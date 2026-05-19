@@ -1,5 +1,6 @@
 /* eslint-disable no-unused-vars */
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
+import { supabase } from "./supabaseClient";
 import { QRCodeSVG } from "qrcode.react";
 import { motion } from "framer-motion";
 import {
@@ -20,9 +21,12 @@ import {
     LogIn,
     Plus,
     QrCode,
+    RefreshCw,
     Search,
     ShieldCheck,
+    Trash2,
     Upload,
+    UserPlus,
     UserRound,
     Users,
     XCircle,
@@ -77,35 +81,21 @@ const colaboradoresIniciais = [
             { treinamentoId: 3, realizado: addDays(-300), vencimento: addDays(430), arquivo: "nr12_marcos.pdf" },
         ],
     },
-    {
-        id: 103,
-        nome: "Renata Souza",
-        empresa: "LR Manutenção",
-        funcao: "Eletricista",
-        matricula: "LR-087",
-        status: "Ativo",
-        token: "SST-RENATA-91D0",
-        treinamentos: [
-            { treinamentoId: 1, realizado: addDays(-200), vencimento: addDays(165), arquivo: "integracao_renata.pdf" },
-            { treinamentoId: 4, realizado: addDays(-760), vencimento: addDays(-30), arquivo: "nr10_renata.pdf" },
-            { treinamentoId: 5, realizado: addDays(-80), vencimento: addDays(285), arquivo: "pemt_renata.pdf" },
-        ],
-    },
-    {
-        id: 104,
-        nome: "Carlos Henrique Alves",
-        empresa: "MTS Engenharia",
-        funcao: "Operador PEMT",
-        matricula: "MTS-331",
-        status: "Ativo",
-        token: "SST-CARLOS-33EF",
-        treinamentos: [
-            { treinamentoId: 1, realizado: addDays(-90), vencimento: addDays(275), arquivo: "integracao_carlos.pdf" },
-            { treinamentoId: 2, realizado: addDays(-200), vencimento: addDays(530), arquivo: "nr35_carlos.pdf" },
-            { treinamentoId: 5, realizado: addDays(-350), vencimento: addDays(15), arquivo: "pemt_carlos.pdf" },
-        ],
-    },
 ];
+
+function normalizarColaborador(item) {
+    return {
+        id: item.id,
+        empresaId: item.empresa_id || item.empresaId || null,
+        nome: item.nome || "",
+        empresa: item.empresas?.nome || item.empresa || "Empresa não informada",
+        funcao: item.funcao || "-",
+        matricula: item.matricula || "-",
+        status: item.status || "Ativo",
+        token: item.token_qr || item.token || `SST-${String(item.id).slice(0, 8)}`,
+        treinamentos: item.treinamentos || [],
+    };
+}
 
 function diasParaVencer(dataISO) {
     const venc = new Date(`${dataISO}T12:00:00`);
@@ -115,12 +105,38 @@ function diasParaVencer(dataISO) {
 
 function statusDocumento(dataISO) {
     const dias = diasParaVencer(dataISO);
-    if (dias < 0) return { chave: "vencido", texto: "Vencido", icon: XCircle, classe: "bg-red-50 text-red-700 ring-red-200", barra: "bg-red-500" };
-    if (dias <= 30) return { chave: "vencendo", texto: "A vencer", icon: AlertTriangle, classe: "bg-amber-50 text-amber-700 ring-amber-200", barra: "bg-amber-500" };
-    return { chave: "emdia", texto: "Em dia", icon: CheckCircle2, classe: "bg-emerald-50 text-emerald-700 ring-emerald-200", barra: "bg-emerald-500" };
+
+    if (dias < 0) {
+        return {
+            chave: "vencido",
+            texto: "Vencido",
+            icon: XCircle,
+            classe: "bg-red-50 text-red-700 ring-red-200",
+            barra: "bg-red-500",
+        };
+    }
+
+    if (dias <= 30) {
+        return {
+            chave: "vencendo",
+            texto: "A vencer",
+            icon: AlertTriangle,
+            classe: "bg-amber-50 text-amber-700 ring-amber-200",
+            barra: "bg-amber-500",
+        };
+    }
+
+    return {
+        chave: "emdia",
+        texto: "Em dia",
+        icon: CheckCircle2,
+        classe: "bg-emerald-50 text-emerald-700 ring-emerald-200",
+        barra: "bg-emerald-500",
+    };
 }
 
 function formatDate(dataISO) {
+    if (!dataISO) return "-";
     return new Date(`${dataISO}T12:00:00`).toLocaleDateString("pt-BR");
 }
 
@@ -130,8 +146,15 @@ function classNames(...items) {
 
 function StatusPill({ status, small = false }) {
     const Icon = status.icon;
+
     return (
-        <span className={classNames("inline-flex items-center gap-1 rounded-full ring-1", status.classe, small ? "px-2 py-1 text-xs" : "px-3 py-1.5 text-sm font-medium")}>
+        <span
+            className={classNames(
+                "inline-flex items-center gap-1 rounded-full ring-1",
+                status.classe,
+                small ? "px-2 py-1 text-xs" : "px-3 py-1.5 text-sm font-medium"
+            )}
+        >
             <Icon className={small ? "h-3.5 w-3.5" : "h-4 w-4"} />
             {status.texto}
         </span>
@@ -139,7 +162,7 @@ function StatusPill({ status, small = false }) {
 }
 
 function QRCodeReal({ token, size = 160 }) {
-    const urlConsulta = `https://controle-sst-qr.app/consulta/${token}`;
+    const urlConsulta = `${window.location.origin}/consulta/${token}`;
 
     return (
         <div className="rounded-2xl bg-white p-3 shadow-inner ring-1 ring-slate-200">
@@ -151,7 +174,9 @@ function QRCodeReal({ token, size = 160 }) {
                 bgColor="#ffffff"
                 fgColor="#0f172a"
             />
-            <p className="mt-2 max-w-[180px] break-all text-center text-[10px] text-slate-400">{urlConsulta}</p>
+            <p className="mt-2 max-w-[180px] break-all text-center text-[10px] text-slate-400">
+                {urlConsulta}
+            </p>
         </div>
     );
 }
@@ -161,14 +186,35 @@ function obterTreinamento(id) {
 }
 
 function statusGeral(colaborador) {
-    const status = colaborador.treinamentos.map((t) => statusDocumento(t.vencimento).chave);
-    if (status.includes("vencido")) return { texto: "Bloqueado", classe: "bg-red-600 text-white", detalhe: "Possui treinamento vencido" };
-    if (status.includes("vencendo")) return { texto: "Atenção", classe: "bg-amber-500 text-white", detalhe: "Possui treinamento a vencer" };
+    const treinamentos = colaborador.treinamentos || [];
+
+    if (treinamentos.length === 0) {
+        return {
+            texto: "Pendente",
+            classe: "bg-slate-600 text-white",
+            detalhe: "Sem treinamentos lançados",
+        };
+    }
+
+    const status = treinamentos.map((t) => statusDocumento(t.vencimento).chave);
+
+    if (status.includes("vencido")) {
+        return { texto: "Bloqueado", classe: "bg-red-600 text-white", detalhe: "Possui treinamento vencido" };
+    }
+
+    if (status.includes("vencendo")) {
+        return { texto: "Atenção", classe: "bg-amber-500 text-white", detalhe: "Possui treinamento a vencer" };
+    }
+
     return { texto: "Apto", classe: "bg-emerald-600 text-white", detalhe: "Treinamentos válidos" };
 }
 
 function Card({ children, className = "" }) {
-    return <div className={classNames("rounded-3xl border border-slate-200 bg-white p-5 shadow-sm", className)}>{children}</div>;
+    return (
+        <div className={classNames("rounded-3xl border border-slate-200 bg-white p-5 shadow-sm", className)}>
+            {children}
+        </div>
+    );
 }
 
 function Header({ titulo, subtitulo, acao }) {
@@ -183,13 +229,130 @@ function Header({ titulo, subtitulo, acao }) {
     );
 }
 
+function LoginScreen({ onLogin }) {
+    const [email, setEmail] = useState("sst@empresa.com");
+    const [senha, setSenha] = useState("");
+    const [perfil, setPerfil] = useState("Técnico de Segurança");
+    const [carregando, setCarregando] = useState(false);
+    const [erro, setErro] = useState("");
+
+    const fazerLogin = async () => {
+        setErro("");
+
+        if (!email || !senha) {
+            setErro("Preencha o e-mail e a senha.");
+            return;
+        }
+
+        setCarregando(true);
+
+        const { data, error } = await supabase.auth.signInWithPassword({
+            email,
+            password: senha,
+        });
+
+        setCarregando(false);
+
+        if (error) {
+            setErro("E-mail ou senha incorretos.");
+            return;
+        }
+
+        onLogin({
+            id: data.user.id,
+            email: data.user.email,
+            perfil,
+        });
+    };
+
+    return (
+        <div className="flex min-h-screen items-center justify-center bg-slate-950 p-4">
+            <motion.div
+                initial={{ opacity: 0, y: 18 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="w-full max-w-md rounded-[2rem] bg-white p-8 shadow-2xl"
+            >
+                <div className="mb-6 flex items-center gap-3">
+                    <div className="rounded-3xl bg-slate-950 p-4 text-white">
+                        <ShieldCheck className="h-7 w-7" />
+                    </div>
+                    <div>
+                        <h1 className="text-2xl font-bold text-slate-950">Controle SST QR</h1>
+                        <p className="text-sm text-slate-500">Acesso restrito ao sistema</p>
+                    </div>
+                </div>
+
+                <div className="space-y-3">
+                    <label className="block text-sm font-medium text-slate-700">E-mail</label>
+                    <input
+                        type="email"
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
+                        placeholder="Digite seu e-mail"
+                        className="w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-slate-300"
+                    />
+
+                    <label className="block text-sm font-medium text-slate-700">Senha</label>
+                    <div className="relative">
+                        <Lock className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                        <input
+                            type="password"
+                            value={senha}
+                            onChange={(e) => setSenha(e.target.value)}
+                            onKeyDown={(e) => {
+                                if (e.key === "Enter") fazerLogin();
+                            }}
+                            placeholder="Digite sua senha"
+                            className="w-full rounded-2xl border border-slate-200 py-3 pl-10 pr-4 text-sm outline-none focus:ring-2 focus:ring-slate-300"
+                        />
+                    </div>
+
+                    <label className="block text-sm font-medium text-slate-700">Perfil de acesso</label>
+                    <select
+                        value={perfil}
+                        onChange={(e) => setPerfil(e.target.value)}
+                        className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-slate-300"
+                    >
+                        <option>Administrador</option>
+                        <option>Técnico de Segurança</option>
+                        <option>Empresa Terceirizada</option>
+                        <option>Portaria / Fiscalização</option>
+                        <option>Auditor</option>
+                    </select>
+
+                    {erro && (
+                        <div className="rounded-2xl bg-red-50 p-3 text-sm font-medium text-red-700 ring-1 ring-red-200">
+                            {erro}
+                        </div>
+                    )}
+                </div>
+
+                <button
+                    type="button"
+                    onClick={fazerLogin}
+                    disabled={carregando}
+                    className="mt-6 flex w-full items-center justify-center gap-2 rounded-2xl bg-slate-950 px-4 py-3 text-sm font-semibold text-white hover:bg-slate-800 disabled:opacity-60"
+                >
+                    <LogIn className="h-4 w-4" />
+                    {carregando ? "Entrando..." : "Entrar no sistema"}
+                </button>
+
+                <p className="mt-4 rounded-2xl bg-slate-50 p-3 text-xs text-slate-500">
+                    O acesso é validado pelo Supabase. Só entra quem tiver e-mail e senha cadastrados.
+                </p>
+            </motion.div>
+        </div>
+    );
+}
+
 function Dashboard({ colaboradores, onSelectColab }) {
     const indicadores = useMemo(() => {
-        const docs = colaboradores.flatMap((c) => c.treinamentos.map((t) => ({ ...t, colaborador: c })));
+        const docs = colaboradores.flatMap((c) => (c.treinamentos || []).map((t) => ({ ...t, colaborador: c })));
         const vencidos = docs.filter((d) => statusDocumento(d.vencimento).chave === "vencido").length;
         const vencendo = docs.filter((d) => statusDocumento(d.vencimento).chave === "vencendo").length;
         const emDia = docs.filter((d) => statusDocumento(d.vencimento).chave === "emdia").length;
         const empresas = new Set(colaboradores.map((c) => c.empresa)).size;
+
         return { docs, vencidos, vencendo, emDia, empresas };
     }, [colaboradores]);
 
@@ -209,12 +372,18 @@ function Dashboard({ colaboradores, onSelectColab }) {
             <Header
                 titulo="Dashboard SST"
                 subtitulo="Visão geral dos treinamentos, vencimentos e liberações por QR Code."
-                acao={<button className="inline-flex items-center gap-2 rounded-2xl bg-slate-950 px-4 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-slate-800"><Download className="h-4 w-4" /> Exportar relatório</button>}
+                acao={
+                    <button className="inline-flex items-center gap-2 rounded-2xl bg-slate-950 px-4 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-slate-800">
+                        <Download className="h-4 w-4" />
+                        Exportar relatório
+                    </button>
+                }
             />
 
             <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
                 {cards.map((item) => {
                     const Icon = item.icon;
+
                     return (
                         <Card key={item.label} className="overflow-hidden">
                             <div className="flex items-start justify-between">
@@ -239,8 +408,11 @@ function Dashboard({ colaboradores, onSelectColab }) {
                             <h2 className="text-lg font-bold text-slate-950">Pendências críticas</h2>
                             <p className="text-sm text-slate-500">Treinamentos vencidos ou a vencer em até 30 dias.</p>
                         </div>
-                        <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-600">{pendencias.length} itens</span>
+                        <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-600">
+                            {pendencias.length} itens
+                        </span>
                     </div>
+
                     <div className="overflow-hidden rounded-2xl border border-slate-200">
                         <table className="w-full text-left text-sm">
                             <thead className="bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
@@ -253,8 +425,17 @@ function Dashboard({ colaboradores, onSelectColab }) {
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-slate-100 bg-white">
+                                {pendencias.length === 0 && (
+                                    <tr>
+                                        <td className="px-4 py-8 text-center text-sm text-slate-500" colSpan={5}>
+                                            Nenhuma pendência crítica encontrada.
+                                        </td>
+                                    </tr>
+                                )}
+
                                 {pendencias.map((d, idx) => {
                                     const st = statusDocumento(d.vencimento);
+
                                     return (
                                         <tr key={`${d.colaborador.id}-${d.treinamentoId}-${idx}`} className="hover:bg-slate-50">
                                             <td className="px-4 py-3">
@@ -263,9 +444,16 @@ function Dashboard({ colaboradores, onSelectColab }) {
                                             </td>
                                             <td className="px-4 py-3 text-slate-700">{obterTreinamento(d.treinamentoId).nome}</td>
                                             <td className="px-4 py-3 text-slate-700">{formatDate(d.vencimento)}</td>
-                                            <td className="px-4 py-3"><StatusPill status={st} small /></td>
+                                            <td className="px-4 py-3">
+                                                <StatusPill status={st} small />
+                                            </td>
                                             <td className="px-4 py-3 text-right">
-                                                <button onClick={() => onSelectColab(d.colaborador)} className="rounded-xl p-2 text-slate-500 hover:bg-slate-100 hover:text-slate-900"><Eye className="h-4 w-4" /></button>
+                                                <button
+                                                    onClick={() => onSelectColab(d.colaborador)}
+                                                    className="rounded-xl p-2 text-slate-500 hover:bg-slate-100 hover:text-slate-900"
+                                                >
+                                                    <Eye className="h-4 w-4" />
+                                                </button>
                                             </td>
                                         </tr>
                                     );
@@ -278,6 +466,7 @@ function Dashboard({ colaboradores, onSelectColab }) {
                 <Card>
                     <h2 className="text-lg font-bold text-slate-950">Resumo de conformidade</h2>
                     <p className="mt-1 text-sm text-slate-500">Baseado nos certificados cadastrados.</p>
+
                     <div className="mt-6 space-y-5">
                         {[
                             { label: "Em dia", valor: indicadores.emDia, total: indicadores.docs.length, classe: "bg-emerald-500" },
@@ -290,11 +479,15 @@ function Dashboard({ colaboradores, onSelectColab }) {
                                     <span className="text-slate-500">{i.valor}/{i.total}</span>
                                 </div>
                                 <div className="h-3 overflow-hidden rounded-full bg-slate-100">
-                                    <div className={classNames("h-full rounded-full", i.classe)} style={{ width: `${Math.max(4, (i.valor / Math.max(1, i.total)) * 100)}%` }} />
+                                    <div
+                                        className={classNames("h-full rounded-full", i.classe)}
+                                        style={{ width: `${Math.max(4, (i.valor / Math.max(1, i.total)) * 100)}%` }}
+                                    />
                                 </div>
                             </div>
                         ))}
                     </div>
+
                     <div className="mt-6 rounded-2xl bg-slate-50 p-4 text-sm text-slate-600">
                         <strong className="text-slate-900">Regra do sistema:</strong> vencido bloqueia a atividade; vencendo em até 30 dias gera alerta preventivo; em dia libera consulta no QR Code.
                     </div>
@@ -304,50 +497,157 @@ function Dashboard({ colaboradores, onSelectColab }) {
     );
 }
 
-function Colaboradores({ colaboradores, setColaboradores, onSelectColab }) {
+function Colaboradores({
+    colaboradores,
+    empresasBanco,
+    carregandoBanco,
+    erroBanco,
+    onAtualizarBanco,
+    onAdicionarColaborador,
+    onExcluirColaborador,
+    onSelectColab,
+}) {
     const [busca, setBusca] = useState("");
     const [empresa, setEmpresa] = useState("Todas");
-    const [novo, setNovo] = useState({ nome: "", empresa: "", funcao: "", matricula: "" });
+    const [salvando, setSalvando] = useState(false);
+    const [novo, setNovo] = useState({
+        nome: "",
+        empresaNome: "",
+        funcao: "",
+        matricula: "",
+    });
 
-    const empresas = ["Todas", ...Array.from(new Set(colaboradores.map((c) => c.empresa)))];
+    const empresasFiltro = ["Todas", ...Array.from(new Set(colaboradores.map((c) => c.empresa).filter(Boolean)))];
+
     const filtrados = colaboradores.filter((c) => {
         const texto = `${c.nome} ${c.empresa} ${c.funcao} ${c.matricula}`.toLowerCase();
         return texto.includes(busca.toLowerCase()) && (empresa === "Todas" || c.empresa === empresa);
     });
 
-    const adicionar = () => {
-        if (!novo.nome.trim() || !novo.empresa.trim() || !novo.funcao.trim()) return;
-        const id = Date.now();
-        setColaboradores([
-            ...colaboradores,
-            {
-                id,
-                nome: novo.nome.trim(),
-                empresa: novo.empresa.trim(),
-                funcao: novo.funcao.trim(),
-                matricula: novo.matricula.trim() || `CAD-${String(id).slice(-4)}`,
-                status: "Ativo",
-                token: `SST-${String(id).slice(-6)}`,
-                treinamentos: [{ treinamentoId: 1, realizado: addDays(0), vencimento: addDays(365), arquivo: "integracao.pdf" }],
-            },
-        ]);
-        setNovo({ nome: "", empresa: "", funcao: "", matricula: "" });
+    const adicionar = async () => {
+        if (!novo.nome.trim() || !novo.empresaNome.trim() || !novo.funcao.trim()) {
+            alert("Preencha nome, empresa terceirizada e função.");
+            return;
+        }
+
+        setSalvando(true);
+
+        const ok = await onAdicionarColaborador({
+            nome: novo.nome.trim(),
+            empresaNome: novo.empresaNome.trim(),
+            funcao: novo.funcao.trim(),
+            matricula: novo.matricula.trim(),
+        });
+
+        setSalvando(false);
+
+        if (ok) {
+            setNovo({ nome: "", empresaNome: "", funcao: "", matricula: "" });
+        }
     };
 
     return (
         <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
-            <Header titulo="Colaboradores" subtitulo="Cadastro, consulta e geração de QR Code individual." />
+            <Header
+                titulo="Colaboradores"
+                subtitulo="Cadastro, consulta, remoção e geração de QR Code individual usando o banco Supabase."
+                acao={
+                    <button
+                        onClick={onAtualizarBanco}
+                        className="inline-flex items-center gap-2 rounded-2xl bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 shadow-sm ring-1 ring-slate-200 hover:bg-slate-50"
+                    >
+                        <RefreshCw className={classNames("h-4 w-4", carregandoBanco && "animate-spin")} />
+                        Atualizar banco
+                    </button>
+                }
+            />
 
-            <div className="grid gap-6 xl:grid-cols-[0.7fr_1.3fr]">
-                <Card>
-                    <h2 className="flex items-center gap-2 text-lg font-bold text-slate-950"><Plus className="h-5 w-5" /> Novo colaborador</h2>
-                    <p className="mt-1 text-sm text-slate-500">Cadastro simplificado para a primeira versão do sistema.</p>
-                    <div className="mt-5 space-y-3">
-                        <input value={novo.nome} onChange={(e) => setNovo({ ...novo, nome: e.target.value })} placeholder="Nome completo" className="w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-slate-300" />
-                        <input value={novo.empresa} onChange={(e) => setNovo({ ...novo, empresa: e.target.value })} placeholder="Empresa terceirizada" className="w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-slate-300" />
-                        <input value={novo.funcao} onChange={(e) => setNovo({ ...novo, funcao: e.target.value })} placeholder="Função" className="w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-slate-300" />
-                        <input value={novo.matricula} onChange={(e) => setNovo({ ...novo, matricula: e.target.value })} placeholder="Matrícula / Código" className="w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-slate-300" />
-                        <button onClick={adicionar} className="w-full rounded-2xl bg-slate-950 px-4 py-3 text-sm font-semibold text-white hover:bg-slate-800">Cadastrar e gerar QR Code</button>
+            {erroBanco && (
+                <div className="mb-5 rounded-2xl bg-red-50 p-4 text-sm font-medium text-red-700 ring-1 ring-red-200">
+                    {erroBanco}
+                </div>
+            )}
+
+            <div className="grid gap-6 xl:grid-cols-[0.82fr_1.18fr]">
+                <Card className="overflow-hidden">
+                    <div className="-m-5 mb-5 bg-gradient-to-br from-slate-950 to-slate-800 p-5 text-white">
+                        <div className="flex items-center gap-3">
+                            <div className="rounded-2xl bg-white/10 p-3">
+                                <UserPlus className="h-6 w-6" />
+                            </div>
+                            <div>
+                                <h2 className="text-lg font-bold">Novo colaborador</h2>
+                                <p className="text-sm text-slate-300">Salva o funcionário diretamente no banco de dados.</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="space-y-3">
+                        <div>
+                            <label className="mb-1 block text-xs font-bold uppercase tracking-wide text-slate-500">
+                                Nome completo
+                            </label>
+                            <input
+                                value={novo.nome}
+                                onChange={(e) => setNovo({ ...novo, nome: e.target.value })}
+                                placeholder="Ex.: João da Silva"
+                                className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none focus:border-slate-400 focus:ring-4 focus:ring-slate-100"
+                            />
+                        </div>
+
+                        <div>
+                            <label className="mb-1 block text-xs font-bold uppercase tracking-wide text-slate-500">
+                                Empresa terceirizada
+                            </label>
+                            <input
+                                value={novo.empresaNome}
+                                onChange={(e) => setNovo({ ...novo, empresaNome: e.target.value })}
+                                placeholder="Ex.: ABC Montagens"
+                                list="empresas-cadastradas"
+                                className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none focus:border-slate-400 focus:ring-4 focus:ring-slate-100"
+                            />
+                            <datalist id="empresas-cadastradas">
+                                {empresasBanco.map((e) => (
+                                    <option key={e.id} value={e.nome} />
+                                ))}
+                            </datalist>
+                            <p className="mt-1 text-xs text-slate-400">
+                                Se a empresa ainda não existir, o sistema cria automaticamente no Supabase.
+                            </p>
+                        </div>
+
+                        <div>
+                            <label className="mb-1 block text-xs font-bold uppercase tracking-wide text-slate-500">
+                                Função
+                            </label>
+                            <input
+                                value={novo.funcao}
+                                onChange={(e) => setNovo({ ...novo, funcao: e.target.value })}
+                                placeholder="Ex.: Soldador, Montador, Eletricista"
+                                className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none focus:border-slate-400 focus:ring-4 focus:ring-slate-100"
+                            />
+                        </div>
+
+                        <div>
+                            <label className="mb-1 block text-xs font-bold uppercase tracking-wide text-slate-500">
+                                Matrícula / Código
+                            </label>
+                            <input
+                                value={novo.matricula}
+                                onChange={(e) => setNovo({ ...novo, matricula: e.target.value })}
+                                placeholder="Ex.: M-0145"
+                                className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none focus:border-slate-400 focus:ring-4 focus:ring-slate-100"
+                            />
+                        </div>
+
+                        <button
+                            onClick={adicionar}
+                            disabled={salvando}
+                            className="flex w-full items-center justify-center gap-2 rounded-2xl bg-slate-950 px-4 py-3 text-sm font-semibold text-white hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
+                        >
+                            <Plus className="h-4 w-4" />
+                            {salvando ? "Salvando no banco..." : "Cadastrar colaborador"}
+                        </button>
                     </div>
                 </Card>
 
@@ -355,40 +655,115 @@ function Colaboradores({ colaboradores, setColaboradores, onSelectColab }) {
                     <div className="mb-4 flex flex-col gap-3 lg:flex-row">
                         <div className="relative flex-1">
                             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-                            <input value={busca} onChange={(e) => setBusca(e.target.value)} placeholder="Buscar por nome, função ou matrícula" className="w-full rounded-2xl border border-slate-200 py-3 pl-10 pr-4 text-sm outline-none focus:ring-2 focus:ring-slate-300" />
+                            <input
+                                value={busca}
+                                onChange={(e) => setBusca(e.target.value)}
+                                placeholder="Buscar por nome, empresa, função ou matrícula"
+                                className="w-full rounded-2xl border border-slate-200 py-3 pl-10 pr-4 text-sm outline-none focus:border-slate-400 focus:ring-4 focus:ring-slate-100"
+                            />
                         </div>
+
                         <div className="relative min-w-56">
                             <Filter className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-                            <select value={empresa} onChange={(e) => setEmpresa(e.target.value)} className="w-full appearance-none rounded-2xl border border-slate-200 bg-white py-3 pl-10 pr-4 text-sm outline-none focus:ring-2 focus:ring-slate-300">
-                                {empresas.map((e) => <option key={e}>{e}</option>)}
+                            <select
+                                value={empresa}
+                                onChange={(e) => setEmpresa(e.target.value)}
+                                className="w-full appearance-none rounded-2xl border border-slate-200 bg-white py-3 pl-10 pr-4 text-sm outline-none focus:border-slate-400 focus:ring-4 focus:ring-slate-100"
+                            >
+                                {empresasFiltro.map((e) => (
+                                    <option key={e}>{e}</option>
+                                ))}
                             </select>
                         </div>
                     </div>
 
+                    <div className="mb-4 grid gap-3 md:grid-cols-3">
+                        <div className="rounded-2xl bg-slate-50 p-3">
+                            <p className="text-xs font-medium text-slate-500">Total</p>
+                            <p className="text-2xl font-bold text-slate-950">{colaboradores.length}</p>
+                        </div>
+                        <div className="rounded-2xl bg-slate-50 p-3">
+                            <p className="text-xs font-medium text-slate-500">Empresas</p>
+                            <p className="text-2xl font-bold text-slate-950">{empresasFiltro.length - 1}</p>
+                        </div>
+                        <div className="rounded-2xl bg-slate-50 p-3">
+                            <p className="text-xs font-medium text-slate-500">Exibindo</p>
+                            <p className="text-2xl font-bold text-slate-950">{filtrados.length}</p>
+                        </div>
+                    </div>
+
+                    {carregandoBanco && (
+                        <div className="rounded-3xl border border-dashed border-slate-300 p-8 text-center text-sm text-slate-500">
+                            Carregando colaboradores do Supabase...
+                        </div>
+                    )}
+
+                    {!carregandoBanco && filtrados.length === 0 && (
+                        <div className="rounded-3xl border border-dashed border-slate-300 p-8 text-center">
+                            <Users className="mx-auto h-10 w-10 text-slate-300" />
+                            <h3 className="mt-3 font-bold text-slate-900">Nenhum colaborador encontrado</h3>
+                            <p className="mt-1 text-sm text-slate-500">
+                                Cadastre o primeiro colaborador no formulário ao lado.
+                            </p>
+                        </div>
+                    )}
+
                     <div className="grid gap-4 lg:grid-cols-2">
-                        {filtrados.map((c) => {
-                            const geral = statusGeral(c);
-                            return (
-                                <button key={c.id} onClick={() => onSelectColab(c)} className="rounded-3xl border border-slate-200 bg-white p-4 text-left transition hover:border-slate-300 hover:shadow-md">
-                                    <div className="flex items-start gap-4">
-                                        <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-slate-100 text-slate-700"><UserRound className="h-6 w-6" /></div>
-                                        <div className="min-w-0 flex-1">
-                                            <div className="flex items-start justify-between gap-2">
-                                                <div>
-                                                    <h3 className="truncate font-bold text-slate-950">{c.nome}</h3>
-                                                    <p className="text-sm text-slate-500">{c.funcao}</p>
+                        {!carregandoBanco &&
+                            filtrados.map((c) => {
+                                const geral = statusGeral(c);
+
+                                return (
+                                    <div
+                                        key={c.id}
+                                        className="group rounded-3xl border border-slate-200 bg-white p-4 transition hover:border-slate-300 hover:shadow-md"
+                                    >
+                                        <div className="flex items-start gap-4">
+                                            <button
+                                                onClick={() => onSelectColab(c)}
+                                                className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-slate-100 text-slate-700 transition group-hover:bg-slate-950 group-hover:text-white"
+                                            >
+                                                <UserRound className="h-6 w-6" />
+                                            </button>
+
+                                            <div className="min-w-0 flex-1">
+                                                <div className="flex items-start justify-between gap-2">
+                                                    <div>
+                                                        <h3 className="truncate font-bold text-slate-950">{c.nome}</h3>
+                                                        <p className="text-sm text-slate-500">{c.funcao}</p>
+                                                    </div>
+                                                    <span className={classNames("rounded-full px-2.5 py-1 text-xs font-semibold", geral.classe)}>
+                                                        {geral.texto}
+                                                    </span>
                                                 </div>
-                                                <span className={classNames("rounded-full px-2.5 py-1 text-xs font-semibold", geral.classe)}>{geral.texto}</span>
-                                            </div>
-                                            <div className="mt-3 grid grid-cols-2 gap-2 text-xs text-slate-500">
-                                                <span className="rounded-xl bg-slate-50 px-3 py-2">{c.empresa}</span>
-                                                <span className="rounded-xl bg-slate-50 px-3 py-2">{c.matricula}</span>
+
+                                                <div className="mt-3 grid grid-cols-2 gap-2 text-xs text-slate-500">
+                                                    <span className="rounded-xl bg-slate-50 px-3 py-2">{c.empresa}</span>
+                                                    <span className="rounded-xl bg-slate-50 px-3 py-2">{c.matricula}</span>
+                                                </div>
+
+                                                <div className="mt-4 flex gap-2">
+                                                    <button
+                                                        onClick={() => onSelectColab(c)}
+                                                        className="inline-flex flex-1 items-center justify-center gap-2 rounded-xl bg-slate-950 px-3 py-2 text-xs font-semibold text-white hover:bg-slate-800"
+                                                    >
+                                                        <QrCode className="h-3.5 w-3.5" />
+                                                        Ver QR
+                                                    </button>
+
+                                                    <button
+                                                        onClick={() => onExcluirColaborador(c)}
+                                                        className="inline-flex items-center justify-center gap-2 rounded-xl bg-red-50 px-3 py-2 text-xs font-semibold text-red-700 ring-1 ring-red-200 hover:bg-red-100"
+                                                    >
+                                                        <Trash2 className="h-3.5 w-3.5" />
+                                                        Excluir
+                                                    </button>
+                                                </div>
                                             </div>
                                         </div>
                                     </div>
-                                </button>
-                            );
-                        })}
+                                );
+                            })}
                     </div>
                 </Card>
             </div>
@@ -403,37 +778,96 @@ function Treinamentos({ colaboradores, setColaboradores }) {
     const [arquivo, setArquivo] = useState("certificado.pdf");
     const [arquivoSelecionado, setArquivoSelecionado] = useState(null);
 
+    const colabSelecionadoId = colabId || colaboradores[0]?.id || "";
+
     const adicionarTreinamento = () => {
+        if (!colabSelecionadoId) {
+            alert("Cadastre um colaborador primeiro.");
+            return;
+        }
+
         const nomeArquivo = arquivoSelecionado?.name || arquivo || "certificado.pdf";
-        setColaboradores(colaboradores.map((c) => {
-            if (String(c.id) !== String(colabId)) return c;
-            const atualizados = c.treinamentos.filter((t) => t.treinamentoId !== Number(treinamentoId));
-            return {
-                ...c,
-                treinamentos: [...atualizados, { treinamentoId: Number(treinamentoId), realizado: hoje.toISOString().slice(0, 10), vencimento, arquivo: nomeArquivo }],
-            };
-        }));
+
+        setColaboradores(
+            colaboradores.map((c) => {
+                if (String(c.id) !== String(colabSelecionadoId)) return c;
+
+                const atualizados = (c.treinamentos || []).filter((t) => t.treinamentoId !== Number(treinamentoId));
+
+                return {
+                    ...c,
+                    treinamentos: [
+                        ...atualizados,
+                        {
+                            treinamentoId: Number(treinamentoId),
+                            realizado: hoje.toISOString().slice(0, 10),
+                            vencimento,
+                            arquivo: nomeArquivo,
+                        },
+                    ],
+                };
+            })
+        );
+
         setArquivo(nomeArquivo);
     };
 
-    const documentos = colaboradores.flatMap((c) => c.treinamentos.map((t) => ({ ...t, colaborador: c, treinamento: obterTreinamento(t.treinamentoId) })));
+    const documentos = colaboradores.flatMap((c) =>
+        (c.treinamentos || []).map((t) => ({ ...t, colaborador: c, treinamento: obterTreinamento(t.treinamentoId) }))
+    );
 
     return (
         <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
             <Header titulo="Treinamentos e certificados" subtitulo="Lançamento de certificados, validade e controle automático de status." />
+
             <div className="grid gap-6 xl:grid-cols-[0.75fr_1.25fr]">
                 <Card>
-                    <h2 className="flex items-center gap-2 text-lg font-bold text-slate-950"><Upload className="h-5 w-5" /> Lançar certificado</h2>
-                    <p className="mt-1 text-sm text-slate-500">Simulação de upload e atualização da validade.</p>
+                    <h2 className="flex items-center gap-2 text-lg font-bold text-slate-950">
+                        <Upload className="h-5 w-5" />
+                        Lançar certificado
+                    </h2>
+                    <p className="mt-1 text-sm text-slate-500">Nesta versão, o lançamento ainda fica local. O próximo passo é salvar os certificados no Supabase Storage.</p>
+
                     <div className="mt-5 space-y-3">
-                        <select value={colabId} onChange={(e) => setColabId(e.target.value)} className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-slate-300">
-                            {colaboradores.map((c) => <option key={c.id} value={c.id}>{c.nome} — {c.empresa}</option>)}
+                        <select
+                            value={colabSelecionadoId}
+                            onChange={(e) => setColabId(e.target.value)}
+                            className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-slate-300"
+                        >
+                            {colaboradores.length === 0 && <option value="">Nenhum colaborador cadastrado</option>}
+                            {colaboradores.map((c) => (
+                                <option key={c.id} value={c.id}>
+                                    {c.nome} — {c.empresa}
+                                </option>
+                            ))}
                         </select>
-                        <select value={treinamentoId} onChange={(e) => setTreinamentoId(e.target.value)} className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-slate-300">
-                            {treinamentosBase.map((t) => <option key={t.id} value={t.id}>{t.nome}</option>)}
+
+                        <select
+                            value={treinamentoId}
+                            onChange={(e) => setTreinamentoId(e.target.value)}
+                            className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-slate-300"
+                        >
+                            {treinamentosBase.map((t) => (
+                                <option key={t.id} value={t.id}>
+                                    {t.nome}
+                                </option>
+                            ))}
                         </select>
-                        <input type="date" value={vencimento} onChange={(e) => setVencimento(e.target.value)} className="w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-slate-300" />
-                        <input value={arquivo} onChange={(e) => setArquivo(e.target.value)} placeholder="Nome do arquivo PDF" className="w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-slate-300" />
+
+                        <input
+                            type="date"
+                            value={vencimento}
+                            onChange={(e) => setVencimento(e.target.value)}
+                            className="w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-slate-300"
+                        />
+
+                        <input
+                            value={arquivo}
+                            onChange={(e) => setArquivo(e.target.value)}
+                            placeholder="Nome do arquivo PDF"
+                            className="w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-slate-300"
+                        />
+
                         <label className="flex cursor-pointer items-center justify-center gap-2 rounded-2xl border border-dashed border-slate-300 bg-slate-50 px-4 py-4 text-sm font-medium text-slate-600 hover:bg-slate-100">
                             <Upload className="h-4 w-4" />
                             {arquivoSelecionado ? arquivoSelecionado.name : "Selecionar PDF do certificado"}
@@ -448,15 +882,24 @@ function Treinamentos({ colaboradores, setColaboradores }) {
                                 }}
                             />
                         </label>
-                        <button onClick={adicionarTreinamento} className="w-full rounded-2xl bg-slate-950 px-4 py-3 text-sm font-semibold text-white hover:bg-slate-800">Salvar certificado</button>
+
+                        <button
+                            onClick={adicionarTreinamento}
+                            className="w-full rounded-2xl bg-slate-950 px-4 py-3 text-sm font-semibold text-white hover:bg-slate-800"
+                        >
+                            Salvar certificado
+                        </button>
                     </div>
                 </Card>
 
                 <Card>
                     <div className="mb-4 flex items-center justify-between">
                         <h2 className="text-lg font-bold text-slate-950">Base de certificados</h2>
-                        <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-600">{documentos.length} registros</span>
+                        <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-600">
+                            {documentos.length} registros
+                        </span>
                     </div>
+
                     <div className="overflow-hidden rounded-2xl border border-slate-200">
                         <table className="w-full text-left text-sm">
                             <thead className="bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
@@ -469,6 +912,14 @@ function Treinamentos({ colaboradores, setColaboradores }) {
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-slate-100 bg-white">
+                                {documentos.length === 0 && (
+                                    <tr>
+                                        <td className="px-4 py-8 text-center text-sm text-slate-500" colSpan={5}>
+                                            Nenhum certificado lançado ainda.
+                                        </td>
+                                    </tr>
+                                )}
+
                                 {documentos.map((d, idx) => (
                                     <tr key={`${d.colaborador.id}-${d.treinamentoId}-${idx}`} className="hover:bg-slate-50">
                                         <td className="px-4 py-3">
@@ -476,9 +927,14 @@ function Treinamentos({ colaboradores, setColaboradores }) {
                                             <div className="text-xs text-slate-500">{d.colaborador.empresa}</div>
                                         </td>
                                         <td className="px-4 py-3 text-slate-700">{d.treinamento.nome}</td>
-                                        <td className="px-4 py-3 text-slate-500"><FileText className="mr-1 inline h-4 w-4" />{d.arquivo}</td>
+                                        <td className="px-4 py-3 text-slate-500">
+                                            <FileText className="mr-1 inline h-4 w-4" />
+                                            {d.arquivo}
+                                        </td>
                                         <td className="px-4 py-3 text-slate-700">{formatDate(d.vencimento)}</td>
-                                        <td className="px-4 py-3"><StatusPill status={statusDocumento(d.vencimento)} small /></td>
+                                        <td className="px-4 py-3">
+                                            <StatusPill status={statusDocumento(d.vencimento)} small />
+                                        </td>
                                     </tr>
                                 ))}
                             </tbody>
@@ -492,25 +948,38 @@ function Treinamentos({ colaboradores, setColaboradores }) {
 
 function ConsultaQR({ colaborador }) {
     if (!colaborador) return null;
+
     const geral = statusGeral(colaborador);
+    const treinamentos = colaborador.treinamentos || [];
+
     return (
         <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
             <Header titulo="Consulta por QR Code" subtitulo="Modelo da tela que abre no celular quando o QR Code do colaborador é escaneado." />
+
             <div className="mx-auto max-w-5xl rounded-[2rem] bg-slate-950 p-3 shadow-2xl">
                 <div className="rounded-[1.5rem] bg-white p-5 md:p-8">
                     <div className="flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
                         <div className="flex gap-4">
-                            <div className="flex h-16 w-16 items-center justify-center rounded-3xl bg-slate-100 text-slate-800"><HardHat className="h-8 w-8" /></div>
+                            <div className="flex h-16 w-16 items-center justify-center rounded-3xl bg-slate-100 text-slate-800">
+                                <HardHat className="h-8 w-8" />
+                            </div>
+
                             <div>
-                                <div className="mb-2 inline-flex items-center gap-2 rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-700"><ShieldCheck className="h-3.5 w-3.5" /> Verificação SST</div>
+                                <div className="mb-2 inline-flex items-center gap-2 rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-700">
+                                    <ShieldCheck className="h-3.5 w-3.5" />
+                                    Verificação SST
+                                </div>
                                 <h2 className="text-2xl font-bold text-slate-950">{colaborador.nome}</h2>
                                 <p className="mt-1 text-slate-500">{colaborador.funcao} · {colaborador.empresa}</p>
                                 <p className="mt-1 text-sm text-slate-400">Matrícula: {colaborador.matricula}</p>
                             </div>
                         </div>
+
                         <div className="flex flex-col items-center gap-3">
                             <QRCodeReal token={colaborador.token} />
-                            <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-500">{colaborador.token}</span>
+                            <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-500">
+                                {colaborador.token}
+                            </span>
                         </div>
                     </div>
 
@@ -520,14 +989,27 @@ function ConsultaQR({ colaborador }) {
                                 <p className="text-sm font-medium text-slate-500">Status geral do colaborador</p>
                                 <h3 className="mt-1 text-xl font-bold text-slate-950">{geral.detalhe}</h3>
                             </div>
-                            <span className={classNames("inline-flex items-center justify-center rounded-2xl px-5 py-3 text-base font-bold", geral.classe)}>{geral.texto}</span>
+                            <span className={classNames("inline-flex items-center justify-center rounded-2xl px-5 py-3 text-base font-bold", geral.classe)}>
+                                {geral.texto}
+                            </span>
                         </div>
                     </div>
 
+                    {treinamentos.length === 0 && (
+                        <div className="mt-6 rounded-3xl border border-dashed border-slate-300 p-8 text-center">
+                            <ClipboardCheck className="mx-auto h-10 w-10 text-slate-300" />
+                            <h3 className="mt-3 font-bold text-slate-900">Sem treinamentos lançados</h3>
+                            <p className="mt-1 text-sm text-slate-500">
+                                Lance os certificados na aba Treinamentos para atualizar a situação do colaborador.
+                            </p>
+                        </div>
+                    )}
+
                     <div className="mt-6 grid gap-4 md:grid-cols-2">
-                        {colaborador.treinamentos.map((t) => {
+                        {treinamentos.map((t) => {
                             const st = statusDocumento(t.vencimento);
                             const dias = diasParaVencer(t.vencimento);
+
                             return (
                                 <div key={t.treinamentoId} className="rounded-3xl border border-slate-200 p-4">
                                     <div className="mb-4 flex items-start justify-between gap-3">
@@ -537,6 +1019,7 @@ function ConsultaQR({ colaborador }) {
                                         </div>
                                         <StatusPill status={st} small />
                                     </div>
+
                                     <div className="grid grid-cols-2 gap-3 text-sm">
                                         <div className="rounded-2xl bg-slate-50 p-3">
                                             <p className="text-xs text-slate-400">Realizado</p>
@@ -547,10 +1030,17 @@ function ConsultaQR({ colaborador }) {
                                             <p className="font-semibold text-slate-700">{formatDate(t.vencimento)}</p>
                                         </div>
                                     </div>
+
                                     <div className="mt-3 h-2 overflow-hidden rounded-full bg-slate-100">
-                                        <div className={classNames("h-full rounded-full", st.barra)} style={{ width: st.chave === "vencido" ? "100%" : `${Math.max(12, Math.min(100, 100 - dias / 7))}%` }} />
+                                        <div
+                                            className={classNames("h-full rounded-full", st.barra)}
+                                            style={{ width: st.chave === "vencido" ? "100%" : `${Math.max(12, Math.min(100, 100 - dias / 7))}%` }}
+                                        />
                                     </div>
-                                    <p className="mt-3 text-xs text-slate-500">{dias < 0 ? `Vencido há ${Math.abs(dias)} dia(s).` : `Faltam ${dias} dia(s) para vencer.`}</p>
+
+                                    <p className="mt-3 text-xs text-slate-500">
+                                        {dias < 0 ? `Vencido há ${Math.abs(dias)} dia(s).` : `Faltam ${dias} dia(s) para vencer.`}
+                                    </p>
                                 </div>
                             );
                         })}
@@ -565,29 +1055,47 @@ function ConsultaQR({ colaborador }) {
     );
 }
 
-function Empresas() {
-    const empresas = [
-        { nome: "ABC Montagens", cnpj: "00.000.000/0001-00", responsavel: "João Silva", status: "Ativa", pendencias: 1 },
-        { nome: "RDB Serviços Industriais", cnpj: "11.111.111/0001-11", responsavel: "Patrícia Gomes", status: "Ativa", pendencias: 1 },
-        { nome: "LR Manutenção", cnpj: "22.222.222/0001-22", responsavel: "Eduardo Reis", status: "Ativa", pendencias: 1 },
-        { nome: "MTS Engenharia", cnpj: "33.333.333/0001-33", responsavel: "Camila Torres", status: "Ativa", pendencias: 1 },
-    ];
-
+function Empresas({ empresasBanco, onAtualizarBanco }) {
     return (
         <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
-            <Header titulo="Empresas terceirizadas" subtitulo="Controle de prestadores, responsáveis e pendências documentais." acao={<button className="inline-flex items-center gap-2 rounded-2xl bg-slate-950 px-4 py-2.5 text-sm font-semibold text-white"><Plus className="h-4 w-4" /> Nova empresa</button>} />
+            <Header
+                titulo="Empresas terceirizadas"
+                subtitulo="Empresas carregadas do banco Supabase."
+                acao={
+                    <button
+                        onClick={onAtualizarBanco}
+                        className="inline-flex items-center gap-2 rounded-2xl bg-slate-950 px-4 py-2.5 text-sm font-semibold text-white"
+                    >
+                        <RefreshCw className="h-4 w-4" />
+                        Atualizar
+                    </button>
+                }
+            />
+
             <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-                {empresas.map((e) => (
-                    <Card key={e.nome}>
+                {empresasBanco.length === 0 && (
+                    <Card className="md:col-span-2 xl:col-span-4">
+                        <div className="text-center text-sm text-slate-500">
+                            Nenhuma empresa cadastrada. Cadastre um colaborador informando a empresa terceirizada.
+                        </div>
+                    </Card>
+                )}
+
+                {empresasBanco.map((e) => (
+                    <Card key={e.id}>
                         <div className="mb-4 flex items-start justify-between">
-                            <div className="rounded-2xl bg-slate-100 p-3 text-slate-700"><Building2 className="h-5 w-5" /></div>
-                            <span className="rounded-full bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700 ring-1 ring-emerald-200">{e.status}</span>
+                            <div className="rounded-2xl bg-slate-100 p-3 text-slate-700">
+                                <Building2 className="h-5 w-5" />
+                            </div>
+                            <span className="rounded-full bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700 ring-1 ring-emerald-200">
+                                {e.status || "Ativa"}
+                            </span>
                         </div>
                         <h3 className="font-bold text-slate-950">{e.nome}</h3>
-                        <p className="mt-1 text-sm text-slate-500">{e.cnpj}</p>
+                        <p className="mt-1 text-sm text-slate-500">{e.cnpj || "CNPJ não informado"}</p>
                         <div className="mt-4 rounded-2xl bg-slate-50 p-3 text-sm text-slate-600">
-                            <p><strong>Responsável:</strong> {e.responsavel}</p>
-                            <p><strong>Pendências:</strong> {e.pendencias}</p>
+                            <p><strong>Responsável:</strong> {e.responsavel || "-"}</p>
+                            <p><strong>E-mail:</strong> {e.email || "-"}</p>
                         </div>
                     </Card>
                 ))}
@@ -598,32 +1106,29 @@ function Empresas() {
 
 function Requisitos() {
     const requisitos = [
-        "Login com perfis: Administrador, SST, Terceirizada, Portaria e Auditor.",
+        "Login com Supabase Auth.",
+        "Colaboradores cadastrados no banco Supabase.",
+        "Empresas criadas automaticamente no banco quando informadas no cadastro.",
+        "Exclusão de colaboradores diretamente na tabela colaboradores.",
         "QR Code individual com link real de consulta e token aleatório, sem CPF ou dado sensível.",
-        "Controle automático: vencido, a vencer em 30 dias e em dia.",
-        "Upload de certificados em PDF com aprovação do Técnico de Segurança.",
-        "Banco de dados para empresas, colaboradores, treinamentos, certificados, usuários e logs.",
-        "Histórico de alterações para auditoria e fiscalização.",
-        "Exportação de relatórios em Excel/PDF por empresa, função e treinamento.",
-        "Bloqueio automático de atividade quando houver treinamento obrigatório vencido.",
-        "Proteção LGPD: consulta pública mostra somente dados necessários para liberação em campo.",
+        "Próximo passo: salvar certificados em Supabase Storage e tabela certificados.",
     ];
 
     const tabelas = [
-        { nome: "usuarios", campos: "id, nome, email, senha_hash, perfil, status" },
-        { nome: "empresas", campos: "id, razao_social, cnpj, responsavel, email, status" },
-        { nome: "colaboradores", campos: "id, empresa_id, nome, funcao, matricula, token_qr, status" },
-        { nome: "treinamentos", campos: "id, nome, categoria, validade_padrao, obrigatorio" },
-        { nome: "certificados", campos: "id, colaborador_id, treinamento_id, arquivo_url, data_realizacao, data_vencimento, validado_por" },
-        { nome: "logs", campos: "id, usuario_id, acao, entidade, data_hora, detalhes" },
+        { nome: "empresas", campos: "id, nome, cnpj, responsavel, email, telefone, status, created_at" },
+        { nome: "colaboradores", campos: "id, empresa_id, nome, funcao, matricula, token_qr, status, created_at" },
+        { nome: "treinamentos", campos: "id, nome, categoria, validade_padrao_dias, obrigatorio, created_at" },
+        { nome: "certificados", campos: "id, colaborador_id, treinamento_id, arquivo_url, data_realizacao, data_vencimento, status_validacao" },
     ];
 
     return (
         <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
             <Header titulo="Roteiro técnico do projeto" subtitulo="Etapas para transformar este protótipo em sistema real." />
+
             <div className="grid gap-6 xl:grid-cols-[1fr_1fr]">
                 <Card>
-                    <h2 className="text-lg font-bold text-slate-950">Funcionalidades obrigatórias</h2>
+                    <h2 className="text-lg font-bold text-slate-950">Funcionalidades atuais</h2>
+
                     <div className="mt-4 space-y-3">
                         {requisitos.map((r, idx) => (
                             <div key={idx} className="flex gap-3 rounded-2xl bg-slate-50 p-3 text-sm text-slate-700">
@@ -633,9 +1138,13 @@ function Requisitos() {
                         ))}
                     </div>
                 </Card>
+
                 <Card>
-                    <h2 className="flex items-center gap-2 text-lg font-bold text-slate-950"><Database className="h-5 w-5" /> Banco de dados sugerido</h2>
-                    <p className="mt-1 text-sm text-slate-500">Estrutura inicial para desenvolver a versão real em PostgreSQL, Supabase ou Firebase.</p>
+                    <h2 className="flex items-center gap-2 text-lg font-bold text-slate-950">
+                        <Database className="h-5 w-5" />
+                        Tabelas utilizadas
+                    </h2>
+
                     <div className="mt-4 space-y-3">
                         {tabelas.map((t) => (
                             <div key={t.nome} className="rounded-3xl border border-slate-200 p-4">
@@ -645,87 +1154,217 @@ function Requisitos() {
                         ))}
                     </div>
                 </Card>
-                <Card className="xl:col-span-2">
-                    <h2 className="text-lg font-bold text-slate-950">Próximas fases</h2>
-                    <div className="mt-4 grid gap-4 md:grid-cols-4">
-                        {[
-                            { fase: "Fase 1", titulo: "MVP", desc: "Dashboard, colaboradores, treinamentos, vencimentos e QR Code real." },
-                            { fase: "Fase 2", titulo: "Login e perfis", desc: "Controle de acesso por administrador, SST, portaria, auditor e terceirizada." },
-                            { fase: "Fase 3", titulo: "Documentos", desc: "Upload real, validação, histórico, armazenamento em nuvem e permissões." },
-                            { fase: "Fase 4", titulo: "Produção", desc: "Banco PostgreSQL, hospedagem, domínio, backup, segurança e alertas." },
-                        ].map((f) => (
-                            <div key={f.fase} className="rounded-3xl border border-slate-200 p-4">
-                                <p className="text-xs font-bold uppercase tracking-wide text-slate-400">{f.fase}</p>
-                                <h3 className="mt-1 font-bold text-slate-950">{f.titulo}</h3>
-                                <p className="mt-1 text-sm text-slate-500">{f.desc}</p>
-                            </div>
-                        ))}
-                    </div>
-                </Card>
             </div>
         </motion.div>
     );
 }
 
-function LoginScreen({ onLogin }) {
-    const [email, setEmail] = useState("sst@empresa.com");
-    const [senha, setSenha] = useState("123456");
-    const [perfil, setPerfil] = useState("Técnico de Segurança");
-
-    return (
-        <div className="flex min-h-screen items-center justify-center bg-slate-950 p-4">
-            <motion.div initial={{ opacity: 0, y: 18 }} animate={{ opacity: 1, y: 0 }} className="w-full max-w-md rounded-[2rem] bg-white p-8 shadow-2xl">
-                <div className="mb-6 flex items-center gap-3">
-                    <div className="rounded-3xl bg-slate-950 p-4 text-white"><ShieldCheck className="h-7 w-7" /></div>
-                    <div>
-                        <h1 className="text-2xl font-bold text-slate-950">Controle SST QR</h1>
-                        <p className="text-sm text-slate-500">Acesso restrito ao sistema</p>
-                    </div>
-                </div>
-
-                <div className="space-y-3">
-                    <label className="block text-sm font-medium text-slate-700">E-mail</label>
-                    <input value={email} onChange={(e) => setEmail(e.target.value)} className="w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-slate-300" />
-                    <label className="block text-sm font-medium text-slate-700">Senha</label>
-                    <div className="relative">
-                        <Lock className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-                        <input type="password" value={senha} onChange={(e) => setSenha(e.target.value)} className="w-full rounded-2xl border border-slate-200 py-3 pl-10 pr-4 text-sm outline-none focus:ring-2 focus:ring-slate-300" />
-                    </div>
-                    <label className="block text-sm font-medium text-slate-700">Perfil de acesso</label>
-                    <select value={perfil} onChange={(e) => setPerfil(e.target.value)} className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-slate-300">
-                        <option>Administrador</option>
-                        <option>Técnico de Segurança</option>
-                        <option>Empresa Terceirizada</option>
-                        <option>Portaria / Fiscalização</option>
-                        <option>Auditor</option>
-                    </select>
-                </div>
-
-                <button onClick={() => onLogin({ email, perfil })} className="mt-6 flex w-full items-center justify-center gap-2 rounded-2xl bg-slate-950 px-4 py-3 text-sm font-semibold text-white hover:bg-slate-800">
-                    <LogIn className="h-4 w-4" /> Entrar no sistema
-                </button>
-                <p className="mt-4 rounded-2xl bg-slate-50 p-3 text-xs text-slate-500">Protótipo: o login é simulado. Na versão real, a senha deve ser criptografada e validada no banco de dados.</p>
-            </motion.div>
-        </div>
-    );
-}
-
 export default function App() {
     const [usuario, setUsuario] = useState(null);
+    const [carregandoSessao, setCarregandoSessao] = useState(true);
     const [tela, setTela] = useState("dashboard");
-    const [colaboradores, setColaboradores] = useState(() => {
-        try {
-            const salvos = localStorage.getItem("controle-sst-qr-colaboradores");
-            return salvos ? JSON.parse(salvos) : colaboradoresIniciais;
-        } catch {
-            return colaboradoresIniciais;
+    const [colaboradores, setColaboradores] = useState([]);
+    const [empresasBanco, setEmpresasBanco] = useState([]);
+    const [carregandoBanco, setCarregandoBanco] = useState(false);
+    const [erroBanco, setErroBanco] = useState("");
+    const [colaboradorSelecionado, setColaboradorSelecionado] = useState(null);
+
+    const carregarEmpresas = useCallback(async () => {
+        const { data, error } = await supabase
+            .from("empresas")
+            .select("id, nome, cnpj, responsavel, email, telefone, status")
+            .order("nome", { ascending: true });
+
+        if (error) {
+            throw new Error(`Erro ao carregar empresas: ${error.message}`);
         }
-    });
-    const [colaboradorSelecionado, setColaboradorSelecionado] = useState(colaboradoresIniciais[0]);
+
+        setEmpresasBanco(data || []);
+        return data || [];
+    }, []);
+
+    const carregarColaboradores = useCallback(async () => {
+        setCarregandoBanco(true);
+        setErroBanco("");
+
+        try {
+            const empresas = await carregarEmpresas();
+
+            const { data, error } = await supabase
+                .from("colaboradores")
+                .select(`
+          id,
+          nome,
+          funcao,
+          matricula,
+          token_qr,
+          status,
+          empresa_id,
+          empresas (
+            id,
+            nome
+          )
+        `)
+                .order("created_at", { ascending: false });
+
+            if (error) {
+                throw new Error(`Erro ao carregar colaboradores: ${error.message}`);
+            }
+
+            const normalizados = (data || []).map(normalizarColaborador);
+            setColaboradores(normalizados);
+            setColaboradorSelecionado((atual) => atual || normalizados[0] || null);
+
+            if (normalizados.length === 0 && empresas.length === 0) {
+                setColaboradores([]);
+            }
+        } catch (error) {
+            setErroBanco(error.message || "Erro ao conectar ao banco de dados.");
+        } finally {
+            setCarregandoBanco(false);
+        }
+    }, [carregarEmpresas]);
+
+    async function obterOuCriarEmpresa(nomeEmpresa) {
+        const nomeTratado = nomeEmpresa.trim();
+
+        const existente = empresasBanco.find(
+            (empresa) => empresa.nome.toLowerCase() === nomeTratado.toLowerCase()
+        );
+
+        if (existente) return existente;
+
+        const { data, error } = await supabase
+            .from("empresas")
+            .insert({
+                nome: nomeTratado,
+                status: "Ativa",
+            })
+            .select("id, nome, cnpj, responsavel, email, telefone, status")
+            .single();
+
+        if (error) {
+            throw new Error(`Erro ao criar empresa: ${error.message}`);
+        }
+
+        setEmpresasBanco((atual) => [...atual, data].sort((a, b) => a.nome.localeCompare(b.nome)));
+        return data;
+    }
+
+    async function adicionarColaborador(novo) {
+        setErroBanco("");
+
+        try {
+            const empresaCriada = await obterOuCriarEmpresa(novo.empresaNome);
+
+            const { data, error } = await supabase
+                .from("colaboradores")
+                .insert({
+                    empresa_id: empresaCriada.id,
+                    nome: novo.nome,
+                    funcao: novo.funcao,
+                    matricula: novo.matricula || null,
+                    status: "Ativo",
+                })
+                .select(`
+          id,
+          nome,
+          funcao,
+          matricula,
+          token_qr,
+          status,
+          empresa_id,
+          empresas (
+            id,
+            nome
+          )
+        `)
+                .single();
+
+            if (error) {
+                throw new Error(`Erro ao cadastrar colaborador: ${error.message}`);
+            }
+
+            const colaborador = normalizarColaborador(data);
+
+            setColaboradores((atual) => [colaborador, ...atual]);
+            setColaboradorSelecionado(colaborador);
+
+            return true;
+        } catch (error) {
+            setErroBanco(error.message || "Erro ao cadastrar colaborador.");
+            return false;
+        }
+    }
+
+    async function excluirColaborador(colaborador) {
+        const confirmar = window.confirm(`Deseja realmente excluir o colaborador ${colaborador.nome}?`);
+
+        if (!confirmar) return;
+
+        setErroBanco("");
+
+        const { error } = await supabase
+            .from("colaboradores")
+            .delete()
+            .eq("id", colaborador.id);
+
+        if (error) {
+            setErroBanco(`Erro ao excluir colaborador: ${error.message}`);
+            return;
+        }
+
+        setColaboradores((atual) => atual.filter((item) => item.id !== colaborador.id));
+
+        if (colaboradorSelecionado?.id === colaborador.id) {
+            const restante = colaboradores.filter((item) => item.id !== colaborador.id);
+            setColaboradorSelecionado(restante[0] || null);
+        }
+    }
 
     useEffect(() => {
-        localStorage.setItem("controle-sst-qr-colaboradores", JSON.stringify(colaboradores));
-    }, [colaboradores]);
+        async function carregarSessao() {
+            const { data } = await supabase.auth.getSession();
+
+            if (data.session?.user) {
+                setUsuario({
+                    id: data.session.user.id,
+                    email: data.session.user.email,
+                    perfil: "Técnico de Segurança",
+                });
+            }
+
+            setCarregandoSessao(false);
+        }
+
+        carregarSessao();
+
+        const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
+            if (session?.user) {
+                setUsuario({
+                    id: session.user.id,
+                    email: session.user.email,
+                    perfil: "Técnico de Segurança",
+                });
+            } else {
+                setUsuario(null);
+            }
+        });
+
+        return () => {
+            listener.subscription.unsubscribe();
+        };
+    }, []);
+
+    useEffect(() => {
+        if (!usuario) return;
+
+        const timer = window.setTimeout(() => {
+            carregarColaboradores();
+        }, 0);
+
+        return () => window.clearTimeout(timer);
+    }, [usuario, carregarColaboradores]);
 
     const nav = [
         { id: "dashboard", label: "Dashboard", icon: LayoutDashboard },
@@ -741,14 +1380,37 @@ export default function App() {
         setTela("qr");
     };
 
-    if (!usuario) return <LoginScreen onLogin={setUsuario} />;
+    const sair = async () => {
+        await supabase.auth.signOut();
+        setUsuario(null);
+        setColaboradores([]);
+        setEmpresasBanco([]);
+        setColaboradorSelecionado(null);
+    };
+
+    if (carregandoSessao) {
+        return (
+            <div className="flex min-h-screen items-center justify-center bg-slate-950 text-white">
+                <div className="rounded-3xl bg-white/10 p-6 text-center">
+                    <ShieldCheck className="mx-auto mb-3 h-8 w-8" />
+                    <p className="font-semibold">Carregando sistema...</p>
+                </div>
+            </div>
+        );
+    }
+
+    if (!usuario) {
+        return <LoginScreen onLogin={setUsuario} />;
+    }
 
     return (
         <div className="min-h-screen bg-slate-100 text-slate-900">
             <div className="flex min-h-screen">
                 <aside className="hidden w-72 border-r border-slate-200 bg-white p-5 lg:block">
                     <div className="flex items-center gap-3 rounded-3xl bg-slate-950 p-4 text-white">
-                        <div className="rounded-2xl bg-white/10 p-3"><ShieldCheck className="h-6 w-6" /></div>
+                        <div className="rounded-2xl bg-white/10 p-3">
+                            <ShieldCheck className="h-6 w-6" />
+                        </div>
                         <div>
                             <h1 className="font-bold">Controle SST QR</h1>
                             <p className="text-xs text-slate-300">Treinamentos · Terceiros</p>
@@ -758,8 +1420,18 @@ export default function App() {
                     <nav className="mt-6 space-y-2">
                         {nav.map((item) => {
                             const Icon = item.icon;
+
                             return (
-                                <button key={item.id} onClick={() => setTela(item.id)} className={classNames("flex w-full items-center gap-3 rounded-2xl px-4 py-3 text-left text-sm font-medium transition", tela === item.id ? "bg-slate-950 text-white shadow-sm" : "text-slate-600 hover:bg-slate-100 hover:text-slate-950")}>
+                                <button
+                                    key={item.id}
+                                    onClick={() => setTela(item.id)}
+                                    className={classNames(
+                                        "flex w-full items-center gap-3 rounded-2xl px-4 py-3 text-left text-sm font-medium transition",
+                                        tela === item.id
+                                            ? "bg-slate-950 text-white shadow-sm"
+                                            : "text-slate-600 hover:bg-slate-100 hover:text-slate-950"
+                                    )}
+                                >
                                     <Icon className="h-4 w-4" />
                                     {item.label}
                                 </button>
@@ -769,25 +1441,65 @@ export default function App() {
 
                     <div className="mt-6 rounded-3xl bg-slate-50 p-4">
                         <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Usuário logado</p>
-                        <p className="mt-1 text-sm font-bold text-slate-900">{usuario.email}</p>
+                        <p className="mt-1 break-all text-sm font-bold text-slate-900">{usuario.email}</p>
                         <p className="mt-1 text-xs text-slate-500">Perfil: {usuario.perfil}</p>
-                        <button onClick={() => setUsuario(null)} className="mt-3 rounded-xl bg-white px-3 py-2 text-xs font-semibold text-slate-600 ring-1 ring-slate-200 hover:bg-slate-100">Sair</button>
+
+                        <button
+                            onClick={sair}
+                            className="mt-3 rounded-xl bg-white px-3 py-2 text-xs font-semibold text-slate-600 ring-1 ring-slate-200 hover:bg-slate-100"
+                        >
+                            Sair
+                        </button>
                     </div>
                 </aside>
 
                 <main className="flex-1 p-4 md:p-8">
                     <div className="mb-5 flex items-center justify-between rounded-3xl bg-white p-3 shadow-sm lg:hidden">
-                        <div className="flex items-center gap-2 font-bold"><ShieldCheck className="h-5 w-5" /> Controle SST QR</div>
-                        <select value={tela} onChange={(e) => setTela(e.target.value)} className="rounded-2xl border border-slate-200 bg-white px-3 py-2 text-sm">
-                            {nav.map((n) => <option key={n.id} value={n.id}>{n.label}</option>)}
+                        <div className="flex items-center gap-2 font-bold">
+                            <ShieldCheck className="h-5 w-5" />
+                            Controle SST QR
+                        </div>
+
+                        <select
+                            value={tela}
+                            onChange={(e) => setTela(e.target.value)}
+                            className="rounded-2xl border border-slate-200 bg-white px-3 py-2 text-sm"
+                        >
+                            {nav.map((n) => (
+                                <option key={n.id} value={n.id}>
+                                    {n.label}
+                                </option>
+                            ))}
                         </select>
                     </div>
 
-                    {tela === "dashboard" && <Dashboard colaboradores={colaboradores} onSelectColab={selecionarColaborador} />}
-                    {tela === "empresas" && <Empresas />}
-                    {tela === "colaboradores" && <Colaboradores colaboradores={colaboradores} setColaboradores={setColaboradores} onSelectColab={selecionarColaborador} />}
-                    {tela === "treinamentos" && <Treinamentos colaboradores={colaboradores} setColaboradores={setColaboradores} />}
+                    {tela === "dashboard" && (
+                        <Dashboard colaboradores={colaboradores} onSelectColab={selecionarColaborador} />
+                    )}
+
+                    {tela === "empresas" && (
+                        <Empresas empresasBanco={empresasBanco} onAtualizarBanco={carregarColaboradores} />
+                    )}
+
+                    {tela === "colaboradores" && (
+                        <Colaboradores
+                            colaboradores={colaboradores}
+                            empresasBanco={empresasBanco}
+                            carregandoBanco={carregandoBanco}
+                            erroBanco={erroBanco}
+                            onAtualizarBanco={carregarColaboradores}
+                            onAdicionarColaborador={adicionarColaborador}
+                            onExcluirColaborador={excluirColaborador}
+                            onSelectColab={selecionarColaborador}
+                        />
+                    )}
+
+                    {tela === "treinamentos" && (
+                        <Treinamentos colaboradores={colaboradores} setColaboradores={setColaboradores} />
+                    )}
+
                     {tela === "qr" && <ConsultaQR colaborador={colaboradorSelecionado} />}
+
                     {tela === "roteiro" && <Requisitos />}
                 </main>
             </div>
