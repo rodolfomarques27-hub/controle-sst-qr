@@ -57,7 +57,7 @@ const documentosEmpresaBase = [
         nome: "LTCAT",
         validadePadraoDias: null,
         regra:
-            "Documento previdenciário para caracterizar exposição a agentes nocivos. Não possui validade fixa por NR; deve ser revisado sempre que houver alteração no ambiente, processo, layout, equipamentos, agentes nocivos ou medidas de controle.",
+            "Documento previdenciário utilizado para caracterizar exposição a agentes nocivos. Não possui validade fixa por NR. Deve ser revisado sempre que houver alteração no ambiente de trabalho, processo, layout, equipamentos, agentes nocivos, EPCs, EPIs ou medidas de controle.",
         fundamento: "Base legal: legislação previdenciária/eSocial. Não é documento de NR.",
     },
     {
@@ -65,16 +65,16 @@ const documentosEmpresaBase = [
         nome: "PCMSO",
         validadePadraoDias: 365,
         regra:
-            "Programa médico ocupacional elaborado com base nos riscos identificados no PGR. Controle interno recomendado anual, considerando o relatório analítico anual e a necessidade de atualização quando houver alteração de riscos, função, processo ou exposição ocupacional.",
-        fundamento: "Base normativa: NR-07, integrada aos riscos ocupacionais do PGR/NR-01.",
+            "Programa médico ocupacional baseado nos riscos identificados no PGR. Controle interno anual recomendado, considerando o relatório analítico anual, exames ocupacionais, mudanças de função, alteração de riscos ou exposição ocupacional.",
+        fundamento: "Base normativa: NR-07, integrada aos riscos ocupacionais identificados no PGR/NR-01.",
     },
     {
         tipo: "PGR",
         nome: "PGR",
         validadePadraoDias: 730,
         regra:
-            "A avaliação de riscos do PGR é processo contínuo. Deve ser revista, no mínimo, a cada 2 anos ou quando houver mudanças em processos, atividades, layout, equipamentos, medidas de prevenção, ocorrência de acidente/incidente relevante ou indicação de necessidade de nova avaliação.",
-        fundamento: "Base normativa: NR-01/GRO/PGR.",
+            "Programa de Gerenciamento de Riscos. A avaliação de riscos deve ser revista no mínimo a cada 2 anos ou quando houver mudanças em processos, atividades, layout, equipamentos, medidas de prevenção, ocorrência de acidente/incidente relevante ou indicação de necessidade de nova avaliação.",
+        fundamento: "Base normativa: NR-01 / GRO / PGR.",
     },
 ];
 
@@ -1128,6 +1128,7 @@ function Empresas({
     erroBanco,
     onAtualizarBanco,
     onAdicionarEmpresa,
+    onAtualizarEmpresa,
     onAdicionarDocumentoEmpresa,
     onExcluirDocumentoEmpresa,
 }) {
@@ -1151,6 +1152,10 @@ function Empresas({
     const [salvandoEmpresa, setSalvandoEmpresa] = useState(false);
     const [salvandoDocumento, setSalvandoDocumento] = useState(false);
     const [empresaRevisao, setEmpresaRevisao] = useState(null);
+    const [empresaEdicao, setEmpresaEdicao] = useState(null);
+    const [salvandoEdicaoEmpresa, setSalvandoEdicaoEmpresa] = useState(false);
+
+    const documentoSelecionado = useMemo(() => obterDocumentoEmpresa(novoDoc.tipo), [novoDoc.tipo]);
 
     const documentosPorEmpresa = useMemo(() => {
         return documentosEmpresas.reduce((acc, doc) => {
@@ -1185,13 +1190,56 @@ function Empresas({
     };
 
     const alterarTipoDocumento = (tipo) => {
-        const vencimento = calcularVencimentoDocumento(tipo, novoDoc.dataEmissao);
-        setNovoDoc({ ...novoDoc, tipo, dataVencimento: vencimento });
+        setNovoDoc((atual) => ({
+            ...atual,
+            tipo,
+            dataVencimento: calcularVencimentoDocumento(tipo, atual.dataEmissao),
+        }));
     };
 
     const alterarEmissaoDocumento = (dataEmissao) => {
-        const vencimento = calcularVencimentoDocumento(novoDoc.tipo, dataEmissao);
-        setNovoDoc({ ...novoDoc, dataEmissao, dataVencimento: vencimento });
+        setNovoDoc((atual) => ({
+            ...atual,
+            dataEmissao,
+            dataVencimento: calcularVencimentoDocumento(atual.tipo, dataEmissao),
+        }));
+    };
+
+    const abrirEdicaoEmpresa = (empresa) => {
+        setEmpresaEdicao({
+            id: empresa.id,
+            nome: empresa.nome || "",
+            cnpj: empresa.cnpj || "",
+            responsavel: empresa.responsavel || "",
+            email: empresa.email || "",
+            telefone: empresa.telefone || "",
+            status: empresa.status || "Ativa",
+        });
+    };
+
+    const salvarEdicaoEmpresa = async () => {
+        if (!empresaEdicao?.nome?.trim()) {
+            alert("Informe o nome da empresa.");
+            return;
+        }
+
+        setSalvandoEdicaoEmpresa(true);
+
+        const ok = await onAtualizarEmpresa({
+            id: empresaEdicao.id,
+            nome: empresaEdicao.nome.trim(),
+            cnpj: empresaEdicao.cnpj.trim(),
+            responsavel: empresaEdicao.responsavel.trim(),
+            email: empresaEdicao.email.trim(),
+            telefone: empresaEdicao.telefone.trim(),
+            status: empresaEdicao.status || "Ativa",
+        });
+
+        setSalvandoEdicaoEmpresa(false);
+
+        if (ok) {
+            setEmpresaEdicao(null);
+        }
     };
 
     const adicionarDocumento = async () => {
@@ -1346,8 +1394,9 @@ function Empresas({
                             </select>
 
                             <div className="rounded-2xl bg-slate-50 p-3 text-xs text-slate-600">
-                                <p><strong>Regra:</strong> {obterDocumentoEmpresa(novoDoc.tipo).regra}</p>
-                                <p className="mt-1 text-slate-500"><strong>Referência:</strong> {obterDocumentoEmpresa(novoDoc.tipo).fundamento}</p>
+                                <p className="font-bold text-slate-800">{documentoSelecionado.nome}</p>
+                                <p className="mt-1"><strong>Regra:</strong> {documentoSelecionado.regra}</p>
+                                <p className="mt-1 text-slate-500"><strong>Referência:</strong> {documentoSelecionado.fundamento}</p>
                             </div>
 
                             <div className="grid gap-3 md:grid-cols-2">
@@ -1448,6 +1497,13 @@ function Empresas({
                                                     {empresa.status || "Ativa"}
                                                 </span>
                                                 <button
+                                                    onClick={() => abrirEdicaoEmpresa(empresa)}
+                                                    className="inline-flex items-center gap-1 rounded-full bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 ring-1 ring-slate-200 hover:bg-slate-50"
+                                                >
+                                                    <FileText className="h-3.5 w-3.5" />
+                                                    Editar dados
+                                                </button>
+                                                <button
                                                     onClick={() => setEmpresaRevisao({ empresa, docs })}
                                                     className="inline-flex items-center gap-1 rounded-full bg-slate-950 px-3 py-1.5 text-xs font-semibold text-white hover:bg-slate-800"
                                                 >
@@ -1468,7 +1524,7 @@ function Empresas({
                                                             <div>
                                                                 <p className="font-bold text-slate-900">{tipoDoc.nome}</p>
                                                                 <p className="text-xs text-slate-400">
-                                                                    {doc ? `Emissão: ${formatDate(doc.data_emissao)}` : "Não enviado"}
+                                                                    {doc ? `Emissão: ${formatDate(doc.data_emissao)}` : "Documento ainda não cadastrado"}
                                                                 </p>
                                                             </div>
                                                             {doc && <StatusPill status={st} small />}
@@ -1480,7 +1536,7 @@ function Empresas({
                                                                     <strong>Revisão:</strong> {doc.data_vencimento ? formatDate(doc.data_vencimento) : "Sem vencimento fixo"}
                                                                 </p>
                                                                 <p className="truncate text-xs text-slate-500">
-                                                                    <strong>Arquivo:</strong> {doc.arquivo_nome || "Não anexado"}
+                                                                    <strong>Arquivo:</strong> {doc.arquivo_nome || "Arquivo ainda não anexado"}
                                                                 </p>
                                                                 {doc.observacao && (
                                                                     <p className="line-clamp-2 text-xs text-slate-500">{doc.observacao}</p>
@@ -1495,7 +1551,7 @@ function Empresas({
                                                                 </button>
                                                             </div>
                                                         ) : (
-                                                            <p className="text-xs text-slate-500">Documento pendente para esta empresa.</p>
+                                                            <p className="text-xs text-slate-500">Documento ainda não cadastrado para esta empresa.</p>
                                                         )}
                                                     </div>
                                                 );
@@ -1507,6 +1563,103 @@ function Empresas({
                     </div>
                 </Card>
             </div>
+
+            {empresaEdicao && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/70 p-4">
+                    <div className="w-full max-w-2xl rounded-[2rem] bg-white p-6 shadow-2xl">
+                        <div className="flex items-start justify-between gap-4 border-b border-slate-200 pb-4">
+                            <div>
+                                <p className="text-xs font-bold uppercase tracking-wide text-slate-400">Editar empresa</p>
+                                <h2 className="mt-1 text-2xl font-bold text-slate-950">{empresaEdicao.nome}</h2>
+                                <p className="mt-1 text-sm text-slate-500">Atualize os dados cadastrais da empresa terceirizada.</p>
+                            </div>
+                            <button
+                                onClick={() => setEmpresaEdicao(null)}
+                                className="rounded-2xl bg-slate-100 px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-200"
+                            >
+                                Fechar
+                            </button>
+                        </div>
+
+                        <div className="mt-5 grid gap-3 md:grid-cols-2">
+                            <div className="md:col-span-2">
+                                <label className="mb-1 block text-xs font-bold uppercase tracking-wide text-slate-500">Nome da empresa</label>
+                                <input
+                                    value={empresaEdicao.nome}
+                                    onChange={(e) => setEmpresaEdicao({ ...empresaEdicao, nome: e.target.value })}
+                                    className="w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-slate-400 focus:ring-4 focus:ring-slate-100"
+                                />
+                            </div>
+
+                            <div>
+                                <label className="mb-1 block text-xs font-bold uppercase tracking-wide text-slate-500">CNPJ</label>
+                                <input
+                                    value={empresaEdicao.cnpj}
+                                    onChange={(e) => setEmpresaEdicao({ ...empresaEdicao, cnpj: e.target.value })}
+                                    className="w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-slate-400 focus:ring-4 focus:ring-slate-100"
+                                />
+                            </div>
+
+                            <div>
+                                <label className="mb-1 block text-xs font-bold uppercase tracking-wide text-slate-500">Status</label>
+                                <select
+                                    value={empresaEdicao.status}
+                                    onChange={(e) => setEmpresaEdicao({ ...empresaEdicao, status: e.target.value })}
+                                    className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none focus:border-slate-400 focus:ring-4 focus:ring-slate-100"
+                                >
+                                    <option>Ativa</option>
+                                    <option>Inativa</option>
+                                    <option>Bloqueada</option>
+                                </select>
+                            </div>
+
+                            <div>
+                                <label className="mb-1 block text-xs font-bold uppercase tracking-wide text-slate-500">Responsável</label>
+                                <input
+                                    value={empresaEdicao.responsavel}
+                                    onChange={(e) => setEmpresaEdicao({ ...empresaEdicao, responsavel: e.target.value })}
+                                    className="w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-slate-400 focus:ring-4 focus:ring-slate-100"
+                                />
+                            </div>
+
+                            <div>
+                                <label className="mb-1 block text-xs font-bold uppercase tracking-wide text-slate-500">E-mail</label>
+                                <input
+                                    value={empresaEdicao.email}
+                                    onChange={(e) => setEmpresaEdicao({ ...empresaEdicao, email: e.target.value })}
+                                    className="w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-slate-400 focus:ring-4 focus:ring-slate-100"
+                                />
+                            </div>
+
+                            <div className="md:col-span-2">
+                                <label className="mb-1 block text-xs font-bold uppercase tracking-wide text-slate-500">Telefone</label>
+                                <input
+                                    value={empresaEdicao.telefone}
+                                    onChange={(e) => setEmpresaEdicao({ ...empresaEdicao, telefone: e.target.value })}
+                                    className="w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-slate-400 focus:ring-4 focus:ring-slate-100"
+                                />
+                            </div>
+                        </div>
+
+                        <div className="mt-6 flex flex-col gap-3 sm:flex-row">
+                            <button
+                                onClick={salvarEdicaoEmpresa}
+                                disabled={salvandoEdicaoEmpresa}
+                                className="flex-1 rounded-2xl bg-slate-950 px-4 py-3 text-sm font-semibold text-white hover:bg-slate-800 disabled:opacity-60"
+                            >
+                                {salvandoEdicaoEmpresa ? "Salvando alterações..." : "Salvar alterações"}
+                            </button>
+
+                            <button
+                                onClick={() => setEmpresaEdicao(null)}
+                                className="flex-1 rounded-2xl bg-slate-100 px-4 py-3 text-sm font-semibold text-slate-700 hover:bg-slate-200"
+                            >
+                                Cancelar
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
 
             {empresaRevisao && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/70 p-4">
@@ -1550,7 +1703,7 @@ function Empresas({
                                             <p><strong>Regra:</strong> {tipoDoc.regra}</p>
                                             <p><strong>Emissão:</strong> {doc ? formatDate(doc.data_emissao) : "Documento não enviado"}</p>
                                             <p><strong>Próxima revisão:</strong> {doc?.data_vencimento ? formatDate(doc.data_vencimento) : "Sem vencimento fixo / controlar por alteração"}</p>
-                                            <p><strong>Arquivo:</strong> {doc?.arquivo_nome || "Não anexado"}</p>
+                                            <p><strong>Arquivo:</strong> {doc?.arquivo_nome || "Arquivo ainda não anexado"}</p>
                                             {doc?.observacao && <p><strong>Observação:</strong> {doc.observacao}</p>}
                                         </div>
 
@@ -1748,6 +1901,45 @@ export default function App() {
             return true;
         } catch (error) {
             setErroBanco(error.message || "Erro ao cadastrar empresa.");
+            return false;
+        }
+    }
+
+    async function atualizarEmpresa(empresaAtualizada) {
+        setErroBanco("");
+
+        try {
+            const { data, error } = await supabase
+                .from("empresas")
+                .update({
+                    nome: empresaAtualizada.nome,
+                    cnpj: empresaAtualizada.cnpj || null,
+                    responsavel: empresaAtualizada.responsavel || null,
+                    email: empresaAtualizada.email || null,
+                    telefone: empresaAtualizada.telefone || null,
+                    status: empresaAtualizada.status || "Ativa",
+                })
+                .eq("id", empresaAtualizada.id)
+                .select("id, nome, cnpj, responsavel, email, telefone, status")
+                .single();
+
+            if (error) {
+                throw new Error(`Erro ao atualizar empresa: ${error.message}`);
+            }
+
+            setEmpresasBanco((atual) =>
+                atual.map((empresa) => (empresa.id === data.id ? data : empresa)).sort((a, b) => a.nome.localeCompare(b.nome))
+            );
+
+            setColaboradores((atual) =>
+                atual.map((colaborador) =>
+                    colaborador.empresaId === data.id ? { ...colaborador, empresa: data.nome } : colaborador
+                )
+            );
+
+            return true;
+        } catch (error) {
+            setErroBanco(error.message || "Erro ao atualizar empresa.");
             return false;
         }
     }
@@ -2098,6 +2290,7 @@ export default function App() {
                             erroBanco={erroBanco}
                             onAtualizarBanco={carregarColaboradores}
                             onAdicionarEmpresa={adicionarEmpresa}
+                            onAtualizarEmpresa={atualizarEmpresa}
                             onAdicionarDocumentoEmpresa={adicionarDocumentoEmpresa}
                             onExcluirDocumentoEmpresa={excluirDocumentoEmpresa}
                         />
