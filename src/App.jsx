@@ -56,19 +56,25 @@ const documentosEmpresaBase = [
         tipo: "LTCAT",
         nome: "LTCAT",
         validadePadraoDias: null,
-        regra: "Sem vencimento legal fixo. Controlar revisão quando houver alteração de layout, processo, máquinas, agentes nocivos ou medidas de controle.",
+        regra:
+            "Documento previdenciário para caracterizar exposição a agentes nocivos. Não possui validade fixa por NR; deve ser revisado sempre que houver alteração no ambiente, processo, layout, equipamentos, agentes nocivos ou medidas de controle.",
+        fundamento: "Base legal: legislação previdenciária/eSocial. Não é documento de NR.",
     },
     {
         tipo: "PCMSO",
         nome: "PCMSO",
         validadePadraoDias: 365,
-        regra: "Controle anual recomendado, alinhado ao relatório analítico anual e à avaliação dos riscos ocupacionais.",
+        regra:
+            "Programa médico ocupacional elaborado com base nos riscos identificados no PGR. Controle interno recomendado anual, considerando o relatório analítico anual e a necessidade de atualização quando houver alteração de riscos, função, processo ou exposição ocupacional.",
+        fundamento: "Base normativa: NR-07, integrada aos riscos ocupacionais do PGR/NR-01.",
     },
     {
         tipo: "PGR",
         nome: "PGR",
         validadePadraoDias: 730,
-        regra: "Controle de revisão a cada 24 meses ou sempre que houver mudança nos riscos, processos, layout, equipamentos ou medidas de controle.",
+        regra:
+            "A avaliação de riscos do PGR é processo contínuo. Deve ser revista, no mínimo, a cada 2 anos ou quando houver mudanças em processos, atividades, layout, equipamentos, medidas de prevenção, ocorrência de acidente/incidente relevante ou indicação de necessidade de nova avaliação.",
+        fundamento: "Base normativa: NR-01/GRO/PGR.",
     },
 ];
 
@@ -193,6 +199,15 @@ function formatDate(dataISO) {
 
 function classNames(...items) {
     return items.filter(Boolean).join(" ");
+}
+
+function sanitizarNomeArquivo(nome) {
+    return String(nome || "documento.pdf")
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .replace(/[^a-zA-Z0-9._-]/g, "-")
+        .replace(/-+/g, "-")
+        .toLowerCase();
 }
 
 function StatusPill({ status, small = false }) {
@@ -1135,6 +1150,7 @@ function Empresas({
 
     const [salvandoEmpresa, setSalvandoEmpresa] = useState(false);
     const [salvandoDocumento, setSalvandoDocumento] = useState(false);
+    const [empresaRevisao, setEmpresaRevisao] = useState(null);
 
     const documentosPorEmpresa = useMemo(() => {
         return documentosEmpresas.reduce((acc, doc) => {
@@ -1330,7 +1346,8 @@ function Empresas({
                             </select>
 
                             <div className="rounded-2xl bg-slate-50 p-3 text-xs text-slate-600">
-                                <strong>Regra:</strong> {obterDocumentoEmpresa(novoDoc.tipo).regra}
+                                <p><strong>Regra:</strong> {obterDocumentoEmpresa(novoDoc.tipo).regra}</p>
+                                <p className="mt-1 text-slate-500"><strong>Referência:</strong> {obterDocumentoEmpresa(novoDoc.tipo).fundamento}</p>
                             </div>
 
                             <div className="grid gap-3 md:grid-cols-2">
@@ -1426,9 +1443,18 @@ function Empresas({
                                                     Responsável: {empresa.responsavel || "-"} · {empresa.email || "-"}
                                                 </p>
                                             </div>
-                                            <span className="rounded-full bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700 ring-1 ring-emerald-200">
-                                                {empresa.status || "Ativa"}
-                                            </span>
+                                            <div className="flex flex-wrap items-center gap-2">
+                                                <span className="rounded-full bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700 ring-1 ring-emerald-200">
+                                                    {empresa.status || "Ativa"}
+                                                </span>
+                                                <button
+                                                    onClick={() => setEmpresaRevisao({ empresa, docs })}
+                                                    className="inline-flex items-center gap-1 rounded-full bg-slate-950 px-3 py-1.5 text-xs font-semibold text-white hover:bg-slate-800"
+                                                >
+                                                    <Eye className="h-3.5 w-3.5" />
+                                                    Revisar documentos
+                                                </button>
+                                            </div>
                                         </div>
 
                                         <div className="mt-4 grid gap-3 lg:grid-cols-3">
@@ -1461,10 +1487,11 @@ function Empresas({
                                                                 )}
                                                                 <button
                                                                     onClick={() => onExcluirDocumentoEmpresa(doc)}
+                                                                    title="Excluir este documento do cadastro da empresa"
                                                                     className="inline-flex items-center gap-1 rounded-xl bg-red-50 px-2.5 py-1.5 text-xs font-semibold text-red-700 ring-1 ring-red-200 hover:bg-red-100"
                                                                 >
                                                                     <Trash2 className="h-3.5 w-3.5" />
-                                                                    Remover
+                                                                    Excluir documento
                                                                 </button>
                                                             </div>
                                                         ) : (
@@ -1480,6 +1507,73 @@ function Empresas({
                     </div>
                 </Card>
             </div>
+
+            {empresaRevisao && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/70 p-4">
+                    <div className="max-h-[90vh] w-full max-w-5xl overflow-auto rounded-[2rem] bg-white p-6 shadow-2xl">
+                        <div className="flex flex-col justify-between gap-4 border-b border-slate-200 pb-4 md:flex-row md:items-start">
+                            <div>
+                                <p className="text-xs font-bold uppercase tracking-wide text-slate-400">Revisão documental da empresa</p>
+                                <h2 className="mt-1 text-2xl font-bold text-slate-950">{empresaRevisao.empresa.nome}</h2>
+                                <p className="mt-1 text-sm text-slate-500">
+                                    CNPJ: {empresaRevisao.empresa.cnpj || "Não informado"} · Responsável: {empresaRevisao.empresa.responsavel || "-"}
+                                </p>
+                                <p className="mt-1 text-sm text-slate-500">
+                                    E-mail: {empresaRevisao.empresa.email || "-"} · Telefone: {empresaRevisao.empresa.telefone || "-"}
+                                </p>
+                            </div>
+
+                            <button
+                                onClick={() => setEmpresaRevisao(null)}
+                                className="rounded-2xl bg-slate-950 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-800"
+                            >
+                                Fechar revisão
+                            </button>
+                        </div>
+
+                        <div className="mt-5 grid gap-4 md:grid-cols-3">
+                            {documentosEmpresaBase.map((tipoDoc) => {
+                                const doc = empresaRevisao.docs.find((item) => item.tipo_documento === tipoDoc.tipo);
+                                const st = statusEmpresaDocumento(doc?.data_vencimento);
+
+                                return (
+                                    <div key={tipoDoc.tipo} className="rounded-3xl border border-slate-200 p-4">
+                                        <div className="mb-3 flex items-start justify-between gap-2">
+                                            <div>
+                                                <h3 className="text-lg font-bold text-slate-950">{tipoDoc.nome}</h3>
+                                                <p className="text-xs text-slate-400">{tipoDoc.fundamento}</p>
+                                            </div>
+                                            {doc ? <StatusPill status={st} small /> : <span className="rounded-full bg-red-50 px-2 py-1 text-xs font-semibold text-red-700 ring-1 ring-red-200">Pendente</span>}
+                                        </div>
+
+                                        <div className="space-y-2 text-sm text-slate-600">
+                                            <p><strong>Regra:</strong> {tipoDoc.regra}</p>
+                                            <p><strong>Emissão:</strong> {doc ? formatDate(doc.data_emissao) : "Documento não enviado"}</p>
+                                            <p><strong>Próxima revisão:</strong> {doc?.data_vencimento ? formatDate(doc.data_vencimento) : "Sem vencimento fixo / controlar por alteração"}</p>
+                                            <p><strong>Arquivo:</strong> {doc?.arquivo_nome || "Não anexado"}</p>
+                                            {doc?.observacao && <p><strong>Observação:</strong> {doc.observacao}</p>}
+                                        </div>
+
+                                        {doc && (
+                                            <button
+                                                onClick={() => onExcluirDocumentoEmpresa(doc)}
+                                                className="mt-4 inline-flex items-center gap-1 rounded-xl bg-red-50 px-3 py-2 text-xs font-semibold text-red-700 ring-1 ring-red-200 hover:bg-red-100"
+                                            >
+                                                <Trash2 className="h-3.5 w-3.5" />
+                                                Excluir documento
+                                            </button>
+                                        )}
+                                    </div>
+                                );
+                            })}
+                        </div>
+
+                        <div className="mt-5 rounded-3xl bg-slate-50 p-4 text-sm text-slate-600">
+                            <strong>Observação técnica:</strong> este painel serve para conferência documental. A validade automática é um controle interno e deve ser confirmada pelo responsável de SST conforme o documento emitido, escopo da empresa, alterações de risco e exigências contratuais do cliente.
+                        </div>
+                    </div>
+                </div>
+            )}
         </motion.div>
     );
 }
@@ -1666,13 +1760,16 @@ export default function App() {
             let arquivoNome = novoDoc.arquivo?.name || null;
 
             if (novoDoc.arquivo) {
-                const caminho = `${novoDoc.empresaId}/${novoDoc.tipo}-${Date.now()}-${novoDoc.arquivo.name}`;
+                const nomeSeguro = sanitizarNomeArquivo(novoDoc.arquivo.name);
+                const tipoSeguro = sanitizarNomeArquivo(novoDoc.tipo);
+                const caminho = `${novoDoc.empresaId}/${tipoSeguro}-${Date.now()}-${nomeSeguro}`;
 
                 const { error: uploadError } = await supabase.storage
                     .from("documentos-empresas")
                     .upload(caminho, novoDoc.arquivo, {
                         cacheControl: "3600",
                         upsert: true,
+                        contentType: novoDoc.arquivo.type || "application/pdf",
                     });
 
                 if (uploadError) {
@@ -1680,6 +1777,7 @@ export default function App() {
                 }
 
                 arquivoUrl = caminho;
+                arquivoNome = nomeSeguro;
             }
 
             const { data, error } = await supabase
@@ -1716,7 +1814,7 @@ export default function App() {
     }
 
     async function excluirDocumentoEmpresa(documento) {
-        const confirmar = window.confirm(`Deseja remover o documento ${documento.tipo_documento}?`);
+        const confirmar = window.confirm(`Deseja excluir definitivamente o documento ${documento.tipo_documento} desta empresa?`);
 
         if (!confirmar) return;
 
