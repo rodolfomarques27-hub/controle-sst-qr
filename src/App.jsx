@@ -299,7 +299,10 @@ function obterUrlFotoColaborador(caminho) {
 }
 
 function avaliarTreinamentosColaborador(colaborador) {
-    const obrigatorios = treinamentosObrigatoriosFuncao(colaborador.funcao);
+    const removidos = (colaborador.treinamentosRemovidos || []).map(Number);
+    const obrigatorios = treinamentosObrigatoriosFuncao(colaborador.funcao).filter(
+        (treinamento) => !removidos.includes(Number(treinamento.id))
+    );
     const realizados = colaborador.treinamentos || [];
 
     const itens = obrigatorios.map((treinamento) => {
@@ -388,6 +391,7 @@ function normalizarColaborador(item) {
         fotoNome: item.foto_nome || item.fotoNome || "",
         status: item.status || "Ativo",
         statusMobilizacao: item.status_mobilizacao || item.statusMobilizacao || "Mobilizado",
+        treinamentosRemovidos: item.treinamentos_removidos || item.treinamentosRemovidos || [],
         token: item.token_qr || item.token || `SST-${String(item.id).slice(0, 8)}`,
         treinamentos: item.treinamentos || [],
     };
@@ -1189,6 +1193,7 @@ function Colaboradores({
                 "Matriz aplicada",
                 "Status geral",
                 "Treinamentos obrigatórios",
+                "Treinamentos removidos",
                 "Treinamentos válidos",
                 "Pendentes",
                 "Vencidos",
@@ -1210,6 +1215,7 @@ function Colaboradores({
                 avaliacao.matriz.rotulo,
                 geral.texto,
                 avaliacao.itens.map((item) => item.treinamento.nome).join(" | "),
+                (c.treinamentosRemovidos || []).map((id) => obterTreinamento(id)?.nome).filter(Boolean).join(" | "),
                 avaliacao.emDia.map((item) => item.treinamento.nome).join(" | "),
                 avaliacao.pendentes.map((item) => item.treinamento.nome).join(" | "),
                 avaliacao.vencidos.map((item) => item.treinamento.nome).join(" | "),
@@ -1317,6 +1323,7 @@ function Colaboradores({
             codigoFuncionario: colaborador.codigoFuncionario || "",
             status: colaborador.status || "Ativo",
             statusMobilizacao: colaborador.statusMobilizacao || "Mobilizado",
+            treinamentosRemovidos: colaborador.treinamentosRemovidos || [],
             fotoAtual: colaborador.fotoUrl || "",
             fotoNomeAtual: colaborador.fotoNome || "",
             foto: null,
@@ -1339,6 +1346,7 @@ function Colaboradores({
             matricula: colaboradorEdicao.matricula.trim(),
             status: colaboradorEdicao.status || "Ativo",
             statusMobilizacao: colaboradorEdicao.statusMobilizacao || "Mobilizado",
+            treinamentosRemovidos: colaboradorEdicao.treinamentosRemovidos || [],
             codigoFuncionario: colaboradorEdicao.codigoFuncionario,
             foto: colaboradorEdicao.foto,
             fotoAtual: colaboradorEdicao.fotoAtual,
@@ -1640,7 +1648,7 @@ function Colaboradores({
                                                         "mt-2 inline-flex rounded-xl px-3 py-2 text-xs font-semibold ring-1",
                                                         c.statusMobilizacao === "Mobilizado"
                                                             ? "bg-emerald-50 text-emerald-700 ring-emerald-200"
-                                                            : "bg-slate-100 text-slate-700 ring-slate-300"
+                                                            : "bg-red-50 text-red-700 ring-red-200"
                                                     )}>
                                                         Situação na obra: {c.statusMobilizacao}
                                                     </span>
@@ -1957,6 +1965,56 @@ function Colaboradores({
                                                 {treinamento.nome}
                                             </span>
                                         ))}
+                                    </div>
+                                </div>
+
+                                <div className="md:col-span-2 rounded-2xl border border-blue-100 bg-blue-50 p-4">
+                                    <div className="mb-3">
+                                        <p className="text-xs font-bold uppercase tracking-wide text-blue-700">
+                                            Tirar treinamentos deste colaborador
+                                        </p>
+                                        <p className="mt-1 text-xs text-blue-700/80">
+                                            Use apenas quando o treinamento não se aplicar à atividade real do colaborador. O item será removido da cobrança, dos pendentes e dos relatórios.
+                                        </p>
+                                    </div>
+
+                                    <div className="grid gap-2 md:grid-cols-2">
+                                        {treinamentosObrigatoriosFuncao(colaboradorEdicao.funcao).map((treinamento) => {
+                                            const removido = (colaboradorEdicao.treinamentosRemovidos || []).map(Number).includes(Number(treinamento.id));
+
+                                            return (
+                                                <label
+                                                    key={treinamento.id}
+                                                    className={classNames(
+                                                        "flex cursor-pointer items-start gap-2 rounded-2xl border p-3 text-sm",
+                                                        removido
+                                                            ? "border-red-200 bg-red-50 text-red-700"
+                                                            : "border-slate-200 bg-white text-slate-700"
+                                                    )}
+                                                >
+                                                    <input
+                                                        type="checkbox"
+                                                        checked={removido}
+                                                        onChange={(e) => {
+                                                            const atual = (colaboradorEdicao.treinamentosRemovidos || []).map(Number);
+                                                            const atualizados = e.target.checked
+                                                                ? [...atual, Number(treinamento.id)]
+                                                                : atual.filter((id) => id !== Number(treinamento.id));
+
+                                                            setColaboradorEdicao({
+                                                                ...colaboradorEdicao,
+                                                                treinamentosRemovidos: Array.from(new Set(atualizados)),
+                                                            });
+                                                        }}
+                                                        className="mt-1"
+                                                    />
+                                                    <span>
+                                                        <strong className="block">{treinamento.nome}</strong>
+                                                        <span className="text-xs opacity-75">{removido ? "Removido desta função para este colaborador" : treinamento.base}</span>
+                                                    </span>
+                                                </label>
+                                            );
+                                        })}
                                     </div>
                                 </div>
 
@@ -3842,6 +3900,7 @@ export default function App() {
           matricula,
           codigo_funcionario,
           status_mobilizacao,
+          treinamentos_removidos,
           foto_url,
           foto_nome,
           token_qr,
@@ -4191,6 +4250,7 @@ export default function App() {
                     matricula: novo.matricula || null,
                     codigo_funcionario: novo.codigoFuncionario || gerarCodigoFuncionario(novo.nome),
                     status_mobilizacao: novo.statusMobilizacao || "Mobilizado",
+                    treinamentos_removidos: [],
                     status: "Ativo",
                 })
                 .select(`
@@ -4232,6 +4292,7 @@ export default function App() {
             matricula,
             codigo_funcionario,
             status_mobilizacao,
+            treinamentos_removidos,
             foto_url,
             foto_nome,
             token_qr,
@@ -4291,6 +4352,7 @@ export default function App() {
                     matricula: colaboradorAtualizado.matricula || null,
                     status: colaboradorAtualizado.status || "Ativo",
                     status_mobilizacao: colaboradorAtualizado.statusMobilizacao || "Mobilizado",
+                    treinamentos_removidos: colaboradorAtualizado.treinamentosRemovidos || [],
                     foto_url: fotoAtualizada.foto_url,
                     foto_nome: fotoAtualizada.foto_nome,
                 })
@@ -4566,3 +4628,4 @@ export default function App() {
         </div>
     );
 }
+
