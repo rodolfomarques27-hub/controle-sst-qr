@@ -1043,7 +1043,7 @@ function Colaboradores({
             pendentes: avaliacoes.reduce((total, item) => total + item.pendentes.length, 0),
             vencidos: avaliacoes.reduce((total, item) => total + item.vencidos.length, 0),
             vencendo: avaliacoes.reduce((total, item) => total + item.vencendo.length, 0),
-            aptos: colaboradores.filter((c) => statusGeral(c).texto === "Apto").length,
+            regulares: colaboradores.filter((c) => statusGeral(c).texto === "Apto").length,
         };
     }, [colaboradores]);
 
@@ -1353,16 +1353,16 @@ function Colaboradores({
                             <p className="text-2xl font-bold text-slate-950">{colaboradores.length}</p>
                         </div>
                         <div className="rounded-2xl bg-emerald-50 p-3">
-                            <p className="text-xs font-medium text-emerald-700">Aptos</p>
-                            <p className="text-2xl font-bold text-emerald-700">{resumoTreinamentos.aptos}</p>
-                        </div>
-                        <div className="rounded-2xl bg-orange-50 p-3">
-                            <p className="text-xs font-medium text-orange-700">A vencer 30d</p>
-                            <p className="text-2xl font-bold text-orange-700">{resumoTreinamentos.vencendo}</p>
+                            <p className="text-xs font-medium text-emerald-700">Regulares</p>
+                            <p className="text-2xl font-bold text-emerald-700">{resumoTreinamentos.regulares}</p>
                         </div>
                         <div className="rounded-2xl bg-blue-50 p-3">
                             <p className="text-xs font-medium text-blue-700">Pendentes</p>
                             <p className="text-2xl font-bold text-blue-700">{resumoTreinamentos.pendentes}</p>
+                        </div>
+                        <div className="rounded-2xl bg-orange-50 p-3">
+                            <p className="text-xs font-medium text-orange-700">A vencer 30d</p>
+                            <p className="text-2xl font-bold text-orange-700">{resumoTreinamentos.vencendo}</p>
                         </div>
                         <div className="rounded-2xl bg-red-50 p-3">
                             <p className="text-xs font-medium text-red-700">Vencidos</p>
@@ -1429,22 +1429,18 @@ function Colaboradores({
 
                                             <div className="min-w-0">
                                                 <div className="flex flex-col gap-2 lg:pt-1">
-                                                    <div className="flex flex-wrap items-start justify-between gap-2">
-                                                        <h3 className="max-w-full break-words text-lg font-bold leading-snug text-slate-950">
-                                                            {c.nome}
-                                                        </h3>
-                                                        <span className={classNames("w-fit shrink-0 rounded-full px-2.5 py-1 text-xs font-semibold", geral.classe)}>
-                                                            {geral.texto}
-                                                        </span>
-                                                    </div>
+                                                    <h3 className="max-w-full break-words text-lg font-bold leading-snug text-slate-950">
+                                                        {c.nome}
+                                                    </h3>
 
                                                     <p className="text-sm text-slate-500">{c.funcao}</p>
                                                     <p className="break-words text-xs font-semibold text-slate-500">Código: {c.codigoFuncionario}</p>
                                                 </div>
 
-                                                <div className="mt-3 grid grid-cols-1 gap-2 text-xs text-slate-500 md:grid-cols-2">
-                                                    <span className="break-words rounded-xl bg-slate-50 px-3 py-2">{c.empresa}</span>
-                                                    <span className="break-words rounded-xl bg-slate-50 px-3 py-2">{c.matricula || "Matrícula não informada"}</span>
+                                                <div className="mt-3 text-xs text-slate-500">
+                                                    <span className="block break-words rounded-xl bg-slate-50 px-3 py-2">
+                                                        <strong>Empresa:</strong> {c.empresa}
+                                                    </span>
                                                 </div>
 
                                                 <button
@@ -1494,6 +1490,13 @@ function Colaboradores({
                                             </div>
 
                                             <div className="flex flex-col gap-2">
+                                                <div
+                                                    title={geral.detalhe}
+                                                    className={classNames("inline-flex items-center justify-center gap-2 rounded-xl px-3 py-2 text-xs font-semibold", geral.classe)}
+                                                >
+                                                    {geral.texto}
+                                                </div>
+
                                                 <button
                                                     onClick={() => onSelectColab(c)}
                                                     className="inline-flex items-center justify-center gap-2 rounded-xl bg-slate-950 px-3 py-2 text-xs font-semibold text-white hover:bg-slate-800"
