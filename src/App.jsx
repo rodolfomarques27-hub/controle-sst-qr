@@ -2700,31 +2700,33 @@ function Empresas({
                                 const chaveUpload = `${empresaRevisao.empresa.id}-${tipoDoc.tipo}`;
 
                                 return (
-                                    <div key={tipoDoc.tipo} className="flex h-full flex-col rounded-3xl border border-slate-200 p-4">
-                                        <div className="mb-3 flex items-start justify-between gap-2">
-                                            <div>
+                                    <div key={tipoDoc.tipo} className="flex h-full min-h-[620px] flex-col rounded-3xl border border-slate-200 p-4">
+                                        <div className="mb-3 flex min-h-[88px] items-start justify-between gap-2">
+                                            <div className="pr-2">
                                                 <h3 className="text-lg font-bold text-slate-950">{tipoDoc.nome}</h3>
-                                                <p className="line-clamp-2 text-xs text-slate-400">{tipoDoc.fundamento}</p>
+                                                <p className="min-h-[48px] text-xs leading-relaxed text-slate-400">{tipoDoc.fundamento}</p>
                                             </div>
-                                            {doc ? <StatusPill status={st} small /> : <span className="rounded-full bg-red-50 px-2 py-1 text-xs font-semibold text-red-700 ring-1 ring-red-200">Pendente</span>}
+                                            <div className="shrink-0">
+                                                {doc ? <StatusPill status={st} small /> : <span className="rounded-full bg-red-50 px-2 py-1 text-xs font-semibold text-red-700 ring-1 ring-red-200">Pendente</span>}
+                                            </div>
                                         </div>
 
-                                        <div className="flex min-h-[235px] flex-col justify-between rounded-2xl bg-white text-sm text-slate-600">
+                                        <div className="flex min-h-[285px] flex-col justify-between rounded-2xl bg-white text-sm text-slate-600">
                                             <div className="space-y-2">
-                                                <p className="line-clamp-3"><strong>Regra:</strong> {tipoDoc.regra}</p>
+                                                <p className="min-h-[96px] leading-relaxed"><strong>Regra:</strong> {tipoDoc.regra}</p>
                                                 <p><strong>Emissão:</strong> {doc ? formatDate(doc.data_emissao) : "Documento não enviado"}</p>
                                                 <p><strong>Próxima revisão:</strong> {doc?.data_vencimento ? formatDate(doc.data_vencimento) : "Sem revisão definida"}</p>
-                                                <p className="truncate"><strong>Arquivo:</strong> {doc?.arquivo_nome || "Arquivo ainda não anexado"}</p>
+                                                <p className="break-words"><strong>Arquivo:</strong> {doc?.arquivo_nome || "Arquivo ainda não anexado"}</p>
                                             </div>
 
                                             {doc?.observacao && (
-                                                <p className="mt-2 line-clamp-2 text-xs text-slate-500">
+                                                <p className="mt-2 text-xs leading-relaxed text-slate-500">
                                                     <strong>Observação:</strong> {doc.observacao}
                                                 </p>
                                             )}
                                         </div>
 
-                                        <div className="mt-4 rounded-2xl bg-slate-50 p-3">
+                                        <div className="mt-4 min-h-[190px] rounded-2xl bg-slate-50 p-3">
                                             <p className="mb-2 text-xs font-bold uppercase tracking-wide text-slate-500">
                                                 {doc ? "Substituir documento" : "Enviar documento"}
                                             </p>
