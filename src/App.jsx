@@ -191,6 +191,62 @@ function statusEmpresaDocumento(dataVencimento) {
     return statusDocumento(dataVencimento);
 }
 
+function calcularSituacaoDocumentalEmpresa(docs = []) {
+    const obrigatorios = ["LTCAT", "PCMSO", "PGR"];
+    const faltantes = obrigatorios.filter((tipo) => !docs.some((doc) => doc.tipo_documento === tipo));
+
+    if (docs.length === 0) {
+        return {
+            texto: "Sem documentos",
+            classe: "bg-red-50 text-red-700 ring-red-200",
+            detalhe: "Nenhum documento obrigatório cadastrado",
+            faltantes,
+        };
+    }
+
+    if (faltantes.length > 0) {
+        return {
+            texto: "Com pendências",
+            classe: "bg-red-50 text-red-700 ring-red-200",
+            detalhe: `Faltando: ${faltantes.join(", ")}`,
+            faltantes,
+        };
+    }
+
+    const statusDocs = docs.map((doc) => ({
+        tipo: doc.tipo_documento,
+        status: statusEmpresaDocumento(doc.data_vencimento),
+    }));
+
+    const vencidos = statusDocs.filter((item) => item.status.chave === "vencido");
+    const vencendo = statusDocs.filter((item) => item.status.chave === "vencendo");
+
+    if (vencidos.length > 0) {
+        return {
+            texto: "Documentos vencidos",
+            classe: "bg-red-50 text-red-700 ring-red-200",
+            detalhe: `Vencido(s): ${vencidos.map((item) => item.tipo).join(", ")}`,
+            faltantes: [],
+        };
+    }
+
+    if (vencendo.length > 0) {
+        return {
+            texto: "A vencer",
+            classe: "bg-amber-50 text-amber-700 ring-amber-200",
+            detalhe: `A vencer: ${vencendo.map((item) => item.tipo).join(", ")}`,
+            faltantes: [],
+        };
+    }
+
+    return {
+        texto: "Regular",
+        classe: "bg-emerald-50 text-emerald-700 ring-emerald-200",
+        detalhe: "Documentos obrigatórios cadastrados e válidos",
+        faltantes: [],
+    };
+}
+
 
 function formatDate(dataISO) {
     if (!dataISO) return "-";
@@ -248,6 +304,25 @@ function classeStatusEmpresa(status) {
     }
 
     return "bg-slate-100 text-slate-700 ring-slate-300";
+}
+
+function escaparCSV(valor) {
+    const texto = String(valor ?? "").replace(/"/g, '""');
+    return `"${texto}"`;
+}
+
+function baixarCSV(nomeArquivo, linhas) {
+    const csv = linhas.map((linha) => linha.map(escaparCSV).join(";")).join("\n");
+    const blob = new Blob(["\ufeff" + csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+
+    link.href = url;
+    link.download = nomeArquivo;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
 }
 
 function StatusPill({ status, small = false }) {
@@ -1164,6 +1239,7 @@ function ConsultaQR({ colaborador }) {
 function Empresas({
     empresasBanco,
     documentosEmpresas,
+    colaboradores,
     carregandoBanco,
     erroBanco,
     onAtualizarBanco,
@@ -1181,6 +1257,12 @@ function Empresas({
         telefone: "",
         tipoEmpresa: "Terceirizada",
         logo: null,
+        numeroContrato: "",
+        dataInicioContrato: "",
+        dataFimContrato: "",
+        responsavelContratante: "",
+        escopoServico: "",
+        observacaoStatus: "",
     });
 
     const [novoDoc, setNovoDoc] = useState({
@@ -1197,6 +1279,9 @@ function Empresas({
     const [empresaRevisao, setEmpresaRevisao] = useState(null);
     const [empresaEdicao, setEmpresaEdicao] = useState(null);
     const [salvandoEdicaoEmpresa, setSalvandoEdicaoEmpresa] = useState(false);
+    const [buscaEmpresa, setBuscaEmpresa] = useState("");
+    const [filtroStatusEmpresa, setFiltroStatusEmpresa] = useState("Todos");
+    const [filtroTipoEmpresa, setFiltroTipoEmpresa] = useState("Todos");
 
     const documentoSelecionado = useMemo(() => obterDocumentoEmpresa(novoDoc.tipo), [novoDoc.tipo]);
 
@@ -1208,6 +1293,16 @@ function Empresas({
             return acc;
         }, {});
     }, [documentosEmpresas]);
+
+    const colaboradoresPorEmpresa = useMemo(() => {
+        return (colaboradores || []).reduce((acc, colaborador) => {
+            const empresaId = colaborador.empresaId || colaborador.empresa_id;
+            if (!empresaId) return acc;
+            if (!acc[empresaId]) acc[empresaId] = [];
+            acc[empresaId].push(colaborador);
+            return acc;
+        }, {});
+    }, [colaboradores]);
 
     const adicionarEmpresa = async () => {
         if (!novaEmpresa.nome.trim()) {
@@ -1225,12 +1320,32 @@ function Empresas({
             telefone: novaEmpresa.telefone.trim(),
             tipoEmpresa: novaEmpresa.tipoEmpresa,
             logo: novaEmpresa.logo,
+            numeroContrato: novaEmpresa.numeroContrato.trim(),
+            dataInicioContrato: novaEmpresa.dataInicioContrato || null,
+            dataFimContrato: novaEmpresa.dataFimContrato || null,
+            responsavelContratante: novaEmpresa.responsavelContratante.trim(),
+            escopoServico: novaEmpresa.escopoServico.trim(),
+            observacaoStatus: novaEmpresa.observacaoStatus.trim(),
         });
 
         setSalvandoEmpresa(false);
 
         if (ok) {
-            setNovaEmpresa({ nome: "", cnpj: "", responsavel: "", email: "", telefone: "", tipoEmpresa: "Terceirizada", logo: null });
+            setNovaEmpresa({
+                nome: "",
+                cnpj: "",
+                responsavel: "",
+                email: "",
+                telefone: "",
+                tipoEmpresa: "Terceirizada",
+                logo: null,
+                numeroContrato: "",
+                dataInicioContrato: "",
+                dataFimContrato: "",
+                responsavelContratante: "",
+                escopoServico: "",
+                observacaoStatus: "",
+            });
         }
     };
 
@@ -1263,6 +1378,12 @@ function Empresas({
             logoAtual: empresa.logo_url || "",
             logoNomeAtual: empresa.logo_nome || "",
             logo: null,
+            numeroContrato: empresa.numero_contrato || "",
+            dataInicioContrato: empresa.data_inicio_contrato || "",
+            dataFimContrato: empresa.data_fim_contrato || "",
+            responsavelContratante: empresa.responsavel_contratante || "",
+            escopoServico: empresa.escopo_servico || "",
+            observacaoStatus: empresa.observacao_status || "",
         });
     };
 
@@ -1286,6 +1407,12 @@ function Empresas({
             logo: empresaEdicao.logo,
             logoAtual: empresaEdicao.logoAtual,
             logoNomeAtual: empresaEdicao.logoNomeAtual,
+            numeroContrato: empresaEdicao.numeroContrato.trim(),
+            dataInicioContrato: empresaEdicao.dataInicioContrato || null,
+            dataFimContrato: empresaEdicao.dataFimContrato || null,
+            responsavelContratante: empresaEdicao.responsavelContratante.trim(),
+            escopoServico: empresaEdicao.escopoServico.trim(),
+            observacaoStatus: empresaEdicao.observacaoStatus.trim(),
         });
 
         setSalvandoEdicaoEmpresa(false);
@@ -1338,6 +1465,8 @@ function Empresas({
 
     const renderEmpresaCard = (empresa, docs, destaqueContratante = false) => {
         const logoUrl = obterUrlLogoEmpresa(empresa.logo_url);
+        const funcionarios = colaboradoresPorEmpresa[empresa.id] || [];
+        const situacaoDocumental = calcularSituacaoDocumentalEmpresa(docs);
 
         return (
             <div key={empresa.id} className={classNames("rounded-3xl border p-4", destaqueContratante ? "border-slate-300 bg-slate-50" : "border-slate-200 bg-white")}>
@@ -1359,12 +1488,31 @@ function Empresas({
                             <p className="mt-1 text-xs font-semibold text-slate-600">
                                 Tipo: {empresa.tipo_empresa || "Terceirizada"}
                             </p>
+                            <p className="mt-1 text-xs text-slate-500">
+                                Funcionários vinculados: <strong>{funcionarios.length}</strong>
+                            </p>
+                            {empresa.numero_contrato && (
+                                <p className="mt-1 text-xs text-slate-500">
+                                    Contrato: <strong>{empresa.numero_contrato}</strong>
+                                </p>
+                            )}
+                            {empresa.escopo_servico && (
+                                <p className="mt-1 line-clamp-2 text-xs text-slate-500">
+                                    Escopo: {empresa.escopo_servico}
+                                </p>
+                            )}
                         </div>
                     </div>
 
                     <div className="flex flex-wrap items-center gap-2">
                         <span className={classNames("rounded-full px-3 py-1 text-xs font-semibold ring-1", classeStatusEmpresa(empresa.status))}>
                             {normalizarStatusEmpresa(empresa.status)}
+                        </span>
+                        <span
+                            title={situacaoDocumental.detalhe}
+                            className={classNames("rounded-full px-3 py-1 text-xs font-semibold ring-1", situacaoDocumental.classe)}
+                        >
+                            {situacaoDocumental.texto}
                         </span>
                         <button
                             onClick={() => abrirEdicaoEmpresa(empresa)}
@@ -1443,13 +1591,158 @@ function Empresas({
         );
     };
 
-    const empresasContratantes = empresasBanco.filter(
+    const empresasFiltradas = empresasBanco.filter((empresa) => {
+        const texto = [
+            empresa.nome,
+            empresa.cnpj,
+            empresa.responsavel,
+            empresa.email,
+            empresa.telefone,
+            empresa.tipo_empresa,
+            normalizarStatusEmpresa(empresa.status),
+        ]
+            .join(" ")
+            .toLowerCase();
+
+        const atendeBusca = texto.includes(buscaEmpresa.toLowerCase());
+        const atendeStatus = filtroStatusEmpresa === "Todos" || normalizarStatusEmpresa(empresa.status) === filtroStatusEmpresa;
+        const atendeTipo = filtroTipoEmpresa === "Todos" || (empresa.tipo_empresa || "Terceirizada") === filtroTipoEmpresa;
+
+        return atendeBusca && atendeStatus && atendeTipo;
+    });
+
+    const empresasContratantes = empresasFiltradas.filter(
         (empresa) => (empresa.tipo_empresa || "Terceirizada") === "Contratante - Idealiza Cidades"
     );
 
-    const empresasTerceirizadas = empresasBanco.filter(
+    const empresasTerceirizadas = empresasFiltradas.filter(
         (empresa) => (empresa.tipo_empresa || "Terceirizada") !== "Contratante - Idealiza Cidades"
     );
+
+    const documentosFiltrados = documentosEmpresas.filter((doc) =>
+        empresasFiltradas.some((empresa) => empresa.id === doc.empresa_id)
+    );
+
+    const baixarRelatorioEmpresas = () => {
+        const linhas = [
+            ["Empresa", "Tipo", "Status da empresa", "Situação documental", "Nº funcionários", "CNPJ", "Responsável", "E-mail", "Telefone", "Nº contrato", "Início contrato", "Fim contrato", "Escopo do serviço", "Observação status", "LTCAT", "PCMSO", "PGR"],
+        ];
+
+        empresasFiltradas.forEach((empresa) => {
+            const docs = documentosPorEmpresa[empresa.id] || [];
+
+            const statusDoc = (tipo) => {
+                const doc = docs.find((item) => item.tipo_documento === tipo);
+                if (!doc) return "Pendente";
+                const status = statusEmpresaDocumento(doc.data_vencimento);
+                return `${status.texto} - emissão ${formatDate(doc.data_emissao)} - revisão ${doc.data_vencimento ? formatDate(doc.data_vencimento) : "sem vencimento fixo"}`;
+            };
+
+            const situacaoDocumental = calcularSituacaoDocumentalEmpresa(docs);
+            const qtdFuncionarios = (colaboradoresPorEmpresa[empresa.id] || []).length;
+
+            linhas.push([
+                empresa.nome,
+                empresa.tipo_empresa || "Terceirizada",
+                normalizarStatusEmpresa(empresa.status),
+                situacaoDocumental.texto,
+                qtdFuncionarios,
+                empresa.cnpj || "",
+                empresa.responsavel || "",
+                empresa.email || "",
+                empresa.telefone || "",
+                empresa.numero_contrato || "",
+                empresa.data_inicio_contrato ? formatDate(empresa.data_inicio_contrato) : "",
+                empresa.data_fim_contrato ? formatDate(empresa.data_fim_contrato) : "",
+                empresa.escopo_servico || "",
+                empresa.observacao_status || "",
+                statusDoc("LTCAT"),
+                statusDoc("PCMSO"),
+                statusDoc("PGR"),
+            ]);
+        });
+
+        baixarCSV("relatorio-empresas-documentos.csv", linhas);
+    };
+
+    const baixarRelatorioPendencias = () => {
+        const linhas = [
+            ["Empresa", "Tipo da empresa", "Status da empresa", "Situação documental", "Nº funcionários", "Documento", "Situação", "Emissão", "Próxima revisão", "Arquivo"],
+        ];
+
+        empresasFiltradas.forEach((empresa) => {
+            const docs = documentosPorEmpresa[empresa.id] || [];
+
+            documentosEmpresaBase.forEach((tipoDoc) => {
+                const doc = docs.find((item) => item.tipo_documento === tipoDoc.tipo);
+
+                if (!doc) {
+                    const situacaoDocumental = calcularSituacaoDocumentalEmpresa(docs);
+                    const qtdFuncionarios = (colaboradoresPorEmpresa[empresa.id] || []).length;
+
+                    linhas.push([
+                        empresa.nome,
+                        empresa.tipo_empresa || "Terceirizada",
+                        normalizarStatusEmpresa(empresa.status),
+                        situacaoDocumental.texto,
+                        qtdFuncionarios,
+                        tipoDoc.tipo,
+                        "Documento pendente",
+                        "",
+                        "",
+                        "",
+                    ]);
+                    return;
+                }
+
+                const status = statusEmpresaDocumento(doc.data_vencimento);
+
+                if (["vencido", "vencendo"].includes(status.chave)) {
+                    const situacaoDocumental = calcularSituacaoDocumentalEmpresa(docs);
+                    const qtdFuncionarios = (colaboradoresPorEmpresa[empresa.id] || []).length;
+
+                    linhas.push([
+                        empresa.nome,
+                        empresa.tipo_empresa || "Terceirizada",
+                        normalizarStatusEmpresa(empresa.status),
+                        situacaoDocumental.texto,
+                        qtdFuncionarios,
+                        tipoDoc.tipo,
+                        status.texto,
+                        formatDate(doc.data_emissao),
+                        doc.data_vencimento ? formatDate(doc.data_vencimento) : "Sem vencimento fixo",
+                        doc.arquivo_nome || "",
+                    ]);
+                }
+            });
+        });
+
+        baixarCSV("relatorio-pendencias-documentais.csv", linhas);
+    };
+
+    const baixarRelatorioDocumentos = () => {
+        const linhas = [
+            ["Empresa", "Nº funcionários", "Documento", "Status", "Emissão", "Próxima revisão", "Arquivo", "Observação"],
+        ];
+
+        documentosFiltrados.forEach((doc) => {
+            const empresa = empresasBanco.find((item) => item.id === doc.empresa_id);
+            const status = statusEmpresaDocumento(doc.data_vencimento);
+
+            linhas.push([
+                empresa?.nome || "",
+                empresa ? (colaboradoresPorEmpresa[empresa.id] || []).length : 0,
+                doc.tipo_documento,
+                status.texto,
+                formatDate(doc.data_emissao),
+                doc.data_vencimento ? formatDate(doc.data_vencimento) : "Sem vencimento fixo",
+                doc.arquivo_nome || "",
+                doc.observacao || "",
+            ]);
+        });
+
+        baixarCSV("relatorio-documentos-enviados.csv", linhas);
+    };
 
     return (
         <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
@@ -1539,6 +1832,58 @@ function Empresas({
                                     onChange={(e) => setNovaEmpresa({ ...novaEmpresa, logo: e.target.files?.[0] || null })}
                                 />
                             </label>
+
+                            <div className="grid gap-3 md:grid-cols-2">
+                                <input
+                                    value={novaEmpresa.numeroContrato}
+                                    onChange={(e) => setNovaEmpresa({ ...novaEmpresa, numeroContrato: e.target.value })}
+                                    placeholder="Nº do contrato"
+                                    className="w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-slate-400 focus:ring-4 focus:ring-slate-100"
+                                />
+
+                                <input
+                                    value={novaEmpresa.responsavelContratante}
+                                    onChange={(e) => setNovaEmpresa({ ...novaEmpresa, responsavelContratante: e.target.value })}
+                                    placeholder="Responsável da contratante"
+                                    className="w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-slate-400 focus:ring-4 focus:ring-slate-100"
+                                />
+
+                                <div>
+                                    <label className="mb-1 block text-xs font-bold uppercase tracking-wide text-slate-500">Início do contrato</label>
+                                    <input
+                                        type="date"
+                                        value={novaEmpresa.dataInicioContrato}
+                                        onChange={(e) => setNovaEmpresa({ ...novaEmpresa, dataInicioContrato: e.target.value })}
+                                        className="w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-slate-400 focus:ring-4 focus:ring-slate-100"
+                                    />
+                                </div>
+
+                                <div>
+                                    <label className="mb-1 block text-xs font-bold uppercase tracking-wide text-slate-500">Fim do contrato</label>
+                                    <input
+                                        type="date"
+                                        value={novaEmpresa.dataFimContrato}
+                                        onChange={(e) => setNovaEmpresa({ ...novaEmpresa, dataFimContrato: e.target.value })}
+                                        className="w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-slate-400 focus:ring-4 focus:ring-slate-100"
+                                    />
+                                </div>
+                            </div>
+
+                            <textarea
+                                value={novaEmpresa.escopoServico}
+                                onChange={(e) => setNovaEmpresa({ ...novaEmpresa, escopoServico: e.target.value })}
+                                placeholder="Escopo do serviço"
+                                rows={3}
+                                className="w-full resize-none rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-slate-400 focus:ring-4 focus:ring-slate-100"
+                            />
+
+                            <textarea
+                                value={novaEmpresa.observacaoStatus}
+                                onChange={(e) => setNovaEmpresa({ ...novaEmpresa, observacaoStatus: e.target.value })}
+                                placeholder="Observação de bloqueio, suspensão ou condição especial"
+                                rows={2}
+                                className="w-full resize-none rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-slate-400 focus:ring-4 focus:ring-slate-100"
+                            />
 
                             <button
                                 onClick={adicionarEmpresa}
@@ -1647,8 +1992,68 @@ function Empresas({
                             <p className="text-sm text-slate-500">Separação entre contratante e terceirizadas.</p>
                         </div>
                         <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-600">
-                            {empresasBanco.length} empresa(s)
+                            {empresasFiltradas.length} de {empresasBanco.length} empresa(s)
                         </span>
+                    </div>
+
+                    <div className="mb-5 grid gap-3 lg:grid-cols-[1fr_220px_220px]">
+                        <div className="relative">
+                            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                            <input
+                                value={buscaEmpresa}
+                                onChange={(e) => setBuscaEmpresa(e.target.value)}
+                                placeholder="Pesquisar por empresa, CNPJ, responsável, e-mail ou status"
+                                className="w-full rounded-2xl border border-slate-200 py-3 pl-10 pr-4 text-sm outline-none focus:border-slate-400 focus:ring-4 focus:ring-slate-100"
+                            />
+                        </div>
+
+                        <select
+                            value={filtroTipoEmpresa}
+                            onChange={(e) => setFiltroTipoEmpresa(e.target.value)}
+                            className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none focus:border-slate-400 focus:ring-4 focus:ring-slate-100"
+                        >
+                            <option>Todos</option>
+                            <option>Contratante - Idealiza Cidades</option>
+                            <option>Terceirizada</option>
+                        </select>
+
+                        <select
+                            value={filtroStatusEmpresa}
+                            onChange={(e) => setFiltroStatusEmpresa(e.target.value)}
+                            className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none focus:border-slate-400 focus:ring-4 focus:ring-slate-100"
+                        >
+                            <option>Todos</option>
+                            <option>Empresa ativa</option>
+                            <option>Empresa inativa</option>
+                            <option>Empresa inapta</option>
+                            <option>Empresa suspensa</option>
+                        </select>
+                    </div>
+
+                    <div className="mb-5 flex flex-wrap gap-2">
+                        <button
+                            onClick={baixarRelatorioEmpresas}
+                            className="inline-flex items-center gap-2 rounded-2xl bg-slate-950 px-4 py-2.5 text-xs font-semibold text-white hover:bg-slate-800"
+                        >
+                            <Download className="h-4 w-4" />
+                            Baixar relatório geral
+                        </button>
+
+                        <button
+                            onClick={baixarRelatorioPendencias}
+                            className="inline-flex items-center gap-2 rounded-2xl bg-amber-50 px-4 py-2.5 text-xs font-semibold text-amber-700 ring-1 ring-amber-200 hover:bg-amber-100"
+                        >
+                            <AlertTriangle className="h-4 w-4" />
+                            Baixar pendências
+                        </button>
+
+                        <button
+                            onClick={baixarRelatorioDocumentos}
+                            className="inline-flex items-center gap-2 rounded-2xl bg-white px-4 py-2.5 text-xs font-semibold text-slate-700 ring-1 ring-slate-200 hover:bg-slate-50"
+                        >
+                            <FileText className="h-4 w-4" />
+                            Baixar documentos enviados
+                        </button>
                     </div>
 
                     {carregandoBanco && (
@@ -1665,7 +2070,15 @@ function Empresas({
                         </div>
                     )}
 
-                    {!carregandoBanco && empresasBanco.length > 0 && (
+                    {!carregandoBanco && empresasBanco.length > 0 && empresasFiltradas.length === 0 && (
+                        <div className="rounded-3xl border border-dashed border-slate-300 p-8 text-center">
+                            <Search className="mx-auto h-10 w-10 text-slate-300" />
+                            <h3 className="mt-3 font-bold text-slate-900">Nenhuma empresa encontrada</h3>
+                            <p className="mt-1 text-sm text-slate-500">Altere a pesquisa ou os filtros para visualizar empresas.</p>
+                        </div>
+                    )}
+
+                    {!carregandoBanco && empresasFiltradas.length > 0 && (
                         <div className="space-y-6">
                             <section>
                                 <div className="mb-3 flex items-center gap-2">
@@ -1821,6 +2234,64 @@ function Empresas({
                                         onChange={(e) => setEmpresaEdicao({ ...empresaEdicao, logo: e.target.files?.[0] || null })}
                                     />
                                 </label>
+                            </div>
+
+                            <div>
+                                <label className="mb-1 block text-xs font-bold uppercase tracking-wide text-slate-500">Nº do contrato</label>
+                                <input
+                                    value={empresaEdicao.numeroContrato}
+                                    onChange={(e) => setEmpresaEdicao({ ...empresaEdicao, numeroContrato: e.target.value })}
+                                    className="w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-slate-400 focus:ring-4 focus:ring-slate-100"
+                                />
+                            </div>
+
+                            <div>
+                                <label className="mb-1 block text-xs font-bold uppercase tracking-wide text-slate-500">Responsável da contratante</label>
+                                <input
+                                    value={empresaEdicao.responsavelContratante}
+                                    onChange={(e) => setEmpresaEdicao({ ...empresaEdicao, responsavelContratante: e.target.value })}
+                                    className="w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-slate-400 focus:ring-4 focus:ring-slate-100"
+                                />
+                            </div>
+
+                            <div>
+                                <label className="mb-1 block text-xs font-bold uppercase tracking-wide text-slate-500">Início do contrato</label>
+                                <input
+                                    type="date"
+                                    value={empresaEdicao.dataInicioContrato}
+                                    onChange={(e) => setEmpresaEdicao({ ...empresaEdicao, dataInicioContrato: e.target.value })}
+                                    className="w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-slate-400 focus:ring-4 focus:ring-slate-100"
+                                />
+                            </div>
+
+                            <div>
+                                <label className="mb-1 block text-xs font-bold uppercase tracking-wide text-slate-500">Fim do contrato</label>
+                                <input
+                                    type="date"
+                                    value={empresaEdicao.dataFimContrato}
+                                    onChange={(e) => setEmpresaEdicao({ ...empresaEdicao, dataFimContrato: e.target.value })}
+                                    className="w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-slate-400 focus:ring-4 focus:ring-slate-100"
+                                />
+                            </div>
+
+                            <div className="md:col-span-2">
+                                <label className="mb-1 block text-xs font-bold uppercase tracking-wide text-slate-500">Escopo do serviço</label>
+                                <textarea
+                                    value={empresaEdicao.escopoServico}
+                                    onChange={(e) => setEmpresaEdicao({ ...empresaEdicao, escopoServico: e.target.value })}
+                                    rows={3}
+                                    className="w-full resize-none rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-slate-400 focus:ring-4 focus:ring-slate-100"
+                                />
+                            </div>
+
+                            <div className="md:col-span-2">
+                                <label className="mb-1 block text-xs font-bold uppercase tracking-wide text-slate-500">Observação de bloqueio/suspensão</label>
+                                <textarea
+                                    value={empresaEdicao.observacaoStatus}
+                                    onChange={(e) => setEmpresaEdicao({ ...empresaEdicao, observacaoStatus: e.target.value })}
+                                    rows={2}
+                                    className="w-full resize-none rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-slate-400 focus:ring-4 focus:ring-slate-100"
+                                />
                             </div>
                         </div>
 
@@ -1994,7 +2465,7 @@ export default function App() {
     const carregarEmpresas = useCallback(async () => {
         const { data, error } = await supabase
             .from("empresas")
-            .select("id, nome, cnpj, responsavel, email, telefone, status, tipo_empresa, logo_url, logo_nome")
+            .select("id, nome, cnpj, responsavel, email, telefone, status, tipo_empresa, logo_url, logo_nome, numero_contrato, data_inicio_contrato, data_fim_contrato, responsavel_contratante, escopo_servico, observacao_status")
             .order("nome", { ascending: true });
 
         if (error) {
@@ -2106,8 +2577,14 @@ export default function App() {
                     telefone: novaEmpresa.telefone || null,
                     tipo_empresa: novaEmpresa.tipoEmpresa || "Terceirizada",
                     status: "Empresa ativa",
+                    numero_contrato: novaEmpresa.numeroContrato || null,
+                    data_inicio_contrato: novaEmpresa.dataInicioContrato || null,
+                    data_fim_contrato: novaEmpresa.dataFimContrato || null,
+                    responsavel_contratante: novaEmpresa.responsavelContratante || null,
+                    escopo_servico: novaEmpresa.escopoServico || null,
+                    observacao_status: novaEmpresa.observacaoStatus || null,
                 })
-                .select("id, nome, cnpj, responsavel, email, telefone, status, tipo_empresa, logo_url, logo_nome")
+                .select("id, nome, cnpj, responsavel, email, telefone, status, tipo_empresa, logo_url, logo_nome, numero_contrato, data_inicio_contrato, data_fim_contrato, responsavel_contratante, escopo_servico, observacao_status")
                 .single();
 
             if (error) {
@@ -2124,7 +2601,7 @@ export default function App() {
                         logo_nome: logo.logoNome,
                     })
                     .eq("id", data.id)
-                    .select("id, nome, cnpj, responsavel, email, telefone, status, tipo_empresa, logo_url, logo_nome")
+                    .select("id, nome, cnpj, responsavel, email, telefone, status, tipo_empresa, logo_url, logo_nome, numero_contrato, data_inicio_contrato, data_fim_contrato, responsavel_contratante, escopo_servico, observacao_status")
                     .single();
 
                 if (logoError) {
@@ -2171,9 +2648,15 @@ export default function App() {
                     tipo_empresa: empresaAtualizada.tipoEmpresa || "Terceirizada",
                     logo_url: logoAtualizada.logo_url,
                     logo_nome: logoAtualizada.logo_nome,
+                    numero_contrato: empresaAtualizada.numeroContrato || null,
+                    data_inicio_contrato: empresaAtualizada.dataInicioContrato || null,
+                    data_fim_contrato: empresaAtualizada.dataFimContrato || null,
+                    responsavel_contratante: empresaAtualizada.responsavelContratante || null,
+                    escopo_servico: empresaAtualizada.escopoServico || null,
+                    observacao_status: empresaAtualizada.observacaoStatus || null,
                 })
                 .eq("id", empresaAtualizada.id)
-                .select("id, nome, cnpj, responsavel, email, telefone, status, tipo_empresa, logo_url, logo_nome")
+                .select("id, nome, cnpj, responsavel, email, telefone, status, tipo_empresa, logo_url, logo_nome, numero_contrato, data_inicio_contrato, data_fim_contrato, responsavel_contratante, escopo_servico, observacao_status")
                 .single();
 
             if (error) {
@@ -2317,7 +2800,7 @@ export default function App() {
                 nome: nomeTratado,
                 status: "Empresa ativa",
             })
-            .select("id, nome, cnpj, responsavel, email, telefone, status, tipo_empresa, logo_url, logo_nome")
+            .select("id, nome, cnpj, responsavel, email, telefone, status, tipo_empresa, logo_url, logo_nome, numero_contrato, data_inicio_contrato, data_fim_contrato, responsavel_contratante, escopo_servico, observacao_status")
             .single();
 
         if (error) {
@@ -2559,6 +3042,7 @@ export default function App() {
                         <Empresas
                             empresasBanco={empresasBanco}
                             documentosEmpresas={documentosEmpresas}
+                            colaboradores={colaboradores}
                             carregandoBanco={carregandoBanco}
                             erroBanco={erroBanco}
                             onAtualizarBanco={carregarColaboradores}
