@@ -55,10 +55,10 @@ const documentosEmpresaBase = [
     {
         tipo: "LTCAT",
         nome: "LTCAT",
-        validadePadraoDias: null,
+        validadePadraoDias: 1095,
         regra:
-            "Documento previdenciário utilizado para caracterizar exposição a agentes nocivos. Não possui validade fixa por NR. Deve ser revisado sempre que houver alteração no ambiente de trabalho, processo, layout, equipamentos, agentes nocivos, EPCs, EPIs ou medidas de controle.",
-        fundamento: "Base legal: legislação previdenciária/eSocial. Não é documento de NR.",
+            "Documento previdenciário utilizado para caracterizar exposição a agentes nocivos. Para controle interno do sistema, será adotada validade padrão de 3 anos, desde que não haja alteração de layout, processo, atividade, equipamentos, agentes nocivos, EPCs, EPIs ou medidas de controle. Havendo qualquer alteração nas condições de exposição, o LTCAT deve ser revisado antes desse prazo.",
+        fundamento: "Base legal: legislação previdenciária/eSocial. Controle interno adotado: 3 anos ou revisão imediata quando houver mudança nas condições ambientais.",
     },
     {
         tipo: "PCMSO",
@@ -181,7 +181,7 @@ function statusEmpresaDocumento(dataVencimento) {
     if (!dataVencimento) {
         return {
             chave: "semvencimento",
-            texto: "Sem vencimento fixo",
+            texto: "Sem revisão",
             icon: FileText,
             classe: "bg-slate-50 text-slate-700 ring-slate-200",
             barra: "bg-slate-500",
@@ -470,7 +470,7 @@ function StatusPill({ status, small = false }) {
     return (
         <span
             className={classNames(
-                "inline-flex items-center gap-1 rounded-full ring-1",
+                "inline-flex min-w-[72px] items-center justify-center gap-1 whitespace-nowrap rounded-full text-center ring-1",
                 status.classe,
                 small ? "px-2 py-1 text-xs" : "px-3 py-1.5 text-sm font-medium"
             )}
@@ -1768,7 +1768,7 @@ function Empresas({
                                 {doc ? (
                                     <div className="space-y-2">
                                         <p className="text-xs text-slate-500">
-                                            <strong>Revisão:</strong> {doc.data_vencimento ? formatDate(doc.data_vencimento) : "Sem vencimento fixo"}
+                                            <strong>Revisão:</strong> {doc.data_vencimento ? formatDate(doc.data_vencimento) : "Sem revisão definida"}
                                         </p>
                                         <p className="truncate text-xs text-slate-500">
                                             <strong>Arquivo:</strong> {doc.arquivo_nome || "Arquivo ainda não anexado"}
@@ -1883,7 +1883,7 @@ function Empresas({
                 const doc = docs.find((item) => item.tipo_documento === tipo);
                 if (!doc) return "Pendente";
                 const status = statusEmpresaDocumento(doc.data_vencimento);
-                return `${status.texto} - emissão ${formatDate(doc.data_emissao)} - revisão ${doc.data_vencimento ? formatDate(doc.data_vencimento) : "sem vencimento fixo"}`;
+                return `${status.texto} - emissão ${formatDate(doc.data_emissao)} - revisão ${doc.data_vencimento ? formatDate(doc.data_vencimento) : "sem revisão definida"}`;
             };
 
             const situacaoDocumental = calcularSituacaoDocumentalEmpresa(docs);
@@ -1961,7 +1961,7 @@ function Empresas({
                         tipoDoc.tipo,
                         status.texto,
                         formatDate(doc.data_emissao),
-                        doc.data_vencimento ? formatDate(doc.data_vencimento) : "Sem vencimento fixo",
+                        doc.data_vencimento ? formatDate(doc.data_vencimento) : "Sem revisão definida",
                         doc.arquivo_nome || "",
                     ]);
                 }
@@ -1989,7 +1989,7 @@ function Empresas({
                 doc.tipo_documento,
                 status.texto,
                 formatDate(doc.data_emissao),
-                doc.data_vencimento ? formatDate(doc.data_vencimento) : "Sem vencimento fixo",
+                doc.data_vencimento ? formatDate(doc.data_vencimento) : "Sem revisão definida",
                 doc.arquivo_nome || "",
                 doc.observacao || "",
             ]);
@@ -2712,7 +2712,7 @@ function Empresas({
                                         <div className="space-y-2 text-sm text-slate-600">
                                             <p><strong>Regra:</strong> {tipoDoc.regra}</p>
                                             <p><strong>Emissão:</strong> {doc ? formatDate(doc.data_emissao) : "Documento não enviado"}</p>
-                                            <p><strong>Próxima revisão:</strong> {doc?.data_vencimento ? formatDate(doc.data_vencimento) : "Sem vencimento fixo / controlar por alteração"}</p>
+                                            <p><strong>Próxima revisão:</strong> {doc?.data_vencimento ? formatDate(doc.data_vencimento) : "Sem revisão definida"}</p>
                                             <p><strong>Arquivo:</strong> {doc?.arquivo_nome || "Arquivo ainda não anexado"}</p>
                                             {doc?.observacao && <p><strong>Observação:</strong> {doc.observacao}</p>}
                                         </div>
