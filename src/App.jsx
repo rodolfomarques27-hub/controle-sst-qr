@@ -915,40 +915,96 @@ function LoginScreen({ onLogin }) {
 
 function Dashboard({ colaboradores, onSelectColab }) {
     const indicadores = useMemo(() => {
-        const docs = colaboradores.flatMap((c) => (c.treinamentos || []).map((t) => ({ ...t, colaborador: c })));
-        const vencidos = docs.filter((d) => statusDocumento(d.vencimento).chave === "vencido").length;
-        const vencendo = docs.filter((d) => statusDocumento(d.vencimento).chave === "vencendo").length;
-        const emDia = docs.filter((d) => statusDocumento(d.vencimento).chave === "emdia").length;
-        const empresas = new Set(colaboradores.map((c) => c.empresa)).size;
+        const avaliacoes = colaboradores.map((colaborador) => {
+            const avaliacao = avaliarTreinamentosColaborador(colaborador);
 
-        return { docs, vencidos, vencendo, emDia, empresas };
+            return avaliacao.itens.map((item) => ({
+                ...item,
+                colaborador,
+                vencimento: item.realizado?.vencimento || null,
+            }));
+        });
+
+        const itens = avaliacoes.flat();
+        const vencidos = itens.filter((item) => item.status.chave === "vencido").length;
+        const vencendo = itens.filter((item) => item.status.chave === "vencendo").length;
+        const pendentes = itens.filter((item) => item.status.chave === "pendente").length;
+        const emDia = itens.filter((item) => item.status.chave === "emdia").length;
+        const empresas = new Set(colaboradores.map((c) => c.empresa).filter(Boolean)).size;
+
+        return { itens, vencidos, vencendo, pendentes, emDia, empresas };
     }, [colaboradores]);
 
+    const totalItens = indicadores.itens.length;
+
     const cards = [
-        { label: "Colaboradores", valor: colaboradores.length, icon: Users, detalhe: "Ativos no sistema" },
-        { label: "Empresas", valor: indicadores.empresas, icon: Building2, detalhe: "Terceiras cadastradas" },
+        { label: "Colaboradores", valor: colaboradores.length, icon: Users, detalhe: "Cadastrados no sistema" },
+        { label: "Empresas", valor: indicadores.empresas, icon: Building2, detalhe: "Empresas vinculadas" },
+        { label: "Pendentes", valor: indicadores.pendentes, icon: AlertTriangle, detalhe: "Sem certificado enviado" },
+        { label: "A vencer", valor: indicadores.vencendo, icon: CalendarClock, detalhe: "Próximos 30 dias" },
         { label: "Vencidos", valor: indicadores.vencidos, icon: XCircle, detalhe: "Bloqueiam atividade" },
-        { label: "A vencer", valor: indicadores.vencendo, icon: AlertTriangle, detalhe: "Próximos 30 dias" },
     ];
 
-    const pendencias = indicadores.docs
-        .filter((d) => ["vencido", "vencendo"].includes(statusDocumento(d.vencimento).chave))
-        .sort((a, b) => diasParaVencer(a.vencimento) - diasParaVencer(b.vencimento));
+    const pendencias = indicadores.itens
+        .filter((item) => ["pendente", "vencido", "vencendo"].includes(item.status.chave))
+        .sort((a, b) => {
+            const ordem = { vencido: 1, vencendo: 2, pendente: 3 };
+            const ordemStatus = ordem[a.status.chave] - ordem[b.status.chave];
+
+            if (ordemStatus !== 0) return ordemStatus;
+
+            if (!a.vencimento && !b.vencimento) return a.colaborador.nome.localeCompare(b.colaborador.nome);
+            if (!a.vencimento) return 1;
+            if (!b.vencimento) return -1;
+
+            return diasParaVencer(a.vencimento) - diasParaVencer(b.vencimento);
+        });
+
+    const baixarRelatorioDashboard = () => {
+        const linhas = [
+            ["Colaborador", "Empresa", "Função", "Situação na obra", "Treinamento/Documento", "Status", "Vencimento", "Base"],
+        ];
+
+        indicadores.itens.forEach((item) => {
+            linhas.push([
+                item.colaborador.nome,
+                item.colaborador.empresa,
+                item.colaborador.funcao,
+                item.colaborador.statusMobilizacao || "Mobilizado",
+                item.treinamento.nome,
+                item.status.texto,
+                item.vencimento ? formatDate(item.vencimento) : "Sem certificado enviado",
+                item.treinamento.base || "",
+            ]);
+        });
+
+        baixarPDF("relatorio-dashboard-sst.pdf", "Relatorio Dashboard SST", linhas);
+    };
+
+    const resumoConformidade = [
+        { label: "Em dia", valor: indicadores.emDia, total: totalItens, classe: "bg-emerald-500" },
+        { label: "Pendentes", valor: indicadores.pendentes, total: totalItens, classe: "bg-blue-500" },
+        { label: "A vencer", valor: indicadores.vencendo, total: totalItens, classe: "bg-orange-500" },
+        { label: "Vencidos", valor: indicadores.vencidos, total: totalItens, classe: "bg-red-500" },
+    ];
 
     return (
         <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
             <Header
                 titulo="Dashboard SST"
-                subtitulo="Visão geral dos treinamentos, vencimentos e liberações por QR Code."
+                subtitulo="Visão geral dos treinamentos obrigatórios, pendências, vencimentos e liberações por QR Code."
                 acao={
-                    <button className="inline-flex items-center gap-2 rounded-2xl bg-slate-950 px-4 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-slate-800">
+                    <button
+                        onClick={baixarRelatorioDashboard}
+                        className="inline-flex items-center gap-2 rounded-2xl bg-slate-950 px-4 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-slate-800"
+                    >
                         <Download className="h-4 w-4" />
                         Exportar relatório
                     </button>
                 }
             />
 
-            <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+            <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
                 {cards.map((item) => {
                     const Icon = item.icon;
 
@@ -974,7 +1030,9 @@ function Dashboard({ colaboradores, onSelectColab }) {
                     <div className="mb-4 flex items-center justify-between">
                         <div>
                             <h2 className="text-lg font-bold text-slate-950">Pendências críticas</h2>
-                            <p className="text-sm text-slate-500">Treinamentos vencidos ou a vencer em até 30 dias.</p>
+                            <p className="text-sm text-slate-500">
+                                Treinamentos pendentes, vencidos ou a vencer em até 30 dias.
+                            </p>
                         </div>
                         <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-600">
                             {pendencias.length} itens
@@ -1001,31 +1059,33 @@ function Dashboard({ colaboradores, onSelectColab }) {
                                     </tr>
                                 )}
 
-                                {pendencias.map((d, idx) => {
-                                    const st = statusDocumento(d.vencimento);
-
-                                    return (
-                                        <tr key={`${d.colaborador.id}-${d.treinamentoId}-${idx}`} className="hover:bg-slate-50">
-                                            <td className="px-4 py-3">
-                                                <div className="font-semibold text-slate-900">{d.colaborador.nome}</div>
-                                                <div className="text-xs text-slate-500">{d.colaborador.empresa}</div>
-                                            </td>
-                                            <td className="px-4 py-3 text-slate-700">{obterTreinamento(d.treinamentoId).nome}</td>
-                                            <td className="px-4 py-3 text-slate-700">{formatDate(d.vencimento)}</td>
-                                            <td className="px-4 py-3">
-                                                <StatusPill status={st} small />
-                                            </td>
-                                            <td className="px-4 py-3 text-right">
-                                                <button
-                                                    onClick={() => onSelectColab(d.colaborador)}
-                                                    className="rounded-xl p-2 text-slate-500 hover:bg-slate-100 hover:text-slate-900"
-                                                >
-                                                    <Eye className="h-4 w-4" />
-                                                </button>
-                                            </td>
-                                        </tr>
-                                    );
-                                })}
+                                {pendencias.map((item, idx) => (
+                                    <tr key={`${item.colaborador.id}-${item.treinamento.id}-${idx}`} className="hover:bg-slate-50">
+                                        <td className="px-4 py-3">
+                                            <div className="font-semibold text-slate-900">{item.colaborador.nome}</div>
+                                            <div className="text-xs text-slate-500">
+                                                {item.colaborador.empresa} · {item.colaborador.statusMobilizacao || "Mobilizado"}
+                                            </div>
+                                        </td>
+                                        <td className="px-4 py-3 text-slate-600">{item.treinamento.nome}</td>
+                                        <td className="px-4 py-3 text-slate-600">
+                                            {item.vencimento ? formatDate(item.vencimento) : "Não enviado"}
+                                        </td>
+                                        <td className="px-4 py-3">
+                                            <span className={classNames("rounded-full px-2 py-1 text-xs font-semibold ring-1", item.status.classe)}>
+                                                {item.status.texto}
+                                            </span>
+                                        </td>
+                                        <td className="px-4 py-3 text-right">
+                                            <button
+                                                onClick={() => onSelectColab(item.colaborador)}
+                                                className="rounded-xl bg-slate-950 px-3 py-1.5 text-xs font-semibold text-white hover:bg-slate-800"
+                                            >
+                                                QR
+                                            </button>
+                                        </td>
+                                    </tr>
+                                ))}
                             </tbody>
                         </table>
                     </div>
@@ -1033,14 +1093,12 @@ function Dashboard({ colaboradores, onSelectColab }) {
 
                 <Card>
                     <h2 className="text-lg font-bold text-slate-950">Resumo de conformidade</h2>
-                    <p className="mt-1 text-sm text-slate-500">Baseado nos certificados cadastrados.</p>
+                    <p className="mt-1 text-sm text-slate-500">
+                        Baseado nos treinamentos exigidos para a função, incluindo os ainda não enviados.
+                    </p>
 
                     <div className="mt-6 space-y-5">
-                        {[
-                            { label: "Em dia", valor: indicadores.emDia, total: indicadores.docs.length, classe: "bg-emerald-500" },
-                            { label: "A vencer", valor: indicadores.vencendo, total: indicadores.docs.length, classe: "bg-orange-500" },
-                            { label: "Vencidos", valor: indicadores.vencidos, total: indicadores.docs.length, classe: "bg-red-500" },
-                        ].map((i) => (
+                        {resumoConformidade.map((i) => (
                             <div key={i.label}>
                                 <div className="mb-2 flex justify-between text-sm">
                                     <span className="font-medium text-slate-700">{i.label}</span>
@@ -1049,7 +1107,7 @@ function Dashboard({ colaboradores, onSelectColab }) {
                                 <div className="h-3 overflow-hidden rounded-full bg-slate-100">
                                     <div
                                         className={classNames("h-full rounded-full", i.classe)}
-                                        style={{ width: `${Math.max(4, (i.valor / Math.max(1, i.total)) * 100)}%` }}
+                                        style={{ width: `${i.total ? Math.max(4, (i.valor / i.total) * 100) : 0}%` }}
                                     />
                                 </div>
                             </div>
@@ -1057,13 +1115,14 @@ function Dashboard({ colaboradores, onSelectColab }) {
                     </div>
 
                     <div className="mt-6 rounded-2xl bg-slate-50 p-4 text-sm text-slate-600">
-                        <strong className="text-slate-900">Regra do sistema:</strong> vencido bloqueia a atividade; vencendo em até 30 dias gera alerta preventivo; em dia libera consulta no QR Code.
+                        <strong className="text-slate-900">Regra do sistema:</strong> pendente indica ausência de certificado; vencido bloqueia a atividade; a vencer em até 30 dias gera alerta preventivo; em dia libera a consulta no QR Code.
                     </div>
                 </Card>
             </div>
         </motion.div>
     );
 }
+
 
 function Colaboradores({
     colaboradores,
