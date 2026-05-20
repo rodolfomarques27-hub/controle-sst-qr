@@ -1449,7 +1449,7 @@ function Colaboradores({
                                                     onClick={() => setPendenciasAbertas(pendenciasAbertas === c.id ? null : c.id)}
                                                     className="mt-3 w-full rounded-2xl bg-slate-50 p-3 text-left transition hover:bg-slate-100"
                                                 >
-                                                    <div className="flex flex-wrap items-center justify-between gap-2">
+                                                    <div className="flex flex-wrap items-center justify-between gap-3">
                                                         <div>
                                                             <p className="text-xs font-bold uppercase tracking-wide text-slate-500">
                                                                 Treinamentos obrigatórios
@@ -1459,13 +1459,28 @@ function Colaboradores({
                                                             </p>
                                                         </div>
 
-                                                        <div className="flex flex-wrap gap-2 text-xs font-semibold">
-                                                            <span className="rounded-full bg-emerald-50 px-2 py-1 text-emerald-700 ring-1 ring-emerald-200">
-                                                                {avaliacao.emDia.length}/{avaliacao.total} válidos
-                                                            </span>
-                                                            <span className="rounded-full bg-blue-50 px-2 py-1 text-blue-700 ring-1 ring-blue-200">
-                                                                {avaliacao.pendentes.length} pendente(s)
-                                                            </span>
+                                                        <div className="min-w-[220px] flex-1">
+                                                            <div className="mb-2 flex flex-wrap justify-end gap-2 text-xs font-semibold">
+                                                                <span className="rounded-full bg-emerald-50 px-2 py-1 text-emerald-700 ring-1 ring-emerald-200">
+                                                                    Em dia: {avaliacao.emDia.length}
+                                                                </span>
+                                                                <span className="rounded-full bg-blue-50 px-2 py-1 text-blue-700 ring-1 ring-blue-200">
+                                                                    Pendentes: {avaliacao.pendentes.length}
+                                                                </span>
+                                                            </div>
+
+                                                            <div className="h-2 overflow-hidden rounded-full bg-slate-200">
+                                                                <div
+                                                                    className="h-full rounded-full bg-emerald-500 transition-all"
+                                                                    style={{
+                                                                        width: `${avaliacao.total ? Math.round((avaliacao.emDia.length / avaliacao.total) * 100) : 0}%`,
+                                                                    }}
+                                                                />
+                                                            </div>
+
+                                                            <p className="mt-1 text-right text-[11px] font-medium text-slate-500">
+                                                                {avaliacao.emDia.length} de {avaliacao.total} treinamento(s) em dia
+                                                            </p>
                                                         </div>
                                                     </div>
                                                 </button>
