@@ -33,6 +33,32 @@ import {
 } from "lucide-react";
 
 const hoje = new Date();
+
+const estilosGlobais = `
+  .scrollbar-discreta {
+    scrollbar-width: thin;
+    scrollbar-color: #cbd5e1 transparent;
+  }
+
+  .scrollbar-discreta::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+
+  .scrollbar-discreta::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  .scrollbar-discreta::-webkit-scrollbar-thumb {
+    background: #cbd5e1;
+    border-radius: 999px;
+  }
+
+  .scrollbar-discreta::-webkit-scrollbar-thumb:hover {
+    background: #94a3b8;
+  }
+`;
+
 const DAY = 1000 * 60 * 60 * 24;
 
 function addDays(days) {
@@ -2462,7 +2488,7 @@ function Empresas({
                 </Card>      </div>
 
             {empresaEdicao && (
-                <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-slate-950/70 p-4 md:items-center">
+                <div className="scrollbar-discreta fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-slate-950/70 p-4 md:items-center">
                     <div className="flex max-h-[92vh] w-full max-w-2xl flex-col rounded-[2rem] bg-white shadow-2xl">
                         <div className="sticky top-0 z-10 flex items-start justify-between gap-4 border-b border-slate-200 bg-white p-6 pb-4">
                             <div>
@@ -2478,7 +2504,7 @@ function Empresas({
                             </button>
                         </div>
 
-                        <div className="flex-1 overflow-y-auto px-6 py-5">
+                        <div className="scrollbar-discreta flex-1 overflow-y-auto px-6 py-5">
                             <div className="grid gap-3 md:grid-cols-2">
                                 <div className="md:col-span-2">
                                     <label className="mb-1 block text-xs font-bold uppercase tracking-wide text-slate-500">Nome da empresa</label>
@@ -2669,8 +2695,8 @@ function Empresas({
             )}
 
             {empresaRevisao && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/70 p-4">
-                    <div className="max-h-[90vh] w-full max-w-5xl overflow-auto rounded-[2rem] bg-white p-6 shadow-2xl">
+                <div className="scrollbar-discreta fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-slate-950/70 p-4">
+                    <div className="scrollbar-discreta max-h-[90vh] w-full max-w-5xl overflow-auto rounded-[2rem] bg-white p-6 shadow-2xl">
                         <div className="flex flex-col justify-between gap-4 border-b border-slate-200 pb-4 md:flex-row md:items-start">
                             <div>
                                 <p className="text-xs font-bold uppercase tracking-wide text-slate-400">Revisão documental da empresa</p>
