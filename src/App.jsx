@@ -2700,7 +2700,7 @@ function Empresas({
                                 const chaveUpload = `${empresaRevisao.empresa.id}-${tipoDoc.tipo}`;
 
                                 return (
-                                    <div key={tipoDoc.tipo} className="flex h-full min-h-[700px] flex-col rounded-3xl border border-slate-200 p-4">
+                                    <div key={tipoDoc.tipo} className="flex h-full min-h-[610px] flex-col rounded-3xl border border-slate-200 p-4">
                                         <div className="mb-3 flex min-h-[88px] items-start justify-between gap-2">
                                             <div className="pr-2">
                                                 <h3 className="text-lg font-bold text-slate-950">{tipoDoc.nome}</h3>
@@ -2711,7 +2711,7 @@ function Empresas({
                                             </div>
                                         </div>
 
-                                        <div className="flex min-h-[330px] flex-col justify-between rounded-2xl bg-white text-sm text-slate-600">
+                                        <div className="flex min-h-[245px] flex-col justify-between rounded-2xl bg-white text-sm text-slate-600">
                                             <div className="space-y-2">
                                                 <p className="min-h-[96px] leading-relaxed"><strong>Regra:</strong> {tipoDoc.regra}</p>
                                                 <p><strong>Emissão:</strong> {doc ? formatDate(doc.data_emissao) : "Documento não enviado"}</p>
@@ -2726,7 +2726,7 @@ function Empresas({
                                             )}
                                         </div>
 
-                                        <div className="mt-auto min-h-[190px] rounded-2xl bg-slate-50 p-3">
+                                        <div className="mt-5 min-h-[190px] rounded-2xl bg-slate-50 p-3">
                                             <p className="mb-2 text-xs font-bold uppercase tracking-wide text-slate-500">
                                                 {doc ? "Substituir documento" : "Enviar documento"}
                                             </p>
@@ -2781,7 +2781,7 @@ function Empresas({
                                         </div>
 
                                         {doc && (
-                                            <div className="mt-4 flex flex-wrap gap-2">
+                                            <div className="mt-3 flex flex-wrap gap-2">
                                                 <button
                                                     onClick={() => onVisualizarDocumentoEmpresa(doc)}
                                                     disabled={!doc.arquivo_url}
