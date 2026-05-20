@@ -1395,6 +1395,7 @@ function Empresas({
         email: "",
         telefone: "",
         tipoEmpresa: "Terceirizada",
+        empresaPaiId: "",
         logo: null,
         numeroContrato: "",
         dataInicioContrato: "",
@@ -1443,6 +1444,11 @@ function Empresas({
         }, {});
     }, [colaboradores]);
 
+    const nomeEmpresaPai = (empresaPaiId) => {
+        if (!empresaPaiId) return "";
+        return empresasBanco.find((empresa) => empresa.id === empresaPaiId)?.nome || "";
+    };
+
     const adicionarEmpresa = async () => {
         if (!novaEmpresa.nome.trim()) {
             alert("Informe o nome da empresa.");
@@ -1458,6 +1464,7 @@ function Empresas({
             email: novaEmpresa.email.trim(),
             telefone: novaEmpresa.telefone.trim(),
             tipoEmpresa: novaEmpresa.tipoEmpresa,
+            empresaPaiId: novaEmpresa.empresaPaiId || null,
             logo: novaEmpresa.logo,
             numeroContrato: novaEmpresa.numeroContrato.trim(),
             dataInicioContrato: novaEmpresa.dataInicioContrato || null,
@@ -1477,6 +1484,7 @@ function Empresas({
                 email: "",
                 telefone: "",
                 tipoEmpresa: "Terceirizada",
+                empresaPaiId: "",
                 logo: null,
                 numeroContrato: "",
                 dataInicioContrato: "",
@@ -1514,6 +1522,7 @@ function Empresas({
             telefone: empresa.telefone || "",
             status: normalizarStatusEmpresa(empresa.status),
             tipoEmpresa: empresa.tipo_empresa || "Terceirizada",
+            empresaPaiId: empresa.empresa_pai_id || "",
             logoAtual: empresa.logo_url || "",
             logoNomeAtual: empresa.logo_nome || "",
             logo: null,
@@ -1543,6 +1552,7 @@ function Empresas({
             telefone: empresaEdicao.telefone.trim(),
             status: empresaEdicao.status || "Ativa",
             tipoEmpresa: empresaEdicao.tipoEmpresa,
+            empresaPaiId: empresaEdicao.empresaPaiId || null,
             logo: empresaEdicao.logo,
             logoAtual: empresaEdicao.logoAtual,
             logoNomeAtual: empresaEdicao.logoNomeAtual,
@@ -1627,6 +1637,11 @@ function Empresas({
                             <p className="mt-1 text-xs font-semibold text-slate-600">
                                 Tipo: {empresa.tipo_empresa || "Terceirizada"}
                             </p>
+                            {empresa.empresa_pai_id && (
+                                <p className="mt-1 text-xs font-semibold text-slate-600">
+                                    Contratada por: {nomeEmpresaPai(empresa.empresa_pai_id) || "Empresa não identificada"}
+                                </p>
+                            )}
                             <p className="mt-1 text-xs text-slate-500">
                                 Funcionários vinculados: <strong>{funcionarios.length}</strong>
                             </p>
@@ -1748,6 +1763,7 @@ function Empresas({
             empresa.email,
             empresa.telefone,
             empresa.tipo_empresa,
+            nomeEmpresaPai(empresa.empresa_pai_id),
             normalizarStatusEmpresa(empresa.status),
         ]
             .join(" ")
@@ -1765,7 +1781,11 @@ function Empresas({
     );
 
     const empresasTerceirizadas = empresasFiltradas.filter(
-        (empresa) => (empresa.tipo_empresa || "Terceirizada") !== "Contratante - Idealiza Cidades"
+        (empresa) => (empresa.tipo_empresa || "Terceirizada") === "Terceirizada"
+    );
+
+    const empresasSubcontratadas = empresasFiltradas.filter(
+        (empresa) => (empresa.tipo_empresa || "Terceirizada") === "Subcontratada"
     );
 
     const documentosFiltrados = documentosEmpresas.filter((doc) =>
@@ -1774,7 +1794,7 @@ function Empresas({
 
     const baixarRelatorioEmpresas = () => {
         const linhas = [
-            ["Empresa", "Tipo", "Status da empresa", "Situação documental", "Nº funcionários", "CNPJ", "Responsável", "E-mail", "Telefone", "Nº contrato", "Início contrato", "Fim contrato", "Escopo do serviço", "Observação status", "LTCAT", "PCMSO", "PGR"],
+            ["Empresa", "Tipo", "Contratada por", "Status da empresa", "Situação documental", "Nº funcionários", "CNPJ", "Responsável", "E-mail", "Telefone", "Nº contrato", "Início contrato", "Fim contrato", "Escopo do serviço", "Observação status", "LTCAT", "PCMSO", "PGR"],
         ];
 
         empresasFiltradas.forEach((empresa) => {
@@ -1793,6 +1813,7 @@ function Empresas({
             linhas.push([
                 empresa.nome,
                 empresa.tipo_empresa || "Terceirizada",
+                nomeEmpresaPai(empresa.empresa_pai_id),
                 normalizarStatusEmpresa(empresa.status),
                 situacaoDocumental.texto,
                 qtdFuncionarios,
@@ -1816,7 +1837,7 @@ function Empresas({
 
     const baixarRelatorioPendencias = () => {
         const linhas = [
-            ["Empresa", "Tipo da empresa", "Status da empresa", "Situação documental", "Nº funcionários", "Documento", "Situação", "Emissão", "Próxima revisão", "Arquivo"],
+            ["Empresa", "Tipo da empresa", "Contratada por", "Status da empresa", "Situação documental", "Nº funcionários", "Documento", "Situação", "Emissão", "Próxima revisão", "Arquivo"],
         ];
 
         empresasFiltradas.forEach((empresa) => {
@@ -1832,6 +1853,7 @@ function Empresas({
                     linhas.push([
                         empresa.nome,
                         empresa.tipo_empresa || "Terceirizada",
+                        nomeEmpresaPai(empresa.empresa_pai_id),
                         normalizarStatusEmpresa(empresa.status),
                         situacaoDocumental.texto,
                         qtdFuncionarios,
@@ -1853,6 +1875,7 @@ function Empresas({
                     linhas.push([
                         empresa.nome,
                         empresa.tipo_empresa || "Terceirizada",
+                        nomeEmpresaPai(empresa.empresa_pai_id),
                         normalizarStatusEmpresa(empresa.status),
                         situacaoDocumental.texto,
                         qtdFuncionarios,
@@ -1871,7 +1894,7 @@ function Empresas({
 
     const baixarRelatorioDocumentos = (empresa, docsEmpresa = []) => {
         const linhas = [
-            ["Empresa", "Nº funcionários", "Documento", "Status", "Emissão", "Próxima revisão", "Arquivo", "Observação"],
+            ["Empresa", "Tipo da empresa", "Contratada por", "Nº funcionários", "Documento", "Status", "Emissão", "Próxima revisão", "Arquivo", "Observação"],
         ];
 
         const qtdFuncionarios = (colaboradoresPorEmpresa[empresa.id] || []).length;
@@ -1881,6 +1904,8 @@ function Empresas({
 
             linhas.push([
                 empresa.nome || "",
+                empresa.tipo_empresa || "Terceirizada",
+                nomeEmpresaPai(empresa.empresa_pai_id),
                 qtdFuncionarios,
                 doc.tipo_documento,
                 status.texto,
@@ -1894,6 +1919,8 @@ function Empresas({
         if (docsEmpresa.length === 0) {
             linhas.push([
                 empresa.nome || "",
+                empresa.tipo_empresa || "Terceirizada",
+                nomeEmpresaPai(empresa.empresa_pai_id),
                 qtdFuncionarios,
                 "Sem documentos enviados",
                 "Pendente",
@@ -1941,7 +1968,7 @@ function Empresas({
                                 </div>
                                 <div>
                                     <h2 className="text-lg font-bold">Adicionar empresa</h2>
-                                    <p className="text-sm text-slate-300">Cadastre a terceirizada antes de anexar documentos.</p>
+                                    <p className="text-sm text-slate-300">Cadastre contratante, terceirizada ou subcontratada antes de anexar documentos.</p>
                                 </div>
                             </div>
                         </div>
@@ -1950,7 +1977,7 @@ function Empresas({
                             <input
                                 value={novaEmpresa.nome}
                                 onChange={(e) => setNovaEmpresa({ ...novaEmpresa, nome: e.target.value })}
-                                placeholder="Nome da empresa terceirizada"
+                                placeholder="Nome da empresa"
                                 className="w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-slate-400 focus:ring-4 focus:ring-slate-100"
                             />
                             <input
@@ -1984,8 +2011,26 @@ function Empresas({
                                 className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none focus:border-slate-400 focus:ring-4 focus:ring-slate-100"
                             >
                                 <option>Terceirizada</option>
+                                <option>Subcontratada</option>
                                 <option>Contratante - Idealiza Cidades</option>
                             </select>
+
+                            {novaEmpresa.tipoEmpresa === "Subcontratada" && (
+                                <select
+                                    value={novaEmpresa.empresaPaiId}
+                                    onChange={(e) => setNovaEmpresa({ ...novaEmpresa, empresaPaiId: e.target.value })}
+                                    className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none focus:border-slate-400 focus:ring-4 focus:ring-slate-100"
+                                >
+                                    <option value="">Selecione a empresa terceirizada contratante direta</option>
+                                    {empresasBanco
+                                        .filter((empresa) => (empresa.tipo_empresa || "Terceirizada") !== "Subcontratada")
+                                        .map((empresa) => (
+                                            <option key={empresa.id} value={empresa.id}>
+                                                {empresa.nome}
+                                            </option>
+                                        ))}
+                                </select>
+                            )}
 
                             <label className="flex cursor-pointer items-center justify-center gap-2 rounded-2xl border border-dashed border-slate-300 bg-slate-50 px-4 py-4 text-sm font-medium text-slate-600 hover:bg-slate-100">
                                 <Upload className="h-4 w-4" />
@@ -2180,6 +2225,7 @@ function Empresas({
                             <option>Todos</option>
                             <option>Contratante - Idealiza Cidades</option>
                             <option>Terceirizada</option>
+                            <option>Subcontratada</option>
                         </select>
 
                         <select
@@ -2262,6 +2308,31 @@ function Empresas({
                                 ) : (
                                     <div className="space-y-4">
                                         {empresasTerceirizadas.map((empresa) => {
+                                            const docs = documentosPorEmpresa[empresa.id] || [];
+                                            return renderEmpresaCard(empresa, docs, false);
+                                        })}
+                                    </div>
+                                )}
+                            </section>
+
+                            <section>
+                                <div className="mb-3 flex items-center gap-2">
+                                    <div className="rounded-xl bg-slate-100 p-2 text-slate-700">
+                                        <Building2 className="h-4 w-4" />
+                                    </div>
+                                    <div>
+                                        <h3 className="font-bold text-slate-950">Subcontratadas</h3>
+                                        <p className="text-xs text-slate-500">Empresas contratadas por uma terceirizada</p>
+                                    </div>
+                                </div>
+
+                                {empresasSubcontratadas.length === 0 ? (
+                                    <div className="rounded-3xl border border-dashed border-slate-300 p-5 text-sm text-slate-500">
+                                        Nenhuma empresa subcontratada cadastrada.
+                                    </div>
+                                ) : (
+                                    <div className="space-y-4">
+                                        {empresasSubcontratadas.map((empresa) => {
                                             const docs = documentosPorEmpresa[empresa.id] || [];
                                             return renderEmpresaCard(empresa, docs, false);
                                         })}
@@ -2358,9 +2429,32 @@ function Empresas({
                                         className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none focus:border-slate-400 focus:ring-4 focus:ring-slate-100"
                                     >
                                         <option>Terceirizada</option>
+                                        <option>Subcontratada</option>
                                         <option>Contratante - Idealiza Cidades</option>
                                     </select>
                                 </div>
+
+                                {empresaEdicao.tipoEmpresa === "Subcontratada" && (
+                                    <div className="md:col-span-2">
+                                        <label className="mb-1 block text-xs font-bold uppercase tracking-wide text-slate-500">
+                                            Empresa terceirizada contratante direta
+                                        </label>
+                                        <select
+                                            value={empresaEdicao.empresaPaiId}
+                                            onChange={(e) => setEmpresaEdicao({ ...empresaEdicao, empresaPaiId: e.target.value })}
+                                            className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none focus:border-slate-400 focus:ring-4 focus:ring-slate-100"
+                                        >
+                                            <option value="">Selecione a empresa contratante direta</option>
+                                            {empresasBanco
+                                                .filter((empresa) => empresa.id !== empresaEdicao.id && (empresa.tipo_empresa || "Terceirizada") !== "Subcontratada")
+                                                .map((empresa) => (
+                                                    <option key={empresa.id} value={empresa.id}>
+                                                        {empresa.nome}
+                                                    </option>
+                                                ))}
+                                        </select>
+                                    </div>
+                                )}
 
                                 <div>
                                     <label className="mb-1 block text-xs font-bold uppercase tracking-wide text-slate-500">Responsável</label>
@@ -2633,7 +2727,7 @@ export default function App() {
     const carregarEmpresas = useCallback(async () => {
         const { data, error } = await supabase
             .from("empresas")
-            .select("id, nome, cnpj, responsavel, email, telefone, status, tipo_empresa, logo_url, logo_nome, numero_contrato, data_inicio_contrato, data_fim_contrato, responsavel_contratante, escopo_servico, observacao_status")
+            .select("id, nome, cnpj, responsavel, email, telefone, status, tipo_empresa, logo_url, logo_nome, numero_contrato, data_inicio_contrato, data_fim_contrato, responsavel_contratante, escopo_servico, observacao_status, empresa_pai_id")
             .order("nome", { ascending: true });
 
         if (error) {
@@ -2744,6 +2838,7 @@ export default function App() {
                     email: novaEmpresa.email || null,
                     telefone: novaEmpresa.telefone || null,
                     tipo_empresa: novaEmpresa.tipoEmpresa || "Terceirizada",
+                    empresa_pai_id: novaEmpresa.empresaPaiId || null,
                     status: "Empresa ativa",
                     numero_contrato: novaEmpresa.numeroContrato || null,
                     data_inicio_contrato: novaEmpresa.dataInicioContrato || null,
@@ -2752,7 +2847,7 @@ export default function App() {
                     escopo_servico: novaEmpresa.escopoServico || null,
                     observacao_status: novaEmpresa.observacaoStatus || null,
                 })
-                .select("id, nome, cnpj, responsavel, email, telefone, status, tipo_empresa, logo_url, logo_nome, numero_contrato, data_inicio_contrato, data_fim_contrato, responsavel_contratante, escopo_servico, observacao_status")
+                .select("id, nome, cnpj, responsavel, email, telefone, status, tipo_empresa, logo_url, logo_nome, numero_contrato, data_inicio_contrato, data_fim_contrato, responsavel_contratante, escopo_servico, observacao_status, empresa_pai_id")
                 .single();
 
             if (error) {
@@ -2769,7 +2864,7 @@ export default function App() {
                         logo_nome: logo.logoNome,
                     })
                     .eq("id", data.id)
-                    .select("id, nome, cnpj, responsavel, email, telefone, status, tipo_empresa, logo_url, logo_nome, numero_contrato, data_inicio_contrato, data_fim_contrato, responsavel_contratante, escopo_servico, observacao_status")
+                    .select("id, nome, cnpj, responsavel, email, telefone, status, tipo_empresa, logo_url, logo_nome, numero_contrato, data_inicio_contrato, data_fim_contrato, responsavel_contratante, escopo_servico, observacao_status, empresa_pai_id")
                     .single();
 
                 if (logoError) {
@@ -2814,6 +2909,7 @@ export default function App() {
                     telefone: empresaAtualizada.telefone || null,
                     status: normalizarStatusEmpresa(empresaAtualizada.status),
                     tipo_empresa: empresaAtualizada.tipoEmpresa || "Terceirizada",
+                    empresa_pai_id: empresaAtualizada.tipoEmpresa === "Subcontratada" ? empresaAtualizada.empresaPaiId : null,
                     logo_url: logoAtualizada.logo_url,
                     logo_nome: logoAtualizada.logo_nome,
                     numero_contrato: empresaAtualizada.numeroContrato || null,
@@ -2824,7 +2920,7 @@ export default function App() {
                     observacao_status: empresaAtualizada.observacaoStatus || null,
                 })
                 .eq("id", empresaAtualizada.id)
-                .select("id, nome, cnpj, responsavel, email, telefone, status, tipo_empresa, logo_url, logo_nome, numero_contrato, data_inicio_contrato, data_fim_contrato, responsavel_contratante, escopo_servico, observacao_status")
+                .select("id, nome, cnpj, responsavel, email, telefone, status, tipo_empresa, logo_url, logo_nome, numero_contrato, data_inicio_contrato, data_fim_contrato, responsavel_contratante, escopo_servico, observacao_status, empresa_pai_id")
                 .single();
 
             if (error) {
@@ -2968,7 +3064,7 @@ export default function App() {
                 nome: nomeTratado,
                 status: "Empresa ativa",
             })
-            .select("id, nome, cnpj, responsavel, email, telefone, status, tipo_empresa, logo_url, logo_nome, numero_contrato, data_inicio_contrato, data_fim_contrato, responsavel_contratante, escopo_servico, observacao_status")
+            .select("id, nome, cnpj, responsavel, email, telefone, status, tipo_empresa, logo_url, logo_nome, numero_contrato, data_inicio_contrato, data_fim_contrato, responsavel_contratante, escopo_servico, observacao_status, empresa_pai_id")
             .single();
 
         if (error) {
