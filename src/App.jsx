@@ -1415,7 +1415,7 @@ function Colaboradores({
                                         key={c.id}
                                         className="group rounded-3xl border border-slate-200 bg-white p-5 transition hover:border-slate-300 hover:shadow-md"
                                     >
-                                        <div className="grid gap-4 lg:grid-cols-[72px_1fr_360px_150px] lg:items-start">
+                                        <div className="grid gap-4 lg:grid-cols-[72px_1fr_170px] lg:items-start">
                                             <button
                                                 onClick={() => onSelectColab(c)}
                                                 className="flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-slate-100 text-slate-700 transition group-hover:bg-slate-950 group-hover:text-white"
@@ -1428,46 +1428,47 @@ function Colaboradores({
                                             </button>
 
                                             <div className="min-w-0">
-                                                <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
-                                                    <div className="min-w-0">
-                                                        <h3 className="break-words font-bold leading-snug text-slate-950">{c.nome}</h3>
-                                                        <p className="text-sm text-slate-500">{c.funcao}</p>
-                                                        <p className="mt-1 break-words text-xs font-semibold text-slate-500">Código: {c.codigoFuncionario}</p>
+                                                <div className="flex flex-col gap-2 lg:pt-1">
+                                                    <div className="flex flex-wrap items-start justify-between gap-2">
+                                                        <h3 className="max-w-full break-words text-lg font-bold leading-snug text-slate-950">
+                                                            {c.nome}
+                                                        </h3>
+                                                        <span className={classNames("w-fit shrink-0 rounded-full px-2.5 py-1 text-xs font-semibold", geral.classe)}>
+                                                            {geral.texto}
+                                                        </span>
                                                     </div>
-                                                    <span className={classNames("w-fit shrink-0 rounded-full px-2.5 py-1 text-xs font-semibold", geral.classe)}>
-                                                        {geral.texto}
-                                                    </span>
+
+                                                    <p className="text-sm text-slate-500">{c.funcao}</p>
+                                                    <p className="break-words text-xs font-semibold text-slate-500">Código: {c.codigoFuncionario}</p>
                                                 </div>
 
-                                                <div className="mt-3 grid grid-cols-1 gap-2 text-xs text-slate-500 xl:grid-cols-2">
+                                                <div className="mt-3 grid grid-cols-1 gap-2 text-xs text-slate-500 md:grid-cols-2">
                                                     <span className="break-words rounded-xl bg-slate-50 px-3 py-2">{c.empresa}</span>
                                                     <span className="break-words rounded-xl bg-slate-50 px-3 py-2">{c.matricula || "Matrícula não informada"}</span>
                                                 </div>
 
-                                            </div>
-
-                                            <div>
                                                 <button
                                                     type="button"
                                                     onClick={() => setPendenciasAbertas(pendenciasAbertas === c.id ? null : c.id)}
-                                                    className="w-full rounded-2xl bg-slate-50 p-3 text-left transition hover:bg-slate-100"
+                                                    className="mt-3 w-full rounded-2xl bg-slate-50 p-3 text-left transition hover:bg-slate-100"
                                                 >
-                                                    <div className="flex items-center justify-between gap-2">
+                                                    <div className="flex flex-wrap items-center justify-between gap-2">
                                                         <div>
                                                             <p className="text-xs font-bold uppercase tracking-wide text-slate-500">
-                                                                Matriz: {avaliacao.matriz.rotulo}
+                                                                Treinamentos obrigatórios
                                                             </p>
                                                             <p className="mt-1 text-xs text-slate-500">
-                                                                Clique para visualizar pendências e treinamentos da função.
+                                                                Clique para visualizar pendências.
                                                             </p>
                                                         </div>
-                                                        <div className="text-right">
-                                                            <p className="text-xs font-semibold text-slate-600">
+
+                                                        <div className="flex flex-wrap gap-2 text-xs font-semibold">
+                                                            <span className="rounded-full bg-emerald-50 px-2 py-1 text-emerald-700 ring-1 ring-emerald-200">
                                                                 {avaliacao.emDia.length}/{avaliacao.total} válidos
-                                                            </p>
-                                                            <p className="mt-1 text-xs font-semibold text-blue-700">
+                                                            </span>
+                                                            <span className="rounded-full bg-blue-50 px-2 py-1 text-blue-700 ring-1 ring-blue-200">
                                                                 {avaliacao.pendentes.length} pendente(s)
-                                                            </p>
+                                                            </span>
                                                         </div>
                                                     </div>
                                                 </button>
@@ -1490,7 +1491,6 @@ function Colaboradores({
                                                         </div>
                                                     </div>
                                                 )}
-
                                             </div>
 
                                             <div className="flex flex-col gap-2">
