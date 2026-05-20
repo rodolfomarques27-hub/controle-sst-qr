@@ -70,13 +70,19 @@ function addDays(days) {
 }
 
 const treinamentosBase = [
-    { id: 1, nome: "Integração SST", validadePadrao: 365, categoria: "Obrigatório" },
-    { id: 2, nome: "NR-35 Trabalho em Altura", validadePadrao: 730, categoria: "Alto Risco" },
-    { id: 3, nome: "NR-12 Segurança em Máquinas", validadePadrao: 730, categoria: "Operacional" },
-    { id: 4, nome: "NR-10 Segurança em Eletricidade", validadePadrao: 730, categoria: "Elétrica" },
-    { id: 5, nome: "PEMT / PTA", validadePadrao: 365, categoria: "Equipamento" },
-    { id: 6, nome: "Trabalho a Quente / Solda", validadePadrao: 365, categoria: "Alto Risco" },
-    { id: 7, nome: "Lixadeira / Esmerilhadeira", validadePadrao: 365, categoria: "Ferramentas" },
+    { id: 1, nome: "Integração SST", validadePadrao: 365, categoria: "Obrigatório", base: "NR-01 / Integração" },
+    { id: 2, nome: "NR-35 Trabalho em Altura", validadePadrao: 730, categoria: "Alto Risco", base: "NR-35" },
+    { id: 3, nome: "NR-12 Segurança em Máquinas", validadePadrao: 730, categoria: "Operacional", base: "NR-12" },
+    { id: 4, nome: "NR-10 Segurança em Eletricidade", validadePadrao: 730, categoria: "Elétrica", base: "NR-10" },
+    { id: 5, nome: "PEMT / PTA", validadePadrao: 365, categoria: "Equipamento", base: "NR-18 / NR-12 / fabricante" },
+    { id: 6, nome: "Trabalho a Quente / Solda", validadePadrao: 365, categoria: "Alto Risco", base: "NR-18 / NR-34 como referência técnica" },
+    { id: 7, nome: "Lixadeira / Esmerilhadeira", validadePadrao: 365, categoria: "Ferramentas", base: "NR-12 / NR-18" },
+    { id: 8, nome: "NR-06 Uso e Conservação de EPI", validadePadrao: 365, categoria: "Obrigatório", base: "NR-06 / NR-01" },
+    { id: 9, nome: "NR-18 Construção Civil / Canteiro", validadePadrao: 365, categoria: "Construção", base: "NR-18" },
+    { id: 10, nome: "NR-33 Espaço Confinado", validadePadrao: 365, categoria: "Alto Risco", base: "NR-33" },
+    { id: 11, nome: "Movimentação Manual de Cargas", validadePadrao: 365, categoria: "Ergonomia / Operacional", base: "NR-17 / procedimento interno" },
+    { id: 12, nome: "Escavação / Abertura de Valas", validadePadrao: 365, categoria: "Construção", base: "NR-18 / procedimento interno" },
+    { id: 13, nome: "Procedimento Operacional da Função", validadePadrao: 365, categoria: "Atividade", base: "PGR / APR / procedimento interno" },
 ];
 
 const documentosEmpresaBase = [
@@ -120,6 +126,155 @@ function calcularVencimentoDocumento(tipo, dataEmissao) {
     return data.toISOString().slice(0, 10);
 }
 
+const matrizTreinamentosPorFuncao = [
+    {
+        chave: "soldador",
+        rotulo: "Soldador / trabalho a quente",
+        termos: ["soldador", "solda", "caldeireiro"],
+        treinamentos: [1, 8, 9, 3, 6, 7],
+    },
+    {
+        chave: "pedreiro",
+        rotulo: "Pedreiro / alvenaria",
+        termos: ["pedreiro", "alvenaria", "bloquete", "pavimentador", "calceteiro"],
+        treinamentos: [1, 8, 9, 11, 13],
+    },
+    {
+        chave: "bloquete",
+        rotulo: "Instalador de bloquete / pavimentação",
+        termos: ["bloquete", "paver", "pavimento", "pavimentacao", "pavimentação"],
+        treinamentos: [1, 8, 9, 11, 13],
+    },
+    {
+        chave: "eletricista",
+        rotulo: "Eletricista",
+        termos: ["eletricista", "eletrica", "elétrica", "eletrico", "elétrico"],
+        treinamentos: [1, 8, 4, 3, 2],
+    },
+    {
+        chave: "operador-pemt",
+        rotulo: "Operador de PEMT / PTA",
+        termos: ["pemt", "pta", "plataforma", "cesto", "elevatoria", "elevatória"],
+        treinamentos: [1, 8, 5, 2, 3],
+    },
+    {
+        chave: "montador",
+        rotulo: "Montador / estruturas",
+        termos: ["montador", "estrutura", "andaime", "serralheiro"],
+        treinamentos: [1, 8, 9, 2, 3, 7],
+    },
+    {
+        chave: "ajudante",
+        rotulo: "Ajudante / servente",
+        termos: ["ajudante", "servente", "auxiliar"],
+        treinamentos: [1, 8, 9, 11, 13],
+    },
+    {
+        chave: "pintor",
+        rotulo: "Pintor",
+        termos: ["pintor", "pintura"],
+        treinamentos: [1, 8, 9, 2, 13],
+    },
+    {
+        chave: "escavacao",
+        rotulo: "Escavação / abertura de valas",
+        termos: ["escavacao", "escavação", "vala", "valas"],
+        treinamentos: [1, 8, 9, 12, 13],
+    },
+    {
+        chave: "geral",
+        rotulo: "Função geral",
+        termos: [],
+        treinamentos: [1, 8, 13],
+    },
+];
+
+function normalizarTextoBusca(valor) {
+    return String(valor || "")
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .toLowerCase();
+}
+
+function obterMatrizFuncao(funcao) {
+    const texto = normalizarTextoBusca(funcao);
+
+    return (
+        matrizTreinamentosPorFuncao.find((item) =>
+            item.termos.some((termo) => texto.includes(normalizarTextoBusca(termo)))
+        ) || matrizTreinamentosPorFuncao.find((item) => item.chave === "geral")
+    );
+}
+
+function treinamentosObrigatoriosFuncao(funcao) {
+    const matriz = obterMatrizFuncao(funcao);
+    return matriz.treinamentos.map((id) => obterTreinamento(id));
+}
+
+function gerarCodigoFuncionario(nome = "") {
+    const base = normalizarTextoBusca(nome)
+        .replace(/[^a-z0-9]/g, "")
+        .slice(0, 4)
+        .toUpperCase();
+
+    const aleatorio = Math.random().toString(36).slice(2, 8).toUpperCase();
+    return `COL-${base || "SST"}-${aleatorio}`;
+}
+
+function obterUrlFotoColaborador(caminho) {
+    if (!caminho) return "";
+
+    const { data } = supabase.storage
+        .from("fotos-colaboradores")
+        .getPublicUrl(caminho);
+
+    return data?.publicUrl || "";
+}
+
+function avaliarTreinamentosColaborador(colaborador) {
+    const obrigatorios = treinamentosObrigatoriosFuncao(colaborador.funcao);
+    const realizados = colaborador.treinamentos || [];
+
+    const itens = obrigatorios.map((treinamento) => {
+        const realizado = realizados.find((item) => Number(item.treinamentoId) === Number(treinamento.id));
+
+        if (!realizado) {
+            return {
+                treinamento,
+                realizado: null,
+                status: {
+                    chave: "pendente",
+                    texto: "Pendente",
+                    icon: AlertTriangle,
+                    classe: "bg-red-50 text-red-700 ring-red-200",
+                    barra: "bg-red-500",
+                },
+            };
+        }
+
+        return {
+            treinamento,
+            realizado,
+            status: statusDocumento(realizado.vencimento),
+        };
+    });
+
+    const pendentes = itens.filter((item) => item.status.chave === "pendente");
+    const vencidos = itens.filter((item) => item.status.chave === "vencido");
+    const vencendo = itens.filter((item) => item.status.chave === "vencendo");
+    const emDia = itens.filter((item) => item.status.chave === "emdia");
+
+    return {
+        matriz: obterMatrizFuncao(colaborador.funcao),
+        itens,
+        pendentes,
+        vencidos,
+        vencendo,
+        emDia,
+        total: itens.length,
+    };
+}
+
 
 const colaboradoresIniciais = [
     {
@@ -161,6 +316,9 @@ function normalizarColaborador(item) {
         empresa: item.empresas?.nome || item.empresa || "Empresa não informada",
         funcao: item.funcao || "-",
         matricula: item.matricula || "-",
+        codigoFuncionario: item.codigo_funcionario || item.codigoFuncionario || `COL-${String(item.id).slice(0, 8).toUpperCase()}`,
+        fotoUrl: item.foto_url || item.fotoUrl || "",
+        fotoNome: item.foto_nome || item.fotoNome || "",
         status: item.status || "Ativo",
         token: item.token_qr || item.token || `SST-${String(item.id).slice(0, 8)}`,
         treinamentos: item.treinamentos || [],
@@ -534,27 +692,21 @@ function obterTreinamento(id) {
 }
 
 function statusGeral(colaborador) {
-    const treinamentos = colaborador.treinamentos || [];
+    const avaliacao = avaliarTreinamentosColaborador(colaborador);
 
-    if (treinamentos.length === 0) {
-        return {
-            texto: "Pendente",
-            classe: "bg-slate-600 text-white",
-            detalhe: "Sem treinamentos lançados",
-        };
+    if (avaliacao.vencidos.length > 0) {
+        return { texto: "Bloqueado", classe: "bg-red-600 text-white", detalhe: "Possui treinamento obrigatório vencido" };
     }
 
-    const status = treinamentos.map((t) => statusDocumento(t.vencimento).chave);
-
-    if (status.includes("vencido")) {
-        return { texto: "Bloqueado", classe: "bg-red-600 text-white", detalhe: "Possui treinamento vencido" };
+    if (avaliacao.pendentes.length > 0) {
+        return { texto: "Pendente", classe: "bg-red-50 text-red-700 ring-1 ring-red-200", detalhe: "Faltam treinamentos obrigatórios da função" };
     }
 
-    if (status.includes("vencendo")) {
-        return { texto: "Atenção", classe: "bg-amber-500 text-white", detalhe: "Possui treinamento a vencer" };
+    if (avaliacao.vencendo.length > 0) {
+        return { texto: "Atenção", classe: "bg-amber-500 text-white", detalhe: "Possui treinamento obrigatório a vencer em até 30 dias" };
     }
 
-    return { texto: "Apto", classe: "bg-emerald-600 text-white", detalhe: "Treinamentos válidos" };
+    return { texto: "Apto", classe: "bg-emerald-600 text-white", detalhe: "Treinamentos obrigatórios válidos" };
 }
 
 function Card({ children, className = "" }) {
@@ -863,14 +1015,95 @@ function Colaboradores({
         empresaNome: "",
         funcao: "",
         matricula: "",
+        foto: null,
     });
 
     const empresasFiltro = ["Todas", ...Array.from(new Set(colaboradores.map((c) => c.empresa).filter(Boolean)))];
 
     const filtrados = colaboradores.filter((c) => {
-        const texto = `${c.nome} ${c.empresa} ${c.funcao} ${c.matricula}`.toLowerCase();
+        const avaliacao = avaliarTreinamentosColaborador(c);
+        const texto = `${c.nome} ${c.empresa} ${c.funcao} ${c.matricula} ${c.codigoFuncionario} ${avaliacao.matriz.rotulo}`.toLowerCase();
         return texto.includes(busca.toLowerCase()) && (empresa === "Todas" || c.empresa === empresa);
     });
+
+    const resumoTreinamentos = useMemo(() => {
+        const avaliacoes = colaboradores.map(avaliarTreinamentosColaborador);
+
+        return {
+            pendentes: avaliacoes.reduce((total, item) => total + item.pendentes.length, 0),
+            vencidos: avaliacoes.reduce((total, item) => total + item.vencidos.length, 0),
+            vencendo: avaliacoes.reduce((total, item) => total + item.vencendo.length, 0),
+            aptos: colaboradores.filter((c) => statusGeral(c).texto === "Apto").length,
+        };
+    }, [colaboradores]);
+
+    const baixarRelatorioColaboradores = () => {
+        const linhas = [
+            [
+                "Colaborador",
+                "Código",
+                "Empresa",
+                "Função",
+                "Matrícula",
+                "Matriz aplicada",
+                "Status geral",
+                "Treinamentos obrigatórios",
+                "Treinamentos válidos",
+                "Pendentes",
+                "Vencidos",
+                "A vencer",
+            ],
+        ];
+
+        filtrados.forEach((c) => {
+            const avaliacao = avaliarTreinamentosColaborador(c);
+            const geral = statusGeral(c);
+
+            linhas.push([
+                c.nome,
+                c.codigoFuncionario,
+                c.empresa,
+                c.funcao,
+                c.matricula,
+                avaliacao.matriz.rotulo,
+                geral.texto,
+                avaliacao.itens.map((item) => item.treinamento.nome).join(" | "),
+                avaliacao.emDia.map((item) => item.treinamento.nome).join(" | "),
+                avaliacao.pendentes.map((item) => item.treinamento.nome).join(" | "),
+                avaliacao.vencidos.map((item) => item.treinamento.nome).join(" | "),
+                avaliacao.vencendo.map((item) => `${item.treinamento.nome} - vence ${formatDate(item.realizado?.vencimento)}`).join(" | "),
+            ]);
+        });
+
+        baixarPDF("relatorio-colaboradores-treinamentos.pdf", "Relatorio de colaboradores e treinamentos", linhas);
+    };
+
+    const baixarRelatorioPendencias = () => {
+        const linhas = [
+            ["Colaborador", "Código", "Empresa", "Função", "Treinamento", "Situação", "Vencimento", "Base"],
+        ];
+
+        filtrados.forEach((c) => {
+            const avaliacao = avaliarTreinamentosColaborador(c);
+
+            avaliacao.itens
+                .filter((item) => ["pendente", "vencido", "vencendo"].includes(item.status.chave))
+                .forEach((item) => {
+                    linhas.push([
+                        c.nome,
+                        c.codigoFuncionario,
+                        c.empresa,
+                        c.funcao,
+                        item.treinamento.nome,
+                        item.status.texto,
+                        item.realizado?.vencimento ? formatDate(item.realizado.vencimento) : "Sem certificado lançado",
+                        item.treinamento.base || "",
+                    ]);
+                });
+        });
+
+        baixarPDF("relatorio-pendencias-treinamentos.pdf", "Relatorio de pendencias de treinamentos", linhas);
+    };
 
     const adicionar = async () => {
         if (!novo.nome.trim() || !novo.empresaNome.trim() || !novo.funcao.trim()) {
@@ -885,20 +1118,24 @@ function Colaboradores({
             empresaNome: novo.empresaNome.trim(),
             funcao: novo.funcao.trim(),
             matricula: novo.matricula.trim(),
+            foto: novo.foto,
+            codigoFuncionario: gerarCodigoFuncionario(novo.nome),
         });
 
         setSalvando(false);
 
         if (ok) {
-            setNovo({ nome: "", empresaNome: "", funcao: "", matricula: "" });
+            setNovo({ nome: "", empresaNome: "", funcao: "", matricula: "", foto: null });
         }
     };
+
+    const funcoesSugeridas = matrizTreinamentosPorFuncao.filter((item) => item.chave !== "geral");
 
     return (
         <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
             <Header
                 titulo="Colaboradores"
-                subtitulo="Cadastro, consulta, remoção e geração de QR Code individual usando o banco Supabase."
+                subtitulo="Cadastro com foto, código automático, matriz de treinamentos por função e alerta de vencimentos."
                 acao={
                     <button
                         onClick={onAtualizarBanco}
@@ -925,7 +1162,7 @@ function Colaboradores({
                             </div>
                             <div>
                                 <h2 className="text-lg font-bold">Novo colaborador</h2>
-                                <p className="text-sm text-slate-300">Salva o funcionário diretamente no banco de dados.</p>
+                                <p className="text-sm text-slate-300">Foto, código automático e matriz de treinamentos por função.</p>
                             </div>
                         </div>
                     </div>
@@ -959,9 +1196,6 @@ function Colaboradores({
                                     <option key={e.id} value={e.nome} />
                                 ))}
                             </datalist>
-                            <p className="mt-1 text-xs text-slate-400">
-                                Se a empresa ainda não existir, o sistema cria automaticamente no Supabase.
-                            </p>
                         </div>
 
                         <div>
@@ -971,14 +1205,35 @@ function Colaboradores({
                             <input
                                 value={novo.funcao}
                                 onChange={(e) => setNovo({ ...novo, funcao: e.target.value })}
-                                placeholder="Ex.: Soldador, Montador, Eletricista"
+                                placeholder="Ex.: Pedreiro, Soldador, Eletricista, Operador de PEMT"
+                                list="funcoes-sugeridas"
                                 className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none focus:border-slate-400 focus:ring-4 focus:ring-slate-100"
                             />
+                            <datalist id="funcoes-sugeridas">
+                                {funcoesSugeridas.map((item) => (
+                                    <option key={item.chave} value={item.rotulo} />
+                                ))}
+                            </datalist>
+
+                            {novo.funcao && (
+                                <div className="mt-2 rounded-2xl bg-slate-50 p-3">
+                                    <p className="text-xs font-bold uppercase tracking-wide text-slate-500">
+                                        Matriz aplicada: {obterMatrizFuncao(novo.funcao).rotulo}
+                                    </p>
+                                    <div className="mt-2 flex flex-wrap gap-1.5">
+                                        {treinamentosObrigatoriosFuncao(novo.funcao).map((treinamento) => (
+                                            <span key={treinamento.id} className="rounded-full bg-white px-2 py-1 text-[11px] font-medium text-slate-600 ring-1 ring-slate-200">
+                                                {treinamento.nome}
+                                            </span>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
                         </div>
 
                         <div>
                             <label className="mb-1 block text-xs font-bold uppercase tracking-wide text-slate-500">
-                                Matrícula / Código
+                                Matrícula / Código interno
                             </label>
                             <input
                                 value={novo.matricula}
@@ -986,7 +1241,21 @@ function Colaboradores({
                                 placeholder="Ex.: M-0145"
                                 className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none focus:border-slate-400 focus:ring-4 focus:ring-slate-100"
                             />
+                            <p className="mt-1 text-xs text-slate-400">
+                                O código aleatório do colaborador é gerado automaticamente ao cadastrar.
+                            </p>
                         </div>
+
+                        <label className="flex cursor-pointer items-center justify-center gap-2 rounded-2xl border border-dashed border-slate-300 bg-slate-50 px-4 py-4 text-sm font-medium text-slate-600 hover:bg-slate-100">
+                            <Upload className="h-4 w-4" />
+                            {novo.foto ? novo.foto.name : "Adicionar foto do colaborador"}
+                            <input
+                                type="file"
+                                accept="image/png,image/jpeg,image/webp"
+                                className="hidden"
+                                onChange={(e) => setNovo({ ...novo, foto: e.target.files?.[0] || null })}
+                            />
+                        </label>
 
                         <button
                             onClick={adicionar}
@@ -1006,7 +1275,7 @@ function Colaboradores({
                             <input
                                 value={busca}
                                 onChange={(e) => setBusca(e.target.value)}
-                                placeholder="Buscar por nome, empresa, função ou matrícula"
+                                placeholder="Buscar por nome, empresa, função, matrícula ou código"
                                 className="w-full rounded-2xl border border-slate-200 py-3 pl-10 pr-4 text-sm outline-none focus:border-slate-400 focus:ring-4 focus:ring-slate-100"
                             />
                         </div>
@@ -1025,19 +1294,44 @@ function Colaboradores({
                         </div>
                     </div>
 
-                    <div className="mb-4 grid gap-3 md:grid-cols-3">
+                    <div className="mb-4 grid gap-3 md:grid-cols-5">
                         <div className="rounded-2xl bg-slate-50 p-3">
                             <p className="text-xs font-medium text-slate-500">Total</p>
                             <p className="text-2xl font-bold text-slate-950">{colaboradores.length}</p>
                         </div>
-                        <div className="rounded-2xl bg-slate-50 p-3">
-                            <p className="text-xs font-medium text-slate-500">Empresas</p>
-                            <p className="text-2xl font-bold text-slate-950">{empresasFiltro.length - 1}</p>
+                        <div className="rounded-2xl bg-emerald-50 p-3">
+                            <p className="text-xs font-medium text-emerald-700">Aptos</p>
+                            <p className="text-2xl font-bold text-emerald-700">{resumoTreinamentos.aptos}</p>
                         </div>
-                        <div className="rounded-2xl bg-slate-50 p-3">
-                            <p className="text-xs font-medium text-slate-500">Exibindo</p>
-                            <p className="text-2xl font-bold text-slate-950">{filtrados.length}</p>
+                        <div className="rounded-2xl bg-red-50 p-3">
+                            <p className="text-xs font-medium text-red-700">Pendentes</p>
+                            <p className="text-2xl font-bold text-red-700">{resumoTreinamentos.pendentes}</p>
                         </div>
+                        <div className="rounded-2xl bg-red-50 p-3">
+                            <p className="text-xs font-medium text-red-700">Vencidos</p>
+                            <p className="text-2xl font-bold text-red-700">{resumoTreinamentos.vencidos}</p>
+                        </div>
+                        <div className="rounded-2xl bg-amber-50 p-3">
+                            <p className="text-xs font-medium text-amber-700">A vencer 30d</p>
+                            <p className="text-2xl font-bold text-amber-700">{resumoTreinamentos.vencendo}</p>
+                        </div>
+                    </div>
+
+                    <div className="mb-4 flex flex-wrap justify-center gap-2 border-b border-slate-200 pb-4">
+                        <button
+                            onClick={baixarRelatorioColaboradores}
+                            className="inline-flex items-center gap-2 rounded-2xl bg-slate-950 px-4 py-2.5 text-xs font-semibold text-white hover:bg-slate-800"
+                        >
+                            <Download className="h-4 w-4" />
+                            Baixar PDF colaboradores
+                        </button>
+                        <button
+                            onClick={baixarRelatorioPendencias}
+                            className="inline-flex items-center gap-2 rounded-2xl bg-amber-50 px-4 py-2.5 text-xs font-semibold text-amber-700 ring-1 ring-amber-200 hover:bg-amber-100"
+                        >
+                            <AlertTriangle className="h-4 w-4" />
+                            Baixar PDF pendências
+                        </button>
                     </div>
 
                     {carregandoBanco && (
@@ -1060,6 +1354,8 @@ function Colaboradores({
                         {!carregandoBanco &&
                             filtrados.map((c) => {
                                 const geral = statusGeral(c);
+                                const avaliacao = avaliarTreinamentosColaborador(c);
+                                const foto = obterUrlFotoColaborador(c.fotoUrl);
 
                                 return (
                                     <div
@@ -1069,9 +1365,13 @@ function Colaboradores({
                                         <div className="flex items-start gap-4">
                                             <button
                                                 onClick={() => onSelectColab(c)}
-                                                className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-slate-100 text-slate-700 transition group-hover:bg-slate-950 group-hover:text-white"
+                                                className="flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-slate-100 text-slate-700 transition group-hover:bg-slate-950 group-hover:text-white"
                                             >
-                                                <UserRound className="h-6 w-6" />
+                                                {foto ? (
+                                                    <img src={foto} alt={`Foto ${c.nome}`} className="h-full w-full object-cover" />
+                                                ) : (
+                                                    <UserRound className="h-7 w-7" />
+                                                )}
                                             </button>
 
                                             <div className="min-w-0 flex-1">
@@ -1079,6 +1379,7 @@ function Colaboradores({
                                                     <div>
                                                         <h3 className="truncate font-bold text-slate-950">{c.nome}</h3>
                                                         <p className="text-sm text-slate-500">{c.funcao}</p>
+                                                        <p className="mt-1 text-xs font-semibold text-slate-500">Código: {c.codigoFuncionario}</p>
                                                     </div>
                                                     <span className={classNames("rounded-full px-2.5 py-1 text-xs font-semibold", geral.classe)}>
                                                         {geral.texto}
@@ -1088,6 +1389,32 @@ function Colaboradores({
                                                 <div className="mt-3 grid grid-cols-2 gap-2 text-xs text-slate-500">
                                                     <span className="rounded-xl bg-slate-50 px-3 py-2">{c.empresa}</span>
                                                     <span className="rounded-xl bg-slate-50 px-3 py-2">{c.matricula}</span>
+                                                </div>
+
+                                                <div className="mt-3 rounded-2xl bg-slate-50 p-3">
+                                                    <div className="flex items-center justify-between gap-2">
+                                                        <p className="text-xs font-bold uppercase tracking-wide text-slate-500">
+                                                            Matriz: {avaliacao.matriz.rotulo}
+                                                        </p>
+                                                        <p className="text-xs font-semibold text-slate-600">
+                                                            {avaliacao.emDia.length}/{avaliacao.total} válidos
+                                                        </p>
+                                                    </div>
+
+                                                    <div className="mt-2 space-y-1.5">
+                                                        {avaliacao.itens.slice(0, 5).map((item) => (
+                                                            <div key={item.treinamento.id} className="flex items-center justify-between gap-2 rounded-xl bg-white px-2 py-1.5 text-xs">
+                                                                <span className="min-w-0 truncate text-slate-600">{item.treinamento.nome}</span>
+                                                                <span className={classNames("shrink-0 rounded-full px-2 py-0.5 text-[10px] font-semibold ring-1", item.status.classe)}>
+                                                                    {item.status.texto}
+                                                                </span>
+                                                            </div>
+                                                        ))}
+                                                    </div>
+
+                                                    {avaliacao.itens.length > 5 && (
+                                                        <p className="mt-2 text-xs text-slate-400">+ {avaliacao.itens.length - 5} treinamento(s) obrigatório(s)</p>
+                                                    )}
                                                 </div>
 
                                                 <div className="mt-4 flex gap-2">
@@ -1119,6 +1446,7 @@ function Colaboradores({
     );
 }
 
+
 function Treinamentos({ colaboradores, setColaboradores }) {
     const [colabId, setColabId] = useState(colaboradores[0]?.id || "");
     const [treinamentoId, setTreinamentoId] = useState(treinamentosBase[0].id);
@@ -1127,6 +1455,8 @@ function Treinamentos({ colaboradores, setColaboradores }) {
     const [arquivoSelecionado, setArquivoSelecionado] = useState(null);
 
     const colabSelecionadoId = colabId || colaboradores[0]?.id || "";
+    const colabSelecionado = colaboradores.find((c) => String(c.id) === String(colabSelecionadoId));
+    const avaliacaoSelecionado = colabSelecionado ? avaliarTreinamentosColaborador(colabSelecionado) : null;
 
     const adicionarTreinamento = () => {
         if (!colabSelecionadoId) {
@@ -2956,6 +3286,9 @@ export default function App() {
           nome,
           funcao,
           matricula,
+          codigo_funcionario,
+          foto_url,
+          foto_nome,
           token_qr,
           status,
           empresa_id,
@@ -3267,19 +3600,41 @@ export default function App() {
         return data;
     }
 
+    async function enviarFotoColaborador(arquivo, colaboradorId) {
+        if (!arquivo) return { fotoUrl: null, fotoNome: null };
+
+        const nomeSeguro = sanitizarNomeArquivo(arquivo.name);
+        const caminho = `${colaboradorId}/${Date.now()}-${nomeSeguro}`;
+
+        const { error } = await supabase.storage
+            .from("fotos-colaboradores")
+            .upload(caminho, arquivo, {
+                cacheControl: "3600",
+                upsert: true,
+                contentType: arquivo.type || "image/png",
+            });
+
+        if (error) {
+            throw new Error(`Erro ao enviar foto do colaborador: ${error.message}`);
+        }
+
+        return { fotoUrl: caminho, fotoNome: nomeSeguro };
+    }
+
     async function adicionarColaborador(novo) {
         setErroBanco("");
 
         try {
             const empresaCriada = await obterOuCriarEmpresa(novo.empresaNome);
 
-            const { data, error } = await supabase
+            let { data, error } = await supabase
                 .from("colaboradores")
                 .insert({
                     empresa_id: empresaCriada.id,
                     nome: novo.nome,
                     funcao: novo.funcao,
                     matricula: novo.matricula || null,
+                    codigo_funcionario: novo.codigoFuncionario || gerarCodigoFuncionario(novo.nome),
                     status: "Ativo",
                 })
                 .select(`
@@ -3287,6 +3642,9 @@ export default function App() {
           nome,
           funcao,
           matricula,
+          codigo_funcionario,
+          foto_url,
+          foto_nome,
           token_qr,
           status,
           empresa_id,
@@ -3299,6 +3657,41 @@ export default function App() {
 
             if (error) {
                 throw new Error(`Erro ao cadastrar colaborador: ${error.message}`);
+            }
+
+            if (novo.foto) {
+                const foto = await enviarFotoColaborador(novo.foto, data.id);
+
+                const { data: colaboradorComFoto, error: fotoError } = await supabase
+                    .from("colaboradores")
+                    .update({
+                        foto_url: foto.fotoUrl,
+                        foto_nome: foto.fotoNome,
+                    })
+                    .eq("id", data.id)
+                    .select(`
+            id,
+            nome,
+            funcao,
+            matricula,
+            codigo_funcionario,
+            foto_url,
+            foto_nome,
+            token_qr,
+            status,
+            empresa_id,
+            empresas (
+              id,
+              nome
+            )
+          `)
+                    .single();
+
+                if (fotoError) {
+                    throw new Error(`Colaborador cadastrado, mas houve erro ao salvar a foto: ${fotoError.message}`);
+                }
+
+                data = colaboradorComFoto;
             }
 
             const colaborador = normalizarColaborador(data);
