@@ -210,6 +210,46 @@ function sanitizarNomeArquivo(nome) {
         .toLowerCase();
 }
 
+function obterUrlLogoEmpresa(caminho) {
+    if (!caminho) return "";
+
+    const { data } = supabase.storage
+        .from("logos-empresas")
+        .getPublicUrl(caminho);
+
+    return data?.publicUrl || "";
+}
+
+function normalizarStatusEmpresa(status) {
+    if (!status || status === "Ativa" || status === "Empresa ativa") return "Empresa ativa";
+    if (status === "Inativa" || status === "Empresa inativa") return "Empresa inativa";
+    if (status === "Inapta" || status === "Empresa inapta") return "Empresa inapta";
+    if (status === "Bloqueada" || status === "Suspensa" || status === "Empresa suspensa") return "Empresa suspensa";
+    return status;
+}
+
+function classeStatusEmpresa(status) {
+    const statusNormalizado = normalizarStatusEmpresa(status);
+
+    if (statusNormalizado === "Empresa ativa") {
+        return "bg-emerald-50 text-emerald-700 ring-emerald-200";
+    }
+
+    if (statusNormalizado === "Empresa inativa") {
+        return "bg-slate-100 text-slate-700 ring-slate-300";
+    }
+
+    if (statusNormalizado === "Empresa inapta") {
+        return "bg-red-50 text-red-700 ring-red-200";
+    }
+
+    if (statusNormalizado === "Empresa suspensa") {
+        return "bg-amber-50 text-amber-700 ring-amber-200";
+    }
+
+    return "bg-slate-100 text-slate-700 ring-slate-300";
+}
+
 function StatusPill({ status, small = false }) {
     const Icon = status.icon;
 
@@ -1131,6 +1171,7 @@ function Empresas({
     onAtualizarEmpresa,
     onAdicionarDocumentoEmpresa,
     onExcluirDocumentoEmpresa,
+    onVisualizarDocumentoEmpresa,
 }) {
     const [novaEmpresa, setNovaEmpresa] = useState({
         nome: "",
@@ -1138,6 +1179,8 @@ function Empresas({
         responsavel: "",
         email: "",
         telefone: "",
+        tipoEmpresa: "Terceirizada",
+        logo: null,
     });
 
     const [novoDoc, setNovoDoc] = useState({
@@ -1180,12 +1223,14 @@ function Empresas({
             responsavel: novaEmpresa.responsavel.trim(),
             email: novaEmpresa.email.trim(),
             telefone: novaEmpresa.telefone.trim(),
+            tipoEmpresa: novaEmpresa.tipoEmpresa,
+            logo: novaEmpresa.logo,
         });
 
         setSalvandoEmpresa(false);
 
         if (ok) {
-            setNovaEmpresa({ nome: "", cnpj: "", responsavel: "", email: "", telefone: "" });
+            setNovaEmpresa({ nome: "", cnpj: "", responsavel: "", email: "", telefone: "", tipoEmpresa: "Terceirizada", logo: null });
         }
     };
 
@@ -1213,7 +1258,11 @@ function Empresas({
             responsavel: empresa.responsavel || "",
             email: empresa.email || "",
             telefone: empresa.telefone || "",
-            status: empresa.status || "Ativa",
+            status: normalizarStatusEmpresa(empresa.status),
+            tipoEmpresa: empresa.tipo_empresa || "Terceirizada",
+            logoAtual: empresa.logo_url || "",
+            logoNomeAtual: empresa.logo_nome || "",
+            logo: null,
         });
     };
 
@@ -1233,6 +1282,10 @@ function Empresas({
             email: empresaEdicao.email.trim(),
             telefone: empresaEdicao.telefone.trim(),
             status: empresaEdicao.status || "Ativa",
+            tipoEmpresa: empresaEdicao.tipoEmpresa,
+            logo: empresaEdicao.logo,
+            logoAtual: empresaEdicao.logoAtual,
+            logoNomeAtual: empresaEdicao.logoNomeAtual,
         });
 
         setSalvandoEdicaoEmpresa(false);
@@ -1282,6 +1335,121 @@ function Empresas({
             });
         }
     };
+
+    const renderEmpresaCard = (empresa, docs, destaqueContratante = false) => {
+        const logoUrl = obterUrlLogoEmpresa(empresa.logo_url);
+
+        return (
+            <div key={empresa.id} className={classNames("rounded-3xl border p-4", destaqueContratante ? "border-slate-300 bg-slate-50" : "border-slate-200 bg-white")}>
+                <div className="flex flex-col justify-between gap-3 md:flex-row md:items-start">
+                    <div className="flex items-start gap-3">
+                        <div className="flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-white ring-1 ring-slate-200">
+                            {logoUrl ? (
+                                <img src={logoUrl} alt={`Logo ${empresa.nome}`} className="h-full w-full object-contain p-1" />
+                            ) : (
+                                <Building2 className="h-6 w-6 text-slate-400" />
+                            )}
+                        </div>
+                        <div>
+                            <h3 className="font-bold text-slate-950">{empresa.nome}</h3>
+                            <p className="text-sm text-slate-500">{empresa.cnpj || "CNPJ não informado"}</p>
+                            <p className="text-xs text-slate-400">
+                                Responsável: {empresa.responsavel || "-"} · {empresa.email || "-"}
+                            </p>
+                            <p className="mt-1 text-xs font-semibold text-slate-600">
+                                Tipo: {empresa.tipo_empresa || "Terceirizada"}
+                            </p>
+                        </div>
+                    </div>
+
+                    <div className="flex flex-wrap items-center gap-2">
+                        <span className={classNames("rounded-full px-3 py-1 text-xs font-semibold ring-1", classeStatusEmpresa(empresa.status))}>
+                            {normalizarStatusEmpresa(empresa.status)}
+                        </span>
+                        <button
+                            onClick={() => abrirEdicaoEmpresa(empresa)}
+                            className="inline-flex items-center gap-1 rounded-full bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 ring-1 ring-slate-200 hover:bg-slate-50"
+                        >
+                            <FileText className="h-3.5 w-3.5" />
+                            Editar dados
+                        </button>
+                        <button
+                            onClick={() => setEmpresaRevisao({ empresa, docs })}
+                            className="inline-flex items-center gap-1 rounded-full bg-slate-950 px-3 py-1.5 text-xs font-semibold text-white hover:bg-slate-800"
+                        >
+                            <Eye className="h-3.5 w-3.5" />
+                            Revisar documentos
+                        </button>
+                    </div>
+                </div>
+
+                <div className="mt-4 grid gap-3 lg:grid-cols-3">
+                    {documentosEmpresaBase.map((tipoDoc) => {
+                        const doc = docs.find((item) => item.tipo_documento === tipoDoc.tipo);
+                        const st = statusEmpresaDocumento(doc?.data_vencimento);
+
+                        return (
+                            <div key={tipoDoc.tipo} className="rounded-2xl bg-white p-3 ring-1 ring-slate-200">
+                                <div className="mb-2 flex items-start justify-between gap-2">
+                                    <div>
+                                        <p className="font-bold text-slate-900">{tipoDoc.nome}</p>
+                                        <p className="text-xs text-slate-400">
+                                            {doc ? `Emissão: ${formatDate(doc.data_emissao)}` : "Documento ainda não cadastrado"}
+                                        </p>
+                                    </div>
+                                    {doc && <StatusPill status={st} small />}
+                                </div>
+
+                                {doc ? (
+                                    <div className="space-y-2">
+                                        <p className="text-xs text-slate-500">
+                                            <strong>Revisão:</strong> {doc.data_vencimento ? formatDate(doc.data_vencimento) : "Sem vencimento fixo"}
+                                        </p>
+                                        <p className="truncate text-xs text-slate-500">
+                                            <strong>Arquivo:</strong> {doc.arquivo_nome || "Arquivo ainda não anexado"}
+                                        </p>
+                                        {doc.observacao && (
+                                            <p className="line-clamp-2 text-xs text-slate-500">{doc.observacao}</p>
+                                        )}
+                                        <div className="flex flex-wrap gap-2">
+                                            <button
+                                                onClick={() => onVisualizarDocumentoEmpresa(doc)}
+                                                disabled={!doc.arquivo_url}
+                                                title="Abrir o documento enviado"
+                                                className="inline-flex items-center gap-1 rounded-xl bg-slate-950 px-2.5 py-1.5 text-xs font-semibold text-white hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50"
+                                            >
+                                                <Eye className="h-3.5 w-3.5" />
+                                                Visualizar documento
+                                            </button>
+
+                                            <button
+                                                onClick={() => onExcluirDocumentoEmpresa(doc)}
+                                                title="Excluir este documento do cadastro da empresa"
+                                                className="inline-flex items-center gap-1 rounded-xl bg-red-50 px-2.5 py-1.5 text-xs font-semibold text-red-700 ring-1 ring-red-200 hover:bg-red-100"
+                                            >
+                                                <Trash2 className="h-3.5 w-3.5" />
+                                                Excluir documento
+                                            </button>
+                                        </div>
+                                    </div>
+                                ) : (
+                                    <p className="text-xs text-slate-500">Documento ainda não cadastrado para esta empresa.</p>
+                                )}
+                            </div>
+                        );
+                    })}
+                </div>
+            </div>
+        );
+    };
+
+    const empresasContratantes = empresasBanco.filter(
+        (empresa) => (empresa.tipo_empresa || "Terceirizada") === "Contratante - Idealiza Cidades"
+    );
+
+    const empresasTerceirizadas = empresasBanco.filter(
+        (empresa) => (empresa.tipo_empresa || "Terceirizada") !== "Contratante - Idealiza Cidades"
+    );
 
     return (
         <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
@@ -1351,6 +1519,26 @@ function Empresas({
                                 placeholder="Telefone"
                                 className="w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-slate-400 focus:ring-4 focus:ring-slate-100"
                             />
+
+                            <select
+                                value={novaEmpresa.tipoEmpresa}
+                                onChange={(e) => setNovaEmpresa({ ...novaEmpresa, tipoEmpresa: e.target.value })}
+                                className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none focus:border-slate-400 focus:ring-4 focus:ring-slate-100"
+                            >
+                                <option>Terceirizada</option>
+                                <option>Contratante - Idealiza Cidades</option>
+                            </select>
+
+                            <label className="flex cursor-pointer items-center justify-center gap-2 rounded-2xl border border-dashed border-slate-300 bg-slate-50 px-4 py-4 text-sm font-medium text-slate-600 hover:bg-slate-100">
+                                <Upload className="h-4 w-4" />
+                                {novaEmpresa.logo ? novaEmpresa.logo.name : "Adicionar logo da empresa"}
+                                <input
+                                    type="file"
+                                    accept="image/png,image/jpeg,image/webp,image/svg+xml"
+                                    className="hidden"
+                                    onChange={(e) => setNovaEmpresa({ ...novaEmpresa, logo: e.target.files?.[0] || null })}
+                                />
+                            </label>
 
                             <button
                                 onClick={adicionarEmpresa}
@@ -1456,7 +1644,7 @@ function Empresas({
                     <div className="mb-4 flex items-center justify-between">
                         <div>
                             <h2 className="text-lg font-bold text-slate-950">Empresas cadastradas</h2>
-                            <p className="text-sm text-slate-500">Documentos obrigatórios por empresa.</p>
+                            <p className="text-sm text-slate-500">Separação entre contratante e terceirizadas.</p>
                         </div>
                         <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-600">
                             {empresasBanco.length} empresa(s)
@@ -1473,96 +1661,64 @@ function Empresas({
                         <div className="rounded-3xl border border-dashed border-slate-300 p-8 text-center">
                             <Building2 className="mx-auto h-10 w-10 text-slate-300" />
                             <h3 className="mt-3 font-bold text-slate-900">Nenhuma empresa cadastrada</h3>
-                            <p className="mt-1 text-sm text-slate-500">Cadastre a primeira empresa no formulário ao lado.</p>
+                            <p className="mt-1 text-sm text-slate-500">Cadastre a contratante e as terceirizadas no formulário ao lado.</p>
                         </div>
                     )}
 
-                    <div className="space-y-4">
-                        {!carregandoBanco &&
-                            empresasBanco.map((empresa) => {
-                                const docs = documentosPorEmpresa[empresa.id] || [];
-
-                                return (
-                                    <div key={empresa.id} className="rounded-3xl border border-slate-200 p-4">
-                                        <div className="flex flex-col justify-between gap-3 md:flex-row md:items-start">
-                                            <div>
-                                                <h3 className="font-bold text-slate-950">{empresa.nome}</h3>
-                                                <p className="text-sm text-slate-500">{empresa.cnpj || "CNPJ não informado"}</p>
-                                                <p className="text-xs text-slate-400">
-                                                    Responsável: {empresa.responsavel || "-"} · {empresa.email || "-"}
-                                                </p>
-                                            </div>
-                                            <div className="flex flex-wrap items-center gap-2">
-                                                <span className="rounded-full bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700 ring-1 ring-emerald-200">
-                                                    {empresa.status || "Ativa"}
-                                                </span>
-                                                <button
-                                                    onClick={() => abrirEdicaoEmpresa(empresa)}
-                                                    className="inline-flex items-center gap-1 rounded-full bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 ring-1 ring-slate-200 hover:bg-slate-50"
-                                                >
-                                                    <FileText className="h-3.5 w-3.5" />
-                                                    Editar dados
-                                                </button>
-                                                <button
-                                                    onClick={() => setEmpresaRevisao({ empresa, docs })}
-                                                    className="inline-flex items-center gap-1 rounded-full bg-slate-950 px-3 py-1.5 text-xs font-semibold text-white hover:bg-slate-800"
-                                                >
-                                                    <Eye className="h-3.5 w-3.5" />
-                                                    Revisar documentos
-                                                </button>
-                                            </div>
-                                        </div>
-
-                                        <div className="mt-4 grid gap-3 lg:grid-cols-3">
-                                            {documentosEmpresaBase.map((tipoDoc) => {
-                                                const doc = docs.find((item) => item.tipo_documento === tipoDoc.tipo);
-                                                const st = statusEmpresaDocumento(doc?.data_vencimento);
-
-                                                return (
-                                                    <div key={tipoDoc.tipo} className="rounded-2xl bg-slate-50 p-3">
-                                                        <div className="mb-2 flex items-start justify-between gap-2">
-                                                            <div>
-                                                                <p className="font-bold text-slate-900">{tipoDoc.nome}</p>
-                                                                <p className="text-xs text-slate-400">
-                                                                    {doc ? `Emissão: ${formatDate(doc.data_emissao)}` : "Documento ainda não cadastrado"}
-                                                                </p>
-                                                            </div>
-                                                            {doc && <StatusPill status={st} small />}
-                                                        </div>
-
-                                                        {doc ? (
-                                                            <div className="space-y-2">
-                                                                <p className="text-xs text-slate-500">
-                                                                    <strong>Revisão:</strong> {doc.data_vencimento ? formatDate(doc.data_vencimento) : "Sem vencimento fixo"}
-                                                                </p>
-                                                                <p className="truncate text-xs text-slate-500">
-                                                                    <strong>Arquivo:</strong> {doc.arquivo_nome || "Arquivo ainda não anexado"}
-                                                                </p>
-                                                                {doc.observacao && (
-                                                                    <p className="line-clamp-2 text-xs text-slate-500">{doc.observacao}</p>
-                                                                )}
-                                                                <button
-                                                                    onClick={() => onExcluirDocumentoEmpresa(doc)}
-                                                                    title="Excluir este documento do cadastro da empresa"
-                                                                    className="inline-flex items-center gap-1 rounded-xl bg-red-50 px-2.5 py-1.5 text-xs font-semibold text-red-700 ring-1 ring-red-200 hover:bg-red-100"
-                                                                >
-                                                                    <Trash2 className="h-3.5 w-3.5" />
-                                                                    Excluir documento
-                                                                </button>
-                                                            </div>
-                                                        ) : (
-                                                            <p className="text-xs text-slate-500">Documento ainda não cadastrado para esta empresa.</p>
-                                                        )}
-                                                    </div>
-                                                );
-                                            })}
-                                        </div>
+                    {!carregandoBanco && empresasBanco.length > 0 && (
+                        <div className="space-y-6">
+                            <section>
+                                <div className="mb-3 flex items-center gap-2">
+                                    <div className="rounded-xl bg-slate-950 p-2 text-white">
+                                        <ShieldCheck className="h-4 w-4" />
                                     </div>
-                                );
-                            })}
-                    </div>
-                </Card>
-            </div>
+                                    <div>
+                                        <h3 className="font-bold text-slate-950">Empresa contratante</h3>
+                                        <p className="text-xs text-slate-500">Idealiza Cidades / empresa principal do controle documental</p>
+                                    </div>
+                                </div>
+
+                                {empresasContratantes.length === 0 ? (
+                                    <div className="rounded-3xl border border-dashed border-slate-300 p-5 text-sm text-slate-500">
+                                        Nenhuma empresa contratante cadastrada. Cadastre a empresa como <strong>Contratante - Idealiza Cidades</strong>.
+                                    </div>
+                                ) : (
+                                    <div className="space-y-4">
+                                        {empresasContratantes.map((empresa) => {
+                                            const docs = documentosPorEmpresa[empresa.id] || [];
+                                            return renderEmpresaCard(empresa, docs, true);
+                                        })}
+                                    </div>
+                                )}
+                            </section>
+
+                            <section>
+                                <div className="mb-3 flex items-center gap-2">
+                                    <div className="rounded-xl bg-slate-100 p-2 text-slate-700">
+                                        <Users className="h-4 w-4" />
+                                    </div>
+                                    <div>
+                                        <h3 className="font-bold text-slate-950">Empresas terceirizadas</h3>
+                                        <p className="text-xs text-slate-500">Prestadoras de serviço vinculadas ao controle de documentos</p>
+                                    </div>
+                                </div>
+
+                                {empresasTerceirizadas.length === 0 ? (
+                                    <div className="rounded-3xl border border-dashed border-slate-300 p-5 text-sm text-slate-500">
+                                        Nenhuma empresa terceirizada cadastrada.
+                                    </div>
+                                ) : (
+                                    <div className="space-y-4">
+                                        {empresasTerceirizadas.map((empresa) => {
+                                            const docs = documentosPorEmpresa[empresa.id] || [];
+                                            return renderEmpresaCard(empresa, docs, false);
+                                        })}
+                                    </div>
+                                )}
+                            </section>
+                        </div>
+                    )}
+                </Card>      </div>
 
             {empresaEdicao && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/70 p-4">
@@ -1603,13 +1759,26 @@ function Empresas({
                             <div>
                                 <label className="mb-1 block text-xs font-bold uppercase tracking-wide text-slate-500">Status</label>
                                 <select
-                                    value={empresaEdicao.status}
+                                    value={normalizarStatusEmpresa(empresaEdicao.status)}
                                     onChange={(e) => setEmpresaEdicao({ ...empresaEdicao, status: e.target.value })}
                                     className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none focus:border-slate-400 focus:ring-4 focus:ring-slate-100"
                                 >
-                                    <option>Ativa</option>
-                                    <option>Inativa</option>
-                                    <option>Bloqueada</option>
+                                    <option>Empresa ativa</option>
+                                    <option>Empresa inativa</option>
+                                    <option>Empresa inapta</option>
+                                    <option>Empresa suspensa</option>
+                                </select>
+                            </div>
+
+                            <div className="md:col-span-2">
+                                <label className="mb-1 block text-xs font-bold uppercase tracking-wide text-slate-500">Tipo da empresa</label>
+                                <select
+                                    value={empresaEdicao.tipoEmpresa}
+                                    onChange={(e) => setEmpresaEdicao({ ...empresaEdicao, tipoEmpresa: e.target.value })}
+                                    className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none focus:border-slate-400 focus:ring-4 focus:ring-slate-100"
+                                >
+                                    <option>Terceirizada</option>
+                                    <option>Contratante - Idealiza Cidades</option>
                                 </select>
                             </div>
 
@@ -1638,6 +1807,20 @@ function Empresas({
                                     onChange={(e) => setEmpresaEdicao({ ...empresaEdicao, telefone: e.target.value })}
                                     className="w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-slate-400 focus:ring-4 focus:ring-slate-100"
                                 />
+                            </div>
+
+                            <div className="md:col-span-2">
+                                <label className="mb-1 block text-xs font-bold uppercase tracking-wide text-slate-500">Logo da empresa</label>
+                                <label className="flex cursor-pointer items-center justify-center gap-2 rounded-2xl border border-dashed border-slate-300 bg-slate-50 px-4 py-4 text-sm font-medium text-slate-600 hover:bg-slate-100">
+                                    <Upload className="h-4 w-4" />
+                                    {empresaEdicao.logo ? empresaEdicao.logo.name : empresaEdicao.logoNomeAtual || "Alterar logo da empresa"}
+                                    <input
+                                        type="file"
+                                        accept="image/png,image/jpeg,image/webp,image/svg+xml"
+                                        className="hidden"
+                                        onChange={(e) => setEmpresaEdicao({ ...empresaEdicao, logo: e.target.files?.[0] || null })}
+                                    />
+                                </label>
                             </div>
                         </div>
 
@@ -1708,13 +1891,24 @@ function Empresas({
                                         </div>
 
                                         {doc && (
-                                            <button
-                                                onClick={() => onExcluirDocumentoEmpresa(doc)}
-                                                className="mt-4 inline-flex items-center gap-1 rounded-xl bg-red-50 px-3 py-2 text-xs font-semibold text-red-700 ring-1 ring-red-200 hover:bg-red-100"
-                                            >
-                                                <Trash2 className="h-3.5 w-3.5" />
-                                                Excluir documento
-                                            </button>
+                                            <div className="mt-4 flex flex-wrap gap-2">
+                                                <button
+                                                    onClick={() => onVisualizarDocumentoEmpresa(doc)}
+                                                    disabled={!doc.arquivo_url}
+                                                    className="inline-flex items-center gap-1 rounded-xl bg-slate-950 px-3 py-2 text-xs font-semibold text-white hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50"
+                                                >
+                                                    <Eye className="h-3.5 w-3.5" />
+                                                    Visualizar documento
+                                                </button>
+
+                                                <button
+                                                    onClick={() => onExcluirDocumentoEmpresa(doc)}
+                                                    className="inline-flex items-center gap-1 rounded-xl bg-red-50 px-3 py-2 text-xs font-semibold text-red-700 ring-1 ring-red-200 hover:bg-red-100"
+                                                >
+                                                    <Trash2 className="h-3.5 w-3.5" />
+                                                    Excluir documento
+                                                </button>
+                                            </div>
                                         )}
                                     </div>
                                 );
@@ -1737,7 +1931,8 @@ function Requisitos() {
         "Empresas criadas automaticamente no banco quando informadas no cadastro.",
         "Exclusão de colaboradores diretamente na tabela colaboradores.",
         "QR Code individual com link real de consulta e token aleatório, sem CPF ou dado sensível.",
-        "Próximo passo: salvar certificados em Supabase Storage e tabela certificados.",
+        "Visualização dos documentos enviados por link temporário seguro do Supabase Storage.",
+        "Próximo passo: salvar certificados dos colaboradores em Supabase Storage e tabela certificados.",
     ];
 
     const tabelas = [
@@ -1799,7 +1994,7 @@ export default function App() {
     const carregarEmpresas = useCallback(async () => {
         const { data, error } = await supabase
             .from("empresas")
-            .select("id, nome, cnpj, responsavel, email, telefone, status")
+            .select("id, nome, cnpj, responsavel, email, telefone, status, tipo_empresa, logo_url, logo_nome")
             .order("nome", { ascending: true });
 
         if (error) {
@@ -1867,6 +2062,27 @@ export default function App() {
         }
     }, [carregarEmpresas, carregarDocumentosEmpresas]);
 
+    async function enviarLogoEmpresa(arquivo, empresaId) {
+        if (!arquivo) return { logoUrl: null, logoNome: null };
+
+        const nomeSeguro = sanitizarNomeArquivo(arquivo.name);
+        const caminho = `${empresaId || "nova-empresa"}/${Date.now()}-${nomeSeguro}`;
+
+        const { error } = await supabase.storage
+            .from("logos-empresas")
+            .upload(caminho, arquivo, {
+                cacheControl: "3600",
+                upsert: true,
+                contentType: arquivo.type || "image/png",
+            });
+
+        if (error) {
+            throw new Error(`Erro ao enviar logo: ${error.message}`);
+        }
+
+        return { logoUrl: caminho, logoNome: nomeSeguro };
+    }
+
     async function adicionarEmpresa(novaEmpresa) {
         setErroBanco("");
 
@@ -1880,7 +2096,7 @@ export default function App() {
                 return false;
             }
 
-            const { data, error } = await supabase
+            let { data, error } = await supabase
                 .from("empresas")
                 .insert({
                     nome: novaEmpresa.nome,
@@ -1888,13 +2104,34 @@ export default function App() {
                     responsavel: novaEmpresa.responsavel || null,
                     email: novaEmpresa.email || null,
                     telefone: novaEmpresa.telefone || null,
-                    status: "Ativa",
+                    tipo_empresa: novaEmpresa.tipoEmpresa || "Terceirizada",
+                    status: "Empresa ativa",
                 })
-                .select("id, nome, cnpj, responsavel, email, telefone, status")
+                .select("id, nome, cnpj, responsavel, email, telefone, status, tipo_empresa, logo_url, logo_nome")
                 .single();
 
             if (error) {
                 throw new Error(`Erro ao cadastrar empresa: ${error.message}`);
+            }
+
+            if (novaEmpresa.logo) {
+                const logo = await enviarLogoEmpresa(novaEmpresa.logo, data.id);
+
+                const { data: empresaComLogo, error: logoError } = await supabase
+                    .from("empresas")
+                    .update({
+                        logo_url: logo.logoUrl,
+                        logo_nome: logo.logoNome,
+                    })
+                    .eq("id", data.id)
+                    .select("id, nome, cnpj, responsavel, email, telefone, status, tipo_empresa, logo_url, logo_nome")
+                    .single();
+
+                if (logoError) {
+                    throw new Error(`Empresa cadastrada, mas houve erro ao salvar o logo: ${logoError.message}`);
+                }
+
+                data = empresaComLogo;
             }
 
             setEmpresasBanco((atual) => [data, ...atual].sort((a, b) => a.nome.localeCompare(b.nome)));
@@ -1909,6 +2146,19 @@ export default function App() {
         setErroBanco("");
 
         try {
+            let logoAtualizada = {
+                logo_url: empresaAtualizada.logoAtual || null,
+                logo_nome: empresaAtualizada.logoNomeAtual || null,
+            };
+
+            if (empresaAtualizada.logo) {
+                const logo = await enviarLogoEmpresa(empresaAtualizada.logo, empresaAtualizada.id);
+                logoAtualizada = {
+                    logo_url: logo.logoUrl,
+                    logo_nome: logo.logoNome,
+                };
+            }
+
             const { data, error } = await supabase
                 .from("empresas")
                 .update({
@@ -1917,10 +2167,13 @@ export default function App() {
                     responsavel: empresaAtualizada.responsavel || null,
                     email: empresaAtualizada.email || null,
                     telefone: empresaAtualizada.telefone || null,
-                    status: empresaAtualizada.status || "Ativa",
+                    status: normalizarStatusEmpresa(empresaAtualizada.status),
+                    tipo_empresa: empresaAtualizada.tipoEmpresa || "Terceirizada",
+                    logo_url: logoAtualizada.logo_url,
+                    logo_nome: logoAtualizada.logo_nome,
                 })
                 .eq("id", empresaAtualizada.id)
-                .select("id, nome, cnpj, responsavel, email, telefone, status")
+                .select("id, nome, cnpj, responsavel, email, telefone, status, tipo_empresa, logo_url, logo_nome")
                 .single();
 
             if (error) {
@@ -2029,6 +2282,26 @@ export default function App() {
         setDocumentosEmpresas((atual) => atual.filter((item) => item.id !== documento.id));
     }
 
+    async function visualizarDocumentoEmpresa(documento) {
+        setErroBanco("");
+
+        if (!documento?.arquivo_url) {
+            setErroBanco("Este documento ainda não possui arquivo anexado para visualização.");
+            return;
+        }
+
+        const { data, error } = await supabase.storage
+            .from("documentos-empresas")
+            .createSignedUrl(documento.arquivo_url, 60 * 10);
+
+        if (error) {
+            setErroBanco(`Erro ao gerar link de visualização: ${error.message}`);
+            return;
+        }
+
+        window.open(data.signedUrl, "_blank", "noopener,noreferrer");
+    }
+
     async function obterOuCriarEmpresa(nomeEmpresa) {
         const nomeTratado = nomeEmpresa.trim();
 
@@ -2042,9 +2315,9 @@ export default function App() {
             .from("empresas")
             .insert({
                 nome: nomeTratado,
-                status: "Ativa",
+                status: "Empresa ativa",
             })
-            .select("id, nome, cnpj, responsavel, email, telefone, status")
+            .select("id, nome, cnpj, responsavel, email, telefone, status, tipo_empresa, logo_url, logo_nome")
             .single();
 
         if (error) {
@@ -2293,6 +2566,7 @@ export default function App() {
                             onAtualizarEmpresa={atualizarEmpresa}
                             onAdicionarDocumentoEmpresa={adicionarDocumentoEmpresa}
                             onExcluirDocumentoEmpresa={excluirDocumentoEmpresa}
+                            onVisualizarDocumentoEmpresa={visualizarDocumentoEmpresa}
                         />
                     )}
 
