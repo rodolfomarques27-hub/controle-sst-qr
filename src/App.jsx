@@ -1019,6 +1019,7 @@ function Colaboradores({
     const [salvando, setSalvando] = useState(false);
     const [colaboradorEdicao, setColaboradorEdicao] = useState(null);
     const [salvandoEdicaoColaborador, setSalvandoEdicaoColaborador] = useState(false);
+    const [pendenciasAbertas, setPendenciasAbertas] = useState(null);
     const [novo, setNovo] = useState({
         nome: "",
         empresaNome: "",
@@ -1355,6 +1356,10 @@ function Colaboradores({
                             <p className="text-xs font-medium text-emerald-700">Aptos</p>
                             <p className="text-2xl font-bold text-emerald-700">{resumoTreinamentos.aptos}</p>
                         </div>
+                        <div className="rounded-2xl bg-orange-50 p-3">
+                            <p className="text-xs font-medium text-orange-700">A vencer 30d</p>
+                            <p className="text-2xl font-bold text-orange-700">{resumoTreinamentos.vencendo}</p>
+                        </div>
                         <div className="rounded-2xl bg-blue-50 p-3">
                             <p className="text-xs font-medium text-blue-700">Pendentes</p>
                             <p className="text-2xl font-bold text-blue-700">{resumoTreinamentos.pendentes}</p>
@@ -1362,10 +1367,6 @@ function Colaboradores({
                         <div className="rounded-2xl bg-red-50 p-3">
                             <p className="text-xs font-medium text-red-700">Vencidos</p>
                             <p className="text-2xl font-bold text-red-700">{resumoTreinamentos.vencidos}</p>
-                        </div>
-                        <div className="rounded-2xl bg-orange-50 p-3">
-                            <p className="text-xs font-medium text-orange-700">A vencer 30d</p>
-                            <p className="text-2xl font-bold text-orange-700">{resumoTreinamentos.vencendo}</p>
                         </div>
                     </div>
 
@@ -1443,31 +1444,49 @@ function Colaboradores({
                                                     <span className="break-words rounded-xl bg-slate-50 px-3 py-2">{c.matricula || "Matrícula não informada"}</span>
                                                 </div>
 
-                                                <div className="mt-3 rounded-2xl bg-slate-50 p-3">
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setPendenciasAbertas(pendenciasAbertas === c.id ? null : c.id)}
+                                                    className="mt-3 w-full rounded-2xl bg-slate-50 p-3 text-left transition hover:bg-slate-100"
+                                                >
                                                     <div className="flex items-center justify-between gap-2">
-                                                        <p className="text-xs font-bold uppercase tracking-wide text-slate-500">
-                                                            Matriz: {avaliacao.matriz.rotulo}
-                                                        </p>
-                                                        <p className="text-xs font-semibold text-slate-600">
-                                                            {avaliacao.emDia.length}/{avaliacao.total} válidos
-                                                        </p>
+                                                        <div>
+                                                            <p className="text-xs font-bold uppercase tracking-wide text-slate-500">
+                                                                Matriz: {avaliacao.matriz.rotulo}
+                                                            </p>
+                                                            <p className="mt-1 text-xs text-slate-500">
+                                                                Clique para visualizar pendências e treinamentos da função.
+                                                            </p>
+                                                        </div>
+                                                        <div className="text-right">
+                                                            <p className="text-xs font-semibold text-slate-600">
+                                                                {avaliacao.emDia.length}/{avaliacao.total} válidos
+                                                            </p>
+                                                            <p className="mt-1 text-xs font-semibold text-blue-700">
+                                                                {avaliacao.pendentes.length} pendente(s)
+                                                            </p>
+                                                        </div>
                                                     </div>
+                                                </button>
 
-                                                    <div className="mt-2 space-y-1.5">
-                                                        {avaliacao.itens.slice(0, 5).map((item) => (
-                                                            <div key={item.treinamento.id} className="flex items-center justify-between gap-2 rounded-xl bg-white px-2 py-1.5 text-xs">
-                                                                <span className="min-w-0 truncate text-slate-600">{item.treinamento.nome}</span>
-                                                                <span className={classNames("shrink-0 rounded-full px-2 py-0.5 text-[10px] font-semibold ring-1", item.status.classe)}>
-                                                                    {item.status.texto}
-                                                                </span>
-                                                            </div>
-                                                        ))}
+                                                {pendenciasAbertas === c.id && (
+                                                    <div className="mt-2 rounded-2xl border border-slate-200 bg-white p-3">
+                                                        <p className="mb-2 text-xs font-bold uppercase tracking-wide text-slate-500">
+                                                            Treinamentos e pendências
+                                                        </p>
+
+                                                        <div className="space-y-1.5">
+                                                            {avaliacao.itens.map((item) => (
+                                                                <div key={item.treinamento.id} className="flex items-center justify-between gap-2 rounded-xl bg-slate-50 px-2 py-1.5 text-xs">
+                                                                    <span className="min-w-0 break-words text-slate-600">{item.treinamento.nome}</span>
+                                                                    <span className={classNames("shrink-0 rounded-full px-2 py-0.5 text-[10px] font-semibold ring-1", item.status.classe)}>
+                                                                        {item.status.texto}
+                                                                    </span>
+                                                                </div>
+                                                            ))}
+                                                        </div>
                                                     </div>
-
-                                                    {avaliacao.itens.length > 5 && (
-                                                        <p className="mt-2 text-xs text-slate-400">+ {avaliacao.itens.length - 5} treinamento(s) obrigatório(s)</p>
-                                                    )}
-                                                </div>
+                                                )}
 
                                                 <div className="mt-4 grid gap-2 sm:grid-cols-[1fr_auto]">
                                                     <button
