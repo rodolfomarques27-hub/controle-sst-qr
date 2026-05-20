@@ -1013,6 +1013,7 @@ function Colaboradores({
     onAtualizarColaborador,
     onExcluirColaborador,
     onSelectColab,
+    onEnviarTreinamento,
 }) {
     const [busca, setBusca] = useState("");
     const [empresa, setEmpresa] = useState("Todas");
@@ -1514,6 +1515,14 @@ function Colaboradores({
                                                 </button>
 
                                                 <button
+                                                    onClick={() => onEnviarTreinamento(c)}
+                                                    className="inline-flex items-center justify-center gap-2 rounded-xl bg-blue-50 px-3 py-2 text-xs font-semibold text-blue-700 ring-1 ring-blue-200 hover:bg-blue-100"
+                                                >
+                                                    <Upload className="h-3.5 w-3.5" />
+                                                    Enviar treinamento
+                                                </button>
+
+                                                <button
                                                     onClick={() => onExcluirColaborador(c)}
                                                     className="inline-flex items-center justify-center gap-2 rounded-xl bg-red-50 px-3 py-2 text-xs font-semibold text-red-700 ring-1 ring-red-200 hover:bg-red-100"
                                                 >
@@ -1664,8 +1673,8 @@ function Colaboradores({
 }
 
 
-function Treinamentos({ colaboradores, setColaboradores }) {
-    const [colabId, setColabId] = useState(colaboradores[0]?.id || "");
+function Treinamentos({ colaboradores, setColaboradores, colaboradorInicialId }) {
+    const [colabId, setColabId] = useState(colaboradorInicialId || colaboradores[0]?.id || "");
     const [treinamentoId, setTreinamentoId] = useState(treinamentosBase[0].id);
     const [vencimento, setVencimento] = useState(addDays(365));
     const [arquivo, setArquivo] = useState("certificado.pdf");
@@ -4074,6 +4083,11 @@ export default function App() {
         setTela("qr");
     };
 
+    const abrirEnvioTreinamento = (c) => {
+        setColaboradorSelecionado(c);
+        setTela("treinamentos");
+    };
+
     const sair = async () => {
         await supabase.auth.signOut();
         setUsuario(null);
@@ -4199,11 +4213,17 @@ export default function App() {
                             onAtualizarColaborador={atualizarColaborador}
                             onExcluirColaborador={excluirColaborador}
                             onSelectColab={selecionarColaborador}
+                            onEnviarTreinamento={abrirEnvioTreinamento}
                         />
                     )}
 
                     {tela === "treinamentos" && (
-                        <Treinamentos colaboradores={colaboradores} setColaboradores={setColaboradores} />
+                        <Treinamentos
+                            key={colaboradorSelecionado?.id || "treinamentos"}
+                            colaboradores={colaboradores}
+                            setColaboradores={setColaboradores}
+                            colaboradorInicialId={colaboradorSelecionado?.id}
+                        />
                     )}
 
                     {tela === "qr" && <ConsultaQR colaborador={colaboradorSelecionado} />}
