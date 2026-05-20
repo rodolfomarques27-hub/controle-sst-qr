@@ -1403,7 +1403,7 @@ function Colaboradores({
                         </div>
                     )}
 
-                    <div className="grid gap-4 lg:grid-cols-2">
+                    <div className="grid gap-4">
                         {!carregandoBanco &&
                             filtrados.map((c) => {
                                 const geral = statusGeral(c);
@@ -1415,10 +1415,10 @@ function Colaboradores({
                                         key={c.id}
                                         className="group rounded-3xl border border-slate-200 bg-white p-5 transition hover:border-slate-300 hover:shadow-md"
                                     >
-                                        <div className="flex items-start gap-4">
+                                        <div className="grid gap-4 lg:grid-cols-[72px_1fr_360px_150px] lg:items-start">
                                             <button
                                                 onClick={() => onSelectColab(c)}
-                                                className="flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-slate-100 text-slate-700 transition group-hover:bg-slate-950 group-hover:text-white"
+                                                className="flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-slate-100 text-slate-700 transition group-hover:bg-slate-950 group-hover:text-white"
                                             >
                                                 {foto ? (
                                                     <img src={foto} alt={`Foto ${c.nome}`} className="h-full w-full object-cover" />
@@ -1427,7 +1427,7 @@ function Colaboradores({
                                                 )}
                                             </button>
 
-                                            <div className="min-w-0 flex-1">
+                                            <div className="min-w-0">
                                                 <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
                                                     <div className="min-w-0">
                                                         <h3 className="break-words font-bold leading-snug text-slate-950">{c.nome}</h3>
@@ -1439,15 +1439,18 @@ function Colaboradores({
                                                     </span>
                                                 </div>
 
-                                                <div className="mt-3 grid grid-cols-1 gap-2 text-xs text-slate-500 sm:grid-cols-2">
+                                                <div className="mt-3 grid grid-cols-1 gap-2 text-xs text-slate-500 xl:grid-cols-2">
                                                     <span className="break-words rounded-xl bg-slate-50 px-3 py-2">{c.empresa}</span>
                                                     <span className="break-words rounded-xl bg-slate-50 px-3 py-2">{c.matricula || "Matrícula não informada"}</span>
                                                 </div>
 
+                                            </div>
+
+                                            <div>
                                                 <button
                                                     type="button"
                                                     onClick={() => setPendenciasAbertas(pendenciasAbertas === c.id ? null : c.id)}
-                                                    className="mt-3 w-full rounded-2xl bg-slate-50 p-3 text-left transition hover:bg-slate-100"
+                                                    className="w-full rounded-2xl bg-slate-50 p-3 text-left transition hover:bg-slate-100"
                                                 >
                                                     <div className="flex items-center justify-between gap-2">
                                                         <div>
@@ -1488,31 +1491,32 @@ function Colaboradores({
                                                     </div>
                                                 )}
 
-                                                <div className="mt-4 grid gap-2 sm:grid-cols-[1fr_auto]">
-                                                    <button
-                                                        onClick={() => onSelectColab(c)}
-                                                        className="inline-flex items-center justify-center gap-2 rounded-xl bg-slate-950 px-3 py-2 text-xs font-semibold text-white hover:bg-slate-800"
-                                                    >
-                                                        <QrCode className="h-3.5 w-3.5" />
-                                                        Ver QR
-                                                    </button>
+                                            </div>
 
-                                                    <button
-                                                        onClick={() => abrirRevisaoColaborador(c)}
-                                                        className="inline-flex items-center justify-center gap-2 rounded-xl bg-white px-3 py-2 text-xs font-semibold text-slate-700 ring-1 ring-slate-200 hover:bg-slate-50"
-                                                    >
-                                                        <FileText className="h-3.5 w-3.5" />
-                                                        Revisar dados
-                                                    </button>
+                                            <div className="flex flex-col gap-2">
+                                                <button
+                                                    onClick={() => onSelectColab(c)}
+                                                    className="inline-flex items-center justify-center gap-2 rounded-xl bg-slate-950 px-3 py-2 text-xs font-semibold text-white hover:bg-slate-800"
+                                                >
+                                                    <QrCode className="h-3.5 w-3.5" />
+                                                    Ver QR
+                                                </button>
 
-                                                    <button
-                                                        onClick={() => onExcluirColaborador(c)}
-                                                        className="inline-flex items-center justify-center gap-2 rounded-xl bg-red-50 px-3 py-2 text-xs font-semibold text-red-700 ring-1 ring-red-200 hover:bg-red-100 sm:col-span-2"
-                                                    >
-                                                        <Trash2 className="h-3.5 w-3.5" />
-                                                        Excluir
-                                                    </button>
-                                                </div>
+                                                <button
+                                                    onClick={() => abrirRevisaoColaborador(c)}
+                                                    className="inline-flex items-center justify-center gap-2 rounded-xl bg-white px-3 py-2 text-xs font-semibold text-slate-700 ring-1 ring-slate-200 hover:bg-slate-50"
+                                                >
+                                                    <FileText className="h-3.5 w-3.5" />
+                                                    Revisar dados
+                                                </button>
+
+                                                <button
+                                                    onClick={() => onExcluirColaborador(c)}
+                                                    className="inline-flex items-center justify-center gap-2 rounded-xl bg-red-50 px-3 py-2 text-xs font-semibold text-red-700 ring-1 ring-red-200 hover:bg-red-100"
+                                                >
+                                                    <Trash2 className="h-3.5 w-3.5" />
+                                                    Excluir
+                                                </button>
                                             </div>
                                         </div>
                                     </div>
