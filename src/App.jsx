@@ -70,19 +70,29 @@ function addDays(days) {
 }
 
 const treinamentosBase = [
-    { id: 1, nome: "Integração SST", validadePadrao: 365, categoria: "Obrigatório", base: "NR-01 / Integração" },
+    { id: 1, nome: "Integração / Mobilização SST", validadePadrao: 365, categoria: "Obrigatório", base: "NR-01 / Integração de obra" },
     { id: 2, nome: "NR-35 Trabalho em Altura", validadePadrao: 730, categoria: "Alto Risco", base: "NR-35" },
-    { id: 3, nome: "NR-12 Segurança em Máquinas", validadePadrao: 730, categoria: "Operacional", base: "NR-12" },
+    { id: 3, nome: "NR-12 Máquinas e Equipamentos", validadePadrao: 730, categoria: "Operacional", base: "NR-12" },
     { id: 4, nome: "NR-10 Segurança em Eletricidade", validadePadrao: 730, categoria: "Elétrica", base: "NR-10" },
     { id: 5, nome: "PEMT / PTA", validadePadrao: 365, categoria: "Equipamento", base: "NR-18 / NR-12 / fabricante" },
     { id: 6, nome: "Trabalho a Quente / Solda", validadePadrao: 365, categoria: "Alto Risco", base: "NR-18 / NR-34 como referência técnica" },
     { id: 7, nome: "Lixadeira / Esmerilhadeira", validadePadrao: 365, categoria: "Ferramentas", base: "NR-12 / NR-18" },
-    { id: 8, nome: "NR-06 Uso e Conservação de EPI", validadePadrao: 365, categoria: "Obrigatório", base: "NR-06 / NR-01" },
-    { id: 9, nome: "NR-18 Construção Civil / Canteiro", validadePadrao: 365, categoria: "Construção", base: "NR-18" },
+    { id: 8, nome: "NR-06 Uso Correto de EPIs", validadePadrao: 365, categoria: "Obrigatório", base: "NR-06 / NR-01" },
+    { id: 9, nome: "NR-18.06 Treinamento de Obra / Construção", validadePadrao: 365, categoria: "Construção", base: "NR-18" },
     { id: 10, nome: "NR-33 Espaço Confinado", validadePadrao: 365, categoria: "Alto Risco", base: "NR-33" },
-    { id: 11, nome: "Movimentação Manual de Cargas", validadePadrao: 365, categoria: "Ergonomia / Operacional", base: "NR-17 / procedimento interno" },
+    { id: 11, nome: "NR-11 Transporte e Movimentação de Cargas", validadePadrao: 365, categoria: "Movimentação", base: "NR-11" },
     { id: 12, nome: "Escavação / Abertura de Valas", validadePadrao: 365, categoria: "Construção", base: "NR-18 / procedimento interno" },
-    { id: 13, nome: "Procedimento Operacional da Função", validadePadrao: 365, categoria: "Atividade", base: "PGR / APR / procedimento interno" },
+    { id: 13, nome: "Procedimento Operacional da Função / OS", validadePadrao: 365, categoria: "Atividade", base: "PGR / APR / Ordem de Serviço" },
+    { id: 14, nome: "Ficha de EPIs atualizada", validadePadrao: 365, categoria: "Documento", base: "NR-06" },
+    { id: 15, nome: "Ordem de Serviço da Função", validadePadrao: 365, categoria: "Documento", base: "NR-01 / NR-06" },
+    { id: 16, nome: "NR-21 Trabalho a Céu Aberto / Protetor Solar", validadePadrao: 365, categoria: "Ambiental", base: "NR-21 / procedimento interno" },
+    { id: 17, nome: "NR-25 Meio Ambiente / Resíduos", validadePadrao: 365, categoria: "Meio Ambiente", base: "NR-25 / procedimento interno" },
+    { id: 18, nome: "NR-17 Ergonomia", validadePadrao: 365, categoria: "Ergonomia", base: "NR-17" },
+    { id: 19, nome: "NR-26 Sinalização de Segurança / Vias", validadePadrao: 365, categoria: "Sinalização", base: "NR-26" },
+    { id: 20, nome: "NR-23 Proteção Contra Incêndio", validadePadrao: 365, categoria: "Emergência", base: "NR-23" },
+    { id: 21, nome: "Ficha de Registro", validadePadrao: 3650, categoria: "Documento", base: "CLT / admissional" },
+    { id: 22, nome: "ASO - Atestado de Saúde Ocupacional", validadePadrao: 365, categoria: "Documento Médico", base: "NR-07" },
+    { id: 23, nome: "NR-20 Inflamáveis e Combustíveis", validadePadrao: 365, categoria: "Alto Risco", base: "NR-20" },
 ];
 
 const documentosEmpresaBase = [
@@ -126,72 +136,98 @@ function calcularVencimentoDocumento(tipo, dataEmissao) {
     return data.toISOString().slice(0, 10);
 }
 
+const treinamentosBaseObra = [1, 14, 15, 8, 9, 16, 17, 18, 20, 21, 22];
+
 const matrizTreinamentosPorFuncao = [
     {
-        chave: "soldador",
-        rotulo: "Soldador / trabalho a quente",
-        termos: ["soldador", "solda", "caldeireiro"],
-        treinamentos: [1, 8, 9, 3, 6, 7],
-    },
-    {
         chave: "pedreiro",
-        rotulo: "Pedreiro / alvenaria",
+        rotulo: "PEDREIRO",
         termos: ["pedreiro", "alvenaria", "bloquete", "pavimentador", "calceteiro"],
-        treinamentos: [1, 8, 9, 11, 13],
-    },
-    {
-        chave: "bloquete",
-        rotulo: "Instalador de bloquete / pavimentação",
-        termos: ["bloquete", "paver", "pavimento", "pavimentacao", "pavimentação"],
-        treinamentos: [1, 8, 9, 11, 13],
-    },
-    {
-        chave: "eletricista",
-        rotulo: "Eletricista",
-        termos: ["eletricista", "eletrica", "elétrica", "eletrico", "elétrico"],
-        treinamentos: [1, 8, 4, 3, 2],
-    },
-    {
-        chave: "operador-pemt",
-        rotulo: "Operador de PEMT / PTA",
-        termos: ["pemt", "pta", "plataforma", "cesto", "elevatoria", "elevatória"],
-        treinamentos: [1, 8, 5, 2, 3],
-    },
-    {
-        chave: "montador",
-        rotulo: "Montador / estruturas",
-        termos: ["montador", "estrutura", "andaime", "serralheiro"],
-        treinamentos: [1, 8, 9, 2, 3, 7],
+        treinamentos: [...treinamentosBaseObra, 11, 13],
     },
     {
         chave: "ajudante",
-        rotulo: "Ajudante / servente",
+        rotulo: "AJUDANTE",
         termos: ["ajudante", "servente", "auxiliar"],
-        treinamentos: [1, 8, 9, 11, 13],
+        treinamentos: [...treinamentosBaseObra, 11, 13],
     },
     {
-        chave: "pintor",
-        rotulo: "Pintor",
-        termos: ["pintor", "pintura"],
-        treinamentos: [1, 8, 9, 2, 13],
+        chave: "encarregado",
+        rotulo: "ENCARREGADO",
+        termos: ["encarregado", "mestre de obras", "supervisor"],
+        treinamentos: [...treinamentosBaseObra, 11, 13],
     },
     {
-        chave: "escavacao",
-        rotulo: "Escavação / abertura de valas",
-        termos: ["escavacao", "escavação", "vala", "valas"],
-        treinamentos: [1, 8, 9, 12, 13],
+        chave: "carpinteiro",
+        rotulo: "CARPINTEIRO",
+        termos: ["carpinteiro", "formas", "forma"],
+        treinamentos: [...treinamentosBaseObra, 2, 3, 7, 11, 13],
+    },
+    {
+        chave: "op-betoneira",
+        rotulo: "OP. DE BETONEIRA",
+        termos: ["betoneira", "op. de betoneira", "operador de betoneira"],
+        treinamentos: [...treinamentosBaseObra, 3, 11, 13],
     },
     {
         chave: "tecnico-sst",
-        rotulo: "Técnico de Segurança do Trabalho",
-        termos: ["tecnico de seguranca", "técnico de segurança", "seguranca do trabalho", "segurança do trabalho", "sst"],
-        treinamentos: [1, 8, 13],
+        rotulo: "TEC. SEG. DO TRAB.",
+        termos: ["tecnico de seguranca", "técnico de segurança", "tec. seg", "seguranca do trabalho", "segurança do trabalho", "sst"],
+        treinamentos: [...treinamentosBaseObra, 13],
+    },
+    {
+        chave: "lider",
+        rotulo: "LÍDER",
+        termos: ["lider", "líder", "liderança"],
+        treinamentos: [...treinamentosBaseObra, 11, 13],
+    },
+    {
+        chave: "motorista",
+        rotulo: "MOTORISTA",
+        termos: ["motorista", "condutor"],
+        treinamentos: [...treinamentosBaseObra, 11, 19, 13],
+    },
+    {
+        chave: "armador",
+        rotulo: "ARMADOR",
+        termos: ["armador", "armação", "armacao", "ferreiro"],
+        treinamentos: [...treinamentosBaseObra, 2, 11, 13],
+    },
+    {
+        chave: "op-maquinas",
+        rotulo: "OP. DE MÁQUINAS",
+        termos: ["op. de maquinas", "op de maquinas", "operador de maquinas", "operador de máquinas", "maquinas", "máquinas", "retroescavadeira", "escavadeira", "pa carregadeira", "pá carregadeira"],
+        treinamentos: [...treinamentosBaseObra, 3, 11, 19, 13],
+    },
+    {
+        chave: "greidista",
+        rotulo: "GREIDISTA",
+        termos: ["greidista", "greide", "nivelamento"],
+        treinamentos: [...treinamentosBaseObra, 3, 11, 19, 13],
+    },
+    {
+        chave: "soldador",
+        rotulo: "SOLDADOR / TRABALHO A QUENTE",
+        termos: ["soldador", "solda", "caldeireiro"],
+        treinamentos: [...treinamentosBaseObra, 3, 6, 7, 13],
+    },
+    {
+        chave: "operador-pemt",
+        rotulo: "OPERADOR DE PEMT / PTA",
+        termos: ["pemt", "pta", "plataforma", "cesto", "elevatoria", "elevatória"],
+        treinamentos: [...treinamentosBaseObra, 2, 3, 5, 13],
+    },
+    {
+        chave: "eletricista",
+        rotulo: "ELETRICISTA",
+        termos: ["eletricista", "eletrica", "elétrica", "eletrico", "elétrico"],
+        treinamentos: [...treinamentosBaseObra, 2, 3, 4, 13],
     },
     {
         chave: "geral",
-        rotulo: "Matriz básica",
+        rotulo: "MATRIZ BÁSICA DE OBRA",
         termos: [],
-        treinamentos: [1, 8, 13],
+        treinamentos: [...treinamentosBaseObra, 13],
     },
 ];
 
@@ -202,19 +238,44 @@ function normalizarTextoBusca(valor) {
         .toLowerCase();
 }
 
+function obterFuncoesPersonalizadasSalvas() {
+    if (typeof window === "undefined") return [];
+
+    try {
+        const salvas = JSON.parse(window.localStorage.getItem("funcoesTreinamentosPersonalizadas") || "[]");
+        return Array.isArray(salvas) ? salvas : [];
+    } catch {
+        return [];
+    }
+}
+
+function salvarFuncoesPersonalizadas(lista) {
+    if (typeof window === "undefined") return;
+    window.localStorage.setItem("funcoesTreinamentosPersonalizadas", JSON.stringify(lista));
+}
+
+function obterTodasMatrizesFuncao() {
+    const personalizadas = obterFuncoesPersonalizadasSalvas();
+    const matrizGeral = matrizTreinamentosPorFuncao.find((item) => item.chave === "geral");
+    const fixasSemGeral = matrizTreinamentosPorFuncao.filter((item) => item.chave !== "geral");
+
+    return [...fixasSemGeral, ...personalizadas, matrizGeral];
+}
+
 function obterMatrizFuncao(funcao) {
     const texto = normalizarTextoBusca(funcao);
+    const matrizes = obterTodasMatrizesFuncao();
 
     return (
-        matrizTreinamentosPorFuncao.find((item) =>
-            item.termos.some((termo) => texto.includes(normalizarTextoBusca(termo)))
-        ) || matrizTreinamentosPorFuncao.find((item) => item.chave === "geral")
+        matrizes.find((item) =>
+            item.chave !== "geral" && item.termos.some((termo) => texto.includes(normalizarTextoBusca(termo)))
+        ) || matrizes.find((item) => item.chave === "geral")
     );
 }
 
 function treinamentosObrigatoriosFuncao(funcao) {
     const matriz = obterMatrizFuncao(funcao);
-    return matriz.treinamentos.map((id) => obterTreinamento(id));
+    return Array.from(new Set(matriz.treinamentos)).map((id) => obterTreinamento(id)).filter(Boolean);
 }
 
 function gerarCodigoFuncionario(nome = "") {
@@ -326,6 +387,7 @@ function normalizarColaborador(item) {
         fotoUrl: item.foto_url || item.fotoUrl || "",
         fotoNome: item.foto_nome || item.fotoNome || "",
         status: item.status || "Ativo",
+        statusMobilizacao: item.status_mobilizacao || item.statusMobilizacao || "Mobilizado",
         token: item.token_qr || item.token || `SST-${String(item.id).slice(0, 8)}`,
         treinamentos: item.treinamentos || [],
     };
@@ -1021,11 +1083,19 @@ function Colaboradores({
     const [colaboradorEdicao, setColaboradorEdicao] = useState(null);
     const [salvandoEdicaoColaborador, setSalvandoEdicaoColaborador] = useState(false);
     const [pendenciasAbertas, setPendenciasAbertas] = useState(null);
+    const [modalFuncaoAberto, setModalFuncaoAberto] = useState(false);
+    const [versaoFuncoes, setVersaoFuncoes] = useState(0);
+    const [novaFuncao, setNovaFuncao] = useState({
+        rotulo: "",
+        termos: "",
+        treinamentos: [...treinamentosBaseObra, 13],
+    });
     const [novo, setNovo] = useState({
         nome: "",
         empresaNome: "",
         funcao: "",
         matricula: "",
+        statusMobilizacao: "Mobilizado",
         foto: null,
     });
 
@@ -1033,7 +1103,7 @@ function Colaboradores({
 
     const filtrados = colaboradores.filter((c) => {
         const avaliacao = avaliarTreinamentosColaborador(c);
-        const texto = `${c.nome} ${c.empresa} ${c.funcao} ${c.matricula} ${c.codigoFuncionario} ${avaliacao.matriz.rotulo}`.toLowerCase();
+        const texto = `${c.nome} ${c.empresa} ${c.funcao} ${c.matricula} ${c.codigoFuncionario} ${c.statusMobilizacao} ${avaliacao.matriz.rotulo}`.toLowerCase();
         return texto.includes(busca.toLowerCase()) && (empresa === "Todas" || c.empresa === empresa);
     });
 
@@ -1056,6 +1126,7 @@ function Colaboradores({
                 "Empresa",
                 "Função",
                 "Matrícula",
+                "Situação na obra",
                 "Matriz aplicada",
                 "Status geral",
                 "Treinamentos obrigatórios",
@@ -1076,6 +1147,7 @@ function Colaboradores({
                 c.empresa,
                 c.funcao,
                 c.matricula,
+                c.statusMobilizacao,
                 avaliacao.matriz.rotulo,
                 geral.texto,
                 avaliacao.itens.map((item) => item.treinamento.nome).join(" | "),
@@ -1091,7 +1163,7 @@ function Colaboradores({
 
     const baixarRelatorioPendencias = () => {
         const linhas = [
-            ["Colaborador", "Código", "Empresa", "Função", "Treinamento", "Situação", "Vencimento", "Base"],
+            ["Colaborador", "Código", "Empresa", "Função", "Situação na obra", "Treinamento", "Situação", "Vencimento", "Base"],
         ];
 
         filtrados.forEach((c) => {
@@ -1105,6 +1177,7 @@ function Colaboradores({
                         c.codigoFuncionario,
                         c.empresa,
                         c.funcao,
+                        c.statusMobilizacao,
                         item.treinamento.nome,
                         item.status.texto,
                         item.realizado?.vencimento ? formatDate(item.realizado.vencimento) : "Sem certificado lançado",
@@ -1129,6 +1202,7 @@ function Colaboradores({
             empresaNome: novo.empresaNome.trim(),
             funcao: novo.funcao.trim(),
             matricula: novo.matricula.trim(),
+            statusMobilizacao: novo.statusMobilizacao,
             foto: novo.foto,
             codigoFuncionario: gerarCodigoFuncionario(novo.nome),
         });
@@ -1136,11 +1210,43 @@ function Colaboradores({
         setSalvando(false);
 
         if (ok) {
-            setNovo({ nome: "", empresaNome: "", funcao: "", matricula: "", foto: null });
+            setNovo({ nome: "", empresaNome: "", funcao: "", matricula: "", statusMobilizacao: "Mobilizado", foto: null });
         }
     };
 
-    const funcoesSugeridas = matrizTreinamentosPorFuncao.filter((item) => item.chave !== "geral");
+    const funcoesSugeridas = obterTodasMatrizesFuncao().filter((item) => item.chave !== "geral");
+    void versaoFuncoes;
+
+    const salvarNovaFuncao = () => {
+        if (!novaFuncao.rotulo.trim()) {
+            alert("Informe o nome da função.");
+            return;
+        }
+
+        if (!novaFuncao.treinamentos.length) {
+            alert("Selecione pelo menos um treinamento/documento obrigatório.");
+            return;
+        }
+
+        const listaAtual = obterFuncoesPersonalizadasSalvas();
+        const chave = `custom-${normalizarTextoBusca(novaFuncao.rotulo).replace(/[^a-z0-9]+/g, "-")}-${Date.now()}`;
+        const termos = novaFuncao.termos
+            .split(",")
+            .map((termo) => termo.trim())
+            .filter(Boolean);
+
+        const nova = {
+            chave,
+            rotulo: novaFuncao.rotulo.trim().toUpperCase(),
+            termos: Array.from(new Set([novaFuncao.rotulo.trim(), ...termos])),
+            treinamentos: novaFuncao.treinamentos.map(Number),
+        };
+
+        salvarFuncoesPersonalizadas([...listaAtual, nova]);
+        setVersaoFuncoes((valor) => valor + 1);
+        setNovaFuncao({ rotulo: "", termos: "", treinamentos: [...treinamentosBaseObra, 13] });
+        setModalFuncaoAberto(false);
+    };
 
     const abrirRevisaoColaborador = (colaborador) => {
         setColaboradorEdicao({
@@ -1151,6 +1257,7 @@ function Colaboradores({
             matricula: colaborador.matricula === "-" ? "" : colaborador.matricula || "",
             codigoFuncionario: colaborador.codigoFuncionario || "",
             status: colaborador.status || "Ativo",
+            statusMobilizacao: colaborador.statusMobilizacao || "Mobilizado",
             fotoAtual: colaborador.fotoUrl || "",
             fotoNomeAtual: colaborador.fotoNome || "",
             foto: null,
@@ -1172,6 +1279,7 @@ function Colaboradores({
             funcao: colaboradorEdicao.funcao.trim(),
             matricula: colaboradorEdicao.matricula.trim(),
             status: colaboradorEdicao.status || "Ativo",
+            statusMobilizacao: colaboradorEdicao.statusMobilizacao || "Mobilizado",
             codigoFuncionario: colaboradorEdicao.codigoFuncionario,
             foto: colaboradorEdicao.foto,
             fotoAtual: colaboradorEdicao.fotoAtual,
@@ -1191,13 +1299,23 @@ function Colaboradores({
                 titulo="Colaboradores"
                 subtitulo="Cadastro com foto, código automático, matriz de treinamentos por função e alerta de vencimentos."
                 acao={
-                    <button
-                        onClick={onAtualizarBanco}
-                        className="inline-flex items-center gap-2 rounded-2xl bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 shadow-sm ring-1 ring-slate-200 hover:bg-slate-50"
-                    >
-                        <RefreshCw className={classNames("h-4 w-4", carregandoBanco && "animate-spin")} />
-                        Atualizar banco
-                    </button>
+                    <div className="flex flex-wrap gap-2">
+                        <button
+                            onClick={() => setModalFuncaoAberto(true)}
+                            className="inline-flex items-center gap-2 rounded-2xl bg-slate-950 px-4 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-slate-800"
+                        >
+                            <Plus className="h-4 w-4" />
+                            Nova função
+                        </button>
+
+                        <button
+                            onClick={onAtualizarBanco}
+                            className="inline-flex items-center gap-2 rounded-2xl bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 shadow-sm ring-1 ring-slate-200 hover:bg-slate-50"
+                        >
+                            <RefreshCw className={classNames("h-4 w-4", carregandoBanco && "animate-spin")} />
+                            Atualizar banco
+                        </button>
+                    </div>
                 }
             />
 
@@ -1250,6 +1368,23 @@ function Colaboradores({
                                     <option key={e.id} value={e.nome} />
                                 ))}
                             </datalist>
+                        </div>
+
+                        <div>
+                            <label className="mb-1 block text-xs font-bold uppercase tracking-wide text-slate-500">
+                                Situação na obra
+                            </label>
+                            <select
+                                value={novo.statusMobilizacao}
+                                onChange={(e) => setNovo({ ...novo, statusMobilizacao: e.target.value })}
+                                className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none focus:border-slate-400 focus:ring-4 focus:ring-slate-100"
+                            >
+                                <option>Mobilizado</option>
+                                <option>Desmobilizado</option>
+                            </select>
+                            <p className="mt-1 text-xs text-slate-400">
+                                Mobilizado = ativo na obra. Desmobilizado = fora da obra.
+                            </p>
                         </div>
 
                         <div>
@@ -1442,6 +1577,14 @@ function Colaboradores({
                                                     <span className="block break-words rounded-xl bg-slate-50 px-3 py-2">
                                                         <strong>Empresa:</strong> {c.empresa}
                                                     </span>
+                                                    <span className={classNames(
+                                                        "mt-2 inline-flex rounded-xl px-3 py-2 text-xs font-semibold ring-1",
+                                                        c.statusMobilizacao === "Mobilizado"
+                                                            ? "bg-emerald-50 text-emerald-700 ring-emerald-200"
+                                                            : "bg-slate-100 text-slate-700 ring-slate-300"
+                                                    )}>
+                                                        Situação na obra: {c.statusMobilizacao}
+                                                    </span>
                                                 </div>
 
                                                 <button
@@ -1552,6 +1695,105 @@ function Colaboradores({
                     </div>
                 </Card>
             </div>
+            {modalFuncaoAberto && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center overflow-hidden bg-slate-950/70 p-4">
+                    <div className="flex max-h-[92vh] w-full max-w-3xl flex-col overflow-hidden rounded-[2rem] bg-white shadow-2xl">
+                        <div className="shrink-0 border-b border-slate-200 bg-white p-6 pb-4">
+                            <div className="flex items-start justify-between gap-4">
+                                <div>
+                                    <p className="text-xs font-bold uppercase tracking-wide text-slate-400">Cadastro de função</p>
+                                    <h2 className="mt-1 text-2xl font-bold text-slate-950">Nova função e treinamentos obrigatórios</h2>
+                                    <p className="mt-1 text-sm text-slate-500">
+                                        Crie uma função personalizada e selecione quais treinamentos/documentos serão exigidos.
+                                    </p>
+                                </div>
+                                <button
+                                    onClick={() => setModalFuncaoAberto(false)}
+                                    className="rounded-2xl bg-slate-950 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-800"
+                                >
+                                    Fechar
+                                </button>
+                            </div>
+                        </div>
+
+                        <div className="scrollbar-discreta flex-1 overflow-y-auto px-6 py-5">
+                            <div className="grid gap-3 md:grid-cols-2">
+                                <div>
+                                    <label className="mb-1 block text-xs font-bold uppercase tracking-wide text-slate-500">Nome da função</label>
+                                    <input
+                                        value={novaFuncao.rotulo}
+                                        onChange={(e) => setNovaFuncao({ ...novaFuncao, rotulo: e.target.value })}
+                                        placeholder="Ex.: Operador de rolo compactador"
+                                        className="w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-slate-400 focus:ring-4 focus:ring-slate-100"
+                                    />
+                                </div>
+
+                                <div>
+                                    <label className="mb-1 block text-xs font-bold uppercase tracking-wide text-slate-500">Palavras-chave</label>
+                                    <input
+                                        value={novaFuncao.termos}
+                                        onChange={(e) => setNovaFuncao({ ...novaFuncao, termos: e.target.value })}
+                                        placeholder="Ex.: rolo, compactador, operador"
+                                        className="w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-slate-400 focus:ring-4 focus:ring-slate-100"
+                                    />
+                                    <p className="mt-1 text-xs text-slate-400">Separe por vírgula. O sistema usa isso para identificar a matriz.</p>
+                                </div>
+                            </div>
+
+                            <div className="mt-5">
+                                <p className="mb-3 text-xs font-bold uppercase tracking-wide text-slate-500">
+                                    Treinamentos/documentos obrigatórios
+                                </p>
+
+                                <div className="grid gap-2 md:grid-cols-2">
+                                    {treinamentosBase.map((treinamento) => (
+                                        <label
+                                            key={treinamento.id}
+                                            className="flex cursor-pointer items-start gap-2 rounded-2xl border border-slate-200 bg-white p-3 text-sm hover:bg-slate-50"
+                                        >
+                                            <input
+                                                type="checkbox"
+                                                checked={novaFuncao.treinamentos.includes(treinamento.id)}
+                                                onChange={(e) => {
+                                                    const atualizados = e.target.checked
+                                                        ? [...novaFuncao.treinamentos, treinamento.id]
+                                                        : novaFuncao.treinamentos.filter((id) => id !== treinamento.id);
+
+                                                    setNovaFuncao({ ...novaFuncao, treinamentos: Array.from(new Set(atualizados)) });
+                                                }}
+                                                className="mt-1"
+                                            />
+                                            <span>
+                                                <strong className="block text-slate-800">{treinamento.nome}</strong>
+                                                <span className="text-xs text-slate-400">{treinamento.base}</span>
+                                            </span>
+                                        </label>
+                                    ))}
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="shrink-0 border-t border-slate-200 bg-white p-6">
+                            <div className="flex flex-col gap-3 sm:flex-row">
+                                <button
+                                    onClick={salvarNovaFuncao}
+                                    className="flex-1 rounded-2xl bg-slate-950 px-4 py-3 text-sm font-semibold text-white hover:bg-slate-800"
+                                >
+                                    Salvar função
+                                </button>
+
+                                <button
+                                    onClick={() => setModalFuncaoAberto(false)}
+                                    className="flex-1 rounded-2xl bg-slate-100 px-4 py-3 text-sm font-semibold text-slate-700 hover:bg-slate-200"
+                                >
+                                    Cancelar
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+
             {colaboradorEdicao && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center overflow-hidden bg-slate-950/70 p-4">
                     <div className="flex max-h-[92vh] w-full max-w-2xl flex-col overflow-hidden rounded-[2rem] bg-white shadow-2xl">
@@ -1631,6 +1873,18 @@ function Colaboradores({
                                         <option>Ativo</option>
                                         <option>Inativo</option>
                                         <option>Bloqueado</option>
+                                    </select>
+                                </div>
+
+                                <div>
+                                    <label className="mb-1 block text-xs font-bold uppercase tracking-wide text-slate-500">Situação na obra</label>
+                                    <select
+                                        value={colaboradorEdicao.statusMobilizacao}
+                                        onChange={(e) => setColaboradorEdicao({ ...colaboradorEdicao, statusMobilizacao: e.target.value })}
+                                        className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none focus:border-slate-400 focus:ring-4 focus:ring-slate-100"
+                                    >
+                                        <option>Mobilizado</option>
+                                        <option>Desmobilizado</option>
                                     </select>
                                 </div>
 
@@ -3528,6 +3782,7 @@ export default function App() {
           funcao,
           matricula,
           codigo_funcionario,
+          status_mobilizacao,
           foto_url,
           foto_nome,
           token_qr,
@@ -3876,6 +4131,7 @@ export default function App() {
                     funcao: novo.funcao,
                     matricula: novo.matricula || null,
                     codigo_funcionario: novo.codigoFuncionario || gerarCodigoFuncionario(novo.nome),
+                    status_mobilizacao: novo.statusMobilizacao || "Mobilizado",
                     status: "Ativo",
                 })
                 .select(`
@@ -3916,6 +4172,7 @@ export default function App() {
             funcao,
             matricula,
             codigo_funcionario,
+            status_mobilizacao,
             foto_url,
             foto_nome,
             token_qr,
@@ -3974,6 +4231,7 @@ export default function App() {
                     funcao: colaboradorAtualizado.funcao,
                     matricula: colaboradorAtualizado.matricula || null,
                     status: colaboradorAtualizado.status || "Ativo",
+                    status_mobilizacao: colaboradorAtualizado.statusMobilizacao || "Mobilizado",
                     foto_url: fotoAtualizada.foto_url,
                     foto_nome: fotoAtualizada.foto_nome,
                 })
