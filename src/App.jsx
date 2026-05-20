@@ -57,23 +57,23 @@ const documentosEmpresaBase = [
         nome: "LTCAT",
         validadePadraoDias: 1095,
         regra:
-            "Documento previdenciário utilizado para caracterizar exposição a agentes nocivos. Para controle interno do sistema, será adotada validade padrão de 3 anos, desde que não haja alteração de layout, processo, atividade, equipamentos, agentes nocivos, EPCs, EPIs ou medidas de controle. Havendo qualquer alteração nas condições de exposição, o LTCAT deve ser revisado antes desse prazo.",
-        fundamento: "Base legal: legislação previdenciária/eSocial. Controle interno adotado: 3 anos ou revisão imediata quando houver mudança nas condições ambientais.",
+            "Controle interno de 3 anos. Revisar antes do prazo se houver alteração de layout, processo, atividade, equipamentos, agentes nocivos, EPCs, EPIs ou medidas de controle.",
+        fundamento: "Base legal: previdenciária/eSocial. Controle interno: 3 anos ou revisão por alteração ambiental.",
     },
     {
         tipo: "PCMSO",
         nome: "PCMSO",
         validadePadraoDias: 365,
         regra:
-            "Programa médico ocupacional baseado nos riscos identificados no PGR. Controle interno anual recomendado, considerando o relatório analítico anual, exames ocupacionais, mudanças de função, alteração de riscos ou exposição ocupacional.",
-        fundamento: "Base normativa: NR-07, integrada aos riscos ocupacionais identificados no PGR/NR-01.",
+            "Controle anual recomendado, com base nos riscos do PGR, exames ocupacionais, mudanças de função ou alteração da exposição ocupacional.",
+        fundamento: "Base normativa: NR-07, integrada aos riscos identificados no PGR/NR-01.",
     },
     {
         tipo: "PGR",
         nome: "PGR",
         validadePadraoDias: 730,
         regra:
-            "Programa de Gerenciamento de Riscos. A avaliação de riscos deve ser revista no mínimo a cada 2 anos ou quando houver mudanças em processos, atividades, layout, equipamentos, medidas de prevenção, ocorrência de acidente/incidente relevante ou indicação de necessidade de nova avaliação.",
+            "Revisar no mínimo a cada 2 anos ou quando houver mudança em processos, layout, equipamentos, medidas de prevenção ou ocorrência relevante.",
         fundamento: "Base normativa: NR-01 / GRO / PGR.",
     },
 ];
@@ -2691,7 +2691,7 @@ function Empresas({
                             </button>
                         </div>
 
-                        <div className="mt-5 grid gap-4 md:grid-cols-3">
+                        <div className="mt-5 grid items-stretch gap-4 md:grid-cols-3">
                             {documentosEmpresaBase.map((tipoDoc) => {
                                 const docsAtualizadosRevisao = documentosPorEmpresa[empresaRevisao.empresa.id] || [];
                                 const doc = docsAtualizadosRevisao.find((item) => item.tipo_documento === tipoDoc.tipo);
@@ -2700,21 +2700,28 @@ function Empresas({
                                 const chaveUpload = `${empresaRevisao.empresa.id}-${tipoDoc.tipo}`;
 
                                 return (
-                                    <div key={tipoDoc.tipo} className="rounded-3xl border border-slate-200 p-4">
+                                    <div key={tipoDoc.tipo} className="flex h-full flex-col rounded-3xl border border-slate-200 p-4">
                                         <div className="mb-3 flex items-start justify-between gap-2">
                                             <div>
                                                 <h3 className="text-lg font-bold text-slate-950">{tipoDoc.nome}</h3>
-                                                <p className="text-xs text-slate-400">{tipoDoc.fundamento}</p>
+                                                <p className="line-clamp-2 text-xs text-slate-400">{tipoDoc.fundamento}</p>
                                             </div>
                                             {doc ? <StatusPill status={st} small /> : <span className="rounded-full bg-red-50 px-2 py-1 text-xs font-semibold text-red-700 ring-1 ring-red-200">Pendente</span>}
                                         </div>
 
-                                        <div className="space-y-2 text-sm text-slate-600">
-                                            <p><strong>Regra:</strong> {tipoDoc.regra}</p>
-                                            <p><strong>Emissão:</strong> {doc ? formatDate(doc.data_emissao) : "Documento não enviado"}</p>
-                                            <p><strong>Próxima revisão:</strong> {doc?.data_vencimento ? formatDate(doc.data_vencimento) : "Sem revisão definida"}</p>
-                                            <p><strong>Arquivo:</strong> {doc?.arquivo_nome || "Arquivo ainda não anexado"}</p>
-                                            {doc?.observacao && <p><strong>Observação:</strong> {doc.observacao}</p>}
+                                        <div className="flex min-h-[235px] flex-col justify-between rounded-2xl bg-white text-sm text-slate-600">
+                                            <div className="space-y-2">
+                                                <p className="line-clamp-3"><strong>Regra:</strong> {tipoDoc.regra}</p>
+                                                <p><strong>Emissão:</strong> {doc ? formatDate(doc.data_emissao) : "Documento não enviado"}</p>
+                                                <p><strong>Próxima revisão:</strong> {doc?.data_vencimento ? formatDate(doc.data_vencimento) : "Sem revisão definida"}</p>
+                                                <p className="truncate"><strong>Arquivo:</strong> {doc?.arquivo_nome || "Arquivo ainda não anexado"}</p>
+                                            </div>
+
+                                            {doc?.observacao && (
+                                                <p className="mt-2 line-clamp-2 text-xs text-slate-500">
+                                                    <strong>Observação:</strong> {doc.observacao}
+                                                </p>
+                                            )}
                                         </div>
 
                                         <div className="mt-4 rounded-2xl bg-slate-50 p-3">
@@ -2772,7 +2779,7 @@ function Empresas({
                                         </div>
 
                                         {doc && (
-                                            <div className="mt-4 flex flex-wrap gap-2">
+                                            <div className="mt-auto flex flex-wrap gap-2 pt-4">
                                                 <button
                                                     onClick={() => onVisualizarDocumentoEmpresa(doc)}
                                                     disabled={!doc.arquivo_url}
