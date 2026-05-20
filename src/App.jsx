@@ -183,7 +183,7 @@ const matrizTreinamentosPorFuncao = [
     },
     {
         chave: "geral",
-        rotulo: "Função geral",
+        rotulo: "Matriz básica - função não classificada",
         termos: [],
         treinamentos: [1, 8, 13],
     },
@@ -1010,6 +1010,7 @@ function Colaboradores({
     const [busca, setBusca] = useState("");
     const [empresa, setEmpresa] = useState("Todas");
     const [salvando, setSalvando] = useState(false);
+    const [colaboradorRevisao, setColaboradorRevisao] = useState(null);
     const [novo, setNovo] = useState({
         nome: "",
         empresaNome: "",
@@ -1233,16 +1234,16 @@ function Colaboradores({
 
                         <div>
                             <label className="mb-1 block text-xs font-bold uppercase tracking-wide text-slate-500">
-                                Matrícula / Código interno
+                                Matrícula da empresa, se houver
                             </label>
                             <input
                                 value={novo.matricula}
                                 onChange={(e) => setNovo({ ...novo, matricula: e.target.value })}
-                                placeholder="Ex.: M-0145"
+                                placeholder="Opcional. Ex.: matrícula da empresa terceirizada"
                                 className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none focus:border-slate-400 focus:ring-4 focus:ring-slate-100"
                             />
                             <p className="mt-1 text-xs text-slate-400">
-                                O código aleatório do colaborador é gerado automaticamente ao cadastrar.
+                                O código interno do sistema é gerado automaticamente. Use este campo apenas se a empresa possuir matrícula própria.
                             </p>
                         </div>
 
@@ -1350,7 +1351,7 @@ function Colaboradores({
                         </div>
                     )}
 
-                    <div className="grid gap-4 lg:grid-cols-2">
+                    <div className="grid gap-4 2xl:grid-cols-2">
                         {!carregandoBanco &&
                             filtrados.map((c) => {
                                 const geral = statusGeral(c);
@@ -1377,11 +1378,11 @@ function Colaboradores({
                                             <div className="min-w-0 flex-1">
                                                 <div className="flex items-start justify-between gap-2">
                                                     <div>
-                                                        <h3 className="truncate font-bold text-slate-950">{c.nome}</h3>
-                                                        <p className="text-sm text-slate-500">{c.funcao}</p>
+                                                        <h3 className="break-words pr-2 font-bold leading-snug text-slate-950">{c.nome}</h3>
+                                                        <p className="break-words pr-2 text-sm text-slate-500">{c.funcao}</p>
                                                         <p className="mt-1 text-xs font-semibold text-slate-500">Código: {c.codigoFuncionario}</p>
                                                     </div>
-                                                    <span className={classNames("rounded-full px-2.5 py-1 text-xs font-semibold", geral.classe)}>
+                                                    <span className={classNames("shrink-0 whitespace-nowrap rounded-full px-2.5 py-1 text-xs font-semibold", geral.classe)}>
                                                         {geral.texto}
                                                     </span>
                                                 </div>
@@ -1394,7 +1395,7 @@ function Colaboradores({
                                                 <div className="mt-3 rounded-2xl bg-slate-50 p-3">
                                                     <div className="flex items-center justify-between gap-2">
                                                         <p className="text-xs font-bold uppercase tracking-wide text-slate-500">
-                                                            Matriz: {avaliacao.matriz.rotulo}
+                                                            Matriz aplicada: {avaliacao.matriz.rotulo}
                                                         </p>
                                                         <p className="text-xs font-semibold text-slate-600">
                                                             {avaliacao.emDia.length}/{avaliacao.total} válidos
@@ -1417,10 +1418,18 @@ function Colaboradores({
                                                     )}
                                                 </div>
 
-                                                <div className="mt-4 flex gap-2">
+                                                <div className="mt-4 grid gap-2 sm:grid-cols-[1fr_1fr_auto]">
+                                                    <button
+                                                        onClick={() => setColaboradorRevisao(c)}
+                                                        className="inline-flex items-center justify-center gap-2 rounded-xl bg-white px-3 py-2 text-xs font-semibold text-slate-700 ring-1 ring-slate-200 hover:bg-slate-50"
+                                                    >
+                                                        <FileText className="h-3.5 w-3.5" />
+                                                        Revisar dados
+                                                    </button>
+
                                                     <button
                                                         onClick={() => onSelectColab(c)}
-                                                        className="inline-flex flex-1 items-center justify-center gap-2 rounded-xl bg-slate-950 px-3 py-2 text-xs font-semibold text-white hover:bg-slate-800"
+                                                        className="inline-flex items-center justify-center gap-2 rounded-xl bg-slate-950 px-3 py-2 text-xs font-semibold text-white hover:bg-slate-800"
                                                     >
                                                         <QrCode className="h-3.5 w-3.5" />
                                                         Ver QR
