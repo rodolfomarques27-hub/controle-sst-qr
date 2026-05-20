@@ -2315,30 +2315,26 @@ function Empresas({
                                 )}
                             </section>
 
-                            <section>
-                                <div className="mb-3 flex items-center gap-2">
-                                    <div className="rounded-xl bg-slate-100 p-2 text-slate-700">
-                                        <Building2 className="h-4 w-4" />
+                            {empresasSubcontratadas.length > 0 && (
+                                <section>
+                                    <div className="mb-3 flex items-center gap-2">
+                                        <div className="rounded-xl bg-slate-100 p-2 text-slate-700">
+                                            <Building2 className="h-4 w-4" />
+                                        </div>
+                                        <div>
+                                            <h3 className="font-bold text-slate-950">Subcontratadas</h3>
+                                            <p className="text-xs text-slate-500">Empresas contratadas por uma terceirizada</p>
+                                        </div>
                                     </div>
-                                    <div>
-                                        <h3 className="font-bold text-slate-950">Subcontratadas</h3>
-                                        <p className="text-xs text-slate-500">Empresas contratadas por uma terceirizada</p>
-                                    </div>
-                                </div>
 
-                                {empresasSubcontratadas.length === 0 ? (
-                                    <div className="rounded-3xl border border-dashed border-slate-300 p-5 text-sm text-slate-500">
-                                        Nenhuma empresa subcontratada cadastrada.
-                                    </div>
-                                ) : (
                                     <div className="space-y-4">
                                         {empresasSubcontratadas.map((empresa) => {
                                             const docs = documentosPorEmpresa[empresa.id] || [];
                                             return renderEmpresaCard(empresa, docs, false);
                                         })}
                                     </div>
-                                )}
-                            </section>
+                                </section>
+                            )}
                         </div>
                     )}
                     {empresasBanco.length > 0 && (
