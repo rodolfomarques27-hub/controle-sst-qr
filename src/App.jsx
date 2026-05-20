@@ -1422,6 +1422,8 @@ function Empresas({
     const [buscaEmpresa, setBuscaEmpresa] = useState("");
     const [filtroStatusEmpresa, setFiltroStatusEmpresa] = useState("Todos");
     const [filtroTipoEmpresa, setFiltroTipoEmpresa] = useState("Todos");
+    const [uploadRevisao, setUploadRevisao] = useState({});
+    const [salvandoUploadRevisao, setSalvandoUploadRevisao] = useState("");
 
     const documentoSelecionado = useMemo(() => obterDocumentoEmpresa(novoDoc.tipo), [novoDoc.tipo]);
 
@@ -1568,6 +1570,67 @@ function Empresas({
 
         if (ok) {
             setEmpresaEdicao(null);
+        }
+    };
+
+    const obterUploadRevisao = (tipo) => {
+        const dataEmissao = hoje.toISOString().slice(0, 10);
+
+        return {
+            dataEmissao,
+            dataVencimento: calcularVencimentoDocumento(tipo, dataEmissao),
+            observacao: "",
+            ...(uploadRevisao[tipo] || {}),
+        };
+    };
+
+    const atualizarUploadRevisao = (tipo, campo, valor) => {
+        setUploadRevisao((atual) => {
+            const dadosAtuais = obterUploadRevisao(tipo);
+            const atualizados = {
+                ...dadosAtuais,
+                [campo]: valor,
+            };
+
+            if (campo === "dataEmissao") {
+                atualizados.dataVencimento = calcularVencimentoDocumento(tipo, valor);
+            }
+
+            return {
+                ...atual,
+                [tipo]: atualizados,
+            };
+        });
+    };
+
+    const enviarDocumentoPelaRevisao = async (empresa, tipo, arquivo) => {
+        if (!arquivo) return;
+
+        const dados = obterUploadRevisao(tipo);
+        const chave = `${empresa.id}-${tipo}`;
+
+        setSalvandoUploadRevisao(chave);
+
+        const ok = await onAdicionarDocumentoEmpresa({
+            empresaId: empresa.id,
+            tipo,
+            dataEmissao: dados.dataEmissao,
+            dataVencimento: dados.dataVencimento || null,
+            arquivo,
+            observacao: dados.observacao || "",
+        });
+
+        setSalvandoUploadRevisao("");
+
+        if (ok) {
+            setUploadRevisao((atual) => ({
+                ...atual,
+                [tipo]: {
+                    dataEmissao: hoje.toISOString().slice(0, 10),
+                    dataVencimento: calcularVencimentoDocumento(tipo, hoje.toISOString().slice(0, 10)),
+                    observacao: "",
+                },
+            }));
         }
     };
 
@@ -2630,8 +2693,11 @@ function Empresas({
 
                         <div className="mt-5 grid gap-4 md:grid-cols-3">
                             {documentosEmpresaBase.map((tipoDoc) => {
-                                const doc = empresaRevisao.docs.find((item) => item.tipo_documento === tipoDoc.tipo);
+                                const docsAtualizadosRevisao = documentosPorEmpresa[empresaRevisao.empresa.id] || [];
+                                const doc = docsAtualizadosRevisao.find((item) => item.tipo_documento === tipoDoc.tipo);
                                 const st = statusEmpresaDocumento(doc?.data_vencimento);
+                                const dadosUpload = obterUploadRevisao(tipoDoc.tipo);
+                                const chaveUpload = `${empresaRevisao.empresa.id}-${tipoDoc.tipo}`;
 
                                 return (
                                     <div key={tipoDoc.tipo} className="rounded-3xl border border-slate-200 p-4">
@@ -2649,6 +2715,60 @@ function Empresas({
                                             <p><strong>Próxima revisão:</strong> {doc?.data_vencimento ? formatDate(doc.data_vencimento) : "Sem vencimento fixo / controlar por alteração"}</p>
                                             <p><strong>Arquivo:</strong> {doc?.arquivo_nome || "Arquivo ainda não anexado"}</p>
                                             {doc?.observacao && <p><strong>Observação:</strong> {doc.observacao}</p>}
+                                        </div>
+
+                                        <div className="mt-4 rounded-2xl bg-slate-50 p-3">
+                                            <p className="mb-2 text-xs font-bold uppercase tracking-wide text-slate-500">
+                                                {doc ? "Substituir documento" : "Enviar documento"}
+                                            </p>
+
+                                            <div className="grid gap-2">
+                                                <div className="grid gap-2 sm:grid-cols-2">
+                                                    <div>
+                                                        <label className="mb-1 block text-[11px] font-semibold text-slate-500">Emissão</label>
+                                                        <input
+                                                            type="date"
+                                                            value={dadosUpload.dataEmissao}
+                                                            onChange={(e) => atualizarUploadRevisao(tipoDoc.tipo, "dataEmissao", e.target.value)}
+                                                            className="w-full rounded-xl border border-slate-200 px-3 py-2 text-xs outline-none focus:border-slate-400 focus:ring-4 focus:ring-slate-100"
+                                                        />
+                                                    </div>
+
+                                                    <div>
+                                                        <label className="mb-1 block text-[11px] font-semibold text-slate-500">Próxima revisão</label>
+                                                        <input
+                                                            type="date"
+                                                            value={dadosUpload.dataVencimento || ""}
+                                                            onChange={(e) => atualizarUploadRevisao(tipoDoc.tipo, "dataVencimento", e.target.value)}
+                                                            className="w-full rounded-xl border border-slate-200 px-3 py-2 text-xs outline-none focus:border-slate-400 focus:ring-4 focus:ring-slate-100"
+                                                        />
+                                                    </div>
+                                                </div>
+
+                                                <textarea
+                                                    value={dadosUpload.observacao}
+                                                    onChange={(e) => atualizarUploadRevisao(tipoDoc.tipo, "observacao", e.target.value)}
+                                                    placeholder="Observação opcional"
+                                                    rows={2}
+                                                    className="w-full resize-none rounded-xl border border-slate-200 px-3 py-2 text-xs outline-none focus:border-slate-400 focus:ring-4 focus:ring-slate-100"
+                                                />
+
+                                                <label className="flex cursor-pointer items-center justify-center gap-2 rounded-xl border border-dashed border-slate-300 bg-white px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-100">
+                                                    <Upload className="h-3.5 w-3.5" />
+                                                    {salvandoUploadRevisao === chaveUpload
+                                                        ? "Enviando..."
+                                                        : doc
+                                                            ? "Selecionar PDF para substituir"
+                                                            : "Selecionar PDF para enviar"}
+                                                    <input
+                                                        type="file"
+                                                        accept="application/pdf,image/*"
+                                                        className="hidden"
+                                                        disabled={salvandoUploadRevisao === chaveUpload}
+                                                        onChange={(e) => enviarDocumentoPelaRevisao(empresaRevisao.empresa, tipoDoc.tipo, e.target.files?.[0])}
+                                                    />
+                                                </label>
+                                            </div>
                                         </div>
 
                                         {doc && (
@@ -3002,16 +3122,19 @@ export default function App() {
 
             const { data, error } = await supabase
                 .from("documentos_empresas")
-                .insert({
-                    empresa_id: novoDoc.empresaId,
-                    tipo_documento: novoDoc.tipo,
-                    data_emissao: novoDoc.dataEmissao,
-                    data_vencimento: novoDoc.dataVencimento,
-                    arquivo_url: arquivoUrl,
-                    arquivo_nome: arquivoNome,
-                    observacao: novoDoc.observacao || null,
-                    status_validacao: "Validado",
-                })
+                .upsert(
+                    {
+                        empresa_id: novoDoc.empresaId,
+                        tipo_documento: novoDoc.tipo,
+                        data_emissao: novoDoc.dataEmissao,
+                        data_vencimento: novoDoc.dataVencimento,
+                        arquivo_url: arquivoUrl,
+                        arquivo_nome: arquivoNome,
+                        observacao: novoDoc.observacao || null,
+                        status_validacao: "Validado",
+                    },
+                    { onConflict: "empresa_id,tipo_documento" }
+                )
                 .select("id, empresa_id, tipo_documento, data_emissao, data_vencimento, arquivo_url, arquivo_nome, observacao, status_validacao, created_at")
                 .single();
 
