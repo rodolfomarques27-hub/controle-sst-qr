@@ -182,8 +182,14 @@ const matrizTreinamentosPorFuncao = [
         treinamentos: [1, 8, 9, 12, 13],
     },
     {
+        chave: "tecnico-sst",
+        rotulo: "Técnico de Segurança do Trabalho",
+        termos: ["tecnico de seguranca", "técnico de segurança", "seguranca do trabalho", "segurança do trabalho", "sst"],
+        treinamentos: [1, 8, 13],
+    },
+    {
         chave: "geral",
-        rotulo: "Matriz básica - função não classificada",
+        rotulo: "Matriz básica",
         termos: [],
         treinamentos: [1, 8, 13],
     },
@@ -246,8 +252,8 @@ function avaliarTreinamentosColaborador(colaborador) {
                     chave: "pendente",
                     texto: "Pendente",
                     icon: AlertTriangle,
-                    classe: "bg-red-50 text-red-700 ring-red-200",
-                    barra: "bg-red-500",
+                    classe: "bg-blue-50 text-blue-700 ring-blue-200",
+                    barra: "bg-blue-500",
                 },
             };
         }
@@ -349,8 +355,8 @@ function statusDocumento(dataISO) {
             chave: "vencendo",
             texto: "A vencer",
             icon: AlertTriangle,
-            classe: "bg-amber-50 text-amber-700 ring-amber-200",
-            barra: "bg-amber-500",
+            classe: "bg-orange-50 text-orange-700 ring-orange-200",
+            barra: "bg-orange-500",
         };
     }
 
@@ -384,7 +390,7 @@ function calcularSituacaoDocumentalEmpresa(docs = []) {
     if (docs.length === 0) {
         return {
             texto: "Sem documentos",
-            classe: "bg-red-50 text-red-700 ring-red-200",
+            classe: "bg-blue-50 text-blue-700 ring-blue-200",
             detalhe: "Nenhum documento obrigatório cadastrado",
             faltantes,
         };
@@ -393,7 +399,7 @@ function calcularSituacaoDocumentalEmpresa(docs = []) {
     if (faltantes.length > 0) {
         return {
             texto: "Com pendências",
-            classe: "bg-red-50 text-red-700 ring-red-200",
+            classe: "bg-blue-50 text-blue-700 ring-blue-200",
             detalhe: `Faltando: ${faltantes.join(", ")}`,
             faltantes,
         };
@@ -419,7 +425,7 @@ function calcularSituacaoDocumentalEmpresa(docs = []) {
     if (vencendo.length > 0) {
         return {
             texto: "A vencer",
-            classe: "bg-amber-50 text-amber-700 ring-amber-200",
+            classe: "bg-orange-50 text-orange-700 ring-orange-200",
             detalhe: `A vencer: ${vencendo.map((item) => item.tipo).join(", ")}`,
             faltantes: [],
         };
@@ -486,7 +492,7 @@ function classeStatusEmpresa(status) {
     }
 
     if (statusNormalizado === "Empresa suspensa") {
-        return "bg-amber-50 text-amber-700 ring-amber-200";
+        return "bg-orange-50 text-orange-700 ring-orange-200";
     }
 
     return "bg-slate-100 text-slate-700 ring-slate-300";
@@ -699,11 +705,11 @@ function statusGeral(colaborador) {
     }
 
     if (avaliacao.pendentes.length > 0) {
-        return { texto: "Pendente", classe: "bg-red-50 text-red-700 ring-1 ring-red-200", detalhe: "Faltam treinamentos obrigatórios da função" };
+        return { texto: "Pendente", classe: "bg-blue-50 text-blue-700 ring-1 ring-blue-200", detalhe: "Faltam treinamentos obrigatórios da função" };
     }
 
     if (avaliacao.vencendo.length > 0) {
-        return { texto: "Atenção", classe: "bg-amber-500 text-white", detalhe: "Possui treinamento obrigatório a vencer em até 30 dias" };
+        return { texto: "Atenção", classe: "bg-orange-500 text-white", detalhe: "Possui treinamento obrigatório a vencer em até 30 dias" };
     }
 
     return { texto: "Apto", classe: "bg-emerald-600 text-white", detalhe: "Treinamentos obrigatórios válidos" };
@@ -970,7 +976,7 @@ function Dashboard({ colaboradores, onSelectColab }) {
                     <div className="mt-6 space-y-5">
                         {[
                             { label: "Em dia", valor: indicadores.emDia, total: indicadores.docs.length, classe: "bg-emerald-500" },
-                            { label: "A vencer", valor: indicadores.vencendo, total: indicadores.docs.length, classe: "bg-amber-500" },
+                            { label: "A vencer", valor: indicadores.vencendo, total: indicadores.docs.length, classe: "bg-orange-500" },
                             { label: "Vencidos", valor: indicadores.vencidos, total: indicadores.docs.length, classe: "bg-red-500" },
                         ].map((i) => (
                             <div key={i.label}>
@@ -1004,13 +1010,15 @@ function Colaboradores({
     erroBanco,
     onAtualizarBanco,
     onAdicionarColaborador,
+    onAtualizarColaborador,
     onExcluirColaborador,
     onSelectColab,
 }) {
     const [busca, setBusca] = useState("");
     const [empresa, setEmpresa] = useState("Todas");
     const [salvando, setSalvando] = useState(false);
-    const [colaboradorRevisao, setColaboradorRevisao] = useState(null);
+    const [colaboradorEdicao, setColaboradorEdicao] = useState(null);
+    const [salvandoEdicaoColaborador, setSalvandoEdicaoColaborador] = useState(false);
     const [novo, setNovo] = useState({
         nome: "",
         empresaNome: "",
@@ -1132,6 +1140,49 @@ function Colaboradores({
 
     const funcoesSugeridas = matrizTreinamentosPorFuncao.filter((item) => item.chave !== "geral");
 
+    const abrirRevisaoColaborador = (colaborador) => {
+        setColaboradorEdicao({
+            id: colaborador.id,
+            nome: colaborador.nome || "",
+            empresaNome: colaborador.empresa || "",
+            funcao: colaborador.funcao || "",
+            matricula: colaborador.matricula === "-" ? "" : colaborador.matricula || "",
+            codigoFuncionario: colaborador.codigoFuncionario || "",
+            status: colaborador.status || "Ativo",
+            fotoAtual: colaborador.fotoUrl || "",
+            fotoNomeAtual: colaborador.fotoNome || "",
+            foto: null,
+        });
+    };
+
+    const salvarRevisaoColaborador = async () => {
+        if (!colaboradorEdicao?.nome?.trim() || !colaboradorEdicao?.empresaNome?.trim() || !colaboradorEdicao?.funcao?.trim()) {
+            alert("Preencha nome, empresa e função.");
+            return;
+        }
+
+        setSalvandoEdicaoColaborador(true);
+
+        const ok = await onAtualizarColaborador({
+            id: colaboradorEdicao.id,
+            nome: colaboradorEdicao.nome.trim(),
+            empresaNome: colaboradorEdicao.empresaNome.trim(),
+            funcao: colaboradorEdicao.funcao.trim(),
+            matricula: colaboradorEdicao.matricula.trim(),
+            status: colaboradorEdicao.status || "Ativo",
+            codigoFuncionario: colaboradorEdicao.codigoFuncionario,
+            foto: colaboradorEdicao.foto,
+            fotoAtual: colaboradorEdicao.fotoAtual,
+            fotoNomeAtual: colaboradorEdicao.fotoNomeAtual,
+        });
+
+        setSalvandoEdicaoColaborador(false);
+
+        if (ok) {
+            setColaboradorEdicao(null);
+        }
+    };
+
     return (
         <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
             <Header
@@ -1234,16 +1285,16 @@ function Colaboradores({
 
                         <div>
                             <label className="mb-1 block text-xs font-bold uppercase tracking-wide text-slate-500">
-                                Matrícula da empresa, se houver
+                                Matrícula da empresa (opcional)
                             </label>
                             <input
                                 value={novo.matricula}
                                 onChange={(e) => setNovo({ ...novo, matricula: e.target.value })}
-                                placeholder="Opcional. Ex.: matrícula da empresa terceirizada"
+                                placeholder="Ex.: matrícula da empresa, crachá ou RE"
                                 className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none focus:border-slate-400 focus:ring-4 focus:ring-slate-100"
                             />
                             <p className="mt-1 text-xs text-slate-400">
-                                O código interno do sistema é gerado automaticamente. Use este campo apenas se a empresa possuir matrícula própria.
+                                O código do sistema é gerado automaticamente. A matrícula é opcional e serve para código da empresa, crachá ou RE.
                             </p>
                         </div>
 
@@ -1304,17 +1355,17 @@ function Colaboradores({
                             <p className="text-xs font-medium text-emerald-700">Aptos</p>
                             <p className="text-2xl font-bold text-emerald-700">{resumoTreinamentos.aptos}</p>
                         </div>
-                        <div className="rounded-2xl bg-red-50 p-3">
-                            <p className="text-xs font-medium text-red-700">Pendentes</p>
-                            <p className="text-2xl font-bold text-red-700">{resumoTreinamentos.pendentes}</p>
+                        <div className="rounded-2xl bg-blue-50 p-3">
+                            <p className="text-xs font-medium text-blue-700">Pendentes</p>
+                            <p className="text-2xl font-bold text-blue-700">{resumoTreinamentos.pendentes}</p>
                         </div>
                         <div className="rounded-2xl bg-red-50 p-3">
                             <p className="text-xs font-medium text-red-700">Vencidos</p>
                             <p className="text-2xl font-bold text-red-700">{resumoTreinamentos.vencidos}</p>
                         </div>
-                        <div className="rounded-2xl bg-amber-50 p-3">
-                            <p className="text-xs font-medium text-amber-700">A vencer 30d</p>
-                            <p className="text-2xl font-bold text-amber-700">{resumoTreinamentos.vencendo}</p>
+                        <div className="rounded-2xl bg-orange-50 p-3">
+                            <p className="text-xs font-medium text-orange-700">A vencer 30d</p>
+                            <p className="text-2xl font-bold text-orange-700">{resumoTreinamentos.vencendo}</p>
                         </div>
                     </div>
 
@@ -1328,7 +1379,7 @@ function Colaboradores({
                         </button>
                         <button
                             onClick={baixarRelatorioPendencias}
-                            className="inline-flex items-center gap-2 rounded-2xl bg-amber-50 px-4 py-2.5 text-xs font-semibold text-amber-700 ring-1 ring-amber-200 hover:bg-amber-100"
+                            className="inline-flex items-center gap-2 rounded-2xl bg-orange-50 px-4 py-2.5 text-xs font-semibold text-orange-700 ring-1 ring-orange-200 hover:bg-orange-100"
                         >
                             <AlertTriangle className="h-4 w-4" />
                             Baixar PDF pendências
@@ -1351,7 +1402,7 @@ function Colaboradores({
                         </div>
                     )}
 
-                    <div className="grid gap-4 2xl:grid-cols-2">
+                    <div className="grid gap-4 lg:grid-cols-2">
                         {!carregandoBanco &&
                             filtrados.map((c) => {
                                 const geral = statusGeral(c);
@@ -1361,7 +1412,7 @@ function Colaboradores({
                                 return (
                                     <div
                                         key={c.id}
-                                        className="group rounded-3xl border border-slate-200 bg-white p-4 transition hover:border-slate-300 hover:shadow-md"
+                                        className="group rounded-3xl border border-slate-200 bg-white p-5 transition hover:border-slate-300 hover:shadow-md"
                                     >
                                         <div className="flex items-start gap-4">
                                             <button
@@ -1376,26 +1427,26 @@ function Colaboradores({
                                             </button>
 
                                             <div className="min-w-0 flex-1">
-                                                <div className="flex items-start justify-between gap-2">
-                                                    <div>
-                                                        <h3 className="break-words pr-2 font-bold leading-snug text-slate-950">{c.nome}</h3>
-                                                        <p className="break-words pr-2 text-sm text-slate-500">{c.funcao}</p>
-                                                        <p className="mt-1 text-xs font-semibold text-slate-500">Código: {c.codigoFuncionario}</p>
+                                                <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+                                                    <div className="min-w-0">
+                                                        <h3 className="break-words font-bold leading-snug text-slate-950">{c.nome}</h3>
+                                                        <p className="text-sm text-slate-500">{c.funcao}</p>
+                                                        <p className="mt-1 break-words text-xs font-semibold text-slate-500">Código: {c.codigoFuncionario}</p>
                                                     </div>
-                                                    <span className={classNames("shrink-0 whitespace-nowrap rounded-full px-2.5 py-1 text-xs font-semibold", geral.classe)}>
+                                                    <span className={classNames("w-fit shrink-0 rounded-full px-2.5 py-1 text-xs font-semibold", geral.classe)}>
                                                         {geral.texto}
                                                     </span>
                                                 </div>
 
-                                                <div className="mt-3 grid grid-cols-2 gap-2 text-xs text-slate-500">
-                                                    <span className="rounded-xl bg-slate-50 px-3 py-2">{c.empresa}</span>
-                                                    <span className="rounded-xl bg-slate-50 px-3 py-2">{c.matricula}</span>
+                                                <div className="mt-3 grid grid-cols-1 gap-2 text-xs text-slate-500 sm:grid-cols-2">
+                                                    <span className="break-words rounded-xl bg-slate-50 px-3 py-2">{c.empresa}</span>
+                                                    <span className="break-words rounded-xl bg-slate-50 px-3 py-2">{c.matricula || "Matrícula não informada"}</span>
                                                 </div>
 
                                                 <div className="mt-3 rounded-2xl bg-slate-50 p-3">
                                                     <div className="flex items-center justify-between gap-2">
                                                         <p className="text-xs font-bold uppercase tracking-wide text-slate-500">
-                                                            Matriz aplicada: {avaliacao.matriz.rotulo}
+                                                            Matriz: {avaliacao.matriz.rotulo}
                                                         </p>
                                                         <p className="text-xs font-semibold text-slate-600">
                                                             {avaliacao.emDia.length}/{avaliacao.total} válidos
@@ -1418,15 +1469,7 @@ function Colaboradores({
                                                     )}
                                                 </div>
 
-                                                <div className="mt-4 grid gap-2 sm:grid-cols-[1fr_1fr_auto]">
-                                                    <button
-                                                        onClick={() => setColaboradorRevisao(c)}
-                                                        className="inline-flex items-center justify-center gap-2 rounded-xl bg-white px-3 py-2 text-xs font-semibold text-slate-700 ring-1 ring-slate-200 hover:bg-slate-50"
-                                                    >
-                                                        <FileText className="h-3.5 w-3.5" />
-                                                        Revisar dados
-                                                    </button>
-
+                                                <div className="mt-4 grid gap-2 sm:grid-cols-[1fr_auto]">
                                                     <button
                                                         onClick={() => onSelectColab(c)}
                                                         className="inline-flex items-center justify-center gap-2 rounded-xl bg-slate-950 px-3 py-2 text-xs font-semibold text-white hover:bg-slate-800"
@@ -1436,8 +1479,16 @@ function Colaboradores({
                                                     </button>
 
                                                     <button
+                                                        onClick={() => abrirRevisaoColaborador(c)}
+                                                        className="inline-flex items-center justify-center gap-2 rounded-xl bg-white px-3 py-2 text-xs font-semibold text-slate-700 ring-1 ring-slate-200 hover:bg-slate-50"
+                                                    >
+                                                        <FileText className="h-3.5 w-3.5" />
+                                                        Revisar dados
+                                                    </button>
+
+                                                    <button
                                                         onClick={() => onExcluirColaborador(c)}
-                                                        className="inline-flex items-center justify-center gap-2 rounded-xl bg-red-50 px-3 py-2 text-xs font-semibold text-red-700 ring-1 ring-red-200 hover:bg-red-100"
+                                                        className="inline-flex items-center justify-center gap-2 rounded-xl bg-red-50 px-3 py-2 text-xs font-semibold text-red-700 ring-1 ring-red-200 hover:bg-red-100 sm:col-span-2"
                                                     >
                                                         <Trash2 className="h-3.5 w-3.5" />
                                                         Excluir
@@ -1451,6 +1502,137 @@ function Colaboradores({
                     </div>
                 </Card>
             </div>
+            {colaboradorEdicao && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center overflow-hidden bg-slate-950/70 p-4">
+                    <div className="flex max-h-[92vh] w-full max-w-2xl flex-col overflow-hidden rounded-[2rem] bg-white shadow-2xl">
+                        <div className="shrink-0 border-b border-slate-200 bg-white p-6 pb-4">
+                            <div className="flex items-start justify-between gap-4">
+                                <div>
+                                    <p className="text-xs font-bold uppercase tracking-wide text-slate-400">Revisão de dados do colaborador</p>
+                                    <h2 className="mt-1 text-2xl font-bold text-slate-950">{colaboradorEdicao.nome}</h2>
+                                    <p className="mt-1 text-sm text-slate-500">Código do sistema: {colaboradorEdicao.codigoFuncionario}</p>
+                                </div>
+                                <button
+                                    onClick={() => setColaboradorEdicao(null)}
+                                    className="rounded-2xl bg-slate-950 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-800"
+                                >
+                                    Fechar
+                                </button>
+                            </div>
+                        </div>
+
+                        <div className="scrollbar-discreta flex-1 overflow-y-auto px-6 py-5">
+                            <div className="grid gap-3 md:grid-cols-2">
+                                <div className="md:col-span-2">
+                                    <label className="mb-1 block text-xs font-bold uppercase tracking-wide text-slate-500">Nome completo</label>
+                                    <input
+                                        value={colaboradorEdicao.nome}
+                                        onChange={(e) => setColaboradorEdicao({ ...colaboradorEdicao, nome: e.target.value })}
+                                        className="w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-slate-400 focus:ring-4 focus:ring-slate-100"
+                                    />
+                                </div>
+
+                                <div>
+                                    <label className="mb-1 block text-xs font-bold uppercase tracking-wide text-slate-500">Empresa</label>
+                                    <input
+                                        value={colaboradorEdicao.empresaNome}
+                                        onChange={(e) => setColaboradorEdicao({ ...colaboradorEdicao, empresaNome: e.target.value })}
+                                        list="empresas-cadastradas-edicao"
+                                        className="w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-slate-400 focus:ring-4 focus:ring-slate-100"
+                                    />
+                                    <datalist id="empresas-cadastradas-edicao">
+                                        {empresasBanco.map((e) => (
+                                            <option key={e.id} value={e.nome} />
+                                        ))}
+                                    </datalist>
+                                </div>
+
+                                <div>
+                                    <label className="mb-1 block text-xs font-bold uppercase tracking-wide text-slate-500">Função</label>
+                                    <input
+                                        value={colaboradorEdicao.funcao}
+                                        onChange={(e) => setColaboradorEdicao({ ...colaboradorEdicao, funcao: e.target.value })}
+                                        list="funcoes-sugeridas-edicao"
+                                        className="w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-slate-400 focus:ring-4 focus:ring-slate-100"
+                                    />
+                                    <datalist id="funcoes-sugeridas-edicao">
+                                        {funcoesSugeridas.map((item) => (
+                                            <option key={item.chave} value={item.rotulo} />
+                                        ))}
+                                    </datalist>
+                                </div>
+
+                                <div>
+                                    <label className="mb-1 block text-xs font-bold uppercase tracking-wide text-slate-500">Matrícula da empresa (opcional)</label>
+                                    <input
+                                        value={colaboradorEdicao.matricula}
+                                        onChange={(e) => setColaboradorEdicao({ ...colaboradorEdicao, matricula: e.target.value })}
+                                        className="w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-slate-400 focus:ring-4 focus:ring-slate-100"
+                                    />
+                                </div>
+
+                                <div>
+                                    <label className="mb-1 block text-xs font-bold uppercase tracking-wide text-slate-500">Status</label>
+                                    <select
+                                        value={colaboradorEdicao.status}
+                                        onChange={(e) => setColaboradorEdicao({ ...colaboradorEdicao, status: e.target.value })}
+                                        className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none focus:border-slate-400 focus:ring-4 focus:ring-slate-100"
+                                    >
+                                        <option>Ativo</option>
+                                        <option>Inativo</option>
+                                        <option>Bloqueado</option>
+                                    </select>
+                                </div>
+
+                                <div className="md:col-span-2 rounded-2xl bg-slate-50 p-3">
+                                    <p className="text-xs font-bold uppercase tracking-wide text-slate-500">
+                                        Matriz aplicada: {obterMatrizFuncao(colaboradorEdicao.funcao).rotulo}
+                                    </p>
+                                    <div className="mt-2 flex flex-wrap gap-1.5">
+                                        {treinamentosObrigatoriosFuncao(colaboradorEdicao.funcao).map((treinamento) => (
+                                            <span key={treinamento.id} className="rounded-full bg-white px-2 py-1 text-[11px] font-medium text-slate-600 ring-1 ring-slate-200">
+                                                {treinamento.nome}
+                                            </span>
+                                        ))}
+                                    </div>
+                                </div>
+
+                                <div className="md:col-span-2">
+                                    <label className="mb-1 block text-xs font-bold uppercase tracking-wide text-slate-500">Foto do colaborador</label>
+                                    <label className="flex cursor-pointer items-center justify-center gap-2 rounded-2xl border border-dashed border-slate-300 bg-slate-50 px-4 py-4 text-sm font-medium text-slate-600 hover:bg-slate-100">
+                                        <Upload className="h-4 w-4" />
+                                        {colaboradorEdicao.foto ? colaboradorEdicao.foto.name : colaboradorEdicao.fotoNomeAtual || "Alterar foto do colaborador"}
+                                        <input
+                                            type="file"
+                                            accept="image/png,image/jpeg,image/webp"
+                                            className="hidden"
+                                            onChange={(e) => setColaboradorEdicao({ ...colaboradorEdicao, foto: e.target.files?.[0] || null })}
+                                        />
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="shrink-0 border-t border-slate-200 bg-white p-6">
+                            <div className="flex flex-col gap-3 sm:flex-row">
+                                <button
+                                    onClick={salvarRevisaoColaborador}
+                                    disabled={salvandoEdicaoColaborador}
+                                    className="flex-1 rounded-2xl bg-slate-950 px-4 py-3 text-sm font-semibold text-white hover:bg-slate-800 disabled:opacity-60"
+                                >
+                                    {salvandoEdicaoColaborador ? "Salvando alterações..." : "Salvar alterações"}
+                                </button>
+                                <button
+                                    onClick={() => setColaboradorEdicao(null)}
+                                    className="flex-1 rounded-2xl bg-slate-100 px-4 py-3 text-sm font-semibold text-slate-700 hover:bg-slate-200"
+                                >
+                                    Cancelar
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
         </motion.div>
     );
 }
@@ -2816,7 +2998,7 @@ function Empresas({
 
                                 <button
                                     onClick={baixarRelatorioPendencias}
-                                    className="inline-flex items-center gap-2 rounded-2xl bg-amber-50 px-5 py-3 text-xs font-semibold text-amber-700 ring-1 ring-amber-200 hover:bg-amber-100"
+                                    className="inline-flex items-center gap-2 rounded-2xl bg-orange-50 px-5 py-3 text-xs font-semibold text-orange-700 ring-1 ring-orange-200 hover:bg-orange-100"
                                 >
                                     <AlertTriangle className="h-4 w-4" />
                                     Baixar PDF pendências
@@ -3715,6 +3897,74 @@ export default function App() {
         }
     }
 
+    async function atualizarColaborador(colaboradorAtualizado) {
+        setErroBanco("");
+
+        try {
+            const empresaCriada = await obterOuCriarEmpresa(colaboradorAtualizado.empresaNome);
+
+            let fotoAtualizada = {
+                foto_url: colaboradorAtualizado.fotoAtual || null,
+                foto_nome: colaboradorAtualizado.fotoNomeAtual || null,
+            };
+
+            if (colaboradorAtualizado.foto) {
+                const foto = await enviarFotoColaborador(colaboradorAtualizado.foto, colaboradorAtualizado.id);
+                fotoAtualizada = {
+                    foto_url: foto.fotoUrl,
+                    foto_nome: foto.fotoNome,
+                };
+            }
+
+            const { data, error } = await supabase
+                .from("colaboradores")
+                .update({
+                    empresa_id: empresaCriada.id,
+                    nome: colaboradorAtualizado.nome,
+                    funcao: colaboradorAtualizado.funcao,
+                    matricula: colaboradorAtualizado.matricula || null,
+                    status: colaboradorAtualizado.status || "Ativo",
+                    foto_url: fotoAtualizada.foto_url,
+                    foto_nome: fotoAtualizada.foto_nome,
+                })
+                .eq("id", colaboradorAtualizado.id)
+                .select(`
+          id,
+          nome,
+          funcao,
+          matricula,
+          codigo_funcionario,
+          foto_url,
+          foto_nome,
+          token_qr,
+          status,
+          empresa_id,
+          empresas (
+            id,
+            nome
+          )
+        `)
+                .single();
+
+            if (error) {
+                throw new Error(`Erro ao atualizar colaborador: ${error.message}`);
+            }
+
+            const colaborador = normalizarColaborador(data);
+
+            setColaboradores((atual) => atual.map((item) => (item.id === colaborador.id ? { ...item, ...colaborador } : item)));
+
+            if (colaboradorSelecionado?.id === colaborador.id) {
+                setColaboradorSelecionado((atual) => ({ ...atual, ...colaborador }));
+            }
+
+            return true;
+        } catch (error) {
+            setErroBanco(error.message || "Erro ao atualizar colaborador.");
+            return false;
+        }
+    }
+
     async function excluirColaborador(colaborador) {
         const confirmar = window.confirm(`Deseja realmente excluir o colaborador ${colaborador.nome}?`);
 
@@ -3920,6 +4170,7 @@ export default function App() {
                             erroBanco={erroBanco}
                             onAtualizarBanco={carregarColaboradores}
                             onAdicionarColaborador={adicionarColaborador}
+                            onAtualizarColaborador={atualizarColaborador}
                             onExcluirColaborador={excluirColaborador}
                             onSelectColab={selecionarColaborador}
                         />
