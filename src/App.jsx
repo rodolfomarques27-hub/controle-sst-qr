@@ -300,9 +300,18 @@ function obterUrlFotoColaborador(caminho) {
 
 function avaliarTreinamentosColaborador(colaborador) {
     const removidos = (colaborador.treinamentosRemovidos || []).map(Number);
-    const obrigatorios = treinamentosObrigatoriosFuncao(colaborador.funcao).filter(
-        (treinamento) => !removidos.includes(Number(treinamento.id))
-    );
+    const adicionais = (colaborador.treinamentosAdicionais || []).map(Number);
+    const obrigatoriosBase = treinamentosObrigatoriosFuncao(colaborador.funcao);
+    const idsObrigatorios = Array.from(new Set([
+        ...obrigatoriosBase.map((treinamento) => Number(treinamento.id)),
+        ...adicionais,
+    ]));
+
+    const obrigatorios = idsObrigatorios
+        .filter((id) => !removidos.includes(Number(id)))
+        .map((id) => obterTreinamento(id))
+        .filter(Boolean);
+
     const realizados = colaborador.treinamentos || [];
 
     const itens = obrigatorios.map((treinamento) => {
@@ -392,6 +401,7 @@ function normalizarColaborador(item) {
         status: item.status || "Ativo",
         statusMobilizacao: item.status_mobilizacao || item.statusMobilizacao || "Mobilizado",
         treinamentosRemovidos: item.treinamentos_removidos || item.treinamentosRemovidos || [],
+        treinamentosAdicionais: item.treinamentos_adicionais || item.treinamentosAdicionais || [],
         token: item.token_qr || item.token || `SST-${String(item.id).slice(0, 8)}`,
         treinamentos: item.treinamentos || [],
     };
@@ -1185,6 +1195,8 @@ function Colaboradores({
         funcao: "",
         matricula: "",
         statusMobilizacao: "Mobilizado",
+        treinamentosRemovidos: [],
+        treinamentosAdicionais: [],
         foto: null,
     });
 
@@ -1219,6 +1231,7 @@ function Colaboradores({
                 "Matriz aplicada",
                 "Status geral",
                 "Treinamentos obrigatórios",
+                "Treinamentos adicionados",
                 "Treinamentos removidos",
                 "Treinamentos válidos",
                 "Pendentes",
@@ -1241,6 +1254,7 @@ function Colaboradores({
                 avaliacao.matriz.rotulo,
                 geral.texto,
                 avaliacao.itens.map((item) => item.treinamento.nome).join(" | "),
+                (c.treinamentosAdicionais || []).map((id) => obterTreinamento(id)?.nome).filter(Boolean).join(" | "),
                 (c.treinamentosRemovidos || []).map((id) => obterTreinamento(id)?.nome).filter(Boolean).join(" | "),
                 avaliacao.emDia.map((item) => item.treinamento.nome).join(" | "),
                 avaliacao.pendentes.map((item) => item.treinamento.nome).join(" | "),
@@ -1294,6 +1308,8 @@ function Colaboradores({
             funcao: novo.funcao.trim(),
             matricula: novo.matricula.trim(),
             statusMobilizacao: novo.statusMobilizacao,
+            treinamentosRemovidos: novo.treinamentosRemovidos || [],
+            treinamentosAdicionais: novo.treinamentosAdicionais || [],
             foto: novo.foto,
             codigoFuncionario: gerarCodigoFuncionario(novo.nome),
         });
@@ -1301,12 +1317,123 @@ function Colaboradores({
         setSalvando(false);
 
         if (ok) {
-            setNovo({ nome: "", empresaNome: "", funcao: "", matricula: "", statusMobilizacao: "Mobilizado", foto: null });
+            setNovo({
+                nome: "",
+                empresaNome: "",
+                funcao: "",
+                matricula: "",
+                statusMobilizacao: "Mobilizado",
+                treinamentosRemovidos: [],
+                treinamentosAdicionais: [],
+                foto: null,
+            });
         }
     };
 
     const funcoesSugeridas = obterTodasMatrizesFuncao().filter((item) => item.chave !== "geral");
     void versaoFuncoes;
+
+    const idsBaseNovo = novo.funcao
+        ? treinamentosObrigatoriosFuncao(novo.funcao).map((treinamento) => Number(treinamento.id))
+        : [];
+    const idsRemovidosNovo = (novo.treinamentosRemovidos || []).map(Number);
+    const idsAdicionaisNovo = (novo.treinamentosAdicionais || []).map(Number);
+    const idsAplicadosNovo = Array.from(new Set([...idsBaseNovo, ...idsAdicionaisNovo])).filter(
+        (id) => !idsRemovidosNovo.includes(Number(id))
+    );
+    const treinamentosAplicadosNovo = idsAplicadosNovo.map((id) => obterTreinamento(id)).filter(Boolean);
+    const treinamentosParaAdicionarNovo = treinamentosBase.filter(
+        (treinamento) => !idsAplicadosNovo.includes(Number(treinamento.id))
+    );
+
+    const removerTreinamentoNovo = (treinamentoId) => {
+        const id = Number(treinamentoId);
+        const baseDaFuncao = idsBaseNovo.includes(id);
+
+        if (baseDaFuncao) {
+            setNovo({
+                ...novo,
+                treinamentosRemovidos: Array.from(new Set([...idsRemovidosNovo, id])),
+            });
+            return;
+        }
+
+        setNovo({
+            ...novo,
+            treinamentosAdicionais: idsAdicionaisNovo.filter((item) => item !== id),
+        });
+    };
+
+    const adicionarTreinamentoNovo = (treinamentoId) => {
+        const id = Number(treinamentoId);
+        if (!id) return;
+
+        if (idsBaseNovo.includes(id)) {
+            setNovo({
+                ...novo,
+                treinamentosRemovidos: idsRemovidosNovo.filter((item) => item !== id),
+            });
+            return;
+        }
+
+        setNovo({
+            ...novo,
+            treinamentosAdicionais: Array.from(new Set([...idsAdicionaisNovo, id])),
+        });
+    };
+
+    const idsBaseEdicao = colaboradorEdicao?.funcao
+        ? treinamentosObrigatoriosFuncao(colaboradorEdicao.funcao).map((treinamento) => Number(treinamento.id))
+        : [];
+    const idsRemovidosEdicao = (colaboradorEdicao?.treinamentosRemovidos || []).map(Number);
+    const idsAdicionaisEdicao = (colaboradorEdicao?.treinamentosAdicionais || []).map(Number);
+    const idsAplicadosEdicao = Array.from(new Set([...idsBaseEdicao, ...idsAdicionaisEdicao])).filter(
+        (id) => !idsRemovidosEdicao.includes(Number(id))
+    );
+    const treinamentosAplicadosEdicao = idsAplicadosEdicao.map((id) => obterTreinamento(id)).filter(Boolean);
+    const treinamentosParaAdicionarEdicao = treinamentosBase.filter(
+        (treinamento) => !idsAplicadosEdicao.includes(Number(treinamento.id))
+    );
+
+    const removerTreinamentoEdicao = (treinamentoId) => {
+        if (!colaboradorEdicao) return;
+
+        const id = Number(treinamentoId);
+        const baseDaFuncao = idsBaseEdicao.includes(id);
+
+        if (baseDaFuncao) {
+            setColaboradorEdicao({
+                ...colaboradorEdicao,
+                treinamentosRemovidos: Array.from(new Set([...idsRemovidosEdicao, id])),
+            });
+            return;
+        }
+
+        setColaboradorEdicao({
+            ...colaboradorEdicao,
+            treinamentosAdicionais: idsAdicionaisEdicao.filter((item) => item !== id),
+        });
+    };
+
+    const adicionarTreinamentoEdicao = (treinamentoId) => {
+        if (!colaboradorEdicao) return;
+
+        const id = Number(treinamentoId);
+        if (!id) return;
+
+        if (idsBaseEdicao.includes(id)) {
+            setColaboradorEdicao({
+                ...colaboradorEdicao,
+                treinamentosRemovidos: idsRemovidosEdicao.filter((item) => item !== id),
+            });
+            return;
+        }
+
+        setColaboradorEdicao({
+            ...colaboradorEdicao,
+            treinamentosAdicionais: Array.from(new Set([...idsAdicionaisEdicao, id])),
+        });
+    };
 
     const salvarNovaFuncao = () => {
         if (!novaFuncao.rotulo.trim()) {
@@ -1350,6 +1477,7 @@ function Colaboradores({
             status: colaborador.status || "Ativo",
             statusMobilizacao: colaborador.statusMobilizacao || "Mobilizado",
             treinamentosRemovidos: colaborador.treinamentosRemovidos || [],
+            treinamentosAdicionais: colaborador.treinamentosAdicionais || [],
             fotoAtual: colaborador.fotoUrl || "",
             fotoNomeAtual: colaborador.fotoNome || "",
             foto: null,
@@ -1373,6 +1501,7 @@ function Colaboradores({
             status: colaboradorEdicao.status || "Ativo",
             statusMobilizacao: colaboradorEdicao.statusMobilizacao || "Mobilizado",
             treinamentosRemovidos: colaboradorEdicao.treinamentosRemovidos || [],
+            treinamentosAdicionais: colaboradorEdicao.treinamentosAdicionais || [],
             codigoFuncionario: colaboradorEdicao.codigoFuncionario,
             foto: colaboradorEdicao.foto,
             fotoAtual: colaboradorEdicao.fotoAtual,
@@ -1486,7 +1615,14 @@ function Colaboradores({
                             </label>
                             <input
                                 value={novo.funcao}
-                                onChange={(e) => setNovo({ ...novo, funcao: e.target.value })}
+                                onChange={(e) =>
+                                    setNovo({
+                                        ...novo,
+                                        funcao: e.target.value,
+                                        treinamentosRemovidos: [],
+                                        treinamentosAdicionais: [],
+                                    })
+                                }
                                 placeholder="Ex.: Pedreiro, Soldador, Eletricista, Operador de PEMT"
                                 list="funcoes-sugeridas"
                                 className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none focus:border-slate-400 focus:ring-4 focus:ring-slate-100"
@@ -1499,15 +1635,68 @@ function Colaboradores({
 
                             {novo.funcao && (
                                 <div className="mt-2 rounded-2xl bg-slate-50 p-3">
-                                    <p className="text-xs font-bold uppercase tracking-wide text-slate-500">
-                                        Matriz aplicada: {obterMatrizFuncao(novo.funcao).rotulo}
-                                    </p>
+                                    <div className="flex flex-wrap items-center justify-between gap-2">
+                                        <p className="text-xs font-bold uppercase tracking-wide text-slate-500">
+                                            Matriz aplicada: {obterMatrizFuncao(novo.funcao).rotulo}
+                                        </p>
+                                        <span className="rounded-full bg-white px-2 py-1 text-[11px] font-semibold text-slate-500 ring-1 ring-slate-200">
+                                            {treinamentosAplicadosNovo.length} exigência(s)
+                                        </span>
+                                    </div>
+
                                     <div className="mt-2 flex flex-wrap gap-1.5">
-                                        {treinamentosObrigatoriosFuncao(novo.funcao).map((treinamento) => (
-                                            <span key={treinamento.id} className="rounded-full bg-white px-2 py-1 text-[11px] font-medium text-slate-600 ring-1 ring-slate-200">
-                                                {treinamento.nome}
+                                        {treinamentosAplicadosNovo.map((treinamento) => {
+                                            const extra = idsAdicionaisNovo.includes(Number(treinamento.id));
+
+                                            return (
+                                                <span
+                                                    key={treinamento.id}
+                                                    className={classNames(
+                                                        "inline-flex items-center gap-1 rounded-full px-2 py-1 text-[11px] font-medium ring-1",
+                                                        extra
+                                                            ? "bg-blue-50 text-blue-700 ring-blue-200"
+                                                            : "bg-white text-slate-600 ring-slate-200"
+                                                    )}
+                                                >
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => removerTreinamentoNovo(treinamento.id)}
+                                                        title="Retirar este treinamento deste colaborador"
+                                                        className="inline-flex h-4 w-4 items-center justify-center rounded-full bg-red-50 text-[10px] font-bold text-red-700 ring-1 ring-red-200 hover:bg-red-100"
+                                                    >
+                                                        ×
+                                                    </button>
+                                                    {treinamento.nome}
+                                                </span>
+                                            );
+                                        })}
+
+                                        {treinamentosAplicadosNovo.length === 0 && (
+                                            <span className="rounded-full bg-red-50 px-2 py-1 text-[11px] font-semibold text-red-700 ring-1 ring-red-200">
+                                                Nenhum treinamento selecionado
                                             </span>
-                                        ))}
+                                        )}
+                                    </div>
+
+                                    <div className="mt-3">
+                                        <select
+                                            value=""
+                                            onChange={(e) => {
+                                                adicionarTreinamentoNovo(e.target.value);
+                                                e.target.value = "";
+                                            }}
+                                            className="w-full rounded-2xl border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-600 outline-none focus:border-slate-400 focus:ring-4 focus:ring-slate-100"
+                                        >
+                                            <option value="">+ Adicionar treinamento/documento para este colaborador</option>
+                                            {treinamentosParaAdicionarNovo.map((treinamento) => (
+                                                <option key={treinamento.id} value={treinamento.id}>
+                                                    {treinamento.nome}
+                                                </option>
+                                            ))}
+                                        </select>
+                                        <p className="mt-1 text-[11px] text-slate-400">
+                                            Use o × para retirar itens que não se aplicam e o campo acima para adicionar exigências específicas.
+                                        </p>
                                     </div>
                                 </div>
                             )}
@@ -1990,65 +2179,68 @@ function Colaboradores({
                                 </div>
 
                                 <div className="md:col-span-2 rounded-2xl bg-slate-50 p-3">
-                                    <p className="text-xs font-bold uppercase tracking-wide text-slate-500">
-                                        Matriz aplicada: {obterMatrizFuncao(colaboradorEdicao.funcao).rotulo}
-                                    </p>
+                                    <div className="flex flex-wrap items-center justify-between gap-2">
+                                        <p className="text-xs font-bold uppercase tracking-wide text-slate-500">
+                                            Matriz aplicada: {obterMatrizFuncao(colaboradorEdicao.funcao).rotulo}
+                                        </p>
+                                        <span className="rounded-full bg-white px-2 py-1 text-[11px] font-semibold text-slate-500 ring-1 ring-slate-200">
+                                            {treinamentosAplicadosEdicao.length} exigência(s)
+                                        </span>
+                                    </div>
+
                                     <div className="mt-2 flex flex-wrap gap-1.5">
-                                        {treinamentosObrigatoriosFuncao(colaboradorEdicao.funcao).map((treinamento) => (
-                                            <span key={treinamento.id} className="rounded-full bg-white px-2 py-1 text-[11px] font-medium text-slate-600 ring-1 ring-slate-200">
-                                                {treinamento.nome}
-                                            </span>
-                                        ))}
-                                    </div>
-                                </div>
-
-                                <div className="md:col-span-2 rounded-2xl border border-blue-100 bg-blue-50 p-4">
-                                    <div className="mb-3">
-                                        <p className="text-xs font-bold uppercase tracking-wide text-blue-700">
-                                            Tirar treinamentos deste colaborador
-                                        </p>
-                                        <p className="mt-1 text-xs text-blue-700/80">
-                                            Use apenas quando o treinamento não se aplicar à atividade real do colaborador. O item será removido da cobrança, dos pendentes e dos relatórios.
-                                        </p>
-                                    </div>
-
-                                    <div className="grid gap-2 md:grid-cols-2">
-                                        {treinamentosObrigatoriosFuncao(colaboradorEdicao.funcao).map((treinamento) => {
-                                            const removido = (colaboradorEdicao.treinamentosRemovidos || []).map(Number).includes(Number(treinamento.id));
+                                        {treinamentosAplicadosEdicao.map((treinamento) => {
+                                            const extra = idsAdicionaisEdicao.includes(Number(treinamento.id));
 
                                             return (
-                                                <label
+                                                <span
                                                     key={treinamento.id}
                                                     className={classNames(
-                                                        "flex cursor-pointer items-start gap-2 rounded-2xl border p-3 text-sm",
-                                                        removido
-                                                            ? "border-red-200 bg-red-50 text-red-700"
-                                                            : "border-slate-200 bg-white text-slate-700"
+                                                        "inline-flex items-center gap-1 rounded-full px-2 py-1 text-[11px] font-medium ring-1",
+                                                        extra
+                                                            ? "bg-blue-50 text-blue-700 ring-blue-200"
+                                                            : "bg-white text-slate-600 ring-slate-200"
                                                     )}
                                                 >
-                                                    <input
-                                                        type="checkbox"
-                                                        checked={removido}
-                                                        onChange={(e) => {
-                                                            const atual = (colaboradorEdicao.treinamentosRemovidos || []).map(Number);
-                                                            const atualizados = e.target.checked
-                                                                ? [...atual, Number(treinamento.id)]
-                                                                : atual.filter((id) => id !== Number(treinamento.id));
-
-                                                            setColaboradorEdicao({
-                                                                ...colaboradorEdicao,
-                                                                treinamentosRemovidos: Array.from(new Set(atualizados)),
-                                                            });
-                                                        }}
-                                                        className="mt-1"
-                                                    />
-                                                    <span>
-                                                        <strong className="block">{treinamento.nome}</strong>
-                                                        <span className="text-xs opacity-75">{removido ? "Removido desta função para este colaborador" : treinamento.base}</span>
-                                                    </span>
-                                                </label>
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => removerTreinamentoEdicao(treinamento.id)}
+                                                        title="Retirar este treinamento deste colaborador"
+                                                        className="inline-flex h-4 w-4 items-center justify-center rounded-full bg-red-50 text-[10px] font-bold text-red-700 ring-1 ring-red-200 hover:bg-red-100"
+                                                    >
+                                                        ×
+                                                    </button>
+                                                    {treinamento.nome}
+                                                </span>
                                             );
                                         })}
+
+                                        {treinamentosAplicadosEdicao.length === 0 && (
+                                            <span className="rounded-full bg-red-50 px-2 py-1 text-[11px] font-semibold text-red-700 ring-1 ring-red-200">
+                                                Nenhum treinamento selecionado
+                                            </span>
+                                        )}
+                                    </div>
+
+                                    <div className="mt-3">
+                                        <select
+                                            value=""
+                                            onChange={(e) => {
+                                                adicionarTreinamentoEdicao(e.target.value);
+                                                e.target.value = "";
+                                            }}
+                                            className="w-full rounded-2xl border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-600 outline-none focus:border-slate-400 focus:ring-4 focus:ring-slate-100"
+                                        >
+                                            <option value="">+ Adicionar treinamento/documento para este colaborador</option>
+                                            {treinamentosParaAdicionarEdicao.map((treinamento) => (
+                                                <option key={treinamento.id} value={treinamento.id}>
+                                                    {treinamento.nome}
+                                                </option>
+                                            ))}
+                                        </select>
+                                        <p className="mt-1 text-[11px] text-slate-400">
+                                            Use o × para retirar itens que não se aplicam e o campo acima para adicionar exigências específicas.
+                                        </p>
                                     </div>
                                 </div>
 
@@ -4264,6 +4456,7 @@ export default function App() {
           codigo_funcionario,
           status_mobilizacao,
           treinamentos_removidos,
+          treinamentos_adicionais,
           foto_url,
           foto_nome,
           token_qr,
@@ -4640,7 +4833,8 @@ export default function App() {
                     matricula: novo.matricula || null,
                     codigo_funcionario: novo.codigoFuncionario || gerarCodigoFuncionario(novo.nome),
                     status_mobilizacao: novo.statusMobilizacao || "Mobilizado",
-                    treinamentos_removidos: [],
+                    treinamentos_removidos: novo.treinamentosRemovidos || [],
+                    treinamentos_adicionais: novo.treinamentosAdicionais || [],
                     status: "Ativo",
                 })
                 .select(`
@@ -4651,6 +4845,7 @@ export default function App() {
           codigo_funcionario,
           status_mobilizacao,
           treinamentos_removidos,
+          treinamentos_adicionais,
           foto_url,
           foto_nome,
           token_qr,
@@ -4685,6 +4880,7 @@ export default function App() {
             codigo_funcionario,
             status_mobilizacao,
             treinamentos_removidos,
+            treinamentos_adicionais,
             foto_url,
             foto_nome,
             token_qr,
@@ -4745,6 +4941,7 @@ export default function App() {
                     status: colaboradorAtualizado.status || "Ativo",
                     status_mobilizacao: colaboradorAtualizado.statusMobilizacao || "Mobilizado",
                     treinamentos_removidos: colaboradorAtualizado.treinamentosRemovidos || [],
+                    treinamentos_adicionais: colaboradorAtualizado.treinamentosAdicionais || [],
                     foto_url: fotoAtualizada.foto_url,
                     foto_nome: fotoAtualizada.foto_nome,
                 })
@@ -4757,6 +4954,7 @@ export default function App() {
           codigo_funcionario,
           status_mobilizacao,
           treinamentos_removidos,
+          treinamentos_adicionais,
           foto_url,
           foto_nome,
           token_qr,
