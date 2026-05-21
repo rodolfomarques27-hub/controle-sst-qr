@@ -1632,9 +1632,20 @@ function Colaboradores({
 
                                             <div className="min-w-0">
                                                 <div className="flex flex-col gap-2 lg:pt-1">
-                                                    <h3 className="max-w-full break-words text-lg font-bold leading-snug text-slate-950">
-                                                        {c.nome}
-                                                    </h3>
+                                                    <div className="flex flex-wrap items-start gap-2">
+                                                        <h3 className="max-w-full break-words text-lg font-bold leading-snug text-slate-950">
+                                                            {c.nome}
+                                                        </h3>
+
+                                                        <span className={classNames(
+                                                            "inline-flex shrink-0 rounded-full px-2.5 py-1 text-[11px] font-semibold ring-1",
+                                                            c.statusMobilizacao === "Mobilizado"
+                                                                ? "bg-emerald-50 text-emerald-700 ring-emerald-200"
+                                                                : "bg-red-50 text-red-700 ring-red-200"
+                                                        )}>
+                                                            {c.statusMobilizacao}
+                                                        </span>
+                                                    </div>
 
                                                     <p className="text-sm text-slate-500">{c.funcao}</p>
                                                     <p className="break-words text-xs font-semibold text-slate-500">Código: {c.codigoFuncionario}</p>
@@ -1643,14 +1654,6 @@ function Colaboradores({
                                                 <div className="mt-3 text-xs text-slate-500">
                                                     <span className="block break-words rounded-xl bg-slate-50 px-3 py-2">
                                                         <strong>Empresa:</strong> {c.empresa}
-                                                    </span>
-                                                    <span className={classNames(
-                                                        "mt-2 inline-flex rounded-xl px-3 py-2 text-xs font-semibold ring-1",
-                                                        c.statusMobilizacao === "Mobilizado"
-                                                            ? "bg-emerald-50 text-emerald-700 ring-emerald-200"
-                                                            : "bg-red-50 text-red-700 ring-red-200"
-                                                    )}>
-                                                        Situação na obra: {c.statusMobilizacao}
                                                     </span>
                                                 </div>
 
