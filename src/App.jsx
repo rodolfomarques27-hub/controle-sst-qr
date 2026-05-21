@@ -1655,19 +1655,17 @@ function Colaboradores({
                                                                 Código: {c.codigoFuncionario}
                                                             </span>
                                                         </div>
-                                                    </div>
-                                                </div>
 
-                                                <div className="mt-2 text-xs text-slate-500">
-                                                    <p className="break-words">
-                                                        <strong>Empresa:</strong> {c.empresa}
-                                                    </p>
+                                                        <p className="mt-1 break-words text-xs text-slate-500">
+                                                            <strong>Empresa:</strong> {c.empresa}
+                                                        </p>
+                                                    </div>
                                                 </div>
 
                                                 <button
                                                     type="button"
                                                     onClick={() => setPendenciasAbertas(pendenciasAbertas === c.id ? null : c.id)}
-                                                    className="mt-3 w-full rounded-2xl bg-slate-50 p-3 text-left transition hover:bg-slate-100"
+                                                    className="mt-4 w-full rounded-2xl bg-slate-50 p-3 text-left transition hover:bg-slate-100"
                                                 >
                                                     <div className="flex flex-wrap items-center justify-between gap-3">
                                                         <div>
