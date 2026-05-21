@@ -1647,8 +1647,13 @@ function Colaboradores({
                                                         </span>
                                                     </div>
 
-                                                    <p className="text-sm text-slate-500">{c.funcao}</p>
-                                                    <p className="break-words text-xs font-semibold text-slate-500">Código: {c.codigoFuncionario}</p>
+                                                    <div className="flex flex-wrap items-center gap-2 text-sm text-slate-500">
+                                                        <span>{c.funcao}</span>
+                                                        <span className="text-slate-300">•</span>
+                                                        <span className="text-xs font-semibold text-slate-500">
+                                                            Código: {c.codigoFuncionario}
+                                                        </span>
+                                                    </div>
                                                 </div>
 
                                                 <div className="mt-3 text-xs text-slate-500">
