@@ -3375,6 +3375,7 @@ function Treinamentos({
 
 function ConsultaQR({ colaborador, colaboradores = [], onSelecionarColaborador }) {
     const [busca, setBusca] = useState("");
+    const [filtroEmpresaQR, setFiltroEmpresaQR] = useState("Todas");
 
     const colaboradorAtual =
         colaboradores.find((item) => String(item.id) === String(colaborador?.id)) ||
@@ -3382,21 +3383,37 @@ function ConsultaQR({ colaborador, colaboradores = [], onSelecionarColaborador }
         colaboradores[0] ||
         null;
 
+    const empresasConsultaQR = useMemo(() => {
+        const nomes = colaboradores
+            .map((item) => item.empresaExibicao || item.empresa || "Empresa não informada")
+            .filter(Boolean);
+
+        return Array.from(new Set(nomes)).sort((a, b) => a.localeCompare(b));
+    }, [colaboradores]);
+
+    const colaboradoresPorEmpresa = useMemo(() => {
+        if (filtroEmpresaQR === "Todas") return colaboradores;
+
+        return colaboradores.filter(
+            (item) => String(item.empresaExibicao || item.empresa || "Empresa não informada") === String(filtroEmpresaQR)
+        );
+    }, [colaboradores, filtroEmpresaQR]);
+
     const colaboradoresFiltrados = useMemo(() => {
         const termo = normalizarTextoBusca(busca);
 
-        if (!termo) return colaboradores.slice(0, 8);
-
-        return colaboradores
+        return colaboradoresPorEmpresa
             .filter((item) => {
+                if (!termo) return true;
+
                 const texto = normalizarTextoBusca(
                     `${item.nome} ${item.codigoFuncionario} ${item.funcao} ${item.empresaExibicao || item.empresa}`
                 );
 
                 return texto.includes(termo);
             })
-            .slice(0, 10);
-    }, [busca, colaboradores]);
+            .slice(0, 12);
+    }, [busca, colaboradoresPorEmpresa]);
 
     if (!colaboradorAtual) {
         return (
@@ -3431,7 +3448,7 @@ function ConsultaQR({ colaborador, colaboradores = [], onSelecionarColaborador }
             />
 
             <Card className="mb-5">
-                <div className="grid gap-3 lg:grid-cols-[1fr_260px] lg:items-end">
+                <div className="grid gap-3 xl:grid-cols-[1fr_260px_280px] xl:items-end">
                     <div>
                         <label className="mb-1 block text-xs font-bold uppercase tracking-wide text-slate-500">
                             Pesquisar funcionário
@@ -3441,12 +3458,16 @@ function ConsultaQR({ colaborador, colaboradores = [], onSelecionarColaborador }
                             <input
                                 value={busca}
                                 onChange={(e) => setBusca(e.target.value)}
-                                placeholder="Pesquisar por nome, código, função ou empresa"
+                                placeholder="Pesquisar por nome, código ou função"
                                 className="w-full rounded-2xl border border-slate-200 bg-white py-3 pl-11 pr-4 text-sm outline-none focus:border-slate-400 focus:ring-4 focus:ring-slate-100"
                             />
                         </div>
 
-                        {busca && (
+                        <p className="mt-1 text-xs text-slate-400">
+                            {colaboradoresFiltrados.length} colaborador(es) encontrado(s)
+                        </p>
+
+                        {(busca || filtroEmpresaQR !== "Todas") && (
                             <div className="mt-2 max-h-64 overflow-y-auto rounded-2xl border border-slate-200 bg-white p-2 shadow-sm scrollbar-discreta">
                                 {colaboradoresFiltrados.length === 0 && (
                                     <p className="px-3 py-2 text-sm text-slate-500">Nenhum funcionário encontrado.</p>
@@ -3473,6 +3494,9 @@ function ConsultaQR({ colaborador, colaboradores = [], onSelecionarColaborador }
                                             <p className="truncate text-xs text-slate-500">
                                                 {item.funcao} · {item.codigoFuncionario}
                                             </p>
+                                            <p className="truncate text-[11px] text-slate-400">
+                                                {item.empresaExibicao || item.empresa}
+                                            </p>
                                         </div>
                                     </button>
                                 ))}
@@ -3480,20 +3504,48 @@ function ConsultaQR({ colaborador, colaboradores = [], onSelecionarColaborador }
                         )}
                     </div>
 
-                    <select
-                        value={colaboradorAtual.id}
-                        onChange={(e) => {
-                            const escolhido = colaboradores.find((item) => String(item.id) === String(e.target.value));
-                            if (escolhido) onSelecionarColaborador?.(escolhido);
-                        }}
-                        className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none focus:border-slate-400 focus:ring-4 focus:ring-slate-100"
-                    >
-                        {colaboradores.map((item) => (
-                            <option key={item.id} value={item.id}>
-                                {item.nome} — {item.codigoFuncionario}
-                            </option>
-                        ))}
-                    </select>
+                    <div>
+                        <label className="mb-1 block text-xs font-bold uppercase tracking-wide text-slate-500">
+                            Filtrar por empresa
+                        </label>
+                        <select
+                            value={filtroEmpresaQR}
+                            onChange={(e) => setFiltroEmpresaQR(e.target.value)}
+                            className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 outline-none focus:border-slate-400 focus:ring-4 focus:ring-slate-100"
+                        >
+                            <option value="Todas">Todas as empresas</option>
+                            {empresasConsultaQR.map((empresa) => (
+                                <option key={empresa} value={empresa}>
+                                    {empresa}
+                                </option>
+                            ))}
+                        </select>
+                    </div>
+
+                    <div>
+                        <label className="mb-1 block text-xs font-bold uppercase tracking-wide text-slate-500">
+                            Selecionar funcionário
+                        </label>
+                        <select
+                            value={colaboradorAtual.id}
+                            onChange={(e) => {
+                                const escolhido = colaboradores.find((item) => String(item.id) === String(e.target.value));
+                                if (escolhido) onSelecionarColaborador?.(escolhido);
+                            }}
+                            className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none focus:border-slate-400 focus:ring-4 focus:ring-slate-100"
+                        >
+                            {colaboradoresFiltrados.map((item) => (
+                                <option key={item.id} value={item.id}>
+                                    {item.nome} — {item.codigoFuncionario}
+                                </option>
+                            ))}
+                            {!colaboradoresFiltrados.some((item) => String(item.id) === String(colaboradorAtual.id)) && (
+                                <option value={colaboradorAtual.id}>
+                                    {colaboradorAtual.nome} — {colaboradorAtual.codigoFuncionario}
+                                </option>
+                            )}
+                        </select>
+                    </div>
                 </div>
             </Card>
 
