@@ -397,6 +397,22 @@ function normalizarColaborador(item) {
     };
 }
 
+function normalizarCertificado(item) {
+    return {
+        id: item.id,
+        colaboradorId: item.colaborador_id || item.colaboradorId || null,
+        treinamentoId: Number(item.treinamento_id || item.treinamentoId),
+        nomeTreinamento: item.nome_treinamento || item.nomeTreinamento || "",
+        realizado: item.data_realizacao || item.realizado || "",
+        vencimento: item.data_vencimento || item.vencimento || "",
+        arquivo: item.arquivo_nome || item.arquivo || "",
+        arquivoUrl: item.arquivo_url || item.arquivoUrl || "",
+        observacao: item.observacao || "",
+        statusValidacao: item.status_validacao || "Validado",
+        createdAt: item.created_at || "",
+    };
+}
+
 function diasParaVencer(dataISO) {
     const venc = new Date(`${dataISO}T12:00:00`);
     const base = new Date(hoje.toISOString().slice(0, 10) + "T12:00:00");
@@ -760,7 +776,17 @@ function QRCodeReal({ token, size = 160 }) {
 }
 
 function obterTreinamento(id) {
-    return treinamentosBase.find((t) => t.id === id) || { nome: "Treinamento não cadastrado", categoria: "-" };
+    return treinamentosBase.find((t) => Number(t.id) === Number(id)) || { nome: "Treinamento não cadastrado", categoria: "-", validadePadrao: 365 };
+}
+
+function calcularVencimentoTreinamento(treinamentoId, dataRealizacao) {
+    const treinamento = obterTreinamento(Number(treinamentoId));
+
+    if (!dataRealizacao || !treinamento?.validadePadrao) return "";
+
+    const data = new Date(`${dataRealizacao}T12:00:00`);
+    data.setDate(data.getDate() + Number(treinamento.validadePadrao));
+    return data.toISOString().slice(0, 10);
 }
 
 function statusGeral(colaborador) {
@@ -2067,47 +2093,59 @@ function Colaboradores({
 }
 
 
-function Treinamentos({ colaboradores, setColaboradores, colaboradorInicialId }) {
+function Treinamentos({
+    colaboradores,
+    colaboradorInicialId,
+    onSalvarCertificado,
+    onVisualizarCertificado,
+    onExcluirCertificado,
+}) {
     const [colabId, setColabId] = useState(colaboradorInicialId || colaboradores[0]?.id || "");
     const [treinamentoId, setTreinamentoId] = useState(treinamentosBase[0].id);
-    const [vencimento, setVencimento] = useState(addDays(365));
-    const [arquivo, setArquivo] = useState("certificado.pdf");
+    const [dataRealizacao, setDataRealizacao] = useState(hoje.toISOString().slice(0, 10));
+    const [vencimento, setVencimento] = useState(calcularVencimentoTreinamento(treinamentosBase[0].id, hoje.toISOString().slice(0, 10)));
     const [arquivoSelecionado, setArquivoSelecionado] = useState(null);
+    const [observacao, setObservacao] = useState("");
+    const [salvandoCertificado, setSalvandoCertificado] = useState(false);
 
     const colabSelecionadoId = colabId || colaboradores[0]?.id || "";
     const colabSelecionado = colaboradores.find((c) => String(c.id) === String(colabSelecionadoId));
     const avaliacaoSelecionado = colabSelecionado ? avaliarTreinamentosColaborador(colabSelecionado) : null;
 
-    const adicionarTreinamento = () => {
+    useEffect(() => {
+        if (!dataRealizacao || !treinamentoId) return;
+        setVencimento(calcularVencimentoTreinamento(treinamentoId, dataRealizacao));
+    }, [treinamentoId, dataRealizacao]);
+
+    const adicionarTreinamento = async () => {
         if (!colabSelecionadoId) {
             alert("Cadastre um colaborador primeiro.");
             return;
         }
 
-        const nomeArquivo = arquivoSelecionado?.name || arquivo || "certificado.pdf";
+        if (!arquivoSelecionado) {
+            alert("Selecione o arquivo do certificado antes de salvar.");
+            return;
+        }
 
-        setColaboradores(
-            colaboradores.map((c) => {
-                if (String(c.id) !== String(colabSelecionadoId)) return c;
+        setSalvandoCertificado(true);
 
-                const atualizados = (c.treinamentos || []).filter((t) => t.treinamentoId !== Number(treinamentoId));
+        const ok = await onSalvarCertificado({
+            colaboradorId: colabSelecionadoId,
+            treinamentoId: Number(treinamentoId),
+            dataRealizacao,
+            dataVencimento: vencimento,
+            arquivo: arquivoSelecionado,
+            arquivoNome: arquivoSelecionado.name,
+            observacao: observacao.trim(),
+        });
 
-                return {
-                    ...c,
-                    treinamentos: [
-                        ...atualizados,
-                        {
-                            treinamentoId: Number(treinamentoId),
-                            realizado: hoje.toISOString().slice(0, 10),
-                            vencimento,
-                            arquivo: nomeArquivo,
-                        },
-                    ],
-                };
-            })
-        );
+        setSalvandoCertificado(false);
 
-        setArquivo(nomeArquivo);
+        if (ok) {
+            setArquivoSelecionado(null);
+            setObservacao("");
+        }
     };
 
     const documentos = colaboradores.flatMap((c) =>
@@ -2116,7 +2154,7 @@ function Treinamentos({ colaboradores, setColaboradores, colaboradorInicialId })
 
     return (
         <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
-            <Header titulo="Treinamentos e certificados" subtitulo="Lançamento de certificados, validade e controle automático de status." />
+            <Header titulo="Treinamentos e certificados" subtitulo="Lançamento de certificados no Supabase, validade e controle automático de status." />
 
             <div className="grid gap-6 xl:grid-cols-[0.75fr_1.25fr]">
                 <Card>
@@ -2124,68 +2162,107 @@ function Treinamentos({ colaboradores, setColaboradores, colaboradorInicialId })
                         <Upload className="h-5 w-5" />
                         Lançar certificado
                     </h2>
-                    <p className="mt-1 text-sm text-slate-500">Nesta versão, o lançamento ainda fica local. O próximo passo é salvar os certificados no Supabase Storage.</p>
+                    <p className="mt-1 text-sm text-slate-500">
+                        O arquivo será salvo no Supabase Storage e o registro ficará vinculado ao colaborador.
+                    </p>
 
                     <div className="mt-5 space-y-3">
-                        <select
-                            value={colabSelecionadoId}
-                            onChange={(e) => setColabId(e.target.value)}
-                            className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-slate-300"
-                        >
-                            {colaboradores.length === 0 && <option value="">Nenhum colaborador cadastrado</option>}
-                            {colaboradores.map((c) => (
-                                <option key={c.id} value={c.id}>
-                                    {c.nome} — {c.empresa}
-                                </option>
-                            ))}
-                        </select>
+                        <div>
+                            <label className="mb-1 block text-xs font-bold uppercase tracking-wide text-slate-500">Colaborador</label>
+                            <select
+                                value={colabSelecionadoId}
+                                onChange={(e) => setColabId(e.target.value)}
+                                className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-slate-300"
+                            >
+                                {colaboradores.length === 0 && <option value="">Nenhum colaborador cadastrado</option>}
+                                {colaboradores.map((c) => (
+                                    <option key={c.id} value={c.id}>
+                                        {c.nome} — {c.empresa}
+                                    </option>
+                                ))}
+                            </select>
+                        </div>
 
-                        <select
-                            value={treinamentoId}
-                            onChange={(e) => setTreinamentoId(e.target.value)}
-                            className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-slate-300"
-                        >
-                            {treinamentosBase.map((t) => (
-                                <option key={t.id} value={t.id}>
-                                    {t.nome}
-                                </option>
-                            ))}
-                        </select>
+                        <div>
+                            <label className="mb-1 block text-xs font-bold uppercase tracking-wide text-slate-500">Treinamento / documento</label>
+                            <select
+                                value={treinamentoId}
+                                onChange={(e) => setTreinamentoId(e.target.value)}
+                                className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-slate-300"
+                            >
+                                {treinamentosBase.map((t) => (
+                                    <option key={t.id} value={t.id}>
+                                        {t.nome}
+                                    </option>
+                                ))}
+                            </select>
+                        </div>
 
-                        <input
-                            type="date"
-                            value={vencimento}
-                            onChange={(e) => setVencimento(e.target.value)}
-                            className="w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-slate-300"
-                        />
+                        {avaliacaoSelecionado && (
+                            <div className="rounded-2xl bg-slate-50 p-3">
+                                <p className="text-xs font-bold uppercase tracking-wide text-slate-500">
+                                    Treinamentos automáticos para a função: {avaliacaoSelecionado.matriz.rotulo}
+                                </p>
+                                <div className="mt-2 space-y-1.5">
+                                    {avaliacaoSelecionado.itens.map((item) => (
+                                        <div key={item.treinamento.id} className="flex items-center justify-between gap-2 rounded-xl bg-white px-3 py-2 text-xs">
+                                            <span className="font-medium text-slate-700">{item.treinamento.nome}</span>
+                                            <span className={classNames("rounded-full px-2 py-0.5 text-[10px] font-semibold ring-1", item.status.classe)}>
+                                                {item.status.texto}
+                                            </span>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
 
-                        <input
-                            value={arquivo}
-                            onChange={(e) => setArquivo(e.target.value)}
-                            placeholder="Nome do arquivo PDF"
-                            className="w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-slate-300"
+                        <div className="grid gap-3 sm:grid-cols-2">
+                            <div>
+                                <label className="mb-1 block text-xs font-bold uppercase tracking-wide text-slate-500">Realização / emissão</label>
+                                <input
+                                    type="date"
+                                    value={dataRealizacao}
+                                    onChange={(e) => setDataRealizacao(e.target.value)}
+                                    className="w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-slate-300"
+                                />
+                            </div>
+
+                            <div>
+                                <label className="mb-1 block text-xs font-bold uppercase tracking-wide text-slate-500">Validade / vencimento</label>
+                                <input
+                                    type="date"
+                                    value={vencimento}
+                                    onChange={(e) => setVencimento(e.target.value)}
+                                    className="w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-slate-300"
+                                />
+                            </div>
+                        </div>
+
+                        <textarea
+                            value={observacao}
+                            onChange={(e) => setObservacao(e.target.value)}
+                            placeholder="Observação opcional"
+                            rows={3}
+                            className="w-full resize-none rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-slate-300"
                         />
 
                         <label className="flex cursor-pointer items-center justify-center gap-2 rounded-2xl border border-dashed border-slate-300 bg-slate-50 px-4 py-4 text-sm font-medium text-slate-600 hover:bg-slate-100">
                             <Upload className="h-4 w-4" />
-                            {arquivoSelecionado ? arquivoSelecionado.name : "Selecionar PDF do certificado"}
+                            {arquivoSelecionado ? arquivoSelecionado.name : "Selecionar PDF ou imagem do certificado"}
                             <input
                                 type="file"
                                 accept="application/pdf,image/*"
                                 className="hidden"
-                                onChange={(e) => {
-                                    const file = e.target.files?.[0];
-                                    setArquivoSelecionado(file || null);
-                                    if (file) setArquivo(file.name);
-                                }}
+                                onChange={(e) => setArquivoSelecionado(e.target.files?.[0] || null)}
                             />
                         </label>
 
                         <button
                             onClick={adicionarTreinamento}
-                            className="w-full rounded-2xl bg-slate-950 px-4 py-3 text-sm font-semibold text-white hover:bg-slate-800"
+                            disabled={salvandoCertificado}
+                            className="w-full rounded-2xl bg-slate-950 px-4 py-3 text-sm font-semibold text-white hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
                         >
-                            Salvar certificado
+                            {salvandoCertificado ? "Salvando no Supabase..." : "Salvar certificado no banco"}
                         </button>
                     </div>
                 </Card>
@@ -2207,19 +2284,20 @@ function Treinamentos({ colaboradores, setColaboradores, colaboradorInicialId })
                                     <th className="px-4 py-3">Arquivo</th>
                                     <th className="px-4 py-3">Validade</th>
                                     <th className="px-4 py-3">Status</th>
+                                    <th className="px-4 py-3"></th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-slate-100 bg-white">
                                 {documentos.length === 0 && (
                                     <tr>
-                                        <td className="px-4 py-8 text-center text-sm text-slate-500" colSpan={5}>
+                                        <td className="px-4 py-8 text-center text-sm text-slate-500" colSpan={6}>
                                             Nenhum certificado lançado ainda.
                                         </td>
                                     </tr>
                                 )}
 
                                 {documentos.map((d, idx) => (
-                                    <tr key={`${d.colaborador.id}-${d.treinamentoId}-${idx}`} className="hover:bg-slate-50">
+                                    <tr key={`${d.id || d.colaborador.id}-${d.treinamentoId}-${idx}`} className="hover:bg-slate-50">
                                         <td className="px-4 py-3">
                                             <div className="font-semibold text-slate-900">{d.colaborador.nome}</div>
                                             <div className="text-xs text-slate-500">{d.colaborador.empresa}</div>
@@ -2232,6 +2310,22 @@ function Treinamentos({ colaboradores, setColaboradores, colaboradorInicialId })
                                         <td className="px-4 py-3 text-slate-700">{formatDate(d.vencimento)}</td>
                                         <td className="px-4 py-3">
                                             <StatusPill status={statusDocumento(d.vencimento)} small />
+                                        </td>
+                                        <td className="px-4 py-3">
+                                            <div className="flex justify-end gap-2">
+                                                <button
+                                                    onClick={() => onVisualizarCertificado(d)}
+                                                    className="rounded-xl bg-slate-950 px-3 py-1.5 text-xs font-semibold text-white hover:bg-slate-800"
+                                                >
+                                                    Abrir
+                                                </button>
+                                                <button
+                                                    onClick={() => onExcluirCertificado(d)}
+                                                    className="rounded-xl bg-red-50 px-3 py-1.5 text-xs font-semibold text-red-700 ring-1 ring-red-200 hover:bg-red-100"
+                                                >
+                                                    Excluir
+                                                </button>
+                                            </div>
                                         </td>
                                     </tr>
                                 ))}
@@ -3926,10 +4020,37 @@ export default function App() {
             }
 
             const normalizados = (data || []).map(normalizarColaborador);
-            setColaboradores(normalizados);
-            setColaboradorSelecionado((atual) => atual || normalizados[0] || null);
+            const idsColaboradores = normalizados.map((colaborador) => colaborador.id);
+            let certificadosPorColaborador = {};
 
-            if (normalizados.length === 0 && empresas.length === 0) {
+            if (idsColaboradores.length > 0) {
+                const { data: certificadosData, error: certificadosError } = await supabase
+                    .from("certificados")
+                    .select("id, colaborador_id, treinamento_id, nome_treinamento, data_realizacao, data_vencimento, arquivo_url, arquivo_nome, observacao, status_validacao, created_at")
+                    .in("colaborador_id", idsColaboradores)
+                    .order("created_at", { ascending: false });
+
+                if (certificadosError) {
+                    throw new Error(`Erro ao carregar certificados: ${certificadosError.message}`);
+                }
+
+                certificadosPorColaborador = (certificadosData || []).reduce((acc, item) => {
+                    const certificado = normalizarCertificado(item);
+                    if (!acc[certificado.colaboradorId]) acc[certificado.colaboradorId] = [];
+                    acc[certificado.colaboradorId].push(certificado);
+                    return acc;
+                }, {});
+            }
+
+            const colaboradoresComCertificados = normalizados.map((colaborador) => ({
+                ...colaborador,
+                treinamentos: certificadosPorColaborador[colaborador.id] || [],
+            }));
+
+            setColaboradores(colaboradoresComCertificados);
+            setColaboradorSelecionado((atual) => atual || colaboradoresComCertificados[0] || null);
+
+            if (colaboradoresComCertificados.length === 0 && empresas.length === 0) {
                 setColaboradores([]);
             }
         } catch (error) {
@@ -4267,6 +4388,8 @@ export default function App() {
           funcao,
           matricula,
           codigo_funcionario,
+          status_mobilizacao,
+          treinamentos_removidos,
           foto_url,
           foto_nome,
           token_qr,
@@ -4371,6 +4494,8 @@ export default function App() {
           funcao,
           matricula,
           codigo_funcionario,
+          status_mobilizacao,
+          treinamentos_removidos,
           foto_url,
           foto_nome,
           token_qr,
@@ -4400,6 +4525,184 @@ export default function App() {
             setErroBanco(error.message || "Erro ao atualizar colaborador.");
             return false;
         }
+    }
+
+    async function enviarArquivoCertificado(arquivo, colaboradorId, treinamentoId) {
+        if (!arquivo) return { arquivoUrl: null, arquivoNome: null };
+
+        const nomeSeguro = sanitizarNomeArquivo(arquivo.name);
+        const caminho = `${colaboradorId}/${treinamentoId}/${Date.now()}-${nomeSeguro}`;
+
+        const { error } = await supabase.storage
+            .from("certificados-treinamentos")
+            .upload(caminho, arquivo, {
+                cacheControl: "3600",
+                upsert: true,
+                contentType: arquivo.type || "application/pdf",
+            });
+
+        if (error) {
+            throw new Error(`Erro ao enviar certificado: ${error.message}`);
+        }
+
+        return { arquivoUrl: caminho, arquivoNome: nomeSeguro };
+    }
+
+    async function salvarCertificadoTreinamento(certificado) {
+        setErroBanco("");
+
+        try {
+            if (!certificado.colaboradorId) {
+                throw new Error("Selecione o colaborador.");
+            }
+
+            if (!certificado.treinamentoId) {
+                throw new Error("Selecione o treinamento/documento.");
+            }
+
+            if (!certificado.dataRealizacao) {
+                throw new Error("Informe a data de realização/emissão.");
+            }
+
+            if (!certificado.dataVencimento) {
+                throw new Error("Informe a validade/revisão do certificado.");
+            }
+
+            if (!certificado.arquivo) {
+                throw new Error("Selecione o arquivo PDF ou imagem do certificado.");
+            }
+
+            const { data: existente } = await supabase
+                .from("certificados")
+                .select("id, arquivo_url")
+                .eq("colaborador_id", certificado.colaboradorId)
+                .eq("treinamento_id", certificado.treinamentoId)
+                .maybeSingle();
+
+            const arquivo = await enviarArquivoCertificado(
+                certificado.arquivo,
+                certificado.colaboradorId,
+                certificado.treinamentoId
+            );
+
+            const treinamento = obterTreinamento(Number(certificado.treinamentoId));
+
+            const { data, error } = await supabase
+                .from("certificados")
+                .upsert(
+                    {
+                        colaborador_id: certificado.colaboradorId,
+                        treinamento_id: Number(certificado.treinamentoId),
+                        nome_treinamento: treinamento.nome,
+                        data_realizacao: certificado.dataRealizacao,
+                        data_vencimento: certificado.dataVencimento,
+                        arquivo_url: arquivo.arquivoUrl,
+                        arquivo_nome: certificado.arquivoNome || arquivo.arquivoNome,
+                        observacao: certificado.observacao || null,
+                        status_validacao: "Validado",
+                    },
+                    { onConflict: "colaborador_id,treinamento_id" }
+                )
+                .select("id, colaborador_id, treinamento_id, nome_treinamento, data_realizacao, data_vencimento, arquivo_url, arquivo_nome, observacao, status_validacao, created_at")
+                .single();
+
+            if (error) {
+                throw new Error(`Erro ao salvar certificado: ${error.message}`);
+            }
+
+            if (existente?.arquivo_url && existente.arquivo_url !== arquivo.arquivoUrl) {
+                await supabase.storage.from("certificados-treinamentos").remove([existente.arquivo_url]);
+            }
+
+            const certificadoNormalizado = normalizarCertificado(data);
+
+            setColaboradores((atual) =>
+                atual.map((colaborador) => {
+                    if (String(colaborador.id) !== String(certificadoNormalizado.colaboradorId)) return colaborador;
+
+                    const demais = (colaborador.treinamentos || []).filter(
+                        (item) => Number(item.treinamentoId) !== Number(certificadoNormalizado.treinamentoId)
+                    );
+
+                    return {
+                        ...colaborador,
+                        treinamentos: [certificadoNormalizado, ...demais],
+                    };
+                })
+            );
+
+            setColaboradorSelecionado((atual) => {
+                if (!atual || String(atual.id) !== String(certificadoNormalizado.colaboradorId)) return atual;
+
+                const demais = (atual.treinamentos || []).filter(
+                    (item) => Number(item.treinamentoId) !== Number(certificadoNormalizado.treinamentoId)
+                );
+
+                return {
+                    ...atual,
+                    treinamentos: [certificadoNormalizado, ...demais],
+                };
+            });
+
+            return true;
+        } catch (error) {
+            setErroBanco(error.message || "Erro ao salvar certificado.");
+            return false;
+        }
+    }
+
+    async function visualizarCertificadoTreinamento(certificado) {
+        setErroBanco("");
+
+        if (!certificado?.arquivoUrl) {
+            setErroBanco("Este certificado ainda não possui arquivo anexado.");
+            return;
+        }
+
+        const { data, error } = await supabase.storage
+            .from("certificados-treinamentos")
+            .createSignedUrl(certificado.arquivoUrl, 60 * 10);
+
+        if (error) {
+            setErroBanco(`Erro ao gerar link do certificado: ${error.message}`);
+            return;
+        }
+
+        window.open(data.signedUrl, "_blank", "noopener,noreferrer");
+    }
+
+    async function excluirCertificadoTreinamento(certificado) {
+        const treinamento = obterTreinamento(certificado.treinamentoId);
+        const confirmar = window.confirm(`Deseja excluir o certificado ${treinamento.nome}?`);
+
+        if (!confirmar) return;
+
+        setErroBanco("");
+
+        const { error } = await supabase
+            .from("certificados")
+            .delete()
+            .eq("id", certificado.id);
+
+        if (error) {
+            setErroBanco(`Erro ao excluir certificado: ${error.message}`);
+            return;
+        }
+
+        if (certificado.arquivoUrl) {
+            await supabase.storage.from("certificados-treinamentos").remove([certificado.arquivoUrl]);
+        }
+
+        setColaboradores((atual) =>
+            atual.map((colaborador) => {
+                if (String(colaborador.id) !== String(certificado.colaboradorId)) return colaborador;
+
+                return {
+                    ...colaborador,
+                    treinamentos: (colaborador.treinamentos || []).filter((item) => item.id !== certificado.id),
+                };
+            })
+        );
     }
 
     async function excluirColaborador(colaborador) {
@@ -4623,8 +4926,10 @@ export default function App() {
                         <Treinamentos
                             key={colaboradorSelecionado?.id || "treinamentos"}
                             colaboradores={colaboradores}
-                            setColaboradores={setColaboradores}
                             colaboradorInicialId={colaboradorSelecionado?.id}
+                            onSalvarCertificado={salvarCertificadoTreinamento}
+                            onVisualizarCertificado={visualizarCertificadoTreinamento}
+                            onExcluirCertificado={excluirCertificadoTreinamento}
                         />
                     )}
 
