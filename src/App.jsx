@@ -793,6 +793,9 @@ function baixarPDF(nomeArquivo, titulo, linhas) {
 
 function StatusPill({ status, small = false }) {
     const Icon = status.icon;
+    const textoStatus = String(status.texto || "")
+        .replace(/A vencer/gi, "A vencer")
+        .replace(/A vencer/gi, "A vencer");
 
     return (
         <span
@@ -803,30 +806,32 @@ function StatusPill({ status, small = false }) {
             )}
         >
             <Icon className={small ? "h-3.5 w-3.5" : "h-4 w-4"} />
-            {status.texto}
+            {textoStatus}
         </span>
     );
 }
 
-function QRCodeReal({ token, size = 160 }) {
+function QRCodeReal({ token, size = 142 }) {
     const urlConsulta = `${window.location.origin}/?qr=${encodeURIComponent(token)}`;
 
     return (
-        <div className="flex w-full max-w-[260px] flex-col items-center gap-3">
-            <div className="flex items-center justify-center rounded-2xl bg-white p-3 shadow-inner ring-1 ring-slate-200">
-                <QRCodeSVG
-                    value={urlConsulta}
-                    size={size}
-                    level="H"
-                    includeMargin
-                    bgColor="#ffffff"
-                    fgColor="#0f172a"
-                />
-            </div>
+        <div className="w-full max-w-[310px] rounded-3xl bg-slate-50 p-3 ring-1 ring-slate-200">
+            <div className="grid gap-3 sm:grid-cols-[auto_1fr] sm:items-center">
+                <div className="mx-auto flex items-center justify-center rounded-2xl bg-white p-2 shadow-inner ring-1 ring-slate-200">
+                    <QRCodeSVG
+                        value={urlConsulta}
+                        size={size}
+                        level="H"
+                        includeMargin
+                        bgColor="#ffffff"
+                        fgColor="#0f172a"
+                    />
+                </div>
 
-            <div className="w-full rounded-2xl bg-slate-50 px-3 py-2 text-center ring-1 ring-slate-200">
-                <p className="text-[10px] font-bold uppercase tracking-wide text-slate-400">Link público</p>
-                <p className="mt-1 break-all text-[10px] text-slate-500">{urlConsulta}</p>
+                <div className="rounded-2xl bg-white px-3 py-2 text-center ring-1 ring-slate-200 sm:text-left">
+                    <p className="text-[10px] font-bold uppercase tracking-wide text-slate-400">Link público</p>
+                    <p className="mt-1 break-all text-[10px] leading-relaxed text-slate-500">{urlConsulta}</p>
+                </div>
             </div>
         </div>
     );
@@ -2365,38 +2370,37 @@ function ConsultaQRPublica({ dados }) {
         <div className="min-h-screen bg-slate-100 p-4 text-slate-900">
             <div className="mx-auto max-w-5xl rounded-[2rem] bg-slate-950 p-3 shadow-2xl">
                 <div className="rounded-[1.5rem] bg-white p-5 md:p-8">
-                    <div className="flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
+                    <div className="grid gap-4 lg:grid-cols-[1fr_auto] lg:items-start">
                         <div className="flex gap-4">
                             <FotoColaborador
                                 src={colaborador.fotoUrl}
                                 nome={colaborador.nome}
-                                className="h-20 w-20 rounded-3xl"
-                                iconClassName="h-9 w-9"
+                                className="h-24 w-24 rounded-3xl"
+                                iconClassName="h-10 w-10"
                             />
 
-                            <div>
+                            <div className="min-w-0 pt-1">
                                 <div className="mb-2 inline-flex items-center gap-2 rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-700">
                                     <ShieldCheck className="h-3.5 w-3.5" />
                                     Consulta pública SST
                                 </div>
-                                <h2 className="text-2xl font-bold text-slate-950">{colaborador.nome}</h2>
-                                <p className="mt-1 text-slate-500">
-                                    {colaborador.funcao} · {colaborador.empresa}
-                                </p>
+                                <h2 className="break-words text-2xl font-bold leading-tight text-slate-950">{colaborador.nome}</h2>
+                                <p className="mt-2 text-sm font-semibold text-slate-500">{colaborador.funcao}</p>
+                                <p className="mt-1 text-sm text-slate-500">{colaborador.empresa}</p>
                                 <p className="mt-1 text-sm font-semibold text-slate-500">
                                     Código: {colaborador.codigoFuncionario}
                                 </p>
                             </div>
                         </div>
 
-                        <span className={classNames("inline-flex items-center justify-center rounded-2xl px-5 py-3 text-base font-bold", geral.classe)}>
+                        <span className={classNames("inline-flex items-center justify-center rounded-2xl px-5 py-3 text-base font-bold lg:min-w-[150px]", geral.classe)}>
                             {geral.texto}
                         </span>
                     </div>
 
-                    <div className="mt-8 rounded-3xl border border-slate-200 p-5">
+                    <div className="mt-5 rounded-3xl border border-slate-200 p-5">
                         <p className="text-sm font-medium text-slate-500">Status geral do colaborador</p>
-                        <h3 className="mt-1 text-xl font-bold text-slate-950">{geral.detalhe}</h3>
+                        <h3 className="mt-1 text-justify text-lg font-bold leading-relaxed text-slate-950">{geral.detalhe}</h3>
                     </div>
 
                     {treinamentos.length === 0 && (
@@ -2464,7 +2468,7 @@ function ConsultaQRPublica({ dados }) {
                         })}
                     </div>
 
-                    <div className="mt-6 rounded-3xl bg-slate-50 p-4 text-sm text-slate-600">
+                    <div className="mt-6 rounded-3xl bg-slate-50 p-4 text-justify text-sm leading-relaxed text-slate-600">
                         Consulta pública limitada. Dados sensíveis como CPF, endereço, ASO detalhado e documentos médicos não são exibidos.
                     </div>
                 </div>
@@ -3196,40 +3200,39 @@ function ConsultaQR({ colaborador, colaboradores = [], onSelecionarColaborador }
 
             <div className="mx-auto max-w-5xl rounded-[2rem] bg-slate-950 p-3 shadow-2xl">
                 <div className="rounded-[1.5rem] bg-white p-5 md:p-8">
-                    <div className="flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
+                    <div className="grid gap-5 lg:grid-cols-[1fr_320px] lg:items-start">
                         <div className="flex gap-4">
                             <FotoColaborador
                                 src={foto}
                                 nome={colaboradorAtual.nome}
-                                className="h-20 w-20 rounded-3xl"
-                                iconClassName="h-9 w-9"
+                                className="h-24 w-24 rounded-3xl"
+                                iconClassName="h-10 w-10"
                             />
 
-                            <div>
+                            <div className="min-w-0 pt-1">
                                 <div className="mb-2 inline-flex items-center gap-2 rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-700">
                                     <ShieldCheck className="h-3.5 w-3.5" />
                                     Verificação SST
                                 </div>
-                                <h2 className="text-2xl font-bold text-slate-950">{colaboradorAtual.nome}</h2>
-                                <p className="mt-1 text-slate-500">
-                                    {colaboradorAtual.funcao} · {colaboradorAtual.empresaExibicao || colaboradorAtual.empresa}
-                                </p>
+                                <h2 className="break-words text-2xl font-bold leading-tight text-slate-950">{colaboradorAtual.nome}</h2>
+                                <p className="mt-2 text-sm font-semibold text-slate-500">{colaboradorAtual.funcao}</p>
+                                <p className="mt-1 text-sm text-slate-500">{colaboradorAtual.empresaExibicao || colaboradorAtual.empresa}</p>
                                 <p className="mt-1 text-sm font-semibold text-slate-500">
                                     Código: {colaboradorAtual.codigoFuncionario}
                                 </p>
                             </div>
                         </div>
 
-                        <div className="flex flex-col items-center justify-center gap-3">
+                        <div className="flex justify-center lg:justify-end">
                             <QRCodeReal token={colaboradorAtual.token} />
                         </div>
                     </div>
 
-                    <div className="mt-8 rounded-3xl border border-slate-200 p-5">
+                    <div className="mt-5 rounded-3xl border border-slate-200 p-5">
                         <div className="flex flex-col justify-between gap-3 md:flex-row md:items-center">
                             <div>
                                 <p className="text-sm font-medium text-slate-500">Status geral do colaborador</p>
-                                <h3 className="mt-1 text-xl font-bold text-slate-950">{geral.detalhe}</h3>
+                                <h3 className="mt-1 text-justify text-lg font-bold leading-relaxed text-slate-950">{geral.detalhe}</h3>
                             </div>
                             <span className={classNames("inline-flex items-center justify-center rounded-2xl px-5 py-3 text-base font-bold", geral.classe)}>
                                 {geral.texto}
@@ -3306,7 +3309,7 @@ function ConsultaQR({ colaborador, colaboradores = [], onSelecionarColaborador }
                         })}
                     </div>
 
-                    <div className="mt-6 rounded-3xl bg-slate-50 p-4 text-sm text-slate-600">
+                    <div className="mt-6 rounded-3xl bg-slate-50 p-4 text-justify text-sm leading-relaxed text-slate-600">
                         Dados sensíveis como CPF completo, endereço, ASO detalhado e documentos médicos não aparecem nesta consulta pública. A visualização completa fica restrita ao perfil autorizado.
                     </div>
                 </div>
