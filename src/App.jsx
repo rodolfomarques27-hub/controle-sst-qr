@@ -70,7 +70,11 @@ function addDays(days) {
 }
 
 const treinamentosBase = [
+    { id: 14, nome: "NR-06 Ficha de EPIs atualizada", validadePadrao: 365, categoria: "Documento", base: "NR-06 / registro de fornecimento de EPI" },
+
     { id: 1, nome: "NR-01 Integração / Mobilização SST", validadePadrao: 365, categoria: "Obrigatório", base: "NR-01 / Integração de obra" },
+    { id: 15, nome: "NR-01 Ordem de Serviço da Função", validadePadrao: 365, categoria: "Documento", base: "NR-01 / Ordem de Serviço" },
+    { id: 13, nome: "NR-01 / NR-18 Procedimento Operacional da Função / OS", validadePadrao: 365, categoria: "Atividade", base: "NR-01 / NR-18 / PGR / APR" },
     { id: 8, nome: "NR-06 Uso Correto de EPIs", validadePadrao: 365, categoria: "Obrigatório", base: "NR-06 / NR-01" },
     { id: 22, nome: "NR-07 ASO - Atestado de Saúde Ocupacional", validadePadrao: 365, categoria: "Documento Médico", base: "NR-07" },
     { id: 4, nome: "NR-10 Segurança em Eletricidade", validadePadrao: 730, categoria: "Elétrica", base: "NR-10" },
@@ -89,10 +93,7 @@ const treinamentosBase = [
     { id: 10, nome: "NR-33 Espaço Confinado", validadePadrao: 365, categoria: "Alto Risco", base: "NR-33" },
     { id: 2, nome: "NR-35 Trabalho em Altura", validadePadrao: 730, categoria: "Alto Risco", base: "NR-35" },
 
-    { id: 14, nome: "Ficha de EPIs atualizada", validadePadrao: 365, categoria: "Documento", base: "Controle interno / NR-06" },
-    { id: 15, nome: "Ordem de Serviço da Função", validadePadrao: 365, categoria: "Documento", base: "Controle interno / NR-01" },
-    { id: 13, nome: "Procedimento Operacional da Função / OS", validadePadrao: 365, categoria: "Atividade", base: "PGR / APR / Ordem de Serviço" },
-    { id: 21, nome: "Ficha de Registro", validadePadrao: 3650, categoria: "Documento", base: "CLT / admissional" },
+    { id: 21, nome: "Ficha de Registro - CLT / eSocial", validadePadrao: 3650, categoria: "Documento", base: "CLT / eSocial / admissional" },
 ];
 
 const documentosEmpresaBase = [
