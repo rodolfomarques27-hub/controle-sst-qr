@@ -3063,96 +3063,109 @@ function Treinamentos({
                         </span>
                     </div>
 
-                    <div className="overflow-hidden rounded-2xl border border-slate-200">
-                        <table className="w-full text-left text-sm">
-                            <thead className="bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
-                                <tr>
-                                    <th className="px-4 py-3">Colaborador</th>
-                                    <th className="px-4 py-3">Treinamento</th>
-                                    <th className="px-4 py-3">Arquivo</th>
-                                    <th className="px-4 py-3">Revisar datas</th>
-                                    <th className="px-4 py-3">Status</th>
-                                    <th className="px-4 py-3"></th>
-                                </tr>
-                            </thead>
-                            <tbody className="divide-y divide-slate-100 bg-white">
-                                {documentos.length === 0 && (
-                                    <tr>
-                                        <td className="px-4 py-8 text-center text-sm text-slate-500" colSpan={6}>
-                                            Nenhum certificado lançado ainda.
-                                        </td>
-                                    </tr>
-                                )}
+                    <div className="space-y-3">
+                        {documentos.length === 0 && (
+                            <div className="rounded-3xl border border-dashed border-slate-300 p-8 text-center">
+                                <FileText className="mx-auto h-10 w-10 text-slate-300" />
+                                <h3 className="mt-3 font-bold text-slate-900">Nenhum certificado lançado ainda</h3>
+                                <p className="mt-1 text-sm text-slate-500">
+                                    Os certificados enviados aparecerão nesta base para revisão de validade e consulta.
+                                </p>
+                            </div>
+                        )}
 
-                                {documentos.map((d, idx) => (
-                                    <tr key={`${d.id || d.colaborador.id}-${d.treinamentoId}-${idx}`} className="hover:bg-slate-50">
-                                        <td className="px-4 py-3">
-                                            <div className="font-semibold text-slate-900">{d.colaborador.nome}</div>
-                                            <div className="text-xs text-slate-500">{d.colaborador.empresa}</div>
-                                        </td>
-                                        <td className="px-4 py-3 text-slate-700">{d.treinamento.nome}</td>
-                                        <td className="px-4 py-3 text-slate-500">
-                                            <FileText className="mr-1 inline h-4 w-4" />
-                                            {d.arquivo}
-                                        </td>
-                                        <td className="px-4 py-3">
-                                            <div className="grid min-w-[230px] gap-2">
-                                                <div className="grid grid-cols-2 gap-2">
-                                                    <div>
-                                                        <p className="mb-1 text-[10px] font-bold uppercase tracking-wide text-slate-400">Realização</p>
-                                                        <input
-                                                            type="date"
-                                                            value={valoresRevisao(d).realizado}
-                                                            onChange={(e) => alterarDataRevisao(d, "realizado", e.target.value)}
-                                                            className="w-full rounded-xl border border-slate-200 px-2 py-1.5 text-xs outline-none focus:ring-2 focus:ring-slate-200"
-                                                        />
-                                                    </div>
-                                                    <div>
-                                                        <p className="mb-1 text-[10px] font-bold uppercase tracking-wide text-slate-400">Vencimento</p>
-                                                        <input
-                                                            type="date"
-                                                            value={valoresRevisao(d).vencimento}
-                                                            onChange={(e) => alterarDataRevisao(d, "vencimento", e.target.value)}
-                                                            className="w-full rounded-xl border border-slate-200 px-2 py-1.5 text-xs outline-none focus:ring-2 focus:ring-slate-200"
-                                                        />
-                                                    </div>
+                        {documentos.map((d, idx) => {
+                            const valores = valoresRevisao(d);
+                            const statusAtual = statusDocumento(valores.vencimento || d.vencimento);
+
+                            return (
+                                <div
+                                    key={`${d.id || d.colaborador.id}-${d.treinamentoId}-${idx}`}
+                                    className="rounded-3xl border border-slate-200 bg-white p-4 shadow-sm transition hover:border-slate-300 hover:shadow-md"
+                                >
+                                    <div className="grid gap-4 xl:grid-cols-[1.25fr_1.15fr_1.55fr_auto] xl:items-start">
+                                        <div className="min-w-0">
+                                            <p className="text-[10px] font-bold uppercase tracking-wide text-slate-400">Colaborador</p>
+                                            <p className="mt-1 break-words text-base font-bold leading-snug text-slate-950">
+                                                {d.colaborador.nome}
+                                            </p>
+                                            <p className="mt-1 break-words text-sm text-slate-500">
+                                                {d.colaborador.empresaExibicao || d.colaborador.empresa}
+                                            </p>
+                                            <p className="mt-1 text-xs font-semibold text-slate-500">
+                                                Código: {d.colaborador.codigoFuncionario}
+                                            </p>
+                                        </div>
+
+                                        <div className="min-w-0">
+                                            <p className="text-[10px] font-bold uppercase tracking-wide text-slate-400">Treinamento</p>
+                                            <p className="mt-1 break-words text-sm font-semibold leading-relaxed text-slate-800">
+                                                {d.treinamento.nome}
+                                            </p>
+
+                                            <div className="mt-3 rounded-2xl bg-slate-50 px-3 py-2 text-sm text-slate-600">
+                                                <FileText className="mr-1 inline h-4 w-4 text-slate-400" />
+                                                <span className="break-words">{d.arquivo || "Arquivo não informado"}</span>
+                                            </div>
+                                        </div>
+
+                                        <div className="min-w-0 rounded-2xl bg-slate-50 p-3">
+                                            <div className="grid gap-2 sm:grid-cols-2">
+                                                <div>
+                                                    <p className="mb-1 text-[10px] font-bold uppercase tracking-wide text-slate-400">Realização</p>
+                                                    <input
+                                                        type="date"
+                                                        value={valores.realizado}
+                                                        onChange={(e) => alterarDataRevisao(d, "realizado", e.target.value)}
+                                                        className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs outline-none focus:ring-2 focus:ring-slate-200"
+                                                    />
                                                 </div>
-                                                <p className="text-[10px] text-slate-400">
-                                                    Ao alterar a realização, o vencimento é recalculado automaticamente pela validade do treinamento.
-                                                </p>
-                                                <button
-                                                    type="button"
-                                                    onClick={() => salvarDatasCertificado(d)}
-                                                    disabled={salvandoDatasId === d.id}
-                                                    className="rounded-xl bg-blue-50 px-3 py-1.5 text-xs font-semibold text-blue-700 ring-1 ring-blue-200 hover:bg-blue-100 disabled:opacity-60"
-                                                >
-                                                    {salvandoDatasId === d.id ? "Salvando..." : "Salvar datas"}
-                                                </button>
+                                                <div>
+                                                    <p className="mb-1 text-[10px] font-bold uppercase tracking-wide text-slate-400">Vencimento</p>
+                                                    <input
+                                                        type="date"
+                                                        value={valores.vencimento}
+                                                        onChange={(e) => alterarDataRevisao(d, "vencimento", e.target.value)}
+                                                        className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs outline-none focus:ring-2 focus:ring-slate-200"
+                                                    />
+                                                </div>
                                             </div>
-                                        </td>
-                                        <td className="px-4 py-3">
-                                            <StatusPill status={statusDocumento(valoresRevisao(d).vencimento || d.vencimento)} small />
-                                        </td>
-                                        <td className="px-4 py-3">
-                                            <div className="flex justify-end gap-2">
-                                                <button
-                                                    onClick={() => onVisualizarCertificado(d)}
-                                                    className="rounded-xl bg-slate-950 px-3 py-1.5 text-xs font-semibold text-white hover:bg-slate-800"
-                                                >
-                                                    Abrir
-                                                </button>
-                                                <button
-                                                    onClick={() => onExcluirCertificado(d)}
-                                                    className="rounded-xl bg-red-50 px-3 py-1.5 text-xs font-semibold text-red-700 ring-1 ring-red-200 hover:bg-red-100"
-                                                >
-                                                    Excluir
-                                                </button>
-                                            </div>
-                                        </td>
-                                    </tr>
-                                ))}
-                            </tbody>
-                        </table>
+
+                                            <p className="mt-2 text-[10px] leading-relaxed text-slate-400">
+                                                Ao alterar a realização, o vencimento é recalculado automaticamente pela validade do treinamento.
+                                            </p>
+
+                                            <button
+                                                type="button"
+                                                onClick={() => salvarDatasCertificado(d)}
+                                                disabled={salvandoDatasId === d.id}
+                                                className="mt-2 w-full rounded-xl bg-blue-50 px-3 py-2 text-xs font-semibold text-blue-700 ring-1 ring-blue-200 hover:bg-blue-100 disabled:opacity-60"
+                                            >
+                                                {salvandoDatasId === d.id ? "Salvando..." : "Salvar datas"}
+                                            </button>
+                                        </div>
+
+                                        <div className="flex flex-wrap items-center gap-2 xl:min-w-[210px] xl:justify-end">
+                                            <StatusPill status={statusAtual} small />
+
+                                            <button
+                                                onClick={() => onVisualizarCertificado(d)}
+                                                className="rounded-xl bg-slate-950 px-4 py-2 text-xs font-semibold text-white hover:bg-slate-800"
+                                            >
+                                                Abrir
+                                            </button>
+
+                                            <button
+                                                onClick={() => onExcluirCertificado(d)}
+                                                className="rounded-xl bg-red-50 px-4 py-2 text-xs font-semibold text-red-700 ring-1 ring-red-200 hover:bg-red-100"
+                                            >
+                                                Excluir
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            );
+                        })}
                     </div>
                 </Card>
             </div>
