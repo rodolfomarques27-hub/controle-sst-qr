@@ -3299,15 +3299,15 @@ function ConsultaQR({ colaborador, colaboradores = [], onSelecionarColaborador }
                                 <ShieldCheck className="h-3.5 w-3.5" />
                                 Verificação SST
                             </div>
-                            <h2 className="break-words text-2xl font-bold leading-tight text-slate-950">{colaboradorAtual.nome}</h2>
+                            <div className="flex flex-wrap items-center gap-2">
+                                <h2 className="break-words text-2xl font-bold leading-tight text-slate-950">{colaboradorAtual.nome}</h2>
+                                <MobilizacaoBadge status={colaboradorAtual.statusMobilizacao} />
+                            </div>
                             <p className="mt-2 text-sm font-semibold text-slate-500">{colaboradorAtual.funcao}</p>
                             <p className="mt-1 text-sm text-slate-500">{colaboradorAtual.empresaExibicao || colaboradorAtual.empresa}</p>
                             <p className="mt-1 text-sm font-semibold text-slate-500">
                                 Código: {colaboradorAtual.codigoFuncionario}
                             </p>
-                            <div className="mt-3">
-                                <MobilizacaoBadge status={colaboradorAtual.statusMobilizacao} />
-                            </div>
 
                             <LinkPublicoQR token={colaboradorAtual.token} />
                         </div>
