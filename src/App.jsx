@@ -793,17 +793,21 @@ function baixarPDF(nomeArquivo, titulo, linhas) {
 
 function StatusPill({ status, small = false }) {
     const Icon = status.icon;
-    const textoStatus = String(status.texto || "")
-        .replace(/A vencer/gi, "A vencer")
-        .replace(/Um vencendor/gi, "A vencer")
-        .replace(/Um vencendo/gi, "A vencer")
-        .replace(/A vencer/gi, "A vencer")
-        .replace(/A vencer/gi, "A vencer");
+    const textoStatus =
+        status.chave === "vencendo"
+            ? "A vencer"
+            : String(status.texto || "")
+                .replace(/A vencer/gi, "A vencer")
+                .replace(/A vencer/gi, "A vencer")
+                .replace(/A vencer/gi, "A vencer")
+                .replace(/Vencendo/gi, "A vencer")
+                .replace(/A vencer/gi, "A vencer");
 
     return (
         <span
+            translate="no"
             className={classNames(
-                "inline-flex min-w-[72px] items-center justify-center gap-1 whitespace-nowrap rounded-full text-center ring-1",
+                "notranslate inline-flex min-w-[72px] items-center justify-center gap-1 whitespace-nowrap rounded-full text-center ring-1",
                 status.classe,
                 small ? "px-2 py-1 text-xs" : "px-3 py-1.5 text-sm font-medium"
             )}
@@ -835,9 +839,9 @@ function LinkPublicoQR({ token }) {
     const urlConsulta = `${window.location.origin}/?qr=${encodeURIComponent(token)}`;
 
     return (
-        <div className="mt-3 max-w-xl rounded-2xl bg-slate-50 px-4 py-3 ring-1 ring-slate-200">
-            <p className="text-[10px] font-bold uppercase tracking-wide text-slate-400">Link público</p>
-            <p className="mt-1 break-all text-xs leading-relaxed text-slate-500">{urlConsulta}</p>
+        <div className="mt-2 inline-flex max-w-full items-center gap-2 rounded-full bg-slate-50 px-3 py-1.5 ring-1 ring-slate-200">
+            <span className="shrink-0 text-[10px] font-bold uppercase tracking-wide text-slate-400">Link público</span>
+            <span className="max-w-[360px] truncate text-[11px] text-slate-500">{urlConsulta}</span>
         </div>
     );
 }
@@ -2364,23 +2368,56 @@ function Colaboradores({
 }
 
 
+function statusGeralConsultaPublica(treinamentos = []) {
+    if (!treinamentos.length) {
+        return {
+            texto: "Pendente",
+            classe: "bg-blue-600 text-white",
+            detalhe: "Sem certificados lançados.",
+        };
+    }
+
+    const vencidos = treinamentos.filter((item) => diasParaVencer(item.vencimento) < 0);
+    const aVencer = treinamentos.filter((item) => {
+        const dias = diasParaVencer(item.vencimento);
+        return dias >= 0 && dias <= 30;
+    });
+
+    if (vencidos.length > 0) {
+        return {
+            texto: "Bloqueado",
+            classe: "bg-red-600 text-white",
+            detalhe: "Possui documento vencido.",
+        };
+    }
+
+    if (aVencer.length > 0) {
+        return {
+            texto: "Atenção",
+            classe: "bg-orange-500 text-white",
+            detalhe: "Documento próximo do vencimento.",
+        };
+    }
+
+    return {
+        texto: "Em dia",
+        classe: "bg-emerald-600 text-white",
+        detalhe: "Documentos válidos.",
+    };
+}
+
 function ConsultaQRPublica({ dados }) {
     if (!dados) return null;
 
     const colaborador = dados.colaborador || {};
     const treinamentos = dados.treinamentos || [];
-    const geral = dados.statusGeral || statusGeral({ ...colaborador, treinamentos });
+    const geral = statusGeralConsultaPublica(treinamentos);
 
     return (
         <div className="min-h-screen bg-slate-100 p-4 text-slate-900">
             <div className="mx-auto max-w-5xl rounded-[2rem] bg-slate-950 p-3 shadow-2xl">
                 <div className="rounded-[1.5rem] bg-white p-5 md:p-8">
                     <div className="flex flex-col items-center text-center">
-                        <div className="mb-3 inline-flex items-center gap-2 rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-700">
-                            <ShieldCheck className="h-3.5 w-3.5" />
-                            Consulta pública SST
-                        </div>
-
                         <FotoColaborador
                             src={colaborador.fotoUrl}
                             nome={colaborador.nome}
@@ -2396,11 +2433,16 @@ function ConsultaQRPublica({ dados }) {
                         </p>
                     </div>
 
-                    <div className="mt-5 rounded-3xl border border-slate-200 p-5">
-                        <p className="text-sm font-medium text-slate-500">Status geral do colaborador</p>
-                        <h3 className="mt-1 text-base font-bold leading-relaxed text-slate-950">
-                            {geral.detalhe || "Consulta pública de documentos SST."}
-                        </h3>
+                    <div className="mt-5 rounded-3xl bg-blue-50 p-4 ring-1 ring-blue-100">
+                        <div className="flex items-center justify-between gap-3">
+                            <div>
+                                <p className="text-xs font-bold uppercase tracking-wide text-blue-700">Status geral do colaborador</p>
+                                <p className="mt-1 text-sm font-semibold text-blue-950">{geral.detalhe}</p>
+                            </div>
+                            <span className={classNames("inline-flex shrink-0 items-center justify-center rounded-2xl px-4 py-2 text-sm font-bold", geral.classe)}>
+                                {geral.texto}
+                            </span>
+                        </div>
                     </div>
 
                     {treinamentos.length === 0 && (
@@ -3200,29 +3242,27 @@ function ConsultaQR({ colaborador, colaboradores = [], onSelecionarColaborador }
 
             <div className="mx-auto max-w-5xl rounded-[2rem] bg-slate-950 p-3 shadow-2xl">
                 <div className="rounded-[1.5rem] bg-white p-5 md:p-8">
-                    <div className="grid gap-5 lg:grid-cols-[1fr_190px] lg:items-start">
-                        <div className="flex gap-4">
-                            <FotoColaborador
-                                src={foto}
-                                nome={colaboradorAtual.nome}
-                                className="h-24 w-24 rounded-3xl"
-                                iconClassName="h-10 w-10"
-                            />
+                    <div className="grid gap-5 lg:grid-cols-[104px_1fr_178px] lg:items-start">
+                        <FotoColaborador
+                            src={foto}
+                            nome={colaboradorAtual.nome}
+                            className="h-24 w-24 rounded-3xl"
+                            iconClassName="h-10 w-10"
+                        />
 
-                            <div className="min-w-0 pt-1">
-                                <div className="mb-2 inline-flex items-center gap-2 rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-700">
-                                    <ShieldCheck className="h-3.5 w-3.5" />
-                                    Verificação SST
-                                </div>
-                                <h2 className="break-words text-2xl font-bold leading-tight text-slate-950">{colaboradorAtual.nome}</h2>
-                                <p className="mt-2 text-sm font-semibold text-slate-500">{colaboradorAtual.funcao}</p>
-                                <p className="mt-1 text-sm text-slate-500">{colaboradorAtual.empresaExibicao || colaboradorAtual.empresa}</p>
-                                <p className="mt-1 text-sm font-semibold text-slate-500">
-                                    Código: {colaboradorAtual.codigoFuncionario}
-                                </p>
-
-                                <LinkPublicoQR token={colaboradorAtual.token} />
+                        <div className="min-w-0">
+                            <div className="mb-2 inline-flex items-center gap-2 rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-700">
+                                <ShieldCheck className="h-3.5 w-3.5" />
+                                Verificação SST
                             </div>
+                            <h2 className="break-words text-2xl font-bold leading-tight text-slate-950">{colaboradorAtual.nome}</h2>
+                            <p className="mt-2 text-sm font-semibold text-slate-500">{colaboradorAtual.funcao}</p>
+                            <p className="mt-1 text-sm text-slate-500">{colaboradorAtual.empresaExibicao || colaboradorAtual.empresa}</p>
+                            <p className="mt-1 text-sm font-semibold text-slate-500">
+                                Código: {colaboradorAtual.codigoFuncionario}
+                            </p>
+
+                            <LinkPublicoQR token={colaboradorAtual.token} />
                         </div>
 
                         <div className="flex justify-center lg:justify-end">
