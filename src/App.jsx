@@ -812,18 +812,22 @@ function QRCodeReal({ token, size = 160 }) {
     const urlConsulta = `${window.location.origin}/?qr=${encodeURIComponent(token)}`;
 
     return (
-        <div className="rounded-2xl bg-white p-3 shadow-inner ring-1 ring-slate-200">
-            <QRCodeSVG
-                value={urlConsulta}
-                size={size}
-                level="H"
-                includeMargin
-                bgColor="#ffffff"
-                fgColor="#0f172a"
-            />
-            <p className="mt-2 max-w-[180px] break-all text-center text-[10px] text-slate-400">
-                {urlConsulta}
-            </p>
+        <div className="flex w-full max-w-[260px] flex-col items-center gap-3">
+            <div className="flex items-center justify-center rounded-2xl bg-white p-3 shadow-inner ring-1 ring-slate-200">
+                <QRCodeSVG
+                    value={urlConsulta}
+                    size={size}
+                    level="H"
+                    includeMargin
+                    bgColor="#ffffff"
+                    fgColor="#0f172a"
+                />
+            </div>
+
+            <div className="w-full rounded-2xl bg-slate-50 px-3 py-2 text-center ring-1 ring-slate-200">
+                <p className="text-[10px] font-bold uppercase tracking-wide text-slate-400">Link público</p>
+                <p className="mt-1 break-all text-[10px] text-slate-500">{urlConsulta}</p>
+            </div>
         </div>
     );
 }
@@ -1567,7 +1571,7 @@ function Colaboradores({
             statusMobilizacao: colaboradorEdicao.statusMobilizacao || "Mobilizado",
             treinamentosRemovidos: colaboradorEdicao.treinamentosRemovidos || [],
             treinamentosAdicionais: colaboradorEdicao.treinamentosAdicionais || [],
-            codigoFuncionario: colaboradorEdicao.codigoFuncionario,
+            codigoFuncionario: colaboradorEdicao.codigoFuncionarioOriginal || colaboradorEdicao.codigoFuncionario,
             foto: colaboradorEdicao.foto,
             fotoAtual: colaboradorEdicao.fotoAtual,
             fotoNomeAtual: colaboradorEdicao.fotoNomeAtual,
@@ -2449,9 +2453,11 @@ function ConsultaQRPublica({ dados }) {
                                     <p className={classNames("mt-3 text-xs font-medium", alerta30Dias || dias < 0 ? "text-red-700" : "text-slate-500")}>
                                         {dias < 0
                                             ? `Vencido há ${Math.abs(dias)} dia(s).`
-                                            : alerta30Dias
+                                            : dias <= 5
                                                 ? `Atenção: faltam ${dias} dia(s) para vencer. Renovar com prioridade.`
-                                                : `Faltam ${dias} dia(s) para vencer.`}
+                                                : alerta30Dias
+                                                    ? "Atenção: documento próximo da data de vencimento."
+                                                    : `Faltam ${dias} dia(s) para vencer.`}
                                     </p>
                                 </div>
                             );
@@ -3214,11 +3220,8 @@ function ConsultaQR({ colaborador, colaboradores = [], onSelecionarColaborador }
                             </div>
                         </div>
 
-                        <div className="flex flex-col items-center gap-3">
+                        <div className="flex flex-col items-center justify-center gap-3">
                             <QRCodeReal token={colaboradorAtual.token} />
-                            <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-500">
-                                {colaboradorAtual.token}
-                            </span>
                         </div>
                     </div>
 
@@ -3292,9 +3295,11 @@ function ConsultaQR({ colaborador, colaboradores = [], onSelecionarColaborador }
                                     <p className={classNames("mt-3 text-xs font-medium", alerta30Dias || dias < 0 ? "text-red-700" : "text-slate-500")}>
                                         {dias < 0
                                             ? `Vencido há ${Math.abs(dias)} dia(s).`
-                                            : alerta30Dias
+                                            : dias <= 5
                                                 ? `Atenção: faltam ${dias} dia(s) para vencer. Renovar com prioridade.`
-                                                : `Faltam ${dias} dia(s) para vencer.`}
+                                                : alerta30Dias
+                                                    ? "Atenção: documento próximo da data de vencimento."
+                                                    : `Faltam ${dias} dia(s) para vencer.`}
                                     </p>
                                 </div>
                             );
