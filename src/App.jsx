@@ -2112,9 +2112,12 @@ function Treinamentos({
     const [sincronizandoStorage, setSincronizandoStorage] = useState(false);
     const [resultadoLote, setResultadoLote] = useState("");
 
-    const colaboradorIdValido = colaboradores.some((c) => String(c.id) === String(colabId));
-    const colabSelecionadoId = colaboradorIdValido ? colabId : colaboradores[0]?.id || "";
-    const colabSelecionado = colaboradores.find((c) => String(c.id) === String(colabSelecionadoId));
+    const colabSelecionado =
+        colaboradores.find((c) => String(c.id) === String(colabId)) ||
+        colaboradores[0] ||
+        null;
+
+    const colabSelecionadoId = colabSelecionado?.id || "";
     const avaliacaoSelecionado = colabSelecionado ? avaliarTreinamentosColaborador(colabSelecionado) : null;
     const treinamentosDisponiveis = avaliacaoSelecionado?.itens?.length
         ? avaliacaoSelecionado.itens.map((item) => item.treinamento).filter(Boolean)
@@ -2143,7 +2146,7 @@ function Treinamentos({
         setSalvandoCertificado(true);
 
         const ok = await onSalvarCertificado({
-            colaboradorId: String(colabSelecionadoId),
+            colaboradorId: String(colabSelecionado?.id || ""),
             treinamentoId: Number(treinamentoSelecionadoId),
             dataRealizacao,
             dataVencimento: vencimento,
@@ -4888,12 +4891,6 @@ export default function App() {
                 throw new Error("Selecione o colaborador.");
             }
 
-            const colaboradorExiste = colaboradores.some((c) => String(c.id) === String(certificado.colaboradorId));
-
-            if (!colaboradorExiste) {
-                throw new Error("Colaborador inválido. Selecione novamente o colaborador antes de salvar o certificado.");
-            }
-
             if (!certificado.treinamentoId) {
                 throw new Error("Selecione o treinamento/documento.");
             }
@@ -4910,11 +4907,30 @@ export default function App() {
                 throw new Error("Selecione o arquivo PDF ou imagem do certificado.");
             }
 
+            let colaboradorSeguro = colaboradores.find((c) => String(c.id) === String(certificado.colaboradorId));
+
+            // Proteção contra o erro: treinamento_id, exemplo "22", entrando como colaborador_id.
+            // Se isso acontecer, usa o colaborador selecionado na tela.
+            if (!colaboradorSeguro && colaboradorSelecionado?.id) {
+                colaboradorSeguro = colaboradores.find((c) => String(c.id) === String(colaboradorSelecionado.id));
+            }
+
+            if (!colaboradorSeguro) {
+                throw new Error("Colaborador inválido. Volte para a aba Colaboradores, clique em Enviar treinamento novamente e tente salvar.");
+            }
+
+            const colaboradorIdSeguro = String(colaboradorSeguro.id);
+            const treinamentoIdSeguro = Number(certificado.treinamentoId);
+
+            if (!Number.isFinite(treinamentoIdSeguro)) {
+                throw new Error("Treinamento/documento inválido. Selecione novamente o documento.");
+            }
+
             const { data: existentes, error: buscaError } = await supabase
                 .from("certificados")
                 .select("id, arquivo_url")
-                .eq("colaborador_id", certificado.colaboradorId)
-                .eq("treinamento_id", Number(certificado.treinamentoId))
+                .eq("colaborador_id", colaboradorIdSeguro)
+                .eq("treinamento_id", treinamentoIdSeguro)
                 .order("created_at", { ascending: false })
                 .limit(1);
 
@@ -4926,15 +4942,15 @@ export default function App() {
 
             const arquivo = await enviarArquivoCertificado(
                 certificado.arquivo,
-                certificado.colaboradorId,
-                certificado.treinamentoId
+                colaboradorIdSeguro,
+                treinamentoIdSeguro
             );
 
-            const treinamento = obterTreinamento(Number(certificado.treinamentoId));
+            const treinamento = obterTreinamento(treinamentoIdSeguro);
 
             const payload = {
-                colaborador_id: certificado.colaboradorId,
-                treinamento_id: Number(certificado.treinamentoId),
+                colaborador_id: colaboradorIdSeguro,
+                treinamento_id: treinamentoIdSeguro,
                 nome_treinamento: treinamento.nome,
                 data_realizacao: certificado.dataRealizacao,
                 data_vencimento: certificado.dataVencimento,
