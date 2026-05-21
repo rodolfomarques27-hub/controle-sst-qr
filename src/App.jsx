@@ -2765,6 +2765,22 @@ function Treinamentos({
         (c.treinamentos || []).map((t) => ({ ...t, colaborador: c, treinamento: obterTreinamento(t.treinamentoId) }))
     );
 
+    const documentosPorColaborador = Object.values(
+        documentos.reduce((acc, documento) => {
+            const colaboradorId = documento.colaborador?.id || "sem-colaborador";
+
+            if (!acc[colaboradorId]) {
+                acc[colaboradorId] = {
+                    colaborador: documento.colaborador,
+                    certificados: [],
+                };
+            }
+
+            acc[colaboradorId].certificados.push(documento);
+            return acc;
+        }, {})
+    );
+
     const valoresRevisao = (doc) => ({
         realizado: datasRevisao[doc.id]?.realizado ?? doc.realizado ?? "",
         vencimento: datasRevisao[doc.id]?.vencimento ?? doc.vencimento ?? "",
@@ -3077,119 +3093,143 @@ function Treinamentos({
                             </div>
                         )}
 
-                        {documentos.map((d, idx) => {
-                            const valores = valoresRevisao(d);
-                            const statusAtual = statusDocumento(valores.vencimento || d.vencimento);
-                            const itemKey = String(d.id || `${d.colaborador.id}-${d.treinamentoId}-${idx}`);
-                            const aberto = Boolean(certificadosAbertos[itemKey]);
+                        {documentosPorColaborador.map((grupo) => {
+                            const colaborador = grupo.colaborador;
+                            const certificados = grupo.certificados || [];
 
                             return (
                                 <div
-                                    key={itemKey}
+                                    key={colaborador?.id || colaborador?.codigoFuncionario}
                                     className="rounded-3xl border border-slate-200 bg-white p-4 shadow-sm transition hover:border-slate-300 hover:shadow-md"
                                 >
-                                    <div className="grid gap-4 lg:grid-cols-[0.95fr_1.8fr_auto] lg:items-start">
+                                    <div className="mb-4 flex flex-col justify-between gap-3 border-b border-slate-100 pb-4 lg:flex-row lg:items-start">
                                         <div className="min-w-0">
                                             <p className="text-[10px] font-bold uppercase tracking-wide text-slate-400">Colaborador</p>
-                                            <p className="mt-1 break-words text-base font-bold leading-snug text-slate-950">
-                                                {d.colaborador.nome}
+                                            <p className="mt-1 break-words text-lg font-bold leading-snug text-slate-950">
+                                                {colaborador.nome}
                                             </p>
                                             <p className="mt-1 break-words text-sm text-slate-500">
-                                                {d.colaborador.empresaExibicao || d.colaborador.empresa}
+                                                {colaborador.empresaExibicao || colaborador.empresa}
                                             </p>
                                             <p className="mt-1 text-xs font-semibold text-slate-500">
-                                                Código: {d.colaborador.codigoFuncionario}
+                                                Código: {colaborador.codigoFuncionario}
                                             </p>
                                         </div>
 
-                                        <div className="min-w-0">
-                                            <div className="flex flex-wrap items-center gap-2">
-                                                <StatusPill status={statusAtual} small />
-                                                <h3 className="break-words text-base font-bold leading-snug text-slate-900">
-                                                    {d.treinamento.nome}
-                                                </h3>
-                                                <button
-                                                    onClick={() => onVisualizarCertificado(d)}
-                                                    className="rounded-xl bg-slate-950 px-3 py-1.5 text-xs font-semibold text-white hover:bg-slate-800"
-                                                >
-                                                    Abrir
-                                                </button>
-                                                <button
-                                                    onClick={() => onExcluirCertificado(d)}
-                                                    className="rounded-xl bg-red-50 px-3 py-1.5 text-xs font-semibold text-red-700 ring-1 ring-red-200 hover:bg-red-100"
-                                                >
-                                                    Excluir
-                                                </button>
-                                            </div>
-
-                                            <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-slate-500">
-                                                <FileText className="h-4 w-4 text-slate-400" />
-                                                <span className="break-words">{d.arquivo || "Arquivo não informado"}</span>
-                                            </div>
-                                        </div>
-
-                                        <div className="flex lg:justify-end">
-                                            <button
-                                                type="button"
-                                                onClick={() =>
-                                                    setCertificadosAbertos((atual) => ({
-                                                        ...atual,
-                                                        [itemKey]: !atual[itemKey],
-                                                    }))
-                                                }
-                                                className="inline-flex items-center gap-2 rounded-xl bg-slate-100 px-4 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-200"
-                                            >
-                                                {aberto ? (
-                                                    <>
-                                                        <ChevronUp className="h-4 w-4" />
-                                                        Ocultar
-                                                    </>
-                                                ) : (
-                                                    <>
-                                                        <ChevronDown className="h-4 w-4" />
-                                                        Revisar datas
-                                                    </>
-                                                )}
-                                            </button>
-                                        </div>
+                                        <span className="w-fit rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-600">
+                                            {certificados.length} certificado(s)
+                                        </span>
                                     </div>
 
-                                    {aberto && (
-                                        <div className="mt-4 rounded-2xl bg-slate-50 p-4">
-                                            <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-[1fr_1fr_auto] xl:items-end">
-                                                <div>
-                                                    <p className="mb-1 text-[10px] font-bold uppercase tracking-wide text-slate-400">Realização</p>
-                                                    <input
-                                                        type="date"
-                                                        value={valores.realizado}
-                                                        onChange={(e) => alterarDataRevisao(d, "realizado", e.target.value)}
-                                                        className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-slate-200"
-                                                    />
-                                                </div>
-                                                <div>
-                                                    <p className="mb-1 text-[10px] font-bold uppercase tracking-wide text-slate-400">Vencimento</p>
-                                                    <input
-                                                        type="date"
-                                                        value={valores.vencimento}
-                                                        onChange={(e) => alterarDataRevisao(d, "vencimento", e.target.value)}
-                                                        className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-slate-200"
-                                                    />
-                                                </div>
-                                                <button
-                                                    type="button"
-                                                    onClick={() => salvarDatasCertificado(d)}
-                                                    disabled={salvandoDatasId === d.id}
-                                                    className="rounded-xl bg-blue-50 px-4 py-2 text-sm font-semibold text-blue-700 ring-1 ring-blue-200 hover:bg-blue-100 disabled:opacity-60"
-                                                >
-                                                    {salvandoDatasId === d.id ? "Salvando..." : "Salvar datas"}
-                                                </button>
-                                            </div>
+                                    <div className="space-y-3">
+                                        {certificados.map((d, idx) => {
+                                            const valores = valoresRevisao(d);
+                                            const statusAtual = statusDocumento(valores.vencimento || d.vencimento);
+                                            const itemKey = String(d.id || `${d.colaborador.id}-${d.treinamentoId}-${idx}`);
+                                            const aberto = Boolean(certificadosAbertos[itemKey]);
 
-                                            <p className="mt-3 text-xs leading-relaxed text-slate-400">
-                                                Ao alterar a realização, o vencimento é recalculado automaticamente pela validade do treinamento.
-                                            </p>
-                                        </div>
-                                    )}
+                                            return (
+                                                <div
+                                                    key={itemKey}
+                                                    className="rounded-2xl bg-slate-50 p-3 ring-1 ring-slate-100"
+                                                >
+                                                    <div className="grid gap-3 lg:grid-cols-[1fr_150px] lg:items-start">
+                                                        <div className="min-w-0">
+                                                            <div className="flex flex-wrap items-center gap-2">
+                                                                <StatusPill status={statusAtual} small />
+                                                                <h3 className="break-words text-base font-bold leading-snug text-slate-900">
+                                                                    {d.treinamento.nome}
+                                                                </h3>
+                                                            </div>
+
+                                                            <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-slate-500">
+                                                                <FileText className="h-4 w-4 text-slate-400" />
+                                                                <span className="break-words">{d.arquivo || "Arquivo não informado"}</span>
+                                                            </div>
+                                                        </div>
+
+                                                        <div className="flex flex-col gap-2 lg:items-stretch">
+                                                            <button
+                                                                type="button"
+                                                                onClick={() =>
+                                                                    setCertificadosAbertos((atual) => ({
+                                                                        ...atual,
+                                                                        [itemKey]: !atual[itemKey],
+                                                                    }))
+                                                                }
+                                                                className="inline-flex items-center justify-center gap-2 rounded-xl bg-white px-4 py-2 text-xs font-semibold text-slate-700 ring-1 ring-slate-200 hover:bg-slate-100"
+                                                            >
+                                                                {aberto ? (
+                                                                    <>
+                                                                        <ChevronUp className="h-4 w-4" />
+                                                                        Ocultar datas
+                                                                    </>
+                                                                ) : (
+                                                                    <>
+                                                                        <ChevronDown className="h-4 w-4" />
+                                                                        Revisar datas
+                                                                    </>
+                                                                )}
+                                                            </button>
+
+                                                            <button
+                                                                onClick={() => onVisualizarCertificado(d)}
+                                                                className="rounded-xl bg-slate-950 px-4 py-2 text-xs font-semibold text-white hover:bg-slate-800"
+                                                            >
+                                                                Abrir
+                                                            </button>
+
+                                                            <button
+                                                                onClick={() => onExcluirCertificado(d)}
+                                                                className="rounded-xl bg-red-50 px-4 py-2 text-xs font-semibold text-red-700 ring-1 ring-red-200 hover:bg-red-100"
+                                                            >
+                                                                Excluir
+                                                            </button>
+                                                        </div>
+                                                    </div>
+
+                                                    {aberto && (
+                                                        <div className="mt-4 rounded-2xl bg-white p-4 ring-1 ring-slate-100">
+                                                            <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-[1fr_1fr_auto] xl:items-end">
+                                                                <div>
+                                                                    <p className="mb-1 text-[10px] font-bold uppercase tracking-wide text-slate-400">Realização</p>
+                                                                    <input
+                                                                        type="date"
+                                                                        value={valores.realizado}
+                                                                        onChange={(e) => alterarDataRevisao(d, "realizado", e.target.value)}
+                                                                        className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-slate-200"
+                                                                    />
+                                                                </div>
+
+                                                                <div>
+                                                                    <p className="mb-1 text-[10px] font-bold uppercase tracking-wide text-slate-400">Vencimento</p>
+                                                                    <input
+                                                                        type="date"
+                                                                        value={valores.vencimento}
+                                                                        onChange={(e) => alterarDataRevisao(d, "vencimento", e.target.value)}
+                                                                        className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-slate-200"
+                                                                    />
+                                                                </div>
+
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={() => salvarDatasCertificado(d)}
+                                                                    disabled={salvandoDatasId === d.id}
+                                                                    className="rounded-xl bg-blue-50 px-4 py-2 text-sm font-semibold text-blue-700 ring-1 ring-blue-200 hover:bg-blue-100 disabled:opacity-60"
+                                                                >
+                                                                    {salvandoDatasId === d.id ? "Salvando..." : "Salvar datas"}
+                                                                </button>
+                                                            </div>
+
+                                                            <p className="mt-3 text-xs leading-relaxed text-slate-400">
+                                                                Ao alterar a realização, o vencimento é recalculado automaticamente pela validade do treinamento.
+                                                            </p>
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
                                 </div>
                             );
                         })}
