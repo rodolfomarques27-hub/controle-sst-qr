@@ -2112,7 +2112,8 @@ function Treinamentos({
     const [sincronizandoStorage, setSincronizandoStorage] = useState(false);
     const [resultadoLote, setResultadoLote] = useState("");
 
-    const colabSelecionadoId = colabId || colaboradores[0]?.id || "";
+    const colaboradorIdValido = colaboradores.some((c) => String(c.id) === String(colabId));
+    const colabSelecionadoId = colaboradorIdValido ? colabId : colaboradores[0]?.id || "";
     const colabSelecionado = colaboradores.find((c) => String(c.id) === String(colabSelecionadoId));
     const avaliacaoSelecionado = colabSelecionado ? avaliarTreinamentosColaborador(colabSelecionado) : null;
     const treinamentosDisponiveis = avaliacaoSelecionado?.itens?.length
@@ -2142,7 +2143,7 @@ function Treinamentos({
         setSalvandoCertificado(true);
 
         const ok = await onSalvarCertificado({
-            colaboradorId: colabSelecionadoId,
+            colaboradorId: String(colabSelecionadoId),
             treinamentoId: Number(treinamentoSelecionadoId),
             dataRealizacao,
             dataVencimento: vencimento,
@@ -2319,7 +2320,7 @@ function Treinamentos({
                                     const novaAvaliacao = novoColaborador ? avaliarTreinamentosColaborador(novoColaborador) : null;
                                     const primeiroTreinamento = novaAvaliacao?.itens?.[0]?.treinamento?.id || treinamentosBase[0].id;
 
-                                    setColabId(novoColaboradorId);
+                                    setColabId(String(novoColaboradorId));
                                     setTreinamentoId(Number(primeiroTreinamento));
                                 }}
                                 className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-slate-300"
@@ -4885,6 +4886,12 @@ export default function App() {
         try {
             if (!certificado.colaboradorId) {
                 throw new Error("Selecione o colaborador.");
+            }
+
+            const colaboradorExiste = colaboradores.some((c) => String(c.id) === String(certificado.colaboradorId));
+
+            if (!colaboradorExiste) {
+                throw new Error("Colaborador inválido. Selecione novamente o colaborador antes de salvar o certificado.");
             }
 
             if (!certificado.treinamentoId) {
