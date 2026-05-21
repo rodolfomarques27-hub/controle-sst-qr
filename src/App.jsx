@@ -1618,17 +1618,17 @@ function Colaboradores({
                                         key={c.id}
                                         className="group rounded-3xl border border-slate-200 bg-white p-5 transition hover:border-slate-300 hover:shadow-md"
                                     >
-                                        <div className="grid gap-4 lg:grid-cols-[1fr_170px] lg:items-start">
-                                            <div className="min-w-0">
+                                        <div className="grid gap-4 lg:grid-cols-[1fr_170px] lg:items-stretch">
+                                            <div className="min-w-0 flex h-full flex-col">
                                                 <div className="flex items-start gap-4 lg:pt-1">
                                                     <button
                                                         onClick={() => onSelectColab(c)}
-                                                        className="flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-slate-100 text-slate-700 transition group-hover:bg-slate-950 group-hover:text-white"
+                                                        className="flex h-20 w-20 shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-slate-100 text-slate-700 transition group-hover:bg-slate-950 group-hover:text-white"
                                                     >
                                                         {foto ? (
                                                             <img src={foto} alt={`Foto ${c.nome}`} className="h-full w-full object-cover" />
                                                         ) : (
-                                                            <UserRound className="h-7 w-7" />
+                                                            <UserRound className="h-8 w-8" />
                                                         )}
                                                     </button>
 
@@ -1665,7 +1665,7 @@ function Colaboradores({
                                                 <button
                                                     type="button"
                                                     onClick={() => setPendenciasAbertas(pendenciasAbertas === c.id ? null : c.id)}
-                                                    className="mt-4 w-full rounded-2xl bg-slate-50 p-3 text-left transition hover:bg-slate-100"
+                                                    className="mt-4 flex flex-1 flex-col justify-between rounded-2xl bg-slate-50 p-3 text-left transition hover:bg-slate-100"
                                                 >
                                                     <div className="flex flex-wrap items-center justify-between gap-3">
                                                         <div>
@@ -1723,7 +1723,7 @@ function Colaboradores({
                                                 )}
                                             </div>
 
-                                            <div className="flex flex-col gap-2">
+                                            <div className="flex h-full flex-col gap-2">
                                                 <div
                                                     title={geral.detalhe}
                                                     className={classNames("inline-flex items-center justify-center gap-2 rounded-xl px-3 py-2 text-xs font-semibold", geral.classe)}
