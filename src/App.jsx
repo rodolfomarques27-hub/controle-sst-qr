@@ -393,6 +393,10 @@ function normalizarColaborador(item) {
         empresaId: item.empresa_id || item.empresaId || null,
         nome: item.nome || "",
         empresa: item.empresas?.nome || item.empresa || "Empresa não informada",
+        empresaTipo: item.empresas?.tipo_empresa || item.empresaTipo || "",
+        empresaPaiId: item.empresas?.empresa_pai_id || item.empresaPaiId || null,
+        empresaPaiNome: item.empresaPaiNome || "",
+        empresaExibicao: item.empresaExibicao || item.empresas?.nome || item.empresa || "Empresa não informada",
         funcao: item.funcao || "-",
         matricula: item.matricula || "-",
         codigoFuncionario: item.codigo_funcionario || item.codigoFuncionario || `COL-${String(item.id).slice(0, 8).toUpperCase()}`,
@@ -539,6 +543,12 @@ function formatDate(dataISO) {
 
 function classNames(...items) {
     return items.filter(Boolean).join(" ");
+}
+
+function ehUuid(valor) {
+    return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
+        String(valor || "").trim()
+    );
 }
 
 function sanitizarNomeArquivo(nome) {
@@ -1008,7 +1018,7 @@ function Dashboard({ colaboradores, onSelectColab }) {
         indicadores.itens.forEach((item) => {
             linhas.push([
                 item.colaborador.nome,
-                item.colaborador.empresa,
+                item.colaborador.empresaExibicao || item.colaborador.empresa,
                 item.colaborador.funcao,
                 item.colaborador.statusMobilizacao || "Mobilizado",
                 item.treinamento.nome,
@@ -1104,7 +1114,7 @@ function Dashboard({ colaboradores, onSelectColab }) {
                                         <td className="px-4 py-3">
                                             <div className="font-semibold text-slate-900">{item.colaborador.nome}</div>
                                             <div className="text-xs text-slate-500">
-                                                {item.colaborador.empresa} · {item.colaborador.statusMobilizacao || "Mobilizado"}
+                                                {item.colaborador.empresaExibicao || item.colaborador.empresa} · {item.colaborador.statusMobilizacao || "Mobilizado"}
                                             </div>
                                         </td>
                                         <td className="px-4 py-3 text-slate-600">{item.treinamento.nome}</td>
@@ -1204,7 +1214,7 @@ function Colaboradores({
 
     const filtrados = colaboradores.filter((c) => {
         const avaliacao = avaliarTreinamentosColaborador(c);
-        const texto = `${c.nome} ${c.empresa} ${c.funcao} ${c.matricula} ${c.codigoFuncionario} ${c.statusMobilizacao} ${avaliacao.matriz.rotulo}`.toLowerCase();
+        const texto = `${c.nome} ${c.empresa} ${c.empresaExibicao} ${c.empresaPaiNome} ${c.funcao} ${c.matricula} ${c.codigoFuncionario} ${c.statusMobilizacao} ${avaliacao.matriz.rotulo}`.toLowerCase();
         return texto.includes(busca.toLowerCase()) && (empresa === "Todas" || c.empresa === empresa);
     });
 
@@ -1247,7 +1257,7 @@ function Colaboradores({
             linhas.push([
                 c.nome,
                 c.codigoFuncionario,
-                c.empresa,
+                c.empresaExibicao || c.empresa,
                 c.funcao,
                 c.matricula,
                 c.statusMobilizacao,
@@ -1872,7 +1882,7 @@ function Colaboradores({
                                                         </div>
 
                                                         <p className="mt-1 break-words text-xs text-slate-500">
-                                                            <strong>Empresa:</strong> {c.empresa}
+                                                            <strong>Empresa:</strong> {c.empresaExibicao || c.empresa}
                                                         </p>
                                                     </div>
                                                 </div>
@@ -2344,8 +2354,8 @@ function Treinamentos({
         setSalvandoCertificado(true);
 
         const ok = await onSalvarCertificado({
-            colaboradorId: String(colabSelecionado?.id || ""),
             colaboradorCodigo: String(colabSelecionado?.codigoFuncionario || ""),
+            colaborador: colabSelecionado,
             treinamentoId: Number(treinamentoSelecionadoId),
             dataRealizacao,
             dataVencimento: vencimento,
@@ -2406,7 +2416,7 @@ function Treinamentos({
             return {
                 id: `${Date.now()}-${index}-${arquivo.name}`,
                 arquivo,
-                colaboradorId: colaboradorSugerido?.id || "",
+                colaboradorCodigo: colaboradorSugerido?.codigoFuncionario || "",
                 status: colaboradorSugerido ? "Identificado" : "Conferir manualmente",
             };
         });
@@ -2415,9 +2425,13 @@ function Treinamentos({
         setResultadoLote("");
     };
 
-    const alterarColaboradorArquivoLote = (arquivoId, colaboradorId) => {
+    const alterarColaboradorArquivoLote = (arquivoId, colaboradorCodigo) => {
         setArquivosLote((atual) =>
-            atual.map((item) => (item.id === arquivoId ? { ...item, colaboradorId, status: colaboradorId ? "Conferido" : "Conferir manualmente" } : item))
+            atual.map((item) =>
+                item.id === arquivoId
+                    ? { ...item, colaboradorCodigo, status: colaboradorCodigo ? "Conferido" : "Conferir manualmente" }
+                    : item
+            )
         );
     };
 
@@ -2443,7 +2457,7 @@ function Treinamentos({
             return;
         }
 
-        const semColaborador = arquivosLote.filter((item) => !item.colaboradorId);
+        const semColaborador = arquivosLote.filter((item) => !item.colaboradorCodigo);
 
         if (semColaborador.length > 0) {
             alert("Antes de salvar, selecione o colaborador para todos os arquivos do lote.");
@@ -2467,11 +2481,11 @@ function Treinamentos({
         let falhas = 0;
 
         for (const item of arquivosLote) {
-            const colaboradorDoArquivo = colaboradores.find((c) => String(c.id) === String(item.colaboradorId));
+            const colaboradorDoArquivo = colaboradores.find((c) => String(c.codigoFuncionario) === String(item.colaboradorCodigo));
 
             const ok = await onSalvarCertificado({
-                colaboradorId: item.colaboradorId,
-                colaboradorCodigo: String(colaboradorDoArquivo?.codigoFuncionario || ""),
+                colaboradorCodigo: String(item.colaboradorCodigo || ""),
+                colaborador: colaboradorDoArquivo,
                 treinamentoId: Number(treinamentoSelecionadoId),
                 dataRealizacao,
                 dataVencimento: vencimento,
@@ -2511,7 +2525,7 @@ function Treinamentos({
                         Lançar certificado
                     </h2>
                     <p className="mt-1 text-sm text-slate-500">
-                        O arquivo será salvo no Supabase Storage e o registro ficará vinculado ao colaborador.
+                        O arquivo será salvo no Supabase Storage usando o código do funcionário e o registro ficará vinculado ao UUID real do colaborador.
                     </p>
 
                     <div className="mt-5 space-y-3">
@@ -2533,7 +2547,7 @@ function Treinamentos({
                                 {colaboradores.length === 0 && <option value="">Nenhum colaborador cadastrado</option>}
                                 {colaboradores.map((c) => (
                                     <option key={c.id} value={c.codigoFuncionario}>
-                                        {c.nome} — {c.empresa} — {c.codigoFuncionario}
+                                        {c.nome} — {c.empresaExibicao || c.empresa} — {c.codigoFuncionario}
                                     </option>
                                 ))}
                             </select>
@@ -2696,14 +2710,14 @@ function Treinamentos({
                                                 </div>
 
                                                 <select
-                                                    value={item.colaboradorId}
+                                                    value={item.colaboradorCodigo}
                                                     onChange={(e) => alterarColaboradorArquivoLote(item.id, e.target.value)}
                                                     className="w-full rounded-2xl border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-slate-300"
                                                 >
                                                     <option value="">Selecione o colaborador</option>
                                                     {colaboradores.map((c) => (
                                                         <option key={c.id} value={c.id}>
-                                                            {c.nome} — {c.empresa} — {c.codigoFuncionario}
+                                                            {c.nome} — {c.empresaExibicao || c.empresa} — {c.codigoFuncionario}
                                                         </option>
                                                     ))}
                                                 </select>
@@ -4474,7 +4488,9 @@ export default function App() {
           empresa_id,
           empresas (
             id,
-            nome
+            nome,
+            tipo_empresa,
+            empresa_pai_id
           )
         `)
                 .order("created_at", { ascending: false });
@@ -4483,7 +4499,28 @@ export default function App() {
                 throw new Error(`Erro ao carregar colaboradores: ${error.message}`);
             }
 
-            const normalizados = (data || []).map(normalizarColaborador);
+            const empresasPorId = (empresas || []).reduce((acc, empresa) => {
+                acc[empresa.id] = empresa;
+                return acc;
+            }, {});
+
+            const normalizados = (data || []).map((item) => {
+                const colaborador = normalizarColaborador(item);
+                const empresaAtual = empresasPorId[colaborador.empresaId] || null;
+                const empresaPai = empresaAtual?.empresa_pai_id ? empresasPorId[empresaAtual.empresa_pai_id] : null;
+                const ehSubcontratada = Boolean(empresaPai);
+
+                return {
+                    ...colaborador,
+                    empresaTipo: empresaAtual?.tipo_empresa || colaborador.empresaTipo || "",
+                    empresaPaiId: empresaAtual?.empresa_pai_id || colaborador.empresaPaiId || null,
+                    empresaPaiNome: empresaPai?.nome || colaborador.empresaPaiNome || "",
+                    empresaExibicao: ehSubcontratada
+                        ? `${empresaPai.nome} / ${empresaAtual.nome}`
+                        : colaborador.empresa,
+                };
+            });
+
             const idsColaboradores = normalizados.map((colaborador) => colaborador.id);
             let certificadosPorColaborador = {};
 
@@ -4863,7 +4900,9 @@ export default function App() {
           empresa_id,
           empresas (
             id,
-            nome
+            nome,
+            tipo_empresa,
+            empresa_pai_id
           )
         `)
                 .single();
@@ -4972,7 +5011,9 @@ export default function App() {
           empresa_id,
           empresas (
             id,
-            nome
+            nome,
+            tipo_empresa,
+            empresa_pai_id
           )
         `)
                 .single();
@@ -4997,7 +5038,12 @@ export default function App() {
     }
 
     function codigoPastaCertificado(colaborador) {
-        const codigo = String(colaborador?.codigoFuncionario || colaborador?.codigo_funcionario || colaborador?.id || "sem-codigo");
+        const codigo = String(colaborador?.codigoFuncionario || colaborador?.codigo_funcionario || "").trim();
+
+        if (!codigo) {
+            throw new Error("O colaborador não possui código do funcionário para organizar o arquivo no Storage.");
+        }
+
         return sanitizarNomeArquivo(codigo).replace(/\.[^.]+$/, "");
     }
 
@@ -5101,7 +5147,7 @@ export default function App() {
         setErroBanco("");
 
         try {
-            if (!certificado.colaboradorCodigo && !certificado.colaboradorId) {
+            if (!certificado.colaboradorCodigo && !certificado.colaborador?.codigoFuncionario && !certificado.colaborador?.id) {
                 throw new Error("Selecione o colaborador.");
             }
 
@@ -5121,17 +5167,26 @@ export default function App() {
                 throw new Error("Selecione o arquivo PDF ou imagem do certificado.");
             }
 
-            const codigoInformado = String(certificado.colaboradorCodigo || "").trim();
-            const colaboradorIdInformado = String(certificado.colaboradorId || "").trim();
+            const codigoInformado = String(
+                certificado.colaboradorCodigo ||
+                certificado.colaborador?.codigoFuncionario ||
+                ""
+            ).trim();
+
+            const idInformadoSomenteSeUuid = ehUuid(certificado.colaborador?.id)
+                ? String(certificado.colaborador.id)
+                : "";
 
             let colaboradorSeguro =
                 colaboradores.find((c) => String(c.codigoFuncionario) === codigoInformado) ||
-                colaboradores.find((c) => String(c.id) === colaboradorIdInformado) ||
+                colaboradores.find((c) => idInformadoSomenteSeUuid && String(c.id) === idInformadoSomenteSeUuid) ||
                 colaboradores.find((c) => String(c.codigoFuncionario) === String(colaboradorSelecionado?.codigoFuncionario || "")) ||
                 null;
 
-            if (!colaboradorSeguro) {
-                throw new Error("Colaborador inválido. Volte na aba Colaboradores, clique em Enviar treinamento novamente e tente salvar.");
+            if (!colaboradorSeguro?.id || !ehUuid(colaboradorSeguro.id)) {
+                throw new Error(
+                    "Colaborador inválido. O sistema não encontrou o UUID do colaborador. Volte na aba Colaboradores, clique em Enviar treinamento e tente novamente."
+                );
             }
 
             const colaboradorIdSeguro = String(colaboradorSeguro.id);
@@ -5141,13 +5196,21 @@ export default function App() {
                 throw new Error("Treinamento/documento inválido. Selecione novamente o documento.");
             }
 
+            const treinamento = obterTreinamento(treinamentoIdSeguro);
+
+            if (!treinamento) {
+                throw new Error("Treinamento/documento não encontrado na base do sistema.");
+            }
+
+            // Mesmo padrão da foto do colaborador:
+            // 1) identifica o colaborador corretamente;
+            // 2) salva o arquivo no Storage em pasta organizada pelo código do funcionário;
+            // 3) grava/atualiza a referência na tabela certificados usando o UUID real do colaborador.
             const arquivo = await enviarArquivoCertificado(
                 certificado.arquivo,
                 colaboradorSeguro,
                 treinamentoIdSeguro
             );
-
-            const treinamento = obterTreinamento(treinamentoIdSeguro);
 
             const payload = {
                 colaborador_id: colaboradorIdSeguro,
@@ -5161,16 +5224,19 @@ export default function App() {
                 status_validacao: "Validado",
             };
 
-            const { data: existente, error: buscaError } = await supabase
+            const { data: existentes, error: buscaError } = await supabase
                 .from("certificados")
                 .select("id, arquivo_url")
                 .eq("colaborador_id", colaboradorIdSeguro)
                 .eq("treinamento_id", treinamentoIdSeguro)
-                .maybeSingle();
+                .order("created_at", { ascending: false })
+                .limit(1);
 
-            if (buscaError && buscaError.code !== "PGRST116") {
+            if (buscaError) {
                 throw new Error(`Erro ao verificar certificado existente: ${buscaError.message}`);
             }
+
+            const existente = existentes?.[0] || null;
 
             const consulta = existente?.id
                 ? supabase
@@ -5232,6 +5298,7 @@ export default function App() {
             return false;
         }
     }
+
 
     async function visualizarCertificadoTreinamento(certificado) {
         setErroBanco("");
