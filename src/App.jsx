@@ -1618,41 +1618,43 @@ function Colaboradores({
                                         key={c.id}
                                         className="group rounded-3xl border border-slate-200 bg-white p-5 transition hover:border-slate-300 hover:shadow-md"
                                     >
-                                        <div className="grid gap-4 lg:grid-cols-[72px_1fr_170px] lg:items-start">
-                                            <button
-                                                onClick={() => onSelectColab(c)}
-                                                className="flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-slate-100 text-slate-700 transition group-hover:bg-slate-950 group-hover:text-white"
-                                            >
-                                                {foto ? (
-                                                    <img src={foto} alt={`Foto ${c.nome}`} className="h-full w-full object-cover" />
-                                                ) : (
-                                                    <UserRound className="h-7 w-7" />
-                                                )}
-                                            </button>
-
+                                        <div className="grid gap-4 lg:grid-cols-[1fr_170px] lg:items-start">
                                             <div className="min-w-0">
-                                                <div className="flex flex-col gap-2 lg:pt-1">
-                                                    <div className="flex flex-wrap items-start gap-2">
-                                                        <h3 className="max-w-full break-words text-lg font-bold leading-snug text-slate-950">
-                                                            {c.nome}
-                                                        </h3>
+                                                <div className="flex items-start gap-4 lg:pt-1">
+                                                    <button
+                                                        onClick={() => onSelectColab(c)}
+                                                        className="flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-slate-100 text-slate-700 transition group-hover:bg-slate-950 group-hover:text-white"
+                                                    >
+                                                        {foto ? (
+                                                            <img src={foto} alt={`Foto ${c.nome}`} className="h-full w-full object-cover" />
+                                                        ) : (
+                                                            <UserRound className="h-7 w-7" />
+                                                        )}
+                                                    </button>
 
-                                                        <span className={classNames(
-                                                            "inline-flex shrink-0 rounded-full px-2.5 py-1 text-[11px] font-semibold ring-1",
-                                                            c.statusMobilizacao === "Mobilizado"
-                                                                ? "bg-emerald-50 text-emerald-700 ring-emerald-200"
-                                                                : "bg-red-50 text-red-700 ring-red-200"
-                                                        )}>
-                                                            {c.statusMobilizacao}
-                                                        </span>
-                                                    </div>
+                                                    <div className="min-w-0 flex-1">
+                                                        <div className="flex flex-wrap items-start gap-2">
+                                                            <h3 className="max-w-full break-words text-lg font-bold leading-snug text-slate-950">
+                                                                {c.nome}
+                                                            </h3>
 
-                                                    <div className="flex flex-wrap items-center gap-2 text-sm text-slate-500">
-                                                        <span>{c.funcao}</span>
-                                                        <span className="text-slate-300">•</span>
-                                                        <span className="text-xs font-semibold text-slate-500">
-                                                            Código: {c.codigoFuncionario}
-                                                        </span>
+                                                            <span className={classNames(
+                                                                "inline-flex shrink-0 rounded-full px-2.5 py-1 text-[11px] font-semibold ring-1",
+                                                                c.statusMobilizacao === "Mobilizado"
+                                                                    ? "bg-emerald-50 text-emerald-700 ring-emerald-200"
+                                                                    : "bg-red-50 text-red-700 ring-red-200"
+                                                            )}>
+                                                                {c.statusMobilizacao}
+                                                            </span>
+                                                        </div>
+
+                                                        <div className="mt-1 flex flex-wrap items-center gap-2 text-sm text-slate-500">
+                                                            <span>{c.funcao}</span>
+                                                            <span className="text-slate-300">•</span>
+                                                            <span className="text-xs font-semibold text-slate-500">
+                                                                Código: {c.codigoFuncionario}
+                                                            </span>
+                                                        </div>
                                                     </div>
                                                 </div>
 
