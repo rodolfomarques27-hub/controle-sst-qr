@@ -2569,6 +2569,8 @@ function Treinamentos({
     const [salvandoDatasId, setSalvandoDatasId] = useState("");
     const [certificadosAbertos, setCertificadosAbertos] = useState({});
     const [gruposCertificadosAbertos, setGruposCertificadosAbertos] = useState({});
+    const [buscaCertificados, setBuscaCertificados] = useState("");
+    const [filtroStatusCertificados, setFiltroStatusCertificados] = useState("Todos");
 
     const colabSelecionado =
         colaboradores.find((c) => String(c.codigoFuncionario) === String(colabId)) ||
@@ -2766,8 +2768,27 @@ function Treinamentos({
         (c.treinamentos || []).map((t) => ({ ...t, colaborador: c, treinamento: obterTreinamento(t.treinamentoId) }))
     );
 
+    const documentosFiltrados = documentos.filter((documento) => {
+        const vencimentoFiltro = datasRevisao[documento.id]?.vencimento ?? documento.vencimento ?? "";
+        const status = statusDocumento(vencimentoFiltro);
+        const termo = normalizarTextoBusca(buscaCertificados);
+
+        const textoBusca = normalizarTextoBusca(
+            `${documento.colaborador?.nome || ""} ${documento.colaborador?.empresaExibicao || documento.colaborador?.empresa || ""} ${documento.colaborador?.codigoFuncionario || ""} ${documento.treinamento?.nome || ""} ${documento.arquivo || ""} ${status.texto || ""}`
+        );
+
+        const bateBusca = !termo || textoBusca.includes(termo);
+        const bateStatus =
+            filtroStatusCertificados === "Todos" ||
+            (filtroStatusCertificados === "Em dia" && status.chave === "em-dia") ||
+            (filtroStatusCertificados === "A vencer" && status.chave === "vencendo") ||
+            (filtroStatusCertificados === "Vencido" && status.chave === "vencido");
+
+        return bateBusca && bateStatus;
+    });
+
     const documentosPorColaborador = Object.values(
-        documentos.reduce((acc, documento) => {
+        documentosFiltrados.reduce((acc, documento) => {
             const colaboradorId = documento.colaborador?.id || "sem-colaborador";
 
             if (!acc[colaboradorId]) {
@@ -2780,6 +2801,19 @@ function Treinamentos({
             acc[colaboradorId].certificados.push(documento);
             return acc;
         }, {})
+    );
+
+    const totalPorStatusCertificados = documentos.reduce(
+        (acc, documento) => {
+            const status = statusDocumento(documento.vencimento);
+
+            if (status.chave === "vencido") acc.vencidos += 1;
+            else if (status.chave === "vencendo") acc.aVencer += 1;
+            else acc.emDia += 1;
+
+            return acc;
+        },
+        { emDia: 0, aVencer: 0, vencidos: 0 }
     );
 
     const valoresRevisao = (doc) => ({
@@ -3076,11 +3110,36 @@ function Treinamentos({
                 </Card>
 
                 <Card>
-                    <div className="mb-4 flex items-center justify-between">
-                        <h2 className="text-lg font-bold text-slate-950">Base de certificados</h2>
-                        <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-600">
-                            {documentos.length} registros
-                        </span>
+                    <div className="mb-4 flex flex-col gap-3">
+                        <div className="flex items-center justify-between gap-3">
+                            <h2 className="text-lg font-bold text-slate-950">Base de certificados</h2>
+                            <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-600">
+                                {documentosFiltrados.length} de {documentos.length} registro(s)
+                            </span>
+                        </div>
+
+                        <div className="grid gap-3 xl:grid-cols-[1fr_220px]">
+                            <div className="relative">
+                                <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                                <input
+                                    value={buscaCertificados}
+                                    onChange={(e) => setBuscaCertificados(e.target.value)}
+                                    placeholder="Buscar por colaborador, empresa, código, treinamento ou arquivo"
+                                    className="w-full rounded-2xl border border-slate-200 bg-white py-3 pl-11 pr-4 text-sm outline-none focus:border-slate-400 focus:ring-4 focus:ring-slate-100"
+                                />
+                            </div>
+
+                            <select
+                                value={filtroStatusCertificados}
+                                onChange={(e) => setFiltroStatusCertificados(e.target.value)}
+                                className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 outline-none focus:border-slate-400 focus:ring-4 focus:ring-slate-100"
+                            >
+                                <option value="Todos">Todos os status</option>
+                                <option value="Em dia">Em dia ({totalPorStatusCertificados.emDia})</option>
+                                <option value="A vencer">A vencer ({totalPorStatusCertificados.aVencer})</option>
+                                <option value="Vencido">Vencidos ({totalPorStatusCertificados.vencidos})</option>
+                            </select>
+                        </div>
                     </div>
 
                     <div className="space-y-3">
@@ -3090,6 +3149,16 @@ function Treinamentos({
                                 <h3 className="mt-3 font-bold text-slate-900">Nenhum certificado lançado ainda</h3>
                                 <p className="mt-1 text-sm text-slate-500">
                                     Os certificados enviados aparecerão nesta base para revisão de validade e consulta.
+                                </p>
+                            </div>
+                        )}
+
+                        {documentos.length > 0 && documentosFiltrados.length === 0 && (
+                            <div className="rounded-3xl border border-dashed border-slate-300 p-8 text-center">
+                                <Filter className="mx-auto h-10 w-10 text-slate-300" />
+                                <h3 className="mt-3 font-bold text-slate-900">Nenhum certificado encontrado</h3>
+                                <p className="mt-1 text-sm text-slate-500">
+                                    Ajuste a busca ou o filtro de status para localizar os certificados.
                                 </p>
                             </div>
                         )}
