@@ -886,7 +886,7 @@ function statusGeral(colaborador) {
     const avaliacao = avaliarTreinamentosColaborador(colaborador);
 
     if (avaliacao.vencidos.length > 0) {
-        return { texto: "Bloqueado", classe: "bg-red-600 text-white", detalhe: "Possui treinamento obrigatório vencido" };
+        return { texto: "Vencido", classe: "bg-red-600 text-white", detalhe: "Possui treinamento obrigatório vencido" };
     }
 
     if (avaliacao.pendentes.length > 0) {
@@ -2385,7 +2385,7 @@ function statusGeralConsultaPublica(treinamentos = []) {
 
     if (vencidos.length > 0) {
         return {
-            texto: "Bloqueado",
+            texto: "Vencido",
             classe: "bg-red-600 text-white",
             detalhe: "Possui documento vencido.",
         };
@@ -2418,6 +2418,11 @@ function ConsultaQRPublica({ dados }) {
             <div className="mx-auto max-w-5xl rounded-[2rem] bg-slate-950 p-3 shadow-2xl">
                 <div className="rounded-[1.5rem] bg-white p-5 md:p-8">
                     <div className="flex flex-col items-center text-center">
+                        <div className="mb-3 inline-flex items-center gap-2 rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-700">
+                            <ShieldCheck className="h-3.5 w-3.5" />
+                            Verificação SST
+                        </div>
+
                         <FotoColaborador
                             src={colaborador.fotoUrl}
                             nome={colaborador.nome}
@@ -2433,15 +2438,10 @@ function ConsultaQRPublica({ dados }) {
                         </p>
                     </div>
 
-                    <div className="mt-5 rounded-3xl bg-blue-50 p-4 ring-1 ring-blue-100">
-                        <div className="flex items-center justify-between gap-3">
-                            <div>
-                                <p className="text-xs font-bold uppercase tracking-wide text-blue-700">Status geral do colaborador</p>
-                                <p className="mt-1 text-sm font-semibold text-blue-950">{geral.detalhe}</p>
-                            </div>
-                            <span className={classNames("inline-flex shrink-0 items-center justify-center rounded-2xl px-4 py-2 text-sm font-bold", geral.classe)}>
-                                {geral.texto}
-                            </span>
+                    <div className="mt-5">
+                        <div className="w-full rounded-2xl bg-slate-950 px-5 py-4 text-center shadow-sm">
+                            <p className="text-xs font-bold uppercase tracking-wide text-slate-300">Status geral do colaborador</p>
+                            <p className="mt-1 text-base font-bold text-white">{geral.texto}</p>
                         </div>
                     </div>
 
