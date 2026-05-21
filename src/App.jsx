@@ -412,11 +412,20 @@ function normalizarColaborador(item) {
 }
 
 function normalizarCertificado(item) {
+    const tipoTreinamento = item.tipo_treinamento || item.tipoTreinamento || item.nome_treinamento || item.nomeTreinamento || "";
+    const idNumerico =
+        Number.isFinite(Number(item.treinamento_codigo || item.treinamentoCodigo))
+            ? Number(item.treinamento_codigo || item.treinamentoCodigo)
+            : Number.isFinite(Number(item.treinamento_id || item.treinamentoId))
+                ? Number(item.treinamento_id || item.treinamentoId)
+                : obterTreinamentoIdPorTipo(tipoTreinamento);
+
     return {
         id: item.id,
         colaboradorId: item.colaborador_id || item.colaboradorId || null,
-        treinamentoId: Number(item.treinamento_id || item.treinamentoId),
-        nomeTreinamento: item.nome_treinamento || item.nomeTreinamento || "",
+        treinamentoId: Number(idNumerico),
+        tipoTreinamento,
+        nomeTreinamento: item.nome_treinamento || item.nomeTreinamento || tipoTreinamento || "",
         realizado: item.data_realizacao || item.realizado || "",
         vencimento: item.data_vencimento || item.vencimento || "",
         arquivo: item.arquivo_nome || item.arquivo || "",
@@ -797,6 +806,28 @@ function QRCodeReal({ token, size = 160 }) {
 
 function obterTreinamento(id) {
     return treinamentosBase.find((t) => Number(t.id) === Number(id)) || { nome: "Treinamento não cadastrado", categoria: "-", validadePadrao: 365 };
+}
+
+function obterTreinamentoIdPorTipo(valor) {
+    const texto = normalizarTextoBusca(valor);
+
+    if (!texto) return null;
+
+    const encontrado = treinamentosBase.find((treinamento) => {
+        const nome = normalizarTextoBusca(treinamento.nome);
+        const categoria = normalizarTextoBusca(treinamento.categoria);
+        const base = normalizarTextoBusca(treinamento.base);
+
+        return (
+            nome === texto ||
+            nome.includes(texto) ||
+            texto.includes(nome) ||
+            categoria === texto ||
+            base === texto
+        );
+    });
+
+    return encontrado?.id || null;
 }
 
 function calcularVencimentoTreinamento(treinamentoId, dataRealizacao) {
@@ -4527,7 +4558,7 @@ export default function App() {
             if (idsColaboradores.length > 0) {
                 const { data: certificadosData, error: certificadosError } = await supabase
                     .from("certificados")
-                    .select("id, colaborador_id, treinamento_id, nome_treinamento, data_realizacao, data_vencimento, arquivo_url, arquivo_nome, observacao, status_validacao, created_at")
+                    .select("id, colaborador_id, tipo_treinamento, treinamento_codigo, treinamento_id, nome_treinamento, data_realizacao, data_vencimento, arquivo_url, arquivo_nome, observacao, status_validacao, created_at")
                     .in("colaborador_id", idsColaboradores)
                     .order("created_at", { ascending: false });
 
@@ -5112,7 +5143,8 @@ export default function App() {
                         .upsert(
                             {
                                 colaborador_id: colaborador.id,
-                                treinamento_id: Number(treinamento.id),
+                                tipo_treinamento: treinamento.nome,
+                                treinamento_codigo: Number(treinamento.id),
                                 nome_treinamento: treinamento.nome,
                                 data_realizacao: dataRealizacao,
                                 data_vencimento: dataVencimento,
@@ -5121,7 +5153,7 @@ export default function App() {
                                 observacao: "Sincronizado automaticamente do Storage",
                                 status_validacao: "Validado",
                             },
-                            { onConflict: "colaborador_id,treinamento_id" }
+                            { onConflict: "colaborador_id,tipo_treinamento" }
                         );
 
                     if (upsertError) {
@@ -5214,7 +5246,8 @@ export default function App() {
 
             const payload = {
                 colaborador_id: colaboradorIdSeguro,
-                treinamento_id: treinamentoIdSeguro,
+                tipo_treinamento: treinamento.nome,
+                treinamento_codigo: treinamentoIdSeguro,
                 nome_treinamento: treinamento.nome,
                 data_realizacao: certificado.dataRealizacao,
                 data_vencimento: certificado.dataVencimento,
@@ -5228,7 +5261,7 @@ export default function App() {
                 .from("certificados")
                 .select("id, arquivo_url")
                 .eq("colaborador_id", colaboradorIdSeguro)
-                .eq("treinamento_id", treinamentoIdSeguro)
+                .eq("tipo_treinamento", treinamento.nome)
                 .order("created_at", { ascending: false })
                 .limit(1);
 
@@ -5248,7 +5281,7 @@ export default function App() {
                     .insert(payload);
 
             const { data, error } = await consulta
-                .select("id, colaborador_id, treinamento_id, nome_treinamento, data_realizacao, data_vencimento, arquivo_url, arquivo_nome, observacao, status_validacao, created_at")
+                .select("id, colaborador_id, tipo_treinamento, treinamento_codigo, treinamento_id, nome_treinamento, data_realizacao, data_vencimento, arquivo_url, arquivo_nome, observacao, status_validacao, created_at")
                 .single();
 
             if (error) {
