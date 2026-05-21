@@ -291,11 +291,35 @@ function gerarCodigoFuncionario(nome = "") {
 function obterUrlFotoColaborador(caminho) {
     if (!caminho) return "";
 
+    if (String(caminho).startsWith("http")) return caminho;
+
     const { data } = supabase.storage
         .from("fotos-colaboradores")
         .getPublicUrl(caminho);
 
     return data?.publicUrl || "";
+}
+
+function FotoColaborador({ src, nome, className = "h-12 w-12", iconClassName = "h-5 w-5" }) {
+    const [erroImagem, setErroImagem] = useState(false);
+    const url = obterUrlFotoColaborador(src);
+
+    if (!url || erroImagem) {
+        return (
+            <div className={classNames("flex shrink-0 items-center justify-center overflow-hidden bg-slate-100 text-slate-500", className)}>
+                <UserRound className={iconClassName} />
+            </div>
+        );
+    }
+
+    return (
+        <img
+            src={url}
+            alt={`Foto ${nome || "colaborador"}`}
+            className={classNames("shrink-0 object-cover", className)}
+            onError={() => setErroImagem(true)}
+        />
+    );
 }
 
 function avaliarTreinamentosColaborador(colaborador) {
@@ -2326,12 +2350,130 @@ function Colaboradores({
 }
 
 
+function ConsultaQRPublica({ dados }) {
+    if (!dados) return null;
+
+    const colaborador = dados.colaborador || {};
+    const treinamentos = dados.treinamentos || [];
+    const geral = dados.statusGeral || statusGeral({ ...colaborador, treinamentos });
+
+    return (
+        <div className="min-h-screen bg-slate-100 p-4 text-slate-900">
+            <div className="mx-auto max-w-5xl rounded-[2rem] bg-slate-950 p-3 shadow-2xl">
+                <div className="rounded-[1.5rem] bg-white p-5 md:p-8">
+                    <div className="flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
+                        <div className="flex gap-4">
+                            <FotoColaborador
+                                src={colaborador.fotoUrl}
+                                nome={colaborador.nome}
+                                className="h-20 w-20 rounded-3xl"
+                                iconClassName="h-9 w-9"
+                            />
+
+                            <div>
+                                <div className="mb-2 inline-flex items-center gap-2 rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-700">
+                                    <ShieldCheck className="h-3.5 w-3.5" />
+                                    Consulta pública SST
+                                </div>
+                                <h2 className="text-2xl font-bold text-slate-950">{colaborador.nome}</h2>
+                                <p className="mt-1 text-slate-500">
+                                    {colaborador.funcao} · {colaborador.empresa}
+                                </p>
+                                <p className="mt-1 text-sm font-semibold text-slate-500">
+                                    Código: {colaborador.codigoFuncionario}
+                                </p>
+                            </div>
+                        </div>
+
+                        <span className={classNames("inline-flex items-center justify-center rounded-2xl px-5 py-3 text-base font-bold", geral.classe)}>
+                            {geral.texto}
+                        </span>
+                    </div>
+
+                    <div className="mt-8 rounded-3xl border border-slate-200 p-5">
+                        <p className="text-sm font-medium text-slate-500">Status geral do colaborador</p>
+                        <h3 className="mt-1 text-xl font-bold text-slate-950">{geral.detalhe}</h3>
+                    </div>
+
+                    {treinamentos.length === 0 && (
+                        <div className="mt-6 rounded-3xl border border-dashed border-slate-300 p-8 text-center">
+                            <ClipboardCheck className="mx-auto h-10 w-10 text-slate-300" />
+                            <h3 className="mt-3 font-bold text-slate-900">Sem certificados lançados</h3>
+                            <p className="mt-1 text-sm text-slate-500">
+                                Nenhum certificado público encontrado para este colaborador.
+                            </p>
+                        </div>
+                    )}
+
+                    <div className="mt-6 grid gap-4 md:grid-cols-2">
+                        {treinamentos.map((t) => {
+                            const st = statusDocumento(t.vencimento);
+                            const dias = diasParaVencer(t.vencimento);
+                            const dataInicio = new Date(`${t.realizado}T12:00:00`);
+                            const dataFim = new Date(`${t.vencimento}T12:00:00`);
+                            const totalValidade = Math.max(1, Math.ceil((dataFim - dataInicio) / DAY));
+                            const percentualRestante =
+                                dias < 0
+                                    ? 100
+                                    : Math.max(4, Math.min(100, Math.round((dias / totalValidade) * 100)));
+                            const alerta30Dias = dias >= 0 && dias <= 30;
+
+                            return (
+                                <div key={`${t.id || t.treinamentoId}-${t.vencimento}`} className="rounded-3xl border border-slate-200 p-4">
+                                    <div className="mb-4 flex items-start justify-between gap-3">
+                                        <div>
+                                            <h4 className="font-bold text-slate-950">{t.nomeTreinamento || obterTreinamento(t.treinamentoId).nome}</h4>
+                                            <p className="mt-1 text-sm text-slate-500">{obterTreinamento(t.treinamentoId).categoria}</p>
+                                        </div>
+                                        <StatusPill status={st} small />
+                                    </div>
+
+                                    <div className="grid grid-cols-2 gap-3 text-sm">
+                                        <div className="rounded-2xl bg-slate-50 p-3">
+                                            <p className="text-xs text-slate-400">Realizado</p>
+                                            <p className="font-semibold text-slate-700">{formatDate(t.realizado)}</p>
+                                        </div>
+                                        <div className="rounded-2xl bg-slate-50 p-3">
+                                            <p className="text-xs text-slate-400">Vencimento</p>
+                                            <p className="font-semibold text-slate-700">{formatDate(t.vencimento)}</p>
+                                        </div>
+                                    </div>
+
+                                    <div className="mt-3 h-2 overflow-hidden rounded-full bg-slate-100">
+                                        <div
+                                            className={classNames("h-full rounded-full transition-all", dias < 0 || alerta30Dias ? "bg-red-500" : st.barra)}
+                                            style={{ width: `${percentualRestante}%` }}
+                                        />
+                                    </div>
+
+                                    <p className={classNames("mt-3 text-xs font-medium", alerta30Dias || dias < 0 ? "text-red-700" : "text-slate-500")}>
+                                        {dias < 0
+                                            ? `Vencido há ${Math.abs(dias)} dia(s).`
+                                            : alerta30Dias
+                                                ? `Atenção: faltam ${dias} dia(s) para vencer. Renovar com prioridade.`
+                                                : `Faltam ${dias} dia(s) para vencer.`}
+                                    </p>
+                                </div>
+                            );
+                        })}
+                    </div>
+
+                    <div className="mt-6 rounded-3xl bg-slate-50 p-4 text-sm text-slate-600">
+                        Consulta pública limitada. Dados sensíveis como CPF, endereço, ASO detalhado e documentos médicos não são exibidos.
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
+}
+
 function Treinamentos({
     colaboradores,
     colaboradorInicialId,
     onSalvarCertificado,
     onVisualizarCertificado,
     onExcluirCertificado,
+    onAtualizarDatasCertificado,
     onSincronizarStorage,
 }) {
     const [colabId, setColabId] = useState(
@@ -2348,6 +2490,8 @@ function Treinamentos({
     const [salvandoLote, setSalvandoLote] = useState(false);
     const [sincronizandoStorage, setSincronizandoStorage] = useState(false);
     const [resultadoLote, setResultadoLote] = useState("");
+    const [datasRevisao, setDatasRevisao] = useState({});
+    const [salvandoDatasId, setSalvandoDatasId] = useState("");
 
     const colabSelecionado =
         colaboradores.find((c) => String(c.codigoFuncionario) === String(colabId)) ||
@@ -2544,6 +2688,49 @@ function Treinamentos({
     const documentos = colaboradores.flatMap((c) =>
         (c.treinamentos || []).map((t) => ({ ...t, colaborador: c, treinamento: obterTreinamento(t.treinamentoId) }))
     );
+
+    const valoresRevisao = (doc) => ({
+        realizado: datasRevisao[doc.id]?.realizado ?? doc.realizado ?? "",
+        vencimento: datasRevisao[doc.id]?.vencimento ?? doc.vencimento ?? "",
+    });
+
+    const alterarDataRevisao = (docId, campo, valor) => {
+        setDatasRevisao((atual) => ({
+            ...atual,
+            [docId]: {
+                ...atual[docId],
+                [campo]: valor,
+            },
+        }));
+    };
+
+    const salvarDatasCertificado = async (doc) => {
+        if (!onAtualizarDatasCertificado) return;
+
+        const valores = valoresRevisao(doc);
+
+        if (!valores.realizado || !valores.vencimento) {
+            alert("Informe a data de realização e o vencimento.");
+            return;
+        }
+
+        setSalvandoDatasId(doc.id);
+
+        const ok = await onAtualizarDatasCertificado(doc, {
+            realizado: valores.realizado,
+            vencimento: valores.vencimento,
+        });
+
+        setSalvandoDatasId("");
+
+        if (ok) {
+            setDatasRevisao((atual) => {
+                const copia = { ...atual };
+                delete copia[doc.id];
+                return copia;
+            });
+        }
+    };
 
     return (
         <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
@@ -2747,7 +2934,7 @@ function Treinamentos({
                                                 >
                                                     <option value="">Selecione o colaborador</option>
                                                     {colaboradores.map((c) => (
-                                                        <option key={c.id} value={c.id}>
+                                                        <option key={c.id} value={c.codigoFuncionario}>
                                                             {c.nome} — {c.empresaExibicao || c.empresa} — {c.codigoFuncionario}
                                                         </option>
                                                     ))}
@@ -2790,7 +2977,7 @@ function Treinamentos({
                                     <th className="px-4 py-3">Colaborador</th>
                                     <th className="px-4 py-3">Treinamento</th>
                                     <th className="px-4 py-3">Arquivo</th>
-                                    <th className="px-4 py-3">Validade</th>
+                                    <th className="px-4 py-3">Revisar datas</th>
                                     <th className="px-4 py-3">Status</th>
                                     <th className="px-4 py-3"></th>
                                 </tr>
@@ -2815,9 +3002,40 @@ function Treinamentos({
                                             <FileText className="mr-1 inline h-4 w-4" />
                                             {d.arquivo}
                                         </td>
-                                        <td className="px-4 py-3 text-slate-700">{formatDate(d.vencimento)}</td>
                                         <td className="px-4 py-3">
-                                            <StatusPill status={statusDocumento(d.vencimento)} small />
+                                            <div className="grid min-w-[230px] gap-2">
+                                                <div className="grid grid-cols-2 gap-2">
+                                                    <div>
+                                                        <p className="mb-1 text-[10px] font-bold uppercase tracking-wide text-slate-400">Realização</p>
+                                                        <input
+                                                            type="date"
+                                                            value={valoresRevisao(d).realizado}
+                                                            onChange={(e) => alterarDataRevisao(d.id, "realizado", e.target.value)}
+                                                            className="w-full rounded-xl border border-slate-200 px-2 py-1.5 text-xs outline-none focus:ring-2 focus:ring-slate-200"
+                                                        />
+                                                    </div>
+                                                    <div>
+                                                        <p className="mb-1 text-[10px] font-bold uppercase tracking-wide text-slate-400">Vencimento</p>
+                                                        <input
+                                                            type="date"
+                                                            value={valoresRevisao(d).vencimento}
+                                                            onChange={(e) => alterarDataRevisao(d.id, "vencimento", e.target.value)}
+                                                            className="w-full rounded-xl border border-slate-200 px-2 py-1.5 text-xs outline-none focus:ring-2 focus:ring-slate-200"
+                                                        />
+                                                    </div>
+                                                </div>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => salvarDatasCertificado(d)}
+                                                    disabled={salvandoDatasId === d.id}
+                                                    className="rounded-xl bg-blue-50 px-3 py-1.5 text-xs font-semibold text-blue-700 ring-1 ring-blue-200 hover:bg-blue-100 disabled:opacity-60"
+                                                >
+                                                    {salvandoDatasId === d.id ? "Salvando..." : "Salvar datas"}
+                                                </button>
+                                            </div>
+                                        </td>
+                                        <td className="px-4 py-3">
+                                            <StatusPill status={statusDocumento(valoresRevisao(d).vencimento || d.vencimento)} small />
                                         </td>
                                         <td className="px-4 py-3">
                                             <div className="flex justify-end gap-2">
@@ -2935,13 +3153,12 @@ function ConsultaQR({ colaborador, colaboradores = [], onSelecionarColaborador }
                                         }}
                                         className="flex w-full items-center gap-3 rounded-xl px-3 py-2 text-left hover:bg-slate-50"
                                     >
-                                        <div className="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-slate-100 text-slate-500">
-                                            {item.fotoUrl ? (
-                                                <img src={item.fotoUrl} alt={`Foto ${item.nome}`} className="h-full w-full object-cover" />
-                                            ) : (
-                                                <UserRound className="h-4 w-4" />
-                                            )}
-                                        </div>
+                                        <FotoColaborador
+                                            src={item.fotoUrl}
+                                            nome={item.nome}
+                                            className="h-9 w-9 rounded-xl"
+                                            iconClassName="h-4 w-4"
+                                        />
                                         <div className="min-w-0">
                                             <p className="truncate text-sm font-semibold text-slate-900">{item.nome}</p>
                                             <p className="truncate text-xs text-slate-500">
@@ -2975,13 +3192,12 @@ function ConsultaQR({ colaborador, colaboradores = [], onSelecionarColaborador }
                 <div className="rounded-[1.5rem] bg-white p-5 md:p-8">
                     <div className="flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
                         <div className="flex gap-4">
-                            <div className="flex h-20 w-20 shrink-0 items-center justify-center overflow-hidden rounded-3xl bg-slate-100 text-slate-800">
-                                {foto ? (
-                                    <img src={foto} alt={`Foto ${colaboradorAtual.nome}`} className="h-full w-full object-cover" />
-                                ) : (
-                                    <UserRound className="h-9 w-9" />
-                                )}
-                            </div>
+                            <FotoColaborador
+                                src={foto}
+                                nome={colaboradorAtual.nome}
+                                className="h-20 w-20 rounded-3xl"
+                                iconClassName="h-9 w-9"
+                            />
 
                             <div>
                                 <div className="mb-2 inline-flex items-center gap-2 rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-700">
@@ -4604,6 +4820,9 @@ export default function App() {
     const [carregandoBanco, setCarregandoBanco] = useState(false);
     const [erroBanco, setErroBanco] = useState("");
     const [colaboradorSelecionado, setColaboradorSelecionado] = useState(null);
+    const [consultaPublica, setConsultaPublica] = useState(null);
+    const [carregandoConsultaPublica, setCarregandoConsultaPublica] = useState(false);
+    const [erroConsultaPublica, setErroConsultaPublica] = useState("");
 
     const carregarEmpresas = useCallback(async () => {
         const { data, error } = await supabase
@@ -5473,6 +5692,61 @@ export default function App() {
     }
 
 
+    async function atualizarDatasCertificado(certificado, datas) {
+        setErroBanco("");
+
+        if (!certificado?.id) {
+            setErroBanco("Certificado inválido para atualização.");
+            return false;
+        }
+
+        const { data, error } = await supabase
+            .from("certificados")
+            .update({
+                data_realizacao: datas.realizado,
+                data_vencimento: datas.vencimento,
+            })
+            .eq("id", certificado.id)
+            .select("id, colaborador_id, tipo_treinamento, treinamento_codigo, treinamento_id, nome_treinamento, data_realizacao, data_vencimento, arquivo_url, arquivo_nome, observacao, status_validacao, created_at")
+            .single();
+
+        if (error) {
+            setErroBanco(`Erro ao atualizar datas do certificado: ${error.message}`);
+            alert(`Erro ao atualizar datas do certificado: ${error.message}`);
+            return false;
+        }
+
+        const atualizado = normalizarCertificado(data);
+
+        setColaboradores((atual) =>
+            atual.map((colaborador) => {
+                if (String(colaborador.id) !== String(atualizado.colaboradorId)) return colaborador;
+
+                return {
+                    ...colaborador,
+                    treinamentos: (colaborador.treinamentos || []).map((item) =>
+                        item.id === atualizado.id ? atualizado : item
+                    ),
+                };
+            })
+        );
+
+        setColaboradorSelecionado((atual) => {
+            if (!atual || String(atual.id) !== String(atualizado.colaboradorId)) return atual;
+
+            return {
+                ...atual,
+                treinamentos: (atual.treinamentos || []).map((item) =>
+                    item.id === atualizado.id ? atualizado : item
+                ),
+            };
+        });
+
+        await carregarColaboradores();
+
+        return true;
+    }
+
     async function visualizarCertificadoTreinamento(certificado) {
         setErroBanco("");
 
@@ -5587,6 +5861,41 @@ export default function App() {
     }, []);
 
     useEffect(() => {
+        const parametros = new URLSearchParams(window.location.search);
+        const tokenQr = parametros.get("qr");
+
+        if (!tokenQr) return;
+
+        let ativo = true;
+
+        async function carregarConsultaPublica() {
+            setCarregandoConsultaPublica(true);
+            setErroConsultaPublica("");
+
+            const { data, error } = await supabase.rpc("consulta_publica_qr", {
+                token_param: tokenQr,
+            });
+
+            if (!ativo) return;
+
+            if (error) {
+                setErroConsultaPublica(`Erro ao carregar consulta pública: ${error.message}`);
+                setConsultaPublica(null);
+            } else {
+                setConsultaPublica(data);
+            }
+
+            setCarregandoConsultaPublica(false);
+        }
+
+        carregarConsultaPublica();
+
+        return () => {
+            ativo = false;
+        };
+    }, []);
+
+    useEffect(() => {
         if (!usuario) return;
 
         const timer = window.setTimeout(() => {
@@ -5653,6 +5962,38 @@ export default function App() {
                 </div>
             </div>
         );
+    }
+
+    const parametrosAtuais = new URLSearchParams(window.location.search);
+    const tokenQrPublico = parametrosAtuais.get("qr");
+
+    if (tokenQrPublico && !usuario) {
+        if (carregandoConsultaPublica || carregandoSessao) {
+            return (
+                <div className="flex min-h-screen items-center justify-center bg-slate-950 text-white">
+                    <div className="rounded-3xl bg-white/10 p-6 text-center">
+                        <QrCode className="mx-auto mb-3 h-8 w-8" />
+                        <p className="font-semibold">Carregando consulta pública...</p>
+                    </div>
+                </div>
+            );
+        }
+
+        if (erroConsultaPublica || !consultaPublica) {
+            return (
+                <div className="flex min-h-screen items-center justify-center bg-slate-100 p-4">
+                    <div className="w-full max-w-lg rounded-[2rem] bg-white p-8 text-center shadow-sm">
+                        <XCircle className="mx-auto mb-3 h-10 w-10 text-red-500" />
+                        <h1 className="text-xl font-bold text-slate-950">QR Code não encontrado</h1>
+                        <p className="mt-2 text-sm text-slate-500">
+                            {erroConsultaPublica || "Não foi possível localizar a consulta pública deste colaborador."}
+                        </p>
+                    </div>
+                </div>
+            );
+        }
+
+        return <ConsultaQRPublica dados={consultaPublica} />;
     }
 
     if (!usuario) {
@@ -5772,6 +6113,7 @@ export default function App() {
                             onSalvarCertificado={salvarCertificadoTreinamento}
                             onVisualizarCertificado={visualizarCertificadoTreinamento}
                             onExcluirCertificado={excluirCertificadoTreinamento}
+                            onAtualizarDatasCertificado={atualizarDatasCertificado}
                             onSincronizarStorage={sincronizarCertificadosDoStorage}
                         />
                     )}
