@@ -3428,8 +3428,12 @@ function Treinamentos({
                     colaborador: colaborador.nome,
                     codigo: colaborador.codigoFuncionario,
                     funcao: colaborador.funcao,
+                    situacaoObra: colaborador.statusMobilizacao || "Mobilizado",
+                    empresa: empresaNome,
                     treinamento: certificado.nomeTreinamento || treinamento.nome,
+                    realizacao: certificado.realizado || "",
                     vencimento: certificado.vencimento,
+                    arquivo: certificado.arquivo || certificado.arquivoNome || "",
                     dias,
                     tipoAlerta,
                 });
@@ -3439,28 +3443,89 @@ function Treinamentos({
         return Object.values(grupos).sort((a, b) => a.empresa.localeCompare(b.empresa));
     }, [colaboradores]);
 
-    const abrirEmailAlertaTst = (grupo) => {
-        if (!grupo.tstEmail) {
+    const montarAvisoAlertaTst = (grupo) => {
+        const destinatario = String(grupo.tstEmail || "")
+            .split(/[;,]/)
+            .map((email) => email.trim())
+            .filter(Boolean)
+            .join(",");
+
+        const itensOrdenados = [...(grupo.itens || [])].sort((a, b) => a.dias - b.dias);
+        const totalVencidos = itensOrdenados.filter((item) => item.dias < 0).length;
+        const totalAVencer = itensOrdenados.filter((item) => item.dias >= 0).length;
+
+        const assunto = `Aviso SST - ${totalVencidos} vencido(s) e ${totalAVencer} a vencer - ${grupo.empresa}`;
+
+        const linhas = itensOrdenados
+            .map((item, index) => {
+                const statusPrazo =
+                    item.dias < 0
+                        ? `VENCIDO HÁ ${Math.abs(item.dias)} DIA(S)`
+                        : `A VENCER EM ${item.dias} DIA(S)`;
+
+                return [
+                    `${index + 1}. COLABORADOR: ${item.colaborador}`,
+                    `Código: ${item.codigo || "-"}`,
+                    `Função: ${item.funcao || "-"}`,
+                    `Situação na obra: ${item.situacaoObra || "-"}`,
+                    `Empresa: ${item.empresa || grupo.empresa}`,
+                    `Documento/Treinamento: ${item.treinamento}`,
+                    `Data de elaboração/realização: ${item.realizacao ? formatDate(item.realizacao) : "Não informada"}`,
+                    `Data de vencimento: ${formatDate(item.vencimento)}`,
+                    `Status: ${statusPrazo}`,
+                    `Arquivo: ${item.arquivo || "Não informado"}`,
+                ].join("\n");
+            })
+            .join("\n\n");
+
+        const corpo = [
+            `Olá${grupo.tstResponsavel ? `, ${grupo.tstResponsavel}` : ""}.`,
+            "",
+            "Segue aviso automático de documentos/treinamentos SST vencidos ou com vencimento previsto para os próximos 30 dias.",
+            "",
+            `Empresa: ${grupo.empresa}`,
+            `TST responsável: ${grupo.tstResponsavel || "Não informado"}`,
+            `Resumo: ${totalVencidos} vencido(s) e ${totalAVencer} a vencer.`,
+            "",
+            linhas,
+            "",
+            "Solicitamos regularizar os documentos vencidos e programar a renovação dos próximos vencimentos para evitar bloqueio de atividade.",
+            "",
+            "Atenciosamente,",
+            "Sistema de Controle SST QR",
+        ].join("\n");
+
+        return { destinatario, assunto, corpo };
+    };
+
+    const copiarAvisoAlertaTst = async (grupo) => {
+        const { assunto, corpo } = montarAvisoAlertaTst(grupo);
+        const texto = `${assunto}\n\n${corpo}`;
+
+        try {
+            await navigator.clipboard.writeText(texto);
+            alert("Aviso copiado. Cole o conteúdo no e-mail ou WhatsApp do TST.");
+        } catch {
+            window.prompt("Copie o aviso abaixo:", texto);
+        }
+    };
+
+    const abrirEmailAlertaTst = async (grupo) => {
+        const { destinatario, assunto, corpo } = montarAvisoAlertaTst(grupo);
+
+        if (!destinatario) {
             alert("Cadastre o e-mail do Técnico de Segurança responsável na empresa antes de enviar o aviso.");
             return;
         }
 
-        const assunto = `Aviso SST - treinamentos/ASO vencidos ou a vencer - ${grupo.empresa}`;
-        const linhas = grupo.itens
-            .sort((a, b) => a.dias - b.dias)
-            .map((item, index) => {
-                const situacao =
-                    item.dias < 0
-                        ? `vencido há ${Math.abs(item.dias)} dia(s)`
-                        : `faltam ${item.dias} dia(s)`;
+        const mailtoUrl = `mailto:${destinatario}?subject=${encodeURIComponent(assunto)}&body=${encodeURIComponent(corpo)}`;
 
-                return `${index + 1}. ${item.colaborador} (${item.codigo}) - ${item.funcao}\nTreinamento/Documento: ${item.treinamento}\nVencimento: ${formatDate(item.vencimento)} - ${situacao}`;
-            })
-            .join("\n\n");
+        try {
+            await navigator.clipboard.writeText(`${assunto}\n\n${corpo}`);
+        } catch {
+            // Se o navegador bloquear a cópia automática, apenas tenta abrir o e-mail.
+        }
 
-        const corpo = `Olá${grupo.tstResponsavel ? `, ${grupo.tstResponsavel}` : ""}.\n\nSegue aviso automático de treinamentos/documentos SST vencidos ou com vencimento previsto para os próximos 30 dias.\n\nEmpresa: ${grupo.empresa}\n\n${linhas}\n\nSolicitamos regularizar os documentos vencidos e programar a renovação dos próximos vencimentos para evitar bloqueio de atividade.\n\nAtenciosamente,\nSistema de Controle SST QR`;
-
-        const mailtoUrl = `mailto:${grupo.tstEmail}?subject=${encodeURIComponent(assunto)}&body=${encodeURIComponent(corpo)}`;
         const link = document.createElement("a");
 
         link.href = mailtoUrl;
@@ -3469,6 +3534,10 @@ function Treinamentos({
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
+
+        window.setTimeout(() => {
+            alert("Se o e-mail não abrir, verifique se existe aplicativo de e-mail padrão configurado no computador. O aviso também foi copiado para a área de transferência quando permitido pelo navegador.");
+        }, 700);
     };
 
     const valoresRevisao = (doc) => ({
@@ -3915,13 +3984,23 @@ function Treinamentos({
                                                 </p>
                                             </div>
 
-                                            <button
-                                                type="button"
-                                                onClick={() => abrirEmailAlertaTst(grupo)}
-                                                className="rounded-2xl bg-slate-950 px-4 py-2.5 text-sm font-semibold text-white hover:bg-slate-800"
-                                            >
-                                                Enviar aviso por e-mail
-                                            </button>
+                                            <div className="flex flex-wrap gap-2 lg:justify-end">
+                                                <button
+                                                    type="button"
+                                                    onClick={() => abrirEmailAlertaTst(grupo)}
+                                                    className="rounded-2xl bg-slate-950 px-4 py-2.5 text-sm font-semibold text-white hover:bg-slate-800"
+                                                >
+                                                    Enviar aviso por e-mail
+                                                </button>
+
+                                                <button
+                                                    type="button"
+                                                    onClick={() => copiarAvisoAlertaTst(grupo)}
+                                                    className="rounded-2xl bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 ring-1 ring-slate-200 hover:bg-slate-50"
+                                                >
+                                                    Copiar aviso
+                                                </button>
+                                            </div>
                                         </div>
 
                                         <div className="mt-3 space-y-2">
@@ -3957,6 +4036,9 @@ function Treinamentos({
                                                             <p className="mt-1">
                                                                 {item.treinamento} · vencimento em {formatDate(item.vencimento)} · {textoPrazo}
                                                             </p>
+                                                            <p className="mt-1 text-xs opacity-80">
+                                                                Código: {item.codigo || "-"} · Função: {item.funcao || "-"} · Situação: {item.situacaoObra || "-"}
+                                                            </p>
                                                         </div>
                                                     );
                                                 })}
@@ -3967,7 +4049,7 @@ function Treinamentos({
                         )}
 
                         <p className="mt-3 rounded-2xl bg-slate-50 p-3 text-xs text-slate-500">
-                            O botão abre um e-mail já preenchido no aplicativo de e-mail do computador. Para envio automático sem abrir e-mail, é necessário configurar uma função do Supabase com provedor de e-mail.
+                            O botão de e-mail abre o aplicativo de e-mail padrão do computador com todas as informações do colaborador e do documento. Se o e-mail não abrir, use Copiar aviso. Para envio automático sem abrir e-mail, é necessário configurar uma função do Supabase com provedor de e-mail.
                         </p>
                     </Card>
 
