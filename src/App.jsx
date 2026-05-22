@@ -66,7 +66,7 @@ const estilosGlobais = `
 const DAY = 1000 * 60 * 60 * 24;
 const SENHA_AUDITORIA = import.meta.env.VITE_SENHA_AUDITORIA || "Rodolfo@2026";
 const EMAIL_DESTINATARIO_ALERTAS = import.meta.env.VITE_EMAIL_ALERTA_SST || "";
-const FUNCAO_EMAIL_ALERTA_TST = import.meta.env.VITE_FUNCAO_EMAIL_ALERTA_TST || "enviar-alerta-tst";
+const FUNCAO_EMAIL_ALERTA_TST = import.meta.env.VITE_FUNCAO_EMAIL_ALERTA_TST || "rapid-api";
 
 function addDays(days) {
     const d = new Date(hoje);
