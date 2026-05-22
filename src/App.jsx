@@ -2816,6 +2816,70 @@ function Treinamentos({
         { emDia: 0, aVencer: 0, vencidos: 0 }
     );
 
+    const alertasTstPorEmpresa = useMemo(() => {
+        const grupos = {};
+
+        colaboradores.forEach((colaborador) => {
+            (colaborador.treinamentos || []).forEach((certificado) => {
+                const dias = diasParaVencer(certificado.vencimento);
+
+                if (dias < 0 || dias > 30) return;
+
+                const empresaNome = colaborador.empresaExibicao || colaborador.empresa || "Empresa não informada";
+                const chave = colaborador.empresaId || empresaNome;
+                const treinamento = obterTreinamento(certificado.treinamentoId);
+
+                if (!grupos[chave]) {
+                    grupos[chave] = {
+                        empresa: empresaNome,
+                        tstResponsavel: colaborador.empresaTstResponsavel || "",
+                        tstEmail: colaborador.empresaTstEmail || "",
+                        itens: [],
+                    };
+                }
+
+                grupos[chave].itens.push({
+                    colaborador: colaborador.nome,
+                    codigo: colaborador.codigoFuncionario,
+                    funcao: colaborador.funcao,
+                    treinamento: certificado.nomeTreinamento || treinamento.nome,
+                    vencimento: certificado.vencimento,
+                    dias,
+                });
+            });
+        });
+
+        return Object.values(grupos).sort((a, b) => a.empresa.localeCompare(b.empresa));
+    }, [colaboradores]);
+
+    const abrirEmailAlertaTst = (grupo) => {
+        if (!grupo.tstEmail) {
+            alert("Cadastre o e-mail do Técnico de Segurança responsável na empresa antes de enviar o aviso.");
+            return;
+        }
+
+        const assunto = `Aviso SST - treinamentos/ASO a vencer em até 30 dias - ${grupo.empresa}`;
+        const linhas = grupo.itens
+            .sort((a, b) => a.dias - b.dias)
+            .map(
+                (item, index) =>
+                    `${index + 1}. ${item.colaborador} (${item.codigo}) - ${item.funcao}\nTreinamento/Documento: ${item.treinamento}\nVencimento: ${formatDate(item.vencimento)} - faltam ${item.dias} dia(s)`
+            )
+            .join("\n\n");
+
+        const corpo = `Olá${grupo.tstResponsavel ? `, ${grupo.tstResponsavel}` : ""}.\n\nSegue aviso automático de treinamentos/documentos SST com vencimento previsto para os próximos 30 dias.\n\nEmpresa: ${grupo.empresa}\n\n${linhas}\n\nSolicitamos programar a renovação antes do vencimento para evitar bloqueio de atividade.\n\nAtenciosamente,\nSistema de Controle SST QR`;
+
+        const mailtoUrl = `mailto:${grupo.tstEmail}?subject=${encodeURIComponent(assunto)}&body=${encodeURIComponent(corpo)}`;
+        const link = document.createElement("a");
+
+        link.href = mailtoUrl;
+        link.target = "_self";
+        link.rel = "noopener noreferrer";
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    };
+
     const valoresRevisao = (doc) => ({
         realizado: datasRevisao[doc.id]?.realizado ?? doc.realizado ?? "",
         vencimento: datasRevisao[doc.id]?.vencimento ?? doc.vencimento ?? "",
@@ -3107,6 +3171,69 @@ function Treinamentos({
                             )}
                         </div>
                     </div>
+                </Card>
+
+                <Card>
+                    <div className="mb-4 flex flex-col justify-between gap-3 lg:flex-row lg:items-center">
+                        <div>
+                            <h2 className="text-lg font-bold text-slate-950">Alertas para TST</h2>
+                            <p className="mt-1 text-sm text-slate-500">
+                                Treinamentos, certificados e ASO com vencimento nos próximos 30 dias.
+                            </p>
+                        </div>
+
+                        <span className="w-fit rounded-full bg-orange-50 px-3 py-1 text-xs font-semibold text-orange-700 ring-1 ring-orange-200">
+                            {alertasTstPorEmpresa.reduce((total, grupo) => total + grupo.itens.length, 0)} item(ns) a vencer
+                        </span>
+                    </div>
+
+                    {alertasTstPorEmpresa.length === 0 ? (
+                        <div className="rounded-3xl border border-dashed border-slate-300 p-6 text-center">
+                            <CheckCircle2 className="mx-auto h-9 w-9 text-emerald-500" />
+                            <h3 className="mt-3 font-bold text-slate-900">Nenhum vencimento nos próximos 30 dias</h3>
+                            <p className="mt-1 text-sm text-slate-500">
+                                Quando houver documentos ou treinamentos a vencer, o aviso ao TST aparecerá aqui.
+                            </p>
+                        </div>
+                    ) : (
+                        <div className="space-y-3">
+                            {alertasTstPorEmpresa.map((grupo) => (
+                                <div key={grupo.empresa} className="rounded-3xl border border-slate-200 bg-white p-4">
+                                    <div className="flex flex-col justify-between gap-3 lg:flex-row lg:items-start">
+                                        <div>
+                                            <p className="text-[10px] font-bold uppercase tracking-wide text-slate-400">Empresa</p>
+                                            <h3 className="mt-1 text-base font-bold text-slate-950">{grupo.empresa}</h3>
+                                            <p className="mt-1 text-sm text-slate-500">
+                                                TST: {grupo.tstResponsavel || "Não informado"} · E-mail: {grupo.tstEmail || "Não cadastrado"}
+                                            </p>
+                                        </div>
+
+                                        <button
+                                            type="button"
+                                            onClick={() => abrirEmailAlertaTst(grupo)}
+                                            className="rounded-2xl bg-slate-950 px-4 py-2.5 text-sm font-semibold text-white hover:bg-slate-800"
+                                        >
+                                            Enviar aviso por e-mail
+                                        </button>
+                                    </div>
+
+                                    <div className="mt-3 space-y-2">
+                                        {grupo.itens
+                                            .sort((a, b) => a.dias - b.dias)
+                                            .map((item, index) => (
+                                                <div key={`${grupo.empresa}-${item.codigo}-${item.treinamento}-${index}`} className="rounded-2xl bg-orange-50 px-3 py-2 text-sm text-orange-950 ring-1 ring-orange-100">
+                                                    <strong>{item.colaborador}</strong> · {item.treinamento} · vencimento em {formatDate(item.vencimento)} · faltam {item.dias} dia(s)
+                                                </div>
+                                            ))}
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    )}
+
+                    <p className="mt-3 rounded-2xl bg-slate-50 p-3 text-xs text-slate-500">
+                        O botão abre um e-mail já preenchido no aplicativo de e-mail do computador. Para envio automático sem abrir e-mail, é necessário configurar uma função do Supabase com provedor de e-mail.
+                    </p>
                 </Card>
 
                 <Card>
@@ -3668,6 +3795,8 @@ function Empresas({
         responsavel: "",
         email: "",
         telefone: "",
+        tstResponsavel: "",
+        tstEmail: "",
         tipoEmpresa: "Terceirizada",
         empresaPaiId: "",
         logo: null,
@@ -3739,6 +3868,8 @@ function Empresas({
             responsavel: novaEmpresa.responsavel.trim(),
             email: novaEmpresa.email.trim(),
             telefone: novaEmpresa.telefone.trim(),
+            tstResponsavel: novaEmpresa.tstResponsavel.trim(),
+            tstEmail: novaEmpresa.tstEmail.trim(),
             tipoEmpresa: novaEmpresa.tipoEmpresa,
             empresaPaiId: novaEmpresa.empresaPaiId || null,
             logo: novaEmpresa.logo,
@@ -3759,6 +3890,8 @@ function Empresas({
                 responsavel: "",
                 email: "",
                 telefone: "",
+                tstResponsavel: "",
+                tstEmail: "",
                 tipoEmpresa: "Terceirizada",
                 empresaPaiId: "",
                 logo: null,
@@ -3796,6 +3929,8 @@ function Empresas({
             responsavel: empresa.responsavel || "",
             email: empresa.email || "",
             telefone: empresa.telefone || "",
+            tstResponsavel: empresa.tst_responsavel || "",
+            tstEmail: empresa.tst_email || "",
             status: normalizarStatusEmpresa(empresa.status),
             tipoEmpresa: empresa.tipo_empresa || "Terceirizada",
             empresaPaiId: empresa.empresa_pai_id || "",
@@ -3826,6 +3961,8 @@ function Empresas({
             responsavel: empresaEdicao.responsavel.trim(),
             email: empresaEdicao.email.trim(),
             telefone: empresaEdicao.telefone.trim(),
+            tstResponsavel: empresaEdicao.tstResponsavel.trim(),
+            tstEmail: empresaEdicao.tstEmail.trim(),
             status: empresaEdicao.status || "Ativa",
             tipoEmpresa: empresaEdicao.tipoEmpresa,
             empresaPaiId: empresaEdicao.empresaPaiId || null,
@@ -4358,6 +4495,23 @@ function Empresas({
                                 className="w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-slate-400 focus:ring-4 focus:ring-slate-100"
                             />
 
+                            <div className="grid gap-3 md:grid-cols-2">
+                                <input
+                                    value={novaEmpresa.tstResponsavel}
+                                    onChange={(e) => setNovaEmpresa({ ...novaEmpresa, tstResponsavel: e.target.value })}
+                                    placeholder="Técnico de Segurança responsável"
+                                    className="w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-slate-400 focus:ring-4 focus:ring-slate-100"
+                                />
+
+                                <input
+                                    type="email"
+                                    value={novaEmpresa.tstEmail}
+                                    onChange={(e) => setNovaEmpresa({ ...novaEmpresa, tstEmail: e.target.value })}
+                                    placeholder="E-mail do TST para alertas"
+                                    className="w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-slate-400 focus:ring-4 focus:ring-slate-100"
+                                />
+                            </div>
+
                             <select
                                 value={novaEmpresa.tipoEmpresa}
                                 onChange={(e) => setNovaEmpresa({ ...novaEmpresa, tipoEmpresa: e.target.value })}
@@ -4839,11 +4993,30 @@ function Empresas({
                                     />
                                 </div>
 
-                                <div className="md:col-span-2">
+                                <div>
                                     <label className="mb-1 block text-xs font-bold uppercase tracking-wide text-slate-500">Telefone</label>
                                     <input
                                         value={empresaEdicao.telefone}
                                         onChange={(e) => setEmpresaEdicao({ ...empresaEdicao, telefone: e.target.value })}
+                                        className="w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-slate-400 focus:ring-4 focus:ring-slate-100"
+                                    />
+                                </div>
+
+                                <div>
+                                    <label className="mb-1 block text-xs font-bold uppercase tracking-wide text-slate-500">Técnico de Segurança responsável</label>
+                                    <input
+                                        value={empresaEdicao.tstResponsavel}
+                                        onChange={(e) => setEmpresaEdicao({ ...empresaEdicao, tstResponsavel: e.target.value })}
+                                        className="w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-slate-400 focus:ring-4 focus:ring-slate-100"
+                                    />
+                                </div>
+
+                                <div className="md:col-span-2">
+                                    <label className="mb-1 block text-xs font-bold uppercase tracking-wide text-slate-500">E-mail do TST para alertas</label>
+                                    <input
+                                        type="email"
+                                        value={empresaEdicao.tstEmail}
+                                        onChange={(e) => setEmpresaEdicao({ ...empresaEdicao, tstEmail: e.target.value })}
                                         className="w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-slate-400 focus:ring-4 focus:ring-slate-100"
                                     />
                                 </div>
@@ -5346,7 +5519,7 @@ export default function App() {
     const carregarEmpresas = useCallback(async () => {
         const { data, error } = await supabase
             .from("empresas")
-            .select("id, nome, cnpj, responsavel, email, telefone, status, tipo_empresa, logo_url, logo_nome, numero_contrato, data_inicio_contrato, data_fim_contrato, responsavel_contratante, escopo_servico, observacao_status, empresa_pai_id")
+            .select("id, nome, cnpj, responsavel, email, telefone, status, tipo_empresa, logo_url, logo_nome, numero_contrato, data_inicio_contrato, data_fim_contrato, responsavel_contratante, tst_responsavel, tst_email, escopo_servico, observacao_status, empresa_pai_id")
             .order("nome", { ascending: true });
 
         if (error) {
@@ -5437,7 +5610,9 @@ export default function App() {
             id,
             nome,
             tipo_empresa,
-            empresa_pai_id
+            empresa_pai_id,
+            tst_responsavel,
+            tst_email
           )
         `)
                 .order("created_at", { ascending: false });
@@ -5462,6 +5637,8 @@ export default function App() {
                     empresaTipo: empresaAtual?.tipo_empresa || colaborador.empresaTipo || "",
                     empresaPaiId: empresaAtual?.empresa_pai_id || colaborador.empresaPaiId || null,
                     empresaPaiNome: empresaPai?.nome || colaborador.empresaPaiNome || "",
+                    empresaTstResponsavel: empresaAtual?.tst_responsavel || empresaPai?.tst_responsavel || "",
+                    empresaTstEmail: empresaAtual?.tst_email || empresaPai?.tst_email || "",
                     empresaExibicao: ehSubcontratada
                         ? `${empresaPai.nome} / Subcontratada: ${empresaAtual.nome}`
                         : colaborador.empresa,
@@ -5557,10 +5734,12 @@ export default function App() {
                     data_inicio_contrato: novaEmpresa.dataInicioContrato || null,
                     data_fim_contrato: novaEmpresa.dataFimContrato || null,
                     responsavel_contratante: novaEmpresa.responsavelContratante || null,
+                    tst_responsavel: novaEmpresa.tstResponsavel || null,
+                    tst_email: novaEmpresa.tstEmail || null,
                     escopo_servico: novaEmpresa.escopoServico || null,
                     observacao_status: novaEmpresa.observacaoStatus || null,
                 })
-                .select("id, nome, cnpj, responsavel, email, telefone, status, tipo_empresa, logo_url, logo_nome, numero_contrato, data_inicio_contrato, data_fim_contrato, responsavel_contratante, escopo_servico, observacao_status, empresa_pai_id")
+                .select("id, nome, cnpj, responsavel, email, telefone, status, tipo_empresa, logo_url, logo_nome, numero_contrato, data_inicio_contrato, data_fim_contrato, responsavel_contratante, tst_responsavel, tst_email, escopo_servico, observacao_status, empresa_pai_id")
                 .single();
 
             if (error) {
@@ -5577,7 +5756,7 @@ export default function App() {
                         logo_nome: logo.logoNome,
                     })
                     .eq("id", data.id)
-                    .select("id, nome, cnpj, responsavel, email, telefone, status, tipo_empresa, logo_url, logo_nome, numero_contrato, data_inicio_contrato, data_fim_contrato, responsavel_contratante, escopo_servico, observacao_status, empresa_pai_id")
+                    .select("id, nome, cnpj, responsavel, email, telefone, status, tipo_empresa, logo_url, logo_nome, numero_contrato, data_inicio_contrato, data_fim_contrato, responsavel_contratante, tst_responsavel, tst_email, escopo_servico, observacao_status, empresa_pai_id")
                     .single();
 
                 if (logoError) {
@@ -5629,11 +5808,13 @@ export default function App() {
                     data_inicio_contrato: empresaAtualizada.dataInicioContrato || null,
                     data_fim_contrato: empresaAtualizada.dataFimContrato || null,
                     responsavel_contratante: empresaAtualizada.responsavelContratante || null,
+                    tst_responsavel: empresaAtualizada.tstResponsavel || null,
+                    tst_email: empresaAtualizada.tstEmail || null,
                     escopo_servico: empresaAtualizada.escopoServico || null,
                     observacao_status: empresaAtualizada.observacaoStatus || null,
                 })
                 .eq("id", empresaAtualizada.id)
-                .select("id, nome, cnpj, responsavel, email, telefone, status, tipo_empresa, logo_url, logo_nome, numero_contrato, data_inicio_contrato, data_fim_contrato, responsavel_contratante, escopo_servico, observacao_status, empresa_pai_id")
+                .select("id, nome, cnpj, responsavel, email, telefone, status, tipo_empresa, logo_url, logo_nome, numero_contrato, data_inicio_contrato, data_fim_contrato, responsavel_contratante, tst_responsavel, tst_email, escopo_servico, observacao_status, empresa_pai_id")
                 .single();
 
             if (error) {
@@ -5780,7 +5961,7 @@ export default function App() {
                 nome: nomeTratado,
                 status: "Empresa ativa",
             })
-            .select("id, nome, cnpj, responsavel, email, telefone, status, tipo_empresa, logo_url, logo_nome, numero_contrato, data_inicio_contrato, data_fim_contrato, responsavel_contratante, escopo_servico, observacao_status, empresa_pai_id")
+            .select("id, nome, cnpj, responsavel, email, telefone, status, tipo_empresa, logo_url, logo_nome, numero_contrato, data_inicio_contrato, data_fim_contrato, responsavel_contratante, tst_responsavel, tst_email, escopo_servico, observacao_status, empresa_pai_id")
             .single();
 
         if (error) {
