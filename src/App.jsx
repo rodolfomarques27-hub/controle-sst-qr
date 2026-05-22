@@ -67,6 +67,7 @@ const DAY = 1000 * 60 * 60 * 24;
 const SENHA_AUDITORIA = import.meta.env.VITE_SENHA_AUDITORIA || "Rodolfo@2026";
 const EMAIL_DESTINATARIO_ALERTAS = import.meta.env.VITE_EMAIL_ALERTA_SST || "";
 const FUNCAO_EMAIL_ALERTA_TST = import.meta.env.VITE_FUNCAO_EMAIL_ALERTA_TST || "rapid-api";
+const LIMITE_STORAGE_MB = Number(import.meta.env.VITE_STORAGE_LIMITE_MB || 1024);
 
 function addDays(days) {
     const d = new Date(hoje);
@@ -610,6 +611,54 @@ function formatDate(dataISO) {
 
 function apenasNumeros(valor) {
     return String(valor || "").replace(/\D/g, "");
+}
+
+function formatarBytes(bytes = 0) {
+    const valor = Number(bytes) || 0;
+
+    if (valor < 1024) return `${valor} B`;
+    if (valor < 1024 ** 2) return `${(valor / 1024).toFixed(1)} KB`;
+    if (valor < 1024 ** 3) return `${(valor / 1024 ** 2).toFixed(2)} MB`;
+
+    return `${(valor / 1024 ** 3).toFixed(2)} GB`;
+}
+
+function calcularPercentualUsoStorage(bytesUsados = 0) {
+    const limiteBytes = Math.max(1, LIMITE_STORAGE_MB * 1024 * 1024);
+    return Math.min(100, Math.max(0, Math.round((Number(bytesUsados || 0) / limiteBytes) * 100)));
+}
+
+function resumirNavegador(userAgent = "") {
+    const agente = String(userAgent || "");
+
+    if (agente.includes("Edg/")) return "Microsoft Edge";
+    if (agente.includes("Chrome/")) return "Google Chrome";
+    if (agente.includes("Firefox/")) return "Mozilla Firefox";
+    if (agente.includes("Safari/") && !agente.includes("Chrome/")) return "Safari";
+
+    return agente ? "Navegador identificado" : "Não identificado";
+}
+
+function obterOrigemAcesso() {
+    if (typeof window === "undefined") {
+        return {
+            url: "Servidor / ambiente sem navegador",
+            pagina: "-",
+            navegador: "-",
+            plataforma: "-",
+            idioma: "-",
+        };
+    }
+
+    return {
+        url: window.location?.href || "",
+        origem: window.location?.origin || "",
+        pagina: `${window.location?.pathname || "/"}${window.location?.search || ""}`,
+        navegador: resumirNavegador(window.navigator?.userAgent || ""),
+        userAgent: window.navigator?.userAgent || "",
+        plataforma: window.navigator?.platform || "",
+        idioma: window.navigator?.language || "",
+    };
 }
 
 function normalizarEmailDestinatario(valor) {
@@ -6646,8 +6695,9 @@ function RelatorioAuditoria({
         const termo = normalizarTextoBusca(busca);
 
         return auditoria.filter((item) => {
+            const origemAcesso = item.dados?.origemAcesso || {};
             const texto = normalizarTextoBusca(
-                `${item.usuario_email || ""} ${item.acao || ""} ${item.tabela || ""} ${item.descricao || ""} ${item.registro_id || ""}`
+                `${item.usuario_email || ""} ${item.acao || ""} ${item.tabela || ""} ${item.descricao || ""} ${item.registro_id || ""} ${origemAcesso.url || ""} ${origemAcesso.pagina || ""} ${origemAcesso.navegador || ""} ${origemAcesso.plataforma || ""}`
             );
 
             const bateBusca = !termo || texto.includes(termo);
@@ -6659,6 +6709,34 @@ function RelatorioAuditoria({
 
     const arquivosStorageAuditoriaSemRegistro = arquivosStorageAuditoria.filter((arquivo) => !arquivo.emUso);
     const arquivosStorageAuditoriaEmUso = arquivosStorageAuditoria.filter((arquivo) => arquivo.emUso);
+    const storageTotalBytes = arquivosStorageAuditoria.reduce((total, arquivo) => total + Number(arquivo.tamanho || 0), 0);
+    const storageEmUsoBytes = arquivosStorageAuditoriaEmUso.reduce((total, arquivo) => total + Number(arquivo.tamanho || 0), 0);
+    const storageSemRegistroBytes = arquivosStorageAuditoriaSemRegistro.reduce((total, arquivo) => total + Number(arquivo.tamanho || 0), 0);
+    const storageLimiteBytes = Math.max(1, LIMITE_STORAGE_MB * 1024 * 1024);
+    const storagePercentual = calcularPercentualUsoStorage(storageTotalBytes);
+    const storagePorBucket = Object.values(
+        arquivosStorageAuditoria.reduce((acc, arquivo) => {
+            const bucket = arquivo.bucket || "storage";
+
+            if (!acc[bucket]) {
+                acc[bucket] = {
+                    bucket,
+                    arquivos: 0,
+                    bytes: 0,
+                    emUso: 0,
+                    semRegistro: 0,
+                };
+            }
+
+            acc[bucket].arquivos += 1;
+            acc[bucket].bytes += Number(arquivo.tamanho || 0);
+
+            if (arquivo.emUso) acc[bucket].emUso += 1;
+            else acc[bucket].semRegistro += 1;
+
+            return acc;
+        }, {})
+    ).sort((a, b) => b.bytes - a.bytes);
 
     const carregarStorageAuditoria = async () => {
         if (!onListarArquivosStorage) return;
@@ -6736,15 +6814,23 @@ function RelatorioAuditoria({
     };
 
     const baixarCsvAuditoria = () => {
-        const cabecalho = ["Data/Hora", "Usuário", "Ação", "Tabela", "Registro", "Descrição"];
-        const linhas = registrosFiltrados.map((item) => [
-            new Date(item.created_at).toLocaleString("pt-BR"),
-            item.usuario_email || "-",
-            item.acao || "-",
-            item.tabela || "-",
-            item.registro_id || "-",
-            item.descricao || "-",
-        ]);
+        const cabecalho = ["Data/Hora", "Usuário", "Ação", "Tabela", "Registro", "Descrição", "Origem do acesso", "Página", "Navegador", "Plataforma"];
+        const linhas = registrosFiltrados.map((item) => {
+            const origemAcesso = item.dados?.origemAcesso || {};
+
+            return [
+                new Date(item.created_at).toLocaleString("pt-BR"),
+                item.usuario_email || "-",
+                item.acao || "-",
+                item.tabela || "-",
+                item.registro_id || "-",
+                item.descricao || "-",
+                origemAcesso.url || "-",
+                origemAcesso.pagina || "-",
+                origemAcesso.navegador || "-",
+                origemAcesso.plataforma || "-",
+            ];
+        });
 
         const csv = [cabecalho, ...linhas]
             .map((linha) => linha.map((campo) => `"${String(campo).replace(/"/g, '""')}"`).join(";"))
@@ -6968,6 +7054,71 @@ function RelatorioAuditoria({
                     <span className="rounded-full bg-red-50 px-3 py-1 text-xs font-semibold text-red-700 ring-1 ring-red-200">
                         {arquivosStorageAuditoriaSemRegistro.length} sem registro
                     </span>
+                    <span className="rounded-full bg-blue-50 px-3 py-1 text-xs font-semibold text-blue-700 ring-1 ring-blue-200">
+                        {formatarBytes(storageTotalBytes)} utilizados
+                    </span>
+                </div>
+
+                <div className="mb-4 rounded-3xl border border-slate-200 bg-slate-50 p-4">
+                    <div className="flex flex-col justify-between gap-2 md:flex-row md:items-center">
+                        <div>
+                            <p className="text-sm font-bold text-slate-950">Capacidade de armazenamento monitorada</p>
+                            <p className="mt-1 text-xs leading-relaxed text-slate-500">
+                                Usado: <strong>{formatarBytes(storageTotalBytes)}</strong> de <strong>{formatarBytes(storageLimiteBytes)}</strong>.
+                                Ajuste o limite visual em <strong>VITE_STORAGE_LIMITE_MB</strong> conforme o plano do Supabase.
+                            </p>
+                        </div>
+
+                        <div className="text-left md:text-right">
+                            <p className="text-2xl font-bold text-slate-950">{storagePercentual}%</p>
+                            <p className="text-xs text-slate-500">uso estimado</p>
+                        </div>
+                    </div>
+
+                    <div className="mt-3 h-2 overflow-hidden rounded-full bg-white ring-1 ring-slate-200">
+                        <div
+                            className={classNames(
+                                "h-full rounded-full",
+                                storagePercentual >= 90
+                                    ? "bg-red-500"
+                                    : storagePercentual >= 70
+                                        ? "bg-orange-500"
+                                        : "bg-emerald-500"
+                            )}
+                            style={{ width: `${Math.max(2, storagePercentual)}%` }}
+                        />
+                    </div>
+
+                    <div className="mt-3 grid gap-2 md:grid-cols-3">
+                        <div className="rounded-2xl bg-white p-3 ring-1 ring-slate-200">
+                            <p className="text-xs font-semibold text-slate-500">Arquivos em uso</p>
+                            <p className="mt-1 text-lg font-bold text-emerald-700">{formatarBytes(storageEmUsoBytes)}</p>
+                        </div>
+
+                        <div className="rounded-2xl bg-white p-3 ring-1 ring-slate-200">
+                            <p className="text-xs font-semibold text-slate-500">Sem registro</p>
+                            <p className="mt-1 text-lg font-bold text-red-700">{formatarBytes(storageSemRegistroBytes)}</p>
+                        </div>
+
+                        <div className="rounded-2xl bg-white p-3 ring-1 ring-slate-200">
+                            <p className="text-xs font-semibold text-slate-500">Espaço estimado livre</p>
+                            <p className="mt-1 text-lg font-bold text-slate-700">{formatarBytes(Math.max(0, storageLimiteBytes - storageTotalBytes))}</p>
+                        </div>
+                    </div>
+
+                    {storagePorBucket.length > 0 && (
+                        <div className="mt-3 space-y-2">
+                            <p className="text-xs font-bold uppercase tracking-wide text-slate-400">Uso por bucket</p>
+                            {storagePorBucket.map((bucketInfo) => (
+                                <div key={bucketInfo.bucket} className="flex flex-col justify-between gap-1 rounded-2xl bg-white px-3 py-2 text-xs ring-1 ring-slate-200 sm:flex-row sm:items-center">
+                                    <span className="font-bold text-slate-700">{bucketInfo.bucket}</span>
+                                    <span className="text-slate-500">
+                                        {bucketInfo.arquivos} arquivo(s) · {formatarBytes(bucketInfo.bytes)} · {bucketInfo.emUso} em uso · {bucketInfo.semRegistro} sem registro
+                                    </span>
+                                </div>
+                            ))}
+                        </div>
+                    )}
                 </div>
 
                 {arquivosStorageAuditoria.length === 0 && !carregandoStorageAuditoria && (
@@ -6996,6 +7147,13 @@ function RelatorioAuditoria({
                                         </p>
                                         <p className="break-words text-xs opacity-80">
                                             <strong>Origem:</strong> {arquivo.origemTipo || "Storage"}
+                                        </p>
+                                        <p className="break-words text-xs opacity-80">
+                                            <strong>Fonte do vínculo:</strong> {arquivo.tabelaOrigem || arquivo.origemRegistro || "Somente Storage"}
+                                        </p>
+                                        <p className="break-words text-xs opacity-80">
+                                            <strong>Tamanho:</strong> {formatarBytes(arquivo.tamanho || 0)}
+                                            {arquivo.atualizadoEm ? ` · Atualizado em ${new Date(arquivo.atualizadoEm).toLocaleString("pt-BR")}` : ""}
                                         </p>
 
                                         {arquivo.colaboradorNome && (
@@ -7118,34 +7276,56 @@ function RelatorioAuditoria({
                         </div>
                     )}
 
-                    {registrosFiltrados.map((item) => (
-                        <div key={item.id} className="rounded-3xl border border-slate-200 bg-white p-4">
-                            <div className="flex flex-col justify-between gap-3 lg:flex-row lg:items-start">
-                                <div>
-                                    <div className="flex flex-wrap items-center gap-2">
-                                        <span className="rounded-full bg-slate-950 px-3 py-1 text-xs font-bold text-white">
-                                            {item.acao || "-"}
-                                        </span>
-                                        <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-600">
-                                            {item.tabela || "-"}
-                                        </span>
+                    {registrosFiltrados.map((item) => {
+                        const origemAcesso = item.dados?.origemAcesso || {};
+                        const temOrigemAcesso = Boolean(origemAcesso.url || origemAcesso.pagina || origemAcesso.navegador || origemAcesso.plataforma);
+
+                        return (
+                            <div key={item.id} className="rounded-3xl border border-slate-200 bg-white p-4">
+                                <div className="flex flex-col justify-between gap-3 lg:flex-row lg:items-start">
+                                    <div className="min-w-0">
+                                        <div className="flex flex-wrap items-center gap-2">
+                                            <span className="rounded-full bg-slate-950 px-3 py-1 text-xs font-bold text-white">
+                                                {item.acao || "-"}
+                                            </span>
+                                            <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-600">
+                                                {item.tabela || "-"}
+                                            </span>
+                                        </div>
+
+                                        <p className="mt-3 font-bold text-slate-950">{item.descricao || "Evento registrado"}</p>
+                                        <p className="mt-1 text-sm text-slate-500">
+                                            Usuário: <strong>{item.usuario_email || "Sistema / consulta pública"}</strong>
+                                        </p>
+                                        {item.registro_id && (
+                                            <p className="mt-1 text-xs text-slate-400">Registro: {item.registro_id}</p>
+                                        )}
+
+                                        {temOrigemAcesso && (
+                                            <div className="mt-3 rounded-2xl bg-slate-50 p-3 text-xs leading-relaxed text-slate-500 ring-1 ring-slate-100">
+                                                <p className="font-bold text-slate-700">Origem do acesso</p>
+                                                <p className="mt-1 break-words">
+                                                    <strong>URL:</strong> {origemAcesso.url || "-"}
+                                                </p>
+                                                <p className="break-words">
+                                                    <strong>Página:</strong> {origemAcesso.pagina || "-"}
+                                                </p>
+                                                <p>
+                                                    <strong>Navegador:</strong> {origemAcesso.navegador || "-"}
+                                                    {origemAcesso.plataforma ? ` · Plataforma: ${origemAcesso.plataforma}` : ""}
+                                                    {origemAcesso.idioma ? ` · Idioma: ${origemAcesso.idioma}` : ""}
+                                                </p>
+                                            </div>
+                                        )}
                                     </div>
 
-                                    <p className="mt-3 font-bold text-slate-950">{item.descricao || "Evento registrado"}</p>
-                                    <p className="mt-1 text-sm text-slate-500">
-                                        Usuário: <strong>{item.usuario_email || "Sistema / consulta pública"}</strong>
+                                    <p className="text-sm font-semibold text-slate-500">
+                                        {item.created_at ? new Date(item.created_at).toLocaleString("pt-BR") : "-"}
                                     </p>
-                                    {item.registro_id && (
-                                        <p className="mt-1 text-xs text-slate-400">Registro: {item.registro_id}</p>
-                                    )}
                                 </div>
-
-                                <p className="text-sm font-semibold text-slate-500">
-                                    {item.created_at ? new Date(item.created_at).toLocaleString("pt-BR") : "-"}
-                                </p>
                             </div>
-                        </div>
-                    ))}
+                        );
+                    })}
                 </div>
             </Card>
         </motion.div>
@@ -7237,7 +7417,10 @@ export default function App() {
                 tabela,
                 registro_id: registroId ? String(registroId) : null,
                 descricao,
-                dados,
+                dados: {
+                    ...(dados || {}),
+                    origemAcesso: obterOrigemAcesso(),
+                },
             });
         },
         [usuario]
