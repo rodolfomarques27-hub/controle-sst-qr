@@ -3448,7 +3448,7 @@ function ConsultaQR({ colaborador, colaboradores = [], onSelecionarColaborador }
             />
 
             <Card className="mb-5">
-                <div className="grid gap-3 xl:grid-cols-[1fr_260px_280px] xl:items-end">
+                <div className="grid gap-3 xl:grid-cols-[1fr_280px] xl:items-end">
                     <div>
                         <label className="mb-1 block text-xs font-bold uppercase tracking-wide text-slate-500">
                             Pesquisar funcionário
@@ -3522,30 +3522,6 @@ function ConsultaQR({ colaborador, colaboradores = [], onSelecionarColaborador }
                         </select>
                     </div>
 
-                    <div>
-                        <label className="mb-1 block text-xs font-bold uppercase tracking-wide text-slate-500">
-                            Selecionar funcionário
-                        </label>
-                        <select
-                            value={colaboradorAtual.id}
-                            onChange={(e) => {
-                                const escolhido = colaboradores.find((item) => String(item.id) === String(e.target.value));
-                                if (escolhido) onSelecionarColaborador?.(escolhido);
-                            }}
-                            className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none focus:border-slate-400 focus:ring-4 focus:ring-slate-100"
-                        >
-                            {colaboradoresFiltrados.map((item) => (
-                                <option key={item.id} value={item.id}>
-                                    {item.nome} — {item.codigoFuncionario}
-                                </option>
-                            ))}
-                            {!colaboradoresFiltrados.some((item) => String(item.id) === String(colaboradorAtual.id)) && (
-                                <option value={colaboradorAtual.id}>
-                                    {colaboradorAtual.nome} — {colaboradorAtual.codigoFuncionario}
-                                </option>
-                            )}
-                        </select>
-                    </div>
                 </div>
             </Card>
 
@@ -5172,6 +5148,185 @@ function Requisitos() {
     );
 }
 
+function RelatorioAuditoria({ auditoria = [], carregando, onAtualizar }) {
+    const [busca, setBusca] = useState("");
+    const [filtroAcao, setFiltroAcao] = useState("Todas");
+
+    const acoes = useMemo(
+        () => Array.from(new Set(auditoria.map((item) => item.acao).filter(Boolean))).sort(),
+        [auditoria]
+    );
+
+    const registrosFiltrados = useMemo(() => {
+        const termo = normalizarTextoBusca(busca);
+
+        return auditoria.filter((item) => {
+            const texto = normalizarTextoBusca(
+                `${item.usuario_email || ""} ${item.acao || ""} ${item.tabela || ""} ${item.descricao || ""} ${item.registro_id || ""}`
+            );
+
+            const bateBusca = !termo || texto.includes(termo);
+            const bateAcao = filtroAcao === "Todas" || item.acao === filtroAcao;
+
+            return bateBusca && bateAcao;
+        });
+    }, [auditoria, busca, filtroAcao]);
+
+    const baixarCsvAuditoria = () => {
+        const cabecalho = ["Data/Hora", "Usuário", "Ação", "Tabela", "Registro", "Descrição"];
+        const linhas = registrosFiltrados.map((item) => [
+            new Date(item.created_at).toLocaleString("pt-BR"),
+            item.usuario_email || "-",
+            item.acao || "-",
+            item.tabela || "-",
+            item.registro_id || "-",
+            item.descricao || "-",
+        ]);
+
+        const csv = [cabecalho, ...linhas]
+            .map((linha) => linha.map((campo) => `"${String(campo).replace(/"/g, '""')}"`).join(";"))
+            .join("\n");
+
+        const blob = new Blob(["\ufeff" + csv], { type: "text/csv;charset=utf-8;" });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement("a");
+
+        link.href = url;
+        link.download = `relatorio-auditoria-${new Date().toISOString().slice(0, 10)}.csv`;
+        link.click();
+
+        URL.revokeObjectURL(url);
+    };
+
+    return (
+        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
+            <Header
+                titulo="Auditoria do sistema"
+                subtitulo="Relatório de acessos, consultas QR e alterações feitas no banco de dados."
+                acao={
+                    <div className="flex flex-wrap gap-2">
+                        <button
+                            onClick={onAtualizar}
+                            className="inline-flex items-center gap-2 rounded-2xl bg-white px-4 py-3 text-sm font-semibold text-slate-700 ring-1 ring-slate-200 hover:bg-slate-50"
+                        >
+                            <RefreshCw className="h-4 w-4" />
+                            Atualizar
+                        </button>
+
+                        <button
+                            onClick={baixarCsvAuditoria}
+                            className="inline-flex items-center gap-2 rounded-2xl bg-slate-950 px-4 py-3 text-sm font-semibold text-white hover:bg-slate-800"
+                        >
+                            <Download className="h-4 w-4" />
+                            Baixar CSV
+                        </button>
+                    </div>
+                }
+            />
+
+            <div className="grid gap-3 md:grid-cols-4">
+                <Card>
+                    <p className="text-sm font-semibold text-slate-500">Total de eventos</p>
+                    <p className="mt-2 text-3xl font-bold text-slate-950">{auditoria.length}</p>
+                </Card>
+
+                <Card>
+                    <p className="text-sm font-semibold text-slate-500">Eventos filtrados</p>
+                    <p className="mt-2 text-3xl font-bold text-blue-700">{registrosFiltrados.length}</p>
+                </Card>
+
+                <Card>
+                    <p className="text-sm font-semibold text-slate-500">Acessos</p>
+                    <p className="mt-2 text-3xl font-bold text-emerald-700">
+                        {auditoria.filter((item) => String(item.acao || "").includes("ACESSO")).length}
+                    </p>
+                </Card>
+
+                <Card>
+                    <p className="text-sm font-semibold text-slate-500">Alterações</p>
+                    <p className="mt-2 text-3xl font-bold text-orange-700">
+                        {auditoria.filter((item) => ["INSERT", "UPDATE", "DELETE"].includes(item.acao)).length}
+                    </p>
+                </Card>
+            </div>
+
+            <Card className="mt-5">
+                <div className="grid gap-3 xl:grid-cols-[1fr_220px]">
+                    <div className="relative">
+                        <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                        <input
+                            value={busca}
+                            onChange={(e) => setBusca(e.target.value)}
+                            placeholder="Buscar por usuário, ação, tabela, registro ou descrição"
+                            className="w-full rounded-2xl border border-slate-200 bg-white py-3 pl-11 pr-4 text-sm outline-none focus:border-slate-400 focus:ring-4 focus:ring-slate-100"
+                        />
+                    </div>
+
+                    <select
+                        value={filtroAcao}
+                        onChange={(e) => setFiltroAcao(e.target.value)}
+                        className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 outline-none focus:border-slate-400 focus:ring-4 focus:ring-slate-100"
+                    >
+                        <option value="Todas">Todas as ações</option>
+                        {acoes.map((acao) => (
+                            <option key={acao} value={acao}>
+                                {acao}
+                            </option>
+                        ))}
+                    </select>
+                </div>
+
+                <div className="mt-5 space-y-3">
+                    {carregando && (
+                        <div className="rounded-3xl bg-slate-50 p-6 text-center text-sm text-slate-500">
+                            Carregando auditoria...
+                        </div>
+                    )}
+
+                    {!carregando && registrosFiltrados.length === 0 && (
+                        <div className="rounded-3xl border border-dashed border-slate-300 p-8 text-center">
+                            <Database className="mx-auto h-10 w-10 text-slate-300" />
+                            <h3 className="mt-3 font-bold text-slate-900">Nenhum evento encontrado</h3>
+                            <p className="mt-1 text-sm text-slate-500">
+                                Quando houver acesso ou alteração no sistema, os eventos aparecerão aqui.
+                            </p>
+                        </div>
+                    )}
+
+                    {registrosFiltrados.map((item) => (
+                        <div key={item.id} className="rounded-3xl border border-slate-200 bg-white p-4">
+                            <div className="flex flex-col justify-between gap-3 lg:flex-row lg:items-start">
+                                <div>
+                                    <div className="flex flex-wrap items-center gap-2">
+                                        <span className="rounded-full bg-slate-950 px-3 py-1 text-xs font-bold text-white">
+                                            {item.acao || "-"}
+                                        </span>
+                                        <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-600">
+                                            {item.tabela || "-"}
+                                        </span>
+                                    </div>
+
+                                    <p className="mt-3 font-bold text-slate-950">{item.descricao || "Evento registrado"}</p>
+                                    <p className="mt-1 text-sm text-slate-500">
+                                        Usuário: <strong>{item.usuario_email || "Sistema / consulta pública"}</strong>
+                                    </p>
+                                    {item.registro_id && (
+                                        <p className="mt-1 text-xs text-slate-400">Registro: {item.registro_id}</p>
+                                    )}
+                                </div>
+
+                                <p className="text-sm font-semibold text-slate-500">
+                                    {item.created_at ? new Date(item.created_at).toLocaleString("pt-BR") : "-"}
+                                </p>
+                            </div>
+                        </div>
+                    ))}
+                </div>
+            </Card>
+        </motion.div>
+    );
+}
+
 export default function App() {
     const [usuario, setUsuario] = useState(null);
     const [carregandoSessao, setCarregandoSessao] = useState(true);
@@ -5185,6 +5340,8 @@ export default function App() {
     const [consultaPublica, setConsultaPublica] = useState(null);
     const [carregandoConsultaPublica, setCarregandoConsultaPublica] = useState(false);
     const [erroConsultaPublica, setErroConsultaPublica] = useState("");
+    const [auditoria, setAuditoria] = useState([]);
+    const [carregandoAuditoria, setCarregandoAuditoria] = useState(false);
 
     const carregarEmpresas = useCallback(async () => {
         const { data, error } = await supabase
@@ -5213,6 +5370,44 @@ export default function App() {
         setDocumentosEmpresas(data || []);
         return data || [];
     }, []);
+
+    const carregarAuditoria = useCallback(async () => {
+        setCarregandoAuditoria(true);
+
+        const { data, error } = await supabase
+            .from("auditoria_sistema")
+            .select("id, created_at, usuario_email, acao, tabela, registro_id, descricao, dados")
+            .order("created_at", { ascending: false })
+            .limit(300);
+
+        setCarregandoAuditoria(false);
+
+        if (error) {
+            console.warn("Erro ao carregar auditoria:", error.message);
+            setAuditoria([]);
+            return [];
+        }
+
+        setAuditoria(data || []);
+        return data || [];
+    }, []);
+
+    const registrarAuditoria = useCallback(
+        async (acao, tabela, descricao, registroId = null, dados = {}) => {
+            if (!usuario?.email) return;
+
+            await supabase.from("auditoria_sistema").insert({
+                usuario_id: usuario.id || null,
+                usuario_email: usuario.email,
+                acao,
+                tabela,
+                registro_id: registroId ? String(registroId) : null,
+                descricao,
+                dados,
+            });
+        },
+        [usuario]
+    );
 
     const carregarColaboradores = useCallback(async () => {
         setCarregandoBanco(true);
@@ -6262,10 +6457,12 @@ export default function App() {
 
         const timer = window.setTimeout(() => {
             carregarColaboradores();
+            carregarAuditoria();
+            registrarAuditoria("ACESSO", "sistema", "Usuário acessou o sistema");
         }, 0);
 
         return () => window.clearTimeout(timer);
-    }, [usuario, carregarColaboradores]);
+    }, [usuario, carregarColaboradores, carregarAuditoria, registrarAuditoria]);
 
     useEffect(() => {
         if (!usuario || colaboradores.length === 0) return;
@@ -6293,12 +6490,16 @@ export default function App() {
         { id: "colaboradores", label: "Colaboradores", icon: Users },
         { id: "treinamentos", label: "Treinamentos", icon: ClipboardCheck },
         { id: "qr", label: "Consulta QR", icon: QrCode },
+        { id: "auditoria", label: "Auditoria", icon: Database },
         { id: "roteiro", label: "Roteiro", icon: CalendarClock },
     ];
 
     const selecionarColaborador = (c) => {
         setColaboradorSelecionado(c);
         setTela("qr");
+        registrarAuditoria("ACESSO_QR_INTERNO", "colaboradores", `Abriu consulta QR interna de ${c?.nome || "colaborador"}`, c?.id, {
+            codigoFuncionario: c?.codigoFuncionario || null,
+        });
     };
 
     const abrirEnvioTreinamento = (c) => {
@@ -6383,7 +6584,10 @@ export default function App() {
                             return (
                                 <button
                                     key={item.id}
-                                    onClick={() => setTela(item.id)}
+                                    onClick={() => {
+                                        setTela(item.id);
+                                        registrarAuditoria("ACESSO_TELA", "navegacao", `Acessou a tela: ${item.label}`);
+                                    }}
                                     className={classNames(
                                         "flex w-full items-center gap-3 rounded-2xl px-4 py-3 text-left text-sm font-medium transition",
                                         tela === item.id
@@ -6421,7 +6625,10 @@ export default function App() {
 
                         <select
                             value={tela}
-                            onChange={(e) => setTela(e.target.value)}
+                            onChange={(e) => {
+                                setTela(e.target.value);
+                                registrarAuditoria("ACESSO_TELA", "navegacao", `Acessou a tela: ${e.target.value}`);
+                            }}
                             className="rounded-2xl border border-slate-200 bg-white px-3 py-2 text-sm"
                         >
                             {nav.map((n) => (
@@ -6485,6 +6692,14 @@ export default function App() {
                             colaborador={colaboradorSelecionado}
                             colaboradores={colaboradores}
                             onSelecionarColaborador={setColaboradorSelecionado}
+                        />
+                    )}
+
+                    {tela === "auditoria" && (
+                        <RelatorioAuditoria
+                            auditoria={auditoria}
+                            carregando={carregandoAuditoria}
+                            onAtualizar={carregarAuditoria}
                         />
                     )}
 
