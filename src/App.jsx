@@ -65,6 +65,7 @@ const estilosGlobais = `
 
 const DAY = 1000 * 60 * 60 * 24;
 const SENHA_AUDITORIA = import.meta.env.VITE_SENHA_AUDITORIA || "Rodolfo@2026";
+const EMAIL_DESTINATARIO_ALERTAS = import.meta.env.VITE_EMAIL_ALERTA_SST || "rodolfomarques27@gmail.com";
 
 function addDays(days) {
     const d = new Date(hoje);
@@ -1414,6 +1415,8 @@ function LoginScreen({ onLogin }) {
 }
 
 function Dashboard({ colaboradores, onSelectColab }) {
+    const [enviandoEmail, setEnviandoEmail] = useState(false);
+
     const indicadores = useMemo(() => {
         const avaliacoes = colaboradores.map((colaborador) => {
             const avaliacao = avaliarTreinamentosColaborador(colaborador);
@@ -1460,6 +1463,104 @@ function Dashboard({ colaboradores, onSelectColab }) {
             return diasParaVencer(a.vencimento) - diasParaVencer(b.vencimento);
         });
 
+    const montarPayloadEmailPendencia = (item) => {
+        const statusEmail =
+            item.status.chave === "pendente"
+                ? "Faltante"
+                : item.status.chave === "vencendo"
+                    ? "A vencer"
+                    : item.status.texto || "Vencido";
+
+        return {
+            destinatario: EMAIL_DESTINATARIO_ALERTAS,
+            colaborador: item.colaborador?.nome || "Colaborador não informado",
+            documento: item.treinamento?.nome || "Documento não informado",
+            dataRealizacao: item.realizado?.realizado ? formatDate(item.realizado.realizado) : "Não informada",
+            dataVencimento: item.realizado?.vencimento ? formatDate(item.realizado.vencimento) : "Não informada",
+            status: statusEmail,
+        };
+    };
+
+    const enviarAlertaEmailPendencia = async (item, mostrarMensagem = true) => {
+        if (!item) return false;
+
+        if (mostrarMensagem) {
+            setEnviandoEmail(true);
+        }
+
+        try {
+            const payload = montarPayloadEmailPendencia(item);
+
+            const { data, error } = await supabase.functions.invoke("rapid-api", {
+                body: payload,
+            });
+
+            if (error || data?.ok === false) {
+                console.error("Erro ao enviar alerta por e-mail:", error || data);
+
+                if (mostrarMensagem) {
+                    alert("Erro ao enviar alerta por e-mail. Verifique o console do navegador.");
+                }
+
+                return false;
+            }
+
+            console.log("Alerta enviado por e-mail:", data);
+
+            if (mostrarMensagem) {
+                alert(`Alerta enviado para ${payload.destinatario}.`);
+            }
+
+            return true;
+        } catch (erro) {
+            console.error("Falha inesperada ao enviar e-mail:", erro);
+
+            if (mostrarMensagem) {
+                alert("Falha inesperada ao enviar e-mail.");
+            }
+
+            return false;
+        } finally {
+            if (mostrarMensagem) {
+                setEnviandoEmail(false);
+            }
+        }
+    };
+
+    const enviarAlertasPendenciasCriticas = async () => {
+        if (!pendencias.length) {
+            alert("Não existem pendências críticas para enviar por e-mail.");
+            return;
+        }
+
+        const confirmar = window.confirm(
+            `Deseja enviar ${pendencias.length} alerta(s) por e-mail para ${EMAIL_DESTINATARIO_ALERTAS}?`
+        );
+
+        if (!confirmar) return;
+
+        setEnviandoEmail(true);
+
+        let enviados = 0;
+        let falhas = 0;
+
+        try {
+            for (const item of pendencias) {
+                const sucesso = await enviarAlertaEmailPendencia(item, false);
+
+                if (sucesso) {
+                    enviados += 1;
+                } else {
+                    falhas += 1;
+                }
+            }
+
+            alert(`Envio finalizado. Enviados: ${enviados}. Falhas: ${falhas}.`);
+        } finally {
+            setEnviandoEmail(false);
+        }
+    };
+
     const baixarRelatorioDashboard = () => {
         const linhas = [
             ["Colaborador", "Empresa", "Função", "Situação na obra", "Treinamento/Documento", "Status", "Vencimento", "Base"],
@@ -1494,13 +1595,26 @@ function Dashboard({ colaboradores, onSelectColab }) {
                 titulo="Dashboard SST"
                 subtitulo="Visão geral dos treinamentos obrigatórios, pendências, vencimentos e liberações por QR Code."
                 acao={
-                    <button
-                        onClick={baixarRelatorioDashboard}
-                        className="inline-flex items-center gap-2 rounded-2xl bg-slate-950 px-4 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-slate-800"
-                    >
-                        <Download className="h-4 w-4" />
-                        Exportar relatório
-                    </button>
+                    <div className="flex flex-wrap items-center gap-2">
+                        <button
+                            type="button"
+                            onClick={enviarAlertasPendenciasCriticas}
+                            disabled={enviandoEmail || pendencias.length === 0}
+                            className="inline-flex items-center gap-2 rounded-2xl bg-red-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-50"
+                        >
+                            <AlertTriangle className="h-4 w-4" />
+                            {enviandoEmail ? "Enviando..." : "Enviar alertas por e-mail"}
+                        </button>
+
+                        <button
+                            type="button"
+                            onClick={baixarRelatorioDashboard}
+                            className="inline-flex items-center gap-2 rounded-2xl bg-slate-950 px-4 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-slate-800"
+                        >
+                            <Download className="h-4 w-4" />
+                            Exportar relatório
+                        </button>
+                    </div>
                 }
             />
 
@@ -1577,12 +1691,24 @@ function Dashboard({ colaboradores, onSelectColab }) {
                                             </span>
                                         </td>
                                         <td className="px-4 py-3 text-right">
-                                            <button
-                                                onClick={() => onSelectColab(item.colaborador)}
-                                                className="rounded-xl bg-slate-950 px-3 py-1.5 text-xs font-semibold text-white hover:bg-slate-800"
-                                            >
-                                                QR
-                                            </button>
+                                            <div className="flex justify-end gap-2">
+                                                <button
+                                                    type="button"
+                                                    onClick={() => enviarAlertaEmailPendencia(item)}
+                                                    disabled={enviandoEmail}
+                                                    className="rounded-xl bg-red-50 px-3 py-1.5 text-xs font-semibold text-red-700 ring-1 ring-red-200 hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-50"
+                                                >
+                                                    E-mail
+                                                </button>
+
+                                                <button
+                                                    type="button"
+                                                    onClick={() => onSelectColab(item.colaborador)}
+                                                    className="rounded-xl bg-slate-950 px-3 py-1.5 text-xs font-semibold text-white hover:bg-slate-800"
+                                                >
+                                                    QR
+                                                </button>
+                                            </div>
                                         </td>
                                     </tr>
                                 ))}
