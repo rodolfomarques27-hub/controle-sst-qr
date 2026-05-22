@@ -5863,7 +5863,7 @@ function RelatorioAuditoria({ auditoria = [], carregando, onAtualizar, onListarA
                     <div>
                         <h2 className="text-lg font-bold text-slate-950">Arquivos salvos no Storage</h2>
                         <p className="mt-1 text-sm text-slate-500">
-                            Auditoria dos arquivos do bucket certificados-treinamentos, com pasta, vínculo na base e opção de excluir arquivos sem registro.
+                            Auditoria dos arquivos salvos no Storage, identificando se pertencem a colaborador, empresa, contrato, logo ou outro registro do sistema.
                         </p>
                     </div>
 
@@ -5912,16 +5912,38 @@ function RelatorioAuditoria({ auditoria = [], carregando, onAtualizar, onListarA
                                     <div className="min-w-0">
                                         <p className="break-words font-bold">{arquivo.nome}</p>
                                         <p className="break-words text-xs opacity-80">
-                                            <strong>Funcionário:</strong>{" "}
-                                            {arquivo.colaboradorNome
-                                                ? `${arquivo.colaboradorNome}${arquivo.colaboradorCodigo ? ` · ${arquivo.colaboradorCodigo}` : ""}`
-                                                : "Não identificado pela pasta"}
+                                            <strong>Bucket:</strong> {arquivo.bucket || "-"}
                                         </p>
-                                        {arquivo.colaboradorEmpresa && (
+                                        <p className="break-words text-xs opacity-80">
+                                            <strong>Origem:</strong> {arquivo.origemTipo || "Storage"}
+                                        </p>
+
+                                        {arquivo.colaboradorNome && (
                                             <p className="break-words text-xs opacity-80">
-                                                <strong>Empresa:</strong> {arquivo.colaboradorEmpresa}
+                                                <strong>Funcionário:</strong>{" "}
+                                                {`${arquivo.colaboradorNome}${arquivo.colaboradorCodigo ? ` · ${arquivo.colaboradorCodigo}` : ""}`}
                                             </p>
                                         )}
+
+                                        {arquivo.colaboradorEmpresa && (
+                                            <p className="break-words text-xs opacity-80">
+                                                <strong>Empresa do funcionário:</strong> {arquivo.colaboradorEmpresa}
+                                            </p>
+                                        )}
+
+                                        {arquivo.empresaNome && (
+                                            <p className="break-words text-xs opacity-80">
+                                                <strong>Empresa:</strong>{" "}
+                                                {`${arquivo.empresaNome}${arquivo.empresaCnpj ? ` · ${formatarCnpj(arquivo.empresaCnpj)}` : ""}`}
+                                            </p>
+                                        )}
+
+                                        {arquivo.tipoDocumentoEmpresa && (
+                                            <p className="break-words text-xs opacity-80">
+                                                <strong>Tipo do documento:</strong> {arquivo.tipoDocumentoEmpresa}
+                                            </p>
+                                        )}
+
                                         <p className="break-words text-xs opacity-80">
                                             <strong>Pasta:</strong> {arquivo.pasta || "raiz"}
                                         </p>
@@ -5933,9 +5955,14 @@ function RelatorioAuditoria({ auditoria = [], carregando, onAtualizar, onListarA
                                                 <strong>Treinamento:</strong> {arquivo.treinamentoNome}
                                             </p>
                                         )}
-                                        {arquivo.origemColaborador && (
+                                        {arquivo.origemRegistro && (
                                             <p className="break-words text-xs opacity-80">
-                                                <strong>Funcionário identificado por:</strong> {arquivo.origemColaborador}
+                                                <strong>Identificado por:</strong> {arquivo.origemRegistro}
+                                            </p>
+                                        )}
+                                        {!arquivo.colaboradorNome && !arquivo.empresaNome && (
+                                            <p className="break-words text-xs font-semibold text-red-700">
+                                                Registro não identificado na base atual.
                                             </p>
                                         )}
                                     </div>
@@ -6940,17 +6967,45 @@ export default function App() {
 
         try {
             const coletados = [];
+            const bucketsAuditados = [
+                {
+                    bucket: "certificados-treinamentos",
+                    origemTipo: "Colaborador / Certificado de treinamento",
+                    tabelaOrigem: "certificados",
+                },
+                {
+                    bucket: "documentos-empresas",
+                    origemTipo: "Empresa / Documento empresarial",
+                    tabelaOrigem: "documentos_empresas",
+                },
+                {
+                    bucket: "contratos-empresas",
+                    origemTipo: "Empresa / Contrato",
+                    tabelaOrigem: "empresas.contrato_url",
+                },
+                {
+                    bucket: "logos-empresas",
+                    origemTipo: "Empresa / Logo",
+                    tabelaOrigem: "empresas.logo_url",
+                },
+                {
+                    bucket: "fotos-colaboradores",
+                    origemTipo: "Colaborador / Foto",
+                    tabelaOrigem: "colaboradores.foto_url",
+                },
+            ];
 
-            const listarNivel = async (prefixo = "") => {
+            const listarNivel = async (bucketInfo, prefixo = "") => {
                 const { data, error } = await supabase.storage
-                    .from("certificados-treinamentos")
+                    .from(bucketInfo.bucket)
                     .list(prefixo, {
                         limit: 1000,
                         sortBy: { column: "name", order: "asc" },
                     });
 
                 if (error) {
-                    throw new Error(`Erro ao listar Storage em ${prefixo || "raiz"}: ${error.message}`);
+                    console.warn(`Erro ao listar bucket ${bucketInfo.bucket}:`, error.message);
+                    return;
                 }
 
                 for (const item of data || []) {
@@ -6959,18 +7014,23 @@ export default function App() {
 
                     if (pareceArquivo) {
                         coletados.push({
+                            bucket: bucketInfo.bucket,
+                            origemTipo: bucketInfo.origemTipo,
+                            tabelaOrigem: bucketInfo.tabelaOrigem,
                             nome: item.name,
                             caminho,
                             tamanho: item.metadata?.size || null,
                             atualizadoEm: item.updated_at || item.created_at || null,
                         });
                     } else {
-                        await listarNivel(caminho);
+                        await listarNivel(bucketInfo, caminho);
                     }
                 }
             };
 
-            await listarNivel("");
+            for (const bucketInfo of bucketsAuditados) {
+                await listarNivel(bucketInfo, "");
+            }
 
             const { data: certificados, error: certificadosError } = await supabase
                 .from("certificados")
@@ -6980,11 +7040,13 @@ export default function App() {
                 throw new Error(`Erro ao consultar certificados: ${certificadosError.message}`);
             }
 
-            const caminhosEmUso = new Set((certificados || []).map((item) => item.arquivo_url).filter(Boolean));
-            const certificadosPorCaminho = (certificados || []).reduce((acc, item) => {
-                if (item.arquivo_url) acc[item.arquivo_url] = item;
-                return acc;
-            }, {});
+            const { data: documentosEmpresaBanco, error: documentosEmpresaError } = await supabase
+                .from("documentos_empresas")
+                .select("id, empresa_id, tipo_documento, arquivo_url, arquivo_nome");
+
+            if (documentosEmpresaError) {
+                throw new Error(`Erro ao consultar documentos de empresas: ${documentosEmpresaError.message}`);
+            }
 
             const colaboradoresPorId = colaboradores.reduce((acc, colaborador) => {
                 acc[colaborador.id] = colaborador;
@@ -7003,34 +7065,149 @@ export default function App() {
                 return acc;
             }, {});
 
+            const empresasPorId = empresasBanco.reduce((acc, empresa) => {
+                acc[empresa.id] = empresa;
+                return acc;
+            }, {});
+
+            const certificadosPorCaminho = (certificados || []).reduce((acc, item) => {
+                if (item.arquivo_url) acc[`certificados-treinamentos:${item.arquivo_url}`] = item;
+                return acc;
+            }, {});
+
+            const documentosEmpresaPorCaminho = (documentosEmpresaBanco || []).reduce((acc, item) => {
+                if (item.arquivo_url) acc[`documentos-empresas:${item.arquivo_url}`] = item;
+                return acc;
+            }, {});
+
+            const contratosPorCaminho = empresasBanco.reduce((acc, empresa) => {
+                if (empresa.contrato_url) acc[`contratos-empresas:${empresa.contrato_url}`] = empresa;
+                return acc;
+            }, {});
+
+            const logosPorCaminho = empresasBanco.reduce((acc, empresa) => {
+                if (empresa.logo_url) acc[`logos-empresas:${empresa.logo_url}`] = empresa;
+                return acc;
+            }, {});
+
+            const fotosPorCaminho = colaboradores.reduce((acc, colaborador) => {
+                if (colaborador.fotoUrl) acc[`fotos-colaboradores:${colaborador.fotoUrl}`] = colaborador;
+                return acc;
+            }, {});
+
             return coletados
                 .map((arquivo) => {
                     const partes = arquivo.caminho.split("/");
                     const pasta = partes.length > 1 ? partes.slice(0, -1).join("/") : "";
-                    const pastaColaborador = partes[0] || "";
-                    const treinamentoIdPasta = partes[1] || "";
-                    const treinamento = obterTreinamento(Number(treinamentoIdPasta));
-                    const certificadoVinculado = certificadosPorCaminho[arquivo.caminho] || null;
-                    const colaboradorVinculado = certificadoVinculado
-                        ? colaboradoresPorId[certificadoVinculado.colaborador_id]
-                        : null;
-                    const colaboradorPelaPasta = colaboradoresPorPasta[pastaColaborador] || null;
-                    const colaboradorArquivo = colaboradorVinculado || colaboradorPelaPasta || null;
+                    const primeiraPasta = partes[0] || "";
+                    const segundaPasta = partes[1] || "";
+                    const chave = `${arquivo.bucket}:${arquivo.caminho}`;
+
+                    let emUso = false;
+                    let origemRegistro = "";
+                    let registroId = "";
+                    let colaboradorNome = "";
+                    let colaboradorCodigo = "";
+                    let colaboradorEmpresa = "";
+                    let empresaNome = "";
+                    let empresaCnpj = "";
+                    let tipoDocumentoEmpresa = "";
+                    let treinamentoNome = "";
+                    let origemIdentificacao = "";
+
+                    if (arquivo.bucket === "certificados-treinamentos") {
+                        const certificadoVinculado = certificadosPorCaminho[chave] || null;
+                        const colaboradorVinculado = certificadoVinculado
+                            ? colaboradoresPorId[certificadoVinculado.colaborador_id]
+                            : null;
+                        const colaboradorPelaPasta = colaboradoresPorPasta[primeiraPasta] || null;
+                        const colaboradorArquivo = colaboradorVinculado || colaboradorPelaPasta || null;
+                        const treinamento = obterTreinamento(Number(segundaPasta));
+
+                        emUso = Boolean(certificadoVinculado);
+                        origemRegistro = certificadoVinculado ? "Base de certificados" : colaboradorPelaPasta ? "Pasta do Storage" : "";
+                        registroId = certificadoVinculado?.id || "";
+                        colaboradorNome = colaboradorArquivo?.nome || "";
+                        colaboradorCodigo = colaboradorArquivo?.codigoFuncionario || "";
+                        colaboradorEmpresa = colaboradorArquivo?.empresaExibicao || colaboradorArquivo?.empresa || "";
+                        treinamentoNome = certificadoVinculado?.nome_treinamento || treinamento?.nome || "";
+                        origemIdentificacao = origemRegistro;
+                    }
+
+                    if (arquivo.bucket === "documentos-empresas") {
+                        const documentoVinculado = documentosEmpresaPorCaminho[chave] || null;
+                        const empresaVinculada = documentoVinculado
+                            ? empresasPorId[documentoVinculado.empresa_id]
+                            : empresasPorId[primeiraPasta];
+
+                        emUso = Boolean(documentoVinculado);
+                        origemRegistro = documentoVinculado ? "Base de documentos empresariais" : empresaVinculada ? "Pasta do Storage" : "";
+                        registroId = documentoVinculado?.id || "";
+                        empresaNome = empresaVinculada?.nome || "";
+                        empresaCnpj = empresaVinculada?.cnpj || "";
+                        tipoDocumentoEmpresa = documentoVinculado?.tipo_documento || segundaPasta || "";
+                        origemIdentificacao = origemRegistro;
+                    }
+
+                    if (arquivo.bucket === "contratos-empresas") {
+                        const empresaContrato = contratosPorCaminho[chave] || empresasPorId[primeiraPasta];
+
+                        emUso = Boolean(contratosPorCaminho[chave]);
+                        origemRegistro = contratosPorCaminho[chave] ? "Cadastro da empresa" : empresaContrato ? "Pasta do Storage" : "";
+                        registroId = empresaContrato?.id || "";
+                        empresaNome = empresaContrato?.nome || "";
+                        empresaCnpj = empresaContrato?.cnpj || "";
+                        tipoDocumentoEmpresa = "Contrato da empresa";
+                        origemIdentificacao = origemRegistro;
+                    }
+
+                    if (arquivo.bucket === "logos-empresas") {
+                        const empresaLogo = logosPorCaminho[chave] || empresasPorId[primeiraPasta];
+
+                        emUso = Boolean(logosPorCaminho[chave]);
+                        origemRegistro = logosPorCaminho[chave] ? "Cadastro da empresa" : empresaLogo ? "Pasta do Storage" : "";
+                        registroId = empresaLogo?.id || "";
+                        empresaNome = empresaLogo?.nome || "";
+                        empresaCnpj = empresaLogo?.cnpj || "";
+                        tipoDocumentoEmpresa = "Logo da empresa";
+                        origemIdentificacao = origemRegistro;
+                    }
+
+                    if (arquivo.bucket === "fotos-colaboradores") {
+                        const colaboradorFoto = fotosPorCaminho[chave] || colaboradoresPorId[primeiraPasta];
+
+                        emUso = Boolean(fotosPorCaminho[chave]);
+                        origemRegistro = fotosPorCaminho[chave] ? "Cadastro do colaborador" : colaboradorFoto ? "Pasta do Storage" : "";
+                        registroId = colaboradorFoto?.id || "";
+                        colaboradorNome = colaboradorFoto?.nome || "";
+                        colaboradorCodigo = colaboradorFoto?.codigoFuncionario || "";
+                        colaboradorEmpresa = colaboradorFoto?.empresaExibicao || colaboradorFoto?.empresa || "";
+                        origemIdentificacao = origemRegistro;
+                    }
 
                     return {
                         ...arquivo,
                         pasta,
-                        pastaColaborador,
-                        pastaTreinamento: treinamentoIdPasta,
-                        treinamentoNome: certificadoVinculado?.nome_treinamento || treinamento?.nome || "",
-                        colaboradorNome: colaboradorArquivo?.nome || "",
-                        colaboradorCodigo: colaboradorArquivo?.codigoFuncionario || "",
-                        colaboradorEmpresa: colaboradorArquivo?.empresaExibicao || colaboradorArquivo?.empresa || "",
-                        origemColaborador: colaboradorVinculado ? "Base de certificados" : colaboradorPelaPasta ? "Pasta do Storage" : "",
-                        emUso: caminhosEmUso.has(arquivo.caminho),
+                        pastaColaborador: primeiraPasta,
+                        pastaTreinamento: segundaPasta,
+                        treinamentoNome,
+                        colaboradorNome,
+                        colaboradorCodigo,
+                        colaboradorEmpresa,
+                        empresaNome,
+                        empresaCnpj,
+                        tipoDocumentoEmpresa,
+                        origemColaborador: origemIdentificacao,
+                        origemRegistro,
+                        registroId,
+                        emUso,
                     };
                 })
-                .sort((a, b) => Number(a.emUso) - Number(b.emUso) || a.caminho.localeCompare(b.caminho));
+                .sort((a, b) =>
+                    a.bucket.localeCompare(b.bucket) ||
+                    Number(a.emUso) - Number(b.emUso) ||
+                    a.caminho.localeCompare(b.caminho)
+                );
         } catch (error) {
             setErroBanco(error.message || "Erro ao listar arquivos do Storage.");
             alert(error.message || "Erro ao listar arquivos do Storage.");
@@ -7047,18 +7224,18 @@ export default function App() {
         }
 
         if (arquivo.emUso) {
-            alert("Este arquivo está em uso na base de certificados. Para evitar quebrar o histórico, exclua primeiro o certificado vinculado na Base de certificados.");
+            alert(`Este arquivo está em uso em: ${arquivo.origemTipo || arquivo.tabelaOrigem || "base do sistema"}. Para evitar quebrar o histórico, exclua primeiro o registro vinculado.`);
             return false;
         }
 
         const confirmado = window.confirm(
-            `Excluir definitivamente este arquivo do Storage?\n\nArquivo: ${arquivo.nome}\nPasta: ${arquivo.pasta || "raiz"}`
+            `Excluir definitivamente este arquivo do Storage?\n\nBucket: ${arquivo.bucket || "certificados-treinamentos"}\nArquivo: ${arquivo.nome}\nPasta: ${arquivo.pasta || "raiz"}`
         );
 
         if (!confirmado) return false;
 
         const { error } = await supabase.storage
-            .from("certificados-treinamentos")
+            .from(arquivo.bucket || "certificados-treinamentos")
             .remove([arquivo.caminho]);
 
         if (error) {
@@ -7067,13 +7244,19 @@ export default function App() {
             return false;
         }
 
-        await registrarAuditoria("DELETE_STORAGE", "certificados-treinamentos", `Excluiu arquivo sem registro do Storage: ${arquivo.nome}`, arquivo.caminho, {
+        await registrarAuditoria("DELETE_STORAGE", arquivo.bucket || "storage", `Excluiu arquivo sem registro do Storage: ${arquivo.nome}`, arquivo.caminho, {
+            bucket: arquivo.bucket || "",
             caminho: arquivo.caminho,
             pasta: arquivo.pasta || "",
             nome: arquivo.nome,
+            origemTipo: arquivo.origemTipo || "",
+            tabelaOrigem: arquivo.tabelaOrigem || "",
             colaboradorNome: arquivo.colaboradorNome || "",
             colaboradorCodigo: arquivo.colaboradorCodigo || "",
             colaboradorEmpresa: arquivo.colaboradorEmpresa || "",
+            empresaNome: arquivo.empresaNome || "",
+            empresaCnpj: arquivo.empresaCnpj || "",
+            tipoDocumentoEmpresa: arquivo.tipoDocumentoEmpresa || "",
         });
 
         return true;
