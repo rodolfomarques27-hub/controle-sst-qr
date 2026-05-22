@@ -1029,6 +1029,220 @@ function dataRealizacaoPorArquivo(arquivo) {
     return hoje.toISOString().slice(0, 10);
 }
 
+function converterDataParaISO(dia, mes, ano) {
+    const d = Number(dia);
+    const m = Number(mes);
+    let a = Number(ano);
+
+    if (!d || !m || !a) return "";
+
+    if (a < 100) a += a >= 70 ? 1900 : 2000;
+
+    if (d < 1 || d > 31 || m < 1 || m > 12 || a < 1990 || a > 2100) return "";
+
+    const data = new Date(a, m - 1, d, 12, 0, 0);
+
+    if (data.getFullYear() !== a || data.getMonth() !== m - 1 || data.getDate() !== d) {
+        return "";
+    }
+
+    return data.toISOString().slice(0, 10);
+}
+
+function converterDataIsoDireta(ano, mes, dia) {
+    return converterDataParaISO(dia, mes, ano);
+}
+
+function extrairDatasComContexto(texto = "") {
+    const resultado = [];
+    const textoNormalizado = String(texto || "").replace(/\s+/g, " ");
+    const regexDataBr = /\b(\d{1,2})[/.-](\d{1,2})[/.-](\d{2,4})\b/g;
+    const regexDataIso = /\b(20\d{2}|19\d{2})[/.-](\d{1,2})[/.-](\d{1,2})\b/g;
+
+    const palavrasEmissao = [
+        "emissão",
+        "emissao",
+        "emitido",
+        "realização",
+        "realizacao",
+        "realizado",
+        "realizada",
+        "data do treinamento",
+        "treinamento",
+        "data do aso",
+        "aso",
+        "admissão",
+        "admissao",
+        "data de admissão",
+        "data de admissao",
+        "data",
+    ];
+
+    const palavrasVencimento = [
+        "validade",
+        "vencimento",
+        "vence",
+        "vencer",
+        "válido até",
+        "valido ate",
+        "apto até",
+        "apto ate",
+    ];
+
+    const adicionar = (match, iso, indice) => {
+        if (!iso) return;
+
+        const data = new Date(`${iso}T12:00:00`);
+        const hojeBase = new Date(hoje.toISOString().slice(0, 10) + "T12:00:00");
+        const limiteFuturo = new Date(hojeBase);
+
+        limiteFuturo.setDate(limiteFuturo.getDate() + 30);
+
+        // Data de realização/emissão não deve ser muito futura.
+        if (data > limiteFuturo) return;
+
+        const inicio = Math.max(0, indice - 100);
+        const fim = Math.min(textoNormalizado.length, indice + match[0].length + 100);
+        const contexto = textoNormalizado.slice(inicio, fim).trim();
+        const contextoBusca = normalizarTextoBusca(contexto);
+
+        let pontuacao = 1;
+
+        palavrasEmissao.forEach((palavra) => {
+            if (contextoBusca.includes(normalizarTextoBusca(palavra))) pontuacao += 4;
+        });
+
+        palavrasVencimento.forEach((palavra) => {
+            if (contextoBusca.includes(normalizarTextoBusca(palavra))) pontuacao -= 7;
+        });
+
+        resultado.push({
+            iso,
+            texto: match[0],
+            contexto,
+            pontuacao,
+        });
+    };
+
+    let match;
+
+    while ((match = regexDataBr.exec(textoNormalizado))) {
+        adicionar(match, converterDataParaISO(match[1], match[2], match[3]), match.index);
+    }
+
+    while ((match = regexDataIso.exec(textoNormalizado))) {
+        adicionar(match, converterDataIsoDireta(match[1], match[2], match[3]), match.index);
+    }
+
+    return resultado
+        .filter((item, index, array) => array.findIndex((outro) => outro.iso === item.iso) === index)
+        .sort((a, b) => b.pontuacao - a.pontuacao || b.iso.localeCompare(a.iso));
+}
+
+function limparTextoPdfBruto(texto = "") {
+    return String(texto || "")
+        .replace(/\\r/g, " ")
+        .replace(/\\n/g, " ")
+        .replace(/[()<>[\]{}]/g, " ")
+        .replace(/\s+/g, " ");
+}
+
+async function lerTextoPossivelDoArquivo(arquivo) {
+    if (!arquivo) return "";
+
+    const nome = arquivo.name || "";
+    const extensao = nome.split(".").pop()?.toLowerCase() || "";
+
+    try {
+        if (["txt", "csv"].includes(extensao) || String(arquivo.type || "").startsWith("text/")) {
+            return await arquivo.text();
+        }
+
+        if (extensao === "pdf" || arquivo.type === "application/pdf") {
+            const buffer = await arquivo.arrayBuffer();
+            const bytes = new Uint8Array(buffer);
+            let bruto = "";
+            const tamanhoMaximo = Math.min(bytes.length, 2_000_000);
+
+            for (let i = 0; i < tamanhoMaximo; i += 1) {
+                const byte = bytes[i];
+
+                if (byte >= 32 && byte <= 126) {
+                    bruto += String.fromCharCode(byte);
+                } else {
+                    bruto += " ";
+                }
+            }
+
+            return limparTextoPdfBruto(bruto);
+        }
+
+        // Imagens dependem de OCR. Sem OCR, tentamos apenas o nome do arquivo.
+        return "";
+    } catch {
+        return "";
+    }
+}
+
+async function detectarDataEmissaoArquivo(arquivo) {
+    if (!arquivo) {
+        return {
+            data: "",
+            origem: "nenhuma",
+            confianca: 0,
+            mensagem: "Nenhum arquivo selecionado.",
+        };
+    }
+
+    const candidatos = [];
+    const nomeArquivo = arquivo.name || "";
+
+    extrairDatasComContexto(nomeArquivo).forEach((item) =>
+        candidatos.push({
+            ...item,
+            origem: "nome do arquivo",
+            pontuacao: item.pontuacao + 1,
+        })
+    );
+
+    const textoArquivo = await lerTextoPossivelDoArquivo(arquivo);
+
+    extrairDatasComContexto(textoArquivo).forEach((item) =>
+        candidatos.push({
+            ...item,
+            origem: "conteúdo do arquivo",
+            pontuacao: item.pontuacao + 3,
+        })
+    );
+
+    const ordenados = candidatos
+        .filter((item, index, array) =>
+            array.findIndex((outro) => outro.iso === item.iso && outro.origem === item.origem) === index
+        )
+        .sort((a, b) => b.pontuacao - a.pontuacao || b.iso.localeCompare(a.iso));
+
+    const melhor = ordenados[0];
+
+    if (!melhor) {
+        return {
+            data: "",
+            origem: "não identificada",
+            confianca: 0,
+            mensagem: "Não foi possível identificar a data no arquivo. Informe manualmente antes de salvar.",
+        };
+    }
+
+    const confianca = Math.max(1, Math.min(100, Math.round(melhor.pontuacao * 12)));
+
+    return {
+        data: melhor.iso,
+        origem: melhor.origem,
+        confianca,
+        contexto: melhor.contexto,
+        mensagem: `Data sugerida: ${formatDate(melhor.iso)} (${melhor.origem}). Confira antes de salvar.`,
+    };
+}
+
 function analisarArquivosTreinamentoMassa(arquivos = []) {
     return Array.from(arquivos || []).map((arquivo) => {
         const treinamento = inferirTreinamentoPorNomeArquivo(arquivo.name);
@@ -2780,6 +2994,7 @@ function Treinamentos({
     const [treinamentoId, setTreinamentoId] = useState(treinamentosBase[0].id);
     const [dataRealizacao, setDataRealizacao] = useState(hoje.toISOString().slice(0, 10));
     const [arquivoSelecionado, setArquivoSelecionado] = useState(null);
+    const [sugestaoDataArquivo, setSugestaoDataArquivo] = useState(null);
     const [observacao, setObservacao] = useState("");
     const [salvandoCertificado, setSalvandoCertificado] = useState(false);
     const [arquivosLote, setArquivosLote] = useState([]);
@@ -2844,6 +3059,7 @@ function Treinamentos({
 
         if (ok) {
             setArquivoSelecionado(null);
+            setSugestaoDataArquivo(null);
             setObservacao("");
         }
     };
@@ -2883,7 +3099,7 @@ function Treinamentos({
         return melhorPontuacao >= 25 ? melhor : null;
     };
 
-    const prepararArquivosLote = (listaArquivos) => {
+    const prepararArquivosLote = async (listaArquivos) => {
         const arquivos = Array.from(listaArquivos || []);
 
         if (!colabSelecionado?.codigoFuncionario) {
@@ -2891,29 +3107,35 @@ function Treinamentos({
             return;
         }
 
-        const preparados = arquivos.map((arquivo, index) => {
-            const treinamento = inferirTreinamentoPorNomeArquivo(arquivo.name);
-            const dataArquivo = dataRealizacaoPorArquivo(arquivo);
-            const colaboradorSugerido = identificarColaboradorPorArquivo(arquivo);
-            const pareceOutroColaborador =
-                colaboradorSugerido?.codigoFuncionario &&
-                String(colaboradorSugerido.codigoFuncionario) !== String(colabSelecionado.codigoFuncionario);
+        const preparados = await Promise.all(
+            arquivos.map(async (arquivo, index) => {
+                const treinamento = inferirTreinamentoPorNomeArquivo(arquivo.name);
+                const sugestaoData = await detectarDataEmissaoArquivo(arquivo);
+                const dataArquivo = sugestaoData.data || dataRealizacaoPorArquivo(arquivo);
+                const colaboradorSugerido = identificarColaboradorPorArquivo(arquivo);
+                const pareceOutroColaborador =
+                    colaboradorSugerido?.codigoFuncionario &&
+                    String(colaboradorSugerido.codigoFuncionario) !== String(colabSelecionado.codigoFuncionario);
 
-            return {
-                id: `${Date.now()}-${index}-${arquivo.name}`,
-                arquivo,
-                colaboradorCodigo: colabSelecionado.codigoFuncionario,
-                colaboradorSugeridoCodigo: colaboradorSugerido?.codigoFuncionario || "",
-                treinamentoId: treinamento?.id || "",
-                dataRealizacao: dataArquivo,
-                dataVencimento: treinamento ? calcularVencimentoTreinamento(treinamento.id, dataArquivo) : "",
-                status: treinamento
-                    ? pareceOutroColaborador
-                        ? `Atenção: arquivo parece ser de ${colaboradorSugerido.nome}`
-                        : "Treinamento identificado"
-                    : "Treinamento não identificado",
-            };
-        });
+                return {
+                    id: `${Date.now()}-${index}-${arquivo.name}`,
+                    arquivo,
+                    colaboradorCodigo: colabSelecionado.codigoFuncionario,
+                    colaboradorSugeridoCodigo: colaboradorSugerido?.codigoFuncionario || "",
+                    treinamentoId: treinamento?.id || "",
+                    dataRealizacao: dataArquivo,
+                    dataVencimento: treinamento ? calcularVencimentoTreinamento(treinamento.id, dataArquivo) : "",
+                    sugestaoData,
+                    status: treinamento
+                        ? pareceOutroColaborador
+                            ? `Atenção: arquivo parece ser de ${colaboradorSugerido.nome}`
+                            : sugestaoData.data
+                                ? "Treinamento e data identificados"
+                                : "Treinamento identificado"
+                        : "Treinamento não identificado",
+                };
+            })
+        );
 
         setArquivosLote(preparados);
         setResultadoLote("");
@@ -2969,6 +3191,21 @@ function Treinamentos({
                 };
             })
         );
+    };
+
+    const selecionarArquivoCertificado = async (arquivo) => {
+        setArquivoSelecionado(arquivo || null);
+        setSugestaoDataArquivo(null);
+
+        if (!arquivo) return;
+
+        const sugestao = await detectarDataEmissaoArquivo(arquivo);
+
+        setSugestaoDataArquivo(sugestao);
+
+        if (sugestao.data) {
+            setDataRealizacao(sugestao.data);
+        }
     };
 
     const removerArquivoLote = (arquivoId) => {
@@ -3388,9 +3625,20 @@ function Treinamentos({
                                 type="file"
                                 accept="application/pdf,image/*"
                                 className="hidden"
-                                onChange={(e) => setArquivoSelecionado(e.target.files?.[0] || null)}
+                                onChange={(e) => selecionarArquivoCertificado(e.target.files?.[0] || null)}
                             />
                         </label>
+
+                        {sugestaoDataArquivo && (
+                            <div className={classNames(
+                                "rounded-2xl px-3 py-2 text-xs font-medium ring-1",
+                                sugestaoDataArquivo.data
+                                    ? "bg-emerald-50 text-emerald-700 ring-emerald-100"
+                                    : "bg-orange-50 text-orange-700 ring-orange-100"
+                            )}>
+                                {sugestaoDataArquivo.mensagem}
+                            </div>
+                        )}
 
                         <button
                             onClick={adicionarTreinamento}
@@ -3407,8 +3655,8 @@ function Treinamentos({
                                     Envio em lote
                                 </h3>
                                 <p className="mt-1 text-xs text-blue-800/80">
-                                    Selecione vários arquivos. O sistema tenta distribuir pelo nome ou código do colaborador no nome do arquivo.
-                                    Antes de salvar, confira o colaborador de cada documento.
+                                    Selecione vários arquivos. O sistema tenta distribuir pelo nome do arquivo e identificar a data de emissão/realização no nome ou no conteúdo do PDF.
+                                    Antes de salvar, confira colaborador, treinamento e data de cada documento.
                                 </p>
                             </div>
 
@@ -3458,10 +3706,19 @@ function Treinamentos({
                                                         </p>
                                                         <p className={classNames(
                                                             "mt-1 text-xs font-medium",
-                                                            item.status === "Treinamento identificado" || item.status === "Conferido" ? "text-emerald-700" : "text-orange-700"
+                                                            item.status === "Treinamento identificado" ||
+                                                                item.status === "Treinamento e data identificados" ||
+                                                                item.status === "Conferido"
+                                                                ? "text-emerald-700"
+                                                                : "text-orange-700"
                                                         )}>
                                                             {item.status}
                                                         </p>
+                                                        {item.sugestaoData?.mensagem && (
+                                                            <p className="mt-1 text-[11px] leading-relaxed text-slate-500">
+                                                                {item.sugestaoData.mensagem}
+                                                            </p>
+                                                        )}
                                                     </div>
 
                                                     <button
