@@ -73,7 +73,7 @@ function addDays(days) {
 }
 
 const treinamentosBase = [
-    { id: 21, nome: "Ficha de Registro - CLT / eSocial", validadePadrao: 3650, categoria: "Documento", base: "CLT / eSocial / admissional" },
+    { id: 21, nome: "Ficha de Registro - CLT / eSocial", validadePadrao: null, categoria: "Documento sem validade", base: "CLT / eSocial / admissional" },
 
     { id: 1, nome: "NR-01 Integração / Mobilização SST", validadePadrao: 365, categoria: "Obrigatório", base: "NR-01 / Integração de obra" },
     { id: 15, nome: "NR-01 Ordem de Serviço da Função", validadePadrao: 365, categoria: "Documento", base: "NR-01 / Ordem de Serviço" },
@@ -361,14 +361,14 @@ function avaliarTreinamentosColaborador(colaborador) {
         return {
             treinamento,
             realizado,
-            status: statusDocumento(realizado.vencimento),
+            status: statusDocumento(realizado.vencimento, treinamentoSemValidade(treinamento.id)),
         };
     });
 
     const pendentes = itens.filter((item) => item.status.chave === "pendente");
     const vencidos = itens.filter((item) => item.status.chave === "vencido");
     const vencendo = itens.filter((item) => item.status.chave === "vencendo");
-    const emDia = itens.filter((item) => item.status.chave === "emdia");
+    const emDia = itens.filter((item) => ["emdia", "semvalidade"].includes(item.status.chave));
 
     return {
         matriz: obterMatrizFuncao(colaborador.funcao),
@@ -464,13 +464,42 @@ function normalizarCertificado(item) {
 }
 
 function diasParaVencer(dataISO) {
+    if (!dataISO) return null;
+
     const venc = new Date(`${dataISO}T12:00:00`);
     const base = new Date(hoje.toISOString().slice(0, 10) + "T12:00:00");
-    return Math.ceil((venc - base) / DAY);
+    const dias = Math.ceil((venc - base) / DAY);
+
+    return Number.isFinite(dias) ? dias : null;
 }
 
-function statusDocumento(dataISO) {
+function treinamentoSemValidade(treinamentoId) {
+    const treinamento = obterTreinamento(Number(treinamentoId));
+    return treinamento?.validadePadrao === null || treinamento?.validadePadrao === 0;
+}
+
+function statusDocumento(dataISO, semValidade = false) {
+    if (semValidade) {
+        return {
+            chave: "semvalidade",
+            texto: "Sem validade",
+            icon: FileText,
+            classe: "bg-slate-50 text-slate-700 ring-slate-200",
+            barra: "bg-slate-400",
+        };
+    }
+
     const dias = diasParaVencer(dataISO);
+
+    if (dias === null) {
+        return {
+            chave: "semdata",
+            texto: "Sem data",
+            icon: AlertTriangle,
+            classe: "bg-blue-50 text-blue-700 ring-blue-200",
+            barra: "bg-blue-500",
+        };
+    }
 
     if (dias < 0) {
         return {
@@ -2581,10 +2610,13 @@ function statusGeralConsultaPublica(treinamentos = []) {
         };
     }
 
-    const vencidos = treinamentos.filter((item) => diasParaVencer(item.vencimento) < 0);
+    const vencidos = treinamentos.filter((item) => {
+        const dias = diasParaVencer(item.vencimento);
+        return dias !== null && dias < 0;
+    });
     const aVencer = treinamentos.filter((item) => {
         const dias = diasParaVencer(item.vencimento);
-        return dias >= 0 && dias <= 30;
+        return dias !== null && dias >= 0 && dias <= 30;
     });
 
     if (vencidos.length > 0) {
@@ -2664,16 +2696,19 @@ function ConsultaQRPublica({ dados }) {
 
                     <div className="mt-6 grid gap-4 md:grid-cols-2">
                         {treinamentos.map((t) => {
-                            const st = statusDocumento(t.vencimento);
-                            const dias = diasParaVencer(t.vencimento);
+                            const semValidade = treinamentoSemValidade(t.treinamentoId);
+                            const st = statusDocumento(t.vencimento, semValidade);
+                            const dias = semValidade ? null : diasParaVencer(t.vencimento);
                             const dataInicio = new Date(`${t.realizado}T12:00:00`);
                             const dataFim = new Date(`${t.vencimento}T12:00:00`);
-                            const totalValidade = Math.max(1, Math.ceil((dataFim - dataInicio) / DAY));
+                            const totalValidade = dias === null ? 1 : Math.max(1, Math.ceil((dataFim - dataInicio) / DAY));
                             const percentualRestante =
-                                dias < 0
+                                dias === null
                                     ? 100
-                                    : Math.max(4, Math.min(100, Math.round((dias / totalValidade) * 100)));
-                            const alerta30Dias = dias >= 0 && dias <= 30;
+                                    : dias < 0
+                                        ? 100
+                                        : Math.max(4, Math.min(100, Math.round((dias / totalValidade) * 100)));
+                            const alerta30Dias = dias !== null && dias >= 0 && dias <= 30;
 
                             return (
                                 <div key={`${t.id || t.treinamentoId}-${t.vencimento}`} className="rounded-3xl border border-slate-200 p-4">
@@ -2692,7 +2727,7 @@ function ConsultaQRPublica({ dados }) {
                                         </div>
                                         <div className="rounded-2xl bg-slate-50 p-3">
                                             <p className="text-xs text-slate-400">Vencimento</p>
-                                            <p className="font-semibold text-slate-700">{formatDate(t.vencimento)}</p>
+                                            <p className="font-semibold text-slate-700">{semValidade ? "Sem validade" : formatDate(t.vencimento)}</p>
                                         </div>
                                     </div>
 
@@ -2704,13 +2739,15 @@ function ConsultaQRPublica({ dados }) {
                                     </div>
 
                                     <p className={classNames("mt-3 text-xs font-medium", alerta30Dias || dias < 0 ? "text-red-700" : "text-slate-500")}>
-                                        {dias < 0
-                                            ? `Vencido há ${Math.abs(dias)} dia(s).`
-                                            : dias <= 5
-                                                ? `Atenção: faltam ${dias} dia(s) para vencer. Renovar com prioridade.`
-                                                : alerta30Dias
-                                                    ? "Atenção: documento próximo da data de vencimento."
-                                                    : `Faltam ${dias} dia(s) para vencer.`}
+                                        {semValidade
+                                            ? "Documento sem validade definida."
+                                            : dias < 0
+                                                ? `Vencido há ${Math.abs(dias)} dia(s).`
+                                                : dias <= 5
+                                                    ? `Atenção: faltam ${dias} dia(s) para vencer. Renovar com prioridade.`
+                                                    : alerta30Dias
+                                                        ? "Atenção: documento próximo da data de vencimento."
+                                                        : `Faltam ${dias} dia(s) para vencer.`}
                                     </p>
                                 </div>
                             );
@@ -2957,7 +2994,11 @@ function Treinamentos({
         }
 
         const incompletos = arquivosLote.filter(
-            (item) => !item.colaboradorCodigo || !item.treinamentoId || !item.dataRealizacao || !item.dataVencimento
+            (item) =>
+                !item.colaboradorCodigo ||
+                !item.treinamentoId ||
+                !item.dataRealizacao ||
+                (!treinamentoSemValidade(item.treinamentoId) && !item.dataVencimento)
         );
 
         if (incompletos.length > 0) {
@@ -3012,7 +3053,7 @@ function Treinamentos({
 
     const documentosFiltrados = documentos.filter((documento) => {
         const vencimentoFiltro = datasRevisao[documento.id]?.vencimento ?? documento.vencimento ?? "";
-        const status = statusDocumento(vencimentoFiltro);
+        const status = statusDocumento(vencimentoFiltro, treinamentoSemValidade(documento.treinamentoId));
         const termo = normalizarTextoBusca(buscaCertificados);
 
         const textoBusca = normalizarTextoBusca(
@@ -3022,7 +3063,7 @@ function Treinamentos({
         const bateBusca = !termo || textoBusca.includes(termo);
         const bateStatus =
             filtroStatusCertificados === "Todos" ||
-            (filtroStatusCertificados === "Em dia" && status.chave === "em-dia") ||
+            (filtroStatusCertificados === "Em dia" && ["emdia", "semvalidade"].includes(status.chave)) ||
             (filtroStatusCertificados === "A vencer" && status.chave === "vencendo") ||
             (filtroStatusCertificados === "Vencido" && status.chave === "vencido");
 
@@ -3047,7 +3088,7 @@ function Treinamentos({
 
     const totalPorStatusCertificados = documentos.reduce(
         (acc, documento) => {
-            const status = statusDocumento(documento.vencimento);
+            const status = statusDocumento(documento.vencimento, treinamentoSemValidade(documento.treinamentoId));
 
             if (status.chave === "vencido") acc.vencidos += 1;
             else if (status.chave === "vencendo") acc.aVencer += 1;
@@ -3066,7 +3107,7 @@ function Treinamentos({
             (colaborador.treinamentos || []).forEach((certificado) => {
                 const dias = diasParaVencer(certificado.vencimento);
 
-                if (dias < 0 || dias > 30) return;
+                if (dias === null || dias < 0 || dias > 30) return;
 
                 const empresaNome = colaborador.empresaExibicao || colaborador.empresa || "Empresa não informada";
                 const chave = colaborador.empresaId || empresaNome;
@@ -3145,10 +3186,7 @@ function Treinamentos({
 
             if (campo === "realizado") {
                 const vencimentoAutomatico = calcularVencimentoTreinamento(doc.treinamentoId, valor);
-
-                if (vencimentoAutomatico) {
-                    proximosDados.vencimento = vencimentoAutomatico;
-                }
+                proximosDados.vencimento = vencimentoAutomatico || "";
             }
 
             return {
@@ -3163,8 +3201,10 @@ function Treinamentos({
 
         const valores = valoresRevisao(doc);
 
-        if (!valores.realizado || !valores.vencimento) {
-            alert("Informe a data de realização e o vencimento.");
+        const exigeVencimento = !treinamentoSemValidade(doc.treinamentoId);
+
+        if (!valores.realizado || (exigeVencimento && !valores.vencimento)) {
+            alert(exigeVencimento ? "Informe a data de realização e o vencimento." : "Informe a data de realização/emissão.");
             return;
         }
 
@@ -3697,7 +3737,8 @@ function Treinamentos({
                                             <div className="mt-4 space-y-3 border-t border-slate-100 pt-4">
                                                 {certificados.map((d, idx) => {
                                                     const valores = valoresRevisao(d);
-                                                    const statusAtual = statusDocumento(valores.vencimento || d.vencimento);
+                                                    const semValidade = treinamentoSemValidade(d.treinamentoId);
+                                                    const statusAtual = statusDocumento(valores.vencimento || d.vencimento, semValidade);
                                                     const itemKey = String(d.id || `${d.colaborador.id}-${d.treinamentoId}-${idx}`);
                                                     const aberto = Boolean(certificadosAbertos[itemKey]);
 
@@ -3718,6 +3759,20 @@ function Treinamentos({
                                                                     <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-slate-500">
                                                                         <FileText className="h-4 w-4 text-slate-400" />
                                                                         <span className="break-words">{d.arquivo || "Arquivo não informado"}</span>
+                                                                    </div>
+
+                                                                    <div className="mt-3 grid gap-2 sm:grid-cols-2">
+                                                                        <div className="rounded-xl bg-white px-3 py-2 ring-1 ring-slate-100">
+                                                                            <p className="text-[10px] font-bold uppercase tracking-wide text-slate-400">Realização</p>
+                                                                            <p className="text-xs font-semibold text-slate-700">{formatDate(valores.realizado)}</p>
+                                                                        </div>
+
+                                                                        <div className="rounded-xl bg-white px-3 py-2 ring-1 ring-slate-100">
+                                                                            <p className="text-[10px] font-bold uppercase tracking-wide text-slate-400">Vencimento</p>
+                                                                            <p className="text-xs font-semibold text-slate-700">
+                                                                                {semValidade ? "Sem validade" : formatDate(valores.vencimento)}
+                                                                            </p>
+                                                                        </div>
                                                                     </div>
                                                                 </div>
 
@@ -3776,12 +3831,18 @@ function Treinamentos({
 
                                                                         <div>
                                                                             <p className="mb-1 text-[10px] font-bold uppercase tracking-wide text-slate-400">Vencimento</p>
-                                                                            <input
-                                                                                type="date"
-                                                                                value={valores.vencimento}
-                                                                                onChange={(e) => alterarDataRevisao(d, "vencimento", e.target.value)}
-                                                                                className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-slate-200"
-                                                                            />
+                                                                            {semValidade ? (
+                                                                                <div className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-semibold text-slate-600">
+                                                                                    Sem validade
+                                                                                </div>
+                                                                            ) : (
+                                                                                <input
+                                                                                    type="date"
+                                                                                    value={valores.vencimento}
+                                                                                    onChange={(e) => alterarDataRevisao(d, "vencimento", e.target.value)}
+                                                                                    className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-slate-200"
+                                                                                />
+                                                                            )}
                                                                         </div>
 
                                                                         <button
@@ -3795,7 +3856,9 @@ function Treinamentos({
                                                                     </div>
 
                                                                     <p className="mt-3 text-xs leading-relaxed text-slate-400">
-                                                                        Ao alterar a realização, o vencimento é recalculado automaticamente pela validade do treinamento.
+                                                                        {semValidade
+                                                                            ? "Este documento não possui validade. Ao revisar, somente a data de realização/emissão será atualizada."
+                                                                            : "Ao alterar a realização, o vencimento é recalculado automaticamente pela validade do treinamento."}
                                                                     </p>
                                                                 </div>
                                                             )}
@@ -4024,16 +4087,19 @@ function ConsultaQR({ colaborador, colaboradores = [], onSelecionarColaborador }
 
                     <div className="mt-6 grid gap-4 md:grid-cols-2">
                         {treinamentos.map((t) => {
-                            const st = statusDocumento(t.vencimento);
-                            const dias = diasParaVencer(t.vencimento);
+                            const semValidade = treinamentoSemValidade(t.treinamentoId);
+                            const st = statusDocumento(t.vencimento, semValidade);
+                            const dias = semValidade ? null : diasParaVencer(t.vencimento);
                             const dataInicio = new Date(`${t.realizado}T12:00:00`);
                             const dataFim = new Date(`${t.vencimento}T12:00:00`);
-                            const totalValidade = Math.max(1, Math.ceil((dataFim - dataInicio) / DAY));
+                            const totalValidade = dias === null ? 1 : Math.max(1, Math.ceil((dataFim - dataInicio) / DAY));
                             const percentualRestante =
-                                dias < 0
+                                dias === null
                                     ? 100
-                                    : Math.max(4, Math.min(100, Math.round((dias / totalValidade) * 100)));
-                            const alerta30Dias = dias >= 0 && dias <= 30;
+                                    : dias < 0
+                                        ? 100
+                                        : Math.max(4, Math.min(100, Math.round((dias / totalValidade) * 100)));
+                            const alerta30Dias = dias !== null && dias >= 0 && dias <= 30;
                             const treinamentoInfo = obterTreinamento(t.treinamentoId);
 
                             return (
@@ -4053,7 +4119,7 @@ function ConsultaQR({ colaborador, colaboradores = [], onSelecionarColaborador }
                                         </div>
                                         <div className="rounded-2xl bg-slate-50 p-3">
                                             <p className="text-xs text-slate-400">Vencimento</p>
-                                            <p className="font-semibold text-slate-700">{formatDate(t.vencimento)}</p>
+                                            <p className="font-semibold text-slate-700">{semValidade ? "Sem validade" : formatDate(t.vencimento)}</p>
                                         </div>
                                     </div>
 
@@ -4068,13 +4134,15 @@ function ConsultaQR({ colaborador, colaboradores = [], onSelecionarColaborador }
                                     </div>
 
                                     <p className={classNames("mt-3 text-xs font-medium", alerta30Dias || dias < 0 ? "text-red-700" : "text-slate-500")}>
-                                        {dias < 0
-                                            ? `Vencido há ${Math.abs(dias)} dia(s).`
-                                            : dias <= 5
-                                                ? `Atenção: faltam ${dias} dia(s) para vencer. Renovar com prioridade.`
-                                                : alerta30Dias
-                                                    ? "Atenção: documento próximo da data de vencimento."
-                                                    : `Faltam ${dias} dia(s) para vencer.`}
+                                        {semValidade
+                                            ? "Documento sem validade definida."
+                                            : dias < 0
+                                                ? `Vencido há ${Math.abs(dias)} dia(s).`
+                                                : dias <= 5
+                                                    ? `Atenção: faltam ${dias} dia(s) para vencer. Renovar com prioridade.`
+                                                    : alerta30Dias
+                                                        ? "Atenção: documento próximo da data de vencimento."
+                                                        : `Faltam ${dias} dia(s) para vencer.`}
                                     </p>
                                 </div>
                             );
@@ -7729,7 +7797,9 @@ export default function App() {
                 throw new Error("Informe a data de realização/emissão.");
             }
 
-            if (!certificado.dataVencimento) {
+            const treinamentoSemVencimento = treinamentoSemValidade(certificado.treinamentoId);
+
+            if (!treinamentoSemVencimento && !certificado.dataVencimento) {
                 throw new Error("Informe a validade/revisão do certificado.");
             }
 
@@ -7788,7 +7858,7 @@ export default function App() {
                 treinamento_codigo: treinamentoIdSeguro,
                 nome_treinamento: treinamento.nome,
                 data_realizacao: certificado.dataRealizacao,
-                data_vencimento: certificado.dataVencimento,
+                data_vencimento: treinamentoSemVencimento ? null : certificado.dataVencimento,
                 arquivo_url: arquivo.arquivoUrl,
                 arquivo_nome: certificado.arquivoNome || arquivo.arquivoNome,
                 observacao: certificado.observacao || null,
@@ -7883,7 +7953,7 @@ export default function App() {
             .from("certificados")
             .update({
                 data_realizacao: datas.realizado,
-                data_vencimento: datas.vencimento,
+                data_vencimento: datas.vencimento || null,
             })
             .eq("id", certificado.id)
             .select("id, colaborador_id, tipo_treinamento, treinamento_codigo, treinamento_id, nome_treinamento, data_realizacao, data_vencimento, arquivo_url, arquivo_nome, observacao, status_validacao, created_at")
