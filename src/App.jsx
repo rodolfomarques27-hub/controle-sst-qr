@@ -64,6 +64,7 @@ const estilosGlobais = `
 `;
 
 const DAY = 1000 * 60 * 60 * 24;
+const SENHA_AUDITORIA = "SST@2026";
 
 function addDays(days) {
     const d = new Date(hoje);
@@ -3573,7 +3574,7 @@ function Treinamentos({
                     </p>
                 </Card>
 
-                <Card>
+                <Card className="xl:col-start-2">
                     <div className="mb-4 flex items-center justify-between gap-3">
                         <h2 className="text-lg font-bold text-slate-950">Base de certificados</h2>
                         <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-600">
@@ -5723,12 +5724,133 @@ function Requisitos() {
     );
 }
 
-function RelatorioAuditoria({ auditoria = [], carregando, onAtualizar, onListarArquivosStorage, onExcluirArquivoStorage }) {
+function AuditoriaAcessoNegado() {
+    return (
+        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
+            <Header
+                titulo="Acesso não autorizado"
+                subtitulo="Seu usuário não possui permissão cadastrada no Supabase para acessar a Auditoria."
+            />
+
+            <div className="mx-auto max-w-xl">
+                <Card>
+                    <div className="flex items-start gap-3">
+                        <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-red-50 text-red-700 ring-1 ring-red-100">
+                            <Lock className="h-6 w-6" />
+                        </div>
+
+                        <div>
+                            <h2 className="text-lg font-bold text-slate-950">Auditoria restrita</h2>
+                            <p className="mt-1 text-sm leading-relaxed text-slate-500">
+                                Para liberar o acesso, o administrador deve cadastrar o e-mail deste usuário na tabela
+                                <strong> auditoria_usuarios_autorizados</strong> no Supabase.
+                            </p>
+                        </div>
+                    </div>
+                </Card>
+            </div>
+        </motion.div>
+    );
+}
+
+function AuditoriaBloqueada({ onLiberar }) {
+    const [senha, setSenha] = useState("");
+    const [erro, setErro] = useState("");
+
+    const validarSenha = (evento) => {
+        evento.preventDefault();
+        setErro("");
+
+        if (senha === SENHA_AUDITORIA) {
+            onLiberar?.();
+            setSenha("");
+            return;
+        }
+
+        setErro("Senha incorreta. A auditoria é restrita a pessoas autorizadas.");
+    };
+
+    return (
+        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
+            <Header
+                titulo="Auditoria protegida"
+                subtitulo="Acesso restrito aos registros de auditoria, arquivos do Storage e histórico de alterações."
+            />
+
+            <div className="mx-auto max-w-xl">
+                <Card>
+                    <div className="mb-5 flex items-start gap-3">
+                        <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-slate-950 text-white">
+                            <Lock className="h-6 w-6" />
+                        </div>
+
+                        <div>
+                            <h2 className="text-lg font-bold text-slate-950">Digite a senha de auditoria</h2>
+                            <p className="mt-1 text-sm leading-relaxed text-slate-500">
+                                Esta área mostra acessos, alterações e arquivos salvos no Storage. O acesso deve ficar restrito aos responsáveis autorizados.
+                            </p>
+                        </div>
+                    </div>
+
+                    <form onSubmit={validarSenha} className="space-y-3">
+                        <input
+                            type="password"
+                            value={senha}
+                            onChange={(e) => setSenha(e.target.value)}
+                            placeholder="Senha de acesso"
+                            className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none focus:border-slate-400 focus:ring-4 focus:ring-slate-100"
+                            autoFocus
+                        />
+
+                        {erro && (
+                            <div className="rounded-2xl bg-red-50 px-4 py-3 text-sm font-semibold text-red-700 ring-1 ring-red-100">
+                                {erro}
+                            </div>
+                        )}
+
+                        <button
+                            type="submit"
+                            className="inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-slate-950 px-4 py-3 text-sm font-semibold text-white hover:bg-slate-800"
+                        >
+                            <Lock className="h-4 w-4" />
+                            Liberar auditoria
+                        </button>
+                    </form>
+
+                    <p className="mt-4 rounded-2xl bg-slate-50 p-3 text-xs leading-relaxed text-slate-500">
+                        Senha inicial: <strong>SST@2026</strong>. Para alterar, edite a constante <strong>SENHA_AUDITORIA</strong> no início do arquivo App.jsx.
+                    </p>
+                </Card>
+            </div>
+        </motion.div>
+    );
+}
+
+function RelatorioAuditoria({
+    auditoria = [],
+    carregando,
+    onAtualizar,
+    onListarArquivosStorage,
+    onExcluirArquivoStorage,
+    onListarUsuariosAuditoria,
+    onSalvarUsuarioAuditoria,
+    onAlternarUsuarioAuditoria,
+    onBloquear,
+}) {
     const [busca, setBusca] = useState("");
     const [filtroAcao, setFiltroAcao] = useState("Todas");
     const [arquivosStorageAuditoria, setArquivosStorageAuditoria] = useState([]);
     const [carregandoStorageAuditoria, setCarregandoStorageAuditoria] = useState(false);
     const [excluindoStorageAuditoria, setExcluindoStorageAuditoria] = useState("");
+    const [usuariosAuditoria, setUsuariosAuditoria] = useState([]);
+    const [carregandoUsuariosAuditoria, setCarregandoUsuariosAuditoria] = useState(false);
+    const [salvandoUsuarioAuditoria, setSalvandoUsuarioAuditoria] = useState(false);
+    const [alterandoUsuarioAuditoria, setAlterandoUsuarioAuditoria] = useState("");
+    const [novoUsuarioAuditoria, setNovoUsuarioAuditoria] = useState({
+        email: "",
+        nome: "",
+        funcao: "",
+    });
 
     const acoes = useMemo(
         () => Array.from(new Set(auditoria.map((item) => item.acao).filter(Boolean))).sort(),
@@ -5780,6 +5902,54 @@ function RelatorioAuditoria({ auditoria = [], carregando, onAtualizar, onListarA
         }
     };
 
+    const carregarUsuariosAuditoria = async () => {
+        if (!onListarUsuariosAuditoria) return;
+
+        setCarregandoUsuariosAuditoria(true);
+
+        const lista = await onListarUsuariosAuditoria();
+
+        setUsuariosAuditoria(lista || []);
+        setCarregandoUsuariosAuditoria(false);
+    };
+
+    const salvarUsuarioAuditoriaTela = async (evento) => {
+        evento.preventDefault();
+
+        if (!novoUsuarioAuditoria.email.trim()) {
+            alert("Informe o e-mail do usuário que terá acesso à Auditoria.");
+            return;
+        }
+
+        setSalvandoUsuarioAuditoria(true);
+
+        const ok = await onSalvarUsuarioAuditoria?.({
+            ...novoUsuarioAuditoria,
+            email: novoUsuarioAuditoria.email.trim().toLowerCase(),
+            nome: novoUsuarioAuditoria.nome.trim(),
+            funcao: novoUsuarioAuditoria.funcao.trim(),
+        });
+
+        setSalvandoUsuarioAuditoria(false);
+
+        if (ok) {
+            setNovoUsuarioAuditoria({ email: "", nome: "", funcao: "" });
+            carregarUsuariosAuditoria();
+        }
+    };
+
+    const alternarUsuarioAuditoriaTela = async (usuarioAutorizado) => {
+        setAlterandoUsuarioAuditoria(usuarioAutorizado.id);
+
+        const ok = await onAlternarUsuarioAuditoria?.(usuarioAutorizado);
+
+        setAlterandoUsuarioAuditoria("");
+
+        if (ok) {
+            carregarUsuariosAuditoria();
+        }
+    };
+
     const baixarCsvAuditoria = () => {
         const cabecalho = ["Data/Hora", "Usuário", "Ação", "Tabela", "Registro", "Descrição"];
         const linhas = registrosFiltrados.map((item) => [
@@ -5822,6 +5992,14 @@ function RelatorioAuditoria({ auditoria = [], carregando, onAtualizar, onListarA
                         </button>
 
                         <button
+                            onClick={onBloquear}
+                            className="inline-flex items-center gap-2 rounded-2xl bg-white px-4 py-3 text-sm font-semibold text-slate-700 ring-1 ring-slate-200 hover:bg-slate-50"
+                        >
+                            <Lock className="h-4 w-4" />
+                            Bloquear auditoria
+                        </button>
+
+                        <button
                             onClick={baixarCsvAuditoria}
                             className="inline-flex items-center gap-2 rounded-2xl bg-slate-950 px-4 py-3 text-sm font-semibold text-white hover:bg-slate-800"
                         >
@@ -5857,6 +6035,123 @@ function RelatorioAuditoria({ auditoria = [], carregando, onAtualizar, onListarA
                     </p>
                 </Card>
             </div>
+
+            <Card className="mt-5">
+                <div className="mb-4 flex flex-col justify-between gap-3 lg:flex-row lg:items-start">
+                    <div>
+                        <h2 className="text-lg font-bold text-slate-950">Usuários autorizados na Auditoria</h2>
+                        <p className="mt-1 text-sm text-slate-500">
+                            Habilite ou desabilite quais usuários podem abrir a aba Auditoria. A permissão é validada no Supabase.
+                        </p>
+                    </div>
+
+                    <button
+                        type="button"
+                        onClick={carregarUsuariosAuditoria}
+                        disabled={carregandoUsuariosAuditoria}
+                        className="inline-flex items-center justify-center gap-2 rounded-2xl bg-white px-4 py-3 text-sm font-semibold text-slate-700 ring-1 ring-slate-200 hover:bg-slate-50 disabled:opacity-60"
+                    >
+                        <RefreshCw className={classNames("h-4 w-4", carregandoUsuariosAuditoria ? "animate-spin" : "")} />
+                        {carregandoUsuariosAuditoria ? "Carregando..." : "Carregar usuários"}
+                    </button>
+                </div>
+
+                <form onSubmit={salvarUsuarioAuditoriaTela} className="grid gap-3 xl:grid-cols-[1fr_1fr_1fr_auto]">
+                    <input
+                        type="email"
+                        value={novoUsuarioAuditoria.email}
+                        onChange={(e) => setNovoUsuarioAuditoria({ ...novoUsuarioAuditoria, email: e.target.value })}
+                        placeholder="E-mail do usuário autorizado"
+                        className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none focus:border-slate-400 focus:ring-4 focus:ring-slate-100"
+                    />
+
+                    <input
+                        value={novoUsuarioAuditoria.nome}
+                        onChange={(e) => setNovoUsuarioAuditoria({ ...novoUsuarioAuditoria, nome: e.target.value })}
+                        placeholder="Nome"
+                        className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none focus:border-slate-400 focus:ring-4 focus:ring-slate-100"
+                    />
+
+                    <input
+                        value={novoUsuarioAuditoria.funcao}
+                        onChange={(e) => setNovoUsuarioAuditoria({ ...novoUsuarioAuditoria, funcao: e.target.value })}
+                        placeholder="Função"
+                        className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none focus:border-slate-400 focus:ring-4 focus:ring-slate-100"
+                    />
+
+                    <button
+                        type="submit"
+                        disabled={salvandoUsuarioAuditoria}
+                        className="rounded-2xl bg-slate-950 px-4 py-3 text-sm font-semibold text-white hover:bg-slate-800 disabled:opacity-60"
+                    >
+                        {salvandoUsuarioAuditoria ? "Salvando..." : "Autorizar"}
+                    </button>
+                </form>
+
+                <div className="mt-4 space-y-2">
+                    {usuariosAuditoria.length === 0 && !carregandoUsuariosAuditoria && (
+                        <div className="rounded-3xl border border-dashed border-slate-300 p-6 text-center text-sm text-slate-500">
+                            Clique em <strong>Carregar usuários</strong> para visualizar quem tem acesso à Auditoria.
+                        </div>
+                    )}
+
+                    {usuariosAuditoria.map((usuarioAutorizado) => (
+                        <div
+                            key={usuarioAutorizado.id}
+                            className={classNames(
+                                "rounded-3xl border p-4",
+                                usuarioAutorizado.ativo
+                                    ? "border-emerald-200 bg-emerald-50"
+                                    : "border-slate-200 bg-slate-50"
+                            )}
+                        >
+                            <div className="flex flex-col justify-between gap-3 lg:flex-row lg:items-center">
+                                <div className="min-w-0">
+                                    <div className="flex flex-wrap items-center gap-2">
+                                        <p className="break-words font-bold text-slate-950">{usuarioAutorizado.email}</p>
+                                        <span
+                                            className={classNames(
+                                                "rounded-full px-3 py-1 text-xs font-bold ring-1",
+                                                usuarioAutorizado.ativo
+                                                    ? "bg-emerald-100 text-emerald-700 ring-emerald-200"
+                                                    : "bg-slate-100 text-slate-600 ring-slate-200"
+                                            )}
+                                        >
+                                            {usuarioAutorizado.ativo ? "Habilitado" : "Desabilitado"}
+                                        </span>
+                                    </div>
+
+                                    <p className="mt-1 text-sm text-slate-500">
+                                        {usuarioAutorizado.nome || "Nome não informado"} · {usuarioAutorizado.funcao || "Função não informada"}
+                                    </p>
+                                </div>
+
+                                <button
+                                    type="button"
+                                    onClick={() => alternarUsuarioAuditoriaTela(usuarioAutorizado)}
+                                    disabled={alterandoUsuarioAuditoria === usuarioAutorizado.id}
+                                    className={classNames(
+                                        "whitespace-nowrap rounded-2xl px-4 py-2 text-sm font-semibold ring-1 disabled:opacity-60",
+                                        usuarioAutorizado.ativo
+                                            ? "bg-red-50 text-red-700 ring-red-200 hover:bg-red-100"
+                                            : "bg-emerald-50 text-emerald-700 ring-emerald-200 hover:bg-emerald-100"
+                                    )}
+                                >
+                                    {alterandoUsuarioAuditoria === usuarioAutorizado.id
+                                        ? "Atualizando..."
+                                        : usuarioAutorizado.ativo
+                                            ? "Desabilitar acesso"
+                                            : "Habilitar acesso"}
+                                </button>
+                            </div>
+                        </div>
+                    ))}
+                </div>
+
+                <p className="mt-3 rounded-2xl bg-slate-50 p-3 text-xs leading-relaxed text-slate-500">
+                    A senha da tela continua existindo, mas o Supabase bloqueia a Auditoria para e-mails não cadastrados ou desabilitados nesta lista.
+                </p>
+            </Card>
 
             <Card className="mt-5">
                 <div className="mb-4 flex flex-col justify-between gap-3 lg:flex-row lg:items-center">
@@ -6087,6 +6382,15 @@ export default function App() {
     const [erroConsultaPublica, setErroConsultaPublica] = useState("");
     const [auditoria, setAuditoria] = useState([]);
     const [carregandoAuditoria, setCarregandoAuditoria] = useState(false);
+    const [podeAcessarAuditoria, setPodeAcessarAuditoria] = useState(false);
+    const [verificandoAcessoAuditoria, setVerificandoAcessoAuditoria] = useState(false);
+    const [auditoriaLiberada, setAuditoriaLiberada] = useState(() => {
+        try {
+            return window.sessionStorage.getItem("auditoriaLiberada") === "true";
+        } catch {
+            return false;
+        }
+    });
 
     const carregarEmpresas = useCallback(async () => {
         const { data, error } = await supabase
@@ -6153,6 +6457,150 @@ export default function App() {
         },
         [usuario]
     );
+
+    const carregarUsuariosAutorizadosAuditoria = useCallback(async () => {
+        const { data, error } = await supabase
+            .from("auditoria_usuarios_autorizados")
+            .select("id, created_at, email, nome, funcao, ativo, observacao")
+            .order("email", { ascending: true });
+
+        if (error) {
+            alert(`Erro ao carregar usuários autorizados: ${error.message}`);
+            return [];
+        }
+
+        return data || [];
+    }, []);
+
+    const salvarUsuarioAutorizadoAuditoria = useCallback(
+        async (usuarioAutorizado) => {
+            if (!usuarioAutorizado?.email) {
+                alert("Informe o e-mail do usuário autorizado.");
+                return false;
+            }
+
+            const { error } = await supabase
+                .from("auditoria_usuarios_autorizados")
+                .upsert(
+                    {
+                        email: usuarioAutorizado.email.toLowerCase(),
+                        nome: usuarioAutorizado.nome || null,
+                        funcao: usuarioAutorizado.funcao || null,
+                        ativo: true,
+                    },
+                    { onConflict: "email" }
+                );
+
+            if (error) {
+                alert(`Erro ao autorizar usuário: ${error.message}`);
+                return false;
+            }
+
+            await registrarAuditoria(
+                "USUARIO_AUDITORIA_AUTORIZADO",
+                "auditoria_usuarios_autorizados",
+                `Autorizou usuário para Auditoria: ${usuarioAutorizado.email}`,
+                usuarioAutorizado.email,
+                usuarioAutorizado
+            );
+
+            return true;
+        },
+        [registrarAuditoria]
+    );
+
+    const alternarUsuarioAutorizadoAuditoria = useCallback(
+        async (usuarioAutorizado) => {
+            if (!usuarioAutorizado?.id) return false;
+
+            if (
+                usuarioAutorizado.ativo &&
+                usuario?.email &&
+                usuarioAutorizado.email?.toLowerCase() === usuario.email.toLowerCase()
+            ) {
+                alert("Você não pode desabilitar o próprio acesso à Auditoria pelo sistema.");
+                return false;
+            }
+
+            const novoStatus = !usuarioAutorizado.ativo;
+
+            const { error } = await supabase
+                .from("auditoria_usuarios_autorizados")
+                .update({ ativo: novoStatus })
+                .eq("id", usuarioAutorizado.id);
+
+            if (error) {
+                alert(`Erro ao atualizar acesso: ${error.message}`);
+                return false;
+            }
+
+            await registrarAuditoria(
+                novoStatus ? "USUARIO_AUDITORIA_HABILITADO" : "USUARIO_AUDITORIA_DESABILITADO",
+                "auditoria_usuarios_autorizados",
+                `${novoStatus ? "Habilitou" : "Desabilitou"} acesso à Auditoria: ${usuarioAutorizado.email}`,
+                usuarioAutorizado.id,
+                {
+                    email: usuarioAutorizado.email,
+                    ativo: novoStatus,
+                }
+            );
+
+            return true;
+        },
+        [registrarAuditoria, usuario]
+    );
+
+    const verificarAcessoAuditoria = useCallback(async () => {
+        if (!usuario?.email) {
+            setPodeAcessarAuditoria(false);
+            return false;
+        }
+
+        setVerificandoAcessoAuditoria(true);
+
+        const { data, error } = await supabase.rpc("usuario_pode_acessar_auditoria");
+
+        setVerificandoAcessoAuditoria(false);
+
+        if (error) {
+            console.warn("Erro ao verificar permissão de auditoria:", error.message);
+            setPodeAcessarAuditoria(false);
+            return false;
+        }
+
+        setPodeAcessarAuditoria(Boolean(data));
+        return Boolean(data);
+    }, [usuario]);
+
+    const liberarAuditoria = async () => {
+        const autorizadoAuditoria = await verificarAcessoAuditoria();
+
+        if (!autorizadoAuditoria) {
+            alert("Seu usuário não está autorizado no Supabase para acessar a Auditoria.");
+            return;
+        }
+
+        try {
+            window.sessionStorage.setItem("auditoriaLiberada", "true");
+        } catch {
+            // Sessão indisponível; mantém apenas em memória.
+        }
+
+        setAuditoriaLiberada(true);
+        carregarAuditoria();
+        registrarAuditoria("ACESSO_AUDITORIA", "auditoria_sistema", "Liberou acesso à tela de Auditoria por senha e regra do Supabase");
+    };
+
+    const bloquearAuditoria = () => {
+        try {
+            window.sessionStorage.removeItem("auditoriaLiberada");
+        } catch {
+            // Sessão indisponível; mantém apenas em memória.
+        }
+
+        setAuditoriaLiberada(false);
+        registrarAuditoria("BLOQUEIO_AUDITORIA", "auditoria_sistema", "Bloqueou novamente o acesso à tela de Auditoria");
+    };
 
     const carregarColaboradores = useCallback(async () => {
         setCarregandoBanco(true);
@@ -7626,14 +8074,19 @@ export default function App() {
     useEffect(() => {
         if (!usuario) return;
 
-        const timer = window.setTimeout(() => {
+        const timer = window.setTimeout(async () => {
             carregarColaboradores();
-            carregarAuditoria();
             registrarAuditoria("ACESSO", "sistema", "Usuário acessou o sistema");
+
+            const autorizadoAuditoria = await verificarAcessoAuditoria();
+
+            if (autorizadoAuditoria) {
+                carregarAuditoria();
+            }
         }, 0);
 
         return () => window.clearTimeout(timer);
-    }, [usuario, carregarColaboradores, carregarAuditoria, registrarAuditoria]);
+    }, [usuario, carregarColaboradores, carregarAuditoria, registrarAuditoria, verificarAcessoAuditoria]);
 
     useEffect(() => {
         if (!usuario || colaboradores.length === 0) return;
@@ -7661,9 +8114,15 @@ export default function App() {
         { id: "colaboradores", label: "Colaboradores", icon: Users },
         { id: "treinamentos", label: "Treinamentos", icon: ClipboardCheck },
         { id: "qr", label: "Consulta QR", icon: QrCode },
-        { id: "auditoria", label: "Auditoria", icon: Database },
+        ...(podeAcessarAuditoria ? [{ id: "auditoria", label: "Auditoria", icon: Database }] : []),
         { id: "roteiro", label: "Roteiro", icon: CalendarClock },
     ];
+
+    useEffect(() => {
+        if (tela === "auditoria" && usuario && !verificandoAcessoAuditoria && !podeAcessarAuditoria) {
+            setAuditoriaLiberada(false);
+        }
+    }, [tela, usuario, verificandoAcessoAuditoria, podeAcessarAuditoria]);
 
     const selecionarColaborador = (c) => {
         setColaboradorSelecionado(c);
@@ -7685,6 +8144,13 @@ export default function App() {
         setEmpresasBanco([]);
         setDocumentosEmpresas([]);
         setColaboradorSelecionado(null);
+        setAuditoriaLiberada(false);
+        setPodeAcessarAuditoria(false);
+        try {
+            window.sessionStorage.removeItem("auditoriaLiberada");
+        } catch {
+            // Ignora indisponibilidade do sessionStorage.
+        }
     };
 
     if (carregandoSessao) {
@@ -7867,13 +8333,30 @@ export default function App() {
                     )}
 
                     {tela === "auditoria" && (
-                        <RelatorioAuditoria
-                            auditoria={auditoria}
-                            carregando={carregandoAuditoria}
-                            onAtualizar={carregarAuditoria}
-                            onListarArquivosStorage={listarArquivosCertificadosStorage}
-                            onExcluirArquivoStorage={excluirArquivoCertificadoStorage}
-                        />
+                        verificandoAcessoAuditoria ? (
+                            <Card>
+                                <div className="flex items-center gap-3 text-sm font-semibold text-slate-600">
+                                    <RefreshCw className="h-4 w-4 animate-spin" />
+                                    Verificando permissão de auditoria...
+                                </div>
+                            </Card>
+                        ) : !podeAcessarAuditoria ? (
+                            <AuditoriaAcessoNegado />
+                        ) : auditoriaLiberada ? (
+                            <RelatorioAuditoria
+                                auditoria={auditoria}
+                                carregando={carregandoAuditoria}
+                                onAtualizar={carregarAuditoria}
+                                onListarArquivosStorage={listarArquivosCertificadosStorage}
+                                onExcluirArquivoStorage={excluirArquivoCertificadoStorage}
+                                onListarUsuariosAuditoria={carregarUsuariosAutorizadosAuditoria}
+                                onSalvarUsuarioAuditoria={salvarUsuarioAutorizadoAuditoria}
+                                onAlternarUsuarioAuditoria={alternarUsuarioAutorizadoAuditoria}
+                                onBloquear={bloquearAuditoria}
+                            />
+                        ) : (
+                            <AuditoriaBloqueada onLiberar={liberarAuditoria} />
+                        )
                     )}
 
                     {tela === "roteiro" && <Requisitos />}
