@@ -2437,14 +2437,42 @@ function Colaboradores({
                                                         </p>
 
                                                         <div className="space-y-1.5">
-                                                            {avaliacao.itens.map((item) => (
-                                                                <div key={item.treinamento.id} className="flex items-center justify-between gap-2 rounded-xl bg-slate-50 px-2 py-1.5 text-xs">
-                                                                    <span className="min-w-0 break-words text-slate-600">{item.treinamento.nome}</span>
-                                                                    <span className={classNames("shrink-0 rounded-full px-2 py-0.5 text-[10px] font-semibold ring-1", item.status.classe)}>
-                                                                        {item.status.texto}
-                                                                    </span>
-                                                                </div>
-                                                            ))}
+                                                            {avaliacao.itens.map((item) => {
+                                                                const temDocumentoLancado = Boolean(item.realizado);
+                                                                const semValidade = treinamentoSemValidade(item.treinamento.id);
+                                                                const dataElaboracao = item.realizado?.realizado || "";
+                                                                const dataVencimento = item.realizado?.vencimento || "";
+
+                                                                return (
+                                                                    <div
+                                                                        key={item.treinamento.id}
+                                                                        className="flex flex-col gap-2 rounded-xl bg-slate-50 px-3 py-2 text-xs lg:flex-row lg:items-center lg:justify-between"
+                                                                    >
+                                                                        <div className="min-w-0 flex-1">
+                                                                            <p className="break-words font-medium text-slate-700">{item.treinamento.nome}</p>
+
+                                                                            {temDocumentoLancado ? (
+                                                                                <div className="mt-1 flex flex-wrap gap-1.5 text-[10px] font-semibold">
+                                                                                    <span className="rounded-full bg-white px-2 py-0.5 text-slate-600 ring-1 ring-slate-200">
+                                                                                        Elaboração: {formatDate(dataElaboracao)}
+                                                                                    </span>
+                                                                                    <span className="rounded-full bg-white px-2 py-0.5 text-slate-600 ring-1 ring-slate-200">
+                                                                                        Vencimento: {semValidade ? "Sem validade" : formatDate(dataVencimento)}
+                                                                                    </span>
+                                                                                </div>
+                                                                            ) : (
+                                                                                <p className="mt-1 text-[10px] font-medium text-slate-400">
+                                                                                    Documento ainda não enviado.
+                                                                                </p>
+                                                                            )}
+                                                                        </div>
+
+                                                                        <span className={classNames("w-fit shrink-0 rounded-full px-2 py-0.5 text-[10px] font-semibold ring-1", item.status.classe)}>
+                                                                            {item.status.texto}
+                                                                        </span>
+                                                                    </div>
+                                                                );
+                                                            })}
                                                         </div>
                                                     </div>
                                                 )}
@@ -3307,21 +3335,49 @@ function Treinamentos({
         return bateBusca && bateStatus;
     });
 
-    const documentosPorColaborador = Object.values(
-        documentosFiltrados.reduce((acc, documento) => {
-            const colaboradorId = documento.colaborador?.id || "sem-colaborador";
+    const documentosPorColaborador = colaboradores
+        .map((colaborador) => {
+            const avaliacao = avaliarTreinamentosColaborador(colaborador);
+            const termo = normalizarTextoBusca(buscaCertificados);
+            const certificadosDoColaborador = documentosFiltrados.filter(
+                (documento) => String(documento.colaborador?.id) === String(colaborador.id)
+            );
 
-            if (!acc[colaboradorId]) {
-                acc[colaboradorId] = {
-                    colaborador: documento.colaborador,
-                    certificados: [],
-                };
-            }
+            const pendentesDoColaborador = avaliacao.itens
+                .filter((item) => item.status.chave === "pendente")
+                .filter((item) => {
+                    const textoBusca = normalizarTextoBusca(
+                        `${colaborador.nome || ""} ${colaborador.empresaExibicao || colaborador.empresa || ""} ${colaborador.codigoFuncionario || ""} ${item.treinamento?.nome || ""} pendente faltando`
+                    );
 
-            acc[colaboradorId].certificados.push(documento);
-            return acc;
-        }, {})
-    );
+                    const bateBusca = !termo || textoBusca.includes(termo);
+                    const bateStatus = filtroStatusCertificados === "Todos" || filtroStatusCertificados === "Pendentes";
+
+                    return bateBusca && bateStatus;
+                });
+
+            return {
+                colaborador,
+                certificados: certificadosDoColaborador,
+                pendentes: pendentesDoColaborador,
+                avaliacao,
+            };
+        })
+        .filter((grupo) => {
+            if (filtroStatusCertificados === "Pendentes") return grupo.pendentes.length > 0;
+
+            return grupo.certificados.length > 0 || grupo.pendentes.length > 0;
+        });
+
+    const enviarDocumentoPendente = (colaborador, treinamento) => {
+        setColabId(colaborador.codigoFuncionario);
+        setTreinamentoId(Number(treinamento.id));
+        setArquivoSelecionado(null);
+        setSugestaoDataArquivo(null);
+        setObservacao("");
+
+        window.scrollTo({ top: 0, behavior: "smooth" });
+    };
 
     const totalPorStatusCertificados = documentos.reduce(
         (acc, documento) => {
@@ -3333,7 +3389,15 @@ function Treinamentos({
 
             return acc;
         },
-        { emDia: 0, aVencer: 0, vencidos: 0 }
+        {
+            emDia: 0,
+            aVencer: 0,
+            vencidos: 0,
+            pendentes: colaboradores.reduce(
+                (total, colaborador) => total + avaliarTreinamentosColaborador(colaborador).pendentes.length,
+                0
+            ),
+        }
     );
 
 
@@ -3344,8 +3408,9 @@ function Treinamentos({
             (colaborador.treinamentos || []).forEach((certificado) => {
                 const dias = diasParaVencer(certificado.vencimento);
 
-                if (dias === null || dias < 0 || dias > 30) return;
+                if (dias === null || dias > 30) return;
 
+                const tipoAlerta = dias < 0 ? "vencido" : "a vencer";
                 const empresaNome = colaborador.empresaExibicao || colaborador.empresa || "Empresa não informada";
                 const chave = colaborador.empresaId || empresaNome;
                 const treinamento = obterTreinamento(certificado.treinamentoId);
@@ -3366,6 +3431,7 @@ function Treinamentos({
                     treinamento: certificado.nomeTreinamento || treinamento.nome,
                     vencimento: certificado.vencimento,
                     dias,
+                    tipoAlerta,
                 });
             });
         });
@@ -3379,16 +3445,20 @@ function Treinamentos({
             return;
         }
 
-        const assunto = `Aviso SST - treinamentos/ASO a vencer em até 30 dias - ${grupo.empresa}`;
+        const assunto = `Aviso SST - treinamentos/ASO vencidos ou a vencer - ${grupo.empresa}`;
         const linhas = grupo.itens
             .sort((a, b) => a.dias - b.dias)
-            .map(
-                (item, index) =>
-                    `${index + 1}. ${item.colaborador} (${item.codigo}) - ${item.funcao}\nTreinamento/Documento: ${item.treinamento}\nVencimento: ${formatDate(item.vencimento)} - faltam ${item.dias} dia(s)`
-            )
+            .map((item, index) => {
+                const situacao =
+                    item.dias < 0
+                        ? `vencido há ${Math.abs(item.dias)} dia(s)`
+                        : `faltam ${item.dias} dia(s)`;
+
+                return `${index + 1}. ${item.colaborador} (${item.codigo}) - ${item.funcao}\nTreinamento/Documento: ${item.treinamento}\nVencimento: ${formatDate(item.vencimento)} - ${situacao}`;
+            })
             .join("\n\n");
 
-        const corpo = `Olá${grupo.tstResponsavel ? `, ${grupo.tstResponsavel}` : ""}.\n\nSegue aviso automático de treinamentos/documentos SST com vencimento previsto para os próximos 30 dias.\n\nEmpresa: ${grupo.empresa}\n\n${linhas}\n\nSolicitamos programar a renovação antes do vencimento para evitar bloqueio de atividade.\n\nAtenciosamente,\nSistema de Controle SST QR`;
+        const corpo = `Olá${grupo.tstResponsavel ? `, ${grupo.tstResponsavel}` : ""}.\n\nSegue aviso automático de treinamentos/documentos SST vencidos ou com vencimento previsto para os próximos 30 dias.\n\nEmpresa: ${grupo.empresa}\n\n${linhas}\n\nSolicitamos regularizar os documentos vencidos e programar a renovação dos próximos vencimentos para evitar bloqueio de atividade.\n\nAtenciosamente,\nSistema de Controle SST QR`;
 
         const mailtoUrl = `mailto:${grupo.tstEmail}?subject=${encodeURIComponent(assunto)}&body=${encodeURIComponent(corpo)}`;
         const link = document.createElement("a");
@@ -3485,6 +3555,7 @@ function Treinamentos({
                         className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 outline-none focus:border-slate-400 focus:ring-4 focus:ring-slate-100"
                     >
                         <option value="Todos">Todos os status</option>
+                        <option value="Pendentes">Pendentes ({totalPorStatusCertificados.pendentes})</option>
                         <option value="Em dia">Em dia ({totalPorStatusCertificados.emDia})</option>
                         <option value="A vencer">A vencer ({totalPorStatusCertificados.aVencer})</option>
                         <option value="Vencido">Vencidos ({totalPorStatusCertificados.vencidos})</option>
@@ -3814,21 +3885,21 @@ function Treinamentos({
                             <div>
                                 <h2 className="text-lg font-bold text-slate-950">Alertas para TST</h2>
                                 <p className="mt-1 text-sm text-slate-500">
-                                    Treinamentos, certificados e ASO com vencimento nos próximos 30 dias.
+                                    Treinamentos, certificados e ASO vencidos ou com vencimento nos próximos 30 dias.
                                 </p>
                             </div>
 
                             <span className="w-fit rounded-full bg-orange-50 px-3 py-1 text-xs font-semibold text-orange-700 ring-1 ring-orange-200">
-                                {alertasTstPorEmpresa.reduce((total, grupo) => total + grupo.itens.length, 0)} item(ns) a vencer
+                                {alertasTstPorEmpresa.reduce((total, grupo) => total + grupo.itens.length, 0)} item(ns) em alerta
                             </span>
                         </div>
 
                         {alertasTstPorEmpresa.length === 0 ? (
                             <div className="rounded-3xl border border-dashed border-slate-300 p-6 text-center">
                                 <CheckCircle2 className="mx-auto h-9 w-9 text-emerald-500" />
-                                <h3 className="mt-3 font-bold text-slate-900">Nenhum vencimento nos próximos 30 dias</h3>
+                                <h3 className="mt-3 font-bold text-slate-900">Nenhum documento vencido ou a vencer</h3>
                                 <p className="mt-1 text-sm text-slate-500">
-                                    Quando houver documentos ou treinamentos a vencer, o aviso ao TST aparecerá aqui.
+                                    Quando houver documentos vencidos ou a vencer, o aviso ao TST aparecerá aqui.
                                 </p>
                             </div>
                         ) : (
@@ -3856,11 +3927,39 @@ function Treinamentos({
                                         <div className="mt-3 space-y-2">
                                             {grupo.itens
                                                 .sort((a, b) => a.dias - b.dias)
-                                                .map((item, index) => (
-                                                    <div key={`${grupo.empresa}-${item.codigo}-${item.treinamento}-${index}`} className="rounded-2xl bg-orange-50 px-3 py-2 text-sm text-orange-950 ring-1 ring-orange-100">
-                                                        <strong>{item.colaborador}</strong> · {item.treinamento} · vencimento em {formatDate(item.vencimento)} · faltam {item.dias} dia(s)
-                                                    </div>
-                                                ))}
+                                                .map((item, index) => {
+                                                    const vencido = item.dias < 0;
+                                                    const textoPrazo = vencido
+                                                        ? `vencido há ${Math.abs(item.dias)} dia(s)`
+                                                        : `faltam ${item.dias} dia(s)`;
+
+                                                    return (
+                                                        <div
+                                                            key={`${grupo.empresa}-${item.codigo}-${item.treinamento}-${index}`}
+                                                            className={classNames(
+                                                                "rounded-2xl px-3 py-2 text-sm ring-1",
+                                                                vencido
+                                                                    ? "bg-red-50 text-red-900 ring-red-100"
+                                                                    : "bg-orange-50 text-orange-950 ring-orange-100"
+                                                            )}
+                                                        >
+                                                            <div className="flex flex-wrap items-center gap-2">
+                                                                <span
+                                                                    className={classNames(
+                                                                        "rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide",
+                                                                        vencido ? "bg-red-100 text-red-700" : "bg-orange-100 text-orange-700"
+                                                                    )}
+                                                                >
+                                                                    {vencido ? "Vencido" : "A vencer"}
+                                                                </span>
+                                                                <strong>{item.colaborador}</strong>
+                                                            </div>
+                                                            <p className="mt-1">
+                                                                {item.treinamento} · vencimento em {formatDate(item.vencimento)} · {textoPrazo}
+                                                            </p>
+                                                        </div>
+                                                    );
+                                                })}
                                         </div>
                                     </div>
                                 ))}
@@ -3876,12 +3975,12 @@ function Treinamentos({
                         <div className="mb-4 flex items-center justify-between gap-3">
                             <h2 className="text-lg font-bold text-slate-950">Base de certificados</h2>
                             <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-600">
-                                {documentosFiltrados.length} de {documentos.length} registro(s)
+                                {documentosFiltrados.length} certificado(s) · {totalPorStatusCertificados.pendentes} pendente(s)
                             </span>
                         </div>
 
                         <div className="space-y-3">
-                            {documentos.length === 0 && (
+                            {documentos.length === 0 && totalPorStatusCertificados.pendentes === 0 && (
                                 <div className="rounded-3xl border border-dashed border-slate-300 p-8 text-center">
                                     <FileText className="mx-auto h-10 w-10 text-slate-300" />
                                     <h3 className="mt-3 font-bold text-slate-900">Nenhum certificado lançado ainda</h3>
@@ -3891,7 +3990,7 @@ function Treinamentos({
                                 </div>
                             )}
 
-                            {documentos.length > 0 && documentosFiltrados.length === 0 && (
+                            {documentos.length > 0 && documentosPorColaborador.length === 0 && (
                                 <div className="rounded-3xl border border-dashed border-slate-300 p-8 text-center">
                                     <Filter className="mx-auto h-10 w-10 text-slate-300" />
                                     <h3 className="mt-3 font-bold text-slate-900">Nenhum certificado encontrado</h3>
@@ -3904,13 +4003,17 @@ function Treinamentos({
                             {documentosPorColaborador.map((grupo) => {
                                 const colaborador = grupo.colaborador;
                                 const certificados = grupo.certificados || [];
+                                const pendentes = grupo.pendentes || [];
                                 const grupoKey = String(colaborador?.id || colaborador?.codigoFuncionario || "sem-colaborador");
                                 const grupoAberto = Boolean(gruposCertificadosAbertos[grupoKey]);
 
                                 const resumoStatus = certificados.reduce(
                                     (acc, certificado) => {
                                         const valores = valoresRevisao(certificado);
-                                        const status = statusDocumento(valores.vencimento || certificado.vencimento);
+                                        const status = statusDocumento(
+                                            valores.vencimento || certificado.vencimento,
+                                            treinamentoSemValidade(certificado.treinamentoId)
+                                        );
 
                                         if (status.chave === "vencido") acc.vencidos += 1;
                                         else if (status.chave === "vencendo") acc.aVencer += 1;
@@ -3945,6 +4048,12 @@ function Treinamentos({
                                                     <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-600">
                                                         {certificados.length} certificado(s)
                                                     </span>
+
+                                                    {pendentes.length > 0 && (
+                                                        <span className="rounded-full bg-blue-50 px-3 py-1 text-xs font-semibold text-blue-700 ring-1 ring-blue-200">
+                                                            {pendentes.length} faltando
+                                                        </span>
+                                                    )}
 
                                                     {resumoStatus.emDia > 0 && (
                                                         <span className="rounded-full bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700 ring-1 ring-emerald-200">
@@ -3992,6 +4101,63 @@ function Treinamentos({
 
                                         {grupoAberto && (
                                             <div className="mt-4 space-y-3 border-t border-slate-100 pt-4">
+                                                {pendentes.length > 0 && (
+                                                    <div className="rounded-2xl border border-dashed border-blue-200 bg-blue-50 p-3">
+                                                        <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+                                                            <div>
+                                                                <p className="text-xs font-bold uppercase tracking-wide text-blue-700">
+                                                                    Documentos faltantes para envio
+                                                                </p>
+                                                                <p className="mt-1 text-[11px] text-blue-700">
+                                                                    Clique em enviar para preencher automaticamente o colaborador e o treinamento no lançamento.
+                                                                </p>
+                                                            </div>
+
+                                                            <span className="rounded-full bg-white px-3 py-1 text-xs font-bold text-blue-700 ring-1 ring-blue-200">
+                                                                {pendentes.length} pendente(s)
+                                                            </span>
+                                                        </div>
+
+                                                        <div className="space-y-2">
+                                                            {pendentes.map((item) => (
+                                                                <div
+                                                                    key={`pendente-${grupoKey}-${item.treinamento.id}`}
+                                                                    className="flex flex-col justify-between gap-2 rounded-xl bg-white px-3 py-2 ring-1 ring-blue-100 lg:flex-row lg:items-center"
+                                                                >
+                                                                    <div className="min-w-0">
+                                                                        <div className="flex flex-wrap items-center gap-2">
+                                                                            <span className="rounded-full bg-blue-50 px-2 py-0.5 text-[10px] font-semibold text-blue-700 ring-1 ring-blue-200">
+                                                                                Pendente
+                                                                            </span>
+                                                                            <p className="break-words text-sm font-semibold text-slate-800">
+                                                                                {item.treinamento.nome}
+                                                                            </p>
+                                                                        </div>
+                                                                        <p className="mt-1 text-[11px] text-slate-500">
+                                                                            Documento ainda não enviado para este colaborador.
+                                                                        </p>
+                                                                    </div>
+
+                                                                    <button
+                                                                        type="button"
+                                                                        onClick={() => enviarDocumentoPendente(colaborador, item.treinamento)}
+                                                                        className="inline-flex items-center justify-center gap-2 rounded-xl bg-blue-600 px-3 py-2 text-xs font-semibold text-white hover:bg-blue-700"
+                                                                    >
+                                                                        <Upload className="h-4 w-4" />
+                                                                        Enviar documento
+                                                                    </button>
+                                                                </div>
+                                                            ))}
+                                                        </div>
+                                                    </div>
+                                                )}
+
+                                                {certificados.length === 0 && pendentes.length === 0 && (
+                                                    <div className="rounded-2xl border border-dashed border-slate-300 p-6 text-center text-sm text-slate-500">
+                                                        Nenhum item encontrado para este colaborador com o filtro atual.
+                                                    </div>
+                                                )}
+
                                                 {certificados.map((d, idx) => {
                                                     const valores = valoresRevisao(d);
                                                     const semValidade = treinamentoSemValidade(d.treinamentoId);
