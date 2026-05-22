@@ -64,7 +64,7 @@ const estilosGlobais = `
 `;
 
 const DAY = 1000 * 60 * 60 * 24;
-const SENHA_AUDITORIA = "SST@2026";
+const SENHA_AUDITORIA = import.meta.env.VITE_SENHA_AUDITORIA || "Rodolfo@2026";
 
 function addDays(days) {
     const d = new Date(hoje);
@@ -3215,7 +3215,7 @@ function Treinamentos({
                 </div>
             </Card>
 
-            <div className="grid gap-6 xl:grid-cols-[0.75fr_1.25fr]">
+            <div className="grid items-start gap-6 xl:grid-cols-[0.75fr_1.25fr]">
                 <Card>
                     <h2 className="flex items-center gap-2 text-lg font-bold text-slate-950">
                         <Upload className="h-5 w-5" />
@@ -3511,7 +3511,7 @@ function Treinamentos({
                     </div>
                 </Card>
 
-                <Card>
+                <Card className="self-start">
                     <div className="mb-4 flex flex-col justify-between gap-3 lg:flex-row lg:items-center">
                         <div>
                             <h2 className="text-lg font-bold text-slate-950">Alertas para TST</h2>
@@ -3574,7 +3574,7 @@ function Treinamentos({
                     </p>
                 </Card>
 
-                <Card className="xl:col-start-2">
+                <Card className="self-start xl:col-start-2">
                     <div className="mb-4 flex items-center justify-between gap-3">
                         <h2 className="text-lg font-bold text-slate-950">Base de certificados</h2>
                         <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-600">
@@ -5761,7 +5761,7 @@ function AuditoriaBloqueada({ onLiberar }) {
         evento.preventDefault();
         setErro("");
 
-        if (senha === SENHA_AUDITORIA) {
+        if (senha.trim() === SENHA_AUDITORIA) {
             onLiberar?.();
             setSenha("");
             return;
@@ -5818,7 +5818,8 @@ function AuditoriaBloqueada({ onLiberar }) {
                     </form>
 
                     <p className="mt-4 rounded-2xl bg-slate-50 p-3 text-xs leading-relaxed text-slate-500">
-                        Senha inicial: <strong>SST@2026</strong>. Para alterar, edite a constante <strong>SENHA_AUDITORIA</strong> no início do arquivo App.jsx.
+                        A senha da Auditoria pode ser alterada no arquivo <strong>.env</strong> usando a variável
+                        <strong> VITE_SENHA_AUDITORIA</strong>. O acesso também depende da liberação do usuário no Supabase.
                     </p>
                 </Card>
             </div>
@@ -8117,12 +8118,6 @@ export default function App() {
         ...(podeAcessarAuditoria ? [{ id: "auditoria", label: "Auditoria", icon: Database }] : []),
         { id: "roteiro", label: "Roteiro", icon: CalendarClock },
     ];
-
-    useEffect(() => {
-        if (tela === "auditoria" && usuario && !verificandoAcessoAuditoria && !podeAcessarAuditoria) {
-            setAuditoriaLiberada(false);
-        }
-    }, [tela, usuario, verificandoAcessoAuditoria, podeAcessarAuditoria]);
 
     const selecionarColaborador = (c) => {
         setColaboradorSelecionado(c);
