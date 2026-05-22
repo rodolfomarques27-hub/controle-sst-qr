@@ -65,7 +65,8 @@ const estilosGlobais = `
 
 const DAY = 1000 * 60 * 60 * 24;
 const SENHA_AUDITORIA = import.meta.env.VITE_SENHA_AUDITORIA || "Rodolfo@2026";
-const EMAIL_DESTINATARIO_ALERTAS = import.meta.env.VITE_EMAIL_ALERTA_SST || "rodolfomarques27@gmail.com";
+const EMAIL_DESTINATARIO_ALERTAS = import.meta.env.VITE_EMAIL_ALERTA_SST || "";
+const FUNCAO_EMAIL_ALERTA_TST = import.meta.env.VITE_FUNCAO_EMAIL_ALERTA_TST || "enviar-alerta-tst";
 
 function addDays(days) {
     const d = new Date(hoje);
@@ -609,6 +610,18 @@ function formatDate(dataISO) {
 
 function apenasNumeros(valor) {
     return String(valor || "").replace(/\D/g, "");
+}
+
+function normalizarEmailDestinatario(valor) {
+    return String(valor || "")
+        .split(/[;,]/)
+        .map((email) => email.trim())
+        .filter(Boolean)
+        .join(",");
+}
+
+function emailTstDaEmpresa(colaborador) {
+    return normalizarEmailDestinatario(colaborador?.empresaTstEmail || "");
 }
 
 function formatarCnpj(valor) {
@@ -1466,18 +1479,33 @@ function Dashboard({ colaboradores, onSelectColab }) {
     const montarPayloadEmailPendencia = (item) => {
         const statusEmail =
             item.status.chave === "pendente"
-                ? "Faltante"
+                ? "FALTANTE"
                 : item.status.chave === "vencendo"
-                    ? "A vencer"
-                    : item.status.texto || "Vencido";
+                    ? "A VENCER"
+                    : "VENCIDO";
+
+        const dias = item.vencimento ? diasParaVencer(item.vencimento) : null;
+        const empresa = item.colaborador?.empresaExibicao || item.colaborador?.empresa || "Empresa não informada";
+        const para = emailTstDaEmpresa(item.colaborador);
 
         return {
-            destinatario: EMAIL_DESTINATARIO_ALERTAS,
-            colaborador: item.colaborador?.nome || "Colaborador não informado",
-            documento: item.treinamento?.nome || "Documento não informado",
-            dataRealizacao: item.realizado?.realizado ? formatDate(item.realizado.realizado) : "Não informada",
-            dataVencimento: item.realizado?.vencimento ? formatDate(item.realizado.vencimento) : "Não informada",
-            status: statusEmail,
+            para,
+            assunto: `Aviso SST - ${statusEmail} - ${item.colaborador?.nome || "Colaborador"}`,
+            empresa,
+            tstResponsavel: item.colaborador?.empresaTstResponsavel || "",
+            itens: [
+                {
+                    colaborador: item.colaborador?.nome || "Colaborador não informado",
+                    codigo: item.colaborador?.codigoFuncionario || "-",
+                    funcao: item.colaborador?.funcao || "-",
+                    situacaoObra: item.colaborador?.statusMobilizacao || "Mobilizado",
+                    treinamento: item.treinamento?.nome || "Documento não informado",
+                    realizacao: item.realizado?.realizado ? formatDate(item.realizado.realizado) : "Não informada",
+                    vencimento: item.realizado?.vencimento ? formatDate(item.realizado.vencimento) : "Não informada",
+                    dias: dias ?? 0,
+                    arquivo: item.realizado?.arquivo || "Não informado",
+                },
+            ],
         };
     };
 
@@ -1491,7 +1519,15 @@ function Dashboard({ colaboradores, onSelectColab }) {
         try {
             const payload = montarPayloadEmailPendencia(item);
 
-            const { data, error } = await supabase.functions.invoke("rapid-api", {
+            if (!payload.para) {
+                if (mostrarMensagem) {
+                    alert(`Cadastre o e-mail do TST responsável da empresa ${payload.empresa} antes de enviar.`);
+                }
+
+                return false;
+            }
+
+            const { data, error } = await supabase.functions.invoke(FUNCAO_EMAIL_ALERTA_TST, {
                 body: payload,
             });
 
@@ -1499,7 +1535,7 @@ function Dashboard({ colaboradores, onSelectColab }) {
                 console.error("Erro ao enviar alerta por e-mail:", error || data);
 
                 if (mostrarMensagem) {
-                    alert("Erro ao enviar alerta por e-mail. Verifique o console do navegador.");
+                    alert(`Erro ao enviar alerta por e-mail: ${error?.message || data?.erro || "Falha na função de e-mail."}`);
                 }
 
                 return false;
@@ -1508,7 +1544,7 @@ function Dashboard({ colaboradores, onSelectColab }) {
             console.log("Alerta enviado por e-mail:", data);
 
             if (mostrarMensagem) {
-                alert(`Alerta enviado para ${payload.destinatario}.`);
+                alert(`Alerta enviado para ${payload.para}.`);
             }
 
             return true;
@@ -1533,8 +1569,9 @@ function Dashboard({ colaboradores, onSelectColab }) {
             return;
         }
 
+        const semEmailTst = pendencias.filter((item) => !emailTstDaEmpresa(item.colaborador)).length;
         const confirmar = window.confirm(
-            `Deseja enviar ${pendencias.length} alerta(s) por e-mail para ${EMAIL_DESTINATARIO_ALERTAS}?`
+            `Deseja enviar ${pendencias.length} alerta(s) por e-mail para o TST responsável de cada empresa?${semEmailTst ? `\n\nAtenção: ${semEmailTst} item(ns) estão sem e-mail de TST cadastrado e não serão enviados.` : ""}`
         );
 
         if (!confirmar) return;
@@ -1696,7 +1733,7 @@ function Dashboard({ colaboradores, onSelectColab }) {
                                                     type="button"
                                                     onClick={() => enviarAlertaEmailPendencia(item)}
                                                     disabled={enviandoEmail}
-                                                    className="rounded-xl bg-red-50 px-3 py-1.5 text-xs font-semibold text-red-700 ring-1 ring-red-200 hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-50"
+                                                    className="inline-flex min-w-[78px] items-center justify-center whitespace-nowrap rounded-xl bg-red-50 px-3 py-1.5 text-xs font-semibold text-red-700 ring-1 ring-red-200 hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-50"
                                                 >
                                                     E-mail
                                                 </button>
@@ -1704,7 +1741,7 @@ function Dashboard({ colaboradores, onSelectColab }) {
                                                 <button
                                                     type="button"
                                                     onClick={() => onSelectColab(item.colaborador)}
-                                                    className="rounded-xl bg-slate-950 px-3 py-1.5 text-xs font-semibold text-white hover:bg-slate-800"
+                                                    className="inline-flex min-w-[48px] items-center justify-center whitespace-nowrap rounded-xl bg-slate-950 px-3 py-1.5 text-xs font-semibold text-white hover:bg-slate-800"
                                                 >
                                                     QR
                                                 </button>
@@ -3162,6 +3199,7 @@ function Treinamentos({
     const [buscaCertificados, setBuscaCertificados] = useState("");
     const [filtroStatusCertificados, setFiltroStatusCertificados] = useState("Todos");
     const [exigenciasAbertas, setExigenciasAbertas] = useState(false);
+    const [enviandoAlertaTst, setEnviandoAlertaTst] = useState(false);
 
     const colabSelecionado =
         colaboradores.find((c) => String(c.codigoFuncionario) === String(colabId)) ||
@@ -3545,7 +3583,7 @@ function Treinamentos({
                     grupos[chave] = {
                         empresa: empresaNome,
                         tstResponsavel: colaborador.empresaTstResponsavel || "",
-                        tstEmail: colaborador.empresaTstEmail || "",
+                        tstEmail: emailTstDaEmpresa(colaborador),
                         itens: [],
                     };
                 }
@@ -3570,11 +3608,7 @@ function Treinamentos({
     }, [colaboradores]);
 
     const montarAvisoAlertaTst = (grupo) => {
-        const destinatario = String(grupo.tstEmail || "")
-            .split(/[;,]/)
-            .map((email) => email.trim())
-            .filter(Boolean)
-            .join(",");
+        const destinatario = normalizarEmailDestinatario(grupo.tstEmail);
 
         const itensOrdenados = [...(grupo.itens || [])].sort((a, b) => a.dias - b.dias);
         const totalVencidos = itensOrdenados.filter((item) => item.dias < 0).length;
@@ -3664,6 +3698,54 @@ function Treinamentos({
         window.setTimeout(() => {
             alert("Se o e-mail não abrir, verifique se existe aplicativo de e-mail padrão configurado no computador. O aviso também foi copiado para a área de transferência quando permitido pelo navegador.");
         }, 700);
+    };
+
+
+    const enviarEmailAlertaTstAutomatico = async (grupo) => {
+        const { destinatario, assunto } = montarAvisoAlertaTst(grupo);
+
+        if (!destinatario) {
+            alert("Cadastre o e-mail do Técnico de Segurança responsável na empresa antes de enviar o aviso.");
+            return;
+        }
+
+        setEnviandoAlertaTst(true);
+
+        try {
+            const itens = [...(grupo.itens || [])].sort((a, b) => a.dias - b.dias).map((item) => ({
+                colaborador: item.colaborador,
+                codigo: item.codigo || "-",
+                funcao: item.funcao || "-",
+                situacaoObra: item.situacaoObra || "-",
+                treinamento: item.treinamento,
+                realizacao: item.realizacao ? formatDate(item.realizacao) : "Não informada",
+                vencimento: formatDate(item.vencimento),
+                dias: item.dias,
+                arquivo: item.arquivo || "Não informado",
+            }));
+
+            const { data, error } = await supabase.functions.invoke(FUNCAO_EMAIL_ALERTA_TST, {
+                body: {
+                    para: destinatario,
+                    assunto,
+                    empresa: grupo.empresa,
+                    tstResponsavel: grupo.tstResponsavel,
+                    tstEmail: destinatario,
+                    itens,
+                },
+            });
+
+            if (error || data?.ok === false) {
+                alert(`Erro ao enviar e-mail pela aba Treinamentos: ${error?.message || data?.erro || `Falha na função ${FUNCAO_EMAIL_ALERTA_TST}.`}\n\nConfirme se a Edge Function está publicada e se as secrets GMAIL_USER e GMAIL_APP_PASSWORD estão configuradas.`);
+                return;
+            }
+
+            alert(`Aviso enviado com sucesso para ${destinatario}.`);
+        } catch (error) {
+            alert(`Falha inesperada ao enviar e-mail: ${error?.message || String(error)}`);
+        } finally {
+            setEnviandoAlertaTst(false);
+        }
     };
 
     const valoresRevisao = (doc) => ({
@@ -4113,16 +4195,17 @@ function Treinamentos({
                                             <div className="flex flex-wrap gap-2 lg:justify-end">
                                                 <button
                                                     type="button"
-                                                    onClick={() => abrirEmailAlertaTst(grupo)}
-                                                    className="rounded-2xl bg-slate-950 px-4 py-2.5 text-sm font-semibold text-white hover:bg-slate-800"
+                                                    onClick={() => enviarEmailAlertaTstAutomatico(grupo)}
+                                                    disabled={enviandoAlertaTst}
+                                                    className="inline-flex min-w-[190px] items-center justify-center whitespace-nowrap rounded-2xl bg-slate-950 px-4 py-2.5 text-sm font-semibold text-white hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
                                                 >
-                                                    Enviar aviso por e-mail
+                                                    {enviandoAlertaTst ? "Enviando..." : "Enviar aviso por e-mail"}
                                                 </button>
 
                                                 <button
                                                     type="button"
                                                     onClick={() => copiarAvisoAlertaTst(grupo)}
-                                                    className="rounded-2xl bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 ring-1 ring-slate-200 hover:bg-slate-50"
+                                                    className="inline-flex items-center justify-center whitespace-nowrap rounded-2xl bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 ring-1 ring-slate-200 hover:bg-slate-50"
                                                 >
                                                     Copiar aviso
                                                 </button>
@@ -4175,7 +4258,7 @@ function Treinamentos({
                         )}
 
                         <p className="mt-3 rounded-2xl bg-slate-50 p-3 text-xs text-slate-500">
-                            O botão de e-mail abre o aplicativo de e-mail padrão do computador com todas as informações do colaborador e do documento. Se o e-mail não abrir, use Copiar aviso. Para envio automático sem abrir e-mail, é necessário configurar uma função do Supabase com provedor de e-mail.
+                            O botão de e-mail envia automaticamente pela função Supabase enviar-alerta-tst. Use Copiar aviso como alternativa manual quando precisar enviar pelo Outlook, Gmail ou WhatsApp.
                         </p>
                     </Card>
 
