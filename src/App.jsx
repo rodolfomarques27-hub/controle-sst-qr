@@ -3511,303 +3511,305 @@ function Treinamentos({
                     </div>
                 </Card>
 
-                <Card className="self-start">
-                    <div className="mb-4 flex flex-col justify-between gap-3 lg:flex-row lg:items-center">
-                        <div>
-                            <h2 className="text-lg font-bold text-slate-950">Alertas para TST</h2>
-                            <p className="mt-1 text-sm text-slate-500">
-                                Treinamentos, certificados e ASO com vencimento nos próximos 30 dias.
-                            </p>
-                        </div>
-
-                        <span className="w-fit rounded-full bg-orange-50 px-3 py-1 text-xs font-semibold text-orange-700 ring-1 ring-orange-200">
-                            {alertasTstPorEmpresa.reduce((total, grupo) => total + grupo.itens.length, 0)} item(ns) a vencer
-                        </span>
-                    </div>
-
-                    {alertasTstPorEmpresa.length === 0 ? (
-                        <div className="rounded-3xl border border-dashed border-slate-300 p-6 text-center">
-                            <CheckCircle2 className="mx-auto h-9 w-9 text-emerald-500" />
-                            <h3 className="mt-3 font-bold text-slate-900">Nenhum vencimento nos próximos 30 dias</h3>
-                            <p className="mt-1 text-sm text-slate-500">
-                                Quando houver documentos ou treinamentos a vencer, o aviso ao TST aparecerá aqui.
-                            </p>
-                        </div>
-                    ) : (
-                        <div className="space-y-3">
-                            {alertasTstPorEmpresa.map((grupo) => (
-                                <div key={grupo.empresa} className="rounded-3xl border border-slate-200 bg-white p-4">
-                                    <div className="flex flex-col justify-between gap-3 lg:flex-row lg:items-start">
-                                        <div>
-                                            <p className="text-[10px] font-bold uppercase tracking-wide text-slate-400">Empresa</p>
-                                            <h3 className="mt-1 text-base font-bold text-slate-950">{grupo.empresa}</h3>
-                                            <p className="mt-1 text-sm text-slate-500">
-                                                TST: {grupo.tstResponsavel || "Não informado"} · E-mail: {grupo.tstEmail || "Não cadastrado"}
-                                            </p>
-                                        </div>
-
-                                        <button
-                                            type="button"
-                                            onClick={() => abrirEmailAlertaTst(grupo)}
-                                            className="rounded-2xl bg-slate-950 px-4 py-2.5 text-sm font-semibold text-white hover:bg-slate-800"
-                                        >
-                                            Enviar aviso por e-mail
-                                        </button>
-                                    </div>
-
-                                    <div className="mt-3 space-y-2">
-                                        {grupo.itens
-                                            .sort((a, b) => a.dias - b.dias)
-                                            .map((item, index) => (
-                                                <div key={`${grupo.empresa}-${item.codigo}-${item.treinamento}-${index}`} className="rounded-2xl bg-orange-50 px-3 py-2 text-sm text-orange-950 ring-1 ring-orange-100">
-                                                    <strong>{item.colaborador}</strong> · {item.treinamento} · vencimento em {formatDate(item.vencimento)} · faltam {item.dias} dia(s)
-                                                </div>
-                                            ))}
-                                    </div>
-                                </div>
-                            ))}
-                        </div>
-                    )}
-
-                    <p className="mt-3 rounded-2xl bg-slate-50 p-3 text-xs text-slate-500">
-                        O botão abre um e-mail já preenchido no aplicativo de e-mail do computador. Para envio automático sem abrir e-mail, é necessário configurar uma função do Supabase com provedor de e-mail.
-                    </p>
-                </Card>
-
-                <Card className="self-start xl:col-start-2">
-                    <div className="mb-4 flex items-center justify-between gap-3">
-                        <h2 className="text-lg font-bold text-slate-950">Base de certificados</h2>
-                        <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-600">
-                            {documentosFiltrados.length} de {documentos.length} registro(s)
-                        </span>
-                    </div>
-
-                    <div className="space-y-3">
-                        {documentos.length === 0 && (
-                            <div className="rounded-3xl border border-dashed border-slate-300 p-8 text-center">
-                                <FileText className="mx-auto h-10 w-10 text-slate-300" />
-                                <h3 className="mt-3 font-bold text-slate-900">Nenhum certificado lançado ainda</h3>
+                <div className="space-y-6">
+                    <Card className="self-start">
+                        <div className="mb-4 flex flex-col justify-between gap-3 lg:flex-row lg:items-center">
+                            <div>
+                                <h2 className="text-lg font-bold text-slate-950">Alertas para TST</h2>
                                 <p className="mt-1 text-sm text-slate-500">
-                                    Os certificados enviados aparecerão nesta base para revisão de validade e consulta.
+                                    Treinamentos, certificados e ASO com vencimento nos próximos 30 dias.
                                 </p>
                             </div>
-                        )}
 
-                        {documentos.length > 0 && documentosFiltrados.length === 0 && (
-                            <div className="rounded-3xl border border-dashed border-slate-300 p-8 text-center">
-                                <Filter className="mx-auto h-10 w-10 text-slate-300" />
-                                <h3 className="mt-3 font-bold text-slate-900">Nenhum certificado encontrado</h3>
+                            <span className="w-fit rounded-full bg-orange-50 px-3 py-1 text-xs font-semibold text-orange-700 ring-1 ring-orange-200">
+                                {alertasTstPorEmpresa.reduce((total, grupo) => total + grupo.itens.length, 0)} item(ns) a vencer
+                            </span>
+                        </div>
+
+                        {alertasTstPorEmpresa.length === 0 ? (
+                            <div className="rounded-3xl border border-dashed border-slate-300 p-6 text-center">
+                                <CheckCircle2 className="mx-auto h-9 w-9 text-emerald-500" />
+                                <h3 className="mt-3 font-bold text-slate-900">Nenhum vencimento nos próximos 30 dias</h3>
                                 <p className="mt-1 text-sm text-slate-500">
-                                    Ajuste a busca ou o filtro de status para localizar os certificados.
+                                    Quando houver documentos ou treinamentos a vencer, o aviso ao TST aparecerá aqui.
                                 </p>
                             </div>
-                        )}
-
-                        {documentosPorColaborador.map((grupo) => {
-                            const colaborador = grupo.colaborador;
-                            const certificados = grupo.certificados || [];
-                            const grupoKey = String(colaborador?.id || colaborador?.codigoFuncionario || "sem-colaborador");
-                            const grupoAberto = Boolean(gruposCertificadosAbertos[grupoKey]);
-
-                            const resumoStatus = certificados.reduce(
-                                (acc, certificado) => {
-                                    const valores = valoresRevisao(certificado);
-                                    const status = statusDocumento(valores.vencimento || certificado.vencimento);
-
-                                    if (status.chave === "vencido") acc.vencidos += 1;
-                                    else if (status.chave === "vencendo") acc.aVencer += 1;
-                                    else acc.emDia += 1;
-
-                                    return acc;
-                                },
-                                { emDia: 0, aVencer: 0, vencidos: 0 }
-                            );
-
-                            return (
-                                <div
-                                    key={grupoKey}
-                                    className="rounded-3xl border border-slate-200 bg-white p-4 shadow-sm transition hover:border-slate-300 hover:shadow-md"
-                                >
-                                    <div className="flex flex-col justify-between gap-4 lg:flex-row lg:items-start">
-                                        <div className="min-w-0">
-                                            <p className="text-[10px] font-bold uppercase tracking-wide text-slate-400">Colaborador</p>
-                                            <p className="mt-1 break-words text-lg font-bold leading-snug text-slate-950">
-                                                {colaborador.nome}
-                                            </p>
-                                            <p className="mt-1 break-words text-sm text-slate-500">
-                                                {colaborador.empresaExibicao || colaborador.empresa}
-                                            </p>
-                                            <p className="mt-1 text-xs font-semibold text-slate-500">
-                                                Código: {colaborador.codigoFuncionario}
-                                            </p>
-                                        </div>
-
-                                        <div className="flex flex-col gap-2 lg:items-end">
-                                            <div className="flex flex-wrap gap-2 lg:justify-end">
-                                                <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-600">
-                                                    {certificados.length} certificado(s)
-                                                </span>
-
-                                                {resumoStatus.emDia > 0 && (
-                                                    <span className="rounded-full bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700 ring-1 ring-emerald-200">
-                                                        {resumoStatus.emDia} em dia
-                                                    </span>
-                                                )}
-
-                                                {resumoStatus.aVencer > 0 && (
-                                                    <span className="rounded-full bg-orange-50 px-3 py-1 text-xs font-semibold text-orange-700 ring-1 ring-orange-200">
-                                                        {resumoStatus.aVencer} a vencer
-                                                    </span>
-                                                )}
-
-                                                {resumoStatus.vencidos > 0 && (
-                                                    <span className="rounded-full bg-red-50 px-3 py-1 text-xs font-semibold text-red-700 ring-1 ring-red-200">
-                                                        {resumoStatus.vencidos} vencido(s)
-                                                    </span>
-                                                )}
+                        ) : (
+                            <div className="space-y-3">
+                                {alertasTstPorEmpresa.map((grupo) => (
+                                    <div key={grupo.empresa} className="rounded-3xl border border-slate-200 bg-white p-4">
+                                        <div className="flex flex-col justify-between gap-3 lg:flex-row lg:items-start">
+                                            <div>
+                                                <p className="text-[10px] font-bold uppercase tracking-wide text-slate-400">Empresa</p>
+                                                <h3 className="mt-1 text-base font-bold text-slate-950">{grupo.empresa}</h3>
+                                                <p className="mt-1 text-sm text-slate-500">
+                                                    TST: {grupo.tstResponsavel || "Não informado"} · E-mail: {grupo.tstEmail || "Não cadastrado"}
+                                                </p>
                                             </div>
 
                                             <button
                                                 type="button"
-                                                onClick={() =>
-                                                    setGruposCertificadosAbertos((atual) => ({
-                                                        ...atual,
-                                                        [grupoKey]: !atual[grupoKey],
-                                                    }))
-                                                }
-                                                className="inline-flex items-center justify-center gap-2 rounded-xl bg-slate-950 px-4 py-2 text-xs font-semibold text-white hover:bg-slate-800"
+                                                onClick={() => abrirEmailAlertaTst(grupo)}
+                                                className="rounded-2xl bg-slate-950 px-4 py-2.5 text-sm font-semibold text-white hover:bg-slate-800"
                                             >
-                                                {grupoAberto ? (
-                                                    <>
-                                                        <ChevronUp className="h-4 w-4" />
-                                                        Recolher treinamentos
-                                                    </>
-                                                ) : (
-                                                    <>
-                                                        <ChevronDown className="h-4 w-4" />
-                                                        Ver treinamentos
-                                                    </>
-                                                )}
+                                                Enviar aviso por e-mail
                                             </button>
                                         </div>
+
+                                        <div className="mt-3 space-y-2">
+                                            {grupo.itens
+                                                .sort((a, b) => a.dias - b.dias)
+                                                .map((item, index) => (
+                                                    <div key={`${grupo.empresa}-${item.codigo}-${item.treinamento}-${index}`} className="rounded-2xl bg-orange-50 px-3 py-2 text-sm text-orange-950 ring-1 ring-orange-100">
+                                                        <strong>{item.colaborador}</strong> · {item.treinamento} · vencimento em {formatDate(item.vencimento)} · faltam {item.dias} dia(s)
+                                                    </div>
+                                                ))}
+                                        </div>
                                     </div>
+                                ))}
+                            </div>
+                        )}
 
-                                    {grupoAberto && (
-                                        <div className="mt-4 space-y-3 border-t border-slate-100 pt-4">
-                                            {certificados.map((d, idx) => {
-                                                const valores = valoresRevisao(d);
-                                                const statusAtual = statusDocumento(valores.vencimento || d.vencimento);
-                                                const itemKey = String(d.id || `${d.colaborador.id}-${d.treinamentoId}-${idx}`);
-                                                const aberto = Boolean(certificadosAbertos[itemKey]);
+                        <p className="mt-3 rounded-2xl bg-slate-50 p-3 text-xs text-slate-500">
+                            O botão abre um e-mail já preenchido no aplicativo de e-mail do computador. Para envio automático sem abrir e-mail, é necessário configurar uma função do Supabase com provedor de e-mail.
+                        </p>
+                    </Card>
 
-                                                return (
-                                                    <div
-                                                        key={itemKey}
-                                                        className="rounded-2xl bg-slate-50 p-3 ring-1 ring-slate-100"
-                                                    >
-                                                        <div className="grid gap-3 lg:grid-cols-[1fr_150px] lg:items-start">
-                                                            <div className="min-w-0">
-                                                                <div className="flex flex-wrap items-center gap-2">
-                                                                    <StatusPill status={statusAtual} small />
-                                                                    <h3 className="break-words text-base font-bold leading-snug text-slate-900">
-                                                                        {d.treinamento.nome}
-                                                                    </h3>
-                                                                </div>
+                    <Card className="self-start">
+                        <div className="mb-4 flex items-center justify-between gap-3">
+                            <h2 className="text-lg font-bold text-slate-950">Base de certificados</h2>
+                            <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-600">
+                                {documentosFiltrados.length} de {documentos.length} registro(s)
+                            </span>
+                        </div>
 
-                                                                <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-slate-500">
-                                                                    <FileText className="h-4 w-4 text-slate-400" />
-                                                                    <span className="break-words">{d.arquivo || "Arquivo não informado"}</span>
-                                                                </div>
-                                                            </div>
+                        <div className="space-y-3">
+                            {documentos.length === 0 && (
+                                <div className="rounded-3xl border border-dashed border-slate-300 p-8 text-center">
+                                    <FileText className="mx-auto h-10 w-10 text-slate-300" />
+                                    <h3 className="mt-3 font-bold text-slate-900">Nenhum certificado lançado ainda</h3>
+                                    <p className="mt-1 text-sm text-slate-500">
+                                        Os certificados enviados aparecerão nesta base para revisão de validade e consulta.
+                                    </p>
+                                </div>
+                            )}
 
-                                                            <div className="flex flex-col gap-2 lg:items-stretch">
-                                                                <button
-                                                                    type="button"
-                                                                    onClick={() =>
-                                                                        setCertificadosAbertos((atual) => ({
-                                                                            ...atual,
-                                                                            [itemKey]: !atual[itemKey],
-                                                                        }))
-                                                                    }
-                                                                    className="inline-flex items-center justify-center gap-2 rounded-xl bg-white px-4 py-2 text-xs font-semibold text-slate-700 ring-1 ring-slate-200 hover:bg-slate-100"
-                                                                >
-                                                                    {aberto ? (
-                                                                        <>
-                                                                            <ChevronUp className="h-4 w-4" />
-                                                                            Ocultar datas
-                                                                        </>
-                                                                    ) : (
-                                                                        <>
-                                                                            <ChevronDown className="h-4 w-4" />
-                                                                            Revisar datas
-                                                                        </>
-                                                                    )}
-                                                                </button>
+                            {documentos.length > 0 && documentosFiltrados.length === 0 && (
+                                <div className="rounded-3xl border border-dashed border-slate-300 p-8 text-center">
+                                    <Filter className="mx-auto h-10 w-10 text-slate-300" />
+                                    <h3 className="mt-3 font-bold text-slate-900">Nenhum certificado encontrado</h3>
+                                    <p className="mt-1 text-sm text-slate-500">
+                                        Ajuste a busca ou o filtro de status para localizar os certificados.
+                                    </p>
+                                </div>
+                            )}
 
-                                                                <button
-                                                                    onClick={() => onVisualizarCertificado(d)}
-                                                                    className="rounded-xl bg-slate-950 px-4 py-2 text-xs font-semibold text-white hover:bg-slate-800"
-                                                                >
-                                                                    Abrir
-                                                                </button>
+                            {documentosPorColaborador.map((grupo) => {
+                                const colaborador = grupo.colaborador;
+                                const certificados = grupo.certificados || [];
+                                const grupoKey = String(colaborador?.id || colaborador?.codigoFuncionario || "sem-colaborador");
+                                const grupoAberto = Boolean(gruposCertificadosAbertos[grupoKey]);
 
-                                                                <button
-                                                                    onClick={() => onExcluirCertificado(d)}
-                                                                    className="rounded-xl bg-red-50 px-4 py-2 text-xs font-semibold text-red-700 ring-1 ring-red-200 hover:bg-red-100"
-                                                                >
-                                                                    Excluir
-                                                                </button>
-                                                            </div>
-                                                        </div>
+                                const resumoStatus = certificados.reduce(
+                                    (acc, certificado) => {
+                                        const valores = valoresRevisao(certificado);
+                                        const status = statusDocumento(valores.vencimento || certificado.vencimento);
 
-                                                        {aberto && (
-                                                            <div className="mt-4 rounded-2xl bg-white p-4 ring-1 ring-slate-100">
-                                                                <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-[1fr_1fr_auto] xl:items-end">
-                                                                    <div>
-                                                                        <p className="mb-1 text-[10px] font-bold uppercase tracking-wide text-slate-400">Realização</p>
-                                                                        <input
-                                                                            type="date"
-                                                                            value={valores.realizado}
-                                                                            onChange={(e) => alterarDataRevisao(d, "realizado", e.target.value)}
-                                                                            className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-slate-200"
-                                                                        />
+                                        if (status.chave === "vencido") acc.vencidos += 1;
+                                        else if (status.chave === "vencendo") acc.aVencer += 1;
+                                        else acc.emDia += 1;
+
+                                        return acc;
+                                    },
+                                    { emDia: 0, aVencer: 0, vencidos: 0 }
+                                );
+
+                                return (
+                                    <div
+                                        key={grupoKey}
+                                        className="rounded-3xl border border-slate-200 bg-white p-4 shadow-sm transition hover:border-slate-300 hover:shadow-md"
+                                    >
+                                        <div className="flex flex-col justify-between gap-4 lg:flex-row lg:items-start">
+                                            <div className="min-w-0">
+                                                <p className="text-[10px] font-bold uppercase tracking-wide text-slate-400">Colaborador</p>
+                                                <p className="mt-1 break-words text-lg font-bold leading-snug text-slate-950">
+                                                    {colaborador.nome}
+                                                </p>
+                                                <p className="mt-1 break-words text-sm text-slate-500">
+                                                    {colaborador.empresaExibicao || colaborador.empresa}
+                                                </p>
+                                                <p className="mt-1 text-xs font-semibold text-slate-500">
+                                                    Código: {colaborador.codigoFuncionario}
+                                                </p>
+                                            </div>
+
+                                            <div className="flex flex-col gap-2 lg:items-end">
+                                                <div className="flex flex-wrap gap-2 lg:justify-end">
+                                                    <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-600">
+                                                        {certificados.length} certificado(s)
+                                                    </span>
+
+                                                    {resumoStatus.emDia > 0 && (
+                                                        <span className="rounded-full bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700 ring-1 ring-emerald-200">
+                                                            {resumoStatus.emDia} em dia
+                                                        </span>
+                                                    )}
+
+                                                    {resumoStatus.aVencer > 0 && (
+                                                        <span className="rounded-full bg-orange-50 px-3 py-1 text-xs font-semibold text-orange-700 ring-1 ring-orange-200">
+                                                            {resumoStatus.aVencer} a vencer
+                                                        </span>
+                                                    )}
+
+                                                    {resumoStatus.vencidos > 0 && (
+                                                        <span className="rounded-full bg-red-50 px-3 py-1 text-xs font-semibold text-red-700 ring-1 ring-red-200">
+                                                            {resumoStatus.vencidos} vencido(s)
+                                                        </span>
+                                                    )}
+                                                </div>
+
+                                                <button
+                                                    type="button"
+                                                    onClick={() =>
+                                                        setGruposCertificadosAbertos((atual) => ({
+                                                            ...atual,
+                                                            [grupoKey]: !atual[grupoKey],
+                                                        }))
+                                                    }
+                                                    className="inline-flex items-center justify-center gap-2 rounded-xl bg-slate-950 px-4 py-2 text-xs font-semibold text-white hover:bg-slate-800"
+                                                >
+                                                    {grupoAberto ? (
+                                                        <>
+                                                            <ChevronUp className="h-4 w-4" />
+                                                            Recolher treinamentos
+                                                        </>
+                                                    ) : (
+                                                        <>
+                                                            <ChevronDown className="h-4 w-4" />
+                                                            Ver treinamentos
+                                                        </>
+                                                    )}
+                                                </button>
+                                            </div>
+                                        </div>
+
+                                        {grupoAberto && (
+                                            <div className="mt-4 space-y-3 border-t border-slate-100 pt-4">
+                                                {certificados.map((d, idx) => {
+                                                    const valores = valoresRevisao(d);
+                                                    const statusAtual = statusDocumento(valores.vencimento || d.vencimento);
+                                                    const itemKey = String(d.id || `${d.colaborador.id}-${d.treinamentoId}-${idx}`);
+                                                    const aberto = Boolean(certificadosAbertos[itemKey]);
+
+                                                    return (
+                                                        <div
+                                                            key={itemKey}
+                                                            className="rounded-2xl bg-slate-50 p-3 ring-1 ring-slate-100"
+                                                        >
+                                                            <div className="grid gap-3 lg:grid-cols-[1fr_150px] lg:items-start">
+                                                                <div className="min-w-0">
+                                                                    <div className="flex flex-wrap items-center gap-2">
+                                                                        <StatusPill status={statusAtual} small />
+                                                                        <h3 className="break-words text-base font-bold leading-snug text-slate-900">
+                                                                            {d.treinamento.nome}
+                                                                        </h3>
                                                                     </div>
 
-                                                                    <div>
-                                                                        <p className="mb-1 text-[10px] font-bold uppercase tracking-wide text-slate-400">Vencimento</p>
-                                                                        <input
-                                                                            type="date"
-                                                                            value={valores.vencimento}
-                                                                            onChange={(e) => alterarDataRevisao(d, "vencimento", e.target.value)}
-                                                                            className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-slate-200"
-                                                                        />
+                                                                    <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-slate-500">
+                                                                        <FileText className="h-4 w-4 text-slate-400" />
+                                                                        <span className="break-words">{d.arquivo || "Arquivo não informado"}</span>
                                                                     </div>
+                                                                </div>
 
+                                                                <div className="flex flex-col gap-2 lg:items-stretch">
                                                                     <button
                                                                         type="button"
-                                                                        onClick={() => salvarDatasCertificado(d)}
-                                                                        disabled={salvandoDatasId === d.id}
-                                                                        className="rounded-xl bg-blue-50 px-4 py-2 text-sm font-semibold text-blue-700 ring-1 ring-blue-200 hover:bg-blue-100 disabled:opacity-60"
+                                                                        onClick={() =>
+                                                                            setCertificadosAbertos((atual) => ({
+                                                                                ...atual,
+                                                                                [itemKey]: !atual[itemKey],
+                                                                            }))
+                                                                        }
+                                                                        className="inline-flex items-center justify-center gap-2 rounded-xl bg-white px-4 py-2 text-xs font-semibold text-slate-700 ring-1 ring-slate-200 hover:bg-slate-100"
                                                                     >
-                                                                        {salvandoDatasId === d.id ? "Salvando..." : "Salvar datas"}
+                                                                        {aberto ? (
+                                                                            <>
+                                                                                <ChevronUp className="h-4 w-4" />
+                                                                                Ocultar datas
+                                                                            </>
+                                                                        ) : (
+                                                                            <>
+                                                                                <ChevronDown className="h-4 w-4" />
+                                                                                Revisar datas
+                                                                            </>
+                                                                        )}
+                                                                    </button>
+
+                                                                    <button
+                                                                        onClick={() => onVisualizarCertificado(d)}
+                                                                        className="rounded-xl bg-slate-950 px-4 py-2 text-xs font-semibold text-white hover:bg-slate-800"
+                                                                    >
+                                                                        Abrir
+                                                                    </button>
+
+                                                                    <button
+                                                                        onClick={() => onExcluirCertificado(d)}
+                                                                        className="rounded-xl bg-red-50 px-4 py-2 text-xs font-semibold text-red-700 ring-1 ring-red-200 hover:bg-red-100"
+                                                                    >
+                                                                        Excluir
                                                                     </button>
                                                                 </div>
-
-                                                                <p className="mt-3 text-xs leading-relaxed text-slate-400">
-                                                                    Ao alterar a realização, o vencimento é recalculado automaticamente pela validade do treinamento.
-                                                                </p>
                                                             </div>
-                                                        )}
-                                                    </div>
-                                                );
-                                            })}
-                                        </div>
-                                    )}
-                                </div>
-                            );
-                        })}
-                    </div>
-                </Card>
+
+                                                            {aberto && (
+                                                                <div className="mt-4 rounded-2xl bg-white p-4 ring-1 ring-slate-100">
+                                                                    <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-[1fr_1fr_auto] xl:items-end">
+                                                                        <div>
+                                                                            <p className="mb-1 text-[10px] font-bold uppercase tracking-wide text-slate-400">Realização</p>
+                                                                            <input
+                                                                                type="date"
+                                                                                value={valores.realizado}
+                                                                                onChange={(e) => alterarDataRevisao(d, "realizado", e.target.value)}
+                                                                                className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-slate-200"
+                                                                            />
+                                                                        </div>
+
+                                                                        <div>
+                                                                            <p className="mb-1 text-[10px] font-bold uppercase tracking-wide text-slate-400">Vencimento</p>
+                                                                            <input
+                                                                                type="date"
+                                                                                value={valores.vencimento}
+                                                                                onChange={(e) => alterarDataRevisao(d, "vencimento", e.target.value)}
+                                                                                className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-slate-200"
+                                                                            />
+                                                                        </div>
+
+                                                                        <button
+                                                                            type="button"
+                                                                            onClick={() => salvarDatasCertificado(d)}
+                                                                            disabled={salvandoDatasId === d.id}
+                                                                            className="rounded-xl bg-blue-50 px-4 py-2 text-sm font-semibold text-blue-700 ring-1 ring-blue-200 hover:bg-blue-100 disabled:opacity-60"
+                                                                        >
+                                                                            {salvandoDatasId === d.id ? "Salvando..." : "Salvar datas"}
+                                                                        </button>
+                                                                    </div>
+
+                                                                    <p className="mt-3 text-xs leading-relaxed text-slate-400">
+                                                                        Ao alterar a realização, o vencimento é recalculado automaticamente pela validade do treinamento.
+                                                                    </p>
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                    );
+                                                })}
+                                            </div>
+                                        )}
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    </Card>
+                </div>
             </div>
         </motion.div>
     );
