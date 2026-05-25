@@ -1662,6 +1662,21 @@ function Dashboard({
         ultimosDocumentos: true,
         alertas: true,
     };
+
+    const cartasPadraoDashboard = {
+        colaboradoresMobilizados: true,
+        colaboradoresLiberados: true,
+        comPendencia: true,
+        emAnalise: true,
+        empresasAtivas: true,
+        documentosVencidos: true,
+        documentosAVencer: true,
+        treinamentosVencidos: true,
+        colaboradoresBloqueados: true,
+        desviosAbertos: true,
+        aniversariantesMes: true,
+        armazenamentoUtilizado: true,
+    };
     const opcoesPainelDashboard = [
         { chave: "cards", label: "Cards principais" },
         { chave: "pendencias", label: "Pendências críticas" },
@@ -1684,13 +1699,36 @@ function Dashboard({
         }
     });
 
+    const [cartasVisiveisDashboard, setCartasVisiveisDashboard] = useState(() => {
+        if (typeof window === "undefined") return cartasPadraoDashboard;
+
+        try {
+            const salvo = JSON.parse(window.localStorage.getItem("dashboardSstCartasVisiveis") || "null");
+            return salvo && typeof salvo === "object" ? { ...cartasPadraoDashboard, ...salvo } : cartasPadraoDashboard;
+        } catch {
+            return cartasPadraoDashboard;
+        }
+    });
+
     useEffect(() => {
         if (typeof window === "undefined") return;
         window.localStorage.setItem("dashboardSstBlocosVisiveis", JSON.stringify(blocosPainelDashboard));
     }, [blocosPainelDashboard]);
 
+    useEffect(() => {
+        if (typeof window === "undefined") return;
+        window.localStorage.setItem("dashboardSstCartasVisiveis", JSON.stringify(cartasVisiveisDashboard));
+    }, [cartasVisiveisDashboard]);
+
     const alternarBlocoPainel = (chave) => {
         setBlocosPainelDashboard((atual) => ({
+            ...atual,
+            [chave]: !atual[chave],
+        }));
+    };
+
+    const alternarCartaPainel = (chave) => {
+        setCartasVisiveisDashboard((atual) => ({
             ...atual,
             [chave]: !atual[chave],
         }));
@@ -1819,20 +1857,21 @@ function Dashboard({
     const totalStorageLabel = carregandoStorageDashboard ? "Carregando..." : formatarBytes(usoStorageDashboard.totalBytes);
 
     const cards = [
-        { label: "Colaboradores mobilizados", valor: colaboradoresMobilizados.length, icon: HardHat, detalhe: "Liberados ou com pendência" },
-        { label: "Colaboradores liberados", valor: colaboradoresLiberados, icon: BadgeCheck, detalhe: "Documentos em dia" },
-        { label: "Com pendência", valor: colaboradoresComPendencia, icon: AlertTriangle, detalhe: "Sem bloqueio" },
-        { label: "Em análise", valor: colaboradoresEmAnalise, icon: Eye, detalhe: "Aguardando conferência" },
-        { label: "Empresas ativas", valor: empresasAtivas.length, icon: Building2, detalhe: "Contratadas liberadas" },
-        { label: "Documentos vencidos", valor: documentosVencidos.length, icon: XCircle, detalhe: "Empresas / contratos" },
-        { label: "Documentos a vencer", valor: documentosAVencer.length, icon: CalendarClock, detalhe: "Próximos 30 dias" },
-        { label: "Treinamentos vencidos", valor: indicadores.vencidos, icon: AlertTriangle, detalhe: "Colaboradores" },
-        { label: "Colaboradores bloqueados", valor: colaboradoresBloqueados, icon: Lock, detalhe: "Pendência bloqueante" },
-        { label: "Auditorias no mês", valor: auditoriasMes, icon: Database, detalhe: "Eventos registrados" },
-        { label: "Desvios abertos", valor: desviosAbertos, icon: AlertTriangle, detalhe: "Registros não concluídos" },
-        { label: "Aniversariantes do mês", valor: aniversariantesMes.length, icon: UserRound, detalhe: "Campo nascimento" },
-        { label: "Armazenamento utilizado", valor: totalStorageLabel, icon: Upload, detalhe: `${storagePercentual}% do limite visual` },
+        { chave: "colaboradoresMobilizados", label: "Colaboradores mobilizados", valor: colaboradoresMobilizados.length, icon: HardHat, detalhe: "Liberados ou com pendência" },
+        { chave: "colaboradoresLiberados", label: "Colaboradores liberados", valor: colaboradoresLiberados, icon: BadgeCheck, detalhe: "Documentos em dia" },
+        { chave: "comPendencia", label: "Com pendência", valor: colaboradoresComPendencia, icon: AlertTriangle, detalhe: "Sem bloqueio" },
+        { chave: "emAnalise", label: "Em análise", valor: colaboradoresEmAnalise, icon: Eye, detalhe: "Aguardando conferência" },
+        { chave: "empresasAtivas", label: "Empresas ativas", valor: empresasAtivas.length, icon: Building2, detalhe: "Contratadas liberadas" },
+        { chave: "documentosVencidos", label: "Documentos vencidos", valor: documentosVencidos.length, icon: XCircle, detalhe: "Empresas / contratos" },
+        { chave: "documentosAVencer", label: "Documentos a vencer", valor: documentosAVencer.length, icon: CalendarClock, detalhe: "Próximos 30 dias" },
+        { chave: "treinamentosVencidos", label: "Treinamentos vencidos", valor: indicadores.vencidos, icon: AlertTriangle, detalhe: "Colaboradores" },
+        { chave: "colaboradoresBloqueados", label: "Colaboradores bloqueados", valor: colaboradoresBloqueados, icon: Lock, detalhe: "Pendência bloqueante" },
+        { chave: "desviosAbertos", label: "Desvios abertos", valor: desviosAbertos, icon: AlertTriangle, detalhe: "Registros não concluídos" },
+        { chave: "aniversariantesMes", label: "Aniversariantes do mês", valor: aniversariantesMes.length, icon: UserRound, detalhe: "Campo nascimento" },
+        { chave: "armazenamentoUtilizado", label: "Armazenamento utilizado", valor: totalStorageLabel, icon: Upload, detalhe: `${storagePercentual}% do limite visual` },
     ];
+
+    const cardsVisiveis = cards.filter((item) => cartasVisiveisDashboard[item.chave] !== false);
 
     const pendencias = indicadores.itens
         .filter((item) => ["pendente", "vencido", "vencendo"].includes(item.status.chave))
@@ -2313,14 +2352,17 @@ function Dashboard({
                         <div className="flex flex-wrap gap-2">
                             <button
                                 type="button"
-                                onClick={() => setBlocosPainelDashboard(painelPadraoDashboard)}
+                                onClick={() => {
+                                    setBlocosPainelDashboard(painelPadraoDashboard);
+                                    setCartasVisiveisDashboard(cartasPadraoDashboard);
+                                }}
                                 className="rounded-xl bg-slate-950 px-3 py-2 text-xs font-semibold text-white hover:bg-slate-800"
                             >
                                 Mostrar padrão
                             </button>
                             <button
                                 type="button"
-                                onClick={() =>
+                                onClick={() => {
                                     setBlocosPainelDashboard({
                                         cards: true,
                                         pendencias: true,
@@ -2330,8 +2372,14 @@ function Dashboard({
                                         documentosTipo: false,
                                         ultimosDocumentos: false,
                                         alertas: true,
-                                    })
-                                }
+                                    });
+                                    setCartasVisiveisDashboard({
+                                        ...cartasPadraoDashboard,
+                                        armazenamentoUtilizado: false,
+                                        aniversariantesMes: false,
+                                        desviosAbertos: false,
+                                    });
+                                }}
                                 className="rounded-xl bg-slate-100 px-3 py-2 text-xs font-semibold text-slate-700 ring-1 ring-slate-200 hover:bg-slate-200"
                             >
                                 Painel compacto
@@ -2366,306 +2414,361 @@ function Dashboard({
                             );
                         })}
                     </div>
+
+                    {blocosPainelDashboard.cards && (
+                        <div className="mt-5 border-t border-slate-100 pt-4">
+                            <div className="mb-3 flex flex-col justify-between gap-2 sm:flex-row sm:items-center">
+                                <div>
+                                    <h3 className="text-sm font-bold text-slate-950">Cartas principais</h3>
+                                    <p className="mt-0.5 text-xs text-slate-500">Escolha quais cards aparecem no topo do dashboard SST.</p>
+                                </div>
+                                <button
+                                    type="button"
+                                    onClick={() => setCartasVisiveisDashboard(cartasPadraoDashboard)}
+                                    className="self-start rounded-xl bg-white px-3 py-2 text-xs font-semibold text-slate-700 ring-1 ring-slate-200 hover:bg-slate-50 sm:self-auto"
+                                >
+                                    Restaurar cartas
+                                </button>
+                            </div>
+
+                            <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
+                                {cards.map((opcao) => {
+                                    const ativo = cartasVisiveisDashboard[opcao.chave] !== false;
+
+                                    return (
+                                        <button
+                                            key={opcao.chave}
+                                            type="button"
+                                            onClick={() => alternarCartaPainel(opcao.chave)}
+                                            className={classNames(
+                                                "flex items-center justify-between gap-3 rounded-2xl px-3 py-2 text-left text-sm font-semibold ring-1 transition",
+                                                ativo
+                                                    ? "bg-blue-50 text-blue-800 ring-blue-200"
+                                                    : "bg-slate-50 text-slate-500 ring-slate-200"
+                                            )}
+                                        >
+                                            <span>{opcao.label}</span>
+                                            <span className={classNames(
+                                                "rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide",
+                                                ativo ? "bg-blue-100 text-blue-800" : "bg-white text-slate-500 ring-1 ring-slate-200"
+                                            )}>
+                                                {ativo ? "Visível" : "Oculto"}
+                                            </span>
+                                        </button>
+                                    );
+                                })}
+                            </div>
+                        </div>
+                    )}
                 </Card>
             )}
 
             {blocosPainelDashboard.cards && (
-            <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
-                {cards.map((item) => {
-                    const Icon = item.icon;
+                <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
+                    {cardsVisiveis.map((item) => {
+                        const Icon = item.icon;
 
-                    return (
-                        <Card key={item.label} className="overflow-hidden">
-                            <div className="flex items-start justify-between gap-3">
-                                <div className="min-w-0">
-                                    <p className="text-sm font-medium text-slate-500">{item.label}</p>
-                                    <p className="mt-2 break-words text-2xl font-bold text-slate-950">{item.valor}</p>
-                                    <p className="mt-1 text-xs text-slate-400">{item.detalhe}</p>
+                        return (
+                            <Card key={item.label} className="overflow-hidden">
+                                <div className="flex items-start justify-between gap-3">
+                                    <div className="min-w-0">
+                                        <p className="text-sm font-medium text-slate-500">{item.label}</p>
+                                        <p className="mt-2 break-words text-2xl font-bold text-slate-950">{item.valor}</p>
+                                        <p className="mt-1 text-xs text-slate-400">{item.detalhe}</p>
+                                    </div>
+                                    <div className="shrink-0 rounded-2xl bg-slate-100 p-3 text-slate-700">
+                                        <Icon className="h-5 w-5" />
+                                    </div>
                                 </div>
-                                <div className="shrink-0 rounded-2xl bg-slate-100 p-3 text-slate-700">
-                                    <Icon className="h-5 w-5" />
-                                </div>
-                            </div>
-                        </Card>
-                    );
-                })}
-            </div>
+                            </Card>
+                        );
+                    })}
+                </div>
             )}
 
             {(blocosPainelDashboard.pendencias || blocosPainelDashboard.conformidade) && (
-            <div className={classNames(
-                "mt-6 grid gap-6",
-                blocosPainelDashboard.pendencias && blocosPainelDashboard.conformidade ? "xl:grid-cols-[1.35fr_0.65fr]" : "xl:grid-cols-1"
-            )}>
-                {blocosPainelDashboard.pendencias && (
-                <Card>
-                    <div className="mb-4 flex items-center justify-between">
-                        <div>
-                            <h2 className="text-lg font-bold text-slate-950">Pendências críticas</h2>
-                            <p className="text-sm text-slate-500">
-                                Treinamentos pendentes, vencidos ou a vencer em até 30 dias.
-                            </p>
-                        </div>
-                        <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-600">
-                            {pendencias.length} itens
-                        </span>
-                    </div>
-
-                    <div className="overflow-hidden rounded-2xl border border-slate-200">
-                        <table className="w-full text-left text-sm">
-                            <thead className="bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
-                                <tr>
-                                    <th className="px-4 py-3">Colaborador</th>
-                                    <th className="px-4 py-3">Treinamento</th>
-                                    <th className="px-4 py-3">Vencimento</th>
-                                    <th className="px-4 py-3">Status</th>
-                                    <th className="px-4 py-3"></th>
-                                </tr>
-                            </thead>
-                            <tbody className="divide-y divide-slate-100 bg-white">
-                                {pendencias.length === 0 && (
-                                    <tr>
-                                        <td className="px-4 py-8 text-center text-sm text-slate-500" colSpan={5}>
-                                            Nenhuma pendência crítica encontrada.
-                                        </td>
-                                    </tr>
-                                )}
-
-                                {pendencias.slice(0, 10).map((item, idx) => (
-                                    <tr key={`${item.colaborador.id}-${item.treinamento.id}-${idx}`} className="hover:bg-slate-50">
-                                        <td className="px-4 py-3">
-                                            <div className="font-semibold text-slate-900">{item.colaborador.nome}</div>
-                                            <div className="text-xs text-slate-500">
-                                                {item.colaborador.empresaExibicao || item.colaborador.empresa} · {item.colaborador.statusMobilizacao || obterStatusInicialColaborador()} · {statusGeral(item.colaborador).texto}
-                                            </div>
-                                        </td>
-                                        <td className="px-4 py-3 text-slate-600">{item.treinamento.nome}</td>
-                                        <td className="px-4 py-3 text-slate-600">
-                                            {item.vencimento ? formatDate(item.vencimento) : "Não enviado"}
-                                        </td>
-                                        <td className="px-4 py-3">
-                                            <span className={classNames("rounded-full px-2 py-1 text-xs font-semibold ring-1", item.status.classe)}>
-                                                {item.status.texto}
-                                            </span>
-                                        </td>
-                                        <td className="px-4 py-3 text-right">
-                                            <div className="flex justify-end gap-2">
-                                                <button
-                                                    type="button"
-                                                    onClick={() => enviarAlertaEmailPendencia(item)}
-                                                    disabled={enviandoEmail}
-                                                    className="inline-flex min-w-[78px] items-center justify-center whitespace-nowrap rounded-xl bg-red-50 px-3 py-1.5 text-xs font-semibold text-red-700 ring-1 ring-red-200 hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-50"
-                                                >
-                                                    E-mail
-                                                </button>
-
-                                                <button
-                                                    type="button"
-                                                    onClick={() => onSelectColab(item.colaborador)}
-                                                    className="inline-flex min-w-[48px] items-center justify-center whitespace-nowrap rounded-xl bg-slate-950 px-3 py-1.5 text-xs font-semibold text-white hover:bg-slate-800"
-                                                >
-                                                    QR
-                                                </button>
-                                            </div>
-                                        </td>
-                                    </tr>
-                                ))}
-                            </tbody>
-                        </table>
-                    </div>
-                </Card>
-                )}
-
-                {blocosPainelDashboard.conformidade && (
-                <Card>
-                    <h2 className="text-lg font-bold text-slate-950">Resumo de conformidade</h2>
-                    <p className="mt-1 text-sm text-slate-500">
-                        Baseado nos treinamentos exigidos para a função, incluindo os ainda não enviados.
-                    </p>
-
-                    <div className="mt-6 space-y-5">
-                        {resumoConformidade.map((i) => (
-                            <div key={i.label}>
-                                <div className="mb-2 flex justify-between text-sm">
-                                    <span className="font-medium text-slate-700">{i.label}</span>
-                                    <span className="text-slate-500">{i.valor}/{i.total}</span>
+                <div className={classNames(
+                    "mt-6 grid gap-6",
+                    blocosPainelDashboard.pendencias && blocosPainelDashboard.conformidade ? "xl:grid-cols-[1.35fr_0.65fr]" : "xl:grid-cols-1"
+                )}>
+                    {blocosPainelDashboard.pendencias && (
+                        <Card>
+                            <div className="mb-4 flex items-center justify-between">
+                                <div>
+                                    <h2 className="text-lg font-bold text-slate-950">Pendências críticas</h2>
+                                    <p className="text-sm text-slate-500">
+                                        Treinamentos pendentes, vencidos ou a vencer em até 30 dias.
+                                    </p>
                                 </div>
-                                <div className="h-3 overflow-hidden rounded-full bg-slate-100">
-                                    <div
-                                        className={classNames("h-full rounded-full", i.classe)}
-                                        style={{ width: `${i.total ? Math.max(4, (i.valor / i.total) * 100) : 0}%` }}
-                                    />
-                                </div>
+                                <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-600">
+                                    {pendencias.length} itens
+                                </span>
                             </div>
-                        ))}
-                    </div>
 
-                    <div className="mt-6 rounded-2xl bg-slate-50 p-4 text-sm text-slate-600">
-                        <strong className="text-slate-900">Regra do sistema:</strong> pendente indica ausência de certificado; vencido bloqueia a atividade; a vencer em até 30 dias gera alerta preventivo; em dia libera a consulta no QR Code.
-                    </div>
-                </Card>
-                )}
-            </div>
-            )}
-
-            {(blocosPainelDashboard.colaboradoresFuncao || blocosPainelDashboard.rankingEmpresas || blocosPainelDashboard.documentosTipo) && (
-            <div className="mt-6 grid gap-6 xl:grid-cols-3">
-                {blocosPainelDashboard.colaboradoresFuncao && (
-                <ListaCompacta
-                    titulo="Colaboradores mobilizados por função"
-                    subtitulo="Conta apenas ativos, mobilizados, liberados ou com pendência não bloqueante."
-                    vazio="Nenhum colaborador mobilizado encontrado."
-                >
-                    {colaboradoresPorFuncao.slice(0, 8).map((item) => (
-                        <div key={item.funcao} className="rounded-2xl bg-slate-50 p-3 text-sm ring-1 ring-slate-100">
-                            <div className="flex justify-between gap-3">
-                                <span className="font-semibold text-slate-900">{item.funcao}</span>
-                                <span className="rounded-full bg-white px-2 py-0.5 text-xs font-bold text-slate-600 ring-1 ring-slate-200">{item.quantidade}</span>
-                            </div>
-                            <div className="mt-2 h-2 overflow-hidden rounded-full bg-white ring-1 ring-slate-100">
-                                <div
-                                    className="h-full rounded-full bg-slate-900"
-                                    style={{ width: `${Math.max(6, Math.round((item.quantidade / maiorQuantidadePorFuncao) * 100))}%` }}
-                                />
-                            </div>
-                            <p className="mt-1 text-xs text-slate-500">
-                                {item.quantidade} colaborador(es) considerado(s) mobilizado(s)
-                            </p>
-                        </div>
-                    ))}
-                </ListaCompacta>
-                )}
-
-                {blocosPainelDashboard.rankingEmpresas && (
-                <Card className="xl:col-span-2">
-                    <div className="mb-4 flex flex-col justify-between gap-3 md:flex-row md:items-start">
-                        <div>
-                            <h2 className="text-lg font-bold text-slate-950">Ranking de pendências por empresa</h2>
-                            <p className="mt-1 text-sm text-slate-500">
-                                Classificação por documentos, treinamentos vencidos e colaboradores bloqueados.
-                            </p>
-                        </div>
-                        <div className="flex flex-wrap gap-2 text-xs font-semibold">
-                            <span className="rounded-full bg-emerald-50 px-3 py-1 text-emerald-700 ring-1 ring-emerald-200">Regular</span>
-                            <span className="rounded-full bg-orange-50 px-3 py-1 text-orange-700 ring-1 ring-orange-200">Atenção</span>
-                            <span className="rounded-full bg-red-50 px-3 py-1 text-red-700 ring-1 ring-red-200">Crítico</span>
-                        </div>
-                    </div>
-
-                    {rankingPendenciasEmpresa.length === 0 ? (
-                        <div className="rounded-2xl border border-dashed border-slate-300 p-5 text-center text-sm text-slate-500">
-                            Nenhuma empresa encontrada para gerar o ranking.
-                        </div>
-                    ) : (
-                        <div className="overflow-x-auto scrollbar-discreta">
-                            <table className="min-w-[920px] w-full text-left text-sm">
-                                <thead>
-                                    <tr className="border-b border-slate-200 text-xs uppercase tracking-wide text-slate-500">
-                                        <th className="py-3 pr-3 font-semibold">Empresa</th>
-                                        <th className="px-3 py-3 text-center font-semibold">Total colab.</th>
-                                        <th className="px-3 py-3 text-center font-semibold">Docs vencidos</th>
-                                        <th className="px-3 py-3 text-center font-semibold">Docs a vencer</th>
-                                        <th className="px-3 py-3 text-center font-semibold">Trein. vencidos</th>
-                                        <th className="px-3 py-3 text-center font-semibold">Bloqueados</th>
-                                        <th className="py-3 pl-3 text-center font-semibold">Status</th>
-                                    </tr>
-                                </thead>
-                                <tbody className="divide-y divide-slate-100">
-                                    {rankingPendenciasEmpresa.slice(0, 10).map((item, index) => (
-                                        <tr key={item.empresa} className="align-middle text-slate-700 hover:bg-slate-50/80">
-                                            <td className="py-3 pr-3">
-                                                <div className="font-semibold text-slate-950">{index + 1}. {item.empresa}</div>
-                                                {item.pendenciasLeves > 0 && item.statusEmpresa === "Atenção" && (
-                                                    <div className="mt-0.5 text-xs text-slate-500">Possui pendência leve ou item preventivo.</div>
-                                                )}
-                                            </td>
-                                            <td className="px-3 py-3 text-center font-bold text-slate-900">{item.totalColaboradores}</td>
-                                            <td className="px-3 py-3 text-center">
-                                                <span className={classNames("inline-flex min-w-8 justify-center rounded-full px-2 py-1 text-xs font-bold ring-1", item.documentosVencidos > 0 ? "bg-red-50 text-red-700 ring-red-100" : "bg-slate-50 text-slate-600 ring-slate-100")}>{item.documentosVencidos}</span>
-                                            </td>
-                                            <td className="px-3 py-3 text-center">
-                                                <span className={classNames("inline-flex min-w-8 justify-center rounded-full px-2 py-1 text-xs font-bold ring-1", item.documentosAVencer > 0 ? "bg-orange-50 text-orange-700 ring-orange-100" : "bg-slate-50 text-slate-600 ring-slate-100")}>{item.documentosAVencer}</span>
-                                            </td>
-                                            <td className="px-3 py-3 text-center">
-                                                <span className={classNames("inline-flex min-w-8 justify-center rounded-full px-2 py-1 text-xs font-bold ring-1", item.treinamentosVencidos > 0 ? "bg-red-50 text-red-700 ring-red-100" : "bg-slate-50 text-slate-600 ring-slate-100")}>{item.treinamentosVencidos}</span>
-                                            </td>
-                                            <td className="px-3 py-3 text-center">
-                                                <span className={classNames("inline-flex min-w-8 justify-center rounded-full px-2 py-1 text-xs font-bold ring-1", item.colaboradoresBloqueados > 0 ? "bg-red-50 text-red-700 ring-red-100" : "bg-slate-50 text-slate-600 ring-slate-100")}>{item.colaboradoresBloqueados}</span>
-                                            </td>
-                                            <td className="py-3 pl-3 text-center">
-                                                <span className={classNames("inline-flex min-w-[86px] justify-center rounded-full px-3 py-1 text-xs font-bold ring-1", item.statusEmpresaClasse)}>
-                                                    {item.statusEmpresa}
-                                                </span>
-                                            </td>
+                            <div className="overflow-hidden rounded-2xl border border-slate-200">
+                                <table className="w-full text-left text-sm">
+                                    <thead className="bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
+                                        <tr>
+                                            <th className="px-4 py-3">Colaborador</th>
+                                            <th className="px-4 py-3">Treinamento</th>
+                                            <th className="px-4 py-3">Vencimento</th>
+                                            <th className="px-4 py-3">Status</th>
+                                            <th className="px-4 py-3"></th>
                                         </tr>
-                                    ))}
-                                </tbody>
-                            </table>
-                        </div>
+                                    </thead>
+                                    <tbody className="divide-y divide-slate-100 bg-white">
+                                        {pendencias.length === 0 && (
+                                            <tr>
+                                                <td className="px-4 py-8 text-center text-sm text-slate-500" colSpan={5}>
+                                                    Nenhuma pendência crítica encontrada.
+                                                </td>
+                                            </tr>
+                                        )}
+
+                                        {pendencias.slice(0, 10).map((item, idx) => (
+                                            <tr key={`${item.colaborador.id}-${item.treinamento.id}-${idx}`} className="hover:bg-slate-50">
+                                                <td className="px-4 py-3">
+                                                    <div className="font-semibold text-slate-900">{item.colaborador.nome}</div>
+                                                    <div className="text-xs text-slate-500">
+                                                        {item.colaborador.empresaExibicao || item.colaborador.empresa} · {item.colaborador.statusMobilizacao || obterStatusInicialColaborador()} · {statusGeral(item.colaborador).texto}
+                                                    </div>
+                                                </td>
+                                                <td className="px-4 py-3 text-slate-600">{item.treinamento.nome}</td>
+                                                <td className="px-4 py-3 text-slate-600">
+                                                    {item.vencimento ? formatDate(item.vencimento) : "Não enviado"}
+                                                </td>
+                                                <td className="px-4 py-3">
+                                                    <span className={classNames("rounded-full px-2 py-1 text-xs font-semibold ring-1", item.status.classe)}>
+                                                        {item.status.texto}
+                                                    </span>
+                                                </td>
+                                                <td className="px-4 py-3 text-right">
+                                                    <div className="flex justify-end gap-2">
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => enviarAlertaEmailPendencia(item)}
+                                                            disabled={enviandoEmail}
+                                                            className="inline-flex min-w-[78px] items-center justify-center whitespace-nowrap rounded-xl bg-red-50 px-3 py-1.5 text-xs font-semibold text-red-700 ring-1 ring-red-200 hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-50"
+                                                        >
+                                                            E-mail
+                                                        </button>
+
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => onSelectColab(item.colaborador)}
+                                                            className="inline-flex min-w-[48px] items-center justify-center whitespace-nowrap rounded-xl bg-slate-950 px-3 py-1.5 text-xs font-semibold text-white hover:bg-slate-800"
+                                                        >
+                                                            QR
+                                                        </button>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </Card>
                     )}
-                </Card>
-                )}
 
-                {blocosPainelDashboard.documentosTipo && (
-                <ListaCompacta
-                    titulo="Documentos por tipo"
-                    subtitulo="Resumo dos documentos empresariais."
-                    vazio="Nenhum documento empresarial cadastrado."
-                >
-                    {documentosPorTipo.slice(0, 8).map((item) => (
-                        <div key={item.tipo} className="rounded-2xl bg-slate-50 p-3 text-sm ring-1 ring-slate-100">
-                            <div className="flex justify-between gap-3">
-                                <span className="font-semibold text-slate-900">{item.tipo}</span>
-                                <span className="rounded-full bg-white px-2 py-0.5 text-xs font-bold text-slate-600 ring-1 ring-slate-200">{item.total}</span>
-                            </div>
-                            <p className="mt-1 text-xs text-slate-500">
-                                {item.emDia} em dia · {item.vencendo} a vencer · {item.vencidos} vencido(s)
+                    {blocosPainelDashboard.conformidade && (
+                        <Card>
+                            <h2 className="text-lg font-bold text-slate-950">Resumo de conformidade</h2>
+                            <p className="mt-1 text-sm text-slate-500">
+                                Baseado nos treinamentos exigidos para a função, incluindo os ainda não enviados.
                             </p>
-                        </div>
-                    ))}
-                </ListaCompacta>
-                )}
-            </div>
+
+                            <div className="mt-6 space-y-5">
+                                {resumoConformidade.map((i) => (
+                                    <div key={i.label}>
+                                        <div className="mb-2 flex justify-between text-sm">
+                                            <span className="font-medium text-slate-700">{i.label}</span>
+                                            <span className="text-slate-500">{i.valor}/{i.total}</span>
+                                        </div>
+                                        <div className="h-3 overflow-hidden rounded-full bg-slate-100">
+                                            <div
+                                                className={classNames("h-full rounded-full", i.classe)}
+                                                style={{ width: `${i.total ? Math.max(4, (i.valor / i.total) * 100) : 0}%` }}
+                                            />
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+
+                            <div className="mt-6 rounded-2xl bg-slate-50 p-4 text-sm text-slate-600">
+                                <strong className="text-slate-900">Regra do sistema:</strong> pendente indica ausência de certificado; vencido bloqueia a atividade; a vencer em até 30 dias gera alerta preventivo; em dia libera a consulta no QR Code.
+                            </div>
+                        </Card>
+                    )}
+                </div>
             )}
 
-            {(blocosPainelDashboard.ultimosDocumentos || blocosPainelDashboard.alertas) && (
-            <div className="mt-6 grid gap-6 xl:grid-cols-2">
-                {blocosPainelDashboard.ultimosDocumentos && (
-                <ListaCompacta
-                    titulo="Últimos documentos enviados"
-                    subtitulo="Certificados e documentos empresariais mais recentes."
-                    vazio="Nenhum documento enviado ainda."
-                >
-                    {ultimosDocumentosEnviados.map((item, index) => (
-                        <div key={`${item.origem}-${item.nome}-${index}`} className="rounded-2xl bg-slate-50 p-3 text-sm ring-1 ring-slate-100">
-                            <div className="flex flex-wrap items-center justify-between gap-2">
-                                <span className="font-semibold text-slate-900">{item.titulo}</span>
-                                <span className="rounded-full bg-white px-2 py-0.5 text-[10px] font-bold text-slate-600 ring-1 ring-slate-200">{item.origem}</span>
+            {blocosPainelDashboard.rankingEmpresas && (
+                <div className="mt-6">
+                    <Card>
+                        <div className="mb-4 flex flex-col justify-between gap-3 md:flex-row md:items-start">
+                            <div>
+                                <h2 className="text-lg font-bold text-slate-950">Ranking de pendências por empresa</h2>
+                                <p className="mt-1 text-sm text-slate-500">
+                                    Tabela em largura total para facilitar a conferência por empresa, sem dividir espaço com outros blocos.
+                                </p>
                             </div>
-                            <p className="mt-1 text-xs text-slate-500">
-                                {item.colaborador} · {item.empresa} · {item.data ? new Date(`${item.data}`.includes("T") ? item.data : `${item.data}T12:00:00`).toLocaleDateString("pt-BR") : "-"}
-                            </p>
+                            <div className="flex flex-wrap gap-2 text-xs font-semibold">
+                                <span className="rounded-full bg-emerald-50 px-3 py-1 text-emerald-700 ring-1 ring-emerald-200">Regular</span>
+                                <span className="rounded-full bg-orange-50 px-3 py-1 text-orange-700 ring-1 ring-orange-200">Atenção</span>
+                                <span className="rounded-full bg-red-50 px-3 py-1 text-red-700 ring-1 ring-red-200">Crítico</span>
+                            </div>
                         </div>
-                    ))}
-                </ListaCompacta>
-                )}
 
-                {blocosPainelDashboard.alertas && (
-                <ListaCompacta
-                    titulo="Alertas importantes"
-                    subtitulo="Itens que exigem atenção imediata."
-                    vazio="Nenhum alerta importante no momento."
-                >
-                    {alertasImportantes.map((item, index) => (
-                        <div key={`${item.tipo}-${index}`} className={classNames("rounded-2xl p-3 text-sm ring-1", item.classe)}>
-                            <p className="font-bold">{item.tipo}</p>
-                            <p className="mt-1 text-xs">{item.texto}</p>
-                        </div>
-                    ))}
-                </ListaCompacta>
-                )}
-            </div>
+                        {rankingPendenciasEmpresa.length === 0 ? (
+                            <div className="rounded-2xl border border-dashed border-slate-300 p-5 text-center text-sm text-slate-500">
+                                Nenhuma empresa encontrada para gerar o ranking.
+                            </div>
+                        ) : (
+                            <div className="overflow-x-auto scrollbar-discreta">
+                                <table className="min-w-[920px] w-full text-left text-sm">
+                                    <thead>
+                                        <tr className="border-b border-slate-200 text-xs uppercase tracking-wide text-slate-500">
+                                            <th className="py-3 pr-3 font-semibold">Empresa</th>
+                                            <th className="px-3 py-3 text-center font-semibold">Total colab.</th>
+                                            <th className="px-3 py-3 text-center font-semibold">Docs vencidos</th>
+                                            <th className="px-3 py-3 text-center font-semibold">Docs a vencer</th>
+                                            <th className="px-3 py-3 text-center font-semibold">Trein. vencidos</th>
+                                            <th className="px-3 py-3 text-center font-semibold">Bloqueados</th>
+                                            <th className="py-3 pl-3 text-center font-semibold">Status</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-slate-100">
+                                        {rankingPendenciasEmpresa.slice(0, 10).map((item, index) => (
+                                            <tr key={item.empresa} className="align-middle text-slate-700 hover:bg-slate-50/80">
+                                                <td className="py-3 pr-3">
+                                                    <div className="font-semibold text-slate-950">{index + 1}. {item.empresa}</div>
+                                                    {item.pendenciasLeves > 0 && item.statusEmpresa === "Atenção" && (
+                                                        <div className="mt-0.5 text-xs text-slate-500">Possui pendência leve ou item preventivo.</div>
+                                                    )}
+                                                </td>
+                                                <td className="px-3 py-3 text-center font-bold text-slate-900">{item.totalColaboradores}</td>
+                                                <td className="px-3 py-3 text-center">
+                                                    <span className={classNames("inline-flex min-w-8 justify-center rounded-full px-2 py-1 text-xs font-bold ring-1", item.documentosVencidos > 0 ? "bg-red-50 text-red-700 ring-red-100" : "bg-slate-50 text-slate-600 ring-slate-100")}>{item.documentosVencidos}</span>
+                                                </td>
+                                                <td className="px-3 py-3 text-center">
+                                                    <span className={classNames("inline-flex min-w-8 justify-center rounded-full px-2 py-1 text-xs font-bold ring-1", item.documentosAVencer > 0 ? "bg-orange-50 text-orange-700 ring-orange-100" : "bg-slate-50 text-slate-600 ring-slate-100")}>{item.documentosAVencer}</span>
+                                                </td>
+                                                <td className="px-3 py-3 text-center">
+                                                    <span className={classNames("inline-flex min-w-8 justify-center rounded-full px-2 py-1 text-xs font-bold ring-1", item.treinamentosVencidos > 0 ? "bg-red-50 text-red-700 ring-red-100" : "bg-slate-50 text-slate-600 ring-slate-100")}>{item.treinamentosVencidos}</span>
+                                                </td>
+                                                <td className="px-3 py-3 text-center">
+                                                    <span className={classNames("inline-flex min-w-8 justify-center rounded-full px-2 py-1 text-xs font-bold ring-1", item.colaboradoresBloqueados > 0 ? "bg-red-50 text-red-700 ring-red-100" : "bg-slate-50 text-slate-600 ring-slate-100")}>{item.colaboradoresBloqueados}</span>
+                                                </td>
+                                                <td className="py-3 pl-3 text-center">
+                                                    <span className={classNames("inline-flex min-w-[86px] justify-center rounded-full px-3 py-1 text-xs font-bold ring-1", item.statusEmpresaClasse)}>
+                                                        {item.statusEmpresa}
+                                                    </span>
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
+                        )}
+                    </Card>
+                </div>
             )}
+
+            {(blocosPainelDashboard.colaboradoresFuncao || blocosPainelDashboard.alertas) && (
+                <div className={classNames(
+                    "mt-6 grid gap-6",
+                    blocosPainelDashboard.colaboradoresFuncao && blocosPainelDashboard.alertas ? "xl:grid-cols-2" : "xl:grid-cols-1"
+                )}>
+                    {blocosPainelDashboard.colaboradoresFuncao && (
+                        <ListaCompacta
+                            titulo="Colaboradores mobilizados por função"
+                            subtitulo="Conta apenas ativos, mobilizados, liberados ou com pendência não bloqueante."
+                            vazio="Nenhum colaborador mobilizado encontrado."
+                        >
+                            {colaboradoresPorFuncao.slice(0, 8).map((item) => (
+                                <div key={item.funcao} className="rounded-2xl bg-slate-50 p-3 text-sm ring-1 ring-slate-100">
+                                    <div className="flex justify-between gap-3">
+                                        <span className="font-semibold text-slate-900">{item.funcao}</span>
+                                        <span className="rounded-full bg-white px-2 py-0.5 text-xs font-bold text-slate-600 ring-1 ring-slate-200">{item.quantidade}</span>
+                                    </div>
+                                    <div className="mt-2 h-2 overflow-hidden rounded-full bg-white ring-1 ring-slate-100">
+                                        <div
+                                            className="h-full rounded-full bg-slate-900"
+                                            style={{ width: `${Math.max(6, Math.round((item.quantidade / maiorQuantidadePorFuncao) * 100))}%` }}
+                                        />
+                                    </div>
+                                    <p className="mt-1 text-xs text-slate-500">
+                                        {item.quantidade} colaborador(es) considerado(s) mobilizado(s)
+                                    </p>
+                                </div>
+                            ))}
+                        </ListaCompacta>
+                    )}
+
+                    {blocosPainelDashboard.alertas && (
+                        <ListaCompacta
+                            titulo="Alertas importantes"
+                            subtitulo="Itens que exigem atenção imediata."
+                            vazio="Nenhum alerta importante no momento."
+                        >
+                            {alertasImportantes.map((item, index) => (
+                                <div key={`${item.tipo}-${index}`} className={classNames("rounded-2xl p-3 text-sm ring-1", item.classe)}>
+                                    <p className="font-bold">{item.tipo}</p>
+                                    <p className="mt-1 text-xs">{item.texto}</p>
+                                </div>
+                            ))}
+                        </ListaCompacta>
+                    )}
+                </div>
+            )}
+
+            {(blocosPainelDashboard.documentosTipo || blocosPainelDashboard.ultimosDocumentos) && (
+                <div className={classNames(
+                    "mt-6 grid gap-6",
+                    blocosPainelDashboard.documentosTipo && blocosPainelDashboard.ultimosDocumentos ? "xl:grid-cols-2" : "xl:grid-cols-1"
+                )}>
+                    {blocosPainelDashboard.documentosTipo && (
+                        <ListaCompacta
+                            titulo="Documentos por tipo"
+                            subtitulo="Resumo dos documentos empresariais."
+                            vazio="Nenhum documento empresarial cadastrado."
+                        >
+                            {documentosPorTipo.slice(0, 8).map((item) => (
+                                <div key={item.tipo} className="rounded-2xl bg-slate-50 p-3 text-sm ring-1 ring-slate-100">
+                                    <div className="flex justify-between gap-3">
+                                        <span className="font-semibold text-slate-900">{item.tipo}</span>
+                                        <span className="rounded-full bg-white px-2 py-0.5 text-xs font-bold text-slate-600 ring-1 ring-slate-200">{item.total}</span>
+                                    </div>
+                                    <p className="mt-1 text-xs text-slate-500">
+                                        {item.emDia} em dia · {item.vencendo} a vencer · {item.vencidos} vencido(s)
+                                    </p>
+                                </div>
+                            ))}
+                        </ListaCompacta>
+                    )}
+
+                    {blocosPainelDashboard.ultimosDocumentos && (
+                        <ListaCompacta
+                            titulo="Últimos documentos enviados"
+                            subtitulo="Certificados e documentos empresariais mais recentes."
+                            vazio="Nenhum documento enviado ainda."
+                        >
+                            {ultimosDocumentosEnviados.map((item, index) => (
+                                <div key={`${item.origem}-${item.nome}-${index}`} className="rounded-2xl bg-slate-50 p-3 text-sm ring-1 ring-slate-100">
+                                    <div className="flex flex-wrap items-center justify-between gap-2">
+                                        <span className="font-semibold text-slate-900">{item.titulo}</span>
+                                        <span className="rounded-full bg-white px-2 py-0.5 text-[10px] font-bold text-slate-600 ring-1 ring-slate-200">{item.origem}</span>
+                                    </div>
+                                    <p className="mt-1 text-xs text-slate-500">
+                                        {item.colaborador} · {item.empresa} · {item.data ? new Date(`${item.data}`.includes("T") ? item.data : `${item.data}T12:00:00`).toLocaleDateString("pt-BR") : "-"}
+                                    </p>
+                                </div>
+                            ))}
+                        </ListaCompacta>
+                    )}
+                </div>
+            )}
+
 
         </motion.div>
     );
@@ -7539,6 +7642,14 @@ function RelatorioAuditoria({
         nome: "",
         funcao: "",
     });
+    const [detalhesAuditoriaAbertos, setDetalhesAuditoriaAbertos] = useState({});
+
+    const alternarDetalhesAuditoria = (id) => {
+        setDetalhesAuditoriaAbertos((atual) => ({
+            ...atual,
+            [id]: !atual[id],
+        }));
+    };
 
     const acoes = useMemo(
         () => Array.from(new Set(auditoria.map((item) => item.acao).filter(Boolean))).sort(),
@@ -7560,6 +7671,16 @@ function RelatorioAuditoria({
             return bateBusca && bateAcao;
         });
     }, [auditoria, busca, filtroAcao]);
+
+    const ultimosAcessosAuditoria = auditoria
+        .filter((item) => normalizarTextoBusca(`${item.acao || ""} ${item.descricao || ""}`).includes("acesso"))
+        .sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0))
+        .slice(0, 8);
+
+    const ultimosEmailsAuditoria = auditoria
+        .filter((item) => normalizarTextoBusca(`${item.acao || ""} ${item.descricao || ""}`).includes("email"))
+        .sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0))
+        .slice(0, 8);
 
     const obterEmpresaArquivoStorage = (arquivo) =>
         arquivo.empresaNome || arquivo.colaboradorEmpresa || "Sem empresa vinculada";
@@ -7852,6 +7973,74 @@ function RelatorioAuditoria({
                     <p className="mt-2 text-3xl font-bold text-orange-700">
                         {auditoria.filter((item) => ["INSERT", "UPDATE", "DELETE"].includes(item.acao)).length}
                     </p>
+                </Card>
+            </div>
+
+            <div className="mt-5 grid gap-5 xl:grid-cols-2">
+                <Card>
+                    <div className="mb-4 flex items-start justify-between gap-3">
+                        <div>
+                            <h2 className="text-lg font-bold text-slate-950">Últimos acessos</h2>
+                            <p className="mt-1 text-sm text-slate-500">Entradas recentes, consultas públicas e abertura da Auditoria.</p>
+                        </div>
+                        <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-bold text-slate-600 ring-1 ring-slate-200">{ultimosAcessosAuditoria.length}</span>
+                    </div>
+
+                    <div className="space-y-2">
+                        {ultimosAcessosAuditoria.length === 0 && (
+                            <div className="rounded-2xl border border-dashed border-slate-300 p-5 text-center text-sm text-slate-500">
+                                Nenhum acesso registrado ainda.
+                            </div>
+                        )}
+
+                        {ultimosAcessosAuditoria.map((item) => {
+                            const origemAcesso = item.dados?.origemAcesso || {};
+
+                            return (
+                                <div key={item.id} className="rounded-2xl bg-slate-50 p-3 text-sm ring-1 ring-slate-100">
+                                    <div className="flex flex-wrap items-center justify-between gap-2">
+                                        <p className="font-semibold text-slate-950">{item.usuario_email || "Sistema / consulta pública"}</p>
+                                        <span className="rounded-full bg-white px-2 py-0.5 text-[10px] font-bold text-slate-600 ring-1 ring-slate-200">{item.acao || "ACESSO"}</span>
+                                    </div>
+                                    <p className="mt-1 text-xs text-slate-500">
+                                        {item.created_at ? new Date(item.created_at).toLocaleString("pt-BR") : "-"}
+                                        {origemAcesso.navegador ? ` · ${origemAcesso.navegador}` : ""}
+                                    </p>
+                                </div>
+                            );
+                        })}
+                    </div>
+                </Card>
+
+                <Card>
+                    <div className="mb-4 flex items-start justify-between gap-3">
+                        <div>
+                            <h2 className="text-lg font-bold text-slate-950">Últimos e-mails enviados</h2>
+                            <p className="mt-1 text-sm text-slate-500">Eventos de envio registrados pela auditoria do sistema.</p>
+                        </div>
+                        <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-bold text-slate-600 ring-1 ring-slate-200">{ultimosEmailsAuditoria.length}</span>
+                    </div>
+
+                    <div className="space-y-2">
+                        {ultimosEmailsAuditoria.length === 0 && (
+                            <div className="rounded-2xl border border-dashed border-slate-300 p-5 text-center text-sm text-slate-500">
+                                Nenhum envio de e-mail registrado ainda.
+                            </div>
+                        )}
+
+                        {ultimosEmailsAuditoria.map((item) => (
+                            <div key={item.id} className="rounded-2xl bg-slate-50 p-3 text-sm ring-1 ring-slate-100">
+                                <div className="flex flex-wrap items-center justify-between gap-2">
+                                    <p className="font-semibold text-slate-950">{item.usuario_email || "Sistema"}</p>
+                                    <span className="rounded-full bg-white px-2 py-0.5 text-[10px] font-bold text-slate-600 ring-1 ring-slate-200">{item.acao || "E-MAIL"}</span>
+                                </div>
+                                <p className="mt-1 text-xs text-slate-500">
+                                    {item.created_at ? new Date(item.created_at).toLocaleString("pt-BR") : "-"}
+                                </p>
+                                <p className="mt-1 line-clamp-2 text-xs text-slate-500">{item.descricao || "Envio registrado"}</p>
+                            </div>
+                        ))}
+                    </div>
                 </Card>
             </div>
 
@@ -8376,6 +8565,12 @@ function RelatorioAuditoria({
                     {registrosFiltrados.map((item) => {
                         const origemAcesso = item.dados?.origemAcesso || {};
                         const temOrigemAcesso = Boolean(origemAcesso.url || origemAcesso.pagina || origemAcesso.navegador || origemAcesso.plataforma);
+                        const dadosExtras = item.dados && typeof item.dados === "object"
+                            ? Object.fromEntries(Object.entries(item.dados).filter(([chave]) => chave !== "origemAcesso"))
+                            : {};
+                        const temDadosExtras = Object.keys(dadosExtras).length > 0;
+                        const detalhesAberto = Boolean(detalhesAuditoriaAbertos[item.id]);
+                        const podeAbrirDetalhes = temOrigemAcesso || temDadosExtras || item.registro_id;
 
                         return (
                             <div key={item.id} className="rounded-3xl border border-slate-200 bg-white p-4">
@@ -8394,12 +8589,43 @@ function RelatorioAuditoria({
                                         <p className="mt-1 text-sm text-slate-500">
                                             Usuário: <strong>{item.usuario_email || "Sistema / consulta pública"}</strong>
                                         </p>
-                                        {item.registro_id && (
-                                            <p className="mt-1 text-xs text-slate-400">Registro: {item.registro_id}</p>
+                                    </div>
+
+                                    <div className="flex shrink-0 flex-col gap-2 lg:items-end">
+                                        <p className="text-sm font-semibold text-slate-500">
+                                            {item.created_at ? new Date(item.created_at).toLocaleString("pt-BR") : "-"}
+                                        </p>
+
+                                        {podeAbrirDetalhes && (
+                                            <button
+                                                type="button"
+                                                onClick={() => alternarDetalhesAuditoria(item.id)}
+                                                className="inline-flex items-center justify-center gap-1 rounded-xl bg-slate-100 px-3 py-1.5 text-xs font-bold text-slate-700 ring-1 ring-slate-200 hover:bg-slate-200"
+                                            >
+                                                {detalhesAberto ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
+                                                {detalhesAberto ? "Fechar detalhes" : "Abrir detalhes"}
+                                            </button>
                                         )}
+                                    </div>
+                                </div>
+
+                                {detalhesAberto && (
+                                    <div className="mt-3 grid gap-3 lg:grid-cols-2">
+                                        <div className="rounded-2xl bg-slate-50 p-3 text-xs leading-relaxed text-slate-500 ring-1 ring-slate-100">
+                                            <p className="font-bold text-slate-700">Informações do registro</p>
+                                            <p className="mt-1 break-words">
+                                                <strong>Registro:</strong> {item.registro_id || "-"}
+                                            </p>
+                                            <p className="break-words">
+                                                <strong>Tabela:</strong> {item.tabela || "-"}
+                                            </p>
+                                            <p className="break-words">
+                                                <strong>Ação:</strong> {item.acao || "-"}
+                                            </p>
+                                        </div>
 
                                         {temOrigemAcesso && (
-                                            <div className="mt-3 rounded-2xl bg-slate-50 p-3 text-xs leading-relaxed text-slate-500 ring-1 ring-slate-100">
+                                            <div className="rounded-2xl bg-slate-50 p-3 text-xs leading-relaxed text-slate-500 ring-1 ring-slate-100">
                                                 <p className="font-bold text-slate-700">Origem do acesso</p>
                                                 <p className="mt-1 break-words">
                                                     <strong>URL:</strong> {origemAcesso.url || "-"}
@@ -8414,12 +8640,17 @@ function RelatorioAuditoria({
                                                 </p>
                                             </div>
                                         )}
-                                    </div>
 
-                                    <p className="text-sm font-semibold text-slate-500">
-                                        {item.created_at ? new Date(item.created_at).toLocaleString("pt-BR") : "-"}
-                                    </p>
-                                </div>
+                                        {temDadosExtras && (
+                                            <div className="rounded-2xl bg-slate-50 p-3 text-xs leading-relaxed text-slate-500 ring-1 ring-slate-100 lg:col-span-2">
+                                                <p className="font-bold text-slate-700">Outras informações</p>
+                                                <pre className="mt-2 max-h-56 overflow-auto whitespace-pre-wrap break-words rounded-xl bg-white p-3 text-[11px] text-slate-600 ring-1 ring-slate-100 scrollbar-discreta">
+                                                    {JSON.stringify(dadosExtras, null, 2)}
+                                                </pre>
+                                            </div>
+                                        )}
+                                    </div>
+                                )}
                             </div>
                         );
                     })}
