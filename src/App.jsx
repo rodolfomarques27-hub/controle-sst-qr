@@ -3449,9 +3449,19 @@ function Dashboard({
                                 {pendencias.slice(0, 10).map((item, idx) => (
                                     <tr key={`${item.colaborador.id}-${item.treinamento.id}-${idx}`} className="hover:bg-slate-50">
                                         <td className="px-4 py-3">
-                                            <div className="font-semibold text-slate-900">{item.colaborador.nome}</div>
-                                            <div className="text-xs text-slate-500">
-                                                {item.colaborador.empresaExibicao || item.colaborador.empresa} · {item.colaborador.statusMobilizacao || obterStatusInicialColaborador()} · {statusGeral(item.colaborador).texto}
+                                            <div className="flex min-w-0 items-center gap-3">
+                                                <FotoColaborador
+                                                    src={item.colaborador.fotoUrl}
+                                                    nome={item.colaborador.nome}
+                                                    className="h-9 w-9 rounded-2xl"
+                                                    iconClassName="h-4 w-4"
+                                                />
+                                                <div className="min-w-0">
+                                                    <div className="truncate font-semibold text-slate-900">{item.colaborador.nome}</div>
+                                                    <div className="text-xs text-slate-500">
+                                                        {item.colaborador.empresaExibicao || item.colaborador.empresa} · {item.colaborador.statusMobilizacao || obterStatusInicialColaborador()} · {statusGeral(item.colaborador).texto}
+                                                    </div>
+                                                </div>
                                             </div>
                                         </td>
                                         <td className="px-4 py-3 text-slate-600">{item.treinamento.nome}</td>
