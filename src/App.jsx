@@ -2070,7 +2070,6 @@ function Dashboard({
     empresasBanco = [],
     documentosEmpresas = [],
     auditoria = [],
-    auditoriasCampo = [],
     onSelectColab,
     onRegistrarEmailEnviado,
 }) {
@@ -2090,8 +2089,6 @@ function Dashboard({
         documentosTipo: true,
         ultimosDocumentos: true,
         alertas: true,
-        auditoriasCampo: true,
-        topDesviosCampo: true,
     };
 
     const cartasPadraoDashboard = {
@@ -2107,9 +2104,6 @@ function Dashboard({
         desviosAbertos: true,
         aniversariantesMes: true,
         armazenamentoUtilizado: true,
-        auditoriasCampoMes: true,
-        mediaConformidadeCampo: true,
-        desviosCampoCorrigidos: true,
     };
 
     const tamanhosPadraoCartasDashboard = {
@@ -2125,9 +2119,6 @@ function Dashboard({
         desviosAbertos: "padrao",
         aniversariantesMes: "padrao",
         armazenamentoUtilizado: "padrao",
-        auditoriasCampoMes: "padrao",
-        mediaConformidadeCampo: "padrao",
-        desviosCampoCorrigidos: "padrao",
     };
 
     const tamanhosPadraoBlocosDashboard = {
@@ -2139,8 +2130,6 @@ function Dashboard({
         alertas: "medio",
         documentosTipo: "medio",
         ultimosDocumentos: "medio",
-        auditoriasCampo: "destaque",
-        topDesviosCampo: "medio",
     };
 
     const ordemPadraoBlocosDashboard = [
@@ -2152,8 +2141,6 @@ function Dashboard({
         "alertas",
         "documentosTipo",
         "ultimosDocumentos",
-        "auditoriasCampo",
-        "topDesviosCampo",
     ];
 
     const ordemPadraoCartasDashboard = [
@@ -2169,9 +2156,6 @@ function Dashboard({
         "desviosAbertos",
         "aniversariantesMes",
         "armazenamentoUtilizado",
-        "auditoriasCampoMes",
-        "mediaConformidadeCampo",
-        "desviosCampoCorrigidos",
     ];
 
     const opcoesTamanhoCartaDashboard = [
@@ -2189,8 +2173,6 @@ function Dashboard({
         { chave: "alertas", label: "Alertas importantes" },
         { chave: "documentosTipo", label: "Documentos por tipo" },
         { chave: "ultimosDocumentos", label: "Últimos documentos enviados" },
-        { chave: "auditoriasCampo", label: "Auditorias de campo" },
-        { chave: "topDesviosCampo", label: "Top 5 desvios" },
     ];
     const blocosComTamanhoDashboard = opcoesPainelDashboard;
     const opcoesTamanhoBlocoDashboard = [
@@ -2207,8 +2189,6 @@ function Dashboard({
         alertas: false,
         documentosTipo: false,
         ultimosDocumentos: false,
-        auditoriasCampo: false,
-        topDesviosCampo: false,
     };
     const [mostrarFiltroPainel, setMostrarFiltroPainel] = useState(false);
     const [cartaArrastandoDashboard, setCartaArrastandoDashboard] = useState(null);
@@ -2561,30 +2541,6 @@ function Dashboard({
         return texto.includes("desvio") && !texto.includes("fechado") && !texto.includes("concluido") && !texto.includes("concluído");
     }).length;
 
-    const auditoriasCampoNormalizadas = auditoriasCampo.map(normalizarAuditoriaCampo);
-    const auditoriasCampoMes = auditoriasCampoNormalizadas.filter((item) => {
-        const data = item.createdAt ? new Date(item.createdAt) : null;
-        return data && data.getMonth() === mesAtual && data.getFullYear() === anoAtual;
-    });
-    const mediaConformidadeCampo = auditoriasCampoMes.length
-        ? Math.round(auditoriasCampoMes.reduce((total, item) => total + Number(item.pontuacao || 0), 0) / auditoriasCampoMes.length)
-        : 0;
-    const desviosCampoAbertos = auditoriasCampoNormalizadas.filter(auditoriaCampoAberta).length;
-    const desviosCampoCorrigidos = auditoriasCampoNormalizadas.filter((item) => {
-        const status = normalizarTextoBusca(item.statusDesvio || "");
-        return (item.totalDesvios || 0) > 0 && status.includes("corrigido");
-    }).length;
-    const topDesviosCampo = Object.values(
-        auditoriasCampoNormalizadas.reduce((acc, item) => {
-            const chave = item.categoriaDesvioPrincipal || item.desvios?.[0]?.categoria || "Desvio não classificado";
-            if (!acc[chave]) acc[chave] = { categoria: chave, total: 0, abertos: 0, graves: 0 };
-            acc[chave].total += Number(item.totalDesvios || 0) || 1;
-            if (auditoriaCampoAberta(item)) acc[chave].abertos += 1;
-            if (item.temDesvioGrave) acc[chave].graves += 1;
-            return acc;
-        }, {})
-    ).sort((a, b) => b.total - a.total || b.graves - a.graves).slice(0, 5);
-
     const aniversariantesElegiveis = colaboradores.filter((colaborador) =>
         deveMostrarAniversarioColaborador(colaborador) && colaboradorContaComoMobilizado(colaborador)
     );
@@ -2595,44 +2551,6 @@ function Dashboard({
 
     const storagePercentual = calcularPercentualUsoStorage(usoStorageDashboard.totalBytes);
     const totalStorageLabel = carregandoStorageDashboard ? "Carregando..." : formatarBytes(usoStorageDashboard.totalBytes);
-    const storageLimiteBytesDashboard = Math.max(1, LIMITE_STORAGE_MB * 1024 * 1024);
-    const storageLimiteLabelDashboard = formatarBytes(storageLimiteBytesDashboard).replace(".00", "");
-    const storageStatusDashboard =
-        storagePercentual >= 90
-            ? {
-                texto: "Crítico",
-                detalhe: "Pouco espaço disponível",
-                apoio: "Considere liberar espaço para evitar interrupções.",
-                classe: "bg-red-50 text-red-700 ring-red-200",
-                iconeClasse: "bg-red-50 text-red-600",
-                valorClasse: "text-red-600",
-                barraClasse: "bg-red-500",
-                trilhoClasse: "bg-red-100",
-                statusIcon: AlertTriangle,
-            }
-            : storagePercentual >= 70
-                ? {
-                    texto: "Atenção",
-                    detalhe: "Acompanhe o limite do sistema",
-                    apoio: "O armazenamento está subindo. Avalie arquivos grandes ou sem vínculo.",
-                    classe: "bg-orange-50 text-orange-700 ring-orange-200",
-                    iconeClasse: "bg-orange-50 text-orange-600",
-                    valorClasse: "text-orange-600",
-                    barraClasse: "bg-orange-500",
-                    trilhoClasse: "bg-orange-100",
-                    statusIcon: AlertTriangle,
-                }
-                : {
-                    texto: "Normal",
-                    detalhe: "Uso saudável do armazenamento",
-                    apoio: "Capacidade dentro do limite configurado.",
-                    classe: "bg-emerald-50 text-emerald-700 ring-emerald-200",
-                    iconeClasse: "bg-emerald-50 text-emerald-600",
-                    valorClasse: "text-slate-950",
-                    barraClasse: "bg-emerald-500",
-                    trilhoClasse: "bg-slate-100",
-                    statusIcon: CheckCircle2,
-                };
 
     const cards = [
         { chave: "colaboradoresMobilizados", label: "Colaboradores mobilizados", valor: colaboradoresMobilizados.length, icon: HardHat, detalhe: "Liberados ou com pendência" },
@@ -2645,9 +2563,6 @@ function Dashboard({
         { chave: "treinamentosVencidos", label: "Treinamentos vencidos", valor: indicadores.vencidos, icon: AlertTriangle, detalhe: "Colaboradores" },
         { chave: "colaboradoresBloqueados", label: "Colaboradores bloqueados", valor: colaboradoresBloqueados, icon: Lock, detalhe: "Pendência bloqueante" },
         { chave: "desviosAbertos", label: "Desvios abertos", valor: desviosAbertos, icon: AlertTriangle, detalhe: "Registros não concluídos" },
-        { chave: "auditoriasCampoMes", label: "Auditorias de campo no mês", valor: auditoriasCampoMes.length, icon: ClipboardCheck, detalhe: "Checklists via QR Code" },
-        { chave: "mediaConformidadeCampo", label: "Média de conformidade", valor: `${mediaConformidadeCampo}%`, icon: BadgeCheck, detalhe: "Auditorias do mês" },
-        { chave: "desviosCampoCorrigidos", label: "Desvios corrigidos", valor: desviosCampoCorrigidos, icon: CheckCircle2, detalhe: `${desviosCampoAbertos} aberto(s)` },
         { chave: "aniversariantesMes", label: "Aniversariantes do mês", valor: aniversariantesMes.length, icon: UserRound, detalhe: aniversariantesMes.length > 0 ? "Quantidade no mês atual" : "Nenhum aniversariante no mês" },
         { chave: "armazenamentoUtilizado", label: "Armazenamento utilizado", valor: totalStorageLabel, icon: Upload, detalhe: `${storagePercentual}% do limite visual` },
     ];
@@ -3183,74 +3098,6 @@ function Dashboard({
                             const Icon = item.icon;
                             const tamanho = tamanhosCartasDashboard[item.chave] || "padrao";
 
-                            if (item.chave === "armazenamentoUtilizado") {
-                                const StatusIcon = storageStatusDashboard.statusIcon;
-                                const percentualBarra = Math.min(100, Math.max(storagePercentual > 0 ? 2 : 0, storagePercentual));
-
-                                return (
-                                    <Card
-                                        key={item.chave}
-                                        className={classNames(
-                                            "overflow-hidden border-dashed bg-white transition hover:border-slate-300",
-                                            classeTamanhoCartaDashboard(item.chave)
-                                        )}
-                                    >
-                                        <div className="flex h-full min-h-[170px] flex-col justify-between gap-4">
-                                            <div className="flex items-start justify-between gap-4">
-                                                <div className="flex min-w-0 items-start gap-3">
-                                                    <div className={classNames("shrink-0 rounded-3xl p-3", storageStatusDashboard.iconeClasse)}>
-                                                        <Upload className={tamanho === "destaque" || tamanho === "grande" ? "h-6 w-6" : "h-5 w-5"} />
-                                                    </div>
-                                                    <div className="min-w-0">
-                                                        <p className="text-sm font-bold text-slate-600">Armazenamento utilizado</p>
-                                                        <div className={classNames("mt-2 flex flex-wrap items-end gap-x-2 gap-y-1 font-black", tamanho === "destaque" || tamanho === "grande" ? "text-4xl" : "text-3xl")}>
-                                                            <span className={storageStatusDashboard.valorClasse}>{totalStorageLabel}</span>
-                                                            <span className="text-xl font-semibold text-slate-400">/ {storageLimiteLabelDashboard}</span>
-                                                        </div>
-                                                    </div>
-                                                </div>
-
-                                                <div className="flex shrink-0 flex-col items-end gap-2">
-                                                    <span className={classNames("inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-bold ring-1", storageStatusDashboard.classe)}>
-                                                        <StatusIcon className="h-3.5 w-3.5" />
-                                                        {storageStatusDashboard.texto}
-                                                    </span>
-                                                    <span className={classNames("rounded-2xl px-3 py-1.5 text-sm font-black", storageStatusDashboard.classe)}>
-                                                        {storagePercentual}%
-                                                    </span>
-                                                </div>
-                                            </div>
-
-                                            <div>
-                                                <div className={classNames("h-3 overflow-hidden rounded-full", storageStatusDashboard.trilhoClasse)}>
-                                                    <div
-                                                        className={classNames("h-full rounded-full transition-all", storageStatusDashboard.barraClasse)}
-                                                        style={{ width: `${percentualBarra}%` }}
-                                                    />
-                                                </div>
-
-                                                <div className="mt-3 flex flex-col gap-2 border-t border-slate-100 pt-3 text-xs text-slate-500 sm:flex-row sm:items-center sm:justify-between">
-                                                    <span className="inline-flex items-center gap-2 font-semibold">
-                                                        <Database className="h-4 w-4 text-slate-400" />
-                                                        Capacidade total: {storageLimiteLabelDashboard}
-                                                    </span>
-                                                    <span className={classNames("inline-flex items-center gap-2 font-semibold", storagePercentual >= 90 ? "text-red-600" : storagePercentual >= 70 ? "text-orange-600" : "text-emerald-600")}>
-                                                        <StatusIcon className="h-4 w-4" />
-                                                        {storageStatusDashboard.detalhe}
-                                                    </span>
-                                                </div>
-
-                                                {(tamanho === "destaque" || tamanho === "grande") && (
-                                                    <p className="mt-2 text-xs leading-relaxed text-slate-400">
-                                                        {storageStatusDashboard.apoio}
-                                                    </p>
-                                                )}
-                                            </div>
-                                        </div>
-                                    </Card>
-                                );
-                            }
-
                             return (
                                 <Card
                                     key={item.chave}
@@ -3282,112 +3129,6 @@ function Dashboard({
                         })
                     )}
                 </div>
-            );
-        }
-
-        if (chave === "auditoriasCampo") {
-            return (
-                <CardDashboardRecolhivel
-                    chaveBloco="auditoriasCampo"
-                    titulo="Auditorias de campo"
-                    subtitulo="Histórico mensal de auditorias realizadas via QR Code por colaborador e empresa."
-                    badge={(
-                        <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-600">
-                            {auditoriasCampoMes.length} no mês
-                        </span>
-                    )}
-                >
-                    <div className="grid gap-3 md:grid-cols-4">
-                        <div className="rounded-2xl bg-slate-50 p-4 ring-1 ring-slate-200">
-                            <p className="text-xs font-bold uppercase tracking-wide text-slate-400">Auditorias do mês</p>
-                            <p className="mt-2 text-2xl font-black text-slate-950">{auditoriasCampoMes.length}</p>
-                        </div>
-                        <div className="rounded-2xl bg-slate-50 p-4 ring-1 ring-slate-200">
-                            <p className="text-xs font-bold uppercase tracking-wide text-slate-400">Média de conformidade</p>
-                            <p className="mt-2 text-2xl font-black text-slate-950">{mediaConformidadeCampo}%</p>
-                        </div>
-                        <div className="rounded-2xl bg-slate-50 p-4 ring-1 ring-slate-200">
-                            <p className="text-xs font-bold uppercase tracking-wide text-slate-400">Desvios abertos</p>
-                            <p className="mt-2 text-2xl font-black text-red-600">{desviosCampoAbertos}</p>
-                        </div>
-                        <div className="rounded-2xl bg-slate-50 p-4 ring-1 ring-slate-200">
-                            <p className="text-xs font-bold uppercase tracking-wide text-slate-400">Desvios corrigidos</p>
-                            <p className="mt-2 text-2xl font-black text-emerald-600">{desviosCampoCorrigidos}</p>
-                        </div>
-                    </div>
-
-                    <div className="mt-4 overflow-x-auto rounded-2xl border border-slate-200 scrollbar-discreta">
-                        <table className="min-w-[850px] w-full text-left text-sm">
-                            <thead className="bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
-                                <tr>
-                                    <th className="px-4 py-3">Data</th>
-                                    <th className="px-4 py-3">Colaborador</th>
-                                    <th className="px-4 py-3">Empresa</th>
-                                    <th className="px-4 py-3">Pontuação</th>
-                                    <th className="px-4 py-3">Classificação</th>
-                                    <th className="px-4 py-3">Desvios</th>
-                                </tr>
-                            </thead>
-                            <tbody className="divide-y divide-slate-100 bg-white">
-                                {auditoriasCampoNormalizadas.length === 0 && (
-                                    <tr>
-                                        <td className="px-4 py-8 text-center text-sm text-slate-500" colSpan={6}>
-                                            Nenhuma auditoria de campo registrada.
-                                        </td>
-                                    </tr>
-                                )}
-                                {auditoriasCampoNormalizadas.slice(0, 10).map((item) => (
-                                    <tr key={item.id} className="hover:bg-slate-50">
-                                        <td className="px-4 py-3 text-slate-600">{formatarDataHora(item.createdAt)}</td>
-                                        <td className="px-4 py-3 font-semibold text-slate-900">{item.colaboradorNome || "-"}</td>
-                                        <td className="px-4 py-3 text-slate-600">{item.empresaNome || "-"}</td>
-                                        <td className="px-4 py-3 font-bold text-slate-900">{item.pontuacao}%</td>
-                                        <td className="px-4 py-3">
-                                            <span className={classNames("rounded-full px-2 py-1 text-xs font-bold ring-1", classeClassificacaoAuditoriaCampo(item.classificacao))}>
-                                                {item.classificacao || "-"}
-                                            </span>
-                                        </td>
-                                        <td className="px-4 py-3 text-slate-600">{item.totalDesvios}</td>
-                                    </tr>
-                                ))}
-                            </tbody>
-                        </table>
-                    </div>
-                </CardDashboardRecolhivel>
-            );
-        }
-
-        if (chave === "topDesviosCampo") {
-            return (
-                <CardDashboardRecolhivel
-                    chaveBloco="topDesviosCampo"
-                    titulo="Top 5 desvios"
-                    subtitulo="Principais tipos de desvios registrados nas auditorias de campo."
-                    badge={(
-                        <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-600">
-                            {topDesviosCampo.length} tipo(s)
-                        </span>
-                    )}
-                >
-                    <div className="space-y-2">
-                        {topDesviosCampo.length === 0 && (
-                            <div className="rounded-2xl border border-dashed border-slate-300 p-5 text-center text-sm text-slate-500">
-                                Nenhum desvio de auditoria de campo registrado.
-                            </div>
-                        )}
-                        {topDesviosCampo.map((item, index) => (
-                            <div key={item.categoria} className="flex items-center justify-between gap-3 rounded-2xl bg-slate-50 p-3 ring-1 ring-slate-100">
-                                <div className="min-w-0">
-                                    <p className="truncate text-sm font-bold text-slate-900">{index + 1}. {item.categoria}</p>
-                                    <p className="text-xs text-slate-500">{item.abertos} aberto(s) · {item.graves} grave(s)</p>
-                                </div>
-                                <span className="rounded-full bg-white px-3 py-1 text-xs font-bold text-slate-700 ring-1 ring-slate-200">
-                                    {item.total}
-                                </span>
-                            </div>
-                        ))}
-                    </div>
-                </CardDashboardRecolhivel>
             );
         }
 
@@ -4127,6 +3868,291 @@ function Dashboard({
             )}
 
 
+        </motion.div>
+    );
+}
+
+
+function DashboardAuditoriaCampo({ auditoriasCampo = [], empresasBanco = [] }) {
+    const [filtroMes, setFiltroMes] = useState(String(hoje.getMonth() + 1));
+    const [filtroEmpresa, setFiltroEmpresa] = useState("Todas");
+    const [filtroClassificacao, setFiltroClassificacao] = useState("Todas");
+    const [filtroStatusDesvio, setFiltroStatusDesvio] = useState("Todos");
+
+    const auditoriasNormalizadas = useMemo(
+        () => auditoriasCampo.map(normalizarAuditoriaCampo),
+        [auditoriasCampo]
+    );
+
+    const empresasFiltro = useMemo(() => {
+        const nomes = new Set([
+            ...empresasBanco.map((empresa) => empresa.nome).filter(Boolean),
+            ...auditoriasNormalizadas.map((item) => item.empresaNome).filter(Boolean),
+        ]);
+        return Array.from(nomes).sort((a, b) => a.localeCompare(b));
+    }, [empresasBanco, auditoriasNormalizadas]);
+
+    const classificacoesFiltro = useMemo(() => {
+        const itens = new Set(auditoriasNormalizadas.map((item) => item.classificacao).filter(Boolean));
+        return Array.from(itens).sort((a, b) => a.localeCompare(b));
+    }, [auditoriasNormalizadas]);
+
+    const auditoriasFiltradas = useMemo(() => {
+        return auditoriasNormalizadas.filter((item) => {
+            const data = item.createdAt ? new Date(item.createdAt) : null;
+            const mes = data && !Number.isNaN(data.getTime()) ? data.getMonth() + 1 : null;
+            const empresaOk = filtroEmpresa === "Todas" || item.empresaNome === filtroEmpresa;
+            const mesOk = filtroMes === "Todos" || Number(filtroMes) === mes;
+            const classificacaoOk = filtroClassificacao === "Todas" || item.classificacao === filtroClassificacao;
+            const statusBusca = normalizarTextoBusca(item.statusDesvio || "");
+            const aberta = auditoriaCampoAberta(item);
+            const statusOk =
+                filtroStatusDesvio === "Todos" ||
+                (filtroStatusDesvio === "Abertos" && aberta) ||
+                (filtroStatusDesvio === "Corrigidos" && statusBusca.includes("corrigido")) ||
+                (filtroStatusDesvio === "Sem desvios" && Number(item.totalDesvios || 0) === 0);
+
+            return mesOk && empresaOk && classificacaoOk && statusOk;
+        });
+    }, [auditoriasNormalizadas, filtroMes, filtroEmpresa, filtroClassificacao, filtroStatusDesvio]);
+
+    const mesAtual = hoje.getMonth();
+    const anoAtual = hoje.getFullYear();
+    const auditoriasMes = auditoriasNormalizadas.filter((item) => {
+        const data = item.createdAt ? new Date(item.createdAt) : null;
+        return data && data.getMonth() === mesAtual && data.getFullYear() === anoAtual;
+    });
+    const mediaConformidade = auditoriasMes.length
+        ? Math.round(auditoriasMes.reduce((total, item) => total + Number(item.pontuacao || 0), 0) / auditoriasMes.length)
+        : 0;
+    const desviosAbertos = auditoriasNormalizadas.filter(auditoriaCampoAberta).length;
+    const desviosCorrigidos = auditoriasNormalizadas.filter((item) => {
+        const status = normalizarTextoBusca(item.statusDesvio || "");
+        return Number(item.totalDesvios || 0) > 0 && status.includes("corrigido");
+    }).length;
+    const topDesvios = Object.values(
+        auditoriasNormalizadas.reduce((acc, item) => {
+            const totalDesvios = Number(item.totalDesvios || 0);
+            if (totalDesvios <= 0 && !item.temDesvioGrave) return acc;
+
+            const chave = item.categoriaDesvioPrincipal || item.desvios?.[0]?.categoria || "Desvio não classificado";
+            if (!acc[chave]) acc[chave] = { categoria: chave, total: 0, abertos: 0, graves: 0 };
+            acc[chave].total += totalDesvios || 1;
+            if (auditoriaCampoAberta(item)) acc[chave].abertos += 1;
+            if (item.temDesvioGrave) acc[chave].graves += 1;
+            return acc;
+        }, {})
+    ).sort((a, b) => b.total - a.total || b.graves - a.graves).slice(0, 5);
+
+    const auditoriasPorEmpresa = Object.values(
+        auditoriasNormalizadas.reduce((acc, item) => {
+            const empresa = item.empresaNome || "Empresa não informada";
+            if (!acc[empresa]) acc[empresa] = { empresa, total: 0, media: 0, soma: 0, desvios: 0, abertos: 0 };
+            acc[empresa].total += 1;
+            acc[empresa].soma += Number(item.pontuacao || 0);
+            acc[empresa].media = Math.round(acc[empresa].soma / Math.max(1, acc[empresa].total));
+            acc[empresa].desvios += Number(item.totalDesvios || 0);
+            if (auditoriaCampoAberta(item)) acc[empresa].abertos += 1;
+            return acc;
+        }, {})
+    ).sort((a, b) => b.total - a.total || b.abertos - a.abertos);
+
+    const colaboradoresAuditados = new Set(auditoriasNormalizadas.map((item) => item.colaboradorId || item.colaboradorNome).filter(Boolean)).size;
+
+    const meses = [
+        { valor: "Todos", label: "Todos os meses" },
+        { valor: "1", label: "Janeiro" },
+        { valor: "2", label: "Fevereiro" },
+        { valor: "3", label: "Março" },
+        { valor: "4", label: "Abril" },
+        { valor: "5", label: "Maio" },
+        { valor: "6", label: "Junho" },
+        { valor: "7", label: "Julho" },
+        { valor: "8", label: "Agosto" },
+        { valor: "9", label: "Setembro" },
+        { valor: "10", label: "Outubro" },
+        { valor: "11", label: "Novembro" },
+        { valor: "12", label: "Dezembro" },
+    ];
+
+    const cards = [
+        { label: "Auditorias do mês", valor: auditoriasMes.length, icon: ClipboardCheck, detalhe: "Checklists via QR Code" },
+        { label: "Média de conformidade", valor: `${mediaConformidade}%`, icon: BadgeCheck, detalhe: "Pontuação média mensal" },
+        { label: "Desvios abertos", valor: desviosAbertos, icon: AlertTriangle, detalhe: "Pendentes de tratativa" },
+        { label: "Desvios corrigidos", valor: desviosCorrigidos, icon: CheckCircle2, detalhe: "Tratativas concluídas" },
+        { label: "Colaboradores auditados", valor: colaboradoresAuditados, icon: Users, detalhe: "Histórico geral" },
+        { label: "Total de auditorias", valor: auditoriasNormalizadas.length, icon: Database, detalhe: "Registros no sistema" },
+    ];
+
+    return (
+        <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}>
+            <Header
+                titulo="Dashboard de Auditoria em Campo"
+                subtitulo="Painel dedicado às auditorias realizadas via QR Code, desvios e conformidade por colaborador e empresa."
+            />
+
+            <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-6">
+                {cards.map((item) => {
+                    const Icon = item.icon;
+                    return (
+                        <Card key={item.label} className="xl:col-span-1">
+                            <div className="flex items-start justify-between gap-3">
+                                <div className="min-w-0">
+                                    <p className="text-sm font-medium text-slate-500">{item.label}</p>
+                                    <p className="mt-2 break-words text-3xl font-black text-slate-950">{item.valor}</p>
+                                    <p className="mt-1 text-xs text-slate-400">{item.detalhe}</p>
+                                </div>
+                                <div className="shrink-0 rounded-2xl bg-slate-100 p-3 text-slate-700">
+                                    <Icon className="h-5 w-5" />
+                                </div>
+                            </div>
+                        </Card>
+                    );
+                })}
+            </div>
+
+            <Card className="mt-6">
+                <div className="mb-4 flex flex-col justify-between gap-3 lg:flex-row lg:items-center">
+                    <div>
+                        <h2 className="text-lg font-bold text-slate-950">Filtros da auditoria de campo</h2>
+                        <p className="mt-1 text-sm text-slate-500">Use os filtros para analisar auditorias por período, empresa, classificação e situação do desvio.</p>
+                    </div>
+                    <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-bold text-slate-600">
+                        {auditoriasFiltradas.length} resultado(s)
+                    </span>
+                </div>
+
+                <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+                    <select value={filtroMes} onChange={(e) => setFiltroMes(e.target.value)} className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 outline-none focus:border-slate-400 focus:ring-4 focus:ring-slate-100">
+                        {meses.map((mes) => <option key={mes.valor} value={mes.valor}>{mes.label}</option>)}
+                    </select>
+                    <select value={filtroEmpresa} onChange={(e) => setFiltroEmpresa(e.target.value)} className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 outline-none focus:border-slate-400 focus:ring-4 focus:ring-slate-100">
+                        <option value="Todas">Todas as empresas</option>
+                        {empresasFiltro.map((empresa) => <option key={empresa} value={empresa}>{empresa}</option>)}
+                    </select>
+                    <select value={filtroClassificacao} onChange={(e) => setFiltroClassificacao(e.target.value)} className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 outline-none focus:border-slate-400 focus:ring-4 focus:ring-slate-100">
+                        <option value="Todas">Todas as classificações</option>
+                        {classificacoesFiltro.map((item) => <option key={item} value={item}>{item}</option>)}
+                    </select>
+                    <select value={filtroStatusDesvio} onChange={(e) => setFiltroStatusDesvio(e.target.value)} className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 outline-none focus:border-slate-400 focus:ring-4 focus:ring-slate-100">
+                        <option value="Todos">Todos os desvios</option>
+                        <option value="Abertos">Somente abertos</option>
+                        <option value="Corrigidos">Somente corrigidos</option>
+                        <option value="Sem desvios">Sem desvios</option>
+                    </select>
+                </div>
+            </Card>
+
+            <div className="mt-6 grid gap-6 xl:grid-cols-3">
+                <Card className="xl:col-span-2">
+                    <div className="mb-4 flex flex-col justify-between gap-3 lg:flex-row lg:items-center">
+                        <div>
+                            <h2 className="text-lg font-bold text-slate-950">Histórico de auditorias de campo</h2>
+                            <p className="mt-1 text-sm text-slate-500">Auditorias registradas por colaborador e por empresa.</p>
+                        </div>
+                        <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-bold text-slate-600">
+                            {auditoriasFiltradas.length} auditoria(s)
+                        </span>
+                    </div>
+
+                    <div className="overflow-x-auto rounded-2xl border border-slate-200 scrollbar-discreta">
+                        <table className="min-w-[920px] w-full text-left text-sm">
+                            <thead className="bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
+                                <tr>
+                                    <th className="px-4 py-3">Data</th>
+                                    <th className="px-4 py-3">Colaborador</th>
+                                    <th className="px-4 py-3">Empresa</th>
+                                    <th className="px-4 py-3">Função</th>
+                                    <th className="px-4 py-3">Pontuação</th>
+                                    <th className="px-4 py-3">Classificação</th>
+                                    <th className="px-4 py-3">Desvios</th>
+                                    <th className="px-4 py-3">Status</th>
+                                </tr>
+                            </thead>
+                            <tbody className="divide-y divide-slate-100 bg-white">
+                                {auditoriasFiltradas.length === 0 && (
+                                    <tr>
+                                        <td className="px-4 py-8 text-center text-sm text-slate-500" colSpan={8}>
+                                            Nenhuma auditoria de campo encontrada para os filtros selecionados.
+                                        </td>
+                                    </tr>
+                                )}
+                                {auditoriasFiltradas.slice(0, 100).map((item) => (
+                                    <tr key={item.id || `${item.colaboradorNome}-${item.createdAt}`} className="hover:bg-slate-50">
+                                        <td className="px-4 py-3 text-slate-600">{formatarDataHora(item.createdAt)}</td>
+                                        <td className="px-4 py-3 font-semibold text-slate-900">{item.colaboradorNome || "-"}</td>
+                                        <td className="px-4 py-3 text-slate-600">{item.empresaNome || "-"}</td>
+                                        <td className="px-4 py-3 text-slate-600">{item.funcao || "-"}</td>
+                                        <td className="px-4 py-3 font-bold text-slate-900">{item.pontuacao}%</td>
+                                        <td className="px-4 py-3">
+                                            <span className={classNames("rounded-full px-2 py-1 text-xs font-bold ring-1", classeClassificacaoAuditoriaCampo(item.classificacao))}>
+                                                {item.classificacao || "-"}
+                                            </span>
+                                        </td>
+                                        <td className="px-4 py-3 text-slate-600">{item.totalDesvios || 0}</td>
+                                        <td className="px-4 py-3 text-slate-600">{item.statusDesvio || (Number(item.totalDesvios || 0) > 0 ? "Aberto" : "Sem desvio")}</td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
+                </Card>
+
+                <div className="space-y-6">
+                    <Card>
+                        <h2 className="text-lg font-bold text-slate-950">Top 5 desvios</h2>
+                        <p className="mt-1 text-sm text-slate-500">Tipos de desvios mais recorrentes nas auditorias de campo.</p>
+
+                        <div className="mt-4 space-y-2">
+                            {topDesvios.length === 0 && (
+                                <div className="rounded-2xl border border-dashed border-slate-300 p-5 text-center text-sm text-slate-500">
+                                    Nenhum desvio registrado.
+                                </div>
+                            )}
+                            {topDesvios.map((item, index) => (
+                                <div key={item.categoria} className="flex items-center justify-between gap-3 rounded-2xl bg-slate-50 p-3 ring-1 ring-slate-100">
+                                    <div className="min-w-0">
+                                        <p className="truncate text-sm font-bold text-slate-900">{index + 1}. {item.categoria}</p>
+                                        <p className="text-xs text-slate-500">{item.abertos} aberto(s) · {item.graves} grave(s)</p>
+                                    </div>
+                                    <span className="rounded-full bg-white px-3 py-1 text-xs font-bold text-slate-700 ring-1 ring-slate-200">
+                                        {item.total}
+                                    </span>
+                                </div>
+                            ))}
+                        </div>
+                    </Card>
+
+                    <Card>
+                        <h2 className="text-lg font-bold text-slate-950">Auditorias por empresa</h2>
+                        <p className="mt-1 text-sm text-slate-500">Visão rápida de volume, média e desvios por empresa.</p>
+
+                        <div className="mt-4 max-h-[26rem] space-y-2 overflow-y-auto pr-1 scrollbar-discreta">
+                            {auditoriasPorEmpresa.length === 0 && (
+                                <div className="rounded-2xl border border-dashed border-slate-300 p-5 text-center text-sm text-slate-500">
+                                    Nenhuma empresa com auditoria registrada.
+                                </div>
+                            )}
+                            {auditoriasPorEmpresa.map((item) => (
+                                <div key={item.empresa} className="rounded-2xl bg-slate-50 p-3 ring-1 ring-slate-100">
+                                    <div className="flex items-start justify-between gap-3">
+                                        <div className="min-w-0">
+                                            <p className="truncate text-sm font-bold text-slate-900">{item.empresa}</p>
+                                            <p className="mt-1 text-xs text-slate-500">{item.total} auditoria(s) · {item.desvios} desvio(s)</p>
+                                        </div>
+                                        <span className="rounded-full bg-white px-3 py-1 text-xs font-bold text-slate-700 ring-1 ring-slate-200">
+                                            {item.media}%
+                                        </span>
+                                    </div>
+                                    <div className="mt-2 h-2 overflow-hidden rounded-full bg-slate-200">
+                                        <div className={classNames("h-full rounded-full", item.media >= 90 ? "bg-emerald-500" : item.media >= 75 ? "bg-blue-500" : item.media >= 50 ? "bg-orange-500" : "bg-red-500")} style={{ width: `${Math.min(100, Math.max(0, item.media))}%` }} />
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    </Card>
+                </div>
+            </div>
         </motion.div>
     );
 }
@@ -12684,6 +12710,7 @@ export default function App() {
 
     const nav = [
         { id: "dashboard", label: "Dashboard", icon: LayoutDashboard },
+        { id: "auditoriaCampo", label: "Auditoria em Campo", icon: ClipboardCheck },
         { id: "empresas", label: "Empresas", icon: Building2 },
         { id: "colaboradores", label: "Colaboradores", icon: Users },
         { id: "aniversariantes", label: "Aniversariantes", icon: CalendarClock },
@@ -12851,9 +12878,15 @@ export default function App() {
                             empresasBanco={empresasBanco}
                             documentosEmpresas={documentosEmpresas}
                             auditoria={auditoria}
-                            auditoriasCampo={auditoriasCampo}
                             onSelectColab={selecionarColaborador}
                             onRegistrarEmailEnviado={registrarEmailEnviado}
+                        />
+                    )}
+
+                    {tela === "auditoriaCampo" && (
+                        <DashboardAuditoriaCampo
+                            auditoriasCampo={auditoriasCampo}
+                            empresasBanco={empresasBanco}
                         />
                     )}
 
