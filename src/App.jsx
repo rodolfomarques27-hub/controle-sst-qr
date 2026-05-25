@@ -545,6 +545,48 @@ const colaboradoresIniciais = [
     },
 ];
 
+
+function normalizarDataAniversario(valor) {
+    if (!valor) return "";
+
+    const texto = String(valor).trim();
+    if (!texto) return "";
+
+    const somenteData = texto.slice(0, 10);
+
+    // Formato padrão salvo pelo campo date do Supabase/input: YYYY-MM-DD.
+    const iso = somenteData.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+    if (iso) {
+        const ano = Number(iso[1]);
+        const mes = Number(iso[2]);
+        const dia = Number(iso[3]);
+        const data = new Date(ano, mes - 1, dia, 12, 0, 0);
+
+        if (data.getFullYear() === ano && data.getMonth() === mes - 1 && data.getDate() === dia) {
+            return `${iso[1]}-${iso[2]}-${iso[3]}`;
+        }
+
+        return "";
+    }
+
+    // Aceita datas digitadas/importadas como DD/MM/YYYY, DD-MM-YYYY ou DD.MM.YYYY.
+    const br = texto.match(/^(\d{1,2})[\/.-](\d{1,2})[\/.-](\d{2,4})$/);
+    if (br) {
+        const dia = Number(br[1]);
+        const mes = Number(br[2]);
+        let ano = Number(br[3]);
+
+        if (ano < 100) ano += ano >= 70 ? 1900 : 2000;
+
+        const data = new Date(ano, mes - 1, dia, 12, 0, 0);
+        if (data.getFullYear() === ano && data.getMonth() === mes - 1 && data.getDate() === dia) {
+            return `${String(ano).padStart(4, "0")}-${String(mes).padStart(2, "0")}-${String(dia).padStart(2, "0")}`;
+        }
+    }
+
+    return "";
+}
+
 function normalizarColaborador(item) {
     return {
         id: item.id,
@@ -563,7 +605,7 @@ function normalizarColaborador(item) {
         fotoNome: item.foto_nome || item.fotoNome || "",
         status: item.status || "Ativo",
         statusMobilizacao: item.status_mobilizacao || item.statusMobilizacao || "",
-        dataNascimento: item.data_nascimento || item.dataNascimento || item.nascimento || "",
+        dataNascimento: normalizarDataAniversario(item.data_nascimento || item.dataNascimento || item.nascimento || item.dt_nascimento || item.data_de_nascimento || item.data_aniversario || ""),
         mostrarAniversarioDashboard: item.mostrar_aniversario_dashboard !== false && item.mostrarAniversarioDashboard !== false,
         treinamentosRemovidos: item.treinamentos_removidos || item.treinamentosRemovidos || [],
         treinamentosAdicionais: item.treinamentos_adicionais || item.treinamentosAdicionais || [],
@@ -751,33 +793,38 @@ function formatDate(dataISO) {
     return new Date(`${dataISO}T12:00:00`).toLocaleDateString("pt-BR");
 }
 
+function obterDataAniversarioColaborador(colaborador) {
+    return normalizarDataAniversario(
+        colaborador?.dataNascimento ||
+        colaborador?.data_nascimento ||
+        colaborador?.nascimento ||
+        colaborador?.dt_nascimento ||
+        colaborador?.data_de_nascimento ||
+        colaborador?.data_aniversario ||
+        ""
+    );
+}
+
 function mesAniversarioColaborador(colaborador) {
-    const data = colaborador?.dataNascimento || colaborador?.data_nascimento || colaborador?.nascimento || "";
+    const data = obterDataAniversarioColaborador(colaborador);
     if (!data) return null;
 
-    const partes = String(data).slice(0, 10).split("-");
-    if (partes.length !== 3) return null;
-
-    const mes = Number(partes[1]);
+    const mes = Number(data.slice(5, 7));
     return mes >= 1 && mes <= 12 ? mes : null;
 }
 
 function diaAniversarioColaborador(colaborador) {
-    const data = colaborador?.dataNascimento || colaborador?.data_nascimento || colaborador?.nascimento || "";
+    const data = obterDataAniversarioColaborador(colaborador);
     if (!data) return null;
 
-    const partes = String(data).slice(0, 10).split("-");
-    if (partes.length !== 3) return null;
-
-    const dia = Number(partes[2]);
+    const dia = Number(data.slice(8, 10));
     return dia >= 1 && dia <= 31 ? dia : null;
 }
 
 function formatarAniversario(dataISO) {
-    if (!dataISO) return "-";
-    const partes = String(dataISO).slice(0, 10).split("-");
-    if (partes.length !== 3) return "-";
-    return `${partes[2]}/${partes[1]}`;
+    const data = normalizarDataAniversario(dataISO);
+    if (!data) return "-";
+    return `${data.slice(8, 10)}/${data.slice(5, 7)}`;
 }
 
 function proximoAniversariante(lista = []) {
@@ -2368,7 +2415,7 @@ function Dashboard({
         { chave: "treinamentosVencidos", label: "Treinamentos vencidos", valor: indicadores.vencidos, icon: AlertTriangle, detalhe: "Colaboradores" },
         { chave: "colaboradoresBloqueados", label: "Colaboradores bloqueados", valor: colaboradoresBloqueados, icon: Lock, detalhe: "Pendência bloqueante" },
         { chave: "desviosAbertos", label: "Desvios abertos", valor: desviosAbertos, icon: AlertTriangle, detalhe: "Registros não concluídos" },
-        { chave: "aniversariantesMes", label: "Aniversariantes do mês", valor: aniversariantesMes.length, icon: UserRound, detalhe: proximoAniversarioDashboard ? `Próximo: ${proximoAniversarioDashboard.colaborador.nome} (${formatarAniversario(proximoAniversarioDashboard.colaborador.dataNascimento)})` : "Sem aniversariantes no mês" },
+        { chave: "aniversariantesMes", label: "Aniversariantes do mês", valor: aniversariantesMes.length, icon: UserRound, detalhe: proximoAniversarioDashboard ? `Próximo: ${proximoAniversarioDashboard.colaborador.nome} (${formatarAniversario(obterDataAniversarioColaborador(proximoAniversarioDashboard.colaborador))})` : "Sem aniversariantes no mês" },
         { chave: "armazenamentoUtilizado", label: "Armazenamento utilizado", valor: totalStorageLabel, icon: Upload, detalhe: `${storagePercentual}% do limite visual` },
     ];
 
@@ -2925,7 +2972,7 @@ function Dashboard({
                                                 <div className="mt-3 space-y-1 text-[11px] text-slate-500">
                                                     {aniversariantesMes.slice(0, 4).map((colaborador) => (
                                                         <div key={colaborador.id} className="truncate rounded-xl bg-slate-50 px-2 py-1 ring-1 ring-slate-100">
-                                                            {formatarAniversario(colaborador.dataNascimento)} · {colaborador.nome}
+                                                            {formatarAniversario(obterDataAniversarioColaborador(colaborador))} · {colaborador.nome}
                                                         </div>
                                                     ))}
                                                 </div>
@@ -8591,11 +8638,15 @@ function Aniversariantes({ colaboradores = [], empresasBanco = [] }) {
         deveMostrarAniversarioColaborador(colaborador) && colaboradorContaComoMobilizado(colaborador)
     );
 
-    const opcoesEmpresa = ["Todas", ...Array.from(new Set(colaboradoresElegiveis.map((c) => c.empresaExibicao || c.empresa).filter(Boolean))).sort()];
-    const opcoesFuncao = ["Todas", ...Array.from(new Set(colaboradoresElegiveis.map((c) => c.funcao).filter(Boolean))).sort()];
+    const colaboradoresComAniversario = colaboradoresElegiveis.filter((colaborador) =>
+        Boolean(obterDataAniversarioColaborador(colaborador))
+    );
+
+    const opcoesEmpresa = ["Todas", ...Array.from(new Set(colaboradoresComAniversario.map((c) => c.empresaExibicao || c.empresa).filter(Boolean))).sort()];
+    const opcoesFuncao = ["Todas", ...Array.from(new Set(colaboradoresComAniversario.map((c) => c.funcao).filter(Boolean))).sort()];
     const opcoesStatus = ["Todos", ...STATUS_CLASSIFICACAO_COLABORADOR];
 
-    const filtrados = colaboradoresElegiveis
+    const filtrados = colaboradoresComAniversario
         .filter((colaborador) => {
             const mesColaborador = mesAniversarioColaborador(colaborador);
             const statusColaborador = statusGeral(colaborador).texto;
@@ -8608,9 +8659,18 @@ function Aniversariantes({ colaboradores = [], empresasBanco = [] }) {
                 (status === "Todos" || statusColaborador === status)
             );
         })
-        .sort((a, b) => (diaAniversarioColaborador(a) || 99) - (diaAniversarioColaborador(b) || 99) || a.nome.localeCompare(b.nome));
+        .sort((a, b) => {
+            const mesA = mesAniversarioColaborador(a) || 99;
+            const mesB = mesAniversarioColaborador(b) || 99;
+            const diaA = diaAniversarioColaborador(a) || 99;
+            const diaB = diaAniversarioColaborador(b) || 99;
 
-    const proximo = proximoAniversariante(colaboradoresElegiveis);
+            if (mes === "Todos" && mesA !== mesB) return mesA - mesB;
+            if (diaA !== diaB) return diaA - diaB;
+            return a.nome.localeCompare(b.nome);
+        });
+
+    const proximo = proximoAniversariante(colaboradoresComAniversario);
 
     const exportarCSVAniversariantes = () => {
         const linhas = [
@@ -8619,7 +8679,7 @@ function Aniversariantes({ colaboradores = [], empresasBanco = [] }) {
                 colaborador.nome,
                 colaborador.empresaExibicao || colaborador.empresa,
                 colaborador.funcao,
-                formatarAniversario(colaborador.dataNascimento),
+                formatarAniversario(obterDataAniversarioColaborador(colaborador)),
                 diaAniversarioColaborador(colaborador) || "",
                 statusGeral(colaborador).texto,
             ]),
@@ -8632,7 +8692,7 @@ function Aniversariantes({ colaboradores = [], empresasBanco = [] }) {
         <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
             <Header
                 titulo="Aniversariantes"
-                subtitulo="Consulta de aniversariantes de todos os meses, considerando apenas colaboradores ativos/mobilizados e autorizados para aparecer no painel."
+                subtitulo="Consulta de aniversariantes de todos os meses, considerando colaboradores ativos/mobilizados, autorizados e com data de nascimento cadastrada."
                 acao={(
                     <button
                         type="button"
@@ -8653,7 +8713,7 @@ function Aniversariantes({ colaboradores = [], empresasBanco = [] }) {
                 <Card>
                     <p className="text-sm font-semibold text-slate-500">Próximo aniversário</p>
                     <p className="mt-2 text-lg font-bold text-slate-950">{proximo?.colaborador?.nome || "-"}</p>
-                    <p className="mt-1 text-sm text-slate-500">{proximo ? formatarAniversario(proximo.colaborador.dataNascimento) : "Sem data cadastrada"}</p>
+                    <p className="mt-1 text-sm text-slate-500">{proximo ? formatarAniversario(obterDataAniversarioColaborador(proximo.colaborador)) : "Sem data cadastrada"}</p>
                 </Card>
                 <Card>
                     <p className="text-sm font-semibold text-slate-500">Exportação</p>
@@ -8712,7 +8772,7 @@ function Aniversariantes({ colaboradores = [], empresasBanco = [] }) {
                                         <td className="px-4 py-3 font-semibold text-slate-950">{colaborador.nome}</td>
                                         <td className="px-4 py-3 text-slate-600">{colaborador.empresaExibicao || colaborador.empresa}</td>
                                         <td className="px-4 py-3 text-slate-600">{colaborador.funcao}</td>
-                                        <td className="px-4 py-3 text-slate-600">{formatarAniversario(colaborador.dataNascimento)}</td>
+                                        <td className="px-4 py-3 text-slate-600">{formatarAniversario(obterDataAniversarioColaborador(colaborador))}</td>
                                         <td className="px-4 py-3 text-slate-600">{diaAniversarioColaborador(colaborador)}</td>
                                         <td className="px-4 py-3">
                                             <span className={classNames("rounded-full px-3 py-1 text-xs font-bold ring-1", statusColaborador.classe)}>{statusColaborador.texto}</span>
