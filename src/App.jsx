@@ -895,6 +895,10 @@ function montarPreviewNotificacaoAuditoriaCampo(notificacao = {}, complementos =
         notificacao.mensagem || "",
     ];
 
+    if (notificacao.auditor) {
+        linhas.push("", `Auditor responsável: ${notificacao.auditor}`);
+    }
+
     const listaComplementos = Array.isArray(complementos) ? complementos.filter(Boolean) : [];
 
     if (listaComplementos.length > 0) {
@@ -969,6 +973,8 @@ function normalizarAuditoriaCampo(item = {}) {
         observacaoAberto: desvio.observacao_aberto || desvio.observacaoAberto || "",
         observacaoTratativa: desvio.observacao_tratativa || desvio.observacaoTratativa || "",
         observacaoCorrigido: desvio.observacao_corrigido || desvio.observacaoCorrigido || "",
+        fotoAntesUrl: desvio.foto_antes_url || desvio.fotoAntesUrl || "",
+        fotoDepoisUrl: desvio.foto_depois_url || desvio.fotoDepoisUrl || "",
         notificacao: desvio.notificacao || {},
     }));
 
@@ -3954,42 +3960,42 @@ function Dashboard({
                     </div>
 
                     {abaPersonalizacaoPainel === "quadros" && (
-                        <div className="mt-5 rounded-3xl border border-slate-200 bg-slate-50/70 p-4">
-                            <div className="mb-3 flex items-start justify-between gap-3">
-                                <div>
-                                    <h3 className="text-sm font-bold text-slate-950">Visibilidade geral do Dashboard SST</h3>
-                                    <p className="mt-0.5 text-xs text-slate-500">Ative ou oculte os grupos principais do painel antes de organizar os detalhes abaixo.</p>
-                                </div>
-                                <span className="rounded-full bg-white px-3 py-1 text-[10px] font-bold uppercase tracking-wide text-slate-500 ring-1 ring-slate-200">Geral</span>
+                    <div className="mt-5 rounded-3xl border border-slate-200 bg-slate-50/70 p-4">
+                        <div className="mb-3 flex items-start justify-between gap-3">
+                            <div>
+                                <h3 className="text-sm font-bold text-slate-950">Visibilidade geral do Dashboard SST</h3>
+                                <p className="mt-0.5 text-xs text-slate-500">Ative ou oculte os grupos principais do painel antes de organizar os detalhes abaixo.</p>
                             </div>
-                            <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
-                                {opcoesPainelDashboard.filter((opcao) => opcao.chave !== "cards").map((opcao) => {
-                                    const ativo = Boolean(blocosPainelDashboard[opcao.chave]);
-
-                                    return (
-                                        <button
-                                            key={opcao.chave}
-                                            type="button"
-                                            onClick={() => alternarBlocoPainel(opcao.chave)}
-                                            className={classNames(
-                                                "flex items-center justify-between gap-3 rounded-2xl px-3 py-2 text-left text-sm font-semibold ring-1 transition",
-                                                ativo
-                                                    ? "bg-emerald-50 text-emerald-800 ring-emerald-200"
-                                                    : "bg-slate-50 text-slate-500 ring-slate-200"
-                                            )}
-                                        >
-                                            <span>{opcao.label}</span>
-                                            <span className={classNames(
-                                                "rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide",
-                                                ativo ? "bg-emerald-100 text-emerald-800" : "bg-white text-slate-500 ring-1 ring-slate-200"
-                                            )}>
-                                                {ativo ? "Visível" : "Oculto"}
-                                            </span>
-                                        </button>
-                                    );
-                                })}
-                            </div>
+                            <span className="rounded-full bg-white px-3 py-1 text-[10px] font-bold uppercase tracking-wide text-slate-500 ring-1 ring-slate-200">Geral</span>
                         </div>
+                        <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
+                        {opcoesPainelDashboard.filter((opcao) => opcao.chave !== "cards").map((opcao) => {
+                            const ativo = Boolean(blocosPainelDashboard[opcao.chave]);
+
+                            return (
+                                <button
+                                    key={opcao.chave}
+                                    type="button"
+                                    onClick={() => alternarBlocoPainel(opcao.chave)}
+                                    className={classNames(
+                                        "flex items-center justify-between gap-3 rounded-2xl px-3 py-2 text-left text-sm font-semibold ring-1 transition",
+                                        ativo
+                                            ? "bg-emerald-50 text-emerald-800 ring-emerald-200"
+                                            : "bg-slate-50 text-slate-500 ring-slate-200"
+                                    )}
+                                >
+                                    <span>{opcao.label}</span>
+                                    <span className={classNames(
+                                        "rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide",
+                                        ativo ? "bg-emerald-100 text-emerald-800" : "bg-white text-slate-500 ring-1 ring-slate-200"
+                                    )}>
+                                        {ativo ? "Visível" : "Oculto"}
+                                    </span>
+                                </button>
+                            );
+                        })}
+                        </div>
+                    </div>
                     )}
 
                     {abaPersonalizacaoPainel === "cartas" && (
@@ -4139,137 +4145,137 @@ function Dashboard({
                     )}
 
                     {abaPersonalizacaoPainel === "quadros" && (
-                        <div className="mt-6 rounded-3xl border border-emerald-200 bg-emerald-50/60 p-4 shadow-sm">
-                            <div className="mb-3 flex flex-col justify-between gap-2 sm:flex-row sm:items-center">
-                                <div>
-                                    <div className="flex flex-wrap items-center gap-2">
-                                        <span className="rounded-full bg-emerald-600 px-2.5 py-1 text-[10px] font-black uppercase tracking-wide text-white">Seção 2</span>
-                                        <h3 className="text-sm font-bold text-slate-950">Organização dos quadros do Dashboard SST</h3>
-                                    </div>
-                                    <p className="mt-1 text-xs text-slate-600">
-                                        Altera somente os quadros grandes do dashboard: posição, tamanho, recolhimento e visibilidade. A ordem abaixo é a mesma ordem exibida no painel.
-                                    </p>
+                    <div className="mt-6 rounded-3xl border border-emerald-200 bg-emerald-50/60 p-4 shadow-sm">
+                        <div className="mb-3 flex flex-col justify-between gap-2 sm:flex-row sm:items-center">
+                            <div>
+                                <div className="flex flex-wrap items-center gap-2">
+                                    <span className="rounded-full bg-emerald-600 px-2.5 py-1 text-[10px] font-black uppercase tracking-wide text-white">Seção 2</span>
+                                    <h3 className="text-sm font-bold text-slate-950">Organização dos quadros do Dashboard SST</h3>
                                 </div>
-                                <button
-                                    type="button"
-                                    onClick={() => {
-                                        setTamanhosBlocosDashboard(tamanhosPadraoBlocosDashboard);
-                                        setBlocosRecolhidosDashboard(blocosRecolhidosPadraoDashboard);
-                                        setOrdemBlocosDashboard(ordemPadraoBlocosDashboard);
-                                    }}
-                                    className="self-start rounded-xl bg-white px-3 py-2 text-xs font-semibold text-slate-700 ring-1 ring-slate-200 hover:bg-slate-50 sm:self-auto"
-                                >
-                                    Restaurar ordem e tamanhos
-                                </button>
+                                <p className="mt-1 text-xs text-slate-600">
+                                    Altera somente os quadros grandes do dashboard: posição, tamanho, recolhimento e visibilidade. A ordem abaixo é a mesma ordem exibida no painel.
+                                </p>
                             </div>
+                            <button
+                                type="button"
+                                onClick={() => {
+                                    setTamanhosBlocosDashboard(tamanhosPadraoBlocosDashboard);
+                                    setBlocosRecolhidosDashboard(blocosRecolhidosPadraoDashboard);
+                                    setOrdemBlocosDashboard(ordemPadraoBlocosDashboard);
+                                }}
+                                className="self-start rounded-xl bg-white px-3 py-2 text-xs font-semibold text-slate-700 ring-1 ring-slate-200 hover:bg-slate-50 sm:self-auto"
+                            >
+                                Restaurar ordem e tamanhos
+                            </button>
+                        </div>
 
-                            <div className="grid gap-3 lg:grid-cols-2">
-                                {opcoesBlocosOrdenadasDashboard.map((opcao, index) => {
-                                    const ativo = Boolean(blocosPainelDashboard[opcao.chave]);
-                                    const tamanhoAtual = tamanhosBlocosDashboard[opcao.chave] || "padrao";
+                        <div className="grid gap-3 lg:grid-cols-2">
+                            {opcoesBlocosOrdenadasDashboard.map((opcao, index) => {
+                                const ativo = Boolean(blocosPainelDashboard[opcao.chave]);
+                                const tamanhoAtual = tamanhosBlocosDashboard[opcao.chave] || "padrao";
 
-                                    return (
-                                        <div
-                                            key={opcao.chave}
-                                            onDragOver={(evento) => evento.preventDefault()}
-                                            onDrop={() => soltarBlocoPainel(opcao.chave)}
-                                            className={classNames(
-                                                "rounded-2xl p-3 ring-1 transition",
-                                                ativo ? "bg-emerald-50/60 ring-emerald-200" : "bg-slate-50 ring-slate-200",
-                                                blocoArrastandoDashboard === opcao.chave ? "opacity-60 ring-2 ring-emerald-300" : ""
-                                            )}
-                                        >
-                                            <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-                                                <div className="flex min-w-0 items-start gap-2">
-                                                    <span
-                                                        draggable
-                                                        onDragStart={(evento) => {
-                                                            prepararArrastePainel(evento);
-                                                            setBlocoArrastandoDashboard(opcao.chave);
-                                                        }}
-                                                        onDragEnd={() => setBlocoArrastandoDashboard(null)}
-                                                        className="mt-0.5 inline-flex h-7 w-7 shrink-0 cursor-grab items-center justify-center rounded-xl bg-white text-sm font-bold text-slate-500 ring-1 ring-slate-200 active:cursor-grabbing"
-                                                        title="Segure e arraste para mudar a posição do quadro"
-                                                    >
-                                                        ☰
+                                return (
+                                    <div
+                                        key={opcao.chave}
+                                        onDragOver={(evento) => evento.preventDefault()}
+                                        onDrop={() => soltarBlocoPainel(opcao.chave)}
+                                        className={classNames(
+                                            "rounded-2xl p-3 ring-1 transition",
+                                            ativo ? "bg-emerald-50/60 ring-emerald-200" : "bg-slate-50 ring-slate-200",
+                                            blocoArrastandoDashboard === opcao.chave ? "opacity-60 ring-2 ring-emerald-300" : ""
+                                        )}
+                                    >
+                                        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                                            <div className="flex min-w-0 items-start gap-2">
+                                                <span
+                                                    draggable
+                                                    onDragStart={(evento) => {
+                                                        prepararArrastePainel(evento);
+                                                        setBlocoArrastandoDashboard(opcao.chave);
+                                                    }}
+                                                    onDragEnd={() => setBlocoArrastandoDashboard(null)}
+                                                    className="mt-0.5 inline-flex h-7 w-7 shrink-0 cursor-grab items-center justify-center rounded-xl bg-white text-sm font-bold text-slate-500 ring-1 ring-slate-200 active:cursor-grabbing"
+                                                    title="Segure e arraste para mudar a posição do quadro"
+                                                >
+                                                    ☰
+                                                </span>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => alternarBlocoPainel(opcao.chave)}
+                                                    className="min-w-0 text-left"
+                                                >
+                                                    <span className={classNames("block text-sm font-bold", ativo ? "text-emerald-900" : "text-slate-500")}>
+                                                        {index + 1}. {opcao.label}
                                                     </span>
-                                                    <button
-                                                        type="button"
-                                                        onClick={() => alternarBlocoPainel(opcao.chave)}
-                                                        className="min-w-0 text-left"
-                                                    >
-                                                        <span className={classNames("block text-sm font-bold", ativo ? "text-emerald-900" : "text-slate-500")}>
-                                                            {index + 1}. {opcao.label}
-                                                        </span>
-                                                        <span className="mt-0.5 block text-xs text-slate-500">
-                                                            {ativo ? "Aparece no painel" : "Oculto no painel"} · arraste pelo ícone ☰
-                                                        </span>
-                                                    </button>
-                                                </div>
-
-                                                <div className="flex shrink-0 flex-wrap items-center gap-1">
-                                                    <button
-                                                        type="button"
-                                                        onClick={() => moverBlocoPainel(opcao.chave, -1)}
-                                                        disabled={index === 0}
-                                                        className="rounded-lg bg-white px-2 py-1 text-xs font-bold text-slate-600 ring-1 ring-slate-200 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40"
-                                                        title="Mover para cima"
-                                                    >
-                                                        ↑
-                                                    </button>
-                                                    <button
-                                                        type="button"
-                                                        onClick={() => moverBlocoPainel(opcao.chave, 1)}
-                                                        disabled={index === opcoesBlocosOrdenadasDashboard.length - 1}
-                                                        className="rounded-lg bg-white px-2 py-1 text-xs font-bold text-slate-600 ring-1 ring-slate-200 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40"
-                                                        title="Mover para baixo"
-                                                    >
-                                                        ↓
-                                                    </button>
-                                                    <button
-                                                        type="button"
-                                                        onClick={() => alternarBlocoPainel(opcao.chave)}
-                                                        className={classNames(
-                                                            "rounded-full px-2 py-1 text-[10px] font-bold uppercase tracking-wide ring-1",
-                                                            ativo ? "bg-emerald-100 text-emerald-800 ring-emerald-200" : "bg-white text-slate-500 ring-slate-200"
-                                                        )}
-                                                    >
-                                                        {ativo ? "Visível" : "Oculto"}
-                                                    </button>
-                                                </div>
+                                                    <span className="mt-0.5 block text-xs text-slate-500">
+                                                        {ativo ? "Aparece no painel" : "Oculto no painel"} · arraste pelo ícone ☰
+                                                    </span>
+                                                </button>
                                             </div>
 
-                                            {ativo && (
-                                                <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4">
-                                                    {opcoesTamanhoBlocoDashboard.map((tamanho) => {
-                                                        const selecionado = tamanhoAtual === tamanho.chave;
-
-                                                        return (
-                                                            <button
-                                                                key={tamanho.chave}
-                                                                type="button"
-                                                                onClick={() => alterarTamanhoBlocoPainel(opcao.chave, tamanho.chave)}
-                                                                className={classNames(
-                                                                    "rounded-xl px-2 py-2 text-center ring-1 transition",
-                                                                    selecionado
-                                                                        ? "bg-slate-950 text-white ring-slate-950"
-                                                                        : "bg-white text-slate-600 ring-slate-200 hover:bg-slate-50"
-                                                                )}
-                                                            >
-                                                                <span className="block text-xs font-bold">{tamanho.label}</span>
-                                                                <span className={classNames("mt-0.5 block text-[10px]", selecionado ? "text-slate-200" : "text-slate-400")}>
-                                                                    {tamanho.descricao}
-                                                                </span>
-                                                            </button>
-                                                        );
-                                                    })}
-                                                </div>
-                                            )}
+                                            <div className="flex shrink-0 flex-wrap items-center gap-1">
+                                                <button
+                                                    type="button"
+                                                    onClick={() => moverBlocoPainel(opcao.chave, -1)}
+                                                    disabled={index === 0}
+                                                    className="rounded-lg bg-white px-2 py-1 text-xs font-bold text-slate-600 ring-1 ring-slate-200 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40"
+                                                    title="Mover para cima"
+                                                >
+                                                    ↑
+                                                </button>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => moverBlocoPainel(opcao.chave, 1)}
+                                                    disabled={index === opcoesBlocosOrdenadasDashboard.length - 1}
+                                                    className="rounded-lg bg-white px-2 py-1 text-xs font-bold text-slate-600 ring-1 ring-slate-200 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40"
+                                                    title="Mover para baixo"
+                                                >
+                                                    ↓
+                                                </button>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => alternarBlocoPainel(opcao.chave)}
+                                                    className={classNames(
+                                                        "rounded-full px-2 py-1 text-[10px] font-bold uppercase tracking-wide ring-1",
+                                                        ativo ? "bg-emerald-100 text-emerald-800 ring-emerald-200" : "bg-white text-slate-500 ring-slate-200"
+                                                    )}
+                                                >
+                                                    {ativo ? "Visível" : "Oculto"}
+                                                </button>
+                                            </div>
                                         </div>
-                                    );
-                                })}
-                            </div>
+
+                                        {ativo && (
+                                            <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4">
+                                                {opcoesTamanhoBlocoDashboard.map((tamanho) => {
+                                                    const selecionado = tamanhoAtual === tamanho.chave;
+
+                                                    return (
+                                                        <button
+                                                            key={tamanho.chave}
+                                                            type="button"
+                                                            onClick={() => alterarTamanhoBlocoPainel(opcao.chave, tamanho.chave)}
+                                                            className={classNames(
+                                                                "rounded-xl px-2 py-2 text-center ring-1 transition",
+                                                                selecionado
+                                                                    ? "bg-slate-950 text-white ring-slate-950"
+                                                                    : "bg-white text-slate-600 ring-slate-200 hover:bg-slate-50"
+                                                            )}
+                                                        >
+                                                            <span className="block text-xs font-bold">{tamanho.label}</span>
+                                                            <span className={classNames("mt-0.5 block text-[10px]", selecionado ? "text-slate-200" : "text-slate-400")}>
+                                                                {tamanho.descricao}
+                                                            </span>
+                                                        </button>
+                                                    );
+                                                })}
+                                            </div>
+                                        )}
+                                    </div>
+                                );
+                            })}
                         </div>
+                    </div>
                     )}
                 </Card>
             )}
@@ -5665,6 +5671,7 @@ function AuditoriaCampoQRCode({ colaborador = {}, treinamentos = [], onAuditoria
     const [boasPraticas, setBoasPraticas] = useState("");
     const [notificacao, setNotificacao] = useState(() => notificacaoPadraoAuditoriaCampo(colaborador, {}));
     const [complementoNotificacao, setComplementoNotificacao] = useState("");
+    const [notificacaoEdicaoAberta, setNotificacaoEdicaoAberta] = useState(false);
     const [desvio, setDesvio] = useState({
         descricao: "",
         gravidade: "Leve",
@@ -5694,8 +5701,9 @@ function AuditoriaCampoQRCode({ colaborador = {}, treinamentos = [], onAuditoria
             mensagem: notificacao.mensagem || notificacaoBase.mensagem,
             complementos: Array.isArray(notificacao.complementos) ? notificacao.complementos : [],
             visualizarPreview: Boolean(notificacao.visualizarPreview),
+            auditor: auditorNome.trim() || notificacao.auditor || "Auditor via QR Code",
         }),
-        [notificacao, notificacaoBase.titulo, notificacaoBase.mensagem]
+        [notificacao, notificacaoBase.titulo, notificacaoBase.mensagem, auditorNome]
     );
 
     const previewNotificacao = useMemo(
@@ -5755,6 +5763,14 @@ function AuditoriaCampoQRCode({ colaborador = {}, treinamentos = [], onAuditoria
 
         try {
             const statusDocumental = statusGeralConsultaPublica(colaborador, treinamentos).texto;
+            const auditorResponsavel = auditorNome.trim() || "Auditor via QR Code";
+            const notificacaoPayload = {
+                titulo: notificacao.titulo.trim(),
+                mensagem: notificacao.mensagem.trim(),
+                complementos: Array.isArray(notificacao.complementos) ? notificacao.complementos : [],
+                preview: previewNotificacao,
+                auditor: auditorResponsavel,
+            };
             const checklist = resultado.itens.map((item) => ({
                 categoria: item.categoria.texto,
                 chave_categoria: item.categoria.chave,
@@ -5777,12 +5793,7 @@ function AuditoriaCampoQRCode({ colaborador = {}, treinamentos = [], onAuditoria
                     observacao_aberto: desvio.observacaoAberto.trim(),
                     observacao_tratativa: desvio.observacaoTratativa.trim(),
                     observacao_corrigido: desvio.observacaoCorrigido.trim(),
-                    notificacao: {
-                        titulo: notificacao.titulo.trim(),
-                        mensagem: notificacao.mensagem.trim(),
-                        complementos: notificacao.complementos,
-                        preview: previewNotificacao,
-                    },
+                    notificacao: notificacaoPayload,
                 }
                 : null;
 
@@ -5795,12 +5806,7 @@ function AuditoriaCampoQRCode({ colaborador = {}, treinamentos = [], onAuditoria
                 funcao: colaborador.funcao || "",
                 status_documental: statusDocumental,
                 boas_praticas: boasPraticas.trim(),
-                notificacao: {
-                    titulo: notificacao.titulo.trim(),
-                    mensagem: notificacao.mensagem.trim(),
-                    complementos: notificacao.complementos,
-                    preview: previewNotificacao,
-                },
+                notificacao: notificacaoPayload,
                 checklist,
                 pontuacao: resultado.percentual,
                 classificacao: resultado.classificacao,
@@ -5808,7 +5814,7 @@ function AuditoriaCampoQRCode({ colaborador = {}, treinamentos = [], onAuditoria
                 categoria_desvio_principal: desvioPayloadBase?.categoria || "",
                 total_desvios: desvioPayloadBase ? 1 : 0,
                 status_desvio: desvioPayloadBase?.status || "Sem desvio",
-                auditor_nome: auditorNome.trim() || "Auditor via QR Code",
+                auditor_nome: auditorResponsavel,
                 origem: "QR Code do colaborador",
             };
 
@@ -5878,6 +5884,7 @@ function AuditoriaCampoQRCode({ colaborador = {}, treinamentos = [], onAuditoria
             setBoasPraticas("");
             setNotificacao(notificacaoPadraoAuditoriaCampo(colaborador, calcularResultadoAuditoriaCampo({ epi: "conforme", frente_trabalho: "conforme", comportamento_seguro: "conforme" })));
             setComplementoNotificacao("");
+            setNotificacaoEdicaoAberta(false);
             setDesvio({
                 descricao: "",
                 gravidade: "Leve",
@@ -5974,36 +5981,37 @@ function AuditoriaCampoQRCode({ colaborador = {}, treinamentos = [], onAuditoria
                                 {statusDesvioAuditoriaCampo.map((status) => <option key={status}>{status}</option>)}
                             </select>
                         </div>
-                        <div className="md:col-span-2">
-                            <label className="block text-sm font-bold text-slate-700">Boas práticas observadas</label>
-                            <textarea
-                                value={boasPraticas}
-                                onChange={(e) => setBoasPraticas(e.target.value)}
-                                rows={3}
-                                placeholder="Registre atitudes positivas, organização, uso correto de EPI ou exemplo que possa virar DDS futuramente."
-                                className="mt-2 w-full rounded-2xl border border-emerald-200 bg-emerald-50/40 px-4 py-3 text-sm outline-none focus:border-emerald-400 focus:ring-2 focus:ring-emerald-100"
-                            />
-                            <p className="mt-1 text-xs text-emerald-700">Opcional. Use este campo para guardar exemplos positivos que possam ser citados em DDS.</p>
-                        </div>
                     </div>
 
-                    <div className="rounded-3xl border border-blue-200 bg-blue-50 p-4">
+                    <div className="overflow-hidden rounded-3xl border border-blue-200 bg-blue-50 p-4">
                         <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
-                            <div>
+                            <div className="min-w-0">
                                 <h4 className="font-bold text-blue-950">Notificação da auditoria</h4>
-                                <p className="mt-1 text-sm text-blue-700">Edite o texto, adicione complementos, remova itens e visualize antes de salvar.</p>
+                                <p className="mt-1 text-sm text-blue-700">Visualize ou edite a notificação, complementos e observações antes de salvar.</p>
                             </div>
-                            <button
-                                type="button"
-                                onClick={() => setNotificacao((atual) => ({ ...atual, visualizarPreview: !atual.visualizarPreview }))}
-                                className="inline-flex items-center justify-center gap-2 rounded-2xl bg-white px-3 py-2 text-xs font-bold text-blue-700 ring-1 ring-blue-200 hover:bg-blue-100"
-                            >
-                                <Eye className="h-4 w-4" />
-                                {notificacaoCompleta.visualizarPreview ? "Ocultar prévia" : "Visualizar prévia"}
-                            </button>
+                            <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+                                <button
+                                    type="button"
+                                    onClick={() => setNotificacao((atual) => ({ ...atual, visualizarPreview: !atual.visualizarPreview }))}
+                                    className="inline-flex items-center justify-center gap-2 rounded-2xl bg-white px-3 py-2 text-xs font-bold text-blue-700 ring-1 ring-blue-200 hover:bg-blue-100"
+                                >
+                                    <Eye className="h-4 w-4" />
+                                    {notificacaoCompleta.visualizarPreview ? "Ocultar visualização" : "Visualizar"}
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={() => setNotificacaoEdicaoAberta((valor) => !valor)}
+                                    className="inline-flex items-center justify-center gap-2 rounded-2xl bg-slate-950 px-3 py-2 text-xs font-bold text-white hover:bg-slate-800"
+                                >
+                                    {notificacaoEdicaoAberta ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                                    {notificacaoEdicaoAberta ? "Fechar edição" : "Editar"}
+                                </button>
+                            </div>
                         </div>
 
-                        <div className="mt-4 grid gap-4 md:grid-cols-2">
+                        <div className="mt-4 grid min-w-0 gap-4 lg:grid-cols-2">
+                            {notificacaoEdicaoAberta && (
+                                <>
                             <div>
                                 <label className="block text-sm font-bold text-slate-700">Assunto / título</label>
                                 <input
@@ -6014,7 +6022,7 @@ function AuditoriaCampoQRCode({ colaborador = {}, treinamentos = [], onAuditoria
                             </div>
                             <div>
                                 <label className="block text-sm font-bold text-slate-700">Adicionar complemento</label>
-                                <div className="mt-2 flex gap-2">
+                                <div className="mt-2 flex flex-col gap-2 sm:flex-row">
                                     <input
                                         value={complementoNotificacao}
                                         onChange={(e) => setComplementoNotificacao(e.target.value)}
@@ -6024,7 +6032,7 @@ function AuditoriaCampoQRCode({ colaborador = {}, treinamentos = [], onAuditoria
                                     <button
                                         type="button"
                                         onClick={adicionarComplementoNotificacao}
-                                        className="inline-flex shrink-0 items-center justify-center gap-2 rounded-2xl bg-blue-600 px-4 py-3 text-sm font-bold text-white hover:bg-blue-700"
+                                        className="inline-flex w-full shrink-0 items-center justify-center gap-2 rounded-2xl bg-blue-600 px-4 py-3 text-sm font-bold text-white hover:bg-blue-700 sm:w-auto"
                                     >
                                         <Plus className="h-4 w-4" />
                                         Adicionar
@@ -6045,8 +6053,8 @@ function AuditoriaCampoQRCode({ colaborador = {}, treinamentos = [], onAuditoria
                                 <div className="md:col-span-2 space-y-2">
                                     <p className="text-xs font-bold uppercase tracking-wide text-blue-700">Complementos adicionados</p>
                                     {(notificacao.complementos || []).map((item, index) => (
-                                        <div key={`${item}-${index}`} className="flex items-start justify-between gap-3 rounded-2xl bg-white p-3 text-sm ring-1 ring-blue-100">
-                                            <span className="text-slate-700">{index + 1}. {item}</span>
+                                        <div key={`${item}-${index}`} className="flex flex-col items-start justify-between gap-3 rounded-2xl bg-white p-3 text-sm ring-1 ring-blue-100 sm:flex-row">
+                                            <span className="break-words text-slate-700">{index + 1}. {item}</span>
                                             <button
                                                 type="button"
                                                 onClick={() => removerComplementoNotificacao(index)}
@@ -6060,10 +6068,13 @@ function AuditoriaCampoQRCode({ colaborador = {}, treinamentos = [], onAuditoria
                                 </div>
                             )}
 
+                                </>
+                            )}
+
                             {notificacaoCompleta.visualizarPreview && (
-                                <div className="md:col-span-2 rounded-2xl bg-slate-950 p-4 text-sm text-slate-100">
+                                <div className="min-w-0 rounded-2xl bg-slate-950 p-4 text-sm text-slate-100 lg:col-span-2">
                                     <p className="mb-2 text-xs font-bold uppercase tracking-wide text-slate-400">Prévia da notificação</p>
-                                    <pre className="whitespace-pre-wrap font-sans leading-relaxed">{previewNotificacao || "Preencha assunto e mensagem para visualizar."}</pre>
+                                    <pre className="max-h-72 overflow-auto whitespace-pre-wrap break-words font-sans leading-relaxed scrollbar-discreta">{previewNotificacao || "Preencha assunto e mensagem para visualizar."}</pre>
                                 </div>
                             )}
                         </div>
@@ -6074,7 +6085,7 @@ function AuditoriaCampoQRCode({ colaborador = {}, treinamentos = [], onAuditoria
                             <h4 className="font-bold text-orange-900">Registro de desvio</h4>
                             <p className="mt-1 text-sm text-orange-700">Obrigatório quando houver observação, não conformidade ou desvio grave.</p>
 
-                            <div className="mt-4 grid gap-4 md:grid-cols-2">
+                            <div className="mt-4 grid min-w-0 gap-4 lg:grid-cols-2">
                                 <div className="md:col-span-2">
                                     <label className="block text-sm font-bold text-slate-700">Descrição</label>
                                     <textarea
@@ -6141,6 +6152,25 @@ function AuditoriaCampoQRCode({ colaborador = {}, treinamentos = [], onAuditoria
                                     />
                                     <FileUploadAviso arquivo={desvio.fotoDepois} tipo="fotoAuditoria" />
                                 </div>
+                                {(desvio.fotoAntes || desvio.fotoDepois) && (
+                                    <div className="md:col-span-2 rounded-2xl border border-slate-200 bg-white p-4">
+                                        <p className="text-sm font-bold text-slate-800">Fotos anexadas para a auditoria</p>
+                                        <div className="mt-3 grid gap-3 sm:grid-cols-2">
+                                            {desvio.fotoAntes && (
+                                                <div className="overflow-hidden rounded-2xl bg-slate-50 ring-1 ring-slate-200">
+                                                    <img src={URL.createObjectURL(desvio.fotoAntes)} alt="Prévia da foto antes" className="h-36 w-full object-cover" />
+                                                    <p className="px-3 py-2 text-xs font-bold text-slate-600">Foto antes: {desvio.fotoAntes.name}</p>
+                                                </div>
+                                            )}
+                                            {desvio.fotoDepois && (
+                                                <div className="overflow-hidden rounded-2xl bg-slate-50 ring-1 ring-slate-200">
+                                                    <img src={URL.createObjectURL(desvio.fotoDepois)} alt="Prévia da foto depois" className="h-36 w-full object-cover" />
+                                                    <p className="px-3 py-2 text-xs font-bold text-slate-600">Foto depois: {desvio.fotoDepois.name}</p>
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
+                                )}
                                 <div className="md:col-span-2 rounded-2xl border border-slate-200 bg-white p-4">
                                     <h5 className="text-sm font-bold text-slate-800">Observações por status do desvio</h5>
                                     <p className="mt-1 text-xs text-slate-500">Use esses campos para acompanhar a evolução: abertura, tratativa e correção.</p>
@@ -6190,6 +6220,19 @@ function AuditoriaCampoQRCode({ colaborador = {}, treinamentos = [], onAuditoria
                             </div>
                         </div>
                     )}
+
+
+                    <div className="rounded-3xl border border-emerald-200 bg-emerald-50/60 p-4">
+                        <label className="block text-sm font-bold text-emerald-900">Boas práticas observadas</label>
+                        <textarea
+                            value={boasPraticas}
+                            onChange={(e) => setBoasPraticas(e.target.value)}
+                            rows={3}
+                            placeholder="Registre atitudes positivas, organização, uso correto de EPI ou exemplo que possa virar DDS futuramente."
+                            className="mt-2 w-full rounded-2xl border border-emerald-200 bg-white px-4 py-3 text-sm outline-none focus:border-emerald-400 focus:ring-2 focus:ring-emerald-100"
+                        />
+                        <p className="mt-1 text-xs text-emerald-700">Opcional. Este campo fica por último para registrar boas práticas após concluir a análise da auditoria.</p>
+                    </div>
 
                     <button
                         type="button"
@@ -6318,33 +6361,6 @@ function ConsultaQRPublica({ dados }) {
                         onAuditoriaSalva={(novaAuditoria) => setAuditoriasCampoQr((atual) => [novaAuditoria, ...atual])}
                     />
 
-                    {auditoriasCampoQr.length > 0 && (
-                        <div className="mt-6 rounded-3xl border border-slate-200 p-4">
-                            <h3 className="text-lg font-bold text-slate-950">Histórico de auditorias do colaborador</h3>
-                            <div className="mt-3 space-y-2">
-                                {auditoriasCampoQr.slice(0, 5).map((auditoria) => (
-                                    <div key={auditoria.id} className="rounded-2xl bg-slate-50 p-3 ring-1 ring-slate-100">
-                                        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-                                            <div>
-                                                <p className="text-sm font-bold text-slate-900">{formatarDataHora(auditoria.createdAt)}</p>
-                                                <p className="text-xs text-slate-500">{auditoria.auditorNome || "Auditor não informado"} · {auditoria.totalDesvios} desvio(s)</p>
-                                                <p className="mt-1 text-xs text-slate-400">Status do desvio: {auditoria.statusDesvio || "Sem desvio"}</p>
-                                            </div>
-                                            <div className="flex items-center gap-2">
-                                                <span className="rounded-full bg-white px-3 py-1 text-xs font-bold text-slate-700 ring-1 ring-slate-200">{auditoria.pontuacao}%</span>
-                                                <span className={classNames("rounded-full px-3 py-1 text-xs font-bold ring-1", classeClassificacaoAuditoriaCampo(auditoria.classificacao))}>{auditoria.classificacao}</span>
-                                            </div>
-                                        </div>
-                                        <EditorNotificacaoHistoricoAuditoria
-                                            auditoria={auditoria}
-                                            onAtualizada={(atualizada) => setAuditoriasCampoQr((atual) => atual.map((registro) => registro.id === atualizada.id ? atualizada : registro))}
-                                        />
-                                    </div>
-                                ))}
-                            </div>
-                        </div>
-                    )}
-
                     {treinamentos.length === 0 && (
                         <div className="mt-6 rounded-3xl border border-dashed border-slate-300 p-8 text-center">
                             <ClipboardCheck className="mx-auto h-10 w-10 text-slate-300" />
@@ -6415,8 +6431,9 @@ function ConsultaQRPublica({ dados }) {
                         })}
                     </div>
 
+
                     <div className="mt-6 rounded-3xl bg-slate-50 p-4 text-justify text-sm leading-relaxed text-slate-600">
-                        Consulta pública limitada. Dados sensíveis como CPF, endereço, ASO detalhado e documentos médicos não são exibidos.
+                        Consulta pública limitada. Dados sensíveis como CPF, endereço, ASO detalhado e documentos médicos não são exibidos. A tela mantém a Auditoria de Campo e a listagem pública de treinamentos/certificados do colaborador.
                     </div>
                 </div>
             </div>
@@ -9524,13 +9541,13 @@ function Empresas({
                                             accept="image/png,image/jpeg,image/webp,image/svg+xml"
                                             className="hidden"
                                             onChange={(e) => {
-                                                const arquivo = e.target.files?.[0] || null;
-                                                if (arquivo && !validarArquivoAntesUpload(arquivo, "fotoAuditoria")) {
-                                                    e.target.value = "";
-                                                    return;
-                                                }
-                                                setEmpresaEdicao({ ...empresaEdicao, logo: arquivo });
-                                            }}
+                                            const arquivo = e.target.files?.[0] || null;
+                                            if (arquivo && !validarArquivoAntesUpload(arquivo, "fotoAuditoria")) {
+                                                e.target.value = "";
+                                                return;
+                                            }
+                                            setEmpresaEdicao({ ...empresaEdicao, logo: arquivo });
+                                        }}
                                         />
                                     </label>
                                     <FileUploadAviso arquivo={empresaEdicao.logo} tipo="fotoAuditoria" />
@@ -9546,13 +9563,13 @@ function Empresas({
                                             accept="application/pdf,image/png,image/jpeg,image/webp"
                                             className="hidden"
                                             onChange={(e) => {
-                                                const arquivo = e.target.files?.[0] || null;
-                                                if (arquivo && !validarArquivoAntesUpload(arquivo, "documentoExtenso")) {
-                                                    e.target.value = "";
-                                                    return;
-                                                }
-                                                setEmpresaEdicao({ ...empresaEdicao, contratoArquivo: arquivo });
-                                            }}
+                                            const arquivo = e.target.files?.[0] || null;
+                                            if (arquivo && !validarArquivoAntesUpload(arquivo, "documentoExtenso")) {
+                                                e.target.value = "";
+                                                return;
+                                            }
+                                            setEmpresaEdicao({ ...empresaEdicao, contratoArquivo: arquivo });
+                                        }}
                                         />
                                     </label>
                                     <FileUploadAviso arquivo={empresaEdicao.contratoArquivo} tipo="documentoExtenso" />
@@ -11210,6 +11227,7 @@ function EditorNotificacaoHistoricoAuditoria({ auditoria = {}, onAtualizada }) {
         titulo: notificacaoInicial.titulo || `Auditoria de campo - ${auditoria.colaboradorNome || "Colaborador"}`,
         mensagem: notificacaoInicial.mensagem || `Auditoria de campo registrada para ${auditoria.colaboradorNome || "colaborador"}. Resultado: ${auditoria.classificacao || "sem classificação"} (${auditoria.pontuacao || 0}%).`,
         complementos: Array.isArray(notificacaoInicial.complementos) ? notificacaoInicial.complementos : [],
+        auditor: notificacaoInicial.auditor || auditoria.auditorNome || "",
     });
     const [novoComplemento, setNovoComplemento] = useState("");
     const [observacoesStatus, setObservacoesStatus] = useState({
@@ -11255,6 +11273,7 @@ function EditorNotificacaoHistoricoAuditoria({ auditoria = {}, onAtualizada }) {
                 titulo: String(notificacao.titulo || "").trim(),
                 mensagem: String(notificacao.mensagem || "").trim(),
                 complementos: Array.isArray(notificacao.complementos) ? notificacao.complementos : [],
+                auditor: notificacao.auditor || auditoria.auditorNome || "",
                 atualizado_em: new Date().toISOString(),
             };
 
@@ -11320,15 +11339,34 @@ function EditorNotificacaoHistoricoAuditoria({ auditoria = {}, onAtualizada }) {
                     <p className="text-sm font-bold text-slate-900">Notificação e tratativa</p>
                     <p className="text-xs text-slate-500">Edite a notificação, complementos e observações por status desta auditoria.</p>
                 </div>
-                <button
-                    type="button"
-                    onClick={() => setAberto((valor) => !valor)}
-                    className="inline-flex items-center justify-center gap-2 rounded-xl bg-slate-50 px-3 py-2 text-xs font-bold text-slate-600 ring-1 ring-slate-200 hover:bg-slate-100"
-                >
-                    {aberto ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
-                    {aberto ? "Ocultar edição" : "Editar / visualizar"}
-                </button>
+                <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+                    <button
+                        type="button"
+                        onClick={() => setVisualizarPreview((valor) => !valor)}
+                        className="inline-flex items-center justify-center gap-2 rounded-xl bg-blue-50 px-3 py-2 text-xs font-bold text-blue-700 ring-1 ring-blue-200 hover:bg-blue-100"
+                    >
+                        <Eye className="h-3.5 w-3.5" />
+                        {visualizarPreview ? "Ocultar visualização" : "Visualizar"}
+                    </button>
+                    <button
+                        type="button"
+                        onClick={() => setAberto((valor) => !valor)}
+                        className="inline-flex items-center justify-center gap-2 rounded-xl bg-slate-50 px-3 py-2 text-xs font-bold text-slate-600 ring-1 ring-slate-200 hover:bg-slate-100"
+                    >
+                        {aberto ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
+                        {aberto ? "Fechar edição" : "Editar"}
+                    </button>
+                </div>
             </div>
+
+            {visualizarPreview && !aberto && (
+                <div className="mt-3 rounded-2xl border border-blue-100 bg-blue-50/70 p-3">
+                    <p className="text-sm font-bold text-blue-950">Prévia da notificação</p>
+                    <pre className="mt-2 max-h-72 overflow-auto whitespace-pre-wrap break-words rounded-2xl bg-slate-950 p-3 font-sans text-xs leading-relaxed text-white scrollbar-discreta">
+                        {preview || "Preencha a notificação para visualizar."}
+                    </pre>
+                </div>
+            )}
 
             {aberto && (
                 <div className="mt-4 grid gap-4 lg:grid-cols-2">
@@ -11352,7 +11390,7 @@ function EditorNotificacaoHistoricoAuditoria({ auditoria = {}, onAtualizada }) {
                         </div>
                         <div>
                             <label className="block text-xs font-bold uppercase tracking-wide text-slate-500">Adicionar complemento</label>
-                            <div className="mt-2 flex gap-2">
+                            <div className="mt-2 flex flex-col gap-2 sm:flex-row">
                                 <input
                                     value={novoComplemento}
                                     onChange={(e) => setNovoComplemento(e.target.value)}
@@ -11454,6 +11492,26 @@ function EditorNotificacaoHistoricoAuditoria({ auditoria = {}, onAtualizada }) {
                                 </div>
                             </div>
                         </div>
+
+                        {(desvioPrincipal?.fotoAntesUrl || desvioPrincipal?.fotoDepoisUrl) && (
+                            <div className="rounded-2xl border border-slate-200 bg-slate-50 p-3">
+                                <p className="text-sm font-bold text-slate-800">Fotos anexadas</p>
+                                <div className="mt-3 grid gap-3 sm:grid-cols-2">
+                                    {desvioPrincipal?.fotoAntesUrl && (
+                                        <a href={desvioPrincipal.fotoAntesUrl} target="_blank" rel="noreferrer" className="block overflow-hidden rounded-2xl bg-white ring-1 ring-slate-200">
+                                            <img src={desvioPrincipal.fotoAntesUrl} alt="Foto antes da auditoria" className="h-40 w-full object-cover" />
+                                            <span className="block px-3 py-2 text-xs font-bold text-slate-600">Foto antes</span>
+                                        </a>
+                                    )}
+                                    {desvioPrincipal?.fotoDepoisUrl && (
+                                        <a href={desvioPrincipal.fotoDepoisUrl} target="_blank" rel="noreferrer" className="block overflow-hidden rounded-2xl bg-white ring-1 ring-slate-200">
+                                            <img src={desvioPrincipal.fotoDepoisUrl} alt="Foto depois da auditoria" className="h-40 w-full object-cover" />
+                                            <span className="block px-3 py-2 text-xs font-bold text-slate-600">Foto depois</span>
+                                        </a>
+                                    )}
+                                </div>
+                            </div>
+                        )}
 
                         {mensagem && (
                             <div className={classNames("rounded-2xl px-3 py-2 text-xs font-bold ring-1", mensagem.includes("Erro") || mensagem.includes("Não foi possível") ? "bg-red-50 text-red-700 ring-red-200" : "bg-emerald-50 text-emerald-700 ring-emerald-200")}>
