@@ -1744,6 +1744,12 @@ function Dashboard({
         armazenamentoUtilizado: "padrao",
     };
 
+    const tamanhosPadraoBlocosDashboard = {
+        pendencias: "grande",
+        conformidade: "medio",
+        rankingEmpresas: "destaque",
+    };
+
     const opcoesTamanhoCartaDashboard = [
         { chave: "padrao", label: "Padrão", descricao: "1 coluna" },
         { chave: "medio", label: "Médio", descricao: "2 colunas" },
@@ -1759,6 +1765,17 @@ function Dashboard({
         { chave: "documentosTipo", label: "Documentos por tipo" },
         { chave: "ultimosDocumentos", label: "Últimos documentos enviados" },
         { chave: "alertas", label: "Alertas importantes" },
+    ];
+    const blocosComTamanhoDashboard = [
+        { chave: "pendencias", label: "Pendências críticas" },
+        { chave: "conformidade", label: "Resumo de conformidade" },
+        { chave: "rankingEmpresas", label: "Ranking de pendências por empresa" },
+    ];
+    const opcoesTamanhoBlocoDashboard = [
+        { chave: "padrao", label: "Padrão", descricao: "menor" },
+        { chave: "medio", label: "Médio", descricao: "metade da linha" },
+        { chave: "grande", label: "Grande", descricao: "maior destaque" },
+        { chave: "destaque", label: "Destaque", descricao: "linha inteira" },
     ];
     const [mostrarFiltroPainel, setMostrarFiltroPainel] = useState(false);
     const [blocosPainelDashboard, setBlocosPainelDashboard] = useState(() => {
@@ -1794,6 +1811,17 @@ function Dashboard({
         }
     });
 
+    const [tamanhosBlocosDashboard, setTamanhosBlocosDashboard] = useState(() => {
+        if (typeof window === "undefined") return tamanhosPadraoBlocosDashboard;
+
+        try {
+            const salvo = JSON.parse(window.localStorage.getItem("dashboardSstTamanhosBlocos") || "null");
+            return salvo && typeof salvo === "object" ? { ...tamanhosPadraoBlocosDashboard, ...salvo } : tamanhosPadraoBlocosDashboard;
+        } catch {
+            return tamanhosPadraoBlocosDashboard;
+        }
+    });
+
     useEffect(() => {
         if (typeof window === "undefined") return;
         window.localStorage.setItem("dashboardSstBlocosVisiveis", JSON.stringify(blocosPainelDashboard));
@@ -1808,6 +1836,11 @@ function Dashboard({
         if (typeof window === "undefined") return;
         window.localStorage.setItem("dashboardSstTamanhosCartas", JSON.stringify(tamanhosCartasDashboard));
     }, [tamanhosCartasDashboard]);
+
+    useEffect(() => {
+        if (typeof window === "undefined") return;
+        window.localStorage.setItem("dashboardSstTamanhosBlocos", JSON.stringify(tamanhosBlocosDashboard));
+    }, [tamanhosBlocosDashboard]);
 
     const alternarBlocoPainel = (chave) => {
         setBlocosPainelDashboard((atual) => ({
@@ -1830,6 +1863,13 @@ function Dashboard({
         }));
     };
 
+    const alterarTamanhoBlocoPainel = (chave, tamanho) => {
+        setTamanhosBlocosDashboard((atual) => ({
+            ...atual,
+            [chave]: tamanho,
+        }));
+    };
+
     const classeTamanhoCartaDashboard = (chave) => {
         const tamanho = tamanhosCartasDashboard[chave] || "padrao";
 
@@ -1838,6 +1878,16 @@ function Dashboard({
         if (tamanho === "medio") return "md:col-span-2 xl:col-span-2";
 
         return "";
+    };
+
+    const classeTamanhoBlocoDashboard = (chave) => {
+        const tamanho = tamanhosBlocosDashboard[chave] || "padrao";
+
+        if (tamanho === "destaque") return "md:col-span-2 xl:col-span-6";
+        if (tamanho === "grande") return "md:col-span-2 xl:col-span-4";
+        if (tamanho === "medio") return "md:col-span-2 xl:col-span-3";
+
+        return "md:col-span-1 xl:col-span-2";
     };
 
     const classeValorCartaDashboard = (chave) => {
@@ -2471,6 +2521,7 @@ function Dashboard({
                                     setBlocosPainelDashboard(painelPadraoDashboard);
                                     setCartasVisiveisDashboard(cartasPadraoDashboard);
                                     setTamanhosCartasDashboard(tamanhosPadraoCartasDashboard);
+                                    setTamanhosBlocosDashboard(tamanhosPadraoBlocosDashboard);
                                 }}
                                 className="rounded-xl bg-slate-950 px-3 py-2 text-xs font-semibold text-white hover:bg-slate-800"
                             >
@@ -2501,6 +2552,12 @@ function Dashboard({
                                         colaboradoresLiberados: "medio",
                                         comPendencia: "medio",
                                         colaboradoresBloqueados: "medio",
+                                    });
+                                    setTamanhosBlocosDashboard({
+                                        ...tamanhosPadraoBlocosDashboard,
+                                        pendencias: "destaque",
+                                        conformidade: "medio",
+                                        rankingEmpresas: "destaque",
                                     });
                                 }}
                                 className="rounded-xl bg-slate-100 px-3 py-2 text-xs font-semibold text-slate-700 ring-1 ring-slate-200 hover:bg-slate-200"
@@ -2628,6 +2685,68 @@ function Dashboard({
                             </div>
                         </div>
                     )}
+
+                    {(blocosPainelDashboard.pendencias || blocosPainelDashboard.conformidade || blocosPainelDashboard.rankingEmpresas) && (
+                        <div className="mt-5 border-t border-slate-100 pt-4">
+                            <div className="mb-3 flex flex-col justify-between gap-2 sm:flex-row sm:items-center">
+                                <div>
+                                    <h3 className="text-sm font-bold text-slate-950">Tamanho dos blocos do painel</h3>
+                                    <p className="mt-0.5 text-xs text-slate-500">
+                                        Defina o espaço de Pendências críticas, Resumo de conformidade e Ranking por empresa.
+                                    </p>
+                                </div>
+                                <button
+                                    type="button"
+                                    onClick={() => setTamanhosBlocosDashboard(tamanhosPadraoBlocosDashboard)}
+                                    className="self-start rounded-xl bg-white px-3 py-2 text-xs font-semibold text-slate-700 ring-1 ring-slate-200 hover:bg-slate-50 sm:self-auto"
+                                >
+                                    Restaurar tamanhos dos blocos
+                                </button>
+                            </div>
+
+                            <div className="grid gap-3 lg:grid-cols-3">
+                                {blocosComTamanhoDashboard
+                                    .filter((opcao) => blocosPainelDashboard[opcao.chave])
+                                    .map((opcao) => {
+                                        const tamanhoAtual = tamanhosBlocosDashboard[opcao.chave] || "padrao";
+
+                                        return (
+                                            <div key={opcao.chave} className="rounded-2xl bg-slate-50 p-3 ring-1 ring-slate-200">
+                                                <div className="mb-3">
+                                                    <span className="block text-sm font-bold text-slate-900">{opcao.label}</span>
+                                                    <span className="mt-0.5 block text-xs text-slate-500">Escolha quanto espaço este bloco ocupa.</span>
+                                                </div>
+
+                                                <div className="grid grid-cols-2 gap-2">
+                                                    {opcoesTamanhoBlocoDashboard.map((tamanho) => {
+                                                        const selecionado = tamanhoAtual === tamanho.chave;
+
+                                                        return (
+                                                            <button
+                                                                key={tamanho.chave}
+                                                                type="button"
+                                                                onClick={() => alterarTamanhoBlocoPainel(opcao.chave, tamanho.chave)}
+                                                                className={classNames(
+                                                                    "rounded-xl px-2 py-2 text-center ring-1 transition",
+                                                                    selecionado
+                                                                        ? "bg-slate-950 text-white ring-slate-950"
+                                                                        : "bg-white text-slate-600 ring-slate-200 hover:bg-slate-50"
+                                                                )}
+                                                            >
+                                                                <span className="block text-xs font-bold">{tamanho.label}</span>
+                                                                <span className={classNames("mt-0.5 block text-[10px]", selecionado ? "text-slate-200" : "text-slate-400")}>
+                                                                    {tamanho.descricao}
+                                                                </span>
+                                                            </button>
+                                                        );
+                                                    })}
+                                                </div>
+                                            </div>
+                                        );
+                                    })}
+                            </div>
+                        </div>
+                    )}
                 </Card>
             )}
 
@@ -2661,13 +2780,10 @@ function Dashboard({
                 </div>
             )}
 
-            {(blocosPainelDashboard.pendencias || blocosPainelDashboard.conformidade) && (
-                <div className={classNames(
-                    "mt-6 grid gap-6",
-                    blocosPainelDashboard.pendencias && blocosPainelDashboard.conformidade ? "xl:grid-cols-[1.35fr_0.65fr]" : "xl:grid-cols-1"
-                )}>
+            {(blocosPainelDashboard.pendencias || blocosPainelDashboard.conformidade || blocosPainelDashboard.rankingEmpresas) && (
+                <div className="mt-6 grid gap-6 md:grid-cols-2 xl:grid-cols-6">
                     {blocosPainelDashboard.pendencias && (
-                        <Card>
+                        <Card className={classNames("h-full", classeTamanhoBlocoDashboard("pendencias"))}>
                             <div className="mb-4 flex items-center justify-between">
                                 <div>
                                     <h2 className="text-lg font-bold text-slate-950">Pendências críticas</h2>
@@ -2680,8 +2796,8 @@ function Dashboard({
                                 </span>
                             </div>
 
-                            <div className="overflow-hidden rounded-2xl border border-slate-200">
-                                <table className="w-full text-left text-sm">
+                            <div className="overflow-x-auto rounded-2xl border border-slate-200 scrollbar-discreta">
+                                <table className="min-w-[760px] w-full text-left text-sm">
                                     <thead className="bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
                                         <tr>
                                             <th className="px-4 py-3">Colaborador</th>
@@ -2746,7 +2862,7 @@ function Dashboard({
                     )}
 
                     {blocosPainelDashboard.conformidade && (
-                        <Card>
+                        <Card className={classNames("h-full", classeTamanhoBlocoDashboard("conformidade"))}>
                             <h2 className="text-lg font-bold text-slate-950">Resumo de conformidade</h2>
                             <p className="mt-1 text-sm text-slate-500">
                                 Baseado nos treinamentos exigidos para a função, incluindo os ainda não enviados.
@@ -2774,78 +2890,76 @@ function Dashboard({
                             </div>
                         </Card>
                     )}
-                </div>
-            )}
 
-            {blocosPainelDashboard.rankingEmpresas && (
-                <div className="mt-6">
-                    <Card>
-                        <div className="mb-4 flex flex-col justify-between gap-3 md:flex-row md:items-start">
-                            <div>
-                                <h2 className="text-lg font-bold text-slate-950">Ranking de pendências por empresa</h2>
-                                <p className="mt-1 text-sm text-slate-500">
-                                    Tabela em largura total para facilitar a conferência por empresa, sem dividir espaço com outros blocos.
-                                </p>
+                    {blocosPainelDashboard.rankingEmpresas && (
+                        <Card className={classNames("h-full", classeTamanhoBlocoDashboard("rankingEmpresas"))}>
+                            <div className="mb-4 flex flex-col justify-between gap-3 md:flex-row md:items-start">
+                                <div>
+                                    <h2 className="text-lg font-bold text-slate-950">Ranking de pendências por empresa</h2>
+                                    <p className="mt-1 text-sm text-slate-500">
+                                        Tabela com tamanho configurável no painel. Use Destaque para ocupar a linha inteira.
+                                    </p>
+                                </div>
+                                <div className="flex flex-wrap gap-2 text-xs font-semibold">
+                                    <span className="rounded-full bg-emerald-50 px-3 py-1 text-emerald-700 ring-1 ring-emerald-200">Regular</span>
+                                    <span className="rounded-full bg-orange-50 px-3 py-1 text-orange-700 ring-1 ring-orange-200">Atenção</span>
+                                    <span className="rounded-full bg-red-50 px-3 py-1 text-red-700 ring-1 ring-red-200">Crítico</span>
+                                </div>
                             </div>
-                            <div className="flex flex-wrap gap-2 text-xs font-semibold">
-                                <span className="rounded-full bg-emerald-50 px-3 py-1 text-emerald-700 ring-1 ring-emerald-200">Regular</span>
-                                <span className="rounded-full bg-orange-50 px-3 py-1 text-orange-700 ring-1 ring-orange-200">Atenção</span>
-                                <span className="rounded-full bg-red-50 px-3 py-1 text-red-700 ring-1 ring-red-200">Crítico</span>
-                            </div>
-                        </div>
 
-                        {rankingPendenciasEmpresa.length === 0 ? (
-                            <div className="rounded-2xl border border-dashed border-slate-300 p-5 text-center text-sm text-slate-500">
-                                Nenhuma empresa encontrada para gerar o ranking.
-                            </div>
-                        ) : (
-                            <div className="overflow-x-auto scrollbar-discreta">
-                                <table className="min-w-[920px] w-full text-left text-sm">
-                                    <thead>
-                                        <tr className="border-b border-slate-200 text-xs uppercase tracking-wide text-slate-500">
-                                            <th className="py-3 pr-3 font-semibold">Empresa</th>
-                                            <th className="px-3 py-3 text-center font-semibold">Total colab.</th>
-                                            <th className="px-3 py-3 text-center font-semibold">Docs vencidos</th>
-                                            <th className="px-3 py-3 text-center font-semibold">Docs a vencer</th>
-                                            <th className="px-3 py-3 text-center font-semibold">Trein. vencidos</th>
-                                            <th className="px-3 py-3 text-center font-semibold">Bloqueados</th>
-                                            <th className="py-3 pl-3 text-center font-semibold">Status</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody className="divide-y divide-slate-100">
-                                        {rankingPendenciasEmpresa.slice(0, 10).map((item, index) => (
-                                            <tr key={item.empresa} className="align-middle text-slate-700 hover:bg-slate-50/80">
-                                                <td className="py-3 pr-3">
-                                                    <div className="font-semibold text-slate-950">{index + 1}. {item.empresa}</div>
-                                                    {item.pendenciasLeves > 0 && item.statusEmpresa === "Atenção" && (
-                                                        <div className="mt-0.5 text-xs text-slate-500">Possui pendência leve ou item preventivo.</div>
-                                                    )}
-                                                </td>
-                                                <td className="px-3 py-3 text-center font-bold text-slate-900">{item.totalColaboradores}</td>
-                                                <td className="px-3 py-3 text-center">
-                                                    <span className={classNames("inline-flex min-w-8 justify-center rounded-full px-2 py-1 text-xs font-bold ring-1", item.documentosVencidos > 0 ? "bg-red-50 text-red-700 ring-red-100" : "bg-slate-50 text-slate-600 ring-slate-100")}>{item.documentosVencidos}</span>
-                                                </td>
-                                                <td className="px-3 py-3 text-center">
-                                                    <span className={classNames("inline-flex min-w-8 justify-center rounded-full px-2 py-1 text-xs font-bold ring-1", item.documentosAVencer > 0 ? "bg-orange-50 text-orange-700 ring-orange-100" : "bg-slate-50 text-slate-600 ring-slate-100")}>{item.documentosAVencer}</span>
-                                                </td>
-                                                <td className="px-3 py-3 text-center">
-                                                    <span className={classNames("inline-flex min-w-8 justify-center rounded-full px-2 py-1 text-xs font-bold ring-1", item.treinamentosVencidos > 0 ? "bg-red-50 text-red-700 ring-red-100" : "bg-slate-50 text-slate-600 ring-slate-100")}>{item.treinamentosVencidos}</span>
-                                                </td>
-                                                <td className="px-3 py-3 text-center">
-                                                    <span className={classNames("inline-flex min-w-8 justify-center rounded-full px-2 py-1 text-xs font-bold ring-1", item.colaboradoresBloqueados > 0 ? "bg-red-50 text-red-700 ring-red-100" : "bg-slate-50 text-slate-600 ring-slate-100")}>{item.colaboradoresBloqueados}</span>
-                                                </td>
-                                                <td className="py-3 pl-3 text-center">
-                                                    <span className={classNames("inline-flex min-w-[86px] justify-center rounded-full px-3 py-1 text-xs font-bold ring-1", item.statusEmpresaClasse)}>
-                                                        {item.statusEmpresa}
-                                                    </span>
-                                                </td>
+                            {rankingPendenciasEmpresa.length === 0 ? (
+                                <div className="rounded-2xl border border-dashed border-slate-300 p-5 text-center text-sm text-slate-500">
+                                    Nenhuma empresa encontrada para gerar o ranking.
+                                </div>
+                            ) : (
+                                <div className="overflow-x-auto scrollbar-discreta">
+                                    <table className="min-w-[920px] w-full text-left text-sm">
+                                        <thead>
+                                            <tr className="border-b border-slate-200 text-xs uppercase tracking-wide text-slate-500">
+                                                <th className="py-3 pr-3 font-semibold">Empresa</th>
+                                                <th className="px-3 py-3 text-center font-semibold">Total colab.</th>
+                                                <th className="px-3 py-3 text-center font-semibold">Docs vencidos</th>
+                                                <th className="px-3 py-3 text-center font-semibold">Docs a vencer</th>
+                                                <th className="px-3 py-3 text-center font-semibold">Trein. vencidos</th>
+                                                <th className="px-3 py-3 text-center font-semibold">Bloqueados</th>
+                                                <th className="py-3 pl-3 text-center font-semibold">Status</th>
                                             </tr>
-                                        ))}
-                                    </tbody>
-                                </table>
-                            </div>
-                        )}
-                    </Card>
+                                        </thead>
+                                        <tbody className="divide-y divide-slate-100">
+                                            {rankingPendenciasEmpresa.slice(0, 10).map((item, index) => (
+                                                <tr key={item.empresa} className="align-middle text-slate-700 hover:bg-slate-50/80">
+                                                    <td className="py-3 pr-3">
+                                                        <div className="font-semibold text-slate-950">{index + 1}. {item.empresa}</div>
+                                                        {item.pendenciasLeves > 0 && item.statusEmpresa === "Atenção" && (
+                                                            <div className="mt-0.5 text-xs text-slate-500">Possui pendência leve ou item preventivo.</div>
+                                                        )}
+                                                    </td>
+                                                    <td className="px-3 py-3 text-center font-bold text-slate-900">{item.totalColaboradores}</td>
+                                                    <td className="px-3 py-3 text-center">
+                                                        <span className={classNames("inline-flex min-w-8 justify-center rounded-full px-2 py-1 text-xs font-bold ring-1", item.documentosVencidos > 0 ? "bg-red-50 text-red-700 ring-red-100" : "bg-slate-50 text-slate-600 ring-slate-100")}>{item.documentosVencidos}</span>
+                                                    </td>
+                                                    <td className="px-3 py-3 text-center">
+                                                        <span className={classNames("inline-flex min-w-8 justify-center rounded-full px-2 py-1 text-xs font-bold ring-1", item.documentosAVencer > 0 ? "bg-orange-50 text-orange-700 ring-orange-100" : "bg-slate-50 text-slate-600 ring-slate-100")}>{item.documentosAVencer}</span>
+                                                    </td>
+                                                    <td className="px-3 py-3 text-center">
+                                                        <span className={classNames("inline-flex min-w-8 justify-center rounded-full px-2 py-1 text-xs font-bold ring-1", item.treinamentosVencidos > 0 ? "bg-red-50 text-red-700 ring-red-100" : "bg-slate-50 text-slate-600 ring-slate-100")}>{item.treinamentosVencidos}</span>
+                                                    </td>
+                                                    <td className="px-3 py-3 text-center">
+                                                        <span className={classNames("inline-flex min-w-8 justify-center rounded-full px-2 py-1 text-xs font-bold ring-1", item.colaboradoresBloqueados > 0 ? "bg-red-50 text-red-700 ring-red-100" : "bg-slate-50 text-slate-600 ring-slate-100")}>{item.colaboradoresBloqueados}</span>
+                                                    </td>
+                                                    <td className="py-3 pl-3 text-center">
+                                                        <span className={classNames("inline-flex min-w-[86px] justify-center rounded-full px-3 py-1 text-xs font-bold ring-1", item.statusEmpresaClasse)}>
+                                                            {item.statusEmpresa}
+                                                        </span>
+                                                    </td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            )}
+                        </Card>
+                    )}
                 </div>
             )}
 
