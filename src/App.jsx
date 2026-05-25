@@ -2908,32 +2908,16 @@ function Dashboard({
                                     key={item.chave}
                                     className={classNames(
                                         "overflow-hidden border-dashed transition hover:border-slate-300",
-                                        classeTamanhoCartaDashboard(item.chave),
-                                        cartaArrastandoDashboard === item.chave ? "opacity-60 ring-2 ring-slate-300" : ""
+                                        classeTamanhoCartaDashboard(item.chave)
                                     )}
                                 >
                                     <div
-                                        draggable
-                                        onDragStart={(evento) => {
-                                            prepararArrastePainel(evento);
-                                            setCartaArrastandoDashboard(item.chave);
-                                        }}
-                                        onDragEnd={() => setCartaArrastandoDashboard(null)}
-                                        onDragOver={(evento) => evento.preventDefault()}
-                                        onDrop={() => soltarCartaPainel(item.chave)}
                                         className={classNames(
-                                            "flex cursor-grab items-start justify-between gap-3 active:cursor-grabbing",
+                                            "flex items-start justify-between gap-3",
                                             tamanho === "destaque" ? "min-h-[108px]" : tamanho === "grande" ? "min-h-[92px]" : ""
                                         )}
-                                        title="Arraste para mudar a ordem das cartas principais"
                                     >
                                         <div className="min-w-0">
-                                            <div className="mb-1 flex flex-wrap items-center gap-2">
-                                                <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-bold text-slate-500 ring-1 ring-slate-200">
-                                                    #{index + 1}
-                                                </span>
-                                                <span className="text-[10px] font-bold uppercase tracking-wide text-slate-400">Arrastar para ordenar</span>
-                                            </div>
                                             <p className="text-sm font-medium text-slate-500">{item.label}</p>
                                             <p className={classNames("mt-2 break-words font-bold text-slate-950", classeValorCartaDashboard(item.chave))}>{item.valor}</p>
                                             <p className="mt-1 text-xs text-slate-400">{item.detalhe}</p>
