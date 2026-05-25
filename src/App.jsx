@@ -8582,8 +8582,7 @@ function Requisitos() {
 
 
 function Aniversariantes({ colaboradores = [], empresasBanco = [] }) {
-    const mesAtual = hoje.getMonth() + 1;
-    const [mes, setMes] = useState(String(mesAtual).padStart(2, "0"));
+    const [mes, setMes] = useState("Todos");
     const [empresa, setEmpresa] = useState("Todas");
     const [funcao, setFuncao] = useState("Todas");
     const [status, setStatus] = useState("Todos");
@@ -8603,7 +8602,7 @@ function Aniversariantes({ colaboradores = [], empresasBanco = [] }) {
             const empresaColaborador = colaborador.empresaExibicao || colaborador.empresa;
 
             return (
-                (!mes || String(mesColaborador).padStart(2, "0") === mes) &&
+                (mes === "Todos" || String(mesColaborador).padStart(2, "0") === mes) &&
                 (empresa === "Todas" || empresaColaborador === empresa) &&
                 (funcao === "Todas" || colaborador.funcao === funcao) &&
                 (status === "Todos" || statusColaborador === status)
@@ -8633,7 +8632,7 @@ function Aniversariantes({ colaboradores = [], empresasBanco = [] }) {
         <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
             <Header
                 titulo="Aniversariantes"
-                subtitulo="Lista mensal considerando apenas colaboradores ativos/mobilizados e autorizados para aparecer no painel."
+                subtitulo="Consulta de aniversariantes de todos os meses, considerando apenas colaboradores ativos/mobilizados e autorizados para aparecer no painel."
                 acao={(
                     <button
                         type="button"
@@ -8665,6 +8664,7 @@ function Aniversariantes({ colaboradores = [], empresasBanco = [] }) {
             <Card className="mb-5">
                 <div className="grid gap-3 md:grid-cols-4">
                     <select value={mes} onChange={(e) => setMes(e.target.value)} className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none focus:border-slate-400 focus:ring-4 focus:ring-slate-100">
+                        <option value="Todos">Todos os meses</option>
                         {Array.from({ length: 12 }).map((_, index) => {
                             const valor = String(index + 1).padStart(2, "0");
                             const nomeMes = new Date(2026, index, 1).toLocaleDateString("pt-BR", { month: "long" });
