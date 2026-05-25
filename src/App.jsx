@@ -1745,10 +1745,41 @@ function Dashboard({
     };
 
     const tamanhosPadraoBlocosDashboard = {
+        cards: "destaque",
         pendencias: "grande",
         conformidade: "medio",
         rankingEmpresas: "destaque",
+        colaboradoresFuncao: "medio",
+        alertas: "medio",
+        documentosTipo: "medio",
+        ultimosDocumentos: "medio",
     };
+
+    const ordemPadraoBlocosDashboard = [
+        "cards",
+        "pendencias",
+        "conformidade",
+        "rankingEmpresas",
+        "colaboradoresFuncao",
+        "alertas",
+        "documentosTipo",
+        "ultimosDocumentos",
+    ];
+
+    const ordemPadraoCartasDashboard = [
+        "colaboradoresMobilizados",
+        "colaboradoresLiberados",
+        "comPendencia",
+        "emAnalise",
+        "empresasAtivas",
+        "documentosVencidos",
+        "documentosAVencer",
+        "treinamentosVencidos",
+        "colaboradoresBloqueados",
+        "desviosAbertos",
+        "aniversariantesMes",
+        "armazenamentoUtilizado",
+    ];
 
     const opcoesTamanhoCartaDashboard = [
         { chave: "padrao", label: "Padrão", descricao: "1 coluna" },
@@ -1760,17 +1791,13 @@ function Dashboard({
         { chave: "cards", label: "Cards principais" },
         { chave: "pendencias", label: "Pendências críticas" },
         { chave: "conformidade", label: "Resumo de conformidade" },
-        { chave: "colaboradoresFuncao", label: "Colaboradores por função" },
         { chave: "rankingEmpresas", label: "Ranking por empresa" },
+        { chave: "colaboradoresFuncao", label: "Colaboradores por função" },
+        { chave: "alertas", label: "Alertas importantes" },
         { chave: "documentosTipo", label: "Documentos por tipo" },
         { chave: "ultimosDocumentos", label: "Últimos documentos enviados" },
-        { chave: "alertas", label: "Alertas importantes" },
     ];
-    const blocosComTamanhoDashboard = [
-        { chave: "pendencias", label: "Pendências críticas" },
-        { chave: "conformidade", label: "Resumo de conformidade" },
-        { chave: "rankingEmpresas", label: "Ranking de pendências por empresa" },
-    ];
+    const blocosComTamanhoDashboard = opcoesPainelDashboard;
     const opcoesTamanhoBlocoDashboard = [
         { chave: "padrao", label: "Padrão", descricao: "menor" },
         { chave: "medio", label: "Médio", descricao: "metade da linha" },
@@ -1822,6 +1849,38 @@ function Dashboard({
         }
     });
 
+    const [ordemBlocosDashboard, setOrdemBlocosDashboard] = useState(() => {
+        if (typeof window === "undefined") return ordemPadraoBlocosDashboard;
+
+        try {
+            const salvo = JSON.parse(window.localStorage.getItem("dashboardSstOrdemBlocos") || "null");
+            if (!Array.isArray(salvo)) return ordemPadraoBlocosDashboard;
+
+            return [
+                ...salvo.filter((chave) => ordemPadraoBlocosDashboard.includes(chave)),
+                ...ordemPadraoBlocosDashboard.filter((chave) => !salvo.includes(chave)),
+            ];
+        } catch {
+            return ordemPadraoBlocosDashboard;
+        }
+    });
+
+    const [ordemCartasDashboard, setOrdemCartasDashboard] = useState(() => {
+        if (typeof window === "undefined") return ordemPadraoCartasDashboard;
+
+        try {
+            const salvo = JSON.parse(window.localStorage.getItem("dashboardSstOrdemCartas") || "null");
+            if (!Array.isArray(salvo)) return ordemPadraoCartasDashboard;
+
+            return [
+                ...salvo.filter((chave) => ordemPadraoCartasDashboard.includes(chave)),
+                ...ordemPadraoCartasDashboard.filter((chave) => !salvo.includes(chave)),
+            ];
+        } catch {
+            return ordemPadraoCartasDashboard;
+        }
+    });
+
     useEffect(() => {
         if (typeof window === "undefined") return;
         window.localStorage.setItem("dashboardSstBlocosVisiveis", JSON.stringify(blocosPainelDashboard));
@@ -1841,6 +1900,16 @@ function Dashboard({
         if (typeof window === "undefined") return;
         window.localStorage.setItem("dashboardSstTamanhosBlocos", JSON.stringify(tamanhosBlocosDashboard));
     }, [tamanhosBlocosDashboard]);
+
+    useEffect(() => {
+        if (typeof window === "undefined") return;
+        window.localStorage.setItem("dashboardSstOrdemBlocos", JSON.stringify(ordemBlocosDashboard));
+    }, [ordemBlocosDashboard]);
+
+    useEffect(() => {
+        if (typeof window === "undefined") return;
+        window.localStorage.setItem("dashboardSstOrdemCartas", JSON.stringify(ordemCartasDashboard));
+    }, [ordemCartasDashboard]);
 
     const alternarBlocoPainel = (chave) => {
         setBlocosPainelDashboard((atual) => ({
@@ -1868,6 +1937,27 @@ function Dashboard({
             ...atual,
             [chave]: tamanho,
         }));
+    };
+
+    const moverItemPainel = (lista, chave, direcao) => {
+        const indice = lista.indexOf(chave);
+        if (indice < 0) return lista;
+
+        const novoIndice = indice + direcao;
+        if (novoIndice < 0 || novoIndice >= lista.length) return lista;
+
+        const novaLista = [...lista];
+        const [item] = novaLista.splice(indice, 1);
+        novaLista.splice(novoIndice, 0, item);
+        return novaLista;
+    };
+
+    const moverBlocoPainel = (chave, direcao) => {
+        setOrdemBlocosDashboard((atual) => moverItemPainel(atual, chave, direcao));
+    };
+
+    const moverCartaPainel = (chave, direcao) => {
+        setOrdemCartasDashboard((atual) => moverItemPainel(atual, chave, direcao));
     };
 
     const classeTamanhoCartaDashboard = (chave) => {
@@ -2036,7 +2126,14 @@ function Dashboard({
         { chave: "armazenamentoUtilizado", label: "Armazenamento utilizado", valor: totalStorageLabel, icon: Upload, detalhe: `${storagePercentual}% do limite visual` },
     ];
 
-    const cardsVisiveis = cards.filter((item) => cartasVisiveisDashboard[item.chave] !== false);
+    const cardsOrdenados = [
+        ...ordemCartasDashboard
+            .map((chave) => cards.find((item) => item.chave === chave))
+            .filter(Boolean),
+        ...cards.filter((item) => !ordemCartasDashboard.includes(item.chave)),
+    ];
+
+    const cardsVisiveis = cardsOrdenados.filter((item) => cartasVisiveisDashboard[item.chave] !== false);
 
     const pendencias = indicadores.itens
         .filter((item) => ["pendente", "vencido", "vencendo"].includes(item.status.chave))
@@ -2466,6 +2563,335 @@ function Dashboard({
         { label: "Vencidos", valor: indicadores.vencidos, total: totalItens, classe: "bg-red-500" },
     ];
 
+    const opcoesBlocosOrdenadasDashboard = [
+        ...ordemBlocosDashboard
+            .map((chave) => opcoesPainelDashboard.find((opcao) => opcao.chave === chave))
+            .filter(Boolean),
+        ...opcoesPainelDashboard.filter((opcao) => !ordemBlocosDashboard.includes(opcao.chave)),
+    ];
+
+    const blocosDashboardOrdenados = opcoesBlocosOrdenadasDashboard
+        .map((opcao) => opcao.chave)
+        .filter((chave) => blocosPainelDashboard[chave]);
+
+    const renderBlocoDashboard = (chave) => {
+        if (chave === "cards") {
+            return (
+                <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-6">
+                    {cardsVisiveis.length === 0 ? (
+                        <Card className="md:col-span-2 xl:col-span-6">
+                            <div className="rounded-2xl border border-dashed border-slate-300 p-5 text-center text-sm text-slate-500">
+                                Nenhuma carta principal selecionada. Abra Personalizar painel e escolha as cartas que deseja exibir.
+                            </div>
+                        </Card>
+                    ) : (
+                        cardsVisiveis.map((item) => {
+                            const Icon = item.icon;
+                            const tamanho = tamanhosCartasDashboard[item.chave] || "padrao";
+
+                            return (
+                                <Card key={item.chave} className={classNames("overflow-hidden", classeTamanhoCartaDashboard(item.chave))}>
+                                    <div className={classNames(
+                                        "flex items-start justify-between gap-3",
+                                        tamanho === "destaque" ? "min-h-[108px]" : tamanho === "grande" ? "min-h-[92px]" : ""
+                                    )}>
+                                        <div className="min-w-0">
+                                            <p className="text-sm font-medium text-slate-500">{item.label}</p>
+                                            <p className={classNames("mt-2 break-words font-bold text-slate-950", classeValorCartaDashboard(item.chave))}>{item.valor}</p>
+                                            <p className="mt-1 text-xs text-slate-400">{item.detalhe}</p>
+                                        </div>
+                                        <div className={classNames(
+                                            "shrink-0 rounded-2xl bg-slate-100 p-3 text-slate-700",
+                                            tamanho === "destaque" || tamanho === "grande" ? "p-4" : ""
+                                        )}>
+                                            <Icon className={tamanho === "destaque" || tamanho === "grande" ? "h-6 w-6" : "h-5 w-5"} />
+                                        </div>
+                                    </div>
+                                </Card>
+                            );
+                        })
+                    )}
+                </div>
+            );
+        }
+
+        if (chave === "pendencias") {
+            return (
+                <Card className="h-full">
+                    <div className="mb-4 flex items-center justify-between">
+                        <div>
+                            <h2 className="text-lg font-bold text-slate-950">Pendências críticas</h2>
+                            <p className="text-sm text-slate-500">
+                                Treinamentos pendentes, vencidos ou a vencer em até 30 dias.
+                            </p>
+                        </div>
+                        <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-600">
+                            {pendencias.length} itens
+                        </span>
+                    </div>
+
+                    <div className="overflow-x-auto rounded-2xl border border-slate-200 scrollbar-discreta">
+                        <table className="min-w-[760px] w-full text-left text-sm">
+                            <thead className="bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
+                                <tr>
+                                    <th className="px-4 py-3">Colaborador</th>
+                                    <th className="px-4 py-3">Treinamento</th>
+                                    <th className="px-4 py-3">Vencimento</th>
+                                    <th className="px-4 py-3">Status</th>
+                                    <th className="px-4 py-3"></th>
+                                </tr>
+                            </thead>
+                            <tbody className="divide-y divide-slate-100 bg-white">
+                                {pendencias.length === 0 && (
+                                    <tr>
+                                        <td className="px-4 py-8 text-center text-sm text-slate-500" colSpan={5}>
+                                            Nenhuma pendência crítica encontrada.
+                                        </td>
+                                    </tr>
+                                )}
+
+                                {pendencias.slice(0, 10).map((item, idx) => (
+                                    <tr key={`${item.colaborador.id}-${item.treinamento.id}-${idx}`} className="hover:bg-slate-50">
+                                        <td className="px-4 py-3">
+                                            <div className="font-semibold text-slate-900">{item.colaborador.nome}</div>
+                                            <div className="text-xs text-slate-500">
+                                                {item.colaborador.empresaExibicao || item.colaborador.empresa} · {item.colaborador.statusMobilizacao || obterStatusInicialColaborador()} · {statusGeral(item.colaborador).texto}
+                                            </div>
+                                        </td>
+                                        <td className="px-4 py-3 text-slate-600">{item.treinamento.nome}</td>
+                                        <td className="px-4 py-3 text-slate-600">
+                                            {item.vencimento ? formatDate(item.vencimento) : "Não enviado"}
+                                        </td>
+                                        <td className="px-4 py-3">
+                                            <span className={classNames("rounded-full px-2 py-1 text-xs font-semibold ring-1", item.status.classe)}>
+                                                {item.status.texto}
+                                            </span>
+                                        </td>
+                                        <td className="px-4 py-3 text-right">
+                                            <div className="flex justify-end gap-2">
+                                                <button
+                                                    type="button"
+                                                    onClick={() => enviarAlertaEmailPendencia(item)}
+                                                    disabled={enviandoEmail}
+                                                    className="inline-flex min-w-[78px] items-center justify-center whitespace-nowrap rounded-xl bg-red-50 px-3 py-1.5 text-xs font-semibold text-red-700 ring-1 ring-red-200 hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-50"
+                                                >
+                                                    E-mail
+                                                </button>
+
+                                                <button
+                                                    type="button"
+                                                    onClick={() => onSelectColab(item.colaborador)}
+                                                    className="inline-flex min-w-[48px] items-center justify-center whitespace-nowrap rounded-xl bg-slate-950 px-3 py-1.5 text-xs font-semibold text-white hover:bg-slate-800"
+                                                >
+                                                    QR
+                                                </button>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
+                </Card>
+            );
+        }
+
+        if (chave === "conformidade") {
+            return (
+                <Card className="h-full">
+                    <h2 className="text-lg font-bold text-slate-950">Resumo de conformidade</h2>
+                    <p className="mt-1 text-sm text-slate-500">
+                        Baseado nos treinamentos exigidos para a função, incluindo os ainda não enviados.
+                    </p>
+
+                    <div className="mt-6 space-y-5">
+                        {resumoConformidade.map((i) => (
+                            <div key={i.label}>
+                                <div className="mb-2 flex justify-between text-sm">
+                                    <span className="font-medium text-slate-700">{i.label}</span>
+                                    <span className="text-slate-500">{i.valor}/{i.total}</span>
+                                </div>
+                                <div className="h-3 overflow-hidden rounded-full bg-slate-100">
+                                    <div
+                                        className={classNames("h-full rounded-full", i.classe)}
+                                        style={{ width: `${i.total ? Math.max(4, (i.valor / i.total) * 100) : 0}%` }}
+                                    />
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+
+                    <div className="mt-6 rounded-2xl bg-slate-50 p-4 text-sm text-slate-600">
+                        <strong className="text-slate-900">Regra do sistema:</strong> pendente indica ausência de certificado; vencido bloqueia a atividade; a vencer em até 30 dias gera alerta preventivo; em dia libera a consulta no QR Code.
+                    </div>
+                </Card>
+            );
+        }
+
+        if (chave === "rankingEmpresas") {
+            return (
+                <Card className="h-full">
+                    <div className="mb-4 flex flex-col justify-between gap-3 md:flex-row md:items-start">
+                        <div>
+                            <h2 className="text-lg font-bold text-slate-950">Ranking de pendências por empresa</h2>
+                            <p className="mt-1 text-sm text-slate-500">
+                                Tabela com tamanho e posição configuráveis no painel. Use Destaque para ocupar a linha inteira.
+                            </p>
+                        </div>
+                        <div className="flex flex-wrap gap-2 text-xs font-semibold">
+                            <span className="rounded-full bg-emerald-50 px-3 py-1 text-emerald-700 ring-1 ring-emerald-200">Regular</span>
+                            <span className="rounded-full bg-orange-50 px-3 py-1 text-orange-700 ring-1 ring-orange-200">Atenção</span>
+                            <span className="rounded-full bg-red-50 px-3 py-1 text-red-700 ring-1 ring-red-200">Crítico</span>
+                        </div>
+                    </div>
+
+                    {rankingPendenciasEmpresa.length === 0 ? (
+                        <div className="rounded-2xl border border-dashed border-slate-300 p-5 text-center text-sm text-slate-500">
+                            Nenhuma empresa encontrada para gerar o ranking.
+                        </div>
+                    ) : (
+                        <div className="overflow-x-auto scrollbar-discreta">
+                            <table className="min-w-[920px] w-full text-left text-sm">
+                                <thead>
+                                    <tr className="border-b border-slate-200 text-xs uppercase tracking-wide text-slate-500">
+                                        <th className="py-3 pr-3 font-semibold">Empresa</th>
+                                        <th className="px-3 py-3 text-center font-semibold">Total colab.</th>
+                                        <th className="px-3 py-3 text-center font-semibold">Docs vencidos</th>
+                                        <th className="px-3 py-3 text-center font-semibold">Docs a vencer</th>
+                                        <th className="px-3 py-3 text-center font-semibold">Trein. vencidos</th>
+                                        <th className="px-3 py-3 text-center font-semibold">Bloqueados</th>
+                                        <th className="py-3 pl-3 text-center font-semibold">Status</th>
+                                    </tr>
+                                </thead>
+                                <tbody className="divide-y divide-slate-100">
+                                    {rankingPendenciasEmpresa.slice(0, 10).map((item, index) => (
+                                        <tr key={item.empresa} className="align-middle text-slate-700 hover:bg-slate-50/80">
+                                            <td className="py-3 pr-3">
+                                                <div className="font-semibold text-slate-950">{index + 1}. {item.empresa}</div>
+                                                {item.pendenciasLeves > 0 && item.statusEmpresa === "Atenção" && (
+                                                    <div className="mt-0.5 text-xs text-slate-500">Possui pendência leve ou item preventivo.</div>
+                                                )}
+                                            </td>
+                                            <td className="px-3 py-3 text-center font-bold text-slate-900">{item.totalColaboradores}</td>
+                                            <td className="px-3 py-3 text-center">
+                                                <span className={classNames("inline-flex min-w-8 justify-center rounded-full px-2 py-1 text-xs font-bold ring-1", item.documentosVencidos > 0 ? "bg-red-50 text-red-700 ring-red-100" : "bg-slate-50 text-slate-600 ring-slate-100")}>{item.documentosVencidos}</span>
+                                            </td>
+                                            <td className="px-3 py-3 text-center">
+                                                <span className={classNames("inline-flex min-w-8 justify-center rounded-full px-2 py-1 text-xs font-bold ring-1", item.documentosAVencer > 0 ? "bg-orange-50 text-orange-700 ring-orange-100" : "bg-slate-50 text-slate-600 ring-slate-100")}>{item.documentosAVencer}</span>
+                                            </td>
+                                            <td className="px-3 py-3 text-center">
+                                                <span className={classNames("inline-flex min-w-8 justify-center rounded-full px-2 py-1 text-xs font-bold ring-1", item.treinamentosVencidos > 0 ? "bg-red-50 text-red-700 ring-red-100" : "bg-slate-50 text-slate-600 ring-slate-100")}>{item.treinamentosVencidos}</span>
+                                            </td>
+                                            <td className="px-3 py-3 text-center">
+                                                <span className={classNames("inline-flex min-w-8 justify-center rounded-full px-2 py-1 text-xs font-bold ring-1", item.colaboradoresBloqueados > 0 ? "bg-red-50 text-red-700 ring-red-100" : "bg-slate-50 text-slate-600 ring-slate-100")}>{item.colaboradoresBloqueados}</span>
+                                            </td>
+                                            <td className="py-3 pl-3 text-center">
+                                                <span className={classNames("inline-flex min-w-[86px] justify-center rounded-full px-3 py-1 text-xs font-bold ring-1", item.statusEmpresaClasse)}>
+                                                    {item.statusEmpresa}
+                                                </span>
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+                    )}
+                </Card>
+            );
+        }
+
+        if (chave === "colaboradoresFuncao") {
+            return (
+                <ListaCompacta
+                    titulo="Colaboradores mobilizados por função"
+                    subtitulo="Conta apenas ativos, mobilizados, liberados ou com pendência não bloqueante."
+                    vazio="Nenhum colaborador mobilizado encontrado."
+                >
+                    {colaboradoresPorFuncao.slice(0, 8).map((item) => (
+                        <div key={item.funcao} className="rounded-2xl bg-slate-50 p-3 text-sm ring-1 ring-slate-100">
+                            <div className="flex justify-between gap-3">
+                                <span className="font-semibold text-slate-900">{item.funcao}</span>
+                                <span className="rounded-full bg-white px-2 py-0.5 text-xs font-bold text-slate-600 ring-1 ring-slate-200">{item.quantidade}</span>
+                            </div>
+                            <div className="mt-2 h-2 overflow-hidden rounded-full bg-white ring-1 ring-slate-100">
+                                <div
+                                    className="h-full rounded-full bg-slate-900"
+                                    style={{ width: `${Math.max(6, Math.round((item.quantidade / maiorQuantidadePorFuncao) * 100))}%` }}
+                                />
+                            </div>
+                            <p className="mt-1 text-xs text-slate-500">
+                                {item.quantidade} colaborador(es) considerado(s) mobilizado(s)
+                            </p>
+                        </div>
+                    ))}
+                </ListaCompacta>
+            );
+        }
+
+        if (chave === "alertas") {
+            return (
+                <ListaCompacta
+                    titulo="Alertas importantes"
+                    subtitulo="Itens que exigem atenção imediata."
+                    vazio="Nenhum alerta importante no momento."
+                >
+                    {alertasImportantes.map((item, index) => (
+                        <div key={`${item.tipo}-${index}`} className={classNames("rounded-2xl p-3 text-sm ring-1", item.classe)}>
+                            <p className="font-bold">{item.tipo}</p>
+                            <p className="mt-1 text-xs">{item.texto}</p>
+                        </div>
+                    ))}
+                </ListaCompacta>
+            );
+        }
+
+        if (chave === "documentosTipo") {
+            return (
+                <ListaCompacta
+                    titulo="Documentos por tipo"
+                    subtitulo="Resumo dos documentos empresariais."
+                    vazio="Nenhum documento empresarial cadastrado."
+                >
+                    {documentosPorTipo.slice(0, 8).map((item) => (
+                        <div key={item.tipo} className="rounded-2xl bg-slate-50 p-3 text-sm ring-1 ring-slate-100">
+                            <div className="flex justify-between gap-3">
+                                <span className="font-semibold text-slate-900">{item.tipo}</span>
+                                <span className="rounded-full bg-white px-2 py-0.5 text-xs font-bold text-slate-600 ring-1 ring-slate-200">{item.total}</span>
+                            </div>
+                            <p className="mt-1 text-xs text-slate-500">
+                                {item.emDia} em dia · {item.vencendo} a vencer · {item.vencidos} vencido(s)
+                            </p>
+                        </div>
+                    ))}
+                </ListaCompacta>
+            );
+        }
+
+        if (chave === "ultimosDocumentos") {
+            return (
+                <ListaCompacta
+                    titulo="Últimos documentos enviados"
+                    subtitulo="Certificados e documentos empresariais mais recentes."
+                    vazio="Nenhum documento enviado ainda."
+                >
+                    {ultimosDocumentosEnviados.map((item, index) => (
+                        <div key={`${item.origem}-${item.nome}-${index}`} className="rounded-2xl bg-slate-50 p-3 text-sm ring-1 ring-slate-100">
+                            <div className="flex flex-wrap items-center justify-between gap-2">
+                                <span className="font-semibold text-slate-900">{item.titulo}</span>
+                                <span className="rounded-full bg-white px-2 py-0.5 text-[10px] font-bold text-slate-600 ring-1 ring-slate-200">{item.origem}</span>
+                            </div>
+                            <p className="mt-1 text-xs text-slate-500">
+                                {item.colaborador} · {item.empresa} · {item.data ? new Date(`${item.data}`.includes("T") ? item.data : `${item.data}T12:00:00`).toLocaleDateString("pt-BR") : "-"}
+                            </p>
+                        </div>
+                    ))}
+                </ListaCompacta>
+            );
+        }
+
+        return null;
+    };
+
 
     return (
         <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
@@ -2522,6 +2948,8 @@ function Dashboard({
                                     setCartasVisiveisDashboard(cartasPadraoDashboard);
                                     setTamanhosCartasDashboard(tamanhosPadraoCartasDashboard);
                                     setTamanhosBlocosDashboard(tamanhosPadraoBlocosDashboard);
+                                    setOrdemBlocosDashboard(ordemPadraoBlocosDashboard);
+                                    setOrdemCartasDashboard(ordemPadraoCartasDashboard);
                                 }}
                                 className="rounded-xl bg-slate-950 px-3 py-2 text-xs font-semibold text-white hover:bg-slate-800"
                             >
@@ -2555,10 +2983,24 @@ function Dashboard({
                                     });
                                     setTamanhosBlocosDashboard({
                                         ...tamanhosPadraoBlocosDashboard,
+                                        cards: "destaque",
                                         pendencias: "destaque",
                                         conformidade: "medio",
                                         rankingEmpresas: "destaque",
+                                        colaboradoresFuncao: "medio",
+                                        alertas: "medio",
                                     });
+                                    setOrdemBlocosDashboard([
+                                        "cards",
+                                        "pendencias",
+                                        "rankingEmpresas",
+                                        "conformidade",
+                                        "colaboradoresFuncao",
+                                        "alertas",
+                                        "documentosTipo",
+                                        "ultimosDocumentos",
+                                    ]);
+                                    setOrdemCartasDashboard(ordemPadraoCartasDashboard);
                                 }}
                                 className="rounded-xl bg-slate-100 px-3 py-2 text-xs font-semibold text-slate-700 ring-1 ring-slate-200 hover:bg-slate-200"
                             >
@@ -2607,6 +3049,7 @@ function Dashboard({
                                     onClick={() => {
                                         setCartasVisiveisDashboard(cartasPadraoDashboard);
                                         setTamanhosCartasDashboard(tamanhosPadraoCartasDashboard);
+                                        setOrdemCartasDashboard(ordemPadraoCartasDashboard);
                                     }}
                                     className="self-start rounded-xl bg-white px-3 py-2 text-xs font-semibold text-slate-700 ring-1 ring-slate-200 hover:bg-slate-50 sm:self-auto"
                                 >
@@ -2615,7 +3058,7 @@ function Dashboard({
                             </div>
 
                             <div className="grid gap-3 lg:grid-cols-2">
-                                {cards.map((opcao) => {
+                                {cardsOrdenados.map((opcao, index) => {
                                     const ativo = cartasVisiveisDashboard[opcao.chave] !== false;
                                     const tamanhoAtual = tamanhosCartasDashboard[opcao.chave] || "padrao";
 
@@ -2641,16 +3084,36 @@ function Dashboard({
                                                     </span>
                                                 </button>
 
-                                                <button
-                                                    type="button"
-                                                    onClick={() => alternarCartaPainel(opcao.chave)}
-                                                    className={classNames(
-                                                        "shrink-0 rounded-full px-2 py-1 text-[10px] font-bold uppercase tracking-wide ring-1",
-                                                        ativo ? "bg-blue-100 text-blue-800 ring-blue-200" : "bg-white text-slate-500 ring-slate-200"
-                                                    )}
-                                                >
-                                                    {ativo ? "Visível" : "Oculto"}
-                                                </button>
+                                                <div className="flex shrink-0 items-center gap-1">
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => moverCartaPainel(opcao.chave, -1)}
+                                                        disabled={index === 0}
+                                                        className="rounded-lg bg-white px-2 py-1 text-xs font-bold text-slate-600 ring-1 ring-slate-200 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40"
+                                                        title="Mover para a esquerda / para cima"
+                                                    >
+                                                        ↑
+                                                    </button>
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => moverCartaPainel(opcao.chave, 1)}
+                                                        disabled={index === cardsOrdenados.length - 1}
+                                                        className="rounded-lg bg-white px-2 py-1 text-xs font-bold text-slate-600 ring-1 ring-slate-200 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40"
+                                                        title="Mover para a direita / para baixo"
+                                                    >
+                                                        ↓
+                                                    </button>
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => alternarCartaPainel(opcao.chave)}
+                                                        className={classNames(
+                                                            "rounded-full px-2 py-1 text-[10px] font-bold uppercase tracking-wide ring-1",
+                                                            ativo ? "bg-blue-100 text-blue-800 ring-blue-200" : "bg-white text-slate-500 ring-slate-200"
+                                                        )}
+                                                    >
+                                                        {ativo ? "Visível" : "Oculto"}
+                                                    </button>
+                                                </div>
                                             </div>
 
                                             {ativo && (
@@ -2686,375 +3149,132 @@ function Dashboard({
                         </div>
                     )}
 
-                    {(blocosPainelDashboard.pendencias || blocosPainelDashboard.conformidade || blocosPainelDashboard.rankingEmpresas) && (
-                        <div className="mt-5 border-t border-slate-100 pt-4">
-                            <div className="mb-3 flex flex-col justify-between gap-2 sm:flex-row sm:items-center">
-                                <div>
-                                    <h3 className="text-sm font-bold text-slate-950">Tamanho dos blocos do painel</h3>
-                                    <p className="mt-0.5 text-xs text-slate-500">
-                                        Defina o espaço de Pendências críticas, Resumo de conformidade e Ranking por empresa.
-                                    </p>
-                                </div>
-                                <button
-                                    type="button"
-                                    onClick={() => setTamanhosBlocosDashboard(tamanhosPadraoBlocosDashboard)}
-                                    className="self-start rounded-xl bg-white px-3 py-2 text-xs font-semibold text-slate-700 ring-1 ring-slate-200 hover:bg-slate-50 sm:self-auto"
-                                >
-                                    Restaurar tamanhos dos blocos
-                                </button>
+                    <div className="mt-5 border-t border-slate-100 pt-4">
+                        <div className="mb-3 flex flex-col justify-between gap-2 sm:flex-row sm:items-center">
+                            <div>
+                                <h3 className="text-sm font-bold text-slate-950">Organização dos quadros do Dashboard SST</h3>
+                                <p className="mt-0.5 text-xs text-slate-500">
+                                    Escolha a posição, o tamanho e a visibilidade de todos os quadros. A ordem abaixo é a mesma ordem exibida no dashboard.
+                                </p>
                             </div>
-
-                            <div className="grid gap-3 lg:grid-cols-3">
-                                {blocosComTamanhoDashboard
-                                    .filter((opcao) => blocosPainelDashboard[opcao.chave])
-                                    .map((opcao) => {
-                                        const tamanhoAtual = tamanhosBlocosDashboard[opcao.chave] || "padrao";
-
-                                        return (
-                                            <div key={opcao.chave} className="rounded-2xl bg-slate-50 p-3 ring-1 ring-slate-200">
-                                                <div className="mb-3">
-                                                    <span className="block text-sm font-bold text-slate-900">{opcao.label}</span>
-                                                    <span className="mt-0.5 block text-xs text-slate-500">Escolha quanto espaço este bloco ocupa.</span>
-                                                </div>
-
-                                                <div className="grid grid-cols-2 gap-2">
-                                                    {opcoesTamanhoBlocoDashboard.map((tamanho) => {
-                                                        const selecionado = tamanhoAtual === tamanho.chave;
-
-                                                        return (
-                                                            <button
-                                                                key={tamanho.chave}
-                                                                type="button"
-                                                                onClick={() => alterarTamanhoBlocoPainel(opcao.chave, tamanho.chave)}
-                                                                className={classNames(
-                                                                    "rounded-xl px-2 py-2 text-center ring-1 transition",
-                                                                    selecionado
-                                                                        ? "bg-slate-950 text-white ring-slate-950"
-                                                                        : "bg-white text-slate-600 ring-slate-200 hover:bg-slate-50"
-                                                                )}
-                                                            >
-                                                                <span className="block text-xs font-bold">{tamanho.label}</span>
-                                                                <span className={classNames("mt-0.5 block text-[10px]", selecionado ? "text-slate-200" : "text-slate-400")}>
-                                                                    {tamanho.descricao}
-                                                                </span>
-                                                            </button>
-                                                        );
-                                                    })}
-                                                </div>
-                                            </div>
-                                        );
-                                    })}
-                            </div>
+                            <button
+                                type="button"
+                                onClick={() => {
+                                    setTamanhosBlocosDashboard(tamanhosPadraoBlocosDashboard);
+                                    setOrdemBlocosDashboard(ordemPadraoBlocosDashboard);
+                                }}
+                                className="self-start rounded-xl bg-white px-3 py-2 text-xs font-semibold text-slate-700 ring-1 ring-slate-200 hover:bg-slate-50 sm:self-auto"
+                            >
+                                Restaurar ordem e tamanhos
+                            </button>
                         </div>
-                    )}
+
+                        <div className="grid gap-3 lg:grid-cols-2">
+                            {opcoesBlocosOrdenadasDashboard.map((opcao, index) => {
+                                const ativo = Boolean(blocosPainelDashboard[opcao.chave]);
+                                const tamanhoAtual = tamanhosBlocosDashboard[opcao.chave] || "padrao";
+
+                                return (
+                                    <div
+                                        key={opcao.chave}
+                                        className={classNames(
+                                            "rounded-2xl p-3 ring-1 transition",
+                                            ativo ? "bg-emerald-50/60 ring-emerald-200" : "bg-slate-50 ring-slate-200"
+                                        )}
+                                    >
+                                        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                                            <button
+                                                type="button"
+                                                onClick={() => alternarBlocoPainel(opcao.chave)}
+                                                className="min-w-0 text-left"
+                                            >
+                                                <span className={classNames("block text-sm font-bold", ativo ? "text-emerald-900" : "text-slate-500")}>
+                                                    {index + 1}. {opcao.label}
+                                                </span>
+                                                <span className="mt-0.5 block text-xs text-slate-500">
+                                                    {ativo ? "Aparece no painel" : "Oculto no painel"}
+                                                </span>
+                                            </button>
+
+                                            <div className="flex shrink-0 flex-wrap items-center gap-1">
+                                                <button
+                                                    type="button"
+                                                    onClick={() => moverBlocoPainel(opcao.chave, -1)}
+                                                    disabled={index === 0}
+                                                    className="rounded-lg bg-white px-2 py-1 text-xs font-bold text-slate-600 ring-1 ring-slate-200 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40"
+                                                    title="Mover para cima"
+                                                >
+                                                    ↑
+                                                </button>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => moverBlocoPainel(opcao.chave, 1)}
+                                                    disabled={index === opcoesBlocosOrdenadasDashboard.length - 1}
+                                                    className="rounded-lg bg-white px-2 py-1 text-xs font-bold text-slate-600 ring-1 ring-slate-200 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40"
+                                                    title="Mover para baixo"
+                                                >
+                                                    ↓
+                                                </button>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => alternarBlocoPainel(opcao.chave)}
+                                                    className={classNames(
+                                                        "rounded-full px-2 py-1 text-[10px] font-bold uppercase tracking-wide ring-1",
+                                                        ativo ? "bg-emerald-100 text-emerald-800 ring-emerald-200" : "bg-white text-slate-500 ring-slate-200"
+                                                    )}
+                                                >
+                                                    {ativo ? "Visível" : "Oculto"}
+                                                </button>
+                                            </div>
+                                        </div>
+
+                                        {ativo && (
+                                            <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4">
+                                                {opcoesTamanhoBlocoDashboard.map((tamanho) => {
+                                                    const selecionado = tamanhoAtual === tamanho.chave;
+
+                                                    return (
+                                                        <button
+                                                            key={tamanho.chave}
+                                                            type="button"
+                                                            onClick={() => alterarTamanhoBlocoPainel(opcao.chave, tamanho.chave)}
+                                                            className={classNames(
+                                                                "rounded-xl px-2 py-2 text-center ring-1 transition",
+                                                                selecionado
+                                                                    ? "bg-slate-950 text-white ring-slate-950"
+                                                                    : "bg-white text-slate-600 ring-slate-200 hover:bg-slate-50"
+                                                            )}
+                                                        >
+                                                            <span className="block text-xs font-bold">{tamanho.label}</span>
+                                                            <span className={classNames("mt-0.5 block text-[10px]", selecionado ? "text-slate-200" : "text-slate-400")}>
+                                                                {tamanho.descricao}
+                                                            </span>
+                                                        </button>
+                                                    );
+                                                })}
+                                            </div>
+                                        )}
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    </div>
                 </Card>
             )}
 
-            {blocosPainelDashboard.cards && (
-                <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-6">
-                    {cardsVisiveis.map((item) => {
-                        const Icon = item.icon;
-                        const tamanho = tamanhosCartasDashboard[item.chave] || "padrao";
-
-                        return (
-                            <Card key={item.label} className={classNames("overflow-hidden", classeTamanhoCartaDashboard(item.chave))}>
-                                <div className={classNames(
-                                    "flex items-start justify-between gap-3",
-                                    tamanho === "destaque" ? "min-h-[108px]" : tamanho === "grande" ? "min-h-[92px]" : ""
-                                )}>
-                                    <div className="min-w-0">
-                                        <p className="text-sm font-medium text-slate-500">{item.label}</p>
-                                        <p className={classNames("mt-2 break-words font-bold text-slate-950", classeValorCartaDashboard(item.chave))}>{item.valor}</p>
-                                        <p className="mt-1 text-xs text-slate-400">{item.detalhe}</p>
-                                    </div>
-                                    <div className={classNames(
-                                        "shrink-0 rounded-2xl bg-slate-100 p-3 text-slate-700",
-                                        tamanho === "destaque" || tamanho === "grande" ? "p-4" : ""
-                                    )}>
-                                        <Icon className={tamanho === "destaque" || tamanho === "grande" ? "h-6 w-6" : "h-5 w-5"} />
-                                    </div>
-                                </div>
-                            </Card>
-                        );
-                    })}
-                </div>
-            )}
-
-            {(blocosPainelDashboard.pendencias || blocosPainelDashboard.conformidade || blocosPainelDashboard.rankingEmpresas) && (
+            {blocosDashboardOrdenados.length === 0 ? (
+                <Card className="mt-6">
+                    <div className="rounded-2xl border border-dashed border-slate-300 p-5 text-center text-sm text-slate-500">
+                        Nenhum quadro selecionado para o Dashboard SST. Abra Personalizar painel e escolha as informações que deseja exibir.
+                    </div>
+                </Card>
+            ) : (
                 <div className="mt-6 grid gap-6 md:grid-cols-2 xl:grid-cols-6">
-                    {blocosPainelDashboard.pendencias && (
-                        <Card className={classNames("h-full", classeTamanhoBlocoDashboard("pendencias"))}>
-                            <div className="mb-4 flex items-center justify-between">
-                                <div>
-                                    <h2 className="text-lg font-bold text-slate-950">Pendências críticas</h2>
-                                    <p className="text-sm text-slate-500">
-                                        Treinamentos pendentes, vencidos ou a vencer em até 30 dias.
-                                    </p>
-                                </div>
-                                <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-600">
-                                    {pendencias.length} itens
-                                </span>
-                            </div>
-
-                            <div className="overflow-x-auto rounded-2xl border border-slate-200 scrollbar-discreta">
-                                <table className="min-w-[760px] w-full text-left text-sm">
-                                    <thead className="bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
-                                        <tr>
-                                            <th className="px-4 py-3">Colaborador</th>
-                                            <th className="px-4 py-3">Treinamento</th>
-                                            <th className="px-4 py-3">Vencimento</th>
-                                            <th className="px-4 py-3">Status</th>
-                                            <th className="px-4 py-3"></th>
-                                        </tr>
-                                    </thead>
-                                    <tbody className="divide-y divide-slate-100 bg-white">
-                                        {pendencias.length === 0 && (
-                                            <tr>
-                                                <td className="px-4 py-8 text-center text-sm text-slate-500" colSpan={5}>
-                                                    Nenhuma pendência crítica encontrada.
-                                                </td>
-                                            </tr>
-                                        )}
-
-                                        {pendencias.slice(0, 10).map((item, idx) => (
-                                            <tr key={`${item.colaborador.id}-${item.treinamento.id}-${idx}`} className="hover:bg-slate-50">
-                                                <td className="px-4 py-3">
-                                                    <div className="font-semibold text-slate-900">{item.colaborador.nome}</div>
-                                                    <div className="text-xs text-slate-500">
-                                                        {item.colaborador.empresaExibicao || item.colaborador.empresa} · {item.colaborador.statusMobilizacao || obterStatusInicialColaborador()} · {statusGeral(item.colaborador).texto}
-                                                    </div>
-                                                </td>
-                                                <td className="px-4 py-3 text-slate-600">{item.treinamento.nome}</td>
-                                                <td className="px-4 py-3 text-slate-600">
-                                                    {item.vencimento ? formatDate(item.vencimento) : "Não enviado"}
-                                                </td>
-                                                <td className="px-4 py-3">
-                                                    <span className={classNames("rounded-full px-2 py-1 text-xs font-semibold ring-1", item.status.classe)}>
-                                                        {item.status.texto}
-                                                    </span>
-                                                </td>
-                                                <td className="px-4 py-3 text-right">
-                                                    <div className="flex justify-end gap-2">
-                                                        <button
-                                                            type="button"
-                                                            onClick={() => enviarAlertaEmailPendencia(item)}
-                                                            disabled={enviandoEmail}
-                                                            className="inline-flex min-w-[78px] items-center justify-center whitespace-nowrap rounded-xl bg-red-50 px-3 py-1.5 text-xs font-semibold text-red-700 ring-1 ring-red-200 hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-50"
-                                                        >
-                                                            E-mail
-                                                        </button>
-
-                                                        <button
-                                                            type="button"
-                                                            onClick={() => onSelectColab(item.colaborador)}
-                                                            className="inline-flex min-w-[48px] items-center justify-center whitespace-nowrap rounded-xl bg-slate-950 px-3 py-1.5 text-xs font-semibold text-white hover:bg-slate-800"
-                                                        >
-                                                            QR
-                                                        </button>
-                                                    </div>
-                                                </td>
-                                            </tr>
-                                        ))}
-                                    </tbody>
-                                </table>
-                            </div>
-                        </Card>
-                    )}
-
-                    {blocosPainelDashboard.conformidade && (
-                        <Card className={classNames("h-full", classeTamanhoBlocoDashboard("conformidade"))}>
-                            <h2 className="text-lg font-bold text-slate-950">Resumo de conformidade</h2>
-                            <p className="mt-1 text-sm text-slate-500">
-                                Baseado nos treinamentos exigidos para a função, incluindo os ainda não enviados.
-                            </p>
-
-                            <div className="mt-6 space-y-5">
-                                {resumoConformidade.map((i) => (
-                                    <div key={i.label}>
-                                        <div className="mb-2 flex justify-between text-sm">
-                                            <span className="font-medium text-slate-700">{i.label}</span>
-                                            <span className="text-slate-500">{i.valor}/{i.total}</span>
-                                        </div>
-                                        <div className="h-3 overflow-hidden rounded-full bg-slate-100">
-                                            <div
-                                                className={classNames("h-full rounded-full", i.classe)}
-                                                style={{ width: `${i.total ? Math.max(4, (i.valor / i.total) * 100) : 0}%` }}
-                                            />
-                                        </div>
-                                    </div>
-                                ))}
-                            </div>
-
-                            <div className="mt-6 rounded-2xl bg-slate-50 p-4 text-sm text-slate-600">
-                                <strong className="text-slate-900">Regra do sistema:</strong> pendente indica ausência de certificado; vencido bloqueia a atividade; a vencer em até 30 dias gera alerta preventivo; em dia libera a consulta no QR Code.
-                            </div>
-                        </Card>
-                    )}
-
-                    {blocosPainelDashboard.rankingEmpresas && (
-                        <Card className={classNames("h-full", classeTamanhoBlocoDashboard("rankingEmpresas"))}>
-                            <div className="mb-4 flex flex-col justify-between gap-3 md:flex-row md:items-start">
-                                <div>
-                                    <h2 className="text-lg font-bold text-slate-950">Ranking de pendências por empresa</h2>
-                                    <p className="mt-1 text-sm text-slate-500">
-                                        Tabela com tamanho configurável no painel. Use Destaque para ocupar a linha inteira.
-                                    </p>
-                                </div>
-                                <div className="flex flex-wrap gap-2 text-xs font-semibold">
-                                    <span className="rounded-full bg-emerald-50 px-3 py-1 text-emerald-700 ring-1 ring-emerald-200">Regular</span>
-                                    <span className="rounded-full bg-orange-50 px-3 py-1 text-orange-700 ring-1 ring-orange-200">Atenção</span>
-                                    <span className="rounded-full bg-red-50 px-3 py-1 text-red-700 ring-1 ring-red-200">Crítico</span>
-                                </div>
-                            </div>
-
-                            {rankingPendenciasEmpresa.length === 0 ? (
-                                <div className="rounded-2xl border border-dashed border-slate-300 p-5 text-center text-sm text-slate-500">
-                                    Nenhuma empresa encontrada para gerar o ranking.
-                                </div>
-                            ) : (
-                                <div className="overflow-x-auto scrollbar-discreta">
-                                    <table className="min-w-[920px] w-full text-left text-sm">
-                                        <thead>
-                                            <tr className="border-b border-slate-200 text-xs uppercase tracking-wide text-slate-500">
-                                                <th className="py-3 pr-3 font-semibold">Empresa</th>
-                                                <th className="px-3 py-3 text-center font-semibold">Total colab.</th>
-                                                <th className="px-3 py-3 text-center font-semibold">Docs vencidos</th>
-                                                <th className="px-3 py-3 text-center font-semibold">Docs a vencer</th>
-                                                <th className="px-3 py-3 text-center font-semibold">Trein. vencidos</th>
-                                                <th className="px-3 py-3 text-center font-semibold">Bloqueados</th>
-                                                <th className="py-3 pl-3 text-center font-semibold">Status</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody className="divide-y divide-slate-100">
-                                            {rankingPendenciasEmpresa.slice(0, 10).map((item, index) => (
-                                                <tr key={item.empresa} className="align-middle text-slate-700 hover:bg-slate-50/80">
-                                                    <td className="py-3 pr-3">
-                                                        <div className="font-semibold text-slate-950">{index + 1}. {item.empresa}</div>
-                                                        {item.pendenciasLeves > 0 && item.statusEmpresa === "Atenção" && (
-                                                            <div className="mt-0.5 text-xs text-slate-500">Possui pendência leve ou item preventivo.</div>
-                                                        )}
-                                                    </td>
-                                                    <td className="px-3 py-3 text-center font-bold text-slate-900">{item.totalColaboradores}</td>
-                                                    <td className="px-3 py-3 text-center">
-                                                        <span className={classNames("inline-flex min-w-8 justify-center rounded-full px-2 py-1 text-xs font-bold ring-1", item.documentosVencidos > 0 ? "bg-red-50 text-red-700 ring-red-100" : "bg-slate-50 text-slate-600 ring-slate-100")}>{item.documentosVencidos}</span>
-                                                    </td>
-                                                    <td className="px-3 py-3 text-center">
-                                                        <span className={classNames("inline-flex min-w-8 justify-center rounded-full px-2 py-1 text-xs font-bold ring-1", item.documentosAVencer > 0 ? "bg-orange-50 text-orange-700 ring-orange-100" : "bg-slate-50 text-slate-600 ring-slate-100")}>{item.documentosAVencer}</span>
-                                                    </td>
-                                                    <td className="px-3 py-3 text-center">
-                                                        <span className={classNames("inline-flex min-w-8 justify-center rounded-full px-2 py-1 text-xs font-bold ring-1", item.treinamentosVencidos > 0 ? "bg-red-50 text-red-700 ring-red-100" : "bg-slate-50 text-slate-600 ring-slate-100")}>{item.treinamentosVencidos}</span>
-                                                    </td>
-                                                    <td className="px-3 py-3 text-center">
-                                                        <span className={classNames("inline-flex min-w-8 justify-center rounded-full px-2 py-1 text-xs font-bold ring-1", item.colaboradoresBloqueados > 0 ? "bg-red-50 text-red-700 ring-red-100" : "bg-slate-50 text-slate-600 ring-slate-100")}>{item.colaboradoresBloqueados}</span>
-                                                    </td>
-                                                    <td className="py-3 pl-3 text-center">
-                                                        <span className={classNames("inline-flex min-w-[86px] justify-center rounded-full px-3 py-1 text-xs font-bold ring-1", item.statusEmpresaClasse)}>
-                                                            {item.statusEmpresa}
-                                                        </span>
-                                                    </td>
-                                                </tr>
-                                            ))}
-                                        </tbody>
-                                    </table>
-                                </div>
-                            )}
-                        </Card>
-                    )}
-                </div>
-            )}
-
-            {(blocosPainelDashboard.colaboradoresFuncao || blocosPainelDashboard.alertas) && (
-                <div className={classNames(
-                    "mt-6 grid gap-6",
-                    blocosPainelDashboard.colaboradoresFuncao && blocosPainelDashboard.alertas ? "xl:grid-cols-2" : "xl:grid-cols-1"
-                )}>
-                    {blocosPainelDashboard.colaboradoresFuncao && (
-                        <ListaCompacta
-                            titulo="Colaboradores mobilizados por função"
-                            subtitulo="Conta apenas ativos, mobilizados, liberados ou com pendência não bloqueante."
-                            vazio="Nenhum colaborador mobilizado encontrado."
-                        >
-                            {colaboradoresPorFuncao.slice(0, 8).map((item) => (
-                                <div key={item.funcao} className="rounded-2xl bg-slate-50 p-3 text-sm ring-1 ring-slate-100">
-                                    <div className="flex justify-between gap-3">
-                                        <span className="font-semibold text-slate-900">{item.funcao}</span>
-                                        <span className="rounded-full bg-white px-2 py-0.5 text-xs font-bold text-slate-600 ring-1 ring-slate-200">{item.quantidade}</span>
-                                    </div>
-                                    <div className="mt-2 h-2 overflow-hidden rounded-full bg-white ring-1 ring-slate-100">
-                                        <div
-                                            className="h-full rounded-full bg-slate-900"
-                                            style={{ width: `${Math.max(6, Math.round((item.quantidade / maiorQuantidadePorFuncao) * 100))}%` }}
-                                        />
-                                    </div>
-                                    <p className="mt-1 text-xs text-slate-500">
-                                        {item.quantidade} colaborador(es) considerado(s) mobilizado(s)
-                                    </p>
-                                </div>
-                            ))}
-                        </ListaCompacta>
-                    )}
-
-                    {blocosPainelDashboard.alertas && (
-                        <ListaCompacta
-                            titulo="Alertas importantes"
-                            subtitulo="Itens que exigem atenção imediata."
-                            vazio="Nenhum alerta importante no momento."
-                        >
-                            {alertasImportantes.map((item, index) => (
-                                <div key={`${item.tipo}-${index}`} className={classNames("rounded-2xl p-3 text-sm ring-1", item.classe)}>
-                                    <p className="font-bold">{item.tipo}</p>
-                                    <p className="mt-1 text-xs">{item.texto}</p>
-                                </div>
-                            ))}
-                        </ListaCompacta>
-                    )}
-                </div>
-            )}
-
-            {(blocosPainelDashboard.documentosTipo || blocosPainelDashboard.ultimosDocumentos) && (
-                <div className={classNames(
-                    "mt-6 grid gap-6",
-                    blocosPainelDashboard.documentosTipo && blocosPainelDashboard.ultimosDocumentos ? "xl:grid-cols-2" : "xl:grid-cols-1"
-                )}>
-                    {blocosPainelDashboard.documentosTipo && (
-                        <ListaCompacta
-                            titulo="Documentos por tipo"
-                            subtitulo="Resumo dos documentos empresariais."
-                            vazio="Nenhum documento empresarial cadastrado."
-                        >
-                            {documentosPorTipo.slice(0, 8).map((item) => (
-                                <div key={item.tipo} className="rounded-2xl bg-slate-50 p-3 text-sm ring-1 ring-slate-100">
-                                    <div className="flex justify-between gap-3">
-                                        <span className="font-semibold text-slate-900">{item.tipo}</span>
-                                        <span className="rounded-full bg-white px-2 py-0.5 text-xs font-bold text-slate-600 ring-1 ring-slate-200">{item.total}</span>
-                                    </div>
-                                    <p className="mt-1 text-xs text-slate-500">
-                                        {item.emDia} em dia · {item.vencendo} a vencer · {item.vencidos} vencido(s)
-                                    </p>
-                                </div>
-                            ))}
-                        </ListaCompacta>
-                    )}
-
-                    {blocosPainelDashboard.ultimosDocumentos && (
-                        <ListaCompacta
-                            titulo="Últimos documentos enviados"
-                            subtitulo="Certificados e documentos empresariais mais recentes."
-                            vazio="Nenhum documento enviado ainda."
-                        >
-                            {ultimosDocumentosEnviados.map((item, index) => (
-                                <div key={`${item.origem}-${item.nome}-${index}`} className="rounded-2xl bg-slate-50 p-3 text-sm ring-1 ring-slate-100">
-                                    <div className="flex flex-wrap items-center justify-between gap-2">
-                                        <span className="font-semibold text-slate-900">{item.titulo}</span>
-                                        <span className="rounded-full bg-white px-2 py-0.5 text-[10px] font-bold text-slate-600 ring-1 ring-slate-200">{item.origem}</span>
-                                    </div>
-                                    <p className="mt-1 text-xs text-slate-500">
-                                        {item.colaborador} · {item.empresa} · {item.data ? new Date(`${item.data}`.includes("T") ? item.data : `${item.data}T12:00:00`).toLocaleDateString("pt-BR") : "-"}
-                                    </p>
-                                </div>
-                            ))}
-                        </ListaCompacta>
-                    )}
+                    {blocosDashboardOrdenados.map((chave) => (
+                        <div key={chave} className={classNames("min-w-0", classeTamanhoBlocoDashboard(chave))}>
+                            {renderBlocoDashboard(chave)}
+                        </div>
+                    ))}
                 </div>
             )}
 
