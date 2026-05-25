@@ -3113,6 +3113,18 @@ function Dashboard({
         .map((opcao) => opcao.chave)
         .filter((chave) => blocosPainelDashboard[chave]);
 
+    const blocosDashboardExibidos = mostrarFiltroPainel
+        ? abaPersonalizacaoPainel === "cartas"
+            ? (blocosPainelDashboard.cards ? ["cards"] : [])
+            : blocosDashboardOrdenados.filter((chave) => chave !== "cards")
+        : blocosDashboardOrdenados;
+
+    const mensagemDashboardSemBlocos = mostrarFiltroPainel
+        ? abaPersonalizacaoPainel === "cartas"
+            ? "A prévia da Seção 1 mostra somente as cartas principais. Ative as cartas para visualizar a configuração."
+            : "A prévia da Seção 2 mostra somente os quadros do Dashboard SST. Ative os quadros para visualizar a configuração."
+        : "Nenhum quadro selecionado para o Dashboard SST. Abra Personalizar painel e escolha as informações que deseja exibir.";
+
     const mensagemVaziaDashboard = (texto) => (
         <div className="rounded-2xl border border-dashed border-slate-300 p-5 text-center text-sm text-slate-500">
             {texto}
@@ -4215,15 +4227,28 @@ function Dashboard({
                 </Card>
             )}
 
-            {blocosDashboardOrdenados.length === 0 ? (
-                <Card className="mt-6">
+            {mostrarFiltroPainel && (
+                <div className={classNames(
+                    "mb-3 mt-6 rounded-2xl px-4 py-3 text-sm font-semibold ring-1",
+                    abaPersonalizacaoPainel === "cartas"
+                        ? "bg-blue-50 text-blue-800 ring-blue-200"
+                        : "bg-emerald-50 text-emerald-800 ring-emerald-200"
+                )}>
+                    Prévia filtrada: {abaPersonalizacaoPainel === "cartas"
+                        ? "mostrando somente as cartas principais do Dashboard SST."
+                        : "mostrando somente os quadros do Dashboard SST."}
+                </div>
+            )}
+
+            {blocosDashboardExibidos.length === 0 ? (
+                <Card className={mostrarFiltroPainel ? "mt-3" : "mt-6"}>
                     <div className="rounded-2xl border border-dashed border-slate-300 p-5 text-center text-sm text-slate-500">
-                        Nenhum quadro selecionado para o Dashboard SST. Abra Personalizar painel e escolha as informações que deseja exibir.
+                        {mensagemDashboardSemBlocos}
                     </div>
                 </Card>
             ) : (
-                <div className="mt-6 grid gap-6 md:grid-cols-2 xl:grid-cols-6">
-                    {blocosDashboardOrdenados.map((chave) => (
+                <div className={classNames("grid gap-6 md:grid-cols-2 xl:grid-cols-6", mostrarFiltroPainel ? "mt-3" : "mt-6")}>
+                    {blocosDashboardExibidos.map((chave) => (
                         <div key={chave} className={classNames("min-w-0", classeTamanhoBlocoDashboard(chave))}>
                             {renderBlocoDashboard(chave)}
                         </div>
@@ -11299,6 +11324,14 @@ export default function App() {
     const [usuario, setUsuario] = useState(null);
     const [carregandoSessao, setCarregandoSessao] = useState(true);
     const [tela, setTela] = useState("dashboard");
+    const [menuLateralAberto, setMenuLateralAberto] = useState(() => {
+        try {
+            const salvo = window.localStorage.getItem("menuLateralAbertoSST");
+            return salvo === null ? true : salvo === "true";
+        } catch {
+            return true;
+        }
+    });
     const [colaboradores, setColaboradores] = useState([]);
     const [empresasBanco, setEmpresasBanco] = useState([]);
     const [documentosEmpresas, setDocumentosEmpresas] = useState([]);
@@ -11321,6 +11354,14 @@ export default function App() {
             return false;
         }
     });
+
+    useEffect(() => {
+        try {
+            window.localStorage.setItem("menuLateralAbertoSST", String(menuLateralAberto));
+        } catch {
+            // Ignora indisponibilidade do localStorage.
+        }
+    }, [menuLateralAberto]);
 
     const carregarEmpresas = useCallback(async () => {
         const { data, error } = await supabase
@@ -13252,16 +13293,39 @@ export default function App() {
     return (
         <div className="min-h-screen bg-slate-100 text-slate-900">
             <div className="flex min-h-screen">
-                <aside className="hidden w-72 border-r border-slate-200 bg-white p-5 lg:block">
-                    <div className="flex items-center gap-3 rounded-3xl bg-slate-950 p-4 text-white">
+                <aside
+                    className={classNames(
+                        "hidden border-r border-slate-200 bg-white transition-all duration-300 lg:block",
+                        menuLateralAberto ? "w-72 p-5" : "w-20 p-3"
+                    )}
+                >
+                    <div className={classNames(
+                        "flex items-center rounded-3xl bg-slate-950 text-white",
+                        menuLateralAberto ? "gap-3 p-4" : "justify-center p-3"
+                    )}>
                         <div className="rounded-2xl bg-white/10 p-3">
                             <ShieldCheck className="h-6 w-6" />
                         </div>
-                        <div>
-                            <h1 className="font-bold">Controle SST QR</h1>
-                            <p className="text-xs text-slate-300">Treinamentos · Terceiros</p>
-                        </div>
+                        {menuLateralAberto && (
+                            <div className="min-w-0 flex-1">
+                                <h1 className="truncate font-bold">Controle SST QR</h1>
+                                <p className="truncate text-xs text-slate-300">Treinamentos · Terceiros</p>
+                            </div>
+                        )}
                     </div>
+
+                    <button
+                        type="button"
+                        onClick={() => setMenuLateralAberto((valor) => !valor)}
+                        className={classNames(
+                            "mt-3 flex w-full items-center justify-center gap-2 rounded-2xl bg-slate-50 px-3 py-2 text-xs font-semibold text-slate-600 ring-1 ring-slate-200 hover:bg-slate-100",
+                            !menuLateralAberto && "h-10 px-0"
+                        )}
+                        title={menuLateralAberto ? "Ocultar menu lateral" : "Abrir menu lateral"}
+                    >
+                        <span className="text-base leading-none">{menuLateralAberto ? "‹" : "›"}</span>
+                        {menuLateralAberto && <span>Ocultar menu</span>}
+                    </button>
 
                     <nav className="mt-6 space-y-2">
                         {nav.map((item) => {
@@ -13275,31 +13339,45 @@ export default function App() {
                                         registrarAuditoria("ACESSO_TELA", "navegacao", `Acessou a tela: ${item.label}`);
                                     }}
                                     className={classNames(
-                                        "flex w-full items-center gap-3 rounded-2xl px-4 py-3 text-left text-sm font-medium transition",
+                                        "flex w-full items-center rounded-2xl text-left text-sm font-medium transition",
+                                        menuLateralAberto ? "gap-3 px-4 py-3" : "justify-center px-0 py-3",
                                         tela === item.id
                                             ? "bg-slate-950 text-white shadow-sm"
                                             : "text-slate-600 hover:bg-slate-100 hover:text-slate-950"
                                     )}
+                                    title={!menuLateralAberto ? item.label : undefined}
                                 >
-                                    <Icon className="h-4 w-4" />
-                                    {item.label}
+                                    <Icon className="h-4 w-4 shrink-0" />
+                                    {menuLateralAberto && <span className="truncate">{item.label}</span>}
                                 </button>
                             );
                         })}
                     </nav>
 
-                    <div className="mt-6 rounded-3xl bg-slate-50 p-4">
-                        <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Usuário logado</p>
-                        <p className="mt-1 break-all text-sm font-bold text-slate-900">{usuario.email}</p>
-                        <p className="mt-1 text-xs text-slate-500">Perfil: {usuario.perfil}</p>
+                    {menuLateralAberto ? (
+                        <div className="mt-6 rounded-3xl bg-slate-50 p-4">
+                            <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Usuário logado</p>
+                            <p className="mt-1 break-all text-sm font-bold text-slate-900">{usuario.email}</p>
+                            <p className="mt-1 text-xs text-slate-500">Perfil: {usuario.perfil}</p>
 
-                        <button
-                            onClick={sair}
-                            className="mt-3 rounded-xl bg-white px-3 py-2 text-xs font-semibold text-slate-600 ring-1 ring-slate-200 hover:bg-slate-100"
-                        >
-                            Sair
-                        </button>
-                    </div>
+                            <button
+                                onClick={sair}
+                                className="mt-3 rounded-xl bg-white px-3 py-2 text-xs font-semibold text-slate-600 ring-1 ring-slate-200 hover:bg-slate-100"
+                            >
+                                Sair
+                            </button>
+                        </div>
+                    ) : (
+                        <div className="mt-6 flex justify-center">
+                            <button
+                                onClick={sair}
+                                className="inline-flex h-10 w-10 items-center justify-center rounded-2xl bg-slate-50 text-xs font-bold text-slate-600 ring-1 ring-slate-200 hover:bg-slate-100"
+                                title={`Sair de ${usuario.email}`}
+                            >
+                                Sair
+                            </button>
+                        </div>
+                    )}
                 </aside>
 
                 <main className="flex-1 p-4 md:p-8">
