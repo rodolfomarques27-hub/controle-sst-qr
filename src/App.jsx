@@ -1490,6 +1490,57 @@ function Card({ children, className = "" }) {
     );
 }
 
+function CardRecolhivel({
+    titulo,
+    subtitulo,
+    contador,
+    acao,
+    children,
+    className = "",
+    defaultOpen = true,
+    compacto = false,
+}) {
+    const [aberto, setAberto] = useState(defaultOpen);
+
+    return (
+        <Card className={classNames("transition-all", className)}>
+            <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-start">
+                <button
+                    type="button"
+                    onClick={() => setAberto((atual) => !atual)}
+                    className="flex min-w-0 flex-1 items-start justify-between gap-3 rounded-2xl text-left transition hover:bg-slate-50 focus:outline-none focus:ring-4 focus:ring-slate-100"
+                >
+                    <div className="min-w-0 p-1">
+                        <div className="flex flex-wrap items-center gap-2">
+                            <h2 className={classNames(compacto ? "text-sm" : "text-lg", "font-bold text-slate-950")}>{titulo}</h2>
+                            {contador !== undefined && contador !== null && (
+                                <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-bold text-slate-600 ring-1 ring-slate-200">
+                                    {contador}
+                                </span>
+                            )}
+                        </div>
+
+                        {subtitulo && <p className="mt-1 text-sm text-slate-500">{subtitulo}</p>}
+                    </div>
+
+                    <span className="mt-1 flex shrink-0 items-center gap-1 rounded-full bg-slate-100 px-3 py-1.5 text-xs font-bold text-slate-700 ring-1 ring-slate-200">
+                        {aberto ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+                        {aberto ? "Recolher" : "Abrir"}
+                    </span>
+                </button>
+
+                {acao && (
+                    <div className="shrink-0" onClick={(evento) => evento.stopPropagation()}>
+                        {acao}
+                    </div>
+                )}
+            </div>
+
+            {aberto && <div className={classNames(compacto ? "mt-3" : "mt-4")}>{children}</div>}
+        </Card>
+    );
+}
+
 function Header({ titulo, subtitulo, acao }) {
     return (
         <div className="mb-6 flex flex-col justify-between gap-4 lg:flex-row lg:items-center">
@@ -8075,41 +8126,34 @@ function RelatorioAuditoria({
             />
 
             <div className="grid gap-3 md:grid-cols-4">
-                <Card>
-                    <p className="text-sm font-semibold text-slate-500">Total de eventos</p>
-                    <p className="mt-2 text-3xl font-bold text-slate-950">{auditoria.length}</p>
-                </Card>
+                <CardRecolhivel titulo="Total de eventos" defaultOpen compacto>
+                    <p className="text-3xl font-bold text-slate-950">{auditoria.length}</p>
+                </CardRecolhivel>
 
-                <Card>
-                    <p className="text-sm font-semibold text-slate-500">Eventos filtrados</p>
-                    <p className="mt-2 text-3xl font-bold text-blue-700">{registrosFiltrados.length}</p>
-                </Card>
+                <CardRecolhivel titulo="Eventos filtrados" defaultOpen compacto>
+                    <p className="text-3xl font-bold text-blue-700">{registrosFiltrados.length}</p>
+                </CardRecolhivel>
 
-                <Card>
-                    <p className="text-sm font-semibold text-slate-500">Acessos</p>
-                    <p className="mt-2 text-3xl font-bold text-emerald-700">
+                <CardRecolhivel titulo="Acessos" defaultOpen compacto>
+                    <p className="text-3xl font-bold text-emerald-700">
                         {auditoria.filter((item) => String(item.acao || "").includes("ACESSO")).length}
                     </p>
-                </Card>
+                </CardRecolhivel>
 
-                <Card>
-                    <p className="text-sm font-semibold text-slate-500">Alterações</p>
-                    <p className="mt-2 text-3xl font-bold text-orange-700">
+                <CardRecolhivel titulo="Alterações" defaultOpen compacto>
+                    <p className="text-3xl font-bold text-orange-700">
                         {auditoria.filter((item) => ["INSERT", "UPDATE", "DELETE"].includes(item.acao)).length}
                     </p>
-                </Card>
+                </CardRecolhivel>
             </div>
 
             <div className="mt-5 grid gap-5 xl:grid-cols-2">
-                <Card>
-                    <div className="mb-4 flex items-start justify-between gap-3">
-                        <div>
-                            <h2 className="text-lg font-bold text-slate-950">Últimos acessos</h2>
-                            <p className="mt-1 text-sm text-slate-500">Entradas recentes, consultas públicas e abertura da Auditoria.</p>
-                        </div>
-                        <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-bold text-slate-600 ring-1 ring-slate-200">{ultimosAcessosAuditoria.length}</span>
-                    </div>
-
+                <CardRecolhivel
+                    titulo="Últimos acessos"
+                    subtitulo="Entradas recentes, consultas públicas e abertura da Auditoria."
+                    contador={ultimosAcessosAuditoria.length}
+                    defaultOpen={false}
+                >
                     <div className="space-y-2">
                         {ultimosAcessosAuditoria.length === 0 && (
                             <div className="rounded-2xl border border-dashed border-slate-300 p-5 text-center text-sm text-slate-500">
@@ -8134,17 +8178,14 @@ function RelatorioAuditoria({
                             );
                         })}
                     </div>
-                </Card>
+                </CardRecolhivel>
 
-                <Card>
-                    <div className="mb-4 flex items-start justify-between gap-3">
-                        <div>
-                            <h2 className="text-lg font-bold text-slate-950">Últimos e-mails enviados</h2>
-                            <p className="mt-1 text-sm text-slate-500">Eventos de envio registrados pela auditoria do sistema.</p>
-                        </div>
-                        <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-bold text-slate-600 ring-1 ring-slate-200">{ultimosEmailsAuditoria.length}</span>
-                    </div>
-
+                <CardRecolhivel
+                    titulo="Últimos e-mails enviados"
+                    subtitulo="Eventos de envio registrados pela auditoria do sistema."
+                    contador={ultimosEmailsAuditoria.length}
+                    defaultOpen={false}
+                >
                     <div className="space-y-2">
                         {ultimosEmailsAuditoria.length === 0 && (
                             <div className="rounded-2xl border border-dashed border-slate-300 p-5 text-center text-sm text-slate-500">
@@ -8165,18 +8206,16 @@ function RelatorioAuditoria({
                             </div>
                         ))}
                     </div>
-                </Card>
+                </CardRecolhivel>
             </div>
 
-            <Card className="mt-5">
-                <div className="mb-4 flex flex-col justify-between gap-3 lg:flex-row lg:items-start">
-                    <div>
-                        <h2 className="text-lg font-bold text-slate-950">Usuários autorizados na Auditoria</h2>
-                        <p className="mt-1 text-sm text-slate-500">
-                            Habilite ou desabilite quais usuários podem abrir a aba Auditoria. A permissão é validada no Supabase.
-                        </p>
-                    </div>
-
+            <CardRecolhivel
+                className="mt-5"
+                titulo="Usuários autorizados na Auditoria"
+                subtitulo="Habilite ou desabilite quais usuários podem abrir a aba Auditoria. A permissão é validada no Supabase."
+                contador={usuariosAuditoria.length}
+                defaultOpen={false}
+                acao={(
                     <button
                         type="button"
                         onClick={carregarUsuariosAuditoria}
@@ -8186,8 +8225,8 @@ function RelatorioAuditoria({
                         <RefreshCw className={classNames("h-4 w-4", carregandoUsuariosAuditoria ? "animate-spin" : "")} />
                         {carregandoUsuariosAuditoria ? "Carregando..." : "Carregar usuários"}
                     </button>
-                </div>
-
+                )}
+            >
                 <form onSubmit={salvarUsuarioAuditoriaTela} className="grid gap-3 xl:grid-cols-[1fr_1fr_1fr_auto]">
                     <input
                         type="email"
@@ -8283,17 +8322,15 @@ function RelatorioAuditoria({
                 <p className="mt-3 rounded-2xl bg-slate-50 p-3 text-xs leading-relaxed text-slate-500">
                     A senha da tela continua existindo, mas o Supabase bloqueia a Auditoria para e-mails não cadastrados ou desabilitados nesta lista.
                 </p>
-            </Card>
+            </CardRecolhivel>
 
-            <Card className="mt-5">
-                <div className="mb-5 flex flex-col justify-between gap-3 lg:flex-row lg:items-center">
-                    <div>
-                        <h2 className="text-lg font-bold text-slate-950">Arquivos salvos no Storage</h2>
-                        <p className="mt-1 text-sm text-slate-500">
-                            Controle de capacidade, vínculos, tipos de documentos, maiores arquivos e uploads recentes.
-                        </p>
-                    </div>
-
+            <CardRecolhivel
+                className="mt-5"
+                titulo="Arquivos salvos no Storage"
+                subtitulo="Controle de capacidade, vínculos, tipos de documentos, maiores arquivos e uploads recentes."
+                contador={arquivosStorageAuditoria.length}
+                defaultOpen={false}
+                acao={(
                     <button
                         type="button"
                         onClick={carregarStorageAuditoria}
@@ -8303,8 +8340,8 @@ function RelatorioAuditoria({
                         <Database className="h-4 w-4" />
                         {carregandoStorageAuditoria ? "Carregando..." : "Carregar arquivos"}
                     </button>
-                </div>
-
+                )}
+            >
                 <div className={classNames("mb-4 rounded-3xl p-4 ring-1", storageStatus.classe)}>
                     <div className="flex flex-col justify-between gap-3 lg:flex-row lg:items-center">
                         <div>
@@ -8641,9 +8678,15 @@ function RelatorioAuditoria({
                         Use excluir apenas para arquivos sem vínculo. Arquivos em uso devem ser tratados pela base correta para manter o histórico do sistema.
                     </p>
                 )}
-            </Card>
+            </CardRecolhivel>
 
-            <Card className="mt-5">
+            <CardRecolhivel
+                className="mt-5"
+                titulo="Registros detalhados da auditoria"
+                subtitulo="Consulta completa com filtros, origem de acesso e dados extras de cada evento."
+                contador={registrosFiltrados.length}
+                defaultOpen={false}
+            >
                 <div className="grid gap-3 xl:grid-cols-[1fr_220px]">
                     <div className="relative">
                         <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
@@ -8779,7 +8822,7 @@ function RelatorioAuditoria({
                         );
                     })}
                 </div>
-            </Card>
+            </CardRecolhivel>
         </motion.div>
     );
 }
