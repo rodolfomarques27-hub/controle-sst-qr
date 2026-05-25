@@ -2458,8 +2458,8 @@ function Dashboard({
     const classeTamanhoCartaDashboard = (chave) => {
         const tamanho = tamanhosCartasDashboard[chave] || "padrao";
 
-        if (tamanho === "destaque") return "md:col-span-2 xl:col-span-6";
-        if (tamanho === "grande") return "md:col-span-2 xl:col-span-3";
+        if (tamanho === "destaque") return "md:col-span-2 xl:col-span-4";
+        if (tamanho === "grande") return "md:col-span-2 xl:col-span-2";
         if (tamanho === "medio") return "md:col-span-2 xl:col-span-2";
 
         return "";
@@ -2482,6 +2482,64 @@ function Dashboard({
         if (tamanho === "grande") return "text-3xl";
 
         return "text-2xl";
+    };
+
+    const estiloCartaDashboard = (chave) => {
+        const estilos = {
+            colaboradoresMobilizados: {
+                icone: "bg-blue-50 text-blue-600 ring-blue-100",
+                valor: "text-slate-950",
+            },
+            colaboradoresLiberados: {
+                icone: "bg-emerald-50 text-emerald-600 ring-emerald-100",
+                valor: "text-slate-950",
+            },
+            comPendencia: {
+                icone: "bg-orange-50 text-orange-600 ring-orange-100",
+                valor: "text-slate-950",
+            },
+            emAnalise: {
+                icone: "bg-violet-50 text-violet-600 ring-violet-100",
+                valor: "text-slate-950",
+            },
+            empresasAtivas: {
+                icone: "bg-cyan-50 text-cyan-700 ring-cyan-100",
+                valor: "text-slate-950",
+            },
+            documentosVencidos: {
+                icone: "bg-red-50 text-red-600 ring-red-100",
+                valor: "text-slate-950",
+            },
+            documentosAVencer: {
+                icone: "bg-amber-50 text-amber-600 ring-amber-100",
+                valor: "text-slate-950",
+            },
+            treinamentosVencidos: {
+                icone: "bg-purple-50 text-purple-600 ring-purple-100",
+                valor: "text-slate-950",
+            },
+            colaboradoresBloqueados: {
+                icone: "bg-teal-50 text-teal-700 ring-teal-100",
+                valor: "text-slate-950",
+            },
+            desviosAbertos: {
+                icone: "bg-red-50 text-red-600 ring-red-100",
+                valor: "text-slate-950",
+            },
+            aniversariantesMes: {
+                icone: "bg-sky-50 text-sky-600 ring-sky-100",
+                valor: "text-slate-950",
+            },
+            armazenamentoUtilizado: {
+                icone: storageStatusDashboard.iconeClasse,
+                valor: storageStatusDashboard.valorClasse,
+            },
+        };
+
+        return estilos[chave] || {
+            icone: "bg-slate-100 text-slate-700 ring-slate-200",
+            valor: "text-slate-950",
+        };
     };
 
     const carregarUsoStorageDashboard = useCallback(async () => {
@@ -3215,9 +3273,9 @@ function Dashboard({
     const renderBlocoDashboard = (chave) => {
         if (chave === "cards") {
             return (
-                <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-6">
+                <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
                     {cardsVisiveis.length === 0 ? (
-                        <Card className="md:col-span-2 xl:col-span-6">
+                        <Card className="md:col-span-2 xl:col-span-4">
                             <div className="rounded-2xl border border-dashed border-slate-300 p-5 text-center text-sm text-slate-500">
                                 Nenhuma carta principal selecionada. Abra Personalizar painel e escolha as cartas que deseja exibir.
                             </div>
@@ -3226,114 +3284,59 @@ function Dashboard({
                         cardsVisiveis.map((item, index) => {
                             const Icon = item.icon;
                             const tamanho = tamanhosCartasDashboard[item.chave] || "padrao";
+                            const estiloCarta = estiloCartaDashboard(item.chave);
+                            const destaqueCarta = tamanho === "destaque" || tamanho === "grande";
+                            const valorClasse = destaqueCarta ? "text-4xl" : tamanho === "medio" ? "text-3xl" : "text-3xl";
+
                             if (item.chave === "armazenamentoUtilizado") {
                                 const StatusIcon = storageStatusDashboard.statusIcon;
                                 const percentualBarra = Math.min(100, Math.max(storagePercentual > 0 ? 2 : 0, storagePercentual));
-                                const ehCompacto = tamanho === "padrao";
-                                const ehExpandido = tamanho === "destaque" || tamanho === "grande";
-
-                                if (ehCompacto) {
-                                    return (
-                                        <Card
-                                            key={item.chave}
-                                            className={classNames(
-                                                "overflow-hidden border-dashed bg-white transition hover:border-slate-300",
-                                                classeTamanhoCartaDashboard(item.chave)
-                                            )}
-                                        >
-                                            <div className="flex items-start justify-between gap-3">
-                                                <div className="min-w-0 flex-1">
-                                                    <p className="text-sm font-medium text-slate-500">Armazenamento utilizado</p>
-                                                    <p className="mt-2 break-words text-[17px] font-bold leading-tight text-slate-950">
-                                                        {totalStorageLabel}
-                                                        <span className="ml-1 text-base font-semibold text-slate-400">/ {storageLimiteLabelDashboard}</span>
-                                                    </p>
-                                                    <div className="mt-2 flex items-center gap-2 text-xs">
-                                                        <span className={classNames("inline-flex items-center gap-1 rounded-full px-2 py-0.5 font-semibold ring-1", storageStatusDashboard.classe)}>
-                                                            <StatusIcon className="h-3 w-3" />
-                                                            {storageStatusDashboard.texto}
-                                                        </span>
-                                                        <span className={classNames("font-semibold", storagePercentual >= 90 ? "text-red-600" : storagePercentual >= 70 ? "text-orange-600" : "text-emerald-600")}>
-                                                            {storagePercentual}% utilizado
-                                                        </span>
-                                                    </div>
-                                                    <div className={classNames("mt-3 h-2 overflow-hidden rounded-full", storageStatusDashboard.trilhoClasse)}>
-                                                        <div
-                                                            className={classNames("h-full rounded-full transition-all", storageStatusDashboard.barraClasse)}
-                                                            style={{ width: `${percentualBarra}%` }}
-                                                        />
-                                                    </div>
-                                                    <p className="mt-2 inline-flex items-center gap-1.5 text-[11px] text-slate-400">
-                                                        <Database className="h-3 w-3" />
-                                                        Capacidade total: {storageLimiteLabelDashboard}
-                                                    </p>
-                                                </div>
-                                                <div className={classNames("shrink-0 rounded-2xl p-3", storageStatusDashboard.iconeClasse)}>
-                                                    <Upload className="h-5 w-5" />
-                                                </div>
-                                            </div>
-                                        </Card>
-                                    );
-                                }
 
                                 return (
                                     <Card
                                         key={item.chave}
                                         className={classNames(
-                                            "overflow-hidden border-dashed bg-white transition hover:border-slate-300",
+                                            "group h-full min-h-[178px] overflow-hidden border-slate-200 bg-white p-5 shadow-sm transition hover:-translate-y-0.5 hover:border-slate-300 hover:shadow-md",
                                             classeTamanhoCartaDashboard(item.chave)
                                         )}
                                     >
-                                        <div className="flex h-full min-h-[160px] flex-col justify-between gap-4">
-                                            <div className="flex items-start justify-between gap-4">
-                                                <div className="flex min-w-0 items-start gap-3">
-                                                    <div className={classNames("shrink-0 rounded-3xl p-3", storageStatusDashboard.iconeClasse)}>
-                                                        <Upload className={ehExpandido ? "h-6 w-6" : "h-5 w-5"} />
-                                                    </div>
-                                                    <div className="min-w-0">
-                                                        <p className="text-sm font-bold text-slate-600">Armazenamento utilizado</p>
-                                                        <div className={classNames("mt-2 flex flex-wrap items-end gap-x-2 gap-y-1 font-black", ehExpandido ? "text-4xl" : "text-3xl")}>
-                                                            <span className={storageStatusDashboard.valorClasse}>{totalStorageLabel}</span>
-                                                            <span className="text-xl font-semibold text-slate-400">/ {storageLimiteLabelDashboard}</span>
-                                                        </div>
-                                                    </div>
+                                        <div className="flex h-full flex-col justify-between gap-3">
+                                            <div className="flex items-start justify-between gap-3">
+                                                <div className="min-w-0">
+                                                    <p className="text-sm font-bold leading-snug text-slate-700">Armazenamento utilizado</p>
                                                 </div>
-
-                                                <div className="flex shrink-0 flex-col items-end gap-2">
-                                                    <span className={classNames("inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-bold ring-1", storageStatusDashboard.classe)}>
-                                                        <StatusIcon className="h-3.5 w-3.5" />
-                                                        {storageStatusDashboard.texto}
-                                                    </span>
-                                                    <span className={classNames("rounded-2xl px-3 py-1.5 text-sm font-black", storageStatusDashboard.classe)}>
-                                                        {storagePercentual}%
-                                                    </span>
+                                                <div className={classNames("shrink-0 rounded-2xl p-3 ring-1", storageStatusDashboard.iconeClasse)}>
+                                                    <Upload className="h-5 w-5" />
                                                 </div>
                                             </div>
 
                                             <div>
-                                                <div className={classNames("h-3 overflow-hidden rounded-full", storageStatusDashboard.trilhoClasse)}>
+                                                <p className={classNames("break-words font-black leading-tight", destaqueCarta ? "text-4xl" : "text-[26px]", storageStatusDashboard.valorClasse)}>
+                                                    {totalStorageLabel}
+                                                    <span className="ml-1 text-xl font-semibold text-slate-400">/ {storageLimiteLabelDashboard}</span>
+                                                </p>
+
+                                                <div className="mt-3 flex flex-wrap items-center gap-2 text-xs">
+                                                    <span className={classNames("inline-flex items-center gap-1 rounded-full px-2.5 py-1 font-bold ring-1", storageStatusDashboard.classe)}>
+                                                        <StatusIcon className="h-3.5 w-3.5" />
+                                                        {storageStatusDashboard.texto}
+                                                    </span>
+                                                    <span className={classNames("font-bold", storagePercentual >= 90 ? "text-red-600" : storagePercentual >= 70 ? "text-orange-600" : "text-emerald-600")}>
+                                                        {storagePercentual}% utilizado
+                                                    </span>
+                                                </div>
+
+                                                <div className={classNames("mt-3 h-2 overflow-hidden rounded-full", storageStatusDashboard.trilhoClasse)}>
                                                     <div
                                                         className={classNames("h-full rounded-full transition-all", storageStatusDashboard.barraClasse)}
                                                         style={{ width: `${percentualBarra}%` }}
                                                     />
                                                 </div>
 
-                                                <div className="mt-3 flex flex-col gap-2 border-t border-slate-100 pt-3 text-xs text-slate-500 sm:flex-row sm:items-center sm:justify-between">
-                                                    <span className="inline-flex items-center gap-2 font-semibold">
-                                                        <Database className="h-4 w-4 text-slate-400" />
-                                                        Capacidade total: {storageLimiteLabelDashboard}
-                                                    </span>
-                                                    <span className={classNames("inline-flex items-center gap-2 font-semibold", storagePercentual >= 90 ? "text-red-600" : storagePercentual >= 70 ? "text-orange-600" : "text-emerald-600")}>
-                                                        <StatusIcon className="h-4 w-4" />
-                                                        {storageStatusDashboard.detalhe}
-                                                    </span>
-                                                </div>
-
-                                                {ehExpandido && (
-                                                    <p className="mt-2 text-xs leading-relaxed text-slate-400">
-                                                        {storageStatusDashboard.apoio}
-                                                    </p>
-                                                )}
+                                                <p className="mt-3 inline-flex items-center gap-1.5 text-[11px] font-medium text-slate-400">
+                                                    <Database className="h-3.5 w-3.5" />
+                                                    Capacidade total: {storageLimiteLabelDashboard}
+                                                </p>
                                             </div>
                                         </div>
                                     </Card>
@@ -3344,26 +3347,22 @@ function Dashboard({
                                 <Card
                                     key={item.chave}
                                     className={classNames(
-                                        "overflow-hidden border-dashed transition hover:border-slate-300",
+                                        "group h-full min-h-[178px] overflow-hidden border-slate-200 bg-white p-5 shadow-sm transition hover:-translate-y-0.5 hover:border-slate-300 hover:shadow-md",
                                         classeTamanhoCartaDashboard(item.chave)
                                     )}
                                 >
-                                    <div
-                                        className={classNames(
-                                            "flex items-start justify-between gap-3",
-                                            tamanho === "destaque" ? "min-h-[108px]" : tamanho === "grande" ? "min-h-[92px]" : ""
-                                        )}
-                                    >
-                                        <div className="min-w-0">
-                                            <p className="text-sm font-medium text-slate-500">{item.label}</p>
-                                            <p className={classNames("mt-2 break-words font-bold text-slate-950", classeValorCartaDashboard(item.chave))}>{item.valor}</p>
-                                            <p className="mt-1 text-xs text-slate-400">{item.detalhe}</p>
+                                    <div className="flex h-full flex-col justify-between gap-4">
+                                        <div className="flex items-start gap-4">
+                                            <div className={classNames("shrink-0 rounded-2xl p-3 ring-1", estiloCarta.icone)}>
+                                                <Icon className="h-5 w-5" />
+                                            </div>
+                                            <p className="min-w-0 text-sm font-bold leading-snug text-slate-700">{item.label}</p>
                                         </div>
-                                        <div className={classNames(
-                                            "shrink-0 rounded-2xl bg-slate-100 p-3 text-slate-700",
-                                            tamanho === "destaque" || tamanho === "grande" ? "p-4" : ""
-                                        )}>
-                                            <Icon className={tamanho === "destaque" || tamanho === "grande" ? "h-6 w-6" : "h-5 w-5"} />
+
+                                        <div>
+                                            <p className={classNames("break-words font-black leading-none", valorClasse, estiloCarta.valor)}>{item.valor}</p>
+                                            <div className="mt-3 h-px bg-slate-100" />
+                                            <p className="mt-3 text-xs leading-snug text-slate-400">{item.detalhe}</p>
                                         </div>
                                     </div>
                                 </Card>
@@ -3960,42 +3959,42 @@ function Dashboard({
                     </div>
 
                     {abaPersonalizacaoPainel === "quadros" && (
-                    <div className="mt-5 rounded-3xl border border-slate-200 bg-slate-50/70 p-4">
-                        <div className="mb-3 flex items-start justify-between gap-3">
-                            <div>
-                                <h3 className="text-sm font-bold text-slate-950">Visibilidade geral do Dashboard SST</h3>
-                                <p className="mt-0.5 text-xs text-slate-500">Ative ou oculte os grupos principais do painel antes de organizar os detalhes abaixo.</p>
+                        <div className="mt-5 rounded-3xl border border-slate-200 bg-slate-50/70 p-4">
+                            <div className="mb-3 flex items-start justify-between gap-3">
+                                <div>
+                                    <h3 className="text-sm font-bold text-slate-950">Visibilidade geral do Dashboard SST</h3>
+                                    <p className="mt-0.5 text-xs text-slate-500">Ative ou oculte os grupos principais do painel antes de organizar os detalhes abaixo.</p>
+                                </div>
+                                <span className="rounded-full bg-white px-3 py-1 text-[10px] font-bold uppercase tracking-wide text-slate-500 ring-1 ring-slate-200">Geral</span>
                             </div>
-                            <span className="rounded-full bg-white px-3 py-1 text-[10px] font-bold uppercase tracking-wide text-slate-500 ring-1 ring-slate-200">Geral</span>
-                        </div>
-                        <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
-                        {opcoesPainelDashboard.filter((opcao) => opcao.chave !== "cards").map((opcao) => {
-                            const ativo = Boolean(blocosPainelDashboard[opcao.chave]);
+                            <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
+                                {opcoesPainelDashboard.filter((opcao) => opcao.chave !== "cards").map((opcao) => {
+                                    const ativo = Boolean(blocosPainelDashboard[opcao.chave]);
 
-                            return (
-                                <button
-                                    key={opcao.chave}
-                                    type="button"
-                                    onClick={() => alternarBlocoPainel(opcao.chave)}
-                                    className={classNames(
-                                        "flex items-center justify-between gap-3 rounded-2xl px-3 py-2 text-left text-sm font-semibold ring-1 transition",
-                                        ativo
-                                            ? "bg-emerald-50 text-emerald-800 ring-emerald-200"
-                                            : "bg-slate-50 text-slate-500 ring-slate-200"
-                                    )}
-                                >
-                                    <span>{opcao.label}</span>
-                                    <span className={classNames(
-                                        "rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide",
-                                        ativo ? "bg-emerald-100 text-emerald-800" : "bg-white text-slate-500 ring-1 ring-slate-200"
-                                    )}>
-                                        {ativo ? "Visível" : "Oculto"}
-                                    </span>
-                                </button>
-                            );
-                        })}
+                                    return (
+                                        <button
+                                            key={opcao.chave}
+                                            type="button"
+                                            onClick={() => alternarBlocoPainel(opcao.chave)}
+                                            className={classNames(
+                                                "flex items-center justify-between gap-3 rounded-2xl px-3 py-2 text-left text-sm font-semibold ring-1 transition",
+                                                ativo
+                                                    ? "bg-emerald-50 text-emerald-800 ring-emerald-200"
+                                                    : "bg-slate-50 text-slate-500 ring-slate-200"
+                                            )}
+                                        >
+                                            <span>{opcao.label}</span>
+                                            <span className={classNames(
+                                                "rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide",
+                                                ativo ? "bg-emerald-100 text-emerald-800" : "bg-white text-slate-500 ring-1 ring-slate-200"
+                                            )}>
+                                                {ativo ? "Visível" : "Oculto"}
+                                            </span>
+                                        </button>
+                                    );
+                                })}
+                            </div>
                         </div>
-                    </div>
                     )}
 
                     {abaPersonalizacaoPainel === "cartas" && (
@@ -4145,137 +4144,137 @@ function Dashboard({
                     )}
 
                     {abaPersonalizacaoPainel === "quadros" && (
-                    <div className="mt-6 rounded-3xl border border-emerald-200 bg-emerald-50/60 p-4 shadow-sm">
-                        <div className="mb-3 flex flex-col justify-between gap-2 sm:flex-row sm:items-center">
-                            <div>
-                                <div className="flex flex-wrap items-center gap-2">
-                                    <span className="rounded-full bg-emerald-600 px-2.5 py-1 text-[10px] font-black uppercase tracking-wide text-white">Seção 2</span>
-                                    <h3 className="text-sm font-bold text-slate-950">Organização dos quadros do Dashboard SST</h3>
-                                </div>
-                                <p className="mt-1 text-xs text-slate-600">
-                                    Altera somente os quadros grandes do dashboard: posição, tamanho, recolhimento e visibilidade. A ordem abaixo é a mesma ordem exibida no painel.
-                                </p>
-                            </div>
-                            <button
-                                type="button"
-                                onClick={() => {
-                                    setTamanhosBlocosDashboard(tamanhosPadraoBlocosDashboard);
-                                    setBlocosRecolhidosDashboard(blocosRecolhidosPadraoDashboard);
-                                    setOrdemBlocosDashboard(ordemPadraoBlocosDashboard);
-                                }}
-                                className="self-start rounded-xl bg-white px-3 py-2 text-xs font-semibold text-slate-700 ring-1 ring-slate-200 hover:bg-slate-50 sm:self-auto"
-                            >
-                                Restaurar ordem e tamanhos
-                            </button>
-                        </div>
-
-                        <div className="grid gap-3 lg:grid-cols-2">
-                            {opcoesBlocosOrdenadasDashboard.map((opcao, index) => {
-                                const ativo = Boolean(blocosPainelDashboard[opcao.chave]);
-                                const tamanhoAtual = tamanhosBlocosDashboard[opcao.chave] || "padrao";
-
-                                return (
-                                    <div
-                                        key={opcao.chave}
-                                        onDragOver={(evento) => evento.preventDefault()}
-                                        onDrop={() => soltarBlocoPainel(opcao.chave)}
-                                        className={classNames(
-                                            "rounded-2xl p-3 ring-1 transition",
-                                            ativo ? "bg-emerald-50/60 ring-emerald-200" : "bg-slate-50 ring-slate-200",
-                                            blocoArrastandoDashboard === opcao.chave ? "opacity-60 ring-2 ring-emerald-300" : ""
-                                        )}
-                                    >
-                                        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-                                            <div className="flex min-w-0 items-start gap-2">
-                                                <span
-                                                    draggable
-                                                    onDragStart={(evento) => {
-                                                        prepararArrastePainel(evento);
-                                                        setBlocoArrastandoDashboard(opcao.chave);
-                                                    }}
-                                                    onDragEnd={() => setBlocoArrastandoDashboard(null)}
-                                                    className="mt-0.5 inline-flex h-7 w-7 shrink-0 cursor-grab items-center justify-center rounded-xl bg-white text-sm font-bold text-slate-500 ring-1 ring-slate-200 active:cursor-grabbing"
-                                                    title="Segure e arraste para mudar a posição do quadro"
-                                                >
-                                                    ☰
-                                                </span>
-                                                <button
-                                                    type="button"
-                                                    onClick={() => alternarBlocoPainel(opcao.chave)}
-                                                    className="min-w-0 text-left"
-                                                >
-                                                    <span className={classNames("block text-sm font-bold", ativo ? "text-emerald-900" : "text-slate-500")}>
-                                                        {index + 1}. {opcao.label}
-                                                    </span>
-                                                    <span className="mt-0.5 block text-xs text-slate-500">
-                                                        {ativo ? "Aparece no painel" : "Oculto no painel"} · arraste pelo ícone ☰
-                                                    </span>
-                                                </button>
-                                            </div>
-
-                                            <div className="flex shrink-0 flex-wrap items-center gap-1">
-                                                <button
-                                                    type="button"
-                                                    onClick={() => moverBlocoPainel(opcao.chave, -1)}
-                                                    disabled={index === 0}
-                                                    className="rounded-lg bg-white px-2 py-1 text-xs font-bold text-slate-600 ring-1 ring-slate-200 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40"
-                                                    title="Mover para cima"
-                                                >
-                                                    ↑
-                                                </button>
-                                                <button
-                                                    type="button"
-                                                    onClick={() => moverBlocoPainel(opcao.chave, 1)}
-                                                    disabled={index === opcoesBlocosOrdenadasDashboard.length - 1}
-                                                    className="rounded-lg bg-white px-2 py-1 text-xs font-bold text-slate-600 ring-1 ring-slate-200 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40"
-                                                    title="Mover para baixo"
-                                                >
-                                                    ↓
-                                                </button>
-                                                <button
-                                                    type="button"
-                                                    onClick={() => alternarBlocoPainel(opcao.chave)}
-                                                    className={classNames(
-                                                        "rounded-full px-2 py-1 text-[10px] font-bold uppercase tracking-wide ring-1",
-                                                        ativo ? "bg-emerald-100 text-emerald-800 ring-emerald-200" : "bg-white text-slate-500 ring-slate-200"
-                                                    )}
-                                                >
-                                                    {ativo ? "Visível" : "Oculto"}
-                                                </button>
-                                            </div>
-                                        </div>
-
-                                        {ativo && (
-                                            <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4">
-                                                {opcoesTamanhoBlocoDashboard.map((tamanho) => {
-                                                    const selecionado = tamanhoAtual === tamanho.chave;
-
-                                                    return (
-                                                        <button
-                                                            key={tamanho.chave}
-                                                            type="button"
-                                                            onClick={() => alterarTamanhoBlocoPainel(opcao.chave, tamanho.chave)}
-                                                            className={classNames(
-                                                                "rounded-xl px-2 py-2 text-center ring-1 transition",
-                                                                selecionado
-                                                                    ? "bg-slate-950 text-white ring-slate-950"
-                                                                    : "bg-white text-slate-600 ring-slate-200 hover:bg-slate-50"
-                                                            )}
-                                                        >
-                                                            <span className="block text-xs font-bold">{tamanho.label}</span>
-                                                            <span className={classNames("mt-0.5 block text-[10px]", selecionado ? "text-slate-200" : "text-slate-400")}>
-                                                                {tamanho.descricao}
-                                                            </span>
-                                                        </button>
-                                                    );
-                                                })}
-                                            </div>
-                                        )}
+                        <div className="mt-6 rounded-3xl border border-emerald-200 bg-emerald-50/60 p-4 shadow-sm">
+                            <div className="mb-3 flex flex-col justify-between gap-2 sm:flex-row sm:items-center">
+                                <div>
+                                    <div className="flex flex-wrap items-center gap-2">
+                                        <span className="rounded-full bg-emerald-600 px-2.5 py-1 text-[10px] font-black uppercase tracking-wide text-white">Seção 2</span>
+                                        <h3 className="text-sm font-bold text-slate-950">Organização dos quadros do Dashboard SST</h3>
                                     </div>
-                                );
-                            })}
+                                    <p className="mt-1 text-xs text-slate-600">
+                                        Altera somente os quadros grandes do dashboard: posição, tamanho, recolhimento e visibilidade. A ordem abaixo é a mesma ordem exibida no painel.
+                                    </p>
+                                </div>
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        setTamanhosBlocosDashboard(tamanhosPadraoBlocosDashboard);
+                                        setBlocosRecolhidosDashboard(blocosRecolhidosPadraoDashboard);
+                                        setOrdemBlocosDashboard(ordemPadraoBlocosDashboard);
+                                    }}
+                                    className="self-start rounded-xl bg-white px-3 py-2 text-xs font-semibold text-slate-700 ring-1 ring-slate-200 hover:bg-slate-50 sm:self-auto"
+                                >
+                                    Restaurar ordem e tamanhos
+                                </button>
+                            </div>
+
+                            <div className="grid gap-3 lg:grid-cols-2">
+                                {opcoesBlocosOrdenadasDashboard.map((opcao, index) => {
+                                    const ativo = Boolean(blocosPainelDashboard[opcao.chave]);
+                                    const tamanhoAtual = tamanhosBlocosDashboard[opcao.chave] || "padrao";
+
+                                    return (
+                                        <div
+                                            key={opcao.chave}
+                                            onDragOver={(evento) => evento.preventDefault()}
+                                            onDrop={() => soltarBlocoPainel(opcao.chave)}
+                                            className={classNames(
+                                                "rounded-2xl p-3 ring-1 transition",
+                                                ativo ? "bg-emerald-50/60 ring-emerald-200" : "bg-slate-50 ring-slate-200",
+                                                blocoArrastandoDashboard === opcao.chave ? "opacity-60 ring-2 ring-emerald-300" : ""
+                                            )}
+                                        >
+                                            <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                                                <div className="flex min-w-0 items-start gap-2">
+                                                    <span
+                                                        draggable
+                                                        onDragStart={(evento) => {
+                                                            prepararArrastePainel(evento);
+                                                            setBlocoArrastandoDashboard(opcao.chave);
+                                                        }}
+                                                        onDragEnd={() => setBlocoArrastandoDashboard(null)}
+                                                        className="mt-0.5 inline-flex h-7 w-7 shrink-0 cursor-grab items-center justify-center rounded-xl bg-white text-sm font-bold text-slate-500 ring-1 ring-slate-200 active:cursor-grabbing"
+                                                        title="Segure e arraste para mudar a posição do quadro"
+                                                    >
+                                                        ☰
+                                                    </span>
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => alternarBlocoPainel(opcao.chave)}
+                                                        className="min-w-0 text-left"
+                                                    >
+                                                        <span className={classNames("block text-sm font-bold", ativo ? "text-emerald-900" : "text-slate-500")}>
+                                                            {index + 1}. {opcao.label}
+                                                        </span>
+                                                        <span className="mt-0.5 block text-xs text-slate-500">
+                                                            {ativo ? "Aparece no painel" : "Oculto no painel"} · arraste pelo ícone ☰
+                                                        </span>
+                                                    </button>
+                                                </div>
+
+                                                <div className="flex shrink-0 flex-wrap items-center gap-1">
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => moverBlocoPainel(opcao.chave, -1)}
+                                                        disabled={index === 0}
+                                                        className="rounded-lg bg-white px-2 py-1 text-xs font-bold text-slate-600 ring-1 ring-slate-200 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40"
+                                                        title="Mover para cima"
+                                                    >
+                                                        ↑
+                                                    </button>
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => moverBlocoPainel(opcao.chave, 1)}
+                                                        disabled={index === opcoesBlocosOrdenadasDashboard.length - 1}
+                                                        className="rounded-lg bg-white px-2 py-1 text-xs font-bold text-slate-600 ring-1 ring-slate-200 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40"
+                                                        title="Mover para baixo"
+                                                    >
+                                                        ↓
+                                                    </button>
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => alternarBlocoPainel(opcao.chave)}
+                                                        className={classNames(
+                                                            "rounded-full px-2 py-1 text-[10px] font-bold uppercase tracking-wide ring-1",
+                                                            ativo ? "bg-emerald-100 text-emerald-800 ring-emerald-200" : "bg-white text-slate-500 ring-slate-200"
+                                                        )}
+                                                    >
+                                                        {ativo ? "Visível" : "Oculto"}
+                                                    </button>
+                                                </div>
+                                            </div>
+
+                                            {ativo && (
+                                                <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4">
+                                                    {opcoesTamanhoBlocoDashboard.map((tamanho) => {
+                                                        const selecionado = tamanhoAtual === tamanho.chave;
+
+                                                        return (
+                                                            <button
+                                                                key={tamanho.chave}
+                                                                type="button"
+                                                                onClick={() => alterarTamanhoBlocoPainel(opcao.chave, tamanho.chave)}
+                                                                className={classNames(
+                                                                    "rounded-xl px-2 py-2 text-center ring-1 transition",
+                                                                    selecionado
+                                                                        ? "bg-slate-950 text-white ring-slate-950"
+                                                                        : "bg-white text-slate-600 ring-slate-200 hover:bg-slate-50"
+                                                                )}
+                                                            >
+                                                                <span className="block text-xs font-bold">{tamanho.label}</span>
+                                                                <span className={classNames("mt-0.5 block text-[10px]", selecionado ? "text-slate-200" : "text-slate-400")}>
+                                                                    {tamanho.descricao}
+                                                                </span>
+                                                            </button>
+                                                        );
+                                                    })}
+                                                </div>
+                                            )}
+                                        </div>
+                                    );
+                                })}
+                            </div>
                         </div>
-                    </div>
                     )}
                 </Card>
             )}
@@ -6012,61 +6011,61 @@ function AuditoriaCampoQRCode({ colaborador = {}, treinamentos = [], onAuditoria
                         <div className="mt-4 grid min-w-0 gap-4 lg:grid-cols-2">
                             {notificacaoEdicaoAberta && (
                                 <>
-                            <div>
-                                <label className="block text-sm font-bold text-slate-700">Assunto / título</label>
-                                <input
-                                    value={notificacao.titulo}
-                                    onChange={(e) => setNotificacao((atual) => ({ ...atual, titulo: e.target.value }))}
-                                    className="mt-2 w-full rounded-2xl border border-blue-100 bg-white px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-blue-200"
-                                />
-                            </div>
-                            <div>
-                                <label className="block text-sm font-bold text-slate-700">Adicionar complemento</label>
-                                <div className="mt-2 flex flex-col gap-2 sm:flex-row">
-                                    <input
-                                        value={complementoNotificacao}
-                                        onChange={(e) => setComplementoNotificacao(e.target.value)}
-                                        placeholder="Ex.: Enviar evidência fotográfica até o prazo definido"
-                                        className="min-w-0 flex-1 rounded-2xl border border-blue-100 bg-white px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-blue-200"
-                                    />
-                                    <button
-                                        type="button"
-                                        onClick={adicionarComplementoNotificacao}
-                                        className="inline-flex w-full shrink-0 items-center justify-center gap-2 rounded-2xl bg-blue-600 px-4 py-3 text-sm font-bold text-white hover:bg-blue-700 sm:w-auto"
-                                    >
-                                        <Plus className="h-4 w-4" />
-                                        Adicionar
-                                    </button>
-                                </div>
-                            </div>
-                            <div className="md:col-span-2">
-                                <label className="block text-sm font-bold text-slate-700">Mensagem</label>
-                                <textarea
-                                    value={notificacao.mensagem}
-                                    onChange={(e) => setNotificacao((atual) => ({ ...atual, mensagem: e.target.value }))}
-                                    rows={3}
-                                    className="mt-2 w-full rounded-2xl border border-blue-100 bg-white px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-blue-200"
-                                />
-                            </div>
-
-                            {(notificacao.complementos || []).length > 0 && (
-                                <div className="md:col-span-2 space-y-2">
-                                    <p className="text-xs font-bold uppercase tracking-wide text-blue-700">Complementos adicionados</p>
-                                    {(notificacao.complementos || []).map((item, index) => (
-                                        <div key={`${item}-${index}`} className="flex flex-col items-start justify-between gap-3 rounded-2xl bg-white p-3 text-sm ring-1 ring-blue-100 sm:flex-row">
-                                            <span className="break-words text-slate-700">{index + 1}. {item}</span>
+                                    <div>
+                                        <label className="block text-sm font-bold text-slate-700">Assunto / título</label>
+                                        <input
+                                            value={notificacao.titulo}
+                                            onChange={(e) => setNotificacao((atual) => ({ ...atual, titulo: e.target.value }))}
+                                            className="mt-2 w-full rounded-2xl border border-blue-100 bg-white px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-blue-200"
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-bold text-slate-700">Adicionar complemento</label>
+                                        <div className="mt-2 flex flex-col gap-2 sm:flex-row">
+                                            <input
+                                                value={complementoNotificacao}
+                                                onChange={(e) => setComplementoNotificacao(e.target.value)}
+                                                placeholder="Ex.: Enviar evidência fotográfica até o prazo definido"
+                                                className="min-w-0 flex-1 rounded-2xl border border-blue-100 bg-white px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-blue-200"
+                                            />
                                             <button
                                                 type="button"
-                                                onClick={() => removerComplementoNotificacao(index)}
-                                                className="inline-flex shrink-0 items-center gap-1 rounded-xl px-2 py-1 text-xs font-bold text-red-600 hover:bg-red-50"
+                                                onClick={adicionarComplementoNotificacao}
+                                                className="inline-flex w-full shrink-0 items-center justify-center gap-2 rounded-2xl bg-blue-600 px-4 py-3 text-sm font-bold text-white hover:bg-blue-700 sm:w-auto"
                                             >
-                                                <Trash2 className="h-3.5 w-3.5" />
-                                                Excluir
+                                                <Plus className="h-4 w-4" />
+                                                Adicionar
                                             </button>
                                         </div>
-                                    ))}
-                                </div>
-                            )}
+                                    </div>
+                                    <div className="md:col-span-2">
+                                        <label className="block text-sm font-bold text-slate-700">Mensagem</label>
+                                        <textarea
+                                            value={notificacao.mensagem}
+                                            onChange={(e) => setNotificacao((atual) => ({ ...atual, mensagem: e.target.value }))}
+                                            rows={3}
+                                            className="mt-2 w-full rounded-2xl border border-blue-100 bg-white px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-blue-200"
+                                        />
+                                    </div>
+
+                                    {(notificacao.complementos || []).length > 0 && (
+                                        <div className="md:col-span-2 space-y-2">
+                                            <p className="text-xs font-bold uppercase tracking-wide text-blue-700">Complementos adicionados</p>
+                                            {(notificacao.complementos || []).map((item, index) => (
+                                                <div key={`${item}-${index}`} className="flex flex-col items-start justify-between gap-3 rounded-2xl bg-white p-3 text-sm ring-1 ring-blue-100 sm:flex-row">
+                                                    <span className="break-words text-slate-700">{index + 1}. {item}</span>
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => removerComplementoNotificacao(index)}
+                                                        className="inline-flex shrink-0 items-center gap-1 rounded-xl px-2 py-1 text-xs font-bold text-red-600 hover:bg-red-50"
+                                                    >
+                                                        <Trash2 className="h-3.5 w-3.5" />
+                                                        Excluir
+                                                    </button>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
 
                                 </>
                             )}
@@ -9541,13 +9540,13 @@ function Empresas({
                                             accept="image/png,image/jpeg,image/webp,image/svg+xml"
                                             className="hidden"
                                             onChange={(e) => {
-                                            const arquivo = e.target.files?.[0] || null;
-                                            if (arquivo && !validarArquivoAntesUpload(arquivo, "fotoAuditoria")) {
-                                                e.target.value = "";
-                                                return;
-                                            }
-                                            setEmpresaEdicao({ ...empresaEdicao, logo: arquivo });
-                                        }}
+                                                const arquivo = e.target.files?.[0] || null;
+                                                if (arquivo && !validarArquivoAntesUpload(arquivo, "fotoAuditoria")) {
+                                                    e.target.value = "";
+                                                    return;
+                                                }
+                                                setEmpresaEdicao({ ...empresaEdicao, logo: arquivo });
+                                            }}
                                         />
                                     </label>
                                     <FileUploadAviso arquivo={empresaEdicao.logo} tipo="fotoAuditoria" />
@@ -9563,13 +9562,13 @@ function Empresas({
                                             accept="application/pdf,image/png,image/jpeg,image/webp"
                                             className="hidden"
                                             onChange={(e) => {
-                                            const arquivo = e.target.files?.[0] || null;
-                                            if (arquivo && !validarArquivoAntesUpload(arquivo, "documentoExtenso")) {
-                                                e.target.value = "";
-                                                return;
-                                            }
-                                            setEmpresaEdicao({ ...empresaEdicao, contratoArquivo: arquivo });
-                                        }}
+                                                const arquivo = e.target.files?.[0] || null;
+                                                if (arquivo && !validarArquivoAntesUpload(arquivo, "documentoExtenso")) {
+                                                    e.target.value = "";
+                                                    return;
+                                                }
+                                                setEmpresaEdicao({ ...empresaEdicao, contratoArquivo: arquivo });
+                                            }}
                                         />
                                     </label>
                                     <FileUploadAviso arquivo={empresaEdicao.contratoArquivo} tipo="documentoExtenso" />
