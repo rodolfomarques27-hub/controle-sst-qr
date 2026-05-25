@@ -570,7 +570,7 @@ function normalizarDataAniversario(valor) {
     }
 
     // Aceita datas digitadas/importadas como DD/MM/YYYY, DD-MM-YYYY ou DD.MM.YYYY.
-    const br = texto.match(/^(\d{1,2})[/.-](\d{1,2})[/.-](\d{2,4})$/);
+    const br = texto.match(/^(\d{1,2})[./-](\d{1,2})[./-](\d{2,4})$/);
     if (br) {
         const dia = Number(br[1]);
         const mes = Number(br[2]);
@@ -852,6 +852,106 @@ function proximoAniversariante(lista = []) {
 
 function deveMostrarAniversarioColaborador(colaborador) {
     return colaborador?.mostrarAniversarioDashboard !== false;
+}
+
+
+const respostasAuditoriaCampo = [
+    { chave: "conforme", texto: "Conforme", pontos: 10 },
+    { chave: "observacao_leve", texto: "Observação leve", pontos: -5 },
+    { chave: "nao_conforme", texto: "Não conforme", pontos: -10 },
+    { chave: "desvio_grave", texto: "Desvio grave", pontos: -30 },
+    { chave: "nao_aplicavel", texto: "Não aplicável", pontos: 0 },
+];
+
+const categoriasAuditoriaCampo = [
+    { chave: "epi", texto: "EPI" },
+    { chave: "frente_trabalho", texto: "Frente de trabalho" },
+    { chave: "comportamento_seguro", texto: "Comportamento seguro" },
+];
+
+const statusDesvioAuditoriaCampo = ["Aberto", "Em tratativa", "Corrigido", "Cancelado"];
+const gravidadesAuditoriaCampo = ["Leve", "Moderada", "Grave", "Crítica"];
+
+function obterRespostaAuditoriaCampo(chave) {
+    return respostasAuditoriaCampo.find((item) => item.chave === chave) || respostasAuditoriaCampo[0];
+}
+
+function calcularResultadoAuditoriaCampo(respostas = {}) {
+    const itens = categoriasAuditoriaCampo.map((categoria) => ({
+        categoria,
+        resposta: obterRespostaAuditoriaCampo(respostas[categoria.chave] || "conforme"),
+    }));
+
+    const aplicaveis = itens.filter((item) => item.resposta.chave !== "nao_aplicavel");
+    const base = Math.max(1, aplicaveis.length * 10);
+    const pontos = aplicaveis.reduce((total, item) => total + Number(item.resposta.pontos || 0), 0);
+    const percentual = Math.max(0, Math.min(100, Math.round((pontos / base) * 100)));
+    const temDesvioGrave = itens.some((item) => item.resposta.chave === "desvio_grave");
+
+    let classificacao = "Crítico";
+
+    if (temDesvioGrave) classificacao = "Ação imediata";
+    else if (percentual >= 90) classificacao = "Excelente";
+    else if (percentual >= 75) classificacao = "Conforme com observações";
+    else if (percentual >= 50) classificacao = "Atenção";
+
+    return {
+        pontos,
+        percentual,
+        classificacao,
+        temDesvioGrave,
+        itens,
+    };
+}
+
+function classeClassificacaoAuditoriaCampo(classificacao = "") {
+    const texto = normalizarTextoBusca(classificacao);
+
+    if (texto.includes("excelente")) return "bg-emerald-50 text-emerald-700 ring-emerald-200";
+    if (texto.includes("observ")) return "bg-blue-50 text-blue-700 ring-blue-200";
+    if (texto.includes("atencao") || texto.includes("atenção")) return "bg-orange-50 text-orange-700 ring-orange-200";
+    if (texto.includes("acao") || texto.includes("ação") || texto.includes("critico") || texto.includes("crítico")) return "bg-red-50 text-red-700 ring-red-200";
+
+    return "bg-slate-50 text-slate-700 ring-slate-200";
+}
+
+function formatarDataHora(dataISO) {
+    if (!dataISO) return "-";
+    const data = new Date(dataISO);
+    if (Number.isNaN(data.getTime())) return "-";
+    return data.toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" });
+}
+
+function normalizarAuditoriaCampo(item = {}) {
+    const checklist = Array.isArray(item.checklist) ? item.checklist : [];
+    const desvios = Array.isArray(item.desvios) ? item.desvios : [];
+
+    return {
+        id: item.id,
+        colaboradorId: item.colaborador_id || item.colaboradorId || null,
+        empresaId: item.empresa_id || item.empresaId || null,
+        tokenQr: item.token_qr || item.tokenQr || "",
+        colaboradorNome: item.colaborador_nome || item.colaboradorNome || item.colaboradores?.nome || "",
+        empresaNome: item.empresa_nome || item.empresaNome || item.empresas?.nome || "",
+        funcao: item.funcao || item.colaboradores?.funcao || "",
+        statusDocumental: item.status_documental || item.statusDocumental || "",
+        checklist,
+        pontuacao: Number(item.pontuacao || 0),
+        classificacao: item.classificacao || "",
+        temDesvioGrave: Boolean(item.tem_desvio_grave || item.temDesvioGrave),
+        categoriaDesvioPrincipal: item.categoria_desvio_principal || item.categoriaDesvioPrincipal || "",
+        totalDesvios: Number(item.total_desvios || item.totalDesvios || desvios.length || 0),
+        statusDesvio: item.status_desvio || item.statusDesvio || "",
+        auditorNome: item.auditor_nome || item.auditorNome || item.enviado_por || "",
+        origem: item.origem || "QR Code",
+        createdAt: item.created_at || item.createdAt || "",
+        desvios,
+    };
+}
+
+function auditoriaCampoAberta(item = {}) {
+    const status = normalizarTextoBusca(item.statusDesvio || item.status_desvio || "");
+    return (item.totalDesvios || item.total_desvios || 0) > 0 && !["corrigido", "cancelado", "fechado", "concluido", "concluído"].some((termo) => status.includes(termo));
 }
 
 function apenasNumeros(valor) {
@@ -1923,6 +2023,7 @@ function Dashboard({
     empresasBanco = [],
     documentosEmpresas = [],
     auditoria = [],
+    auditoriasCampo = [],
     onSelectColab,
     onRegistrarEmailEnviado,
 }) {
@@ -1942,6 +2043,8 @@ function Dashboard({
         documentosTipo: true,
         ultimosDocumentos: true,
         alertas: true,
+        auditoriasCampo: true,
+        topDesviosCampo: true,
     };
 
     const cartasPadraoDashboard = {
@@ -1957,6 +2060,9 @@ function Dashboard({
         desviosAbertos: true,
         aniversariantesMes: true,
         armazenamentoUtilizado: true,
+        auditoriasCampoMes: true,
+        mediaConformidadeCampo: true,
+        desviosCampoCorrigidos: true,
     };
 
     const tamanhosPadraoCartasDashboard = {
@@ -1972,6 +2078,9 @@ function Dashboard({
         desviosAbertos: "padrao",
         aniversariantesMes: "padrao",
         armazenamentoUtilizado: "padrao",
+        auditoriasCampoMes: "padrao",
+        mediaConformidadeCampo: "padrao",
+        desviosCampoCorrigidos: "padrao",
     };
 
     const tamanhosPadraoBlocosDashboard = {
@@ -1983,6 +2092,8 @@ function Dashboard({
         alertas: "medio",
         documentosTipo: "medio",
         ultimosDocumentos: "medio",
+        auditoriasCampo: "destaque",
+        topDesviosCampo: "medio",
     };
 
     const ordemPadraoBlocosDashboard = [
@@ -1994,6 +2105,8 @@ function Dashboard({
         "alertas",
         "documentosTipo",
         "ultimosDocumentos",
+        "auditoriasCampo",
+        "topDesviosCampo",
     ];
 
     const ordemPadraoCartasDashboard = [
@@ -2009,6 +2122,9 @@ function Dashboard({
         "desviosAbertos",
         "aniversariantesMes",
         "armazenamentoUtilizado",
+        "auditoriasCampoMes",
+        "mediaConformidadeCampo",
+        "desviosCampoCorrigidos",
     ];
 
     const opcoesTamanhoCartaDashboard = [
@@ -2026,6 +2142,8 @@ function Dashboard({
         { chave: "alertas", label: "Alertas importantes" },
         { chave: "documentosTipo", label: "Documentos por tipo" },
         { chave: "ultimosDocumentos", label: "Últimos documentos enviados" },
+        { chave: "auditoriasCampo", label: "Auditorias de campo" },
+        { chave: "topDesviosCampo", label: "Top 5 desvios" },
     ];
     const blocosComTamanhoDashboard = opcoesPainelDashboard;
     const opcoesTamanhoBlocoDashboard = [
@@ -2042,6 +2160,8 @@ function Dashboard({
         alertas: false,
         documentosTipo: false,
         ultimosDocumentos: false,
+        auditoriasCampo: false,
+        topDesviosCampo: false,
     };
     const [mostrarFiltroPainel, setMostrarFiltroPainel] = useState(false);
     const [cartaArrastandoDashboard, setCartaArrastandoDashboard] = useState(null);
@@ -2393,6 +2513,31 @@ function Dashboard({
         const texto = normalizarTextoBusca(`${item.acao || ""} ${item.tabela || ""} ${item.descricao || ""}`);
         return texto.includes("desvio") && !texto.includes("fechado") && !texto.includes("concluido") && !texto.includes("concluído");
     }).length;
+
+    const auditoriasCampoNormalizadas = auditoriasCampo.map(normalizarAuditoriaCampo);
+    const auditoriasCampoMes = auditoriasCampoNormalizadas.filter((item) => {
+        const data = item.createdAt ? new Date(item.createdAt) : null;
+        return data && data.getMonth() === mesAtual && data.getFullYear() === anoAtual;
+    });
+    const mediaConformidadeCampo = auditoriasCampoMes.length
+        ? Math.round(auditoriasCampoMes.reduce((total, item) => total + Number(item.pontuacao || 0), 0) / auditoriasCampoMes.length)
+        : 0;
+    const desviosCampoAbertos = auditoriasCampoNormalizadas.filter(auditoriaCampoAberta).length;
+    const desviosCampoCorrigidos = auditoriasCampoNormalizadas.filter((item) => {
+        const status = normalizarTextoBusca(item.statusDesvio || "");
+        return (item.totalDesvios || 0) > 0 && status.includes("corrigido");
+    }).length;
+    const topDesviosCampo = Object.values(
+        auditoriasCampoNormalizadas.reduce((acc, item) => {
+            const chave = item.categoriaDesvioPrincipal || item.desvios?.[0]?.categoria || "Desvio não classificado";
+            if (!acc[chave]) acc[chave] = { categoria: chave, total: 0, abertos: 0, graves: 0 };
+            acc[chave].total += Number(item.totalDesvios || 0) || 1;
+            if (auditoriaCampoAberta(item)) acc[chave].abertos += 1;
+            if (item.temDesvioGrave) acc[chave].graves += 1;
+            return acc;
+        }, {})
+    ).sort((a, b) => b.total - a.total || b.graves - a.graves).slice(0, 5);
+
     const aniversariantesElegiveis = colaboradores.filter((colaborador) =>
         deveMostrarAniversarioColaborador(colaborador) && colaboradorContaComoMobilizado(colaborador)
     );
@@ -2415,6 +2560,9 @@ function Dashboard({
         { chave: "treinamentosVencidos", label: "Treinamentos vencidos", valor: indicadores.vencidos, icon: AlertTriangle, detalhe: "Colaboradores" },
         { chave: "colaboradoresBloqueados", label: "Colaboradores bloqueados", valor: colaboradoresBloqueados, icon: Lock, detalhe: "Pendência bloqueante" },
         { chave: "desviosAbertos", label: "Desvios abertos", valor: desviosAbertos, icon: AlertTriangle, detalhe: "Registros não concluídos" },
+        { chave: "auditoriasCampoMes", label: "Auditorias de campo no mês", valor: auditoriasCampoMes.length, icon: ClipboardCheck, detalhe: "Checklists via QR Code" },
+        { chave: "mediaConformidadeCampo", label: "Média de conformidade", valor: `${mediaConformidadeCampo}%`, icon: BadgeCheck, detalhe: "Auditorias do mês" },
+        { chave: "desviosCampoCorrigidos", label: "Desvios corrigidos", valor: desviosCampoCorrigidos, icon: CheckCircle2, detalhe: `${desviosCampoAbertos} aberto(s)` },
         { chave: "aniversariantesMes", label: "Aniversariantes do mês", valor: aniversariantesMes.length, icon: UserRound, detalhe: aniversariantesMes.length > 0 ? "Quantidade no mês atual" : "Nenhum aniversariante no mês" },
         { chave: "armazenamentoUtilizado", label: "Armazenamento utilizado", valor: totalStorageLabel, icon: Upload, detalhe: `${storagePercentual}% do limite visual` },
     ];
@@ -2968,15 +3116,6 @@ function Dashboard({
                                             <p className="text-sm font-medium text-slate-500">{item.label}</p>
                                             <p className={classNames("mt-2 break-words font-bold text-slate-950", classeValorCartaDashboard(item.chave))}>{item.valor}</p>
                                             <p className="mt-1 text-xs text-slate-400">{item.detalhe}</p>
-                                            {item.chave === "aniversariantesMes" && aniversariantesMes.length > 0 && (
-                                                <div className="mt-3 space-y-1 text-[11px] text-slate-500">
-                                                    {aniversariantesMes.slice(0, 4).map((colaborador) => (
-                                                        <div key={colaborador.id} className="truncate rounded-xl bg-slate-50 px-2 py-1 ring-1 ring-slate-100">
-                                                            {formatarAniversario(obterDataAniversarioColaborador(colaborador))} · {colaborador.nome}
-                                                        </div>
-                                                    ))}
-                                                </div>
-                                            )}
                                         </div>
                                         <div className={classNames(
                                             "shrink-0 rounded-2xl bg-slate-100 p-3 text-slate-700",
@@ -2990,6 +3129,112 @@ function Dashboard({
                         })
                     )}
                 </div>
+            );
+        }
+
+        if (chave === "auditoriasCampo") {
+            return (
+                <CardDashboardRecolhivel
+                    chaveBloco="auditoriasCampo"
+                    titulo="Auditorias de campo"
+                    subtitulo="Histórico mensal de auditorias realizadas via QR Code por colaborador e empresa."
+                    badge={(
+                        <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-600">
+                            {auditoriasCampoMes.length} no mês
+                        </span>
+                    )}
+                >
+                    <div className="grid gap-3 md:grid-cols-4">
+                        <div className="rounded-2xl bg-slate-50 p-4 ring-1 ring-slate-200">
+                            <p className="text-xs font-bold uppercase tracking-wide text-slate-400">Auditorias do mês</p>
+                            <p className="mt-2 text-2xl font-black text-slate-950">{auditoriasCampoMes.length}</p>
+                        </div>
+                        <div className="rounded-2xl bg-slate-50 p-4 ring-1 ring-slate-200">
+                            <p className="text-xs font-bold uppercase tracking-wide text-slate-400">Média de conformidade</p>
+                            <p className="mt-2 text-2xl font-black text-slate-950">{mediaConformidadeCampo}%</p>
+                        </div>
+                        <div className="rounded-2xl bg-slate-50 p-4 ring-1 ring-slate-200">
+                            <p className="text-xs font-bold uppercase tracking-wide text-slate-400">Desvios abertos</p>
+                            <p className="mt-2 text-2xl font-black text-red-600">{desviosCampoAbertos}</p>
+                        </div>
+                        <div className="rounded-2xl bg-slate-50 p-4 ring-1 ring-slate-200">
+                            <p className="text-xs font-bold uppercase tracking-wide text-slate-400">Desvios corrigidos</p>
+                            <p className="mt-2 text-2xl font-black text-emerald-600">{desviosCampoCorrigidos}</p>
+                        </div>
+                    </div>
+
+                    <div className="mt-4 overflow-x-auto rounded-2xl border border-slate-200 scrollbar-discreta">
+                        <table className="min-w-[850px] w-full text-left text-sm">
+                            <thead className="bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
+                                <tr>
+                                    <th className="px-4 py-3">Data</th>
+                                    <th className="px-4 py-3">Colaborador</th>
+                                    <th className="px-4 py-3">Empresa</th>
+                                    <th className="px-4 py-3">Pontuação</th>
+                                    <th className="px-4 py-3">Classificação</th>
+                                    <th className="px-4 py-3">Desvios</th>
+                                </tr>
+                            </thead>
+                            <tbody className="divide-y divide-slate-100 bg-white">
+                                {auditoriasCampoNormalizadas.length === 0 && (
+                                    <tr>
+                                        <td className="px-4 py-8 text-center text-sm text-slate-500" colSpan={6}>
+                                            Nenhuma auditoria de campo registrada.
+                                        </td>
+                                    </tr>
+                                )}
+                                {auditoriasCampoNormalizadas.slice(0, 10).map((item) => (
+                                    <tr key={item.id} className="hover:bg-slate-50">
+                                        <td className="px-4 py-3 text-slate-600">{formatarDataHora(item.createdAt)}</td>
+                                        <td className="px-4 py-3 font-semibold text-slate-900">{item.colaboradorNome || "-"}</td>
+                                        <td className="px-4 py-3 text-slate-600">{item.empresaNome || "-"}</td>
+                                        <td className="px-4 py-3 font-bold text-slate-900">{item.pontuacao}%</td>
+                                        <td className="px-4 py-3">
+                                            <span className={classNames("rounded-full px-2 py-1 text-xs font-bold ring-1", classeClassificacaoAuditoriaCampo(item.classificacao))}>
+                                                {item.classificacao || "-"}
+                                            </span>
+                                        </td>
+                                        <td className="px-4 py-3 text-slate-600">{item.totalDesvios}</td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
+                </CardDashboardRecolhivel>
+            );
+        }
+
+        if (chave === "topDesviosCampo") {
+            return (
+                <CardDashboardRecolhivel
+                    chaveBloco="topDesviosCampo"
+                    titulo="Top 5 desvios"
+                    subtitulo="Principais tipos de desvios registrados nas auditorias de campo."
+                    badge={(
+                        <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-600">
+                            {topDesviosCampo.length} tipo(s)
+                        </span>
+                    )}
+                >
+                    <div className="space-y-2">
+                        {topDesviosCampo.length === 0 && (
+                            <div className="rounded-2xl border border-dashed border-slate-300 p-5 text-center text-sm text-slate-500">
+                                Nenhum desvio de auditoria de campo registrado.
+                            </div>
+                        )}
+                        {topDesviosCampo.map((item, index) => (
+                            <div key={item.categoria} className="flex items-center justify-between gap-3 rounded-2xl bg-slate-50 p-3 ring-1 ring-slate-100">
+                                <div className="min-w-0">
+                                    <p className="truncate text-sm font-bold text-slate-900">{index + 1}. {item.categoria}</p>
+                                    <p className="text-xs text-slate-500">{item.abertos} aberto(s) · {item.graves} grave(s)</p>
+                                </div>
+                                <span className="rounded-full bg-white px-3 py-1 text-xs font-bold text-slate-700 ring-1 ring-slate-200">
+                                    {item.total}
+                                </span>
+                            </div>
+                        ))}
+                    </div>
+                </CardDashboardRecolhivel>
             );
         }
 
@@ -5076,12 +5321,417 @@ function statusGeralConsultaPublica(colaborador = {}, treinamentos = []) {
     });
 }
 
+
+function AuditoriaCampoQRCode({ colaborador = {}, treinamentos = [], onAuditoriaSalva }) {
+    const [aberta, setAberta] = useState(false);
+    const [salvando, setSalvando] = useState(false);
+    const [mensagem, setMensagem] = useState("");
+    const [respostas, setRespostas] = useState({
+        epi: "conforme",
+        frente_trabalho: "conforme",
+        comportamento_seguro: "conforme",
+    });
+    const [auditorNome, setAuditorNome] = useState("");
+    const [desvio, setDesvio] = useState({
+        descricao: "",
+        gravidade: "Leve",
+        acaoImediata: "",
+        responsavel: "",
+        prazo: "",
+        status: "Aberto",
+        observacao: "",
+        fotoAntes: null,
+        fotoDepois: null,
+    });
+
+    const resultado = useMemo(() => calcularResultadoAuditoriaCampo(respostas), [respostas]);
+    const precisaDesvio = resultado.temDesvioGrave || resultado.itens.some((item) => ["nao_conforme", "observacao_leve"].includes(item.resposta.chave));
+
+    const alterarResposta = (categoria, resposta) => {
+        setRespostas((atual) => ({ ...atual, [categoria]: resposta }));
+    };
+
+    const uploadFotoAuditoria = async (arquivo, auditoriaId, tipo) => {
+        if (!arquivo) return "";
+
+        if (!validarArquivoAntesUpload(arquivo, "fotoAuditoria")) {
+            throw new Error("Foto fora do tamanho recomendado para auditoria.");
+        }
+
+        const nomeArquivo = `${auditoriaId}/${tipo}-${Date.now()}-${sanitizarNomeArquivo(arquivo.name || "foto.jpg")}`;
+        const { error } = await supabase.storage
+            .from("auditorias-campo")
+            .upload(nomeArquivo, arquivo, { upsert: true });
+
+        if (error) throw error;
+
+        const { data } = supabase.storage.from("auditorias-campo").getPublicUrl(nomeArquivo);
+        return data?.publicUrl || nomeArquivo;
+    };
+
+    const salvarAuditoria = async () => {
+        setMensagem("");
+
+        if (precisaDesvio && !desvio.descricao.trim()) {
+            setMensagem("Preencha a descrição do desvio antes de salvar a auditoria.");
+            return;
+        }
+
+        setSalvando(true);
+
+        try {
+            const statusDocumental = statusGeralConsultaPublica(colaborador, treinamentos).texto;
+            const checklist = resultado.itens.map((item) => ({
+                categoria: item.categoria.texto,
+                chave_categoria: item.categoria.chave,
+                resposta: item.resposta.texto,
+                chave_resposta: item.resposta.chave,
+                pontos: item.resposta.pontos,
+            }));
+
+            const desvioPayloadBase = precisaDesvio
+                ? {
+                    categoria: resultado.temDesvioGrave ? "Desvio grave" : "Pendência de auditoria",
+                    descricao: desvio.descricao.trim(),
+                    gravidade: resultado.temDesvioGrave ? "Crítica" : desvio.gravidade,
+                    acao_imediata: desvio.acaoImediata.trim(),
+                    responsavel: desvio.responsavel.trim(),
+                    prazo: desvio.prazo || null,
+                    status: desvio.status,
+                    observacao: desvio.observacao.trim(),
+                }
+                : null;
+
+            const auditoriaPayload = {
+                colaborador_id: colaborador.id || null,
+                empresa_id: colaborador.empresaId || colaborador.empresa_id || null,
+                token_qr: colaborador.token || colaborador.token_qr || "",
+                colaborador_nome: colaborador.nome || "",
+                empresa_nome: colaborador.empresaExibicao || colaborador.empresa || "",
+                funcao: colaborador.funcao || "",
+                status_documental: statusDocumental,
+                checklist,
+                pontuacao: resultado.percentual,
+                classificacao: resultado.classificacao,
+                tem_desvio_grave: resultado.temDesvioGrave,
+                categoria_desvio_principal: desvioPayloadBase?.categoria || "",
+                total_desvios: desvioPayloadBase ? 1 : 0,
+                status_desvio: desvioPayloadBase?.status || "Sem desvio",
+                auditor_nome: auditorNome.trim() || "Auditor via QR Code",
+                origem: "QR Code do colaborador",
+            };
+
+            const auditoriaId = typeof crypto !== "undefined" && crypto.randomUUID
+                ? crypto.randomUUID()
+                : `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+            const auditoriaCriada = {
+                id: auditoriaId,
+                ...auditoriaPayload,
+                created_at: new Date().toISOString(),
+            };
+
+            const { error: erroAuditoria } = await supabase
+                .from("auditorias_campo")
+                .insert(auditoriaCriada);
+
+            if (erroAuditoria) throw erroAuditoria;
+
+            let desvioCriado = null;
+
+            if (desvioPayloadBase) {
+                let fotoAntesUrl = "";
+                let fotoDepoisUrl = "";
+
+                try {
+                    fotoAntesUrl = await uploadFotoAuditoria(desvio.fotoAntes, auditoriaCriada.id, "antes");
+                    fotoDepoisUrl = await uploadFotoAuditoria(desvio.fotoDepois, auditoriaCriada.id, "depois");
+                } catch (erroFoto) {
+                    setMensagem(`Auditoria salva, mas a foto não foi enviada: ${erroFoto.message}`);
+                }
+
+                const desvioPayload = {
+                    ...desvioPayloadBase,
+                    auditoria_id: auditoriaCriada.id,
+                    colaborador_id: auditoriaPayload.colaborador_id,
+                    empresa_id: auditoriaPayload.empresa_id,
+                    foto_antes_url: fotoAntesUrl,
+                    foto_depois_url: fotoDepoisUrl,
+                };
+
+                const desvioId = typeof crypto !== "undefined" && crypto.randomUUID
+                    ? crypto.randomUUID()
+                    : `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+                const desvioInserido = {
+                    id: desvioId,
+                    ...desvioPayload,
+                    created_at: new Date().toISOString(),
+                };
+
+                const { error: erroDesvio } = await supabase
+                    .from("auditoria_campo_desvios")
+                    .insert(desvioInserido);
+
+                if (erroDesvio) throw erroDesvio;
+                desvioCriado = desvioInserido;
+            }
+
+            const normalizada = normalizarAuditoriaCampo({
+                ...auditoriaCriada,
+                desvios: desvioCriado ? [desvioCriado] : [],
+            });
+
+            onAuditoriaSalva?.(normalizada);
+            setMensagem("Auditoria registrada com sucesso.");
+            setAberta(false);
+            setRespostas({ epi: "conforme", frente_trabalho: "conforme", comportamento_seguro: "conforme" });
+            setDesvio({
+                descricao: "",
+                gravidade: "Leve",
+                acaoImediata: "",
+                responsavel: "",
+                prazo: "",
+                status: "Aberto",
+                observacao: "",
+                fotoAntes: null,
+                fotoDepois: null,
+            });
+        } catch (erro) {
+            setMensagem(`Erro ao registrar auditoria: ${erro.message}`);
+        } finally {
+            setSalvando(false);
+        }
+    };
+
+    return (
+        <div className="mt-6 rounded-3xl border border-slate-200 bg-white p-4 shadow-sm">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                    <h3 className="text-lg font-bold text-slate-950">Auditoria de campo</h3>
+                    <p className="mt-1 text-sm text-slate-500">Checklist rápido por QR Code para EPI, frente de trabalho e comportamento seguro.</p>
+                </div>
+                <button
+                    type="button"
+                    onClick={() => setAberta((valor) => !valor)}
+                    className="inline-flex items-center justify-center gap-2 rounded-2xl bg-slate-950 px-4 py-3 text-sm font-bold text-white hover:bg-slate-800"
+                >
+                    <ClipboardCheck className="h-4 w-4" />
+                    {aberta ? "Fechar auditoria" : "Realizar Auditoria"}
+                </button>
+            </div>
+
+            {mensagem && (
+                <div className={classNames("mt-4 rounded-2xl px-4 py-3 text-sm font-semibold ring-1", mensagem.includes("Erro") ? "bg-red-50 text-red-700 ring-red-200" : "bg-emerald-50 text-emerald-700 ring-emerald-200")}>
+                    {mensagem}
+                </div>
+            )}
+
+            {aberta && (
+                <div className="mt-5 space-y-5">
+                    <div className="grid gap-3 md:grid-cols-3">
+                        {categoriasAuditoriaCampo.map((categoria) => (
+                            <div key={categoria.chave} className="rounded-2xl bg-slate-50 p-4 ring-1 ring-slate-200">
+                                <label className="block text-sm font-bold text-slate-800">{categoria.texto}</label>
+                                <select
+                                    value={respostas[categoria.chave] || "conforme"}
+                                    onChange={(e) => alterarResposta(categoria.chave, e.target.value)}
+                                    className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-slate-300"
+                                >
+                                    {respostasAuditoriaCampo.map((resposta) => (
+                                        <option key={resposta.chave} value={resposta.chave}>
+                                            {resposta.texto} ({resposta.pontos > 0 ? "+" : ""}{resposta.pontos})
+                                        </option>
+                                    ))}
+                                </select>
+                            </div>
+                        ))}
+                    </div>
+
+                    <div className="rounded-2xl bg-slate-950 p-4 text-white">
+                        <p className="text-xs font-bold uppercase tracking-wide text-slate-300">Resultado parcial</p>
+                        <div className="mt-2 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+                            <div>
+                                <p className="text-3xl font-black">{resultado.percentual}%</p>
+                                <p className="text-sm text-slate-300">{resultado.classificacao}</p>
+                            </div>
+                            <span className="rounded-full bg-white/10 px-3 py-1 text-xs font-bold">Pontos: {resultado.pontos}</span>
+                        </div>
+                    </div>
+
+                    <div className="grid gap-4 md:grid-cols-2">
+                        <div>
+                            <label className="block text-sm font-bold text-slate-700">Nome do auditor</label>
+                            <input
+                                value={auditorNome}
+                                onChange={(e) => setAuditorNome(e.target.value)}
+                                placeholder="Quem realizou a auditoria"
+                                className="mt-2 w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-slate-300"
+                            />
+                        </div>
+                        <div>
+                            <label className="block text-sm font-bold text-slate-700">Status do desvio</label>
+                            <select
+                                value={desvio.status}
+                                onChange={(e) => setDesvio({ ...desvio, status: e.target.value })}
+                                className="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-slate-300"
+                            >
+                                {statusDesvioAuditoriaCampo.map((status) => <option key={status}>{status}</option>)}
+                            </select>
+                        </div>
+                    </div>
+
+                    {precisaDesvio && (
+                        <div className="rounded-3xl border border-orange-200 bg-orange-50 p-4">
+                            <h4 className="font-bold text-orange-900">Registro de desvio</h4>
+                            <p className="mt-1 text-sm text-orange-700">Obrigatório quando houver observação, não conformidade ou desvio grave.</p>
+
+                            <div className="mt-4 grid gap-4 md:grid-cols-2">
+                                <div className="md:col-span-2">
+                                    <label className="block text-sm font-bold text-slate-700">Descrição</label>
+                                    <textarea
+                                        value={desvio.descricao}
+                                        onChange={(e) => setDesvio({ ...desvio, descricao: e.target.value })}
+                                        rows={3}
+                                        placeholder="Descreva o desvio identificado"
+                                        className="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-slate-300"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-bold text-slate-700">Gravidade</label>
+                                    <select
+                                        value={desvio.gravidade}
+                                        onChange={(e) => setDesvio({ ...desvio, gravidade: e.target.value })}
+                                        className="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-slate-300"
+                                    >
+                                        {gravidadesAuditoriaCampo.map((gravidade) => <option key={gravidade}>{gravidade}</option>)}
+                                    </select>
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-bold text-slate-700">Responsável</label>
+                                    <input
+                                        value={desvio.responsavel}
+                                        onChange={(e) => setDesvio({ ...desvio, responsavel: e.target.value })}
+                                        className="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-slate-300"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-bold text-slate-700">Ação imediata</label>
+                                    <input
+                                        value={desvio.acaoImediata}
+                                        onChange={(e) => setDesvio({ ...desvio, acaoImediata: e.target.value })}
+                                        placeholder="Ex.: paralisar atividade e corrigir EPI"
+                                        className="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-slate-300"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-bold text-slate-700">Prazo</label>
+                                    <input
+                                        type="date"
+                                        value={desvio.prazo}
+                                        onChange={(e) => setDesvio({ ...desvio, prazo: e.target.value })}
+                                        className="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-slate-300"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-bold text-slate-700">Foto antes</label>
+                                    <input
+                                        type="file"
+                                        accept="image/png,image/jpeg,image/webp"
+                                        onChange={(e) => setDesvio({ ...desvio, fotoAntes: e.target.files?.[0] || null })}
+                                        className="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm"
+                                    />
+                                    <FileUploadAviso arquivo={desvio.fotoAntes} tipo="fotoAuditoria" />
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-bold text-slate-700">Foto depois</label>
+                                    <input
+                                        type="file"
+                                        accept="image/png,image/jpeg,image/webp"
+                                        onChange={(e) => setDesvio({ ...desvio, fotoDepois: e.target.files?.[0] || null })}
+                                        className="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm"
+                                    />
+                                    <FileUploadAviso arquivo={desvio.fotoDepois} tipo="fotoAuditoria" />
+                                </div>
+                                <div className="md:col-span-2">
+                                    <label className="block text-sm font-bold text-slate-700">Observação</label>
+                                    <textarea
+                                        value={desvio.observacao}
+                                        onChange={(e) => setDesvio({ ...desvio, observacao: e.target.value })}
+                                        rows={2}
+                                        className="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-slate-300"
+                                    />
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                    <button
+                        type="button"
+                        disabled={salvando}
+                        onClick={salvarAuditoria}
+                        className="inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-emerald-600 px-4 py-3 text-sm font-bold text-white hover:bg-emerald-700 disabled:opacity-60"
+                    >
+                        {salvando ? "Salvando auditoria..." : "Salvar auditoria de campo"}
+                    </button>
+                </div>
+            )}
+        </div>
+    );
+}
+
 function ConsultaQRPublica({ dados }) {
+    const colaborador = dados?.colaborador || {};
+    const treinamentos = dados?.treinamentos || [];
+    const geral = statusGeralConsultaPublica(colaborador, treinamentos);
+    const [auditoriasCampoQr, setAuditoriasCampoQr] = useState([]);
+    const [carregandoAuditoriasCampoQr, setCarregandoAuditoriasCampoQr] = useState(false);
+
+    const carregarAuditoriasCampoQr = useCallback(async () => {
+        if (!dados) {
+            setAuditoriasCampoQr([]);
+            setCarregandoAuditoriasCampoQr(false);
+            return;
+        }
+
+        const token = colaborador.token || colaborador.token_qr || new URLSearchParams(window.location.search).get("qr") || "";
+
+        if (!token && !colaborador.id) {
+            setAuditoriasCampoQr([]);
+            return;
+        }
+
+        setCarregandoAuditoriasCampoQr(true);
+
+        try {
+            const { data, error } = await supabase.rpc("consulta_auditorias_campo_qr", {
+                token_param: token,
+            });
+
+            if (!error) {
+                const lista = Array.isArray(data) ? data : Array.isArray(data?.auditorias) ? data.auditorias : [];
+                setAuditoriasCampoQr(lista.map((item) => normalizarAuditoriaCampo({
+                    ...item,
+                    desvios: item.desvios || item.auditoria_campo_desvios || [],
+                })));
+            }
+        } finally {
+            setCarregandoAuditoriasCampoQr(false);
+        }
+    }, [dados, colaborador.id, colaborador.token, colaborador.token_qr]);
+
+    useEffect(() => {
+        const timer = window.setTimeout(() => {
+            carregarAuditoriasCampoQr();
+        }, 0);
+
+        return () => window.clearTimeout(timer);
+    }, [carregarAuditoriasCampoQr]);
+
     if (!dados) return null;
 
-    const colaborador = dados.colaborador || {};
-    const treinamentos = dados.treinamentos || [];
-    const geral = statusGeralConsultaPublica(colaborador, treinamentos);
+    const ultimaAuditoriaCampoQr = auditoriasCampoQr[0] || null;
+    const mediaAuditoriaCampoQr = auditoriasCampoQr.length
+        ? Math.round(auditoriasCampoQr.reduce((total, item) => total + Number(item.pontuacao || 0), 0) / auditoriasCampoQr.length)
+        : null;
 
     return (
         <div className="min-h-screen bg-slate-100 p-4 text-slate-900">
@@ -5117,6 +5767,49 @@ function ConsultaQRPublica({ dados }) {
                             <p className="mt-1 text-base font-bold text-white">{geral.texto}</p>
                         </div>
                     </div>
+
+                    <div className="mt-4 grid gap-3 md:grid-cols-3">
+                        <div className="rounded-2xl bg-slate-50 p-4 ring-1 ring-slate-200">
+                            <p className="text-xs font-bold uppercase tracking-wide text-slate-400">Última auditoria</p>
+                            <p className="mt-1 text-sm font-bold text-slate-900">{carregandoAuditoriasCampoQr ? "Carregando..." : ultimaAuditoriaCampoQr ? formatarDataHora(ultimaAuditoriaCampoQr.createdAt) : "Sem registro"}</p>
+                        </div>
+                        <div className="rounded-2xl bg-slate-50 p-4 ring-1 ring-slate-200">
+                            <p className="text-xs font-bold uppercase tracking-wide text-slate-400">Pontuação média</p>
+                            <p className="mt-1 text-sm font-bold text-slate-900">{mediaAuditoriaCampoQr === null ? "Sem média" : `${mediaAuditoriaCampoQr}%`}</p>
+                        </div>
+                        <div className="rounded-2xl bg-slate-50 p-4 ring-1 ring-slate-200">
+                            <p className="text-xs font-bold uppercase tracking-wide text-slate-400">Classificação</p>
+                            <span className={classNames("mt-2 inline-flex rounded-full px-3 py-1 text-xs font-bold ring-1", classeClassificacaoAuditoriaCampo(ultimaAuditoriaCampoQr?.classificacao))}>
+                                {ultimaAuditoriaCampoQr?.classificacao || "Sem auditoria"}
+                            </span>
+                        </div>
+                    </div>
+
+                    <AuditoriaCampoQRCode
+                        colaborador={colaborador}
+                        treinamentos={treinamentos}
+                        onAuditoriaSalva={(novaAuditoria) => setAuditoriasCampoQr((atual) => [novaAuditoria, ...atual])}
+                    />
+
+                    {auditoriasCampoQr.length > 0 && (
+                        <div className="mt-6 rounded-3xl border border-slate-200 p-4">
+                            <h3 className="text-lg font-bold text-slate-950">Histórico de auditorias do colaborador</h3>
+                            <div className="mt-3 space-y-2">
+                                {auditoriasCampoQr.slice(0, 5).map((auditoria) => (
+                                    <div key={auditoria.id} className="flex flex-col gap-2 rounded-2xl bg-slate-50 p-3 ring-1 ring-slate-100 sm:flex-row sm:items-center sm:justify-between">
+                                        <div>
+                                            <p className="text-sm font-bold text-slate-900">{formatarDataHora(auditoria.createdAt)}</p>
+                                            <p className="text-xs text-slate-500">{auditoria.auditorNome || "Auditor não informado"} · {auditoria.totalDesvios} desvio(s)</p>
+                                        </div>
+                                        <div className="flex items-center gap-2">
+                                            <span className="rounded-full bg-white px-3 py-1 text-xs font-bold text-slate-700 ring-1 ring-slate-200">{auditoria.pontuacao}%</span>
+                                            <span className={classNames("rounded-full px-3 py-1 text-xs font-bold ring-1", classeClassificacaoAuditoriaCampo(auditoria.classificacao))}>{auditoria.classificacao}</span>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    )}
 
                     {treinamentos.length === 0 && (
                         <div className="mt-6 rounded-3xl border border-dashed border-slate-300 p-8 text-center">
@@ -9986,6 +10679,7 @@ export default function App() {
     const [erroConsultaPublica, setErroConsultaPublica] = useState("");
     const [auditoria, setAuditoria] = useState([]);
     const [emailsEnviados, setEmailsEnviados] = useState([]);
+    const [auditoriasCampo, setAuditoriasCampo] = useState([]);
     const [carregandoAuditoria, setCarregandoAuditoria] = useState(false);
     const [podeAcessarAuditoria, setPodeAcessarAuditoria] = useState(false);
     const [verificandoAcessoAuditoria, setVerificandoAcessoAuditoria] = useState(false);
@@ -10063,6 +10757,28 @@ export default function App() {
 
         setEmailsEnviados(data || []);
         return data || [];
+    }, []);
+
+    const carregarAuditoriasCampo = useCallback(async () => {
+        const { data, error } = await supabase
+            .from("auditorias_campo")
+            .select("*, auditoria_campo_desvios(*)")
+            .order("created_at", { ascending: false })
+            .limit(500);
+
+        if (error) {
+            console.warn("Erro ao carregar auditorias de campo:", error.message);
+            setAuditoriasCampo([]);
+            return [];
+        }
+
+        const normalizadas = (data || []).map((item) => normalizarAuditoriaCampo({
+            ...item,
+            desvios: item.auditoria_campo_desvios || [],
+        }));
+
+        setAuditoriasCampo(normalizadas);
+        return normalizadas;
     }, []);
 
     const registrarEmailEnviado = useCallback(
@@ -11781,6 +12497,7 @@ export default function App() {
         const timer = window.setTimeout(async () => {
             carregarColaboradores();
             carregarEmailsEnviados();
+            carregarAuditoriasCampo();
             registrarAuditoria("ACESSO", "sistema", "Usuário acessou o sistema");
 
             const autorizadoAuditoria = await verificarAcessoAuditoria();
@@ -11791,7 +12508,7 @@ export default function App() {
         }, 0);
 
         return () => window.clearTimeout(timer);
-    }, [usuario, carregarColaboradores, carregarAuditoria, carregarEmailsEnviados, registrarAuditoria, verificarAcessoAuditoria]);
+    }, [usuario, carregarColaboradores, carregarAuditoria, carregarEmailsEnviados, carregarAuditoriasCampo, registrarAuditoria, verificarAcessoAuditoria]);
 
     useEffect(() => {
         if (!usuario || colaboradores.length === 0) return;
@@ -11982,6 +12699,7 @@ export default function App() {
                             empresasBanco={empresasBanco}
                             documentosEmpresas={documentosEmpresas}
                             auditoria={auditoria}
+                            auditoriasCampo={auditoriasCampo}
                             onSelectColab={selecionarColaborador}
                             onRegistrarEmailEnviado={registrarEmailEnviado}
                         />
@@ -12062,7 +12780,7 @@ export default function App() {
                                 auditoria={auditoria}
                                 emailsEnviados={emailsEnviados}
                                 carregando={carregandoAuditoria}
-                                onAtualizar={async () => { await carregarAuditoria(); await carregarEmailsEnviados(); }}
+                                onAtualizar={async () => { await carregarAuditoria(); await carregarEmailsEnviados(); await carregarAuditoriasCampo(); }}
                                 onListarArquivosStorage={listarArquivosCertificadosStorage}
                                 onExcluirArquivoStorage={excluirArquivoCertificadoStorage}
                                 onListarUsuariosAuditoria={carregarUsuariosAutorizadosAuditoria}
