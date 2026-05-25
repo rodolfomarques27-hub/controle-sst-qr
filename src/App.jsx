@@ -1652,6 +1652,49 @@ function Dashboard({
         buckets: [],
     });
     const [carregandoStorageDashboard, setCarregandoStorageDashboard] = useState(false);
+    const painelPadraoDashboard = {
+        cards: true,
+        pendencias: true,
+        conformidade: true,
+        colaboradoresFuncao: true,
+        rankingEmpresas: true,
+        documentosTipo: true,
+        ultimosDocumentos: true,
+        alertas: true,
+    };
+    const opcoesPainelDashboard = [
+        { chave: "cards", label: "Cards principais" },
+        { chave: "pendencias", label: "Pendências críticas" },
+        { chave: "conformidade", label: "Resumo de conformidade" },
+        { chave: "colaboradoresFuncao", label: "Colaboradores por função" },
+        { chave: "rankingEmpresas", label: "Ranking por empresa" },
+        { chave: "documentosTipo", label: "Documentos por tipo" },
+        { chave: "ultimosDocumentos", label: "Últimos documentos enviados" },
+        { chave: "alertas", label: "Alertas importantes" },
+    ];
+    const [mostrarFiltroPainel, setMostrarFiltroPainel] = useState(false);
+    const [blocosPainelDashboard, setBlocosPainelDashboard] = useState(() => {
+        if (typeof window === "undefined") return painelPadraoDashboard;
+
+        try {
+            const salvo = JSON.parse(window.localStorage.getItem("dashboardSstBlocosVisiveis") || "null");
+            return salvo && typeof salvo === "object" ? { ...painelPadraoDashboard, ...salvo } : painelPadraoDashboard;
+        } catch {
+            return painelPadraoDashboard;
+        }
+    });
+
+    useEffect(() => {
+        if (typeof window === "undefined") return;
+        window.localStorage.setItem("dashboardSstBlocosVisiveis", JSON.stringify(blocosPainelDashboard));
+    }, [blocosPainelDashboard]);
+
+    const alternarBlocoPainel = (chave) => {
+        setBlocosPainelDashboard((atual) => ({
+            ...atual,
+            [chave]: !atual[chave],
+        }));
+    };
 
     const carregarUsoStorageDashboard = useCallback(async () => {
         setCarregandoStorageDashboard(true);
@@ -2229,6 +2272,15 @@ function Dashboard({
                     <div className="flex flex-wrap items-center gap-2">
                         <button
                             type="button"
+                            onClick={() => setMostrarFiltroPainel((valor) => !valor)}
+                            className="inline-flex items-center gap-2 rounded-2xl bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 shadow-sm ring-1 ring-slate-200 hover:bg-slate-50"
+                        >
+                            <Filter className="h-4 w-4" />
+                            Personalizar painel
+                        </button>
+
+                        <button
+                            type="button"
                             onClick={enviarAlertasPendenciasCriticas}
                             disabled={enviandoEmail || pendencias.length === 0}
                             className="inline-flex items-center gap-2 rounded-2xl bg-red-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-50"
@@ -2249,6 +2301,75 @@ function Dashboard({
                 }
             />
 
+            {mostrarFiltroPainel && (
+                <Card className="mb-6">
+                    <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+                        <div>
+                            <h2 className="text-base font-bold text-slate-950">Personalizar painel SST</h2>
+                            <p className="mt-1 text-sm text-slate-500">
+                                Marque apenas as informações que devem aparecer no dashboard principal. E-mails, acessos e armazenamento por bucket ficam no painel Auditoria.
+                            </p>
+                        </div>
+                        <div className="flex flex-wrap gap-2">
+                            <button
+                                type="button"
+                                onClick={() => setBlocosPainelDashboard(painelPadraoDashboard)}
+                                className="rounded-xl bg-slate-950 px-3 py-2 text-xs font-semibold text-white hover:bg-slate-800"
+                            >
+                                Mostrar padrão
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() =>
+                                    setBlocosPainelDashboard({
+                                        cards: true,
+                                        pendencias: true,
+                                        conformidade: true,
+                                        colaboradoresFuncao: true,
+                                        rankingEmpresas: true,
+                                        documentosTipo: false,
+                                        ultimosDocumentos: false,
+                                        alertas: true,
+                                    })
+                                }
+                                className="rounded-xl bg-slate-100 px-3 py-2 text-xs font-semibold text-slate-700 ring-1 ring-slate-200 hover:bg-slate-200"
+                            >
+                                Painel compacto
+                            </button>
+                        </div>
+                    </div>
+
+                    <div className="mt-4 grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
+                        {opcoesPainelDashboard.map((opcao) => {
+                            const ativo = Boolean(blocosPainelDashboard[opcao.chave]);
+
+                            return (
+                                <button
+                                    key={opcao.chave}
+                                    type="button"
+                                    onClick={() => alternarBlocoPainel(opcao.chave)}
+                                    className={classNames(
+                                        "flex items-center justify-between gap-3 rounded-2xl px-3 py-2 text-left text-sm font-semibold ring-1 transition",
+                                        ativo
+                                            ? "bg-emerald-50 text-emerald-800 ring-emerald-200"
+                                            : "bg-slate-50 text-slate-500 ring-slate-200"
+                                    )}
+                                >
+                                    <span>{opcao.label}</span>
+                                    <span className={classNames(
+                                        "rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide",
+                                        ativo ? "bg-emerald-100 text-emerald-800" : "bg-white text-slate-500 ring-1 ring-slate-200"
+                                    )}>
+                                        {ativo ? "Visível" : "Oculto"}
+                                    </span>
+                                </button>
+                            );
+                        })}
+                    </div>
+                </Card>
+            )}
+
+            {blocosPainelDashboard.cards && (
             <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
                 {cards.map((item) => {
                     const Icon = item.icon;
@@ -2269,8 +2390,14 @@ function Dashboard({
                     );
                 })}
             </div>
+            )}
 
-            <div className="mt-6 grid gap-6 xl:grid-cols-[1.35fr_0.65fr]">
+            {(blocosPainelDashboard.pendencias || blocosPainelDashboard.conformidade) && (
+            <div className={classNames(
+                "mt-6 grid gap-6",
+                blocosPainelDashboard.pendencias && blocosPainelDashboard.conformidade ? "xl:grid-cols-[1.35fr_0.65fr]" : "xl:grid-cols-1"
+            )}>
+                {blocosPainelDashboard.pendencias && (
                 <Card>
                     <div className="mb-4 flex items-center justify-between">
                         <div>
@@ -2347,7 +2474,9 @@ function Dashboard({
                         </table>
                     </div>
                 </Card>
+                )}
 
+                {blocosPainelDashboard.conformidade && (
                 <Card>
                     <h2 className="text-lg font-bold text-slate-950">Resumo de conformidade</h2>
                     <p className="mt-1 text-sm text-slate-500">
@@ -2375,9 +2504,13 @@ function Dashboard({
                         <strong className="text-slate-900">Regra do sistema:</strong> pendente indica ausência de certificado; vencido bloqueia a atividade; a vencer em até 30 dias gera alerta preventivo; em dia libera a consulta no QR Code.
                     </div>
                 </Card>
+                )}
             </div>
+            )}
 
+            {(blocosPainelDashboard.colaboradoresFuncao || blocosPainelDashboard.rankingEmpresas || blocosPainelDashboard.documentosTipo) && (
             <div className="mt-6 grid gap-6 xl:grid-cols-3">
+                {blocosPainelDashboard.colaboradoresFuncao && (
                 <ListaCompacta
                     titulo="Colaboradores mobilizados por função"
                     subtitulo="Conta apenas ativos, mobilizados, liberados ou com pendência não bloqueante."
@@ -2401,7 +2534,9 @@ function Dashboard({
                         </div>
                     ))}
                 </ListaCompacta>
+                )}
 
+                {blocosPainelDashboard.rankingEmpresas && (
                 <Card className="xl:col-span-2">
                     <div className="mb-4 flex flex-col justify-between gap-3 md:flex-row md:items-start">
                         <div>
@@ -2469,7 +2604,9 @@ function Dashboard({
                         </div>
                     )}
                 </Card>
+                )}
 
+                {blocosPainelDashboard.documentosTipo && (
                 <ListaCompacta
                     titulo="Documentos por tipo"
                     subtitulo="Resumo dos documentos empresariais."
@@ -2487,9 +2624,13 @@ function Dashboard({
                         </div>
                     ))}
                 </ListaCompacta>
+                )}
             </div>
+            )}
 
+            {(blocosPainelDashboard.ultimosDocumentos || blocosPainelDashboard.alertas) && (
             <div className="mt-6 grid gap-6 xl:grid-cols-2">
+                {blocosPainelDashboard.ultimosDocumentos && (
                 <ListaCompacta
                     titulo="Últimos documentos enviados"
                     subtitulo="Certificados e documentos empresariais mais recentes."
@@ -2507,7 +2648,9 @@ function Dashboard({
                         </div>
                     ))}
                 </ListaCompacta>
+                )}
 
+                {blocosPainelDashboard.alertas && (
                 <ListaCompacta
                     titulo="Alertas importantes"
                     subtitulo="Itens que exigem atenção imediata."
@@ -2520,75 +2663,10 @@ function Dashboard({
                         </div>
                     ))}
                 </ListaCompacta>
+                )}
             </div>
+            )}
 
-            <div className="mt-6 grid gap-6 xl:grid-cols-3">
-                <ListaCompacta
-                    titulo="Últimos e-mails enviados"
-                    subtitulo="Eventos de envio registrados na auditoria."
-                    vazio="Nenhum envio de e-mail registrado."
-                >
-                    {ultimosEmailsEnviados.map((item) => (
-                        <div key={item.id} className="rounded-2xl bg-slate-50 p-3 text-sm ring-1 ring-slate-100">
-                            <p className="font-semibold text-slate-900">{item.descricao || item.acao}</p>
-                            <p className="mt-1 text-xs text-slate-500">
-                                {item.usuario_email || "-"} · {item.created_at ? new Date(item.created_at).toLocaleString("pt-BR") : "-"}
-                            </p>
-                        </div>
-                    ))}
-                </ListaCompacta>
-
-                <ListaCompacta
-                    titulo="Últimos acessos"
-                    subtitulo="Registros recentes de entrada e consulta."
-                    vazio="Nenhum acesso registrado."
-                >
-                    {ultimosAcessos.map((item) => {
-                        const origem = item.dados?.origemAcesso || {};
-
-                        return (
-                            <div key={item.id} className="rounded-2xl bg-slate-50 p-3 text-sm ring-1 ring-slate-100">
-                                <p className="font-semibold text-slate-900">{item.usuario_email || "Consulta pública"}</p>
-                                <p className="mt-1 text-xs text-slate-500">
-                                    {item.created_at ? new Date(item.created_at).toLocaleString("pt-BR") : "-"} · {origem.navegador || "Origem não registrada"}
-                                </p>
-                            </div>
-                        );
-                    })}
-                </ListaCompacta>
-
-                <ListaCompacta
-                    titulo="Armazenamento por bucket"
-                    subtitulo="Uso estimado do Supabase Storage."
-                    vazio="Nenhum arquivo identificado no Storage."
-                >
-                    <div className="rounded-2xl bg-slate-50 p-3 ring-1 ring-slate-100">
-                        <div className="mb-2 flex justify-between text-sm">
-                            <span className="font-semibold text-slate-700">Total utilizado</span>
-                            <span className="font-bold text-slate-950">{totalStorageLabel}</span>
-                        </div>
-                        <div className="h-2 overflow-hidden rounded-full bg-white ring-1 ring-slate-200">
-                            <div
-                                className={classNames(
-                                    "h-full rounded-full",
-                                    storagePercentual >= 90 ? "bg-red-500" : storagePercentual >= 70 ? "bg-orange-500" : "bg-emerald-500"
-                                )}
-                                style={{ width: `${Math.max(2, storagePercentual)}%` }}
-                            />
-                        </div>
-                    </div>
-
-                    {usoStorageDashboard.buckets.slice(0, 5).map((bucket) => (
-                        <div key={bucket.bucket} className="rounded-2xl bg-slate-50 p-3 text-sm ring-1 ring-slate-100">
-                            <div className="flex justify-between gap-3">
-                                <span className="font-semibold text-slate-900">{bucket.bucket}</span>
-                                <span className="text-xs font-bold text-slate-600">{formatarBytes(bucket.bytes)}</span>
-                            </div>
-                            <p className="mt-1 text-xs text-slate-500">{bucket.arquivos} arquivo(s)</p>
-                        </div>
-                    ))}
-                </ListaCompacta>
-            </div>
         </motion.div>
     );
 }
