@@ -5682,22 +5682,26 @@ function AuditoriaCampoQRCode({ colaborador = {}, treinamentos = [], onAuditoria
 
     const resultado = useMemo(() => calcularResultadoAuditoriaCampo(respostas), [respostas]);
     const precisaDesvio = resultado.temDesvioGrave || resultado.itens.some((item) => ["nao_conforme", "observacao_leve"].includes(item.resposta.chave));
-    const previewNotificacao = useMemo(
-        () => montarPreviewNotificacaoAuditoriaCampo(notificacao, notificacao.complementos),
-        [notificacao]
+    const notificacaoBase = useMemo(
+        () => notificacaoPadraoAuditoriaCampo(colaborador, resultado),
+        [colaborador, resultado]
     );
 
-    useEffect(() => {
-        setNotificacao((atual) => {
-            const padrao = notificacaoPadraoAuditoriaCampo(colaborador, resultado);
-            return {
-                ...atual,
-                titulo: atual.titulo || padrao.titulo,
-                mensagem: atual.mensagem || padrao.mensagem,
-                complementos: Array.isArray(atual.complementos) ? atual.complementos : [],
-            };
-        });
-    }, [colaborador, resultado.classificacao, resultado.percentual]);
+    const notificacaoCompleta = useMemo(
+        () => ({
+            ...notificacao,
+            titulo: notificacao.titulo || notificacaoBase.titulo,
+            mensagem: notificacao.mensagem || notificacaoBase.mensagem,
+            complementos: Array.isArray(notificacao.complementos) ? notificacao.complementos : [],
+            visualizarPreview: Boolean(notificacao.visualizarPreview),
+        }),
+        [notificacao, notificacaoBase.titulo, notificacaoBase.mensagem]
+    );
+
+    const previewNotificacao = useMemo(
+        () => montarPreviewNotificacaoAuditoriaCampo(notificacaoCompleta, notificacaoCompleta.complementos),
+        [notificacaoCompleta]
+    );
 
     const adicionarComplementoNotificacao = () => {
         const texto = complementoNotificacao.trim();
@@ -5776,7 +5780,7 @@ function AuditoriaCampoQRCode({ colaborador = {}, treinamentos = [], onAuditoria
                     notificacao: {
                         titulo: notificacao.titulo.trim(),
                         mensagem: notificacao.mensagem.trim(),
-                        complementos: Array.isArray(notificacao.complementos) ? notificacao.complementos : [],
+                        complementos: notificacao.complementos,
                         preview: previewNotificacao,
                     },
                 }
@@ -5794,7 +5798,7 @@ function AuditoriaCampoQRCode({ colaborador = {}, treinamentos = [], onAuditoria
                 notificacao: {
                     titulo: notificacao.titulo.trim(),
                     mensagem: notificacao.mensagem.trim(),
-                    complementos: Array.isArray(notificacao.complementos) ? notificacao.complementos : [],
+                    complementos: notificacao.complementos,
                     preview: previewNotificacao,
                 },
                 checklist,
@@ -5995,7 +5999,7 @@ function AuditoriaCampoQRCode({ colaborador = {}, treinamentos = [], onAuditoria
                                 className="inline-flex items-center justify-center gap-2 rounded-2xl bg-white px-3 py-2 text-xs font-bold text-blue-700 ring-1 ring-blue-200 hover:bg-blue-100"
                             >
                                 <Eye className="h-4 w-4" />
-                                {notificacao.visualizarPreview ? "Ocultar prévia" : "Visualizar prévia"}
+                                {notificacaoCompleta.visualizarPreview ? "Ocultar prévia" : "Visualizar prévia"}
                             </button>
                         </div>
 
@@ -6056,7 +6060,7 @@ function AuditoriaCampoQRCode({ colaborador = {}, treinamentos = [], onAuditoria
                                 </div>
                             )}
 
-                            {notificacao.visualizarPreview && (
+                            {notificacaoCompleta.visualizarPreview && (
                                 <div className="md:col-span-2 rounded-2xl bg-slate-950 p-4 text-sm text-slate-100">
                                     <p className="mb-2 text-xs font-bold uppercase tracking-wide text-slate-400">Prévia da notificação</p>
                                     <pre className="whitespace-pre-wrap font-sans leading-relaxed">{previewNotificacao || "Preencha assunto e mensagem para visualizar."}</pre>
@@ -6319,15 +6323,22 @@ function ConsultaQRPublica({ dados }) {
                             <h3 className="text-lg font-bold text-slate-950">Histórico de auditorias do colaborador</h3>
                             <div className="mt-3 space-y-2">
                                 {auditoriasCampoQr.slice(0, 5).map((auditoria) => (
-                                    <div key={auditoria.id} className="flex flex-col gap-2 rounded-2xl bg-slate-50 p-3 ring-1 ring-slate-100 sm:flex-row sm:items-center sm:justify-between">
-                                        <div>
-                                            <p className="text-sm font-bold text-slate-900">{formatarDataHora(auditoria.createdAt)}</p>
-                                            <p className="text-xs text-slate-500">{auditoria.auditorNome || "Auditor não informado"} · {auditoria.totalDesvios} desvio(s)</p>
+                                    <div key={auditoria.id} className="rounded-2xl bg-slate-50 p-3 ring-1 ring-slate-100">
+                                        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                                            <div>
+                                                <p className="text-sm font-bold text-slate-900">{formatarDataHora(auditoria.createdAt)}</p>
+                                                <p className="text-xs text-slate-500">{auditoria.auditorNome || "Auditor não informado"} · {auditoria.totalDesvios} desvio(s)</p>
+                                                <p className="mt-1 text-xs text-slate-400">Status do desvio: {auditoria.statusDesvio || "Sem desvio"}</p>
+                                            </div>
+                                            <div className="flex items-center gap-2">
+                                                <span className="rounded-full bg-white px-3 py-1 text-xs font-bold text-slate-700 ring-1 ring-slate-200">{auditoria.pontuacao}%</span>
+                                                <span className={classNames("rounded-full px-3 py-1 text-xs font-bold ring-1", classeClassificacaoAuditoriaCampo(auditoria.classificacao))}>{auditoria.classificacao}</span>
+                                            </div>
                                         </div>
-                                        <div className="flex items-center gap-2">
-                                            <span className="rounded-full bg-white px-3 py-1 text-xs font-bold text-slate-700 ring-1 ring-slate-200">{auditoria.pontuacao}%</span>
-                                            <span className={classNames("rounded-full px-3 py-1 text-xs font-bold ring-1", classeClassificacaoAuditoriaCampo(auditoria.classificacao))}>{auditoria.classificacao}</span>
-                                        </div>
+                                        <EditorNotificacaoHistoricoAuditoria
+                                            auditoria={auditoria}
+                                            onAtualizada={(atualizada) => setAuditoriasCampoQr((atual) => atual.map((registro) => registro.id === atualizada.id ? atualizada : registro))}
+                                        />
                                     </div>
                                 ))}
                             </div>
@@ -11187,7 +11198,286 @@ function RelatorioAuditoria({
 }
 
 
-function DashboardAuditoriaCampo({ auditoriasCampo = [] }) {
+
+function EditorNotificacaoHistoricoAuditoria({ auditoria = {}, onAtualizada }) {
+    const notificacaoInicial = auditoria.notificacao || {};
+    const desvioPrincipal = Array.isArray(auditoria.desvios) ? auditoria.desvios[0] || null : null;
+    const [aberto, setAberto] = useState(false);
+    const [visualizarPreview, setVisualizarPreview] = useState(false);
+    const [salvando, setSalvando] = useState(false);
+    const [mensagem, setMensagem] = useState("");
+    const [notificacao, setNotificacao] = useState({
+        titulo: notificacaoInicial.titulo || `Auditoria de campo - ${auditoria.colaboradorNome || "Colaborador"}`,
+        mensagem: notificacaoInicial.mensagem || `Auditoria de campo registrada para ${auditoria.colaboradorNome || "colaborador"}. Resultado: ${auditoria.classificacao || "sem classificação"} (${auditoria.pontuacao || 0}%).`,
+        complementos: Array.isArray(notificacaoInicial.complementos) ? notificacaoInicial.complementos : [],
+    });
+    const [novoComplemento, setNovoComplemento] = useState("");
+    const [observacoesStatus, setObservacoesStatus] = useState({
+        status: desvioPrincipal?.status || auditoria.statusDesvio || "Aberto",
+        observacaoAberto: desvioPrincipal?.observacaoAberto || "",
+        observacaoTratativa: desvioPrincipal?.observacaoTratativa || "",
+        observacaoCorrigido: desvioPrincipal?.observacaoCorrigido || "",
+    });
+
+    const preview = useMemo(
+        () => montarPreviewNotificacaoAuditoriaCampo(notificacao, notificacao.complementos),
+        [notificacao]
+    );
+
+    const adicionarComplemento = () => {
+        const texto = novoComplemento.trim();
+        if (!texto) return;
+        setNotificacao((atual) => ({
+            ...atual,
+            complementos: [...(atual.complementos || []), texto],
+        }));
+        setNovoComplemento("");
+    };
+
+    const removerComplemento = (index) => {
+        setNotificacao((atual) => ({
+            ...atual,
+            complementos: (atual.complementos || []).filter((_, itemIndex) => itemIndex !== index),
+        }));
+    };
+
+    const salvarAlteracoes = async () => {
+        if (!auditoria.id) {
+            setMensagem("Não foi possível salvar: auditoria sem ID.");
+            return;
+        }
+
+        setSalvando(true);
+        setMensagem("");
+
+        try {
+            const notificacaoPayload = {
+                titulo: String(notificacao.titulo || "").trim(),
+                mensagem: String(notificacao.mensagem || "").trim(),
+                complementos: Array.isArray(notificacao.complementos) ? notificacao.complementos : [],
+                atualizado_em: new Date().toISOString(),
+            };
+
+            const { error: erroAuditoria } = await supabase
+                .from("auditorias_campo")
+                .update({ notificacao: notificacaoPayload })
+                .eq("id", auditoria.id);
+
+            if (erroAuditoria) throw erroAuditoria;
+
+            let desviosAtualizados = auditoria.desvios || [];
+
+            if (desvioPrincipal?.id) {
+                const desvioPayload = {
+                    status: observacoesStatus.status,
+                    observacao_aberto: observacoesStatus.observacaoAberto.trim(),
+                    observacao_tratativa: observacoesStatus.observacaoTratativa.trim(),
+                    observacao_corrigido: observacoesStatus.observacaoCorrigido.trim(),
+                    notificacao: notificacaoPayload,
+                };
+
+                const { error: erroDesvio } = await supabase
+                    .from("auditoria_campo_desvios")
+                    .update(desvioPayload)
+                    .eq("id", desvioPrincipal.id);
+
+                if (erroDesvio) throw erroDesvio;
+
+                desviosAtualizados = desviosAtualizados.map((desvio) =>
+                    desvio.id === desvioPrincipal.id
+                        ? {
+                            ...desvio,
+                            status: observacoesStatus.status,
+                            observacaoAberto: observacoesStatus.observacaoAberto.trim(),
+                            observacaoTratativa: observacoesStatus.observacaoTratativa.trim(),
+                            observacaoCorrigido: observacoesStatus.observacaoCorrigido.trim(),
+                            notificacao: notificacaoPayload,
+                        }
+                        : desvio
+                );
+            }
+
+            const atualizado = {
+                ...auditoria,
+                notificacao: notificacaoPayload,
+                statusDesvio: observacoesStatus.status,
+                desvios: desviosAtualizados,
+            };
+
+            if (typeof onAtualizada === "function") onAtualizada(atualizado);
+            setMensagem("Alterações salvas com sucesso.");
+        } catch (error) {
+            setMensagem(`Erro ao salvar: ${error.message}`);
+        } finally {
+            setSalvando(false);
+        }
+    };
+
+    return (
+        <div className="mt-3 rounded-2xl border border-slate-200 bg-white p-3">
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                    <p className="text-sm font-bold text-slate-900">Notificação e tratativa</p>
+                    <p className="text-xs text-slate-500">Edite a notificação, complementos e observações por status desta auditoria.</p>
+                </div>
+                <button
+                    type="button"
+                    onClick={() => setAberto((valor) => !valor)}
+                    className="inline-flex items-center justify-center gap-2 rounded-xl bg-slate-50 px-3 py-2 text-xs font-bold text-slate-600 ring-1 ring-slate-200 hover:bg-slate-100"
+                >
+                    {aberto ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
+                    {aberto ? "Ocultar edição" : "Editar / visualizar"}
+                </button>
+            </div>
+
+            {aberto && (
+                <div className="mt-4 grid gap-4 lg:grid-cols-2">
+                    <div className="space-y-3">
+                        <div>
+                            <label className="block text-xs font-bold uppercase tracking-wide text-slate-500">Assunto da notificação</label>
+                            <input
+                                value={notificacao.titulo}
+                                onChange={(e) => setNotificacao((atual) => ({ ...atual, titulo: e.target.value }))}
+                                className="mt-2 w-full rounded-2xl border border-slate-200 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-slate-300"
+                            />
+                        </div>
+                        <div>
+                            <label className="block text-xs font-bold uppercase tracking-wide text-slate-500">Mensagem</label>
+                            <textarea
+                                value={notificacao.mensagem}
+                                onChange={(e) => setNotificacao((atual) => ({ ...atual, mensagem: e.target.value }))}
+                                rows={4}
+                                className="mt-2 w-full rounded-2xl border border-slate-200 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-slate-300"
+                            />
+                        </div>
+                        <div>
+                            <label className="block text-xs font-bold uppercase tracking-wide text-slate-500">Adicionar complemento</label>
+                            <div className="mt-2 flex gap-2">
+                                <input
+                                    value={novoComplemento}
+                                    onChange={(e) => setNovoComplemento(e.target.value)}
+                                    placeholder="Ex.: Reforçar tema em DDS da equipe"
+                                    className="min-w-0 flex-1 rounded-2xl border border-slate-200 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-slate-300"
+                                />
+                                <button
+                                    type="button"
+                                    onClick={adicionarComplemento}
+                                    className="inline-flex items-center gap-1 rounded-2xl bg-slate-950 px-3 py-2 text-xs font-bold text-white hover:bg-slate-800"
+                                >
+                                    <Plus className="h-3.5 w-3.5" />
+                                    Adicionar
+                                </button>
+                            </div>
+                        </div>
+
+                        {(notificacao.complementos || []).length > 0 && (
+                            <div className="space-y-2">
+                                {(notificacao.complementos || []).map((item, index) => (
+                                    <div key={`${item}-${index}`} className="flex items-start justify-between gap-2 rounded-2xl bg-slate-50 p-2 text-sm text-slate-700 ring-1 ring-slate-200">
+                                        <span>{index + 1}. {item}</span>
+                                        <button
+                                            type="button"
+                                            onClick={() => removerComplemento(index)}
+                                            className="rounded-xl bg-white p-2 text-red-600 ring-1 ring-red-100 hover:bg-red-50"
+                                            title="Excluir complemento"
+                                        >
+                                            <Trash2 className="h-3.5 w-3.5" />
+                                        </button>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+                    </div>
+
+                    <div className="space-y-3">
+                        <div className="rounded-2xl border border-blue-100 bg-blue-50/50 p-3">
+                            <div className="flex items-center justify-between gap-2">
+                                <div>
+                                    <p className="text-sm font-bold text-blue-950">Prévia da notificação</p>
+                                    <p className="text-xs text-blue-700">Visualize antes de registrar ou reenviar a tratativa.</p>
+                                </div>
+                                <button
+                                    type="button"
+                                    onClick={() => setVisualizarPreview((valor) => !valor)}
+                                    className="rounded-xl bg-white px-3 py-2 text-xs font-bold text-blue-700 ring-1 ring-blue-200"
+                                >
+                                    {visualizarPreview ? "Ocultar" : "Visualizar"}
+                                </button>
+                            </div>
+                            {visualizarPreview && (
+                                <pre className="mt-3 whitespace-pre-wrap rounded-2xl bg-slate-950 p-3 font-sans text-xs leading-relaxed text-white">
+                                    {preview || "Preencha a notificação para visualizar."}
+                                </pre>
+                            )}
+                        </div>
+
+                        <div className="rounded-2xl border border-slate-200 p-3">
+                            <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
+                                <div className="flex-1">
+                                    <label className="block text-xs font-bold uppercase tracking-wide text-slate-500">Status do desvio</label>
+                                    <select
+                                        value={observacoesStatus.status}
+                                        onChange={(e) => setObservacoesStatus((atual) => ({ ...atual, status: e.target.value }))}
+                                        className="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-slate-300"
+                                    >
+                                        {statusDesvioAuditoriaCampo.map((status) => <option key={status}>{status}</option>)}
+                                    </select>
+                                </div>
+                            </div>
+                            <div className="mt-3 grid gap-3 md:grid-cols-3">
+                                <div>
+                                    <label className="block text-xs font-bold uppercase tracking-wide text-red-600">Observação — Aberto</label>
+                                    <textarea
+                                        value={observacoesStatus.observacaoAberto}
+                                        onChange={(e) => setObservacoesStatus((atual) => ({ ...atual, observacaoAberto: e.target.value }))}
+                                        rows={3}
+                                        className="mt-2 w-full rounded-2xl border border-red-100 bg-red-50/40 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-red-100"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-xs font-bold uppercase tracking-wide text-orange-600">Observação — Em tratativa</label>
+                                    <textarea
+                                        value={observacoesStatus.observacaoTratativa}
+                                        onChange={(e) => setObservacoesStatus((atual) => ({ ...atual, observacaoTratativa: e.target.value }))}
+                                        rows={3}
+                                        className="mt-2 w-full rounded-2xl border border-orange-100 bg-orange-50/40 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-orange-100"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-xs font-bold uppercase tracking-wide text-emerald-600">Observação — Corrigido</label>
+                                    <textarea
+                                        value={observacoesStatus.observacaoCorrigido}
+                                        onChange={(e) => setObservacoesStatus((atual) => ({ ...atual, observacaoCorrigido: e.target.value }))}
+                                        rows={3}
+                                        className="mt-2 w-full rounded-2xl border border-emerald-100 bg-emerald-50/40 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-emerald-100"
+                                    />
+                                </div>
+                            </div>
+                        </div>
+
+                        {mensagem && (
+                            <div className={classNames("rounded-2xl px-3 py-2 text-xs font-bold ring-1", mensagem.includes("Erro") || mensagem.includes("Não foi possível") ? "bg-red-50 text-red-700 ring-red-200" : "bg-emerald-50 text-emerald-700 ring-emerald-200")}>
+                                {mensagem}
+                            </div>
+                        )}
+
+                        <button
+                            type="button"
+                            disabled={salvando}
+                            onClick={salvarAlteracoes}
+                            className="inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-emerald-600 px-4 py-3 text-sm font-bold text-white hover:bg-emerald-700 disabled:opacity-60"
+                        >
+                            <CheckCircle2 className="h-4 w-4" />
+                            {salvando ? "Salvando..." : "Salvar notificação e observações"}
+                        </button>
+                    </div>
+                </div>
+            )}
+        </div>
+    );
+}
+
+function DashboardAuditoriaCampo({ auditoriasCampo = [], onAuditoriaAtualizada }) {
     const [mostrarPersonalizacao, setMostrarPersonalizacao] = useState(false);
 
     const cartasPadrao = {
@@ -11399,11 +11689,13 @@ function DashboardAuditoriaCampo({ auditoriasCampo = [] }) {
                                 <div>
                                     <p className="text-sm font-bold text-slate-950">{item.colaboradorNome || "Colaborador não informado"}</p>
                                     <p className="text-xs text-slate-500">{item.empresaNome || "Empresa não informada"} · {formatarDataHora(item.createdAt)}</p>
+                                    <p className="mt-1 text-xs text-slate-400">Status do desvio: {item.statusDesvio || "Sem desvio"}</p>
                                 </div>
                                 <span className={classNames("rounded-full px-3 py-1 text-xs font-bold ring-1", classeClassificacaoAuditoriaCampo(item.classificacao))}>
                                     {item.classificacao || "Sem classificação"} · {item.pontuacao}%
                                 </span>
                             </div>
+                            <EditorNotificacaoHistoricoAuditoria auditoria={item} onAtualizada={onAuditoriaAtualizada} />
                         </div>
                     ))}
                 </div>
@@ -13683,7 +13975,7 @@ export default function App() {
                     )}
 
                     {tela === "auditoriaCampo" && (
-                        <DashboardAuditoriaCampo auditoriasCampo={auditoriasCampo} />
+                        <DashboardAuditoriaCampo auditoriasCampo={auditoriasCampo} onAuditoriaAtualizada={(atualizada) => setAuditoriasCampo((atual) => atual.map((item) => item.id === atualizada.id ? atualizada : item))} />
                     )}
 
                     {tela === "empresas" && (
