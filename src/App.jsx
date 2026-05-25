@@ -69,6 +69,119 @@ const EMAIL_DESTINATARIO_ALERTAS = import.meta.env.VITE_EMAIL_ALERTA_SST || "";
 const FUNCAO_EMAIL_ALERTA_TST = import.meta.env.VITE_FUNCAO_EMAIL_ALERTA_TST || "rapid-api";
 const LIMITE_STORAGE_MB = Number(import.meta.env.VITE_STORAGE_LIMITE_MB || 1024);
 
+const UPLOAD_BLOQUEAR_ACIMA_5MB = String(import.meta.env.VITE_BLOQUEAR_UPLOAD_ACIMA_5MB || "true") !== "false";
+const UPLOAD_LIMITE_FORTE_MB = Number(import.meta.env.VITE_UPLOAD_LIMITE_FORTE_MB || 5);
+const UPLOAD_MENSAGEM_ARQUIVO_GRANDE =
+    "O arquivo está muito grande. Para reduzir o uso de armazenamento, compacte o PDF antes de enviar. Recomendamos escanear documentos em 150 ou 200 DPI, em preto e branco ou tons de cinza quando possível.";
+
+const perfisUpload = {
+    documentoSimples: {
+        rotulo: "Documento simples",
+        limiteIdealBytes: 2 * 1024 * 1024,
+        limiteForteBytes: UPLOAD_LIMITE_FORTE_MB * 1024 * 1024,
+        recomendacao: "até 2 MB",
+    },
+    documentoExtenso: {
+        rotulo: "Documento extenso",
+        limiteIdealBytes: 5 * 1024 * 1024,
+        limiteForteBytes: UPLOAD_LIMITE_FORTE_MB * 1024 * 1024,
+        recomendacao: "até 5 MB",
+    },
+    fotoAuditoria: {
+        rotulo: "Foto / imagem",
+        limiteIdealBytes: 800 * 1024,
+        limiteForteBytes: UPLOAD_LIMITE_FORTE_MB * 1024 * 1024,
+        recomendacao: "preferencialmente até 800 KB",
+    },
+};
+
+function obterPerfilUpload(tipo = "documentoSimples") {
+    return perfisUpload[tipo] || perfisUpload.documentoSimples;
+}
+
+function analisarTamanhoArquivoUpload(arquivo, tipo = "documentoSimples") {
+    if (!arquivo) {
+        return {
+            ok: true,
+            nivel: "vazio",
+            texto: "Nenhum arquivo selecionado.",
+            classe: "bg-slate-50 text-slate-500 ring-slate-200",
+        };
+    }
+
+    const perfil = obterPerfilUpload(tipo);
+    const tamanho = Number(arquivo.size || 0);
+    const acimaForte = tamanho > perfil.limiteForteBytes;
+    const acimaIdeal = tamanho > perfil.limiteIdealBytes;
+
+    if (acimaForte) {
+        return {
+            ok: !UPLOAD_BLOQUEAR_ACIMA_5MB,
+            nivel: UPLOAD_BLOQUEAR_ACIMA_5MB ? "bloqueado" : "critico",
+            texto: `${perfil.rotulo}: ${formatarBytes(tamanho)}. Acima de ${UPLOAD_LIMITE_FORTE_MB} MB. ${UPLOAD_MENSAGEM_ARQUIVO_GRANDE}`,
+            classe: "bg-red-50 text-red-700 ring-red-200",
+        };
+    }
+
+    if (acimaIdeal) {
+        return {
+            ok: true,
+            nivel: "atencao",
+            texto: `${perfil.rotulo}: ${formatarBytes(tamanho)}. Recomendado: ${perfil.recomendacao}. ${UPLOAD_MENSAGEM_ARQUIVO_GRANDE}`,
+            classe: "bg-orange-50 text-orange-700 ring-orange-200",
+        };
+    }
+
+    return {
+        ok: true,
+        nivel: "normal",
+        texto: `${perfil.rotulo}: ${formatarBytes(tamanho)}. Dentro do recomendado (${perfil.recomendacao}).`,
+        classe: "bg-emerald-50 text-emerald-700 ring-emerald-200",
+    };
+}
+
+function validarArquivoAntesUpload(arquivo, tipo = "documentoSimples") {
+    const analise = analisarTamanhoArquivoUpload(arquivo, tipo);
+
+    if (!analise.ok) {
+        alert(analise.texto);
+        return false;
+    }
+
+    return true;
+}
+
+function validarListaArquivosAntesUpload(arquivos = [], tipo = "documentoSimples") {
+    return Array.from(arquivos || []).every((arquivo) => validarArquivoAntesUpload(arquivo, tipo));
+}
+
+function FileUploadAviso({ arquivo, arquivos, tipo = "documentoSimples" }) {
+    const lista = arquivos ? Array.from(arquivos || []) : arquivo ? [arquivo] : [];
+
+    if (!lista.length) return null;
+
+    return (
+        <div className="mt-2 space-y-1">
+            {lista.slice(0, 6).map((item) => {
+                const analise = analisarTamanhoArquivoUpload(item, tipo);
+
+                return (
+                    <div key={`${item.name}-${item.size}`} className={classNames("rounded-xl px-3 py-2 text-[11px] ring-1", analise.classe)}>
+                        <strong>{item.name}</strong> · {formatarBytes(item.size)}
+                        <br />
+                        {analise.texto}
+                    </div>
+                );
+            })}
+            {lista.length > 6 && (
+                <div className="rounded-xl bg-slate-50 px-3 py-2 text-[11px] text-slate-500 ring-1 ring-slate-200">
+                    + {lista.length - 6} arquivo(s) selecionado(s). A validação será feita antes do upload.
+                </div>
+            )}
+        </div>
+    );
+}
+
 function addDays(days) {
     const d = new Date(hoje);
     d.setDate(d.getDate() + days);
@@ -450,10 +563,23 @@ function normalizarColaborador(item) {
         fotoNome: item.foto_nome || item.fotoNome || "",
         status: item.status || "Ativo",
         statusMobilizacao: item.status_mobilizacao || item.statusMobilizacao || "",
+        dataNascimento: item.data_nascimento || item.dataNascimento || item.nascimento || "",
+        mostrarAniversarioDashboard: item.mostrar_aniversario_dashboard !== false && item.mostrarAniversarioDashboard !== false,
         treinamentosRemovidos: item.treinamentos_removidos || item.treinamentosRemovidos || [],
         treinamentosAdicionais: item.treinamentos_adicionais || item.treinamentosAdicionais || [],
         token: item.token_qr || item.token || `SST-${String(item.id).slice(0, 8)}`,
         treinamentos: item.treinamentos || [],
+    };
+}
+
+
+function normalizarDocumentoEmpresa(item) {
+    return {
+        ...item,
+        arquivo_url: item.arquivo_url || item.url_do_arquivo || "",
+        arquivo_nome: item.arquivo_nome || item.nome_do_arquivo || "",
+        url_do_arquivo: item.url_do_arquivo || item.arquivo_url || "",
+        nome_do_arquivo: item.nome_do_arquivo || item.arquivo_nome || "",
     };
 }
 
@@ -474,8 +600,8 @@ function normalizarCertificado(item) {
         nomeTreinamento: item.nome_treinamento || item.nomeTreinamento || tipoTreinamento || "",
         realizado: item.data_realizacao || item.realizado || "",
         vencimento: item.data_vencimento || item.vencimento || "",
-        arquivo: item.arquivo_nome || item.arquivo || "",
-        arquivoUrl: item.arquivo_url || item.arquivoUrl || "",
+        arquivo: item.arquivo_nome || item.nome_do_arquivo || item.arquivo || "",
+        arquivoUrl: item.arquivo_url || item.url_do_arquivo || item.arquivoUrl || "",
         observacao: item.observacao || "",
         statusValidacao: item.status_validacao || "Validado",
         createdAt: item.created_at || "",
@@ -623,6 +749,62 @@ function calcularSituacaoDocumentalEmpresa(docs = []) {
 function formatDate(dataISO) {
     if (!dataISO) return "-";
     return new Date(`${dataISO}T12:00:00`).toLocaleDateString("pt-BR");
+}
+
+function mesAniversarioColaborador(colaborador) {
+    const data = colaborador?.dataNascimento || colaborador?.data_nascimento || colaborador?.nascimento || "";
+    if (!data) return null;
+
+    const partes = String(data).slice(0, 10).split("-");
+    if (partes.length !== 3) return null;
+
+    const mes = Number(partes[1]);
+    return mes >= 1 && mes <= 12 ? mes : null;
+}
+
+function diaAniversarioColaborador(colaborador) {
+    const data = colaborador?.dataNascimento || colaborador?.data_nascimento || colaborador?.nascimento || "";
+    if (!data) return null;
+
+    const partes = String(data).slice(0, 10).split("-");
+    if (partes.length !== 3) return null;
+
+    const dia = Number(partes[2]);
+    return dia >= 1 && dia <= 31 ? dia : null;
+}
+
+function formatarAniversario(dataISO) {
+    if (!dataISO) return "-";
+    const partes = String(dataISO).slice(0, 10).split("-");
+    if (partes.length !== 3) return "-";
+    return `${partes[2]}/${partes[1]}`;
+}
+
+function proximoAniversariante(lista = []) {
+    const hojeBase = new Date();
+    const anoAtual = hojeBase.getFullYear();
+
+    const candidatos = lista
+        .map((colaborador) => {
+            const mes = mesAniversarioColaborador(colaborador);
+            const dia = diaAniversarioColaborador(colaborador);
+            if (!mes || !dia) return null;
+
+            let data = new Date(anoAtual, mes - 1, dia, 12, 0, 0);
+            if (data < new Date(anoAtual, hojeBase.getMonth(), hojeBase.getDate(), 0, 0, 0)) {
+                data = new Date(anoAtual + 1, mes - 1, dia, 12, 0, 0);
+            }
+
+            return { colaborador, data };
+        })
+        .filter(Boolean)
+        .sort((a, b) => a.data - b.data);
+
+    return candidatos[0] || null;
+}
+
+function deveMostrarAniversarioColaborador(colaborador) {
+    return colaborador?.mostrarAniversarioDashboard !== false;
 }
 
 function apenasNumeros(valor) {
@@ -1695,6 +1877,7 @@ function Dashboard({
     documentosEmpresas = [],
     auditoria = [],
     onSelectColab,
+    onRegistrarEmailEnviado,
 }) {
     const [enviandoEmail, setEnviandoEmail] = useState(false);
     const [usoStorageDashboard, setUsoStorageDashboard] = useState({
@@ -2163,13 +2346,13 @@ function Dashboard({
         const texto = normalizarTextoBusca(`${item.acao || ""} ${item.tabela || ""} ${item.descricao || ""}`);
         return texto.includes("desvio") && !texto.includes("fechado") && !texto.includes("concluido") && !texto.includes("concluído");
     }).length;
-    const aniversariantesMes = colaboradores.filter((colaborador) => {
-        const dataBase = colaborador.dataNascimento || colaborador.data_nascimento || colaborador.nascimento || "";
-        if (!dataBase) return false;
-
-        const data = new Date(`${dataBase}T12:00:00`);
-        return !Number.isNaN(data.getTime()) && data.getMonth() === mesAtual;
-    });
+    const aniversariantesElegiveis = colaboradores.filter((colaborador) =>
+        deveMostrarAniversarioColaborador(colaborador) && colaboradorContaComoMobilizado(colaborador)
+    );
+    const aniversariantesMes = aniversariantesElegiveis
+        .filter((colaborador) => mesAniversarioColaborador(colaborador) === mesAtual + 1)
+        .sort((a, b) => (diaAniversarioColaborador(a) || 99) - (diaAniversarioColaborador(b) || 99));
+    const proximoAniversarioDashboard = proximoAniversariante(aniversariantesElegiveis);
 
     const storagePercentual = calcularPercentualUsoStorage(usoStorageDashboard.totalBytes);
     const totalStorageLabel = carregandoStorageDashboard ? "Carregando..." : formatarBytes(usoStorageDashboard.totalBytes);
@@ -2185,7 +2368,7 @@ function Dashboard({
         { chave: "treinamentosVencidos", label: "Treinamentos vencidos", valor: indicadores.vencidos, icon: AlertTriangle, detalhe: "Colaboradores" },
         { chave: "colaboradoresBloqueados", label: "Colaboradores bloqueados", valor: colaboradoresBloqueados, icon: Lock, detalhe: "Pendência bloqueante" },
         { chave: "desviosAbertos", label: "Desvios abertos", valor: desviosAbertos, icon: AlertTriangle, detalhe: "Registros não concluídos" },
-        { chave: "aniversariantesMes", label: "Aniversariantes do mês", valor: aniversariantesMes.length, icon: UserRound, detalhe: "Campo nascimento" },
+        { chave: "aniversariantesMes", label: "Aniversariantes do mês", valor: aniversariantesMes.length, icon: UserRound, detalhe: proximoAniversarioDashboard ? `Próximo: ${proximoAniversarioDashboard.colaborador.nome} (${formatarAniversario(proximoAniversarioDashboard.colaborador.dataNascimento)})` : "Sem aniversariantes no mês" },
         { chave: "armazenamentoUtilizado", label: "Armazenamento utilizado", valor: totalStorageLabel, icon: Upload, detalhe: `${storagePercentual}% do limite visual` },
     ];
 
@@ -2532,6 +2715,17 @@ function Dashboard({
 
             if (error || data?.ok === false) {
                 console.error("Erro ao enviar alerta por e-mail:", error || data);
+                await onRegistrarEmailEnviado?.({
+                    empresaId: item.colaborador?.empresaId || null,
+                    colaboradorId: item.colaborador?.id || null,
+                    documentoId: item.realizado?.id || null,
+                    destinatario: payload.para,
+                    assunto: payload.assunto,
+                    tipoAlerta: "Pendência crítica",
+                    documento: item.treinamento?.nome || "Documento não informado",
+                    statusEnvio: "Erro",
+                    erro: error?.message || data?.erro || "Falha na função de e-mail.",
+                });
 
                 if (mostrarMensagem) {
                     alert(`Erro ao enviar alerta por e-mail: ${error?.message || data?.erro || "Falha na função de e-mail."}`);
@@ -2541,6 +2735,17 @@ function Dashboard({
             }
 
             console.log("Alerta enviado por e-mail:", data);
+            await onRegistrarEmailEnviado?.({
+                empresaId: item.colaborador?.empresaId || null,
+                colaboradorId: item.colaborador?.id || null,
+                documentoId: item.realizado?.id || null,
+                destinatario: payload.para,
+                assunto: payload.assunto,
+                tipoAlerta: "Pendência crítica",
+                documento: item.treinamento?.nome || "Documento não informado",
+                statusEnvio: "Sucesso",
+                erro: "",
+            });
 
             if (mostrarMensagem) {
                 alert(`Alerta enviado para ${payload.para}.`);
@@ -2549,6 +2754,18 @@ function Dashboard({
             return true;
         } catch (erro) {
             console.error("Falha inesperada ao enviar e-mail:", erro);
+            const payloadErro = montarPayloadEmailPendencia(item);
+            await onRegistrarEmailEnviado?.({
+                empresaId: item.colaborador?.empresaId || null,
+                colaboradorId: item.colaborador?.id || null,
+                documentoId: item.realizado?.id || null,
+                destinatario: payloadErro.para,
+                assunto: payloadErro.assunto,
+                tipoAlerta: "Pendência crítica",
+                documento: item.treinamento?.nome || "Documento não informado",
+                statusEnvio: "Erro",
+                erro: erro?.message || String(erro),
+            });
 
             if (mostrarMensagem) {
                 alert("Falha inesperada ao enviar e-mail.");
@@ -2720,6 +2937,15 @@ function Dashboard({
                                             <p className="text-sm font-medium text-slate-500">{item.label}</p>
                                             <p className={classNames("mt-2 break-words font-bold text-slate-950", classeValorCartaDashboard(item.chave))}>{item.valor}</p>
                                             <p className="mt-1 text-xs text-slate-400">{item.detalhe}</p>
+                                            {item.chave === "aniversariantesMes" && aniversariantesMes.length > 0 && (
+                                                <div className="mt-3 space-y-1 text-[11px] text-slate-500">
+                                                    {aniversariantesMes.slice(0, 4).map((colaborador) => (
+                                                        <div key={colaborador.id} className="truncate rounded-xl bg-slate-50 px-2 py-1 ring-1 ring-slate-100">
+                                                            {formatarAniversario(colaborador.dataNascimento)} · {colaborador.nome}
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            )}
                                         </div>
                                         <div className={classNames(
                                             "shrink-0 rounded-2xl bg-slate-100 p-3 text-slate-700",
@@ -3508,6 +3734,8 @@ function Colaboradores({
         empresaNome: "",
         funcao: "",
         matricula: "",
+        dataNascimento: "",
+        mostrarAniversarioDashboard: true,
         statusMobilizacao: obterStatusInicialColaborador(),
         treinamentosRemovidos: [],
         treinamentosAdicionais: [],
@@ -3633,6 +3861,8 @@ function Colaboradores({
             empresaNome: novo.empresaNome.trim(),
             funcao: novo.funcao.trim(),
             matricula: novo.matricula.trim(),
+            dataNascimento: novo.dataNascimento || "",
+            mostrarAniversarioDashboard: novo.mostrarAniversarioDashboard !== false,
             statusMobilizacao: novo.statusMobilizacao,
             treinamentosRemovidos: novo.treinamentosRemovidos || [],
             treinamentosAdicionais: novo.treinamentosAdicionais || [],
@@ -3649,6 +3879,8 @@ function Colaboradores({
                 empresaNome: "",
                 funcao: "",
                 matricula: "",
+                dataNascimento: "",
+                mostrarAniversarioDashboard: true,
                 statusMobilizacao: obterStatusInicialColaborador(),
                 treinamentosRemovidos: [],
                 treinamentosAdicionais: [],
@@ -3805,6 +4037,8 @@ function Colaboradores({
             empresaNome: colaborador.empresa || "",
             funcao: colaborador.funcao || "",
             matricula: colaborador.matricula === "-" ? "" : colaborador.matricula || "",
+            dataNascimento: colaborador.dataNascimento || "",
+            mostrarAniversarioDashboard: colaborador.mostrarAniversarioDashboard !== false,
             codigoFuncionario: colaborador.codigoFuncionario || "",
             status: colaborador.status || "Ativo",
             statusMobilizacao: colaborador.statusMobilizacao || obterStatusInicialColaborador(),
@@ -3830,6 +4064,8 @@ function Colaboradores({
             empresaNome: colaboradorEdicao.empresaNome.trim(),
             funcao: colaboradorEdicao.funcao.trim(),
             matricula: colaboradorEdicao.matricula.trim(),
+            dataNascimento: colaboradorEdicao.dataNascimento || "",
+            mostrarAniversarioDashboard: colaboradorEdicao.mostrarAniversarioDashboard !== false,
             status: colaboradorEdicao.status || "Ativo",
             statusMobilizacao: colaboradorEdicao.statusMobilizacao || obterStatusInicialColaborador(),
             treinamentosRemovidos: colaboradorEdicao.treinamentosRemovidos || [],
@@ -3940,6 +4176,29 @@ function Colaboradores({
                             <p className="mt-1 text-xs text-slate-400">
                                 Liberado e Com pendência entram como mobilização ativa. Bloqueado, Em análise, Desmobilizado e Inativo ficam fora da contagem de mobilizados.
                             </p>
+                        </div>
+
+                        <div className="grid gap-3 sm:grid-cols-[1fr_auto] sm:items-end">
+                            <div>
+                                <label className="mb-1 block text-xs font-bold uppercase tracking-wide text-slate-500">
+                                    Data de nascimento
+                                </label>
+                                <input
+                                    type="date"
+                                    value={novo.dataNascimento}
+                                    onChange={(e) => setNovo({ ...novo, dataNascimento: e.target.value })}
+                                    className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none focus:border-slate-400 focus:ring-4 focus:ring-slate-100"
+                                />
+                            </div>
+                            <label className="flex min-h-[46px] cursor-pointer items-center gap-2 rounded-2xl bg-slate-50 px-3 py-2 text-xs font-semibold text-slate-600 ring-1 ring-slate-200">
+                                <input
+                                    type="checkbox"
+                                    checked={novo.mostrarAniversarioDashboard !== false}
+                                    onChange={(e) => setNovo({ ...novo, mostrarAniversarioDashboard: e.target.checked })}
+                                    className="h-4 w-4 rounded border-slate-300"
+                                />
+                                Mostrar em aniversariantes
+                            </label>
                         </div>
 
                         <div>
@@ -4057,9 +4316,17 @@ function Colaboradores({
                                 type="file"
                                 accept="image/png,image/jpeg,image/webp"
                                 className="hidden"
-                                onChange={(e) => setNovo({ ...novo, foto: e.target.files?.[0] || null })}
+                                onChange={(e) => {
+                                    const arquivo = e.target.files?.[0] || null;
+                                    if (arquivo && !validarArquivoAntesUpload(arquivo, "fotoAuditoria")) {
+                                        e.target.value = "";
+                                        return;
+                                    }
+                                    setNovo({ ...novo, foto: arquivo });
+                                }}
                             />
                         </label>
+                        <FileUploadAviso arquivo={novo.foto} tipo="fotoAuditoria" />
 
                         <div className="rounded-2xl border border-blue-100 bg-blue-50 p-3">
                             <label className="flex cursor-pointer items-center justify-center gap-2 rounded-2xl border border-dashed border-blue-200 bg-white px-4 py-4 text-sm font-semibold text-blue-700 hover:bg-blue-50">
@@ -4072,14 +4339,20 @@ function Colaboradores({
                                     multiple
                                     accept="application/pdf,image/png,image/jpeg,image/webp"
                                     className="hidden"
-                                    onChange={(e) =>
+                                    onChange={(e) => {
+                                        const arquivos = Array.from(e.target.files || []);
+                                        if (!validarListaArquivosAntesUpload(arquivos, "documentoSimples")) {
+                                            e.target.value = "";
+                                            return;
+                                        }
                                         setNovo({
                                             ...novo,
-                                            documentosMassa: Array.from(e.target.files || []),
-                                        })
-                                    }
+                                            documentosMassa: arquivos,
+                                        });
+                                    }}
                                 />
                             </label>
+                            <FileUploadAviso arquivos={novo.documentosMassa} tipo="documentoSimples" />
 
                             <p className="mt-2 text-[11px] leading-relaxed text-blue-900">
                                 O sistema identifica o treinamento pelo nome do arquivo, por exemplo: ASO, EPI, INTEGRAÇÃO, NR-06, NR-11, NR-12, NR-18, NR-21, NR-25, NR-26, REGISTRO ou OS.
@@ -4600,6 +4873,26 @@ function Colaboradores({
                                     </select>
                                 </div>
 
+                                <div>
+                                    <label className="mb-1 block text-xs font-bold uppercase tracking-wide text-slate-500">Data de nascimento</label>
+                                    <input
+                                        type="date"
+                                        value={colaboradorEdicao.dataNascimento || ""}
+                                        onChange={(e) => setColaboradorEdicao({ ...colaboradorEdicao, dataNascimento: e.target.value })}
+                                        className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none focus:border-slate-400 focus:ring-4 focus:ring-slate-100"
+                                    />
+                                </div>
+
+                                <label className="flex min-h-[46px] cursor-pointer items-center gap-2 rounded-2xl bg-slate-50 px-3 py-2 text-xs font-semibold text-slate-600 ring-1 ring-slate-200">
+                                    <input
+                                        type="checkbox"
+                                        checked={colaboradorEdicao.mostrarAniversarioDashboard !== false}
+                                        onChange={(e) => setColaboradorEdicao({ ...colaboradorEdicao, mostrarAniversarioDashboard: e.target.checked })}
+                                        className="h-4 w-4 rounded border-slate-300"
+                                    />
+                                    Mostrar em aniversariantes do mês
+                                </label>
+
                                 <div className="md:col-span-2 rounded-2xl bg-slate-50 p-3">
                                     <div className="flex flex-wrap items-center justify-between gap-2">
                                         <p className="text-xs font-bold uppercase tracking-wide text-slate-500">
@@ -4675,9 +4968,17 @@ function Colaboradores({
                                             type="file"
                                             accept="image/png,image/jpeg,image/webp"
                                             className="hidden"
-                                            onChange={(e) => setColaboradorEdicao({ ...colaboradorEdicao, foto: e.target.files?.[0] || null })}
+                                            onChange={(e) => {
+                                                const arquivo = e.target.files?.[0] || null;
+                                                if (arquivo && !validarArquivoAntesUpload(arquivo, "fotoAuditoria")) {
+                                                    e.target.value = "";
+                                                    return;
+                                                }
+                                                setColaboradorEdicao({ ...colaboradorEdicao, foto: arquivo });
+                                            }}
                                         />
                                     </label>
+                                    <FileUploadAviso arquivo={colaboradorEdicao.foto} tipo="fotoAuditoria" />
                                 </div>
                             </div>
                         </div>
@@ -4873,6 +5174,7 @@ function Treinamentos({
     onExcluirCertificado,
     onAtualizarDatasCertificado,
     onSincronizarStorage,
+    onRegistrarEmailEnviado,
 }) {
     const [colabId, setColabId] = useState(
         () =>
@@ -4991,6 +5293,11 @@ function Treinamentos({
     const prepararArquivosLote = async (listaArquivos) => {
         const arquivos = Array.from(listaArquivos || []);
 
+        if (!validarListaArquivosAntesUpload(arquivos, "documentoSimples")) {
+            setArquivosLote([]);
+            return;
+        }
+
         if (!colabSelecionado?.codigoFuncionario) {
             alert("Selecione o colaborador antes de enviar documentos em massa.");
             return;
@@ -5083,10 +5390,14 @@ function Treinamentos({
     };
 
     const selecionarArquivoCertificado = async (arquivo) => {
-        setArquivoSelecionado(arquivo || null);
+        setArquivoSelecionado(null);
         setSugestaoDataArquivo(null);
 
         if (!arquivo) return;
+
+        if (!validarArquivoAntesUpload(arquivo, "documentoSimples")) return;
+
+        setArquivoSelecionado(arquivo);
 
         const sugestao = await detectarDataEmissaoArquivo(arquivo);
 
@@ -5435,12 +5746,46 @@ function Treinamentos({
             });
 
             if (error || data?.ok === false) {
+                await onRegistrarEmailEnviado?.({
+                    empresaId: grupo.empresaId || null,
+                    colaboradorId: null,
+                    documentoId: null,
+                    destinatario,
+                    assunto,
+                    tipoAlerta: "Alerta TST por empresa",
+                    documento: itens.map((item) => item.treinamento).filter(Boolean).join(" | ").slice(0, 500),
+                    statusEnvio: "Erro",
+                    erro: error?.message || data?.erro || `Falha na função ${FUNCAO_EMAIL_ALERTA_TST}.`,
+                });
                 alert(`Erro ao enviar e-mail pela aba Treinamentos: ${error?.message || data?.erro || `Falha na função ${FUNCAO_EMAIL_ALERTA_TST}.`}\n\nConfirme se a Edge Function está publicada e se as secrets GMAIL_USER e GMAIL_APP_PASSWORD estão configuradas.`);
                 return;
             }
 
+            await onRegistrarEmailEnviado?.({
+                empresaId: grupo.empresaId || null,
+                colaboradorId: null,
+                documentoId: null,
+                destinatario,
+                assunto,
+                tipoAlerta: "Alerta TST por empresa",
+                documento: itens.map((item) => item.treinamento).filter(Boolean).join(" | ").slice(0, 500),
+                statusEnvio: "Sucesso",
+                erro: "",
+            });
+
             alert(`Aviso enviado com sucesso para ${destinatario}.`);
         } catch (error) {
+            await onRegistrarEmailEnviado?.({
+                empresaId: grupo.empresaId || null,
+                colaboradorId: null,
+                documentoId: null,
+                destinatario,
+                assunto,
+                tipoAlerta: "Alerta TST por empresa",
+                documento: (grupo.itens || []).map((item) => item.treinamento).filter(Boolean).join(" | ").slice(0, 500),
+                statusEnvio: "Erro",
+                erro: error?.message || String(error),
+            });
             alert(`Falha inesperada ao enviar e-mail: ${error?.message || String(error)}`);
         } finally {
             setEnviandoAlertaTst(false);
@@ -5675,6 +6020,7 @@ function Treinamentos({
                                 onChange={(e) => selecionarArquivoCertificado(e.target.files?.[0] || null)}
                             />
                         </label>
+                        <FileUploadAviso arquivo={arquivoSelecionado} tipo="documentoSimples" />
 
                         {sugestaoDataArquivo && (
                             <div className={classNames(
@@ -5718,6 +6064,7 @@ function Treinamentos({
                                     onChange={(e) => prepararArquivosLote(e.target.files)}
                                 />
                             </label>
+                            <FileUploadAviso arquivos={arquivosLote.map((item) => item.arquivo)} tipo="documentoSimples" />
 
                             <button
                                 type="button"
@@ -6823,6 +7170,8 @@ function Empresas({
     const enviarDocumentoPelaRevisao = async (empresa, tipo, arquivo) => {
         if (!arquivo) return;
 
+        if (!validarArquivoAntesUpload(arquivo, "documentoExtenso")) return;
+
         const dados = obterUploadRevisao(tipo);
         const chave = `${empresa.id}-${tipo}`;
 
@@ -7397,9 +7746,17 @@ function Empresas({
                                     type="file"
                                     accept="image/png,image/jpeg,image/webp,image/svg+xml"
                                     className="hidden"
-                                    onChange={(e) => setNovaEmpresa({ ...novaEmpresa, logo: e.target.files?.[0] || null })}
+                                    onChange={(e) => {
+                                        const arquivo = e.target.files?.[0] || null;
+                                        if (arquivo && !validarArquivoAntesUpload(arquivo, "fotoAuditoria")) {
+                                            e.target.value = "";
+                                            return;
+                                        }
+                                        setNovaEmpresa({ ...novaEmpresa, logo: arquivo });
+                                    }}
                                 />
                             </label>
+                            <FileUploadAviso arquivo={novaEmpresa.logo} tipo="fotoAuditoria" />
 
                             <label className="flex cursor-pointer items-center justify-center gap-2 rounded-2xl border border-dashed border-blue-200 bg-blue-50 px-4 py-4 text-sm font-semibold text-blue-700 hover:bg-blue-100">
                                 <Upload className="h-4 w-4" />
@@ -7408,9 +7765,17 @@ function Empresas({
                                     type="file"
                                     accept="application/pdf,image/png,image/jpeg,image/webp"
                                     className="hidden"
-                                    onChange={(e) => setNovaEmpresa({ ...novaEmpresa, contratoArquivo: e.target.files?.[0] || null })}
+                                    onChange={(e) => {
+                                        const arquivo = e.target.files?.[0] || null;
+                                        if (arquivo && !validarArquivoAntesUpload(arquivo, "documentoExtenso")) {
+                                            e.target.value = "";
+                                            return;
+                                        }
+                                        setNovaEmpresa({ ...novaEmpresa, contratoArquivo: arquivo });
+                                    }}
                                 />
                             </label>
+                            <FileUploadAviso arquivo={novaEmpresa.contratoArquivo} tipo="documentoExtenso" />
 
                             <div className="grid gap-3 md:grid-cols-2">
                                 <input
@@ -7540,9 +7905,17 @@ function Empresas({
                                     type="file"
                                     accept="application/pdf,image/*"
                                     className="hidden"
-                                    onChange={(e) => setNovoDoc({ ...novoDoc, arquivo: e.target.files?.[0] || null })}
+                                    onChange={(e) => {
+                                        const arquivo = e.target.files?.[0] || null;
+                                        if (arquivo && !validarArquivoAntesUpload(arquivo, "documentoExtenso")) {
+                                            e.target.value = "";
+                                            return;
+                                        }
+                                        setNovoDoc({ ...novoDoc, arquivo });
+                                    }}
                                 />
                             </label>
+                            <FileUploadAviso arquivo={novoDoc.arquivo} tipo="documentoExtenso" />
 
                             <textarea
                                 value={novoDoc.observacao}
@@ -7892,9 +8265,17 @@ function Empresas({
                                             type="file"
                                             accept="image/png,image/jpeg,image/webp,image/svg+xml"
                                             className="hidden"
-                                            onChange={(e) => setEmpresaEdicao({ ...empresaEdicao, logo: e.target.files?.[0] || null })}
+                                            onChange={(e) => {
+                                                const arquivo = e.target.files?.[0] || null;
+                                                if (arquivo && !validarArquivoAntesUpload(arquivo, "fotoAuditoria")) {
+                                                    e.target.value = "";
+                                                    return;
+                                                }
+                                                setEmpresaEdicao({ ...empresaEdicao, logo: arquivo });
+                                            }}
                                         />
                                     </label>
+                                    <FileUploadAviso arquivo={empresaEdicao.logo} tipo="fotoAuditoria" />
                                 </div>
 
                                 <div className="md:col-span-2">
@@ -7906,9 +8287,17 @@ function Empresas({
                                             type="file"
                                             accept="application/pdf,image/png,image/jpeg,image/webp"
                                             className="hidden"
-                                            onChange={(e) => setEmpresaEdicao({ ...empresaEdicao, contratoArquivo: e.target.files?.[0] || null })}
+                                            onChange={(e) => {
+                                                const arquivo = e.target.files?.[0] || null;
+                                                if (arquivo && !validarArquivoAntesUpload(arquivo, "documentoExtenso")) {
+                                                    e.target.value = "";
+                                                    return;
+                                                }
+                                                setEmpresaEdicao({ ...empresaEdicao, contratoArquivo: arquivo });
+                                            }}
                                         />
                                     </label>
+                                    <FileUploadAviso arquivo={empresaEdicao.contratoArquivo} tipo="documentoExtenso" />
                                     {empresaEdicao.contratoUrlAtual && (
                                         <button
                                             type="button"
@@ -8207,6 +8596,154 @@ function Requisitos() {
     );
 }
 
+
+function Aniversariantes({ colaboradores = [], empresasBanco = [] }) {
+    const mesAtual = hoje.getMonth() + 1;
+    const [mes, setMes] = useState(String(mesAtual).padStart(2, "0"));
+    const [empresa, setEmpresa] = useState("Todas");
+    const [funcao, setFuncao] = useState("Todas");
+    const [status, setStatus] = useState("Todos");
+
+    const colaboradoresElegiveis = colaboradores.filter((colaborador) =>
+        deveMostrarAniversarioColaborador(colaborador) && colaboradorContaComoMobilizado(colaborador)
+    );
+
+    const opcoesEmpresa = ["Todas", ...Array.from(new Set(colaboradoresElegiveis.map((c) => c.empresaExibicao || c.empresa).filter(Boolean))).sort()];
+    const opcoesFuncao = ["Todas", ...Array.from(new Set(colaboradoresElegiveis.map((c) => c.funcao).filter(Boolean))).sort()];
+    const opcoesStatus = ["Todos", ...STATUS_CLASSIFICACAO_COLABORADOR];
+
+    const filtrados = colaboradoresElegiveis
+        .filter((colaborador) => {
+            const mesColaborador = mesAniversarioColaborador(colaborador);
+            const statusColaborador = statusGeral(colaborador).texto;
+            const empresaColaborador = colaborador.empresaExibicao || colaborador.empresa;
+
+            return (
+                (!mes || String(mesColaborador).padStart(2, "0") === mes) &&
+                (empresa === "Todas" || empresaColaborador === empresa) &&
+                (funcao === "Todas" || colaborador.funcao === funcao) &&
+                (status === "Todos" || statusColaborador === status)
+            );
+        })
+        .sort((a, b) => (diaAniversarioColaborador(a) || 99) - (diaAniversarioColaborador(b) || 99) || a.nome.localeCompare(b.nome));
+
+    const proximo = proximoAniversariante(colaboradoresElegiveis);
+
+    const exportarCSVAniversariantes = () => {
+        const linhas = [
+            ["Nome", "Empresa", "Função", "Data de aniversário", "Dia", "Status"],
+            ...filtrados.map((colaborador) => [
+                colaborador.nome,
+                colaborador.empresaExibicao || colaborador.empresa,
+                colaborador.funcao,
+                formatarAniversario(colaborador.dataNascimento),
+                diaAniversarioColaborador(colaborador) || "",
+                statusGeral(colaborador).texto,
+            ]),
+        ];
+
+        baixarCSV("aniversariantes.csv", linhas);
+    };
+
+    return (
+        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
+            <Header
+                titulo="Aniversariantes"
+                subtitulo="Lista mensal considerando apenas colaboradores ativos/mobilizados e autorizados para aparecer no painel."
+                acao={(
+                    <button
+                        type="button"
+                        onClick={exportarCSVAniversariantes}
+                        className="inline-flex items-center gap-2 rounded-2xl bg-slate-950 px-4 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-slate-800"
+                    >
+                        <Download className="h-4 w-4" />
+                        Exportar CSV
+                    </button>
+                )}
+            />
+
+            <div className="mb-5 grid gap-4 md:grid-cols-3">
+                <Card>
+                    <p className="text-sm font-semibold text-slate-500">Aniversariantes filtrados</p>
+                    <p className="mt-2 text-3xl font-bold text-slate-950">{filtrados.length}</p>
+                </Card>
+                <Card>
+                    <p className="text-sm font-semibold text-slate-500">Próximo aniversário</p>
+                    <p className="mt-2 text-lg font-bold text-slate-950">{proximo?.colaborador?.nome || "-"}</p>
+                    <p className="mt-1 text-sm text-slate-500">{proximo ? formatarAniversario(proximo.colaborador.dataNascimento) : "Sem data cadastrada"}</p>
+                </Card>
+                <Card>
+                    <p className="text-sm font-semibold text-slate-500">Exportação</p>
+                    <p className="mt-2 text-sm text-slate-600">PDF e Excel nativo ficam como evolução futura. Nesta etapa, o CSV já pode ser aberto no Excel.</p>
+                </Card>
+            </div>
+
+            <Card className="mb-5">
+                <div className="grid gap-3 md:grid-cols-4">
+                    <select value={mes} onChange={(e) => setMes(e.target.value)} className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none focus:border-slate-400 focus:ring-4 focus:ring-slate-100">
+                        {Array.from({ length: 12 }).map((_, index) => {
+                            const valor = String(index + 1).padStart(2, "0");
+                            const nomeMes = new Date(2026, index, 1).toLocaleDateString("pt-BR", { month: "long" });
+                            return <option key={valor} value={valor}>{nomeMes}</option>;
+                        })}
+                    </select>
+
+                    <select value={empresa} onChange={(e) => setEmpresa(e.target.value)} className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none focus:border-slate-400 focus:ring-4 focus:ring-slate-100">
+                        {opcoesEmpresa.map((item) => <option key={item}>{item}</option>)}
+                    </select>
+
+                    <select value={funcao} onChange={(e) => setFuncao(e.target.value)} className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none focus:border-slate-400 focus:ring-4 focus:ring-slate-100">
+                        {opcoesFuncao.map((item) => <option key={item}>{item}</option>)}
+                    </select>
+
+                    <select value={status} onChange={(e) => setStatus(e.target.value)} className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none focus:border-slate-400 focus:ring-4 focus:ring-slate-100">
+                        {opcoesStatus.map((item) => <option key={item}>{item}</option>)}
+                    </select>
+                </div>
+            </Card>
+
+            <Card>
+                <div className="overflow-x-auto scrollbar-discreta">
+                    <table className="min-w-[860px] w-full text-left text-sm">
+                        <thead className="bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
+                            <tr>
+                                <th className="px-4 py-3">Nome</th>
+                                <th className="px-4 py-3">Empresa</th>
+                                <th className="px-4 py-3">Função</th>
+                                <th className="px-4 py-3">Data de aniversário</th>
+                                <th className="px-4 py-3">Dia</th>
+                                <th className="px-4 py-3">Status</th>
+                            </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-100 bg-white">
+                            {filtrados.length === 0 && (
+                                <tr>
+                                    <td colSpan={6} className="px-4 py-8 text-center text-sm text-slate-500">Nenhum aniversariante encontrado para os filtros selecionados.</td>
+                                </tr>
+                            )}
+                            {filtrados.map((colaborador) => {
+                                const statusColaborador = statusGeral(colaborador);
+                                return (
+                                    <tr key={colaborador.id} className="hover:bg-slate-50">
+                                        <td className="px-4 py-3 font-semibold text-slate-950">{colaborador.nome}</td>
+                                        <td className="px-4 py-3 text-slate-600">{colaborador.empresaExibicao || colaborador.empresa}</td>
+                                        <td className="px-4 py-3 text-slate-600">{colaborador.funcao}</td>
+                                        <td className="px-4 py-3 text-slate-600">{formatarAniversario(colaborador.dataNascimento)}</td>
+                                        <td className="px-4 py-3 text-slate-600">{diaAniversarioColaborador(colaborador)}</td>
+                                        <td className="px-4 py-3">
+                                            <span className={classNames("rounded-full px-3 py-1 text-xs font-bold ring-1", statusColaborador.classe)}>{statusColaborador.texto}</span>
+                                        </td>
+                                    </tr>
+                                );
+                            })}
+                        </tbody>
+                    </table>
+                </div>
+            </Card>
+        </motion.div>
+    );
+}
+
 function AuditoriaAcessoNegado() {
     return (
         <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
@@ -8312,6 +8849,7 @@ function AuditoriaBloqueada({ onLiberar }) {
 
 function RelatorioAuditoria({
     auditoria = [],
+    emailsEnviados = [],
     carregando,
     onAtualizar,
     onListarArquivosStorage,
@@ -8379,9 +8917,16 @@ function RelatorioAuditoria({
         .sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0))
         .slice(0, 8);
 
-    const ultimosEmailsAuditoria = auditoria
-        .filter((item) => normalizarTextoBusca(`${item.acao || ""} ${item.descricao || ""}`).includes("email"))
-        .sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0))
+    const mesAtualEmails = hoje.getMonth();
+    const anoAtualEmails = hoje.getFullYear();
+    const emailsMesAuditoria = emailsEnviados.filter((item) => {
+        const data = item.data_envio ? new Date(item.data_envio) : null;
+        return data && data.getMonth() === mesAtualEmails && data.getFullYear() === anoAtualEmails;
+    });
+    const emailsSucessoAuditoria = emailsMesAuditoria.filter((item) => normalizarTextoBusca(item.status_envio).includes("sucesso"));
+    const emailsErroAuditoria = emailsMesAuditoria.filter((item) => normalizarTextoBusca(item.status_envio).includes("erro"));
+    const ultimosEmailsAuditoria = [...emailsEnviados]
+        .sort((a, b) => new Date(b.data_envio || 0) - new Date(a.data_envio || 0))
         .slice(0, 8);
 
     const obterEmpresaArquivoStorage = (arquivo) =>
@@ -8672,6 +9217,18 @@ function RelatorioAuditoria({
                         {auditoria.filter((item) => ["INSERT", "UPDATE", "DELETE"].includes(item.acao)).length}
                     </p>
                 </CardRecolhivel>
+
+                <CardRecolhivel titulo="E-mails no mês" defaultOpen compacto>
+                    <p className="text-3xl font-bold text-blue-700">{emailsMesAuditoria.length}</p>
+                </CardRecolhivel>
+
+                <CardRecolhivel titulo="E-mails com sucesso" defaultOpen compacto>
+                    <p className="text-3xl font-bold text-emerald-700">{emailsSucessoAuditoria.length}</p>
+                </CardRecolhivel>
+
+                <CardRecolhivel titulo="E-mails com erro" defaultOpen compacto>
+                    <p className="text-3xl font-bold text-red-700">{emailsErroAuditoria.length}</p>
+                </CardRecolhivel>
             </div>
 
             <div className="mt-5 grid gap-5 xl:grid-cols-2">
@@ -8723,13 +9280,25 @@ function RelatorioAuditoria({
                         {ultimosEmailsAuditoria.map((item) => (
                             <div key={item.id} className="rounded-2xl bg-slate-50 p-3 text-sm ring-1 ring-slate-100">
                                 <div className="flex flex-wrap items-center justify-between gap-2">
-                                    <p className="font-semibold text-slate-950">{item.usuario_email || "Sistema"}</p>
-                                    <span className="rounded-full bg-white px-2 py-0.5 text-[10px] font-bold text-slate-600 ring-1 ring-slate-200">{item.acao || "E-MAIL"}</span>
+                                    <p className="font-semibold text-slate-950">{item.destinatario || "Destinatário não informado"}</p>
+                                    <span className={classNames(
+                                        "rounded-full px-2 py-0.5 text-[10px] font-bold ring-1",
+                                        normalizarTextoBusca(item.status_envio).includes("erro")
+                                            ? "bg-red-50 text-red-700 ring-red-200"
+                                            : "bg-emerald-50 text-emerald-700 ring-emerald-200"
+                                    )}>
+                                        {item.status_envio || "E-mail"}
+                                    </span>
                                 </div>
                                 <p className="mt-1 text-xs text-slate-500">
-                                    {item.created_at ? new Date(item.created_at).toLocaleString("pt-BR") : "-"}
+                                    {item.data_envio ? new Date(item.data_envio).toLocaleString("pt-BR") : "-"}
+                                    {item.enviado_por ? ` · por ${item.enviado_por}` : ""}
                                 </p>
-                                <p className="mt-1 line-clamp-2 text-xs text-slate-500">{item.descricao || "Envio registrado"}</p>
+                                <p className="mt-1 line-clamp-2 text-xs text-slate-500">
+                                    {item.assunto || "Sem assunto"}
+                                    {item.documento ? ` · ${item.documento}` : ""}
+                                </p>
+                                {item.erro && <p className="mt-1 text-xs font-semibold text-red-700">Erro: {item.erro}</p>}
                             </div>
                         ))}
                     </div>
@@ -9368,6 +9937,7 @@ export default function App() {
     const [carregandoConsultaPublica, setCarregandoConsultaPublica] = useState(false);
     const [erroConsultaPublica, setErroConsultaPublica] = useState("");
     const [auditoria, setAuditoria] = useState([]);
+    const [emailsEnviados, setEmailsEnviados] = useState([]);
     const [carregandoAuditoria, setCarregandoAuditoria] = useState(false);
     const [podeAcessarAuditoria, setPodeAcessarAuditoria] = useState(false);
     const [verificandoAcessoAuditoria, setVerificandoAcessoAuditoria] = useState(false);
@@ -9396,15 +9966,16 @@ export default function App() {
     const carregarDocumentosEmpresas = useCallback(async () => {
         const { data, error } = await supabase
             .from("documentos_empresas")
-            .select("id, empresa_id, tipo_documento, data_emissao, data_vencimento, arquivo_url, arquivo_nome, observacao, status_validacao, created_at")
+            .select("*")
             .order("created_at", { ascending: false });
 
         if (error) {
             throw new Error(`Erro ao carregar documentos das empresas: ${error.message}`);
         }
 
-        setDocumentosEmpresas(data || []);
-        return data || [];
+        const normalizados = (data || []).map(normalizarDocumentoEmpresa);
+        setDocumentosEmpresas(normalizados);
+        return normalizados;
     }, []);
 
     const carregarAuditoria = useCallback(async () => {
@@ -9427,6 +9998,53 @@ export default function App() {
         setAuditoria(data || []);
         return data || [];
     }, []);
+
+
+    const carregarEmailsEnviados = useCallback(async () => {
+        const { data, error } = await supabase
+            .from("emails_enviados")
+            .select("id, empresa_id, colaborador_id, documento_id, destinatario, assunto, tipo_alerta, documento, status_envio, erro, data_envio, enviado_por")
+            .order("data_envio", { ascending: false })
+            .limit(300);
+
+        if (error) {
+            console.warn("Erro ao carregar histórico de e-mails:", error.message);
+            setEmailsEnviados([]);
+            return [];
+        }
+
+        setEmailsEnviados(data || []);
+        return data || [];
+    }, []);
+
+    const registrarEmailEnviado = useCallback(
+        async ({ empresaId = null, colaboradorId = null, documentoId = null, destinatario = "", assunto = "", tipoAlerta = "", documento = "", statusEnvio = "", erro = "" } = {}) => {
+            const payload = {
+                empresa_id: empresaId || null,
+                colaborador_id: colaboradorId || null,
+                documento_id: documentoId || null,
+                destinatario: destinatario || null,
+                assunto: assunto || null,
+                tipo_alerta: tipoAlerta || null,
+                documento: documento || null,
+                status_envio: statusEnvio || "Registrado",
+                erro: erro || null,
+                data_envio: new Date().toISOString(),
+                enviado_por: usuario?.email || null,
+            };
+
+            const { error } = await supabase.from("emails_enviados").insert(payload);
+
+            if (error) {
+                console.warn("Erro ao registrar histórico de e-mail:", error.message);
+                return false;
+            }
+
+            setEmailsEnviados((atual) => [{ id: `${Date.now()}`, ...payload }, ...atual].slice(0, 300));
+            return true;
+        },
+        [usuario?.email]
+    );
 
     const registrarAuditoria = useCallback(
         async (acao, tabela, descricao, registroId = null, dados = {}) => {
@@ -9609,6 +10227,8 @@ export default function App() {
           matricula,
           codigo_funcionario,
           status_mobilizacao,
+          data_nascimento,
+          mostrar_aniversario_dashboard,
           treinamentos_removidos,
           treinamentos_adicionais,
           foto_url,
@@ -9661,7 +10281,7 @@ export default function App() {
             if (idsColaboradores.length > 0) {
                 const { data: certificadosData, error: certificadosError } = await supabase
                     .from("certificados")
-                    .select("id, colaborador_id, tipo_treinamento, treinamento_codigo, treinamento_id, nome_treinamento, data_realizacao, data_vencimento, arquivo_url, arquivo_nome, observacao, status_validacao, created_at")
+                    .select("*")
                     .in("colaborador_id", idsColaboradores)
                     .order("created_at", { ascending: false });
 
@@ -9697,6 +10317,9 @@ export default function App() {
 
     async function enviarLogoEmpresa(arquivo, empresaId) {
         if (!arquivo) return { logoUrl: null, logoNome: null };
+        if (!validarArquivoAntesUpload(arquivo, "fotoAuditoria")) {
+            throw new Error("Arquivo de logo fora do limite configurado.");
+        }
 
         const nomeSeguro = sanitizarNomeArquivo(arquivo.name);
         const caminho = `${empresaId || "nova-empresa"}/${Date.now()}-${nomeSeguro}`;
@@ -9718,6 +10341,9 @@ export default function App() {
 
     async function enviarContratoEmpresa(arquivo, empresaId) {
         if (!arquivo) return { contratoUrl: null, contratoNome: null };
+        if (!validarArquivoAntesUpload(arquivo, "documentoExtenso")) {
+            throw new Error("Contrato fora do limite configurado.");
+        }
 
         const nomeSeguro = sanitizarNomeArquivo(arquivo.name);
         const caminho = `${empresaId || "nova-empresa"}/${Date.now()}-${nomeSeguro}`;
@@ -9901,6 +10527,10 @@ export default function App() {
             let arquivoNome = novoDoc.arquivo?.name || null;
 
             if (novoDoc.arquivo) {
+                if (!validarArquivoAntesUpload(novoDoc.arquivo, "documentoExtenso")) {
+                    throw new Error("Documento empresarial fora do limite configurado.");
+                }
+
                 const nomeSeguro = sanitizarNomeArquivo(novoDoc.arquivo.name);
                 const tipoSeguro = sanitizarNomeArquivo(novoDoc.tipo);
                 const caminho = `${novoDoc.empresaId}/${tipoSeguro}-${Date.now()}-${nomeSeguro}`;
@@ -9929,24 +10559,26 @@ export default function App() {
                         tipo_documento: novoDoc.tipo,
                         data_emissao: novoDoc.dataEmissao,
                         data_vencimento: novoDoc.dataVencimento,
-                        arquivo_url: arquivoUrl,
-                        arquivo_nome: arquivoNome,
+                        url_do_arquivo: arquivoUrl,
+                        nome_do_arquivo: arquivoNome,
                         observacao: novoDoc.observacao || null,
                         status_validacao: "Validado",
                     },
                     { onConflict: "empresa_id,tipo_documento" }
                 )
-                .select("id, empresa_id, tipo_documento, data_emissao, data_vencimento, arquivo_url, arquivo_nome, observacao, status_validacao, created_at")
+                .select("*")
                 .single();
 
             if (error) {
                 throw new Error(`Erro ao salvar documento: ${error.message}`);
             }
 
+            const documentoNormalizado = normalizarDocumentoEmpresa(data);
+
             setDocumentosEmpresas((atual) => [
-                data,
+                documentoNormalizado,
                 ...atual.filter(
-                    (item) => !(item.empresa_id === data.empresa_id && item.tipo_documento === data.tipo_documento)
+                    (item) => !(item.empresa_id === documentoNormalizado.empresa_id && item.tipo_documento === documentoNormalizado.tipo_documento)
                 ),
             ]);
 
@@ -9974,8 +10606,8 @@ export default function App() {
             return;
         }
 
-        if (documento.arquivo_url) {
-            await supabase.storage.from("documentos-empresas").remove([documento.arquivo_url]);
+        if ((documento.url_do_arquivo || documento.arquivo_url)) {
+            await supabase.storage.from("documentos-empresas").remove([(documento.url_do_arquivo || documento.arquivo_url)]);
         }
 
         setDocumentosEmpresas((atual) => atual.filter((item) => item.id !== documento.id));
@@ -9984,14 +10616,14 @@ export default function App() {
     async function visualizarDocumentoEmpresa(documento) {
         setErroBanco("");
 
-        if (!documento?.arquivo_url) {
+        if (!(documento?.url_do_arquivo || documento?.arquivo_url)) {
             setErroBanco("Este documento ainda não possui arquivo anexado para visualização.");
             return;
         }
 
         const { data, error } = await supabase.storage
             .from("documentos-empresas")
-            .createSignedUrl(documento.arquivo_url, 60 * 10);
+            .createSignedUrl((documento.url_do_arquivo || documento.arquivo_url), 60 * 10);
 
         if (error) {
             setErroBanco(`Erro ao gerar link de visualização: ${error.message}`);
@@ -10029,6 +10661,9 @@ export default function App() {
 
     async function enviarFotoColaborador(arquivo, colaboradorId) {
         if (!arquivo) return { fotoUrl: null, fotoNome: null };
+        if (!validarArquivoAntesUpload(arquivo, "fotoAuditoria")) {
+            throw new Error("Arquivo de imagem fora do limite configurado.");
+        }
 
         const nomeSeguro = sanitizarNomeArquivo(arquivo.name);
         const caminho = `${colaboradorId}/${Date.now()}-${nomeSeguro}`;
@@ -10064,15 +10699,15 @@ export default function App() {
                 nome_treinamento: treinamento.nome,
                 data_realizacao: item.dataRealizacao,
                 data_vencimento: item.dataVencimento,
-                arquivo_url: arquivo.arquivoUrl,
-                arquivo_nome: item.arquivo.name,
+                url_do_arquivo: arquivo.arquivoUrl,
+                nome_do_arquivo: item.arquivo.name,
                 observacao: "Enviado em massa no cadastro do colaborador",
                 status_validacao: "Validado",
             };
 
             const { data: existentes, error: buscaError } = await supabase
                 .from("certificados")
-                .select("id, arquivo_url")
+                .select("*")
                 .eq("colaborador_id", colaborador.id)
                 .eq("tipo_treinamento", treinamento.nome)
                 .order("created_at", { ascending: false })
@@ -10093,8 +10728,8 @@ export default function App() {
                 throw new Error(`Erro ao salvar ${item.arquivo.name}: ${error.message}`);
             }
 
-            if (existente?.arquivo_url && existente.arquivo_url !== arquivo.arquivoUrl) {
-                await supabase.storage.from("certificados-treinamentos").remove([existente.arquivo_url]);
+            if ((existente?.url_do_arquivo || existente?.arquivo_url) && (existente.url_do_arquivo || existente.arquivo_url) !== arquivo.arquivoUrl) {
+                await supabase.storage.from("certificados-treinamentos").remove([(existente.url_do_arquivo || existente.arquivo_url)]);
             }
         }
 
@@ -10119,6 +10754,8 @@ export default function App() {
                     matricula: novo.matricula || null,
                     codigo_funcionario: novo.codigoFuncionario || gerarCodigoFuncionario(novo.nome),
                     status_mobilizacao: novo.statusMobilizacao || obterStatusInicialColaborador(),
+                    data_nascimento: novo.dataNascimento || null,
+                    mostrar_aniversario_dashboard: novo.mostrarAniversarioDashboard !== false,
                     treinamentos_removidos: novo.treinamentosRemovidos || [],
                     treinamentos_adicionais: novo.treinamentosAdicionais || [],
                     status: "Ativo",
@@ -10130,6 +10767,8 @@ export default function App() {
           matricula,
           codigo_funcionario,
           status_mobilizacao,
+          data_nascimento,
+          mostrar_aniversario_dashboard,
           treinamentos_removidos,
           treinamentos_adicionais,
           foto_url,
@@ -10167,6 +10806,8 @@ export default function App() {
             matricula,
             codigo_funcionario,
             status_mobilizacao,
+            data_nascimento,
+            mostrar_aniversario_dashboard,
             treinamentos_removidos,
             treinamentos_adicionais,
             foto_url,
@@ -10245,6 +10886,8 @@ export default function App() {
                     matricula: colaboradorAtualizado.matricula || null,
                     status: colaboradorAtualizado.status || "Ativo",
                     status_mobilizacao: colaboradorAtualizado.statusMobilizacao || obterStatusInicialColaborador(),
+                    data_nascimento: colaboradorAtualizado.dataNascimento || null,
+                    mostrar_aniversario_dashboard: colaboradorAtualizado.mostrarAniversarioDashboard !== false,
                     treinamentos_removidos: colaboradorAtualizado.treinamentosRemovidos || [],
                     treinamentos_adicionais: colaboradorAtualizado.treinamentosAdicionais || [],
                     foto_url: fotoAtualizada.foto_url,
@@ -10258,6 +10901,8 @@ export default function App() {
           matricula,
           codigo_funcionario,
           status_mobilizacao,
+          data_nascimento,
+          mostrar_aniversario_dashboard,
           treinamentos_removidos,
           treinamentos_adicionais,
           foto_url,
@@ -10305,6 +10950,9 @@ export default function App() {
 
     async function enviarArquivoCertificado(arquivo, colaborador, treinamentoId) {
         if (!arquivo) return { arquivoUrl: null, arquivoNome: null };
+        if (!validarArquivoAntesUpload(arquivo, "documentoSimples")) {
+            throw new Error("Certificado/documento fora do limite configurado.");
+        }
 
         const nomeSeguro = sanitizarNomeArquivo(arquivo.name);
         const codigoPasta = codigoPastaCertificado(colaborador);
@@ -10373,8 +11021,8 @@ export default function App() {
                                 nome_treinamento: treinamento.nome,
                                 data_realizacao: dataRealizacao,
                                 data_vencimento: dataVencimento,
-                                arquivo_url: caminho,
-                                arquivo_nome: maisRecente.name,
+                                url_do_arquivo: caminho,
+                                nome_do_arquivo: maisRecente.name,
                                 observacao: "Sincronizado automaticamente do Storage",
                                 status_validacao: "Validado",
                             },
@@ -10472,7 +11120,7 @@ export default function App() {
 
             const { data: certificados, error: certificadosError } = await supabase
                 .from("certificados")
-                .select("id, arquivo_url, arquivo_nome, colaborador_id, treinamento_codigo, nome_treinamento");
+                .select("*");
 
             if (certificadosError) {
                 throw new Error(`Erro ao consultar certificados: ${certificadosError.message}`);
@@ -10480,7 +11128,7 @@ export default function App() {
 
             const { data: documentosEmpresaBanco, error: documentosEmpresaError } = await supabase
                 .from("documentos_empresas")
-                .select("id, empresa_id, tipo_documento, arquivo_url, arquivo_nome");
+                .select("*");
 
             if (documentosEmpresaError) {
                 throw new Error(`Erro ao consultar documentos de empresas: ${documentosEmpresaError.message}`);
@@ -10509,12 +11157,14 @@ export default function App() {
             }, {});
 
             const certificadosPorCaminho = (certificados || []).reduce((acc, item) => {
-                if (item.arquivo_url) acc[`certificados-treinamentos:${item.arquivo_url}`] = item;
+                const caminhoArquivo = item.url_do_arquivo || item.arquivo_url;
+                if (caminhoArquivo) acc[`certificados-treinamentos:${caminhoArquivo}`] = item;
                 return acc;
             }, {});
 
             const documentosEmpresaPorCaminho = (documentosEmpresaBanco || []).reduce((acc, item) => {
-                if (item.arquivo_url) acc[`documentos-empresas:${item.arquivo_url}`] = item;
+                const caminhoArquivo = item.url_do_arquivo || item.arquivo_url;
+                if (caminhoArquivo) acc[`documentos-empresas:${caminhoArquivo}`] = item;
                 return acc;
             }, {});
 
@@ -10778,15 +11428,15 @@ export default function App() {
                 nome_treinamento: treinamento.nome,
                 data_realizacao: certificado.dataRealizacao,
                 data_vencimento: treinamentoSemVencimento ? null : certificado.dataVencimento,
-                arquivo_url: arquivo.arquivoUrl,
-                arquivo_nome: certificado.arquivoNome || arquivo.arquivoNome,
+                url_do_arquivo: arquivo.arquivoUrl,
+                nome_do_arquivo: certificado.arquivoNome || arquivo.arquivoNome,
                 observacao: certificado.observacao || null,
                 status_validacao: "Validado",
             };
 
             const { data: existentes, error: buscaError } = await supabase
                 .from("certificados")
-                .select("id, arquivo_url")
+                .select("*")
                 .eq("colaborador_id", colaboradorIdSeguro)
                 .eq("tipo_treinamento", treinamento.nome)
                 .order("created_at", { ascending: false })
@@ -10808,15 +11458,15 @@ export default function App() {
                     .insert(payload);
 
             const { data, error } = await consulta
-                .select("id, colaborador_id, tipo_treinamento, treinamento_codigo, treinamento_id, nome_treinamento, data_realizacao, data_vencimento, arquivo_url, arquivo_nome, observacao, status_validacao, created_at")
+                .select("*")
                 .single();
 
             if (error) {
                 throw new Error(`Erro ao salvar certificado na tabela certificados: ${error.message}`);
             }
 
-            if (existente?.arquivo_url && existente.arquivo_url !== arquivo.arquivoUrl) {
-                await supabase.storage.from("certificados-treinamentos").remove([existente.arquivo_url]);
+            if ((existente?.url_do_arquivo || existente?.arquivo_url) && (existente.url_do_arquivo || existente.arquivo_url) !== arquivo.arquivoUrl) {
+                await supabase.storage.from("certificados-treinamentos").remove([(existente.url_do_arquivo || existente.arquivo_url)]);
             }
 
             const certificadoNormalizado = normalizarCertificado(data);
@@ -10875,7 +11525,7 @@ export default function App() {
                 data_vencimento: datas.vencimento || null,
             })
             .eq("id", certificado.id)
-            .select("id, colaborador_id, tipo_treinamento, treinamento_codigo, treinamento_id, nome_treinamento, data_realizacao, data_vencimento, arquivo_url, arquivo_nome, observacao, status_validacao, created_at")
+            .select("*")
             .single();
 
         if (error) {
@@ -11068,6 +11718,7 @@ export default function App() {
 
         const timer = window.setTimeout(async () => {
             carregarColaboradores();
+            carregarEmailsEnviados();
             registrarAuditoria("ACESSO", "sistema", "Usuário acessou o sistema");
 
             const autorizadoAuditoria = await verificarAcessoAuditoria();
@@ -11078,7 +11729,7 @@ export default function App() {
         }, 0);
 
         return () => window.clearTimeout(timer);
-    }, [usuario, carregarColaboradores, carregarAuditoria, registrarAuditoria, verificarAcessoAuditoria]);
+    }, [usuario, carregarColaboradores, carregarAuditoria, carregarEmailsEnviados, registrarAuditoria, verificarAcessoAuditoria]);
 
     useEffect(() => {
         if (!usuario || colaboradores.length === 0) return;
@@ -11104,6 +11755,7 @@ export default function App() {
         { id: "dashboard", label: "Dashboard", icon: LayoutDashboard },
         { id: "empresas", label: "Empresas", icon: Building2 },
         { id: "colaboradores", label: "Colaboradores", icon: Users },
+        { id: "aniversariantes", label: "Aniversariantes", icon: CalendarClock },
         { id: "treinamentos", label: "Treinamentos", icon: ClipboardCheck },
         { id: "qr", label: "Consulta QR", icon: QrCode },
         ...(podeAcessarAuditoria ? [{ id: "auditoria", label: "Auditoria", icon: Database }] : []),
@@ -11269,6 +11921,7 @@ export default function App() {
                             documentosEmpresas={documentosEmpresas}
                             auditoria={auditoria}
                             onSelectColab={selecionarColaborador}
+                            onRegistrarEmailEnviado={registrarEmailEnviado}
                         />
                     )}
 
@@ -11303,6 +11956,13 @@ export default function App() {
                         />
                     )}
 
+                    {tela === "aniversariantes" && (
+                        <Aniversariantes
+                            colaboradores={colaboradores}
+                            empresasBanco={empresasBanco}
+                        />
+                    )}
+
                     {tela === "treinamentos" && (
                         <Treinamentos
                             key={colaboradorSelecionado?.id || "treinamentos"}
@@ -11313,6 +11973,7 @@ export default function App() {
                             onExcluirCertificado={excluirCertificadoTreinamento}
                             onAtualizarDatasCertificado={atualizarDatasCertificado}
                             onSincronizarStorage={sincronizarCertificadosDoStorage}
+                            onRegistrarEmailEnviado={registrarEmailEnviado}
                         />
                     )}
 
@@ -11337,8 +11998,9 @@ export default function App() {
                         ) : auditoriaLiberada ? (
                             <RelatorioAuditoria
                                 auditoria={auditoria}
+                                emailsEnviados={emailsEnviados}
                                 carregando={carregandoAuditoria}
-                                onAtualizar={carregarAuditoria}
+                                onAtualizar={async () => { await carregarAuditoria(); await carregarEmailsEnviados(); }}
                                 onListarArquivosStorage={listarArquivosCertificadosStorage}
                                 onExcluirArquivoStorage={excluirArquivoCertificadoStorage}
                                 onListarUsuariosAuditoria={carregarUsuariosAutorizadosAuditoria}
