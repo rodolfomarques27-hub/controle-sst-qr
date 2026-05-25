@@ -570,7 +570,7 @@ function normalizarDataAniversario(valor) {
     }
 
     // Aceita datas digitadas/importadas como DD/MM/YYYY, DD-MM-YYYY ou DD.MM.YYYY.
-    const br = texto.match(/^(\d{1,2})[\/.-](\d{1,2})[\/.-](\d{2,4})$/);
+    const br = texto.match(/^(\d{1,2})[/.-](\d{1,2})[/.-](\d{2,4})$/);
     if (br) {
         const dia = Number(br[1]);
         const mes = Number(br[2]);
@@ -2415,7 +2415,7 @@ function Dashboard({
         { chave: "treinamentosVencidos", label: "Treinamentos vencidos", valor: indicadores.vencidos, icon: AlertTriangle, detalhe: "Colaboradores" },
         { chave: "colaboradoresBloqueados", label: "Colaboradores bloqueados", valor: colaboradoresBloqueados, icon: Lock, detalhe: "Pendência bloqueante" },
         { chave: "desviosAbertos", label: "Desvios abertos", valor: desviosAbertos, icon: AlertTriangle, detalhe: "Registros não concluídos" },
-        { chave: "aniversariantesMes", label: "Aniversariantes do mês", valor: aniversariantesMes.length, icon: UserRound, detalhe: proximoAniversarioDashboard ? `Próximo: ${proximoAniversarioDashboard.colaborador.nome} (${formatarAniversario(obterDataAniversarioColaborador(proximoAniversarioDashboard.colaborador))})` : "Sem aniversariantes no mês" },
+        { chave: "aniversariantesMes", label: "Aniversariantes do mês", valor: aniversariantesMes.length, icon: UserRound, detalhe: aniversariantesMes.length > 0 ? "Quantidade no mês atual" : "Nenhum aniversariante no mês" },
         { chave: "armazenamentoUtilizado", label: "Armazenamento utilizado", valor: totalStorageLabel, icon: Upload, detalhe: `${storagePercentual}% do limite visual` },
     ];
 
