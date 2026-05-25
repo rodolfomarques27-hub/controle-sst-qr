@@ -3855,40 +3855,52 @@ function Dashboard({
                         </div>
                     </div>
 
-                    <div className="mt-4 grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
-                        {opcoesPainelDashboard.map((opcao) => {
-                            const ativo = Boolean(blocosPainelDashboard[opcao.chave]);
+                    <div className="mt-5 rounded-3xl border border-slate-200 bg-slate-50/70 p-4">
+                        <div className="mb-3 flex items-start justify-between gap-3">
+                            <div>
+                                <h3 className="text-sm font-bold text-slate-950">Visibilidade geral do Dashboard SST</h3>
+                                <p className="mt-0.5 text-xs text-slate-500">Ative ou oculte os grupos principais do painel antes de organizar os detalhes abaixo.</p>
+                            </div>
+                            <span className="rounded-full bg-white px-3 py-1 text-[10px] font-bold uppercase tracking-wide text-slate-500 ring-1 ring-slate-200">Geral</span>
+                        </div>
+                        <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
+                            {opcoesPainelDashboard.map((opcao) => {
+                                const ativo = Boolean(blocosPainelDashboard[opcao.chave]);
 
-                            return (
-                                <button
-                                    key={opcao.chave}
-                                    type="button"
-                                    onClick={() => alternarBlocoPainel(opcao.chave)}
-                                    className={classNames(
-                                        "flex items-center justify-between gap-3 rounded-2xl px-3 py-2 text-left text-sm font-semibold ring-1 transition",
-                                        ativo
-                                            ? "bg-emerald-50 text-emerald-800 ring-emerald-200"
-                                            : "bg-slate-50 text-slate-500 ring-slate-200"
-                                    )}
-                                >
-                                    <span>{opcao.label}</span>
-                                    <span className={classNames(
-                                        "rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide",
-                                        ativo ? "bg-emerald-100 text-emerald-800" : "bg-white text-slate-500 ring-1 ring-slate-200"
-                                    )}>
-                                        {ativo ? "Visível" : "Oculto"}
-                                    </span>
-                                </button>
-                            );
-                        })}
+                                return (
+                                    <button
+                                        key={opcao.chave}
+                                        type="button"
+                                        onClick={() => alternarBlocoPainel(opcao.chave)}
+                                        className={classNames(
+                                            "flex items-center justify-between gap-3 rounded-2xl px-3 py-2 text-left text-sm font-semibold ring-1 transition",
+                                            ativo
+                                                ? "bg-emerald-50 text-emerald-800 ring-emerald-200"
+                                                : "bg-slate-50 text-slate-500 ring-slate-200"
+                                        )}
+                                    >
+                                        <span>{opcao.label}</span>
+                                        <span className={classNames(
+                                            "rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide",
+                                            ativo ? "bg-emerald-100 text-emerald-800" : "bg-white text-slate-500 ring-1 ring-slate-200"
+                                        )}>
+                                            {ativo ? "Visível" : "Oculto"}
+                                        </span>
+                                    </button>
+                                );
+                            })}
+                        </div>
                     </div>
 
                     {blocosPainelDashboard.cards && (
-                        <div className="mt-5 border-t border-slate-100 pt-4">
+                        <div className="mt-6 rounded-3xl border border-blue-200 bg-blue-50/60 p-4 shadow-sm">
                             <div className="mb-3 flex flex-col justify-between gap-2 sm:flex-row sm:items-center">
                                 <div>
-                                    <h3 className="text-sm font-bold text-slate-950">1. Cartas principais do Dashboard SST</h3>
-                                    <p className="mt-0.5 text-xs text-slate-500">Escolha quais cards aparecem no topo do dashboard SST.</p>
+                                    <div className="flex flex-wrap items-center gap-2">
+                                        <span className="rounded-full bg-blue-600 px-2.5 py-1 text-[10px] font-black uppercase tracking-wide text-white">Seção 1</span>
+                                        <h3 className="text-sm font-bold text-slate-950">Cartas principais do Dashboard SST</h3>
+                                    </div>
+                                    <p className="mt-1 text-xs text-slate-600">Altera somente os cards pequenos do topo: visibilidade, tamanho e ordem das cartas principais.</p>
                                 </div>
                                 <button
                                     type="button"
@@ -4012,12 +4024,15 @@ function Dashboard({
                         </div>
                     )}
 
-                    <div className="mt-5 border-t border-slate-100 pt-4">
+                    <div className="mt-6 rounded-3xl border border-emerald-200 bg-emerald-50/60 p-4 shadow-sm">
                         <div className="mb-3 flex flex-col justify-between gap-2 sm:flex-row sm:items-center">
                             <div>
-                                <h3 className="text-sm font-bold text-slate-950">2. Organização dos quadros do Dashboard SST</h3>
-                                <p className="mt-0.5 text-xs text-slate-500">
-                                    Escolha a posição, o tamanho e a visibilidade de todos os quadros. A ordem abaixo é a mesma ordem exibida no dashboard.
+                                <div className="flex flex-wrap items-center gap-2">
+                                    <span className="rounded-full bg-emerald-600 px-2.5 py-1 text-[10px] font-black uppercase tracking-wide text-white">Seção 2</span>
+                                    <h3 className="text-sm font-bold text-slate-950">Organização dos quadros do Dashboard SST</h3>
+                                </div>
+                                <p className="mt-1 text-xs text-slate-600">
+                                    Altera somente os quadros grandes do dashboard: posição, tamanho, recolhimento e visibilidade. A ordem abaixo é a mesma ordem exibida no painel.
                                 </p>
                             </div>
                             <button
