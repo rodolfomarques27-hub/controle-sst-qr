@@ -2458,8 +2458,8 @@ function Dashboard({
     const classeTamanhoCartaDashboard = (chave) => {
         const tamanho = tamanhosCartasDashboard[chave] || "padrao";
 
-        if (tamanho === "destaque") return "md:col-span-2 xl:col-span-4";
-        if (tamanho === "grande") return "md:col-span-2 xl:col-span-2";
+        if (tamanho === "destaque") return "md:col-span-2 xl:col-span-6";
+        if (tamanho === "grande") return "md:col-span-2 xl:col-span-3";
         if (tamanho === "medio") return "md:col-span-2 xl:col-span-2";
 
         return "";
@@ -2480,8 +2480,9 @@ function Dashboard({
 
         if (tamanho === "destaque") return "text-4xl";
         if (tamanho === "grande") return "text-3xl";
+        if (tamanho === "medio") return "text-2xl";
 
-        return "text-2xl";
+        return "text-[26px]";
     };
 
     const estiloCartaDashboard = (chave) => {
@@ -3273,9 +3274,9 @@ function Dashboard({
     const renderBlocoDashboard = (chave) => {
         if (chave === "cards") {
             return (
-                <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+                <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
                     {cardsVisiveis.length === 0 ? (
-                        <Card className="md:col-span-2 xl:col-span-4">
+                        <Card className="md:col-span-2 xl:col-span-6">
                             <div className="rounded-2xl border border-dashed border-slate-300 p-5 text-center text-sm text-slate-500">
                                 Nenhuma carta principal selecionada. Abra Personalizar painel e escolha as cartas que deseja exibir.
                             </div>
@@ -3286,7 +3287,7 @@ function Dashboard({
                             const tamanho = tamanhosCartasDashboard[item.chave] || "padrao";
                             const estiloCarta = estiloCartaDashboard(item.chave);
                             const destaqueCarta = tamanho === "destaque" || tamanho === "grande";
-                            const valorClasse = destaqueCarta ? "text-4xl" : tamanho === "medio" ? "text-3xl" : "text-3xl";
+                            const valorClasse = destaqueCarta ? "text-4xl" : tamanho === "medio" ? "text-2xl" : "text-[26px]";
 
                             if (item.chave === "armazenamentoUtilizado") {
                                 const StatusIcon = storageStatusDashboard.statusIcon;
@@ -3296,29 +3297,29 @@ function Dashboard({
                                     <Card
                                         key={item.chave}
                                         className={classNames(
-                                            "group h-full min-h-[178px] overflow-hidden border-slate-200 bg-white p-5 shadow-sm transition hover:-translate-y-0.5 hover:border-slate-300 hover:shadow-md",
+                                            "group h-full min-h-[142px] overflow-hidden border-slate-200 bg-white p-4 shadow-sm transition hover:-translate-y-0.5 hover:border-slate-300 hover:shadow-md",
                                             classeTamanhoCartaDashboard(item.chave)
                                         )}
                                     >
-                                        <div className="flex h-full flex-col justify-between gap-3">
-                                            <div className="flex items-start justify-between gap-3">
+                                        <div className="flex h-full flex-col justify-between gap-2">
+                                            <div className="flex items-start justify-between gap-2">
                                                 <div className="min-w-0">
-                                                    <p className="text-sm font-bold leading-snug text-slate-700">Armazenamento utilizado</p>
+                                                    <p className="text-[13px] font-bold leading-snug text-slate-700">Armazenamento utilizado</p>
                                                 </div>
-                                                <div className={classNames("shrink-0 rounded-2xl p-3 ring-1", storageStatusDashboard.iconeClasse)}>
-                                                    <Upload className="h-5 w-5" />
+                                                <div className={classNames("shrink-0 rounded-2xl p-2.5 ring-1", storageStatusDashboard.iconeClasse)}>
+                                                    <Upload className="h-4 w-4" />
                                                 </div>
                                             </div>
 
                                             <div>
-                                                <p className={classNames("break-words font-black leading-tight", destaqueCarta ? "text-4xl" : "text-[26px]", storageStatusDashboard.valorClasse)}>
+                                                <p className={classNames("break-words font-black leading-tight", destaqueCarta ? "text-4xl" : "text-[21px]", storageStatusDashboard.valorClasse)}>
                                                     {totalStorageLabel}
-                                                    <span className="ml-1 text-xl font-semibold text-slate-400">/ {storageLimiteLabelDashboard}</span>
+                                                    <span className="ml-1 text-base font-semibold text-slate-400">/ {storageLimiteLabelDashboard}</span>
                                                 </p>
 
-                                                <div className="mt-3 flex flex-wrap items-center gap-2 text-xs">
-                                                    <span className={classNames("inline-flex items-center gap-1 rounded-full px-2.5 py-1 font-bold ring-1", storageStatusDashboard.classe)}>
-                                                        <StatusIcon className="h-3.5 w-3.5" />
+                                                <div className="mt-2 flex flex-wrap items-center gap-1.5 text-[11px]">
+                                                    <span className={classNames("inline-flex items-center gap-1 rounded-full px-2 py-0.5 font-bold ring-1", storageStatusDashboard.classe)}>
+                                                        <StatusIcon className="h-3 w-3" />
                                                         {storageStatusDashboard.texto}
                                                     </span>
                                                     <span className={classNames("font-bold", storagePercentual >= 90 ? "text-red-600" : storagePercentual >= 70 ? "text-orange-600" : "text-emerald-600")}>
@@ -3326,14 +3327,14 @@ function Dashboard({
                                                     </span>
                                                 </div>
 
-                                                <div className={classNames("mt-3 h-2 overflow-hidden rounded-full", storageStatusDashboard.trilhoClasse)}>
+                                                <div className={classNames("mt-2 h-1.5 overflow-hidden rounded-full", storageStatusDashboard.trilhoClasse)}>
                                                     <div
                                                         className={classNames("h-full rounded-full transition-all", storageStatusDashboard.barraClasse)}
                                                         style={{ width: `${percentualBarra}%` }}
                                                     />
                                                 </div>
 
-                                                <p className="mt-3 inline-flex items-center gap-1.5 text-[11px] font-medium text-slate-400">
+                                                <p className="mt-2 inline-flex items-center gap-1.5 text-[10.5px] font-medium text-slate-400">
                                                     <Database className="h-3.5 w-3.5" />
                                                     Capacidade total: {storageLimiteLabelDashboard}
                                                 </p>
@@ -3347,22 +3348,22 @@ function Dashboard({
                                 <Card
                                     key={item.chave}
                                     className={classNames(
-                                        "group h-full min-h-[178px] overflow-hidden border-slate-200 bg-white p-5 shadow-sm transition hover:-translate-y-0.5 hover:border-slate-300 hover:shadow-md",
+                                        "group h-full min-h-[142px] overflow-hidden border-slate-200 bg-white p-4 shadow-sm transition hover:-translate-y-0.5 hover:border-slate-300 hover:shadow-md",
                                         classeTamanhoCartaDashboard(item.chave)
                                     )}
                                 >
-                                    <div className="flex h-full flex-col justify-between gap-4">
-                                        <div className="flex items-start gap-4">
-                                            <div className={classNames("shrink-0 rounded-2xl p-3 ring-1", estiloCarta.icone)}>
-                                                <Icon className="h-5 w-5" />
+                                    <div className="flex h-full flex-col justify-between gap-3">
+                                        <div className="flex items-start gap-3">
+                                            <div className={classNames("shrink-0 rounded-2xl p-2.5 ring-1", estiloCarta.icone)}>
+                                                <Icon className="h-4 w-4" />
                                             </div>
-                                            <p className="min-w-0 text-sm font-bold leading-snug text-slate-700">{item.label}</p>
+                                            <p className="min-w-0 text-[13px] font-bold leading-snug text-slate-700">{item.label}</p>
                                         </div>
 
                                         <div>
                                             <p className={classNames("break-words font-black leading-none", valorClasse, estiloCarta.valor)}>{item.valor}</p>
-                                            <div className="mt-3 h-px bg-slate-100" />
-                                            <p className="mt-3 text-xs leading-snug text-slate-400">{item.detalhe}</p>
+                                            <div className="mt-2 h-px bg-slate-100" />
+                                            <p className="mt-2 text-[11px] leading-snug text-slate-400">{item.detalhe}</p>
                                         </div>
                                     </div>
                                 </Card>
@@ -7161,7 +7162,7 @@ function Treinamentos({
             <div className="grid items-start gap-6 xl:grid-cols-[0.75fr_1.25fr]">
                 <Card>
                     <h2 className="flex items-center gap-2 text-lg font-bold text-slate-950">
-                        <Upload className="h-5 w-5" />
+                        <Upload className="h-4 w-4" />
                         Lançar certificado
                     </h2>
                     <p className="mt-1 text-sm text-slate-500">
@@ -11720,7 +11721,7 @@ function DashboardAuditoriaCampo({ auditoriasCampo = [], onAuditoriaAtualizada }
         const recolhido = Boolean(blocosRecolhidos[chave]);
         return (
             <Card className={classeTamanho(tamanhosBlocos[chave])}>
-                <div className="flex items-start justify-between gap-3">
+                <div className="flex items-start justify-between gap-2">
                     <div>
                         <h2 className="text-lg font-bold text-slate-950">{titulo}</h2>
                         <p className="mt-1 text-sm text-slate-500">{subtitulo}</p>
@@ -11910,18 +11911,18 @@ function DashboardAuditoriaCampo({ auditoriasCampo = [], onAuditoriaAtualizada }
                 </div>
             )}
 
-            <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
                 {cartasOrdenadas.filter((item) => cartasVisiveis[item.chave] !== false).map((item) => {
                     const Icon = item.icon;
                     return (
                         <Card key={item.chave} className={classNames("overflow-hidden border-dashed transition hover:border-slate-300", classeTamanho(tamanhosCartas[item.chave]))}>
-                            <div className="flex items-start justify-between gap-3">
+                            <div className="flex items-start justify-between gap-2">
                                 <div className="min-w-0">
                                     <p className="text-sm font-medium text-slate-500">{item.label}</p>
                                     <p className="mt-2 break-words text-3xl font-bold text-slate-950">{item.valor}</p>
                                     <p className="mt-1 text-xs text-slate-400">{item.detalhe}</p>
                                 </div>
-                                <div className="shrink-0 rounded-2xl bg-slate-100 p-3 text-slate-700"><Icon className="h-5 w-5" /></div>
+                                <div className="shrink-0 rounded-2xl bg-slate-100 p-3 text-slate-700"><Icon className="h-4 w-4" /></div>
                             </div>
                         </Card>
                     );
