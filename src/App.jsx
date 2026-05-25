@@ -2090,8 +2090,6 @@ function Dashboard({
         documentosTipo: true,
         ultimosDocumentos: true,
         alertas: true,
-        auditoriasCampo: true,
-        topDesviosCampo: true,
     };
 
     const cartasPadraoDashboard = {
@@ -2107,9 +2105,6 @@ function Dashboard({
         desviosAbertos: true,
         aniversariantesMes: true,
         armazenamentoUtilizado: true,
-        auditoriasCampoMes: true,
-        mediaConformidadeCampo: true,
-        desviosCampoCorrigidos: true,
     };
 
     const tamanhosPadraoCartasDashboard = {
@@ -2125,9 +2120,6 @@ function Dashboard({
         desviosAbertos: "padrao",
         aniversariantesMes: "padrao",
         armazenamentoUtilizado: "padrao",
-        auditoriasCampoMes: "padrao",
-        mediaConformidadeCampo: "padrao",
-        desviosCampoCorrigidos: "padrao",
     };
 
     const tamanhosPadraoBlocosDashboard = {
@@ -2139,8 +2131,6 @@ function Dashboard({
         alertas: "medio",
         documentosTipo: "medio",
         ultimosDocumentos: "medio",
-        auditoriasCampo: "destaque",
-        topDesviosCampo: "medio",
     };
 
     const ordemPadraoBlocosDashboard = [
@@ -2152,8 +2142,6 @@ function Dashboard({
         "alertas",
         "documentosTipo",
         "ultimosDocumentos",
-        "auditoriasCampo",
-        "topDesviosCampo",
     ];
 
     const ordemPadraoCartasDashboard = [
@@ -2169,9 +2157,6 @@ function Dashboard({
         "desviosAbertos",
         "aniversariantesMes",
         "armazenamentoUtilizado",
-        "auditoriasCampoMes",
-        "mediaConformidadeCampo",
-        "desviosCampoCorrigidos",
     ];
 
     const opcoesTamanhoCartaDashboard = [
@@ -2189,8 +2174,6 @@ function Dashboard({
         { chave: "alertas", label: "Alertas importantes" },
         { chave: "documentosTipo", label: "Documentos por tipo" },
         { chave: "ultimosDocumentos", label: "Últimos documentos enviados" },
-        { chave: "auditoriasCampo", label: "Auditorias de campo" },
-        { chave: "topDesviosCampo", label: "Top 5 desvios" },
     ];
     const blocosComTamanhoDashboard = opcoesPainelDashboard;
     const opcoesTamanhoBlocoDashboard = [
@@ -2207,8 +2190,6 @@ function Dashboard({
         alertas: false,
         documentosTipo: false,
         ultimosDocumentos: false,
-        auditoriasCampo: false,
-        topDesviosCampo: false,
     };
     const [mostrarFiltroPainel, setMostrarFiltroPainel] = useState(false);
     const [cartaArrastandoDashboard, setCartaArrastandoDashboard] = useState(null);
@@ -2645,9 +2626,6 @@ function Dashboard({
         { chave: "treinamentosVencidos", label: "Treinamentos vencidos", valor: indicadores.vencidos, icon: AlertTriangle, detalhe: "Colaboradores" },
         { chave: "colaboradoresBloqueados", label: "Colaboradores bloqueados", valor: colaboradoresBloqueados, icon: Lock, detalhe: "Pendência bloqueante" },
         { chave: "desviosAbertos", label: "Desvios abertos", valor: desviosAbertos, icon: AlertTriangle, detalhe: "Registros não concluídos" },
-        { chave: "auditoriasCampoMes", label: "Auditorias de campo no mês", valor: auditoriasCampoMes.length, icon: ClipboardCheck, detalhe: "Checklists via QR Code" },
-        { chave: "mediaConformidadeCampo", label: "Média de conformidade", valor: `${mediaConformidadeCampo}%`, icon: BadgeCheck, detalhe: "Auditorias do mês" },
-        { chave: "desviosCampoCorrigidos", label: "Desvios corrigidos", valor: desviosCampoCorrigidos, icon: CheckCircle2, detalhe: `${desviosCampoAbertos} aberto(s)` },
         { chave: "aniversariantesMes", label: "Aniversariantes do mês", valor: aniversariantesMes.length, icon: UserRound, detalhe: aniversariantesMes.length > 0 ? "Quantidade no mês atual" : "Nenhum aniversariante no mês" },
         { chave: "armazenamentoUtilizado", label: "Armazenamento utilizado", valor: totalStorageLabel, icon: Upload, detalhe: `${storagePercentual}% do limite visual` },
     ];
@@ -3899,7 +3877,7 @@ function Dashboard({
                         <div className="mt-5 border-t border-slate-100 pt-4">
                             <div className="mb-3 flex flex-col justify-between gap-2 sm:flex-row sm:items-center">
                                 <div>
-                                    <h3 className="text-sm font-bold text-slate-950">Cartas principais</h3>
+                                    <h3 className="text-sm font-bold text-slate-950">1. Cartas principais do Dashboard SST</h3>
                                     <p className="mt-0.5 text-xs text-slate-500">Escolha quais cards aparecem no topo do dashboard SST.</p>
                                 </div>
                                 <button
@@ -4027,7 +4005,7 @@ function Dashboard({
                     <div className="mt-5 border-t border-slate-100 pt-4">
                         <div className="mb-3 flex flex-col justify-between gap-2 sm:flex-row sm:items-center">
                             <div>
-                                <h3 className="text-sm font-bold text-slate-950">Organização dos quadros do Dashboard SST</h3>
+                                <h3 className="text-sm font-bold text-slate-950">2. Organização dos quadros do Dashboard SST</h3>
                                 <p className="mt-0.5 text-xs text-slate-500">
                                     Escolha a posição, o tamanho e a visibilidade de todos os quadros. A ordem abaixo é a mesma ordem exibida no dashboard.
                                 </p>
@@ -10861,6 +10839,380 @@ function RelatorioAuditoria({
     );
 }
 
+
+function DashboardAuditoriaCampo({ auditoriasCampo = [] }) {
+    const [mostrarPersonalizacao, setMostrarPersonalizacao] = useState(false);
+
+    const cartasPadrao = {
+        auditoriasMes: true,
+        mediaConformidade: true,
+        desviosAbertos: true,
+        desviosCorrigidos: true,
+    };
+    const tamanhosCartasPadrao = {
+        auditoriasMes: "padrao",
+        mediaConformidade: "padrao",
+        desviosAbertos: "padrao",
+        desviosCorrigidos: "padrao",
+    };
+    const ordemCartasPadrao = ["auditoriasMes", "mediaConformidade", "desviosAbertos", "desviosCorrigidos"];
+
+    const blocosPadrao = {
+        historico: true,
+        topDesvios: true,
+        empresas: true,
+    };
+    const tamanhosBlocosPadrao = {
+        historico: "destaque",
+        topDesvios: "medio",
+        empresas: "medio",
+    };
+    const ordemBlocosPadrao = ["historico", "topDesvios", "empresas"];
+
+    const opcoesTamanho = [
+        { chave: "padrao", label: "Padrão", descricao: "1 coluna" },
+        { chave: "medio", label: "Médio", descricao: "2 colunas" },
+        { chave: "grande", label: "Grande", descricao: "3 colunas" },
+        { chave: "destaque", label: "Destaque", descricao: "linha inteira" },
+    ];
+
+    const [cartasVisiveis, setCartasVisiveis] = useState(() => {
+        if (typeof window === "undefined") return cartasPadrao;
+        try {
+            const salvo = JSON.parse(window.localStorage.getItem("dashboardAuditoriaCampoCartasVisiveis") || "null");
+            return salvo && typeof salvo === "object" ? { ...cartasPadrao, ...salvo } : cartasPadrao;
+        } catch {
+            return cartasPadrao;
+        }
+    });
+    const [tamanhosCartas, setTamanhosCartas] = useState(() => {
+        if (typeof window === "undefined") return tamanhosCartasPadrao;
+        try {
+            const salvo = JSON.parse(window.localStorage.getItem("dashboardAuditoriaCampoTamanhosCartas") || "null");
+            return salvo && typeof salvo === "object" ? { ...tamanhosCartasPadrao, ...salvo } : tamanhosCartasPadrao;
+        } catch {
+            return tamanhosCartasPadrao;
+        }
+    });
+    const [ordemCartas, setOrdemCartas] = useState(() => {
+        if (typeof window === "undefined") return ordemCartasPadrao;
+        try {
+            const salvo = JSON.parse(window.localStorage.getItem("dashboardAuditoriaCampoOrdemCartas") || "null");
+            return Array.isArray(salvo) ? [...salvo, ...ordemCartasPadrao.filter((chave) => !salvo.includes(chave))] : ordemCartasPadrao;
+        } catch {
+            return ordemCartasPadrao;
+        }
+    });
+    const [blocosVisiveis, setBlocosVisiveis] = useState(() => {
+        if (typeof window === "undefined") return blocosPadrao;
+        try {
+            const salvo = JSON.parse(window.localStorage.getItem("dashboardAuditoriaCampoBlocosVisiveis") || "null");
+            return salvo && typeof salvo === "object" ? { ...blocosPadrao, ...salvo } : blocosPadrao;
+        } catch {
+            return blocosPadrao;
+        }
+    });
+    const [tamanhosBlocos, setTamanhosBlocos] = useState(() => {
+        if (typeof window === "undefined") return tamanhosBlocosPadrao;
+        try {
+            const salvo = JSON.parse(window.localStorage.getItem("dashboardAuditoriaCampoTamanhosBlocos") || "null");
+            return salvo && typeof salvo === "object" ? { ...tamanhosBlocosPadrao, ...salvo } : tamanhosBlocosPadrao;
+        } catch {
+            return tamanhosBlocosPadrao;
+        }
+    });
+    const [ordemBlocos, setOrdemBlocos] = useState(() => {
+        if (typeof window === "undefined") return ordemBlocosPadrao;
+        try {
+            const salvo = JSON.parse(window.localStorage.getItem("dashboardAuditoriaCampoOrdemBlocos") || "null");
+            return Array.isArray(salvo) ? [...salvo, ...ordemBlocosPadrao.filter((chave) => !salvo.includes(chave))] : ordemBlocosPadrao;
+        } catch {
+            return ordemBlocosPadrao;
+        }
+    });
+    const [blocosRecolhidos, setBlocosRecolhidos] = useState({});
+
+    useEffect(() => { if (typeof window !== "undefined") window.localStorage.setItem("dashboardAuditoriaCampoCartasVisiveis", JSON.stringify(cartasVisiveis)); }, [cartasVisiveis]);
+    useEffect(() => { if (typeof window !== "undefined") window.localStorage.setItem("dashboardAuditoriaCampoTamanhosCartas", JSON.stringify(tamanhosCartas)); }, [tamanhosCartas]);
+    useEffect(() => { if (typeof window !== "undefined") window.localStorage.setItem("dashboardAuditoriaCampoOrdemCartas", JSON.stringify(ordemCartas)); }, [ordemCartas]);
+    useEffect(() => { if (typeof window !== "undefined") window.localStorage.setItem("dashboardAuditoriaCampoBlocosVisiveis", JSON.stringify(blocosVisiveis)); }, [blocosVisiveis]);
+    useEffect(() => { if (typeof window !== "undefined") window.localStorage.setItem("dashboardAuditoriaCampoTamanhosBlocos", JSON.stringify(tamanhosBlocos)); }, [tamanhosBlocos]);
+    useEffect(() => { if (typeof window !== "undefined") window.localStorage.setItem("dashboardAuditoriaCampoOrdemBlocos", JSON.stringify(ordemBlocos)); }, [ordemBlocos]);
+
+    const auditoriasNormalizadas = useMemo(() => auditoriasCampo.map(normalizarAuditoriaCampo), [auditoriasCampo]);
+    const mesAtual = hoje.getMonth();
+    const anoAtual = hoje.getFullYear();
+    const auditoriasMes = auditoriasNormalizadas.filter((item) => {
+        const data = item.createdAt ? new Date(item.createdAt) : null;
+        return data && !Number.isNaN(data.getTime()) && data.getMonth() === mesAtual && data.getFullYear() === anoAtual;
+    });
+    const mediaConformidade = auditoriasMes.length
+        ? Math.round(auditoriasMes.reduce((total, item) => total + Number(item.pontuacao || 0), 0) / auditoriasMes.length)
+        : 0;
+    const desviosAbertos = auditoriasNormalizadas.filter(auditoriaCampoAberta).length;
+    const desviosCorrigidos = auditoriasNormalizadas.filter((item) => {
+        const status = normalizarTextoBusca(item.statusDesvio || "");
+        return Number(item.totalDesvios || 0) > 0 && ["corrigido", "fechado", "concluido", "concluído"].some((termo) => status.includes(termo));
+    }).length;
+
+    const topDesvios = Object.values(
+        auditoriasNormalizadas.reduce((acc, item) => {
+            const chave = item.categoriaDesvioPrincipal || "Sem categoria informada";
+            if (!acc[chave]) acc[chave] = { categoria: chave, total: 0, abertos: 0 };
+            acc[chave].total += Number(item.totalDesvios || 0);
+            if (auditoriaCampoAberta(item)) acc[chave].abertos += 1;
+            return acc;
+        }, {})
+    ).filter((item) => item.total > 0).sort((a, b) => b.total - a.total).slice(0, 5);
+
+    const empresasAuditoria = Object.values(
+        auditoriasNormalizadas.reduce((acc, item) => {
+            const empresa = item.empresaNome || "Empresa não informada";
+            if (!acc[empresa]) acc[empresa] = { empresa, auditorias: 0, desvios: 0, soma: 0 };
+            acc[empresa].auditorias += 1;
+            acc[empresa].desvios += Number(item.totalDesvios || 0);
+            acc[empresa].soma += Number(item.pontuacao || 0);
+            return acc;
+        }, {})
+    ).map((item) => ({ ...item, media: item.auditorias ? Math.round(item.soma / item.auditorias) : 0 }))
+        .sort((a, b) => b.desvios - a.desvios || b.auditorias - a.auditorias);
+
+    const cartas = [
+        { chave: "auditoriasMes", label: "Auditorias do mês", valor: auditoriasMes.length, icon: ClipboardCheck, detalhe: "Checklists via QR Code" },
+        { chave: "mediaConformidade", label: "Média de conformidade", valor: `${mediaConformidade}%`, icon: BadgeCheck, detalhe: "Pontuação média mensal" },
+        { chave: "desviosAbertos", label: "Desvios abertos", valor: desviosAbertos, icon: AlertTriangle, detalhe: "Aguardando tratativa" },
+        { chave: "desviosCorrigidos", label: "Desvios corrigidos", valor: desviosCorrigidos, icon: CheckCircle2, detalhe: "Tratativas concluídas" },
+    ];
+    const blocos = [
+        { chave: "historico", label: "Histórico de auditorias" },
+        { chave: "topDesvios", label: "Top 5 desvios" },
+        { chave: "empresas", label: "Auditorias por empresa" },
+    ];
+
+    const ordenar = (lista, ordem) => [
+        ...ordem.map((chave) => lista.find((item) => item.chave === chave)).filter(Boolean),
+        ...lista.filter((item) => !ordem.includes(item.chave)),
+    ];
+    const cartasOrdenadas = ordenar(cartas, ordemCartas);
+    const blocosOrdenados = ordenar(blocos, ordemBlocos);
+
+    const classeTamanho = (tamanho = "padrao") => {
+        if (tamanho === "destaque") return "md:col-span-2 xl:col-span-4";
+        if (tamanho === "grande") return "md:col-span-2 xl:col-span-3";
+        if (tamanho === "medio") return "md:col-span-2";
+        return "";
+    };
+
+    const mover = (setLista, chave, direcao) => {
+        setLista((atual) => {
+            const base = [...atual];
+            const indice = base.indexOf(chave);
+            const novoIndice = indice + direcao;
+            if (indice < 0 || novoIndice < 0 || novoIndice >= base.length) return atual;
+            [base[indice], base[novoIndice]] = [base[novoIndice], base[indice]];
+            return base;
+        });
+    };
+
+    const blocoWrapper = (chave, titulo, subtitulo, children) => {
+        const recolhido = Boolean(blocosRecolhidos[chave]);
+        return (
+            <Card className={classeTamanho(tamanhosBlocos[chave])}>
+                <div className="flex items-start justify-between gap-3">
+                    <div>
+                        <h2 className="text-lg font-bold text-slate-950">{titulo}</h2>
+                        <p className="mt-1 text-sm text-slate-500">{subtitulo}</p>
+                    </div>
+                    <button type="button" onClick={() => setBlocosRecolhidos((atual) => ({ ...atual, [chave]: !atual[chave] }))} className="rounded-xl bg-slate-50 px-3 py-2 text-xs font-bold text-slate-600 ring-1 ring-slate-200 hover:bg-slate-100">
+                        {recolhido ? "Abrir" : "Recolher"}
+                    </button>
+                </div>
+                {!recolhido && <div className="mt-4">{children}</div>}
+            </Card>
+        );
+    };
+
+    const renderBloco = (chave) => {
+        if (chave === "historico") {
+            return blocoWrapper(chave, "Histórico de auditorias", "Últimos registros de campo por colaborador e empresa.", (
+                <div className="space-y-2">
+                    {auditoriasNormalizadas.length === 0 ? (
+                        <div className="rounded-2xl border border-dashed border-slate-300 p-5 text-center text-sm text-slate-500">Nenhuma auditoria de campo registrada.</div>
+                    ) : auditoriasNormalizadas.slice(0, 12).map((item) => (
+                        <div key={item.id || `${item.colaboradorNome}-${item.createdAt}`} className="rounded-2xl bg-slate-50 p-3 ring-1 ring-slate-200">
+                            <div className="flex flex-wrap items-center justify-between gap-2">
+                                <div>
+                                    <p className="text-sm font-bold text-slate-950">{item.colaboradorNome || "Colaborador não informado"}</p>
+                                    <p className="text-xs text-slate-500">{item.empresaNome || "Empresa não informada"} · {formatarDataHora(item.createdAt)}</p>
+                                </div>
+                                <span className={classNames("rounded-full px-3 py-1 text-xs font-bold ring-1", classeClassificacaoAuditoriaCampo(item.classificacao))}>
+                                    {item.classificacao || "Sem classificação"} · {item.pontuacao}%
+                                </span>
+                            </div>
+                        </div>
+                    ))}
+                </div>
+            ));
+        }
+        if (chave === "topDesvios") {
+            return blocoWrapper(chave, "Top 5 desvios", "Principais categorias de desvios registradas em campo.", (
+                <div className="space-y-2">
+                    {topDesvios.length === 0 ? (
+                        <div className="rounded-2xl border border-dashed border-slate-300 p-5 text-center text-sm text-slate-500">Nenhum desvio registrado.</div>
+                    ) : topDesvios.map((item, index) => (
+                        <div key={item.categoria} className="flex items-center justify-between gap-3 rounded-2xl bg-slate-50 p-3 ring-1 ring-slate-200">
+                            <div>
+                                <p className="text-sm font-bold text-slate-950">#{index + 1} {item.categoria}</p>
+                                <p className="text-xs text-slate-500">{item.abertos} aberto(s)</p>
+                            </div>
+                            <span className="rounded-full bg-red-50 px-3 py-1 text-xs font-bold text-red-700 ring-1 ring-red-200">{item.total} desvio(s)</span>
+                        </div>
+                    ))}
+                </div>
+            ));
+        }
+        if (chave === "empresas") {
+            return blocoWrapper(chave, "Auditorias por empresa", "Resumo de auditorias, desvios e média por empresa.", (
+                <div className="overflow-hidden rounded-2xl border border-slate-200">
+                    <table className="w-full text-left text-sm">
+                        <thead className="bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
+                            <tr>
+                                <th className="px-4 py-3">Empresa</th>
+                                <th className="px-4 py-3">Auditorias</th>
+                                <th className="px-4 py-3">Média</th>
+                                <th className="px-4 py-3">Desvios</th>
+                            </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-100">
+                            {empresasAuditoria.length === 0 ? (
+                                <tr><td colSpan="4" className="px-4 py-5 text-center text-slate-500">Nenhuma empresa auditada.</td></tr>
+                            ) : empresasAuditoria.map((item) => (
+                                <tr key={item.empresa}>
+                                    <td className="px-4 py-3 font-semibold text-slate-900">{item.empresa}</td>
+                                    <td className="px-4 py-3 text-slate-600">{item.auditorias}</td>
+                                    <td className="px-4 py-3 text-slate-600">{item.media}%</td>
+                                    <td className="px-4 py-3 text-slate-600">{item.desvios}</td>
+                                </tr>
+                            ))}
+                        </tbody>
+                    </table>
+                </div>
+            ));
+        }
+        return null;
+    };
+
+    return (
+        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
+            <Header
+                titulo="Dashboard Auditoria de Campo"
+                subtitulo="Indicadores, histórico e desvios das auditorias realizadas via QR Code."
+                acao={(
+                    <button type="button" onClick={() => setMostrarPersonalizacao((valor) => !valor)} className="inline-flex items-center gap-2 rounded-2xl bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 shadow-sm ring-1 ring-slate-200 hover:bg-slate-50">
+                        <Filter className="h-4 w-4" />
+                        Personalizar painel
+                    </button>
+                )}
+            />
+
+            {mostrarPersonalizacao && (
+                <div className="mb-6 grid gap-4 xl:grid-cols-2">
+                    <Card>
+                        <div className="mb-4 flex items-start justify-between gap-3">
+                            <div>
+                                <h2 className="text-base font-bold text-slate-950">1. Cartas principais</h2>
+                                <p className="mt-1 text-sm text-slate-500">Escolha quais cards aparecem e o tamanho de cada indicador.</p>
+                            </div>
+                            <button type="button" onClick={() => { setCartasVisiveis(cartasPadrao); setTamanhosCartas(tamanhosCartasPadrao); setOrdemCartas(ordemCartasPadrao); }} className="rounded-xl bg-slate-50 px-3 py-2 text-xs font-bold text-slate-600 ring-1 ring-slate-200">Restaurar</button>
+                        </div>
+                        <div className="space-y-3">
+                            {cartasOrdenadas.map((opcao, index) => {
+                                const ativo = cartasVisiveis[opcao.chave] !== false;
+                                return (
+                                    <div key={opcao.chave} className="rounded-2xl bg-slate-50 p-3 ring-1 ring-slate-200">
+                                        <div className="flex items-center justify-between gap-2">
+                                            <button type="button" onClick={() => setCartasVisiveis((atual) => ({ ...atual, [opcao.chave]: !ativo }))} className="text-left text-sm font-bold text-slate-800">#{index + 1}. {opcao.label}</button>
+                                            <div className="flex items-center gap-1">
+                                                <button type="button" onClick={() => mover(setOrdemCartas, opcao.chave, -1)} className="rounded-lg bg-white px-2 py-1 text-xs font-bold ring-1 ring-slate-200">↑</button>
+                                                <button type="button" onClick={() => mover(setOrdemCartas, opcao.chave, 1)} className="rounded-lg bg-white px-2 py-1 text-xs font-bold ring-1 ring-slate-200">↓</button>
+                                                <span className={classNames("rounded-full px-2 py-1 text-[10px] font-bold uppercase ring-1", ativo ? "bg-emerald-50 text-emerald-700 ring-emerald-200" : "bg-white text-slate-500 ring-slate-200")}>{ativo ? "Visível" : "Oculto"}</span>
+                                            </div>
+                                        </div>
+                                        {ativo && (
+                                            <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4">
+                                                {opcoesTamanho.map((tamanho) => (
+                                                    <button key={tamanho.chave} type="button" onClick={() => setTamanhosCartas((atual) => ({ ...atual, [opcao.chave]: tamanho.chave }))} className={classNames("rounded-xl px-2 py-2 text-center text-xs font-bold ring-1", tamanhosCartas[opcao.chave] === tamanho.chave ? "bg-slate-950 text-white ring-slate-950" : "bg-white text-slate-600 ring-slate-200")}>{tamanho.label}</button>
+                                                ))}
+                                            </div>
+                                        )}
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    </Card>
+                    <Card>
+                        <div className="mb-4 flex items-start justify-between gap-3">
+                            <div>
+                                <h2 className="text-base font-bold text-slate-950">2. Organização dos quadros</h2>
+                                <p className="mt-1 text-sm text-slate-500">Controle a ordem, o tamanho e a visibilidade dos blocos de informação.</p>
+                            </div>
+                            <button type="button" onClick={() => { setBlocosVisiveis(blocosPadrao); setTamanhosBlocos(tamanhosBlocosPadrao); setOrdemBlocos(ordemBlocosPadrao); }} className="rounded-xl bg-slate-50 px-3 py-2 text-xs font-bold text-slate-600 ring-1 ring-slate-200">Restaurar</button>
+                        </div>
+                        <div className="space-y-3">
+                            {blocosOrdenados.map((opcao, index) => {
+                                const ativo = blocosVisiveis[opcao.chave] !== false;
+                                return (
+                                    <div key={opcao.chave} className="rounded-2xl bg-slate-50 p-3 ring-1 ring-slate-200">
+                                        <div className="flex items-center justify-between gap-2">
+                                            <button type="button" onClick={() => setBlocosVisiveis((atual) => ({ ...atual, [opcao.chave]: !ativo }))} className="text-left text-sm font-bold text-slate-800">#{index + 1}. {opcao.label}</button>
+                                            <div className="flex items-center gap-1">
+                                                <button type="button" onClick={() => mover(setOrdemBlocos, opcao.chave, -1)} className="rounded-lg bg-white px-2 py-1 text-xs font-bold ring-1 ring-slate-200">↑</button>
+                                                <button type="button" onClick={() => mover(setOrdemBlocos, opcao.chave, 1)} className="rounded-lg bg-white px-2 py-1 text-xs font-bold ring-1 ring-slate-200">↓</button>
+                                                <span className={classNames("rounded-full px-2 py-1 text-[10px] font-bold uppercase ring-1", ativo ? "bg-blue-50 text-blue-700 ring-blue-200" : "bg-white text-slate-500 ring-slate-200")}>{ativo ? "Visível" : "Oculto"}</span>
+                                            </div>
+                                        </div>
+                                        {ativo && (
+                                            <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4">
+                                                {opcoesTamanho.map((tamanho) => (
+                                                    <button key={tamanho.chave} type="button" onClick={() => setTamanhosBlocos((atual) => ({ ...atual, [opcao.chave]: tamanho.chave }))} className={classNames("rounded-xl px-2 py-2 text-center text-xs font-bold ring-1", tamanhosBlocos[opcao.chave] === tamanho.chave ? "bg-slate-950 text-white ring-slate-950" : "bg-white text-slate-600 ring-slate-200")}>{tamanho.label}</button>
+                                                ))}
+                                            </div>
+                                        )}
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    </Card>
+                </div>
+            )}
+
+            <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+                {cartasOrdenadas.filter((item) => cartasVisiveis[item.chave] !== false).map((item) => {
+                    const Icon = item.icon;
+                    return (
+                        <Card key={item.chave} className={classNames("overflow-hidden border-dashed transition hover:border-slate-300", classeTamanho(tamanhosCartas[item.chave]))}>
+                            <div className="flex items-start justify-between gap-3">
+                                <div className="min-w-0">
+                                    <p className="text-sm font-medium text-slate-500">{item.label}</p>
+                                    <p className="mt-2 break-words text-3xl font-bold text-slate-950">{item.valor}</p>
+                                    <p className="mt-1 text-xs text-slate-400">{item.detalhe}</p>
+                                </div>
+                                <div className="shrink-0 rounded-2xl bg-slate-100 p-3 text-slate-700"><Icon className="h-5 w-5" /></div>
+                            </div>
+                        </Card>
+                    );
+                })}
+            </div>
+
+            <div className="mt-6 grid gap-6 md:grid-cols-2 xl:grid-cols-4">
+                {blocosOrdenados.filter((item) => blocosVisiveis[item.chave] !== false).map((item) => (
+                    <React.Fragment key={item.chave}>{renderBloco(item.chave)}</React.Fragment>
+                ))}
+            </div>
+        </motion.div>
+    );
+}
+
 export default function App() {
     const [usuario, setUsuario] = useState(null);
     const [carregandoSessao, setCarregandoSessao] = useState(true);
@@ -12729,6 +13081,7 @@ export default function App() {
 
     const nav = [
         { id: "dashboard", label: "Dashboard", icon: LayoutDashboard },
+        { id: "auditoriaCampo", label: "Auditoria Campo", icon: ClipboardCheck },
         { id: "empresas", label: "Empresas", icon: Building2 },
         { id: "colaboradores", label: "Colaboradores", icon: Users },
         { id: "aniversariantes", label: "Aniversariantes", icon: CalendarClock },
@@ -12896,10 +13249,13 @@ export default function App() {
                             empresasBanco={empresasBanco}
                             documentosEmpresas={documentosEmpresas}
                             auditoria={auditoria}
-                            auditoriasCampo={auditoriasCampo}
                             onSelectColab={selecionarColaborador}
                             onRegistrarEmailEnviado={registrarEmailEnviado}
                         />
+                    )}
+
+                    {tela === "auditoriaCampo" && (
+                        <DashboardAuditoriaCampo auditoriasCampo={auditoriasCampo} />
                     )}
 
                     {tela === "empresas" && (
