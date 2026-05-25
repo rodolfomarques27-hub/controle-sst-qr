@@ -2595,6 +2595,44 @@ function Dashboard({
 
     const storagePercentual = calcularPercentualUsoStorage(usoStorageDashboard.totalBytes);
     const totalStorageLabel = carregandoStorageDashboard ? "Carregando..." : formatarBytes(usoStorageDashboard.totalBytes);
+    const storageLimiteBytesDashboard = Math.max(1, LIMITE_STORAGE_MB * 1024 * 1024);
+    const storageLimiteLabelDashboard = formatarBytes(storageLimiteBytesDashboard).replace(".00", "");
+    const storageStatusDashboard =
+        storagePercentual >= 90
+            ? {
+                texto: "Crítico",
+                detalhe: "Pouco espaço disponível",
+                apoio: "Considere liberar espaço para evitar interrupções.",
+                classe: "bg-red-50 text-red-700 ring-red-200",
+                iconeClasse: "bg-red-50 text-red-600",
+                valorClasse: "text-red-600",
+                barraClasse: "bg-red-500",
+                trilhoClasse: "bg-red-100",
+                statusIcon: AlertTriangle,
+            }
+            : storagePercentual >= 70
+                ? {
+                    texto: "Atenção",
+                    detalhe: "Acompanhe o limite do sistema",
+                    apoio: "O armazenamento está subindo. Avalie arquivos grandes ou sem vínculo.",
+                    classe: "bg-orange-50 text-orange-700 ring-orange-200",
+                    iconeClasse: "bg-orange-50 text-orange-600",
+                    valorClasse: "text-orange-600",
+                    barraClasse: "bg-orange-500",
+                    trilhoClasse: "bg-orange-100",
+                    statusIcon: AlertTriangle,
+                }
+                : {
+                    texto: "Normal",
+                    detalhe: "Uso saudável do armazenamento",
+                    apoio: "Capacidade dentro do limite configurado.",
+                    classe: "bg-emerald-50 text-emerald-700 ring-emerald-200",
+                    iconeClasse: "bg-emerald-50 text-emerald-600",
+                    valorClasse: "text-slate-950",
+                    barraClasse: "bg-emerald-500",
+                    trilhoClasse: "bg-slate-100",
+                    statusIcon: CheckCircle2,
+                };
 
     const cards = [
         { chave: "colaboradoresMobilizados", label: "Colaboradores mobilizados", valor: colaboradoresMobilizados.length, icon: HardHat, detalhe: "Liberados ou com pendência" },
@@ -3144,6 +3182,74 @@ function Dashboard({
                         cardsVisiveis.map((item, index) => {
                             const Icon = item.icon;
                             const tamanho = tamanhosCartasDashboard[item.chave] || "padrao";
+
+                            if (item.chave === "armazenamentoUtilizado") {
+                                const StatusIcon = storageStatusDashboard.statusIcon;
+                                const percentualBarra = Math.min(100, Math.max(storagePercentual > 0 ? 2 : 0, storagePercentual));
+
+                                return (
+                                    <Card
+                                        key={item.chave}
+                                        className={classNames(
+                                            "overflow-hidden border-dashed bg-white transition hover:border-slate-300",
+                                            classeTamanhoCartaDashboard(item.chave)
+                                        )}
+                                    >
+                                        <div className="flex h-full min-h-[170px] flex-col justify-between gap-4">
+                                            <div className="flex items-start justify-between gap-4">
+                                                <div className="flex min-w-0 items-start gap-3">
+                                                    <div className={classNames("shrink-0 rounded-3xl p-3", storageStatusDashboard.iconeClasse)}>
+                                                        <Upload className={tamanho === "destaque" || tamanho === "grande" ? "h-6 w-6" : "h-5 w-5"} />
+                                                    </div>
+                                                    <div className="min-w-0">
+                                                        <p className="text-sm font-bold text-slate-600">Armazenamento utilizado</p>
+                                                        <div className={classNames("mt-2 flex flex-wrap items-end gap-x-2 gap-y-1 font-black", tamanho === "destaque" || tamanho === "grande" ? "text-4xl" : "text-3xl")}>
+                                                            <span className={storageStatusDashboard.valorClasse}>{totalStorageLabel}</span>
+                                                            <span className="text-xl font-semibold text-slate-400">/ {storageLimiteLabelDashboard}</span>
+                                                        </div>
+                                                    </div>
+                                                </div>
+
+                                                <div className="flex shrink-0 flex-col items-end gap-2">
+                                                    <span className={classNames("inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-bold ring-1", storageStatusDashboard.classe)}>
+                                                        <StatusIcon className="h-3.5 w-3.5" />
+                                                        {storageStatusDashboard.texto}
+                                                    </span>
+                                                    <span className={classNames("rounded-2xl px-3 py-1.5 text-sm font-black", storageStatusDashboard.classe)}>
+                                                        {storagePercentual}%
+                                                    </span>
+                                                </div>
+                                            </div>
+
+                                            <div>
+                                                <div className={classNames("h-3 overflow-hidden rounded-full", storageStatusDashboard.trilhoClasse)}>
+                                                    <div
+                                                        className={classNames("h-full rounded-full transition-all", storageStatusDashboard.barraClasse)}
+                                                        style={{ width: `${percentualBarra}%` }}
+                                                    />
+                                                </div>
+
+                                                <div className="mt-3 flex flex-col gap-2 border-t border-slate-100 pt-3 text-xs text-slate-500 sm:flex-row sm:items-center sm:justify-between">
+                                                    <span className="inline-flex items-center gap-2 font-semibold">
+                                                        <Database className="h-4 w-4 text-slate-400" />
+                                                        Capacidade total: {storageLimiteLabelDashboard}
+                                                    </span>
+                                                    <span className={classNames("inline-flex items-center gap-2 font-semibold", storagePercentual >= 90 ? "text-red-600" : storagePercentual >= 70 ? "text-orange-600" : "text-emerald-600")}>
+                                                        <StatusIcon className="h-4 w-4" />
+                                                        {storageStatusDashboard.detalhe}
+                                                    </span>
+                                                </div>
+
+                                                {(tamanho === "destaque" || tamanho === "grande") && (
+                                                    <p className="mt-2 text-xs leading-relaxed text-slate-400">
+                                                        {storageStatusDashboard.apoio}
+                                                    </p>
+                                                )}
+                                            </div>
+                                        </div>
+                                    </Card>
+                                );
+                            }
 
                             return (
                                 <Card
