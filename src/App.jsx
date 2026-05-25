@@ -1677,6 +1677,28 @@ function Dashboard({
         aniversariantesMes: true,
         armazenamentoUtilizado: true,
     };
+
+    const tamanhosPadraoCartasDashboard = {
+        colaboradoresMobilizados: "padrao",
+        colaboradoresLiberados: "padrao",
+        comPendencia: "padrao",
+        emAnalise: "padrao",
+        empresasAtivas: "padrao",
+        documentosVencidos: "padrao",
+        documentosAVencer: "padrao",
+        treinamentosVencidos: "padrao",
+        colaboradoresBloqueados: "padrao",
+        desviosAbertos: "padrao",
+        aniversariantesMes: "padrao",
+        armazenamentoUtilizado: "padrao",
+    };
+
+    const opcoesTamanhoCartaDashboard = [
+        { chave: "padrao", label: "Padrão", descricao: "1 coluna" },
+        { chave: "medio", label: "Médio", descricao: "2 colunas" },
+        { chave: "grande", label: "Grande", descricao: "3 colunas" },
+        { chave: "destaque", label: "Destaque", descricao: "linha inteira" },
+    ];
     const opcoesPainelDashboard = [
         { chave: "cards", label: "Cards principais" },
         { chave: "pendencias", label: "Pendências críticas" },
@@ -1710,6 +1732,17 @@ function Dashboard({
         }
     });
 
+    const [tamanhosCartasDashboard, setTamanhosCartasDashboard] = useState(() => {
+        if (typeof window === "undefined") return tamanhosPadraoCartasDashboard;
+
+        try {
+            const salvo = JSON.parse(window.localStorage.getItem("dashboardSstTamanhosCartas") || "null");
+            return salvo && typeof salvo === "object" ? { ...tamanhosPadraoCartasDashboard, ...salvo } : tamanhosPadraoCartasDashboard;
+        } catch {
+            return tamanhosPadraoCartasDashboard;
+        }
+    });
+
     useEffect(() => {
         if (typeof window === "undefined") return;
         window.localStorage.setItem("dashboardSstBlocosVisiveis", JSON.stringify(blocosPainelDashboard));
@@ -1719,6 +1752,11 @@ function Dashboard({
         if (typeof window === "undefined") return;
         window.localStorage.setItem("dashboardSstCartasVisiveis", JSON.stringify(cartasVisiveisDashboard));
     }, [cartasVisiveisDashboard]);
+
+    useEffect(() => {
+        if (typeof window === "undefined") return;
+        window.localStorage.setItem("dashboardSstTamanhosCartas", JSON.stringify(tamanhosCartasDashboard));
+    }, [tamanhosCartasDashboard]);
 
     const alternarBlocoPainel = (chave) => {
         setBlocosPainelDashboard((atual) => ({
@@ -1732,6 +1770,32 @@ function Dashboard({
             ...atual,
             [chave]: !atual[chave],
         }));
+    };
+
+    const alterarTamanhoCartaPainel = (chave, tamanho) => {
+        setTamanhosCartasDashboard((atual) => ({
+            ...atual,
+            [chave]: tamanho,
+        }));
+    };
+
+    const classeTamanhoCartaDashboard = (chave) => {
+        const tamanho = tamanhosCartasDashboard[chave] || "padrao";
+
+        if (tamanho === "destaque") return "md:col-span-2 xl:col-span-6";
+        if (tamanho === "grande") return "md:col-span-2 xl:col-span-3";
+        if (tamanho === "medio") return "md:col-span-2 xl:col-span-2";
+
+        return "";
+    };
+
+    const classeValorCartaDashboard = (chave) => {
+        const tamanho = tamanhosCartasDashboard[chave] || "padrao";
+
+        if (tamanho === "destaque") return "text-4xl";
+        if (tamanho === "grande") return "text-3xl";
+
+        return "text-2xl";
     };
 
     const carregarUsoStorageDashboard = useCallback(async () => {
@@ -2355,6 +2419,7 @@ function Dashboard({
                                 onClick={() => {
                                     setBlocosPainelDashboard(painelPadraoDashboard);
                                     setCartasVisiveisDashboard(cartasPadraoDashboard);
+                                    setTamanhosCartasDashboard(tamanhosPadraoCartasDashboard);
                                 }}
                                 className="rounded-xl bg-slate-950 px-3 py-2 text-xs font-semibold text-white hover:bg-slate-800"
                             >
@@ -2378,6 +2443,13 @@ function Dashboard({
                                         armazenamentoUtilizado: false,
                                         aniversariantesMes: false,
                                         desviosAbertos: false,
+                                    });
+                                    setTamanhosCartasDashboard({
+                                        ...tamanhosPadraoCartasDashboard,
+                                        colaboradoresMobilizados: "medio",
+                                        colaboradoresLiberados: "medio",
+                                        comPendencia: "medio",
+                                        colaboradoresBloqueados: "medio",
                                     });
                                 }}
                                 className="rounded-xl bg-slate-100 px-3 py-2 text-xs font-semibold text-slate-700 ring-1 ring-slate-200 hover:bg-slate-200"
@@ -2424,37 +2496,82 @@ function Dashboard({
                                 </div>
                                 <button
                                     type="button"
-                                    onClick={() => setCartasVisiveisDashboard(cartasPadraoDashboard)}
+                                    onClick={() => {
+                                        setCartasVisiveisDashboard(cartasPadraoDashboard);
+                                        setTamanhosCartasDashboard(tamanhosPadraoCartasDashboard);
+                                    }}
                                     className="self-start rounded-xl bg-white px-3 py-2 text-xs font-semibold text-slate-700 ring-1 ring-slate-200 hover:bg-slate-50 sm:self-auto"
                                 >
-                                    Restaurar cartas
+                                    Restaurar cartas e tamanhos
                                 </button>
                             </div>
 
-                            <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
+                            <div className="grid gap-3 lg:grid-cols-2">
                                 {cards.map((opcao) => {
                                     const ativo = cartasVisiveisDashboard[opcao.chave] !== false;
+                                    const tamanhoAtual = tamanhosCartasDashboard[opcao.chave] || "padrao";
 
                                     return (
-                                        <button
+                                        <div
                                             key={opcao.chave}
-                                            type="button"
-                                            onClick={() => alternarCartaPainel(opcao.chave)}
                                             className={classNames(
-                                                "flex items-center justify-between gap-3 rounded-2xl px-3 py-2 text-left text-sm font-semibold ring-1 transition",
-                                                ativo
-                                                    ? "bg-blue-50 text-blue-800 ring-blue-200"
-                                                    : "bg-slate-50 text-slate-500 ring-slate-200"
+                                                "rounded-2xl p-3 ring-1 transition",
+                                                ativo ? "bg-blue-50/60 ring-blue-200" : "bg-slate-50 ring-slate-200"
                                             )}
                                         >
-                                            <span>{opcao.label}</span>
-                                            <span className={classNames(
-                                                "rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide",
-                                                ativo ? "bg-blue-100 text-blue-800" : "bg-white text-slate-500 ring-1 ring-slate-200"
-                                            )}>
-                                                {ativo ? "Visível" : "Oculto"}
-                                            </span>
-                                        </button>
+                                            <div className="flex items-center justify-between gap-3">
+                                                <button
+                                                    type="button"
+                                                    onClick={() => alternarCartaPainel(opcao.chave)}
+                                                    className="min-w-0 text-left"
+                                                >
+                                                    <span className={classNames("block truncate text-sm font-bold", ativo ? "text-blue-900" : "text-slate-500")}>
+                                                        {opcao.label}
+                                                    </span>
+                                                    <span className="mt-0.5 block text-xs text-slate-500">
+                                                        {ativo ? "Aparece no painel" : "Oculto no painel"}
+                                                    </span>
+                                                </button>
+
+                                                <button
+                                                    type="button"
+                                                    onClick={() => alternarCartaPainel(opcao.chave)}
+                                                    className={classNames(
+                                                        "shrink-0 rounded-full px-2 py-1 text-[10px] font-bold uppercase tracking-wide ring-1",
+                                                        ativo ? "bg-blue-100 text-blue-800 ring-blue-200" : "bg-white text-slate-500 ring-slate-200"
+                                                    )}
+                                                >
+                                                    {ativo ? "Visível" : "Oculto"}
+                                                </button>
+                                            </div>
+
+                                            {ativo && (
+                                                <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4">
+                                                    {opcoesTamanhoCartaDashboard.map((tamanho) => {
+                                                        const selecionado = tamanhoAtual === tamanho.chave;
+
+                                                        return (
+                                                            <button
+                                                                key={tamanho.chave}
+                                                                type="button"
+                                                                onClick={() => alterarTamanhoCartaPainel(opcao.chave, tamanho.chave)}
+                                                                className={classNames(
+                                                                    "rounded-xl px-2 py-2 text-center ring-1 transition",
+                                                                    selecionado
+                                                                        ? "bg-slate-950 text-white ring-slate-950"
+                                                                        : "bg-white text-slate-600 ring-slate-200 hover:bg-slate-50"
+                                                                )}
+                                                            >
+                                                                <span className="block text-xs font-bold">{tamanho.label}</span>
+                                                                <span className={classNames("mt-0.5 block text-[10px]", selecionado ? "text-slate-200" : "text-slate-400")}>
+                                                                    {tamanho.descricao}
+                                                                </span>
+                                                            </button>
+                                                        );
+                                                    })}
+                                                </div>
+                                            )}
+                                        </div>
                                     );
                                 })}
                             </div>
@@ -2464,20 +2581,27 @@ function Dashboard({
             )}
 
             {blocosPainelDashboard.cards && (
-                <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
+                <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-6">
                     {cardsVisiveis.map((item) => {
                         const Icon = item.icon;
+                        const tamanho = tamanhosCartasDashboard[item.chave] || "padrao";
 
                         return (
-                            <Card key={item.label} className="overflow-hidden">
-                                <div className="flex items-start justify-between gap-3">
+                            <Card key={item.label} className={classNames("overflow-hidden", classeTamanhoCartaDashboard(item.chave))}>
+                                <div className={classNames(
+                                    "flex items-start justify-between gap-3",
+                                    tamanho === "destaque" ? "min-h-[108px]" : tamanho === "grande" ? "min-h-[92px]" : ""
+                                )}>
                                     <div className="min-w-0">
                                         <p className="text-sm font-medium text-slate-500">{item.label}</p>
-                                        <p className="mt-2 break-words text-2xl font-bold text-slate-950">{item.valor}</p>
+                                        <p className={classNames("mt-2 break-words font-bold text-slate-950", classeValorCartaDashboard(item.chave))}>{item.valor}</p>
                                         <p className="mt-1 text-xs text-slate-400">{item.detalhe}</p>
                                     </div>
-                                    <div className="shrink-0 rounded-2xl bg-slate-100 p-3 text-slate-700">
-                                        <Icon className="h-5 w-5" />
+                                    <div className={classNames(
+                                        "shrink-0 rounded-2xl bg-slate-100 p-3 text-slate-700",
+                                        tamanho === "destaque" || tamanho === "grande" ? "p-4" : ""
+                                    )}>
+                                        <Icon className={tamanho === "destaque" || tamanho === "grande" ? "h-6 w-6" : "h-5 w-5"} />
                                     </div>
                                 </div>
                             </Card>
