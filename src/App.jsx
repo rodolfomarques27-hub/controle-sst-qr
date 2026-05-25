@@ -988,6 +988,7 @@ function normalizarAuditoriaCampo(item = {}) {
         funcao: item.funcao || item.colaboradores?.funcao || "",
         statusDocumental: item.status_documental || item.statusDocumental || "",
         boasPraticas: item.boas_praticas || item.boasPraticas || "",
+        observacao: item.observacao || item.observacaoAuditoria || "",
         notificacao: item.notificacao || {},
         checklist,
         pontuacao: Number(item.pontuacao || 0),
@@ -1117,6 +1118,63 @@ function sanitizarNomeArquivo(nome) {
         .replace(/[^a-zA-Z0-9._-]/g, "-")
         .replace(/-+/g, "-")
         .toLowerCase();
+}
+
+async function reduzirFotoParaAuditoria(arquivo, opcoes = {}) {
+    if (!arquivo || !String(arquivo.type || "").startsWith("image/")) return arquivo;
+
+    const {
+        maxLado = 1600,
+        qualidadeInicial = 0.78,
+        alvoBytes = 900 * 1024,
+    } = opcoes;
+
+    if (Number(arquivo.size || 0) <= alvoBytes) return arquivo;
+
+    try {
+        const dataUrl = await new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = () => resolve(reader.result);
+            reader.onerror = reject;
+            reader.readAsDataURL(arquivo);
+        });
+
+        const imagem = await new Promise((resolve, reject) => {
+            const img = new Image();
+            img.onload = () => resolve(img);
+            img.onerror = reject;
+            img.src = dataUrl;
+        });
+
+        const escala = Math.min(1, maxLado / Math.max(imagem.width || maxLado, imagem.height || maxLado));
+        const largura = Math.max(1, Math.round((imagem.width || maxLado) * escala));
+        const altura = Math.max(1, Math.round((imagem.height || maxLado) * escala));
+        const canvas = document.createElement("canvas");
+        canvas.width = largura;
+        canvas.height = altura;
+        const ctx = canvas.getContext("2d");
+        ctx.drawImage(imagem, 0, 0, largura, altura);
+
+        const gerarBlob = (qualidade) => new Promise((resolve) => canvas.toBlob(resolve, "image/jpeg", qualidade));
+        let qualidade = qualidadeInicial;
+        let blob = await gerarBlob(qualidade);
+
+        while (blob && blob.size > alvoBytes && qualidade > 0.46) {
+            qualidade -= 0.08;
+            blob = await gerarBlob(qualidade);
+        }
+
+        if (!blob) return arquivo;
+
+        const nomeBase = sanitizarNomeArquivo(arquivo.name || "foto-auditoria.jpg").replace(/\.[^.]+$/, "");
+        return new File([blob], `${nomeBase}-otimizada.jpg`, {
+            type: "image/jpeg",
+            lastModified: Date.now(),
+        });
+    } catch (error) {
+        console.warn("Não foi possível reduzir a foto da auditoria.", error);
+        return arquivo;
+    }
 }
 
 function obterUrlLogoEmpresa(caminho) {
@@ -5668,6 +5726,7 @@ function AuditoriaCampoQRCode({ colaborador = {}, treinamentos = [], onAuditoria
         comportamento_seguro: "conforme",
     });
     const [auditorNome, setAuditorNome] = useState("");
+    const [observacaoAuditoria, setObservacaoAuditoria] = useState("");
     const [boasPraticas, setBoasPraticas] = useState("");
     const [notificacao, setNotificacao] = useState(() => notificacaoPadraoAuditoriaCampo(colaborador, {}));
     const [complementoNotificacao, setComplementoNotificacao] = useState("");
@@ -5736,14 +5795,19 @@ function AuditoriaCampoQRCode({ colaborador = {}, treinamentos = [], onAuditoria
     const uploadFotoAuditoria = async (arquivo, auditoriaId, tipo) => {
         if (!arquivo) return "";
 
-        if (!validarArquivoAntesUpload(arquivo, "fotoAuditoria")) {
-            throw new Error("Foto fora do tamanho recomendado para auditoria.");
+        const arquivoOtimizado = await reduzirFotoParaAuditoria(arquivo);
+
+        if (!validarArquivoAntesUpload(arquivoOtimizado, "fotoAuditoria")) {
+            throw new Error("Foto fora do tamanho permitido mesmo após a redução automática.");
         }
 
-        const nomeArquivo = `${auditoriaId}/${tipo}-${Date.now()}-${sanitizarNomeArquivo(arquivo.name || "foto.jpg")}`;
+        const nomeArquivo = `${auditoriaId}/${tipo}-${Date.now()}-${sanitizarNomeArquivo(arquivoOtimizado.name || "foto-auditoria.jpg")}`;
         const { error } = await supabase.storage
             .from("auditorias-campo")
-            .upload(nomeArquivo, arquivo, { upsert: true });
+            .upload(nomeArquivo, arquivoOtimizado, {
+                upsert: true,
+                contentType: arquivoOtimizado.type || "image/jpeg",
+            });
 
         if (error) throw error;
 
@@ -5765,9 +5829,10 @@ function AuditoriaCampoQRCode({ colaborador = {}, treinamentos = [], onAuditoria
             const statusDocumental = statusGeralConsultaPublica(colaborador, treinamentos).texto;
             const auditorResponsavel = auditorNome.trim() || "Auditor via QR Code";
             const notificacaoPayload = {
-                titulo: notificacao.titulo.trim(),
-                mensagem: notificacao.mensagem.trim(),
-                complementos: Array.isArray(notificacao.complementos) ? notificacao.complementos : [],
+                titulo: String(notificacaoCompleta.titulo || "").trim(),
+                mensagem: String(notificacaoCompleta.mensagem || "").trim(),
+                complementos: Array.isArray(notificacaoCompleta.complementos) ? notificacaoCompleta.complementos : [],
+                observacao: observacaoAuditoria.trim(),
                 preview: previewNotificacao,
                 auditor: auditorResponsavel,
             };
@@ -5805,6 +5870,7 @@ function AuditoriaCampoQRCode({ colaborador = {}, treinamentos = [], onAuditoria
                 empresa_nome: colaborador.empresaExibicao || colaborador.empresa || "",
                 funcao: colaborador.funcao || "",
                 status_documental: statusDocumental,
+                observacao: observacaoAuditoria.trim(),
                 boas_praticas: boasPraticas.trim(),
                 notificacao: notificacaoPayload,
                 checklist,
@@ -5881,6 +5947,7 @@ function AuditoriaCampoQRCode({ colaborador = {}, treinamentos = [], onAuditoria
             setMensagem("Auditoria registrada com sucesso.");
             setAberta(false);
             setRespostas({ epi: "conforme", frente_trabalho: "conforme", comportamento_seguro: "conforme" });
+            setObservacaoAuditoria("");
             setBoasPraticas("");
             setNotificacao(notificacaoPadraoAuditoriaCampo(colaborador, calcularResultadoAuditoriaCampo({ epi: "conforme", frente_trabalho: "conforme", comportamento_seguro: "conforme" })));
             setComplementoNotificacao("");
@@ -5963,7 +6030,16 @@ function AuditoriaCampoQRCode({ colaborador = {}, treinamentos = [], onAuditoria
 
                     <div className="grid gap-4 md:grid-cols-2">
                         <div>
-                            <label className="block text-sm font-bold text-slate-700">Nome do auditor</label>
+                            <label className="block text-sm font-bold text-slate-700">Assunto / título da auditoria</label>
+                            <input
+                                value={notificacaoCompleta.titulo}
+                                onChange={(e) => setNotificacao((atual) => ({ ...atual, titulo: e.target.value }))}
+                                placeholder="Ex.: Auditoria de campo - Nome do colaborador"
+                                className="mt-2 w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-slate-300"
+                            />
+                        </div>
+                        <div>
+                            <label className="block text-sm font-bold text-slate-700">Nome de quem fez a auditoria</label>
                             <input
                                 value={auditorNome}
                                 onChange={(e) => setAuditorNome(e.target.value)}
@@ -5980,6 +6056,16 @@ function AuditoriaCampoQRCode({ colaborador = {}, treinamentos = [], onAuditoria
                             >
                                 {statusDesvioAuditoriaCampo.map((status) => <option key={status}>{status}</option>)}
                             </select>
+                        </div>
+                        <div>
+                            <label className="block text-sm font-bold text-slate-700">Observação da auditoria</label>
+                            <textarea
+                                value={observacaoAuditoria}
+                                onChange={(e) => setObservacaoAuditoria(e.target.value)}
+                                rows={2}
+                                placeholder="Observação geral da auditoria realizada pelo QR Code"
+                                className="mt-2 w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-slate-300"
+                            />
                         </div>
                     </div>
 
@@ -6137,7 +6223,11 @@ function AuditoriaCampoQRCode({ colaborador = {}, treinamentos = [], onAuditoria
                                     <input
                                         type="file"
                                         accept="image/png,image/jpeg,image/webp"
-                                        onChange={(e) => setDesvio({ ...desvio, fotoAntes: e.target.files?.[0] || null })}
+                                        onChange={async (e) => {
+                                            const arquivo = e.target.files?.[0] || null;
+                                            const otimizado = arquivo ? await reduzirFotoParaAuditoria(arquivo) : null;
+                                            setDesvio((atual) => ({ ...atual, fotoAntes: otimizado }));
+                                        }}
                                         className="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm"
                                     />
                                     <FileUploadAviso arquivo={desvio.fotoAntes} tipo="fotoAuditoria" />
@@ -6147,7 +6237,11 @@ function AuditoriaCampoQRCode({ colaborador = {}, treinamentos = [], onAuditoria
                                     <input
                                         type="file"
                                         accept="image/png,image/jpeg,image/webp"
-                                        onChange={(e) => setDesvio({ ...desvio, fotoDepois: e.target.files?.[0] || null })}
+                                        onChange={async (e) => {
+                                            const arquivo = e.target.files?.[0] || null;
+                                            const otimizado = arquivo ? await reduzirFotoParaAuditoria(arquivo) : null;
+                                            setDesvio((atual) => ({ ...atual, fotoDepois: otimizado }));
+                                        }}
                                         className="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm"
                                     />
                                     <FileUploadAviso arquivo={desvio.fotoDepois} tipo="fotoAuditoria" />
@@ -11230,6 +11324,9 @@ function EditorNotificacaoHistoricoAuditoria({ auditoria = {}, onAtualizada }) {
         auditor: notificacaoInicial.auditor || auditoria.auditorNome || "",
     });
     const [novoComplemento, setNovoComplemento] = useState("");
+    const [exclusaoAberta, setExclusaoAberta] = useState(false);
+    const [senhaExclusao, setSenhaExclusao] = useState("");
+    const [excluindo, setExcluindo] = useState(false);
     const [observacoesStatus, setObservacoesStatus] = useState({
         status: desvioPrincipal?.status || auditoria.statusDesvio || "Aberto",
         observacaoAberto: desvioPrincipal?.observacaoAberto || "",
@@ -11273,13 +11370,13 @@ function EditorNotificacaoHistoricoAuditoria({ auditoria = {}, onAtualizada }) {
                 titulo: String(notificacao.titulo || "").trim(),
                 mensagem: String(notificacao.mensagem || "").trim(),
                 complementos: Array.isArray(notificacao.complementos) ? notificacao.complementos : [],
-                auditor: notificacao.auditor || auditoria.auditorNome || "",
+                auditor: String(notificacao.auditor || auditoria.auditorNome || "").trim(),
                 atualizado_em: new Date().toISOString(),
             };
 
             const { error: erroAuditoria } = await supabase
                 .from("auditorias_campo")
-                .update({ notificacao: notificacaoPayload })
+                .update({ notificacao: notificacaoPayload, auditor_nome: notificacaoPayload.auditor })
                 .eq("id", auditoria.id);
 
             if (erroAuditoria) throw erroAuditoria;
@@ -11319,6 +11416,7 @@ function EditorNotificacaoHistoricoAuditoria({ auditoria = {}, onAtualizada }) {
             const atualizado = {
                 ...auditoria,
                 notificacao: notificacaoPayload,
+                auditorNome: notificacaoPayload.auditor,
                 statusDesvio: observacoesStatus.status,
                 desvios: desviosAtualizados,
             };
@@ -11329,6 +11427,47 @@ function EditorNotificacaoHistoricoAuditoria({ auditoria = {}, onAtualizada }) {
             setMensagem(`Erro ao salvar: ${error.message}`);
         } finally {
             setSalvando(false);
+        }
+    };
+
+    const excluirAuditoria = async () => {
+        if (!auditoria.id) {
+            setMensagem("Não foi possível excluir: auditoria sem ID.");
+            return;
+        }
+
+        if (senhaExclusao !== SENHA_AUDITORIA) {
+            setMensagem("Senha incorreta. A auditoria não foi excluída.");
+            return;
+        }
+
+        const confirmou = window.confirm("Confirma a exclusão definitiva desta auditoria de campo?");
+        if (!confirmou) return;
+
+        setExcluindo(true);
+        setMensagem("");
+
+        try {
+            const { error: erroDesvios } = await supabase
+                .from("auditoria_campo_desvios")
+                .delete()
+                .eq("auditoria_id", auditoria.id);
+
+            if (erroDesvios) throw erroDesvios;
+
+            const { error: erroAuditoria } = await supabase
+                .from("auditorias_campo")
+                .delete()
+                .eq("id", auditoria.id);
+
+            if (erroAuditoria) throw erroAuditoria;
+
+            if (typeof onAtualizada === "function") onAtualizada({ ...auditoria, excluida: true });
+            setMensagem("Auditoria excluída com sucesso.");
+        } catch (error) {
+            setMensagem(`Erro ao excluir auditoria: ${error.message}`);
+        } finally {
+            setExcluindo(false);
         }
     };
 
@@ -11356,8 +11495,41 @@ function EditorNotificacaoHistoricoAuditoria({ auditoria = {}, onAtualizada }) {
                         {aberto ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
                         {aberto ? "Fechar edição" : "Editar"}
                     </button>
+                    <button
+                        type="button"
+                        onClick={() => setExclusaoAberta((valor) => !valor)}
+                        className="inline-flex items-center justify-center gap-2 rounded-xl bg-red-50 px-3 py-2 text-xs font-bold text-red-700 ring-1 ring-red-200 hover:bg-red-100"
+                    >
+                        <Trash2 className="h-3.5 w-3.5" />
+                        Excluir
+                    </button>
                 </div>
             </div>
+
+            {exclusaoAberta && (
+                <div className="mt-3 rounded-2xl border border-red-200 bg-red-50 p-3">
+                    <p className="text-sm font-bold text-red-800">Excluir auditoria</p>
+                    <p className="mt-1 text-xs text-red-700">Esta ação remove a auditoria e seus desvios vinculados. Informe a senha de auditoria para confirmar.</p>
+                    <div className="mt-3 flex flex-col gap-2 sm:flex-row">
+                        <PasswordInput
+                            value={senhaExclusao}
+                            onChange={(e) => setSenhaExclusao(e.target.value)}
+                            placeholder="Senha para excluir"
+                            className="min-w-0 flex-1"
+                            inputClassName="border-red-200 bg-white focus:ring-red-200"
+                        />
+                        <button
+                            type="button"
+                            disabled={excluindo}
+                            onClick={excluirAuditoria}
+                            className="inline-flex items-center justify-center gap-2 rounded-2xl bg-red-600 px-4 py-3 text-sm font-bold text-white hover:bg-red-700 disabled:opacity-60"
+                        >
+                            <Trash2 className="h-4 w-4" />
+                            {excluindo ? "Excluindo..." : "Confirmar exclusão"}
+                        </button>
+                    </div>
+                </div>
+            )}
 
             {visualizarPreview && !aberto && (
                 <div className="mt-3 rounded-2xl border border-blue-100 bg-blue-50/70 p-3">
@@ -11371,6 +11543,15 @@ function EditorNotificacaoHistoricoAuditoria({ auditoria = {}, onAtualizada }) {
             {aberto && (
                 <div className="mt-4 grid gap-4 lg:grid-cols-2">
                     <div className="space-y-3">
+                        <div>
+                            <label className="block text-xs font-bold uppercase tracking-wide text-slate-500">Nome de quem fez a auditoria</label>
+                            <input
+                                value={notificacao.auditor}
+                                onChange={(e) => setNotificacao((atual) => ({ ...atual, auditor: e.target.value }))}
+                                placeholder="Auditor responsável"
+                                className="mt-2 w-full rounded-2xl border border-slate-200 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-slate-300"
+                            />
+                        </div>
                         <div>
                             <label className="block text-xs font-bold uppercase tracking-wide text-slate-500">Assunto da notificação</label>
                             <input
@@ -14033,7 +14214,7 @@ export default function App() {
                     )}
 
                     {tela === "auditoriaCampo" && (
-                        <DashboardAuditoriaCampo auditoriasCampo={auditoriasCampo} onAuditoriaAtualizada={(atualizada) => setAuditoriasCampo((atual) => atual.map((item) => item.id === atualizada.id ? atualizada : item))} />
+                        <DashboardAuditoriaCampo auditoriasCampo={auditoriasCampo} onAuditoriaAtualizada={(atualizada) => setAuditoriasCampo((atual) => atualizada?.excluida ? atual.filter((item) => item.id !== atualizada.id) : atual.map((item) => item.id === atualizada.id ? atualizada : item))} />
                     )}
 
                     {tela === "empresas" && (
