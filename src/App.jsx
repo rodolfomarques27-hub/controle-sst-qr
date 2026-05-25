@@ -128,6 +128,21 @@ const documentosEmpresaBase = [
     },
 ];
 
+const STATUS_CLASSIFICACAO_COLABORADOR = [
+    "Liberado",
+    "Com pendência",
+    "Bloqueado",
+    "Em análise",
+    "Desmobilizado",
+    "Inativo",
+];
+
+const IDS_DOCUMENTOS_CRITICOS_COLABORADOR = [1, 14, 15, 21, 22];
+
+function obterStatusInicialColaborador() {
+    return "Em análise";
+}
+
 function obterDocumentoEmpresa(tipo) {
     return documentosEmpresaBase.find((d) => d.tipo === tipo) || documentosEmpresaBase[0];
 }
@@ -427,13 +442,14 @@ function normalizarColaborador(item) {
         empresaPaiId: item.empresas?.empresa_pai_id || item.empresaPaiId || null,
         empresaPaiNome: item.empresaPaiNome || "",
         empresaExibicao: item.empresaExibicao || item.empresas?.nome || item.empresa || "Empresa não informada",
-        funcao: item.funcao || "-",
+        cargo: item.cargo || item.cargo_funcao || item.funcao || "",
+        funcao: item.funcao || item.cargo || item.cargo_funcao || "-",
         matricula: item.matricula || "-",
         codigoFuncionario: item.codigo_funcionario || item.codigoFuncionario || `COL-${String(item.id).slice(0, 8).toUpperCase()}`,
         fotoUrl: item.foto_url || item.fotoUrl || "",
         fotoNome: item.foto_nome || item.fotoNome || "",
         status: item.status || "Ativo",
-        statusMobilizacao: item.status_mobilizacao || item.statusMobilizacao || "Mobilizado",
+        statusMobilizacao: item.status_mobilizacao || item.statusMobilizacao || "",
         treinamentosRemovidos: item.treinamentos_removidos || item.treinamentosRemovidos || [],
         treinamentosAdicionais: item.treinamentos_adicionais || item.treinamentosAdicionais || [],
         token: item.token_qr || item.token || `SST-${String(item.id).slice(0, 8)}`,
@@ -760,6 +776,16 @@ function normalizarStatusEmpresa(status) {
     if (status === "Inapta" || status === "Empresa inapta") return "Empresa inapta";
     if (status === "Bloqueada" || status === "Suspensa" || status === "Empresa suspensa") return "Empresa suspensa";
     return status;
+}
+
+function obterFuncaoCargoColaborador(colaborador) {
+    return String(colaborador?.funcao || colaborador?.cargo || "").trim() || "Função não informada";
+}
+
+function colaboradorContaComoMobilizado(colaborador) {
+    const classificacao = statusGeral(colaborador).texto;
+
+    return classificacao === "Liberado" || classificacao === "Com pendência";
 }
 
 function classeStatusEmpresa(status) {
@@ -1322,22 +1348,138 @@ function analisarArquivosTreinamentoMassa(arquivos = []) {
     });
 }
 
+function itemDocumentoCriticoColaborador(item) {
+    const id = Number(item?.treinamento?.id || item?.treinamentoId || item?.treinamento_id || 0);
+    const nome = normalizarTextoBusca(item?.treinamento?.nome || item?.nomeTreinamento || item?.tipoTreinamento || "");
+
+    return (
+        IDS_DOCUMENTOS_CRITICOS_COLABORADOR.includes(id) ||
+        nome.includes("aso") ||
+        nome.includes("atestado de saude") ||
+        nome.includes("ficha de registro") ||
+        nome.includes("registro clt") ||
+        nome.includes("integracao") ||
+        nome.includes("mobilizacao sst") ||
+        nome.includes("ordem de servico") ||
+        nome.includes("ficha de epi") ||
+        nome.includes("epis atualizada")
+    );
+}
+
+function documentoEmAnaliseColaborador(item) {
+    const statusValidacao = normalizarTextoBusca(
+        item?.realizado?.statusValidacao ||
+        item?.realizado?.status_validacao ||
+        item?.statusValidacao ||
+        item?.status_validacao ||
+        ""
+    );
+
+    return (
+        Boolean(item?.realizado) &&
+        (
+            statusValidacao.includes("analise") ||
+            statusValidacao.includes("conferencia") ||
+            statusValidacao.includes("validacao") ||
+            statusValidacao.includes("aguardando")
+        ) &&
+        !statusValidacao.includes("validado") &&
+        !statusValidacao.includes("aprovado")
+    );
+}
+
+function classeClassificacaoColaborador(status) {
+    const texto = String(status || "");
+
+    if (texto === "Liberado") return "bg-emerald-600 text-white";
+    if (texto === "Com pendência") return "bg-blue-50 text-blue-700 ring-1 ring-blue-200";
+    if (texto === "Bloqueado") return "bg-red-600 text-white";
+    if (texto === "Em análise") return "bg-violet-50 text-violet-700 ring-1 ring-violet-200";
+    if (texto === "Desmobilizado") return "bg-slate-600 text-white";
+    if (texto === "Inativo") return "bg-slate-100 text-slate-700 ring-1 ring-slate-300";
+
+    return "bg-slate-100 text-slate-700 ring-1 ring-slate-300";
+}
+
 function statusGeral(colaborador) {
     const avaliacao = avaliarTreinamentosColaborador(colaborador);
+    const textoSituacao = normalizarTextoBusca(`${colaborador?.status || ""} ${colaborador?.statusMobilizacao || ""} ${colaborador?.status_mobilizacao || ""}`);
 
-    if (avaliacao.vencidos.length > 0) {
-        return { texto: "Vencido", classe: "bg-red-600 text-white", detalhe: "Possui treinamento obrigatório vencido" };
+    if (textoSituacao.includes("desmobilizado") || textoSituacao.includes("desmobilizada")) {
+        return {
+            texto: "Desmobilizado",
+            classe: classeClassificacaoColaborador("Desmobilizado"),
+            detalhe: "Colaborador removido da obra.",
+            avaliacao,
+        };
     }
 
-    if (avaliacao.pendentes.length > 0) {
-        return { texto: "Pendente", classe: "bg-blue-50 text-blue-700 ring-1 ring-blue-200", detalhe: "Faltam treinamentos obrigatórios da função" };
+    if (textoSituacao.includes("inativo") || textoSituacao.includes("inativa")) {
+        return {
+            texto: "Inativo",
+            classe: classeClassificacaoColaborador("Inativo"),
+            detalhe: "Colaborador cadastrado, mas sem mobilização ativa.",
+            avaliacao,
+        };
     }
 
-    if (avaliacao.vencendo.length > 0) {
-        return { texto: "Atenção", classe: "bg-orange-500 text-white", detalhe: "Possui treinamento obrigatório a vencer em até 30 dias" };
+    const possuiDocumentoEmAnalise = avaliacao.itens.some(documentoEmAnaliseColaborador);
+
+    if (
+        textoSituacao.includes("em analise") ||
+        textoSituacao.includes("em análise") ||
+        textoSituacao.includes("aguardando conferencia") ||
+        textoSituacao.includes("aguardando conferência") ||
+        possuiDocumentoEmAnalise
+    ) {
+        return {
+            texto: "Em análise",
+            classe: classeClassificacaoColaborador("Em análise"),
+            detalhe: "Documento enviado, mas aguardando conferência.",
+            avaliacao,
+        };
     }
 
-    return { texto: "Apto", classe: "bg-emerald-600 text-white", detalhe: "Treinamentos obrigatórios válidos" };
+    const documentosCriticosFaltantes = avaliacao.pendentes.filter(itemDocumentoCriticoColaborador);
+    const bloqueadoPorStatus = textoSituacao.includes("bloqueado") || textoSituacao.includes("bloqueada") || textoSituacao.includes("impedido") || textoSituacao.includes("impedida");
+
+    if (bloqueadoPorStatus || avaliacao.vencidos.length > 0 || documentosCriticosFaltantes.length > 0) {
+        const motivos = [];
+
+        if (bloqueadoPorStatus) motivos.push("status manual bloqueado");
+        if (avaliacao.vencidos.length > 0) motivos.push(`${avaliacao.vencidos.length} documento(s) ou treinamento(s) obrigatório(s) vencido(s)`);
+        if (documentosCriticosFaltantes.length > 0) motivos.push(`${documentosCriticosFaltantes.length} documento(s) crítico(s) faltante(s)`);
+
+        return {
+            texto: "Bloqueado",
+            classe: classeClassificacaoColaborador("Bloqueado"),
+            detalhe: motivos.join("; ") || "Existe pendência bloqueante.",
+            avaliacao,
+        };
+    }
+
+    const pendenciasNaoBloqueantes = avaliacao.pendentes.filter((item) => !itemDocumentoCriticoColaborador(item));
+
+    if (pendenciasNaoBloqueantes.length > 0 || avaliacao.vencendo.length > 0) {
+        const detalhes = [];
+
+        if (pendenciasNaoBloqueantes.length > 0) detalhes.push(`${pendenciasNaoBloqueantes.length} pendência(s) não bloqueante(s)`);
+        if (avaliacao.vencendo.length > 0) detalhes.push(`${avaliacao.vencendo.length} item(ns) a vencer em até 30 dias`);
+
+        return {
+            texto: "Com pendência",
+            classe: classeClassificacaoColaborador("Com pendência"),
+            detalhe: detalhes.join("; ") || "Existe pendência, mas não bloqueia a mobilização.",
+            avaliacao,
+        };
+    }
+
+    return {
+        texto: "Liberado",
+        classe: classeClassificacaoColaborador("Liberado"),
+        detalhe: "Documentos e treinamentos obrigatórios em dia.",
+        avaliacao,
+    };
 }
 
 function Card({ children, className = "" }) {
@@ -1476,8 +1618,105 @@ function LoginScreen({ onLogin }) {
     );
 }
 
-function Dashboard({ colaboradores, onSelectColab }) {
+
+function ListaCompacta({ titulo, subtitulo, vazio, children }) {
+    return (
+        <Card>
+            <div className="mb-4">
+                <h2 className="text-lg font-bold text-slate-950">{titulo}</h2>
+                {subtitulo && <p className="mt-1 text-sm text-slate-500">{subtitulo}</p>}
+            </div>
+
+            <div className="space-y-2">
+                {children || (
+                    <div className="rounded-2xl border border-dashed border-slate-300 p-5 text-center text-sm text-slate-500">
+                        {vazio}
+                    </div>
+                )}
+            </div>
+        </Card>
+    );
+}
+
+function Dashboard({
+    colaboradores,
+    empresasBanco = [],
+    documentosEmpresas = [],
+    auditoria = [],
+    onSelectColab,
+}) {
     const [enviandoEmail, setEnviandoEmail] = useState(false);
+    const [usoStorageDashboard, setUsoStorageDashboard] = useState({
+        totalBytes: 0,
+        arquivos: 0,
+        buckets: [],
+    });
+    const [carregandoStorageDashboard, setCarregandoStorageDashboard] = useState(false);
+
+    const carregarUsoStorageDashboard = useCallback(async () => {
+        setCarregandoStorageDashboard(true);
+
+        try {
+            const buckets = ["certificados-treinamentos", "documentos-empresas", "contratos-empresas", "logos-empresas", "fotos-colaboradores"];
+            const resumoBuckets = [];
+
+            const listarNivel = async (bucket, prefixo = "") => {
+                const { data, error } = await supabase.storage
+                    .from(bucket)
+                    .list(prefixo, {
+                        limit: 1000,
+                        sortBy: { column: "name", order: "asc" },
+                    });
+
+                if (error) return { bytes: 0, arquivos: 0 };
+
+                let bytes = 0;
+                let arquivos = 0;
+
+                for (const item of data || []) {
+                    const caminho = prefixo ? `${prefixo}/${item.name}` : item.name;
+                    const pareceArquivo = item.name && /\.[a-z0-9]{2,5}$/i.test(item.name);
+
+                    if (pareceArquivo) {
+                        bytes += Number(item.metadata?.size || 0);
+                        arquivos += 1;
+                    } else {
+                        const sub = await listarNivel(bucket, caminho);
+                        bytes += sub.bytes;
+                        arquivos += sub.arquivos;
+                    }
+                }
+
+                return { bytes, arquivos };
+            };
+
+            for (const bucket of buckets) {
+                const resumo = await listarNivel(bucket);
+
+                if (resumo.arquivos > 0 || resumo.bytes > 0) {
+                    resumoBuckets.push({ bucket, ...resumo });
+                }
+            }
+
+            setUsoStorageDashboard({
+                totalBytes: resumoBuckets.reduce((total, bucket) => total + bucket.bytes, 0),
+                arquivos: resumoBuckets.reduce((total, bucket) => total + bucket.arquivos, 0),
+                buckets: resumoBuckets.sort((a, b) => b.bytes - a.bytes),
+            });
+        } catch {
+            setUsoStorageDashboard({ totalBytes: 0, arquivos: 0, buckets: [] });
+        } finally {
+            setCarregandoStorageDashboard(false);
+        }
+    }, []);
+
+    useEffect(() => {
+        const timer = window.setTimeout(() => {
+            carregarUsoStorageDashboard();
+        }, 0);
+
+        return () => window.clearTimeout(timer);
+    }, [carregarUsoStorageDashboard]);
 
     const indicadores = useMemo(() => {
         const avaliacoes = colaboradores.map((colaborador) => {
@@ -1494,20 +1733,62 @@ function Dashboard({ colaboradores, onSelectColab }) {
         const vencidos = itens.filter((item) => item.status.chave === "vencido").length;
         const vencendo = itens.filter((item) => item.status.chave === "vencendo").length;
         const pendentes = itens.filter((item) => item.status.chave === "pendente").length;
-        const emDia = itens.filter((item) => item.status.chave === "emdia").length;
+        const emDia = itens.filter((item) => ["emdia", "semvalidade"].includes(item.status.chave)).length;
         const empresas = new Set(colaboradores.map((c) => c.empresa).filter(Boolean)).size;
 
         return { itens, vencidos, vencendo, pendentes, emDia, empresas };
     }, [colaboradores]);
 
     const totalItens = indicadores.itens.length;
+    const mesAtual = hoje.getMonth();
+    const anoAtual = hoje.getFullYear();
+
+    const documentosComStatus = documentosEmpresas.map((documento) => ({
+        ...documento,
+        status: statusEmpresaDocumento(documento.data_vencimento),
+    }));
+
+    const documentosVencidos = documentosComStatus.filter((documento) => documento.status.chave === "vencido");
+    const documentosAVencer = documentosComStatus.filter((documento) => documento.status.chave === "vencendo");
+    const empresasAtivas = empresasBanco.filter((empresa) => normalizarStatusEmpresa(empresa.status) === "Empresa ativa");
+    const colaboradoresMobilizados = colaboradores.filter(colaboradorContaComoMobilizado);
+    const colaboradoresBloqueados = colaboradores.filter((colaborador) => statusGeral(colaborador).texto === "Bloqueado").length;
+    const colaboradoresEmAnalise = colaboradores.filter((colaborador) => statusGeral(colaborador).texto === "Em análise").length;
+    const colaboradoresLiberados = colaboradores.filter((colaborador) => statusGeral(colaborador).texto === "Liberado").length;
+    const colaboradoresComPendencia = colaboradores.filter((colaborador) => statusGeral(colaborador).texto === "Com pendência").length;
+    const auditoriasMes = auditoria.filter((item) => {
+        const data = item.created_at ? new Date(item.created_at) : null;
+        return data && data.getMonth() === mesAtual && data.getFullYear() === anoAtual;
+    }).length;
+    const desviosAbertos = auditoria.filter((item) => {
+        const texto = normalizarTextoBusca(`${item.acao || ""} ${item.tabela || ""} ${item.descricao || ""}`);
+        return texto.includes("desvio") && !texto.includes("fechado") && !texto.includes("concluido") && !texto.includes("concluído");
+    }).length;
+    const aniversariantesMes = colaboradores.filter((colaborador) => {
+        const dataBase = colaborador.dataNascimento || colaborador.data_nascimento || colaborador.nascimento || "";
+        if (!dataBase) return false;
+
+        const data = new Date(`${dataBase}T12:00:00`);
+        return !Number.isNaN(data.getTime()) && data.getMonth() === mesAtual;
+    });
+
+    const storagePercentual = calcularPercentualUsoStorage(usoStorageDashboard.totalBytes);
+    const totalStorageLabel = carregandoStorageDashboard ? "Carregando..." : formatarBytes(usoStorageDashboard.totalBytes);
 
     const cards = [
-        { label: "Colaboradores", valor: colaboradores.length, icon: Users, detalhe: "Cadastrados no sistema" },
-        { label: "Empresas", valor: indicadores.empresas, icon: Building2, detalhe: "Empresas vinculadas" },
-        { label: "Pendentes", valor: indicadores.pendentes, icon: AlertTriangle, detalhe: "Sem certificado enviado" },
-        { label: "A vencer", valor: indicadores.vencendo, icon: CalendarClock, detalhe: "Próximos 30 dias" },
-        { label: "Vencidos", valor: indicadores.vencidos, icon: XCircle, detalhe: "Bloqueiam atividade" },
+        { label: "Colaboradores mobilizados", valor: colaboradoresMobilizados.length, icon: HardHat, detalhe: "Liberados ou com pendência" },
+        { label: "Colaboradores liberados", valor: colaboradoresLiberados, icon: BadgeCheck, detalhe: "Documentos em dia" },
+        { label: "Com pendência", valor: colaboradoresComPendencia, icon: AlertTriangle, detalhe: "Sem bloqueio" },
+        { label: "Em análise", valor: colaboradoresEmAnalise, icon: Eye, detalhe: "Aguardando conferência" },
+        { label: "Empresas ativas", valor: empresasAtivas.length, icon: Building2, detalhe: "Contratadas liberadas" },
+        { label: "Documentos vencidos", valor: documentosVencidos.length, icon: XCircle, detalhe: "Empresas / contratos" },
+        { label: "Documentos a vencer", valor: documentosAVencer.length, icon: CalendarClock, detalhe: "Próximos 30 dias" },
+        { label: "Treinamentos vencidos", valor: indicadores.vencidos, icon: AlertTriangle, detalhe: "Colaboradores" },
+        { label: "Colaboradores bloqueados", valor: colaboradoresBloqueados, icon: Lock, detalhe: "Pendência bloqueante" },
+        { label: "Auditorias no mês", valor: auditoriasMes, icon: Database, detalhe: "Eventos registrados" },
+        { label: "Desvios abertos", valor: desviosAbertos, icon: AlertTriangle, detalhe: "Registros não concluídos" },
+        { label: "Aniversariantes do mês", valor: aniversariantesMes.length, icon: UserRound, detalhe: "Campo nascimento" },
+        { label: "Armazenamento utilizado", valor: totalStorageLabel, icon: Upload, detalhe: `${storagePercentual}% do limite visual` },
     ];
 
     const pendencias = indicadores.itens
@@ -1524,6 +1805,267 @@ function Dashboard({ colaboradores, onSelectColab }) {
 
             return diasParaVencer(a.vencimento) - diasParaVencer(b.vencimento);
         });
+
+    const colaboradoresPorFuncao = Object.values(
+        colaboradoresMobilizados.reduce((acc, colaborador) => {
+            const funcao = obterFuncaoCargoColaborador(colaborador);
+
+            if (!acc[funcao]) acc[funcao] = { funcao, quantidade: 0 };
+
+            acc[funcao].quantidade += 1;
+
+            return acc;
+        }, {})
+    ).sort((a, b) => b.quantidade - a.quantidade || a.funcao.localeCompare(b.funcao));
+
+    const maiorQuantidadePorFuncao = Math.max(...colaboradoresPorFuncao.map((item) => item.quantidade), 1);
+
+    const rankingPendenciasEmpresa = (() => {
+        const empresasPorId = new Map();
+        const chavePorNome = new Map();
+        const grupos = {};
+
+        const nomeNormalizado = (nome) => normalizarTextoBusca(nome || "Empresa não informada").trim() || "empresa-nao-informada";
+
+        empresasBanco.forEach((empresa) => {
+            const chave = empresa.id ? `id:${empresa.id}` : `nome:${nomeNormalizado(empresa.nome)}`;
+            const nome = empresa.nome || "Empresa não informada";
+
+            if (empresa.id) empresasPorId.set(String(empresa.id), empresa);
+            chavePorNome.set(nomeNormalizado(nome), chave);
+
+            if (!grupos[chave]) {
+                grupos[chave] = {
+                    empresa: nome,
+                    totalColaboradores: 0,
+                    documentosVencidos: 0,
+                    documentosAVencer: 0,
+                    treinamentosVencidos: 0,
+                    treinamentosAVencer: 0,
+                    pendenciasLeves: 0,
+                    colaboradoresBloqueadosSet: new Set(),
+                };
+            }
+        });
+
+        const obterChaveGrupo = (empresaId, nomeEmpresa) => {
+            if (empresaId) return `id:${empresaId}`;
+
+            const nome = nomeNormalizado(nomeEmpresa);
+            return chavePorNome.get(nome) || `nome:${nome}`;
+        };
+
+        const obterNomeEmpresa = (empresaId, nomeEmpresa) => {
+            if (empresaId && empresasPorId.has(String(empresaId))) {
+                return empresasPorId.get(String(empresaId))?.nome || nomeEmpresa || "Empresa não informada";
+            }
+
+            return nomeEmpresa || "Empresa não informada";
+        };
+
+        const obterOuCriarGrupo = (empresaId, nomeEmpresa) => {
+            const chave = obterChaveGrupo(empresaId, nomeEmpresa);
+
+            if (!grupos[chave]) {
+                grupos[chave] = {
+                    empresa: obterNomeEmpresa(empresaId, nomeEmpresa),
+                    totalColaboradores: 0,
+                    documentosVencidos: 0,
+                    documentosAVencer: 0,
+                    treinamentosVencidos: 0,
+                    treinamentosAVencer: 0,
+                    pendenciasLeves: 0,
+                    colaboradoresBloqueadosSet: new Set(),
+                };
+            }
+
+            return grupos[chave];
+        };
+
+        colaboradores.forEach((colaborador) => {
+            const empresaId = colaborador.empresaId || colaborador.empresa_id || null;
+            const nomeEmpresa = colaborador.empresaExibicao || colaborador.empresa || "Empresa não informada";
+            const grupo = obterOuCriarGrupo(empresaId, nomeEmpresa);
+            const chaveColaborador = colaborador.id || colaborador.codigoFuncionario || colaborador.nome;
+            const classificacao = statusGeral(colaborador);
+
+            grupo.totalColaboradores += 1;
+
+            if (classificacao.texto === "Bloqueado" && chaveColaborador) {
+                grupo.colaboradoresBloqueadosSet.add(chaveColaborador);
+            } else if (["Com pendência", "Em análise"].includes(classificacao.texto)) {
+                grupo.pendenciasLeves += 1;
+            }
+        });
+
+        documentosEmpresas.forEach((documento) => {
+            const empresaId = documento.empresa_id || documento.empresaId || null;
+            const empresaBanco = empresaId ? empresasPorId.get(String(empresaId)) : null;
+            const nomeEmpresa = empresaBanco?.nome || documento.empresa || documento.empresaNome || documento.nome_empresa || "Empresa não informada";
+            const grupo = obterOuCriarGrupo(empresaId, nomeEmpresa);
+            const status = statusEmpresaDocumento(documento.data_vencimento);
+
+            if (status.chave === "vencido") grupo.documentosVencidos += 1;
+            else if (status.chave === "vencendo") grupo.documentosAVencer += 1;
+            else if (["semvencimento", "semdata"].includes(status.chave)) grupo.pendenciasLeves += 1;
+        });
+
+        indicadores.itens.forEach((item) => {
+            const colaborador = item.colaborador || {};
+            const empresaId = colaborador.empresaId || colaborador.empresa_id || null;
+            const nomeEmpresa = colaborador.empresaExibicao || colaborador.empresa || "Empresa não informada";
+            const grupo = obterOuCriarGrupo(empresaId, nomeEmpresa);
+            const chaveColaborador = colaborador.id || colaborador.codigoFuncionario || colaborador.nome;
+
+            if (item.status.chave === "vencido") {
+                grupo.treinamentosVencidos += 1;
+                if (chaveColaborador) grupo.colaboradoresBloqueadosSet.add(chaveColaborador);
+            } else if (item.status.chave === "vencendo") {
+                grupo.treinamentosAVencer += 1;
+                grupo.pendenciasLeves += 1;
+            } else if (item.status.chave === "pendente") {
+                if (itemDocumentoCriticoColaborador(item)) {
+                    if (chaveColaborador) grupo.colaboradoresBloqueadosSet.add(chaveColaborador);
+                } else {
+                    grupo.pendenciasLeves += 1;
+                }
+            }
+        });
+
+        return Object.values(grupos)
+            .map((grupo) => {
+                const colaboradoresBloqueados = grupo.colaboradoresBloqueadosSet.size;
+                const critico = grupo.documentosVencidos > 0 || grupo.treinamentosVencidos > 0 || colaboradoresBloqueados > 0;
+                const atencao = !critico && (grupo.documentosAVencer > 0 || grupo.treinamentosAVencer > 0 || grupo.pendenciasLeves > 0);
+                const statusEmpresa = critico ? "Crítico" : atencao ? "Atenção" : "Regular";
+                const statusEmpresaClasse = critico
+                    ? "bg-red-50 text-red-700 ring-red-200"
+                    : atencao
+                        ? "bg-orange-50 text-orange-700 ring-orange-200"
+                        : "bg-emerald-50 text-emerald-700 ring-emerald-200";
+                const criticidade = critico ? 3 : atencao ? 2 : 1;
+                const totalPendencias =
+                    grupo.documentosVencidos +
+                    grupo.documentosAVencer +
+                    grupo.treinamentosVencidos +
+                    grupo.treinamentosAVencer +
+                    grupo.pendenciasLeves +
+                    colaboradoresBloqueados;
+
+                return {
+                    empresa: grupo.empresa,
+                    totalColaboradores: grupo.totalColaboradores,
+                    documentosVencidos: grupo.documentosVencidos,
+                    documentosAVencer: grupo.documentosAVencer,
+                    treinamentosVencidos: grupo.treinamentosVencidos,
+                    colaboradoresBloqueados,
+                    pendenciasLeves: grupo.pendenciasLeves,
+                    statusEmpresa,
+                    statusEmpresaClasse,
+                    criticidade,
+                    totalPendencias,
+                };
+            })
+            .filter((grupo) => grupo.totalColaboradores > 0 || grupo.totalPendencias > 0)
+            .sort((a, b) =>
+                b.criticidade - a.criticidade ||
+                b.totalPendencias - a.totalPendencias ||
+                b.documentosVencidos - a.documentosVencidos ||
+                b.treinamentosVencidos - a.treinamentosVencidos ||
+                b.colaboradoresBloqueados - a.colaboradoresBloqueados ||
+                b.totalColaboradores - a.totalColaboradores ||
+                a.empresa.localeCompare(b.empresa)
+            );
+    })();
+
+    const documentosPorTipo = Object.values(
+        documentosEmpresas.reduce((acc, documento) => {
+            const tipo = documento.tipo_documento || "Sem tipo";
+
+            if (!acc[tipo]) {
+                acc[tipo] = {
+                    tipo,
+                    total: 0,
+                    vencidos: 0,
+                    vencendo: 0,
+                    emDia: 0,
+                };
+            }
+
+            const status = statusEmpresaDocumento(documento.data_vencimento);
+
+            acc[tipo].total += 1;
+
+            if (status.chave === "vencido") acc[tipo].vencidos += 1;
+            else if (status.chave === "vencendo") acc[tipo].vencendo += 1;
+            else acc[tipo].emDia += 1;
+
+            return acc;
+        }, {})
+    ).sort((a, b) => b.total - a.total || a.tipo.localeCompare(b.tipo));
+
+    const certificadosEnviados = indicadores.itens
+        .filter((item) => item.realizado)
+        .map((item) => ({
+            origem: "Treinamento",
+            nome: item.realizado?.arquivo || item.treinamento?.nome || "Certificado",
+            titulo: item.treinamento?.nome || "Treinamento",
+            colaborador: item.colaborador?.nome || "-",
+            empresa: item.colaborador?.empresaExibicao || item.colaborador?.empresa || "-",
+            data: item.realizado?.created_at || item.realizado?.realizado || item.realizado?.vencimento || "",
+            status: item.status.texto,
+        }));
+
+    const documentosEmpresariaisEnviados = documentosEmpresas.map((doc) => {
+        const empresa = empresasBanco.find((item) => String(item.id) === String(doc.empresa_id));
+
+        return {
+            origem: "Empresa",
+            nome: doc.arquivo_nome || doc.tipo_documento || "Documento empresarial",
+            titulo: doc.tipo_documento || "Documento empresarial",
+            colaborador: empresa?.nome || "-",
+            empresa: empresa?.nome || "-",
+            data: doc.created_at || doc.data_emissao || doc.data_vencimento || "",
+            status: statusEmpresaDocumento(doc.data_vencimento).texto,
+        };
+    });
+
+    const ultimosDocumentosEnviados = [...certificadosEnviados, ...documentosEmpresariaisEnviados]
+        .sort((a, b) => new Date(b.data || 0) - new Date(a.data || 0))
+        .slice(0, 8);
+
+    const ultimosEmailsEnviados = auditoria
+        .filter((item) => normalizarTextoBusca(`${item.acao || ""} ${item.descricao || ""}`).includes("email"))
+        .slice(0, 8);
+
+    const ultimosAcessos = auditoria
+        .filter((item) => normalizarTextoBusca(`${item.acao || ""} ${item.descricao || ""}`).includes("acesso"))
+        .slice(0, 8);
+
+    const alertasImportantes = [
+        ...documentosVencidos.slice(0, 4).map((doc) => ({
+            tipo: "Documento vencido",
+            texto: `${doc.tipo_documento || "Documento"} venceu em ${formatDate(doc.data_vencimento)}`,
+            classe: "bg-red-50 text-red-700 ring-red-100",
+        })),
+        ...pendencias.filter((item) => item.status.chave === "vencido").slice(0, 4).map((item) => ({
+            tipo: "Treinamento vencido",
+            texto: `${item.colaborador.nome} · ${item.treinamento.nome}`,
+            classe: "bg-red-50 text-red-700 ring-red-100",
+        })),
+        ...pendencias.filter((item) => item.status.chave === "vencendo").slice(0, 4).map((item) => ({
+            tipo: "A vencer",
+            texto: `${item.colaborador.nome} · ${item.treinamento.nome} · ${formatDate(item.vencimento)}`,
+            classe: "bg-orange-50 text-orange-700 ring-orange-100",
+        })),
+        ...(storagePercentual >= 80
+            ? [{
+                tipo: "Armazenamento",
+                texto: `Uso estimado do Storage em ${storagePercentual}%`,
+                classe: "bg-orange-50 text-orange-700 ring-orange-100",
+            }]
+            : []),
+    ].slice(0, 8);
 
     const montarPayloadEmailPendencia = (item) => {
         const statusEmail =
@@ -1547,7 +2089,8 @@ function Dashboard({ colaboradores, onSelectColab }) {
                     colaborador: item.colaborador?.nome || "Colaborador não informado",
                     codigo: item.colaborador?.codigoFuncionario || "-",
                     funcao: item.colaborador?.funcao || "-",
-                    situacaoObra: item.colaborador?.statusMobilizacao || "Mobilizado",
+                    situacaoObra: item.colaborador?.statusMobilizacao || obterStatusInicialColaborador(),
+                    statusColaborador: statusGeral(item.colaborador || {}).texto,
                     treinamento: item.treinamento?.nome || "Documento não informado",
                     realizacao: item.realizado?.realizado ? formatDate(item.realizado.realizado) : "Não informada",
                     vencimento: item.realizado?.vencimento ? formatDate(item.realizado.vencimento) : "Não informada",
@@ -1649,7 +2192,7 @@ function Dashboard({ colaboradores, onSelectColab }) {
 
     const baixarRelatorioDashboard = () => {
         const linhas = [
-            ["Colaborador", "Empresa", "Função", "Situação na obra", "Treinamento/Documento", "Status", "Vencimento", "Base"],
+            ["Colaborador", "Empresa", "Função", "Situação na obra", "Status automático", "Treinamento/Documento", "Status", "Vencimento", "Base"],
         ];
 
         indicadores.itens.forEach((item) => {
@@ -1657,7 +2200,8 @@ function Dashboard({ colaboradores, onSelectColab }) {
                 item.colaborador.nome,
                 item.colaborador.empresaExibicao || item.colaborador.empresa,
                 item.colaborador.funcao,
-                item.colaborador.statusMobilizacao || "Mobilizado",
+                item.colaborador.statusMobilizacao || obterStatusInicialColaborador(),
+                statusGeral(item.colaborador).texto,
                 item.treinamento.nome,
                 item.status.texto,
                 item.vencimento ? formatDate(item.vencimento) : "Sem certificado enviado",
@@ -1675,11 +2219,12 @@ function Dashboard({ colaboradores, onSelectColab }) {
         { label: "Vencidos", valor: indicadores.vencidos, total: totalItens, classe: "bg-red-500" },
     ];
 
+
     return (
         <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
             <Header
                 titulo="Dashboard SST"
-                subtitulo="Visão geral dos treinamentos obrigatórios, pendências, vencimentos e liberações por QR Code."
+                subtitulo="Visão executiva dos colaboradores, empresas, documentos, treinamentos, auditoria e armazenamento."
                 acao={
                     <div className="flex flex-wrap items-center gap-2">
                         <button
@@ -1710,13 +2255,13 @@ function Dashboard({ colaboradores, onSelectColab }) {
 
                     return (
                         <Card key={item.label} className="overflow-hidden">
-                            <div className="flex items-start justify-between">
-                                <div>
+                            <div className="flex items-start justify-between gap-3">
+                                <div className="min-w-0">
                                     <p className="text-sm font-medium text-slate-500">{item.label}</p>
-                                    <p className="mt-2 text-3xl font-bold text-slate-950">{item.valor}</p>
+                                    <p className="mt-2 break-words text-2xl font-bold text-slate-950">{item.valor}</p>
                                     <p className="mt-1 text-xs text-slate-400">{item.detalhe}</p>
                                 </div>
-                                <div className="rounded-2xl bg-slate-100 p-3 text-slate-700">
+                                <div className="shrink-0 rounded-2xl bg-slate-100 p-3 text-slate-700">
                                     <Icon className="h-5 w-5" />
                                 </div>
                             </div>
@@ -1759,12 +2304,12 @@ function Dashboard({ colaboradores, onSelectColab }) {
                                     </tr>
                                 )}
 
-                                {pendencias.map((item, idx) => (
+                                {pendencias.slice(0, 10).map((item, idx) => (
                                     <tr key={`${item.colaborador.id}-${item.treinamento.id}-${idx}`} className="hover:bg-slate-50">
                                         <td className="px-4 py-3">
                                             <div className="font-semibold text-slate-900">{item.colaborador.nome}</div>
                                             <div className="text-xs text-slate-500">
-                                                {item.colaborador.empresaExibicao || item.colaborador.empresa} · {item.colaborador.statusMobilizacao || "Mobilizado"}
+                                                {item.colaborador.empresaExibicao || item.colaborador.empresa} · {item.colaborador.statusMobilizacao || obterStatusInicialColaborador()} · {statusGeral(item.colaborador).texto}
                                             </div>
                                         </td>
                                         <td className="px-4 py-3 text-slate-600">{item.treinamento.nome}</td>
@@ -1831,6 +2376,219 @@ function Dashboard({ colaboradores, onSelectColab }) {
                     </div>
                 </Card>
             </div>
+
+            <div className="mt-6 grid gap-6 xl:grid-cols-3">
+                <ListaCompacta
+                    titulo="Colaboradores mobilizados por função"
+                    subtitulo="Conta apenas ativos, mobilizados, liberados ou com pendência não bloqueante."
+                    vazio="Nenhum colaborador mobilizado encontrado."
+                >
+                    {colaboradoresPorFuncao.slice(0, 8).map((item) => (
+                        <div key={item.funcao} className="rounded-2xl bg-slate-50 p-3 text-sm ring-1 ring-slate-100">
+                            <div className="flex justify-between gap-3">
+                                <span className="font-semibold text-slate-900">{item.funcao}</span>
+                                <span className="rounded-full bg-white px-2 py-0.5 text-xs font-bold text-slate-600 ring-1 ring-slate-200">{item.quantidade}</span>
+                            </div>
+                            <div className="mt-2 h-2 overflow-hidden rounded-full bg-white ring-1 ring-slate-100">
+                                <div
+                                    className="h-full rounded-full bg-slate-900"
+                                    style={{ width: `${Math.max(6, Math.round((item.quantidade / maiorQuantidadePorFuncao) * 100))}%` }}
+                                />
+                            </div>
+                            <p className="mt-1 text-xs text-slate-500">
+                                {item.quantidade} colaborador(es) considerado(s) mobilizado(s)
+                            </p>
+                        </div>
+                    ))}
+                </ListaCompacta>
+
+                <Card className="xl:col-span-2">
+                    <div className="mb-4 flex flex-col justify-between gap-3 md:flex-row md:items-start">
+                        <div>
+                            <h2 className="text-lg font-bold text-slate-950">Ranking de pendências por empresa</h2>
+                            <p className="mt-1 text-sm text-slate-500">
+                                Classificação por documentos, treinamentos vencidos e colaboradores bloqueados.
+                            </p>
+                        </div>
+                        <div className="flex flex-wrap gap-2 text-xs font-semibold">
+                            <span className="rounded-full bg-emerald-50 px-3 py-1 text-emerald-700 ring-1 ring-emerald-200">Regular</span>
+                            <span className="rounded-full bg-orange-50 px-3 py-1 text-orange-700 ring-1 ring-orange-200">Atenção</span>
+                            <span className="rounded-full bg-red-50 px-3 py-1 text-red-700 ring-1 ring-red-200">Crítico</span>
+                        </div>
+                    </div>
+
+                    {rankingPendenciasEmpresa.length === 0 ? (
+                        <div className="rounded-2xl border border-dashed border-slate-300 p-5 text-center text-sm text-slate-500">
+                            Nenhuma empresa encontrada para gerar o ranking.
+                        </div>
+                    ) : (
+                        <div className="overflow-x-auto scrollbar-discreta">
+                            <table className="min-w-[920px] w-full text-left text-sm">
+                                <thead>
+                                    <tr className="border-b border-slate-200 text-xs uppercase tracking-wide text-slate-500">
+                                        <th className="py-3 pr-3 font-semibold">Empresa</th>
+                                        <th className="px-3 py-3 text-center font-semibold">Total colab.</th>
+                                        <th className="px-3 py-3 text-center font-semibold">Docs vencidos</th>
+                                        <th className="px-3 py-3 text-center font-semibold">Docs a vencer</th>
+                                        <th className="px-3 py-3 text-center font-semibold">Trein. vencidos</th>
+                                        <th className="px-3 py-3 text-center font-semibold">Bloqueados</th>
+                                        <th className="py-3 pl-3 text-center font-semibold">Status</th>
+                                    </tr>
+                                </thead>
+                                <tbody className="divide-y divide-slate-100">
+                                    {rankingPendenciasEmpresa.slice(0, 10).map((item, index) => (
+                                        <tr key={item.empresa} className="align-middle text-slate-700 hover:bg-slate-50/80">
+                                            <td className="py-3 pr-3">
+                                                <div className="font-semibold text-slate-950">{index + 1}. {item.empresa}</div>
+                                                {item.pendenciasLeves > 0 && item.statusEmpresa === "Atenção" && (
+                                                    <div className="mt-0.5 text-xs text-slate-500">Possui pendência leve ou item preventivo.</div>
+                                                )}
+                                            </td>
+                                            <td className="px-3 py-3 text-center font-bold text-slate-900">{item.totalColaboradores}</td>
+                                            <td className="px-3 py-3 text-center">
+                                                <span className={classNames("inline-flex min-w-8 justify-center rounded-full px-2 py-1 text-xs font-bold ring-1", item.documentosVencidos > 0 ? "bg-red-50 text-red-700 ring-red-100" : "bg-slate-50 text-slate-600 ring-slate-100")}>{item.documentosVencidos}</span>
+                                            </td>
+                                            <td className="px-3 py-3 text-center">
+                                                <span className={classNames("inline-flex min-w-8 justify-center rounded-full px-2 py-1 text-xs font-bold ring-1", item.documentosAVencer > 0 ? "bg-orange-50 text-orange-700 ring-orange-100" : "bg-slate-50 text-slate-600 ring-slate-100")}>{item.documentosAVencer}</span>
+                                            </td>
+                                            <td className="px-3 py-3 text-center">
+                                                <span className={classNames("inline-flex min-w-8 justify-center rounded-full px-2 py-1 text-xs font-bold ring-1", item.treinamentosVencidos > 0 ? "bg-red-50 text-red-700 ring-red-100" : "bg-slate-50 text-slate-600 ring-slate-100")}>{item.treinamentosVencidos}</span>
+                                            </td>
+                                            <td className="px-3 py-3 text-center">
+                                                <span className={classNames("inline-flex min-w-8 justify-center rounded-full px-2 py-1 text-xs font-bold ring-1", item.colaboradoresBloqueados > 0 ? "bg-red-50 text-red-700 ring-red-100" : "bg-slate-50 text-slate-600 ring-slate-100")}>{item.colaboradoresBloqueados}</span>
+                                            </td>
+                                            <td className="py-3 pl-3 text-center">
+                                                <span className={classNames("inline-flex min-w-[86px] justify-center rounded-full px-3 py-1 text-xs font-bold ring-1", item.statusEmpresaClasse)}>
+                                                    {item.statusEmpresa}
+                                                </span>
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+                    )}
+                </Card>
+
+                <ListaCompacta
+                    titulo="Documentos por tipo"
+                    subtitulo="Resumo dos documentos empresariais."
+                    vazio="Nenhum documento empresarial cadastrado."
+                >
+                    {documentosPorTipo.slice(0, 8).map((item) => (
+                        <div key={item.tipo} className="rounded-2xl bg-slate-50 p-3 text-sm ring-1 ring-slate-100">
+                            <div className="flex justify-between gap-3">
+                                <span className="font-semibold text-slate-900">{item.tipo}</span>
+                                <span className="rounded-full bg-white px-2 py-0.5 text-xs font-bold text-slate-600 ring-1 ring-slate-200">{item.total}</span>
+                            </div>
+                            <p className="mt-1 text-xs text-slate-500">
+                                {item.emDia} em dia · {item.vencendo} a vencer · {item.vencidos} vencido(s)
+                            </p>
+                        </div>
+                    ))}
+                </ListaCompacta>
+            </div>
+
+            <div className="mt-6 grid gap-6 xl:grid-cols-2">
+                <ListaCompacta
+                    titulo="Últimos documentos enviados"
+                    subtitulo="Certificados e documentos empresariais mais recentes."
+                    vazio="Nenhum documento enviado ainda."
+                >
+                    {ultimosDocumentosEnviados.map((item, index) => (
+                        <div key={`${item.origem}-${item.nome}-${index}`} className="rounded-2xl bg-slate-50 p-3 text-sm ring-1 ring-slate-100">
+                            <div className="flex flex-wrap items-center justify-between gap-2">
+                                <span className="font-semibold text-slate-900">{item.titulo}</span>
+                                <span className="rounded-full bg-white px-2 py-0.5 text-[10px] font-bold text-slate-600 ring-1 ring-slate-200">{item.origem}</span>
+                            </div>
+                            <p className="mt-1 text-xs text-slate-500">
+                                {item.colaborador} · {item.empresa} · {item.data ? new Date(`${item.data}`.includes("T") ? item.data : `${item.data}T12:00:00`).toLocaleDateString("pt-BR") : "-"}
+                            </p>
+                        </div>
+                    ))}
+                </ListaCompacta>
+
+                <ListaCompacta
+                    titulo="Alertas importantes"
+                    subtitulo="Itens que exigem atenção imediata."
+                    vazio="Nenhum alerta importante no momento."
+                >
+                    {alertasImportantes.map((item, index) => (
+                        <div key={`${item.tipo}-${index}`} className={classNames("rounded-2xl p-3 text-sm ring-1", item.classe)}>
+                            <p className="font-bold">{item.tipo}</p>
+                            <p className="mt-1 text-xs">{item.texto}</p>
+                        </div>
+                    ))}
+                </ListaCompacta>
+            </div>
+
+            <div className="mt-6 grid gap-6 xl:grid-cols-3">
+                <ListaCompacta
+                    titulo="Últimos e-mails enviados"
+                    subtitulo="Eventos de envio registrados na auditoria."
+                    vazio="Nenhum envio de e-mail registrado."
+                >
+                    {ultimosEmailsEnviados.map((item) => (
+                        <div key={item.id} className="rounded-2xl bg-slate-50 p-3 text-sm ring-1 ring-slate-100">
+                            <p className="font-semibold text-slate-900">{item.descricao || item.acao}</p>
+                            <p className="mt-1 text-xs text-slate-500">
+                                {item.usuario_email || "-"} · {item.created_at ? new Date(item.created_at).toLocaleString("pt-BR") : "-"}
+                            </p>
+                        </div>
+                    ))}
+                </ListaCompacta>
+
+                <ListaCompacta
+                    titulo="Últimos acessos"
+                    subtitulo="Registros recentes de entrada e consulta."
+                    vazio="Nenhum acesso registrado."
+                >
+                    {ultimosAcessos.map((item) => {
+                        const origem = item.dados?.origemAcesso || {};
+
+                        return (
+                            <div key={item.id} className="rounded-2xl bg-slate-50 p-3 text-sm ring-1 ring-slate-100">
+                                <p className="font-semibold text-slate-900">{item.usuario_email || "Consulta pública"}</p>
+                                <p className="mt-1 text-xs text-slate-500">
+                                    {item.created_at ? new Date(item.created_at).toLocaleString("pt-BR") : "-"} · {origem.navegador || "Origem não registrada"}
+                                </p>
+                            </div>
+                        );
+                    })}
+                </ListaCompacta>
+
+                <ListaCompacta
+                    titulo="Armazenamento por bucket"
+                    subtitulo="Uso estimado do Supabase Storage."
+                    vazio="Nenhum arquivo identificado no Storage."
+                >
+                    <div className="rounded-2xl bg-slate-50 p-3 ring-1 ring-slate-100">
+                        <div className="mb-2 flex justify-between text-sm">
+                            <span className="font-semibold text-slate-700">Total utilizado</span>
+                            <span className="font-bold text-slate-950">{totalStorageLabel}</span>
+                        </div>
+                        <div className="h-2 overflow-hidden rounded-full bg-white ring-1 ring-slate-200">
+                            <div
+                                className={classNames(
+                                    "h-full rounded-full",
+                                    storagePercentual >= 90 ? "bg-red-500" : storagePercentual >= 70 ? "bg-orange-500" : "bg-emerald-500"
+                                )}
+                                style={{ width: `${Math.max(2, storagePercentual)}%` }}
+                            />
+                        </div>
+                    </div>
+
+                    {usoStorageDashboard.buckets.slice(0, 5).map((bucket) => (
+                        <div key={bucket.bucket} className="rounded-2xl bg-slate-50 p-3 text-sm ring-1 ring-slate-100">
+                            <div className="flex justify-between gap-3">
+                                <span className="font-semibold text-slate-900">{bucket.bucket}</span>
+                                <span className="text-xs font-bold text-slate-600">{formatarBytes(bucket.bytes)}</span>
+                            </div>
+                            <p className="mt-1 text-xs text-slate-500">{bucket.arquivos} arquivo(s)</p>
+                        </div>
+                    ))}
+                </ListaCompacta>
+            </div>
         </motion.div>
     );
 }
@@ -1850,6 +2608,7 @@ function Colaboradores({
 }) {
     const [busca, setBusca] = useState("");
     const [empresa, setEmpresa] = useState("Todas");
+    const [filtroClassificacao, setFiltroClassificacao] = useState("Todos");
     const [salvando, setSalvando] = useState(false);
     const [colaboradorEdicao, setColaboradorEdicao] = useState(null);
     const [salvandoEdicaoColaborador, setSalvandoEdicaoColaborador] = useState(false);
@@ -1866,7 +2625,7 @@ function Colaboradores({
         empresaNome: "",
         funcao: "",
         matricula: "",
-        statusMobilizacao: "Mobilizado",
+        statusMobilizacao: obterStatusInicialColaborador(),
         treinamentosRemovidos: [],
         treinamentosAdicionais: [],
         foto: null,
@@ -1877,18 +2636,29 @@ function Colaboradores({
 
     const filtrados = colaboradores.filter((c) => {
         const avaliacao = avaliarTreinamentosColaborador(c);
-        const texto = `${c.nome} ${c.empresa} ${c.empresaExibicao} ${c.empresaPaiNome} ${c.funcao} ${c.matricula} ${c.codigoFuncionario} ${c.statusMobilizacao} ${avaliacao.matriz.rotulo}`.toLowerCase();
-        return texto.includes(busca.toLowerCase()) && (empresa === "Todas" || c.empresa === empresa);
+        const geral = statusGeral(c);
+        const texto = normalizarTextoBusca(`${c.nome} ${c.empresa} ${c.empresaExibicao} ${c.empresaPaiNome} ${c.funcao} ${c.matricula} ${c.codigoFuncionario} ${c.statusMobilizacao} ${geral.texto} ${avaliacao.matriz.rotulo}`);
+        const bateBusca = texto.includes(normalizarTextoBusca(busca));
+        const bateEmpresa = empresa === "Todas" || c.empresa === empresa;
+        const bateClassificacao = filtroClassificacao === "Todos" || geral.texto === filtroClassificacao;
+
+        return bateBusca && bateEmpresa && bateClassificacao;
     });
 
     const resumoTreinamentos = useMemo(() => {
         const avaliacoes = colaboradores.map(avaliarTreinamentosColaborador);
+        const classificacoes = colaboradores.map((c) => statusGeral(c).texto);
 
         return {
             pendentes: avaliacoes.reduce((total, item) => total + item.pendentes.length, 0),
             vencidos: avaliacoes.reduce((total, item) => total + item.vencidos.length, 0),
             vencendo: avaliacoes.reduce((total, item) => total + item.vencendo.length, 0),
-            regulares: colaboradores.filter((c) => statusGeral(c).texto === "Apto").length,
+            liberados: classificacoes.filter((status) => status === "Liberado").length,
+            comPendencia: classificacoes.filter((status) => status === "Com pendência").length,
+            bloqueados: classificacoes.filter((status) => status === "Bloqueado").length,
+            emAnalise: classificacoes.filter((status) => status === "Em análise").length,
+            desmobilizados: classificacoes.filter((status) => status === "Desmobilizado").length,
+            inativos: classificacoes.filter((status) => status === "Inativo").length,
         };
     }, [colaboradores]);
 
@@ -1996,7 +2766,7 @@ function Colaboradores({
                 empresaNome: "",
                 funcao: "",
                 matricula: "",
-                statusMobilizacao: "Mobilizado",
+                statusMobilizacao: obterStatusInicialColaborador(),
                 treinamentosRemovidos: [],
                 treinamentosAdicionais: [],
                 foto: null,
@@ -2154,7 +2924,7 @@ function Colaboradores({
             matricula: colaborador.matricula === "-" ? "" : colaborador.matricula || "",
             codigoFuncionario: colaborador.codigoFuncionario || "",
             status: colaborador.status || "Ativo",
-            statusMobilizacao: colaborador.statusMobilizacao || "Mobilizado",
+            statusMobilizacao: colaborador.statusMobilizacao || obterStatusInicialColaborador(),
             treinamentosRemovidos: colaborador.treinamentosRemovidos || [],
             treinamentosAdicionais: colaborador.treinamentosAdicionais || [],
             fotoAtual: colaborador.fotoUrl || "",
@@ -2178,7 +2948,7 @@ function Colaboradores({
             funcao: colaboradorEdicao.funcao.trim(),
             matricula: colaboradorEdicao.matricula.trim(),
             status: colaboradorEdicao.status || "Ativo",
-            statusMobilizacao: colaboradorEdicao.statusMobilizacao || "Mobilizado",
+            statusMobilizacao: colaboradorEdicao.statusMobilizacao || obterStatusInicialColaborador(),
             treinamentosRemovidos: colaboradorEdicao.treinamentosRemovidos || [],
             treinamentosAdicionais: colaboradorEdicao.treinamentosAdicionais || [],
             codigoFuncionario: colaboradorEdicao.codigoFuncionarioOriginal || colaboradorEdicao.codigoFuncionario,
@@ -2280,11 +3050,12 @@ function Colaboradores({
                                 onChange={(e) => setNovo({ ...novo, statusMobilizacao: e.target.value })}
                                 className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none focus:border-slate-400 focus:ring-4 focus:ring-slate-100"
                             >
-                                <option>Mobilizado</option>
-                                <option>Desmobilizado</option>
+                                {STATUS_CLASSIFICACAO_COLABORADOR.map((status) => (
+                                    <option key={status}>{status}</option>
+                                ))}
                             </select>
                             <p className="mt-1 text-xs text-slate-400">
-                                Mobilizado = ativo na obra. Desmobilizado = fora da obra.
+                                Liberado e Com pendência entram como mobilização ativa. Bloqueado, Em análise, Desmobilizado e Inativo ficam fora da contagem de mobilizados.
                             </p>
                         </div>
 
@@ -2487,28 +3258,50 @@ function Colaboradores({
                                 ))}
                             </select>
                         </div>
+
+                        <div className="relative min-w-56">
+                            <ShieldCheck className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                            <select
+                                value={filtroClassificacao}
+                                onChange={(e) => setFiltroClassificacao(e.target.value)}
+                                className="w-full appearance-none rounded-2xl border border-slate-200 bg-white py-3 pl-10 pr-4 text-sm outline-none focus:border-slate-400 focus:ring-4 focus:ring-slate-100"
+                            >
+                                <option value="Todos">Todos os status</option>
+                                {STATUS_CLASSIFICACAO_COLABORADOR.map((status) => (
+                                    <option key={status} value={status}>{status}</option>
+                                ))}
+                            </select>
+                        </div>
                     </div>
 
-                    <div className="mb-4 grid gap-3 md:grid-cols-5">
+                    <div className="mb-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-7">
                         <div className="rounded-2xl bg-slate-50 p-3">
                             <p className="text-xs font-medium text-slate-500">Total</p>
                             <p className="text-2xl font-bold text-slate-950">{colaboradores.length}</p>
                         </div>
                         <div className="rounded-2xl bg-emerald-50 p-3">
-                            <p className="text-xs font-medium text-emerald-700">Regulares</p>
-                            <p className="text-2xl font-bold text-emerald-700">{resumoTreinamentos.regulares}</p>
+                            <p className="text-xs font-medium text-emerald-700">Liberados</p>
+                            <p className="text-2xl font-bold text-emerald-700">{resumoTreinamentos.liberados}</p>
                         </div>
                         <div className="rounded-2xl bg-blue-50 p-3">
-                            <p className="text-xs font-medium text-blue-700">Pendentes</p>
-                            <p className="text-2xl font-bold text-blue-700">{resumoTreinamentos.pendentes}</p>
-                        </div>
-                        <div className="rounded-2xl bg-orange-50 p-3">
-                            <p className="text-xs font-medium text-orange-700">A vencer 30d</p>
-                            <p className="text-2xl font-bold text-orange-700">{resumoTreinamentos.vencendo}</p>
+                            <p className="text-xs font-medium text-blue-700">Com pendência</p>
+                            <p className="text-2xl font-bold text-blue-700">{resumoTreinamentos.comPendencia}</p>
                         </div>
                         <div className="rounded-2xl bg-red-50 p-3">
-                            <p className="text-xs font-medium text-red-700">Vencidos</p>
-                            <p className="text-2xl font-bold text-red-700">{resumoTreinamentos.vencidos}</p>
+                            <p className="text-xs font-medium text-red-700">Bloqueados</p>
+                            <p className="text-2xl font-bold text-red-700">{resumoTreinamentos.bloqueados}</p>
+                        </div>
+                        <div className="rounded-2xl bg-violet-50 p-3">
+                            <p className="text-xs font-medium text-violet-700">Em análise</p>
+                            <p className="text-2xl font-bold text-violet-700">{resumoTreinamentos.emAnalise}</p>
+                        </div>
+                        <div className="rounded-2xl bg-slate-100 p-3">
+                            <p className="text-xs font-medium text-slate-700">Desmobilizados</p>
+                            <p className="text-2xl font-bold text-slate-700">{resumoTreinamentos.desmobilizados}</p>
+                        </div>
+                        <div className="rounded-2xl bg-slate-50 p-3 ring-1 ring-slate-200">
+                            <p className="text-xs font-medium text-slate-700">Inativos</p>
+                            <p className="text-2xl font-bold text-slate-700">{resumoTreinamentos.inativos}</p>
                         </div>
                     </div>
 
@@ -2577,14 +3370,7 @@ function Colaboradores({
                                                                 {c.nome}
                                                             </h3>
 
-                                                            <span className={classNames(
-                                                                "inline-flex shrink-0 rounded-full px-2.5 py-1 text-[11px] font-semibold ring-1",
-                                                                c.statusMobilizacao === "Mobilizado"
-                                                                    ? "bg-emerald-50 text-emerald-700 ring-emerald-200"
-                                                                    : "bg-red-50 text-red-700 ring-red-200"
-                                                            )}>
-                                                                {c.statusMobilizacao}
-                                                            </span>
+                                                            <MobilizacaoBadge status={c.statusMobilizacao || geral.texto} />
                                                         </div>
 
                                                         <div className="mt-1 flex flex-wrap items-center gap-2 text-sm text-slate-500">
@@ -2925,8 +3711,9 @@ function Colaboradores({
                                         onChange={(e) => setColaboradorEdicao({ ...colaboradorEdicao, statusMobilizacao: e.target.value })}
                                         className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none focus:border-slate-400 focus:ring-4 focus:ring-slate-100"
                                     >
-                                        <option>Mobilizado</option>
-                                        <option>Desmobilizado</option>
+                                        {STATUS_CLASSIFICACAO_COLABORADOR.map((status) => (
+                                            <option key={status}>{status}</option>
+                                        ))}
                                     </select>
                                 </div>
 
@@ -3038,62 +3825,40 @@ function Colaboradores({
 
 
 function MobilizacaoBadge({ status }) {
-    const mobilizado = normalizarTextoBusca(status || "Mobilizado").includes("mobilizado") &&
-        !normalizarTextoBusca(status || "").includes("desmobilizado");
+    const statusTexto = String(status || obterStatusInicialColaborador());
+    const statusBusca = normalizarTextoBusca(statusTexto);
+
+    const classe =
+        statusBusca.includes("liberado")
+            ? "bg-emerald-50 text-emerald-700 ring-emerald-200"
+            : statusBusca.includes("pendencia") || statusBusca.includes("pendência") || statusBusca.includes("com pend")
+                ? "bg-blue-50 text-blue-700 ring-blue-200"
+                : statusBusca.includes("bloqueado")
+                    ? "bg-red-50 text-red-700 ring-red-200"
+                    : statusBusca.includes("analise") || statusBusca.includes("análise")
+                        ? "bg-violet-50 text-violet-700 ring-violet-200"
+                        : statusBusca.includes("desmobilizado") || statusBusca.includes("inativo")
+                            ? "bg-slate-100 text-slate-700 ring-slate-300"
+                            : "bg-slate-50 text-slate-700 ring-slate-200";
 
     return (
         <span
             className={classNames(
                 "inline-flex items-center justify-center rounded-full px-3 py-1 text-xs font-bold ring-1",
-                mobilizado
-                    ? "bg-emerald-50 text-emerald-700 ring-emerald-200"
-                    : "bg-red-50 text-red-700 ring-red-200"
+                classe
             )}
         >
-            {mobilizado ? "Mobilizado" : "Desmobilizado"}
+            {statusTexto}
         </span>
     );
 }
 
-function statusGeralConsultaPublica(treinamentos = []) {
-    if (!treinamentos.length) {
-        return {
-            texto: "Pendente",
-            classe: "bg-blue-600 text-white",
-            detalhe: "Sem certificados lançados.",
-        };
-    }
-
-    const vencidos = treinamentos.filter((item) => {
-        const dias = diasParaVencer(item.vencimento);
-        return dias !== null && dias < 0;
+function statusGeralConsultaPublica(colaborador = {}, treinamentos = []) {
+    return statusGeral({
+        ...colaborador,
+        statusMobilizacao: colaborador.statusMobilizacao || colaborador.status_mobilizacao || "",
+        treinamentos,
     });
-    const aVencer = treinamentos.filter((item) => {
-        const dias = diasParaVencer(item.vencimento);
-        return dias !== null && dias >= 0 && dias <= 30;
-    });
-
-    if (vencidos.length > 0) {
-        return {
-            texto: "Vencido",
-            classe: "bg-red-600 text-white",
-            detalhe: "Possui documento vencido.",
-        };
-    }
-
-    if (aVencer.length > 0) {
-        return {
-            texto: "Atenção",
-            classe: "bg-orange-500 text-white",
-            detalhe: "Documento próximo do vencimento.",
-        };
-    }
-
-    return {
-        texto: "Em dia",
-        classe: "bg-emerald-600 text-white",
-        detalhe: "Documentos válidos.",
-    };
 }
 
 function ConsultaQRPublica({ dados }) {
@@ -3101,7 +3866,7 @@ function ConsultaQRPublica({ dados }) {
 
     const colaborador = dados.colaborador || {};
     const treinamentos = dados.treinamentos || [];
-    const geral = statusGeralConsultaPublica(treinamentos);
+    const geral = statusGeralConsultaPublica(colaborador, treinamentos);
 
     return (
         <div className="min-h-screen bg-slate-100 p-4 text-slate-900">
@@ -3641,7 +4406,8 @@ function Treinamentos({
                     colaborador: colaborador.nome,
                     codigo: colaborador.codigoFuncionario,
                     funcao: colaborador.funcao,
-                    situacaoObra: colaborador.statusMobilizacao || "Mobilizado",
+                    situacaoObra: colaborador.statusMobilizacao || obterStatusInicialColaborador(),
+                    statusColaborador: statusGeral(colaborador).texto,
                     empresa: empresaNome,
                     treinamento: certificado.nomeTreinamento || treinamento.nome,
                     realizacao: certificado.realizado || "",
@@ -3677,6 +4443,7 @@ function Treinamentos({
                     `Código: ${item.codigo || "-"}`,
                     `Função: ${item.funcao || "-"}`,
                     `Situação na obra: ${item.situacaoObra || "-"}`,
+                    `Status automático: ${item.statusColaborador || "-"}`,
                     `Empresa: ${item.empresa || grupo.empresa}`,
                     `Documento/Treinamento: ${item.treinamento}`,
                     `Data de elaboração/realização: ${item.realizacao ? formatDate(item.realizacao) : "Não informada"}`,
@@ -4675,7 +5442,7 @@ function ConsultaQR({ colaborador, colaboradores = [], onSelecionarColaborador }
                 if (!termo) return true;
 
                 const texto = normalizarTextoBusca(
-                    `${item.nome} ${item.codigoFuncionario} ${item.funcao} ${item.empresaExibicao || item.empresa}`
+                    `${item.nome} ${item.codigoFuncionario} ${item.funcao} ${item.empresaExibicao || item.empresa} ${statusGeral(item).texto}`
                 );
 
                 return texto.includes(termo);
@@ -4763,7 +5530,7 @@ function ConsultaQR({ colaborador, colaboradores = [], onSelecionarColaborador }
                                                 {item.funcao} · {item.codigoFuncionario}
                                             </p>
                                             <p className="truncate text-[11px] text-slate-400">
-                                                {item.empresaExibicao || item.empresa}
+                                                {item.empresaExibicao || item.empresa} · {statusGeral(item).texto}
                                             </p>
                                         </div>
                                     </button>
@@ -6673,6 +7440,15 @@ function RelatorioAuditoria({
 }) {
     const [busca, setBusca] = useState("");
     const [filtroAcao, setFiltroAcao] = useState("Todas");
+    const [filtrosStorage, setFiltrosStorage] = useState({
+        empresa: "Todas",
+        colaborador: "Todos",
+        tipo: "Todos",
+        dataInicio: "",
+        dataFim: "",
+        tamanho: "Todos",
+        vinculo: "Todos",
+    });
     const [arquivosStorageAuditoria, setArquivosStorageAuditoria] = useState([]);
     const [carregandoStorageAuditoria, setCarregandoStorageAuditoria] = useState(false);
     const [excluindoStorageAuditoria, setExcluindoStorageAuditoria] = useState("");
@@ -6707,6 +7483,34 @@ function RelatorioAuditoria({
         });
     }, [auditoria, busca, filtroAcao]);
 
+    const obterEmpresaArquivoStorage = (arquivo) =>
+        arquivo.empresaNome || arquivo.colaboradorEmpresa || "Sem empresa vinculada";
+
+    const obterColaboradorArquivoStorage = (arquivo) =>
+        arquivo.colaboradorNome || "Sem colaborador vinculado";
+
+    const obterTipoArquivoStorage = (arquivo) =>
+        arquivo.tipoDocumentoEmpresa || arquivo.treinamentoNome || arquivo.origemTipo || arquivo.bucket || "Tipo não identificado";
+
+    const obterDataArquivoStorage = (arquivo) => {
+        if (!arquivo?.atualizadoEm) return "";
+
+        const data = new Date(arquivo.atualizadoEm);
+        return Number.isNaN(data.getTime()) ? "" : data.toISOString().slice(0, 10);
+    };
+
+    const tamanhoArquivoDentroDoFiltro = (arquivo) => {
+        const tamanho = Number(arquivo.tamanho || 0);
+
+        if (filtrosStorage.tamanho === "Todos") return true;
+        if (filtrosStorage.tamanho === "ate-1mb") return tamanho <= 1024 ** 2;
+        if (filtrosStorage.tamanho === "1mb-10mb") return tamanho > 1024 ** 2 && tamanho <= 10 * 1024 ** 2;
+        if (filtrosStorage.tamanho === "10mb-50mb") return tamanho > 10 * 1024 ** 2 && tamanho <= 50 * 1024 ** 2;
+        if (filtrosStorage.tamanho === "acima-50mb") return tamanho > 50 * 1024 ** 2;
+
+        return true;
+    };
+
     const arquivosStorageAuditoriaSemRegistro = arquivosStorageAuditoria.filter((arquivo) => !arquivo.emUso);
     const arquivosStorageAuditoriaEmUso = arquivosStorageAuditoria.filter((arquivo) => arquivo.emUso);
     const storageTotalBytes = arquivosStorageAuditoria.reduce((total, arquivo) => total + Number(arquivo.tamanho || 0), 0);
@@ -6714,29 +7518,95 @@ function RelatorioAuditoria({
     const storageSemRegistroBytes = arquivosStorageAuditoriaSemRegistro.reduce((total, arquivo) => total + Number(arquivo.tamanho || 0), 0);
     const storageLimiteBytes = Math.max(1, LIMITE_STORAGE_MB * 1024 * 1024);
     const storagePercentual = calcularPercentualUsoStorage(storageTotalBytes);
-    const storagePorBucket = Object.values(
-        arquivosStorageAuditoria.reduce((acc, arquivo) => {
-            const bucket = arquivo.bucket || "storage";
-
-            if (!acc[bucket]) {
-                acc[bucket] = {
-                    bucket,
-                    arquivos: 0,
-                    bytes: 0,
-                    emUso: 0,
-                    semRegistro: 0,
-                };
+    const storageStatus =
+        storagePercentual >= 90
+            ? {
+                texto: "Crítico",
+                detalhe: "Acima de 90% do limite configurado. Avaliar limpeza de arquivos sem vínculo ou aumento de plano.",
+                classe: "bg-red-50 text-red-700 ring-red-200",
+                barra: "bg-red-500",
             }
+            : storagePercentual >= 70
+                ? {
+                    texto: "Atenção",
+                    detalhe: "Entre 70% e 89% do limite configurado. Acompanhar crescimento dos uploads.",
+                    classe: "bg-orange-50 text-orange-700 ring-orange-200",
+                    barra: "bg-orange-500",
+                }
+                : {
+                    texto: "Normal",
+                    detalhe: "Até 70% do limite configurado. Capacidade dentro do controle esperado.",
+                    classe: "bg-emerald-50 text-emerald-700 ring-emerald-200",
+                    barra: "bg-emerald-500",
+                };
 
-            acc[bucket].arquivos += 1;
-            acc[bucket].bytes += Number(arquivo.tamanho || 0);
+    const arquivosStorageFiltrados = arquivosStorageAuditoria
+        .filter((arquivo) => {
+            const empresa = obterEmpresaArquivoStorage(arquivo);
+            const colaborador = obterColaboradorArquivoStorage(arquivo);
+            const tipo = obterTipoArquivoStorage(arquivo);
+            const dataArquivo = obterDataArquivoStorage(arquivo);
 
-            if (arquivo.emUso) acc[bucket].emUso += 1;
-            else acc[bucket].semRegistro += 1;
+            const bateEmpresa = filtrosStorage.empresa === "Todas" || empresa === filtrosStorage.empresa;
+            const bateColaborador = filtrosStorage.colaborador === "Todos" || colaborador === filtrosStorage.colaborador;
+            const bateTipo = filtrosStorage.tipo === "Todos" || tipo === filtrosStorage.tipo;
+            const bateInicio = !filtrosStorage.dataInicio || (dataArquivo && dataArquivo >= filtrosStorage.dataInicio);
+            const bateFim = !filtrosStorage.dataFim || (dataArquivo && dataArquivo <= filtrosStorage.dataFim);
+            const bateTamanho = tamanhoArquivoDentroDoFiltro(arquivo);
+            const bateVinculo =
+                filtrosStorage.vinculo === "Todos" ||
+                (filtrosStorage.vinculo === "Com vínculo" && arquivo.emUso) ||
+                (filtrosStorage.vinculo === "Sem vínculo" && !arquivo.emUso);
 
-            return acc;
-        }, {})
-    ).sort((a, b) => b.bytes - a.bytes);
+            return bateEmpresa && bateColaborador && bateTipo && bateInicio && bateFim && bateTamanho && bateVinculo;
+        })
+        .sort((a, b) => {
+            const dataA = a.atualizadoEm ? new Date(a.atualizadoEm).getTime() : 0;
+            const dataB = b.atualizadoEm ? new Date(b.atualizadoEm).getTime() : 0;
+
+            return dataB - dataA || Number(b.tamanho || 0) - Number(a.tamanho || 0);
+        });
+
+    const opcoesEmpresasStorage = Array.from(new Set(arquivosStorageAuditoria.map(obterEmpresaArquivoStorage))).sort();
+    const opcoesColaboradoresStorage = Array.from(new Set(arquivosStorageAuditoria.map(obterColaboradorArquivoStorage))).sort();
+    const opcoesTiposStorage = Array.from(new Set(arquivosStorageAuditoria.map(obterTipoArquivoStorage))).sort();
+
+    const agruparArquivosStorage = (lista, obterChave) =>
+        Object.values(
+            lista.reduce((acc, arquivo) => {
+                const chave = obterChave(arquivo) || "Não informado";
+
+                if (!acc[chave]) {
+                    acc[chave] = {
+                        nome: chave,
+                        arquivos: 0,
+                        bytes: 0,
+                        emUso: 0,
+                        semRegistro: 0,
+                    };
+                }
+
+                acc[chave].arquivos += 1;
+                acc[chave].bytes += Number(arquivo.tamanho || 0);
+
+                if (arquivo.emUso) acc[chave].emUso += 1;
+                else acc[chave].semRegistro += 1;
+
+                return acc;
+            }, {})
+        ).sort((a, b) => b.arquivos - a.arquivos || b.bytes - a.bytes || a.nome.localeCompare(b.nome));
+
+    const arquivosPorEmpresaStorage = agruparArquivosStorage(arquivosStorageAuditoria, obterEmpresaArquivoStorage);
+    const arquivosPorTipoStorage = agruparArquivosStorage(arquivosStorageAuditoria, obterTipoArquivoStorage);
+    const storagePorBucket = agruparArquivosStorage(arquivosStorageAuditoria, (arquivo) => arquivo.bucket || "storage")
+        .map((item) => ({ ...item, bucket: item.nome }))
+        .sort((a, b) => b.bytes - a.bytes);
+    const maioresArquivosStorage = [...arquivosStorageAuditoria]
+        .sort((a, b) => Number(b.tamanho || 0) - Number(a.tamanho || 0))
+        .slice(0, 6);
+    const ultimoUploadStorage = [...arquivosStorageAuditoria]
+        .filter((arquivo) => arquivo.atualizadoEm)
+        .sort((a, b) => new Date(b.atualizadoEm).getTime() - new Date(a.atualizadoEm).getTime())[0];
 
     const carregarStorageAuditoria = async () => {
         if (!onListarArquivosStorage) return;
@@ -7025,11 +7895,11 @@ function RelatorioAuditoria({
             </Card>
 
             <Card className="mt-5">
-                <div className="mb-4 flex flex-col justify-between gap-3 lg:flex-row lg:items-center">
+                <div className="mb-5 flex flex-col justify-between gap-3 lg:flex-row lg:items-center">
                     <div>
                         <h2 className="text-lg font-bold text-slate-950">Arquivos salvos no Storage</h2>
                         <p className="mt-1 text-sm text-slate-500">
-                            Auditoria dos arquivos salvos no Storage, identificando se pertencem a colaborador, empresa, contrato, logo ou outro registro do sistema.
+                            Controle de capacidade, vínculos, tipos de documentos, maiores arquivos e uploads recentes.
                         </p>
                     </div>
 
@@ -7044,82 +7914,241 @@ function RelatorioAuditoria({
                     </button>
                 </div>
 
-                <div className="mb-4 flex flex-wrap gap-2">
-                    <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-600">
-                        {arquivosStorageAuditoria.length} arquivo(s)
-                    </span>
-                    <span className="rounded-full bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700 ring-1 ring-emerald-200">
-                        {arquivosStorageAuditoriaEmUso.length} em uso
-                    </span>
-                    <span className="rounded-full bg-red-50 px-3 py-1 text-xs font-semibold text-red-700 ring-1 ring-red-200">
-                        {arquivosStorageAuditoriaSemRegistro.length} sem registro
-                    </span>
-                    <span className="rounded-full bg-blue-50 px-3 py-1 text-xs font-semibold text-blue-700 ring-1 ring-blue-200">
-                        {formatarBytes(storageTotalBytes)} utilizados
-                    </span>
-                </div>
-
-                <div className="mb-4 rounded-3xl border border-slate-200 bg-slate-50 p-4">
-                    <div className="flex flex-col justify-between gap-2 md:flex-row md:items-center">
+                <div className={classNames("mb-4 rounded-3xl p-4 ring-1", storageStatus.classe)}>
+                    <div className="flex flex-col justify-between gap-3 lg:flex-row lg:items-center">
                         <div>
-                            <p className="text-sm font-bold text-slate-950">Capacidade de armazenamento monitorada</p>
-                            <p className="mt-1 text-xs leading-relaxed text-slate-500">
-                                Usado: <strong>{formatarBytes(storageTotalBytes)}</strong> de <strong>{formatarBytes(storageLimiteBytes)}</strong>.
-                                Ajuste o limite visual em <strong>VITE_STORAGE_LIMITE_MB</strong> conforme o plano do Supabase.
-                            </p>
+                            <p className="text-sm font-bold">Alerta de armazenamento: {storageStatus.texto}</p>
+                            <p className="mt-1 text-xs leading-relaxed">{storageStatus.detalhe}</p>
                         </div>
-
-                        <div className="text-left md:text-right">
-                            <p className="text-2xl font-bold text-slate-950">{storagePercentual}%</p>
-                            <p className="text-xs text-slate-500">uso estimado</p>
+                        <div className="text-left lg:text-right">
+                            <p className="text-3xl font-black">{storagePercentual}%</p>
+                            <p className="text-xs font-semibold">{formatarBytes(storageTotalBytes)} de {formatarBytes(storageLimiteBytes)}</p>
                         </div>
                     </div>
 
-                    <div className="mt-3 h-2 overflow-hidden rounded-full bg-white ring-1 ring-slate-200">
+                    <div className="mt-3 h-3 overflow-hidden rounded-full bg-white/80 ring-1 ring-white/70">
                         <div
-                            className={classNames(
-                                "h-full rounded-full",
-                                storagePercentual >= 90
-                                    ? "bg-red-500"
-                                    : storagePercentual >= 70
-                                        ? "bg-orange-500"
-                                        : "bg-emerald-500"
-                            )}
+                            className={classNames("h-full rounded-full", storageStatus.barra)}
                             style={{ width: `${Math.max(2, storagePercentual)}%` }}
                         />
                     </div>
 
-                    <div className="mt-3 grid gap-2 md:grid-cols-3">
-                        <div className="rounded-2xl bg-white p-3 ring-1 ring-slate-200">
-                            <p className="text-xs font-semibold text-slate-500">Arquivos em uso</p>
-                            <p className="mt-1 text-lg font-bold text-emerald-700">{formatarBytes(storageEmUsoBytes)}</p>
-                        </div>
+                    <p className="mt-2 text-[11px] leading-relaxed opacity-80">
+                        Regra visual: até 70% normal; de 70% a 89% atenção; acima de 90% crítico.
+                    </p>
+                </div>
 
-                        <div className="rounded-2xl bg-white p-3 ring-1 ring-slate-200">
-                            <p className="text-xs font-semibold text-slate-500">Sem registro</p>
-                            <p className="mt-1 text-lg font-bold text-red-700">{formatarBytes(storageSemRegistroBytes)}</p>
-                        </div>
-
-                        <div className="rounded-2xl bg-white p-3 ring-1 ring-slate-200">
-                            <p className="text-xs font-semibold text-slate-500">Espaço estimado livre</p>
-                            <p className="mt-1 text-lg font-bold text-slate-700">{formatarBytes(Math.max(0, storageLimiteBytes - storageTotalBytes))}</p>
-                        </div>
+                <div className="mb-5 grid gap-3 md:grid-cols-2 xl:grid-cols-5">
+                    <div className="rounded-3xl bg-slate-50 p-4 ring-1 ring-slate-200">
+                        <p className="text-xs font-bold uppercase tracking-wide text-slate-400">Total usado</p>
+                        <p className="mt-2 text-2xl font-black text-slate-950">{formatarBytes(storageTotalBytes)}</p>
+                        <p className="mt-1 text-xs text-slate-500">Limite: {formatarBytes(storageLimiteBytes)}</p>
                     </div>
 
-                    {storagePorBucket.length > 0 && (
-                        <div className="mt-3 space-y-2">
-                            <p className="text-xs font-bold uppercase tracking-wide text-slate-400">Uso por bucket</p>
-                            {storagePorBucket.map((bucketInfo) => (
-                                <div key={bucketInfo.bucket} className="flex flex-col justify-between gap-1 rounded-2xl bg-white px-3 py-2 text-xs ring-1 ring-slate-200 sm:flex-row sm:items-center">
-                                    <span className="font-bold text-slate-700">{bucketInfo.bucket}</span>
-                                    <span className="text-slate-500">
-                                        {bucketInfo.arquivos} arquivo(s) · {formatarBytes(bucketInfo.bytes)} · {bucketInfo.emUso} em uso · {bucketInfo.semRegistro} sem registro
-                                    </span>
+                    <div className="rounded-3xl bg-slate-50 p-4 ring-1 ring-slate-200">
+                        <p className="text-xs font-bold uppercase tracking-wide text-slate-400">Total de arquivos</p>
+                        <p className="mt-2 text-2xl font-black text-slate-950">{arquivosStorageAuditoria.length}</p>
+                        <p className="mt-1 text-xs text-slate-500">{arquivosStorageFiltrados.length} exibido(s) no filtro</p>
+                    </div>
+
+                    <div className="rounded-3xl bg-emerald-50 p-4 ring-1 ring-emerald-200">
+                        <p className="text-xs font-bold uppercase tracking-wide text-emerald-700">Arquivos vinculados</p>
+                        <p className="mt-2 text-2xl font-black text-emerald-800">{arquivosStorageAuditoriaEmUso.length}</p>
+                        <p className="mt-1 text-xs text-emerald-700">{formatarBytes(storageEmUsoBytes)} em registros ativos</p>
+                    </div>
+
+                    <div className="rounded-3xl bg-red-50 p-4 ring-1 ring-red-200">
+                        <p className="text-xs font-bold uppercase tracking-wide text-red-700">Sem vínculo</p>
+                        <p className="mt-2 text-2xl font-black text-red-800">{arquivosStorageAuditoriaSemRegistro.length}</p>
+                        <p className="mt-1 text-xs text-red-700">{formatarBytes(storageSemRegistroBytes)} sem registro</p>
+                    </div>
+
+                    <div className="rounded-3xl bg-slate-50 p-4 ring-1 ring-slate-200">
+                        <p className="text-xs font-bold uppercase tracking-wide text-slate-400">Último upload</p>
+                        <p className="mt-2 break-words text-sm font-black text-slate-950">
+                            {ultimoUploadStorage?.nome || "Nenhum arquivo carregado"}
+                        </p>
+                        <p className="mt-1 text-xs text-slate-500">
+                            {ultimoUploadStorage?.atualizadoEm ? new Date(ultimoUploadStorage.atualizadoEm).toLocaleString("pt-BR") : "-"}
+                        </p>
+                    </div>
+                </div>
+
+                <div className="mb-5 grid gap-4 xl:grid-cols-3">
+                    <div className="rounded-3xl border border-slate-200 bg-white p-4">
+                        <h3 className="font-bold text-slate-950">Arquivos por empresa</h3>
+                        <p className="mt-1 text-xs text-slate-500">Quantidade e tamanho por empresa vinculada ao arquivo.</p>
+                        <div className="mt-3 max-h-56 space-y-2 overflow-y-auto pr-1 scrollbar-discreta">
+                            {arquivosPorEmpresaStorage.length === 0 && (
+                                <p className="rounded-2xl border border-dashed border-slate-300 p-4 text-center text-sm text-slate-500">Carregue os arquivos para visualizar.</p>
+                            )}
+                            {arquivosPorEmpresaStorage.slice(0, 10).map((item) => (
+                                <div key={item.nome} className="rounded-2xl bg-slate-50 px-3 py-2 text-xs ring-1 ring-slate-200">
+                                    <div className="flex justify-between gap-3">
+                                        <span className="break-words font-bold text-slate-700">{item.nome}</span>
+                                        <span className="shrink-0 font-bold text-slate-950">{item.arquivos}</span>
+                                    </div>
+                                    <p className="mt-1 text-slate-500">{formatarBytes(item.bytes)} · {item.semRegistro} sem vínculo</p>
                                 </div>
                             ))}
                         </div>
-                    )}
+                    </div>
+
+                    <div className="rounded-3xl border border-slate-200 bg-white p-4">
+                        <h3 className="font-bold text-slate-950">Arquivos por tipo</h3>
+                        <p className="mt-1 text-xs text-slate-500">Certificados, documentos empresariais, contratos, logos e fotos.</p>
+                        <div className="mt-3 max-h-56 space-y-2 overflow-y-auto pr-1 scrollbar-discreta">
+                            {arquivosPorTipoStorage.length === 0 && (
+                                <p className="rounded-2xl border border-dashed border-slate-300 p-4 text-center text-sm text-slate-500">Carregue os arquivos para visualizar.</p>
+                            )}
+                            {arquivosPorTipoStorage.slice(0, 10).map((item) => (
+                                <div key={item.nome} className="rounded-2xl bg-slate-50 px-3 py-2 text-xs ring-1 ring-slate-200">
+                                    <div className="flex justify-between gap-3">
+                                        <span className="break-words font-bold text-slate-700">{item.nome}</span>
+                                        <span className="shrink-0 font-bold text-slate-950">{item.arquivos}</span>
+                                    </div>
+                                    <p className="mt-1 text-slate-500">{formatarBytes(item.bytes)} · {item.emUso} vinculados</p>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+
+                    <div className="rounded-3xl border border-slate-200 bg-white p-4">
+                        <h3 className="font-bold text-slate-950">Maiores arquivos</h3>
+                        <p className="mt-1 text-xs text-slate-500">Prioridade para limpeza ou compactação quando o uso crescer.</p>
+                        <div className="mt-3 max-h-56 space-y-2 overflow-y-auto pr-1 scrollbar-discreta">
+                            {maioresArquivosStorage.length === 0 && (
+                                <p className="rounded-2xl border border-dashed border-slate-300 p-4 text-center text-sm text-slate-500">Carregue os arquivos para visualizar.</p>
+                            )}
+                            {maioresArquivosStorage.map((arquivo) => (
+                                <div key={`${arquivo.bucket}-${arquivo.caminho}`} className="rounded-2xl bg-slate-50 px-3 py-2 text-xs ring-1 ring-slate-200">
+                                    <p className="break-words font-bold text-slate-700">{arquivo.nome}</p>
+                                    <p className="mt-1 text-slate-500">
+                                        {formatarBytes(arquivo.tamanho || 0)} · {obterEmpresaArquivoStorage(arquivo)} · {arquivo.emUso ? "vinculado" : "sem vínculo"}
+                                    </p>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
                 </div>
+
+                <div className="mb-5 rounded-3xl border border-slate-200 bg-slate-50 p-4">
+                    <div className="mb-3 flex flex-col justify-between gap-2 md:flex-row md:items-center">
+                        <div>
+                            <h3 className="font-bold text-slate-950">Filtros dos arquivos salvos</h3>
+                            <p className="mt-1 text-xs text-slate-500">Filtre por empresa, colaborador, tipo, data de envio, tamanho e vínculo.</p>
+                        </div>
+
+                        <button
+                            type="button"
+                            onClick={() => setFiltrosStorage({
+                                empresa: "Todas",
+                                colaborador: "Todos",
+                                tipo: "Todos",
+                                dataInicio: "",
+                                dataFim: "",
+                                tamanho: "Todos",
+                                vinculo: "Todos",
+                            })}
+                            className="w-fit rounded-2xl bg-white px-4 py-2 text-xs font-bold text-slate-700 ring-1 ring-slate-200 hover:bg-slate-100"
+                        >
+                            Limpar filtros
+                        </button>
+                    </div>
+
+                    <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-6">
+                        <select
+                            value={filtrosStorage.empresa}
+                            onChange={(e) => setFiltrosStorage((atual) => ({ ...atual, empresa: e.target.value }))}
+                            className="rounded-2xl border border-slate-200 bg-white px-3 py-3 text-sm outline-none focus:border-slate-400 focus:ring-4 focus:ring-slate-100"
+                        >
+                            <option value="Todas">Todas as empresas</option>
+                            {opcoesEmpresasStorage.map((empresa) => (
+                                <option key={empresa} value={empresa}>{empresa}</option>
+                            ))}
+                        </select>
+
+                        <select
+                            value={filtrosStorage.colaborador}
+                            onChange={(e) => setFiltrosStorage((atual) => ({ ...atual, colaborador: e.target.value }))}
+                            className="rounded-2xl border border-slate-200 bg-white px-3 py-3 text-sm outline-none focus:border-slate-400 focus:ring-4 focus:ring-slate-100"
+                        >
+                            <option value="Todos">Todos os colaboradores</option>
+                            {opcoesColaboradoresStorage.map((colaborador) => (
+                                <option key={colaborador} value={colaborador}>{colaborador}</option>
+                            ))}
+                        </select>
+
+                        <select
+                            value={filtrosStorage.tipo}
+                            onChange={(e) => setFiltrosStorage((atual) => ({ ...atual, tipo: e.target.value }))}
+                            className="rounded-2xl border border-slate-200 bg-white px-3 py-3 text-sm outline-none focus:border-slate-400 focus:ring-4 focus:ring-slate-100"
+                        >
+                            <option value="Todos">Todos os tipos</option>
+                            {opcoesTiposStorage.map((tipo) => (
+                                <option key={tipo} value={tipo}>{tipo}</option>
+                            ))}
+                        </select>
+
+                        <select
+                            value={filtrosStorage.tamanho}
+                            onChange={(e) => setFiltrosStorage((atual) => ({ ...atual, tamanho: e.target.value }))}
+                            className="rounded-2xl border border-slate-200 bg-white px-3 py-3 text-sm outline-none focus:border-slate-400 focus:ring-4 focus:ring-slate-100"
+                        >
+                            <option value="Todos">Todos os tamanhos</option>
+                            <option value="ate-1mb">Até 1 MB</option>
+                            <option value="1mb-10mb">1 MB a 10 MB</option>
+                            <option value="10mb-50mb">10 MB a 50 MB</option>
+                            <option value="acima-50mb">Acima de 50 MB</option>
+                        </select>
+
+                        <select
+                            value={filtrosStorage.vinculo}
+                            onChange={(e) => setFiltrosStorage((atual) => ({ ...atual, vinculo: e.target.value }))}
+                            className="rounded-2xl border border-slate-200 bg-white px-3 py-3 text-sm outline-none focus:border-slate-400 focus:ring-4 focus:ring-slate-100"
+                        >
+                            <option value="Todos">Com e sem vínculo</option>
+                            <option value="Com vínculo">Somente vinculados</option>
+                            <option value="Sem vínculo">Somente sem vínculo</option>
+                        </select>
+
+                        <div className="grid grid-cols-2 gap-2">
+                            <input
+                                type="date"
+                                value={filtrosStorage.dataInicio}
+                                onChange={(e) => setFiltrosStorage((atual) => ({ ...atual, dataInicio: e.target.value }))}
+                                className="min-w-0 rounded-2xl border border-slate-200 bg-white px-3 py-3 text-sm outline-none focus:border-slate-400 focus:ring-4 focus:ring-slate-100"
+                                title="Data inicial de envio"
+                            />
+                            <input
+                                type="date"
+                                value={filtrosStorage.dataFim}
+                                onChange={(e) => setFiltrosStorage((atual) => ({ ...atual, dataFim: e.target.value }))}
+                                className="min-w-0 rounded-2xl border border-slate-200 bg-white px-3 py-3 text-sm outline-none focus:border-slate-400 focus:ring-4 focus:ring-slate-100"
+                                title="Data final de envio"
+                            />
+                        </div>
+                    </div>
+                </div>
+
+                {storagePorBucket.length > 0 && (
+                    <div className="mb-5 rounded-3xl border border-slate-200 bg-white p-4">
+                        <h3 className="font-bold text-slate-950">Uso por bucket</h3>
+                        <div className="mt-3 grid gap-2 md:grid-cols-2 xl:grid-cols-5">
+                            {storagePorBucket.map((bucketInfo) => (
+                                <div key={bucketInfo.bucket} className="rounded-2xl bg-slate-50 p-3 text-xs ring-1 ring-slate-200">
+                                    <p className="break-words font-bold text-slate-700">{bucketInfo.bucket}</p>
+                                    <p className="mt-1 text-slate-500">
+                                        {bucketInfo.arquivos} arquivo(s) · {formatarBytes(bucketInfo.bytes)}
+                                    </p>
+                                    <p className="mt-1 text-slate-400">
+                                        {bucketInfo.emUso} em uso · {bucketInfo.semRegistro} sem vínculo
+                                    </p>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                )}
 
                 {arquivosStorageAuditoria.length === 0 && !carregandoStorageAuditoria && (
                     <div className="rounded-3xl border border-dashed border-slate-300 p-6 text-center text-sm text-slate-500">
@@ -7128,107 +8157,97 @@ function RelatorioAuditoria({
                 )}
 
                 {arquivosStorageAuditoria.length > 0 && (
-                    <div className="max-h-96 space-y-2 overflow-y-auto pr-1 scrollbar-discreta">
-                        {arquivosStorageAuditoria.map((arquivo) => (
-                            <div
-                                key={arquivo.caminho}
-                                className={classNames(
-                                    "rounded-2xl px-3 py-2 text-sm ring-1",
-                                    arquivo.emUso
-                                        ? "bg-emerald-50 text-emerald-900 ring-emerald-100"
-                                        : "bg-red-50 text-red-900 ring-red-100"
-                                )}
-                            >
-                                <div className="flex flex-col justify-between gap-3 lg:flex-row lg:items-center">
-                                    <div className="min-w-0">
-                                        <p className="break-words font-bold">{arquivo.nome}</p>
-                                        <p className="break-words text-xs opacity-80">
-                                            <strong>Bucket:</strong> {arquivo.bucket || "-"}
-                                        </p>
-                                        <p className="break-words text-xs opacity-80">
-                                            <strong>Origem:</strong> {arquivo.origemTipo || "Storage"}
-                                        </p>
-                                        <p className="break-words text-xs opacity-80">
-                                            <strong>Fonte do vínculo:</strong> {arquivo.tabelaOrigem || arquivo.origemRegistro || "Somente Storage"}
-                                        </p>
-                                        <p className="break-words text-xs opacity-80">
-                                            <strong>Tamanho:</strong> {formatarBytes(arquivo.tamanho || 0)}
-                                            {arquivo.atualizadoEm ? ` · Atualizado em ${new Date(arquivo.atualizadoEm).toLocaleString("pt-BR")}` : ""}
-                                        </p>
+                    <div>
+                        <div className="mb-3 flex flex-col justify-between gap-2 md:flex-row md:items-center">
+                            <p className="text-sm font-bold text-slate-950">
+                                Arquivos encontrados: {arquivosStorageFiltrados.length} de {arquivosStorageAuditoria.length}
+                            </p>
+                            <p className="text-xs text-slate-500">
+                                Exibindo primeiro os uploads mais recentes.
+                            </p>
+                        </div>
 
-                                        {arquivo.colaboradorNome && (
-                                            <p className="break-words text-xs opacity-80">
-                                                <strong>Funcionário:</strong>{" "}
-                                                {`${arquivo.colaboradorNome}${arquivo.colaboradorCodigo ? ` · ${arquivo.colaboradorCodigo}` : ""}`}
-                                            </p>
-                                        )}
-
-                                        {arquivo.colaboradorEmpresa && (
-                                            <p className="break-words text-xs opacity-80">
-                                                <strong>Empresa do funcionário:</strong> {arquivo.colaboradorEmpresa}
-                                            </p>
-                                        )}
-
-                                        {arquivo.empresaNome && (
-                                            <p className="break-words text-xs opacity-80">
-                                                <strong>Empresa:</strong>{" "}
-                                                {`${arquivo.empresaNome}${arquivo.empresaCnpj ? ` · ${formatarCnpj(arquivo.empresaCnpj)}` : ""}`}
-                                            </p>
-                                        )}
-
-                                        {arquivo.tipoDocumentoEmpresa && (
-                                            <p className="break-words text-xs opacity-80">
-                                                <strong>Tipo do documento:</strong> {arquivo.tipoDocumentoEmpresa}
-                                            </p>
-                                        )}
-
-                                        <p className="break-words text-xs opacity-80">
-                                            <strong>Pasta:</strong> {arquivo.pasta || "raiz"}
-                                        </p>
-                                        <p className="break-words text-xs opacity-80">
-                                            <strong>Caminho:</strong> {arquivo.caminho}
-                                        </p>
-                                        {arquivo.treinamentoNome && (
-                                            <p className="break-words text-xs opacity-80">
-                                                <strong>Treinamento:</strong> {arquivo.treinamentoNome}
-                                            </p>
-                                        )}
-                                        {arquivo.origemRegistro && (
-                                            <p className="break-words text-xs opacity-80">
-                                                <strong>Identificado por:</strong> {arquivo.origemRegistro}
-                                            </p>
-                                        )}
-                                        {!arquivo.colaboradorNome && !arquivo.empresaNome && (
-                                            <p className="break-words text-xs font-semibold text-red-700">
-                                                Registro não identificado na base atual.
-                                            </p>
-                                        )}
-                                    </div>
-
-                                    <div className="flex shrink-0 flex-wrap items-center gap-2 lg:justify-end">
-                                        <span className="w-fit rounded-full bg-white/70 px-3 py-1 text-xs font-bold">
-                                            {arquivo.emUso ? "Em uso" : "Sem registro"}
-                                        </span>
-
-                                        <button
-                                            type="button"
-                                            onClick={() => excluirStorageAuditoria(arquivo)}
-                                            disabled={arquivo.emUso || excluindoStorageAuditoria === arquivo.caminho}
-                                            title={arquivo.emUso ? "Arquivo em uso não pode ser excluído por aqui" : "Excluir arquivo sem registro do Storage"}
-                                            className="rounded-full bg-red-600 px-3 py-1 text-xs font-bold text-white hover:bg-red-700 disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-500"
-                                        >
-                                            {excluindoStorageAuditoria === arquivo.caminho ? "Excluindo..." : "Excluir"}
-                                        </button>
-                                    </div>
-                                </div>
+                        {arquivosStorageFiltrados.length === 0 && (
+                            <div className="rounded-3xl border border-dashed border-slate-300 p-6 text-center text-sm text-slate-500">
+                                Nenhum arquivo encontrado com os filtros selecionados.
                             </div>
-                        ))}
+                        )}
+
+                        {arquivosStorageFiltrados.length > 0 && (
+                            <div className="max-h-[32rem] space-y-2 overflow-y-auto pr-1 scrollbar-discreta">
+                                {arquivosStorageFiltrados.map((arquivo) => (
+                                    <div
+                                        key={`${arquivo.bucket}-${arquivo.caminho}`}
+                                        className={classNames(
+                                            "rounded-2xl px-3 py-2 text-sm ring-1",
+                                            arquivo.emUso
+                                                ? "bg-emerald-50 text-emerald-900 ring-emerald-100"
+                                                : "bg-red-50 text-red-900 ring-red-100"
+                                        )}
+                                    >
+                                        <div className="flex flex-col justify-between gap-3 lg:flex-row lg:items-center">
+                                            <div className="min-w-0">
+                                                <div className="flex flex-wrap items-center gap-2">
+                                                    <p className="break-words font-bold">{arquivo.nome}</p>
+                                                    <span className="rounded-full bg-white/70 px-3 py-1 text-xs font-bold">
+                                                        {arquivo.emUso ? "Em uso" : "Sem vínculo"}
+                                                    </span>
+                                                    <span className="rounded-full bg-white/70 px-3 py-1 text-xs font-bold">
+                                                        {formatarBytes(arquivo.tamanho || 0)}
+                                                    </span>
+                                                </div>
+
+                                                <p className="mt-1 break-words text-xs opacity-80">
+                                                    <strong>Empresa:</strong> {obterEmpresaArquivoStorage(arquivo)}
+                                                </p>
+                                                <p className="break-words text-xs opacity-80">
+                                                    <strong>Colaborador:</strong> {obterColaboradorArquivoStorage(arquivo)}
+                                                </p>
+                                                <p className="break-words text-xs opacity-80">
+                                                    <strong>Tipo:</strong> {obterTipoArquivoStorage(arquivo)}
+                                                </p>
+                                                <p className="break-words text-xs opacity-80">
+                                                    <strong>Bucket:</strong> {arquivo.bucket || "-"} · <strong>Pasta:</strong> {arquivo.pasta || "raiz"}
+                                                </p>
+                                                <p className="break-words text-xs opacity-80">
+                                                    <strong>Fonte do vínculo:</strong> {arquivo.tabelaOrigem || arquivo.origemRegistro || "Somente Storage"}
+                                                </p>
+                                                <p className="break-words text-xs opacity-80">
+                                                    <strong>Data de envio/atualização:</strong> {arquivo.atualizadoEm ? new Date(arquivo.atualizadoEm).toLocaleString("pt-BR") : "Não identificada"}
+                                                </p>
+                                                <p className="break-words text-xs opacity-80">
+                                                    <strong>Caminho:</strong> {arquivo.caminho}
+                                                </p>
+
+                                                {!arquivo.emUso && (
+                                                    <p className="mt-1 break-words text-xs font-semibold text-red-700">
+                                                        Arquivo sem vínculo com registro atual do sistema.
+                                                    </p>
+                                                )}
+                                            </div>
+
+                                            <div className="flex shrink-0 flex-wrap items-center gap-2 lg:justify-end">
+                                                <button
+                                                    type="button"
+                                                    onClick={() => excluirStorageAuditoria(arquivo)}
+                                                    disabled={arquivo.emUso || excluindoStorageAuditoria === arquivo.caminho}
+                                                    title={arquivo.emUso ? "Arquivo em uso não pode ser excluído por aqui" : "Excluir arquivo sem vínculo do Storage"}
+                                                    className="rounded-full bg-red-600 px-3 py-1 text-xs font-bold text-white hover:bg-red-700 disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-500"
+                                                >
+                                                    {excluindoStorageAuditoria === arquivo.caminho ? "Excluindo..." : "Excluir"}
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
                     </div>
                 )}
 
                 {arquivosStorageAuditoriaSemRegistro.length > 0 && (
                     <p className="mt-3 rounded-2xl bg-red-50 p-3 text-xs text-red-700 ring-1 ring-red-100">
-                        Use excluir apenas para arquivos sem registro. Arquivos em uso devem ser tratados pela Base de certificados para manter o histórico correto.
+                        Use excluir apenas para arquivos sem vínculo. Arquivos em uso devem ser tratados pela base correta para manter o histórico do sistema.
                     </p>
                 )}
             </Card>
@@ -8096,7 +9115,7 @@ export default function App() {
                     funcao: novo.funcao,
                     matricula: novo.matricula || null,
                     codigo_funcionario: novo.codigoFuncionario || gerarCodigoFuncionario(novo.nome),
-                    status_mobilizacao: novo.statusMobilizacao || "Mobilizado",
+                    status_mobilizacao: novo.statusMobilizacao || obterStatusInicialColaborador(),
                     treinamentos_removidos: novo.treinamentosRemovidos || [],
                     treinamentos_adicionais: novo.treinamentosAdicionais || [],
                     status: "Ativo",
@@ -8222,7 +9241,7 @@ export default function App() {
                     funcao: colaboradorAtualizado.funcao,
                     matricula: colaboradorAtualizado.matricula || null,
                     status: colaboradorAtualizado.status || "Ativo",
-                    status_mobilizacao: colaboradorAtualizado.statusMobilizacao || "Mobilizado",
+                    status_mobilizacao: colaboradorAtualizado.statusMobilizacao || obterStatusInicialColaborador(),
                     treinamentos_removidos: colaboradorAtualizado.treinamentosRemovidos || [],
                     treinamentos_adicionais: colaboradorAtualizado.treinamentosAdicionais || [],
                     foto_url: fotoAtualizada.foto_url,
@@ -9241,7 +10260,13 @@ export default function App() {
                     </div>
 
                     {tela === "dashboard" && (
-                        <Dashboard colaboradores={colaboradores} onSelectColab={selecionarColaborador} />
+                        <Dashboard
+                            colaboradores={colaboradores}
+                            empresasBanco={empresasBanco}
+                            documentosEmpresas={documentosEmpresas}
+                            auditoria={auditoria}
+                            onSelectColab={selecionarColaborador}
+                        />
                     )}
 
                     {tela === "empresas" && (
