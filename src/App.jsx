@@ -1804,7 +1804,18 @@ function Dashboard({
         { chave: "grande", label: "Grande", descricao: "maior destaque" },
         { chave: "destaque", label: "Destaque", descricao: "linha inteira" },
     ];
+    const blocosRecolhidosPadraoDashboard = {
+        pendencias: false,
+        conformidade: false,
+        rankingEmpresas: false,
+        colaboradoresFuncao: false,
+        alertas: false,
+        documentosTipo: false,
+        ultimosDocumentos: false,
+    };
     const [mostrarFiltroPainel, setMostrarFiltroPainel] = useState(false);
+    const [cartaArrastandoDashboard, setCartaArrastandoDashboard] = useState(null);
+    const [blocoArrastandoDashboard, setBlocoArrastandoDashboard] = useState(null);
     const [blocosPainelDashboard, setBlocosPainelDashboard] = useState(() => {
         if (typeof window === "undefined") return painelPadraoDashboard;
 
@@ -1846,6 +1857,17 @@ function Dashboard({
             return salvo && typeof salvo === "object" ? { ...tamanhosPadraoBlocosDashboard, ...salvo } : tamanhosPadraoBlocosDashboard;
         } catch {
             return tamanhosPadraoBlocosDashboard;
+        }
+    });
+
+    const [blocosRecolhidosDashboard, setBlocosRecolhidosDashboard] = useState(() => {
+        if (typeof window === "undefined") return blocosRecolhidosPadraoDashboard;
+
+        try {
+            const salvo = JSON.parse(window.localStorage.getItem("dashboardSstBlocosRecolhidos") || "null");
+            return salvo && typeof salvo === "object" ? { ...blocosRecolhidosPadraoDashboard, ...salvo } : blocosRecolhidosPadraoDashboard;
+        } catch {
+            return blocosRecolhidosPadraoDashboard;
         }
     });
 
@@ -1900,6 +1922,11 @@ function Dashboard({
         if (typeof window === "undefined") return;
         window.localStorage.setItem("dashboardSstTamanhosBlocos", JSON.stringify(tamanhosBlocosDashboard));
     }, [tamanhosBlocosDashboard]);
+
+    useEffect(() => {
+        if (typeof window === "undefined") return;
+        window.localStorage.setItem("dashboardSstBlocosRecolhidos", JSON.stringify(blocosRecolhidosDashboard));
+    }, [blocosRecolhidosDashboard]);
 
     useEffect(() => {
         if (typeof window === "undefined") return;
@@ -1958,6 +1985,42 @@ function Dashboard({
 
     const moverCartaPainel = (chave, direcao) => {
         setOrdemCartasDashboard((atual) => moverItemPainel(atual, chave, direcao));
+    };
+
+    const alternarBlocoRecolhidoDashboard = (chave) => {
+        setBlocosRecolhidosDashboard((atual) => ({
+            ...atual,
+            [chave]: !atual[chave],
+        }));
+    };
+
+    const reordenarPorArrastePainel = (lista, origem, destino) => {
+        if (!origem || !destino || origem === destino) return lista;
+
+        const origemIndice = lista.indexOf(origem);
+        const destinoIndice = lista.indexOf(destino);
+
+        if (origemIndice < 0 || destinoIndice < 0) return lista;
+
+        const novaLista = [...lista];
+        const [item] = novaLista.splice(origemIndice, 1);
+        novaLista.splice(destinoIndice, 0, item);
+        return novaLista;
+    };
+
+    const soltarCartaPainel = (destino) => {
+        setOrdemCartasDashboard((atual) => reordenarPorArrastePainel(atual, cartaArrastandoDashboard, destino));
+        setCartaArrastandoDashboard(null);
+    };
+
+    const soltarBlocoPainel = (destino) => {
+        setOrdemBlocosDashboard((atual) => reordenarPorArrastePainel(atual, blocoArrastandoDashboard, destino));
+        setBlocoArrastandoDashboard(null);
+    };
+
+    const prepararArrastePainel = (evento) => {
+        evento.dataTransfer.effectAllowed = "move";
+        evento.dataTransfer.setData("text/plain", "mover");
     };
 
     const classeTamanhoCartaDashboard = (chave) => {
@@ -2574,6 +2637,40 @@ function Dashboard({
         .map((opcao) => opcao.chave)
         .filter((chave) => blocosPainelDashboard[chave]);
 
+    const mensagemVaziaDashboard = (texto) => (
+        <div className="rounded-2xl border border-dashed border-slate-300 p-5 text-center text-sm text-slate-500">
+            {texto}
+        </div>
+    );
+
+    const CardDashboardRecolhivel = ({ chaveBloco, titulo, subtitulo, badge, children }) => {
+        const recolhido = Boolean(blocosRecolhidosDashboard[chaveBloco]);
+
+        return (
+            <Card className="h-full">
+                <div className={classNames("flex flex-col justify-between gap-3 md:flex-row md:items-start", recolhido ? "mb-0" : "mb-4")}>
+                    <div className="min-w-0">
+                        <h2 className="text-lg font-bold text-slate-950">{titulo}</h2>
+                        {subtitulo && <p className="mt-1 text-sm text-slate-500">{subtitulo}</p>}
+                    </div>
+                    <div className="flex shrink-0 flex-wrap items-center gap-2">
+                        {badge}
+                        <button
+                            type="button"
+                            onClick={() => alternarBlocoRecolhidoDashboard(chaveBloco)}
+                            className="inline-flex items-center gap-1 rounded-full bg-white px-3 py-1.5 text-xs font-bold text-slate-700 ring-1 ring-slate-200 hover:bg-slate-50"
+                        >
+                            {recolhido ? <ChevronDown className="h-3.5 w-3.5" /> : <ChevronUp className="h-3.5 w-3.5" />}
+                            {recolhido ? "Abrir" : "Recolher"}
+                        </button>
+                    </div>
+                </div>
+
+                {!recolhido && children}
+            </Card>
+        );
+    };
+
     const renderBlocoDashboard = (chave) => {
         if (chave === "cards") {
             return (
@@ -2585,17 +2682,41 @@ function Dashboard({
                             </div>
                         </Card>
                     ) : (
-                        cardsVisiveis.map((item) => {
+                        cardsVisiveis.map((item, index) => {
                             const Icon = item.icon;
                             const tamanho = tamanhosCartasDashboard[item.chave] || "padrao";
 
                             return (
-                                <Card key={item.chave} className={classNames("overflow-hidden", classeTamanhoCartaDashboard(item.chave))}>
-                                    <div className={classNames(
-                                        "flex items-start justify-between gap-3",
-                                        tamanho === "destaque" ? "min-h-[108px]" : tamanho === "grande" ? "min-h-[92px]" : ""
-                                    )}>
+                                <Card
+                                    key={item.chave}
+                                    className={classNames(
+                                        "overflow-hidden border-dashed transition hover:border-slate-300",
+                                        classeTamanhoCartaDashboard(item.chave),
+                                        cartaArrastandoDashboard === item.chave ? "opacity-60 ring-2 ring-slate-300" : ""
+                                    )}
+                                >
+                                    <div
+                                        draggable
+                                        onDragStart={(evento) => {
+                                            prepararArrastePainel(evento);
+                                            setCartaArrastandoDashboard(item.chave);
+                                        }}
+                                        onDragEnd={() => setCartaArrastandoDashboard(null)}
+                                        onDragOver={(evento) => evento.preventDefault()}
+                                        onDrop={() => soltarCartaPainel(item.chave)}
+                                        className={classNames(
+                                            "flex cursor-grab items-start justify-between gap-3 active:cursor-grabbing",
+                                            tamanho === "destaque" ? "min-h-[108px]" : tamanho === "grande" ? "min-h-[92px]" : ""
+                                        )}
+                                        title="Arraste para mudar a ordem das cartas principais"
+                                    >
                                         <div className="min-w-0">
+                                            <div className="mb-1 flex flex-wrap items-center gap-2">
+                                                <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-bold text-slate-500 ring-1 ring-slate-200">
+                                                    #{index + 1}
+                                                </span>
+                                                <span className="text-[10px] font-bold uppercase tracking-wide text-slate-400">Arrastar para ordenar</span>
+                                            </div>
                                             <p className="text-sm font-medium text-slate-500">{item.label}</p>
                                             <p className={classNames("mt-2 break-words font-bold text-slate-950", classeValorCartaDashboard(item.chave))}>{item.valor}</p>
                                             <p className="mt-1 text-xs text-slate-400">{item.detalhe}</p>
@@ -2617,19 +2738,16 @@ function Dashboard({
 
         if (chave === "pendencias") {
             return (
-                <Card className="h-full">
-                    <div className="mb-4 flex items-center justify-between">
-                        <div>
-                            <h2 className="text-lg font-bold text-slate-950">Pendências críticas</h2>
-                            <p className="text-sm text-slate-500">
-                                Treinamentos pendentes, vencidos ou a vencer em até 30 dias.
-                            </p>
-                        </div>
+                <CardDashboardRecolhivel
+                    chaveBloco="pendencias"
+                    titulo="Pendências críticas"
+                    subtitulo="Treinamentos pendentes, vencidos ou a vencer em até 30 dias."
+                    badge={(
                         <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-600">
                             {pendencias.length} itens
                         </span>
-                    </div>
-
+                    )}
+                >
                     <div className="overflow-x-auto rounded-2xl border border-slate-200 scrollbar-discreta">
                         <table className="min-w-[760px] w-full text-left text-sm">
                             <thead className="bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
@@ -2692,19 +2810,18 @@ function Dashboard({
                             </tbody>
                         </table>
                     </div>
-                </Card>
+                </CardDashboardRecolhivel>
             );
         }
 
         if (chave === "conformidade") {
             return (
-                <Card className="h-full">
-                    <h2 className="text-lg font-bold text-slate-950">Resumo de conformidade</h2>
-                    <p className="mt-1 text-sm text-slate-500">
-                        Baseado nos treinamentos exigidos para a função, incluindo os ainda não enviados.
-                    </p>
-
-                    <div className="mt-6 space-y-5">
+                <CardDashboardRecolhivel
+                    chaveBloco="conformidade"
+                    titulo="Resumo de conformidade"
+                    subtitulo="Baseado nos treinamentos exigidos para a função, incluindo os ainda não enviados."
+                >
+                    <div className="space-y-5">
                         {resumoConformidade.map((i) => (
                             <div key={i.label}>
                                 <div className="mb-2 flex justify-between text-sm">
@@ -2724,31 +2841,26 @@ function Dashboard({
                     <div className="mt-6 rounded-2xl bg-slate-50 p-4 text-sm text-slate-600">
                         <strong className="text-slate-900">Regra do sistema:</strong> pendente indica ausência de certificado; vencido bloqueia a atividade; a vencer em até 30 dias gera alerta preventivo; em dia libera a consulta no QR Code.
                     </div>
-                </Card>
+                </CardDashboardRecolhivel>
             );
         }
 
         if (chave === "rankingEmpresas") {
             return (
-                <Card className="h-full">
-                    <div className="mb-4 flex flex-col justify-between gap-3 md:flex-row md:items-start">
-                        <div>
-                            <h2 className="text-lg font-bold text-slate-950">Ranking de pendências por empresa</h2>
-                            <p className="mt-1 text-sm text-slate-500">
-                                Tabela com tamanho e posição configuráveis no painel. Use Destaque para ocupar a linha inteira.
-                            </p>
-                        </div>
+                <CardDashboardRecolhivel
+                    chaveBloco="rankingEmpresas"
+                    titulo="Ranking de pendências por empresa"
+                    subtitulo="Tabela com tamanho e posição configuráveis no painel. Use Destaque para ocupar a linha inteira."
+                    badge={(
                         <div className="flex flex-wrap gap-2 text-xs font-semibold">
                             <span className="rounded-full bg-emerald-50 px-3 py-1 text-emerald-700 ring-1 ring-emerald-200">Regular</span>
                             <span className="rounded-full bg-orange-50 px-3 py-1 text-orange-700 ring-1 ring-orange-200">Atenção</span>
                             <span className="rounded-full bg-red-50 px-3 py-1 text-red-700 ring-1 ring-red-200">Crítico</span>
                         </div>
-                    </div>
-
+                    )}
+                >
                     {rankingPendenciasEmpresa.length === 0 ? (
-                        <div className="rounded-2xl border border-dashed border-slate-300 p-5 text-center text-sm text-slate-500">
-                            Nenhuma empresa encontrada para gerar o ranking.
-                        </div>
+                        mensagemVaziaDashboard("Nenhuma empresa encontrada para gerar o ranking.")
                     ) : (
                         <div className="overflow-x-auto scrollbar-discreta">
                             <table className="min-w-[920px] w-full text-left text-sm">
@@ -2796,96 +2908,140 @@ function Dashboard({
                             </table>
                         </div>
                     )}
-                </Card>
+                </CardDashboardRecolhivel>
             );
         }
 
         if (chave === "colaboradoresFuncao") {
             return (
-                <ListaCompacta
+                <CardDashboardRecolhivel
+                    chaveBloco="colaboradoresFuncao"
                     titulo="Colaboradores mobilizados por função"
                     subtitulo="Conta apenas ativos, mobilizados, liberados ou com pendência não bloqueante."
-                    vazio="Nenhum colaborador mobilizado encontrado."
+                    badge={(
+                        <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-600">
+                            {colaboradoresPorFuncao.length} função(ões)
+                        </span>
+                    )}
                 >
-                    {colaboradoresPorFuncao.slice(0, 8).map((item) => (
-                        <div key={item.funcao} className="rounded-2xl bg-slate-50 p-3 text-sm ring-1 ring-slate-100">
-                            <div className="flex justify-between gap-3">
-                                <span className="font-semibold text-slate-900">{item.funcao}</span>
-                                <span className="rounded-full bg-white px-2 py-0.5 text-xs font-bold text-slate-600 ring-1 ring-slate-200">{item.quantidade}</span>
-                            </div>
-                            <div className="mt-2 h-2 overflow-hidden rounded-full bg-white ring-1 ring-slate-100">
-                                <div
-                                    className="h-full rounded-full bg-slate-900"
-                                    style={{ width: `${Math.max(6, Math.round((item.quantidade / maiorQuantidadePorFuncao) * 100))}%` }}
-                                />
-                            </div>
-                            <p className="mt-1 text-xs text-slate-500">
-                                {item.quantidade} colaborador(es) considerado(s) mobilizado(s)
-                            </p>
-                        </div>
-                    ))}
-                </ListaCompacta>
+                    <div className="space-y-2">
+                        {colaboradoresPorFuncao.length === 0 ? (
+                            mensagemVaziaDashboard("Nenhum colaborador mobilizado encontrado.")
+                        ) : (
+                            colaboradoresPorFuncao.slice(0, 8).map((item) => (
+                                <div key={item.funcao} className="rounded-2xl bg-slate-50 p-3 text-sm ring-1 ring-slate-100">
+                                    <div className="flex justify-between gap-3">
+                                        <span className="font-semibold text-slate-900">{item.funcao}</span>
+                                        <span className="rounded-full bg-white px-2 py-0.5 text-xs font-bold text-slate-600 ring-1 ring-slate-200">{item.quantidade}</span>
+                                    </div>
+                                    <div className="mt-2 h-2 overflow-hidden rounded-full bg-white ring-1 ring-slate-100">
+                                        <div
+                                            className="h-full rounded-full bg-slate-900"
+                                            style={{ width: `${Math.max(6, Math.round((item.quantidade / maiorQuantidadePorFuncao) * 100))}%` }}
+                                        />
+                                    </div>
+                                    <p className="mt-1 text-xs text-slate-500">
+                                        {item.quantidade} colaborador(es) considerado(s) mobilizado(s)
+                                    </p>
+                                </div>
+                            ))
+                        )}
+                    </div>
+                </CardDashboardRecolhivel>
             );
         }
 
         if (chave === "alertas") {
             return (
-                <ListaCompacta
+                <CardDashboardRecolhivel
+                    chaveBloco="alertas"
                     titulo="Alertas importantes"
                     subtitulo="Itens que exigem atenção imediata."
-                    vazio="Nenhum alerta importante no momento."
+                    badge={(
+                        <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-600">
+                            {alertasImportantes.length} alerta(s)
+                        </span>
+                    )}
                 >
-                    {alertasImportantes.map((item, index) => (
-                        <div key={`${item.tipo}-${index}`} className={classNames("rounded-2xl p-3 text-sm ring-1", item.classe)}>
-                            <p className="font-bold">{item.tipo}</p>
-                            <p className="mt-1 text-xs">{item.texto}</p>
-                        </div>
-                    ))}
-                </ListaCompacta>
+                    <div className="space-y-2">
+                        {alertasImportantes.length === 0 ? (
+                            mensagemVaziaDashboard("Nenhum alerta importante no momento.")
+                        ) : (
+                            alertasImportantes.map((item, index) => (
+                                <div key={`${item.tipo}-${index}`} className={classNames("rounded-2xl p-3 text-sm ring-1", item.classe)}>
+                                    <p className="font-bold">{item.tipo}</p>
+                                    <p className="mt-1 text-xs">{item.texto}</p>
+                                </div>
+                            ))
+                        )}
+                    </div>
+                </CardDashboardRecolhivel>
             );
         }
 
         if (chave === "documentosTipo") {
             return (
-                <ListaCompacta
+                <CardDashboardRecolhivel
+                    chaveBloco="documentosTipo"
                     titulo="Documentos por tipo"
                     subtitulo="Resumo dos documentos empresariais."
-                    vazio="Nenhum documento empresarial cadastrado."
+                    badge={(
+                        <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-600">
+                            {documentosPorTipo.length} tipo(s)
+                        </span>
+                    )}
                 >
-                    {documentosPorTipo.slice(0, 8).map((item) => (
-                        <div key={item.tipo} className="rounded-2xl bg-slate-50 p-3 text-sm ring-1 ring-slate-100">
-                            <div className="flex justify-between gap-3">
-                                <span className="font-semibold text-slate-900">{item.tipo}</span>
-                                <span className="rounded-full bg-white px-2 py-0.5 text-xs font-bold text-slate-600 ring-1 ring-slate-200">{item.total}</span>
-                            </div>
-                            <p className="mt-1 text-xs text-slate-500">
-                                {item.emDia} em dia · {item.vencendo} a vencer · {item.vencidos} vencido(s)
-                            </p>
-                        </div>
-                    ))}
-                </ListaCompacta>
+                    <div className="space-y-2">
+                        {documentosPorTipo.length === 0 ? (
+                            mensagemVaziaDashboard("Nenhum documento empresarial cadastrado.")
+                        ) : (
+                            documentosPorTipo.slice(0, 8).map((item) => (
+                                <div key={item.tipo} className="rounded-2xl bg-slate-50 p-3 text-sm ring-1 ring-slate-100">
+                                    <div className="flex justify-between gap-3">
+                                        <span className="font-semibold text-slate-900">{item.tipo}</span>
+                                        <span className="rounded-full bg-white px-2 py-0.5 text-xs font-bold text-slate-600 ring-1 ring-slate-200">{item.total}</span>
+                                    </div>
+                                    <p className="mt-1 text-xs text-slate-500">
+                                        {item.emDia} em dia · {item.vencendo} a vencer · {item.vencidos} vencido(s)
+                                    </p>
+                                </div>
+                            ))
+                        )}
+                    </div>
+                </CardDashboardRecolhivel>
             );
         }
 
         if (chave === "ultimosDocumentos") {
             return (
-                <ListaCompacta
+                <CardDashboardRecolhivel
+                    chaveBloco="ultimosDocumentos"
                     titulo="Últimos documentos enviados"
                     subtitulo="Certificados e documentos empresariais mais recentes."
-                    vazio="Nenhum documento enviado ainda."
+                    badge={(
+                        <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-600">
+                            {ultimosDocumentosEnviados.length} envio(s)
+                        </span>
+                    )}
                 >
-                    {ultimosDocumentosEnviados.map((item, index) => (
-                        <div key={`${item.origem}-${item.nome}-${index}`} className="rounded-2xl bg-slate-50 p-3 text-sm ring-1 ring-slate-100">
-                            <div className="flex flex-wrap items-center justify-between gap-2">
-                                <span className="font-semibold text-slate-900">{item.titulo}</span>
-                                <span className="rounded-full bg-white px-2 py-0.5 text-[10px] font-bold text-slate-600 ring-1 ring-slate-200">{item.origem}</span>
-                            </div>
-                            <p className="mt-1 text-xs text-slate-500">
-                                {item.colaborador} · {item.empresa} · {item.data ? new Date(`${item.data}`.includes("T") ? item.data : `${item.data}T12:00:00`).toLocaleDateString("pt-BR") : "-"}
-                            </p>
-                        </div>
-                    ))}
-                </ListaCompacta>
+                    <div className="space-y-2">
+                        {ultimosDocumentosEnviados.length === 0 ? (
+                            mensagemVaziaDashboard("Nenhum documento enviado ainda.")
+                        ) : (
+                            ultimosDocumentosEnviados.map((item, index) => (
+                                <div key={`${item.origem}-${item.nome}-${index}`} className="rounded-2xl bg-slate-50 p-3 text-sm ring-1 ring-slate-100">
+                                    <div className="flex flex-wrap items-center justify-between gap-2">
+                                        <span className="font-semibold text-slate-900">{item.titulo}</span>
+                                        <span className="rounded-full bg-white px-2 py-0.5 text-[10px] font-bold text-slate-600 ring-1 ring-slate-200">{item.origem}</span>
+                                    </div>
+                                    <p className="mt-1 text-xs text-slate-500">
+                                        {item.colaborador} · {item.empresa} · {item.data ? new Date(`${item.data}`.includes("T") ? item.data : `${item.data}T12:00:00`).toLocaleDateString("pt-BR") : "-"}
+                                    </p>
+                                </div>
+                            ))
+                        )}
+                    </div>
+                </CardDashboardRecolhivel>
             );
         }
 
@@ -2948,6 +3104,7 @@ function Dashboard({
                                     setCartasVisiveisDashboard(cartasPadraoDashboard);
                                     setTamanhosCartasDashboard(tamanhosPadraoCartasDashboard);
                                     setTamanhosBlocosDashboard(tamanhosPadraoBlocosDashboard);
+                                    setBlocosRecolhidosDashboard(blocosRecolhidosPadraoDashboard);
                                     setOrdemBlocosDashboard(ordemPadraoBlocosDashboard);
                                     setOrdemCartasDashboard(ordemPadraoCartasDashboard);
                                 }}
@@ -3001,6 +3158,7 @@ function Dashboard({
                                         "ultimosDocumentos",
                                     ]);
                                     setOrdemCartasDashboard(ordemPadraoCartasDashboard);
+                                    setBlocosRecolhidosDashboard(blocosRecolhidosPadraoDashboard);
                                 }}
                                 className="rounded-xl bg-slate-100 px-3 py-2 text-xs font-semibold text-slate-700 ring-1 ring-slate-200 hover:bg-slate-200"
                             >
@@ -3065,24 +3223,41 @@ function Dashboard({
                                     return (
                                         <div
                                             key={opcao.chave}
+                                            onDragOver={(evento) => evento.preventDefault()}
+                                            onDrop={() => soltarCartaPainel(opcao.chave)}
                                             className={classNames(
                                                 "rounded-2xl p-3 ring-1 transition",
-                                                ativo ? "bg-blue-50/60 ring-blue-200" : "bg-slate-50 ring-slate-200"
+                                                ativo ? "bg-blue-50/60 ring-blue-200" : "bg-slate-50 ring-slate-200",
+                                                cartaArrastandoDashboard === opcao.chave ? "opacity-60 ring-2 ring-blue-300" : ""
                                             )}
                                         >
                                             <div className="flex items-center justify-between gap-3">
-                                                <button
-                                                    type="button"
-                                                    onClick={() => alternarCartaPainel(opcao.chave)}
-                                                    className="min-w-0 text-left"
-                                                >
-                                                    <span className={classNames("block truncate text-sm font-bold", ativo ? "text-blue-900" : "text-slate-500")}>
-                                                        {opcao.label}
+                                                <div className="flex min-w-0 items-start gap-2">
+                                                    <span
+                                                        draggable
+                                                        onDragStart={(evento) => {
+                                                            prepararArrastePainel(evento);
+                                                            setCartaArrastandoDashboard(opcao.chave);
+                                                        }}
+                                                        onDragEnd={() => setCartaArrastandoDashboard(null)}
+                                                        className="mt-0.5 inline-flex h-7 w-7 shrink-0 cursor-grab items-center justify-center rounded-xl bg-white text-sm font-bold text-slate-500 ring-1 ring-slate-200 active:cursor-grabbing"
+                                                        title="Segure e arraste para mudar a ordem"
+                                                    >
+                                                        ☰
                                                     </span>
-                                                    <span className="mt-0.5 block text-xs text-slate-500">
-                                                        {ativo ? "Aparece no painel" : "Oculto no painel"}
-                                                    </span>
-                                                </button>
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => alternarCartaPainel(opcao.chave)}
+                                                        className="min-w-0 text-left"
+                                                    >
+                                                        <span className={classNames("block truncate text-sm font-bold", ativo ? "text-blue-900" : "text-slate-500")}>
+                                                            #{index + 1}. {opcao.label}
+                                                        </span>
+                                                        <span className="mt-0.5 block text-xs text-slate-500">
+                                                            {ativo ? "Aparece no painel" : "Oculto no painel"} · arraste pelo ícone ☰
+                                                        </span>
+                                                    </button>
+                                                </div>
 
                                                 <div className="flex shrink-0 items-center gap-1">
                                                     <button
@@ -3161,6 +3336,7 @@ function Dashboard({
                                 type="button"
                                 onClick={() => {
                                     setTamanhosBlocosDashboard(tamanhosPadraoBlocosDashboard);
+                                    setBlocosRecolhidosDashboard(blocosRecolhidosPadraoDashboard);
                                     setOrdemBlocosDashboard(ordemPadraoBlocosDashboard);
                                 }}
                                 className="self-start rounded-xl bg-white px-3 py-2 text-xs font-semibold text-slate-700 ring-1 ring-slate-200 hover:bg-slate-50 sm:self-auto"
@@ -3177,24 +3353,41 @@ function Dashboard({
                                 return (
                                     <div
                                         key={opcao.chave}
+                                        onDragOver={(evento) => evento.preventDefault()}
+                                        onDrop={() => soltarBlocoPainel(opcao.chave)}
                                         className={classNames(
                                             "rounded-2xl p-3 ring-1 transition",
-                                            ativo ? "bg-emerald-50/60 ring-emerald-200" : "bg-slate-50 ring-slate-200"
+                                            ativo ? "bg-emerald-50/60 ring-emerald-200" : "bg-slate-50 ring-slate-200",
+                                            blocoArrastandoDashboard === opcao.chave ? "opacity-60 ring-2 ring-emerald-300" : ""
                                         )}
                                     >
                                         <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-                                            <button
-                                                type="button"
-                                                onClick={() => alternarBlocoPainel(opcao.chave)}
-                                                className="min-w-0 text-left"
-                                            >
-                                                <span className={classNames("block text-sm font-bold", ativo ? "text-emerald-900" : "text-slate-500")}>
-                                                    {index + 1}. {opcao.label}
+                                            <div className="flex min-w-0 items-start gap-2">
+                                                <span
+                                                    draggable
+                                                    onDragStart={(evento) => {
+                                                        prepararArrastePainel(evento);
+                                                        setBlocoArrastandoDashboard(opcao.chave);
+                                                    }}
+                                                    onDragEnd={() => setBlocoArrastandoDashboard(null)}
+                                                    className="mt-0.5 inline-flex h-7 w-7 shrink-0 cursor-grab items-center justify-center rounded-xl bg-white text-sm font-bold text-slate-500 ring-1 ring-slate-200 active:cursor-grabbing"
+                                                    title="Segure e arraste para mudar a posição do quadro"
+                                                >
+                                                    ☰
                                                 </span>
-                                                <span className="mt-0.5 block text-xs text-slate-500">
-                                                    {ativo ? "Aparece no painel" : "Oculto no painel"}
-                                                </span>
-                                            </button>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => alternarBlocoPainel(opcao.chave)}
+                                                    className="min-w-0 text-left"
+                                                >
+                                                    <span className={classNames("block text-sm font-bold", ativo ? "text-emerald-900" : "text-slate-500")}>
+                                                        {index + 1}. {opcao.label}
+                                                    </span>
+                                                    <span className="mt-0.5 block text-xs text-slate-500">
+                                                        {ativo ? "Aparece no painel" : "Oculto no painel"} · arraste pelo ícone ☰
+                                                    </span>
+                                                </button>
+                                            </div>
 
                                             <div className="flex shrink-0 flex-wrap items-center gap-1">
                                                 <button
