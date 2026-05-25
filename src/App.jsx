@@ -15,6 +15,7 @@ import {
     Database,
     Download,
     Eye,
+    EyeOff,
     FileText,
     Filter,
     HardHat,
@@ -1882,6 +1883,55 @@ function Header({ titulo, subtitulo, acao }) {
     );
 }
 
+function PasswordInput({
+    value,
+    onChange,
+    placeholder = "Digite sua senha",
+    onKeyDown,
+    autoFocus = false,
+    autoComplete = "current-password",
+    name,
+    id,
+    className = "",
+    inputClassName = "",
+    disabled = false,
+}) {
+    const [mostrarSenha, setMostrarSenha] = useState(false);
+    const IconeVisibilidade = mostrarSenha ? EyeOff : Eye;
+
+    return (
+        <div className={classNames("relative", className)}>
+            <Lock className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+            <input
+                id={id}
+                name={name}
+                type={mostrarSenha ? "text" : "password"}
+                value={value}
+                onChange={onChange}
+                onKeyDown={onKeyDown}
+                placeholder={placeholder}
+                autoFocus={autoFocus}
+                autoComplete={autoComplete}
+                disabled={disabled}
+                className={classNames(
+                    "w-full rounded-2xl border border-slate-200 bg-white py-3 pl-10 pr-12 text-sm outline-none focus:border-slate-400 focus:ring-4 focus:ring-slate-100 disabled:cursor-not-allowed disabled:opacity-60",
+                    inputClassName
+                )}
+            />
+            <button
+                type="button"
+                onClick={() => setMostrarSenha((atual) => !atual)}
+                disabled={disabled}
+                aria-label={mostrarSenha ? "Ocultar senha" : "Visualizar senha"}
+                title={mostrarSenha ? "Ocultar senha" : "Visualizar senha"}
+                className="absolute right-3 top-1/2 inline-flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-xl text-slate-500 hover:bg-slate-100 hover:text-slate-900 disabled:cursor-not-allowed disabled:opacity-60"
+            >
+                <IconeVisibilidade className="h-4 w-4" />
+            </button>
+        </div>
+    );
+}
+
 function LoginScreen({ onLogin }) {
     const [email, setEmail] = useState("sst@empresa.com");
     const [senha, setSenha] = useState("");
@@ -1946,19 +1996,16 @@ function LoginScreen({ onLogin }) {
                     />
 
                     <label className="block text-sm font-medium text-slate-700">Senha</label>
-                    <div className="relative">
-                        <Lock className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-                        <input
-                            type="password"
-                            value={senha}
-                            onChange={(e) => setSenha(e.target.value)}
-                            onKeyDown={(e) => {
-                                if (e.key === "Enter") fazerLogin();
-                            }}
-                            placeholder="Digite sua senha"
-                            className="w-full rounded-2xl border border-slate-200 py-3 pl-10 pr-4 text-sm outline-none focus:ring-2 focus:ring-slate-300"
-                        />
-                    </div>
+                    <PasswordInput
+                        value={senha}
+                        onChange={(e) => setSenha(e.target.value)}
+                        onKeyDown={(e) => {
+                            if (e.key === "Enter") fazerLogin();
+                        }}
+                        placeholder="Digite sua senha"
+                        autoComplete="current-password"
+                        inputClassName="focus:ring-2 focus:ring-slate-300"
+                    />
 
                     <label className="block text-sm font-medium text-slate-700">Perfil de acesso</label>
                     <select
@@ -9554,13 +9601,12 @@ function AuditoriaBloqueada({ onLiberar }) {
                     </div>
 
                     <form onSubmit={validarSenha} className="space-y-3">
-                        <input
-                            type="password"
+                        <PasswordInput
                             value={senha}
                             onChange={(e) => setSenha(e.target.value)}
                             placeholder="Senha de acesso"
-                            className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none focus:border-slate-400 focus:ring-4 focus:ring-slate-100"
                             autoFocus
+                            autoComplete="current-password"
                         />
 
                         {erro && (
