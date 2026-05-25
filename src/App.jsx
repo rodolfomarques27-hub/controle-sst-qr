@@ -824,7 +824,7 @@ function diaAniversarioColaborador(colaborador) {
 function formatarAniversario(dataISO) {
     const data = normalizarDataAniversario(dataISO);
     if (!data) return "-";
-    return `${data.slice(8, 10)}/${data.slice(5, 7)}`;
+    return `${data.slice(8, 10)}/${data.slice(5, 7)}/${data.slice(0, 4)}`;
 }
 
 function proximoAniversariante(lista = []) {
@@ -8635,36 +8635,40 @@ function Aniversariantes({ colaboradores = [], empresasBanco = [] }) {
     const [status, setStatus] = useState("Todos");
 
     const colaboradoresElegiveis = colaboradores.filter((colaborador) =>
-        deveMostrarAniversarioColaborador(colaborador) && colaboradorContaComoMobilizado(colaborador)
+        deveMostrarAniversarioColaborador(colaborador)
     );
 
     const colaboradoresComAniversario = colaboradoresElegiveis.filter((colaborador) =>
         Boolean(obterDataAniversarioColaborador(colaborador))
     );
 
-    const opcoesEmpresa = ["Todas", ...Array.from(new Set(colaboradoresComAniversario.map((c) => c.empresaExibicao || c.empresa).filter(Boolean))).sort()];
-    const opcoesFuncao = ["Todas", ...Array.from(new Set(colaboradoresComAniversario.map((c) => c.funcao).filter(Boolean))).sort()];
+    const opcoesEmpresa = ["Todas", ...Array.from(new Set(colaboradoresElegiveis.map((c) => c.empresaExibicao || c.empresa).filter(Boolean))).sort()];
+    const opcoesFuncao = ["Todas", ...Array.from(new Set(colaboradoresElegiveis.map((c) => c.funcao).filter(Boolean))).sort()];
     const opcoesStatus = ["Todos", ...STATUS_CLASSIFICACAO_COLABORADOR];
 
-    const filtrados = colaboradoresComAniversario
+    const filtrados = colaboradoresElegiveis
         .filter((colaborador) => {
+            const dataAniversario = obterDataAniversarioColaborador(colaborador);
             const mesColaborador = mesAniversarioColaborador(colaborador);
             const statusColaborador = statusGeral(colaborador).texto;
             const empresaColaborador = colaborador.empresaExibicao || colaborador.empresa;
 
             return (
-                (mes === "Todos" || String(mesColaborador).padStart(2, "0") === mes) &&
+                (mes === "Todos" || (dataAniversario && String(mesColaborador).padStart(2, "0") === mes)) &&
                 (empresa === "Todas" || empresaColaborador === empresa) &&
                 (funcao === "Todas" || colaborador.funcao === funcao) &&
                 (status === "Todos" || statusColaborador === status)
             );
         })
         .sort((a, b) => {
+            const dataA = obterDataAniversarioColaborador(a);
+            const dataB = obterDataAniversarioColaborador(b);
             const mesA = mesAniversarioColaborador(a) || 99;
             const mesB = mesAniversarioColaborador(b) || 99;
             const diaA = diaAniversarioColaborador(a) || 99;
             const diaB = diaAniversarioColaborador(b) || 99;
 
+            if (mes === "Todos" && Boolean(dataA) !== Boolean(dataB)) return dataA ? -1 : 1;
             if (mes === "Todos" && mesA !== mesB) return mesA - mesB;
             if (diaA !== diaB) return diaA - diaB;
             return a.nome.localeCompare(b.nome);
@@ -8692,7 +8696,7 @@ function Aniversariantes({ colaboradores = [], empresasBanco = [] }) {
         <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
             <Header
                 titulo="Aniversariantes"
-                subtitulo="Consulta de aniversariantes de todos os meses, considerando colaboradores ativos/mobilizados, autorizados e com data de nascimento cadastrada."
+                subtitulo="Consulta de aniversariantes de todos os meses, com todos os colaboradores autorizados para aparecer no painel. Use os filtros para separar por mês, empresa, função e status."
                 acao={(
                     <button
                         type="button"
@@ -8707,7 +8711,7 @@ function Aniversariantes({ colaboradores = [], empresasBanco = [] }) {
 
             <div className="mb-5 grid gap-4 md:grid-cols-3">
                 <Card>
-                    <p className="text-sm font-semibold text-slate-500">Aniversariantes filtrados</p>
+                    <p className="text-sm font-semibold text-slate-500">Registros filtrados</p>
                     <p className="mt-2 text-3xl font-bold text-slate-950">{filtrados.length}</p>
                 </Card>
                 <Card>
@@ -8762,7 +8766,7 @@ function Aniversariantes({ colaboradores = [], empresasBanco = [] }) {
                         <tbody className="divide-y divide-slate-100 bg-white">
                             {filtrados.length === 0 && (
                                 <tr>
-                                    <td colSpan={6} className="px-4 py-8 text-center text-sm text-slate-500">Nenhum aniversariante encontrado para os filtros selecionados.</td>
+                                    <td colSpan={6} className="px-4 py-8 text-center text-sm text-slate-500">Nenhum colaborador encontrado para os filtros selecionados.</td>
                                 </tr>
                             )}
                             {filtrados.map((colaborador) => {
@@ -10969,10 +10973,24 @@ export default function App() {
 
             const colaborador = normalizarColaborador(data);
 
-            setColaboradores((atual) => atual.map((item) => (item.id === colaborador.id ? { ...item, ...colaborador } : item)));
+            setColaboradores((atual) =>
+                atual.map((item) =>
+                    item.id === colaborador.id
+                        ? {
+                            ...item,
+                            ...colaborador,
+                            treinamentos: item.treinamentos || colaborador.treinamentos || [],
+                        }
+                        : item
+                )
+            );
 
             if (colaboradorSelecionado?.id === colaborador.id) {
-                setColaboradorSelecionado((atual) => ({ ...atual, ...colaborador }));
+                setColaboradorSelecionado((atual) => ({
+                    ...atual,
+                    ...colaborador,
+                    treinamentos: atual?.treinamentos || colaborador.treinamentos || [],
+                }));
             }
 
             return true;
