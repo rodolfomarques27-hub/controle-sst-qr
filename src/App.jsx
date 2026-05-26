@@ -873,6 +873,118 @@ const categoriasAuditoriaCampo = [
 const statusDesvioAuditoriaCampo = ["Aberto", "Em tratativa", "Corrigido", "Cancelado"];
 const gravidadesAuditoriaCampo = ["Leve", "Moderada", "Grave", "Crítica"];
 
+const SENHA_LINK_AUDITORIA_CAMPO = import.meta.env.VITE_SENHA_AUDITORIA_CAMPO || SENHA_AUDITORIA;
+const TOKEN_LINK_AUDITORIA_CAMPO = import.meta.env.VITE_TOKEN_AUDITORIA_CAMPO || "";
+
+const tiposAuditoriaCampoDireta = [
+    { valor: "area", label: "Área", parametros: ["area"], grupo: "area" },
+    { valor: "area_externa", label: "Área externa", parametros: ["externa", "area-externa", "area_externa"], grupo: "area" },
+    { valor: "maquina", label: "Máquina", parametros: ["maquina", "máquina"], grupo: "maquina" },
+    { valor: "equipamento", label: "Equipamento", parametros: ["equipamento"], grupo: "maquina" },
+    { valor: "veiculo", label: "Veículo", parametros: ["veiculo", "veículo"], grupo: "maquina" },
+    { valor: "frente_servico", label: "Frente de serviço", parametros: ["frente-servico", "frente_servico", "frente"], grupo: "frente" },
+    { valor: "almoxarifado", label: "Almoxarifado", parametros: ["almoxarifado"], grupo: "area" },
+    { valor: "instalacao_provisoria", label: "Instalação provisória", parametros: ["instalacao-provisoria", "instalacao_provisoria", "instalação-provisória"], grupo: "area" },
+    { valor: "auditoria_interna_geral", label: "Auditoria interna geral", parametros: ["auditoria-interna-geral", "auditoria_interna_geral", "geral"], grupo: "geral" },
+    { valor: "outro", label: "Outro", parametros: ["outro"], grupo: "geral" },
+];
+
+const statusAuditoriaCampoDireta = ["Aberta", "Em andamento", "Resolvida", "Cancelada", "Vencida"];
+const grausRiscoAuditoriaCampoDireta = ["Baixo", "Médio", "Alto", "Crítico"];
+
+const checklistDinamicoAuditoriaCampo = {
+    area: [
+        "Organização e limpeza",
+        "Isolamento adequado",
+        "Sinalização",
+        "Acesso seguro",
+        "Risco de queda",
+        "Risco de atropelamento",
+        "Trânsito de máquinas",
+        "Armazenamento de materiais",
+        "Iluminação",
+        "Interferência com pedestres",
+    ],
+    maquina: [
+        "Proteções instaladas",
+        "Botão de emergência",
+        "Sinalização da máquina",
+        "Vazamentos",
+        "Partes móveis protegidas",
+        "Condição elétrica",
+        "Condição mecânica",
+        "Bloqueio de energia",
+        "Acesso seguro",
+        "Condição geral do equipamento",
+    ],
+    frente: [
+        "APR disponível",
+        "Equipe orientada",
+        "EPIs utilizados",
+        "Ferramentas adequadas",
+        "Isolamento da atividade",
+        "Riscos críticos controlados",
+        "Permissão de trabalho, quando aplicável",
+        "Organização da frente de serviço",
+    ],
+    geral: [
+        "Condição segura do local",
+        "Organização e limpeza",
+        "Sinalização aplicável",
+        "Riscos críticos controlados",
+        "Ação recomendada definida",
+    ],
+};
+
+function obterTipoAuditoriaCampoPorParametro(parametro = "") {
+    const valor = normalizarTextoBusca(parametro || "").replace(/\s+/g, "-");
+    return tiposAuditoriaCampoDireta.find((tipo) => tipo.valor === parametro || tipo.parametros.some((item) => normalizarTextoBusca(item).replace(/\s+/g, "-") === valor)) || tiposAuditoriaCampoDireta[0];
+}
+
+function obterTipoAuditoriaCampoDireta(valor = "") {
+    return tiposAuditoriaCampoDireta.find((tipo) => tipo.valor === valor) || tiposAuditoriaCampoDireta[0];
+}
+
+function checklistParaTipoAuditoriaCampo(valor = "") {
+    const tipo = obterTipoAuditoriaCampoDireta(valor);
+    return checklistDinamicoAuditoriaCampo[tipo.grupo] || checklistDinamicoAuditoriaCampo.geral;
+}
+
+function criarRespostasChecklistDinamico(tipoAuditoria = "area") {
+    return checklistParaTipoAuditoriaCampo(tipoAuditoria).reduce((acc, item) => {
+        acc[item] = "conforme";
+        return acc;
+    }, {});
+}
+
+function calcularResultadoChecklistDinamico(respostas = {}) {
+    const itens = Object.entries(respostas || {}).map(([pergunta, chaveResposta]) => ({
+        pergunta,
+        resposta: obterRespostaAuditoriaCampo(chaveResposta || "conforme"),
+    }));
+
+    const aplicaveis = itens.filter((item) => item.resposta.chave !== "nao_aplicavel");
+    const pontosPossiveis = Math.max(1, aplicaveis.length * 10);
+    const pontos = aplicaveis.reduce((total, item) => total + Number(item.resposta.pontos || 0), 0);
+    const percentual = Math.max(0, Math.min(100, Math.round((pontos / pontosPossiveis) * 100)));
+    const temDesvioGrave = itens.some((item) => item.resposta.chave === "desvio_grave");
+
+    let classificacao = "Crítico";
+    if (temDesvioGrave) classificacao = "Ação imediata";
+    else if (percentual >= 90) classificacao = "Excelente";
+    else if (percentual >= 75) classificacao = "Conforme com observações";
+    else if (percentual >= 50) classificacao = "Atenção";
+
+    return {
+        pontos,
+        pontosPossiveis,
+        percentual,
+        classificacao,
+        temDesvioGrave,
+        itens,
+    };
+}
+
 
 function notificacaoPadraoAuditoriaCampo(colaborador = {}, resultado = {}) {
     const nome = colaborador.nome || "colaborador não informado";
@@ -984,7 +1096,25 @@ function normalizarAuditoriaCampo(item = {}) {
         empresaId: item.empresa_id || item.empresaId || null,
         tokenQr: item.token_qr || item.tokenQr || "",
         colaboradorNome: item.colaborador_nome || item.colaboradorNome || item.colaboradores?.nome || "",
-        empresaNome: item.empresa_nome || item.empresaNome || item.empresas?.nome || "",
+        empresaNome: item.empresa_nome || item.empresaNome || item.empresas?.nome || item.empresa_responsavel || item.empresaResponsavel || "",
+        numeroAuditoria: item.numero_auditoria || item.numeroAuditoria || "",
+        tipoAuditoria: item.tipo_auditoria || item.tipoAuditoria || "",
+        titulo: item.titulo || item.assunto || item.numero_auditoria || item.numeroAuditoria || "",
+        area: item.area || "",
+        subarea: item.subarea || "",
+        local: item.local || "",
+        maquinaEquipamento: item.maquina_equipamento || item.maquinaEquipamento || "",
+        empresaResponsavel: item.empresa_responsavel || item.empresaResponsavel || item.empresa_nome || item.empresaNome || "",
+        grauRisco: item.grau_risco || item.grauRisco || "",
+        situacaoEncontrada: item.situacao_encontrada || item.situacaoEncontrada || "",
+        acaoRecomendada: item.acao_recomendada || item.acaoRecomendada || "",
+        responsavelTratativa: item.responsavel_tratativa || item.responsavelTratativa || "",
+        prazoAdequacao: item.prazo_adequacao || item.prazoAdequacao || "",
+        statusAuditoria: item.status_auditoria || item.statusAuditoria || "",
+        fotoAntesUrl: item.foto_antes_url || item.fotoAntesUrl || "",
+        fotoDepoisUrl: item.foto_depois_url || item.fotoDepoisUrl || "",
+        observacoesGerais: item.observacoes_gerais || item.observacoesGerais || item.observacao || "",
+        checklistDinamico: Array.isArray(item.checklist_dinamico) ? item.checklist_dinamico : (Array.isArray(item.checklistDinamico) ? item.checklistDinamico : []),
         funcao: item.funcao || item.colaboradores?.funcao || "",
         statusDocumental: item.status_documental || item.statusDocumental || "",
         boasPraticas: item.boas_praticas || item.boasPraticas || "",
@@ -12113,6 +12243,431 @@ function DashboardAuditoriaCampo({ auditoriasCampo = [], onAuditoriaAtualizada }
     );
 }
 
+
+function NovaAuditoriaCampoDireta({ usuario = null, onAuditoriaSalva }) {
+    const parametros = useMemo(() => new URLSearchParams(window.location.search), []);
+    const tipoParametro = parametros.get("tipo") || parametros.get("tipo_auditoria") || "area";
+    const identificacaoParametro = parametros.get("id") || parametros.get("maquina") || parametros.get("equipamento") || "";
+    const tokenParametro = parametros.get("token") || parametros.get("chave") || "";
+    const tipoInicial = obterTipoAuditoriaCampoPorParametro(tipoParametro);
+    const linkGeral = `${window.location.origin}/nova-auditoria-campo`;
+
+    const [acessoLiberado, setAcessoLiberado] = useState(() => Boolean(usuario) || (TOKEN_LINK_AUDITORIA_CAMPO && tokenParametro === TOKEN_LINK_AUDITORIA_CAMPO));
+    const [senha, setSenha] = useState("");
+    const [mensagemAcesso, setMensagemAcesso] = useState("");
+    const [salvando, setSalvando] = useState(false);
+    const [mensagem, setMensagem] = useState("");
+    const [auditoriaSalva, setAuditoriaSalva] = useState(null);
+    const [previewFotos, setPreviewFotos] = useState({ antes: "", depois: "" });
+    const [formulario, setFormulario] = useState(() => ({
+        tipoAuditoria: tipoInicial.valor,
+        titulo: identificacaoParametro ? `Auditoria de campo - ${tipoInicial.label} ${identificacaoParametro}` : `Auditoria de campo - ${tipoInicial.label}`,
+        area: "",
+        subarea: "",
+        local: "",
+        maquinaEquipamento: identificacaoParametro,
+        empresaResponsavel: "",
+        auditorNome: usuario?.email || "",
+        grauRisco: "Baixo",
+        situacaoEncontrada: "",
+        acaoRecomendada: "",
+        responsavelTratativa: "",
+        prazoAdequacao: "",
+        statusAuditoria: "Aberta",
+        fotoAntes: null,
+        fotoDepois: null,
+        observacoesGerais: "",
+    }));
+    const [respostasChecklist, setRespostasChecklist] = useState(() => criarRespostasChecklistDinamico(tipoInicial.valor));
+
+    const tipoAtual = obterTipoAuditoriaCampoDireta(formulario.tipoAuditoria);
+    const checklistAtual = useMemo(() => checklistParaTipoAuditoriaCampo(formulario.tipoAuditoria), [formulario.tipoAuditoria]);
+    const resultado = useMemo(() => calcularResultadoChecklistDinamico(respostasChecklist), [respostasChecklist]);
+    const linkTipoAtual = `${linkGeral}?tipo=${tipoAtual.parametros[0] || tipoAtual.valor}`;
+    const linkEspecifico = formulario.maquinaEquipamento
+        ? `${linkGeral}?tipo=${tipoAtual.parametros[0] || tipoAtual.valor}&id=${encodeURIComponent(formulario.maquinaEquipamento)}`
+        : linkTipoAtual;
+
+    const alterarFormulario = (campo, valor) => {
+        setFormulario((atual) => ({ ...atual, [campo]: valor }));
+    };
+
+    const alterarTipoAuditoria = (valor) => {
+        const novoTipo = obterTipoAuditoriaCampoDireta(valor);
+        setFormulario((atual) => ({
+            ...atual,
+            tipoAuditoria: novoTipo.valor,
+            titulo: atual.titulo && !atual.titulo.startsWith("Auditoria de campo -") ? atual.titulo : `Auditoria de campo - ${novoTipo.label}`,
+        }));
+        setRespostasChecklist(criarRespostasChecklistDinamico(novoTipo.valor));
+    };
+
+    const liberarAcesso = () => {
+        const senhaDigitada = senha.trim();
+        if (!senhaDigitada) {
+            setMensagemAcesso("Informe a senha de auditoria para abrir o formulário.");
+            return;
+        }
+        if (senhaDigitada !== SENHA_LINK_AUDITORIA_CAMPO && (!TOKEN_LINK_AUDITORIA_CAMPO || senhaDigitada !== TOKEN_LINK_AUDITORIA_CAMPO)) {
+            setMensagemAcesso("Senha ou token inválido para nova auditoria de campo.");
+            return;
+        }
+        setAcessoLiberado(true);
+        setMensagemAcesso("");
+    };
+
+    const alterarFoto = (campo, arquivo) => {
+        if (arquivo && !String(arquivo.type || "").startsWith("image/")) {
+            setMensagem("Anexe apenas fotos nos campos de evidência.");
+            return;
+        }
+
+        setFormulario((atual) => ({ ...atual, [campo]: arquivo || null }));
+
+        const previewCampo = campo === "fotoAntes" ? "antes" : "depois";
+        if (previewFotos[previewCampo]) {
+            URL.revokeObjectURL(previewFotos[previewCampo]);
+        }
+        setPreviewFotos((atual) => ({
+            ...atual,
+            [previewCampo]: arquivo ? URL.createObjectURL(arquivo) : "",
+        }));
+    };
+
+    const gerarNumeroAuditoria = async () => {
+        const { data, error } = await supabase.rpc("gerar_numero_auditoria_campo");
+        if (!error && data) return data;
+        const ano = new Date().getFullYear();
+        return `AUD-${ano}-${String(Date.now()).slice(-4)}`;
+    };
+
+    const uploadFotoDireta = async (arquivo, numeroAuditoria, tipo) => {
+        if (!arquivo) return "";
+        const otimizada = await reduzirFotoParaAuditoria(arquivo, { maxLado: 1400, alvoBytes: 800 * 1024 });
+        if (!validarArquivoAntesUpload(otimizada, "fotoAuditoria")) {
+            throw new Error("A foto ficou acima do limite mesmo após a redução automática.");
+        }
+        const nomeSeguro = sanitizarNomeArquivo(otimizada.name || `${tipo}.jpg`);
+        const caminho = `auditorias-diretas/${numeroAuditoria}/${tipo}-${Date.now()}-${nomeSeguro}`;
+        const { error } = await supabase.storage.from("auditorias-campo").upload(caminho, otimizada, {
+            cacheControl: "3600",
+            upsert: true,
+            contentType: otimizada.type || "image/jpeg",
+        });
+        if (error) throw new Error(`Erro ao enviar ${tipo}: ${error.message}`);
+        const { data } = supabase.storage.from("auditorias-campo").getPublicUrl(caminho);
+        return data?.publicUrl || caminho;
+    };
+
+    const salvarAuditoriaDireta = async () => {
+        if (!formulario.tipoAuditoria) {
+            setMensagem("Selecione o tipo de auditoria.");
+            return;
+        }
+        if (!formulario.titulo.trim()) {
+            setMensagem("Informe o título/assunto da auditoria.");
+            return;
+        }
+        if (!formulario.local.trim() && !formulario.area.trim() && !formulario.maquinaEquipamento.trim()) {
+            setMensagem("Informe ao menos área, local ou máquina/equipamento.");
+            return;
+        }
+        if (!formulario.situacaoEncontrada.trim()) {
+            setMensagem("Descreva a situação encontrada.");
+            return;
+        }
+
+        setSalvando(true);
+        setMensagem("");
+
+        try {
+            const numeroAuditoria = await gerarNumeroAuditoria();
+            const fotoAntesUrl = await uploadFotoDireta(formulario.fotoAntes, numeroAuditoria, "foto-antes");
+            const fotoDepoisUrl = await uploadFotoDireta(formulario.fotoDepois, numeroAuditoria, "foto-depois");
+            const checklistDinamico = resultado.itens.map((item) => ({
+                pergunta: item.pergunta,
+                resposta: item.resposta.chave,
+                respostaTexto: item.resposta.texto,
+                pontos: item.resposta.pontos,
+            }));
+
+            const payload = {
+                numero_auditoria: numeroAuditoria,
+                tipo_auditoria: formulario.tipoAuditoria,
+                titulo: formulario.titulo.trim(),
+                area: formulario.area.trim() || null,
+                subarea: formulario.subarea.trim() || null,
+                local: formulario.local.trim() || null,
+                maquina_equipamento: formulario.maquinaEquipamento.trim() || null,
+                empresa_responsavel: formulario.empresaResponsavel.trim() || null,
+                empresa_nome: formulario.empresaResponsavel.trim() || null,
+                auditor_nome: formulario.auditorNome.trim() || usuario?.email || "Auditor de campo",
+                grau_risco: formulario.grauRisco,
+                situacao_encontrada: formulario.situacaoEncontrada.trim(),
+                acao_recomendada: formulario.acaoRecomendada.trim() || null,
+                responsavel_tratativa: formulario.responsavelTratativa.trim() || null,
+                prazo_adequacao: formulario.prazoAdequacao || null,
+                status_auditoria: formulario.statusAuditoria,
+                status_desvio: formulario.statusAuditoria === "Resolvida" ? "Corrigido" : "Aberto",
+                foto_antes_url: fotoAntesUrl || null,
+                foto_depois_url: fotoDepoisUrl || null,
+                observacoes_gerais: formulario.observacoesGerais.trim() || null,
+                observacao: formulario.observacoesGerais.trim() || formulario.situacaoEncontrada.trim(),
+                checklist: checklistDinamico,
+                checklist_dinamico: checklistDinamico,
+                pontuacao: resultado.percentual,
+                classificacao: resultado.classificacao,
+                tem_desvio_grave: resultado.temDesvioGrave,
+                categoria_desvio_principal: tipoAtual.label,
+                total_desvios: ["Aberta", "Em andamento", "Vencida"].includes(formulario.statusAuditoria) ? 1 : 0,
+                origem: "Link direto / nova-auditoria-campo",
+                token_qr: tokenParametro || null,
+                notificacao: {
+                    titulo: formulario.titulo.trim(),
+                    mensagem: `Auditoria ${numeroAuditoria} registrada por ${formulario.auditorNome || usuario?.email || "auditor"}. Tipo: ${tipoAtual.label}. Risco: ${formulario.grauRisco}. Resultado: ${resultado.classificacao} (${resultado.percentual}%).`,
+                    auditor: formulario.auditorNome.trim() || usuario?.email || "Auditor de campo",
+                    complementos: formulario.acaoRecomendada ? [formulario.acaoRecomendada.trim()] : [],
+                },
+            };
+
+            const { data, error } = await supabase
+                .from("auditorias_campo")
+                .insert(payload)
+                .select("*, auditoria_campo_desvios(*)")
+                .single();
+
+            if (error) throw new Error(`Erro ao salvar auditoria: ${error.message}`);
+
+            const normalizada = normalizarAuditoriaCampo({ ...data, desvios: data?.auditoria_campo_desvios || [] });
+            setAuditoriaSalva(normalizada);
+            setMensagem(`Auditoria ${numeroAuditoria} salva com sucesso.`);
+            if (onAuditoriaSalva) onAuditoriaSalva(normalizada);
+        } catch (error) {
+            setMensagem(error.message || "Erro ao salvar auditoria de campo.");
+        } finally {
+            setSalvando(false);
+        }
+    };
+
+    if (!acessoLiberado) {
+        return (
+            <div className="min-h-screen bg-slate-100 p-4 text-slate-900">
+                <div className="mx-auto flex min-h-[calc(100vh-2rem)] max-w-xl items-center justify-center">
+                    <Card className="w-full">
+                        <div className="text-center">
+                            <ShieldCheck className="mx-auto h-10 w-10 text-slate-950" />
+                            <h1 className="mt-3 text-2xl font-black text-slate-950">Nova Auditoria de Campo</h1>
+                            <p className="mt-2 text-sm text-slate-500">Acesso direto para registrar auditorias pelo celular, sem abrir o dashboard administrativo.</p>
+                        </div>
+                        <div className="mt-6 space-y-3">
+                            <PasswordInput
+                                label="Senha ou token de auditoria"
+                                value={senha}
+                                onChange={(e) => setSenha(e.target.value)}
+                                placeholder="Informe a senha de campo"
+                                onKeyDown={(e) => {
+                                    if (e.key === "Enter") liberarAcesso();
+                                }}
+                            />
+                            {mensagemAcesso && <p className="rounded-2xl bg-red-50 p-3 text-sm font-semibold text-red-700 ring-1 ring-red-100">{mensagemAcesso}</p>}
+                            <button
+                                type="button"
+                                onClick={liberarAcesso}
+                                className="w-full rounded-2xl bg-slate-950 px-4 py-3 text-sm font-bold text-white hover:bg-slate-800"
+                            >
+                                Abrir formulário
+                            </button>
+                        </div>
+                    </Card>
+                </div>
+            </div>
+        );
+    }
+
+    return (
+        <div className="min-h-screen bg-slate-100 p-4 text-slate-900 md:p-6">
+            <div className="mx-auto max-w-6xl space-y-5">
+                <div className="rounded-[2rem] bg-slate-950 p-5 text-white shadow-sm">
+                    <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+                        <div>
+                            <p className="text-xs font-bold uppercase tracking-[0.25em] text-slate-400">Link direto</p>
+                            <h1 className="mt-2 text-2xl font-black md:text-3xl">Nova Auditoria de Campo</h1>
+                            <p className="mt-2 max-w-3xl text-sm text-slate-300">Use esta tela para áreas externas, pátios, frentes de serviço, máquinas, equipamentos ou locais sem QR Code específico.</p>
+                        </div>
+                        <div className="rounded-3xl bg-white p-3 text-slate-950">
+                            <QRCodeSVG value={linkGeral} size={96} level="M" includeMargin />
+                        </div>
+                    </div>
+                </div>
+
+                <div className="grid gap-4 lg:grid-cols-[1.3fr_0.7fr]">
+                    <Card>
+                        <div className="grid gap-4 md:grid-cols-2">
+                            <div>
+                                <label className="text-xs font-bold uppercase tracking-wide text-slate-500">Tipo de auditoria</label>
+                                <select value={formulario.tipoAuditoria} onChange={(e) => alterarTipoAuditoria(e.target.value)} className="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold outline-none focus:ring-2 focus:ring-slate-300">
+                                    {tiposAuditoriaCampoDireta.map((tipo) => <option key={tipo.valor} value={tipo.valor}>{tipo.label}</option>)}
+                                </select>
+                            </div>
+                            <div>
+                                <label className="text-xs font-bold uppercase tracking-wide text-slate-500">Título / assunto</label>
+                                <input value={formulario.titulo} onChange={(e) => alterarFormulario("titulo", e.target.value)} className="mt-2 w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-slate-300" />
+                            </div>
+                            <div>
+                                <label className="text-xs font-bold uppercase tracking-wide text-slate-500">Área</label>
+                                <input value={formulario.area} onChange={(e) => alterarFormulario("area", e.target.value)} placeholder="Ex.: Pátio de máquinas" className="mt-2 w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-slate-300" />
+                            </div>
+                            <div>
+                                <label className="text-xs font-bold uppercase tracking-wide text-slate-500">Subárea</label>
+                                <input value={formulario.subarea} onChange={(e) => alterarFormulario("subarea", e.target.value)} placeholder="Ex.: Linha 01 / doca / acesso lateral" className="mt-2 w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-slate-300" />
+                            </div>
+                            <div>
+                                <label className="text-xs font-bold uppercase tracking-wide text-slate-500">Local</label>
+                                <input value={formulario.local} onChange={(e) => alterarFormulario("local", e.target.value)} placeholder="Descreva o local exato" className="mt-2 w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-slate-300" />
+                            </div>
+                            <div>
+                                <label className="text-xs font-bold uppercase tracking-wide text-slate-500">Máquina / equipamento</label>
+                                <input value={formulario.maquinaEquipamento} onChange={(e) => alterarFormulario("maquinaEquipamento", e.target.value)} placeholder="Ex.: PRENSA-01" className="mt-2 w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-slate-300" />
+                            </div>
+                            <div>
+                                <label className="text-xs font-bold uppercase tracking-wide text-slate-500">Empresa responsável</label>
+                                <input value={formulario.empresaResponsavel} onChange={(e) => alterarFormulario("empresaResponsavel", e.target.value)} placeholder="Empresa ou responsável pelo local" className="mt-2 w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-slate-300" />
+                            </div>
+                            <div>
+                                <label className="text-xs font-bold uppercase tracking-wide text-slate-500">Nome do auditor</label>
+                                <input value={formulario.auditorNome} onChange={(e) => alterarFormulario("auditorNome", e.target.value)} placeholder="Nome de quem está auditando" className="mt-2 w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-slate-300" />
+                            </div>
+                            <div>
+                                <label className="text-xs font-bold uppercase tracking-wide text-slate-500">Grau de risco</label>
+                                <select value={formulario.grauRisco} onChange={(e) => alterarFormulario("grauRisco", e.target.value)} className="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold outline-none focus:ring-2 focus:ring-slate-300">
+                                    {grausRiscoAuditoriaCampoDireta.map((risco) => <option key={risco}>{risco}</option>)}
+                                </select>
+                            </div>
+                            <div>
+                                <label className="text-xs font-bold uppercase tracking-wide text-slate-500">Status da auditoria</label>
+                                <select value={formulario.statusAuditoria} onChange={(e) => alterarFormulario("statusAuditoria", e.target.value)} className="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold outline-none focus:ring-2 focus:ring-slate-300">
+                                    {statusAuditoriaCampoDireta.map((status) => <option key={status}>{status}</option>)}
+                                </select>
+                            </div>
+                            <div className="md:col-span-2">
+                                <label className="text-xs font-bold uppercase tracking-wide text-slate-500">Situação encontrada</label>
+                                <textarea value={formulario.situacaoEncontrada} onChange={(e) => alterarFormulario("situacaoEncontrada", e.target.value)} rows={3} placeholder="Descreva a condição encontrada durante a auditoria" className="mt-2 w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-slate-300" />
+                            </div>
+                            <div>
+                                <label className="text-xs font-bold uppercase tracking-wide text-slate-500">Ação recomendada</label>
+                                <textarea value={formulario.acaoRecomendada} onChange={(e) => alterarFormulario("acaoRecomendada", e.target.value)} rows={3} className="mt-2 w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-slate-300" />
+                            </div>
+                            <div>
+                                <label className="text-xs font-bold uppercase tracking-wide text-slate-500">Observações gerais</label>
+                                <textarea value={formulario.observacoesGerais} onChange={(e) => alterarFormulario("observacoesGerais", e.target.value)} rows={3} className="mt-2 w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-slate-300" />
+                            </div>
+                            <div>
+                                <label className="text-xs font-bold uppercase tracking-wide text-slate-500">Responsável pela tratativa</label>
+                                <input value={formulario.responsavelTratativa} onChange={(e) => alterarFormulario("responsavelTratativa", e.target.value)} className="mt-2 w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-slate-300" />
+                            </div>
+                            <div>
+                                <label className="text-xs font-bold uppercase tracking-wide text-slate-500">Prazo para adequação</label>
+                                <input type="date" value={formulario.prazoAdequacao} onChange={(e) => alterarFormulario("prazoAdequacao", e.target.value)} className="mt-2 w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-slate-300" />
+                            </div>
+                        </div>
+                    </Card>
+
+                    <div className="space-y-4">
+                        <Card>
+                            <p className="text-xs font-bold uppercase tracking-wide text-slate-500">Número automático</p>
+                            <p className="mt-2 text-sm text-slate-500">Será gerado ao salvar no padrão:</p>
+                            <p className="mt-2 rounded-2xl bg-slate-950 px-4 py-3 text-center text-xl font-black text-white">AUD-ANO-0001</p>
+                        </Card>
+                        <Card>
+                            <p className="text-xs font-bold uppercase tracking-wide text-slate-500">QR Code geral</p>
+                            <div className="mt-3 flex justify-center rounded-3xl bg-slate-50 p-4">
+                                <QRCodeSVG value={linkGeral} size={150} level="M" includeMargin />
+                            </div>
+                            <p className="mt-3 break-all text-xs text-slate-500">{linkGeral}</p>
+                        </Card>
+                        <Card>
+                            <p className="text-xs font-bold uppercase tracking-wide text-slate-500">Links rápidos</p>
+                            <p className="mt-2 break-all text-xs text-slate-500"><strong>Tipo atual:</strong> {linkTipoAtual}</p>
+                            <p className="mt-2 break-all text-xs text-slate-500"><strong>Específico:</strong> {linkEspecifico}</p>
+                        </Card>
+                    </div>
+                </div>
+
+                <Card>
+                    <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
+                        <div>
+                            <h2 className="text-lg font-black text-slate-950">Checklist dinâmico — {tipoAtual.label}</h2>
+                            <p className="text-sm text-slate-500">O checklist muda conforme o tipo de auditoria selecionado.</p>
+                        </div>
+                        <span className={classNames("inline-flex w-fit rounded-full px-3 py-1 text-xs font-bold ring-1", classeClassificacaoAuditoriaCampo(resultado.classificacao))}>{resultado.classificacao} · {resultado.percentual}%</span>
+                    </div>
+
+                    <div className="mt-4 grid gap-3 lg:grid-cols-2">
+                        {checklistAtual.map((pergunta) => (
+                            <div key={pergunta} className="rounded-2xl bg-slate-50 p-3 ring-1 ring-slate-200">
+                                <p className="text-sm font-bold text-slate-800">{pergunta}</p>
+                                <select value={respostasChecklist[pergunta] || "conforme"} onChange={(e) => setRespostasChecklist((atual) => ({ ...atual, [pergunta]: e.target.value }))} className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold outline-none focus:ring-2 focus:ring-slate-300">
+                                    {respostasAuditoriaCampo.map((resposta) => <option key={resposta.chave} value={resposta.chave}>{resposta.texto} — {rotuloPontuacaoAuditoriaCampo(resposta)}</option>)}
+                                </select>
+                            </div>
+                        ))}
+                    </div>
+                </Card>
+
+                <Card>
+                    <h2 className="text-lg font-black text-slate-950">Fotos da auditoria</h2>
+                    <p className="text-sm text-slate-500">Fotos grandes serão reduzidas automaticamente antes do envio ao Supabase Storage.</p>
+                    <div className="mt-4 grid gap-4 md:grid-cols-2">
+                        {[
+                            { campo: "fotoAntes", preview: previewFotos.antes, label: "Foto antes" },
+                            { campo: "fotoDepois", preview: previewFotos.depois, label: "Foto depois" },
+                        ].map((item) => (
+                            <div key={item.campo} className="rounded-3xl border border-dashed border-slate-300 bg-slate-50 p-4">
+                                <label className="flex cursor-pointer items-center justify-center gap-2 rounded-2xl bg-white px-4 py-4 text-sm font-bold text-slate-700 ring-1 ring-slate-200 hover:bg-slate-100">
+                                    <Upload className="h-4 w-4" />
+                                    {formulario[item.campo]?.name || item.label}
+                                    <input type="file" accept="image/png,image/jpeg,image/webp" className="hidden" onChange={(e) => alterarFoto(item.campo, e.target.files?.[0] || null)} />
+                                </label>
+                                <FileUploadAviso arquivo={formulario[item.campo]} tipo="fotoAuditoria" />
+                                {item.preview && <img src={item.preview} alt={item.label} className="mt-3 max-h-64 w-full rounded-2xl object-cover ring-1 ring-slate-200" />}
+                            </div>
+                        ))}
+                    </div>
+                </Card>
+
+                {mensagem && (
+                    <div className={classNames("rounded-3xl p-4 text-sm font-bold ring-1", auditoriaSalva ? "bg-emerald-50 text-emerald-700 ring-emerald-100" : "bg-blue-50 text-blue-700 ring-blue-100")}>
+                        {mensagem}
+                    </div>
+                )}
+
+                {auditoriaSalva && (
+                    <Card className="border-emerald-200 bg-emerald-50">
+                        <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                            <div>
+                                <p className="text-xs font-bold uppercase tracking-wide text-emerald-700">Auditoria salva</p>
+                                <h2 className="mt-1 text-xl font-black text-emerald-950">{auditoriaSalva.numeroAuditoria || auditoriaSalva.id}</h2>
+                                <p className="mt-1 text-sm text-emerald-700">Ela já pode aparecer no dashboard de Auditoria Campo e relatórios.</p>
+                            </div>
+                            <button type="button" onClick={() => window.location.assign(linkGeral)} className="rounded-2xl bg-emerald-600 px-4 py-3 text-sm font-bold text-white hover:bg-emerald-700">Criar outra auditoria</button>
+                        </div>
+                    </Card>
+                )}
+
+                <div className="sticky bottom-4 z-10 flex flex-col gap-3 rounded-3xl bg-white/95 p-3 shadow-xl ring-1 ring-slate-200 backdrop-blur sm:flex-row">
+                    <button type="button" onClick={salvarAuditoriaDireta} disabled={salvando} className="flex-1 rounded-2xl bg-slate-950 px-4 py-3 text-sm font-bold text-white hover:bg-slate-800 disabled:opacity-60">
+                        {salvando ? "Salvando auditoria..." : "+ Salvar nova auditoria de campo"}
+                    </button>
+                    <button type="button" onClick={() => window.location.assign(linkGeral)} className="rounded-2xl bg-slate-100 px-4 py-3 text-sm font-bold text-slate-700 hover:bg-slate-200">
+                        Limpar formulário
+                    </button>
+                </div>
+            </div>
+        </div>
+    );
+}
+
+
 export default function App() {
     const [usuario, setUsuario] = useState(null);
     const [carregandoSessao, setCarregandoSessao] = useState(true);
@@ -13997,6 +14552,7 @@ export default function App() {
 
     const nav = [
         { id: "dashboard", label: "Dashboard", icon: LayoutDashboard },
+        { id: "novaAuditoriaCampo", label: "Nova Auditoria", icon: Plus },
         { id: "auditoriaCampo", label: "Auditoria Campo", icon: ClipboardCheck },
         { id: "empresas", label: "Empresas", icon: Building2 },
         { id: "colaboradores", label: "Colaboradores", icon: Users },
@@ -14049,6 +14605,16 @@ export default function App() {
 
     const parametrosAtuais = new URLSearchParams(window.location.search);
     const tokenQrPublico = parametrosAtuais.get("qr");
+    const rotaNovaAuditoriaCampo = typeof window !== "undefined" && window.location.pathname === "/nova-auditoria-campo";
+
+    if (rotaNovaAuditoriaCampo) {
+        return (
+            <NovaAuditoriaCampoDireta
+                usuario={usuario}
+                onAuditoriaSalva={(novaAuditoria) => setAuditoriasCampo((atual) => [novaAuditoria, ...atual])}
+            />
+        );
+    }
 
     if (tokenQrPublico && !usuario) {
         if (carregandoConsultaPublica || carregandoSessao) {
@@ -14204,6 +14770,13 @@ export default function App() {
                             auditoria={auditoria}
                             onSelectColab={selecionarColaborador}
                             onRegistrarEmailEnviado={registrarEmailEnviado}
+                        />
+                    )}
+
+                    {tela === "novaAuditoriaCampo" && (
+                        <NovaAuditoriaCampoDireta
+                            usuario={usuario}
+                            onAuditoriaSalva={(novaAuditoria) => setAuditoriasCampo((atual) => [novaAuditoria, ...atual])}
                         />
                     )}
 
