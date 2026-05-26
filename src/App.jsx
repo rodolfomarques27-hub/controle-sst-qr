@@ -13824,9 +13824,9 @@ function NovaAuditoriaCampoDireta({ usuario = null, onAuditoriaSalva, empresasBa
         setMensagem("");
 
         try {
-            const numeroAuditoria = await gerarNumeroAuditoria();
-            const fotoAntesUrl = await uploadFotoDireta(formulario.fotoAntes, numeroAuditoria, "foto-antes");
-            const fotoDepoisUrl = await uploadFotoDireta(formulario.fotoDepois, numeroAuditoria, "foto-depois");
+            const referenciaUploadFotos = `auditoria-pendente-${Date.now()}`;
+            const fotoAntesUrl = await uploadFotoDireta(formulario.fotoAntes, referenciaUploadFotos, "foto-antes");
+            const fotoDepoisUrl = await uploadFotoDireta(formulario.fotoDepois, referenciaUploadFotos, "foto-depois");
             const checklistDinamico = resultado.itens.map((item) => ({
                 pergunta: item.pergunta,
                 resposta: item.resposta.chave,
@@ -13835,7 +13835,6 @@ function NovaAuditoriaCampoDireta({ usuario = null, onAuditoriaSalva, empresasBa
             }));
 
             const payload = {
-                numero_auditoria: numeroAuditoria,
                 tipo_auditoria: formulario.tipoAuditoria,
                 titulo: formulario.titulo.trim(),
                 area: formulario.area.trim() || null,
@@ -13858,9 +13857,9 @@ function NovaAuditoriaCampoDireta({ usuario = null, onAuditoriaSalva, empresasBa
                 observacao: formulario.observacoesGerais.trim() || formulario.situacaoEncontrada.trim(),
                 checklist: checklistDinamico,
                 checklist_dinamico: checklistDinamico,
-                pontuacao: resultado.percentual,
-                classificacao: resultado.classificacao,
-                tem_desvio_grave: resultado.temDesvioGrave,
+                pontuacao: resultado.percentual ?? 0,
+                classificacao: resultado.classificacao || "Sem avaliação",
+                tem_desvio_grave: Boolean(resultado.temDesvioGrave),
                 categoria_desvio_principal: categoriaAtual.label,
                 total_desvios: ["Aberta", "Em andamento", "Vencida"].includes(formulario.statusAuditoria) ? 1 : 0,
                 origem: "Link direto / nova-auditoria-campo",
@@ -13868,7 +13867,7 @@ function NovaAuditoriaCampoDireta({ usuario = null, onAuditoriaSalva, empresasBa
                 notificacao: {
                     titulo: formulario.titulo.trim(),
                     mensagem: montarMensagemFluidaAuditoriaCampo({
-                        numeroAuditoria,
+                        numeroAuditoria: "Será gerado ao salvar",
                         tipoAuditoria: tipoAtual.label,
                         titulo: formulario.titulo.trim(),
                         area: formulario.area.trim(),
@@ -13878,7 +13877,7 @@ function NovaAuditoriaCampoDireta({ usuario = null, onAuditoriaSalva, empresasBa
                         auditorNome: formulario.auditorNome.trim() || usuario?.email || "Auditor de campo",
                         grauRisco: formulario.grauRisco,
                         classificacao: resultado.classificacao,
-                        pontuacao: resultado.percentual,
+                        pontuacao: resultado.percentual ?? 0,
                         statusAuditoria: formulario.statusAuditoria,
                         responsavelTratativa: formulario.responsavelTratativa.trim(),
                         prazoAdequacao: formulario.prazoAdequacao,
@@ -13894,21 +13893,33 @@ function NovaAuditoriaCampoDireta({ usuario = null, onAuditoriaSalva, empresasBa
                 },
             };
 
-            const { error } = await supabase
-                .from("auditorias_campo")
-                .insert(payload);
+            const tokenAuditoriaCampo =
+                new URLSearchParams(window.location.search).get("token") ||
+                tokenParametro ||
+                "TOKEN-AUDITORIA-CAMPO-2026";
 
-            if (error) throw new Error(`Erro ao salvar auditoria: ${error.message}`);
+            const { data, error } = await supabase.rpc("salvar_auditoria_campo_publica", {
+                p_token: tokenAuditoriaCampo,
+                p_dados: payload,
+            });
+
+            if (error) {
+                throw error;
+            }
+
+            const numeroGerado = data?.numero_auditoria || referenciaUploadFotos;
+            const idGerado = data?.id || null;
 
             const normalizada = normalizarAuditoriaCampo({
                 ...payload,
-                numero_auditoria: numeroAuditoria,
+                id: idGerado,
+                numero_auditoria: numeroGerado,
                 criado_em: new Date().toISOString(),
                 auditoria_campo_desvios: [],
                 desvios: [],
             });
             setAuditoriaSalva(normalizada);
-            setMensagem(`Auditoria ${numeroAuditoria} salva com sucesso.`);
+            setMensagem(`Auditoria ${numeroGerado} salva com sucesso.`);
             if (onAuditoriaSalva) onAuditoriaSalva(normalizada);
         } catch (error) {
             setMensagem(error.message || "Erro ao salvar auditoria de campo.");
