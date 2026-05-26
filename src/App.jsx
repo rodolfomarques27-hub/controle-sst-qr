@@ -13893,10 +13893,23 @@ function NovaAuditoriaCampoDireta({ usuario = null, onAuditoriaSalva, empresasBa
                 },
             };
 
+            const obterParametroUrl = (nome) => {
+                const parametrosNormais = new URLSearchParams(window.location.search);
+                const valorNormal = parametrosNormais.get(nome);
+
+                if (valorNormal) {
+                    return valorNormal;
+                }
+
+                const hash = window.location.hash || "";
+                const queryHash = hash.includes("?") ? hash.slice(hash.indexOf("?") + 1) : "";
+                const parametrosHash = new URLSearchParams(queryHash);
+
+                return parametrosHash.get(nome);
+            };
+
             const tokenAuditoriaCampo =
-                new URLSearchParams(window.location.search).get("token") ||
-                tokenParametro ||
-                "TOKEN-AUDITORIA-CAMPO-2026";
+                obterParametroUrl("token") || "TOKEN-AUDITORIA-CAMPO-2026";
 
             const { data, error } = await supabase.rpc("salvar_auditoria_campo_publica", {
                 p_token: tokenAuditoriaCampo,
