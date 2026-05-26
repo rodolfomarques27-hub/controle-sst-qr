@@ -1113,6 +1113,8 @@ function normalizarAuditoriaCampo(item = {}) {
         local: item.local || "",
         maquinaEquipamento: item.maquina_equipamento || item.maquinaEquipamento || "",
         empresaResponsavel: item.empresa_responsavel || item.empresaResponsavel || item.empresa_nome || item.empresaNome || "",
+        emailResponsavel: item.email_responsavel || item.emailResponsavel || item.notificacao?.emailResponsavel || item.notificacao?.email_responsavel || "",
+        whatsappResponsavel: item.whatsapp_responsavel || item.whatsappResponsavel || item.notificacao?.whatsappResponsavel || item.notificacao?.whatsapp_responsavel || "",
         grauRisco: item.grau_risco || item.grauRisco || "",
         situacaoEncontrada: item.situacao_encontrada || item.situacaoEncontrada || "",
         acaoRecomendada: item.acao_recomendada || item.acaoRecomendada || "",
@@ -1218,12 +1220,12 @@ function FotoAuditoriaPreview({ url, label }) {
                 <img
                     src={url}
                     alt={label}
-                    className="h-32 w-full object-cover"
+                    className="h-44 w-full bg-slate-100 object-contain"
                     loading="lazy"
                     onError={() => setErro(true)}
                 />
             ) : (
-                <div className="flex h-32 items-center justify-center bg-slate-100 px-3 text-center text-xs font-semibold text-slate-500">
+                <div className="flex h-44 items-center justify-center bg-slate-100 px-3 text-center text-xs font-semibold text-slate-500">
                     Miniatura indisponível. Clique para abrir a foto.
                 </div>
             )}
@@ -1238,6 +1240,16 @@ function FotoAuditoriaPreview({ url, label }) {
 function auditoriaCampoAberta(item = {}) {
     const status = normalizarTextoBusca(item.statusDesvio || item.status_desvio || "");
     return (item.totalDesvios || item.total_desvios || 0) > 0 && !["corrigido", "cancelado", "fechado", "concluido", "concluído"].some((termo) => status.includes(termo));
+}
+
+function auditoriaCampoVencida(item = {}) {
+    const prazoValor = item.prazoAdequacao || item.prazo_adequacao;
+    if (!prazoValor) return false;
+    const prazo = new Date(`${prazoValor}T23:59:59`);
+    if (Number.isNaN(prazo.getTime())) return false;
+    const status = normalizarTextoBusca(item.statusAuditoria || item.status_auditoria || item.statusDesvio || item.status_desvio || "");
+    const concluida = ["resolvida", "corrigido", "corrigida", "concluido", "concluído", "cancelada"].some((termo) => status.includes(termo));
+    return !concluida && prazo < hoje;
 }
 
 function apenasNumeros(valor) {
@@ -11565,7 +11577,14 @@ function EditorNotificacaoHistoricoAuditoria({ auditoria = {}, onAtualizada }) {
     const [mensagem, setMensagem] = useState("");
     const [notificacao, setNotificacao] = useState({
         titulo: notificacaoInicial.titulo || `Auditoria de campo - ${alvoAuditoria.titulo}`,
-        mensagem: notificacaoInicial.mensagem || `Auditoria de campo registrada para ${alvoAuditoria.tipo.toLowerCase()}: ${alvoAuditoria.titulo}. Resultado: ${auditoria.classificacao || "sem classificação"} (${auditoria.pontuacao || 0}%).`,
+        mensagem: notificacaoInicial.mensagem || `Auditoria de campo registrada.
+
+Número: ${auditoria.numeroAuditoria || "Não informado"}
+Alvo: ${alvoAuditoria.tipo} - ${alvoAuditoria.titulo}
+Auditor: ${auditoria.auditorNome || "Não informado"}
+Tipo: ${auditoria.tipoAuditoria || alvoAuditoria.tipo}
+Risco: ${auditoria.grauRisco || "Não informado"}
+Resultado: ${auditoria.classificacao || "sem classificação"} (${auditoria.pontuacao || 0}%).`,
         complementos: Array.isArray(notificacaoInicial.complementos) ? notificacaoInicial.complementos : [],
         auditor: notificacaoInicial.auditor || auditoria.auditorNome || "",
     });
@@ -11584,6 +11603,17 @@ function EditorNotificacaoHistoricoAuditoria({ auditoria = {}, onAtualizada }) {
         () => montarPreviewNotificacaoAuditoriaCampo(notificacao, notificacao.complementos),
         [notificacao]
     );
+    const emailResponsavelAuditoria = String(auditoria.emailResponsavel || notificacaoInicial.emailResponsavel || "").trim();
+    const whatsappResponsavelAuditoria = String(auditoria.whatsappResponsavel || notificacaoInicial.whatsappResponsavel || "").replace(/\D/g, "");
+    const whatsappResponsavelFormatado = whatsappResponsavelAuditoria
+        ? (whatsappResponsavelAuditoria.startsWith("55") ? whatsappResponsavelAuditoria : `55${whatsappResponsavelAuditoria}`)
+        : "";
+    const linkEmailAuditoria = emailResponsavelAuditoria
+        ? `mailto:${emailResponsavelAuditoria}?subject=${encodeURIComponent(notificacao.titulo || "Auditoria de campo")}&body=${encodeURIComponent(preview)}`
+        : "";
+    const linkWhatsappAuditoria = whatsappResponsavelFormatado
+        ? `https://wa.me/${whatsappResponsavelFormatado}?text=${encodeURIComponent(preview)}`
+        : "";
 
     const adicionarComplemento = () => {
         const texto = novoComplemento.trim();
@@ -11787,169 +11817,221 @@ function EditorNotificacaoHistoricoAuditoria({ auditoria = {}, onAtualizada }) {
             )}
 
             {aberto && (
-                <div className="mt-4 grid gap-4 lg:grid-cols-2">
-                    <div className="space-y-3">
-                        <div>
-                            <label className="block text-xs font-bold uppercase tracking-wide text-slate-500">Nome de quem fez a auditoria</label>
-                            <input
-                                value={notificacao.auditor}
-                                onChange={(e) => setNotificacao((atual) => ({ ...atual, auditor: e.target.value }))}
-                                placeholder="Auditor responsável"
-                                className="mt-2 w-full rounded-2xl border border-slate-200 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-slate-300"
-                            />
+                <div className="mt-4 space-y-4">
+                    <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-5">
+                        <div className="rounded-2xl bg-slate-50 p-3 ring-1 ring-slate-100">
+                            <p className="text-[11px] font-bold uppercase tracking-wide text-slate-400">Auditoria</p>
+                            <p className="mt-1 text-sm font-black text-slate-900">{auditoria.numeroAuditoria || "Sem número"}</p>
                         </div>
-                        <div>
-                            <label className="block text-xs font-bold uppercase tracking-wide text-slate-500">Assunto da notificação</label>
-                            <input
-                                value={notificacao.titulo}
-                                onChange={(e) => setNotificacao((atual) => ({ ...atual, titulo: e.target.value }))}
-                                className="mt-2 w-full rounded-2xl border border-slate-200 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-slate-300"
-                            />
+                        <div className="rounded-2xl bg-blue-50 p-3 ring-1 ring-blue-100">
+                            <p className="text-[11px] font-bold uppercase tracking-wide text-blue-600">Alvo</p>
+                            <p className="mt-1 text-sm font-black text-blue-950">{alvoAuditoria.tipo}</p>
                         </div>
-                        <div>
-                            <label className="block text-xs font-bold uppercase tracking-wide text-slate-500">Mensagem</label>
-                            <textarea
-                                value={notificacao.mensagem}
-                                onChange={(e) => setNotificacao((atual) => ({ ...atual, mensagem: e.target.value }))}
-                                rows={4}
-                                className="mt-2 w-full rounded-2xl border border-slate-200 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-slate-300"
-                            />
+                        <div className="rounded-2xl bg-orange-50 p-3 ring-1 ring-orange-100">
+                            <p className="text-[11px] font-bold uppercase tracking-wide text-orange-600">Risco</p>
+                            <p className="mt-1 text-sm font-black text-orange-950">{auditoria.grauRisco || "Não informado"}</p>
                         </div>
-                        <div>
-                            <label className="block text-xs font-bold uppercase tracking-wide text-slate-500">Adicionar complemento</label>
-                            <div className="mt-2 flex flex-col gap-2 sm:flex-row">
-                                <input
-                                    value={novoComplemento}
-                                    onChange={(e) => setNovoComplemento(e.target.value)}
-                                    placeholder="Ex.: Reforçar tema em DDS da equipe"
-                                    className="min-w-0 flex-1 rounded-2xl border border-slate-200 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-slate-300"
-                                />
-                                <button
-                                    type="button"
-                                    onClick={adicionarComplemento}
-                                    className="inline-flex items-center gap-1 rounded-2xl bg-slate-950 px-3 py-2 text-xs font-bold text-white hover:bg-slate-800"
-                                >
-                                    <Plus className="h-3.5 w-3.5" />
-                                    Adicionar
-                                </button>
-                            </div>
+                        <div className="rounded-2xl bg-emerald-50 p-3 ring-1 ring-emerald-100">
+                            <p className="text-[11px] font-bold uppercase tracking-wide text-emerald-600">Resultado</p>
+                            <p className="mt-1 text-sm font-black text-emerald-950">{auditoria.classificacao || "Sem classificação"} · {auditoria.pontuacao || 0}%</p>
                         </div>
-
-                        {(notificacao.complementos || []).length > 0 && (
-                            <div className="space-y-2">
-                                {(notificacao.complementos || []).map((item, index) => (
-                                    <div key={`${item}-${index}`} className="flex items-start justify-between gap-2 rounded-2xl bg-slate-50 p-2 text-sm text-slate-700 ring-1 ring-slate-200">
-                                        <span>{index + 1}. {item}</span>
-                                        <button
-                                            type="button"
-                                            onClick={() => removerComplemento(index)}
-                                            className="rounded-xl bg-white p-2 text-red-600 ring-1 ring-red-100 hover:bg-red-50"
-                                            title="Excluir complemento"
-                                        >
-                                            <Trash2 className="h-3.5 w-3.5" />
-                                        </button>
-                                    </div>
-                                ))}
-                            </div>
-                        )}
+                        <div className="rounded-2xl bg-slate-50 p-3 ring-1 ring-slate-100">
+                            <p className="text-[11px] font-bold uppercase tracking-wide text-slate-400">Responsável</p>
+                            <p className="mt-1 text-sm font-black text-slate-900">{auditoria.responsavelTratativa || "Não informado"}</p>
+                        </div>
                     </div>
-
-                    <div className="space-y-3">
-                        <div className="rounded-2xl border border-blue-100 bg-blue-50/50 p-3">
-                            <div className="flex items-center justify-between gap-2">
-                                <div>
-                                    <p className="text-sm font-bold text-blue-950">Prévia da notificação</p>
-                                    <p className="text-xs text-blue-700">Visualize antes de registrar ou reenviar a tratativa.</p>
-                                </div>
-                                <button
-                                    type="button"
-                                    onClick={() => setVisualizarPreview((valor) => !valor)}
-                                    className="rounded-xl bg-white px-3 py-2 text-xs font-bold text-blue-700 ring-1 ring-blue-200"
-                                >
-                                    {visualizarPreview ? "Ocultar" : "Visualizar"}
-                                </button>
+                    <div className="grid gap-4 lg:grid-cols-2">
+                        <div className="space-y-3">
+                            <div>
+                                <label className="block text-xs font-bold uppercase tracking-wide text-slate-500">Nome de quem fez a auditoria</label>
+                                <input
+                                    value={notificacao.auditor}
+                                    onChange={(e) => setNotificacao((atual) => ({ ...atual, auditor: e.target.value }))}
+                                    placeholder="Auditor responsável"
+                                    className="mt-2 w-full rounded-2xl border border-slate-200 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-slate-300"
+                                />
                             </div>
-                            {visualizarPreview && (
-                                <pre className="mt-3 whitespace-pre-wrap rounded-2xl bg-slate-950 p-3 font-sans text-xs leading-relaxed text-white">
-                                    {preview || "Preencha a notificação para visualizar."}
-                                </pre>
-                            )}
-                        </div>
-
-                        <div className="rounded-2xl border border-slate-200 p-3">
-                            <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
-                                <div className="flex-1">
-                                    <label className="block text-xs font-bold uppercase tracking-wide text-slate-500">Status do desvio</label>
-                                    <select
-                                        value={observacoesStatus.status}
-                                        onChange={(e) => setObservacoesStatus((atual) => ({ ...atual, status: e.target.value }))}
-                                        className="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-slate-300"
+                            <div>
+                                <label className="block text-xs font-bold uppercase tracking-wide text-slate-500">Assunto da notificação</label>
+                                <input
+                                    value={notificacao.titulo}
+                                    onChange={(e) => setNotificacao((atual) => ({ ...atual, titulo: e.target.value }))}
+                                    className="mt-2 w-full rounded-2xl border border-slate-200 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-slate-300"
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-xs font-bold uppercase tracking-wide text-slate-500">Mensagem</label>
+                                <textarea
+                                    value={notificacao.mensagem}
+                                    onChange={(e) => setNotificacao((atual) => ({ ...atual, mensagem: e.target.value }))}
+                                    rows={4}
+                                    className="mt-2 w-full rounded-2xl border border-slate-200 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-slate-300"
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-xs font-bold uppercase tracking-wide text-slate-500">Adicionar complemento</label>
+                                <div className="mt-2 flex flex-col gap-2 sm:flex-row">
+                                    <input
+                                        value={novoComplemento}
+                                        onChange={(e) => setNovoComplemento(e.target.value)}
+                                        placeholder="Ex.: Reforçar tema em DDS da equipe"
+                                        className="min-w-0 flex-1 rounded-2xl border border-slate-200 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-slate-300"
+                                    />
+                                    <button
+                                        type="button"
+                                        onClick={adicionarComplemento}
+                                        className="inline-flex items-center gap-1 rounded-2xl bg-slate-950 px-3 py-2 text-xs font-bold text-white hover:bg-slate-800"
                                     >
-                                        {statusDesvioAuditoriaCampo.map((status) => <option key={status}>{status}</option>)}
-                                    </select>
+                                        <Plus className="h-3.5 w-3.5" />
+                                        Adicionar
+                                    </button>
                                 </div>
                             </div>
-                            <div className="mt-3 grid gap-3 md:grid-cols-3">
-                                <div>
-                                    <label className="block text-xs font-bold uppercase tracking-wide text-red-600">Observação — Aberto</label>
-                                    <textarea
-                                        value={observacoesStatus.observacaoAberto}
-                                        onChange={(e) => setObservacoesStatus((atual) => ({ ...atual, observacaoAberto: e.target.value }))}
-                                        rows={3}
-                                        className="mt-2 w-full rounded-2xl border border-red-100 bg-red-50/40 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-red-100"
-                                    />
+
+                            {(notificacao.complementos || []).length > 0 && (
+                                <div className="space-y-2">
+                                    {(notificacao.complementos || []).map((item, index) => (
+                                        <div key={`${item}-${index}`} className="flex items-start justify-between gap-2 rounded-2xl bg-slate-50 p-2 text-sm text-slate-700 ring-1 ring-slate-200">
+                                            <span>{index + 1}. {item}</span>
+                                            <button
+                                                type="button"
+                                                onClick={() => removerComplemento(index)}
+                                                className="rounded-xl bg-white p-2 text-red-600 ring-1 ring-red-100 hover:bg-red-50"
+                                                title="Excluir complemento"
+                                            >
+                                                <Trash2 className="h-3.5 w-3.5" />
+                                            </button>
+                                        </div>
+                                    ))}
                                 </div>
-                                <div>
-                                    <label className="block text-xs font-bold uppercase tracking-wide text-orange-600">Observação — Em tratativa</label>
-                                    <textarea
-                                        value={observacoesStatus.observacaoTratativa}
-                                        onChange={(e) => setObservacoesStatus((atual) => ({ ...atual, observacaoTratativa: e.target.value }))}
-                                        rows={3}
-                                        className="mt-2 w-full rounded-2xl border border-orange-100 bg-orange-50/40 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-orange-100"
-                                    />
-                                </div>
-                                <div>
-                                    <label className="block text-xs font-bold uppercase tracking-wide text-emerald-600">Observação — Corrigido</label>
-                                    <textarea
-                                        value={observacoesStatus.observacaoCorrigido}
-                                        onChange={(e) => setObservacoesStatus((atual) => ({ ...atual, observacaoCorrigido: e.target.value }))}
-                                        rows={3}
-                                        className="mt-2 w-full rounded-2xl border border-emerald-100 bg-emerald-50/40 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-emerald-100"
-                                    />
+                            )}
+                            <div className="rounded-2xl border border-slate-200 bg-slate-50 p-3">
+                                <p className="text-xs font-bold uppercase tracking-wide text-slate-500">Enviar auditoria para responsável</p>
+                                <p className="mt-1 text-xs text-slate-500">Abre a mensagem pronta para encaminhar a tratativa.</p>
+                                <div className="mt-3 grid gap-2 sm:grid-cols-2">
+                                    {linkEmailAuditoria ? (
+                                        <a href={linkEmailAuditoria} className="inline-flex items-center justify-center gap-2 rounded-2xl bg-white px-3 py-2 text-xs font-bold text-blue-700 ring-1 ring-blue-200 hover:bg-blue-50">
+                                            <Mail className="h-4 w-4" />
+                                            Enviar e-mail
+                                        </a>
+                                    ) : (
+                                        <button type="button" disabled className="inline-flex items-center justify-center gap-2 rounded-2xl bg-white px-3 py-2 text-xs font-bold text-slate-400 ring-1 ring-slate-200">
+                                            <Mail className="h-4 w-4" />
+                                            Sem e-mail
+                                        </button>
+                                    )}
+                                    {linkWhatsappAuditoria ? (
+                                        <a href={linkWhatsappAuditoria} target="_blank" rel="noreferrer" className="inline-flex items-center justify-center gap-2 rounded-2xl bg-emerald-600 px-3 py-2 text-xs font-bold text-white hover:bg-emerald-700">
+                                            <MessageCircle className="h-4 w-4" />
+                                            WhatsApp
+                                        </a>
+                                    ) : (
+                                        <button type="button" disabled className="inline-flex items-center justify-center gap-2 rounded-2xl bg-white px-3 py-2 text-xs font-bold text-slate-400 ring-1 ring-slate-200">
+                                            <MessageCircle className="h-4 w-4" />
+                                            Sem WhatsApp
+                                        </button>
+                                    )}
                                 </div>
                             </div>
                         </div>
 
-                        {(fotosAuditoria.antes || fotosAuditoria.depois) && (
-                            <div className="rounded-2xl border border-slate-200 bg-slate-50 p-3">
+                        <div className="space-y-3">
+                            <div className="rounded-2xl border border-blue-100 bg-blue-50/50 p-3">
                                 <div className="flex items-center justify-between gap-2">
                                     <div>
-                                        <p className="text-sm font-bold text-slate-800">Fotos anexadas</p>
-                                        <p className="text-xs text-slate-500">Evidências vinculadas à auditoria ou ao desvio principal.</p>
+                                        <p className="text-sm font-bold text-blue-950">Prévia da notificação</p>
+                                        <p className="text-xs text-blue-700">Visualize antes de registrar ou reenviar a tratativa.</p>
+                                    </div>
+                                    <button
+                                        type="button"
+                                        onClick={() => setVisualizarPreview((valor) => !valor)}
+                                        className="rounded-xl bg-white px-3 py-2 text-xs font-bold text-blue-700 ring-1 ring-blue-200"
+                                    >
+                                        {visualizarPreview ? "Ocultar" : "Visualizar"}
+                                    </button>
+                                </div>
+                                {visualizarPreview && (
+                                    <pre className="mt-3 whitespace-pre-wrap rounded-2xl bg-slate-950 p-3 font-sans text-xs leading-relaxed text-white">
+                                        {preview || "Preencha a notificação para visualizar."}
+                                    </pre>
+                                )}
+                            </div>
+
+                            <div className="rounded-2xl border border-slate-200 p-3">
+                                <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
+                                    <div className="flex-1">
+                                        <label className="block text-xs font-bold uppercase tracking-wide text-slate-500">Status do desvio</label>
+                                        <select
+                                            value={observacoesStatus.status}
+                                            onChange={(e) => setObservacoesStatus((atual) => ({ ...atual, status: e.target.value }))}
+                                            className="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-slate-300"
+                                        >
+                                            {statusDesvioAuditoriaCampo.map((status) => <option key={status}>{status}</option>)}
+                                        </select>
                                     </div>
                                 </div>
-                                <div className="mt-3 grid gap-3 sm:grid-cols-2">
-                                    <FotoAuditoriaPreview url={fotosAuditoria.antes} label="Foto antes" />
-                                    <FotoAuditoriaPreview url={fotosAuditoria.depois} label="Foto depois" />
+                                <div className="mt-3 grid gap-3 md:grid-cols-3">
+                                    <div>
+                                        <label className="block text-xs font-bold uppercase tracking-wide text-red-600">Observação — Aberto</label>
+                                        <textarea
+                                            value={observacoesStatus.observacaoAberto}
+                                            onChange={(e) => setObservacoesStatus((atual) => ({ ...atual, observacaoAberto: e.target.value }))}
+                                            rows={3}
+                                            className="mt-2 w-full rounded-2xl border border-red-100 bg-red-50/40 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-red-100"
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="block text-xs font-bold uppercase tracking-wide text-orange-600">Observação — Em tratativa</label>
+                                        <textarea
+                                            value={observacoesStatus.observacaoTratativa}
+                                            onChange={(e) => setObservacoesStatus((atual) => ({ ...atual, observacaoTratativa: e.target.value }))}
+                                            rows={3}
+                                            className="mt-2 w-full rounded-2xl border border-orange-100 bg-orange-50/40 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-orange-100"
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="block text-xs font-bold uppercase tracking-wide text-emerald-600">Observação — Corrigido</label>
+                                        <textarea
+                                            value={observacoesStatus.observacaoCorrigido}
+                                            onChange={(e) => setObservacoesStatus((atual) => ({ ...atual, observacaoCorrigido: e.target.value }))}
+                                            rows={3}
+                                            className="mt-2 w-full rounded-2xl border border-emerald-100 bg-emerald-50/40 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-emerald-100"
+                                        />
+                                    </div>
                                 </div>
                             </div>
-                        )}
 
-                        {mensagem && (
-                            <div className={classNames("rounded-2xl px-3 py-2 text-xs font-bold ring-1", mensagem.includes("Erro") || mensagem.includes("Não foi possível") ? "bg-red-50 text-red-700 ring-red-200" : "bg-emerald-50 text-emerald-700 ring-emerald-200")}>
-                                {mensagem}
-                            </div>
-                        )}
+                            {(fotosAuditoria.antes || fotosAuditoria.depois) && (
+                                <div className="rounded-2xl border border-slate-200 bg-slate-50 p-3">
+                                    <div className="flex items-center justify-between gap-2">
+                                        <div>
+                                            <p className="text-sm font-bold text-slate-800">Fotos anexadas</p>
+                                            <p className="text-xs text-slate-500">Evidências vinculadas à auditoria ou ao desvio principal.</p>
+                                        </div>
+                                    </div>
+                                    <div className="mt-3 grid gap-3 sm:grid-cols-2">
+                                        <FotoAuditoriaPreview url={fotosAuditoria.antes} label="Foto antes" />
+                                        <FotoAuditoriaPreview url={fotosAuditoria.depois} label="Foto depois" />
+                                    </div>
+                                </div>
+                            )}
 
-                        <button
-                            type="button"
-                            disabled={salvando}
-                            onClick={salvarAlteracoes}
-                            className="inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-emerald-600 px-4 py-3 text-sm font-bold text-white hover:bg-emerald-700 disabled:opacity-60"
-                        >
-                            <CheckCircle2 className="h-4 w-4" />
-                            {salvando ? "Salvando..." : "Salvar notificação e observações"}
-                        </button>
+                            {mensagem && (
+                                <div className={classNames("rounded-2xl px-3 py-2 text-xs font-bold ring-1", mensagem.includes("Erro") || mensagem.includes("Não foi possível") ? "bg-red-50 text-red-700 ring-red-200" : "bg-emerald-50 text-emerald-700 ring-emerald-200")}>
+                                    {mensagem}
+                                </div>
+                            )}
+
+                            <button
+                                type="button"
+                                disabled={salvando}
+                                onClick={salvarAlteracoes}
+                                className="inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-emerald-600 px-4 py-3 text-sm font-bold text-white hover:bg-emerald-700 disabled:opacity-60"
+                            >
+                                <CheckCircle2 className="h-4 w-4" />
+                                {salvando ? "Salvando..." : "Salvar notificação e observações"}
+                            </button>
+                        </div>
                     </div>
                 </div>
             )}
@@ -12070,6 +12152,24 @@ function DashboardAuditoriaCampo({ auditoriasCampo = [], onAuditoriaAtualizada }
     });
     const [cartaArrastandoAuditoria, setCartaArrastandoAuditoria] = useState(null);
     const [blocoArrastandoAuditoria, setBlocoArrastandoAuditoria] = useState(null);
+    const [auditoriasHistoricoAbertas, setAuditoriasHistoricoAbertas] = useState(() => {
+        if (typeof window === "undefined") return {};
+        try {
+            const salvo = JSON.parse(window.localStorage.getItem("dashboardAuditoriaCampoAuditoriasAbertas") || "{}");
+            return salvo && typeof salvo === "object" ? salvo : {};
+        } catch {
+            return {};
+        }
+    });
+    const [filtrosAuditoriaCampo, setFiltrosAuditoriaCampo] = useState({
+        busca: "",
+        periodo: "todos",
+        tipo: "todos",
+        empresa: "todos",
+        auditor: "todos",
+        status: "todos",
+        risco: "todos",
+    });
 
     useEffect(() => { if (typeof window !== "undefined") window.localStorage.setItem("dashboardAuditoriaCampoCartasVisiveis", JSON.stringify(cartasVisiveis)); }, [cartasVisiveis]);
     useEffect(() => { if (typeof window !== "undefined") window.localStorage.setItem("dashboardAuditoriaCampoTamanhosCartas", JSON.stringify(tamanhosCartas)); }, [tamanhosCartas]);
@@ -12078,8 +12178,58 @@ function DashboardAuditoriaCampo({ auditoriasCampo = [], onAuditoriaAtualizada }
     useEffect(() => { if (typeof window !== "undefined") window.localStorage.setItem("dashboardAuditoriaCampoTamanhosBlocos", JSON.stringify(tamanhosBlocos)); }, [tamanhosBlocos]);
     useEffect(() => { if (typeof window !== "undefined") window.localStorage.setItem("dashboardAuditoriaCampoOrdemBlocos", JSON.stringify(ordemBlocos)); }, [ordemBlocos]);
     useEffect(() => { if (typeof window !== "undefined") window.localStorage.setItem("dashboardAuditoriaCampoBlocosRecolhidos", JSON.stringify(blocosRecolhidos)); }, [blocosRecolhidos]);
+    useEffect(() => { if (typeof window !== "undefined") window.localStorage.setItem("dashboardAuditoriaCampoAuditoriasAbertas", JSON.stringify(auditoriasHistoricoAbertas)); }, [auditoriasHistoricoAbertas]);
 
     const auditoriasNormalizadas = useMemo(() => auditoriasCampo.map(normalizarAuditoriaCampo), [auditoriasCampo]);
+    const opcoesFiltroAuditoriaCampo = useMemo(() => {
+        const unicos = (valores) => Array.from(new Set(valores.map((valor) => String(valor || "").trim()).filter(Boolean))).sort((a, b) => a.localeCompare(b, "pt-BR"));
+        return {
+            tipos: unicos(auditoriasNormalizadas.map((item) => item.tipoAuditoria || identificarAlvoAuditoriaCampo(item).tipo)),
+            empresas: unicos(auditoriasNormalizadas.map((item) => item.empresaNome || item.empresaResponsavel)),
+            auditores: unicos(auditoriasNormalizadas.map((item) => item.auditorNome)),
+            status: unicos(auditoriasNormalizadas.map((item) => item.statusAuditoria || item.statusDesvio)),
+            riscos: unicos(auditoriasNormalizadas.map((item) => item.grauRisco)),
+        };
+    }, [auditoriasNormalizadas]);
+    const auditoriasFiltradas = useMemo(() => {
+        const busca = normalizarTextoBusca(filtrosAuditoriaCampo.busca || "");
+        const agora = new Date();
+        return auditoriasNormalizadas.filter((item) => {
+            const alvo = identificarAlvoAuditoriaCampo(item);
+            const data = item.createdAt ? new Date(item.createdAt) : null;
+            if (filtrosAuditoriaCampo.periodo === "mes" && (!data || data.getMonth() !== agora.getMonth() || data.getFullYear() !== agora.getFullYear())) return false;
+            if (filtrosAuditoriaCampo.periodo === "vencidas" && !auditoriaCampoVencida(item)) return false;
+            if (filtrosAuditoriaCampo.periodo === "criticas") {
+                const classificacao = normalizarTextoBusca(item.classificacao || "");
+                const risco = normalizarTextoBusca(item.grauRisco || "");
+                if (!(risco.includes("critico") || risco.includes("crítico") || classificacao.includes("critico") || classificacao.includes("crítico") || classificacao.includes("acao") || classificacao.includes("ação") || Number(item.pontuacao || 0) < 50)) return false;
+            }
+            if (filtrosAuditoriaCampo.tipo !== "todos" && String(item.tipoAuditoria || alvo.tipo) !== filtrosAuditoriaCampo.tipo) return false;
+            if (filtrosAuditoriaCampo.empresa !== "todos" && String(item.empresaNome || item.empresaResponsavel || "") !== filtrosAuditoriaCampo.empresa) return false;
+            if (filtrosAuditoriaCampo.auditor !== "todos" && String(item.auditorNome || "") !== filtrosAuditoriaCampo.auditor) return false;
+            if (filtrosAuditoriaCampo.status !== "todos" && String(item.statusAuditoria || item.statusDesvio || "") !== filtrosAuditoriaCampo.status) return false;
+            if (filtrosAuditoriaCampo.risco !== "todos" && String(item.grauRisco || "") !== filtrosAuditoriaCampo.risco) return false;
+            if (busca) {
+                const baseBusca = normalizarTextoBusca([
+                    item.numeroAuditoria,
+                    item.titulo,
+                    alvo.titulo,
+                    alvo.descricao,
+                    item.area,
+                    item.local,
+                    item.maquinaEquipamento,
+                    item.empresaNome,
+                    item.empresaResponsavel,
+                    item.auditorNome,
+                    item.situacaoEncontrada,
+                    item.acaoRecomendada,
+                    item.responsavelTratativa,
+                ].filter(Boolean).join(" "));
+                if (!baseBusca.includes(busca)) return false;
+            }
+            return true;
+        }).sort((a, b) => String(b.createdAt || "").localeCompare(String(a.createdAt || "")));
+    }, [auditoriasNormalizadas, filtrosAuditoriaCampo]);
     const mesAtual = hoje.getMonth();
     const anoAtual = hoje.getFullYear();
     const auditoriasMes = auditoriasNormalizadas.filter((item) => {
@@ -12099,14 +12249,7 @@ function DashboardAuditoriaCampo({ auditoriasCampo = [], onAuditoriaAtualizada }
         const risco = normalizarTextoBusca(item.grauRisco || "");
         return risco.includes("critico") || risco.includes("crítico") || classificacao.includes("critico") || classificacao.includes("crítico") || classificacao.includes("acao") || classificacao.includes("ação") || Number(item.pontuacao || 0) < 50;
     }).length;
-    const auditoriasVencidas = auditoriasNormalizadas.filter((item) => {
-        if (!item.prazoAdequacao) return false;
-        const prazo = new Date(`${item.prazoAdequacao}T23:59:59`);
-        if (Number.isNaN(prazo.getTime())) return false;
-        const status = normalizarTextoBusca(item.statusAuditoria || item.statusDesvio || "");
-        const concluida = ["resolvida", "corrigido", "corrigida", "concluido", "concluído", "cancelada"].some((termo) => status.includes(termo));
-        return !concluida && prazo < hoje;
-    }).length;
+    const auditoriasVencidas = auditoriasNormalizadas.filter(auditoriaCampoVencida).length;
 
     const topDesvios = Object.values(
         auditoriasNormalizadas.reduce((acc, item) => {
@@ -12225,17 +12368,81 @@ function DashboardAuditoriaCampo({ auditoriasCampo = [], onAuditoriaAtualizada }
 
     const renderBloco = (chave) => {
         if (chave === "historico") {
-            return blocoWrapper(chave, "Histórico de auditorias", "Últimos registros de campo por colaborador e empresa.", (
-                <div className="space-y-2">
-                    {auditoriasNormalizadas.length === 0 ? (
-                        <div className="rounded-2xl border border-dashed border-slate-300 p-5 text-center text-sm text-slate-500">Nenhuma auditoria de campo registrada.</div>
-                    ) : auditoriasNormalizadas.slice(0, 12).map((item) => {
+            const atualizarFiltro = (campo, valor) => setFiltrosAuditoriaCampo((atual) => ({ ...atual, [campo]: valor }));
+            const renderSelectFiltro = (campo, label, opcoes = []) => (
+                <label className="block text-xs font-bold uppercase tracking-wide text-slate-500">
+                    {label}
+                    <select
+                        value={filtrosAuditoriaCampo[campo]}
+                        onChange={(evento) => atualizarFiltro(campo, evento.target.value)}
+                        className="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-3 py-2 text-sm normal-case tracking-normal text-slate-700 outline-none focus:ring-2 focus:ring-blue-100"
+                    >
+                        <option value="todos">Todos</option>
+                        {opcoes.map((opcao) => <option key={opcao} value={opcao}>{opcao}</option>)}
+                    </select>
+                </label>
+            );
+
+            return blocoWrapper(chave, "Histórico de auditorias", "Filtre, abra e acompanhe os registros de campo por área, máquina, empresa e responsável.", (
+                <div className="space-y-4">
+                    <div className="rounded-3xl border border-slate-200 bg-slate-50/70 p-4">
+                        <div className="flex flex-col gap-3 lg:flex-row lg:items-end">
+                            <label className="block flex-1 text-xs font-bold uppercase tracking-wide text-slate-500">
+                                Buscar auditoria
+                                <input
+                                    value={filtrosAuditoriaCampo.busca}
+                                    onChange={(evento) => atualizarFiltro("busca", evento.target.value)}
+                                    placeholder="Número, área, máquina, empresa, auditor ou responsável"
+                                    className="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-3 py-2 text-sm normal-case tracking-normal text-slate-700 outline-none focus:ring-2 focus:ring-blue-100"
+                                />
+                            </label>
+                            <label className="block text-xs font-bold uppercase tracking-wide text-slate-500 lg:w-56">
+                                Período / destaque
+                                <select
+                                    value={filtrosAuditoriaCampo.periodo}
+                                    onChange={(evento) => atualizarFiltro("periodo", evento.target.value)}
+                                    className="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-3 py-2 text-sm normal-case tracking-normal text-slate-700 outline-none focus:ring-2 focus:ring-blue-100"
+                                >
+                                    <option value="todos">Todas</option>
+                                    <option value="mes">Auditorias do mês</option>
+                                    <option value="criticas">Críticas / ação imediata</option>
+                                    <option value="vencidas">Vencidas</option>
+                                </select>
+                            </label>
+                            <button
+                                type="button"
+                                onClick={() => setFiltrosAuditoriaCampo({ busca: "", periodo: "todos", tipo: "todos", empresa: "todos", auditor: "todos", status: "todos", risco: "todos" })}
+                                className="rounded-2xl bg-white px-4 py-2 text-sm font-bold text-slate-600 ring-1 ring-slate-200 hover:bg-slate-100"
+                            >
+                                Limpar filtros
+                            </button>
+                        </div>
+                        <div className="mt-3 grid gap-3 md:grid-cols-2 xl:grid-cols-5">
+                            {renderSelectFiltro("tipo", "Tipo", opcoesFiltroAuditoriaCampo.tipos)}
+                            {renderSelectFiltro("empresa", "Empresa", opcoesFiltroAuditoriaCampo.empresas)}
+                            {renderSelectFiltro("auditor", "Auditor", opcoesFiltroAuditoriaCampo.auditores)}
+                            {renderSelectFiltro("status", "Status", opcoesFiltroAuditoriaCampo.status)}
+                            {renderSelectFiltro("risco", "Risco", opcoesFiltroAuditoriaCampo.riscos)}
+                        </div>
+                        <p className="mt-3 text-xs font-semibold text-slate-500">
+                            Mostrando {auditoriasFiltradas.length} de {auditoriasNormalizadas.length} auditoria(s).
+                        </p>
+                    </div>
+
+                    {auditoriasFiltradas.length === 0 ? (
+                        <div className="rounded-2xl border border-dashed border-slate-300 p-5 text-center text-sm text-slate-500">Nenhuma auditoria de campo encontrada com os filtros aplicados.</div>
+                    ) : auditoriasFiltradas.slice(0, 30).map((item) => {
                         const alvo = identificarAlvoAuditoriaCampo(item);
                         const fotos = fotosAuditoriaCampo(item);
                         const temFotos = Boolean(fotos.antes || fotos.depois);
+                        const chaveAuditoria = String(item.id || item.numeroAuditoria || `${alvo.titulo}-${item.createdAt}`);
+                        const aberta = Boolean(auditoriasHistoricoAbertas[chaveAuditoria]);
+                        const statusAtual = item.statusAuditoria || item.statusDesvio || "Não informado";
+                        const contatoEmail = item.emailResponsavel || item.notificacao?.emailResponsavel || "";
+                        const contatoWhatsapp = item.whatsappResponsavel || item.notificacao?.whatsappResponsavel || "";
 
                         return (
-                            <div key={item.id || `${alvo.titulo}-${item.createdAt}`} className="overflow-hidden rounded-3xl bg-white ring-1 ring-slate-200 shadow-sm">
+                            <div key={chaveAuditoria} className="overflow-hidden rounded-3xl bg-white ring-1 ring-slate-200 shadow-sm">
                                 <div className="border-b border-slate-100 bg-slate-50/80 p-4">
                                     <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
                                         <div className="min-w-0">
@@ -12243,46 +12450,79 @@ function DashboardAuditoriaCampo({ auditoriasCampo = [], onAuditoriaAtualizada }
                                                 {item.numeroAuditoria && <span className="rounded-full bg-slate-950 px-3 py-1 text-xs font-black text-white">{item.numeroAuditoria}</span>}
                                                 <span className="rounded-full bg-blue-50 px-3 py-1 text-xs font-bold text-blue-700 ring-1 ring-blue-100">{alvo.tipo}</span>
                                                 {item.grauRisco && <span className="rounded-full bg-orange-50 px-3 py-1 text-xs font-bold text-orange-700 ring-1 ring-orange-100">Risco: {item.grauRisco}</span>}
+                                                <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-bold text-slate-600 ring-1 ring-slate-200">Status: {statusAtual}</span>
                                             </div>
                                             <h3 className="mt-3 text-base font-black text-slate-950">{alvo.titulo}</h3>
                                             {alvo.descricao && <p className="mt-1 text-xs font-medium text-slate-500">{alvo.descricao}</p>}
                                             <p className="mt-1 text-xs text-slate-400">{formatarDataHora(item.createdAt)} · Auditor: {item.auditorNome || "Não informado"}</p>
                                         </div>
-                                        <span className={classNames("w-fit rounded-full px-3 py-1 text-xs font-bold ring-1", classeClassificacaoAuditoriaCampo(item.classificacao))}>
-                                            {item.classificacao || "Sem classificação"} · {item.pontuacao}%
-                                        </span>
-                                    </div>
-                                </div>
-
-                                <div className="grid gap-3 p-4 lg:grid-cols-3">
-                                    <div className="rounded-2xl bg-slate-50 p-3 ring-1 ring-slate-100 lg:col-span-2">
-                                        <p className="text-xs font-bold uppercase tracking-wide text-slate-400">Situação encontrada</p>
-                                        <p className="mt-2 text-sm leading-relaxed text-slate-700">{item.situacaoEncontrada || item.observacao || "Situação não informada."}</p>
-                                    </div>
-                                    <div className="rounded-2xl bg-slate-50 p-3 ring-1 ring-slate-100">
-                                        <p className="text-xs font-bold uppercase tracking-wide text-slate-400">Tratativa</p>
-                                        <p className="mt-2 text-sm leading-relaxed text-slate-700">{item.acaoRecomendada || "Ação recomendada não informada."}</p>
-                                        <p className="mt-2 text-xs text-slate-500">Responsável: {item.responsavelTratativa || "Não informado"}</p>
-                                        <p className="text-xs text-slate-500">Prazo: {item.prazoAdequacao ? formatDate(item.prazoAdequacao) : "Não informado"}</p>
-                                        <p className="text-xs text-slate-500">Status: {item.statusAuditoria || item.statusDesvio || "Não informado"}</p>
-                                    </div>
-                                </div>
-
-                                {temFotos && (
-                                    <div className="px-4 pb-4">
-                                        <div className="rounded-2xl border border-slate-200 bg-slate-50 p-3">
-                                            <p className="text-xs font-bold uppercase tracking-wide text-slate-500">Fotos da auditoria</p>
-                                            <div className="mt-3 grid gap-3 sm:grid-cols-2">
-                                                <FotoAuditoriaPreview url={fotos.antes} label="Foto antes" />
-                                                <FotoAuditoriaPreview url={fotos.depois} label="Foto depois" />
-                                            </div>
+                                        <div className="flex flex-col gap-2 sm:flex-row sm:items-center lg:flex-col lg:items-end">
+                                            <span className={classNames("w-fit rounded-full px-3 py-1 text-xs font-bold ring-1", classeClassificacaoAuditoriaCampo(item.classificacao))}>
+                                                {item.classificacao || "Sem classificação"} · {item.pontuacao}%
+                                            </span>
+                                            <button
+                                                type="button"
+                                                onClick={() => setAuditoriasHistoricoAbertas((atual) => ({ ...atual, [chaveAuditoria]: !atual[chaveAuditoria] }))}
+                                                className="rounded-xl bg-white px-3 py-2 text-xs font-bold text-slate-700 ring-1 ring-slate-200 hover:bg-slate-100"
+                                            >
+                                                {aberta ? "Recolher auditoria" : "Abrir auditoria"}
+                                            </button>
                                         </div>
                                     </div>
-                                )}
-
-                                <div className="border-t border-slate-100 px-4 pb-4">
-                                    <EditorNotificacaoHistoricoAuditoria auditoria={item} onAtualizada={onAuditoriaAtualizada} />
                                 </div>
+
+                                {aberta && (
+                                    <>
+                                        <div className="grid gap-3 p-4 lg:grid-cols-4">
+                                            <div className="rounded-2xl bg-blue-50 p-3 ring-1 ring-blue-100">
+                                                <p className="text-xs font-bold uppercase tracking-wide text-blue-700">Tipo</p>
+                                                <p className="mt-2 text-sm font-bold text-blue-950">{item.tipoAuditoria || alvo.tipo}</p>
+                                            </div>
+                                            <div className="rounded-2xl bg-orange-50 p-3 ring-1 ring-orange-100">
+                                                <p className="text-xs font-bold uppercase tracking-wide text-orange-700">Grau de risco</p>
+                                                <p className="mt-2 text-sm font-bold text-orange-950">{item.grauRisco || "Não informado"}</p>
+                                            </div>
+                                            <div className="rounded-2xl bg-emerald-50 p-3 ring-1 ring-emerald-100">
+                                                <p className="text-xs font-bold uppercase tracking-wide text-emerald-700">Resultado</p>
+                                                <p className="mt-2 text-sm font-bold text-emerald-950">{item.classificacao || "Sem classificação"} ({item.pontuacao || 0}%)</p>
+                                            </div>
+                                            <div className="rounded-2xl bg-slate-50 p-3 ring-1 ring-slate-100">
+                                                <p className="text-xs font-bold uppercase tracking-wide text-slate-500">Empresa</p>
+                                                <p className="mt-2 text-sm font-bold text-slate-900">{item.empresaNome || item.empresaResponsavel || "Não informada"}</p>
+                                            </div>
+                                        </div>
+
+                                        <div className="grid gap-3 px-4 pb-4 lg:grid-cols-3">
+                                            <div className="rounded-2xl bg-slate-50 p-3 ring-1 ring-slate-100 lg:col-span-2">
+                                                <p className="text-xs font-bold uppercase tracking-wide text-slate-400">Situação encontrada</p>
+                                                <p className="mt-2 whitespace-pre-wrap text-sm leading-relaxed text-slate-700">{item.situacaoEncontrada || item.observacao || "Situação não informada."}</p>
+                                            </div>
+                                            <div className="rounded-2xl bg-slate-50 p-3 ring-1 ring-slate-100">
+                                                <p className="text-xs font-bold uppercase tracking-wide text-slate-400">Tratativa</p>
+                                                <p className="mt-2 whitespace-pre-wrap text-sm leading-relaxed text-slate-700">{item.acaoRecomendada || "Ação recomendada não informada."}</p>
+                                                <p className="mt-2 text-xs text-slate-500">Responsável: {item.responsavelTratativa || "Não informado"}</p>
+                                                <p className="text-xs text-slate-500">Prazo: {item.prazoAdequacao ? formatDate(item.prazoAdequacao) : "Não informado"}</p>
+                                                <p className="text-xs text-slate-500">Status: {statusAtual}</p>
+                                            </div>
+                                        </div>
+
+                                        {temFotos && (
+                                            <div className="px-4 pb-4">
+                                                <div className="rounded-2xl border border-slate-200 bg-slate-50 p-3">
+                                                    <p className="text-xs font-bold uppercase tracking-wide text-slate-500">Fotos da auditoria</p>
+                                                    <div className="mt-3 grid gap-3 sm:grid-cols-2">
+                                                        <FotoAuditoriaPreview url={fotos.antes} label="Foto antes" />
+                                                        <FotoAuditoriaPreview url={fotos.depois} label="Foto depois" />
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        )}
+
+                                        <div className="border-t border-slate-100 px-4 pb-4 pt-4">
+                                            <EditorNotificacaoHistoricoAuditoria auditoria={{ ...item, emailResponsavel: contatoEmail, whatsappResponsavel: contatoWhatsapp }} onAtualizada={onAuditoriaAtualizada} />
+                                        </div>
+                                    </>
+                                )}
                             </div>
                         );
                     })}
@@ -12790,7 +13030,15 @@ function NovaAuditoriaCampoDireta({ usuario = null, onAuditoriaSalva, empresasBa
                 token_qr: tokenParametro || null,
                 notificacao: {
                     titulo: formulario.titulo.trim(),
-                    mensagem: `Auditoria ${numeroAuditoria} registrada por ${formulario.auditorNome || usuario?.email || "auditor"}. Tipo: ${tipoAtual.label}. Risco: ${formulario.grauRisco}. Resultado: ${resultado.classificacao} (${resultado.percentual}%).`,
+                    mensagem: `Auditoria de campo registrada.
+
+Número: ${numeroAuditoria}
+Auditor: ${formulario.auditorNome || usuario?.email || "auditor"}
+Tipo: ${tipoAtual.label}
+Risco: ${formulario.grauRisco}
+Resultado: ${resultado.classificacao} (${resultado.percentual}%)
+Responsável pela tratativa: ${formulario.responsavelTratativa || "Não informado"}
+Prazo: ${formulario.prazoAdequacao ? formatDate(formulario.prazoAdequacao) : "Não informado"}`,
                     auditor: formulario.auditorNome.trim() || usuario?.email || "Auditor de campo",
                     emailResponsavel: emailResponsavelAuditoria || null,
                     whatsappResponsavel: whatsappResponsavelFormatado || null,
@@ -12901,7 +13149,7 @@ function NovaAuditoriaCampoDireta({ usuario = null, onAuditoriaSalva, empresasBa
 
                 <div className="grid gap-5">
                     <div className="space-y-5">
-                        <CardRecolhivel titulo="Dados da auditoria" subtitulo="Preencha as informações principais da auditoria de campo." contador="AUD-ANO-0001" defaultOpen={true} persistKey="novaAuditoriaCampo:dados">
+                        <CardRecolhivel titulo="Dados da auditoria" subtitulo="Preencha as informações principais da auditoria de campo." defaultOpen={true} persistKey="novaAuditoriaCampo:dados">
                             <div className="grid gap-4 md:grid-cols-2">
                                 <div>
                                     <label className="text-xs font-bold uppercase tracking-wide text-slate-500">Tipo de auditoria</label>
@@ -15029,9 +15277,9 @@ export default function App() {
     }, [usuario, colaboradores]);
 
     const nav = [
-        { id: "dashboard", label: "Dashboard", icon: LayoutDashboard },
+        { id: "dashboard", label: "Dashboard SST", icon: LayoutDashboard },
+        { id: "auditoriaCampo", label: "Dashboard Auditoria", icon: ClipboardCheck },
         { id: "novaAuditoriaCampo", label: "Nova Auditoria", icon: Plus },
-        { id: "auditoriaCampo", label: "Auditoria Campo", icon: ClipboardCheck },
         { id: "empresas", label: "Empresas", icon: Building2 },
         { id: "colaboradores", label: "Colaboradores", icon: Users },
         { id: "aniversariantes", label: "Aniversariantes", icon: CalendarClock },
