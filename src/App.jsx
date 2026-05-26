@@ -8722,8 +8722,13 @@ function Empresas({
         responsavel: "",
         email: "",
         telefone: "",
+        responsavelAuditoria: "",
+        emailAuditoria: "",
+        whatsappAuditoria: "",
+        receberAuditoria: true,
         tstResponsavel: "",
         tstEmail: "",
+        tstWhatsapp: "",
         tipoEmpresa: "Terceirizada",
         empresaPaiId: "",
         logo: null,
@@ -8797,8 +8802,13 @@ function Empresas({
             responsavel: novaEmpresa.responsavel.trim(),
             email: novaEmpresa.email.trim(),
             telefone: novaEmpresa.telefone.trim(),
+            responsavelAuditoria: novaEmpresa.responsavelAuditoria.trim(),
+            emailAuditoria: novaEmpresa.emailAuditoria.trim(),
+            whatsappAuditoria: novaEmpresa.whatsappAuditoria.trim(),
+            receberAuditoria: novaEmpresa.receberAuditoria !== false,
             tstResponsavel: novaEmpresa.tstResponsavel.trim(),
             tstEmail: novaEmpresa.tstEmail.trim(),
+            tstWhatsapp: novaEmpresa.tstWhatsapp.trim(),
             tipoEmpresa: novaEmpresa.tipoEmpresa,
             empresaPaiId: novaEmpresa.empresaPaiId || null,
             logo: novaEmpresa.logo,
@@ -8820,8 +8830,13 @@ function Empresas({
                 responsavel: "",
                 email: "",
                 telefone: "",
+                responsavelAuditoria: "",
+                emailAuditoria: "",
+                whatsappAuditoria: "",
+                receberAuditoria: true,
                 tstResponsavel: "",
                 tstEmail: "",
+                tstWhatsapp: "",
                 tipoEmpresa: "Terceirizada",
                 empresaPaiId: "",
                 logo: null,
@@ -8860,8 +8875,13 @@ function Empresas({
             responsavel: empresa.responsavel || "",
             email: empresa.email || "",
             telefone: empresa.telefone || "",
+            responsavelAuditoria: empresa.responsavel_auditoria || "",
+            emailAuditoria: empresa.email_auditoria || "",
+            whatsappAuditoria: empresa.whatsapp_auditoria || "",
+            receberAuditoria: empresa.receber_auditoria !== false,
             tstResponsavel: empresa.tst_responsavel || "",
             tstEmail: empresa.tst_email || "",
+            tstWhatsapp: empresa.tst_whatsapp || "",
             status: normalizarStatusEmpresa(empresa.status),
             tipoEmpresa: empresa.tipo_empresa || "Terceirizada",
             empresaPaiId: empresa.empresa_pai_id || "",
@@ -8895,8 +8915,13 @@ function Empresas({
             responsavel: empresaEdicao.responsavel.trim(),
             email: empresaEdicao.email.trim(),
             telefone: empresaEdicao.telefone.trim(),
+            responsavelAuditoria: empresaEdicao.responsavelAuditoria.trim(),
+            emailAuditoria: empresaEdicao.emailAuditoria.trim(),
+            whatsappAuditoria: empresaEdicao.whatsappAuditoria.trim(),
+            receberAuditoria: empresaEdicao.receberAuditoria !== false,
             tstResponsavel: empresaEdicao.tstResponsavel.trim(),
             tstEmail: empresaEdicao.tstEmail.trim(),
+            tstWhatsapp: empresaEdicao.tstWhatsapp.trim(),
             status: empresaEdicao.status || "Ativa",
             tipoEmpresa: empresaEdicao.tipoEmpresa,
             empresaPaiId: empresaEdicao.empresaPaiId || null,
@@ -9479,6 +9504,31 @@ function Empresas({
                                 className="w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-slate-400 focus:ring-4 focus:ring-slate-100"
                             />
 
+                            <div className="rounded-3xl bg-emerald-50/60 p-3 ring-1 ring-emerald-100">
+                                <p className="text-xs font-black uppercase tracking-wide text-emerald-700">Contato para receber auditorias</p>
+                                <div className="mt-3 grid gap-3 md:grid-cols-2">
+                                    <input
+                                        value={novaEmpresa.responsavelAuditoria}
+                                        onChange={(e) => setNovaEmpresa({ ...novaEmpresa, responsavelAuditoria: e.target.value })}
+                                        placeholder="Responsável por auditorias"
+                                        className="w-full rounded-2xl border border-emerald-100 px-4 py-3 text-sm outline-none focus:border-emerald-400 focus:ring-4 focus:ring-emerald-100"
+                                    />
+                                    <input
+                                        type="email"
+                                        value={novaEmpresa.emailAuditoria}
+                                        onChange={(e) => setNovaEmpresa({ ...novaEmpresa, emailAuditoria: e.target.value })}
+                                        placeholder="E-mail para auditorias"
+                                        className="w-full rounded-2xl border border-emerald-100 px-4 py-3 text-sm outline-none focus:border-emerald-400 focus:ring-4 focus:ring-emerald-100"
+                                    />
+                                    <input
+                                        value={novaEmpresa.whatsappAuditoria}
+                                        onChange={(e) => setNovaEmpresa({ ...novaEmpresa, whatsappAuditoria: formatarTelefone(e.target.value) })}
+                                        placeholder="WhatsApp para auditorias"
+                                        className="w-full rounded-2xl border border-emerald-100 px-4 py-3 text-sm outline-none focus:border-emerald-400 focus:ring-4 focus:ring-emerald-100 md:col-span-2"
+                                    />
+                                </div>
+                            </div>
+
                             <div className="grid gap-3 md:grid-cols-2">
                                 <input
                                     value={novaEmpresa.tstResponsavel}
@@ -9493,6 +9543,12 @@ function Empresas({
                                     onChange={(e) => setNovaEmpresa({ ...novaEmpresa, tstEmail: e.target.value })}
                                     placeholder="E-mail do TST para alertas"
                                     className="w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-slate-400 focus:ring-4 focus:ring-slate-100"
+                                />
+                                <input
+                                    value={novaEmpresa.tstWhatsapp}
+                                    onChange={(e) => setNovaEmpresa({ ...novaEmpresa, tstWhatsapp: formatarTelefone(e.target.value) })}
+                                    placeholder="WhatsApp do TST para auditorias"
+                                    className="w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-slate-400 focus:ring-4 focus:ring-slate-100 md:col-span-2"
                                 />
                             </div>
 
@@ -10021,6 +10077,31 @@ function Empresas({
                                     />
                                 </div>
 
+                                <div className="md:col-span-2 rounded-3xl bg-emerald-50/60 p-3 ring-1 ring-emerald-100">
+                                    <p className="text-xs font-black uppercase tracking-wide text-emerald-700">Contato para receber auditorias</p>
+                                    <div className="mt-3 grid gap-3 md:grid-cols-3">
+                                        <input
+                                            value={empresaEdicao.responsavelAuditoria}
+                                            onChange={(e) => setEmpresaEdicao({ ...empresaEdicao, responsavelAuditoria: e.target.value })}
+                                            placeholder="Responsável por auditorias"
+                                            className="w-full rounded-2xl border border-emerald-100 px-4 py-3 text-sm outline-none focus:border-emerald-400 focus:ring-4 focus:ring-emerald-100"
+                                        />
+                                        <input
+                                            type="email"
+                                            value={empresaEdicao.emailAuditoria}
+                                            onChange={(e) => setEmpresaEdicao({ ...empresaEdicao, emailAuditoria: e.target.value })}
+                                            placeholder="E-mail para auditorias"
+                                            className="w-full rounded-2xl border border-emerald-100 px-4 py-3 text-sm outline-none focus:border-emerald-400 focus:ring-4 focus:ring-emerald-100"
+                                        />
+                                        <input
+                                            value={empresaEdicao.whatsappAuditoria}
+                                            onChange={(e) => setEmpresaEdicao({ ...empresaEdicao, whatsappAuditoria: formatarTelefone(e.target.value) })}
+                                            placeholder="WhatsApp para auditorias"
+                                            className="w-full rounded-2xl border border-emerald-100 px-4 py-3 text-sm outline-none focus:border-emerald-400 focus:ring-4 focus:ring-emerald-100"
+                                        />
+                                    </div>
+                                </div>
+
                                 <div>
                                     <label className="mb-1 block text-xs font-bold uppercase tracking-wide text-slate-500">Técnico de Segurança responsável</label>
                                     <input
@@ -10030,12 +10111,20 @@ function Empresas({
                                     />
                                 </div>
 
-                                <div className="md:col-span-2">
+                                <div>
                                     <label className="mb-1 block text-xs font-bold uppercase tracking-wide text-slate-500">E-mail do TST para alertas</label>
                                     <input
                                         type="email"
                                         value={empresaEdicao.tstEmail}
                                         onChange={(e) => setEmpresaEdicao({ ...empresaEdicao, tstEmail: e.target.value })}
+                                        className="w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-slate-400 focus:ring-4 focus:ring-slate-100"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="mb-1 block text-xs font-bold uppercase tracking-wide text-slate-500">WhatsApp do TST para auditorias</label>
+                                    <input
+                                        value={empresaEdicao.tstWhatsapp}
+                                        onChange={(e) => setEmpresaEdicao({ ...empresaEdicao, tstWhatsapp: formatarTelefone(e.target.value) })}
                                         className="w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-slate-400 focus:ring-4 focus:ring-slate-100"
                                     />
                                 </div>
@@ -12623,6 +12712,14 @@ function DashboardAuditoriaCampo({ auditoriasCampo = [], onAuditoriaAtualizada }
                         const contatoWhatsapp = String(item.whatsappResponsavel || item.notificacao?.whatsappResponsavel || "").replace(/\D/g, "");
                         const empresaDestaque = item.empresaNome || item.empresaResponsavel || "Empresa não informada";
                         const auditorDestaque = item.auditorNome || "Auditor não informado";
+                        const normalizarComparacaoAuditoria = (valor) => String(valor || "")
+                            .normalize("NFD")
+                            .replace(/[\u0300-\u036f]/g, "")
+                            .trim()
+                            .toLowerCase();
+                        const descricaoAlvoLimpa = alvo.descricao && normalizarComparacaoAuditoria(alvo.descricao) !== normalizarComparacaoAuditoria(empresaDestaque)
+                            ? alvo.descricao
+                            : "";
                         const mensagemEnvioAuditoria = item.notificacao?.textoEnvio || item.notificacao?.mensagem || montarMensagemFluidaAuditoriaCampo(item, alvo);
                         const assuntoEnvioAuditoria = item.notificacao?.titulo || item.titulo || `Auditoria ${item.numeroAuditoria || "de campo"}`;
                         const linkEnviarAuditoria = contatoEmail
@@ -12643,7 +12740,7 @@ function DashboardAuditoriaCampo({ auditoriasCampo = [], onAuditoriaAtualizada }
                                                 <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-bold text-slate-600 ring-1 ring-slate-200">Status: {statusAtual}</span>
                                             </div>
                                             <h3 className="mt-3 text-base font-black text-slate-950">{alvo.titulo}</h3>
-                                            {alvo.descricao && <p className="mt-1 text-xs font-medium text-slate-500">{alvo.descricao}</p>}
+                                            {descricaoAlvoLimpa && <p className="mt-1 text-xs font-medium text-slate-500">{descricaoAlvoLimpa}</p>}
                                             <div className="mt-3 space-y-1.5 text-sm">
                                                 <p className="font-black text-slate-900">{empresaDestaque}</p>
                                                 <p className="font-bold text-slate-700">Auditor: {auditorDestaque}</p>
@@ -12991,10 +13088,23 @@ function NovaAuditoriaCampoDireta({ usuario = null, onAuditoriaSalva, empresasBa
     const linkGeralDireto = `${origem}/nova-auditoria-campo`;
     const linkGeral = `${origem}/#/nova-auditoria-campo`;
     const empresasAuditoriaCampo = useMemo(() => {
-        return [...empresasBanco]
-            .filter((empresa) => empresa?.nome)
+        const normalizarNomeEmpresa = (valor) => String(valor || "")
+            .normalize("NFD")
+            .replace(/[\u0300-\u036f]/g, "")
+            .trim()
+            .toLowerCase();
+
+        const mapa = new Map();
+        (empresasBanco || []).forEach((empresa) => {
+            if (!empresa?.nome) return;
+            const chave = normalizarNomeEmpresa(empresa.nome);
+            if (!mapa.has(chave)) mapa.set(chave, empresa);
+        });
+
+        return Array.from(mapa.values())
             .sort((a, b) => String(a.nome).localeCompare(String(b.nome), "pt-BR"));
     }, [empresasBanco]);
+
 
     const [acessoLiberado, setAcessoLiberado] = useState(() => Boolean(usuario) || (TOKEN_LINK_AUDITORIA_CAMPO && tokenParametro === TOKEN_LINK_AUDITORIA_CAMPO));
     const [senha, setSenha] = useState("");
@@ -13018,6 +13128,9 @@ function NovaAuditoriaCampoDireta({ usuario = null, onAuditoriaSalva, empresasBa
         responsavelTratativa: "",
         emailResponsavel: "",
         whatsappResponsavel: "",
+        nomeTstResponsavel: "",
+        emailTstResponsavel: "",
+        whatsappTstResponsavel: "",
         prazoAdequacao: "",
         statusAuditoria: "Aberta",
         fotoAntes: null,
@@ -13025,6 +13138,40 @@ function NovaAuditoriaCampoDireta({ usuario = null, onAuditoriaSalva, empresasBa
         observacoesGerais: "",
     }));
     const [respostasChecklist, setRespostasChecklist] = useState(() => criarRespostasChecklistDinamico(tipoInicial.valor));
+
+
+    const empresaSelecionadaAuditoria = useMemo(() => {
+        const nomeAtual = String(formulario.empresaResponsavel || empresaParametro || "").trim();
+        if (!nomeAtual) return null;
+        const normalizar = (valor) => String(valor || "")
+            .normalize("NFD")
+            .replace(/[\u0300-\u036f]/g, "")
+            .trim()
+            .toLowerCase();
+        return empresasAuditoriaCampo.find((empresa) => normalizar(empresa.nome) === normalizar(nomeAtual)) || null;
+    }, [empresaParametro, empresasAuditoriaCampo, formulario.empresaResponsavel]);
+
+    const contatosEmpresaAuditoria = useMemo(() => {
+        if (!empresaSelecionadaAuditoria) {
+            return {
+                responsavel: "",
+                email: "",
+                whatsapp: "",
+                tstResponsavel: "",
+                tstEmail: "",
+                tstWhatsapp: "",
+            };
+        }
+
+        return {
+            responsavel: empresaSelecionadaAuditoria.responsavel_auditoria || empresaSelecionadaAuditoria.responsavel || "",
+            email: empresaSelecionadaAuditoria.email_auditoria || empresaSelecionadaAuditoria.email || "",
+            whatsapp: empresaSelecionadaAuditoria.whatsapp_auditoria || empresaSelecionadaAuditoria.telefone || "",
+            tstResponsavel: empresaSelecionadaAuditoria.tst_responsavel || "",
+            tstEmail: empresaSelecionadaAuditoria.tst_email || "",
+            tstWhatsapp: empresaSelecionadaAuditoria.tst_whatsapp || "",
+        };
+    }, [empresaSelecionadaAuditoria]);
 
     const tipoAtual = obterTipoAuditoriaCampoDireta(formulario.tipoAuditoria);
     const checklistAtual = useMemo(() => checklistParaTipoAuditoriaCampo(formulario.tipoAuditoria), [formulario.tipoAuditoria]);
@@ -13065,9 +13212,67 @@ function NovaAuditoriaCampoDireta({ usuario = null, onAuditoriaSalva, empresasBa
         ? `https://wa.me/${whatsappResponsavelFormatado}?text=${encodeURIComponent(textoNotificacaoResponsavel)}`
         : "";
 
+    const emailTstAuditoria = String(formulario.emailTstResponsavel || contatosEmpresaAuditoria.tstEmail || "").trim();
+    const whatsappTstAuditoria = String(formulario.whatsappTstResponsavel || contatosEmpresaAuditoria.tstWhatsapp || "").replace(/\D/g, "");
+    const whatsappTstFormatado = whatsappTstAuditoria
+        ? (whatsappTstAuditoria.startsWith("55") ? whatsappTstAuditoria : `55${whatsappTstAuditoria}`)
+        : "";
+    const linkEmailTstAuditoria = emailTstAuditoria
+        ? `mailto:${emailTstAuditoria}?subject=${encodeURIComponent(assuntoNotificacaoResponsavel)}&body=${encodeURIComponent(textoNotificacaoResponsavel)}`
+        : "";
+    const linkWhatsappTstAuditoria = whatsappTstFormatado
+        ? `https://wa.me/${whatsappTstFormatado}?text=${encodeURIComponent(textoNotificacaoResponsavel)}`
+        : "";
+
+    const aplicarContatosEmpresaAuditoria = useCallback((nomeEmpresa) => {
+        const normalizar = (valor) => String(valor || "")
+            .normalize("NFD")
+            .replace(/[\u0300-\u036f]/g, "")
+            .trim()
+            .toLowerCase();
+        const empresa = empresasAuditoriaCampo.find((item) => normalizar(item.nome) === normalizar(nomeEmpresa));
+        if (!empresa) {
+            setFormulario((atual) => ({ ...atual, empresaResponsavel: nomeEmpresa }));
+            return;
+        }
+
+        const emailAuditoria = empresa.email_auditoria || empresa.email || "";
+        const whatsappAuditoria = empresa.whatsapp_auditoria || empresa.telefone || "";
+        const responsavelAuditoria = empresa.responsavel_auditoria || empresa.responsavel || "";
+        const tstResponsavel = empresa.tst_responsavel || "";
+        const tstEmail = empresa.tst_email || "";
+        const tstWhatsapp = empresa.tst_whatsapp || "";
+
+        setFormulario((atual) => ({
+            ...atual,
+            empresaResponsavel: empresa.nome,
+            responsavelTratativa: atual.responsavelTratativa || responsavelAuditoria,
+            emailResponsavel: emailAuditoria || atual.emailResponsavel,
+            whatsappResponsavel: whatsappAuditoria || atual.whatsappResponsavel,
+            nomeTstResponsavel: tstResponsavel || atual.nomeTstResponsavel,
+            emailTstResponsavel: tstEmail || atual.emailTstResponsavel,
+            whatsappTstResponsavel: tstWhatsapp || atual.whatsappTstResponsavel,
+        }));
+    }, [empresasAuditoriaCampo]);
+
     const alterarFormulario = (campo, valor) => {
         setFormulario((atual) => ({ ...atual, [campo]: valor }));
     };
+
+    const alterarEmpresaResponsavelAuditoria = (valor) => {
+        aplicarContatosEmpresaAuditoria(valor);
+    };
+
+    useEffect(() => {
+        if (!formulario.empresaResponsavel || !empresaSelecionadaAuditoria) return;
+        if (formulario.emailResponsavel && formulario.whatsappResponsavel && formulario.emailTstResponsavel) return;
+
+        const timer = window.setTimeout(() => {
+            aplicarContatosEmpresaAuditoria(formulario.empresaResponsavel);
+        }, 0);
+
+        return () => window.clearTimeout(timer);
+    }, [aplicarContatosEmpresaAuditoria, empresaSelecionadaAuditoria, formulario.empresaResponsavel, formulario.emailResponsavel, formulario.whatsappResponsavel, formulario.emailTstResponsavel]);
 
     const alterarTipoAuditoria = (valor) => {
         const novoTipo = obterTipoAuditoriaCampoDireta(valor);
@@ -13097,6 +13302,11 @@ function NovaAuditoriaCampoDireta({ usuario = null, onAuditoriaSalva, empresasBa
             situacaoEncontrada: "",
             acaoRecomendada: "",
             responsavelTratativa: "",
+            emailResponsavel: "",
+            whatsappResponsavel: "",
+            nomeTstResponsavel: "",
+            emailTstResponsavel: "",
+            whatsappTstResponsavel: "",
             prazoAdequacao: "",
             statusAuditoria: "Aberta",
             fotoAntes: null,
@@ -13259,6 +13469,9 @@ function NovaAuditoriaCampoDireta({ usuario = null, onAuditoriaSalva, empresasBa
                     auditor: formulario.auditorNome.trim() || usuario?.email || "Auditor de campo",
                     emailResponsavel: emailResponsavelAuditoria || null,
                     whatsappResponsavel: whatsappResponsavelFormatado || null,
+                    nomeTstResponsavel: formulario.nomeTstResponsavel || contatosEmpresaAuditoria.tstResponsavel || null,
+                    emailTstResponsavel: emailTstAuditoria || null,
+                    whatsappTstResponsavel: whatsappTstFormatado || null,
                     textoEnvio: textoNotificacaoResponsavel,
                     complementos: formulario.acaoRecomendada ? [formulario.acaoRecomendada.trim()] : [],
                 },
@@ -13335,17 +13548,19 @@ function NovaAuditoriaCampoDireta({ usuario = null, onAuditoriaSalva, empresasBa
         <div className="min-h-screen overflow-x-hidden bg-slate-100 p-3 text-slate-900 sm:p-4 md:p-6">
             <div className="mx-auto w-full max-w-6xl space-y-5">
                 <Card className="overflow-hidden border-emerald-100 bg-gradient-to-br from-white via-white to-emerald-50/60">
-                    <div className="grid min-w-0 gap-4 xl:grid-cols-[minmax(0,1fr)_220px] xl:items-center">
-                        <div className="flex items-start gap-3">
-                            <div className="rounded-2xl bg-emerald-100 p-3 text-emerald-700">
+                    <div className="flex min-w-0 flex-col gap-5 lg:grid lg:grid-cols-[minmax(0,1fr)_180px] lg:items-center">
+                        <div className="flex min-w-0 flex-col items-center gap-3 text-center sm:flex-row sm:items-start sm:text-left">
+                            <div className="shrink-0 rounded-2xl bg-emerald-100 p-3 text-emerald-700">
                                 <ClipboardCheck className="h-6 w-6" />
                             </div>
-                            <div className="min-w-0">
+                            <div className="min-w-0 w-full">
                                 <p className="text-xs font-bold uppercase tracking-[0.22em] text-emerald-700">Link direto</p>
-                                <h1 className="mt-1 text-2xl font-black text-slate-950 md:text-3xl">Nova Auditoria de Campo</h1>
-                                <p className="mt-1 max-w-3xl text-sm text-slate-500">Formulário rápido para áreas externas, pátios, frentes de serviço, máquinas, equipamentos ou locais sem QR Code específico.</p>
-                                <div className="mt-4 flex min-w-0 flex-col gap-2 sm:flex-row sm:items-center">
-                                    <div className="w-full min-w-0 rounded-2xl bg-white px-4 py-3 text-xs font-semibold text-slate-500 ring-1 ring-slate-200 sm:flex-1">
+                                <h1 className="mt-1 text-2xl font-black leading-tight text-slate-950 md:text-3xl">Nova Auditoria de Campo</h1>
+                                <p className="mx-auto mt-1 max-w-3xl text-sm leading-relaxed text-slate-500 sm:mx-0">
+                                    Formulário rápido para áreas externas, pátios, frentes de serviço, máquinas, equipamentos ou locais sem QR Code específico.
+                                </p>
+                                <div className="mx-auto mt-4 flex w-full max-w-full min-w-0 flex-col gap-2 sm:mx-0 sm:max-w-3xl sm:flex-row sm:items-center">
+                                    <div className="w-full min-w-0 overflow-hidden rounded-2xl bg-white px-4 py-3 text-xs font-semibold text-slate-500 ring-1 ring-slate-200">
                                         <span className="block truncate">{linkGeral}</span>
                                     </div>
                                     <button type="button" onClick={() => copiarTexto(linkGeral, "Link geral copiado.")} className="inline-flex w-full shrink-0 items-center justify-center gap-2 rounded-2xl bg-slate-950 px-4 py-3 text-sm font-bold text-white hover:bg-slate-800 sm:w-auto">
@@ -13355,8 +13570,8 @@ function NovaAuditoriaCampoDireta({ usuario = null, onAuditoriaSalva, empresasBa
                                 </div>
                             </div>
                         </div>
-                        <div className="w-full rounded-3xl bg-white p-3 text-center shadow-sm ring-1 ring-slate-200 xl:w-auto">
-                            <div className="mx-auto flex h-32 w-32 max-w-full items-center justify-center rounded-2xl bg-slate-50 p-2">
+                        <div className="mx-auto w-full max-w-[220px] rounded-3xl bg-white p-3 text-center shadow-sm ring-1 ring-slate-200 lg:mx-0 lg:justify-self-end">
+                            <div className="mx-auto flex h-32 w-32 items-center justify-center rounded-2xl bg-slate-50 p-2">
                                 <QRCodeSVG value={linkGeral} size={112} level="M" />
                             </div>
                             <p className="mt-2 text-[11px] font-bold uppercase tracking-wide text-slate-400">QR Code geral</p>
@@ -13437,7 +13652,7 @@ function NovaAuditoriaCampoDireta({ usuario = null, onAuditoriaSalva, empresasBa
                                     <label className="text-xs font-bold uppercase tracking-wide text-slate-500">Empresa responsável</label>
                                     <select
                                         value={empresasAuditoriaCampo.some((empresa) => empresa.nome === formulario.empresaResponsavel) ? formulario.empresaResponsavel : ""}
-                                        onChange={(e) => alterarFormulario("empresaResponsavel", e.target.value)}
+                                        onChange={(e) => alterarEmpresaResponsavelAuditoria(e.target.value)}
                                         className="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold outline-none focus:ring-2 focus:ring-slate-300"
                                     >
                                         <option value="">Selecionar empresa cadastrada</option>
@@ -13458,7 +13673,7 @@ function NovaAuditoriaCampoDireta({ usuario = null, onAuditoriaSalva, empresasBa
                                         ))}
                                     </datalist>
                                     <p className="mt-1 text-[11px] text-slate-400">
-                                        Selecione uma empresa cadastrada ou digite manualmente quando ainda não estiver no cadastro.
+                                        Ao selecionar uma empresa cadastrada, o app preenche automaticamente e-mail, WhatsApp e TST responsável quando esses dados existirem no cadastro.
                                     </p>
                                 </div>
                                 {renderCampoTexto("auditorNome", "Nome do auditor", "Quem está realizando a auditoria")}
@@ -13507,6 +13722,9 @@ function NovaAuditoriaCampoDireta({ usuario = null, onAuditoriaSalva, empresasBa
                                 {renderCampoTexto("prazoAdequacao", "Prazo para adequação", "", "date")}
                                 {renderCampoTexto("emailResponsavel", "E-mail do responsável", "responsavel@empresa.com", "email")}
                                 {renderCampoTexto("whatsappResponsavel", "WhatsApp do responsável", "Ex.: 12 99999-9999")}
+                                {renderCampoTexto("nomeTstResponsavel", "TST responsável", "Nome do TST responsável")}
+                                {renderCampoTexto("emailTstResponsavel", "E-mail do TST responsável", "tst@empresa.com", "email")}
+                                {renderCampoTexto("whatsappTstResponsavel", "WhatsApp do TST responsável", "Ex.: 12 99999-9999")}
                                 <div className="md:col-span-2 rounded-3xl bg-slate-50 p-4 ring-1 ring-slate-200">
                                     <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
                                         <div>
@@ -13538,6 +13756,40 @@ function NovaAuditoriaCampoDireta({ usuario = null, onAuditoriaSalva, empresasBa
                                                     WhatsApp
                                                 </button>
                                             )}
+                                        </div>
+                                    </div>
+                                    <div className="mt-4 rounded-2xl bg-white p-3 ring-1 ring-slate-200">
+                                        <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+                                            <div>
+                                                <p className="text-sm font-black text-slate-900">Enviar também ao TST responsável</p>
+                                                <p className="mt-1 text-xs leading-relaxed text-slate-500">
+                                                    Use quando a tratativa precisar ser acompanhada pelo Técnico de Segurança cadastrado na empresa.
+                                                </p>
+                                            </div>
+                                            <div className="flex flex-col gap-2 sm:flex-row">
+                                                {linkEmailTstAuditoria ? (
+                                                    <a href={linkEmailTstAuditoria} className="inline-flex items-center justify-center gap-2 rounded-2xl bg-white px-4 py-2 text-xs font-bold text-slate-700 ring-1 ring-slate-200 hover:bg-slate-100">
+                                                        <Mail className="h-4 w-4" />
+                                                        E-mail TST
+                                                    </a>
+                                                ) : (
+                                                    <button type="button" disabled className="inline-flex cursor-not-allowed items-center justify-center gap-2 rounded-2xl bg-white px-4 py-2 text-xs font-bold text-slate-400 ring-1 ring-slate-200">
+                                                        <Mail className="h-4 w-4" />
+                                                        E-mail TST
+                                                    </button>
+                                                )}
+                                                {linkWhatsappTstAuditoria ? (
+                                                    <a href={linkWhatsappTstAuditoria} target="_blank" rel="noreferrer" className="inline-flex items-center justify-center gap-2 rounded-2xl bg-emerald-600 px-4 py-2 text-xs font-bold text-white hover:bg-emerald-700">
+                                                        <MessageCircle className="h-4 w-4" />
+                                                        WhatsApp TST
+                                                    </a>
+                                                ) : (
+                                                    <button type="button" disabled className="inline-flex cursor-not-allowed items-center justify-center gap-2 rounded-2xl bg-emerald-50 px-4 py-2 text-xs font-bold text-emerald-300 ring-1 ring-emerald-100">
+                                                        <MessageCircle className="h-4 w-4" />
+                                                        WhatsApp TST
+                                                    </button>
+                                                )}
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
@@ -13657,7 +13909,7 @@ export default function App() {
     const carregarEmpresas = useCallback(async () => {
         const { data, error } = await supabase
             .from("empresas")
-            .select("id, nome, cnpj, responsavel, email, telefone, status, tipo_empresa, logo_url, logo_nome, contrato_url, contrato_nome, numero_contrato, data_inicio_contrato, data_fim_contrato, responsavel_contratante, tst_responsavel, tst_email, escopo_servico, observacao_status, empresa_pai_id")
+            .select("id, nome, cnpj, responsavel, email, telefone, responsavel_auditoria, email_auditoria, whatsapp_auditoria, receber_auditoria, status, tipo_empresa, logo_url, logo_nome, contrato_url, contrato_nome, numero_contrato, data_inicio_contrato, data_fim_contrato, responsavel_contratante, tst_responsavel, tst_email, tst_whatsapp, escopo_servico, observacao_status, empresa_pai_id")
             .order("nome", { ascending: true });
 
         if (error) {
@@ -13969,7 +14221,11 @@ export default function App() {
             tipo_empresa,
             empresa_pai_id,
             tst_responsavel,
-            tst_email
+            tst_email,
+            tst_whatsapp,
+            email_auditoria,
+            whatsapp_auditoria,
+            responsavel_auditoria
           )
         `)
                 .order("created_at", { ascending: false });
@@ -13996,6 +14252,9 @@ export default function App() {
                     empresaPaiNome: empresaPai?.nome || colaborador.empresaPaiNome || "",
                     empresaTstResponsavel: empresaAtual?.tst_responsavel || empresaPai?.tst_responsavel || "",
                     empresaTstEmail: empresaAtual?.tst_email || empresaPai?.tst_email || "",
+                    empresaTstWhatsapp: empresaAtual?.tst_whatsapp || empresaPai?.tst_whatsapp || "",
+                    empresaEmailAuditoria: empresaAtual?.email_auditoria || empresaPai?.email_auditoria || empresaAtual?.email || empresaPai?.email || "",
+                    empresaWhatsappAuditoria: empresaAtual?.whatsapp_auditoria || empresaPai?.whatsapp_auditoria || empresaAtual?.telefone || empresaPai?.telefone || "",
                     empresaExibicao: ehSubcontratada
                         ? `${empresaPai.nome} / Subcontratada: ${empresaAtual.nome}`
                         : colaborador.empresa,
@@ -14111,6 +14370,10 @@ export default function App() {
                     responsavel: novaEmpresa.responsavel || null,
                     email: novaEmpresa.email || null,
                     telefone: novaEmpresa.telefone || null,
+                    responsavel_auditoria: novaEmpresa.responsavelAuditoria || null,
+                    email_auditoria: novaEmpresa.emailAuditoria || null,
+                    whatsapp_auditoria: novaEmpresa.whatsappAuditoria || null,
+                    receber_auditoria: novaEmpresa.receberAuditoria !== false,
                     tipo_empresa: novaEmpresa.tipoEmpresa || "Terceirizada",
                     empresa_pai_id: novaEmpresa.empresaPaiId || null,
                     status: "Empresa ativa",
@@ -14120,10 +14383,11 @@ export default function App() {
                     responsavel_contratante: novaEmpresa.responsavelContratante || null,
                     tst_responsavel: novaEmpresa.tstResponsavel || null,
                     tst_email: novaEmpresa.tstEmail || null,
+                    tst_whatsapp: novaEmpresa.tstWhatsapp || null,
                     escopo_servico: novaEmpresa.escopoServico || null,
                     observacao_status: novaEmpresa.observacaoStatus || null,
                 })
-                .select("id, nome, cnpj, responsavel, email, telefone, status, tipo_empresa, logo_url, logo_nome, contrato_url, contrato_nome, numero_contrato, data_inicio_contrato, data_fim_contrato, responsavel_contratante, tst_responsavel, tst_email, escopo_servico, observacao_status, empresa_pai_id")
+                .select("id, nome, cnpj, responsavel, email, telefone, responsavel_auditoria, email_auditoria, whatsapp_auditoria, receber_auditoria, status, tipo_empresa, logo_url, logo_nome, contrato_url, contrato_nome, numero_contrato, data_inicio_contrato, data_fim_contrato, responsavel_contratante, tst_responsavel, tst_email, tst_whatsapp, escopo_servico, observacao_status, empresa_pai_id")
                 .single();
 
             if (error) {
@@ -14149,7 +14413,7 @@ export default function App() {
                     .from("empresas")
                     .update(atualizacaoArquivos)
                     .eq("id", data.id)
-                    .select("id, nome, cnpj, responsavel, email, telefone, status, tipo_empresa, logo_url, logo_nome, contrato_url, contrato_nome, numero_contrato, data_inicio_contrato, data_fim_contrato, responsavel_contratante, tst_responsavel, tst_email, escopo_servico, observacao_status, empresa_pai_id")
+                    .select("id, nome, cnpj, responsavel, email, telefone, responsavel_auditoria, email_auditoria, whatsapp_auditoria, receber_auditoria, status, tipo_empresa, logo_url, logo_nome, contrato_url, contrato_nome, numero_contrato, data_inicio_contrato, data_fim_contrato, responsavel_contratante, tst_responsavel, tst_email, tst_whatsapp, escopo_servico, observacao_status, empresa_pai_id")
                     .single();
 
                 if (arquivosError) {
@@ -14205,6 +14469,10 @@ export default function App() {
                     responsavel: empresaAtualizada.responsavel || null,
                     email: empresaAtualizada.email || null,
                     telefone: empresaAtualizada.telefone || null,
+                    responsavel_auditoria: empresaAtualizada.responsavelAuditoria || null,
+                    email_auditoria: empresaAtualizada.emailAuditoria || null,
+                    whatsapp_auditoria: empresaAtualizada.whatsappAuditoria || null,
+                    receber_auditoria: empresaAtualizada.receberAuditoria !== false,
                     status: normalizarStatusEmpresa(empresaAtualizada.status),
                     tipo_empresa: empresaAtualizada.tipoEmpresa || "Terceirizada",
                     empresa_pai_id: empresaAtualizada.tipoEmpresa === "Subcontratada" ? empresaAtualizada.empresaPaiId : null,
@@ -14218,11 +14486,12 @@ export default function App() {
                     responsavel_contratante: empresaAtualizada.responsavelContratante || null,
                     tst_responsavel: empresaAtualizada.tstResponsavel || null,
                     tst_email: empresaAtualizada.tstEmail || null,
+                    tst_whatsapp: empresaAtualizada.tstWhatsapp || null,
                     escopo_servico: empresaAtualizada.escopoServico || null,
                     observacao_status: empresaAtualizada.observacaoStatus || null,
                 })
                 .eq("id", empresaAtualizada.id)
-                .select("id, nome, cnpj, responsavel, email, telefone, status, tipo_empresa, logo_url, logo_nome, contrato_url, contrato_nome, numero_contrato, data_inicio_contrato, data_fim_contrato, responsavel_contratante, tst_responsavel, tst_email, escopo_servico, observacao_status, empresa_pai_id")
+                .select("id, nome, cnpj, responsavel, email, telefone, responsavel_auditoria, email_auditoria, whatsapp_auditoria, receber_auditoria, status, tipo_empresa, logo_url, logo_nome, contrato_url, contrato_nome, numero_contrato, data_inicio_contrato, data_fim_contrato, responsavel_contratante, tst_responsavel, tst_email, tst_whatsapp, escopo_servico, observacao_status, empresa_pai_id")
                 .single();
 
             if (error) {
@@ -14375,7 +14644,7 @@ export default function App() {
                 nome: nomeTratado,
                 status: "Empresa ativa",
             })
-            .select("id, nome, cnpj, responsavel, email, telefone, status, tipo_empresa, logo_url, logo_nome, contrato_url, contrato_nome, numero_contrato, data_inicio_contrato, data_fim_contrato, responsavel_contratante, tst_responsavel, tst_email, escopo_servico, observacao_status, empresa_pai_id")
+            .select("id, nome, cnpj, responsavel, email, telefone, responsavel_auditoria, email_auditoria, whatsapp_auditoria, receber_auditoria, status, tipo_empresa, logo_url, logo_nome, contrato_url, contrato_nome, numero_contrato, data_inicio_contrato, data_fim_contrato, responsavel_contratante, tst_responsavel, tst_email, tst_whatsapp, escopo_servico, observacao_status, empresa_pai_id")
             .single();
 
         if (error) {
