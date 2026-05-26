@@ -22,6 +22,8 @@ import {
     LayoutDashboard,
     Lock,
     LogIn,
+    Mail,
+    MessageCircle,
     Plus,
     QrCode,
     RefreshCw,
@@ -1138,6 +1140,99 @@ function normalizarAuditoriaCampo(item = {}) {
         createdAt: item.created_at || item.createdAt || "",
         desvios,
     };
+}
+
+
+function textoNaoAplicavel(valor = "") {
+    const texto = String(valor || "").trim();
+    if (!texto) return "";
+    const normalizado = normalizarTextoBusca(texto).replace(/_/g, " ");
+    if (normalizado.includes("nao aplicavel") || normalizado.includes("não aplicavel")) return "Não aplicável";
+    return texto;
+}
+
+function identificarAlvoAuditoriaCampo(item = {}) {
+    const colaborador = String(item.colaboradorNome || item.colaborador_nome || item.colaboradores?.nome || "").trim();
+    const maquina = textoNaoAplicavel(item.maquinaEquipamento || item.maquina_equipamento || "");
+    const area = textoNaoAplicavel(item.area || "");
+    const subarea = textoNaoAplicavel(item.subarea || "");
+    const local = textoNaoAplicavel(item.local || "");
+    const tipo = String(item.tipoAuditoria || item.tipo_auditoria || "").trim();
+    const titulo = String(item.titulo || item.assunto || item.numeroAuditoria || item.numero_auditoria || "Auditoria de campo").trim();
+
+    if (colaborador) {
+        return {
+            titulo: colaborador,
+            tipo: "Colaborador auditado",
+            descricao: [item.empresaNome || item.empresa_nome || item.empresaResponsavel || item.empresa_responsavel, item.funcao].filter(Boolean).join(" · "),
+        };
+    }
+
+    if (maquina && maquina !== "Não aplicável") {
+        return {
+            titulo: maquina,
+            tipo: tipo && normalizarTextoBusca(tipo).includes("equip") ? "Equipamento auditado" : "Máquina/equipamento auditado",
+            descricao: [area, local, item.empresaResponsavel || item.empresa_responsavel || item.empresaNome || item.empresa_nome].filter(Boolean).join(" · "),
+        };
+    }
+
+    if (area && area !== "Não aplicável") {
+        return {
+            titulo: area,
+            tipo: "Área auditada",
+            descricao: [subarea, local, item.empresaResponsavel || item.empresa_responsavel || item.empresaNome || item.empresa_nome].filter(Boolean).join(" · "),
+        };
+    }
+
+    if (local && local !== "Não aplicável") {
+        return {
+            titulo: local,
+            tipo: "Local auditado",
+            descricao: [tipo, item.empresaResponsavel || item.empresa_responsavel || item.empresaNome || item.empresa_nome].filter(Boolean).join(" · "),
+        };
+    }
+
+    return {
+        titulo,
+        tipo: tipo || "Auditoria de campo",
+        descricao: [item.empresaResponsavel || item.empresa_responsavel || item.empresaNome || item.empresa_nome].filter(Boolean).join(" · "),
+    };
+}
+
+function fotosAuditoriaCampo(item = {}) {
+    const desvios = Array.isArray(item.desvios) ? item.desvios : [];
+    const desvioPrincipal = desvios[0] || {};
+    return {
+        antes: desvioPrincipal.fotoAntesUrl || desvioPrincipal.foto_antes_url || item.fotoAntesUrl || item.foto_antes_url || "",
+        depois: desvioPrincipal.fotoDepoisUrl || desvioPrincipal.foto_depois_url || item.fotoDepoisUrl || item.foto_depois_url || "",
+    };
+}
+
+function FotoAuditoriaPreview({ url, label }) {
+    const [erro, setErro] = useState(false);
+    if (!url) return null;
+
+    return (
+        <a href={url} target="_blank" rel="noreferrer" className="block overflow-hidden rounded-2xl bg-white ring-1 ring-slate-200 transition hover:ring-slate-300">
+            {!erro ? (
+                <img
+                    src={url}
+                    alt={label}
+                    className="h-32 w-full object-cover"
+                    loading="lazy"
+                    onError={() => setErro(true)}
+                />
+            ) : (
+                <div className="flex h-32 items-center justify-center bg-slate-100 px-3 text-center text-xs font-semibold text-slate-500">
+                    Miniatura indisponível. Clique para abrir a foto.
+                </div>
+            )}
+            <span className="flex items-center justify-between gap-2 px-3 py-2 text-xs font-bold text-slate-600">
+                {label}
+                <Eye className="h-3.5 w-3.5" />
+            </span>
+        </a>
+    );
 }
 
 function auditoriaCampoAberta(item = {}) {
@@ -11462,13 +11557,15 @@ function RelatorioAuditoria({
 function EditorNotificacaoHistoricoAuditoria({ auditoria = {}, onAtualizada }) {
     const notificacaoInicial = auditoria.notificacao || {};
     const desvioPrincipal = Array.isArray(auditoria.desvios) ? auditoria.desvios[0] || null : null;
+    const alvoAuditoria = identificarAlvoAuditoriaCampo(auditoria);
+    const fotosAuditoria = fotosAuditoriaCampo(auditoria);
     const [aberto, setAberto] = useState(false);
     const [visualizarPreview, setVisualizarPreview] = useState(false);
     const [salvando, setSalvando] = useState(false);
     const [mensagem, setMensagem] = useState("");
     const [notificacao, setNotificacao] = useState({
-        titulo: notificacaoInicial.titulo || `Auditoria de campo - ${auditoria.colaboradorNome || "Colaborador"}`,
-        mensagem: notificacaoInicial.mensagem || `Auditoria de campo registrada para ${auditoria.colaboradorNome || "colaborador"}. Resultado: ${auditoria.classificacao || "sem classificação"} (${auditoria.pontuacao || 0}%).`,
+        titulo: notificacaoInicial.titulo || `Auditoria de campo - ${alvoAuditoria.titulo}`,
+        mensagem: notificacaoInicial.mensagem || `Auditoria de campo registrada para ${alvoAuditoria.tipo.toLowerCase()}: ${alvoAuditoria.titulo}. Resultado: ${auditoria.classificacao || "sem classificação"} (${auditoria.pontuacao || 0}%).`,
         complementos: Array.isArray(notificacaoInicial.complementos) ? notificacaoInicial.complementos : [],
         auditor: notificacaoInicial.auditor || auditoria.auditorNome || "",
     });
@@ -11823,22 +11920,17 @@ function EditorNotificacaoHistoricoAuditoria({ auditoria = {}, onAtualizada }) {
                             </div>
                         </div>
 
-                        {(desvioPrincipal?.fotoAntesUrl || desvioPrincipal?.fotoDepoisUrl) && (
+                        {(fotosAuditoria.antes || fotosAuditoria.depois) && (
                             <div className="rounded-2xl border border-slate-200 bg-slate-50 p-3">
-                                <p className="text-sm font-bold text-slate-800">Fotos anexadas</p>
+                                <div className="flex items-center justify-between gap-2">
+                                    <div>
+                                        <p className="text-sm font-bold text-slate-800">Fotos anexadas</p>
+                                        <p className="text-xs text-slate-500">Evidências vinculadas à auditoria ou ao desvio principal.</p>
+                                    </div>
+                                </div>
                                 <div className="mt-3 grid gap-3 sm:grid-cols-2">
-                                    {desvioPrincipal?.fotoAntesUrl && (
-                                        <a href={desvioPrincipal.fotoAntesUrl} target="_blank" rel="noreferrer" className="block overflow-hidden rounded-2xl bg-white ring-1 ring-slate-200">
-                                            <img src={desvioPrincipal.fotoAntesUrl} alt="Foto antes da auditoria" className="h-40 w-full object-cover" />
-                                            <span className="block px-3 py-2 text-xs font-bold text-slate-600">Foto antes</span>
-                                        </a>
-                                    )}
-                                    {desvioPrincipal?.fotoDepoisUrl && (
-                                        <a href={desvioPrincipal.fotoDepoisUrl} target="_blank" rel="noreferrer" className="block overflow-hidden rounded-2xl bg-white ring-1 ring-slate-200">
-                                            <img src={desvioPrincipal.fotoDepoisUrl} alt="Foto depois da auditoria" className="h-40 w-full object-cover" />
-                                            <span className="block px-3 py-2 text-xs font-bold text-slate-600">Foto depois</span>
-                                        </a>
-                                    )}
+                                    <FotoAuditoriaPreview url={fotosAuditoria.antes} label="Foto antes" />
+                                    <FotoAuditoriaPreview url={fotosAuditoria.depois} label="Foto depois" />
                                 </div>
                             </div>
                         )}
@@ -12137,21 +12229,63 @@ function DashboardAuditoriaCampo({ auditoriasCampo = [], onAuditoriaAtualizada }
                 <div className="space-y-2">
                     {auditoriasNormalizadas.length === 0 ? (
                         <div className="rounded-2xl border border-dashed border-slate-300 p-5 text-center text-sm text-slate-500">Nenhuma auditoria de campo registrada.</div>
-                    ) : auditoriasNormalizadas.slice(0, 12).map((item) => (
-                        <div key={item.id || `${item.colaboradorNome}-${item.createdAt}`} className="rounded-2xl bg-slate-50 p-3 ring-1 ring-slate-200">
-                            <div className="flex flex-wrap items-center justify-between gap-2">
-                                <div>
-                                    <p className="text-sm font-bold text-slate-950">{item.colaboradorNome || "Colaborador não informado"}</p>
-                                    <p className="text-xs text-slate-500">{item.empresaNome || "Empresa não informada"} · {formatarDataHora(item.createdAt)}</p>
-                                    <p className="mt-1 text-xs text-slate-400">Status do desvio: {item.statusDesvio || "Sem desvio"}</p>
+                    ) : auditoriasNormalizadas.slice(0, 12).map((item) => {
+                        const alvo = identificarAlvoAuditoriaCampo(item);
+                        const fotos = fotosAuditoriaCampo(item);
+                        const temFotos = Boolean(fotos.antes || fotos.depois);
+
+                        return (
+                            <div key={item.id || `${alvo.titulo}-${item.createdAt}`} className="overflow-hidden rounded-3xl bg-white ring-1 ring-slate-200 shadow-sm">
+                                <div className="border-b border-slate-100 bg-slate-50/80 p-4">
+                                    <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+                                        <div className="min-w-0">
+                                            <div className="flex flex-wrap items-center gap-2">
+                                                {item.numeroAuditoria && <span className="rounded-full bg-slate-950 px-3 py-1 text-xs font-black text-white">{item.numeroAuditoria}</span>}
+                                                <span className="rounded-full bg-blue-50 px-3 py-1 text-xs font-bold text-blue-700 ring-1 ring-blue-100">{alvo.tipo}</span>
+                                                {item.grauRisco && <span className="rounded-full bg-orange-50 px-3 py-1 text-xs font-bold text-orange-700 ring-1 ring-orange-100">Risco: {item.grauRisco}</span>}
+                                            </div>
+                                            <h3 className="mt-3 text-base font-black text-slate-950">{alvo.titulo}</h3>
+                                            {alvo.descricao && <p className="mt-1 text-xs font-medium text-slate-500">{alvo.descricao}</p>}
+                                            <p className="mt-1 text-xs text-slate-400">{formatarDataHora(item.createdAt)} · Auditor: {item.auditorNome || "Não informado"}</p>
+                                        </div>
+                                        <span className={classNames("w-fit rounded-full px-3 py-1 text-xs font-bold ring-1", classeClassificacaoAuditoriaCampo(item.classificacao))}>
+                                            {item.classificacao || "Sem classificação"} · {item.pontuacao}%
+                                        </span>
+                                    </div>
                                 </div>
-                                <span className={classNames("rounded-full px-3 py-1 text-xs font-bold ring-1", classeClassificacaoAuditoriaCampo(item.classificacao))}>
-                                    {item.classificacao || "Sem classificação"} · {item.pontuacao}%
-                                </span>
+
+                                <div className="grid gap-3 p-4 lg:grid-cols-3">
+                                    <div className="rounded-2xl bg-slate-50 p-3 ring-1 ring-slate-100 lg:col-span-2">
+                                        <p className="text-xs font-bold uppercase tracking-wide text-slate-400">Situação encontrada</p>
+                                        <p className="mt-2 text-sm leading-relaxed text-slate-700">{item.situacaoEncontrada || item.observacao || "Situação não informada."}</p>
+                                    </div>
+                                    <div className="rounded-2xl bg-slate-50 p-3 ring-1 ring-slate-100">
+                                        <p className="text-xs font-bold uppercase tracking-wide text-slate-400">Tratativa</p>
+                                        <p className="mt-2 text-sm leading-relaxed text-slate-700">{item.acaoRecomendada || "Ação recomendada não informada."}</p>
+                                        <p className="mt-2 text-xs text-slate-500">Responsável: {item.responsavelTratativa || "Não informado"}</p>
+                                        <p className="text-xs text-slate-500">Prazo: {item.prazoAdequacao ? formatDate(item.prazoAdequacao) : "Não informado"}</p>
+                                        <p className="text-xs text-slate-500">Status: {item.statusAuditoria || item.statusDesvio || "Não informado"}</p>
+                                    </div>
+                                </div>
+
+                                {temFotos && (
+                                    <div className="px-4 pb-4">
+                                        <div className="rounded-2xl border border-slate-200 bg-slate-50 p-3">
+                                            <p className="text-xs font-bold uppercase tracking-wide text-slate-500">Fotos da auditoria</p>
+                                            <div className="mt-3 grid gap-3 sm:grid-cols-2">
+                                                <FotoAuditoriaPreview url={fotos.antes} label="Foto antes" />
+                                                <FotoAuditoriaPreview url={fotos.depois} label="Foto depois" />
+                                            </div>
+                                        </div>
+                                    </div>
+                                )}
+
+                                <div className="border-t border-slate-100 px-4 pb-4">
+                                    <EditorNotificacaoHistoricoAuditoria auditoria={item} onAtualizada={onAuditoriaAtualizada} />
+                                </div>
                             </div>
-                            <EditorNotificacaoHistoricoAuditoria auditoria={item} onAtualizada={onAuditoriaAtualizada} />
-                        </div>
-                    ))}
+                        );
+                    })}
                 </div>
             ));
         }
@@ -12164,8 +12298,8 @@ function DashboardAuditoriaCampo({ auditoriasCampo = [], onAuditoriaAtualizada }
                         <div key={item.id || `${item.colaboradorNome}-${item.createdAt}-boas-praticas`} className="rounded-2xl bg-emerald-50/60 p-3 ring-1 ring-emerald-100">
                             <div className="flex flex-wrap items-start justify-between gap-2">
                                 <div>
-                                    <p className="text-sm font-bold text-emerald-950">{item.colaboradorNome || "Colaborador não informado"}</p>
-                                    <p className="text-xs text-emerald-700">{item.empresaNome || "Empresa não informada"} · {formatarDataHora(item.createdAt)}</p>
+                                    <p className="text-sm font-bold text-emerald-950">{identificarAlvoAuditoriaCampo(item).titulo}</p>
+                                    <p className="text-xs text-emerald-700">{identificarAlvoAuditoriaCampo(item).tipo} · {item.empresaNome || item.empresaResponsavel || "Empresa não informada"} · {formatarDataHora(item.createdAt)}</p>
                                 </div>
                                 <span className="rounded-full bg-white px-3 py-1 text-xs font-bold text-emerald-700 ring-1 ring-emerald-200">DDS futuro</span>
                             </div>
@@ -12357,31 +12491,6 @@ function DashboardAuditoriaCampo({ auditoriasCampo = [], onAuditoriaAtualizada }
                 </div>
             )}
 
-            <Card className="mb-6 border-emerald-100 bg-gradient-to-br from-white to-emerald-50/40">
-                <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-                    <div className="flex items-start gap-3">
-                        <div className="rounded-2xl bg-emerald-100 p-3 text-emerald-700">
-                            <Plus className="h-5 w-5" />
-                        </div>
-                        <div>
-                            <p className="text-xs font-bold uppercase tracking-wide text-emerald-700">Ação rápida</p>
-                            <h2 className="text-lg font-black text-slate-950">Nova Auditoria de Campo</h2>
-                            <p className="mt-1 text-sm text-slate-500">Use o formulário direto para áreas externas, frentes de serviço, máquinas, equipamentos ou locais sem QR Code fixo.</p>
-                        </div>
-                    </div>
-                    <div className="flex flex-col gap-2 sm:flex-row">
-                        <button type="button" onClick={() => window.open('/nova-auditoria-campo', '_blank')} className="inline-flex items-center justify-center gap-2 rounded-2xl bg-slate-950 px-4 py-3 text-sm font-bold text-white hover:bg-slate-800">
-                            <Plus className="h-4 w-4" />
-                            Nova auditoria
-                        </button>
-                        <button type="button" onClick={() => setMostrarPersonalizacao(true)} className="inline-flex items-center justify-center gap-2 rounded-2xl bg-white px-4 py-3 text-sm font-bold text-slate-700 ring-1 ring-slate-200 hover:bg-slate-50">
-                            <QrCode className="h-4 w-4" />
-                            Gerenciar painel
-                        </button>
-                    </div>
-                </div>
-            </Card>
-
             <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
                 {cartasOrdenadas.filter((item) => cartasVisiveis[item.chave] !== false).map((item) => {
                     const Icon = item.icon;
@@ -12457,6 +12566,8 @@ function NovaAuditoriaCampoDireta({ usuario = null, onAuditoriaSalva, empresasBa
         situacaoEncontrada: "",
         acaoRecomendada: "",
         responsavelTratativa: "",
+        emailResponsavel: "",
+        whatsappResponsavel: "",
         prazoAdequacao: "",
         statusAuditoria: "Aberta",
         fotoAntes: null,
@@ -12472,6 +12583,37 @@ function NovaAuditoriaCampoDireta({ usuario = null, onAuditoriaSalva, empresasBa
     const linkEspecifico = formulario.maquinaEquipamento
         ? `${linkGeral}?tipo=${tipoAtual.parametros[0] || tipoAtual.valor}&id=${encodeURIComponent(formulario.maquinaEquipamento)}`
         : linkTipoAtual;
+
+    const textoNotificacaoResponsavel = useMemo(() => {
+        return [
+            `Auditoria de campo: ${formulario.titulo || "Sem título"}`,
+            `Tipo: ${tipoAtual.label}`,
+            `Empresa responsável: ${formulario.empresaResponsavel || "Não informada"}`,
+            `Área: ${formulario.area || "Não informada"}`,
+            `Local: ${formulario.local || "Não informado"}`,
+            `Grau de risco: ${formulario.grauRisco}`,
+            `Status: ${formulario.statusAuditoria}`,
+            `Auditor: ${formulario.auditorNome || usuario?.email || "Não informado"}`,
+            "",
+            `Situação encontrada: ${formulario.situacaoEncontrada || "Não informada"}`,
+            `Ação recomendada: ${formulario.acaoRecomendada || "Não informada"}`,
+            `Responsável pela tratativa: ${formulario.responsavelTratativa || "Não informado"}`,
+            `Prazo: ${formulario.prazoAdequacao || "Não informado"}`,
+        ].join("\n");
+    }, [formulario, tipoAtual.label, usuario?.email]);
+
+    const assuntoNotificacaoResponsavel = `Auditoria de campo - ${formulario.grauRisco || "Risco"} - ${formulario.titulo || tipoAtual.label}`;
+    const emailResponsavelAuditoria = String(formulario.emailResponsavel || "").trim();
+    const whatsappResponsavelAuditoria = String(formulario.whatsappResponsavel || "").replace(/\D/g, "");
+    const whatsappResponsavelFormatado = whatsappResponsavelAuditoria
+        ? (whatsappResponsavelAuditoria.startsWith("55") ? whatsappResponsavelAuditoria : `55${whatsappResponsavelAuditoria}`)
+        : "";
+    const linkEmailResponsavel = emailResponsavelAuditoria
+        ? `mailto:${emailResponsavelAuditoria}?subject=${encodeURIComponent(assuntoNotificacaoResponsavel)}&body=${encodeURIComponent(textoNotificacaoResponsavel)}`
+        : "";
+    const linkWhatsappResponsavel = whatsappResponsavelFormatado
+        ? `https://wa.me/${whatsappResponsavelFormatado}?text=${encodeURIComponent(textoNotificacaoResponsavel)}`
+        : "";
 
     const alterarFormulario = (campo, valor) => {
         setFormulario((atual) => ({ ...atual, [campo]: valor }));
@@ -12650,6 +12792,9 @@ function NovaAuditoriaCampoDireta({ usuario = null, onAuditoriaSalva, empresasBa
                     titulo: formulario.titulo.trim(),
                     mensagem: `Auditoria ${numeroAuditoria} registrada por ${formulario.auditorNome || usuario?.email || "auditor"}. Tipo: ${tipoAtual.label}. Risco: ${formulario.grauRisco}. Resultado: ${resultado.classificacao} (${resultado.percentual}%).`,
                     auditor: formulario.auditorNome.trim() || usuario?.email || "Auditor de campo",
+                    emailResponsavel: emailResponsavelAuditoria || null,
+                    whatsappResponsavel: whatsappResponsavelFormatado || null,
+                    textoEnvio: textoNotificacaoResponsavel,
                     complementos: formulario.acaoRecomendada ? [formulario.acaoRecomendada.trim()] : [],
                 },
             };
@@ -12724,28 +12869,39 @@ function NovaAuditoriaCampoDireta({ usuario = null, onAuditoriaSalva, empresasBa
     return (
         <div className="min-h-screen bg-slate-100 p-4 text-slate-900 md:p-6">
             <div className="mx-auto max-w-6xl space-y-5">
-                <Card className="border-emerald-100 bg-gradient-to-br from-white to-emerald-50/50">
-                    <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+                <Card className="border-emerald-100 bg-gradient-to-br from-white via-white to-emerald-50/60">
+                    <div className="grid gap-5 lg:grid-cols-[1fr_230px] lg:items-center">
                         <div className="flex items-start gap-3">
                             <div className="rounded-2xl bg-emerald-100 p-3 text-emerald-700">
                                 <ClipboardCheck className="h-6 w-6" />
                             </div>
-                            <div>
+                            <div className="min-w-0">
                                 <p className="text-xs font-bold uppercase tracking-[0.22em] text-emerald-700">Link direto</p>
                                 <h1 className="mt-1 text-2xl font-black text-slate-950 md:text-3xl">Nova Auditoria de Campo</h1>
                                 <p className="mt-1 max-w-3xl text-sm text-slate-500">Formulário rápido para áreas externas, pátios, frentes de serviço, máquinas, equipamentos ou locais sem QR Code específico.</p>
+                                <div className="mt-4 flex flex-col gap-2 sm:flex-row sm:items-center">
+                                    <div className="min-w-0 rounded-2xl bg-white px-4 py-3 text-xs font-semibold text-slate-500 ring-1 ring-slate-200">
+                                        <span className="block truncate">{linkGeral}</span>
+                                    </div>
+                                    <button type="button" onClick={() => copiarTexto(linkGeral, "Link geral copiado.")} className="inline-flex shrink-0 items-center justify-center gap-2 rounded-2xl bg-slate-950 px-4 py-3 text-sm font-bold text-white hover:bg-slate-800">
+                                        <QrCode className="h-4 w-4" />
+                                        Copiar link geral
+                                    </button>
+                                </div>
                             </div>
                         </div>
-                        <button type="button" onClick={() => copiarTexto(linkGeral, "Link geral copiado.")} className="inline-flex items-center justify-center gap-2 rounded-2xl bg-white px-4 py-3 text-sm font-bold text-slate-700 ring-1 ring-slate-200 hover:bg-slate-50">
-                            <QrCode className="h-4 w-4" />
-                            Copiar link geral
-                        </button>
+                        <div className="rounded-3xl bg-white p-3 text-center shadow-sm ring-1 ring-slate-200">
+                            <div className="mx-auto flex h-32 w-32 items-center justify-center rounded-2xl bg-slate-50 p-2">
+                                <QRCodeSVG value={linkGeral} size={112} level="M" />
+                            </div>
+                            <p className="mt-2 text-[11px] font-bold uppercase tracking-wide text-slate-400">QR Code geral</p>
+                        </div>
                     </div>
                 </Card>
 
-                <div className="grid gap-5 lg:grid-cols-[1fr_360px]">
+                <div className="grid gap-5">
                     <div className="space-y-5">
-                        <CardRecolhivel titulo="Dados da auditoria" subtitulo="Preencha as informações principais da auditoria de campo." defaultOpen={true} persistKey="novaAuditoriaCampo:dados">
+                        <CardRecolhivel titulo="Dados da auditoria" subtitulo="Preencha as informações principais da auditoria de campo." contador="AUD-ANO-0001" defaultOpen={true} persistKey="novaAuditoriaCampo:dados">
                             <div className="grid gap-4 md:grid-cols-2">
                                 <div>
                                     <label className="text-xs font-bold uppercase tracking-wide text-slate-500">Tipo de auditoria</label>
@@ -12814,11 +12970,21 @@ function NovaAuditoriaCampoDireta({ usuario = null, onAuditoriaSalva, empresasBa
                                 </div>
                                 <div>
                                     <label className="text-xs font-bold uppercase tracking-wide text-slate-500">Empresa responsável</label>
+                                    <select
+                                        value={empresasAuditoriaCampo.some((empresa) => empresa.nome === formulario.empresaResponsavel) ? formulario.empresaResponsavel : ""}
+                                        onChange={(e) => alterarFormulario("empresaResponsavel", e.target.value)}
+                                        className="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold outline-none focus:ring-2 focus:ring-slate-300"
+                                    >
+                                        <option value="">Selecionar empresa cadastrada</option>
+                                        {empresasAuditoriaCampo.map((empresa) => (
+                                            <option key={empresa.id || empresa.nome} value={empresa.nome}>{empresa.nome}</option>
+                                        ))}
+                                    </select>
                                     <input
                                         value={formulario.empresaResponsavel || ""}
                                         onChange={(e) => alterarFormulario("empresaResponsavel", e.target.value)}
                                         list="empresas-auditoria-campo"
-                                        placeholder="Selecione ou digite a empresa responsável"
+                                        placeholder="Ou digite manualmente"
                                         className="mt-2 w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-slate-300"
                                     />
                                     <datalist id="empresas-auditoria-campo">
@@ -12826,7 +12992,9 @@ function NovaAuditoriaCampoDireta({ usuario = null, onAuditoriaSalva, empresasBa
                                             <option key={empresa.id || empresa.nome} value={empresa.nome} />
                                         ))}
                                     </datalist>
-                                    <p className="mt-1 text-[11px] text-slate-400">Puxa as empresas cadastradas no sistema e também permite digitar manualmente.</p>
+                                    <p className="mt-1 text-[11px] text-slate-400">
+                                        Selecione uma empresa cadastrada ou digite manualmente quando ainda não estiver no cadastro.
+                                    </p>
                                 </div>
                                 {renderCampoTexto("auditorNome", "Nome do auditor", "Quem está realizando a auditoria")}
                                 <datalist id="opcoes-area-auditoria-campo">
@@ -12858,20 +13026,56 @@ function NovaAuditoriaCampoDireta({ usuario = null, onAuditoriaSalva, empresasBa
                                         {statusAuditoriaCampoDireta.map((status) => <option key={status}>{status}</option>)}
                                     </select>
                                 </div>
-                                <div className="md:col-span-2">
+                                <div>
                                     <label className="text-xs font-bold uppercase tracking-wide text-slate-500">Situação encontrada</label>
-                                    <textarea value={formulario.situacaoEncontrada} onChange={(e) => alterarFormulario("situacaoEncontrada", e.target.value)} rows={3} placeholder="Descreva a condição encontrada durante a auditoria" className="mt-2 w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-slate-300" />
+                                    <textarea value={formulario.situacaoEncontrada} onChange={(e) => alterarFormulario("situacaoEncontrada", e.target.value)} rows={3} placeholder="Descreva a condição encontrada durante a auditoria" className="mt-2 w-full resize-none rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-slate-300" />
                                 </div>
                                 <div>
                                     <label className="text-xs font-bold uppercase tracking-wide text-slate-500">Ação recomendada</label>
-                                    <textarea value={formulario.acaoRecomendada} onChange={(e) => alterarFormulario("acaoRecomendada", e.target.value)} rows={3} className="mt-2 w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-slate-300" />
+                                    <textarea value={formulario.acaoRecomendada} onChange={(e) => alterarFormulario("acaoRecomendada", e.target.value)} rows={3} placeholder="Descreva a ação recomendada para correção" className="mt-2 w-full resize-none rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-slate-300" />
                                 </div>
                                 <div>
                                     <label className="text-xs font-bold uppercase tracking-wide text-slate-500">Observações gerais</label>
-                                    <textarea value={formulario.observacoesGerais} onChange={(e) => alterarFormulario("observacoesGerais", e.target.value)} rows={3} className="mt-2 w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-slate-300" />
+                                    <textarea value={formulario.observacoesGerais} onChange={(e) => alterarFormulario("observacoesGerais", e.target.value)} rows={3} placeholder="Observações adicionais, se necessário" className="mt-2 w-full resize-none rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-slate-300" />
                                 </div>
                                 {renderCampoTexto("responsavelTratativa", "Responsável pela tratativa")}
                                 {renderCampoTexto("prazoAdequacao", "Prazo para adequação", "", "date")}
+                                {renderCampoTexto("emailResponsavel", "E-mail do responsável", "responsavel@empresa.com", "email")}
+                                {renderCampoTexto("whatsappResponsavel", "WhatsApp do responsável", "Ex.: 12 99999-9999")}
+                                <div className="md:col-span-2 rounded-3xl bg-slate-50 p-4 ring-1 ring-slate-200">
+                                    <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+                                        <div>
+                                            <p className="text-sm font-black text-slate-900">Notificação ao responsável</p>
+                                            <p className="mt-1 text-xs leading-relaxed text-slate-500">
+                                                Use estes botões para enviar a tratativa por e-mail ou WhatsApp com as informações preenchidas na auditoria.
+                                            </p>
+                                        </div>
+                                        <div className="flex flex-col gap-2 sm:flex-row">
+                                            {linkEmailResponsavel ? (
+                                                <a href={linkEmailResponsavel} className="inline-flex items-center justify-center gap-2 rounded-2xl bg-white px-4 py-2 text-xs font-bold text-slate-700 ring-1 ring-slate-200 hover:bg-slate-100">
+                                                    <Mail className="h-4 w-4" />
+                                                    Enviar e-mail
+                                                </a>
+                                            ) : (
+                                                <button type="button" disabled className="inline-flex cursor-not-allowed items-center justify-center gap-2 rounded-2xl bg-white px-4 py-2 text-xs font-bold text-slate-400 ring-1 ring-slate-200">
+                                                    <Mail className="h-4 w-4" />
+                                                    Enviar e-mail
+                                                </button>
+                                            )}
+                                            {linkWhatsappResponsavel ? (
+                                                <a href={linkWhatsappResponsavel} target="_blank" rel="noreferrer" className="inline-flex items-center justify-center gap-2 rounded-2xl bg-emerald-600 px-4 py-2 text-xs font-bold text-white hover:bg-emerald-700">
+                                                    <MessageCircle className="h-4 w-4" />
+                                                    WhatsApp
+                                                </a>
+                                            ) : (
+                                                <button type="button" disabled className="inline-flex cursor-not-allowed items-center justify-center gap-2 rounded-2xl bg-emerald-50 px-4 py-2 text-xs font-bold text-emerald-300 ring-1 ring-emerald-100">
+                                                    <MessageCircle className="h-4 w-4" />
+                                                    WhatsApp
+                                                </button>
+                                            )}
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
                         </CardRecolhivel>
 
@@ -12906,18 +13110,6 @@ function NovaAuditoriaCampoDireta({ usuario = null, onAuditoriaSalva, empresasBa
                                 ))}
                             </div>
                         </CardRecolhivel>
-                    </div>
-
-                    <div className="space-y-5">
-                        <Card>
-                            <div className="flex items-start justify-between gap-3">
-                                <div>
-                                    <p className="text-xs font-bold uppercase tracking-wide text-slate-500">Número automático</p>
-                                    <p className="mt-1 text-sm text-slate-500">Será gerado ao salvar.</p>
-                                </div>
-                                <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-bold text-slate-600 ring-1 ring-slate-200">AUD-ANO-0001</span>
-                            </div>
-                        </Card>
                     </div>
                 </div>
 
