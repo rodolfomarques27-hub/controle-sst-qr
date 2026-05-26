@@ -894,6 +894,25 @@ const tiposAuditoriaCampoDireta = [
     { valor: "outro", label: "Outro", parametros: ["outro"], grupo: "geral" },
 ];
 
+const categoriasPadronizadasAuditoriaCampo = [
+    { valor: "isolamento", label: "Isolamento" },
+    { valor: "organizacao_area", label: "Organização de área" },
+    { valor: "sinalizacao", label: "Sinalização" },
+    { valor: "acesso_seguro", label: "Acesso seguro" },
+    { valor: "risco_queda", label: "Risco de queda" },
+    { valor: "risco_atropelamento", label: "Risco de atropelamento" },
+    { valor: "transito_maquinas", label: "Trânsito de máquinas" },
+    { valor: "maquina_defeito", label: "Máquina com defeito" },
+    { valor: "maquina_improvisacao", label: "Máquina com improvisação" },
+    { valor: "vazamento", label: "Vazamento" },
+    { valor: "epi", label: "EPI" },
+    { valor: "outro", label: "Outro" },
+];
+
+function obterCategoriaPadronizadaAuditoriaCampo(valor = "") {
+    return categoriasPadronizadasAuditoriaCampo.find((item) => item.valor === valor) || categoriasPadronizadasAuditoriaCampo[0];
+}
+
 const statusAuditoriaCampoDireta = ["Aberta", "Em andamento", "Resolvida", "Cancelada", "Vencida"];
 const grausRiscoAuditoriaCampoDireta = ["Baixo", "Médio", "Alto", "Crítico"];
 const descricoesGrauRiscoAuditoriaCampoDireta = {
@@ -963,7 +982,7 @@ function checklistParaTipoAuditoriaCampo(valor = "") {
 
 function criarRespostasChecklistDinamico(tipoAuditoria = "area") {
     return checklistParaTipoAuditoriaCampo(tipoAuditoria).reduce((acc, item) => {
-        acc[item] = "conforme";
+        acc[item] = "nao_aplicavel";
         return acc;
     }, {});
 }
@@ -971,7 +990,7 @@ function criarRespostasChecklistDinamico(tipoAuditoria = "area") {
 function calcularResultadoChecklistDinamico(respostas = {}) {
     const itens = Object.entries(respostas || {}).map(([pergunta, chaveResposta]) => ({
         pergunta,
-        resposta: obterRespostaAuditoriaCampo(chaveResposta || "conforme"),
+        resposta: obterRespostaAuditoriaCampo(chaveResposta || "nao_aplicavel"),
     }));
 
     const aplicaveis = itens.filter((item) => item.resposta.chave !== "nao_aplicavel");
@@ -1307,7 +1326,7 @@ function textoNaoAplicavel(valor = "") {
     const texto = String(valor || "").trim();
     if (!texto) return "";
     const normalizado = normalizarTextoBusca(texto).replace(/_/g, " ");
-    if (normalizado.includes("nao aplicavel") || normalizado.includes("não aplicavel")) return "Não aplicável";
+    if (normalizado.includes("nao aplicavel") || normalizado.includes("não aplicavel")) return "";
     return texto;
 }
 
@@ -1328,7 +1347,7 @@ function identificarAlvoAuditoriaCampo(item = {}) {
         };
     }
 
-    if (maquina && maquina !== "Não aplicável") {
+    if (maquina) {
         return {
             titulo: maquina,
             tipo: tipo && normalizarTextoBusca(tipo).includes("equip") ? "Equipamento auditado" : "Máquina/equipamento auditado",
@@ -1336,7 +1355,7 @@ function identificarAlvoAuditoriaCampo(item = {}) {
         };
     }
 
-    if (area && area !== "Não aplicável") {
+    if (area) {
         return {
             titulo: area,
             tipo: "Área auditada",
@@ -1344,7 +1363,7 @@ function identificarAlvoAuditoriaCampo(item = {}) {
         };
     }
 
-    if (local && local !== "Não aplicável") {
+    if (local) {
         return {
             titulo: local,
             tipo: "Local auditado",
@@ -8504,6 +8523,18 @@ function ConsultaQR({ colaborador, colaboradores = [], onSelecionarColaborador }
     const geral = statusGeral(colaboradorAtual);
     const treinamentos = colaboradorAtual.treinamentos || [];
     const foto = colaboradorAtual.fotoUrl || "";
+    const urlConsultaColaborador = typeof window !== "undefined" ? `${window.location.origin}/?qr=${encodeURIComponent(colaboradorAtual.token)}` : "";
+    const idImpressaoQrColaborador = `qr-colaborador-impressao-${colaboradorAtual.id || colaboradorAtual.token}`;
+    const imprimirQrColaborador = () => {
+        const elemento = document.getElementById(idImpressaoQrColaborador);
+        if (!elemento) return;
+        const janela = window.open("", "_blank", "width=520,height=640");
+        if (!janela) return;
+        janela.document.write(`<!doctype html><html><head><title>QR Code ${colaboradorAtual.nome || "Colaborador"}</title><style>body{font-family:Arial,sans-serif;margin:0;padding:32px;text-align:center;color:#0f172a}.cartao{display:inline-flex;flex-direction:column;align-items:center;gap:18px;border:1px solid #e2e8f0;border-radius:28px;padding:28px;box-shadow:0 8px 28px rgba(15,23,42,.08)}h1{font-size:20px;margin:0;text-transform:uppercase;max-width:360px}</style></head><body>${elemento.innerHTML}</body></html>`);
+        janela.document.close();
+        janela.focus();
+        janela.print();
+    };
 
     return (
         <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
@@ -8616,6 +8647,20 @@ function ConsultaQR({ colaborador, colaboradores = [], onSelecionarColaborador }
                             </p>
 
                             <LinkPublicoQR token={colaboradorAtual.token} />
+                            <div id={idImpressaoQrColaborador} className="hidden">
+                                <div className="cartao">
+                                    <QRCodeSVG value={urlConsultaColaborador} size={260} level="H" includeMargin bgColor="#ffffff" fgColor="#0f172a" />
+                                    <h1>{colaboradorAtual.nome}</h1>
+                                </div>
+                            </div>
+                            <button
+                                type="button"
+                                onClick={imprimirQrColaborador}
+                                className="mt-3 inline-flex items-center gap-2 rounded-2xl bg-white px-4 py-2 text-xs font-bold text-slate-700 ring-1 ring-slate-200 hover:bg-slate-50"
+                            >
+                                <Download className="h-4 w-4" />
+                                Imprimir QR Code do funcionário
+                            </button>
                         </div>
 
                         <div className="flex justify-center lg:justify-end">
@@ -12714,7 +12759,11 @@ function DashboardAuditoriaCampo({ auditoriasCampo = [], onAuditoriaAtualizada }
     }, []);
 
     useEffect(() => {
-        carregarQrcodesCampo();
+        const carregamentoQrCampo = window.setTimeout(() => {
+            carregarQrcodesCampo();
+        }, 0);
+
+        return () => window.clearTimeout(carregamentoQrCampo);
     }, [carregarQrcodesCampo]);
 
     const salvarQrCampo = async () => {
@@ -12777,7 +12826,7 @@ function DashboardAuditoriaCampo({ auditoriasCampo = [], onAuditoriaAtualizada }
         }, {})).sort((a, b) => b.total - a.total).slice(0, 5);
         const porTipo = Object.values(auditoriasNormalizadas.reduce((acc, item) => {
             const alvo = identificarAlvoAuditoriaCampo(item);
-            const chave = item.tipoAuditoria || alvo.tipo || "Sem tipo";
+            const chave = item.categoriaDesvioPrincipal || item.tipoAuditoria || alvo.tipo || "Sem categoria";
             if (!acc[chave]) acc[chave] = { label: chave, total: 0 };
             acc[chave].total += 1;
             return acc;
@@ -12943,6 +12992,7 @@ function DashboardAuditoriaCampo({ auditoriasCampo = [], onAuditoriaAtualizada }
                                                 <span className="rounded-full bg-blue-50 px-3 py-1 text-xs font-bold text-blue-700 ring-1 ring-blue-100">{alvo.tipo}</span>
                                                 {item.grauRisco && <span className="rounded-full bg-orange-50 px-3 py-1 text-xs font-bold text-orange-700 ring-1 ring-orange-100">Risco: {item.grauRisco}</span>}
                                                 <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-bold text-slate-600 ring-1 ring-slate-200">Status: {statusAtual}</span>
+                                                {item.categoriaDesvioPrincipal && <span className="rounded-full bg-indigo-50 px-3 py-1 text-xs font-bold text-indigo-700 ring-1 ring-indigo-100">Categoria: {item.categoriaDesvioPrincipal}</span>}
                                             </div>
                                             <h3 className="mt-3 text-base font-black text-slate-950">{alvo.titulo}</h3>
                                             {descricaoAlvoLimpa && <p className="mt-1 text-xs font-medium text-slate-500">{descricaoAlvoLimpa}</p>}
@@ -13042,25 +13092,74 @@ function DashboardAuditoriaCampo({ auditoriasCampo = [], onAuditoriaAtualizada }
             ));
         }
         if (chave === "resumoVisual") {
-            return blocoWrapper(chave, "Resumo visual das auditorias", "Distribuição rápida por status, tipo e grau de risco para leitura gerencial.", (
-                <div className="grid gap-4 lg:grid-cols-3">
-                    <div className="rounded-3xl border border-slate-200 bg-white p-4">
-                        <p className="text-xs font-black uppercase tracking-wide text-slate-400">Por status</p>
-                        <div className="mt-3 space-y-2">
-                            {dadosResumoVisualAuditoria.porStatus.length === 0 ? <p className="text-sm text-slate-500">Sem dados.</p> : dadosResumoVisualAuditoria.porStatus.map((item) => { renderBarraResumoAuditoria(item, dadosResumoVisualAuditoria.total, "bg-emerald-500") })}
+            const tabelaResumo = [
+                ...dadosResumoVisualAuditoria.porStatus.map((item) => ({ ...item, grupo: "Status" })),
+                ...dadosResumoVisualAuditoria.porTipo.map((item) => ({ ...item, grupo: "Tipo / categoria" })),
+                ...dadosResumoVisualAuditoria.porRisco.map((item) => ({ ...item, grupo: "Risco" })),
+            ].slice(0, 12);
+
+            return blocoWrapper(chave, "Resumo visual das auditorias", "Distribuição por status, categoria padronizada e grau de risco para leitura gerencial.", (
+                <div className="space-y-4">
+                    <div className="grid gap-3 md:grid-cols-3">
+                        <div className="rounded-3xl bg-slate-950 p-4 text-white shadow-sm">
+                            <p className="text-xs font-black uppercase tracking-wide text-slate-300">Total analisado</p>
+                            <p className="mt-2 text-3xl font-black">{auditoriasNormalizadas.length}</p>
+                            <p className="mt-1 text-xs text-slate-300">auditoria(s) no histórico</p>
+                        </div>
+                        <div className="rounded-3xl bg-red-50 p-4 ring-1 ring-red-100">
+                            <p className="text-xs font-black uppercase tracking-wide text-red-600">Críticas / ação imediata</p>
+                            <p className="mt-2 text-3xl font-black text-red-700">{auditoriasCriticas}</p>
+                            <p className="mt-1 text-xs text-red-600">priorizar acompanhamento</p>
+                        </div>
+                        <div className="rounded-3xl bg-orange-50 p-4 ring-1 ring-orange-100">
+                            <p className="text-xs font-black uppercase tracking-wide text-orange-600">Vencidas</p>
+                            <p className="mt-2 text-3xl font-black text-orange-700">{auditoriasVencidas}</p>
+                            <p className="mt-1 text-xs text-orange-600">fora do prazo de adequação</p>
                         </div>
                     </div>
-                    <div className="rounded-3xl border border-slate-200 bg-white p-4">
-                        <p className="text-xs font-black uppercase tracking-wide text-slate-400">Por tipo</p>
-                        <div className="mt-3 space-y-2">
-                            {dadosResumoVisualAuditoria.porTipo.length === 0 ? <p className="text-sm text-slate-500">Sem dados.</p> : dadosResumoVisualAuditoria.porTipo.map((item) => { renderBarraResumoAuditoria(item, dadosResumoVisualAuditoria.total, "bg-blue-500") })}
+
+                    <div className="grid gap-4 lg:grid-cols-3">
+                        <div className="rounded-3xl border border-slate-200 bg-white p-4 shadow-sm">
+                            <p className="text-xs font-black uppercase tracking-wide text-slate-400">Por status</p>
+                            <div className="mt-3 space-y-2">
+                                {dadosResumoVisualAuditoria.porStatus.length === 0 ? <p className="text-sm text-slate-500">Sem dados.</p> : dadosResumoVisualAuditoria.porStatus.map((item) => renderBarraResumoAuditoria(item, dadosResumoVisualAuditoria.total, "bg-emerald-500"))}
+                            </div>
+                        </div>
+                        <div className="rounded-3xl border border-slate-200 bg-white p-4 shadow-sm">
+                            <p className="text-xs font-black uppercase tracking-wide text-slate-400">Por categoria</p>
+                            <div className="mt-3 space-y-2">
+                                {dadosResumoVisualAuditoria.porTipo.length === 0 ? <p className="text-sm text-slate-500">Sem dados.</p> : dadosResumoVisualAuditoria.porTipo.map((item) => renderBarraResumoAuditoria(item, dadosResumoVisualAuditoria.total, "bg-blue-500"))}
+                            </div>
+                        </div>
+                        <div className="rounded-3xl border border-slate-200 bg-white p-4 shadow-sm">
+                            <p className="text-xs font-black uppercase tracking-wide text-slate-400">Por risco</p>
+                            <div className="mt-3 space-y-2">
+                                {dadosResumoVisualAuditoria.porRisco.length === 0 ? <p className="text-sm text-slate-500">Sem dados.</p> : dadosResumoVisualAuditoria.porRisco.map((item) => renderBarraResumoAuditoria(item, dadosResumoVisualAuditoria.total, normalizarTextoBusca(item.label).includes("crit") ? "bg-red-500" : normalizarTextoBusca(item.label).includes("alto") ? "bg-orange-500" : normalizarTextoBusca(item.label).includes("medio") ? "bg-amber-500" : "bg-emerald-500"))}
+                            </div>
                         </div>
                     </div>
-                    <div className="rounded-3xl border border-slate-200 bg-white p-4">
-                        <p className="text-xs font-black uppercase tracking-wide text-slate-400">Por risco</p>
-                        <div className="mt-3 space-y-2">
-                            {dadosResumoVisualAuditoria.porRisco.length === 0 ? <p className="text-sm text-slate-500">Sem dados.</p> : dadosResumoVisualAuditoria.porRisco.map((item) => { renderBarraResumoAuditoria(item, dadosResumoVisualAuditoria.total, normalizarTextoBusca(item.label).includes("crit") ? "bg-red-500" : normalizarTextoBusca(item.label).includes("alto") ? "bg-orange-500" : normalizarTextoBusca(item.label).includes("medio") ? "bg-amber-500" : "bg-emerald-500") })}
-                        </div>
+
+                    <div className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm">
+                        <table className="w-full text-left text-sm">
+                            <thead className="bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
+                                <tr>
+                                    <th className="px-4 py-3">Grupo</th>
+                                    <th className="px-4 py-3">Item</th>
+                                    <th className="px-4 py-3 text-right">Qtd.</th>
+                                </tr>
+                            </thead>
+                            <tbody className="divide-y divide-slate-100">
+                                {tabelaResumo.length === 0 ? (
+                                    <tr><td colSpan="3" className="px-4 py-5 text-center text-slate-500">Nenhuma auditoria registrada.</td></tr>
+                                ) : tabelaResumo.map((item) => (
+                                    <tr key={`${item.grupo}-${item.label}`}>
+                                        <td className="px-4 py-3 text-slate-500">{item.grupo}</td>
+                                        <td className="px-4 py-3 font-bold text-slate-900">{item.label}</td>
+                                        <td className="px-4 py-3 text-right font-black text-slate-950">{item.total}</td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
                     </div>
                 </div>
             ));
@@ -13102,12 +13201,10 @@ function DashboardAuditoriaCampo({ auditoriasCampo = [], onAuditoriaAtualizada }
 
                         <div id="qr-auditoria-campo-para-impressao" className="mt-4 rounded-3xl bg-white p-4 text-center ring-1 ring-slate-200">
                             <div className="card">
-                                <h2 className="text-lg font-black text-slate-950">QR Code de Auditoria de Campo</h2>
-                                <p className="mt-1 text-sm font-bold text-slate-600">{tipoSelecionado.label} · {qrFormCampo.identificacao || "Identificação pendente"}</p>
-                                <div className="mx-auto mt-4 flex w-fit justify-center rounded-3xl bg-white p-4 ring-1 ring-slate-200">
-                                    <QRCodeSVG value={linkQrCampoAtual} size={180} level="M" />
+                                <div className="mx-auto flex w-fit justify-center rounded-3xl bg-white p-4 ring-1 ring-slate-200">
+                                    <QRCodeSVG value={linkQrCampoAtual} size={210} level="M" />
                                 </div>
-                                <p className="muted mt-3 break-all text-xs text-slate-500">{linkQrCampoAtual}</p>
+                                <h2 className="mt-4 text-lg font-black uppercase text-slate-950">{qrFormCampo.identificacao || "Identificação pendente"}</h2>
                             </div>
                         </div>
 
@@ -13432,6 +13529,7 @@ function NovaAuditoriaCampoDireta({ usuario = null, onAuditoriaSalva, empresasBa
     const [previewFotos, setPreviewFotos] = useState({ antes: "", depois: "" });
     const [formulario, setFormulario] = useState(() => ({
         tipoAuditoria: tipoInicial.valor,
+        categoriaAuditoria: "isolamento",
         titulo: identificacaoParametro ? `Auditoria de campo - ${tipoInicial.label} ${identificacaoParametro}` : `Auditoria de campo - ${tipoInicial.label}`,
         area: areaParametro,
         subarea: subareaParametro,
@@ -13491,6 +13589,7 @@ function NovaAuditoriaCampoDireta({ usuario = null, onAuditoriaSalva, empresasBa
     }, [empresaSelecionadaAuditoria]);
 
     const tipoAtual = obterTipoAuditoriaCampoDireta(formulario.tipoAuditoria);
+    const categoriaAtual = obterCategoriaPadronizadaAuditoriaCampo(formulario.categoriaAuditoria);
     const checklistAtual = useMemo(() => checklistParaTipoAuditoriaCampo(formulario.tipoAuditoria), [formulario.tipoAuditoria]);
     const resultado = useMemo(() => calcularResultadoChecklistDinamico(respostasChecklist), [respostasChecklist]);
     const linkTipoAtual = `${linkGeral}?tipo=${tipoAtual.parametros[0] || tipoAtual.valor}`;
@@ -13608,6 +13707,7 @@ function NovaAuditoriaCampoDireta({ usuario = null, onAuditoriaSalva, empresasBa
 
         setFormulario({
             tipoAuditoria: tipoInicial.valor,
+            categoriaAuditoria: "isolamento",
             titulo: identificacaoParametro ? `Auditoria de campo - ${tipoInicial.label} ${identificacaoParametro}` : `Auditoria de campo - ${tipoInicial.label}`,
             area: areaParametro,
             subarea: subareaParametro,
@@ -13761,7 +13861,7 @@ function NovaAuditoriaCampoDireta({ usuario = null, onAuditoriaSalva, empresasBa
                 pontuacao: resultado.percentual,
                 classificacao: resultado.classificacao,
                 tem_desvio_grave: resultado.temDesvioGrave,
-                categoria_desvio_principal: tipoAtual.label,
+                categoria_desvio_principal: categoriaAtual.label,
                 total_desvios: ["Aberta", "Em andamento", "Vencida"].includes(formulario.statusAuditoria) ? 1 : 0,
                 origem: "Link direto / nova-auditoria-campo",
                 token_qr: tokenParametro || null,
@@ -13898,7 +13998,7 @@ function NovaAuditoriaCampoDireta({ usuario = null, onAuditoriaSalva, empresasBa
 
                 <div className="grid gap-5">
                     <div className="space-y-5">
-                        <CardRecolhivel titulo="Dados da auditoria" subtitulo="Preencha as informações principais da auditoria de campo." defaultOpen={true} persistKey="novaAuditoriaCampo:dados">
+                        <CardRecolhivel titulo="Dados da auditoria" subtitulo="Preencha as informações principais da auditoria de campo." defaultOpen={false} persistKey="novaAuditoriaCampo:dados">
                             <div className="grid gap-4 md:grid-cols-2">
                                 <div>
                                     <label className="text-xs font-bold uppercase tracking-wide text-slate-500">Tipo de auditoria</label>
@@ -13907,6 +14007,17 @@ function NovaAuditoriaCampoDireta({ usuario = null, onAuditoriaSalva, empresasBa
                                     </select>
                                 </div>
                                 {renderCampoTexto("titulo", "Título / assunto")}
+                                <div>
+                                    <label className="text-xs font-bold uppercase tracking-wide text-slate-500">Categoria padronizada</label>
+                                    <select
+                                        value={formulario.categoriaAuditoria}
+                                        onChange={(e) => alterarFormulario("categoriaAuditoria", e.target.value)}
+                                        className="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold outline-none focus:ring-2 focus:ring-slate-300"
+                                    >
+                                        {categoriasPadronizadasAuditoriaCampo.map((categoria) => <option key={categoria.valor} value={categoria.valor}>{categoria.label}</option>)}
+                                    </select>
+                                    <p className="mt-1 text-[11px] text-slate-400">Padroniza a busca e os gráficos do banco de dados. Ex.: isolamento, organização de área ou máquina com defeito.</p>
+                                </div>
                                 <div>
                                     <div className="flex items-center justify-between gap-2">
                                         <label className="text-xs font-bold uppercase tracking-wide text-slate-500">Área</label>
@@ -14035,6 +14146,11 @@ function NovaAuditoriaCampoDireta({ usuario = null, onAuditoriaSalva, empresasBa
                                     <label className="text-xs font-bold uppercase tracking-wide text-slate-500">Observações gerais</label>
                                     <textarea value={formulario.observacoesGerais} onChange={(e) => alterarFormulario("observacoesGerais", e.target.value)} rows={3} placeholder="Observações adicionais, se necessário" className="mt-2 w-full resize-none rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-slate-300" />
                                 </div>
+                            </div>
+                        </CardRecolhivel>
+
+                        <CardRecolhivel titulo="Responsáveis e notificação" subtitulo="Dados de tratativa e contatos ficam recolhidos para não poluir a tela durante o preenchimento inicial." defaultOpen={false} persistKey="novaAuditoriaCampo:responsaveisNotificacao">
+                            <div className="grid gap-4 md:grid-cols-2">
                                 {renderCampoTexto("responsavelTratativa", "Responsável pela tratativa")}
                                 {renderCampoTexto("prazoAdequacao", "Prazo para adequação", "", "date")}
                                 {renderCampoTexto("emailResponsavel", "E-mail do responsável", "responsavel@empresa.com", "email")}
@@ -14110,15 +14226,16 @@ function NovaAuditoriaCampoDireta({ usuario = null, onAuditoriaSalva, empresasBa
                                         </div>
                                     </div>
                                 </div>
+
                             </div>
                         </CardRecolhivel>
 
-                        <CardRecolhivel titulo={`Checklist dinâmico — ${tipoAtual.label}`} subtitulo="O checklist muda conforme o tipo selecionado." contador={`${resultado.classificacao} · ${resultado.percentual}%`} defaultOpen={true} persistKey="novaAuditoriaCampo:checklist">
+                        <CardRecolhivel titulo={`Checklist dinâmico — ${tipoAtual.label}`} subtitulo="O checklist começa como não aplicável e o auditor altera apenas os itens avaliados." contador={`${resultado.classificacao} · ${resultado.percentual}%`} defaultOpen={false} persistKey="novaAuditoriaCampo:checklist">
                             <div className="grid gap-3 lg:grid-cols-2">
                                 {checklistAtual.map((pergunta) => (
                                     <div key={pergunta} className="rounded-2xl bg-slate-50 p-3 ring-1 ring-slate-200">
                                         <p className="text-sm font-bold text-slate-800">{pergunta}</p>
-                                        <select value={respostasChecklist[pergunta] || "conforme"} onChange={(e) => setRespostasChecklist((atual) => ({ ...atual, [pergunta]: e.target.value }))} className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold outline-none focus:ring-2 focus:ring-slate-300">
+                                        <select value={respostasChecklist[pergunta] || "nao_aplicavel"} onChange={(e) => setRespostasChecklist((atual) => ({ ...atual, [pergunta]: e.target.value }))} className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold outline-none focus:ring-2 focus:ring-slate-300">
                                             {respostasAuditoriaCampo.map((resposta) => <option key={resposta.chave} value={resposta.chave}>{resposta.texto} — {rotuloPontuacaoAuditoriaCampo(resposta)}</option>)}
                                         </select>
                                     </div>
