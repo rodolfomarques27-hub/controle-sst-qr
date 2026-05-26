@@ -1,6 +1,6 @@
 /* eslint-disable no-unused-vars */
 import React, { useCallback, useEffect, useMemo, useState } from "react";
-import { supabase } from "./supabaseClient";
+import { createClient } from "@supabase/supabase-js";
 import { QRCodeSVG } from "qrcode.react";
 import { motion } from "framer-motion";
 import {
@@ -37,6 +37,105 @@ import {
     Users,
     XCircle,
 } from "lucide-react";
+
+
+const SUPABASE_URL_FIXO = "";
+const SUPABASE_ANON_KEY_FIXA = "";
+
+const SUPABASE_URL = String(import.meta.env.VITE_SUPABASE_URL || SUPABASE_URL_FIXO || "").trim();
+const SUPABASE_ANON_KEY = String(import.meta.env.VITE_SUPABASE_ANON_KEY || SUPABASE_ANON_KEY_FIXA || "").trim();
+const SUPABASE_CONFIGURADO = Boolean(SUPABASE_URL && SUPABASE_ANON_KEY);
+const MENSAGEM_SUPABASE_NAO_CONFIGURADO =
+    "Supabase não configurado. Preencha VITE_SUPABASE_URL e VITE_SUPABASE_ANON_KEY no arquivo .env da raiz do projeto e reinicie o servidor.";
+
+function criarConsultaSupabaseDesabilitada() {
+    const resposta = {
+        data: null,
+        error: new Error(MENSAGEM_SUPABASE_NAO_CONFIGURADO),
+    };
+
+    const builder = {
+        select: () => builder,
+        insert: () => builder,
+        update: () => builder,
+        upsert: () => builder,
+        delete: () => builder,
+        order: () => builder,
+        limit: () => builder,
+        range: () => builder,
+        eq: () => builder,
+        neq: () => builder,
+        gt: () => builder,
+        gte: () => builder,
+        lt: () => builder,
+        lte: () => builder,
+        like: () => builder,
+        ilike: () => builder,
+        is: () => builder,
+        filter: () => builder,
+        match: () => builder,
+        contains: () => builder,
+        containedBy: () => builder,
+        or: () => builder,
+        not: () => builder,
+        "in": () => builder,
+        single: () => Promise.resolve(resposta),
+        maybeSingle: () => Promise.resolve(resposta),
+        then: (resolve, reject) => Promise.resolve(resposta).then(resolve, reject),
+        catch: (reject) => Promise.resolve(resposta).catch(reject),
+        finally: (callback) => Promise.resolve(resposta).finally(callback),
+    };
+
+    return builder;
+}
+
+function criarSupabaseDesabilitado() {
+    const resposta = {
+        data: null,
+        error: new Error(MENSAGEM_SUPABASE_NAO_CONFIGURADO),
+    };
+
+    return {
+        auth: {
+            getSession: async () => ({ data: { session: null }, error: null }),
+            onAuthStateChange: () => ({
+                data: {
+                    subscription: {
+                        unsubscribe: () => { },
+                    },
+                },
+            }),
+            signInWithPassword: async () => resposta,
+            signOut: async () => ({ error: null }),
+        },
+        from: () => criarConsultaSupabaseDesabilitada(),
+        rpc: async () => resposta,
+        storage: {
+            from: () => ({
+                upload: async () => resposta,
+                remove: async () => resposta,
+                list: async () => ({ data: [], error: new Error(MENSAGEM_SUPABASE_NAO_CONFIGURADO) }),
+                download: async () => resposta,
+                createSignedUrl: async () => resposta,
+                getPublicUrl: () => ({ data: { publicUrl: "" } }),
+            }),
+        },
+    };
+}
+
+const supabase = SUPABASE_CONFIGURADO
+    ? createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+        auth: {
+            persistSession: true,
+            autoRefreshToken: true,
+            detectSessionInUrl: true,
+        },
+    })
+    : criarSupabaseDesabilitado();
+
+if (!SUPABASE_CONFIGURADO) {
+    console.warn(MENSAGEM_SUPABASE_NAO_CONFIGURADO);
+}
 
 const hoje = new Date();
 
@@ -1523,6 +1622,55 @@ function formatarTelefone(valor) {
 
 function classNames(...items) {
     return items.filter(Boolean).join(" ");
+}
+
+
+function SupabaseConfiguracaoPendente() {
+    const exemploEnv = `VITE_SUPABASE_URL=https://SEU-PROJETO.supabase.co
+VITE_SUPABASE_ANON_KEY=SUA_CHAVE_ANON_PUBLICA`;
+
+    return (
+        <div className="flex min-h-screen items-center justify-center bg-slate-950 p-4 text-white">
+            <div className="w-full max-w-3xl rounded-[2rem] bg-white p-6 text-slate-900 shadow-2xl">
+                <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+                    <div>
+                        <p className="text-xs font-black uppercase tracking-[0.22em] text-red-600">Configuração obrigatória</p>
+                        <h1 className="mt-2 text-2xl font-black text-slate-950">Supabase não configurado</h1>
+                        <p className="mt-2 text-sm leading-relaxed text-slate-600">
+                            O sistema abriu sem travar, mas ainda falta configurar as variáveis do Supabase.
+                            Enquanto elas estiverem vazias, login, banco de dados, arquivos e auditorias não funcionarão.
+                        </p>
+                    </div>
+                    <div className="rounded-2xl bg-red-50 px-4 py-3 text-sm font-black text-red-700 ring-1 ring-red-100">
+                        .env ausente ou não lido
+                    </div>
+                </div>
+
+                <div className="mt-5 grid gap-4 md:grid-cols-2">
+                    <div className="rounded-3xl bg-slate-50 p-4 ring-1 ring-slate-200">
+                        <p className="text-sm font-black text-slate-900">1. Crie ou corrija o arquivo .env</p>
+                        <p className="mt-2 text-xs leading-relaxed text-slate-600">
+                            O arquivo precisa ficar na raiz do projeto, no mesmo nível do package.json. O nome deve ser exatamente .env.
+                        </p>
+                        <pre className="mt-3 overflow-auto rounded-2xl bg-slate-950 p-4 text-xs text-white"><code>{exemploEnv}</code></pre>
+                    </div>
+
+                    <div className="rounded-3xl bg-blue-50 p-4 ring-1 ring-blue-100">
+                        <p className="text-sm font-black text-blue-950">2. Reinicie o Vite</p>
+                        <p className="mt-2 text-xs leading-relaxed text-blue-900">
+                            Depois de salvar o .env, pare o servidor no terminal com CTRL + C e rode novamente npm run dev.
+                            As variáveis VITE_ só são carregadas quando o servidor inicia.
+                        </p>
+                        <div className="mt-3 rounded-2xl bg-white p-3 text-xs font-bold text-blue-900 ring-1 ring-blue-100">
+                            Variáveis detectadas agora:<br />
+                            VITE_SUPABASE_URL: {SUPABASE_URL ? "preenchida" : "vazia"}<br />
+                            VITE_SUPABASE_ANON_KEY: {SUPABASE_ANON_KEY ? "preenchida" : "vazia"}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
 }
 
 function ehUuid(valor) {
@@ -14638,7 +14786,7 @@ function NovaAuditoriaCampoDireta({ usuario = null, onAuditoriaSalva, empresasBa
 
 export default function App() {
     const [usuario, setUsuario] = useState(null);
-    const [carregandoSessao, setCarregandoSessao] = useState(true);
+    const [carregandoSessao, setCarregandoSessao] = useState(() => SUPABASE_CONFIGURADO);
     const [tela, setTela] = useState("dashboard");
     const [menuLateralAberto, setMenuLateralAberto] = useState(() => {
         try {
@@ -16452,6 +16600,8 @@ export default function App() {
     }
 
     useEffect(() => {
+        if (!SUPABASE_CONFIGURADO) return;
+
         async function carregarSessao() {
             const { data } = await supabase.auth.getSession();
 
@@ -16486,6 +16636,8 @@ export default function App() {
     }, []);
 
     useEffect(() => {
+        if (!SUPABASE_CONFIGURADO) return;
+
         const parametros = new URLSearchParams(window.location.search);
         const tokenQr = parametros.get("qr");
 
@@ -16600,6 +16752,10 @@ export default function App() {
             // Ignora indisponibilidade do sessionStorage.
         }
     };
+
+    if (!SUPABASE_CONFIGURADO) {
+        return <SupabaseConfiguracaoPendente />;
+    }
 
     if (carregandoSessao) {
         return (
