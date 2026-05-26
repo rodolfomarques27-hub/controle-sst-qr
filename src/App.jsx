@@ -884,6 +884,8 @@ const tiposAuditoriaCampoDireta = [
     { valor: "area_externa", label: "Área externa", parametros: ["externa", "area-externa", "area_externa"], grupo: "area" },
     { valor: "maquina", label: "Máquina", parametros: ["maquina", "máquina"], grupo: "maquina" },
     { valor: "equipamento", label: "Equipamento", parametros: ["equipamento"], grupo: "maquina" },
+    { valor: "container", label: "Container", parametros: ["container", "contêiner", "conteiner"], grupo: "area" },
+    { valor: "banheiro", label: "Banheiro", parametros: ["banheiro", "sanitario", "sanitário"], grupo: "area" },
     { valor: "veiculo", label: "Veículo", parametros: ["veiculo", "veículo"], grupo: "maquina" },
     { valor: "frente_servico", label: "Frente de serviço", parametros: ["frente-servico", "frente_servico", "frente"], grupo: "frente" },
     { valor: "almoxarifado", label: "Almoxarifado", parametros: ["almoxarifado"], grupo: "area" },
@@ -1034,31 +1036,45 @@ function montarPreviewNotificacaoAuditoriaCampo(notificacao = {}, complementos =
 function montarMensagemFluidaAuditoriaCampo(auditoria = {}, alvoAuditoria = {}) {
     const numero = auditoria.numeroAuditoria || auditoria.numero_auditoria || "Sem número";
     const tipo = auditoria.tipoAuditoria || auditoria.tipo_auditoria || alvoAuditoria.tipo || "Auditoria de campo";
-    const alvo = alvoAuditoria.titulo || auditoria.titulo || auditoria.maquinaEquipamento || auditoria.maquina_equipamento || auditoria.area || auditoria.local || auditoria.nomeColaborador || "Alvo não informado";
+    const alvo = alvoAuditoria.titulo || auditoria.maquinaEquipamento || auditoria.maquina_equipamento || auditoria.area || auditoria.local || auditoria.nomeColaborador || "Não informado";
     const empresa = auditoria.empresaNome || auditoria.empresa_nome || auditoria.empresaResponsavel || auditoria.empresa_responsavel || "Empresa não informada";
     const auditor = auditoria.auditorNome || auditoria.auditor_nome || auditoria.auditor || "Auditor não informado";
     const risco = auditoria.grauRisco || auditoria.grau_risco || "Não informado";
     const classificacao = auditoria.classificacao || "Sem classificação";
-    const pontuacao = Number.isFinite(Number(auditoria.pontuacao)) ? `${Number(auditoria.pontuacao)}%` : "0%";
+    const pontuacao = Number.isFinite(Number(auditoria.pontuacao)) ? `${Number(auditoria.pontuacao)}%` : "Não calculada";
     const status = auditoria.statusAuditoria || auditoria.status_auditoria || auditoria.statusDesvio || auditoria.status_desvio || "Aberta";
+    const situacao = auditoria.situacaoEncontrada || auditoria.situacao_encontrada || "Situação não informada";
+    const acao = auditoria.acaoRecomendada || auditoria.acao_recomendada || "Ação recomendada não informada";
     const responsavel = auditoria.responsavelTratativa || auditoria.responsavel_tratativa || "Responsável não informado";
     const prazo = auditoria.prazoAdequacao || auditoria.prazo_adequacao ? formatDate(auditoria.prazoAdequacao || auditoria.prazo_adequacao) : "Prazo não informado";
 
-    return [
-        `Foi registrada a auditoria ${numero} e ela precisa de acompanhamento da tratativa.`,
+    const linhas = [
+        `Olá, foi registrada a auditoria de campo ${numero}.`,
         "",
+        "Resumo da auditoria:",
         `• Tipo: ${tipo}`,
-        `• Alvo auditado: ${alvo}`,
-        `• Empresa/responsável: ${empresa}`,
-        `• Auditor: ${auditor}`,
+        `• Local/alvo auditado: ${alvo}`,
+        `• Empresa responsável: ${empresa}`,
         `• Grau de risco: ${risco}`,
-        `• Resultado: ${classificacao} (${pontuacao})`,
         `• Status atual: ${status}`,
-        `• Responsável pela tratativa: ${responsavel}`,
-        `• Prazo para adequação: ${prazo}`,
+        `• Auditor: ${auditor}`,
+        "",
+        "Condição encontrada:",
+        `• ${situacao}`,
+        "",
+        "Tratativa solicitada:",
+        `• Ação recomendada: ${acao}`,
+        `• Responsável: ${responsavel}`,
+        `• Prazo: ${prazo}`,
+        "",
+        "Indicador da auditoria:",
+        `• Classificação: ${classificacao}`,
+        `• Conformidade calculada: ${pontuacao}`,
         "",
         "Solicitação: avaliar a condição registrada, iniciar ou atualizar a tratativa e retornar com as evidências de correção quando aplicável.",
-    ].join("\n");
+    ];
+
+    return linhas.join("\n");
 }
 
 
@@ -11825,7 +11841,9 @@ function EditorNotificacaoHistoricoAuditoria({ auditoria = {}, onAtualizada }) {
     const [mensagem, setMensagem] = useState("");
     const [notificacao, setNotificacao] = useState({
         titulo: notificacaoInicial.titulo || `Auditoria de campo - ${alvoAuditoria.titulo}`,
-        mensagem: notificacaoInicial.mensagem || montarMensagemFluidaAuditoriaCampo(auditoria, alvoAuditoria),
+        mensagem: (notificacaoInicial.mensagem && !String(notificacaoInicial.mensagem).includes("Resultado:") && !String(notificacaoInicial.mensagem).includes("Alvo auditado"))
+            ? notificacaoInicial.mensagem
+            : montarMensagemFluidaAuditoriaCampo(auditoria, alvoAuditoria),
         complementos: Array.isArray(notificacaoInicial.complementos) ? notificacaoInicial.complementos : [],
         auditor: notificacaoInicial.auditor || auditoria.auditorNome || "",
     });
@@ -11833,6 +11851,7 @@ function EditorNotificacaoHistoricoAuditoria({ auditoria = {}, onAtualizada }) {
     const [exclusaoAberta, setExclusaoAberta] = useState(false);
     const [senhaExclusao, setSenhaExclusao] = useState("");
     const [excluindo, setExcluindo] = useState(false);
+    const [enviandoEmailAuditoria, setEnviandoEmailAuditoria] = useState(false);
     const [observacoesStatus, setObservacoesStatus] = useState({
         status: desvioPrincipal?.status || auditoria.statusDesvio || "Aberto",
         observacaoAberto: desvioPrincipal?.observacaoAberto || "",
@@ -11855,6 +11874,51 @@ function EditorNotificacaoHistoricoAuditoria({ auditoria = {}, onAtualizada }) {
     const linkWhatsappAuditoria = whatsappResponsavelFormatado
         ? `https://wa.me/${whatsappResponsavelFormatado}?text=${encodeURIComponent(preview)}`
         : "";
+
+    const enviarEmailAuditoriaAutomatico = async () => {
+        if (!emailResponsavelAuditoria) {
+            setMensagem("Cadastre o e-mail do responsável antes de enviar.");
+            return;
+        }
+
+        setEnviandoEmailAuditoria(true);
+        setMensagem("");
+
+        try {
+            const { data, error } = await supabase.functions.invoke(FUNCAO_EMAIL_ALERTA_TST, {
+                body: {
+                    para: emailResponsavelAuditoria,
+                    assunto: notificacao.titulo || `Auditoria ${auditoria.numeroAuditoria || "de campo"}`,
+                    empresa: auditoria.empresaNome || auditoria.empresaResponsavel || "Empresa não informada",
+                    tstResponsavel: auditoria.responsavelTratativa || auditoria.auditorNome || "Responsável pela tratativa",
+                    itens: [
+                        {
+                            colaborador: alvoAuditoria.titulo || auditoria.titulo || "Auditoria de campo",
+                            codigo: auditoria.numeroAuditoria || "-",
+                            funcao: alvoAuditoria.tipo || auditoria.tipoAuditoria || "Auditoria de campo",
+                            situacaoObra: auditoria.statusAuditoria || auditoria.statusDesvio || "Aberta",
+                            treinamento: auditoria.situacaoEncontrada || "Auditoria de campo",
+                            realizacao: auditoria.createdAt ? formatDate(auditoria.createdAt) : formatDate(new Date()),
+                            vencimento: auditoria.prazoAdequacao ? formatDate(auditoria.prazoAdequacao) : "Não informado",
+                            dias: 0,
+                            arquivo: preview,
+                        },
+                    ],
+                    mensagem: preview,
+                },
+            });
+
+            if (error || data?.ok === false) {
+                throw new Error(error?.message || data?.erro || "Falha na função de e-mail.");
+            }
+
+            setMensagem("E-mail enviado automaticamente com sucesso.");
+        } catch (error) {
+            setMensagem(`Erro ao enviar e-mail: ${error.message}`);
+        } finally {
+            setEnviandoEmailAuditoria(false);
+        }
+    };
 
     const adicionarComplemento = () => {
         const texto = novoComplemento.trim();
@@ -12149,13 +12213,13 @@ function EditorNotificacaoHistoricoAuditoria({ auditoria = {}, onAtualizada }) {
                             )}
                             <div className="rounded-2xl border border-slate-200 bg-slate-50 p-3">
                                 <p className="text-xs font-bold uppercase tracking-wide text-slate-500">Enviar auditoria para responsável</p>
-                                <p className="mt-1 text-xs text-slate-500">Abre a mensagem pronta para encaminhar a tratativa.</p>
+                                <p className="mt-1 text-xs text-slate-500">Envie automaticamente por e-mail ou abra a mensagem pronta no WhatsApp.</p>
                                 <div className="mt-3 grid gap-2 sm:grid-cols-2">
-                                    {linkEmailAuditoria ? (
-                                        <a href={linkEmailAuditoria} className="inline-flex items-center justify-center gap-2 rounded-2xl bg-white px-3 py-2 text-xs font-bold text-blue-700 ring-1 ring-blue-200 hover:bg-blue-50">
+                                    {emailResponsavelAuditoria ? (
+                                        <button type="button" disabled={enviandoEmailAuditoria} onClick={enviarEmailAuditoriaAutomatico} className="inline-flex items-center justify-center gap-2 rounded-2xl bg-white px-3 py-2 text-xs font-bold text-blue-700 ring-1 ring-blue-200 hover:bg-blue-50 disabled:opacity-60">
                                             <Mail className="h-4 w-4" />
-                                            Enviar e-mail
-                                        </a>
+                                            {enviandoEmailAuditoria ? "Enviando..." : "Enviar e-mail"}
+                                        </button>
                                     ) : (
                                         <button type="button" disabled className="inline-flex items-center justify-center gap-2 rounded-2xl bg-white px-3 py-2 text-xs font-bold text-slate-400 ring-1 ring-slate-200">
                                             <Mail className="h-4 w-4" />
@@ -12287,6 +12351,17 @@ function EditorNotificacaoHistoricoAuditoria({ auditoria = {}, onAtualizada }) {
 
 function DashboardAuditoriaCampo({ auditoriasCampo = [], onAuditoriaAtualizada }) {
     const [mostrarPersonalizacao, setMostrarPersonalizacao] = useState(false);
+    const [qrcodesCampo, setQrcodesCampo] = useState([]);
+    const [carregandoQrcodesCampo, setCarregandoQrcodesCampo] = useState(false);
+    const [mensagemQrCampo, setMensagemQrCampo] = useState("");
+    const [qrFormCampo, setQrFormCampo] = useState({
+        tipo: "maquina",
+        identificacao: "",
+        area: "",
+        local: "",
+        empresaResponsavel: "",
+        observacao: "",
+    });
 
     const cartasPadrao = {
         auditoriasMes: true,
@@ -12311,14 +12386,18 @@ function DashboardAuditoriaCampo({ auditoriasCampo = [], onAuditoriaAtualizada }
         boasPraticas: true,
         topDesvios: true,
         empresas: true,
+        resumoVisual: true,
+        qrcodes: true,
     };
     const tamanhosBlocosPadrao = {
         historico: "destaque",
         boasPraticas: "medio",
         topDesvios: "medio",
         empresas: "medio",
+        resumoVisual: "medio",
+        qrcodes: "destaque",
     };
-    const ordemBlocosPadrao = ["historico", "boasPraticas", "topDesvios", "empresas"];
+    const ordemBlocosPadrao = ["historico", "resumoVisual", "qrcodes", "boasPraticas", "topDesvios", "empresas"];
 
     const opcoesTamanho = [
         { chave: "padrao", label: "Padrão", descricao: "1 coluna" },
@@ -12386,6 +12465,8 @@ function DashboardAuditoriaCampo({ auditoriasCampo = [], onAuditoriaAtualizada }
         boasPraticas: true,
         topDesvios: true,
         empresas: true,
+        resumoVisual: true,
+        qrcodes: true,
     };
     const [blocosRecolhidos, setBlocosRecolhidos] = useState(() => {
         if (typeof window === "undefined") return blocosRecolhidosPadrao;
@@ -12539,6 +12620,8 @@ function DashboardAuditoriaCampo({ auditoriasCampo = [], onAuditoriaAtualizada }
     ];
     const blocos = [
         { chave: "historico", label: "Histórico de auditorias" },
+        { chave: "resumoVisual", label: "Resumo visual das auditorias" },
+        { chave: "qrcodes", label: "QR Codes de campo" },
         { chave: "boasPraticas", label: "Boas práticas para DDS" },
         { chave: "topDesvios", label: "Top 5 desvios" },
         { chave: "empresas", label: "Auditorias por empresa" },
@@ -12597,6 +12680,128 @@ function DashboardAuditoriaCampo({ auditoriasCampo = [], onAuditoriaAtualizada }
         if (!blocoArrastandoAuditoria) return;
         setOrdemBlocos((atual) => moverItemArrastado(atual, blocoArrastandoAuditoria, destino));
         setBlocoArrastandoAuditoria(null);
+    };
+
+    const montarLinkQrCampo = useCallback((dados = qrFormCampo) => {
+        const origem = typeof window !== "undefined" ? window.location.origin : "";
+        const params = new URLSearchParams();
+        if (dados.tipo) params.set("tipo", dados.tipo);
+        if (dados.identificacao) params.set("id", dados.identificacao);
+        if (dados.area) params.set("area", dados.area);
+        if (dados.local) params.set("local", dados.local);
+        if (dados.empresaResponsavel) params.set("empresa", dados.empresaResponsavel);
+        return `${origem}/#/nova-auditoria-campo?${params.toString()}`;
+    }, [qrFormCampo]);
+
+    const linkQrCampoAtual = useMemo(() => montarLinkQrCampo(qrFormCampo), [montarLinkQrCampo, qrFormCampo]);
+
+    const carregarQrcodesCampo = useCallback(async () => {
+        setCarregandoQrcodesCampo(true);
+        try {
+            const { data, error } = await supabase
+                .from("auditoria_campo_qrcodes")
+                .select("*")
+                .order("criado_em", { ascending: false });
+
+            if (error) throw error;
+            setQrcodesCampo(Array.isArray(data) ? data : []);
+            setMensagemQrCampo("");
+        } catch (error) {
+            setMensagemQrCampo(`Não foi possível carregar os QR Codes salvos: ${error.message}`);
+        } finally {
+            setCarregandoQrcodesCampo(false);
+        }
+    }, []);
+
+    useEffect(() => {
+        carregarQrcodesCampo();
+    }, [carregarQrcodesCampo]);
+
+    const salvarQrCampo = async () => {
+        const identificacao = String(qrFormCampo.identificacao || "").trim();
+        if (!identificacao) {
+            setMensagemQrCampo("Informe a identificação do item. Ex.: GERADOR-01, CONTAINER-02, BANHEIRO-01.");
+            return;
+        }
+
+        const tipo = obterTipoAuditoriaCampoDireta(qrFormCampo.tipo);
+        const payload = {
+            codigo: `${tipo.valor}-${identificacao}`.toUpperCase().replace(/[^A-Z0-9_-]+/g, "-"),
+            tipo: tipo.valor,
+            tipo_label: tipo.label,
+            identificacao,
+            area: String(qrFormCampo.area || "").trim() || null,
+            local: String(qrFormCampo.local || "").trim() || null,
+            empresa_responsavel: String(qrFormCampo.empresaResponsavel || "").trim() || null,
+            link: montarLinkQrCampo(qrFormCampo),
+            observacao: String(qrFormCampo.observacao || "").trim() || null,
+            criado_por: null,
+        };
+
+        try {
+            const { data, error } = await supabase
+                .from("auditoria_campo_qrcodes")
+                .upsert(payload, { onConflict: "codigo" })
+                .select()
+                .single();
+
+            if (error) throw error;
+            setQrcodesCampo((atual) => [data, ...atual.filter((item) => item.codigo !== data.codigo)]);
+            setMensagemQrCampo("QR Code salvo com sucesso no banco de dados.");
+        } catch (error) {
+            setMensagemQrCampo(`Erro ao salvar QR Code: ${error.message}`);
+        }
+    };
+
+    const imprimirQrCampoAtual = () => {
+        const elemento = document.getElementById("qr-auditoria-campo-para-impressao");
+        if (!elemento) return;
+        const janela = window.open("", "_blank", "width=720,height=720");
+        if (!janela) {
+            setMensagemQrCampo("O navegador bloqueou a janela de impressão. Libere pop-ups para imprimir o QR Code.");
+            return;
+        }
+        janela.document.write(`<!doctype html><html><head><title>QR Code Auditoria de Campo</title><style>body{font-family:Arial,sans-serif;margin:0;padding:32px;text-align:center;color:#0f172a}.card{border:1px solid #e2e8f0;border-radius:24px;padding:28px;display:inline-block}.muted{color:#64748b;font-size:13px;word-break:break-all;max-width:560px}</style></head><body>${elemento.innerHTML}</body></html>`);
+        janela.document.close();
+        janela.focus();
+        janela.print();
+    };
+
+    const dadosResumoVisualAuditoria = useMemo(() => {
+        const total = auditoriasNormalizadas.length || 1;
+        const porStatus = Object.values(auditoriasNormalizadas.reduce((acc, item) => {
+            const chave = item.statusAuditoria || item.statusDesvio || "Sem status";
+            if (!acc[chave]) acc[chave] = { label: chave, total: 0 };
+            acc[chave].total += 1;
+            return acc;
+        }, {})).sort((a, b) => b.total - a.total).slice(0, 5);
+        const porTipo = Object.values(auditoriasNormalizadas.reduce((acc, item) => {
+            const alvo = identificarAlvoAuditoriaCampo(item);
+            const chave = item.tipoAuditoria || alvo.tipo || "Sem tipo";
+            if (!acc[chave]) acc[chave] = { label: chave, total: 0 };
+            acc[chave].total += 1;
+            return acc;
+        }, {})).sort((a, b) => b.total - a.total).slice(0, 5);
+        const porRisco = ["Baixo", "Médio", "Alto", "Crítico"].map((risco) => ({
+            label: risco,
+            total: auditoriasNormalizadas.filter((item) => normalizarTextoBusca(item.grauRisco) === normalizarTextoBusca(risco)).length,
+        })).filter((item) => item.total > 0);
+        return { total, porStatus, porTipo, porRisco };
+    }, [auditoriasNormalizadas]);
+
+    const renderBarraResumoAuditoria = (item, total, classe = "bg-blue-500") => {
+        const percentual = total ? Math.round((item.total / total) * 100) : 0;
+        return (
+            <div key={item.label} className="space-y-1.5 rounded-2xl bg-slate-50 p-3 ring-1 ring-slate-100">
+                <div className="flex items-center justify-between gap-2 text-xs">
+                    <span className="font-bold text-slate-700">{item.label}</span>
+                    <span className="font-black text-slate-950">{item.total}</span>
+                </div>
+                <div className="h-2 overflow-hidden rounded-full bg-white ring-1 ring-slate-100">
+                    <div className={classNames("h-full rounded-full", classe)} style={{ width: `${Math.max(percentual, item.total > 0 ? 6 : 0)}%` }} />
+                </div>
+            </div>
+        );
     };
 
     const blocoWrapper = (chave, titulo, subtitulo, children) => {
@@ -12720,7 +12925,7 @@ function DashboardAuditoriaCampo({ auditoriasCampo = [], onAuditoriaAtualizada }
                         const descricaoAlvoLimpa = alvo.descricao && normalizarComparacaoAuditoria(alvo.descricao) !== normalizarComparacaoAuditoria(empresaDestaque)
                             ? alvo.descricao
                             : "";
-                        const mensagemEnvioAuditoria = item.notificacao?.textoEnvio || item.notificacao?.mensagem || montarMensagemFluidaAuditoriaCampo(item, alvo);
+                        const mensagemEnvioAuditoria = montarMensagemFluidaAuditoriaCampo(item, alvo);
                         const assuntoEnvioAuditoria = item.notificacao?.titulo || item.titulo || `Auditoria ${item.numeroAuditoria || "de campo"}`;
                         const linkEnviarAuditoria = contatoEmail
                             ? `mailto:${contatoEmail}?subject=${encodeURIComponent(assuntoEnvioAuditoria)}&body=${encodeURIComponent(mensagemEnvioAuditoria)}`
@@ -12836,6 +13041,118 @@ function DashboardAuditoriaCampo({ auditoriasCampo = [], onAuditoriaAtualizada }
                 </div>
             ));
         }
+        if (chave === "resumoVisual") {
+            return blocoWrapper(chave, "Resumo visual das auditorias", "Distribuição rápida por status, tipo e grau de risco para leitura gerencial.", (
+                <div className="grid gap-4 lg:grid-cols-3">
+                    <div className="rounded-3xl border border-slate-200 bg-white p-4">
+                        <p className="text-xs font-black uppercase tracking-wide text-slate-400">Por status</p>
+                        <div className="mt-3 space-y-2">
+                            {dadosResumoVisualAuditoria.porStatus.length === 0 ? <p className="text-sm text-slate-500">Sem dados.</p> : dadosResumoVisualAuditoria.porStatus.map((item) => { renderBarraResumoAuditoria(item, dadosResumoVisualAuditoria.total, "bg-emerald-500") })}
+                        </div>
+                    </div>
+                    <div className="rounded-3xl border border-slate-200 bg-white p-4">
+                        <p className="text-xs font-black uppercase tracking-wide text-slate-400">Por tipo</p>
+                        <div className="mt-3 space-y-2">
+                            {dadosResumoVisualAuditoria.porTipo.length === 0 ? <p className="text-sm text-slate-500">Sem dados.</p> : dadosResumoVisualAuditoria.porTipo.map((item) => { renderBarraResumoAuditoria(item, dadosResumoVisualAuditoria.total, "bg-blue-500") })}
+                        </div>
+                    </div>
+                    <div className="rounded-3xl border border-slate-200 bg-white p-4">
+                        <p className="text-xs font-black uppercase tracking-wide text-slate-400">Por risco</p>
+                        <div className="mt-3 space-y-2">
+                            {dadosResumoVisualAuditoria.porRisco.length === 0 ? <p className="text-sm text-slate-500">Sem dados.</p> : dadosResumoVisualAuditoria.porRisco.map((item) => { renderBarraResumoAuditoria(item, dadosResumoVisualAuditoria.total, normalizarTextoBusca(item.label).includes("crit") ? "bg-red-500" : normalizarTextoBusca(item.label).includes("alto") ? "bg-orange-500" : normalizarTextoBusca(item.label).includes("medio") ? "bg-amber-500" : "bg-emerald-500") })}
+                        </div>
+                    </div>
+                </div>
+            ));
+        }
+
+        if (chave === "qrcodes") {
+            const tipoSelecionado = obterTipoAuditoriaCampoDireta(qrFormCampo.tipo);
+            return blocoWrapper(chave, "QR Codes de campo", "Crie, imprima e consulte QR Codes específicos para máquinas, equipamentos, containers, banheiros e pontos fixos.", (
+                <div className="grid gap-4 xl:grid-cols-[0.9fr_1.1fr]">
+                    <div className="rounded-3xl border border-slate-200 bg-slate-50/70 p-4">
+                        <div className="grid gap-3 md:grid-cols-2">
+                            <label className="block text-xs font-bold uppercase tracking-wide text-slate-500">
+                                Tipo
+                                <select value={qrFormCampo.tipo} onChange={(e) => setQrFormCampo((atual) => ({ ...atual, tipo: e.target.value }))} className="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-3 py-2 text-sm normal-case tracking-normal outline-none focus:ring-2 focus:ring-blue-100">
+                                    {tiposAuditoriaCampoDireta.map((tipo) => <option key={tipo.valor} value={tipo.valor}>{tipo.label}</option>)}
+                                </select>
+                            </label>
+                            <label className="block text-xs font-bold uppercase tracking-wide text-slate-500">
+                                Identificação
+                                <input value={qrFormCampo.identificacao} onChange={(e) => setQrFormCampo((atual) => ({ ...atual, identificacao: e.target.value }))} placeholder="Ex.: GERADOR-01" className="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-3 py-2 text-sm normal-case tracking-normal outline-none focus:ring-2 focus:ring-blue-100" />
+                            </label>
+                            <label className="block text-xs font-bold uppercase tracking-wide text-slate-500">
+                                Área
+                                <input value={qrFormCampo.area} onChange={(e) => setQrFormCampo((atual) => ({ ...atual, area: e.target.value }))} placeholder="Ex.: Pátio de máquinas" className="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-3 py-2 text-sm normal-case tracking-normal outline-none focus:ring-2 focus:ring-blue-100" />
+                            </label>
+                            <label className="block text-xs font-bold uppercase tracking-wide text-slate-500">
+                                Local
+                                <input value={qrFormCampo.local} onChange={(e) => setQrFormCampo((atual) => ({ ...atual, local: e.target.value }))} placeholder="Ex.: Avenida 1" className="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-3 py-2 text-sm normal-case tracking-normal outline-none focus:ring-2 focus:ring-blue-100" />
+                            </label>
+                            <label className="block text-xs font-bold uppercase tracking-wide text-slate-500 md:col-span-2">
+                                Empresa responsável
+                                <input value={qrFormCampo.empresaResponsavel} onChange={(e) => setQrFormCampo((atual) => ({ ...atual, empresaResponsavel: e.target.value }))} placeholder="Ex.: RIBEIRO AQUINO" className="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-3 py-2 text-sm normal-case tracking-normal outline-none focus:ring-2 focus:ring-blue-100" />
+                            </label>
+                            <label className="block text-xs font-bold uppercase tracking-wide text-slate-500 md:col-span-2">
+                                Observação
+                                <input value={qrFormCampo.observacao} onChange={(e) => setQrFormCampo((atual) => ({ ...atual, observacao: e.target.value }))} placeholder="Ex.: QR fixado no painel do equipamento" className="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-3 py-2 text-sm normal-case tracking-normal outline-none focus:ring-2 focus:ring-blue-100" />
+                            </label>
+                        </div>
+
+                        <div id="qr-auditoria-campo-para-impressao" className="mt-4 rounded-3xl bg-white p-4 text-center ring-1 ring-slate-200">
+                            <div className="card">
+                                <h2 className="text-lg font-black text-slate-950">QR Code de Auditoria de Campo</h2>
+                                <p className="mt-1 text-sm font-bold text-slate-600">{tipoSelecionado.label} · {qrFormCampo.identificacao || "Identificação pendente"}</p>
+                                <div className="mx-auto mt-4 flex w-fit justify-center rounded-3xl bg-white p-4 ring-1 ring-slate-200">
+                                    <QRCodeSVG value={linkQrCampoAtual} size={180} level="M" />
+                                </div>
+                                <p className="muted mt-3 break-all text-xs text-slate-500">{linkQrCampoAtual}</p>
+                            </div>
+                        </div>
+
+                        {mensagemQrCampo && <p className={classNames("mt-3 rounded-2xl px-3 py-2 text-xs font-bold ring-1", mensagemQrCampo.includes("Erro") || mensagemQrCampo.includes("Não foi") ? "bg-red-50 text-red-700 ring-red-200" : "bg-emerald-50 text-emerald-700 ring-emerald-200")}>{mensagemQrCampo}</p>}
+
+                        <div className="mt-4 grid gap-2 sm:grid-cols-3">
+                            <button type="button" onClick={salvarQrCampo} className="inline-flex items-center justify-center gap-2 rounded-2xl bg-slate-950 px-3 py-3 text-sm font-bold text-white hover:bg-slate-800"><QrCode className="h-4 w-4" />Salvar QR</button>
+                            <button type="button" onClick={imprimirQrCampoAtual} className="inline-flex items-center justify-center gap-2 rounded-2xl bg-white px-3 py-3 text-sm font-bold text-slate-700 ring-1 ring-slate-200 hover:bg-slate-50"><Download className="h-4 w-4" />Imprimir</button>
+                            <button type="button" onClick={() => navigator.clipboard?.writeText(linkQrCampoAtual)} className="inline-flex items-center justify-center gap-2 rounded-2xl bg-blue-50 px-3 py-3 text-sm font-bold text-blue-700 ring-1 ring-blue-200 hover:bg-blue-100">Copiar link</button>
+                        </div>
+                    </div>
+
+                    <div className="rounded-3xl border border-slate-200 bg-white p-4">
+                        <div className="flex items-center justify-between gap-2">
+                            <div>
+                                <p className="text-sm font-black text-slate-950">QR Codes salvos</p>
+                                <p className="text-xs text-slate-500">Consulta do banco de dados de QR Codes gerados.</p>
+                            </div>
+                            <button type="button" onClick={carregarQrcodesCampo} className="rounded-xl bg-slate-50 px-3 py-2 text-xs font-bold text-slate-600 ring-1 ring-slate-200">Atualizar</button>
+                        </div>
+                        <div className="mt-3 max-h-[520px] overflow-auto pr-1 scrollbar-discreta">
+                            {carregandoQrcodesCampo ? <p className="rounded-2xl bg-slate-50 p-4 text-sm text-slate-500">Carregando QR Codes...</p> : qrcodesCampo.length === 0 ? <p className="rounded-2xl border border-dashed border-slate-300 p-4 text-center text-sm text-slate-500">Nenhum QR Code salvo ainda.</p> : (
+                                <div className="space-y-2">
+                                    {qrcodesCampo.map((item) => (
+                                        <div key={item.id || item.codigo} className="grid gap-3 rounded-2xl bg-slate-50 p-3 ring-1 ring-slate-100 sm:grid-cols-[auto_1fr]">
+                                            <div className="rounded-2xl bg-white p-2 ring-1 ring-slate-200"><QRCodeSVG value={item.link || ""} size={74} level="M" /></div>
+                                            <div className="min-w-0">
+                                                <div className="flex flex-wrap items-center gap-2">
+                                                    <span className="rounded-full bg-slate-950 px-2 py-1 text-[10px] font-black uppercase text-white">{item.codigo || "Sem código"}</span>
+                                                    <span className="rounded-full bg-blue-50 px-2 py-1 text-[10px] font-bold text-blue-700 ring-1 ring-blue-100">{item.tipo_label || item.tipo}</span>
+                                                </div>
+                                                <p className="mt-2 truncate text-sm font-black text-slate-900" title={item.identificacao}>{item.identificacao}</p>
+                                                <p className="text-xs text-slate-500">{[item.area, item.local, item.empresa_responsavel].filter(Boolean).join(" · ") || "Sem local vinculado"}</p>
+                                                <p className="mt-1 break-all text-[11px] text-slate-400">{item.link}</p>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                </div>
+            ));
+        }
+
         if (chave === "boasPraticas") {
             return blocoWrapper(chave, "Boas práticas para DDS", "Registros positivos observados em campo para usar em DDS futuro.", (
                 <div className="space-y-2">
