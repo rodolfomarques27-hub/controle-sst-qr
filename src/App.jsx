@@ -2513,13 +2513,9 @@ function Dashboard({
         evento.dataTransfer.setData("text/plain", "mover");
     };
 
-    const classeTamanhoCartaDashboard = (chave) => {
-        const tamanho = tamanhosCartasDashboard[chave] || "padrao";
-
-        if (tamanho === "destaque") return "md:col-span-2 xl:col-span-6";
-        if (tamanho === "grande") return "md:col-span-2 xl:col-span-3";
-        if (tamanho === "medio") return "md:col-span-2 xl:col-span-2";
-
+    const classeTamanhoCartaDashboard = () => {
+        // Cards principais padronizados: todos ocupam 1 coluna no grid de 5 por linha.
+        // A organização/visibilidade continua funcionando no Personalizar painel, mas o tamanho fica fixo para manter padrão visual.
         return "";
     };
 
@@ -3332,9 +3328,9 @@ function Dashboard({
     const renderBlocoDashboard = (chave) => {
         if (chave === "cards") {
             return (
-                <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
+                <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
                     {cardsVisiveis.length === 0 ? (
-                        <Card className="md:col-span-2 xl:col-span-6">
+                        <Card className="md:col-span-2 xl:col-span-5">
                             <div className="rounded-2xl border border-dashed border-slate-300 p-5 text-center text-sm text-slate-500">
                                 Nenhuma carta principal selecionada. Abra Personalizar painel e escolha as cartas que deseja exibir.
                             </div>
@@ -3342,10 +3338,8 @@ function Dashboard({
                     ) : (
                         cardsVisiveis.map((item, index) => {
                             const Icon = item.icon;
-                            const tamanho = tamanhosCartasDashboard[item.chave] || "padrao";
                             const estiloCarta = estiloCartaDashboard(item.chave);
-                            const destaqueCarta = tamanho === "destaque" || tamanho === "grande";
-                            const valorClasse = destaqueCarta ? "text-4xl" : tamanho === "medio" ? "text-2xl" : "text-[26px]";
+                            const valorClasse = "text-[26px]";
 
                             if (item.chave === "armazenamentoUtilizado") {
                                 const StatusIcon = storageStatusDashboard.statusIcon;
@@ -3370,7 +3364,7 @@ function Dashboard({
                                             </div>
 
                                             <div>
-                                                <p className={classNames("break-words font-black leading-tight", destaqueCarta ? "text-4xl" : "text-[21px]", storageStatusDashboard.valorClasse)}>
+                                                <p className={classNames("break-words font-black leading-tight", "text-[21px]", storageStatusDashboard.valorClasse)}>
                                                     {totalStorageLabel}
                                                     <span className="ml-1 text-base font-semibold text-slate-400">/ {storageLimiteLabelDashboard}</span>
                                                 </p>
