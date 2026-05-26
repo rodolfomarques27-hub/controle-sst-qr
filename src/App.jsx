@@ -891,6 +891,12 @@ const tiposAuditoriaCampoDireta = [
 
 const statusAuditoriaCampoDireta = ["Aberta", "Em andamento", "Resolvida", "Cancelada", "Vencida"];
 const grausRiscoAuditoriaCampoDireta = ["Baixo", "Médio", "Alto", "Crítico"];
+const descricoesGrauRiscoAuditoriaCampoDireta = {
+    Baixo: "Condição simples, sem risco imediato. Pode ser tratada na rotina normal.",
+    Médio: "Pode gerar incidente ou desvio se não for corrigida. Requer prazo e responsável.",
+    Alto: "Risco relevante para pessoas, máquinas ou operação. Priorizar correção e acompanhamento.",
+    Crítico: "Risco grave ou iminente. Exige ação imediata e controle antes da continuidade da atividade.",
+};
 
 const checklistDinamicoAuditoriaCampo = {
     area: [
@@ -12458,13 +12464,6 @@ function NovaAuditoriaCampoDireta({ usuario = null, onAuditoriaSalva, empresasBa
         observacoesGerais: "",
     }));
     const [respostasChecklist, setRespostasChecklist] = useState(() => criarRespostasChecklistDinamico(tipoInicial.valor));
-    const [qrEquipamento, setQrEquipamento] = useState(() => ({
-        tipoAuditoria: ["maquina", "equipamento", "veiculo"].includes(tipoInicial.valor) ? tipoInicial.valor : "maquina",
-        identificacao: identificacaoParametro,
-        area: areaParametro,
-        local: localParametro,
-        empresa: empresaParametro,
-    }));
 
     const tipoAtual = obterTipoAuditoriaCampoDireta(formulario.tipoAuditoria);
     const checklistAtual = useMemo(() => checklistParaTipoAuditoriaCampo(formulario.tipoAuditoria), [formulario.tipoAuditoria]);
@@ -12473,17 +12472,6 @@ function NovaAuditoriaCampoDireta({ usuario = null, onAuditoriaSalva, empresasBa
     const linkEspecifico = formulario.maquinaEquipamento
         ? `${linkGeral}?tipo=${tipoAtual.parametros[0] || tipoAtual.valor}&id=${encodeURIComponent(formulario.maquinaEquipamento)}`
         : linkTipoAtual;
-    const linkQrEquipamento = useMemo(() => {
-        const tipoQr = obterTipoAuditoriaCampoDireta(qrEquipamento.tipoAuditoria);
-        const parametrosQr = new URLSearchParams();
-        parametrosQr.set("tipo", tipoQr.parametros[0] || tipoQr.valor);
-        if (qrEquipamento.identificacao?.trim()) parametrosQr.set("id", qrEquipamento.identificacao.trim());
-        if (qrEquipamento.area?.trim()) parametrosQr.set("area", qrEquipamento.area.trim());
-        if (qrEquipamento.local?.trim()) parametrosQr.set("local", qrEquipamento.local.trim());
-        if (qrEquipamento.empresa?.trim()) parametrosQr.set("empresa", qrEquipamento.empresa.trim());
-        if (TOKEN_LINK_AUDITORIA_CAMPO) parametrosQr.set("token", TOKEN_LINK_AUDITORIA_CAMPO);
-        return `${linkGeral}?${parametrosQr.toString()}`;
-    }, [linkGeral, qrEquipamento]);
 
     const alterarFormulario = (campo, valor) => {
         setFormulario((atual) => ({ ...atual, [campo]: valor }));
@@ -12497,6 +12485,36 @@ function NovaAuditoriaCampoDireta({ usuario = null, onAuditoriaSalva, empresasBa
             titulo: atual.titulo && !atual.titulo.startsWith("Auditoria de campo -") ? atual.titulo : `Auditoria de campo - ${novoTipo.label}`,
         }));
         setRespostasChecklist(criarRespostasChecklistDinamico(novoTipo.valor));
+    };
+
+
+    const limparFormularioAuditoriaCampo = () => {
+        if (previewFotos.antes) URL.revokeObjectURL(previewFotos.antes);
+        if (previewFotos.depois) URL.revokeObjectURL(previewFotos.depois);
+
+        setFormulario({
+            tipoAuditoria: tipoInicial.valor,
+            titulo: identificacaoParametro ? `Auditoria de campo - ${tipoInicial.label} ${identificacaoParametro}` : `Auditoria de campo - ${tipoInicial.label}`,
+            area: areaParametro,
+            subarea: subareaParametro,
+            local: localParametro,
+            maquinaEquipamento: identificacaoParametro,
+            empresaResponsavel: empresaParametro,
+            auditorNome: usuario?.email || "",
+            grauRisco: "Baixo",
+            situacaoEncontrada: "",
+            acaoRecomendada: "",
+            responsavelTratativa: "",
+            prazoAdequacao: "",
+            statusAuditoria: "Aberta",
+            fotoAntes: null,
+            fotoDepois: null,
+            observacoesGerais: "",
+        });
+        setRespostasChecklist(criarRespostasChecklistDinamico(tipoInicial.valor));
+        setPreviewFotos({ antes: "", depois: "" });
+        setAuditoriaSalva(null);
+        setMensagem("Formulário limpo. Você pode iniciar uma nova auditoria.");
     };
 
     const liberarAcesso = () => {
@@ -12636,15 +12654,19 @@ function NovaAuditoriaCampoDireta({ usuario = null, onAuditoriaSalva, empresasBa
                 },
             };
 
-            const { data, error } = await supabase
+            const { error } = await supabase
                 .from("auditorias_campo")
-                .insert(payload)
-                .select("*, auditoria_campo_desvios(*)")
-                .single();
+                .insert(payload);
 
             if (error) throw new Error(`Erro ao salvar auditoria: ${error.message}`);
 
-            const normalizada = normalizarAuditoriaCampo({ ...data, desvios: data?.auditoria_campo_desvios || [] });
+            const normalizada = normalizarAuditoriaCampo({
+                ...payload,
+                numero_auditoria: numeroAuditoria,
+                criado_em: new Date().toISOString(),
+                auditoria_campo_desvios: [],
+                desvios: [],
+            });
             setAuditoriaSalva(normalizada);
             setMensagem(`Auditoria ${numeroAuditoria} salva com sucesso.`);
             if (onAuditoriaSalva) onAuditoriaSalva(normalizada);
@@ -12747,7 +12769,20 @@ function NovaAuditoriaCampoDireta({ usuario = null, onAuditoriaSalva, empresasBa
                                         className="mt-2 w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-slate-300"
                                     />
                                 </div>
-                                {renderCampoTexto("subarea", "Subárea", "Ex.: Linha 01 / doca / acesso lateral")}
+                                <div>
+                                    <div className="flex items-center justify-between gap-2">
+                                        <label className="text-xs font-bold uppercase tracking-wide text-slate-500">Subárea</label>
+                                        <button type="button" onClick={() => alterarFormulario("subarea", "Não aplicável")} className="rounded-full bg-slate-100 px-2 py-1 text-[10px] font-bold text-slate-600 ring-1 ring-slate-200 hover:bg-slate-200">
+                                            Não aplicável
+                                        </button>
+                                    </div>
+                                    <input
+                                        value={formulario.subarea || ""}
+                                        onChange={(e) => alterarFormulario("subarea", e.target.value)}
+                                        placeholder="Ex.: Linha 01 / doca / acesso lateral"
+                                        className="mt-2 w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-slate-300"
+                                    />
+                                </div>
                                 <div>
                                     <div className="flex items-center justify-between gap-2">
                                         <label className="text-xs font-bold uppercase tracking-wide text-slate-500">Local</label>
@@ -12763,7 +12798,20 @@ function NovaAuditoriaCampoDireta({ usuario = null, onAuditoriaSalva, empresasBa
                                         className="mt-2 w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-slate-300"
                                     />
                                 </div>
-                                {renderCampoTexto("maquinaEquipamento", "Máquina / equipamento", "Ex.: PRENSA-01")}
+                                <div>
+                                    <div className="flex items-center justify-between gap-2">
+                                        <label className="text-xs font-bold uppercase tracking-wide text-slate-500">Máquina / equipamento</label>
+                                        <button type="button" onClick={() => alterarFormulario("maquinaEquipamento", "Não aplicável")} className="rounded-full bg-slate-100 px-2 py-1 text-[10px] font-bold text-slate-600 ring-1 ring-slate-200 hover:bg-slate-200">
+                                            Não aplicável
+                                        </button>
+                                    </div>
+                                    <input
+                                        value={formulario.maquinaEquipamento || ""}
+                                        onChange={(e) => alterarFormulario("maquinaEquipamento", e.target.value)}
+                                        placeholder="Ex.: PRENSA-01 ou Não aplicável"
+                                        className="mt-2 w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-slate-300"
+                                    />
+                                </div>
                                 <div>
                                     <label className="text-xs font-bold uppercase tracking-wide text-slate-500">Empresa responsável</label>
                                     <input
@@ -12800,6 +12848,9 @@ function NovaAuditoriaCampoDireta({ usuario = null, onAuditoriaSalva, empresasBa
                                     <select value={formulario.grauRisco} onChange={(e) => alterarFormulario("grauRisco", e.target.value)} className="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold outline-none focus:ring-2 focus:ring-slate-300">
                                         {grausRiscoAuditoriaCampoDireta.map((risco) => <option key={risco}>{risco}</option>)}
                                     </select>
+                                    <p className="mt-2 rounded-2xl bg-slate-50 px-3 py-2 text-[11px] leading-relaxed text-slate-500 ring-1 ring-slate-100">
+                                        {descricoesGrauRiscoAuditoriaCampoDireta[formulario.grauRisco]}
+                                    </p>
                                 </div>
                                 <div>
                                     <label className="text-xs font-bold uppercase tracking-wide text-slate-500">Status da auditoria</label>
@@ -12867,59 +12918,6 @@ function NovaAuditoriaCampoDireta({ usuario = null, onAuditoriaSalva, empresasBa
                                 <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-bold text-slate-600 ring-1 ring-slate-200">AUD-ANO-0001</span>
                             </div>
                         </Card>
-
-                        <Card>
-                            <div className="flex flex-col gap-4">
-                                <div>
-                                    <p className="text-xs font-bold uppercase tracking-wide text-slate-500">QR Code geral</p>
-                                    <p className="mt-1 text-sm text-slate-500">Abre o formulário de nova auditoria em qualquer local.</p>
-                                </div>
-                                <div className="flex justify-center rounded-3xl bg-slate-50 p-4 ring-1 ring-slate-100">
-                                    <QRCodeSVG value={linkGeral} size={150} level="M" includeMargin />
-                                </div>
-                                <p className="break-all rounded-2xl bg-slate-50 p-3 text-xs text-slate-500 ring-1 ring-slate-100">{linkGeral}</p>
-                                <p className="text-[11px] leading-relaxed text-slate-400">Link direto alternativo: {linkGeralDireto}. O QR usa o formato seguro com # para evitar erro 404 quando o acesso é feito direto pelo celular.</p>
-                                <button type="button" onClick={() => copiarTexto(linkGeral, "Link geral copiado.")} className="rounded-2xl bg-slate-950 px-4 py-3 text-sm font-bold text-white hover:bg-slate-800">Copiar link geral</button>
-                            </div>
-                        </Card>
-
-                        <CardRecolhivel titulo="QR Code de máquina/equipamento" subtitulo="Gere um QR específico com identificação, área e local já preenchidos." defaultOpen={false} persistKey="novaAuditoriaCampo:qrcodeEquipamento">
-                            <div className="space-y-3">
-                                <div>
-                                    <label className="text-xs font-bold uppercase tracking-wide text-slate-500">Tipo</label>
-                                    <select value={qrEquipamento.tipoAuditoria} onChange={(e) => setQrEquipamento((atual) => ({ ...atual, tipoAuditoria: e.target.value }))} className="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold outline-none focus:ring-2 focus:ring-slate-300">
-                                        {tiposAuditoriaCampoDireta.filter((tipo) => ["maquina", "equipamento", "veiculo", "area", "area_externa"].includes(tipo.valor)).map((tipo) => <option key={tipo.valor} value={tipo.valor}>{tipo.label}</option>)}
-                                    </select>
-                                </div>
-                                <div>
-                                    <label className="text-xs font-bold uppercase tracking-wide text-slate-500">Identificação</label>
-                                    <input value={qrEquipamento.identificacao || ""} onChange={(e) => setQrEquipamento((atual) => ({ ...atual, identificacao: e.target.value }))} placeholder="Ex.: PRENSA-01" className="mt-2 w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-slate-300" />
-                                </div>
-                                <div>
-                                    <div className="flex items-center justify-between gap-2">
-                                        <label className="text-xs font-bold uppercase tracking-wide text-slate-500">Área</label>
-                                        <button type="button" onClick={() => setQrEquipamento((atual) => ({ ...atual, area: "Não aplicável" }))} className="rounded-full bg-slate-100 px-2 py-1 text-[10px] font-bold text-slate-600 ring-1 ring-slate-200 hover:bg-slate-200">Não aplicável</button>
-                                    </div>
-                                    <input value={qrEquipamento.area || ""} onChange={(e) => setQrEquipamento((atual) => ({ ...atual, area: e.target.value }))} list="opcoes-area-auditoria-campo" placeholder="Ex.: Linha 01" className="mt-2 w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-slate-300" />
-                                </div>
-                                <div>
-                                    <div className="flex items-center justify-between gap-2">
-                                        <label className="text-xs font-bold uppercase tracking-wide text-slate-500">Local</label>
-                                        <button type="button" onClick={() => setQrEquipamento((atual) => ({ ...atual, local: "Não aplicável" }))} className="rounded-full bg-slate-100 px-2 py-1 text-[10px] font-bold text-slate-600 ring-1 ring-slate-200 hover:bg-slate-200">Não aplicável</button>
-                                    </div>
-                                    <input value={qrEquipamento.local || ""} onChange={(e) => setQrEquipamento((atual) => ({ ...atual, local: e.target.value }))} list="opcoes-local-auditoria-campo" placeholder="Ex.: Pátio de máquinas" className="mt-2 w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-slate-300" />
-                                </div>
-                                <div>
-                                    <label className="text-xs font-bold uppercase tracking-wide text-slate-500">Empresa responsável</label>
-                                    <input value={qrEquipamento.empresa || ""} onChange={(e) => setQrEquipamento((atual) => ({ ...atual, empresa: e.target.value }))} list="empresas-auditoria-campo" placeholder="Selecione ou digite a empresa" className="mt-2 w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-slate-300" />
-                                </div>
-                                <div className="flex justify-center rounded-3xl bg-slate-50 p-4 ring-1 ring-slate-100">
-                                    <QRCodeSVG value={linkQrEquipamento} size={150} level="M" includeMargin />
-                                </div>
-                                <p className="break-all rounded-2xl bg-slate-50 p-3 text-xs text-slate-500 ring-1 ring-slate-100">{linkQrEquipamento}</p>
-                                <button type="button" onClick={() => copiarTexto(linkQrEquipamento, "Link específico copiado.")} className="w-full rounded-2xl bg-slate-950 px-4 py-3 text-sm font-bold text-white hover:bg-slate-800">Copiar link específico</button>
-                            </div>
-                        </CardRecolhivel>
                     </div>
                 </div>
 
@@ -12937,7 +12935,7 @@ function NovaAuditoriaCampoDireta({ usuario = null, onAuditoriaSalva, empresasBa
                                 <h2 className="mt-1 text-xl font-black text-emerald-950">{auditoriaSalva.numeroAuditoria || auditoriaSalva.id}</h2>
                                 <p className="mt-1 text-sm text-emerald-700">Ela já pode aparecer no Dashboard Auditoria de Campo e relatórios.</p>
                             </div>
-                            <button type="button" onClick={() => window.location.assign(linkGeral)} className="rounded-2xl bg-emerald-600 px-4 py-3 text-sm font-bold text-white hover:bg-emerald-700">Criar outra auditoria</button>
+                            <button type="button" onClick={limparFormularioAuditoriaCampo} className="rounded-2xl bg-emerald-600 px-4 py-3 text-sm font-bold text-white hover:bg-emerald-700">Nova auditoria</button>
                         </div>
                     </Card>
                 )}
@@ -12946,8 +12944,8 @@ function NovaAuditoriaCampoDireta({ usuario = null, onAuditoriaSalva, empresasBa
                     <button type="button" onClick={salvarAuditoriaDireta} disabled={salvando} className="flex-1 rounded-2xl bg-slate-950 px-4 py-3 text-sm font-bold text-white hover:bg-slate-800 disabled:opacity-60">
                         {salvando ? "Salvando auditoria..." : "+ Salvar nova auditoria de campo"}
                     </button>
-                    <button type="button" onClick={() => window.location.assign(linkGeral)} className="rounded-2xl bg-slate-100 px-4 py-3 text-sm font-bold text-slate-700 hover:bg-slate-200">
-                        Limpar formulário
+                    <button type="button" onClick={limparFormularioAuditoriaCampo} className="rounded-2xl bg-slate-100 px-4 py-3 text-sm font-bold text-slate-700 hover:bg-slate-200">
+                        Nova auditoria / limpar formulário
                     </button>
                 </div>
             </div>
