@@ -1,6 +1,6 @@
 /* eslint-disable no-unused-vars */
 import React, { useCallback, useEffect, useMemo, useState } from "react";
-import { createClient } from "@supabase/supabase-js";
+import { supabase } from "./supabaseClient";
 import { QRCodeSVG } from "qrcode.react";
 import { motion } from "framer-motion";
 import {
@@ -37,23 +37,6 @@ import {
     Users,
     XCircle,
 } from "lucide-react";
-
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
-
-if (!supabaseUrl) {
-    throw new Error(
-        "VITE_SUPABASE_URL não encontrada. Confira se o arquivo .env está na raiz do projeto e se a variável começa com VITE_."
-    );
-}
-
-if (!supabaseAnonKey) {
-    throw new Error(
-        "VITE_SUPABASE_ANON_KEY não encontrada. Confira se o arquivo .env está na raiz do projeto e se a variável começa com VITE_."
-    );
-}
-
-const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
 const hoje = new Date();
 
@@ -894,7 +877,7 @@ const statusDesvioAuditoriaCampo = ["Aberto", "Em tratativa", "Corrigido", "Canc
 const gravidadesAuditoriaCampo = ["Leve", "Moderada", "Grave", "Crítica"];
 
 const SENHA_LINK_AUDITORIA_CAMPO = import.meta.env.VITE_SENHA_AUDITORIA_CAMPO || SENHA_AUDITORIA;
-const TOKEN_LINK_AUDITORIA_CAMPO = import.meta.env.VITE_TOKEN_AUDITORIA_CAMPO || "";
+const TOKEN_LINK_AUDITORIA_CAMPO = import.meta.env.VITE_TOKEN_AUDITORIA_CAMPO || "TOKEN-AUDITORIA-CAMPO-2026";
 
 const tiposAuditoriaCampoDireta = [
     { valor: "area", label: "Área", parametros: ["area"], grupo: "area" },
@@ -12411,7 +12394,13 @@ function EditorNotificacaoHistoricoAuditoria({ auditoria = {}, onAtualizada }) {
     );
 }
 
-function DashboardAuditoriaCampo({ auditoriasCampo = [], onAuditoriaAtualizada }) {
+function DashboardAuditoriaCampo({
+    auditoriasCampo = [],
+    carregando = false,
+    erro = "",
+    onRecarregar,
+    onAuditoriaAtualizada,
+}) {
     const [mostrarPersonalizacao, setMostrarPersonalizacao] = useState(false);
     const [qrcodesCampo, setQrcodesCampo] = useState([]);
     const [carregandoQrcodesCampo, setCarregandoQrcodesCampo] = useState(false);
@@ -12426,40 +12415,60 @@ function DashboardAuditoriaCampo({ auditoriasCampo = [], onAuditoriaAtualizada }
     });
 
     const cartasPadrao = {
+        totalAuditorias: true,
         auditoriasMes: true,
-        mediaConformidade: true,
-        desviosAbertos: true,
-        desviosCorrigidos: true,
-        auditoriasCriticas: true,
+        auditoriasAbertas: true,
         auditoriasVencidas: true,
+        desviosCriticos: true,
+        desviosAbertos: true,
+        mediaConformidade: true,
     };
     const tamanhosCartasPadrao = {
+        totalAuditorias: "padrao",
         auditoriasMes: "padrao",
-        mediaConformidade: "padrao",
-        desviosAbertos: "padrao",
-        desviosCorrigidos: "padrao",
-        auditoriasCriticas: "padrao",
+        auditoriasAbertas: "padrao",
         auditoriasVencidas: "padrao",
+        desviosCriticos: "padrao",
+        desviosAbertos: "padrao",
+        mediaConformidade: "padrao",
     };
-    const ordemCartasPadrao = ["auditoriasMes", "mediaConformidade", "desviosAbertos", "desviosCorrigidos", "auditoriasCriticas", "auditoriasVencidas"];
+    const ordemCartasPadrao = [
+        "totalAuditorias",
+        "auditoriasMes",
+        "auditoriasAbertas",
+        "auditoriasVencidas",
+        "desviosCriticos",
+        "desviosAbertos",
+        "mediaConformidade",
+    ];
 
     const blocosPadrao = {
         historico: true,
-        boasPraticas: true,
+        resumoVisual: true,
         topDesvios: true,
         empresas: true,
-        resumoVisual: true,
+        areas: true,
+        boasPraticas: true,
         qrcodes: true,
     };
     const tamanhosBlocosPadrao = {
         historico: "destaque",
-        boasPraticas: "medio",
+        resumoVisual: "medio",
         topDesvios: "medio",
         empresas: "medio",
-        resumoVisual: "medio",
+        areas: "medio",
+        boasPraticas: "medio",
         qrcodes: "destaque",
     };
-    const ordemBlocosPadrao = ["historico", "resumoVisual", "qrcodes", "boasPraticas", "topDesvios", "empresas"];
+    const ordemBlocosPadrao = [
+        "historico",
+        "resumoVisual",
+        "topDesvios",
+        "empresas",
+        "areas",
+        "boasPraticas",
+        "qrcodes",
+    ];
 
     const opcoesTamanho = [
         { chave: "padrao", label: "Padrão", descricao: "1 coluna" },
@@ -12524,10 +12533,11 @@ function DashboardAuditoriaCampo({ auditoriasCampo = [], onAuditoriaAtualizada }
     });
     const blocosRecolhidosPadrao = {
         historico: true,
-        boasPraticas: true,
+        resumoVisual: true,
         topDesvios: true,
         empresas: true,
-        resumoVisual: true,
+        areas: true,
+        boasPraticas: true,
         qrcodes: true,
     };
     const [blocosRecolhidos, setBlocosRecolhidos] = useState(() => {
@@ -12624,69 +12634,239 @@ function DashboardAuditoriaCampo({ auditoriasCampo = [], onAuditoriaAtualizada }
             return true;
         }).sort((a, b) => String(b.createdAt || "").localeCompare(String(a.createdAt || "")));
     }, [auditoriasNormalizadas, filtrosAuditoriaCampo]);
+    const auditoriasBaseDashboard = auditoriasNormalizadas.filter((item) =>
+        item.numeroAuditoria ||
+        item.tipoAuditoria ||
+        item.titulo ||
+        item.area ||
+        item.local ||
+        item.maquinaEquipamento ||
+        item.situacaoEncontrada
+    );
+
     const mesAtual = hoje.getMonth();
     const anoAtual = hoje.getFullYear();
-    const auditoriasMes = auditoriasNormalizadas.filter((item) => {
+
+    const auditoriasMes = auditoriasBaseDashboard.filter((item) => {
         const data = item.createdAt ? new Date(item.createdAt) : null;
         return data && !Number.isNaN(data.getTime()) && data.getMonth() === mesAtual && data.getFullYear() === anoAtual;
     });
+
     const mediaConformidade = auditoriasMes.length
         ? Math.round(auditoriasMes.reduce((total, item) => total + Number(item.pontuacao || 0), 0) / auditoriasMes.length)
         : 0;
-    const desviosAbertos = auditoriasNormalizadas.filter(auditoriaCampoAberta).length;
-    const desviosCorrigidos = auditoriasNormalizadas.filter((item) => {
-        const status = normalizarTextoBusca(item.statusDesvio || "");
-        return Number(item.totalDesvios || 0) > 0 && ["corrigido", "fechado", "concluido", "concluído"].some((termo) => status.includes(termo));
+
+    const auditoriasAbertas = auditoriasBaseDashboard.filter((item) => {
+        const status = normalizarTextoBusca(item.statusAuditoria || item.statusDesvio || "");
+        return (
+            status.includes("aberta") ||
+            status.includes("aberto") ||
+            status.includes("andamento") ||
+            status.includes("tratativa")
+        ) && !(
+            status.includes("corrigido") ||
+            status.includes("corrigida") ||
+            status.includes("resolvida") ||
+            status.includes("cancelada") ||
+            status.includes("concluido") ||
+            status.includes("concluído")
+        );
     }).length;
-    const auditoriasCriticas = auditoriasNormalizadas.filter((item) => {
+
+    const auditoriasVencidas = auditoriasBaseDashboard.filter(auditoriaCampoVencida).length;
+    const desviosAbertos = auditoriasBaseDashboard.filter(auditoriaCampoAberta).length;
+
+    const desviosCriticos = auditoriasBaseDashboard.filter((item) => {
         const classificacao = normalizarTextoBusca(item.classificacao || "");
         const risco = normalizarTextoBusca(item.grauRisco || "");
-        return risco.includes("critico") || risco.includes("crítico") || classificacao.includes("critico") || classificacao.includes("crítico") || classificacao.includes("acao") || classificacao.includes("ação") || Number(item.pontuacao || 0) < 50;
+        const categoria = normalizarTextoBusca(item.categoriaDesvioPrincipal || "");
+        const status = normalizarTextoBusca(item.statusDesvio || item.statusAuditoria || "");
+
+        const ehCritico =
+            item.temDesvioGrave ||
+            risco.includes("alto") ||
+            risco.includes("critico") ||
+            risco.includes("crítico") ||
+            classificacao.includes("critico") ||
+            classificacao.includes("crítico") ||
+            classificacao.includes("acao") ||
+            classificacao.includes("ação") ||
+            categoria.includes("grave") ||
+            categoria.includes("critico") ||
+            categoria.includes("crítico") ||
+            Number(item.pontuacao || 0) < 50;
+
+        const estaEncerrado =
+            status.includes("corrigido") ||
+            status.includes("corrigida") ||
+            status.includes("resolvida") ||
+            status.includes("cancelada") ||
+            status.includes("concluido") ||
+            status.includes("concluído");
+
+        return ehCritico && !estaEncerrado;
     }).length;
-    const auditoriasVencidas = auditoriasNormalizadas.filter(auditoriaCampoVencida).length;
+
+    const auditoriasCriticas = desviosCriticos;
 
     const topDesvios = Object.values(
-        auditoriasNormalizadas.reduce((acc, item) => {
-            const chave = item.categoriaDesvioPrincipal || "Sem categoria informada";
-            if (!acc[chave]) acc[chave] = { categoria: chave, total: 0, abertos: 0 };
-            acc[chave].total += Number(item.totalDesvios || 0);
-            if (auditoriaCampoAberta(item)) acc[chave].abertos += 1;
+        auditoriasBaseDashboard.reduce((acc, item) => {
+            const chave =
+                item.categoriaDesvioPrincipal ||
+                item.grauRisco ||
+                item.tipoAuditoria ||
+                "Sem categoria informada";
+
+            if (!acc[chave]) {
+                acc[chave] = {
+                    categoria: chave,
+                    total: 0,
+                    abertos: 0,
+                };
+            }
+
+            acc[chave].total += Number(item.totalDesvios || 0) || 1;
+
+            if (auditoriaCampoAberta(item)) {
+                acc[chave].abertos += 1;
+            }
+
             return acc;
         }, {})
-    ).filter((item) => item.total > 0).sort((a, b) => b.total - a.total).slice(0, 5);
+    )
+        .filter((item) => item.total > 0)
+        .sort((a, b) => b.total - a.total)
+        .slice(0, 5);
 
     const empresasAuditoria = Object.values(
-        auditoriasNormalizadas.reduce((acc, item) => {
-            const empresa = item.empresaNome || "Empresa não informada";
-            if (!acc[empresa]) acc[empresa] = { empresa, auditorias: 0, desvios: 0, soma: 0 };
+        auditoriasBaseDashboard.reduce((acc, item) => {
+            const empresa = item.empresaNome || item.empresaResponsavel || "Empresa não informada";
+
+            if (!acc[empresa]) {
+                acc[empresa] = {
+                    empresa,
+                    auditorias: 0,
+                    desvios: 0,
+                    soma: 0,
+                };
+            }
+
             acc[empresa].auditorias += 1;
             acc[empresa].desvios += Number(item.totalDesvios || 0);
             acc[empresa].soma += Number(item.pontuacao || 0);
+
             return acc;
         }, {})
-    ).map((item) => ({ ...item, media: item.auditorias ? Math.round(item.soma / item.auditorias) : 0 }))
+    )
+        .map((item) => ({
+            ...item,
+            media: item.auditorias ? Math.round(item.soma / item.auditorias) : 0,
+        }))
         .sort((a, b) => b.desvios - a.desvios || b.auditorias - a.auditorias);
 
-    const boasPraticasAuditoria = auditoriasNormalizadas
+    const areasAuditoria = Object.values(
+        auditoriasBaseDashboard.reduce((acc, item) => {
+            const alvo =
+                item.area ||
+                item.local ||
+                item.maquinaEquipamento ||
+                identificarAlvoAuditoriaCampo(item).titulo ||
+                "Área/local não informado";
+
+            if (!acc[alvo]) {
+                acc[alvo] = {
+                    area: alvo,
+                    auditorias: 0,
+                    desvios: 0,
+                    riscosAltos: 0,
+                    soma: 0,
+                };
+            }
+
+            const risco = normalizarTextoBusca(item.grauRisco || "");
+
+            acc[alvo].auditorias += 1;
+            acc[alvo].desvios += Number(item.totalDesvios || 0);
+            acc[alvo].soma += Number(item.pontuacao || 0);
+
+            if (risco.includes("alto") || risco.includes("critico") || risco.includes("crítico")) {
+                acc[alvo].riscosAltos += 1;
+            }
+
+            return acc;
+        }, {})
+    )
+        .map((item) => ({
+            ...item,
+            media: item.auditorias ? Math.round(item.soma / item.auditorias) : 0,
+        }))
+        .sort((a, b) => b.riscosAltos - a.riscosAltos || b.desvios - a.desvios || b.auditorias - a.auditorias)
+        .slice(0, 10);
+
+    const boasPraticasAuditoria = auditoriasBaseDashboard
         .filter((item) => String(item.boasPraticas || "").trim())
         .sort((a, b) => String(b.createdAt || "").localeCompare(String(a.createdAt || "")))
         .slice(0, 10);
 
     const cartas = [
-        { chave: "auditoriasMes", label: "Auditorias do mês", valor: auditoriasMes.length, icon: ClipboardCheck, detalhe: "Checklists via QR Code" },
-        { chave: "mediaConformidade", label: "Média de conformidade", valor: `${mediaConformidade}%`, icon: BadgeCheck, detalhe: "Pontuação média mensal" },
-        { chave: "desviosAbertos", label: "Desvios abertos", valor: desviosAbertos, icon: AlertTriangle, detalhe: "Aguardando tratativa" },
-        { chave: "desviosCorrigidos", label: "Desvios corrigidos", valor: desviosCorrigidos, icon: CheckCircle2, detalhe: "Tratativas concluídas" },
-        { chave: "auditoriasCriticas", label: "Auditorias críticas", valor: auditoriasCriticas, icon: AlertTriangle, detalhe: "Risco crítico ou ação imediata" },
-        { chave: "auditoriasVencidas", label: "Auditorias vencidas", valor: auditoriasVencidas, icon: CalendarClock, detalhe: "Prazos vencidos" },
+        {
+            chave: "totalAuditorias",
+            label: "Total de auditorias",
+            valor: auditoriasBaseDashboard.length,
+            icon: ClipboardCheck,
+            detalhe: "Registros válidos no banco",
+        },
+        {
+            chave: "auditoriasMes",
+            label: "Auditorias do mês",
+            valor: auditoriasMes.length,
+            icon: ClipboardCheck,
+            detalhe: "Registradas no mês atual",
+        },
+        {
+            chave: "auditoriasAbertas",
+            label: "Auditorias abertas",
+            valor: auditoriasAbertas,
+            icon: AlertTriangle,
+            detalhe: "Aguardando tratativa",
+        },
+        {
+            chave: "auditoriasVencidas",
+            label: "Auditorias vencidas",
+            valor: auditoriasVencidas,
+            icon: CalendarClock,
+            detalhe: "Prazo de adequação vencido",
+        },
+        {
+            chave: "desviosCriticos",
+            label: "Desvios críticos",
+            valor: desviosCriticos,
+            icon: AlertTriangle,
+            detalhe: "Alto/crítico ou ação imediata",
+        },
+        {
+            chave: "desviosAbertos",
+            label: "Desvios abertos",
+            valor: desviosAbertos,
+            icon: AlertTriangle,
+            detalhe: "Pendências não encerradas",
+        },
+        {
+            chave: "mediaConformidade",
+            label: "Média de conformidade",
+            valor: `${mediaConformidade}%`,
+            icon: BadgeCheck,
+            detalhe: "Média das auditorias do mês",
+        },
     ];
     const blocos = [
-        { chave: "historico", label: "Histórico de auditorias" },
+        { chave: "historico", label: "Últimas auditorias registradas" },
         { chave: "resumoVisual", label: "Resumo visual das auditorias" },
-        { chave: "qrcodes", label: "QR Codes de campo" },
-        { chave: "boasPraticas", label: "Boas práticas para DDS" },
         { chave: "topDesvios", label: "Top 5 desvios" },
-        { chave: "empresas", label: "Auditorias por empresa" },
+        { chave: "empresas", label: "Ranking por empresa" },
+        { chave: "areas", label: "Ranking por área/local" },
+        { chave: "boasPraticas", label: "Boas práticas para DDS" },
+        { chave: "qrcodes", label: "QR Codes de campo" },
     ];
 
     const ordenar = (lista, ordem) => [
@@ -12747,12 +12927,13 @@ function DashboardAuditoriaCampo({ auditoriasCampo = [], onAuditoriaAtualizada }
     const montarLinkQrCampo = useCallback((dados = qrFormCampo) => {
         const origem = typeof window !== "undefined" ? window.location.origin : "";
         const params = new URLSearchParams();
+        params.set("token", TOKEN_LINK_AUDITORIA_CAMPO);
         if (dados.tipo) params.set("tipo", dados.tipo);
         if (dados.identificacao) params.set("id", dados.identificacao);
         if (dados.area) params.set("area", dados.area);
         if (dados.local) params.set("local", dados.local);
         if (dados.empresaResponsavel) params.set("empresa", dados.empresaResponsavel);
-        return `${origem}/#/nova-auditoria-campo?${params.toString()}`;
+        return `${origem}/#/auditoria-campo?${params.toString()}`;
     }, [qrFormCampo]);
 
     const linkQrCampoAtual = useMemo(() => montarLinkQrCampo(qrFormCampo), [montarLinkQrCampo, qrFormCampo]);
@@ -13305,7 +13486,7 @@ function DashboardAuditoriaCampo({ auditoriasCampo = [], onAuditoriaAtualizada }
             ));
         }
         if (chave === "empresas") {
-            return blocoWrapper(chave, "Auditorias por empresa", "Resumo de auditorias, desvios e média por empresa.", (
+            return blocoWrapper(chave, "Ranking por empresa", "Resumo de auditorias, desvios e média por empresa.", (
                 <div className="overflow-hidden rounded-2xl border border-slate-200">
                     <table className="w-full text-left text-sm">
                         <thead className="bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
@@ -13332,6 +13513,49 @@ function DashboardAuditoriaCampo({ auditoriasCampo = [], onAuditoriaAtualizada }
                 </div>
             ));
         }
+        if (chave === "areas") {
+            return blocoWrapper(chave, "Ranking por área/local", "Áreas, locais ou máquinas com mais auditorias e desvios registrados.", (
+                <div className="overflow-hidden rounded-2xl border border-slate-200">
+                    <table className="w-full text-left text-sm">
+                        <thead className="bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
+                            <tr>
+                                <th className="px-4 py-3">Área / Local / Máquina</th>
+                                <th className="px-4 py-3">Auditorias</th>
+                                <th className="px-4 py-3">Média</th>
+                                <th className="px-4 py-3">Desvios</th>
+                                <th className="px-4 py-3">Risco alto/crítico</th>
+                            </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-100">
+                            {areasAuditoria.length === 0 ? (
+                                <tr>
+                                    <td colSpan="5" className="px-4 py-5 text-center text-slate-500">
+                                        Nenhuma área auditada.
+                                    </td>
+                                </tr>
+                            ) : areasAuditoria.map((item) => (
+                                <tr key={item.area}>
+                                    <td className="px-4 py-3 font-semibold text-slate-900">{item.area}</td>
+                                    <td className="px-4 py-3 text-slate-600">{item.auditorias}</td>
+                                    <td className="px-4 py-3 text-slate-600">{item.media}%</td>
+                                    <td className="px-4 py-3 text-slate-600">{item.desvios}</td>
+                                    <td className="px-4 py-3">
+                                        <span className={classNames(
+                                            "rounded-full px-3 py-1 text-xs font-bold ring-1",
+                                            item.riscosAltos > 0
+                                                ? "bg-red-50 text-red-700 ring-red-200"
+                                                : "bg-emerald-50 text-emerald-700 ring-emerald-200"
+                                        )}>
+                                            {item.riscosAltos}
+                                        </span>
+                                    </td>
+                                </tr>
+                            ))}
+                        </tbody>
+                    </table>
+                </div>
+            ));
+        }
         return null;
     };
 
@@ -13341,12 +13565,24 @@ function DashboardAuditoriaCampo({ auditoriasCampo = [], onAuditoriaAtualizada }
                 titulo="Dashboard Auditoria de Campo"
                 subtitulo="Indicadores, histórico e desvios das auditorias realizadas via QR Code."
                 acao={(
-                    <button type="button" onClick={() => setMostrarPersonalizacao((valor) => !valor)} className="inline-flex items-center gap-2 rounded-2xl bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 shadow-sm ring-1 ring-slate-200 hover:bg-slate-50">
-                        <Filter className="h-4 w-4" />
-                        Personalizar painel
-                    </button>
+                    <div className="flex flex-wrap items-center gap-2">
+                        <button type="button" onClick={onRecarregar} className="inline-flex items-center gap-2 rounded-2xl bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 shadow-sm ring-1 ring-slate-200 hover:bg-slate-50">
+                            <RefreshCw className={classNames("h-4 w-4", carregando ? "animate-spin" : "")} />
+                            Atualizar dados
+                        </button>
+                        <button type="button" onClick={() => setMostrarPersonalizacao((valor) => !valor)} className="inline-flex items-center gap-2 rounded-2xl bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 shadow-sm ring-1 ring-slate-200 hover:bg-slate-50">
+                            <Filter className="h-4 w-4" />
+                            Personalizar painel
+                        </button>
+                    </div>
                 )}
             />
+
+            {erro && (
+                <div className="mb-4 rounded-2xl bg-red-50 px-4 py-3 text-sm font-semibold text-red-700 ring-1 ring-red-200">
+                    Erro ao carregar auditorias de campo: {erro}
+                </div>
+            )}
 
             {mostrarPersonalizacao && (
                 <div className="mb-6 grid gap-4 xl:grid-cols-2">
@@ -13498,15 +13734,28 @@ function DashboardAuditoriaCampo({ auditoriasCampo = [], onAuditoriaAtualizada }
 
 
 function NovaAuditoriaCampoDireta({ usuario = null, onAuditoriaSalva, empresasBanco = [] }) {
-    const parametros = useMemo(() => {
+    const parametros = (() => {
         if (typeof window === "undefined") return new URLSearchParams("");
+
+        const parametrosNormais = new URLSearchParams(window.location.search || "");
         const hash = window.location.hash || "";
-        if (hash.startsWith("#/nova-auditoria-campo")) {
-            const indiceConsulta = hash.indexOf("?");
-            return new URLSearchParams(indiceConsulta >= 0 ? hash.slice(indiceConsulta) : "");
+        const indiceConsultaHash = hash.indexOf("?");
+
+        if (indiceConsultaHash >= 0) {
+            const queryHash = hash.slice(indiceConsultaHash + 1);
+            const parametrosHash = new URLSearchParams(queryHash);
+
+            parametrosNormais.forEach((valor, chave) => {
+                if (!parametrosHash.has(chave)) {
+                    parametrosHash.set(chave, valor);
+                }
+            });
+
+            return parametrosHash;
         }
-        return new URLSearchParams(window.location.search || "");
-    }, []);
+
+        return parametrosNormais;
+    })();
     const tipoParametro = parametros.get("tipo") || parametros.get("tipo_auditoria") || "area";
     const identificacaoParametro = parametros.get("id") || parametros.get("maquina") || parametros.get("equipamento") || "";
     const areaParametro = parametros.get("area") || "";
@@ -13516,8 +13765,25 @@ function NovaAuditoriaCampoDireta({ usuario = null, onAuditoriaSalva, empresasBa
     const tokenParametro = parametros.get("token") || parametros.get("chave") || "";
     const tipoInicial = obterTipoAuditoriaCampoPorParametro(tipoParametro);
     const origem = typeof window !== "undefined" ? window.location.origin : "";
-    const linkGeralDireto = `${origem}/nova-auditoria-campo`;
-    const linkGeral = `${origem}/#/nova-auditoria-campo`;
+    const tokenLinkAuditoriaCampo = tokenParametro || TOKEN_LINK_AUDITORIA_CAMPO;
+    const montarLinkAuditoriaCampo = (parametrosExtras = {}) => {
+        const params = new URLSearchParams();
+
+        if (tokenLinkAuditoriaCampo) {
+            params.set("token", tokenLinkAuditoriaCampo);
+        }
+
+        Object.entries(parametrosExtras).forEach(([chave, valor]) => {
+            if (valor !== undefined && valor !== null && String(valor).trim() !== "") {
+                params.set(chave, String(valor));
+            }
+        });
+
+        const consulta = params.toString();
+        return `${origem}/#/auditoria-campo${consulta ? `?${consulta}` : ""}`;
+    };
+    const linkGeral = montarLinkAuditoriaCampo();
+    const linkGeralDireto = linkGeral;
     const empresasAuditoriaCampo = useMemo(() => {
         const normalizarNomeEmpresa = (valor) => String(valor || "")
             .normalize("NFD")
@@ -13572,46 +13838,45 @@ function NovaAuditoriaCampoDireta({ usuario = null, onAuditoriaSalva, empresasBa
     const [respostasChecklist, setRespostasChecklist] = useState(() => criarRespostasChecklistDinamico(tipoInicial.valor));
 
 
-    const empresaSelecionadaAuditoria = useMemo(() => {
-        const nomeAtual = String(formulario.empresaResponsavel || empresaParametro || "").trim();
-        if (!nomeAtual) return null;
-        const normalizar = (valor) => String(valor || "")
-            .normalize("NFD")
-            .replace(/[\u0300-\u036f]/g, "")
-            .trim()
-            .toLowerCase();
-        return empresasAuditoriaCampo.find((empresa) => normalizar(empresa.nome) === normalizar(nomeAtual)) || null;
-    }, [empresaParametro, empresasAuditoriaCampo, formulario.empresaResponsavel]);
+    const nomeEmpresaAtualAuditoria = String(formulario.empresaResponsavel || empresaParametro || "").trim();
+    const nomeEmpresaAtualNormalizado = normalizarTextoBusca(nomeEmpresaAtualAuditoria).trim();
 
-    const contatosEmpresaAuditoria = useMemo(() => {
-        if (!empresaSelecionadaAuditoria) {
-            return {
-                responsavel: "",
-                email: "",
-                whatsapp: "",
-                tstResponsavel: "",
-                tstEmail: "",
-                tstWhatsapp: "",
-            };
-        }
+    const empresaSelecionadaAuditoria = nomeEmpresaAtualNormalizado
+        ? empresasAuditoriaCampo.find((empresa) =>
+            normalizarTextoBusca(empresa.nome).trim() === nomeEmpresaAtualNormalizado
+        ) || null
+        : null;
 
-        return {
+    const contatosEmpresaAuditoria = empresaSelecionadaAuditoria
+        ? {
             responsavel: empresaSelecionadaAuditoria.responsavel_auditoria || empresaSelecionadaAuditoria.responsavel || "",
             email: empresaSelecionadaAuditoria.email_auditoria || empresaSelecionadaAuditoria.email || "",
             whatsapp: empresaSelecionadaAuditoria.whatsapp_auditoria || empresaSelecionadaAuditoria.telefone || "",
             tstResponsavel: empresaSelecionadaAuditoria.tst_responsavel || "",
             tstEmail: empresaSelecionadaAuditoria.tst_email || "",
             tstWhatsapp: empresaSelecionadaAuditoria.tst_whatsapp || "",
+        }
+        : {
+            responsavel: "",
+            email: "",
+            whatsapp: "",
+            tstResponsavel: "",
+            tstEmail: "",
+            tstWhatsapp: "",
         };
-    }, [empresaSelecionadaAuditoria]);
 
     const tipoAtual = obterTipoAuditoriaCampoDireta(formulario.tipoAuditoria);
     const categoriaAtual = obterCategoriaPadronizadaAuditoriaCampo(formulario.categoriaAuditoria);
     const checklistAtual = useMemo(() => checklistParaTipoAuditoriaCampo(formulario.tipoAuditoria), [formulario.tipoAuditoria]);
     const resultado = useMemo(() => calcularResultadoChecklistDinamico(respostasChecklist), [respostasChecklist]);
-    const linkTipoAtual = `${linkGeral}?tipo=${tipoAtual.parametros[0] || tipoAtual.valor}`;
+    const linkTipoAtual = montarLinkAuditoriaCampo({
+        tipo: tipoAtual.parametros[0] || tipoAtual.valor,
+    });
     const linkEspecifico = formulario.maquinaEquipamento
-        ? `${linkGeral}?tipo=${tipoAtual.parametros[0] || tipoAtual.valor}&id=${encodeURIComponent(formulario.maquinaEquipamento)}`
+        ? montarLinkAuditoriaCampo({
+            tipo: tipoAtual.parametros[0] || tipoAtual.valor,
+            id: formulario.maquinaEquipamento,
+        })
         : linkTipoAtual;
 
     const textoNotificacaoResponsavel = useMemo(() => {
@@ -13657,15 +13922,18 @@ function NovaAuditoriaCampoDireta({ usuario = null, onAuditoriaSalva, empresasBa
         ? `https://wa.me/${whatsappTstFormatado}?text=${encodeURIComponent(textoNotificacaoResponsavel)}`
         : "";
 
-    const aplicarContatosEmpresaAuditoria = useCallback((nomeEmpresa) => {
-        const normalizar = (valor) => String(valor || "")
-            .normalize("NFD")
-            .replace(/[\u0300-\u036f]/g, "")
-            .trim()
-            .toLowerCase();
-        const empresa = empresasAuditoriaCampo.find((item) => normalizar(item.nome) === normalizar(nomeEmpresa));
+    const aplicarContatosEmpresaAuditoria = (nomeEmpresa) => {
+        const nomeNormalizado = normalizarTextoBusca(nomeEmpresa).trim();
+
+        const empresa = empresasAuditoriaCampo.find((item) =>
+            normalizarTextoBusca(item.nome).trim() === nomeNormalizado
+        );
+
         if (!empresa) {
-            setFormulario((atual) => ({ ...atual, empresaResponsavel: nomeEmpresa }));
+            setFormulario((atual) => ({
+                ...atual,
+                empresaResponsavel: nomeEmpresa,
+            }));
             return;
         }
 
@@ -13686,7 +13954,7 @@ function NovaAuditoriaCampoDireta({ usuario = null, onAuditoriaSalva, empresasBa
             emailTstResponsavel: tstEmail || atual.emailTstResponsavel,
             whatsappTstResponsavel: tstWhatsapp || atual.whatsappTstResponsavel,
         }));
-    }, [empresasAuditoriaCampo]);
+    };
 
     const alterarFormulario = (campo, valor) => {
         setFormulario((atual) => ({ ...atual, [campo]: valor }));
@@ -13701,11 +13969,41 @@ function NovaAuditoriaCampoDireta({ usuario = null, onAuditoriaSalva, empresasBa
         if (formulario.emailResponsavel && formulario.whatsappResponsavel && formulario.emailTstResponsavel) return;
 
         const timer = window.setTimeout(() => {
-            aplicarContatosEmpresaAuditoria(formulario.empresaResponsavel);
+            const nomeNormalizado = normalizarTextoBusca(formulario.empresaResponsavel).trim();
+
+            const empresa = empresasAuditoriaCampo.find((item) =>
+                normalizarTextoBusca(item.nome).trim() === nomeNormalizado
+            );
+
+            if (!empresa) return;
+
+            const emailAuditoria = empresa.email_auditoria || empresa.email || "";
+            const whatsappAuditoria = empresa.whatsapp_auditoria || empresa.telefone || "";
+            const responsavelAuditoria = empresa.responsavel_auditoria || empresa.responsavel || "";
+            const tstResponsavel = empresa.tst_responsavel || "";
+            const tstEmail = empresa.tst_email || "";
+            const tstWhatsapp = empresa.tst_whatsapp || "";
+
+            setFormulario((atual) => ({
+                ...atual,
+                responsavelTratativa: atual.responsavelTratativa || responsavelAuditoria,
+                emailResponsavel: emailAuditoria || atual.emailResponsavel,
+                whatsappResponsavel: whatsappAuditoria || atual.whatsappResponsavel,
+                nomeTstResponsavel: tstResponsavel || atual.nomeTstResponsavel,
+                emailTstResponsavel: tstEmail || atual.emailTstResponsavel,
+                whatsappTstResponsavel: tstWhatsapp || atual.whatsappTstResponsavel,
+            }));
         }, 0);
 
         return () => window.clearTimeout(timer);
-    }, [aplicarContatosEmpresaAuditoria, empresaSelecionadaAuditoria, formulario.empresaResponsavel, formulario.emailResponsavel, formulario.whatsappResponsavel, formulario.emailTstResponsavel]);
+    }, [
+        empresasAuditoriaCampo,
+        empresaSelecionadaAuditoria,
+        formulario.empresaResponsavel,
+        formulario.emailResponsavel,
+        formulario.whatsappResponsavel,
+        formulario.emailTstResponsavel,
+    ]);
 
     const alterarTipoAuditoria = (valor) => {
         const novoTipo = obterTipoAuditoriaCampoDireta(valor);
@@ -13879,7 +14177,7 @@ function NovaAuditoriaCampoDireta({ usuario = null, onAuditoriaSalva, empresasBa
                 tem_desvio_grave: Boolean(resultado.temDesvioGrave),
                 categoria_desvio_principal: categoriaAtual.label,
                 total_desvios: ["Aberta", "Em andamento", "Vencida"].includes(formulario.statusAuditoria) ? 1 : 0,
-                origem: "Link direto / nova-auditoria-campo",
+                origem: "Link direto / auditoria-campo",
                 token_qr: tokenParametro || null,
                 notificacao: {
                     titulo: formulario.titulo.trim(),
@@ -14362,6 +14660,8 @@ export default function App() {
     const [auditoria, setAuditoria] = useState([]);
     const [emailsEnviados, setEmailsEnviados] = useState([]);
     const [auditoriasCampo, setAuditoriasCampo] = useState([]);
+    const [carregandoAuditoriasCampo, setCarregandoAuditoriasCampo] = useState(false);
+    const [erroAuditoriasCampo, setErroAuditoriasCampo] = useState("");
     const [carregandoAuditoria, setCarregandoAuditoria] = useState(false);
     const [podeAcessarAuditoria, setPodeAcessarAuditoria] = useState(false);
     const [verificandoAcessoAuditoria, setVerificandoAcessoAuditoria] = useState(false);
@@ -14450,25 +14750,47 @@ export default function App() {
     }, []);
 
     const carregarAuditoriasCampo = useCallback(async () => {
-        const { data, error } = await supabase
-            .from("auditorias_campo")
-            .select("*, auditoria_campo_desvios(*)")
-            .order("created_at", { ascending: false })
-            .limit(500);
+        setCarregandoAuditoriasCampo(true);
+        setErroAuditoriasCampo("");
 
-        if (error) {
+        try {
+            const { data, error } = await supabase
+                .from("auditorias_campo")
+                .select("*")
+                .order("created_at", { ascending: false })
+                .limit(1000);
+
+            if (error) {
+                throw error;
+            }
+
+            const registrosValidos = (data || []).filter((item) =>
+                item.numero_auditoria ||
+                item.tipo_auditoria ||
+                item.titulo ||
+                item.area ||
+                item.local ||
+                item.maquina_equipamento ||
+                item.situacao_encontrada
+            );
+
+            const normalizadas = registrosValidos.map((item) =>
+                normalizarAuditoriaCampo({
+                    ...item,
+                    desvios: Array.isArray(item.desvios) ? item.desvios : [],
+                })
+            );
+
+            setAuditoriasCampo(normalizadas);
+            return normalizadas;
+        } catch (error) {
             console.warn("Erro ao carregar auditorias de campo:", error.message);
+            setErroAuditoriasCampo(error.message || "Erro ao carregar auditorias de campo.");
             setAuditoriasCampo([]);
             return [];
+        } finally {
+            setCarregandoAuditoriasCampo(false);
         }
-
-        const normalizadas = (data || []).map((item) => normalizarAuditoriaCampo({
-            ...item,
-            desvios: item.auditoria_campo_desvios || [],
-        }));
-
-        setAuditoriasCampo(normalizadas);
-        return normalizadas;
     }, []);
 
     const registrarEmailEnviado = useCallback(
@@ -16292,9 +16614,14 @@ export default function App() {
 
     const parametrosAtuais = new URLSearchParams(window.location.search);
     const tokenQrPublico = parametrosAtuais.get("qr");
-    const rotaNovaAuditoriaCampo = typeof window !== "undefined" && (
-        window.location.pathname === "/nova-auditoria-campo" ||
-        String(window.location.hash || "").startsWith("#/nova-auditoria-campo")
+
+    const rotaAtualCompleta = typeof window !== "undefined"
+        ? `${window.location.pathname}${window.location.hash}`
+        : "";
+
+    const rotaNovaAuditoriaCampo = (
+        rotaAtualCompleta.includes("/nova-auditoria-campo") ||
+        rotaAtualCompleta.includes("/auditoria-campo")
     );
 
     if (rotaNovaAuditoriaCampo) {
@@ -16473,7 +16800,19 @@ export default function App() {
                     )}
 
                     {tela === "auditoriaCampo" && (
-                        <DashboardAuditoriaCampo auditoriasCampo={auditoriasCampo} onAuditoriaAtualizada={(atualizada) => setAuditoriasCampo((atual) => atualizada?.excluida ? atual.filter((item) => item.id !== atualizada.id) : atual.map((item) => item.id === atualizada.id ? atualizada : item))} />
+                        <DashboardAuditoriaCampo
+                            auditoriasCampo={auditoriasCampo}
+                            carregando={carregandoAuditoriasCampo}
+                            erro={erroAuditoriasCampo}
+                            onRecarregar={carregarAuditoriasCampo}
+                            onAuditoriaAtualizada={(atualizada) =>
+                                setAuditoriasCampo((atual) =>
+                                    atualizada?.excluida
+                                        ? atual.filter((item) => item.id !== atualizada.id)
+                                        : atual.map((item) => item.id === atualizada.id ? atualizada : item)
+                                )
+                            }
+                        />
                     )}
 
                     {tela === "empresas" && (
