@@ -28,6 +28,7 @@ import {
     QrCode,
     RefreshCw,
     Search,
+    Send,
     ShieldCheck,
     Trash2,
     Upload,
@@ -1027,6 +1028,37 @@ function montarPreviewNotificacaoAuditoriaCampo(notificacao = {}, complementos =
     }
 
     return linhas.join("\n").trim();
+}
+
+
+function montarMensagemFluidaAuditoriaCampo(auditoria = {}, alvoAuditoria = {}) {
+    const numero = auditoria.numeroAuditoria || auditoria.numero_auditoria || "Sem número";
+    const tipo = auditoria.tipoAuditoria || auditoria.tipo_auditoria || alvoAuditoria.tipo || "Auditoria de campo";
+    const alvo = alvoAuditoria.titulo || auditoria.titulo || auditoria.maquinaEquipamento || auditoria.maquina_equipamento || auditoria.area || auditoria.local || auditoria.nomeColaborador || "Alvo não informado";
+    const empresa = auditoria.empresaNome || auditoria.empresa_nome || auditoria.empresaResponsavel || auditoria.empresa_responsavel || "Empresa não informada";
+    const auditor = auditoria.auditorNome || auditoria.auditor_nome || auditoria.auditor || "Auditor não informado";
+    const risco = auditoria.grauRisco || auditoria.grau_risco || "Não informado";
+    const classificacao = auditoria.classificacao || "Sem classificação";
+    const pontuacao = Number.isFinite(Number(auditoria.pontuacao)) ? `${Number(auditoria.pontuacao)}%` : "0%";
+    const status = auditoria.statusAuditoria || auditoria.status_auditoria || auditoria.statusDesvio || auditoria.status_desvio || "Aberta";
+    const responsavel = auditoria.responsavelTratativa || auditoria.responsavel_tratativa || "Responsável não informado";
+    const prazo = auditoria.prazoAdequacao || auditoria.prazo_adequacao ? formatDate(auditoria.prazoAdequacao || auditoria.prazo_adequacao) : "Prazo não informado";
+
+    return [
+        `Foi registrada a auditoria ${numero} e ela precisa de acompanhamento da tratativa.`,
+        "",
+        `• Tipo: ${tipo}`,
+        `• Alvo auditado: ${alvo}`,
+        `• Empresa/responsável: ${empresa}`,
+        `• Auditor: ${auditor}`,
+        `• Grau de risco: ${risco}`,
+        `• Resultado: ${classificacao} (${pontuacao})`,
+        `• Status atual: ${status}`,
+        `• Responsável pela tratativa: ${responsavel}`,
+        `• Prazo para adequação: ${prazo}`,
+        "",
+        "Solicitação: avaliar a condição registrada, iniciar ou atualizar a tratativa e retornar com as evidências de correção quando aplicável.",
+    ].join("\n");
 }
 
 
@@ -11704,14 +11736,7 @@ function EditorNotificacaoHistoricoAuditoria({ auditoria = {}, onAtualizada }) {
     const [mensagem, setMensagem] = useState("");
     const [notificacao, setNotificacao] = useState({
         titulo: notificacaoInicial.titulo || `Auditoria de campo - ${alvoAuditoria.titulo}`,
-        mensagem: notificacaoInicial.mensagem || `Auditoria de campo registrada.
-
-Número: ${auditoria.numeroAuditoria || "Não informado"}
-Alvo: ${alvoAuditoria.tipo} - ${alvoAuditoria.titulo}
-Auditor: ${auditoria.auditorNome || "Não informado"}
-Tipo: ${auditoria.tipoAuditoria || alvoAuditoria.tipo}
-Risco: ${auditoria.grauRisco || "Não informado"}
-Resultado: ${auditoria.classificacao || "sem classificação"} (${auditoria.pontuacao || 0}%).`,
+        mensagem: notificacaoInicial.mensagem || montarMensagemFluidaAuditoriaCampo(auditoria, alvoAuditoria),
         complementos: Array.isArray(notificacaoInicial.complementos) ? notificacaoInicial.complementos : [],
         auditor: notificacaoInicial.auditor || auditoria.auditorNome || "",
     });
@@ -12302,6 +12327,10 @@ function DashboardAuditoriaCampo({ auditoriasCampo = [], onAuditoriaAtualizada }
         status: "todos",
         risco: "todos",
     });
+    const [buscarAuditoriaRecolhido, setBuscarAuditoriaRecolhido] = useState(() => {
+        if (typeof window === "undefined") return false;
+        return window.localStorage.getItem("dashboardAuditoriaCampoBuscarRecolhido") === "true";
+    });
 
     useEffect(() => { if (typeof window !== "undefined") window.localStorage.setItem("dashboardAuditoriaCampoCartasVisiveis", JSON.stringify(cartasVisiveis)); }, [cartasVisiveis]);
     useEffect(() => { if (typeof window !== "undefined") window.localStorage.setItem("dashboardAuditoriaCampoTamanhosCartas", JSON.stringify(tamanhosCartas)); }, [tamanhosCartas]);
@@ -12311,6 +12340,7 @@ function DashboardAuditoriaCampo({ auditoriasCampo = [], onAuditoriaAtualizada }
     useEffect(() => { if (typeof window !== "undefined") window.localStorage.setItem("dashboardAuditoriaCampoOrdemBlocos", JSON.stringify(ordemBlocos)); }, [ordemBlocos]);
     useEffect(() => { if (typeof window !== "undefined") window.localStorage.setItem("dashboardAuditoriaCampoBlocosRecolhidos", JSON.stringify(blocosRecolhidos)); }, [blocosRecolhidos]);
     useEffect(() => { if (typeof window !== "undefined") window.localStorage.setItem("dashboardAuditoriaCampoAuditoriasAbertas", JSON.stringify(auditoriasHistoricoAbertas)); }, [auditoriasHistoricoAbertas]);
+    useEffect(() => { if (typeof window !== "undefined") window.localStorage.setItem("dashboardAuditoriaCampoBuscarRecolhido", String(buscarAuditoriaRecolhido)); }, [buscarAuditoriaRecolhido]);
 
     const auditoriasNormalizadas = useMemo(() => auditoriasCampo.map(normalizarAuditoriaCampo), [auditoriasCampo]);
     const opcoesFiltroAuditoriaCampo = useMemo(() => {
@@ -12518,44 +12548,63 @@ function DashboardAuditoriaCampo({ auditoriasCampo = [], onAuditoriaAtualizada }
             return blocoWrapper(chave, "Histórico de auditorias", "Filtre, abra e acompanhe os registros de campo por área, máquina, empresa e responsável.", (
                 <div className="space-y-4">
                     <div className="rounded-3xl border border-slate-200 bg-slate-50/70 p-4">
-                        <div className="flex flex-col gap-3 lg:flex-row lg:items-end">
-                            <label className="block flex-1 text-xs font-bold uppercase tracking-wide text-slate-500">
-                                Buscar auditoria
-                                <input
-                                    value={filtrosAuditoriaCampo.busca}
-                                    onChange={(evento) => atualizarFiltro("busca", evento.target.value)}
-                                    placeholder="Número, área, máquina, empresa, auditor ou responsável"
-                                    className="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-3 py-2 text-sm normal-case tracking-normal text-slate-700 outline-none focus:ring-2 focus:ring-blue-100"
-                                />
-                            </label>
-                            <label className="block text-xs font-bold uppercase tracking-wide text-slate-500 lg:w-56">
-                                Período / destaque
-                                <select
-                                    value={filtrosAuditoriaCampo.periodo}
-                                    onChange={(evento) => atualizarFiltro("periodo", evento.target.value)}
-                                    className="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-3 py-2 text-sm normal-case tracking-normal text-slate-700 outline-none focus:ring-2 focus:ring-blue-100"
-                                >
-                                    <option value="todos">Todas</option>
-                                    <option value="mes">Auditorias do mês</option>
-                                    <option value="criticas">Críticas / ação imediata</option>
-                                    <option value="vencidas">Vencidas</option>
-                                </select>
-                            </label>
+                        <div className="flex items-center justify-between gap-3">
+                            <div>
+                                <p className="text-xs font-black uppercase tracking-wide text-slate-500">Buscar auditoria</p>
+                                <p className="mt-1 text-xs text-slate-500">Use filtros para localizar auditorias por número, empresa, auditor, risco ou status.</p>
+                            </div>
                             <button
                                 type="button"
-                                onClick={() => setFiltrosAuditoriaCampo({ busca: "", periodo: "todos", tipo: "todos", empresa: "todos", auditor: "todos", status: "todos", risco: "todos" })}
-                                className="rounded-2xl bg-white px-4 py-2 text-sm font-bold text-slate-600 ring-1 ring-slate-200 hover:bg-slate-100"
+                                onClick={() => setBuscarAuditoriaRecolhido((valor) => !valor)}
+                                className="inline-flex items-center gap-2 rounded-2xl bg-white px-4 py-2 text-xs font-bold text-slate-700 ring-1 ring-slate-200 hover:bg-slate-100"
                             >
-                                Limpar filtros
+                                {buscarAuditoriaRecolhido ? "Abrir filtros" : "Recolher filtros"}
                             </button>
                         </div>
-                        <div className="mt-3 grid gap-3 md:grid-cols-2 xl:grid-cols-5">
-                            {renderSelectFiltro("tipo", "Tipo", opcoesFiltroAuditoriaCampo.tipos)}
-                            {renderSelectFiltro("empresa", "Empresa", opcoesFiltroAuditoriaCampo.empresas)}
-                            {renderSelectFiltro("auditor", "Auditor", opcoesFiltroAuditoriaCampo.auditores)}
-                            {renderSelectFiltro("status", "Status", opcoesFiltroAuditoriaCampo.status)}
-                            {renderSelectFiltro("risco", "Risco", opcoesFiltroAuditoriaCampo.riscos)}
-                        </div>
+
+                        {!buscarAuditoriaRecolhido && (
+                            <>
+                                <div className="mt-4 flex flex-col gap-3 lg:flex-row lg:items-end">
+                                    <label className="block flex-1 text-xs font-bold uppercase tracking-wide text-slate-500">
+                                        Buscar auditoria
+                                        <input
+                                            value={filtrosAuditoriaCampo.busca}
+                                            onChange={(evento) => atualizarFiltro("busca", evento.target.value)}
+                                            placeholder="Número, área, máquina, empresa, auditor ou responsável"
+                                            className="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-3 py-2 text-sm normal-case tracking-normal text-slate-700 outline-none focus:ring-2 focus:ring-blue-100"
+                                        />
+                                    </label>
+                                    <label className="block text-xs font-bold uppercase tracking-wide text-slate-500 lg:w-56">
+                                        Período / destaque
+                                        <select
+                                            value={filtrosAuditoriaCampo.periodo}
+                                            onChange={(evento) => atualizarFiltro("periodo", evento.target.value)}
+                                            className="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-3 py-2 text-sm normal-case tracking-normal text-slate-700 outline-none focus:ring-2 focus:ring-blue-100"
+                                        >
+                                            <option value="todos">Todas</option>
+                                            <option value="mes">Auditorias do mês</option>
+                                            <option value="criticas">Críticas / ação imediata</option>
+                                            <option value="vencidas">Vencidas</option>
+                                        </select>
+                                    </label>
+                                    <button
+                                        type="button"
+                                        onClick={() => setFiltrosAuditoriaCampo({ busca: "", periodo: "todos", tipo: "todos", empresa: "todos", auditor: "todos", status: "todos", risco: "todos" })}
+                                        className="rounded-2xl bg-white px-4 py-2 text-sm font-bold text-slate-600 ring-1 ring-slate-200 hover:bg-slate-100"
+                                    >
+                                        Limpar filtros
+                                    </button>
+                                </div>
+                                <div className="mt-3 grid gap-3 md:grid-cols-2 xl:grid-cols-5">
+                                    {renderSelectFiltro("tipo", "Tipo", opcoesFiltroAuditoriaCampo.tipos)}
+                                    {renderSelectFiltro("empresa", "Empresa", opcoesFiltroAuditoriaCampo.empresas)}
+                                    {renderSelectFiltro("auditor", "Auditor", opcoesFiltroAuditoriaCampo.auditores)}
+                                    {renderSelectFiltro("status", "Status", opcoesFiltroAuditoriaCampo.status)}
+                                    {renderSelectFiltro("risco", "Risco", opcoesFiltroAuditoriaCampo.riscos)}
+                                </div>
+                            </>
+                        )}
+
                         <p className="mt-3 text-xs font-semibold text-slate-500">
                             Mostrando {auditoriasFiltradas.length} de {auditoriasNormalizadas.length} auditoria(s).
                         </p>
@@ -12570,8 +12619,17 @@ function DashboardAuditoriaCampo({ auditoriasCampo = [], onAuditoriaAtualizada }
                         const chaveAuditoria = String(item.id || item.numeroAuditoria || `${alvo.titulo}-${item.createdAt}`);
                         const aberta = Boolean(auditoriasHistoricoAbertas[chaveAuditoria]);
                         const statusAtual = item.statusAuditoria || item.statusDesvio || "Não informado";
-                        const contatoEmail = item.emailResponsavel || item.notificacao?.emailResponsavel || "";
-                        const contatoWhatsapp = item.whatsappResponsavel || item.notificacao?.whatsappResponsavel || "";
+                        const contatoEmail = String(item.emailResponsavel || item.notificacao?.emailResponsavel || "").trim();
+                        const contatoWhatsapp = String(item.whatsappResponsavel || item.notificacao?.whatsappResponsavel || "").replace(/\D/g, "");
+                        const empresaDestaque = item.empresaNome || item.empresaResponsavel || "Empresa não informada";
+                        const auditorDestaque = item.auditorNome || "Auditor não informado";
+                        const mensagemEnvioAuditoria = item.notificacao?.textoEnvio || item.notificacao?.mensagem || montarMensagemFluidaAuditoriaCampo(item, alvo);
+                        const assuntoEnvioAuditoria = item.notificacao?.titulo || item.titulo || `Auditoria ${item.numeroAuditoria || "de campo"}`;
+                        const linkEnviarAuditoria = contatoEmail
+                            ? `mailto:${contatoEmail}?subject=${encodeURIComponent(assuntoEnvioAuditoria)}&body=${encodeURIComponent(mensagemEnvioAuditoria)}`
+                            : contatoWhatsapp
+                                ? `https://wa.me/${contatoWhatsapp}?text=${encodeURIComponent(mensagemEnvioAuditoria)}`
+                                : "";
 
                         return (
                             <div key={chaveAuditoria} className="overflow-hidden rounded-3xl bg-white ring-1 ring-slate-200 shadow-sm">
@@ -12586,7 +12644,11 @@ function DashboardAuditoriaCampo({ auditoriasCampo = [], onAuditoriaAtualizada }
                                             </div>
                                             <h3 className="mt-3 text-base font-black text-slate-950">{alvo.titulo}</h3>
                                             {alvo.descricao && <p className="mt-1 text-xs font-medium text-slate-500">{alvo.descricao}</p>}
-                                            <p className="mt-1 text-xs text-slate-400">{formatarDataHora(item.createdAt)} · Auditor: {item.auditorNome || "Não informado"}</p>
+                                            <div className="mt-3 space-y-1.5 text-sm">
+                                                <p className="font-black text-slate-900">{empresaDestaque}</p>
+                                                <p className="font-bold text-slate-700">Auditor: {auditorDestaque}</p>
+                                                <p className="text-xs font-semibold text-slate-400">{formatarDataHora(item.createdAt)}</p>
+                                            </div>
                                         </div>
                                         <div className="flex flex-col gap-2 sm:flex-row sm:items-center lg:flex-col lg:items-end">
                                             <span className={classNames("w-fit rounded-full px-3 py-1 text-xs font-bold ring-1", classeClassificacaoAuditoriaCampo(item.classificacao))}>
@@ -12599,6 +12661,22 @@ function DashboardAuditoriaCampo({ auditoriasCampo = [], onAuditoriaAtualizada }
                                             >
                                                 {aberta ? "Recolher auditoria" : "Abrir auditoria"}
                                             </button>
+                                            {linkEnviarAuditoria ? (
+                                                <a
+                                                    href={linkEnviarAuditoria}
+                                                    target={contatoWhatsapp && !contatoEmail ? "_blank" : undefined}
+                                                    rel={contatoWhatsapp && !contatoEmail ? "noreferrer" : undefined}
+                                                    className="inline-flex items-center justify-center gap-2 rounded-xl bg-slate-950 px-3 py-2 text-xs font-bold text-white hover:bg-slate-800"
+                                                >
+                                                    <Send className="h-3.5 w-3.5" />
+                                                    Enviar auditoria
+                                                </a>
+                                            ) : (
+                                                <button type="button" disabled className="inline-flex items-center justify-center gap-2 rounded-xl bg-slate-100 px-3 py-2 text-xs font-bold text-slate-400">
+                                                    <Send className="h-3.5 w-3.5" />
+                                                    Sem contato
+                                                </button>
+                                            )}
                                         </div>
                                     </div>
                                 </div>
@@ -13162,15 +13240,22 @@ function NovaAuditoriaCampoDireta({ usuario = null, onAuditoriaSalva, empresasBa
                 token_qr: tokenParametro || null,
                 notificacao: {
                     titulo: formulario.titulo.trim(),
-                    mensagem: `Auditoria de campo registrada.
-
-Número: ${numeroAuditoria}
-Auditor: ${formulario.auditorNome || usuario?.email || "auditor"}
-Tipo: ${tipoAtual.label}
-Risco: ${formulario.grauRisco}
-Resultado: ${resultado.classificacao} (${resultado.percentual}%)
-Responsável pela tratativa: ${formulario.responsavelTratativa || "Não informado"}
-Prazo: ${formulario.prazoAdequacao ? formatDate(formulario.prazoAdequacao) : "Não informado"}`,
+                    mensagem: montarMensagemFluidaAuditoriaCampo({
+                        numeroAuditoria,
+                        tipoAuditoria: tipoAtual.label,
+                        titulo: formulario.titulo.trim(),
+                        area: formulario.area.trim(),
+                        local: formulario.local.trim(),
+                        maquinaEquipamento: formulario.maquinaEquipamento.trim(),
+                        empresaResponsavel: formulario.empresaResponsavel.trim(),
+                        auditorNome: formulario.auditorNome.trim() || usuario?.email || "Auditor de campo",
+                        grauRisco: formulario.grauRisco,
+                        classificacao: resultado.classificacao,
+                        pontuacao: resultado.percentual,
+                        statusAuditoria: formulario.statusAuditoria,
+                        responsavelTratativa: formulario.responsavelTratativa.trim(),
+                        prazoAdequacao: formulario.prazoAdequacao,
+                    }, { tipo: tipoAtual.label, titulo: formulario.titulo.trim() }),
                     auditor: formulario.auditorNome.trim() || usuario?.email || "Auditor de campo",
                     emailResponsavel: emailResponsavelAuditoria || null,
                     whatsappResponsavel: whatsappResponsavelFormatado || null,
@@ -13247,10 +13332,10 @@ Prazo: ${formulario.prazoAdequacao ? formatDate(formulario.prazoAdequacao) : "N�
     }
 
     return (
-        <div className="min-h-screen bg-slate-100 p-4 text-slate-900 md:p-6">
-            <div className="mx-auto max-w-6xl space-y-5">
-                <Card className="border-emerald-100 bg-gradient-to-br from-white via-white to-emerald-50/60">
-                    <div className="grid gap-5 lg:grid-cols-[1fr_230px] lg:items-center">
+        <div className="min-h-screen overflow-x-hidden bg-slate-100 p-3 text-slate-900 sm:p-4 md:p-6">
+            <div className="mx-auto w-full max-w-6xl space-y-5">
+                <Card className="overflow-hidden border-emerald-100 bg-gradient-to-br from-white via-white to-emerald-50/60">
+                    <div className="grid min-w-0 gap-4 xl:grid-cols-[minmax(0,1fr)_220px] xl:items-center">
                         <div className="flex items-start gap-3">
                             <div className="rounded-2xl bg-emerald-100 p-3 text-emerald-700">
                                 <ClipboardCheck className="h-6 w-6" />
@@ -13259,19 +13344,19 @@ Prazo: ${formulario.prazoAdequacao ? formatDate(formulario.prazoAdequacao) : "N�
                                 <p className="text-xs font-bold uppercase tracking-[0.22em] text-emerald-700">Link direto</p>
                                 <h1 className="mt-1 text-2xl font-black text-slate-950 md:text-3xl">Nova Auditoria de Campo</h1>
                                 <p className="mt-1 max-w-3xl text-sm text-slate-500">Formulário rápido para áreas externas, pátios, frentes de serviço, máquinas, equipamentos ou locais sem QR Code específico.</p>
-                                <div className="mt-4 flex flex-col gap-2 sm:flex-row sm:items-center">
-                                    <div className="min-w-0 rounded-2xl bg-white px-4 py-3 text-xs font-semibold text-slate-500 ring-1 ring-slate-200">
+                                <div className="mt-4 flex min-w-0 flex-col gap-2 sm:flex-row sm:items-center">
+                                    <div className="w-full min-w-0 rounded-2xl bg-white px-4 py-3 text-xs font-semibold text-slate-500 ring-1 ring-slate-200 sm:flex-1">
                                         <span className="block truncate">{linkGeral}</span>
                                     </div>
-                                    <button type="button" onClick={() => copiarTexto(linkGeral, "Link geral copiado.")} className="inline-flex shrink-0 items-center justify-center gap-2 rounded-2xl bg-slate-950 px-4 py-3 text-sm font-bold text-white hover:bg-slate-800">
+                                    <button type="button" onClick={() => copiarTexto(linkGeral, "Link geral copiado.")} className="inline-flex w-full shrink-0 items-center justify-center gap-2 rounded-2xl bg-slate-950 px-4 py-3 text-sm font-bold text-white hover:bg-slate-800 sm:w-auto">
                                         <QrCode className="h-4 w-4" />
                                         Copiar link geral
                                     </button>
                                 </div>
                             </div>
                         </div>
-                        <div className="rounded-3xl bg-white p-3 text-center shadow-sm ring-1 ring-slate-200">
-                            <div className="mx-auto flex h-32 w-32 items-center justify-center rounded-2xl bg-slate-50 p-2">
+                        <div className="w-full rounded-3xl bg-white p-3 text-center shadow-sm ring-1 ring-slate-200 xl:w-auto">
+                            <div className="mx-auto flex h-32 w-32 max-w-full items-center justify-center rounded-2xl bg-slate-50 p-2">
                                 <QRCodeSVG value={linkGeral} size={112} level="M" />
                             </div>
                             <p className="mt-2 text-[11px] font-bold uppercase tracking-wide text-slate-400">QR Code geral</p>
@@ -13512,11 +13597,11 @@ Prazo: ${formulario.prazoAdequacao ? formatDate(formulario.prazoAdequacao) : "N�
                     </Card>
                 )}
 
-                <div className="sticky bottom-4 z-10 flex flex-col gap-3 rounded-3xl bg-white/95 p-3 shadow-xl ring-1 ring-slate-200 backdrop-blur sm:flex-row">
+                <div className="flex flex-col gap-3 rounded-3xl bg-white/95 p-3 shadow-xl ring-1 ring-slate-200 backdrop-blur md:sticky md:bottom-4 md:z-10 md:flex-row">
                     <button type="button" onClick={salvarAuditoriaDireta} disabled={salvando} className="flex-1 rounded-2xl bg-slate-950 px-4 py-3 text-sm font-bold text-white hover:bg-slate-800 disabled:opacity-60">
                         {salvando ? "Salvando auditoria..." : "+ Salvar nova auditoria de campo"}
                     </button>
-                    <button type="button" onClick={limparFormularioAuditoriaCampo} className="rounded-2xl bg-slate-100 px-4 py-3 text-sm font-bold text-slate-700 hover:bg-slate-200">
+                    <button type="button" onClick={limparFormularioAuditoriaCampo} className="rounded-2xl bg-slate-100 px-4 py-3 text-sm font-bold text-slate-700 hover:bg-slate-200 md:w-auto">
                         Nova auditoria / limpar formulário
                     </button>
                 </div>
