@@ -1,6 +1,6 @@
 /* eslint-disable no-unused-vars */
 import React, { useCallback, useEffect, useMemo, useState } from "react";
-import { supabase } from "./supabaseClient";
+import { createClient } from "@supabase/supabase-js";
 import { QRCodeSVG } from "qrcode.react";
 import { motion } from "framer-motion";
 import {
@@ -37,6 +37,23 @@ import {
     Users,
     XCircle,
 } from "lucide-react";
+
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+
+if (!supabaseUrl) {
+    throw new Error(
+        "VITE_SUPABASE_URL não encontrada. Confira se o arquivo .env está na raiz do projeto e se a variável começa com VITE_."
+    );
+}
+
+if (!supabaseAnonKey) {
+    throw new Error(
+        "VITE_SUPABASE_ANON_KEY não encontrada. Confira se o arquivo .env está na raiz do projeto e se a variável começa com VITE_."
+    );
+}
+
+const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
 const hoje = new Date();
 
