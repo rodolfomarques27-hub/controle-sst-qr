@@ -1,0 +1,12 @@
+{
+  "rewrites": [
+    {
+      "source": "/nova-auditoria-campo",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/(.*)",
+      "destination": "/index.html"
+    }
+  ]
+}

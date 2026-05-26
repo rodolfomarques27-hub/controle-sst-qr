@@ -12404,8 +12404,16 @@ function DashboardAuditoriaCampo({ auditoriasCampo = [], onAuditoriaAtualizada }
 }
 
 
-function NovaAuditoriaCampoDireta({ usuario = null, onAuditoriaSalva }) {
-    const parametros = useMemo(() => new URLSearchParams(typeof window !== "undefined" ? window.location.search : ""), []);
+function NovaAuditoriaCampoDireta({ usuario = null, onAuditoriaSalva, empresasBanco = [] }) {
+    const parametros = useMemo(() => {
+        if (typeof window === "undefined") return new URLSearchParams("");
+        const hash = window.location.hash || "";
+        if (hash.startsWith("#/nova-auditoria-campo")) {
+            const indiceConsulta = hash.indexOf("?");
+            return new URLSearchParams(indiceConsulta >= 0 ? hash.slice(indiceConsulta) : "");
+        }
+        return new URLSearchParams(window.location.search || "");
+    }, []);
     const tipoParametro = parametros.get("tipo") || parametros.get("tipo_auditoria") || "area";
     const identificacaoParametro = parametros.get("id") || parametros.get("maquina") || parametros.get("equipamento") || "";
     const areaParametro = parametros.get("area") || "";
@@ -12415,7 +12423,13 @@ function NovaAuditoriaCampoDireta({ usuario = null, onAuditoriaSalva }) {
     const tokenParametro = parametros.get("token") || parametros.get("chave") || "";
     const tipoInicial = obterTipoAuditoriaCampoPorParametro(tipoParametro);
     const origem = typeof window !== "undefined" ? window.location.origin : "";
-    const linkGeral = `${origem}/nova-auditoria-campo`;
+    const linkGeralDireto = `${origem}/nova-auditoria-campo`;
+    const linkGeral = `${origem}/#/nova-auditoria-campo`;
+    const empresasAuditoriaCampo = useMemo(() => {
+        return [...empresasBanco]
+            .filter((empresa) => empresa?.nome)
+            .sort((a, b) => String(a.nome).localeCompare(String(b.nome), "pt-BR"));
+    }, [empresasBanco]);
 
     const [acessoLiberado, setAcessoLiberado] = useState(() => Boolean(usuario) || (TOKEN_LINK_AUDITORIA_CAMPO && tokenParametro === TOKEN_LINK_AUDITORIA_CAMPO));
     const [senha, setSenha] = useState("");
@@ -12718,12 +12732,69 @@ function NovaAuditoriaCampoDireta({ usuario = null, onAuditoriaSalva }) {
                                     </select>
                                 </div>
                                 {renderCampoTexto("titulo", "Título / assunto")}
-                                {renderCampoTexto("area", "Área", "Ex.: Pátio de máquinas")}
+                                <div>
+                                    <div className="flex items-center justify-between gap-2">
+                                        <label className="text-xs font-bold uppercase tracking-wide text-slate-500">Área</label>
+                                        <button type="button" onClick={() => alterarFormulario("area", "Não aplicável")} className="rounded-full bg-slate-100 px-2 py-1 text-[10px] font-bold text-slate-600 ring-1 ring-slate-200 hover:bg-slate-200">
+                                            Não aplicável
+                                        </button>
+                                    </div>
+                                    <input
+                                        value={formulario.area || ""}
+                                        onChange={(e) => alterarFormulario("area", e.target.value)}
+                                        list="opcoes-area-auditoria-campo"
+                                        placeholder="Ex.: Pátio de máquinas"
+                                        className="mt-2 w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-slate-300"
+                                    />
+                                </div>
                                 {renderCampoTexto("subarea", "Subárea", "Ex.: Linha 01 / doca / acesso lateral")}
-                                {renderCampoTexto("local", "Local", "Descreva o local exato")}
+                                <div>
+                                    <div className="flex items-center justify-between gap-2">
+                                        <label className="text-xs font-bold uppercase tracking-wide text-slate-500">Local</label>
+                                        <button type="button" onClick={() => alterarFormulario("local", "Não aplicável")} className="rounded-full bg-slate-100 px-2 py-1 text-[10px] font-bold text-slate-600 ring-1 ring-slate-200 hover:bg-slate-200">
+                                            Não aplicável
+                                        </button>
+                                    </div>
+                                    <input
+                                        value={formulario.local || ""}
+                                        onChange={(e) => alterarFormulario("local", e.target.value)}
+                                        list="opcoes-local-auditoria-campo"
+                                        placeholder="Descreva o local exato"
+                                        className="mt-2 w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-slate-300"
+                                    />
+                                </div>
                                 {renderCampoTexto("maquinaEquipamento", "Máquina / equipamento", "Ex.: PRENSA-01")}
-                                {renderCampoTexto("empresaResponsavel", "Empresa responsável", "Empresa ou responsável pelo local")}
+                                <div>
+                                    <label className="text-xs font-bold uppercase tracking-wide text-slate-500">Empresa responsável</label>
+                                    <input
+                                        value={formulario.empresaResponsavel || ""}
+                                        onChange={(e) => alterarFormulario("empresaResponsavel", e.target.value)}
+                                        list="empresas-auditoria-campo"
+                                        placeholder="Selecione ou digite a empresa responsável"
+                                        className="mt-2 w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-slate-300"
+                                    />
+                                    <datalist id="empresas-auditoria-campo">
+                                        {empresasAuditoriaCampo.map((empresa) => (
+                                            <option key={empresa.id || empresa.nome} value={empresa.nome} />
+                                        ))}
+                                    </datalist>
+                                    <p className="mt-1 text-[11px] text-slate-400">Puxa as empresas cadastradas no sistema e também permite digitar manualmente.</p>
+                                </div>
                                 {renderCampoTexto("auditorNome", "Nome do auditor", "Quem está realizando a auditoria")}
+                                <datalist id="opcoes-area-auditoria-campo">
+                                    <option value="Não aplicável" />
+                                    <option value="Geral" />
+                                    <option value="Área externa" />
+                                    <option value="Pátio de máquinas" />
+                                    <option value="Frente de serviço" />
+                                </datalist>
+                                <datalist id="opcoes-local-auditoria-campo">
+                                    <option value="Não aplicável" />
+                                    <option value="Geral" />
+                                    <option value="Obra toda" />
+                                    <option value="Local móvel" />
+                                    <option value="Frente de serviço" />
+                                </datalist>
                                 <div>
                                     <label className="text-xs font-bold uppercase tracking-wide text-slate-500">Grau de risco</label>
                                     <select value={formulario.grauRisco} onChange={(e) => alterarFormulario("grauRisco", e.target.value)} className="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold outline-none focus:ring-2 focus:ring-slate-300">
@@ -12807,6 +12878,7 @@ function NovaAuditoriaCampoDireta({ usuario = null, onAuditoriaSalva }) {
                                     <QRCodeSVG value={linkGeral} size={150} level="M" includeMargin />
                                 </div>
                                 <p className="break-all rounded-2xl bg-slate-50 p-3 text-xs text-slate-500 ring-1 ring-slate-100">{linkGeral}</p>
+                                <p className="text-[11px] leading-relaxed text-slate-400">Link direto alternativo: {linkGeralDireto}. O QR usa o formato seguro com # para evitar erro 404 quando o acesso é feito direto pelo celular.</p>
                                 <button type="button" onClick={() => copiarTexto(linkGeral, "Link geral copiado.")} className="rounded-2xl bg-slate-950 px-4 py-3 text-sm font-bold text-white hover:bg-slate-800">Copiar link geral</button>
                             </div>
                         </Card>
@@ -12819,17 +12891,28 @@ function NovaAuditoriaCampoDireta({ usuario = null, onAuditoriaSalva }) {
                                         {tiposAuditoriaCampoDireta.filter((tipo) => ["maquina", "equipamento", "veiculo", "area", "area_externa"].includes(tipo.valor)).map((tipo) => <option key={tipo.valor} value={tipo.valor}>{tipo.label}</option>)}
                                     </select>
                                 </div>
-                                {[
-                                    ["identificacao", "Identificação", "Ex.: PRENSA-01"],
-                                    ["area", "Área", "Ex.: Linha 01"],
-                                    ["local", "Local", "Ex.: Pátio de máquinas"],
-                                    ["empresa", "Empresa responsável", "Ex.: Empresa contratada"],
-                                ].map(([campo, label, placeholder]) => (
-                                    <div key={campo}>
-                                        <label className="text-xs font-bold uppercase tracking-wide text-slate-500">{label}</label>
-                                        <input value={qrEquipamento[campo] || ""} onChange={(e) => setQrEquipamento((atual) => ({ ...atual, [campo]: e.target.value }))} placeholder={placeholder} className="mt-2 w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-slate-300" />
+                                <div>
+                                    <label className="text-xs font-bold uppercase tracking-wide text-slate-500">Identificação</label>
+                                    <input value={qrEquipamento.identificacao || ""} onChange={(e) => setQrEquipamento((atual) => ({ ...atual, identificacao: e.target.value }))} placeholder="Ex.: PRENSA-01" className="mt-2 w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-slate-300" />
+                                </div>
+                                <div>
+                                    <div className="flex items-center justify-between gap-2">
+                                        <label className="text-xs font-bold uppercase tracking-wide text-slate-500">Área</label>
+                                        <button type="button" onClick={() => setQrEquipamento((atual) => ({ ...atual, area: "Não aplicável" }))} className="rounded-full bg-slate-100 px-2 py-1 text-[10px] font-bold text-slate-600 ring-1 ring-slate-200 hover:bg-slate-200">Não aplicável</button>
                                     </div>
-                                ))}
+                                    <input value={qrEquipamento.area || ""} onChange={(e) => setQrEquipamento((atual) => ({ ...atual, area: e.target.value }))} list="opcoes-area-auditoria-campo" placeholder="Ex.: Linha 01" className="mt-2 w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-slate-300" />
+                                </div>
+                                <div>
+                                    <div className="flex items-center justify-between gap-2">
+                                        <label className="text-xs font-bold uppercase tracking-wide text-slate-500">Local</label>
+                                        <button type="button" onClick={() => setQrEquipamento((atual) => ({ ...atual, local: "Não aplicável" }))} className="rounded-full bg-slate-100 px-2 py-1 text-[10px] font-bold text-slate-600 ring-1 ring-slate-200 hover:bg-slate-200">Não aplicável</button>
+                                    </div>
+                                    <input value={qrEquipamento.local || ""} onChange={(e) => setQrEquipamento((atual) => ({ ...atual, local: e.target.value }))} list="opcoes-local-auditoria-campo" placeholder="Ex.: Pátio de máquinas" className="mt-2 w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-slate-300" />
+                                </div>
+                                <div>
+                                    <label className="text-xs font-bold uppercase tracking-wide text-slate-500">Empresa responsável</label>
+                                    <input value={qrEquipamento.empresa || ""} onChange={(e) => setQrEquipamento((atual) => ({ ...atual, empresa: e.target.value }))} list="empresas-auditoria-campo" placeholder="Selecione ou digite a empresa" className="mt-2 w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-slate-300" />
+                                </div>
                                 <div className="flex justify-center rounded-3xl bg-slate-50 p-4 ring-1 ring-slate-100">
                                     <QRCodeSVG value={linkQrEquipamento} size={150} level="M" includeMargin />
                                 </div>
@@ -14810,12 +14893,16 @@ export default function App() {
 
     const parametrosAtuais = new URLSearchParams(window.location.search);
     const tokenQrPublico = parametrosAtuais.get("qr");
-    const rotaNovaAuditoriaCampo = typeof window !== "undefined" && window.location.pathname === "/nova-auditoria-campo";
+    const rotaNovaAuditoriaCampo = typeof window !== "undefined" && (
+        window.location.pathname === "/nova-auditoria-campo" ||
+        String(window.location.hash || "").startsWith("#/nova-auditoria-campo")
+    );
 
     if (rotaNovaAuditoriaCampo) {
         return (
             <NovaAuditoriaCampoDireta
                 usuario={usuario}
+                empresasBanco={empresasBanco}
                 onAuditoriaSalva={(novaAuditoria) => setAuditoriasCampo((atual) => [novaAuditoria, ...atual])}
             />
         );
@@ -14981,6 +15068,7 @@ export default function App() {
                     {tela === "novaAuditoriaCampo" && (
                         <NovaAuditoriaCampoDireta
                             usuario={usuario}
+                            empresasBanco={empresasBanco}
                             onAuditoriaSalva={(novaAuditoria) => setAuditoriasCampo((atual) => [novaAuditoria, ...atual])}
                         />
                     )}
