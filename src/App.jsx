@@ -111,6 +111,10 @@ import {
     checklistDinamicoAuditoriaCampo,
 } from "./constants/sstConstants";
 import {
+    baixarCSV,
+    baixarPDF,
+} from "./services/exportacaoService";
+import {
     normalizarTextoBusca,
     normalizarDataAniversario,
     diasParaVencer,
@@ -131,11 +135,6 @@ import {
     extrairCaminhoStorage,
     ehUuid,
     sanitizarNomeArquivo,
-    escaparCSV,
-    baixarCSV,
-    limparTextoPDF,
-    quebrarTextoPDF,
-    baixarPDF,
     converterDataParaISO,
     converterDataIsoDireta,
     limparTextoPdfBruto,
