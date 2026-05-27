@@ -167,8 +167,6 @@ const estilosGlobais = `
 `;
 
 const DAY = 1000 * 60 * 60 * 24;
-const SENHA_AUDITORIA = import.meta.env.VITE_SENHA_AUDITORIA || "Rodolfo@2026";
-const EMAIL_DESTINATARIO_ALERTAS = import.meta.env.VITE_EMAIL_ALERTA_SST || "";
 const FUNCAO_EMAIL_ALERTA_TST = import.meta.env.VITE_FUNCAO_EMAIL_ALERTA_TST || "rapid-api";
 const LIMITE_STORAGE_MB = Number(import.meta.env.VITE_STORAGE_LIMITE_MB || 1024);
 
@@ -525,21 +523,9 @@ function gerarCodigoFuncionario(nome = "") {
     return `COL-${base || "SST"}-${aleatorio}`;
 }
 
-function obterUrlFotoColaborador(caminho) {
-    if (!caminho) return "";
-
-    if (String(caminho).startsWith("http")) return caminho;
-
-    const { data } = supabase.storage
-        .from("fotos-colaboradores")
-        .getPublicUrl(caminho);
-
-    return data?.publicUrl || "";
-}
-
 function FotoColaborador({ src, nome, className = "h-12 w-12", iconClassName = "h-5 w-5" }) {
     const [erroImagem, setErroImagem] = useState(false);
-    const url = obterUrlFotoColaborador(src);
+    const url = useStorageUrl("fotos-colaboradores", src, 600);
 
     if (!url || erroImagem) {
         return (
@@ -975,8 +961,6 @@ const categoriasAuditoriaCampo = [
 const statusDesvioAuditoriaCampo = ["Aberto", "Em tratativa", "Corrigido", "Cancelado"];
 const gravidadesAuditoriaCampo = ["Leve", "Moderada", "Grave", "Crítica"];
 
-const SENHA_LINK_AUDITORIA_CAMPO = import.meta.env.VITE_SENHA_AUDITORIA_CAMPO || SENHA_AUDITORIA;
-const TOKEN_LINK_AUDITORIA_CAMPO = import.meta.env.VITE_TOKEN_AUDITORIA_CAMPO || "TOKEN-AUDITORIA-CAMPO-2026";
 
 const tiposAuditoriaCampoDireta = [
     { valor: "area", label: "Área", parametros: ["area"], grupo: "area" },
@@ -1488,13 +1472,14 @@ function fotosAuditoriaCampo(item = {}) {
 
 function FotoAuditoriaPreview({ url, label }) {
     const [erro, setErro] = useState(false);
+    const urlAssinada = useStorageUrl("auditorias-campo", url, 600);
     if (!url) return null;
 
     return (
-        <a href={url} target="_blank" rel="noreferrer" className="block overflow-hidden rounded-2xl bg-white ring-1 ring-slate-200 transition hover:ring-slate-300">
-            {!erro ? (
+        <a href={urlAssinada || "#"} target="_blank" rel="noreferrer" className="block overflow-hidden rounded-2xl bg-white ring-1 ring-slate-200 transition hover:ring-slate-300">
+            {urlAssinada && !erro ? (
                 <img
-                    src={url}
+                    src={urlAssinada}
                     alt={label}
                     className="h-44 w-full bg-slate-100 object-contain"
                     loading="lazy"
@@ -1622,6 +1607,101 @@ function formatarTelefone(valor) {
 
 function classNames(...items) {
     return items.filter(Boolean).join(" ");
+}
+
+
+function obterParametroUrl(nome) {
+    if (typeof window === "undefined") return "";
+
+    const parametrosNormais = new URLSearchParams(window.location.search || "");
+    const valorNormal = parametrosNormais.get(nome);
+
+    if (valorNormal) return valorNormal;
+
+    const hash = window.location.hash || "";
+    const queryHash = hash.includes("?") ? hash.slice(hash.indexOf("?") + 1) : "";
+    const parametrosHash = new URLSearchParams(queryHash);
+
+    return parametrosHash.get(nome) || "";
+}
+
+function extrairCaminhoStorage(bucket, caminhoOuUrl) {
+    const valor = String(caminhoOuUrl || "").trim();
+    if (!valor) return "";
+
+    if (!valor.startsWith("http")) {
+        return valor.replace(/^\/+/, "");
+    }
+
+    try {
+        const url = new URL(valor);
+        const marcadores = [
+            `/storage/v1/object/public/${bucket}/`,
+            `/storage/v1/object/sign/${bucket}/`,
+        ];
+
+        const marcador = marcadores.find((item) => url.pathname.includes(item));
+        if (!marcador) return valor;
+
+        const caminho = url.pathname.slice(url.pathname.indexOf(marcador) + marcador.length);
+        return decodeURIComponent(caminho).replace(/^\/+/, "");
+    } catch {
+        return valor;
+    }
+}
+
+async function criarUrlAssinadaStorage(bucket, caminhoOuUrl, validadeSegundos = 600) {
+    if (!bucket || !caminhoOuUrl) return "";
+
+    const caminho = extrairCaminhoStorage(bucket, caminhoOuUrl);
+
+    if (!caminho) return "";
+
+    if (String(caminho).startsWith("http")) {
+        return caminho;
+    }
+
+    if (bucket === "logos-empresas") {
+        const { data } = supabase.storage.from(bucket).getPublicUrl(caminho);
+        return data?.publicUrl || "";
+    }
+
+    const { data, error } = await supabase.storage
+        .from(bucket)
+        .createSignedUrl(caminho, validadeSegundos);
+
+    if (error) {
+        console.warn(`Erro ao gerar URL assinada do bucket ${bucket}:`, error.message);
+        return "";
+    }
+
+    return data?.signedUrl || "";
+}
+
+function useStorageUrl(bucket, caminhoOuUrl, validadeSegundos = 600) {
+    const [url, setUrl] = useState("");
+
+    useEffect(() => {
+        let ativo = true;
+
+        async function carregarUrl() {
+            if (!caminhoOuUrl) {
+                if (ativo) setUrl("");
+                return;
+            }
+
+            const gerada = await criarUrlAssinadaStorage(bucket, caminhoOuUrl, validadeSegundos);
+            if (ativo) setUrl(gerada);
+        }
+
+        carregarUrl();
+
+        return () => {
+            ativo = false;
+        };
+    }, [bucket, caminhoOuUrl, validadeSegundos]);
+
+    return url;
 }
 
 
@@ -1755,18 +1835,6 @@ function obterUrlLogoEmpresa(caminho) {
     return data?.publicUrl || "";
 }
 
-function obterUrlContratoEmpresa(caminho) {
-    if (!caminho) return "";
-
-    if (String(caminho).startsWith("http")) return caminho;
-
-    const { data } = supabase.storage
-        .from("contratos-empresas")
-        .getPublicUrl(caminho);
-
-    return data?.publicUrl || "";
-}
-
 function abrirArquivoUrl(url) {
     if (!url) return;
 
@@ -1777,6 +1845,16 @@ function abrirArquivoUrl(url) {
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
+}
+
+
+async function abrirArquivoStorage(bucket, caminhoOuUrl) {
+    const url = await criarUrlAssinadaStorage(bucket, caminhoOuUrl, 600);
+    if (!url) {
+        alert("Não foi possível gerar link temporário para o arquivo.");
+        return;
+    }
+    abrirArquivoUrl(url);
 }
 
 function normalizarStatusEmpresa(status) {
@@ -5750,7 +5828,6 @@ function Colaboradores({
                             filtrados.map((c) => {
                                 const geral = statusGeral(c);
                                 const avaliacao = avaliarTreinamentosColaborador(c);
-                                const foto = obterUrlFotoColaborador(c.fotoUrl);
 
                                 return (
                                     <div
@@ -5764,11 +5841,12 @@ function Colaboradores({
                                                         onClick={() => onSelectColab(c)}
                                                         className="flex h-20 w-20 shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-slate-100 text-slate-700 transition group-hover:bg-slate-950 group-hover:text-white"
                                                     >
-                                                        {foto ? (
-                                                            <img src={foto} alt={`Foto ${c.nome}`} className="h-full w-full object-cover" />
-                                                        ) : (
-                                                            <UserRound className="h-8 w-8" />
-                                                        )}
+                                                        <FotoColaborador
+                                                            src={c.fotoUrl}
+                                                            nome={c.nome}
+                                                            className="h-full w-full rounded-2xl"
+                                                            iconClassName="h-8 w-8"
+                                                        />
                                                     </button>
 
                                                     <div className="min-w-0 flex-1">
@@ -6390,7 +6468,7 @@ function AuditoriaCampoQRCode({ colaborador = {}, treinamentos = [], onAuditoria
             throw new Error("Foto fora do tamanho permitido mesmo após a redução automática.");
         }
 
-        const nomeArquivo = `${auditoriaId}/${tipo}-${Date.now()}-${sanitizarNomeArquivo(arquivoOtimizado.name || "foto-auditoria.jpg")}`;
+        const nomeArquivo = `auditorias-publicas/qr-colaborador/${auditoriaId}/${tipo}-${Date.now()}-${sanitizarNomeArquivo(arquivoOtimizado.name || "foto-auditoria.jpg")}`;
         const { error } = await supabase.storage
             .from("auditorias-campo")
             .upload(nomeArquivo, arquivoOtimizado, {
@@ -6400,8 +6478,7 @@ function AuditoriaCampoQRCode({ colaborador = {}, treinamentos = [], onAuditoria
 
         if (error) throw error;
 
-        const { data } = supabase.storage.from("auditorias-campo").getPublicUrl(nomeArquivo);
-        return data?.publicUrl || nomeArquivo;
+        return nomeArquivo;
     };
 
     const salvarAuditoria = async () => {
@@ -9261,7 +9338,7 @@ function Empresas({
 
     const renderEmpresaCard = (empresa, docs, destaqueContratante = false) => {
         const logoUrl = obterUrlLogoEmpresa(empresa.logo_url);
-        const contratoUrl = obterUrlContratoEmpresa(empresa.contrato_url);
+        const contratoUrl = empresa.contrato_url || "";
         const funcionarios = colaboradoresPorEmpresa[empresa.id] || [];
         const situacaoDocumental = calcularSituacaoDocumentalEmpresa(docs);
         const escopoAberto = Boolean(escoposAbertos[empresa.id]);
@@ -9351,7 +9428,7 @@ function Empresas({
                         {contratoUrl && (
                             <button
                                 type="button"
-                                onClick={() => abrirArquivoUrl(contratoUrl)}
+                                onClick={() => abrirArquivoStorage("contratos-empresas", contratoUrl)}
                                 className="inline-flex items-center justify-center gap-1 whitespace-nowrap rounded-full bg-blue-50 px-3 py-1.5 text-xs font-semibold text-blue-700 ring-1 ring-blue-200 hover:bg-blue-100"
                             >
                                 <FileText className="h-3.5 w-3.5" />
@@ -10383,7 +10460,7 @@ function Empresas({
                                     {empresaEdicao.contratoUrlAtual && (
                                         <button
                                             type="button"
-                                            onClick={() => abrirArquivoUrl(obterUrlContratoEmpresa(empresaEdicao.contratoUrlAtual))}
+                                            onClick={() => abrirArquivoStorage("contratos-empresas", empresaEdicao.contratoUrlAtual)}
                                             className="mt-2 inline-flex items-center gap-2 rounded-xl bg-white px-3 py-2 text-xs font-semibold text-slate-700 ring-1 ring-slate-200 hover:bg-slate-50"
                                         >
                                             <Eye className="h-4 w-4" />
@@ -10873,22 +10950,6 @@ function AuditoriaAcessoNegado() {
 }
 
 function AuditoriaBloqueada({ onLiberar }) {
-    const [senha, setSenha] = useState("");
-    const [erro, setErro] = useState("");
-
-    const validarSenha = (evento) => {
-        evento.preventDefault();
-        setErro("");
-
-        if (senha.trim() === SENHA_AUDITORIA) {
-            onLiberar?.();
-            setSenha("");
-            return;
-        }
-
-        setErro("Senha incorreta. A auditoria é restrita a pessoas autorizadas.");
-    };
-
     return (
         <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
             <Header
@@ -10904,46 +10965,27 @@ function AuditoriaBloqueada({ onLiberar }) {
                         </div>
 
                         <div>
-                            <h2 className="text-lg font-bold text-slate-950">Digite a senha de auditoria</h2>
+                            <h2 className="text-lg font-bold text-slate-950">Validação pelo Supabase</h2>
                             <p className="mt-1 text-sm leading-relaxed text-slate-500">
-                                Esta área mostra acessos, alterações e arquivos salvos no Storage. O acesso deve ficar restrito aos responsáveis autorizados.
+                                A senha local foi removida. O acesso agora depende somente do usuário autenticado e da autorização cadastrada no Supabase.
                             </p>
                         </div>
                     </div>
 
-                    <form onSubmit={validarSenha} className="space-y-3">
-                        <PasswordInput
-                            value={senha}
-                            onChange={(e) => setSenha(e.target.value)}
-                            placeholder="Senha de acesso"
-                            autoFocus
-                            autoComplete="current-password"
-                        />
-
-                        {erro && (
-                            <div className="rounded-2xl bg-red-50 px-4 py-3 text-sm font-semibold text-red-700 ring-1 ring-red-100">
-                                {erro}
-                            </div>
-                        )}
-
-                        <button
-                            type="submit"
-                            className="inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-slate-950 px-4 py-3 text-sm font-semibold text-white hover:bg-slate-800"
-                        >
-                            <Lock className="h-4 w-4" />
-                            Liberar auditoria
-                        </button>
-                    </form>
-
-                    <p className="mt-4 rounded-2xl bg-slate-50 p-3 text-xs leading-relaxed text-slate-500">
-                        A senha da Auditoria pode ser alterada no arquivo <strong>.env</strong> usando a variável
-                        <strong> VITE_SENHA_AUDITORIA</strong>. O acesso também depende da liberação do usuário no Supabase.
-                    </p>
+                    <button
+                        type="button"
+                        onClick={onLiberar}
+                        className="flex w-full items-center justify-center gap-2 rounded-2xl bg-slate-950 px-4 py-3 text-sm font-bold text-white hover:bg-slate-800"
+                    >
+                        <ShieldCheck className="h-4 w-4" />
+                        Validar acesso no Supabase
+                    </button>
                 </Card>
             </div>
         </motion.div>
     );
 }
+
 
 function RelatorioAuditoria({
     auditoria = [],
@@ -12042,7 +12084,7 @@ function EditorNotificacaoHistoricoAuditoria({ auditoria = {}, onAtualizada }) {
     });
     const [novoComplemento, setNovoComplemento] = useState("");
     const [exclusaoAberta, setExclusaoAberta] = useState(false);
-    const [senhaExclusao, setSenhaExclusao] = useState("");
+    const [confirmacaoExclusao, setConfirmacaoExclusao] = useState("");
     const [excluindo, setExcluindo] = useState(false);
     const [enviandoEmailAuditoria, setEnviandoEmailAuditoria] = useState(false);
     const [observacoesStatus, setObservacoesStatus] = useState({
@@ -12210,8 +12252,8 @@ function EditorNotificacaoHistoricoAuditoria({ auditoria = {}, onAtualizada }) {
             return;
         }
 
-        if (senhaExclusao !== SENHA_AUDITORIA) {
-            setMensagem("Senha incorreta. A auditoria não foi excluída.");
+        if (confirmacaoExclusao.trim().toUpperCase() !== "EXCLUIR") {
+            setMensagem("Digite EXCLUIR para confirmar a exclusão.");
             return;
         }
 
@@ -12283,14 +12325,13 @@ function EditorNotificacaoHistoricoAuditoria({ auditoria = {}, onAtualizada }) {
             {exclusaoAberta && (
                 <div className="mt-3 rounded-2xl border border-red-200 bg-red-50 p-3">
                     <p className="text-sm font-bold text-red-800">Excluir auditoria</p>
-                    <p className="mt-1 text-xs text-red-700">Esta ação remove a auditoria e seus desvios vinculados. Informe a senha de auditoria para confirmar.</p>
+                    <p className="mt-1 text-xs text-red-700">Esta ação remove a auditoria e seus desvios vinculados. Digite EXCLUIR para confirmar.</p>
                     <div className="mt-3 flex flex-col gap-2 sm:flex-row">
-                        <PasswordInput
-                            value={senhaExclusao}
-                            onChange={(e) => setSenhaExclusao(e.target.value)}
-                            placeholder="Senha para excluir"
-                            className="min-w-0 flex-1"
-                            inputClassName="border-red-200 bg-white focus:ring-red-200"
+                        <input
+                            value={confirmacaoExclusao}
+                            onChange={(e) => setConfirmacaoExclusao(e.target.value)}
+                            placeholder="Digite EXCLUIR"
+                            className="min-w-0 flex-1 rounded-2xl border border-red-200 bg-white px-4 py-3 text-sm outline-none focus:ring-4 focus:ring-red-100"
                         />
                         <button
                             type="button"
@@ -12559,6 +12600,7 @@ function DashboardAuditoriaCampo({
         area: "",
         local: "",
         empresaResponsavel: "",
+        token: "",
         observacao: "",
     });
 
@@ -13075,7 +13117,7 @@ function DashboardAuditoriaCampo({
     const montarLinkQrCampo = useCallback((dados = qrFormCampo) => {
         const origem = typeof window !== "undefined" ? window.location.origin : "";
         const params = new URLSearchParams();
-        params.set("token", TOKEN_LINK_AUDITORIA_CAMPO);
+        if (dados.token) params.set("token", String(dados.token).trim());
         if (dados.tipo) params.set("tipo", dados.tipo);
         if (dados.identificacao) params.set("id", dados.identificacao);
         if (dados.area) params.set("area", dados.area);
@@ -13128,6 +13170,7 @@ function DashboardAuditoriaCampo({
             area: String(qrFormCampo.area || "").trim() || null,
             local: String(qrFormCampo.local || "").trim() || null,
             empresa_responsavel: String(qrFormCampo.empresaResponsavel || "").trim() || null,
+            token_publico: String(qrFormCampo.token || "").trim() || null,
             link: montarLinkQrCampo(qrFormCampo),
             observacao: String(qrFormCampo.observacao || "").trim() || null,
             criado_por: null,
@@ -13540,6 +13583,11 @@ function DashboardAuditoriaCampo({
                                 <input value={qrFormCampo.empresaResponsavel} onChange={(e) => setQrFormCampo((atual) => ({ ...atual, empresaResponsavel: e.target.value }))} placeholder="Ex.: RIBEIRO AQUINO" className="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-3 py-2 text-sm normal-case tracking-normal outline-none focus:ring-2 focus:ring-blue-100" />
                             </label>
                             <label className="block text-xs font-bold uppercase tracking-wide text-slate-500 md:col-span-2">
+                                Token público cadastrado no Supabase
+                                <input value={qrFormCampo.token} onChange={(e) => setQrFormCampo((atual) => ({ ...atual, token: e.target.value }))} placeholder="Cole o token público ativo da tabela auditoria_tokens_publicos" className="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-3 py-2 text-sm normal-case tracking-normal outline-none focus:ring-2 focus:ring-blue-100" />
+                                <span className="mt-1 block text-[11px] font-medium normal-case tracking-normal text-slate-400">O token não fica fixo no App.jsx. Ele precisa existir e estar ativo no Supabase.</span>
+                            </label>
+                            <label className="block text-xs font-bold uppercase tracking-wide text-slate-500 md:col-span-2">
                                 Observação
                                 <input value={qrFormCampo.observacao} onChange={(e) => setQrFormCampo((atual) => ({ ...atual, observacao: e.target.value }))} placeholder="Ex.: QR fixado no painel do equipamento" className="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-3 py-2 text-sm normal-case tracking-normal outline-none focus:ring-2 focus:ring-blue-100" />
                             </label>
@@ -13913,7 +13961,7 @@ function NovaAuditoriaCampoDireta({ usuario = null, onAuditoriaSalva, empresasBa
     const tokenParametro = parametros.get("token") || parametros.get("chave") || "";
     const tipoInicial = obterTipoAuditoriaCampoPorParametro(tipoParametro);
     const origem = typeof window !== "undefined" ? window.location.origin : "";
-    const tokenLinkAuditoriaCampo = tokenParametro || TOKEN_LINK_AUDITORIA_CAMPO;
+    const tokenLinkAuditoriaCampo = tokenParametro;
     const montarLinkAuditoriaCampo = (parametrosExtras = {}) => {
         const params = new URLSearchParams();
 
@@ -13951,9 +13999,8 @@ function NovaAuditoriaCampoDireta({ usuario = null, onAuditoriaSalva, empresasBa
     }, [empresasBanco]);
 
 
-    const [acessoLiberado, setAcessoLiberado] = useState(() => Boolean(usuario) || (TOKEN_LINK_AUDITORIA_CAMPO && tokenParametro === TOKEN_LINK_AUDITORIA_CAMPO));
-    const [senha, setSenha] = useState("");
-    const [mensagemAcesso, setMensagemAcesso] = useState("");
+    const acessoLiberado = Boolean(usuario) || Boolean(tokenParametro);
+    const mensagemAcesso = tokenParametro ? "" : "Link inválido. Informe um token público de auditoria na URL.";
     const [salvando, setSalvando] = useState(false);
     const [mensagem, setMensagem] = useState("");
     const [auditoriaSalva, setAuditoriaSalva] = useState(null);
@@ -14199,20 +14246,6 @@ function NovaAuditoriaCampoDireta({ usuario = null, onAuditoriaSalva, empresasBa
         setMensagem("Formulário limpo. Você pode iniciar uma nova auditoria.");
     };
 
-    const liberarAcesso = () => {
-        const senhaDigitada = senha.trim();
-        if (!senhaDigitada) {
-            setMensagemAcesso("Informe a senha de auditoria para abrir o formulário.");
-            return;
-        }
-        if (senhaDigitada !== SENHA_LINK_AUDITORIA_CAMPO && (!TOKEN_LINK_AUDITORIA_CAMPO || senhaDigitada !== TOKEN_LINK_AUDITORIA_CAMPO)) {
-            setMensagemAcesso("Senha ou token inválido para nova auditoria de campo.");
-            return;
-        }
-        setAcessoLiberado(true);
-        setMensagemAcesso("");
-    };
-
     const copiarTexto = async (texto, sucesso = "Link copiado.") => {
         try {
             await navigator.clipboard.writeText(texto);
@@ -14254,15 +14287,14 @@ function NovaAuditoriaCampoDireta({ usuario = null, onAuditoriaSalva, empresasBa
             throw new Error("A foto ficou acima do limite mesmo após a redução automática.");
         }
         const nomeSeguro = sanitizarNomeArquivo(otimizada.name || `${tipo}.jpg`);
-        const caminho = `auditorias-diretas/${numeroAuditoria}/${tipo}-${Date.now()}-${nomeSeguro}`;
+        const caminho = `auditorias-publicas/${numeroAuditoria}/${tipo}-${Date.now()}-${nomeSeguro}`;
         const { error } = await supabase.storage.from("auditorias-campo").upload(caminho, otimizada, {
             cacheControl: "3600",
             upsert: true,
             contentType: otimizada.type || "image/jpeg",
         });
         if (error) throw new Error(`Erro ao enviar ${tipo}: ${error.message}`);
-        const { data } = supabase.storage.from("auditorias-campo").getPublicUrl(caminho);
-        return data?.publicUrl || caminho;
+        return caminho;
     };
 
     const salvarAuditoriaDireta = async () => {
@@ -14356,31 +14388,76 @@ function NovaAuditoriaCampoDireta({ usuario = null, onAuditoriaSalva, empresasBa
                 },
             };
 
-            const obterParametroUrl = (nome) => {
-                const parametrosNormais = new URLSearchParams(window.location.search);
-                const valorNormal = parametrosNormais.get(nome);
+            const tokenAuditoriaCampo = obterParametroUrl("token") || obterParametroUrl("chave");
+            let data = null;
 
-                if (valorNormal) {
-                    return valorNormal;
+            if (tokenAuditoriaCampo) {
+                const { data: dadosRpc, error } = await supabase.rpc("salvar_auditoria_campo_publica", {
+                    p_token: tokenAuditoriaCampo,
+                    p_dados: payload,
+                });
+
+                if (error) {
+                    throw error;
                 }
 
-                const hash = window.location.hash || "";
-                const queryHash = hash.includes("?") ? hash.slice(hash.indexOf("?") + 1) : "";
-                const parametrosHash = new URLSearchParams(queryHash);
+                data = dadosRpc;
+            } else if (usuario) {
+                const numeroAuditoriaInterna = await gerarNumeroAuditoria();
+                const payloadInterno = {
+                    ...payload,
+                    empresa_id: empresaSelecionadaAuditoria?.id || null,
+                    empresa_nome: payload.empresa_nome || empresaSelecionadaAuditoria?.nome || formulario.empresaResponsavel.trim() || null,
+                    numero_auditoria: numeroAuditoriaInterna,
+                    token_qr: null,
+                    origem: "Auditoria interna / app autenticado",
+                };
 
-                return parametrosHash.get(nome);
-            };
+                const { data: auditoriaCriada, error: erroAuditoria } = await supabase
+                    .from("auditorias_campo")
+                    .insert(payloadInterno)
+                    .select("*")
+                    .single();
 
-            const tokenAuditoriaCampo =
-                obterParametroUrl("token") || "TOKEN-AUDITORIA-CAMPO-2026";
+                if (erroAuditoria) {
+                    throw erroAuditoria;
+                }
 
-            const { data, error } = await supabase.rpc("salvar_auditoria_campo_publica", {
-                p_token: tokenAuditoriaCampo,
-                p_dados: payload,
-            });
+                if (Number(payloadInterno.total_desvios || 0) > 0) {
+                    const { error: erroDesvio } = await supabase
+                        .from("auditoria_campo_desvios")
+                        .insert({
+                            auditoria_id: auditoriaCriada.id,
+                            empresa_id: auditoriaCriada.empresa_id || payloadInterno.empresa_id || null,
+                            categoria: payloadInterno.categoria_desvio_principal || "Auditoria de campo",
+                            descricao: payloadInterno.situacao_encontrada || "Desvio registrado na auditoria de campo",
+                            gravidade: payloadInterno.grau_risco || "Moderada",
+                            acao_imediata: payloadInterno.acao_recomendada || null,
+                            responsavel: payloadInterno.responsavel_tratativa || null,
+                            prazo: payloadInterno.prazo_adequacao || null,
+                            status: payloadInterno.status_desvio || "Aberto",
+                            foto_antes_url: payloadInterno.foto_antes_url || null,
+                            foto_depois_url: payloadInterno.foto_depois_url || null,
+                            observacao: payloadInterno.observacao || null,
+                            notificacao: payloadInterno.notificacao || {},
+                            observacao_aberto: payloadInterno.observacoes_gerais || null,
+                        });
 
-            if (error) {
-                throw error;
+                    if (erroDesvio) {
+                        throw erroDesvio;
+                    }
+                }
+
+                data = {
+                    ok: true,
+                    id: auditoriaCriada.id,
+                    numero_auditoria: auditoriaCriada.numero_auditoria || numeroAuditoriaInterna,
+                    empresa_id: auditoriaCriada.empresa_id || payloadInterno.empresa_id || null,
+                    token_validado_no_supabase: false,
+                    auditoria_interna_autenticada: true,
+                };
+            } else {
+                throw new Error("Token da auditoria não informado. Acesse o formulário por um link público com token cadastrado no Supabase.");
             }
 
             const numeroGerado = data?.numero_auditoria || referenciaUploadFotos;
@@ -14423,25 +14500,13 @@ function NovaAuditoriaCampoDireta({ usuario = null, onAuditoriaSalva, empresasBa
                 <div className="mx-auto flex min-h-[calc(100vh-2rem)] max-w-xl items-center justify-center">
                     <Card className="w-full">
                         <div className="text-center">
-                            <ShieldCheck className="mx-auto h-10 w-10 text-emerald-600" />
-                            <h1 className="mt-3 text-2xl font-black text-slate-950">Nova Auditoria de Campo</h1>
-                            <p className="mt-2 text-sm text-slate-500">Acesso direto para registrar auditorias pelo celular, sem abrir o dashboard administrativo.</p>
+                            <ShieldCheck className="mx-auto h-10 w-10 text-red-600" />
+                            <h1 className="mt-3 text-2xl font-black text-slate-950">Link inválido</h1>
+                            <p className="mt-2 text-sm leading-relaxed text-slate-500">
+                                A auditoria pública não usa mais senha no front-end. Abra o formulário por um link com token público ativo cadastrado no Supabase.
+                            </p>
                         </div>
-                        <div className="mt-6 space-y-3">
-                            <PasswordInput
-                                label="Senha ou token de auditoria"
-                                value={senha}
-                                onChange={(e) => setSenha(e.target.value)}
-                                placeholder="Informe a senha de campo"
-                                onKeyDown={(e) => {
-                                    if (e.key === "Enter") liberarAcesso();
-                                }}
-                            />
-                            {mensagemAcesso && <p className="rounded-2xl bg-red-50 p-3 text-sm font-semibold text-red-700 ring-1 ring-red-100">{mensagemAcesso}</p>}
-                            <button type="button" onClick={liberarAcesso} className="w-full rounded-2xl bg-slate-950 px-4 py-3 text-sm font-bold text-white hover:bg-slate-800">
-                                Abrir formulário
-                            </button>
-                        </div>
+                        {mensagemAcesso && <p className="mt-6 rounded-2xl bg-red-50 p-3 text-sm font-semibold text-red-700 ring-1 ring-red-100">{mensagemAcesso}</p>}
                     </Card>
                 </div>
             </div>
@@ -15120,7 +15185,7 @@ export default function App() {
 
         setAuditoriaLiberada(true);
         carregarAuditoria();
-        registrarAuditoria("ACESSO_AUDITORIA", "auditoria_sistema", "Liberou acesso à tela de Auditoria por senha e regra do Supabase");
+        registrarAuditoria("ACESSO_AUDITORIA", "auditoria_sistema", "Liberou acesso à tela de Auditoria pela regra do Supabase");
     };
 
     const bloquearAuditoria = () => {
@@ -15640,8 +15705,8 @@ export default function App() {
                 nome_treinamento: treinamento.nome,
                 data_realizacao: item.dataRealizacao,
                 data_vencimento: item.dataVencimento,
-                url_do_arquivo: arquivo.arquivoUrl,
-                nome_do_arquivo: item.arquivo.name,
+                arquivo_url: arquivo.arquivoUrl,
+                arquivo_nome: item.arquivo.name,
                 observacao: "Enviado em massa no cadastro do colaborador",
                 status_validacao: "Validado",
             };
@@ -15976,8 +16041,8 @@ export default function App() {
                                 nome_treinamento: treinamento.nome,
                                 data_realizacao: dataRealizacao,
                                 data_vencimento: dataVencimento,
-                                url_do_arquivo: caminho,
-                                nome_do_arquivo: maisRecente.name,
+                                arquivo_url: caminho,
+                                arquivo_nome: maisRecente.name,
                                 observacao: "Sincronizado automaticamente do Storage",
                                 status_validacao: "Validado",
                             },
@@ -16383,8 +16448,8 @@ export default function App() {
                 nome_treinamento: treinamento.nome,
                 data_realizacao: certificado.dataRealizacao,
                 data_vencimento: treinamentoSemVencimento ? null : certificado.dataVencimento,
-                url_do_arquivo: arquivo.arquivoUrl,
-                nome_do_arquivo: certificado.arquivoNome || arquivo.arquivoNome,
+                arquivo_url: arquivo.arquivoUrl,
+                arquivo_nome: certificado.arquivoNome || arquivo.arquivoNome,
                 observacao: certificado.observacao || null,
                 status_validacao: "Validado",
             };
