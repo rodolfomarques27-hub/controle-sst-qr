@@ -3266,7 +3266,7 @@ function Dashboard({
         setCarregandoStorageDashboard(true);
 
         try {
-            const buckets = ["certificados-treinamentos", "documentos-empresas", "contratos-empresas", "logos-empresas", "fotos-colaboradores"];
+            const buckets = ["certificados-treinamentos", "documentos-empresas", "contratos-empresas", "logos-empresas", "fotos-colaboradores", "auditorias-campo"];
             const resumoBuckets = [];
 
             const listarNivel = async (bucket, prefixo = "") => {
@@ -8998,6 +8998,7 @@ function Empresas({
     onAtualizarBanco,
     onAdicionarEmpresa,
     onAtualizarEmpresa,
+    onExcluirEmpresa,
     onAdicionarDocumentoEmpresa,
     onExcluirDocumentoEmpresa,
     onVisualizarDocumentoEmpresa,
@@ -9047,6 +9048,14 @@ function Empresas({
     const [uploadRevisao, setUploadRevisao] = useState({});
     const [salvandoUploadRevisao, setSalvandoUploadRevisao] = useState("");
     const [escoposAbertos, setEscoposAbertos] = useState({});
+    const [empresasAbertas, setEmpresasAbertas] = useState({});
+
+    const alternarEmpresaAberta = (empresaId) => {
+        setEmpresasAbertas((atual) => ({
+            ...atual,
+            [empresaId]: !atual[empresaId],
+        }));
+    };
 
     const documentoSelecionado = useMemo(() => obterDocumentoEmpresa(novoDoc.tipo), [novoDoc.tipo]);
 
@@ -9232,6 +9241,42 @@ function Empresas({
         }
     };
 
+    const excluirEmpresaEdicao = async () => {
+        if (!empresaEdicao?.id || !onExcluirEmpresa) return;
+
+        const documentosVinculados = documentosPorEmpresa[empresaEdicao.id] || [];
+        const colaboradoresVinculados = colaboradoresPorEmpresa[empresaEdicao.id] || [];
+
+        const resumoVinculos = [
+            `${colaboradoresVinculados.length} colaborador(es) vinculado(s)`,
+            `${documentosVinculados.length} documento(s) vinculado(s)`,
+        ].join(" e ");
+
+        const confirmou = window.confirm(
+            `Deseja excluir a empresa ${empresaEdicao.nome}?\n\nAtenção: esta ação tenta remover o cadastro da empresa. ${resumoVinculos}. Se houver vínculo protegido no Supabase, a exclusão será bloqueada para preservar o histórico.`
+        );
+
+        if (!confirmou) return;
+
+        const confirmacaoTexto = window.prompt('Para confirmar a exclusão definitiva, digite EXCLUIR.');
+
+        if (confirmacaoTexto !== 'EXCLUIR') {
+            alert('Exclusão cancelada.');
+            return;
+        }
+
+        setSalvandoEdicaoEmpresa(true);
+        const ok = await onExcluirEmpresa({
+            id: empresaEdicao.id,
+            nome: empresaEdicao.nome,
+        });
+        setSalvandoEdicaoEmpresa(false);
+
+        if (ok) {
+            setEmpresaEdicao(null);
+        }
+    };
+
     const obterUploadRevisao = (tipo) => {
         const dataEmissao = hoje.toISOString().slice(0, 10);
 
@@ -9342,6 +9387,7 @@ function Empresas({
         const funcionarios = colaboradoresPorEmpresa[empresa.id] || [];
         const situacaoDocumental = calcularSituacaoDocumentalEmpresa(docs);
         const escopoAberto = Boolean(escoposAbertos[empresa.id]);
+        const empresaAberta = Boolean(empresasAbertas[empresa.id]);
 
         return (
             <div key={empresa.id} className={classNames("rounded-3xl border p-4", destaqueContratante ? "border-slate-300 bg-slate-50" : "border-slate-200 bg-white")}>
@@ -9437,6 +9483,24 @@ function Empresas({
                         )}
 
                         <button
+                            type="button"
+                            onClick={() => alternarEmpresaAberta(empresa.id)}
+                            className="inline-flex items-center justify-center gap-1 whitespace-nowrap rounded-full bg-slate-100 px-3 py-1.5 text-xs font-semibold text-slate-700 ring-1 ring-slate-200 hover:bg-slate-200"
+                        >
+                            {empresaAberta ? (
+                                <>
+                                    <ChevronUp className="h-3.5 w-3.5" />
+                                    Recolher
+                                </>
+                            ) : (
+                                <>
+                                    <ChevronDown className="h-3.5 w-3.5" />
+                                    Abrir
+                                </>
+                            )}
+                        </button>
+
+                        <button
                             onClick={() => abrirEdicaoEmpresa(empresa)}
                             className="inline-flex items-center justify-center gap-1 whitespace-nowrap rounded-full bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 ring-1 ring-slate-200 hover:bg-slate-50"
                         >
@@ -9453,72 +9517,80 @@ function Empresas({
                     </div>
                 </div>
 
-                <div className="mt-4 grid gap-3 lg:grid-cols-3">
-                    {documentosEmpresaBase.map((tipoDoc) => {
-                        const doc = docs.find((item) => item.tipo_documento === tipoDoc.tipo);
-                        const st = statusEmpresaDocumento(doc?.data_vencimento);
+                {empresaAberta ? (
+                    <>
+                        <div className="mt-4 grid gap-3 lg:grid-cols-3">
+                            {documentosEmpresaBase.map((tipoDoc) => {
+                                const doc = docs.find((item) => item.tipo_documento === tipoDoc.tipo);
+                                const st = statusEmpresaDocumento(doc?.data_vencimento);
 
-                        return (
-                            <div key={tipoDoc.tipo} className="rounded-2xl bg-white p-3 ring-1 ring-slate-200">
-                                <div className="mb-2 flex items-start justify-between gap-2">
-                                    <div>
-                                        <p className="font-bold text-slate-900">{tipoDoc.nome}</p>
-                                        <p className="text-xs text-slate-400">
-                                            {doc ? `Emissão: ${formatDate(doc.data_emissao)}` : "Documento ainda não cadastrado"}
-                                        </p>
-                                    </div>
-                                    {doc && <StatusPill status={st} small />}
-                                </div>
-
-                                {doc ? (
-                                    <div className="space-y-2">
-                                        <p className="text-xs text-slate-500">
-                                            <strong>Revisão:</strong> {doc.data_vencimento ? formatDate(doc.data_vencimento) : "Sem revisão definida"}
-                                        </p>
-                                        <p className="truncate text-xs text-slate-500">
-                                            <strong>Arquivo:</strong> {doc.arquivo_nome || "Arquivo ainda não anexado"}
-                                        </p>
-                                        {doc.observacao && (
-                                            <p className="line-clamp-2 text-xs text-slate-500">{doc.observacao}</p>
-                                        )}
-                                        <div className="flex flex-wrap gap-2">
-                                            <button
-                                                onClick={() => onVisualizarDocumentoEmpresa(doc)}
-                                                disabled={!doc.arquivo_url}
-                                                title="Abrir o documento enviado"
-                                                className="inline-flex items-center gap-1 whitespace-nowrap rounded-xl bg-slate-950 px-2.5 py-1.5 text-xs font-semibold text-white hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50"
-                                            >
-                                                <Eye className="h-3.5 w-3.5" />
-                                                Visualizar documento
-                                            </button>
-
-                                            <button
-                                                onClick={() => onExcluirDocumentoEmpresa(doc)}
-                                                title="Excluir este documento do cadastro da empresa"
-                                                className="inline-flex items-center gap-1 whitespace-nowrap rounded-xl bg-red-50 px-2.5 py-1.5 text-xs font-semibold text-red-700 ring-1 ring-red-200 hover:bg-red-100"
-                                            >
-                                                <Trash2 className="h-3.5 w-3.5" />
-                                                Excluir documento
-                                            </button>
+                                return (
+                                    <div key={tipoDoc.tipo} className="rounded-2xl bg-white p-3 ring-1 ring-slate-200">
+                                        <div className="mb-2 flex items-start justify-between gap-2">
+                                            <div>
+                                                <p className="font-bold text-slate-900">{tipoDoc.nome}</p>
+                                                <p className="text-xs text-slate-400">
+                                                    {doc ? `Emissão: ${formatDate(doc.data_emissao)}` : "Documento ainda não cadastrado"}
+                                                </p>
+                                            </div>
+                                            {doc && <StatusPill status={st} small />}
                                         </div>
-                                    </div>
-                                ) : (
-                                    <p className="text-xs text-slate-500">Documento ainda não cadastrado para esta empresa.</p>
-                                )}
-                            </div>
-                        );
-                    })}
-                </div>
 
-                <div className="mt-4 flex justify-center border-t border-slate-200 pt-4">
-                    <button
-                        onClick={() => baixarRelatorioDocumentos(empresa, docs)}
-                        className="inline-flex items-center gap-2 whitespace-nowrap rounded-2xl bg-white px-4 py-2.5 text-xs font-semibold text-slate-700 ring-1 ring-slate-200 hover:bg-slate-50"
-                    >
-                        <FileText className="h-4 w-4" />
-                        Baixar PDF documentos desta empresa
-                    </button>
-                </div>
+                                        {doc ? (
+                                            <div className="space-y-2">
+                                                <p className="text-xs text-slate-500">
+                                                    <strong>Revisão:</strong> {doc.data_vencimento ? formatDate(doc.data_vencimento) : "Sem revisão definida"}
+                                                </p>
+                                                <p className="truncate text-xs text-slate-500">
+                                                    <strong>Arquivo:</strong> {doc.arquivo_nome || "Arquivo ainda não anexado"}
+                                                </p>
+                                                {doc.observacao && (
+                                                    <p className="line-clamp-2 text-xs text-slate-500">{doc.observacao}</p>
+                                                )}
+                                                <div className="flex flex-wrap gap-2">
+                                                    <button
+                                                        onClick={() => onVisualizarDocumentoEmpresa(doc)}
+                                                        disabled={!doc.arquivo_url}
+                                                        title="Abrir o documento enviado"
+                                                        className="inline-flex items-center gap-1 whitespace-nowrap rounded-xl bg-slate-950 px-2.5 py-1.5 text-xs font-semibold text-white hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50"
+                                                    >
+                                                        <Eye className="h-3.5 w-3.5" />
+                                                        Visualizar documento
+                                                    </button>
+
+                                                    <button
+                                                        onClick={() => onExcluirDocumentoEmpresa(doc)}
+                                                        title="Excluir este documento do cadastro da empresa"
+                                                        className="inline-flex items-center gap-1 whitespace-nowrap rounded-xl bg-red-50 px-2.5 py-1.5 text-xs font-semibold text-red-700 ring-1 ring-red-200 hover:bg-red-100"
+                                                    >
+                                                        <Trash2 className="h-3.5 w-3.5" />
+                                                        Excluir documento
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        ) : (
+                                            <p className="text-xs text-slate-500">Documento ainda não cadastrado para esta empresa.</p>
+                                        )}
+                                    </div>
+                                );
+                            })}
+                        </div>
+
+                        <div className="mt-4 flex justify-center border-t border-slate-200 pt-4">
+                            <button
+                                onClick={() => baixarRelatorioDocumentos(empresa, docs)}
+                                className="inline-flex items-center gap-2 whitespace-nowrap rounded-2xl bg-white px-4 py-2.5 text-xs font-semibold text-slate-700 ring-1 ring-slate-200 hover:bg-slate-50"
+                            >
+                                <FileText className="h-4 w-4" />
+                                Baixar PDF documentos desta empresa
+                            </button>
+                        </div>
+                    </>
+                ) : (
+                    <div className="mt-4 rounded-2xl border border-dashed border-slate-200 bg-slate-50 px-4 py-3 text-center text-xs font-semibold text-slate-500">
+                        Documentos e detalhes recolhidos. Clique em <span className="text-slate-800">Abrir</span> para visualizar PGR, PCMSO, contrato, relatórios e ações da empresa.
+                    </div>
+                )}
             </div>
         );
     };
@@ -10529,20 +10601,31 @@ function Empresas({
                             </div>
                         </div>
 
-                        <div className="sticky bottom-0 z-10 flex flex-col gap-3 border-t border-slate-200 bg-white p-6 sm:flex-row">
+                        <div className="sticky bottom-0 z-10 grid gap-3 border-t border-slate-200 bg-white p-6 sm:grid-cols-[1fr_1fr_1fr]">
                             <button
-                                onClick={salvarEdicaoEmpresa}
-                                disabled={salvandoEdicaoEmpresa}
-                                className="flex-1 rounded-2xl bg-slate-950 px-4 py-3 text-sm font-semibold text-white hover:bg-slate-800 disabled:opacity-60"
+                                type="button"
+                                onClick={excluirEmpresaEdicao}
+                                disabled={salvandoEdicaoEmpresa || !onExcluirEmpresa}
+                                className="rounded-2xl bg-red-50 px-4 py-3 text-sm font-semibold text-red-700 ring-1 ring-red-200 hover:bg-red-100 disabled:opacity-60"
                             >
-                                {salvandoEdicaoEmpresa ? "Salvando alterações..." : "Salvar alterações"}
+                                Excluir empresa
                             </button>
 
                             <button
+                                type="button"
                                 onClick={() => setEmpresaEdicao(null)}
-                                className="flex-1 rounded-2xl bg-slate-100 px-4 py-3 text-sm font-semibold text-slate-700 hover:bg-slate-200"
+                                className="rounded-2xl bg-slate-100 px-4 py-3 text-sm font-semibold text-slate-700 hover:bg-slate-200"
                             >
                                 Cancelar
+                            </button>
+
+                            <button
+                                type="button"
+                                onClick={salvarEdicaoEmpresa}
+                                disabled={salvandoEdicaoEmpresa}
+                                className="rounded-2xl bg-slate-950 px-4 py-3 text-sm font-semibold text-white hover:bg-slate-800 disabled:opacity-60"
+                            >
+                                {salvandoEdicaoEmpresa ? "Salvando alterações..." : "Salvar alterações"}
                             </button>
                         </div>
                     </div>
@@ -14014,7 +14097,7 @@ function NovaAuditoriaCampoDireta({ usuario = null, onAuditoriaSalva, empresasBa
         local: localParametro,
         maquinaEquipamento: identificacaoParametro,
         empresaResponsavel: empresaParametro,
-        auditorNome: usuario?.email || "",
+        auditorNome: "",
         grauRisco: "Baixo",
         situacaoEncontrada: "",
         acaoRecomendada: "",
@@ -14083,14 +14166,14 @@ function NovaAuditoriaCampoDireta({ usuario = null, onAuditoriaSalva, empresasBa
             `Local: ${formulario.local || "Não informado"}`,
             `Grau de risco: ${formulario.grauRisco}`,
             `Status: ${formulario.statusAuditoria}`,
-            `Auditor: ${formulario.auditorNome || usuario?.email || "Não informado"}`,
+            `Auditor: ${formulario.auditorNome || "Não informado"}`,
             "",
             `Situação encontrada: ${formulario.situacaoEncontrada || "Não informada"}`,
             `Ação recomendada: ${formulario.acaoRecomendada || "Não informada"}`,
             `Responsável pela tratativa: ${formulario.responsavelTratativa || "Não informado"}`,
             `Prazo: ${formulario.prazoAdequacao || "Não informado"}`,
         ].join("\n");
-    }, [formulario, tipoAtual.label, usuario?.email]);
+    }, [formulario, tipoAtual.label]);
 
     const assuntoNotificacaoResponsavel = `Auditoria de campo - ${formulario.grauRisco || "Risco"} - ${formulario.titulo || tipoAtual.label}`;
     const emailResponsavelAuditoria = String(formulario.emailResponsavel || "").trim();
@@ -14224,7 +14307,7 @@ function NovaAuditoriaCampoDireta({ usuario = null, onAuditoriaSalva, empresasBa
             local: localParametro,
             maquinaEquipamento: identificacaoParametro,
             empresaResponsavel: empresaParametro,
-            auditorNome: usuario?.email || "",
+            auditorNome: "",
             grauRisco: "Baixo",
             situacaoEncontrada: "",
             acaoRecomendada: "",
@@ -14338,7 +14421,7 @@ function NovaAuditoriaCampoDireta({ usuario = null, onAuditoriaSalva, empresasBa
                 maquina_equipamento: formulario.maquinaEquipamento.trim() || null,
                 empresa_responsavel: formulario.empresaResponsavel.trim() || null,
                 empresa_nome: formulario.empresaResponsavel.trim() || null,
-                auditor_nome: formulario.auditorNome.trim() || usuario?.email || "Auditor de campo",
+                auditor_nome: formulario.auditorNome.trim() || "Não informado",
                 grau_risco: formulario.grauRisco,
                 situacao_encontrada: formulario.situacaoEncontrada.trim(),
                 acao_recomendada: formulario.acaoRecomendada.trim() || null,
@@ -14369,7 +14452,7 @@ function NovaAuditoriaCampoDireta({ usuario = null, onAuditoriaSalva, empresasBa
                         local: formulario.local.trim(),
                         maquinaEquipamento: formulario.maquinaEquipamento.trim(),
                         empresaResponsavel: formulario.empresaResponsavel.trim(),
-                        auditorNome: formulario.auditorNome.trim() || usuario?.email || "Auditor de campo",
+                        auditorNome: formulario.auditorNome.trim() || "Não informado",
                         grauRisco: formulario.grauRisco,
                         classificacao: resultado.classificacao,
                         pontuacao: resultado.percentual ?? 0,
@@ -14377,7 +14460,7 @@ function NovaAuditoriaCampoDireta({ usuario = null, onAuditoriaSalva, empresasBa
                         responsavelTratativa: formulario.responsavelTratativa.trim(),
                         prazoAdequacao: formulario.prazoAdequacao,
                     }, { tipo: tipoAtual.label, titulo: formulario.titulo.trim() }),
-                    auditor: formulario.auditorNome.trim() || usuario?.email || "Auditor de campo",
+                    auditor: formulario.auditorNome.trim() || "Não informado",
                     emailResponsavel: emailResponsavelAuditoria || null,
                     whatsappResponsavel: whatsappResponsavelFormatado || null,
                     nomeTstResponsavel: formulario.nomeTstResponsavel || contatosEmpresaAuditoria.tstResponsavel || null,
@@ -14930,7 +15013,7 @@ export default function App() {
             .from("auditoria_sistema")
             .select("id, created_at, usuario_email, acao, tabela, registro_id, descricao, dados")
             .order("created_at", { ascending: false })
-            .limit(300);
+            .limit(1000);
 
         setCarregandoAuditoria(false);
 
@@ -14950,7 +15033,7 @@ export default function App() {
             .from("emails_enviados")
             .select("id, empresa_id, colaborador_id, documento_id, destinatario, assunto, tipo_alerta, documento, status_envio, erro, data_envio, enviado_por")
             .order("data_envio", { ascending: false })
-            .limit(300);
+            .limit(1000);
 
         if (error) {
             console.warn("Erro ao carregar histórico de e-mails:", error.message);
@@ -15521,6 +15604,80 @@ export default function App() {
             return true;
         } catch (error) {
             setErroBanco(error.message || "Erro ao atualizar empresa.");
+            return false;
+        }
+    }
+
+    async function excluirEmpresa(empresa) {
+        setErroBanco("");
+
+        try {
+            if (!empresa?.id) {
+                throw new Error("Empresa inválida para exclusão.");
+            }
+
+            const documentosVinculados = documentosEmpresas.filter((doc) => String(doc.empresa_id || doc.empresaId || "") === String(empresa.id));
+            const colaboradoresVinculados = colaboradores.filter((colaborador) => String(colaborador.empresaId || colaborador.empresa_id || "") === String(empresa.id));
+
+            if (colaboradoresVinculados.length > 0) {
+                throw new Error(
+                    `Não foi possível excluir ${empresa.nome || "esta empresa"}: existem ${colaboradoresVinculados.length} colaborador(es) vinculado(s). Desmobilize, transfira ou exclua os colaboradores antes de remover a empresa para não quebrar o histórico.`
+                );
+            }
+
+            if (documentosVinculados.length > 0) {
+                const confirmouDocumentos = window.confirm(
+                    `A empresa ${empresa.nome || "selecionada"} possui ${documentosVinculados.length} documento(s) empresarial(is). Deseja excluir os registros de documentos antes de remover a empresa? Os arquivos vinculados também serão removidos do Storage quando possível.`
+                );
+
+                if (!confirmouDocumentos) {
+                    throw new Error("Exclusão cancelada. Remova ou revise os documentos da empresa antes de excluir o cadastro.");
+                }
+
+                for (const doc of documentosVinculados) {
+                    const caminhoArquivo = doc.url_do_arquivo || doc.arquivo_url || "";
+
+                    if (caminhoArquivo) {
+                        await supabase.storage.from("documentos-empresas").remove([caminhoArquivo]);
+                    }
+
+                    const { error: erroDoc } = await supabase
+                        .from("documentos_empresas")
+                        .delete()
+                        .eq("id", doc.id);
+
+                    if (erroDoc) {
+                        throw new Error(`Erro ao excluir documento vinculado: ${erroDoc.message}`);
+                    }
+                }
+            }
+
+            const empresaAtual = empresasBanco.find((item) => String(item.id) === String(empresa.id)) || empresa;
+
+            if (empresaAtual.logo_url) {
+                await supabase.storage.from("logos-empresas").remove([empresaAtual.logo_url]);
+            }
+
+            if (empresaAtual.contrato_url) {
+                await supabase.storage.from("contratos-empresas").remove([empresaAtual.contrato_url]);
+            }
+
+            const { error } = await supabase
+                .from("empresas")
+                .delete()
+                .eq("id", empresa.id);
+
+            if (error) {
+                throw new Error(`Erro ao excluir empresa: ${error.message}`);
+            }
+
+            setEmpresasBanco((atual) => atual.filter((item) => String(item.id) !== String(empresa.id)));
+            setDocumentosEmpresas((atual) => atual.filter((doc) => String(doc.empresa_id || doc.empresaId || "") !== String(empresa.id)));
+
+            return true;
+        } catch (error) {
+            setErroBanco(error.message || "Erro ao excluir empresa.");
+            alert(error.message || "Erro ao excluir empresa.");
             return false;
         }
     }
@@ -16099,6 +16256,11 @@ export default function App() {
                     origemTipo: "Colaborador / Foto",
                     tabelaOrigem: "colaboradores.foto_url",
                 },
+                {
+                    bucket: "auditorias-campo",
+                    origemTipo: "Auditoria de campo / Evidência fotográfica",
+                    tabelaOrigem: "auditorias_campo.fotos",
+                },
             ];
 
             const listarNivel = async (bucketInfo, prefixo = "") => {
@@ -16154,6 +16316,22 @@ export default function App() {
                 throw new Error(`Erro ao consultar documentos de empresas: ${documentosEmpresaError.message}`);
             }
 
+            const { data: auditoriasCampoBanco, error: auditoriasCampoStorageError } = await supabase
+                .from("auditorias_campo")
+                .select("id, empresa_id, numero_auditoria, titulo, empresa_nome, foto_antes_url, foto_depois_url");
+
+            if (auditoriasCampoStorageError) {
+                console.warn("Erro ao consultar auditorias para vínculo de fotos:", auditoriasCampoStorageError.message);
+            }
+
+            const { data: desviosAuditoriaBanco, error: desviosAuditoriaStorageError } = await supabase
+                .from("auditoria_campo_desvios")
+                .select("id, auditoria_id, empresa_id, categoria, descricao, foto_antes_url, foto_depois_url");
+
+            if (desviosAuditoriaStorageError) {
+                console.warn("Erro ao consultar desvios para vínculo de fotos:", desviosAuditoriaStorageError.message);
+            }
+
             const colaboradoresPorId = colaboradores.reduce((acc, colaborador) => {
                 acc[colaborador.id] = colaborador;
                 return acc;
@@ -16200,6 +16378,26 @@ export default function App() {
 
             const fotosPorCaminho = colaboradores.reduce((acc, colaborador) => {
                 if (colaborador.fotoUrl) acc[`fotos-colaboradores:${colaborador.fotoUrl}`] = colaborador;
+                return acc;
+            }, {});
+
+            const registrarCaminhoAuditoria = (acc, valor, registro, origem) => {
+                const caminho = extrairCaminhoStorage("auditorias-campo", valor);
+                if (caminho) {
+                    acc[`auditorias-campo:${caminho}`] = { ...registro, origemAuditoriaStorage: origem };
+                }
+                return acc;
+            };
+
+            const auditoriasCampoPorCaminho = (auditoriasCampoBanco || []).reduce((acc, auditoria) => {
+                registrarCaminhoAuditoria(acc, auditoria.foto_antes_url, auditoria, "Auditoria de campo");
+                registrarCaminhoAuditoria(acc, auditoria.foto_depois_url, auditoria, "Auditoria de campo");
+                return acc;
+            }, {});
+
+            const desviosAuditoriaPorCaminho = (desviosAuditoriaBanco || []).reduce((acc, desvio) => {
+                registrarCaminhoAuditoria(acc, desvio.foto_antes_url, desvio, "Desvio de auditoria");
+                registrarCaminhoAuditoria(acc, desvio.foto_depois_url, desvio, "Desvio de auditoria");
                 return acc;
             }, {});
 
@@ -16290,6 +16488,21 @@ export default function App() {
                         colaboradorNome = colaboradorFoto?.nome || "";
                         colaboradorCodigo = colaboradorFoto?.codigoFuncionario || "";
                         colaboradorEmpresa = colaboradorFoto?.empresaExibicao || colaboradorFoto?.empresa || "";
+                        origemIdentificacao = origemRegistro;
+                    }
+
+                    if (arquivo.bucket === "auditorias-campo") {
+                        const auditoriaVinculada = auditoriasCampoPorCaminho[chave] || null;
+                        const desvioVinculado = desviosAuditoriaPorCaminho[chave] || null;
+                        const registroAuditoria = auditoriaVinculada || desvioVinculado || null;
+                        const empresaAuditoria = registroAuditoria?.empresa_id ? empresasPorId[registroAuditoria.empresa_id] : null;
+
+                        emUso = Boolean(registroAuditoria);
+                        origemRegistro = registroAuditoria?.origemAuditoriaStorage || (primeiraPasta ? "Pasta do Storage" : "");
+                        registroId = registroAuditoria?.id || "";
+                        empresaNome = empresaAuditoria?.nome || registroAuditoria?.empresa_nome || "";
+                        empresaCnpj = empresaAuditoria?.cnpj || "";
+                        tipoDocumentoEmpresa = registroAuditoria?.numero_auditoria || registroAuditoria?.categoria || "Foto de auditoria de campo";
                         origemIdentificacao = origemRegistro;
                     }
 
@@ -17046,6 +17259,7 @@ export default function App() {
                             onAtualizarBanco={carregarColaboradores}
                             onAdicionarEmpresa={adicionarEmpresa}
                             onAtualizarEmpresa={atualizarEmpresa}
+                            onExcluirEmpresa={excluirEmpresa}
                             onAdicionarDocumentoEmpresa={adicionarDocumentoEmpresa}
                             onExcluirDocumentoEmpresa={excluirDocumentoEmpresa}
                             onVisualizarDocumentoEmpresa={visualizarDocumentoEmpresa}
