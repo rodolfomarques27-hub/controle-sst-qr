@@ -137,6 +137,83 @@ if (!SUPABASE_CONFIGURADO) {
     console.warn(MENSAGEM_SUPABASE_NAO_CONFIGURADO);
 }
 
+
+const TAMANHO_PAGINA_SUPABASE = 1000;
+
+async function buscarTodosRegistrosSupabase(tabela, colunas = "*", opcoes = {}) {
+    const {
+        campoOrdenacao = null,
+        crescente = false,
+        tamanhoPagina = TAMANHO_PAGINA_SUPABASE,
+    } = opcoes;
+
+    const todos = [];
+    let inicio = 0;
+
+    while (true) {
+        let consulta = supabase
+            .from(tabela)
+            .select(colunas)
+            .range(inicio, inicio + tamanhoPagina - 1);
+
+        if (campoOrdenacao) {
+            consulta = consulta.order(campoOrdenacao, { ascending: crescente });
+        }
+
+        const { data, error } = await consulta;
+
+        if (error) {
+            throw error;
+        }
+
+        const pagina = data || [];
+        todos.push(...pagina);
+
+        if (pagina.length < tamanhoPagina) {
+            break;
+        }
+
+        inicio += tamanhoPagina;
+    }
+
+    return todos;
+}
+
+async function listarTodosArquivosStorage(bucket, prefixo = "", opcoes = {}) {
+    const {
+        tamanhoPagina = TAMANHO_PAGINA_SUPABASE,
+        sortBy = { column: "name", order: "asc" },
+    } = opcoes;
+
+    const todos = [];
+    let offset = 0;
+
+    while (true) {
+        const { data, error } = await supabase.storage
+            .from(bucket)
+            .list(prefixo, {
+                limit: tamanhoPagina,
+                offset,
+                sortBy,
+            });
+
+        if (error) {
+            throw error;
+        }
+
+        const pagina = data || [];
+        todos.push(...pagina);
+
+        if (pagina.length < tamanhoPagina) {
+            break;
+        }
+
+        offset += tamanhoPagina;
+    }
+
+    return todos;
+}
+
 const hoje = new Date();
 
 const estilosGlobais = `
@@ -3270,14 +3347,14 @@ function Dashboard({
             const resumoBuckets = [];
 
             const listarNivel = async (bucket, prefixo = "") => {
-                const { data, error } = await supabase.storage
-                    .from(bucket)
-                    .list(prefixo, {
-                        limit: 1000,
-                        sortBy: { column: "name", order: "asc" },
-                    });
+                let data;
 
-                if (error) return { bytes: 0, arquivos: 0 };
+                try {
+                    data = await listarTodosArquivosStorage(bucket, prefixo);
+                } catch (error) {
+                    console.warn(`Erro ao listar bucket ${bucket}:`, error.message);
+                    return { bytes: 0, arquivos: 0 };
+                }
 
                 let bytes = 0;
                 let arquivos = 0;
@@ -15009,11 +15086,18 @@ export default function App() {
     const carregarAuditoria = useCallback(async () => {
         setCarregandoAuditoria(true);
 
-        const { data, error } = await supabase
-            .from("auditoria_sistema")
-            .select("id, created_at, usuario_email, acao, tabela, registro_id, descricao, dados")
-            .order("created_at", { ascending: false })
-            .limit(1000);
+        let data = [];
+        let error = null;
+
+        try {
+            data = await buscarTodosRegistrosSupabase(
+                "auditoria_sistema",
+                "id, created_at, usuario_email, acao, tabela, registro_id, descricao, dados",
+                { campoOrdenacao: "created_at", crescente: false }
+            );
+        } catch (erroConsulta) {
+            error = erroConsulta;
+        }
 
         setCarregandoAuditoria(false);
 
@@ -15029,11 +15113,18 @@ export default function App() {
 
 
     const carregarEmailsEnviados = useCallback(async () => {
-        const { data, error } = await supabase
-            .from("emails_enviados")
-            .select("id, empresa_id, colaborador_id, documento_id, destinatario, assunto, tipo_alerta, documento, status_envio, erro, data_envio, enviado_por")
-            .order("data_envio", { ascending: false })
-            .limit(1000);
+        let data = [];
+        let error = null;
+
+        try {
+            data = await buscarTodosRegistrosSupabase(
+                "emails_enviados",
+                "id, empresa_id, colaborador_id, documento_id, destinatario, assunto, tipo_alerta, documento, status_envio, erro, data_envio, enviado_por",
+                { campoOrdenacao: "data_envio", crescente: false }
+            );
+        } catch (erroConsulta) {
+            error = erroConsulta;
+        }
 
         if (error) {
             console.warn("Erro ao carregar histórico de e-mails:", error.message);
@@ -15050,15 +15141,11 @@ export default function App() {
         setErroAuditoriasCampo("");
 
         try {
-            const { data, error } = await supabase
-                .from("auditorias_campo")
-                .select("*")
-                .order("created_at", { ascending: false })
-                .limit(1000);
-
-            if (error) {
-                throw error;
-            }
+            const data = await buscarTodosRegistrosSupabase(
+                "auditorias_campo",
+                "*",
+                { campoOrdenacao: "created_at", crescente: false }
+            );
 
             const registrosValidos = (data || []).filter((item) =>
                 item.numero_auditoria ||
@@ -15616,68 +15703,47 @@ export default function App() {
                 throw new Error("Empresa inválida para exclusão.");
             }
 
-            const documentosVinculados = documentosEmpresas.filter((doc) => String(doc.empresa_id || doc.empresaId || "") === String(empresa.id));
-            const colaboradoresVinculados = colaboradores.filter((colaborador) => String(colaborador.empresaId || colaborador.empresa_id || "") === String(empresa.id));
+            const nomeEmpresaNormalizado = normalizarTextoBusca(empresa.nome || "");
 
-            if (colaboradoresVinculados.length > 0) {
+            const colaboradoresVinculadosEstado = colaboradores.filter((colaborador) => {
+                const mesmoId = String(colaborador.empresaId || colaborador.empresa_id || "") === String(empresa.id);
+                const mesmoNome = nomeEmpresaNormalizado && normalizarTextoBusca(colaborador.empresa || colaborador.empresaExibicao || "") === nomeEmpresaNormalizado;
+                return mesmoId || mesmoNome;
+            });
+
+            if (colaboradoresVinculadosEstado.length > 0) {
                 throw new Error(
-                    `Não foi possível excluir ${empresa.nome || "esta empresa"}: existem ${colaboradoresVinculados.length} colaborador(es) vinculado(s). Desmobilize, transfira ou exclua os colaboradores antes de remover a empresa para não quebrar o histórico.`
+                    `Não foi possível excluir ${empresa.nome || "esta empresa"}: existem ${colaboradoresVinculadosEstado.length} colaborador(es) vinculado(s). Desmobilize, transfira ou exclua os colaboradores antes de remover a empresa para preservar o histórico.`
                 );
             }
 
-            if (documentosVinculados.length > 0) {
-                const confirmouDocumentos = window.confirm(
-                    `A empresa ${empresa.nome || "selecionada"} possui ${documentosVinculados.length} documento(s) empresarial(is). Deseja excluir os registros de documentos antes de remover a empresa? Os arquivos vinculados também serão removidos do Storage quando possível.`
-                );
-
-                if (!confirmouDocumentos) {
-                    throw new Error("Exclusão cancelada. Remova ou revise os documentos da empresa antes de excluir o cadastro.");
-                }
-
-                for (const doc of documentosVinculados) {
-                    const caminhoArquivo = doc.url_do_arquivo || doc.arquivo_url || "";
-
-                    if (caminhoArquivo) {
-                        await supabase.storage.from("documentos-empresas").remove([caminhoArquivo]);
-                    }
-
-                    const { error: erroDoc } = await supabase
-                        .from("documentos_empresas")
-                        .delete()
-                        .eq("id", doc.id);
-
-                    if (erroDoc) {
-                        throw new Error(`Erro ao excluir documento vinculado: ${erroDoc.message}`);
-                    }
-                }
-            }
-
-            const empresaAtual = empresasBanco.find((item) => String(item.id) === String(empresa.id)) || empresa;
-
-            if (empresaAtual.logo_url) {
-                await supabase.storage.from("logos-empresas").remove([empresaAtual.logo_url]);
-            }
-
-            if (empresaAtual.contrato_url) {
-                await supabase.storage.from("contratos-empresas").remove([empresaAtual.contrato_url]);
-            }
-
-            const { error } = await supabase
-                .from("empresas")
-                .delete()
-                .eq("id", empresa.id);
+            const { data, error } = await supabase.rpc("excluir_empresa_segura", {
+                p_empresa_id: empresa.id,
+            });
 
             if (error) {
-                throw new Error(`Erro ao excluir empresa: ${error.message}`);
+                throw new Error(error.message || "Erro ao excluir empresa no Supabase.");
+            }
+
+            if (!data?.ok) {
+                throw new Error(data?.mensagem || "A empresa não foi excluída. Atualize a página e tente novamente.");
             }
 
             setEmpresasBanco((atual) => atual.filter((item) => String(item.id) !== String(empresa.id)));
             setDocumentosEmpresas((atual) => atual.filter((doc) => String(doc.empresa_id || doc.empresaId || "") !== String(empresa.id)));
+            setColaboradores((atual) => atual.filter((colaborador) => {
+                const mesmoId = String(colaborador.empresaId || colaborador.empresa_id || "") === String(empresa.id);
+                const mesmoNome = nomeEmpresaNormalizado && normalizarTextoBusca(colaborador.empresa || colaborador.empresaExibicao || "") === nomeEmpresaNormalizado;
+                return !(mesmoId || mesmoNome);
+            }));
 
+            alert(data.mensagem || `Empresa ${empresa.nome || "selecionada"} excluída com sucesso.`);
+            await carregarColaboradores();
             return true;
         } catch (error) {
             setErroBanco(error.message || "Erro ao excluir empresa.");
             alert(error.message || "Erro ao excluir empresa.");
+            await carregarColaboradores();
             return false;
         }
     }
@@ -16264,14 +16330,11 @@ export default function App() {
             ];
 
             const listarNivel = async (bucketInfo, prefixo = "") => {
-                const { data, error } = await supabase.storage
-                    .from(bucketInfo.bucket)
-                    .list(prefixo, {
-                        limit: 1000,
-                        sortBy: { column: "name", order: "asc" },
-                    });
+                let data;
 
-                if (error) {
+                try {
+                    data = await listarTodosArquivosStorage(bucketInfo.bucket, prefixo);
+                } catch (error) {
                     console.warn(`Erro ao listar bucket ${bucketInfo.bucket}:`, error.message);
                     return;
                 }
@@ -16300,35 +16363,38 @@ export default function App() {
                 await listarNivel(bucketInfo, "");
             }
 
-            const { data: certificados, error: certificadosError } = await supabase
-                .from("certificados")
-                .select("*");
+            let certificados = [];
+            let documentosEmpresaBanco = [];
+            let auditoriasCampoBanco = [];
+            let desviosAuditoriaBanco = [];
 
-            if (certificadosError) {
-                throw new Error(`Erro ao consultar certificados: ${certificadosError.message}`);
+            try {
+                certificados = await buscarTodosRegistrosSupabase("certificados", "*");
+            } catch (certificadosError) {
+                throw new Error(`Erro ao consultar certificados: ${certificadosError.message}`, { cause: certificadosError });
             }
 
-            const { data: documentosEmpresaBanco, error: documentosEmpresaError } = await supabase
-                .from("documentos_empresas")
-                .select("*");
-
-            if (documentosEmpresaError) {
-                throw new Error(`Erro ao consultar documentos de empresas: ${documentosEmpresaError.message}`);
+            try {
+                documentosEmpresaBanco = await buscarTodosRegistrosSupabase("documentos_empresas", "*");
+            } catch (documentosEmpresaError) {
+                throw new Error(`Erro ao consultar documentos de empresas: ${documentosEmpresaError.message}`, { cause: documentosEmpresaError });
             }
 
-            const { data: auditoriasCampoBanco, error: auditoriasCampoStorageError } = await supabase
-                .from("auditorias_campo")
-                .select("id, empresa_id, numero_auditoria, titulo, empresa_nome, foto_antes_url, foto_depois_url");
-
-            if (auditoriasCampoStorageError) {
+            try {
+                auditoriasCampoBanco = await buscarTodosRegistrosSupabase(
+                    "auditorias_campo",
+                    "id, empresa_id, numero_auditoria, titulo, empresa_nome, foto_antes_url, foto_depois_url"
+                );
+            } catch (auditoriasCampoStorageError) {
                 console.warn("Erro ao consultar auditorias para vínculo de fotos:", auditoriasCampoStorageError.message);
             }
 
-            const { data: desviosAuditoriaBanco, error: desviosAuditoriaStorageError } = await supabase
-                .from("auditoria_campo_desvios")
-                .select("id, auditoria_id, empresa_id, categoria, descricao, foto_antes_url, foto_depois_url");
-
-            if (desviosAuditoriaStorageError) {
+            try {
+                desviosAuditoriaBanco = await buscarTodosRegistrosSupabase(
+                    "auditoria_campo_desvios",
+                    "id, auditoria_id, empresa_id, categoria, descricao, foto_antes_url, foto_depois_url"
+                );
+            } catch (desviosAuditoriaStorageError) {
                 console.warn("Erro ao consultar desvios para vínculo de fotos:", desviosAuditoriaStorageError.message);
             }
 
