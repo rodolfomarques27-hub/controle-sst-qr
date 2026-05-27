@@ -4,10 +4,10 @@ import { supabase, SUPABASE_ANON_KEY, SUPABASE_CONFIGURADO, SUPABASE_URL } from 
 import {
     buscarTodosRegistrosSupabase,
     listarTodosArquivosStorage,
-    criarUrlAssinadaStorage,
     obterUrlLogoEmpresa,
     abrirArquivoStorage,
 } from "./services/supabaseServices";
+import { useStorageUrl } from "./hooks/useStorageUrl";
 import {
     TAMANHO_PAGINA_SUPABASE,
     estilosGlobais,
@@ -1079,33 +1079,6 @@ function auditoriaCampoVencida(item = {}) {
 
 function emailTstDaEmpresa(colaborador) {
     return normalizarEmailDestinatario(colaborador?.empresaTstEmail || "");
-}
-
-
-function useStorageUrl(bucket, caminhoOuUrl, validadeSegundos = 600) {
-    const [url, setUrl] = useState("");
-
-    useEffect(() => {
-        let ativo = true;
-
-        async function carregarUrl() {
-            if (!caminhoOuUrl) {
-                if (ativo) setUrl("");
-                return;
-            }
-
-            const gerada = await criarUrlAssinadaStorage(bucket, caminhoOuUrl, validadeSegundos);
-            if (ativo) setUrl(gerada);
-        }
-
-        carregarUrl();
-
-        return () => {
-            ativo = false;
-        };
-    }, [bucket, caminhoOuUrl, validadeSegundos]);
-
-    return url;
 }
 
 
