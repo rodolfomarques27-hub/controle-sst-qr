@@ -126,6 +126,13 @@ import {
     blocosComTamanhoDashboard,
     opcoesTamanhoBlocoDashboard,
     blocosRecolhidosPadraoDashboard,
+    moverItemPainel,
+    reordenarPorArrastePainel,
+    prepararArrastePainel,
+    classeTamanhoCartaDashboard,
+    classeTamanhoBlocoDashboard,
+    classeValorCartaDashboard,
+    estiloCartaDashboard,
 } from "./services/dashboardService";
 import {
     normalizarTextoBusca,
@@ -404,19 +411,6 @@ function Dashboard({
         }));
     };
 
-    const moverItemPainel = (lista, chave, direcao) => {
-        const indice = lista.indexOf(chave);
-        if (indice < 0) return lista;
-
-        const novoIndice = indice + direcao;
-        if (novoIndice < 0 || novoIndice >= lista.length) return lista;
-
-        const novaLista = [...lista];
-        const [item] = novaLista.splice(indice, 1);
-        novaLista.splice(novoIndice, 0, item);
-        return novaLista;
-    };
-
     const moverBlocoPainel = (chave, direcao) => {
         setOrdemBlocosDashboard((atual) => moverItemPainel(atual, chave, direcao));
     };
@@ -432,20 +426,6 @@ function Dashboard({
         }));
     };
 
-    const reordenarPorArrastePainel = (lista, origem, destino) => {
-        if (!origem || !destino || origem === destino) return lista;
-
-        const origemIndice = lista.indexOf(origem);
-        const destinoIndice = lista.indexOf(destino);
-
-        if (origemIndice < 0 || destinoIndice < 0) return lista;
-
-        const novaLista = [...lista];
-        const [item] = novaLista.splice(origemIndice, 1);
-        novaLista.splice(destinoIndice, 0, item);
-        return novaLista;
-    };
-
     const soltarCartaPainel = (destino) => {
         setOrdemCartasDashboard((atual) => reordenarPorArrastePainel(atual, cartaArrastandoDashboard, destino));
         setCartaArrastandoDashboard(null);
@@ -454,95 +434,6 @@ function Dashboard({
     const soltarBlocoPainel = (destino) => {
         setOrdemBlocosDashboard((atual) => reordenarPorArrastePainel(atual, blocoArrastandoDashboard, destino));
         setBlocoArrastandoDashboard(null);
-    };
-
-    const prepararArrastePainel = (evento) => {
-        evento.dataTransfer.effectAllowed = "move";
-        evento.dataTransfer.setData("text/plain", "mover");
-    };
-
-    const classeTamanhoCartaDashboard = () => {
-        // Cards principais padronizados: todos ocupam 1 coluna no grid de 5 por linha.
-        // A organização/visibilidade continua funcionando no Personalizar painel, mas o tamanho fica fixo para manter padrão visual.
-        return "";
-    };
-
-    const classeTamanhoBlocoDashboard = (chave) => {
-        const tamanho = tamanhosBlocosDashboard[chave] || "padrao";
-
-        if (tamanho === "destaque") return "md:col-span-2 xl:col-span-6";
-        if (tamanho === "grande") return "md:col-span-2 xl:col-span-4";
-        if (tamanho === "medio") return "md:col-span-2 xl:col-span-3";
-
-        return "md:col-span-1 xl:col-span-2";
-    };
-
-    const classeValorCartaDashboard = (chave) => {
-        const tamanho = tamanhosCartasDashboard[chave] || "padrao";
-
-        if (tamanho === "destaque") return "text-4xl";
-        if (tamanho === "grande") return "text-3xl";
-        if (tamanho === "medio") return "text-2xl";
-
-        return "text-[26px]";
-    };
-
-    const estiloCartaDashboard = (chave) => {
-        const estilos = {
-            colaboradoresMobilizados: {
-                icone: "bg-blue-50 text-blue-600 ring-blue-100",
-                valor: "text-slate-950",
-            },
-            colaboradoresLiberados: {
-                icone: "bg-emerald-50 text-emerald-600 ring-emerald-100",
-                valor: "text-slate-950",
-            },
-            comPendencia: {
-                icone: "bg-orange-50 text-orange-600 ring-orange-100",
-                valor: "text-slate-950",
-            },
-            emAnalise: {
-                icone: "bg-violet-50 text-violet-600 ring-violet-100",
-                valor: "text-slate-950",
-            },
-            empresasAtivas: {
-                icone: "bg-cyan-50 text-cyan-700 ring-cyan-100",
-                valor: "text-slate-950",
-            },
-            documentosVencidos: {
-                icone: "bg-red-50 text-red-600 ring-red-100",
-                valor: "text-slate-950",
-            },
-            documentosAVencer: {
-                icone: "bg-amber-50 text-amber-600 ring-amber-100",
-                valor: "text-slate-950",
-            },
-            treinamentosVencidos: {
-                icone: "bg-purple-50 text-purple-600 ring-purple-100",
-                valor: "text-slate-950",
-            },
-            colaboradoresBloqueados: {
-                icone: "bg-teal-50 text-teal-700 ring-teal-100",
-                valor: "text-slate-950",
-            },
-            desviosAbertos: {
-                icone: "bg-red-50 text-red-600 ring-red-100",
-                valor: "text-slate-950",
-            },
-            aniversariantesMes: {
-                icone: "bg-sky-50 text-sky-600 ring-sky-100",
-                valor: "text-slate-950",
-            },
-            armazenamentoUtilizado: {
-                icone: storageStatusDashboard.iconeClasse,
-                valor: storageStatusDashboard.valorClasse,
-            },
-        };
-
-        return estilos[chave] || {
-            icone: "bg-slate-100 text-slate-700 ring-slate-200",
-            valor: "text-slate-950",
-        };
     };
 
     const carregarUsoStorageDashboard = useCallback(async () => {
@@ -1286,7 +1177,7 @@ function Dashboard({
                     ) : (
                         cardsVisiveis.map((item, index) => {
                             const Icon = item.icon;
-                            const estiloCarta = estiloCartaDashboard(item.chave);
+                            const estiloCarta = estiloCartaDashboard(item.chave, storageStatusDashboard);
                             const valorClasse = "text-[26px]";
 
                             if (item.chave === "armazenamentoUtilizado") {
@@ -2302,7 +2193,7 @@ function Dashboard({
             ) : (
                 <div className={classNames("grid gap-6 md:grid-cols-2 xl:grid-cols-6", mostrarFiltroPainel ? "mt-3" : "mt-6")}>
                     {blocosDashboardExibidos.map((chave) => (
-                        <div key={chave} className={classNames("min-w-0", classeTamanhoBlocoDashboard(chave))}>
+                        <div key={chave} className={classNames("min-w-0", classeTamanhoBlocoDashboard(chave, tamanhosBlocosDashboard))}>
                             {renderBlocoDashboard(chave)}
                         </div>
                     ))}
