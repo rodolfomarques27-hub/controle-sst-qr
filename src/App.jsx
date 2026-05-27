@@ -46,8 +46,6 @@ import {
 } from "./services/auditoriaCampoService";
 import {
     obterStatusInicialColaborador,
-    obterDocumentoEmpresa,
-    calcularVencimentoDocumento,
     obterFuncoesPersonalizadasSalvas,
     salvarFuncoesPersonalizadas,
     obterTodasMatrizesFuncao,
@@ -56,21 +54,16 @@ import {
     gerarCodigoFuncionario,
     avaliarTreinamentosColaborador,
     normalizarColaborador,
-    normalizarDocumentoEmpresa,
     normalizarCertificado,
     treinamentoSemValidade,
     statusDocumento,
-    statusEmpresaDocumento,
-    calcularSituacaoDocumentalEmpresa,
     obterDataAniversarioColaborador,
     mesAniversarioColaborador,
     diaAniversarioColaborador,
     proximoAniversariante,
     deveMostrarAniversarioColaborador,
-    normalizarStatusEmpresa,
     obterFuncaoCargoColaborador,
     colaboradorContaComoMobilizado,
-    classeStatusEmpresa,
     obterTreinamento,
     obterTreinamentoIdPorTipo,
     calcularVencimentoTreinamento,
@@ -85,6 +78,15 @@ import {
     classeClassificacaoColaborador,
     statusGeral,
 } from "./services/colaboradorDocumentosService";
+import {
+    obterDocumentoEmpresa,
+    calcularVencimentoDocumento,
+    normalizarDocumentoEmpresa,
+    statusEmpresaDocumento,
+    calcularSituacaoDocumentalEmpresa,
+    normalizarStatusEmpresa,
+    classeStatusEmpresa,
+} from "./services/empresaDocumentosService";
 import {
     TAMANHO_PAGINA_SUPABASE,
     estilosGlobais,
