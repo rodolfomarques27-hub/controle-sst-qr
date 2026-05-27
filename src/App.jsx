@@ -11085,7 +11085,7 @@ function AuditoriaAcessoNegado() {
         <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
             <Header
                 titulo="Acesso não autorizado"
-                subtitulo="Seu usuário não possui permissão cadastrada no Supabase para acessar a Auditoria."
+                subtitulo="Seu usuário não possui permissão cadastrada no Supabase para acessar a Auditoria de sistema."
             />
 
             <div className="mx-auto max-w-xl">
@@ -11096,10 +11096,9 @@ function AuditoriaAcessoNegado() {
                         </div>
 
                         <div>
-                            <h2 className="text-lg font-bold text-slate-950">Auditoria restrita</h2>
+                            <h2 className="text-lg font-bold text-slate-950">Auditoria de sistema restrita</h2>
                             <p className="mt-1 text-sm leading-relaxed text-slate-500">
-                                Para liberar o acesso, o administrador deve cadastrar o e-mail deste usuário na tabela
-                                <strong> auditoria_usuarios_autorizados</strong> no Supabase.
+                                Para liberar o acesso, o administrador deve habilitar este usuário em <strong>Permissões da Auditoria de sistema</strong>.
                             </p>
                         </div>
                     </div>
@@ -11113,8 +11112,8 @@ function AuditoriaBloqueada({ onLiberar }) {
     return (
         <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
             <Header
-                titulo="Auditoria protegida"
-                subtitulo="Acesso restrito aos registros de auditoria, arquivos do Storage e histórico de alterações."
+                titulo="Auditoria de sistema protegida"
+                subtitulo="Acesso restrito apenas aos registros internos da Auditoria de sistema."
             />
 
             <div className="mx-auto max-w-xl">
@@ -11607,8 +11606,8 @@ function RelatorioAuditoria({
 
             <CardRecolhivel
                 className="mt-5"
-                titulo="Usuários autorizados na Auditoria"
-                subtitulo="Habilite ou desabilite quais usuários podem abrir a aba Auditoria. A permissão é validada no Supabase."
+                titulo="Permissões da Auditoria de sistema"
+                subtitulo="Libere ou bloqueie diretamente pelo sistema quem pode acessar somente a Auditoria de sistema. Dashboard Auditoria e Nova Auditoria continuam liberados para todos."
                 contador={usuariosAuditoria.length}
                 defaultOpen={false}
                 acao={(
@@ -11628,7 +11627,7 @@ function RelatorioAuditoria({
                         type="email"
                         value={novoUsuarioAuditoria.email}
                         onChange={(e) => setNovoUsuarioAuditoria({ ...novoUsuarioAuditoria, email: e.target.value })}
-                        placeholder="E-mail do usuário autorizado"
+                        placeholder="E-mail do usuário"
                         className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none focus:border-slate-400 focus:ring-4 focus:ring-slate-100"
                     />
 
@@ -11651,14 +11650,14 @@ function RelatorioAuditoria({
                         disabled={salvandoUsuarioAuditoria}
                         className="rounded-2xl bg-slate-950 px-4 py-3 text-sm font-semibold text-white hover:bg-slate-800 disabled:opacity-60"
                     >
-                        {salvandoUsuarioAuditoria ? "Salvando..." : "Autorizar"}
+                        {salvandoUsuarioAuditoria ? "Salvando..." : "Liberar Auditoria de sistema"}
                     </button>
                 </form>
 
                 <div className="mt-4 space-y-2">
                     {usuariosAuditoria.length === 0 && !carregandoUsuariosAuditoria && (
                         <div className="rounded-3xl border border-dashed border-slate-300 p-6 text-center text-sm text-slate-500">
-                            Clique em <strong>Carregar usuários</strong> para visualizar quem tem acesso à Auditoria.
+                            Clique em <strong>Carregar usuários</strong> para visualizar quem tem acesso à Auditoria de sistema.
                         </div>
                     )}
 
@@ -11667,9 +11666,9 @@ function RelatorioAuditoria({
                             key={usuarioAutorizado.id}
                             className={classNames(
                                 "rounded-3xl border p-4",
-                                usuarioAutorizado.ativo
+                                usuarioAutorizado.pode_acessar_auditoria
                                     ? "border-emerald-200 bg-emerald-50"
-                                    : "border-slate-200 bg-slate-50"
+                                    : "border-red-200 bg-red-50"
                             )}
                         >
                             <div className="flex flex-col justify-between gap-3 lg:flex-row lg:items-center">
@@ -11679,17 +11678,21 @@ function RelatorioAuditoria({
                                         <span
                                             className={classNames(
                                                 "rounded-full px-3 py-1 text-xs font-bold ring-1",
-                                                usuarioAutorizado.ativo
+                                                usuarioAutorizado.pode_acessar_auditoria
                                                     ? "bg-emerald-100 text-emerald-700 ring-emerald-200"
-                                                    : "bg-slate-100 text-slate-600 ring-slate-200"
+                                                    : "bg-red-100 text-red-700 ring-red-200"
                                             )}
                                         >
-                                            {usuarioAutorizado.ativo ? "Habilitado" : "Desabilitado"}
+                                            {usuarioAutorizado.pode_acessar_auditoria ? "Auditoria de sistema liberada" : "Auditoria de sistema bloqueada"}
                                         </span>
                                     </div>
 
                                     <p className="mt-1 text-sm text-slate-500">
                                         {usuarioAutorizado.nome || "Nome não informado"} · {usuarioAutorizado.funcao || "Função não informada"}
+                                    </p>
+                                    <p className="mt-1 text-xs font-semibold text-slate-500">
+                                        Perfil: {usuarioAutorizado.perfil || "usuario"} · Usuário {usuarioAutorizado.ativo ? "ativo" : "inativo"}
+                                        {usuarioAutorizado.acesso_global ? " · Administrador global" : ""}
                                     </p>
                                 </div>
 
@@ -11699,16 +11702,16 @@ function RelatorioAuditoria({
                                     disabled={alterandoUsuarioAuditoria === usuarioAutorizado.id}
                                     className={classNames(
                                         "whitespace-nowrap rounded-2xl px-4 py-2 text-sm font-semibold ring-1 disabled:opacity-60",
-                                        usuarioAutorizado.ativo
+                                        usuarioAutorizado.pode_acessar_auditoria
                                             ? "bg-red-50 text-red-700 ring-red-200 hover:bg-red-100"
                                             : "bg-emerald-50 text-emerald-700 ring-emerald-200 hover:bg-emerald-100"
                                     )}
                                 >
                                     {alterandoUsuarioAuditoria === usuarioAutorizado.id
                                         ? "Atualizando..."
-                                        : usuarioAutorizado.ativo
-                                            ? "Desabilitar acesso"
-                                            : "Habilitar acesso"}
+                                        : usuarioAutorizado.pode_acessar_auditoria
+                                            ? "Bloquear Auditoria de sistema"
+                                            : "Liberar Auditoria de sistema"}
                                 </button>
                             </div>
                         </div>
@@ -11716,7 +11719,7 @@ function RelatorioAuditoria({
                 </div>
 
                 <p className="mt-3 rounded-2xl bg-slate-50 p-3 text-xs leading-relaxed text-slate-500">
-                    A senha da tela continua existindo, mas o Supabase bloqueia a Auditoria para e-mails não cadastrados ou desabilitados nesta lista.
+                    Use esta área para liberar ou bloquear somente a Auditoria de sistema sem editar SQL manualmente. O Dashboard Auditoria e a Nova Auditoria permanecem disponíveis para todos os usuários logados.
                 </p>
             </CardRecolhivel>
 
@@ -15086,7 +15089,7 @@ export default function App() {
     const carregarAuditoria = useCallback(async () => {
         setCarregandoAuditoria(true);
 
-        let data = [];
+        let data;
         let error = null;
 
         try {
@@ -15113,7 +15116,7 @@ export default function App() {
 
 
     const carregarEmailsEnviados = useCallback(async () => {
-        let data = [];
+        let data;
         let error = null;
 
         try {
@@ -15228,7 +15231,7 @@ export default function App() {
     const carregarUsuariosAutorizadosAuditoria = useCallback(async () => {
         const { data, error } = await supabase
             .from("auditoria_usuarios_autorizados")
-            .select("id, created_at, email, nome, funcao, ativo, observacao")
+            .select("id, created_at, email, nome, funcao, ativo, observacao, user_id, empresa_id, perfil, acesso_global, pode_acessar_auditoria")
             .order("email", { ascending: true });
 
         if (error) {
@@ -15254,6 +15257,8 @@ export default function App() {
                         nome: usuarioAutorizado.nome || null,
                         funcao: usuarioAutorizado.funcao || null,
                         ativo: true,
+                        perfil: usuarioAutorizado.perfil || "usuario",
+                        pode_acessar_auditoria: true,
                     },
                     { onConflict: "email" }
                 );
@@ -15280,35 +15285,46 @@ export default function App() {
         async (usuarioAutorizado) => {
             if (!usuarioAutorizado?.id) return false;
 
+            const acessoAtual = Boolean(usuarioAutorizado.pode_acessar_auditoria);
+            const novoAcessoAuditoria = !acessoAtual;
+
             if (
-                usuarioAutorizado.ativo &&
+                acessoAtual &&
                 usuario?.email &&
                 usuarioAutorizado.email?.toLowerCase() === usuario.email.toLowerCase()
             ) {
-                alert("Você não pode desabilitar o próprio acesso à Auditoria pelo sistema.");
+                alert("Você não pode bloquear o próprio acesso à Auditoria de sistema pelo sistema.");
                 return false;
             }
 
-            const novoStatus = !usuarioAutorizado.ativo;
+            if (acessoAtual && usuarioAutorizado.acesso_global) {
+                alert("Este usuário é administrador global. Remova o acesso global no Supabase antes de bloquear a Auditoria de sistema.");
+                return false;
+            }
+
+            const payloadAtualizacao = novoAcessoAuditoria
+                ? { pode_acessar_auditoria: true, ativo: true }
+                : { pode_acessar_auditoria: false };
 
             const { error } = await supabase
                 .from("auditoria_usuarios_autorizados")
-                .update({ ativo: novoStatus })
+                .update(payloadAtualizacao)
                 .eq("id", usuarioAutorizado.id);
 
             if (error) {
-                alert(`Erro ao atualizar acesso: ${error.message}`);
+                alert(`Erro ao atualizar permissão da Auditoria: ${error.message}`);
                 return false;
             }
 
             await registrarAuditoria(
-                novoStatus ? "USUARIO_AUDITORIA_HABILITADO" : "USUARIO_AUDITORIA_DESABILITADO",
+                novoAcessoAuditoria ? "USUARIO_AUDITORIA_LIBERADO" : "USUARIO_AUDITORIA_BLOQUEADO",
                 "auditoria_usuarios_autorizados",
-                `${novoStatus ? "Habilitou" : "Desabilitou"} acesso à Auditoria: ${usuarioAutorizado.email}`,
+                `${novoAcessoAuditoria ? "Liberou" : "Bloqueou"} acesso à Auditoria de sistema: ${usuarioAutorizado.email}`,
                 usuarioAutorizado.id,
                 {
                     email: usuarioAutorizado.email,
-                    ativo: novoStatus,
+                    pode_acessar_auditoria: novoAcessoAuditoria,
+                    ativo: usuarioAutorizado.ativo,
                 }
             );
 
@@ -15330,7 +15346,7 @@ export default function App() {
         setVerificandoAcessoAuditoria(false);
 
         if (error) {
-            console.warn("Erro ao verificar permissão de auditoria:", error.message);
+            console.warn("Erro ao verificar permissão da Auditoria de sistema:", error.message);
             setPodeAcessarAuditoria(false);
             return false;
         }
@@ -17064,7 +17080,7 @@ export default function App() {
         { id: "aniversariantes", label: "Aniversariantes", icon: CalendarClock },
         { id: "treinamentos", label: "Treinamentos", icon: ClipboardCheck },
         { id: "qr", label: "Consulta QR", icon: QrCode },
-        ...(podeAcessarAuditoria ? [{ id: "auditoria", label: "Auditoria", icon: Database }] : []),
+        ...(podeAcessarAuditoria ? [{ id: "auditoria", label: "Auditoria de sistema", icon: Database }] : []),
         { id: "roteiro", label: "Roteiro", icon: CalendarClock },
     ];
 
@@ -17381,12 +17397,12 @@ export default function App() {
                             <Card>
                                 <div className="flex items-center gap-3 text-sm font-semibold text-slate-600">
                                     <RefreshCw className="h-4 w-4 animate-spin" />
-                                    Verificando permissão de auditoria...
+                                    Verificando permissão da Auditoria de sistema...
                                 </div>
                             </Card>
                         ) : !podeAcessarAuditoria ? (
                             <AuditoriaAcessoNegado />
-                        ) : auditoriaLiberada ? (
+                        ) : (
                             <RelatorioAuditoria
                                 auditoria={auditoria}
                                 emailsEnviados={emailsEnviados}
@@ -17399,8 +17415,6 @@ export default function App() {
                                 onAlternarUsuarioAuditoria={alternarUsuarioAutorizadoAuditoria}
                                 onBloquear={bloquearAuditoria}
                             />
-                        ) : (
-                            <AuditoriaBloqueada onLiberar={liberarAuditoria} />
                         )
                     )}
 
