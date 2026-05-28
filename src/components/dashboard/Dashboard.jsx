@@ -1,5 +1,5 @@
 /* eslint-disable no-unused-vars */
-import React, { useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { motion } from "framer-motion";
 import {
     AlertTriangle,
@@ -72,12 +72,14 @@ import {
     normalizarEmailDestinatario,
 } from "../../utils/sstUtils";
 
+const hoje = new Date();
+
 function emailTstDaEmpresa(colaborador) {
     return normalizarEmailDestinatario(colaborador?.empresaTstEmail || "");
 }
 
 export function Dashboard({
-    colaboradores,
+    colaboradores = [],
     empresasBanco = [],
     documentosEmpresas = [],
     auditoria = [],
