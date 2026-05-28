@@ -6174,7 +6174,12 @@ function NovaAuditoriaCampoDireta({ usuario = null, onAuditoriaSalva, empresasBa
     }, [empresasBanco]);
 
 
-    const acessoLiberado = Boolean(usuario) || Boolean(tokenParametro);
+    const tokenAuditoriaPublicaInformado = Boolean(tokenParametro);
+    const [senhaAcessoAuditoria, setSenhaAcessoAuditoria] = useState("");
+    const [acessoAuditoriaValidado, setAcessoAuditoriaValidado] = useState(() => Boolean(usuario));
+    const [validandoAcessoAuditoria, setValidandoAcessoAuditoria] = useState(false);
+    const [mensagemAcessoAuditoria, setMensagemAcessoAuditoria] = useState("");
+    const acessoLiberado = Boolean(usuario) || (tokenAuditoriaPublicaInformado && acessoAuditoriaValidado);
     const mensagemAcesso = tokenParametro ? "" : "Link inválido. Informe um token público de auditoria na URL.";
     const [salvando, setSalvando] = useState(false);
     const [mensagem, setMensagem] = useState("");
@@ -6206,6 +6211,62 @@ function NovaAuditoriaCampoDireta({ usuario = null, onAuditoriaSalva, empresasBa
         observacoesGerais: "",
     }));
     const [respostasChecklist, setRespostasChecklist] = useState(() => criarRespostasChecklistDinamico(tipoInicial.valor));
+
+    useEffect(() => {
+        if (usuario) {
+            setAcessoAuditoriaValidado(true);
+            setMensagemAcessoAuditoria("");
+            return;
+        }
+
+        setAcessoAuditoriaValidado(false);
+        setSenhaAcessoAuditoria("");
+        setMensagemAcessoAuditoria("");
+    }, [usuario, tokenParametro]);
+
+    const validarSenhaAuditoriaPublica = async (evento) => {
+        evento?.preventDefault?.();
+
+        if (!tokenParametro) {
+            setMensagemAcessoAuditoria("Token público da auditoria não informado na URL.");
+            return;
+        }
+
+        if (!senhaAcessoAuditoria.trim()) {
+            setMensagemAcessoAuditoria("Informe a senha de acesso da auditoria.");
+            return;
+        }
+
+        setValidandoAcessoAuditoria(true);
+        setMensagemAcessoAuditoria("");
+
+        try {
+            const { data, error } = await supabase.rpc("validar_acesso_auditoria_publica", {
+                p_token: tokenParametro,
+                p_senha: senhaAcessoAuditoria.trim(),
+            });
+
+            if (error) {
+                throw error;
+            }
+
+            const autorizado = Boolean(data?.autorizado || data?.ok === true);
+
+            if (!autorizado) {
+                setAcessoAuditoriaValidado(false);
+                setMensagemAcessoAuditoria(data?.mensagem || "Senha inválida ou token público inativo.");
+                return;
+            }
+
+            setAcessoAuditoriaValidado(true);
+            setMensagemAcessoAuditoria("");
+        } catch (error) {
+            setAcessoAuditoriaValidado(false);
+            setMensagemAcessoAuditoria(error?.message || "Erro ao validar senha da auditoria.");
+        } finally {
+            setValidandoAcessoAuditoria(false);
+        }
+    };
 
 
     const nomeEmpresaAtualAuditoria = String(formulario.empresaResponsavel || empresaParametro || "").trim();
@@ -6669,7 +6730,7 @@ function NovaAuditoriaCampoDireta({ usuario = null, onAuditoriaSalva, empresasBa
         </div>
     );
 
-    if (!acessoLiberado) {
+    if (!usuario && !tokenAuditoriaPublicaInformado) {
         return (
             <div className="min-h-screen bg-slate-100 p-4 text-slate-900">
                 <div className="mx-auto flex min-h-[calc(100vh-2rem)] max-w-xl items-center justify-center">
@@ -6678,10 +6739,65 @@ function NovaAuditoriaCampoDireta({ usuario = null, onAuditoriaSalva, empresasBa
                             <ShieldCheck className="mx-auto h-10 w-10 text-red-600" />
                             <h1 className="mt-3 text-2xl font-black text-slate-950">Link inválido</h1>
                             <p className="mt-2 text-sm leading-relaxed text-slate-500">
-                                A auditoria pública não usa mais senha no front-end. Abra o formulário por um link com token público ativo cadastrado no Supabase.
+                                Abra o formulário por um link com token público ativo cadastrado no Supabase.
                             </p>
                         </div>
                         {mensagemAcesso && <p className="mt-6 rounded-2xl bg-red-50 p-3 text-sm font-semibold text-red-700 ring-1 ring-red-100">{mensagemAcesso}</p>}
+                    </Card>
+                </div>
+            </div>
+        );
+    }
+
+    if (!usuario && tokenAuditoriaPublicaInformado && !acessoLiberado) {
+        return (
+            <div className="min-h-screen bg-slate-100 p-4 text-slate-900">
+                <div className="mx-auto flex min-h-[calc(100vh-2rem)] max-w-xl items-center justify-center">
+                    <Card className="w-full overflow-hidden">
+                        <div className="-m-5 mb-5 bg-gradient-to-br from-slate-950 to-slate-800 p-6 text-center text-white">
+                            <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-3xl bg-white/10 text-white ring-1 ring-white/10">
+                                <Lock className="h-7 w-7" />
+                            </div>
+                            <h1 className="mt-4 text-2xl font-black">Acesso à auditoria</h1>
+                            <p className="mt-2 text-sm leading-relaxed text-slate-300">
+                                Informe a senha autorizada para abrir a Nova Auditoria de Campo.
+                            </p>
+                        </div>
+
+                        <form onSubmit={validarSenhaAuditoriaPublica} className="space-y-4">
+                            <div>
+                                <label className="mb-1 block text-xs font-bold uppercase tracking-wide text-slate-500">
+                                    Senha da auditoria
+                                </label>
+                                <input
+                                    type="password"
+                                    value={senhaAcessoAuditoria}
+                                    onChange={(e) => setSenhaAcessoAuditoria(e.target.value)}
+                                    placeholder="Digite a senha de acesso"
+                                    autoComplete="current-password"
+                                    className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none focus:border-slate-400 focus:ring-4 focus:ring-slate-100"
+                                />
+                            </div>
+
+                            {mensagemAcessoAuditoria && (
+                                <div className="rounded-2xl bg-red-50 p-3 text-sm font-semibold text-red-700 ring-1 ring-red-100">
+                                    {mensagemAcessoAuditoria}
+                                </div>
+                            )}
+
+                            <button
+                                type="submit"
+                                disabled={validandoAcessoAuditoria}
+                                className="inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-slate-950 px-4 py-3 text-sm font-bold text-white hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
+                            >
+                                <ShieldCheck className="h-4 w-4" />
+                                {validandoAcessoAuditoria ? "Validando acesso..." : "Entrar na auditoria"}
+                            </button>
+                        </form>
+
+                        <p className="mt-4 rounded-2xl bg-slate-50 p-3 text-xs leading-relaxed text-slate-500 ring-1 ring-slate-100">
+                            A consulta pública do QR do funcionário continua liberada sem senha. Esta senha protege somente a abertura da Nova Auditoria de Campo.
+                        </p>
                     </Card>
                 </div>
             </div>
