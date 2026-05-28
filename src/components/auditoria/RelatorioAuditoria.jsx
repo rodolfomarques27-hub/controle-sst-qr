@@ -10,7 +10,7 @@ import {
     RefreshCw,
     Search,
 } from "lucide-react";
-import { CardRecolhivel } from "../commonComponents";
+import { CardRecolhivel, Header } from "../commonComponents";
 import { AuditoriaAtividades } from "./AuditoriaAtividades";
 import { LIMITE_STORAGE_MB } from "../../constants/sstConstants";
 import {
