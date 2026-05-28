@@ -1016,30 +1016,26 @@ export function Dashboard({
 
                                 {ehArmazenamento ? (
                                     <>
-                                        <div className="mt-3 border-b border-slate-100 pb-2">
-                                            <div className="flex items-end gap-1.5">
-                                                <span className={`text-3xl font-black leading-none ${storageStatusDashboard.valorClasse || "text-slate-950"}`}>
-                                                    {storagePercentual}%
-                                                </span>
-                                                <span className="pb-1 text-xs font-bold text-slate-500">utilizado</span>
-                                            </div>
+                                        <div className="mt-3 flex items-end justify-between gap-2 border-b border-slate-100 pb-2">
+                                            <span className={`text-3xl font-black leading-none ${storageStatusDashboard.valorClasse || "text-slate-950"}`}>
+                                                {storagePercentual}%
+                                            </span>
+                                            <span className="pb-0.5 text-[11px] font-bold text-slate-500">
+                                                {totalStorageLabel} / {storageLimiteLabelDashboard}
+                                            </span>
                                         </div>
 
-                                        <div className="mt-2 flex flex-wrap items-center gap-2">
-                                            <span className="text-xs font-semibold text-slate-500">
-                                                {totalStorageLabel} de {storageLimiteLabelDashboard}
-                                            </span>
-                                            <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-black ring-1 ${storageStatusDashboard.classe || "bg-slate-50 text-slate-600 ring-slate-200"}`}>
+                                        <div className="mt-2 flex items-center gap-2">
+                                            <span className={`inline-flex shrink-0 items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-black ring-1 ${storageStatusDashboard.classe || "bg-slate-50 text-slate-600 ring-slate-200"}`}>
                                                 <StatusIcon className="h-3 w-3" />
                                                 {storageStatusDashboard.texto}
                                             </span>
-                                        </div>
-
-                                        <div className={`mt-2 h-1 overflow-hidden rounded-full ${storageStatusDashboard.trilhoClasse || "bg-slate-100"}`}>
-                                            <div
-                                                className={`h-full rounded-full ${storageStatusDashboard.barraClasse || "bg-emerald-500"}`}
-                                                style={{ width: `${Math.max(3, storagePercentual)}%` }}
-                                            />
+                                            <div className={`h-1 flex-1 overflow-hidden rounded-full ${storageStatusDashboard.trilhoClasse || "bg-slate-100"}`}>
+                                                <div
+                                                    className={`h-full rounded-full ${storageStatusDashboard.barraClasse || "bg-emerald-500"}`}
+                                                    style={{ width: `${Math.max(3, storagePercentual)}%` }}
+                                                />
+                                            </div>
                                         </div>
                                     </>
                                 ) : (
