@@ -21,18 +21,11 @@ import {
 import { LoginScreen } from "./components/LoginScreen";
 import { MobilizacaoBadge } from "./components/MobilizacaoBadge";
 import { Requisitos } from "./components/Requisitos";
-import { DashboardCardsGrid } from "./components/dashboard/DashboardCardsGrid";
 import { DashboardBlocosGrid } from "./components/dashboard/DashboardBlocosGrid";
 import { DashboardHeaderAcoes } from "./components/dashboard/DashboardHeaderAcoes";
 import { DashboardPreviewFiltro } from "./components/dashboard/DashboardPreviewFiltro";
+import { DashboardBlocoConteudo } from "./components/dashboard/DashboardBlocoConteudo";
 import { DashboardControles } from "./components/dashboard/DashboardControles";
-import { DashboardPendencias } from "./components/dashboard/DashboardPendencias";
-import { DashboardConformidade } from "./components/dashboard/DashboardConformidade";
-import { DashboardRankingPendencias } from "./components/dashboard/DashboardRankingPendencias";
-import { DashboardColaboradoresFuncao } from "./components/dashboard/DashboardColaboradoresFuncao";
-import { DashboardAlertas } from "./components/dashboard/DashboardAlertas";
-import { DashboardDocumentosTipo, DashboardUltimosDocumentos } from "./components/dashboard/DashboardDocumentos";
-import { DashboardAuditoriasCampo, DashboardTopDesviosCampo } from "./components/dashboard/DashboardAuditoriasCampo";
 import { FileUploadAviso, validarArquivoAntesUpload, validarListaArquivosAntesUpload } from "./components/FileUploadAviso";
 import { PreviaNotificacaoAuditoriaCampo } from "./components/auditoria/PreviaNotificacaoAuditoriaCampo";
 import { AuditoriaAcessoNegado, AuditoriaBloqueada } from "./components/auditoria/AuditoriaPermissao";
@@ -1143,132 +1136,37 @@ function Dashboard({
             : "A prévia da Seção 2 mostra somente os quadros do Dashboard SST. Ative os quadros para visualizar a configuração."
         : "Nenhum quadro selecionado para o Dashboard SST. Abra Personalizar painel e escolha as informações que deseja exibir.";
 
-    const mensagemVaziaDashboard = (texto) => (
-        <div className="rounded-2xl border border-dashed border-slate-300 p-5 text-center text-sm text-slate-500">
-            {texto}
-        </div>
+    const renderBlocoDashboard = (chave) => (
+        <DashboardBlocoConteudo
+            chave={chave}
+            cardsVisiveis={cardsVisiveis}
+            storageStatusDashboard={storageStatusDashboard}
+            storagePercentual={storagePercentual}
+            totalStorageLabel={totalStorageLabel}
+            storageLimiteLabelDashboard={storageLimiteLabelDashboard}
+            classeTamanhoCartaDashboard={classeTamanhoCartaDashboard}
+            estiloCartaDashboard={estiloCartaDashboard}
+            auditoriasCampoMes={auditoriasCampoMes}
+            mediaConformidadeCampo={mediaConformidadeCampo}
+            desviosCampoAbertos={desviosCampoAbertos}
+            desviosCampoCorrigidos={desviosCampoCorrigidos}
+            auditoriasCampoNormalizadas={auditoriasCampoNormalizadas}
+            blocosRecolhidosDashboard={blocosRecolhidosDashboard}
+            alternarBlocoRecolhidoDashboard={alternarBlocoRecolhidoDashboard}
+            topDesviosCampo={topDesviosCampo}
+            pendencias={pendencias}
+            enviarAlertaEmailPendencia={enviarAlertaEmailPendencia}
+            enviandoEmail={enviandoEmail}
+            onSelectColab={onSelectColab}
+            resumoConformidade={resumoConformidade}
+            rankingPendenciasEmpresa={rankingPendenciasEmpresa}
+            colaboradoresPorFuncao={colaboradoresPorFuncao}
+            maiorQuantidadePorFuncao={maiorQuantidadePorFuncao}
+            alertasImportantes={alertasImportantes}
+            documentosPorTipo={documentosPorTipo}
+            ultimosDocumentosEnviados={ultimosDocumentosEnviados}
+        />
     );
-
-    const renderBlocoDashboard = (chave) => {
-        if (chave === "cards") {
-            return (
-                <DashboardCardsGrid
-                    cardsVisiveis={cardsVisiveis}
-                    storageStatusDashboard={storageStatusDashboard}
-                    storagePercentual={storagePercentual}
-                    totalStorageLabel={totalStorageLabel}
-                    storageLimiteLabelDashboard={storageLimiteLabelDashboard}
-                    classeTamanhoCartaDashboard={classeTamanhoCartaDashboard}
-                    estiloCartaDashboard={estiloCartaDashboard}
-                />
-            );
-        }
-
-        if (chave === "auditoriasCampo") {
-            return (
-                <DashboardAuditoriasCampo
-                    auditoriasCampoMes={auditoriasCampoMes}
-                    mediaConformidadeCampo={mediaConformidadeCampo}
-                    desviosCampoAbertos={desviosCampoAbertos}
-                    desviosCampoCorrigidos={desviosCampoCorrigidos}
-                    auditoriasCampoNormalizadas={auditoriasCampoNormalizadas}
-                    blocosRecolhidosDashboard={blocosRecolhidosDashboard}
-                    alternarBlocoRecolhidoDashboard={alternarBlocoRecolhidoDashboard}
-                />
-            );
-        }
-
-        if (chave === "topDesviosCampo") {
-            return (
-                <DashboardTopDesviosCampo
-                    topDesviosCampo={topDesviosCampo}
-                    blocosRecolhidosDashboard={blocosRecolhidosDashboard}
-                    alternarBlocoRecolhidoDashboard={alternarBlocoRecolhidoDashboard}
-                />
-            );
-        }
-
-        if (chave === "pendencias") {
-            return (
-                <DashboardPendencias
-                    pendencias={pendencias}
-                    blocosRecolhidosDashboard={blocosRecolhidosDashboard}
-                    alternarBlocoRecolhidoDashboard={alternarBlocoRecolhidoDashboard}
-                    enviarAlertaEmailPendencia={enviarAlertaEmailPendencia}
-                    enviandoEmail={enviandoEmail}
-                    onSelectColab={onSelectColab}
-                />
-            );
-        }
-
-        if (chave === "conformidade") {
-            return (
-                <DashboardConformidade
-                    resumoConformidade={resumoConformidade}
-                    blocosRecolhidosDashboard={blocosRecolhidosDashboard}
-                    alternarBlocoRecolhidoDashboard={alternarBlocoRecolhidoDashboard}
-                />
-            );
-        }
-
-        if (chave === "rankingEmpresas") {
-            return (
-                <DashboardRankingPendencias
-                    rankingPendenciasEmpresa={rankingPendenciasEmpresa}
-                    blocosRecolhidosDashboard={blocosRecolhidosDashboard}
-                    alternarBlocoRecolhidoDashboard={alternarBlocoRecolhidoDashboard}
-                    mensagemVaziaDashboard={mensagemVaziaDashboard}
-                />
-            );
-        }
-
-        if (chave === "colaboradoresFuncao") {
-            return (
-                <DashboardColaboradoresFuncao
-                    colaboradoresPorFuncao={colaboradoresPorFuncao}
-                    maiorQuantidadePorFuncao={maiorQuantidadePorFuncao}
-                    blocosRecolhidosDashboard={blocosRecolhidosDashboard}
-                    alternarBlocoRecolhidoDashboard={alternarBlocoRecolhidoDashboard}
-                    mensagemVaziaDashboard={mensagemVaziaDashboard}
-                />
-            );
-        }
-
-        if (chave === "alertas") {
-            return (
-                <DashboardAlertas
-                    alertasImportantes={alertasImportantes}
-                    blocosRecolhidosDashboard={blocosRecolhidosDashboard}
-                    alternarBlocoRecolhidoDashboard={alternarBlocoRecolhidoDashboard}
-                    mensagemVaziaDashboard={mensagemVaziaDashboard}
-                />
-            );
-        }
-
-        if (chave === "documentosTipo") {
-            return (
-                <DashboardDocumentosTipo
-                    documentosPorTipo={documentosPorTipo}
-                    blocosRecolhidosDashboard={blocosRecolhidosDashboard}
-                    alternarBlocoRecolhidoDashboard={alternarBlocoRecolhidoDashboard}
-                    mensagemVaziaDashboard={mensagemVaziaDashboard}
-                />
-            );
-        }
-
-        if (chave === "ultimosDocumentos") {
-            return (
-                <DashboardUltimosDocumentos
-                    ultimosDocumentosEnviados={ultimosDocumentosEnviados}
-                    blocosRecolhidosDashboard={blocosRecolhidosDashboard}
-                    alternarBlocoRecolhidoDashboard={alternarBlocoRecolhidoDashboard}
-                    mensagemVaziaDashboard={mensagemVaziaDashboard}
-                />
-            );
-        }
-
-        return null;
-    };
 
 
     return (
