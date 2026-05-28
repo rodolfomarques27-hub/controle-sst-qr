@@ -27,6 +27,7 @@ import { DashboardBlocoRecolhivel } from "./components/dashboard/DashboardBlocoR
 import { DashboardPendencias } from "./components/dashboard/DashboardPendencias";
 import { DashboardConformidade } from "./components/dashboard/DashboardConformidade";
 import { DashboardRankingPendencias } from "./components/dashboard/DashboardRankingPendencias";
+import { DashboardColaboradoresFuncao } from "./components/dashboard/DashboardColaboradoresFuncao";
 import { FileUploadAviso, validarArquivoAntesUpload, validarListaArquivosAntesUpload } from "./components/FileUploadAviso";
 import { PreviaNotificacaoAuditoriaCampo } from "./components/auditoria/PreviaNotificacaoAuditoriaCampo";
 import { AuditoriaAcessoNegado, AuditoriaBloqueada } from "./components/auditoria/AuditoriaPermissao";
@@ -1316,42 +1317,13 @@ function Dashboard({
 
         if (chave === "colaboradoresFuncao") {
             return (
-                <DashboardBlocoRecolhivel
-                    chaveBloco="colaboradoresFuncao"
+                <DashboardColaboradoresFuncao
+                    colaboradoresPorFuncao={colaboradoresPorFuncao}
+                    maiorQuantidadePorFuncao={maiorQuantidadePorFuncao}
                     blocosRecolhidosDashboard={blocosRecolhidosDashboard}
                     alternarBlocoRecolhidoDashboard={alternarBlocoRecolhidoDashboard}
-                    titulo="Colaboradores mobilizados por função"
-                    subtitulo="Conta apenas ativos, mobilizados, liberados ou com pendência não bloqueante."
-                    badge={(
-                        <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-600">
-                            {colaboradoresPorFuncao.length} função(ões)
-                        </span>
-                    )}
-                >
-                    <div className="space-y-2">
-                        {colaboradoresPorFuncao.length === 0 ? (
-                            mensagemVaziaDashboard("Nenhum colaborador mobilizado encontrado.")
-                        ) : (
-                            colaboradoresPorFuncao.slice(0, 8).map((item) => (
-                                <div key={item.funcao} className="rounded-2xl bg-slate-50 p-3 text-sm ring-1 ring-slate-100">
-                                    <div className="flex justify-between gap-3">
-                                        <span className="font-semibold text-slate-900">{item.funcao}</span>
-                                        <span className="rounded-full bg-white px-2 py-0.5 text-xs font-bold text-slate-600 ring-1 ring-slate-200">{item.quantidade}</span>
-                                    </div>
-                                    <div className="mt-2 h-2 overflow-hidden rounded-full bg-white ring-1 ring-slate-100">
-                                        <div
-                                            className="h-full rounded-full bg-slate-900"
-                                            style={{ width: `${Math.max(6, Math.round((item.quantidade / maiorQuantidadePorFuncao) * 100))}%` }}
-                                        />
-                                    </div>
-                                    <p className="mt-1 text-xs text-slate-500">
-                                        {item.quantidade} colaborador(es) considerado(s) mobilizado(s)
-                                    </p>
-                                </div>
-                            ))
-                        )}
-                    </div>
-                </DashboardBlocoRecolhivel>
+                    mensagemVaziaDashboard={mensagemVaziaDashboard}
+                />
             );
         }
 
