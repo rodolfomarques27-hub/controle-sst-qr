@@ -9666,6 +9666,64 @@ export default function App() {
 
         let ativo = true;
 
+        const gerarUrlAssinadaFotoColaboradorPublica = async (valorFoto) => {
+            if (!valorFoto) return "";
+
+            const textoFoto = String(valorFoto || "").trim();
+
+            if (!textoFoto) return "";
+
+            if (/^https?:\/\//i.test(textoFoto) || textoFoto.startsWith("blob:")) {
+                return textoFoto;
+            }
+
+            const caminhoFoto = extrairCaminhoStorage("fotos-colaboradores", textoFoto) || textoFoto;
+
+            if (!caminhoFoto) return "";
+
+            const { data, error } = await supabase.storage
+                .from("fotos-colaboradores")
+                .createSignedUrl(caminhoFoto, 60 * 10);
+
+            if (error) {
+                console.warn("Erro ao gerar URL assinada da foto pública do colaborador:", error.message);
+                return "";
+            }
+
+            return data?.signedUrl || "";
+        };
+
+        const normalizarConsultaPublicaComFoto = async (dadosConsulta) => {
+            if (!dadosConsulta?.colaborador) return dadosConsulta;
+
+            const colaboradorConsulta = dadosConsulta.colaborador || {};
+            const fotoOriginal =
+                colaboradorConsulta.fotoUrl ||
+                colaboradorConsulta.foto_url ||
+                colaboradorConsulta.foto ||
+                "";
+
+            const fotoAssinada = await gerarUrlAssinadaFotoColaboradorPublica(fotoOriginal);
+
+            return {
+                ...dadosConsulta,
+                colaborador: {
+                    ...colaboradorConsulta,
+                    fotoUrl: fotoAssinada || fotoOriginal || "",
+                    fotoNome: colaboradorConsulta.fotoNome || colaboradorConsulta.foto_nome || "",
+                    codigoFuncionario:
+                        colaboradorConsulta.codigoFuncionario ||
+                        colaboradorConsulta.codigo_funcionario ||
+                        "",
+                    statusMobilizacao:
+                        colaboradorConsulta.statusMobilizacao ||
+                        colaboradorConsulta.status_mobilizacao ||
+                        "",
+                    token: colaboradorConsulta.token || colaboradorConsulta.token_qr || tokenQr,
+                },
+            };
+        };
+
         async function carregarConsultaPublica() {
             setCarregandoConsultaPublica(true);
             setErroConsultaPublica("");
@@ -9680,7 +9738,11 @@ export default function App() {
                 setErroConsultaPublica(`Erro ao carregar consulta pública: ${error.message}`);
                 setConsultaPublica(null);
             } else {
-                setConsultaPublica(data);
+                const dadosNormalizados = await normalizarConsultaPublicaComFoto(data);
+
+                if (!ativo) return;
+
+                setConsultaPublica(dadosNormalizados);
             }
 
             setCarregandoConsultaPublica(false);
