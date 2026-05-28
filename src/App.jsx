@@ -26,11 +26,6 @@ import { Requisitos } from "./components/Requisitos";
 import { Aniversariantes } from "./components/aniversariantes/AniversariantesPage";
 import { Dashboard } from "./components/dashboard/Dashboard";
 import { Empresas } from "./components/empresas/EmpresasPage";
-import { DashboardBlocosGrid } from "./components/dashboard/DashboardBlocosGrid";
-import { DashboardHeaderAcoes } from "./components/dashboard/DashboardHeaderAcoes";
-import { DashboardPreviewFiltro } from "./components/dashboard/DashboardPreviewFiltro";
-import { DashboardBlocoConteudo } from "./components/dashboard/DashboardBlocoConteudo";
-import { DashboardControles } from "./components/dashboard/DashboardControles";
 import { FileUploadAviso, validarArquivoAntesUpload, validarListaArquivosAntesUpload } from "./components/FileUploadAviso";
 import { PreviaNotificacaoAuditoriaCampo } from "./components/auditoria/PreviaNotificacaoAuditoriaCampo";
 import { AuditoriaAcessoNegado, AuditoriaBloqueada } from "./components/auditoria/AuditoriaPermissao";
@@ -127,26 +122,6 @@ import {
 } from "./services/exportacaoService";
 import { reduzirFotoParaAuditoria } from "./services/imagemService";
 import {
-    painelPadraoDashboard,
-    cartasPadraoDashboard,
-    tamanhosPadraoCartasDashboard,
-    tamanhosPadraoBlocosDashboard,
-    ordemPadraoBlocosDashboard,
-    ordemPadraoCartasDashboard,
-    opcoesTamanhoCartaDashboard,
-    opcoesPainelDashboard,
-    blocosComTamanhoDashboard,
-    opcoesTamanhoBlocoDashboard,
-    blocosRecolhidosPadraoDashboard,
-    moverItemPainel,
-    reordenarPorArrastePainel,
-    prepararArrastePainel,
-    classeTamanhoCartaDashboard,
-    classeTamanhoBlocoDashboard,
-    classeValorCartaDashboard,
-    estiloCartaDashboard,
-} from "./services/dashboardService";
-import {
     normalizarTextoBusca,
     normalizarDataAniversario,
     diasParaVencer,
@@ -210,43 +185,6 @@ import {
 const hoje = new Date();
 const TOKEN_AUDITORIA_CAMPO_PUBLICA_PADRAO = "TOKEN-AUDITORIA-CAMPO-2026";
 
-function addDays(days) {
-    const d = new Date(hoje);
-    d.setDate(d.getDate() + days);
-    return d.toISOString().slice(0, 10);
-}
-
-const colaboradoresIniciais = [
-    {
-        id: 101,
-        nome: "Luiz Paulo Costa",
-        empresa: "ABC Montagens",
-        funcao: "Soldador",
-        matricula: "M-0145",
-        status: "Ativo",
-        token: "SST-LUIZ-8F2A",
-        treinamentos: [
-            { treinamentoId: 1, realizado: addDays(-160), vencimento: addDays(205), arquivo: "integracao_luiz.pdf" },
-            { treinamentoId: 2, realizado: addDays(-500), vencimento: addDays(230), arquivo: "nr35_luiz.pdf" },
-            { treinamentoId: 6, realizado: addDays(-370), vencimento: addDays(-5), arquivo: "solda_luiz.pdf" },
-            { treinamentoId: 7, realizado: addDays(-340), vencimento: addDays(25), arquivo: "lixadeira_luiz.pdf" },
-        ],
-    },
-    {
-        id: 102,
-        nome: "Marcos Vinícius Lima",
-        empresa: "RDB Serviços Industriais",
-        funcao: "Montador",
-        matricula: "RDB-229",
-        status: "Ativo",
-        token: "SST-MARCOS-A73C",
-        treinamentos: [
-            { treinamentoId: 1, realizado: addDays(-40), vencimento: addDays(325), arquivo: "integracao_marcos.pdf" },
-            { treinamentoId: 2, realizado: addDays(-700), vencimento: addDays(30), arquivo: "nr35_marcos.pdf" },
-            { treinamentoId: 3, realizado: addDays(-300), vencimento: addDays(430), arquivo: "nr12_marcos.pdf" },
-        ],
-    },
-];
 
 
 function emailTstDaEmpresa(colaborador) {
