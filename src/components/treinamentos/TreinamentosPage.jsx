@@ -19,10 +19,14 @@ import {
     statusDocumento,
     obterTreinamento,
     calcularVencimentoTreinamento,
-    inferirTreinamentoPorNomeArquivo,
-    dataRealizacaoPorArquivo,
     detectarDataEmissaoArquivo,
 } from "../../services/colaboradorDocumentosService";
+import {
+    prepararArquivosTreinamentoLote,
+    atualizarColaboradorArquivoLote,
+    atualizarTreinamentoArquivoLote,
+    atualizarDataArquivoLote,
+} from "../../services/treinamentosService";
 import { treinamentosBase, FUNCAO_EMAIL_ALERTA_TST } from "../../constants/sstConstants";
 import {
     normalizarTextoBusca,
@@ -127,41 +131,6 @@ export function Treinamentos({
         }
     };
 
-    const identificarColaboradorPorArquivo = (arquivo) => {
-        const nomeArquivoOriginal = arquivo?.name || "";
-        const nomeArquivo = normalizarTextoBusca(nomeArquivoOriginal.replace(/\.[^.]+$/, ""));
-        const nomeArquivoCompacto = nomeArquivo.replace(/[^a-z0-9]/g, "");
-
-        let melhor = null;
-        let melhorPontuacao = 0;
-
-        colaboradores.forEach((colaborador) => {
-            const codigo = normalizarTextoBusca(colaborador.codigoFuncionario || "").replace(/[^a-z0-9]/g, "");
-            const nome = normalizarTextoBusca(colaborador.nome || "").replace(/[^a-z0-9\s]/g, " ");
-            const nomeCompacto = nome.replace(/\s+/g, "");
-            const palavrasNome = nome.split(/\s+/).filter((parte) => parte.length >= 3);
-
-            let pontos = 0;
-
-            if (codigo && nomeArquivoCompacto.includes(codigo)) pontos += 120;
-            if (nomeCompacto && nomeArquivoCompacto.includes(nomeCompacto)) pontos += 90;
-
-            const acertosNome = palavrasNome.filter((parte) => nomeArquivo.includes(parte)).length;
-            pontos += acertosNome * 15;
-
-            if (palavrasNome.length > 0 && acertosNome >= Math.min(2, palavrasNome.length)) {
-                pontos += 25;
-            }
-
-            if (pontos > melhorPontuacao) {
-                melhorPontuacao = pontos;
-                melhor = colaborador;
-            }
-        });
-
-        return melhorPontuacao >= 25 ? melhor : null;
-    };
-
     const prepararArquivosLote = async (listaArquivos) => {
         const arquivos = Array.from(listaArquivos || []);
 
@@ -175,90 +144,27 @@ export function Treinamentos({
             return;
         }
 
-        const preparados = await Promise.all(
-            arquivos.map(async (arquivo, index) => {
-                const treinamento = inferirTreinamentoPorNomeArquivo(arquivo.name);
-                const sugestaoData = await detectarDataEmissaoArquivo(arquivo);
-                const dataArquivo = sugestaoData.data || dataRealizacaoPorArquivo(arquivo);
-                const colaboradorSugerido = identificarColaboradorPorArquivo(arquivo);
-                const pareceOutroColaborador =
-                    colaboradorSugerido?.codigoFuncionario &&
-                    String(colaboradorSugerido.codigoFuncionario) !== String(colabSelecionado.codigoFuncionario);
-
-                return {
-                    id: `${Date.now()}-${index}-${arquivo.name}`,
-                    arquivo,
-                    colaboradorCodigo: colabSelecionado.codigoFuncionario,
-                    colaboradorSugeridoCodigo: colaboradorSugerido?.codigoFuncionario || "",
-                    treinamentoId: treinamento?.id || "",
-                    dataRealizacao: dataArquivo,
-                    dataVencimento: treinamento ? calcularVencimentoTreinamento(treinamento.id, dataArquivo) : "",
-                    sugestaoData,
-                    status: treinamento
-                        ? pareceOutroColaborador
-                            ? `Atenção: arquivo parece ser de ${colaboradorSugerido.nome}`
-                            : sugestaoData.data
-                                ? "Treinamento e data identificados"
-                                : "Treinamento identificado"
-                        : "Treinamento não identificado",
-                };
-            })
-        );
+        const preparados = await prepararArquivosTreinamentoLote({
+            listaArquivos: arquivos,
+            colaboradores,
+            colabSelecionado,
+            dataRealizacao,
+        });
 
         setArquivosLote(preparados);
         setResultadoLote("");
     };
 
     const alterarColaboradorArquivoLote = (arquivoId, colaboradorCodigo) => {
-        setArquivosLote((atual) =>
-            atual.map((item) =>
-                item.id === arquivoId
-                    ? {
-                        ...item,
-                        colaboradorCodigo,
-                        status: colaboradorCodigo
-                            ? item.treinamentoId
-                                ? "Conferido"
-                                : "Treinamento não identificado"
-                            : "Selecione o colaborador",
-                    }
-                    : item
-            )
-        );
+        setArquivosLote((atual) => atualizarColaboradorArquivoLote(atual, arquivoId, colaboradorCodigo));
     };
 
     const alterarTreinamentoArquivoLote = (arquivoId, treinamentoId) => {
-        setArquivosLote((atual) =>
-            atual.map((item) => {
-                if (item.id !== arquivoId) return item;
-
-                const treinamento = obterTreinamento(Number(treinamentoId));
-                const dataBase = item.dataRealizacao || dataRealizacao;
-
-                return {
-                    ...item,
-                    treinamentoId: treinamento?.id || "",
-                    dataVencimento: treinamento ? calcularVencimentoTreinamento(treinamento.id, dataBase) : "",
-                    status: treinamento && item.colaboradorCodigo ? "Conferido" : "Conferir dados",
-                };
-            })
-        );
+        setArquivosLote((atual) => atualizarTreinamentoArquivoLote(atual, arquivoId, treinamentoId, dataRealizacao));
     };
 
     const alterarDataArquivoLote = (arquivoId, data) => {
-        setArquivosLote((atual) =>
-            atual.map((item) => {
-                if (item.id !== arquivoId) return item;
-
-                return {
-                    ...item,
-                    dataRealizacao: data,
-                    dataVencimento: item.treinamentoId
-                        ? calcularVencimentoTreinamento(item.treinamentoId, data)
-                        : "",
-                };
-            })
-        );
+        setArquivosLote((atual) => atualizarDataArquivoLote(atual, arquivoId, data));
     };
 
     const selecionarArquivoCertificado = async (arquivo) => {
