@@ -208,6 +208,7 @@ import {
 } from "lucide-react";
 
 const hoje = new Date();
+const TOKEN_AUDITORIA_CAMPO_PUBLICA_PADRAO = "TOKEN-AUDITORIA-CAMPO-2026";
 
 function addDays(days) {
     const d = new Date(hoje);
@@ -4775,7 +4776,7 @@ function DashboardAuditoriaCampo({
         area: "",
         local: "",
         empresaResponsavel: "",
-        token: "",
+        token: TOKEN_AUDITORIA_CAMPO_PUBLICA_PADRAO,
         observacao: "",
     });
 
@@ -5292,7 +5293,8 @@ function DashboardAuditoriaCampo({
     const montarLinkQrCampo = useCallback((dados = qrFormCampo) => {
         const origem = typeof window !== "undefined" ? window.location.origin : "";
         const params = new URLSearchParams();
-        if (dados.token) params.set("token", String(dados.token).trim());
+        const tokenPublico = String(dados.token || TOKEN_AUDITORIA_CAMPO_PUBLICA_PADRAO).trim();
+        if (tokenPublico) params.set("token", tokenPublico);
         if (dados.tipo) params.set("tipo", dados.tipo);
         if (dados.identificacao) params.set("id", dados.identificacao);
         if (dados.area) params.set("area", dados.area);
@@ -6136,7 +6138,7 @@ function NovaAuditoriaCampoDireta({ usuario = null, onAuditoriaSalva, empresasBa
     const tokenParametro = parametros.get("token") || parametros.get("chave") || "";
     const tipoInicial = obterTipoAuditoriaCampoPorParametro(tipoParametro);
     const origem = typeof window !== "undefined" ? window.location.origin : "";
-    const tokenLinkAuditoriaCampo = tokenParametro;
+    const tokenLinkAuditoriaCampo = tokenParametro || TOKEN_AUDITORIA_CAMPO_PUBLICA_PADRAO;
     const montarLinkAuditoriaCampo = (parametrosExtras = {}) => {
         const params = new URLSearchParams();
 
