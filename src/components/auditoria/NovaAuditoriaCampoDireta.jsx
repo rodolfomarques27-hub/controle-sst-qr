@@ -10,7 +10,6 @@ import {
     checklistParaTipoAuditoriaCampo,
     criarRespostasChecklistDinamico,
     calcularResultadoChecklistDinamico,
-    montarMensagemFluidaAuditoriaCampo,
     rotuloPontuacaoAuditoriaCampo,
     normalizarAuditoriaCampo,
 } from "../../services/auditoriaCampoService";
@@ -22,13 +21,27 @@ import {
     grausRiscoAuditoriaCampoDireta,
     descricoesGrauRiscoAuditoriaCampoDireta,
 } from "../../constants/sstConstants";
-import { reduzirFotoParaAuditoria } from "../../services/imagemService";
 import {
-    normalizarTextoBusca,
     classNames,
     obterParametroUrl,
-    sanitizarNomeArquivo,
 } from "../../utils/sstUtils";
+import {
+    TOKEN_AUDITORIA_CAMPO_PUBLICA_PADRAO,
+    aplicarContatosEmpresaAuditoriaCampoDireta,
+    criarFormularioInicialAuditoriaCampoDireta,
+    encontrarEmpresaAuditoriaCampoDireta,
+    extrairParametrosAuditoriaCampoDireta,
+    gerarNumeroAuditoriaCampoDireta,
+    listarEmpresasAuditoriaCampoDireta,
+    montarLinkAuditoriaCampoDireta,
+    montarLinksNotificacaoAuditoriaCampoDireta,
+    montarPayloadAuditoriaCampoDireta,
+    montarTextoNotificacaoAuditoriaCampoDireta,
+    obterContatosEmpresaAuditoriaCampoDireta,
+    obterParametrosAuditoriaCampoDiretaUrl,
+    uploadFotoAuditoriaCampoDireta,
+    validarFormularioAuditoriaCampoDireta,
+} from "../../services/auditoriaCampoDiretaService";
 import { QRCodeSVG } from "qrcode.react";
 import {
     ClipboardCheck,
@@ -40,76 +53,31 @@ import {
     Upload,
 } from "lucide-react";
 
-const TOKEN_AUDITORIA_CAMPO_PUBLICA_PADRAO = "TOKEN-AUDITORIA-CAMPO-2026";
-
 export function NovaAuditoriaCampoDireta({ usuario = null, onAuditoriaSalva, empresasBanco = [] }) {
-    const parametros = (() => {
-        if (typeof window === "undefined") return new URLSearchParams("");
-
-        const parametrosNormais = new URLSearchParams(window.location.search || "");
-        const hash = window.location.hash || "";
-        const indiceConsultaHash = hash.indexOf("?");
-
-        if (indiceConsultaHash >= 0) {
-            const queryHash = hash.slice(indiceConsultaHash + 1);
-            const parametrosHash = new URLSearchParams(queryHash);
-
-            parametrosNormais.forEach((valor, chave) => {
-                if (!parametrosHash.has(chave)) {
-                    parametrosHash.set(chave, valor);
-                }
-            });
-
-            return parametrosHash;
-        }
-
-        return parametrosNormais;
-    })();
-    const tipoParametro = parametros.get("tipo") || parametros.get("tipo_auditoria") || "area";
-    const identificacaoParametro = parametros.get("id") || parametros.get("maquina") || parametros.get("equipamento") || "";
-    const areaParametro = parametros.get("area") || "";
-    const localParametro = parametros.get("local") || "";
-    const empresaParametro = parametros.get("empresa") || parametros.get("empresa_responsavel") || "";
-    const subareaParametro = parametros.get("subarea") || "";
-    const tokenParametro = parametros.get("token") || parametros.get("chave") || "";
+    const parametros = obterParametrosAuditoriaCampoDiretaUrl();
+    const {
+        tipoParametro,
+        identificacaoParametro,
+        areaParametro,
+        localParametro,
+        empresaParametro,
+        subareaParametro,
+        tokenParametro,
+    } = extrairParametrosAuditoriaCampoDireta(parametros);
     const tipoInicial = obterTipoAuditoriaCampoPorParametro(tipoParametro);
     const origem = typeof window !== "undefined" ? window.location.origin : "";
     const tokenLinkAuditoriaCampo = tokenParametro || TOKEN_AUDITORIA_CAMPO_PUBLICA_PADRAO;
-    const montarLinkAuditoriaCampo = (parametrosExtras = {}) => {
-        const params = new URLSearchParams();
-
-        if (tokenLinkAuditoriaCampo) {
-            params.set("token", tokenLinkAuditoriaCampo);
-        }
-
-        Object.entries(parametrosExtras).forEach(([chave, valor]) => {
-            if (valor !== undefined && valor !== null && String(valor).trim() !== "") {
-                params.set(chave, String(valor));
-            }
-        });
-
-        const consulta = params.toString();
-        return `${origem}/#/auditoria-campo${consulta ? `?${consulta}` : ""}`;
-    };
+    const montarLinkAuditoriaCampo = (parametrosExtras = {}) => montarLinkAuditoriaCampoDireta({
+        origem,
+        token: tokenLinkAuditoriaCampo,
+        parametrosExtras,
+    });
     const linkGeral = montarLinkAuditoriaCampo();
     const linkGeralDireto = linkGeral;
-    const empresasAuditoriaCampo = useMemo(() => {
-        const normalizarNomeEmpresa = (valor) => String(valor || "")
-            .normalize("NFD")
-            .replace(/[\u0300-\u036f]/g, "")
-            .trim()
-            .toLowerCase();
-
-        const mapa = new Map();
-        (empresasBanco || []).forEach((empresa) => {
-            if (!empresa?.nome) return;
-            const chave = normalizarNomeEmpresa(empresa.nome);
-            if (!mapa.has(chave)) mapa.set(chave, empresa);
-        });
-
-        return Array.from(mapa.values())
-            .sort((a, b) => String(a.nome).localeCompare(String(b.nome), "pt-BR"));
-    }, [empresasBanco]);
+    const empresasAuditoriaCampo = useMemo(
+        () => listarEmpresasAuditoriaCampoDireta(empresasBanco),
+        [empresasBanco]
+    );
 
 
     const tokenAuditoriaPublicaInformado = Boolean(tokenParametro);
@@ -123,30 +91,13 @@ export function NovaAuditoriaCampoDireta({ usuario = null, onAuditoriaSalva, emp
     const [mensagem, setMensagem] = useState("");
     const [auditoriaSalva, setAuditoriaSalva] = useState(null);
     const [previewFotos, setPreviewFotos] = useState({ antes: "", depois: "" });
-    const [formulario, setFormulario] = useState(() => ({
-        tipoAuditoria: tipoInicial.valor,
-        categoriaAuditoria: "isolamento",
-        titulo: identificacaoParametro ? `Auditoria de campo - ${tipoInicial.label} ${identificacaoParametro}` : `Auditoria de campo - ${tipoInicial.label}`,
-        area: areaParametro,
-        subarea: subareaParametro,
-        local: localParametro,
-        maquinaEquipamento: identificacaoParametro,
-        empresaResponsavel: empresaParametro,
-        auditorNome: "",
-        grauRisco: "Baixo",
-        situacaoEncontrada: "",
-        acaoRecomendada: "",
-        responsavelTratativa: "",
-        emailResponsavel: "",
-        whatsappResponsavel: "",
-        nomeTstResponsavel: "",
-        emailTstResponsavel: "",
-        whatsappTstResponsavel: "",
-        prazoAdequacao: "",
-        statusAuditoria: "Aberta",
-        fotoAntes: null,
-        fotoDepois: null,
-        observacoesGerais: "",
+    const [formulario, setFormulario] = useState(() => criarFormularioInicialAuditoriaCampoDireta({
+        tipoInicial,
+        identificacaoParametro,
+        areaParametro,
+        subareaParametro,
+        localParametro,
+        empresaParametro,
     }));
     const [respostasChecklist, setRespostasChecklist] = useState(() => criarRespostasChecklistDinamico(tipoInicial.valor));
 
@@ -208,31 +159,11 @@ export function NovaAuditoriaCampoDireta({ usuario = null, onAuditoriaSalva, emp
 
 
     const nomeEmpresaAtualAuditoria = String(formulario.empresaResponsavel || empresaParametro || "").trim();
-    const nomeEmpresaAtualNormalizado = normalizarTextoBusca(nomeEmpresaAtualAuditoria).trim();
-
-    const empresaSelecionadaAuditoria = nomeEmpresaAtualNormalizado
-        ? empresasAuditoriaCampo.find((empresa) =>
-            normalizarTextoBusca(empresa.nome).trim() === nomeEmpresaAtualNormalizado
-        ) || null
-        : null;
-
-    const contatosEmpresaAuditoria = empresaSelecionadaAuditoria
-        ? {
-            responsavel: empresaSelecionadaAuditoria.responsavel_auditoria || empresaSelecionadaAuditoria.responsavel || "",
-            email: empresaSelecionadaAuditoria.email_auditoria || empresaSelecionadaAuditoria.email || "",
-            whatsapp: empresaSelecionadaAuditoria.whatsapp_auditoria || empresaSelecionadaAuditoria.telefone || "",
-            tstResponsavel: empresaSelecionadaAuditoria.tst_responsavel || "",
-            tstEmail: empresaSelecionadaAuditoria.tst_email || "",
-            tstWhatsapp: empresaSelecionadaAuditoria.tst_whatsapp || "",
-        }
-        : {
-            responsavel: "",
-            email: "",
-            whatsapp: "",
-            tstResponsavel: "",
-            tstEmail: "",
-            tstWhatsapp: "",
-        };
+    const empresaSelecionadaAuditoria = encontrarEmpresaAuditoriaCampoDireta(
+        empresasAuditoriaCampo,
+        nomeEmpresaAtualAuditoria
+    );
+    const contatosEmpresaAuditoria = obterContatosEmpresaAuditoriaCampoDireta(empresaSelecionadaAuditoria);
 
     const tipoAtual = obterTipoAuditoriaCampoDireta(formulario.tipoAuditoria);
     const categoriaAtual = obterCategoriaPadronizadaAuditoriaCampo(formulario.categoriaAuditoria);
@@ -248,81 +179,32 @@ export function NovaAuditoriaCampoDireta({ usuario = null, onAuditoriaSalva, emp
         })
         : linkTipoAtual;
 
-    const textoNotificacaoResponsavel = useMemo(() => {
-        return [
-            `Auditoria de campo: ${formulario.titulo || "Sem título"}`,
-            `Tipo: ${tipoAtual.label}`,
-            `Empresa responsável: ${formulario.empresaResponsavel || "Não informada"}`,
-            `Área: ${formulario.area || "Não informada"}`,
-            `Local: ${formulario.local || "Não informado"}`,
-            `Grau de risco: ${formulario.grauRisco}`,
-            `Status: ${formulario.statusAuditoria}`,
-            `Auditor: ${formulario.auditorNome || "Não informado"}`,
-            "",
-            `Situação encontrada: ${formulario.situacaoEncontrada || "Não informada"}`,
-            `Ação recomendada: ${formulario.acaoRecomendada || "Não informada"}`,
-            `Responsável pela tratativa: ${formulario.responsavelTratativa || "Não informado"}`,
-            `Prazo: ${formulario.prazoAdequacao || "Não informado"}`,
-        ].join("\n");
-    }, [formulario, tipoAtual.label]);
+    const textoNotificacaoResponsavel = useMemo(() => montarTextoNotificacaoAuditoriaCampoDireta({
+        formulario,
+        tipoAtual,
+    }), [formulario, tipoAtual]);
 
-    const assuntoNotificacaoResponsavel = `Auditoria de campo - ${formulario.grauRisco || "Risco"} - ${formulario.titulo || tipoAtual.label}`;
-    const emailResponsavelAuditoria = String(formulario.emailResponsavel || "").trim();
-    const whatsappResponsavelAuditoria = String(formulario.whatsappResponsavel || "").replace(/\D/g, "");
-    const whatsappResponsavelFormatado = whatsappResponsavelAuditoria
-        ? (whatsappResponsavelAuditoria.startsWith("55") ? whatsappResponsavelAuditoria : `55${whatsappResponsavelAuditoria}`)
-        : "";
-    const linkEmailResponsavel = emailResponsavelAuditoria
-        ? `mailto:${emailResponsavelAuditoria}?subject=${encodeURIComponent(assuntoNotificacaoResponsavel)}&body=${encodeURIComponent(textoNotificacaoResponsavel)}`
-        : "";
-    const linkWhatsappResponsavel = whatsappResponsavelFormatado
-        ? `https://wa.me/${whatsappResponsavelFormatado}?text=${encodeURIComponent(textoNotificacaoResponsavel)}`
-        : "";
-
-    const emailTstAuditoria = String(formulario.emailTstResponsavel || contatosEmpresaAuditoria.tstEmail || "").trim();
-    const whatsappTstAuditoria = String(formulario.whatsappTstResponsavel || contatosEmpresaAuditoria.tstWhatsapp || "").replace(/\D/g, "");
-    const whatsappTstFormatado = whatsappTstAuditoria
-        ? (whatsappTstAuditoria.startsWith("55") ? whatsappTstAuditoria : `55${whatsappTstAuditoria}`)
-        : "";
-    const linkEmailTstAuditoria = emailTstAuditoria
-        ? `mailto:${emailTstAuditoria}?subject=${encodeURIComponent(assuntoNotificacaoResponsavel)}&body=${encodeURIComponent(textoNotificacaoResponsavel)}`
-        : "";
-    const linkWhatsappTstAuditoria = whatsappTstFormatado
-        ? `https://wa.me/${whatsappTstFormatado}?text=${encodeURIComponent(textoNotificacaoResponsavel)}`
-        : "";
+    const {
+        assuntoNotificacaoResponsavel,
+        emailResponsavelAuditoria,
+        whatsappResponsavelFormatado,
+        linkEmailResponsavel,
+        linkWhatsappResponsavel,
+        emailTstAuditoria,
+        whatsappTstFormatado,
+        linkEmailTstAuditoria,
+        linkWhatsappTstAuditoria,
+    } = montarLinksNotificacaoAuditoriaCampoDireta({
+        formulario,
+        tipoAtual,
+        contatosEmpresaAuditoria,
+        textoNotificacaoResponsavel,
+    });
 
     const aplicarContatosEmpresaAuditoria = (nomeEmpresa) => {
-        const nomeNormalizado = normalizarTextoBusca(nomeEmpresa).trim();
+        const empresa = encontrarEmpresaAuditoriaCampoDireta(empresasAuditoriaCampo, nomeEmpresa);
 
-        const empresa = empresasAuditoriaCampo.find((item) =>
-            normalizarTextoBusca(item.nome).trim() === nomeNormalizado
-        );
-
-        if (!empresa) {
-            setFormulario((atual) => ({
-                ...atual,
-                empresaResponsavel: nomeEmpresa,
-            }));
-            return;
-        }
-
-        const emailAuditoria = empresa.email_auditoria || empresa.email || "";
-        const whatsappAuditoria = empresa.whatsapp_auditoria || empresa.telefone || "";
-        const responsavelAuditoria = empresa.responsavel_auditoria || empresa.responsavel || "";
-        const tstResponsavel = empresa.tst_responsavel || "";
-        const tstEmail = empresa.tst_email || "";
-        const tstWhatsapp = empresa.tst_whatsapp || "";
-
-        setFormulario((atual) => ({
-            ...atual,
-            empresaResponsavel: empresa.nome,
-            responsavelTratativa: atual.responsavelTratativa || responsavelAuditoria,
-            emailResponsavel: emailAuditoria || atual.emailResponsavel,
-            whatsappResponsavel: whatsappAuditoria || atual.whatsappResponsavel,
-            nomeTstResponsavel: tstResponsavel || atual.nomeTstResponsavel,
-            emailTstResponsavel: tstEmail || atual.emailTstResponsavel,
-            whatsappTstResponsavel: tstWhatsapp || atual.whatsappTstResponsavel,
-        }));
+        setFormulario((atual) => aplicarContatosEmpresaAuditoriaCampoDireta(atual, empresa, nomeEmpresa));
     };
 
     const alterarFormulario = (campo, valor) => {
@@ -338,35 +220,15 @@ export function NovaAuditoriaCampoDireta({ usuario = null, onAuditoriaSalva, emp
         if (formulario.emailResponsavel && formulario.whatsappResponsavel && formulario.emailTstResponsavel) return;
 
         const timer = window.setTimeout(() => {
-            const nomeNormalizado = normalizarTextoBusca(formulario.empresaResponsavel).trim();
-
-            const empresa = empresasAuditoriaCampo.find((item) =>
-                normalizarTextoBusca(item.nome).trim() === nomeNormalizado
-            );
-
-            if (!empresa) return;
-
-            const emailAuditoria = empresa.email_auditoria || empresa.email || "";
-            const whatsappAuditoria = empresa.whatsapp_auditoria || empresa.telefone || "";
-            const responsavelAuditoria = empresa.responsavel_auditoria || empresa.responsavel || "";
-            const tstResponsavel = empresa.tst_responsavel || "";
-            const tstEmail = empresa.tst_email || "";
-            const tstWhatsapp = empresa.tst_whatsapp || "";
-
-            setFormulario((atual) => ({
-                ...atual,
-                responsavelTratativa: atual.responsavelTratativa || responsavelAuditoria,
-                emailResponsavel: emailAuditoria || atual.emailResponsavel,
-                whatsappResponsavel: whatsappAuditoria || atual.whatsappResponsavel,
-                nomeTstResponsavel: tstResponsavel || atual.nomeTstResponsavel,
-                emailTstResponsavel: tstEmail || atual.emailTstResponsavel,
-                whatsappTstResponsavel: tstWhatsapp || atual.whatsappTstResponsavel,
-            }));
+            setFormulario((atual) => aplicarContatosEmpresaAuditoriaCampoDireta(
+                atual,
+                empresaSelecionadaAuditoria,
+                formulario.empresaResponsavel
+            ));
         }, 0);
 
         return () => window.clearTimeout(timer);
     }, [
-        empresasAuditoriaCampo,
         empresaSelecionadaAuditoria,
         formulario.empresaResponsavel,
         formulario.emailResponsavel,
@@ -389,31 +251,14 @@ export function NovaAuditoriaCampoDireta({ usuario = null, onAuditoriaSalva, emp
         if (previewFotos.antes) URL.revokeObjectURL(previewFotos.antes);
         if (previewFotos.depois) URL.revokeObjectURL(previewFotos.depois);
 
-        setFormulario({
-            tipoAuditoria: tipoInicial.valor,
-            categoriaAuditoria: "isolamento",
-            titulo: identificacaoParametro ? `Auditoria de campo - ${tipoInicial.label} ${identificacaoParametro}` : `Auditoria de campo - ${tipoInicial.label}`,
-            area: areaParametro,
-            subarea: subareaParametro,
-            local: localParametro,
-            maquinaEquipamento: identificacaoParametro,
-            empresaResponsavel: empresaParametro,
-            auditorNome: "",
-            grauRisco: "Baixo",
-            situacaoEncontrada: "",
-            acaoRecomendada: "",
-            responsavelTratativa: "",
-            emailResponsavel: "",
-            whatsappResponsavel: "",
-            nomeTstResponsavel: "",
-            emailTstResponsavel: "",
-            whatsappTstResponsavel: "",
-            prazoAdequacao: "",
-            statusAuditoria: "Aberta",
-            fotoAntes: null,
-            fotoDepois: null,
-            observacoesGerais: "",
-        });
+        setFormulario(criarFormularioInicialAuditoriaCampoDireta({
+            tipoInicial,
+            identificacaoParametro,
+            areaParametro,
+            subareaParametro,
+            localParametro,
+            empresaParametro,
+        }));
         setRespostasChecklist(criarRespostasChecklistDinamico(tipoInicial.valor));
         setPreviewFotos({ antes: "", depois: "" });
         setAuditoriaSalva(null);
@@ -447,45 +292,11 @@ export function NovaAuditoriaCampoDireta({ usuario = null, onAuditoriaSalva, emp
         }));
     };
 
-    const gerarNumeroAuditoria = async () => {
-        const { data, error } = await supabase.rpc("gerar_numero_auditoria_campo");
-        if (!error && data) return data;
-        const ano = new Date().getFullYear();
-        return `AUD-${ano}-${String(Date.now()).slice(-4)}`;
-    };
-
-    const uploadFotoDireta = async (arquivo, numeroAuditoria, tipo) => {
-        if (!arquivo) return "";
-        const otimizada = await reduzirFotoParaAuditoria(arquivo, { maxLado: 1400, alvoBytes: 800 * 1024 });
-        if (!validarArquivoAntesUpload(otimizada, "fotoAuditoria")) {
-            throw new Error("A foto ficou acima do limite mesmo após a redução automática.");
-        }
-        const nomeSeguro = sanitizarNomeArquivo(otimizada.name || `${tipo}.jpg`);
-        const caminho = `auditorias-publicas/${numeroAuditoria}/${tipo}-${Date.now()}-${nomeSeguro}`;
-        const { error } = await supabase.storage.from("auditorias-campo").upload(caminho, otimizada, {
-            cacheControl: "3600",
-            upsert: true,
-            contentType: otimizada.type || "image/jpeg",
-        });
-        if (error) throw new Error(`Erro ao enviar ${tipo}: ${error.message}`);
-        return caminho;
-    };
-
     const salvarAuditoriaDireta = async () => {
-        if (!formulario.tipoAuditoria) {
-            setMensagem("Selecione o tipo de auditoria.");
-            return;
-        }
-        if (!formulario.titulo.trim()) {
-            setMensagem("Informe o título/assunto da auditoria.");
-            return;
-        }
-        if (!formulario.local.trim() && !formulario.area.trim() && !formulario.maquinaEquipamento.trim()) {
-            setMensagem("Informe ao menos área, local ou máquina/equipamento.");
-            return;
-        }
-        if (!formulario.situacaoEncontrada.trim()) {
-            setMensagem("Descreva a situação encontrada.");
+        const erroFormulario = validarFormularioAuditoriaCampoDireta(formulario);
+
+        if (erroFormulario) {
+            setMensagem(erroFormulario);
             return;
         }
 
@@ -494,73 +305,36 @@ export function NovaAuditoriaCampoDireta({ usuario = null, onAuditoriaSalva, emp
 
         try {
             const referenciaUploadFotos = `auditoria-pendente-${Date.now()}`;
-            const fotoAntesUrl = await uploadFotoDireta(formulario.fotoAntes, referenciaUploadFotos, "foto-antes");
-            const fotoDepoisUrl = await uploadFotoDireta(formulario.fotoDepois, referenciaUploadFotos, "foto-depois");
-            const checklistDinamico = resultado.itens.map((item) => ({
-                pergunta: item.pergunta,
-                resposta: item.resposta.chave,
-                respostaTexto: item.resposta.texto,
-                pontos: item.resposta.pontos,
-            }));
+            const fotoAntesUrl = await uploadFotoAuditoriaCampoDireta({
+                supabaseClient: supabase,
+                arquivo: formulario.fotoAntes,
+                numeroAuditoria: referenciaUploadFotos,
+                tipo: "foto-antes",
+                validarArquivoAntesUpload,
+            });
+            const fotoDepoisUrl = await uploadFotoAuditoriaCampoDireta({
+                supabaseClient: supabase,
+                arquivo: formulario.fotoDepois,
+                numeroAuditoria: referenciaUploadFotos,
+                tipo: "foto-depois",
+                validarArquivoAntesUpload,
+            });
 
-            const payload = {
-                tipo_auditoria: formulario.tipoAuditoria,
-                titulo: formulario.titulo.trim(),
-                area: formulario.area.trim() || null,
-                subarea: formulario.subarea.trim() || null,
-                local: formulario.local.trim() || null,
-                maquina_equipamento: formulario.maquinaEquipamento.trim() || null,
-                empresa_responsavel: formulario.empresaResponsavel.trim() || null,
-                empresa_nome: formulario.empresaResponsavel.trim() || null,
-                auditor_nome: formulario.auditorNome.trim() || "Não informado",
-                grau_risco: formulario.grauRisco,
-                situacao_encontrada: formulario.situacaoEncontrada.trim(),
-                acao_recomendada: formulario.acaoRecomendada.trim() || null,
-                responsavel_tratativa: formulario.responsavelTratativa.trim() || null,
-                prazo_adequacao: formulario.prazoAdequacao || null,
-                status_auditoria: formulario.statusAuditoria,
-                status_desvio: formulario.statusAuditoria === "Resolvida" ? "Corrigido" : "Aberto",
-                foto_antes_url: fotoAntesUrl || null,
-                foto_depois_url: fotoDepoisUrl || null,
-                observacoes_gerais: formulario.observacoesGerais.trim() || null,
-                observacao: formulario.observacoesGerais.trim() || formulario.situacaoEncontrada.trim(),
-                checklist: checklistDinamico,
-                checklist_dinamico: checklistDinamico,
-                pontuacao: resultado.percentual ?? 0,
-                classificacao: resultado.classificacao || "Sem avaliação",
-                tem_desvio_grave: Boolean(resultado.temDesvioGrave),
-                categoria_desvio_principal: categoriaAtual.label,
-                total_desvios: ["Aberta", "Em andamento", "Vencida"].includes(formulario.statusAuditoria) ? 1 : 0,
-                origem: "Link direto / auditoria-campo",
-                token_qr: tokenParametro || null,
-                notificacao: {
-                    titulo: formulario.titulo.trim(),
-                    mensagem: montarMensagemFluidaAuditoriaCampo({
-                        numeroAuditoria: "Será gerado ao salvar",
-                        tipoAuditoria: tipoAtual.label,
-                        titulo: formulario.titulo.trim(),
-                        area: formulario.area.trim(),
-                        local: formulario.local.trim(),
-                        maquinaEquipamento: formulario.maquinaEquipamento.trim(),
-                        empresaResponsavel: formulario.empresaResponsavel.trim(),
-                        auditorNome: formulario.auditorNome.trim() || "Não informado",
-                        grauRisco: formulario.grauRisco,
-                        classificacao: resultado.classificacao,
-                        pontuacao: resultado.percentual ?? 0,
-                        statusAuditoria: formulario.statusAuditoria,
-                        responsavelTratativa: formulario.responsavelTratativa.trim(),
-                        prazoAdequacao: formulario.prazoAdequacao,
-                    }, { tipo: tipoAtual.label, titulo: formulario.titulo.trim() }),
-                    auditor: formulario.auditorNome.trim() || "Não informado",
-                    emailResponsavel: emailResponsavelAuditoria || null,
-                    whatsappResponsavel: whatsappResponsavelFormatado || null,
-                    nomeTstResponsavel: formulario.nomeTstResponsavel || contatosEmpresaAuditoria.tstResponsavel || null,
-                    emailTstResponsavel: emailTstAuditoria || null,
-                    whatsappTstResponsavel: whatsappTstFormatado || null,
-                    textoEnvio: textoNotificacaoResponsavel,
-                    complementos: formulario.acaoRecomendada ? [formulario.acaoRecomendada.trim()] : [],
-                },
-            };
+            const payload = montarPayloadAuditoriaCampoDireta({
+                formulario,
+                resultado,
+                categoriaAtual,
+                tipoAtual,
+                tokenParametro,
+                contatosEmpresaAuditoria,
+                emailResponsavelAuditoria,
+                whatsappResponsavelFormatado,
+                emailTstAuditoria,
+                whatsappTstFormatado,
+                textoNotificacaoResponsavel,
+                fotoAntesUrl,
+                fotoDepoisUrl,
+            });
 
             const tokenAuditoriaCampo = obterParametroUrl("token") || obterParametroUrl("chave");
             let data = null;
@@ -577,7 +351,7 @@ export function NovaAuditoriaCampoDireta({ usuario = null, onAuditoriaSalva, emp
 
                 data = dadosRpc;
             } else if (usuario) {
-                const numeroAuditoriaInterna = await gerarNumeroAuditoria();
+                const numeroAuditoriaInterna = await gerarNumeroAuditoriaCampoDireta(supabase);
                 const payloadInterno = {
                     ...payload,
                     empresa_id: empresaSelecionadaAuditoria?.id || null,
