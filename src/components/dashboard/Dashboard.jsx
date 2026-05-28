@@ -967,6 +967,12 @@ export function Dashboard({
             : "A prévia da Seção 2 mostra somente os quadros do Dashboard SST. Ative os quadros para visualizar a configuração."
         : "Nenhum quadro selecionado para o Dashboard SST. Abra Personalizar painel e escolha as informações que deseja exibir.";
 
+    const obterClasseTamanhoCartaDashboard = useCallback((chaveOuTamanho) => {
+        const tamanhoSelecionado = tamanhosCartasDashboard[chaveOuTamanho] || chaveOuTamanho || "padrao";
+
+        return classeTamanhoCartaDashboard(tamanhoSelecionado);
+    }, [tamanhosCartasDashboard]);
+
     const renderBlocoDashboard = (chave) => (
         <DashboardBlocoConteudo
             chave={chave}
@@ -975,7 +981,8 @@ export function Dashboard({
             storagePercentual={storagePercentual}
             totalStorageLabel={totalStorageLabel}
             storageLimiteLabelDashboard={storageLimiteLabelDashboard}
-            classeTamanhoCartaDashboard={classeTamanhoCartaDashboard}
+            classeTamanhoCartaDashboard={obterClasseTamanhoCartaDashboard}
+            tamanhosCartasDashboard={tamanhosCartasDashboard}
             estiloCartaDashboard={estiloCartaDashboard}
             auditoriasCampoMes={auditoriasCampoMes}
             mediaConformidadeCampo={mediaConformidadeCampo}
