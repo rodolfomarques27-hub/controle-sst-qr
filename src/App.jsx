@@ -124,6 +124,7 @@ import {
     baixarCSV,
     baixarPDF,
 } from "./services/exportacaoService";
+import { reduzirFotoParaAuditoria } from "./services/imagemService";
 import {
     painelPadraoDashboard,
     cartasPadraoDashboard,
