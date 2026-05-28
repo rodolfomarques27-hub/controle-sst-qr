@@ -103,63 +103,6 @@ VITE_SUPABASE_ANON_KEY=SUA_CHAVE_ANON_PUBLICA`;
     );
 }
 
-async function reduzirFotoParaAuditoria(arquivo, opcoes = {}) {
-    if (!arquivo || !String(arquivo.type || "").startsWith("image/")) return arquivo;
-
-    const {
-        maxLado = 1600,
-        qualidadeInicial = 0.78,
-        alvoBytes = 900 * 1024,
-    } = opcoes;
-
-    if (Number(arquivo.size || 0) <= alvoBytes) return arquivo;
-
-    try {
-        const dataUrl = await new Promise((resolve, reject) => {
-            const reader = new FileReader();
-            reader.onload = () => resolve(reader.result);
-            reader.onerror = reject;
-            reader.readAsDataURL(arquivo);
-        });
-
-        const imagem = await new Promise((resolve, reject) => {
-            const img = new Image();
-            img.onload = () => resolve(img);
-            img.onerror = reject;
-            img.src = dataUrl;
-        });
-
-        const escala = Math.min(1, maxLado / Math.max(imagem.width || maxLado, imagem.height || maxLado));
-        const largura = Math.max(1, Math.round((imagem.width || maxLado) * escala));
-        const altura = Math.max(1, Math.round((imagem.height || maxLado) * escala));
-        const canvas = document.createElement("canvas");
-        canvas.width = largura;
-        canvas.height = altura;
-        const ctx = canvas.getContext("2d");
-        ctx.drawImage(imagem, 0, 0, largura, altura);
-
-        const gerarBlob = (qualidade) => new Promise((resolve) => canvas.toBlob(resolve, "image/jpeg", qualidade));
-        let qualidade = qualidadeInicial;
-        let blob = await gerarBlob(qualidade);
-
-        while (blob && blob.size > alvoBytes && qualidade > 0.46) {
-            qualidade -= 0.08;
-            blob = await gerarBlob(qualidade);
-        }
-
-        if (!blob) return arquivo;
-
-        const nomeBase = sanitizarNomeArquivo(arquivo.name || "foto-auditoria.jpg").replace(/\.[^.]+$/, "");
-        return new File([blob], `${nomeBase}-otimizada.jpg`, {
-            type: "image/jpeg",
-            lastModified: Date.now(),
-        });
-    } catch (error) {
-        console.warn("Não foi possível reduzir a foto da auditoria.", error);
-        return arquivo;
-    }
-}
-
 export function StatusPill({ status, small = false }) {
     const Icon = status.icon;
     const textoStatus =
