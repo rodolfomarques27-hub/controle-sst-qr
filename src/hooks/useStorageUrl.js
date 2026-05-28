@@ -1,26 +1,54 @@
 import { useEffect, useState } from "react";
 import { criarUrlAssinadaStorage } from "../services/supabaseServices";
 
+function valorEhUrlFinal(valor) {
+    const texto = String(valor || "").trim();
+
+    return (
+        /^https?:\/\//i.test(texto) ||
+        texto.startsWith("blob:") ||
+        texto.startsWith("data:")
+    );
+}
+
 export function useStorageUrl(bucket, caminhoOuUrl, validadeSegundos = 600) {
     const [url, setUrl] = useState("");
 
     useEffect(() => {
-        let ativo = true;
+        let cancelado = false;
 
         async function carregarUrl() {
-            if (!caminhoOuUrl) {
-                if (ativo) setUrl("");
+            const valor = String(caminhoOuUrl || "").trim();
+
+            if (!valor) {
+                setUrl("");
                 return;
             }
 
-            const gerada = await criarUrlAssinadaStorage(bucket, caminhoOuUrl, validadeSegundos);
-            if (ativo) setUrl(gerada);
+            if (valorEhUrlFinal(valor)) {
+                setUrl(valor);
+                return;
+            }
+
+            try {
+                const urlAssinada = await criarUrlAssinadaStorage(bucket, valor, validadeSegundos);
+
+                if (!cancelado) {
+                    setUrl(urlAssinada || "");
+                }
+            } catch (error) {
+                console.warn(`Erro ao gerar URL assinada do bucket ${bucket}:`, error?.message || error);
+
+                if (!cancelado) {
+                    setUrl("");
+                }
+            }
         }
 
         carregarUrl();
 
         return () => {
-            ativo = false;
+            cancelado = true;
         };
     }, [bucket, caminhoOuUrl, validadeSegundos]);
 
