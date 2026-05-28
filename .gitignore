@@ -26,3 +26,4 @@ dist-ssr
 .vs/ 
 /.gitignore
 /eslint.config.js
+supabase/.temp/
