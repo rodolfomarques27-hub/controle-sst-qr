@@ -21,7 +21,7 @@ import {
 import { LoginScreen } from "./components/LoginScreen";
 import { MobilizacaoBadge } from "./components/MobilizacaoBadge";
 import { Requisitos } from "./components/Requisitos";
-import { DashboardCard } from "./components/dashboard/DashboardCard";
+import { DashboardCardsGrid } from "./components/dashboard/DashboardCardsGrid";
 import { DashboardControles } from "./components/dashboard/DashboardControles";
 import { DashboardPendencias } from "./components/dashboard/DashboardPendencias";
 import { DashboardConformidade } from "./components/dashboard/DashboardConformidade";
@@ -1149,28 +1149,15 @@ function Dashboard({
     const renderBlocoDashboard = (chave) => {
         if (chave === "cards") {
             return (
-                <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
-                    {cardsVisiveis.length === 0 ? (
-                        <Card className="md:col-span-2 xl:col-span-5">
-                            <div className="rounded-2xl border border-dashed border-slate-300 p-5 text-center text-sm text-slate-500">
-                                Nenhuma carta principal selecionada. Abra Personalizar painel e escolha as cartas que deseja exibir.
-                            </div>
-                        </Card>
-                    ) : (
-                        cardsVisiveis.map((item) => (
-                            <DashboardCard
-                                key={item.chave}
-                                item={item}
-                                storageStatusDashboard={storageStatusDashboard}
-                                storagePercentual={storagePercentual}
-                                totalStorageLabel={totalStorageLabel}
-                                storageLimiteLabelDashboard={storageLimiteLabelDashboard}
-                                classeTamanhoCartaDashboard={classeTamanhoCartaDashboard}
-                                estiloCartaDashboard={estiloCartaDashboard}
-                            />
-                        ))
-                    )}
-                </div>
+                <DashboardCardsGrid
+                    cardsVisiveis={cardsVisiveis}
+                    storageStatusDashboard={storageStatusDashboard}
+                    storagePercentual={storagePercentual}
+                    totalStorageLabel={totalStorageLabel}
+                    storageLimiteLabelDashboard={storageLimiteLabelDashboard}
+                    classeTamanhoCartaDashboard={classeTamanhoCartaDashboard}
+                    estiloCartaDashboard={estiloCartaDashboard}
+                />
             );
         }
 
