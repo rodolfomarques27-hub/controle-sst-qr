@@ -24,6 +24,7 @@ import { Requisitos } from "./components/Requisitos";
 import { DashboardCardsGrid } from "./components/dashboard/DashboardCardsGrid";
 import { DashboardBlocosGrid } from "./components/dashboard/DashboardBlocosGrid";
 import { DashboardHeaderAcoes } from "./components/dashboard/DashboardHeaderAcoes";
+import { DashboardPreviewFiltro } from "./components/dashboard/DashboardPreviewFiltro";
 import { DashboardControles } from "./components/dashboard/DashboardControles";
 import { DashboardPendencias } from "./components/dashboard/DashboardPendencias";
 import { DashboardConformidade } from "./components/dashboard/DashboardConformidade";
@@ -1318,18 +1319,10 @@ function Dashboard({
                 prepararArrastePainel={prepararArrastePainel}
             />
 
-            {mostrarFiltroPainel && (
-                <div className={classNames(
-                    "mb-3 mt-6 rounded-2xl px-4 py-3 text-sm font-semibold ring-1",
-                    abaPersonalizacaoPainel === "cartas"
-                        ? "bg-blue-50 text-blue-800 ring-blue-200"
-                        : "bg-emerald-50 text-emerald-800 ring-emerald-200"
-                )}>
-                    Prévia filtrada: {abaPersonalizacaoPainel === "cartas"
-                        ? "mostrando somente as cartas principais do Dashboard SST."
-                        : "mostrando somente os quadros do Dashboard SST."}
-                </div>
-            )}
+            <DashboardPreviewFiltro
+                mostrarFiltroPainel={mostrarFiltroPainel}
+                abaPersonalizacaoPainel={abaPersonalizacaoPainel}
+            />
 
             <DashboardBlocosGrid
                 mostrarFiltroPainel={mostrarFiltroPainel}
