@@ -23,6 +23,7 @@ import { MobilizacaoBadge } from "./components/MobilizacaoBadge";
 import { Requisitos } from "./components/Requisitos";
 import { DashboardCard } from "./components/dashboard/DashboardCard";
 import { DashboardControles } from "./components/dashboard/DashboardControles";
+import { DashboardBlocoRecolhivel } from "./components/dashboard/DashboardBlocoRecolhivel";
 import { FileUploadAviso, validarArquivoAntesUpload, validarListaArquivosAntesUpload } from "./components/FileUploadAviso";
 import { PreviaNotificacaoAuditoriaCampo } from "./components/auditoria/PreviaNotificacaoAuditoriaCampo";
 import { AuditoriaAcessoNegado, AuditoriaBloqueada } from "./components/auditoria/AuditoriaPermissao";
@@ -1138,34 +1139,6 @@ function Dashboard({
         </div>
     );
 
-    const CardDashboardRecolhivel = ({ chaveBloco, titulo, subtitulo, badge, children }) => {
-        const recolhido = Boolean(blocosRecolhidosDashboard[chaveBloco]);
-
-        return (
-            <Card className="h-full">
-                <div className={classNames("flex flex-col justify-between gap-3 md:flex-row md:items-start", recolhido ? "mb-0" : "mb-4")}>
-                    <div className="min-w-0">
-                        <h2 className="text-lg font-bold text-slate-950">{titulo}</h2>
-                        {subtitulo && <p className="mt-1 text-sm text-slate-500">{subtitulo}</p>}
-                    </div>
-                    <div className="flex shrink-0 flex-wrap items-center gap-2">
-                        {badge}
-                        <button
-                            type="button"
-                            onClick={() => alternarBlocoRecolhidoDashboard(chaveBloco)}
-                            className="inline-flex items-center gap-1 rounded-full bg-white px-3 py-1.5 text-xs font-bold text-slate-700 ring-1 ring-slate-200 hover:bg-slate-50"
-                        >
-                            {recolhido ? <ChevronDown className="h-3.5 w-3.5" /> : <ChevronUp className="h-3.5 w-3.5" />}
-                            {recolhido ? "Abrir" : "Recolher"}
-                        </button>
-                    </div>
-                </div>
-
-                {!recolhido && children}
-            </Card>
-        );
-    };
-
     const renderBlocoDashboard = (chave) => {
         if (chave === "cards") {
             return (
@@ -1196,8 +1169,10 @@ function Dashboard({
 
         if (chave === "auditoriasCampo") {
             return (
-                <CardDashboardRecolhivel
+                <DashboardBlocoRecolhivel
                     chaveBloco="auditoriasCampo"
+                    blocosRecolhidosDashboard={blocosRecolhidosDashboard}
+                    alternarBlocoRecolhidoDashboard={alternarBlocoRecolhidoDashboard}
                     titulo="Auditorias de campo"
                     subtitulo="Histórico mensal de auditorias realizadas via QR Code por colaborador e empresa."
                     badge={(
@@ -1262,14 +1237,16 @@ function Dashboard({
                             </tbody>
                         </table>
                     </div>
-                </CardDashboardRecolhivel>
+                </DashboardBlocoRecolhivel>
             );
         }
 
         if (chave === "topDesviosCampo") {
             return (
-                <CardDashboardRecolhivel
+                <DashboardBlocoRecolhivel
                     chaveBloco="topDesviosCampo"
+                    blocosRecolhidosDashboard={blocosRecolhidosDashboard}
+                    alternarBlocoRecolhidoDashboard={alternarBlocoRecolhidoDashboard}
                     titulo="Top 5 desvios"
                     subtitulo="Principais tipos de desvios registrados nas auditorias de campo."
                     badge={(
@@ -1296,14 +1273,16 @@ function Dashboard({
                             </div>
                         ))}
                     </div>
-                </CardDashboardRecolhivel>
+                </DashboardBlocoRecolhivel>
             );
         }
 
         if (chave === "pendencias") {
             return (
-                <CardDashboardRecolhivel
+                <DashboardBlocoRecolhivel
                     chaveBloco="pendencias"
+                    blocosRecolhidosDashboard={blocosRecolhidosDashboard}
+                    alternarBlocoRecolhidoDashboard={alternarBlocoRecolhidoDashboard}
                     titulo="Pendências críticas"
                     subtitulo="Treinamentos pendentes, vencidos ou a vencer em até 30 dias."
                     badge={(
@@ -1384,14 +1363,16 @@ function Dashboard({
                             </tbody>
                         </table>
                     </div>
-                </CardDashboardRecolhivel>
+                </DashboardBlocoRecolhivel>
             );
         }
 
         if (chave === "conformidade") {
             return (
-                <CardDashboardRecolhivel
+                <DashboardBlocoRecolhivel
                     chaveBloco="conformidade"
+                    blocosRecolhidosDashboard={blocosRecolhidosDashboard}
+                    alternarBlocoRecolhidoDashboard={alternarBlocoRecolhidoDashboard}
                     titulo="Resumo de conformidade"
                     subtitulo="Baseado nos treinamentos exigidos para a função, incluindo os ainda não enviados."
                 >
@@ -1415,14 +1396,16 @@ function Dashboard({
                     <div className="mt-6 rounded-2xl bg-slate-50 p-4 text-sm text-slate-600">
                         <strong className="text-slate-900">Regra do sistema:</strong> pendente indica ausência de certificado; vencido bloqueia a atividade; a vencer em até 30 dias gera alerta preventivo; em dia libera a consulta no QR Code.
                     </div>
-                </CardDashboardRecolhivel>
+                </DashboardBlocoRecolhivel>
             );
         }
 
         if (chave === "rankingEmpresas") {
             return (
-                <CardDashboardRecolhivel
+                <DashboardBlocoRecolhivel
                     chaveBloco="rankingEmpresas"
+                    blocosRecolhidosDashboard={blocosRecolhidosDashboard}
+                    alternarBlocoRecolhidoDashboard={alternarBlocoRecolhidoDashboard}
                     titulo="Ranking de pendências por empresa"
                     subtitulo="Tabela com tamanho e posição configuráveis no painel. Use Destaque para ocupar a linha inteira."
                     badge={(
@@ -1482,14 +1465,16 @@ function Dashboard({
                             </table>
                         </div>
                     )}
-                </CardDashboardRecolhivel>
+                </DashboardBlocoRecolhivel>
             );
         }
 
         if (chave === "colaboradoresFuncao") {
             return (
-                <CardDashboardRecolhivel
+                <DashboardBlocoRecolhivel
                     chaveBloco="colaboradoresFuncao"
+                    blocosRecolhidosDashboard={blocosRecolhidosDashboard}
+                    alternarBlocoRecolhidoDashboard={alternarBlocoRecolhidoDashboard}
                     titulo="Colaboradores mobilizados por função"
                     subtitulo="Conta apenas ativos, mobilizados, liberados ou com pendência não bloqueante."
                     badge={(
@@ -1521,14 +1506,16 @@ function Dashboard({
                             ))
                         )}
                     </div>
-                </CardDashboardRecolhivel>
+                </DashboardBlocoRecolhivel>
             );
         }
 
         if (chave === "alertas") {
             return (
-                <CardDashboardRecolhivel
+                <DashboardBlocoRecolhivel
                     chaveBloco="alertas"
+                    blocosRecolhidosDashboard={blocosRecolhidosDashboard}
+                    alternarBlocoRecolhidoDashboard={alternarBlocoRecolhidoDashboard}
                     titulo="Alertas importantes"
                     subtitulo="Itens que exigem atenção imediata."
                     badge={(
@@ -1549,14 +1536,16 @@ function Dashboard({
                             ))
                         )}
                     </div>
-                </CardDashboardRecolhivel>
+                </DashboardBlocoRecolhivel>
             );
         }
 
         if (chave === "documentosTipo") {
             return (
-                <CardDashboardRecolhivel
+                <DashboardBlocoRecolhivel
                     chaveBloco="documentosTipo"
+                    blocosRecolhidosDashboard={blocosRecolhidosDashboard}
+                    alternarBlocoRecolhidoDashboard={alternarBlocoRecolhidoDashboard}
                     titulo="Documentos por tipo"
                     subtitulo="Resumo dos documentos empresariais."
                     badge={(
@@ -1582,14 +1571,16 @@ function Dashboard({
                             ))
                         )}
                     </div>
-                </CardDashboardRecolhivel>
+                </DashboardBlocoRecolhivel>
             );
         }
 
         if (chave === "ultimosDocumentos") {
             return (
-                <CardDashboardRecolhivel
+                <DashboardBlocoRecolhivel
                     chaveBloco="ultimosDocumentos"
+                    blocosRecolhidosDashboard={blocosRecolhidosDashboard}
+                    alternarBlocoRecolhidoDashboard={alternarBlocoRecolhidoDashboard}
                     titulo="Últimos documentos enviados"
                     subtitulo="Certificados e documentos empresariais mais recentes."
                     badge={(
@@ -1615,7 +1606,7 @@ function Dashboard({
                             ))
                         )}
                     </div>
-                </CardDashboardRecolhivel>
+                </DashboardBlocoRecolhivel>
             );
         }
 
@@ -1676,7 +1667,7 @@ function Dashboard({
                 setBlocosRecolhidosDashboard={setBlocosRecolhidosDashboard}
                 setOrdemBlocosDashboard={setOrdemBlocosDashboard}
                 setOrdemCartasDashboard={setOrdemCartasDashboard}
-                opcoesCartasOrdenadasDashboard={opcoesCartasOrdenadasDashboard}
+                opcoesCartasOrdenadasDashboard={cardsOrdenados}
                 opcoesBlocosOrdenadasDashboard={opcoesBlocosOrdenadasDashboard}
                 cartaArrastandoDashboard={cartaArrastandoDashboard}
                 setCartaArrastandoDashboard={setCartaArrastandoDashboard}

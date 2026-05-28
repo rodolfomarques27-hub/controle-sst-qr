@@ -244,7 +244,7 @@ export function DashboardControles({
                     </div>
 
                     <div className="grid gap-3 lg:grid-cols-2">
-                        {cardsOrdenados.map((opcao, index) => {
+                        {opcoesCartasOrdenadasDashboard.map((opcao, index) => {
                             const ativo = cartasVisiveisDashboard[opcao.chave] !== false;
                             const tamanhoAtual = tamanhosCartasDashboard[opcao.chave] || "padrao";
 
@@ -300,7 +300,7 @@ export function DashboardControles({
                                             <button
                                                 type="button"
                                                 onClick={() => moverCartaPainel(opcao.chave, 1)}
-                                                disabled={index === cardsOrdenados.length - 1}
+                                                disabled={index === opcoesCartasOrdenadasDashboard.length - 1}
                                                 className="rounded-lg bg-white px-2 py-1 text-xs font-bold text-slate-600 ring-1 ring-slate-200 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40"
                                                 title="Mover para a direita / para baixo"
                                             >
