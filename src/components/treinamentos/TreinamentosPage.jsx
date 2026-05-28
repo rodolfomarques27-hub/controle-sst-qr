@@ -15,6 +15,7 @@ import { FileUploadAviso, validarArquivoAntesUpload, validarListaArquivosAntesUp
 import { AlertasTstTreinamentos } from "./AlertasTstTreinamentos";
 import {
     avaliarTreinamentosColaborador,
+    statusGeral,
     treinamentoSemValidade,
     statusDocumento,
     obterTreinamento,
