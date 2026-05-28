@@ -9667,31 +9667,29 @@ export default function App() {
 
         let ativo = true;
 
-        const gerarUrlAssinadaFotoColaboradorPublica = async (valorFoto) => {
-            if (!valorFoto) return "";
+        const obterFotoColaboradorQrPorEdgeFunction = async (tokenConsulta) => {
+            const tokenSeguro = String(tokenConsulta || "").trim();
 
-            const textoFoto = String(valorFoto || "").trim();
+            if (!tokenSeguro) return "";
 
-            if (!textoFoto) return "";
+            try {
+                const { data, error } = await supabase.functions.invoke("gerar-foto-colaborador-qr", {
+                    body: { token: tokenSeguro },
+                });
 
-            if (/^https?:\/\//i.test(textoFoto) || textoFoto.startsWith("blob:")) {
-                return textoFoto;
-            }
+                if (error || data?.ok === false) {
+                    console.warn(
+                        "Erro ao obter foto pública do colaborador via Edge Function:",
+                        error?.message || data?.erro || "Falha ao gerar URL assinada da foto."
+                    );
+                    return "";
+                }
 
-            const caminhoFoto = extrairCaminhoStorage("fotos-colaboradores", textoFoto) || textoFoto;
-
-            if (!caminhoFoto) return "";
-
-            const { data, error } = await supabase.storage
-                .from("fotos-colaboradores")
-                .createSignedUrl(caminhoFoto, 60 * 10);
-
-            if (error) {
-                console.warn("Erro ao gerar URL assinada da foto pública do colaborador:", error.message);
+                return data?.signedUrl || data?.fotoUrl || "";
+            } catch (error) {
+                console.warn("Falha inesperada ao obter foto pública do colaborador:", error?.message || error);
                 return "";
             }
-
-            return data?.signedUrl || "";
         };
 
         const normalizarConsultaPublicaComFoto = async (dadosConsulta) => {
@@ -9704,13 +9702,14 @@ export default function App() {
                 colaboradorConsulta.foto ||
                 "";
 
-            const fotoAssinada = await gerarUrlAssinadaFotoColaboradorPublica(fotoOriginal);
+            const fotoEhUrlFinal = /^https?:\/\//i.test(String(fotoOriginal || "")) || String(fotoOriginal || "").startsWith("blob:");
+            const fotoAssinada = fotoEhUrlFinal ? fotoOriginal : await obterFotoColaboradorQrPorEdgeFunction(tokenQr);
 
             return {
                 ...dadosConsulta,
                 colaborador: {
                     ...colaboradorConsulta,
-                    fotoUrl: fotoAssinada || fotoOriginal || "",
+                    fotoUrl: fotoAssinada || "",
                     fotoNome: colaboradorConsulta.fotoNome || colaboradorConsulta.foto_nome || "",
                     codigoFuncionario:
                         colaboradorConsulta.codigoFuncionario ||
