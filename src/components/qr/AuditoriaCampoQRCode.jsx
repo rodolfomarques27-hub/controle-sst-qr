@@ -1,8 +1,7 @@
 /* eslint-disable no-unused-vars */
 import React, { useMemo, useState } from "react";
 import { ClipboardCheck, Eye, EyeOff, Plus, Trash2 } from "lucide-react";
-import { supabase } from "../../lib/supabaseClient";
-import { FileUploadAviso, validarArquivoAntesUpload } from "../FileUploadAviso";
+import { FileUploadAviso } from "../FileUploadAviso";
 import {
     notificacaoPadraoAuditoriaCampo,
     montarPreviewNotificacaoAuditoriaCampo,
@@ -18,7 +17,13 @@ import {
     statusDesvioAuditoriaCampo,
     gravidadesAuditoriaCampo,
 } from "../../constants/sstConstants";
-import { classNames, sanitizarNomeArquivo } from "../../utils/sstUtils";
+import {
+    TOKEN_AUDITORIA_CAMPO_PUBLICA,
+    validarSenhaAuditoriaQr,
+    gerarNumeroAuditoriaQr,
+    salvarAuditoriaQrColaborador,
+} from "../../services/auditoriaQrColaboradorService";
+import { classNames } from "../../utils/sstUtils";
 
 export function statusGeralConsultaPublica(colaborador = {}, treinamentos = []) {
     return statusGeral({
@@ -28,11 +33,14 @@ export function statusGeralConsultaPublica(colaborador = {}, treinamentos = []) 
     });
 }
 
-
 export function AuditoriaCampoQRCode({ colaborador = {}, treinamentos = [], onAuditoriaSalva }) {
     const [aberta, setAberta] = useState(false);
     const [salvando, setSalvando] = useState(false);
     const [mensagem, setMensagem] = useState("");
+    const [senhaAuditoriaQr, setSenhaAuditoriaQr] = useState("");
+    const [acessoAuditoriaLiberado, setAcessoAuditoriaLiberado] = useState(false);
+    const [validandoAcessoAuditoria, setValidandoAcessoAuditoria] = useState(false);
+    const [mensagemAcessoAuditoria, setMensagemAcessoAuditoria] = useState("");
     const [respostas, setRespostas] = useState({
         epi: "conforme",
         frente_trabalho: "conforme",
@@ -105,38 +113,47 @@ export function AuditoriaCampoQRCode({ colaborador = {}, treinamentos = [], onAu
         setRespostas((atual) => ({ ...atual, [categoria]: resposta }));
     };
 
-    const gerarNumeroAuditoriaQRCode = async () => {
-        const { data, error } = await supabase.rpc("gerar_numero_auditoria_campo");
-        if (!error && data) return data;
-        const ano = new Date().getFullYear();
-        const sequenciaFallback = String(Date.now()).slice(-4);
-        return `AUD-${ano}-${sequenciaFallback}`;
-    };
+    const validarAcessoAuditoriaQRCode = async () => {
+        setMensagemAcessoAuditoria("");
 
-    const uploadFotoAuditoria = async (arquivo, auditoriaId, tipo) => {
-        if (!arquivo) return "";
-
-        const arquivoOtimizado = await reduzirFotoParaAuditoria(arquivo);
-
-        if (!validarArquivoAntesUpload(arquivoOtimizado, "fotoAuditoria")) {
-            throw new Error("Foto fora do tamanho permitido mesmo após a redução automática.");
+        if (!senhaAuditoriaQr.trim()) {
+            setMensagemAcessoAuditoria("Informe a senha de acesso da auditoria.");
+            return;
         }
 
-        const nomeArquivo = `auditorias-publicas/qr-colaborador/${auditoriaId}/${tipo}-${Date.now()}-${sanitizarNomeArquivo(arquivoOtimizado.name || "foto-auditoria.jpg")}`;
-        const { error } = await supabase.storage
-            .from("auditorias-campo")
-            .upload(nomeArquivo, arquivoOtimizado, {
-                upsert: true,
-                contentType: arquivoOtimizado.type || "image/jpeg",
+        setValidandoAcessoAuditoria(true);
+
+        try {
+            const resposta = await validarSenhaAuditoriaQr({
+                tokenAuditoria: TOKEN_AUDITORIA_CAMPO_PUBLICA,
+                senha: senhaAuditoriaQr,
             });
 
-        if (error) throw error;
+            if (resposta?.autorizado !== true) {
+                setMensagemAcessoAuditoria(resposta?.mensagem || "Senha inválida para abrir a auditoria.");
+                setAcessoAuditoriaLiberado(false);
+                return;
+            }
 
-        return nomeArquivo;
+            setAcessoAuditoriaLiberado(true);
+            setMensagemAcessoAuditoria("Acesso liberado. Preencha a auditoria abaixo.");
+        } catch (error) {
+            setMensagemAcessoAuditoria(error?.message || "Não foi possível validar a senha da auditoria.");
+            setAcessoAuditoriaLiberado(false);
+        } finally {
+            setValidandoAcessoAuditoria(false);
+        }
     };
+
+    const gerarNumeroAuditoriaQRCode = gerarNumeroAuditoriaQr;
 
     const salvarAuditoria = async () => {
         setMensagem("");
+
+        if (!acessoAuditoriaLiberado) {
+            setMensagem("Informe e valide a senha da auditoria antes de salvar.");
+            return;
+        }
 
         if (precisaDesvio && !desvio.descricao.trim()) {
             setMensagem("Preencha a descrição do desvio antes de salvar a auditoria.");
@@ -213,63 +230,21 @@ export function AuditoriaCampoQRCode({ colaborador = {}, treinamentos = [], onAu
                 origem: "QR Code do colaborador",
             };
 
-            const auditoriaId = typeof crypto !== "undefined" && crypto.randomUUID
-                ? crypto.randomUUID()
-                : `${Date.now()}-${Math.random().toString(36).slice(2)}`;
-            const auditoriaCriada = {
-                id: auditoriaId,
-                ...auditoriaPayload,
-                created_at: new Date().toISOString(),
-            };
-
-            const { error: erroAuditoria } = await supabase
-                .from("auditorias_campo")
-                .insert(auditoriaCriada);
-
-            if (erroAuditoria) throw erroAuditoria;
-
-            let desvioCriado = null;
-
-            if (desvioPayloadBase) {
-                let fotoAntesUrl = "";
-                let fotoDepoisUrl = "";
-
-                try {
-                    fotoAntesUrl = await uploadFotoAuditoria(desvio.fotoAntes, auditoriaCriada.id, "antes");
-                    fotoDepoisUrl = await uploadFotoAuditoria(desvio.fotoDepois, auditoriaCriada.id, "depois");
-                } catch (erroFoto) {
-                    setMensagem(`Auditoria salva, mas a foto não foi enviada: ${erroFoto.message}`);
-                }
-
-                const desvioPayload = {
-                    ...desvioPayloadBase,
-                    auditoria_id: auditoriaCriada.id,
-                    colaborador_id: auditoriaPayload.colaborador_id,
-                    empresa_id: auditoriaPayload.empresa_id,
-                    foto_antes_url: fotoAntesUrl,
-                    foto_depois_url: fotoDepoisUrl,
-                };
-
-                const desvioId = typeof crypto !== "undefined" && crypto.randomUUID
-                    ? crypto.randomUUID()
-                    : `${Date.now()}-${Math.random().toString(36).slice(2)}`;
-                const desvioInserido = {
-                    id: desvioId,
-                    ...desvioPayload,
-                    created_at: new Date().toISOString(),
-                };
-
-                const { error: erroDesvio } = await supabase
-                    .from("auditoria_campo_desvios")
-                    .insert(desvioInserido);
-
-                if (erroDesvio) throw erroDesvio;
-                desvioCriado = desvioInserido;
-            }
+            const resultadoSalvamento = await salvarAuditoriaQrColaborador({
+                tokenAuditoria: TOKEN_AUDITORIA_CAMPO_PUBLICA,
+                senha: senhaAuditoriaQr,
+                tokenQr: auditoriaPayload.token_qr,
+                auditoria: auditoriaPayload,
+                desvio: desvioPayloadBase,
+                fotos: {
+                    antes: desvio.fotoAntes,
+                    depois: desvio.fotoDepois,
+                },
+            });
 
             const normalizada = normalizarAuditoriaCampo({
-                ...auditoriaCriada,
-                desvios: desvioCriado ? [desvioCriado] : [],
+                ...(resultadoSalvamento?.auditoria || auditoriaPayload),
+                desvios: resultadoSalvamento?.desvio ? [resultadoSalvamento.desvio] : [],
             });
 
             onAuditoriaSalva?.(normalizada);
@@ -281,6 +256,9 @@ export function AuditoriaCampoQRCode({ colaborador = {}, treinamentos = [], onAu
             setNotificacao(notificacaoPadraoAuditoriaCampo(colaborador, calcularResultadoAuditoriaCampo({ epi: "conforme", frente_trabalho: "conforme", comportamento_seguro: "conforme" })));
             setComplementoNotificacao("");
             setNotificacaoEdicaoAberta(false);
+            setAcessoAuditoriaLiberado(false);
+            setSenhaAuditoriaQr("");
+            setMensagemAcessoAuditoria("");
             setDesvio({
                 descricao: "",
                 gravidade: "Leve",
@@ -311,7 +289,18 @@ export function AuditoriaCampoQRCode({ colaborador = {}, treinamentos = [], onAu
                 </div>
                 <button
                     type="button"
-                    onClick={() => setAberta((valor) => !valor)}
+                    onClick={() => {
+                        setAberta((valor) => {
+                            const proximo = !valor;
+                            if (proximo) {
+                                setAcessoAuditoriaLiberado(false);
+                                setSenhaAuditoriaQr("");
+                                setMensagemAcessoAuditoria("");
+                                setMensagem("");
+                            }
+                            return proximo;
+                        });
+                    }}
                     className="inline-flex items-center justify-center gap-2 rounded-2xl bg-slate-950 px-4 py-3 text-sm font-bold text-white hover:bg-slate-800"
                 >
                     <ClipboardCheck className="h-4 w-4" />
@@ -327,6 +316,40 @@ export function AuditoriaCampoQRCode({ colaborador = {}, treinamentos = [], onAu
 
             {aberta && (
                 <div className="mt-5 space-y-5">
+                    {!acessoAuditoriaLiberado ? (
+                        <div className="rounded-3xl border border-blue-200 bg-blue-50 p-4">
+                            <h4 className="font-bold text-blue-950">Acesso à auditoria</h4>
+                            <p className="mt-1 text-sm text-blue-700">Informe a senha de auditoria para registrar checklist, desvios e evidências pelo QR Code do colaborador.</p>
+                            <div className="mt-4 grid gap-3 sm:grid-cols-[1fr_auto]">
+                                <input
+                                    type="password"
+                                    value={senhaAuditoriaQr}
+                                    onChange={(e) => setSenhaAuditoriaQr(e.target.value)}
+                                    onKeyDown={(e) => {
+                                        if (e.key === "Enter") {
+                                            validarAcessoAuditoriaQRCode();
+                                        }
+                                    }}
+                                    placeholder="Senha da auditoria"
+                                    className="w-full rounded-2xl border border-blue-100 bg-white px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-blue-200"
+                                />
+                                <button
+                                    type="button"
+                                    onClick={validarAcessoAuditoriaQRCode}
+                                    disabled={validandoAcessoAuditoria}
+                                    className="inline-flex items-center justify-center rounded-2xl bg-slate-950 px-4 py-3 text-sm font-bold text-white hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
+                                >
+                                    {validandoAcessoAuditoria ? "Validando..." : "Entrar"}
+                                </button>
+                            </div>
+                            {mensagemAcessoAuditoria && (
+                                <div className={classNames("mt-3 rounded-2xl px-4 py-3 text-sm font-semibold ring-1", acessoAuditoriaLiberado ? "bg-emerald-50 text-emerald-700 ring-emerald-200" : "bg-red-50 text-red-700 ring-red-200")}>
+                                    {mensagemAcessoAuditoria}
+                                </div>
+                            )}
+                        </div>
+                    ) : (
+                        <>
                     <div className="grid gap-3 md:grid-cols-3">
                         {categoriasAuditoriaCampo.map((categoria) => (
                             <div key={categoria.chave} className="rounded-2xl bg-slate-50 p-4 ring-1 ring-slate-200">
@@ -665,6 +688,8 @@ export function AuditoriaCampoQRCode({ colaborador = {}, treinamentos = [], onAu
                     >
                         {salvando ? "Salvando auditoria..." : "Salvar auditoria de campo"}
                     </button>
+                        </>
+                    )}
                 </div>
             )}
         </div>
