@@ -30,6 +30,7 @@ import { tiposAuditoriaCampoDireta } from "../../constants/sstConstants";
 import { normalizarTextoBusca, formatDate, formatarDataHora, classNames } from "../../utils/sstUtils";
 
 const TOKEN_AUDITORIA_CAMPO_PUBLICA_PADRAO = "TOKEN-AUDITORIA-CAMPO-2026";
+const hoje = new Date();
 
 export function DashboardAuditoriaCampo({
     auditoriasCampo = [],
