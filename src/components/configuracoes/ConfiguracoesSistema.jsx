@@ -300,6 +300,15 @@ export function ConfiguracoesSistema({ usuario = null, podeAcessarAuditoria = fa
         },
     ];
 
+    const secoesConfiguracoes = [
+        { chave: "config-eventos-auditoria", titulo: "Auditoria de sistema", descricao: "Eventos registrados e exibidos na auditoria.", icon: Settings },
+        { chave: "config-limites-carregamento", titulo: "Limites", descricao: "Quantidade de registros por tela/carga.", icon: SlidersHorizontal },
+        { chave: "config-auditoria-publica", titulo: "Auditoria pública", descricao: "Token, senha de referência e link público.", icon: KeyRound },
+        { chave: "config-seguranca-publica", titulo: "Segurança pública", descricao: "Checklist operacional do QR Code público.", icon: ShieldAlert },
+        { chave: "config-storage-privado", titulo: "Storage privado", descricao: "Buckets, URLs assinadas e arquivos sensíveis.", icon: HardDrive },
+        { chave: "config-status-etapa", titulo: "Status", descricao: "Resumo da configuração e usuário atual.", icon: CheckCircle2 },
+    ];
+
     return (
         <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
             <Header
@@ -338,13 +347,46 @@ export function ConfiguracoesSistema({ usuario = null, podeAcessarAuditoria = fa
                 })}
             </div>
 
+            <Card className="mt-6 border-blue-100 bg-blue-50/40">
+                <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+                    <div>
+                        <p className="text-xs font-black uppercase tracking-wide text-blue-700">Organização das configurações</p>
+                        <h2 className="mt-1 text-lg font-black text-slate-950">Seções rápidas do sistema</h2>
+                        <p className="mt-1 text-sm text-slate-600">Acesse rapidamente o grupo de configuração que deseja revisar.</p>
+                    </div>
+                    <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
+                        {secoesConfiguracoes.map((secao) => {
+                            const Icon = secao.icon;
+
+                            return (
+                                <a
+                                    key={secao.chave}
+                                    href={`#${secao.chave}`}
+                                    className="group rounded-2xl bg-white px-3 py-3 text-left ring-1 ring-blue-100 transition hover:-translate-y-0.5 hover:ring-blue-200"
+                                >
+                                    <div className="flex items-start gap-2">
+                                        <span className="rounded-xl bg-blue-50 p-2 text-blue-700 ring-1 ring-blue-100">
+                                            <Icon className="h-4 w-4" />
+                                        </span>
+                                        <span className="min-w-0">
+                                            <span className="block text-xs font-black text-slate-950 group-hover:text-blue-700">{secao.titulo}</span>
+                                            <span className="mt-0.5 block text-[11px] leading-snug text-slate-500">{secao.descricao}</span>
+                                        </span>
+                                    </div>
+                                </a>
+                            );
+                        })}
+                    </div>
+                </div>
+            </Card>
+
             <div className="mt-6 grid gap-6 xl:grid-cols-[1.25fr_0.75fr]">
                 <Card>
                     <div className="flex flex-col gap-3 border-b border-slate-100 pb-4 md:flex-row md:items-start md:justify-between">
                         <div>
                             <div className="flex items-center gap-2">
                                 <Settings className="h-5 w-5 text-slate-500" />
-                                <h2 className="text-lg font-black text-slate-950">Eventos da Auditoria de sistema</h2>
+                                <h2 id="config-eventos-auditoria" className="scroll-mt-24 text-lg font-black text-slate-950">Eventos da Auditoria de sistema</h2>
                             </div>
                             <p className="mt-1 text-sm text-slate-500">
                                 Escolha quais eventos o sistema deve registrar e exibir na Auditoria de sistema.
@@ -441,7 +483,7 @@ export function ConfiguracoesSistema({ usuario = null, podeAcessarAuditoria = fa
                             <div>
                                 <div className="flex items-center gap-2">
                                     <SlidersHorizontal className="h-5 w-5 text-slate-500" />
-                                    <h2 className="text-lg font-black text-slate-950">Limites de carregamento</h2>
+                                    <h2 id="config-limites-carregamento" className="scroll-mt-24 text-lg font-black text-slate-950">Limites de carregamento</h2>
                                 </div>
                                 <p className="mt-1 text-sm text-slate-500">
                                     Ajuste quantos registros cada tela deve buscar por carga para equilibrar velocidade e histórico disponível.
@@ -513,7 +555,7 @@ export function ConfiguracoesSistema({ usuario = null, podeAcessarAuditoria = fa
                             <div>
                                 <div className="flex items-center gap-2">
                                     <KeyRound className="h-5 w-5 text-slate-500" />
-                                    <h2 className="text-lg font-black text-slate-950">Auditoria pública e QR Code</h2>
+                                    <h2 id="config-auditoria-publica" className="scroll-mt-24 text-lg font-black text-slate-950">Auditoria pública e QR Code</h2>
                                 </div>
                                 <p className="mt-1 text-sm text-slate-500">
                                     Configure o token usado nos links públicos e deixe a senha de referência documentada para operação.
@@ -595,7 +637,7 @@ export function ConfiguracoesSistema({ usuario = null, podeAcessarAuditoria = fa
                             <div>
                                 <div className="flex items-center gap-2">
                                     <ShieldAlert className="h-5 w-5 text-slate-500" />
-                                    <h2 className="text-lg font-black text-slate-950">Revisão de segurança da Auditoria pública</h2>
+                                    <h2 id="config-seguranca-publica" className="scroll-mt-24 text-lg font-black text-slate-950">Revisão de segurança da Auditoria pública</h2>
                                 </div>
                                 <p className="mt-1 text-sm text-slate-500">
                                     Checklist operacional para evitar token padrão, senha fraca no processo e exposição indevida no QR Code.
@@ -644,7 +686,7 @@ export function ConfiguracoesSistema({ usuario = null, podeAcessarAuditoria = fa
                             <div>
                                 <div className="flex items-center gap-2">
                                     <HardDrive className="h-5 w-5 text-slate-500" />
-                                    <h2 className="text-lg font-black text-slate-950">Revisão de Storage e arquivos privados</h2>
+                                    <h2 id="config-storage-privado" className="scroll-mt-24 text-lg font-black text-slate-950">Revisão de Storage e arquivos privados</h2>
                                 </div>
                                 <p className="mt-1 text-sm text-slate-500">
                                     Checklist operacional para buckets, URLs assinadas e arquivos sensíveis do sistema SST.
@@ -705,7 +747,7 @@ export function ConfiguracoesSistema({ usuario = null, podeAcessarAuditoria = fa
                                 <CheckCircle2 className="h-5 w-5" />
                             </div>
                             <div>
-                                <h2 className="text-lg font-black text-slate-950">Status da etapa</h2>
+                                <h2 id="config-status-etapa" className="scroll-mt-24 text-lg font-black text-slate-950">Status da etapa</h2>
                                 <p className="mt-1 text-sm leading-relaxed text-slate-500">
                                     Esta tela centraliza as configurações sem alterar regras de login, RLS, Storage, upload ou QR público.
                                 </p>
