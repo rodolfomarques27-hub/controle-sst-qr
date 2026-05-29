@@ -1,0 +1,28 @@
+Roteiro 2 - Etapa 97 - Corrigir QR Codes de campo
+
+Objetivo:
+Corrigir erro ao salvar QR Code de máquina/equipamento:
+Could not find the 'token_publico' column of 'auditoria_campo_qrcodes' in the schema cache
+
+Arquivos:
+- supabase/sql/etapa97_corrigir_qrcodes_campo.sql
+
+Passos:
+1. Abrir Supabase > SQL Editor > New query.
+2. Colar o conteúdo do SQL etapa97_corrigir_qrcodes_campo.sql.
+3. Clicar em Run.
+4. Aguardar finalizar sem erro.
+5. Conferir no Table Editor se a tabela auditoria_campo_qrcodes tem token_publico.
+6. Rodar npm run build no projeto.
+7. Testar Dashboard Auditoria > QR Codes de campo.
+8. Criar QR Code de máquina/equipamento.
+9. Salvar QR.
+10. Copiar link.
+11. Abrir link público.
+12. Confirmar que o QR Code salvo aparece na lista.
+
+Teste esperado:
+- O erro token_publico não deve aparecer mais.
+- A tela não deve ficar branca.
+- O QR Code deve salvar no Supabase.
+- O link deve conter token, tipo, id, área/local/empresa quando preenchidos.
