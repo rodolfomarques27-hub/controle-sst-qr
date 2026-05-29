@@ -59,6 +59,8 @@ export function DashboardAuditoriaCampo({
     const [carregandoMaisQrcodesCampo, setCarregandoMaisQrcodesCampo] = useState(false);
     const [excluindoQrCampoId, setExcluindoQrCampoId] = useState(null);
     const [mensagemQrCampo, setMensagemQrCampo] = useState("");
+    const [buscaQrCampoSalvo, setBuscaQrCampoSalvo] = useState("");
+    const [filtroTipoQrCampoSalvo, setFiltroTipoQrCampoSalvo] = useState("todos");
     const [qrFormCampo, setQrFormCampo] = useState({
         tipo: "maquina",
         identificacao: "",
@@ -723,6 +725,73 @@ export function DashboardAuditoriaCampo({
         janela.print();
     };
 
+    const chaveQrCampoSalvo = (item) =>
+        String(item?.id || item?.codigo || item?.identificacao || "qr-campo")
+            .replace(/[^a-zA-Z0-9_-]+/g, "-")
+            .slice(0, 80);
+
+    const imprimirQrCampoSalvo = (item) => {
+        if (!item) return;
+
+        const chave = chaveQrCampoSalvo(item);
+        const elementoQr = document.querySelector(`[data-qrcode-campo-id="${chave}"] svg`);
+        const qrHtml = elementoQr?.outerHTML || "";
+        const identificacao = item.identificacao || item.codigo || "QR Code de campo";
+        const detalhes = [item.tipo_label || item.tipo, item.area, item.local, item.empresa_responsavel].filter(Boolean).join(" · ");
+        const link = item.link || "";
+        const janela = window.open("", "_blank", "width=720,height=760");
+
+        if (!janela) {
+            setMensagemQrCampo("O navegador bloqueou a janela de impressão. Libere pop-ups para imprimir o QR Code salvo.");
+            return;
+        }
+
+        janela.document.write(`<!doctype html><html><head><title>QR Code - ${identificacao}</title><style>body{font-family:Arial,sans-serif;margin:0;padding:32px;text-align:center;color:#0f172a}.card{border:1px solid #e2e8f0;border-radius:24px;padding:28px;display:inline-block;max-width:620px}.qr svg{width:230px;height:230px}.codigo{display:inline-block;margin-top:16px;border-radius:999px;background:#020617;color:#fff;padding:8px 14px;font-size:12px;font-weight:900;letter-spacing:.04em}.titulo{font-size:24px;font-weight:900;margin:18px 0 6px}.muted{color:#64748b;font-size:13px;word-break:break-all;line-height:1.45}.detalhes{font-size:14px;color:#334155;margin-bottom:12px}</style></head><body><div class="card"><div class="qr">${qrHtml}</div><div class="codigo">${item.codigo || "SEM CÓDIGO"}</div><div class="titulo">${identificacao}</div><div class="detalhes">${detalhes || "Sem local vinculado"}</div><div class="muted">${link}</div></div></body></html>`);
+        janela.document.close();
+        janela.focus();
+        janela.print();
+    };
+
+    const tiposFiltroQrcodesCampo = useMemo(() => {
+        const tipos = qrcodesCampo.reduce((acc, item) => {
+            const valor = item.tipo || "sem_tipo";
+            const label = item.tipo_label || item.tipo || "Sem tipo";
+
+            if (!acc.some((opcao) => opcao.valor === valor)) {
+                acc.push({ valor, label });
+            }
+
+            return acc;
+        }, []);
+
+        return tipos.sort((a, b) => a.label.localeCompare(b.label));
+    }, [qrcodesCampo]);
+
+    const qrcodesCampoFiltrados = useMemo(() => {
+        const termo = normalizarTextoBusca(buscaQrCampoSalvo);
+
+        return qrcodesCampo.filter((item) => {
+            const tipoConfere = filtroTipoQrCampoSalvo === "todos" || String(item.tipo || "") === filtroTipoQrCampoSalvo;
+            const textoBusca = normalizarTextoBusca([
+                item.codigo,
+                item.tipo,
+                item.tipo_label,
+                item.identificacao,
+                item.area,
+                item.local,
+                item.empresa_responsavel,
+                item.link,
+            ].filter(Boolean).join(" "));
+
+            return tipoConfere && (!termo || textoBusca.includes(termo));
+        });
+    }, [qrcodesCampo, buscaQrCampoSalvo, filtroTipoQrCampoSalvo]);
+
+    const limparFiltrosQrcodesCampo = () => {
+        setBuscaQrCampoSalvo("");
+        setFiltroTipoQrCampoSalvo("todos");
+    };
+
     const dadosResumoVisualAuditoria = useMemo(() => {
         const total = auditoriasNormalizadas.length || 1;
         const porStatus = Object.values(auditoriasNormalizadas.reduce((acc, item) => {
@@ -1167,13 +1236,46 @@ export function DashboardAuditoriaCampo({
                     </div>
 
                     <div className="rounded-3xl border border-slate-200 bg-white p-4">
-                        <div className="flex items-center justify-between gap-2">
+                        <div className="flex flex-wrap items-start justify-between gap-3">
                             <div>
                                 <p className="text-sm font-black text-slate-950">QR Codes salvos</p>
                                 <p className="text-xs text-slate-500">Consulta do banco de dados de QR Codes gerados.</p>
                             </div>
                             <button type="button" onClick={() => carregarQrcodesCampo()} disabled={carregandoQrcodesCampo} className="rounded-xl bg-slate-50 px-3 py-2 text-xs font-bold text-slate-600 ring-1 ring-slate-200 disabled:cursor-not-allowed disabled:opacity-60">{qrcodesCampoCarregados ? "Atualizar" : "Carregar QR Codes"}</button>
                         </div>
+
+                        {qrcodesCampoCarregados && qrcodesCampo.length > 0 && (
+                            <div className="mt-3 grid gap-2 rounded-2xl bg-slate-50 p-3 ring-1 ring-slate-100 md:grid-cols-[1fr_220px_auto]">
+                                <label className="relative block">
+                                    <span className="sr-only">Pesquisar QR Code</span>
+                                    <input
+                                        value={buscaQrCampoSalvo}
+                                        onChange={(evento) => setBuscaQrCampoSalvo(evento.target.value)}
+                                        placeholder="Pesquisar por código, identificação, área, local ou empresa"
+                                        className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 pr-9 text-sm font-semibold text-slate-700 outline-none focus:border-blue-300 focus:ring-2 focus:ring-blue-100"
+                                    />
+                                    <Filter className="pointer-events-none absolute right-3 top-2.5 h-4 w-4 text-slate-400" />
+                                </label>
+                                <select
+                                    value={filtroTipoQrCampoSalvo}
+                                    onChange={(evento) => setFiltroTipoQrCampoSalvo(evento.target.value)}
+                                    className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-bold text-slate-700 outline-none focus:border-blue-300 focus:ring-2 focus:ring-blue-100"
+                                >
+                                    <option value="todos">Todos os tipos</option>
+                                    {tiposFiltroQrcodesCampo.map((tipo) => (
+                                        <option key={tipo.valor} value={tipo.valor}>{tipo.label}</option>
+                                    ))}
+                                </select>
+                                <button
+                                    type="button"
+                                    onClick={limparFiltrosQrcodesCampo}
+                                    className="rounded-xl bg-white px-3 py-2 text-xs font-bold text-slate-600 ring-1 ring-slate-200 hover:bg-slate-50"
+                                >
+                                    Limpar filtro
+                                </button>
+                            </div>
+                        )}
+
                         <div className="mt-3 max-h-[520px] overflow-auto pr-1 scrollbar-discreta">
                             {carregandoQrcodesCampo ? <p className="rounded-2xl bg-slate-50 p-4 text-sm text-slate-500">Carregando QR Codes...</p> : !qrcodesCampoCarregados ? (
                                 <div className="rounded-2xl border border-dashed border-slate-300 bg-slate-50/70 p-4 text-center">
@@ -1183,10 +1285,15 @@ export function DashboardAuditoriaCampo({
                                 </div>
                             ) : qrcodesCampo.length === 0 ? <p className="rounded-2xl border border-dashed border-slate-300 p-4 text-center text-sm text-slate-500">Nenhum QR Code salvo ainda.</p> : (
                                 <div className="space-y-2">
-                                    <p className="rounded-2xl bg-blue-50 px-3 py-2 text-xs font-bold text-blue-700 ring-1 ring-blue-100">Exibindo {qrcodesCampo.length} QR Code(s) salvo(s).</p>
-                                    {qrcodesCampo.map((item) => (
+                                    <p className="rounded-2xl bg-blue-50 px-3 py-2 text-xs font-bold text-blue-700 ring-1 ring-blue-100">Exibindo {qrcodesCampoFiltrados.length} de {qrcodesCampo.length} QR Code(s) salvo(s).</p>
+                                    {qrcodesCampoFiltrados.length === 0 ? (
+                                        <p className="rounded-2xl border border-dashed border-slate-300 bg-white p-4 text-center text-sm font-semibold text-slate-500">Nenhum QR Code encontrado com os filtros aplicados.</p>
+                                    ) : qrcodesCampoFiltrados.map((item) => {
+                                        const chaveQrSalvo = chaveQrCampoSalvo(item);
+
+                                        return (
                                         <div key={item.id || item.codigo} className="grid gap-3 rounded-2xl bg-slate-50 p-3 ring-1 ring-slate-100 sm:grid-cols-[auto_1fr]">
-                                            <div className="rounded-2xl bg-white p-2 ring-1 ring-slate-200"><QRCodeSVG value={item.link || ""} size={74} level="M" /></div>
+                                            <div data-qrcode-campo-id={chaveQrSalvo} className="rounded-2xl bg-white p-2 ring-1 ring-slate-200"><QRCodeSVG value={item.link || ""} size={74} level="M" /></div>
                                             <div className="min-w-0">
                                                 <div className="flex flex-wrap items-center gap-2">
                                                     <span className="rounded-full bg-slate-950 px-2 py-1 text-[10px] font-black uppercase text-white">{item.codigo || "Sem código"}</span>
@@ -1205,6 +1312,14 @@ export function DashboardAuditoriaCampo({
                                                     </button>
                                                     <button
                                                         type="button"
+                                                        onClick={() => imprimirQrCampoSalvo(item)}
+                                                        className="inline-flex items-center gap-2 rounded-xl bg-white px-3 py-2 text-xs font-bold text-slate-700 ring-1 ring-slate-200 hover:bg-slate-50"
+                                                    >
+                                                        <Download className="h-3.5 w-3.5" />
+                                                        Imprimir
+                                                    </button>
+                                                    <button
+                                                        type="button"
                                                         onClick={() => excluirQrCampo(item)}
                                                         disabled={excluindoQrCampoId === (item.id || item.codigo || item.identificacao)}
                                                         className="inline-flex items-center gap-2 rounded-xl bg-red-50 px-3 py-2 text-xs font-bold text-red-700 ring-1 ring-red-100 hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-60"
@@ -1215,7 +1330,8 @@ export function DashboardAuditoriaCampo({
                                                 </div>
                                             </div>
                                         </div>
-                                    ))}
+                                        );
+                                    })}
                                     {existeMaisQrcodesCampo && (
                                         <button type="button" onClick={() => carregarQrcodesCampo({ append: true })} disabled={carregandoMaisQrcodesCampo} className="w-full rounded-2xl bg-white px-4 py-3 text-sm font-bold text-slate-700 ring-1 ring-slate-200 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60">
                                             {carregandoMaisQrcodesCampo ? "Carregando mais QR Codes..." : "Carregar mais QR Codes"}
