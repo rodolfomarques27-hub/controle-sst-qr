@@ -51,6 +51,11 @@ import {
     calcularResumoSegurancaStorageSistema,
     montarChecklistSegurancaStorageSistemaTexto,
 } from "../../services/storageSegurancaService";
+import {
+    avaliarRevisaoSupabaseSistema,
+    calcularResumoRevisaoSupabaseSistema,
+    montarChecklistRevisaoSupabaseSistemaTexto,
+} from "../../services/supabaseRevisaoService";
 
 const classNames = (...classes) => classes.filter(Boolean).join(" ");
 
@@ -61,6 +66,7 @@ const CHAVES_BLOCOS_CONFIGURACOES_PADRAO = [
     "config-auditoria-publica",
     "config-seguranca-publica",
     "config-storage-privado",
+    "config-supabase-geral",
     "config-status-etapa",
 ];
 
@@ -112,6 +118,7 @@ export function ConfiguracoesSistema({ usuario = null, podeAcessarAuditoria = fa
     const [configAuditoriaPublica, setConfigAuditoriaPublica] = useState(() => carregarConfiguracaoAuditoriaPublicaSistema());
     const [mensagemAuditoriaPublica, setMensagemAuditoriaPublica] = useState("Configuração pública carregada localmente.");
     const [mensagemStorage, setMensagemStorage] = useState("Checklist de Storage pronto para conferência operacional.");
+    const [mensagemSupabase, setMensagemSupabase] = useState("Checklist Supabase/RLS/RPC pronto para conferência técnica.");
 
     const [mostrarOrganizacaoCards, setMostrarOrganizacaoCards] = useState(false);
     const [blocosVisiveisConfiguracoes, setBlocosVisiveisConfiguracoes] = useState(() => ({
@@ -298,6 +305,13 @@ export function ConfiguracoesSistema({ usuario = null, podeAcessarAuditoria = fa
         [avaliacoesSegurancaStorage]
     );
 
+    const avaliacoesRevisaoSupabase = useMemo(() => avaliarRevisaoSupabaseSistema(), []);
+
+    const resumoRevisaoSupabase = useMemo(
+        () => calcularResumoRevisaoSupabaseSistema(avaliacoesRevisaoSupabase),
+        [avaliacoesRevisaoSupabase]
+    );
+
     const alterarConfigAuditoriaPublica = (campo, valor) => {
         setConfigAuditoriaPublica((atual) => ({
             ...atual,
@@ -341,6 +355,15 @@ export function ConfiguracoesSistema({ usuario = null, podeAcessarAuditoria = fa
             setMensagemStorage("Checklist de Storage copiado para a área de transferência.");
         } catch {
             setMensagemStorage("Não foi possível copiar o checklist de Storage automaticamente.");
+        }
+    };
+
+    const copiarChecklistRevisaoSupabase = async () => {
+        try {
+            await navigator.clipboard?.writeText(montarChecklistRevisaoSupabaseSistemaTexto(avaliacoesRevisaoSupabase));
+            setMensagemSupabase("Checklist Supabase/RLS/RPC copiado para a área de transferência.");
+        } catch {
+            setMensagemSupabase("Não foi possível copiar o checklist Supabase automaticamente.");
         }
     };
 
@@ -462,6 +485,12 @@ export function ConfiguracoesSistema({ usuario = null, podeAcessarAuditoria = fa
             detalhe: resumoSegurancaStorage.detalhe,
             icon: HardDrive,
         },
+        {
+            label: "Revisão Supabase",
+            valor: resumoRevisaoSupabase.texto,
+            detalhe: resumoRevisaoSupabase.detalhe,
+            icon: Database,
+        },
     ];
 
     const secoesConfiguracoes = [
@@ -470,6 +499,7 @@ export function ConfiguracoesSistema({ usuario = null, podeAcessarAuditoria = fa
         { chave: "config-auditoria-publica", titulo: "Auditoria pública", descricao: "Token, senha de referência e link público.", icon: KeyRound },
         { chave: "config-seguranca-publica", titulo: "Segurança pública", descricao: "Checklist operacional do QR Code público.", icon: ShieldAlert },
         { chave: "config-storage-privado", titulo: "Storage privado", descricao: "Buckets, URLs assinadas e arquivos sensíveis.", icon: HardDrive },
+        { chave: "config-supabase-geral", titulo: "Supabase/RLS/RPC", descricao: "Tabelas, policies, funções e performance.", icon: Database },
         { chave: "config-status-etapa", titulo: "Status", descricao: "Resumo da configuração e usuário atual.", icon: CheckCircle2 },
     ];
 
@@ -855,6 +885,75 @@ export function ConfiguracoesSistema({ usuario = null, podeAcessarAuditoria = fa
 
                         <div className="mt-4 space-y-3">
                             {avaliacoesSegurancaStorage.map((item) => (
+                                <div key={item.chave} className="rounded-2xl bg-slate-50 px-3 py-3 ring-1 ring-slate-100">
+                                    <div className="flex items-start justify-between gap-3">
+                                        <div>
+                                            <div className="flex flex-wrap items-center gap-2">
+                                                <span className="rounded-full bg-white px-3 py-1 text-[10px] font-black uppercase tracking-wide text-slate-500 ring-1 ring-slate-200">
+                                                    {item.grupo}
+                                                </span>
+                                                <span className={classNames(
+                                                    "rounded-full px-3 py-1 text-[10px] font-black uppercase tracking-wide ring-1",
+                                                    item.nivel === "ok" && "bg-emerald-50 text-emerald-700 ring-emerald-200",
+                                                    item.nivel === "alerta" && "bg-orange-50 text-orange-700 ring-orange-200",
+                                                    item.nivel === "critico" && "bg-red-50 text-red-700 ring-red-200",
+                                                    item.nivel === "info" && "bg-blue-50 text-blue-700 ring-blue-200"
+                                                )}>
+                                                    {item.nivel === "ok" ? "OK" : item.nivel === "critico" ? "Crítico" : item.nivel === "alerta" ? "Atenção" : "Info"}
+                                                </span>
+                                            </div>
+                                            <p className="mt-3 text-sm font-bold text-slate-900">{item.label}</p>
+                                            <p className="mt-1 text-xs leading-relaxed text-slate-500">{item.descricao}</p>
+                                            <p className="mt-2 text-[11px] font-semibold leading-relaxed text-slate-400">{item.recomendacao}</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    </Card>
+                )
+            );
+
+
+        case "config-supabase-geral":
+            return renderBlocoConfiguracaoComControle(
+                "config-supabase-geral",
+                "Revisão geral Supabase / RLS / RPC",
+                "Tabelas, policies, funções, buckets e pontos de performance.",
+                (
+                    <Card>
+                        <div className="flex flex-col gap-3 border-b border-slate-100 pb-4 sm:flex-row sm:items-start sm:justify-between">
+                            <div>
+                                <div className="flex items-center gap-2">
+                                    <Database className="h-5 w-5 text-slate-500" />
+                                    <h2 id="config-supabase-geral" className="scroll-mt-24 text-lg font-black text-slate-950">Revisão geral Supabase / RLS / RPC</h2>
+                                </div>
+                                <p className="mt-1 text-sm text-slate-500">
+                                    Checklist técnico para conferir tabelas, RLS, RPCs, Edge Functions, buckets e performance do Supabase.
+                                </p>
+                            </div>
+                            <button
+                                type="button"
+                                onClick={copiarChecklistRevisaoSupabase}
+                                className="inline-flex items-center justify-center gap-2 rounded-2xl bg-white px-3 py-2 text-xs font-bold text-slate-700 ring-1 ring-slate-200 hover:bg-slate-50"
+                            >
+                                <Copy className="h-3.5 w-3.5" />
+                                Copiar checklist Supabase
+                            </button>
+                        </div>
+
+                        {mensagemSupabase && (
+                            <div className="mt-4 rounded-2xl bg-blue-50 px-4 py-3 text-xs font-bold text-blue-700 ring-1 ring-blue-200">
+                                {mensagemSupabase}
+                            </div>
+                        )}
+
+                        <div className={classNames("mt-4 rounded-2xl px-4 py-3 text-sm font-black ring-1", resumoRevisaoSupabase.classe)}>
+                            Status: {resumoRevisaoSupabase.texto} · {resumoRevisaoSupabase.detalhe}
+                        </div>
+
+                        <div className="mt-4 space-y-3">
+                            {avaliacoesRevisaoSupabase.map((item) => (
                                 <div key={item.chave} className="rounded-2xl bg-slate-50 px-3 py-3 ring-1 ring-slate-100">
                                     <div className="flex items-start justify-between gap-3">
                                         <div>
