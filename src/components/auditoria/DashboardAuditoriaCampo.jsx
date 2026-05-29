@@ -30,6 +30,7 @@ import { tiposAuditoriaCampoDireta } from "../../constants/sstConstants";
 import { normalizarTextoBusca, formatDate, formatarDataHora, classNames } from "../../utils/sstUtils";
 
 const TOKEN_AUDITORIA_CAMPO_PUBLICA_PADRAO = "TOKEN-AUDITORIA-CAMPO-2026";
+const LIMITE_QRCODES_CAMPO_POR_CARGA = 50;
 const hoje = new Date();
 
 export function DashboardAuditoriaCampo({
@@ -44,7 +45,10 @@ export function DashboardAuditoriaCampo({
 }) {
     const [mostrarPersonalizacao, setMostrarPersonalizacao] = useState(false);
     const [qrcodesCampo, setQrcodesCampo] = useState([]);
+    const [qrcodesCampoCarregados, setQrcodesCampoCarregados] = useState(false);
+    const [existeMaisQrcodesCampo, setExisteMaisQrcodesCampo] = useState(false);
     const [carregandoQrcodesCampo, setCarregandoQrcodesCampo] = useState(false);
+    const [carregandoMaisQrcodesCampo, setCarregandoMaisQrcodesCampo] = useState(false);
     const [mensagemQrCampo, setMensagemQrCampo] = useState("");
     const [qrFormCampo, setQrFormCampo] = useState({
         tipo: "maquina",
@@ -583,31 +587,38 @@ export function DashboardAuditoriaCampo({
 
     const linkQrCampoAtual = useMemo(() => montarLinkQrCampo(qrFormCampo), [montarLinkQrCampo, qrFormCampo]);
 
-    const carregarQrcodesCampo = useCallback(async () => {
-        setCarregandoQrcodesCampo(true);
+    const carregarQrcodesCampo = useCallback(async ({ append = false } = {}) => {
+        if (append) {
+            setCarregandoMaisQrcodesCampo(true);
+        } else {
+            setCarregandoQrcodesCampo(true);
+        }
+
         try {
+            const offset = append ? qrcodesCampo.length : 0;
+            const limiteBusca = LIMITE_QRCODES_CAMPO_POR_CARGA + 1;
             const { data, error } = await supabase
                 .from("auditoria_campo_qrcodes")
                 .select("*")
-                .order("criado_em", { ascending: false });
+                .order("criado_em", { ascending: false })
+                .range(offset, offset + limiteBusca - 1);
 
             if (error) throw error;
-            setQrcodesCampo(Array.isArray(data) ? data : []);
-            setMensagemQrCampo("");
+
+            const registros = Array.isArray(data) ? data : [];
+            const registrosVisiveis = registros.slice(0, LIMITE_QRCODES_CAMPO_POR_CARGA);
+
+            setQrcodesCampo((atual) => append ? [...atual, ...registrosVisiveis] : registrosVisiveis);
+            setExisteMaisQrcodesCampo(registros.length > LIMITE_QRCODES_CAMPO_POR_CARGA);
+            setQrcodesCampoCarregados(true);
+            setMensagemQrCampo(append ? "Mais QR Codes carregados." : "QR Codes carregados com sucesso.");
         } catch (error) {
             setMensagemQrCampo(`Não foi possível carregar os QR Codes salvos: ${error.message}`);
         } finally {
             setCarregandoQrcodesCampo(false);
+            setCarregandoMaisQrcodesCampo(false);
         }
-    }, []);
-
-    useEffect(() => {
-        const carregamentoQrCampo = window.setTimeout(() => {
-            carregarQrcodesCampo();
-        }, 0);
-
-        return () => window.clearTimeout(carregamentoQrCampo);
-    }, [carregarQrcodesCampo]);
+    }, [qrcodesCampo.length]);
 
     const salvarQrCampo = async () => {
         const identificacao = String(qrFormCampo.identificacao || "").trim();
@@ -640,6 +651,7 @@ export function DashboardAuditoriaCampo({
 
             if (error) throw error;
             setQrcodesCampo((atual) => [data, ...atual.filter((item) => item.codigo !== data.codigo)]);
+            setQrcodesCampoCarregados(true);
             setMensagemQrCampo("QR Code salvo com sucesso no banco de dados.");
         } catch (error) {
             setMensagemQrCampo(`Erro ao salvar QR Code: ${error.message}`);
@@ -1106,11 +1118,18 @@ export function DashboardAuditoriaCampo({
                                 <p className="text-sm font-black text-slate-950">QR Codes salvos</p>
                                 <p className="text-xs text-slate-500">Consulta do banco de dados de QR Codes gerados.</p>
                             </div>
-                            <button type="button" onClick={carregarQrcodesCampo} className="rounded-xl bg-slate-50 px-3 py-2 text-xs font-bold text-slate-600 ring-1 ring-slate-200">Atualizar</button>
+                            <button type="button" onClick={() => carregarQrcodesCampo()} disabled={carregandoQrcodesCampo} className="rounded-xl bg-slate-50 px-3 py-2 text-xs font-bold text-slate-600 ring-1 ring-slate-200 disabled:cursor-not-allowed disabled:opacity-60">{qrcodesCampoCarregados ? "Atualizar" : "Carregar QR Codes"}</button>
                         </div>
                         <div className="mt-3 max-h-[520px] overflow-auto pr-1 scrollbar-discreta">
-                            {carregandoQrcodesCampo ? <p className="rounded-2xl bg-slate-50 p-4 text-sm text-slate-500">Carregando QR Codes...</p> : qrcodesCampo.length === 0 ? <p className="rounded-2xl border border-dashed border-slate-300 p-4 text-center text-sm text-slate-500">Nenhum QR Code salvo ainda.</p> : (
+                            {carregandoQrcodesCampo ? <p className="rounded-2xl bg-slate-50 p-4 text-sm text-slate-500">Carregando QR Codes...</p> : !qrcodesCampoCarregados ? (
+                                <div className="rounded-2xl border border-dashed border-slate-300 bg-slate-50/70 p-4 text-center">
+                                    <p className="text-sm font-bold text-slate-700">Os QR Codes salvos não são carregados automaticamente.</p>
+                                    <p className="mt-1 text-xs text-slate-500">Clique em Carregar QR Codes somente quando precisar consultar a lista, mantendo o Dashboard Auditoria mais leve.</p>
+                                    <button type="button" onClick={() => carregarQrcodesCampo()} className="mt-3 rounded-xl bg-slate-950 px-4 py-2 text-xs font-bold text-white hover:bg-slate-800">Carregar QR Codes</button>
+                                </div>
+                            ) : qrcodesCampo.length === 0 ? <p className="rounded-2xl border border-dashed border-slate-300 p-4 text-center text-sm text-slate-500">Nenhum QR Code salvo ainda.</p> : (
                                 <div className="space-y-2">
+                                    <p className="rounded-2xl bg-blue-50 px-3 py-2 text-xs font-bold text-blue-700 ring-1 ring-blue-100">Exibindo {qrcodesCampo.length} QR Code(s) salvo(s).</p>
                                     {qrcodesCampo.map((item) => (
                                         <div key={item.id || item.codigo} className="grid gap-3 rounded-2xl bg-slate-50 p-3 ring-1 ring-slate-100 sm:grid-cols-[auto_1fr]">
                                             <div className="rounded-2xl bg-white p-2 ring-1 ring-slate-200"><QRCodeSVG value={item.link || ""} size={74} level="M" /></div>
@@ -1125,6 +1144,11 @@ export function DashboardAuditoriaCampo({
                                             </div>
                                         </div>
                                     ))}
+                                    {existeMaisQrcodesCampo && (
+                                        <button type="button" onClick={() => carregarQrcodesCampo({ append: true })} disabled={carregandoMaisQrcodesCampo} className="w-full rounded-2xl bg-white px-4 py-3 text-sm font-bold text-slate-700 ring-1 ring-slate-200 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60">
+                                            {carregandoMaisQrcodesCampo ? "Carregando mais QR Codes..." : "Carregar mais QR Codes"}
+                                        </button>
+                                    )}
                                 </div>
                             )}
                         </div>
