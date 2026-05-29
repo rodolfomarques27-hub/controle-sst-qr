@@ -26,15 +26,6 @@ import {
 } from "./components/commonComponents";
 import { LoginScreen } from "./components/LoginScreen";
 import { MobilizacaoBadge } from "./components/MobilizacaoBadge";
-import { ConsultaQR } from "./components/qr/ConsultaQR";
-import { ConsultaQRPublica } from "./components/qr/ConsultaQRPublica";
-import { Requisitos } from "./components/Requisitos";
-import { Aniversariantes } from "./components/aniversariantes/AniversariantesPage";
-import { Dashboard } from "./components/dashboard/Dashboard";
-import { Empresas } from "./components/empresas/EmpresasPage";
-import { Colaboradores } from "./components/colaboradores/ColaboradoresPage";
-import { Treinamentos } from "./components/treinamentos/TreinamentosPage";
-import { RelatorioAuditoria } from "./components/auditoria/RelatorioAuditoria";
 import { FormularioNovoColaborador } from "./components/colaboradores/FormularioNovoColaborador";
 import { ModalNovaFuncaoColaborador } from "./components/colaboradores/ModalNovaFuncaoColaborador";
 import { ModalRevisaoColaborador } from "./components/colaboradores/ModalRevisaoColaborador";
@@ -42,8 +33,6 @@ import { FileUploadAviso, validarArquivoAntesUpload, validarListaArquivosAntesUp
 import { AuditoriaAcessoNegado, AuditoriaBloqueada } from "./components/auditoria/AuditoriaPermissao";
 import { AuditoriaAtividades } from "./components/auditoria/AuditoriaAtividades";
 import { EditorNotificacaoHistoricoAuditoria } from "./components/auditoria/EditorNotificacaoHistoricoAuditoria";
-import { DashboardAuditoriaCampo } from "./components/auditoria/DashboardAuditoriaCampo";
-import { NovaAuditoriaCampoDireta } from "./components/auditoria/NovaAuditoriaCampoDireta";
 import {
     obterCategoriaPadronizadaAuditoriaCampo,
     obterTipoAuditoriaCampoPorParametro,
@@ -196,9 +185,33 @@ import {
     XCircle,
 } from "lucide-react";
 
+
+const ConsultaQR = React.lazy(() => import("./components/qr/ConsultaQR").then((modulo) => ({ default: modulo.ConsultaQR })));
+const ConsultaQRPublica = React.lazy(() => import("./components/qr/ConsultaQRPublica").then((modulo) => ({ default: modulo.ConsultaQRPublica })));
+const Requisitos = React.lazy(() => import("./components/Requisitos").then((modulo) => ({ default: modulo.Requisitos })));
+const Aniversariantes = React.lazy(() => import("./components/aniversariantes/AniversariantesPage").then((modulo) => ({ default: modulo.Aniversariantes })));
+const Dashboard = React.lazy(() => import("./components/dashboard/Dashboard").then((modulo) => ({ default: modulo.Dashboard })));
+const Empresas = React.lazy(() => import("./components/empresas/EmpresasPage").then((modulo) => ({ default: modulo.Empresas })));
+const Colaboradores = React.lazy(() => import("./components/colaboradores/ColaboradoresPage").then((modulo) => ({ default: modulo.Colaboradores })));
+const Treinamentos = React.lazy(() => import("./components/treinamentos/TreinamentosPage").then((modulo) => ({ default: modulo.Treinamentos })));
+const RelatorioAuditoria = React.lazy(() => import("./components/auditoria/RelatorioAuditoria").then((modulo) => ({ default: modulo.RelatorioAuditoria })));
+const DashboardAuditoriaCampo = React.lazy(() => import("./components/auditoria/DashboardAuditoriaCampo").then((modulo) => ({ default: modulo.DashboardAuditoriaCampo })));
+const NovaAuditoriaCampoDireta = React.lazy(() => import("./components/auditoria/NovaAuditoriaCampoDireta").then((modulo) => ({ default: modulo.NovaAuditoriaCampoDireta })));
+
 const hoje = new Date();
 const LIMITE_AUDITORIA_SISTEMA_INICIAL = 300;
 const LIMITE_EMAILS_ENVIADOS_INICIAL = 200;
+
+function CarregandoTela({ mensagem = "Carregando tela..." }) {
+    return (
+        <div className="flex min-h-[320px] items-center justify-center rounded-3xl bg-white p-8 text-slate-600 shadow-sm">
+            <div className="text-center">
+                <RefreshCw className="mx-auto mb-3 h-6 w-6 animate-spin" />
+                <p className="text-sm font-semibold">{mensagem}</p>
+            </div>
+        </div>
+    );
+}
 
 
 
@@ -2415,11 +2428,13 @@ export default function App() {
 
     if (rotaNovaAuditoriaCampo) {
         return (
-            <NovaAuditoriaCampoDireta
-                usuario={usuario}
-                empresasBanco={empresasBanco}
-                onAuditoriaSalva={(novaAuditoria) => setAuditoriasCampo((atual) => [novaAuditoria, ...atual])}
-            />
+            <React.Suspense fallback={<CarregandoTela mensagem="Carregando auditoria de campo..." />}>
+                <NovaAuditoriaCampoDireta
+                    usuario={usuario}
+                    empresasBanco={empresasBanco}
+                    onAuditoriaSalva={(novaAuditoria) => setAuditoriasCampo((atual) => [novaAuditoria, ...atual])}
+                />
+            </React.Suspense>
         );
     }
 
@@ -2449,7 +2464,11 @@ export default function App() {
             );
         }
 
-        return <ConsultaQRPublica dados={consultaPublica} />;
+        return (
+            <React.Suspense fallback={<CarregandoTela mensagem="Carregando consulta pública..." />}>
+                <ConsultaQRPublica dados={consultaPublica} />
+            </React.Suspense>
+        );
     }
 
     if (!usuario) {
@@ -2569,132 +2588,134 @@ export default function App() {
                         </select>
                     </div>
 
-                    {tela === "dashboard" && (
-                        <Dashboard
-                            colaboradores={colaboradores}
-                            empresasBanco={empresasBanco}
-                            documentosEmpresas={documentosEmpresas}
-                            auditoria={auditoria}
-                            onSelectColab={selecionarColaborador}
-                            onRegistrarEmailEnviado={registrarEmailEnviado}
-                        />
-                    )}
-
-                    {tela === "novaAuditoriaCampo" && (
-                        <NovaAuditoriaCampoDireta
-                            usuario={usuario}
-                            empresasBanco={empresasBanco}
-                            onAuditoriaSalva={(novaAuditoria) => {
-                                setAuditoriasCampoCarregadas(true);
-                                setAuditoriasCampo((atual) => [novaAuditoria, ...atual]);
-                            }}
-                        />
-                    )}
-
-                    {tela === "auditoriaCampo" && (
-                        <DashboardAuditoriaCampo
-                            auditoriasCampo={auditoriasCampo}
-                            carregando={carregandoAuditoriasCampo}
-                            erro={erroAuditoriasCampo}
-                            onRecarregar={carregarAuditoriasCampo}
-                            onAuditoriaAtualizada={(atualizada) =>
-                                setAuditoriasCampo((atual) =>
-                                    atualizada?.excluida
-                                        ? atual.filter((item) => item.id !== atualizada.id)
-                                        : atual.map((item) => item.id === atualizada.id ? atualizada : item)
-                                )
-                            }
-                        />
-                    )}
-
-                    {tela === "empresas" && (
-                        <Empresas
-                            empresasBanco={empresasBanco}
-                            documentosEmpresas={documentosEmpresas}
-                            colaboradores={colaboradores}
-                            carregandoBanco={carregandoBanco}
-                            erroBanco={erroBanco}
-                            onAtualizarBanco={carregarColaboradores}
-                            onAdicionarEmpresa={adicionarEmpresa}
-                            onAtualizarEmpresa={atualizarEmpresa}
-                            onExcluirEmpresa={excluirEmpresa}
-                            onAdicionarDocumentoEmpresa={adicionarDocumentoEmpresa}
-                            onExcluirDocumentoEmpresa={excluirDocumentoEmpresa}
-                            onVisualizarDocumentoEmpresa={visualizarDocumentoEmpresa}
-                        />
-                    )}
-
-                    {tela === "colaboradores" && (
-                        <Colaboradores
-                            colaboradores={colaboradores}
-                            empresasBanco={empresasBanco}
-                            carregandoBanco={carregandoBanco}
-                            erroBanco={erroBanco}
-                            onAtualizarBanco={carregarColaboradores}
-                            onAdicionarColaborador={adicionarColaborador}
-                            onAtualizarColaborador={atualizarColaborador}
-                            onExcluirColaborador={excluirColaborador}
-                            onSelectColab={selecionarColaborador}
-                            onEnviarTreinamento={abrirEnvioTreinamento}
-                        />
-                    )}
-
-                    {tela === "aniversariantes" && (
-                        <Aniversariantes
-                            colaboradores={colaboradores}
-                            empresasBanco={empresasBanco}
-                        />
-                    )}
-
-                    {tela === "treinamentos" && (
-                        <Treinamentos
-                            key={colaboradorSelecionado?.id || "treinamentos"}
-                            colaboradores={colaboradores}
-                            colaboradorInicialId={colaboradorSelecionado?.id}
-                            onSalvarCertificado={salvarCertificadoTreinamento}
-                            onVisualizarCertificado={visualizarCertificadoTreinamento}
-                            onExcluirCertificado={excluirCertificadoTreinamento}
-                            onAtualizarDatasCertificado={atualizarDatasCertificado}
-                            onSincronizarStorage={sincronizarCertificadosDoStorage}
-                            onRegistrarEmailEnviado={registrarEmailEnviado}
-                        />
-                    )}
-
-                    {tela === "qr" && (
-                        <ConsultaQR
-                            colaborador={colaboradorSelecionado}
-                            colaboradores={colaboradores}
-                            onSelecionarColaborador={setColaboradorSelecionado}
-                        />
-                    )}
-
-                    {tela === "auditoria" && (
-                        verificandoAcessoAuditoria ? (
-                            <Card>
-                                <div className="flex items-center gap-3 text-sm font-semibold text-slate-600">
-                                    <RefreshCw className="h-4 w-4 animate-spin" />
-                                    Verificando permissão da Auditoria de sistema...
-                                </div>
-                            </Card>
-                        ) : !podeAcessarAuditoria ? (
-                            <AuditoriaAcessoNegado />
-                        ) : (
-                            <RelatorioAuditoria
+                    <React.Suspense fallback={<CarregandoTela mensagem="Carregando módulo..." />}>
+                        {tela === "dashboard" && (
+                            <Dashboard
+                                colaboradores={colaboradores}
+                                empresasBanco={empresasBanco}
+                                documentosEmpresas={documentosEmpresas}
                                 auditoria={auditoria}
-                                emailsEnviados={emailsEnviados}
-                                carregando={carregandoAuditoria}
-                                onAtualizar={async () => { await carregarAuditoria(); await carregarEmailsEnviados(); await carregarAuditoriasCampo(); }}
-                                onListarArquivosStorage={listarArquivosCertificadosStorage}
-                                onExcluirArquivoStorage={excluirArquivoCertificadoStorage}
-                                onListarUsuariosAuditoria={carregarUsuariosAutorizadosAuditoria}
-                                onSalvarUsuarioAuditoria={salvarUsuarioAutorizadoAuditoria}
-                                onAlternarUsuarioAuditoria={alternarUsuarioAutorizadoAuditoria}
-                                onBloquear={bloquearAuditoria}
+                                onSelectColab={selecionarColaborador}
+                                onRegistrarEmailEnviado={registrarEmailEnviado}
                             />
-                        )
-                    )}
+                        )}
 
-                    {tela === "roteiro" && <Requisitos />}
+                        {tela === "novaAuditoriaCampo" && (
+                            <NovaAuditoriaCampoDireta
+                                usuario={usuario}
+                                empresasBanco={empresasBanco}
+                                onAuditoriaSalva={(novaAuditoria) => {
+                                    setAuditoriasCampoCarregadas(true);
+                                    setAuditoriasCampo((atual) => [novaAuditoria, ...atual]);
+                                }}
+                            />
+                        )}
+
+                        {tela === "auditoriaCampo" && (
+                            <DashboardAuditoriaCampo
+                                auditoriasCampo={auditoriasCampo}
+                                carregando={carregandoAuditoriasCampo}
+                                erro={erroAuditoriasCampo}
+                                onRecarregar={carregarAuditoriasCampo}
+                                onAuditoriaAtualizada={(atualizada) =>
+                                    setAuditoriasCampo((atual) =>
+                                        atualizada?.excluida
+                                            ? atual.filter((item) => item.id !== atualizada.id)
+                                            : atual.map((item) => item.id === atualizada.id ? atualizada : item)
+                                    )
+                                }
+                            />
+                        )}
+
+                        {tela === "empresas" && (
+                            <Empresas
+                                empresasBanco={empresasBanco}
+                                documentosEmpresas={documentosEmpresas}
+                                colaboradores={colaboradores}
+                                carregandoBanco={carregandoBanco}
+                                erroBanco={erroBanco}
+                                onAtualizarBanco={carregarColaboradores}
+                                onAdicionarEmpresa={adicionarEmpresa}
+                                onAtualizarEmpresa={atualizarEmpresa}
+                                onExcluirEmpresa={excluirEmpresa}
+                                onAdicionarDocumentoEmpresa={adicionarDocumentoEmpresa}
+                                onExcluirDocumentoEmpresa={excluirDocumentoEmpresa}
+                                onVisualizarDocumentoEmpresa={visualizarDocumentoEmpresa}
+                            />
+                        )}
+
+                        {tela === "colaboradores" && (
+                            <Colaboradores
+                                colaboradores={colaboradores}
+                                empresasBanco={empresasBanco}
+                                carregandoBanco={carregandoBanco}
+                                erroBanco={erroBanco}
+                                onAtualizarBanco={carregarColaboradores}
+                                onAdicionarColaborador={adicionarColaborador}
+                                onAtualizarColaborador={atualizarColaborador}
+                                onExcluirColaborador={excluirColaborador}
+                                onSelectColab={selecionarColaborador}
+                                onEnviarTreinamento={abrirEnvioTreinamento}
+                            />
+                        )}
+
+                        {tela === "aniversariantes" && (
+                            <Aniversariantes
+                                colaboradores={colaboradores}
+                                empresasBanco={empresasBanco}
+                            />
+                        )}
+
+                        {tela === "treinamentos" && (
+                            <Treinamentos
+                                key={colaboradorSelecionado?.id || "treinamentos"}
+                                colaboradores={colaboradores}
+                                colaboradorInicialId={colaboradorSelecionado?.id}
+                                onSalvarCertificado={salvarCertificadoTreinamento}
+                                onVisualizarCertificado={visualizarCertificadoTreinamento}
+                                onExcluirCertificado={excluirCertificadoTreinamento}
+                                onAtualizarDatasCertificado={atualizarDatasCertificado}
+                                onSincronizarStorage={sincronizarCertificadosDoStorage}
+                                onRegistrarEmailEnviado={registrarEmailEnviado}
+                            />
+                        )}
+
+                        {tela === "qr" && (
+                            <ConsultaQR
+                                colaborador={colaboradorSelecionado}
+                                colaboradores={colaboradores}
+                                onSelecionarColaborador={setColaboradorSelecionado}
+                            />
+                        )}
+
+                        {tela === "auditoria" && (
+                            verificandoAcessoAuditoria ? (
+                                <Card>
+                                    <div className="flex items-center gap-3 text-sm font-semibold text-slate-600">
+                                        <RefreshCw className="h-4 w-4 animate-spin" />
+                                        Verificando permissão da Auditoria de sistema...
+                                    </div>
+                                </Card>
+                            ) : !podeAcessarAuditoria ? (
+                                <AuditoriaAcessoNegado />
+                            ) : (
+                                <RelatorioAuditoria
+                                    auditoria={auditoria}
+                                    emailsEnviados={emailsEnviados}
+                                    carregando={carregandoAuditoria}
+                                    onAtualizar={async () => { await carregarAuditoria(); await carregarEmailsEnviados(); await carregarAuditoriasCampo(); }}
+                                    onListarArquivosStorage={listarArquivosCertificadosStorage}
+                                    onExcluirArquivoStorage={excluirArquivoCertificadoStorage}
+                                    onListarUsuariosAuditoria={carregarUsuariosAutorizadosAuditoria}
+                                    onSalvarUsuarioAuditoria={salvarUsuarioAutorizadoAuditoria}
+                                    onAlternarUsuarioAuditoria={alternarUsuarioAutorizadoAuditoria}
+                                    onBloquear={bloquearAuditoria}
+                                />
+                            )
+                        )}
+
+                        {tela === "roteiro" && <Requisitos />}
+                    </React.Suspense>
                 </main>
             </div>
         </div>
