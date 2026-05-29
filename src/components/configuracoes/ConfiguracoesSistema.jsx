@@ -4,7 +4,10 @@ import { motion } from "framer-motion";
 import {
     AlertTriangle,
     CheckCircle2,
+    Copy,
     Database,
+    KeyRound,
+    Link2,
     RefreshCw,
     RotateCcw,
     Settings,
@@ -27,6 +30,13 @@ import {
     LIMITES_MINIMOS_CARREGAMENTO_SISTEMA,
     normalizarLimitesCarregamentoSistema,
 } from "../../constants/sistemaLimitesConstants";
+import {
+    carregarConfiguracaoAuditoriaPublicaSistema,
+    montarLinkAuditoriaPublicaSistema,
+    restaurarConfiguracaoAuditoriaPublicaPadrao,
+    salvarConfiguracaoAuditoriaPublicaSistema,
+    TOKEN_AUDITORIA_CAMPO_PUBLICA_PADRAO,
+} from "../../constants/auditoriaPublicaConstants";
 
 const classNames = (...classes) => classes.filter(Boolean).join(" ");
 
@@ -38,6 +48,8 @@ export function ConfiguracoesSistema({ usuario = null, podeAcessarAuditoria = fa
     const [salvandoConfig, setSalvandoConfig] = useState(false);
     const [limitesEditaveis, setLimitesEditaveis] = useState(() => normalizarLimitesCarregamentoSistema(limites));
     const [mensagemLimites, setMensagemLimites] = useState("Os limites estão prontos para edição local.");
+    const [configAuditoriaPublica, setConfigAuditoriaPublica] = useState(() => carregarConfiguracaoAuditoriaPublicaSistema());
+    const [mensagemAuditoriaPublica, setMensagemAuditoriaPublica] = useState("Configuração pública carregada localmente.");
 
     const eventosAuditoria = useMemo(() => {
         const normalizada = normalizarConfiguracaoEventosAuditoriaSistema(configEventos);
@@ -86,6 +98,38 @@ export function ConfiguracoesSistema({ usuario = null, podeAcessarAuditoria = fa
 
         setLimitesEditaveis(padrao);
         setMensagemLimites("Limites padrão restaurados.");
+    };
+
+    const linkAuditoriaPublica = useMemo(() => montarLinkAuditoriaPublicaSistema({
+        tokenPublico: configAuditoriaPublica.tokenPublico,
+    }), [configAuditoriaPublica.tokenPublico]);
+
+    const alterarConfigAuditoriaPublica = (campo, valor) => {
+        setConfigAuditoriaPublica((atual) => ({
+            ...atual,
+            [campo]: valor,
+        }));
+    };
+
+    const salvarConfigAuditoriaPublica = () => {
+        const normalizada = salvarConfiguracaoAuditoriaPublicaSistema(configAuditoriaPublica);
+        setConfigAuditoriaPublica(normalizada);
+        setMensagemAuditoriaPublica("Configuração da Auditoria pública salva localmente. Gere novos QR Codes para usar o token atualizado.");
+    };
+
+    const restaurarConfigAuditoriaPublica = () => {
+        const padrao = restaurarConfiguracaoAuditoriaPublicaPadrao();
+        setConfigAuditoriaPublica(padrao);
+        setMensagemAuditoriaPublica("Configuração padrão da Auditoria pública restaurada.");
+    };
+
+    const copiarLinkAuditoriaPublica = async () => {
+        try {
+            await navigator.clipboard?.writeText(linkAuditoriaPublica);
+            setMensagemAuditoriaPublica("Link público copiado para a área de transferência.");
+        } catch {
+            setMensagemAuditoriaPublica("Não foi possível copiar automaticamente. Copie o link manualmente.");
+        }
     };
 
     const carregarConfiguracao = async () => {
@@ -187,6 +231,12 @@ export function ConfiguracoesSistema({ usuario = null, podeAcessarAuditoria = fa
             valor: limitesEditaveis.auditoriasCampo || 500,
             detalhe: "registros iniciais",
             icon: SlidersHorizontal,
+        },
+        {
+            label: "Token Auditoria pública",
+            valor: configAuditoriaPublica.tokenPublico || TOKEN_AUDITORIA_CAMPO_PUBLICA_PADRAO,
+            detalhe: "usado em links e QR Codes",
+            icon: KeyRound,
         },
     ];
 
@@ -395,6 +445,88 @@ export function ConfiguracoesSistema({ usuario = null, podeAcessarAuditoria = fa
                             className="mt-4 w-full rounded-2xl bg-slate-950 px-4 py-3 text-sm font-black text-white hover:bg-slate-800"
                         >
                             Salvar limites de carregamento
+                        </button>
+                    </Card>
+
+                    <Card>
+                        <div className="flex flex-col gap-3 border-b border-slate-100 pb-4 sm:flex-row sm:items-start sm:justify-between">
+                            <div>
+                                <div className="flex items-center gap-2">
+                                    <KeyRound className="h-5 w-5 text-slate-500" />
+                                    <h2 className="text-lg font-black text-slate-950">Auditoria pública e QR Code</h2>
+                                </div>
+                                <p className="mt-1 text-sm text-slate-500">
+                                    Configure o token usado nos links públicos e deixe a senha de referência documentada para operação.
+                                </p>
+                            </div>
+                            <button
+                                type="button"
+                                onClick={restaurarConfigAuditoriaPublica}
+                                className="inline-flex items-center justify-center gap-2 rounded-2xl bg-white px-3 py-2 text-xs font-bold text-slate-700 ring-1 ring-slate-200 hover:bg-slate-50"
+                            >
+                                <RotateCcw className="h-3.5 w-3.5" />
+                                Restaurar
+                            </button>
+                        </div>
+
+                        {mensagemAuditoriaPublica && (
+                            <div className="mt-4 rounded-2xl bg-blue-50 px-4 py-3 text-xs font-bold text-blue-700 ring-1 ring-blue-200">
+                                {mensagemAuditoriaPublica}
+                            </div>
+                        )}
+
+                        <div className="mt-4 space-y-3">
+                            <label className="block rounded-2xl bg-slate-50 px-3 py-3 ring-1 ring-slate-100">
+                                <p className="text-sm font-bold text-slate-800">Token público padrão</p>
+                                <p className="mt-1 text-xs text-slate-500">Usado para gerar links e QR Codes da Nova Auditoria de Campo.</p>
+                                <input
+                                    value={configAuditoriaPublica.tokenPublico || ""}
+                                    onChange={(evento) => alterarConfigAuditoriaPublica("tokenPublico", evento.target.value)}
+                                    placeholder="TOKEN-AUDITORIA-CAMPO-2026"
+                                    className="mt-3 w-full rounded-2xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-800 outline-none focus:ring-2 focus:ring-blue-100"
+                                />
+                            </label>
+
+                            <label className="block rounded-2xl bg-slate-50 px-3 py-3 ring-1 ring-slate-100">
+                                <p className="text-sm font-bold text-slate-800">Senha de referência</p>
+                                <p className="mt-1 text-xs text-slate-500">Campo operacional. A validação real continua na RPC/tabela do Supabase.</p>
+                                <input
+                                    value={configAuditoriaPublica.senhaReferencia || ""}
+                                    onChange={(evento) => alterarConfigAuditoriaPublica("senhaReferencia", evento.target.value)}
+                                    placeholder="2026"
+                                    className="mt-3 w-full rounded-2xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-800 outline-none focus:ring-2 focus:ring-blue-100"
+                                />
+                            </label>
+
+                            <div className="rounded-2xl bg-slate-50 px-3 py-3 ring-1 ring-slate-100">
+                                <div className="flex items-center gap-2">
+                                    <Link2 className="h-4 w-4 text-slate-500" />
+                                    <p className="text-sm font-bold text-slate-800">Link público atual</p>
+                                </div>
+                                <p className="mt-2 break-all rounded-xl bg-white px-3 py-2 text-xs font-semibold text-slate-500 ring-1 ring-slate-200">
+                                    {linkAuditoriaPublica}
+                                </p>
+                                <button
+                                    type="button"
+                                    onClick={copiarLinkAuditoriaPublica}
+                                    className="mt-3 inline-flex items-center gap-2 rounded-2xl bg-white px-3 py-2 text-xs font-bold text-slate-700 ring-1 ring-slate-200 hover:bg-slate-100"
+                                >
+                                    <Copy className="h-3.5 w-3.5" />
+                                    Copiar link
+                                </button>
+                            </div>
+
+                            <div className="rounded-2xl bg-orange-50 px-3 py-3 text-xs font-semibold leading-relaxed text-orange-700 ring-1 ring-orange-200">
+                                Segurança: alterar a senha aqui não altera a senha validada pelo Supabase. Para mudar a senha real, atualize também o registro/token usado pela RPC validar_acesso_auditoria_publica.
+                            </div>
+                        </div>
+
+                        <button
+                            type="button"
+                            onClick={salvarConfigAuditoriaPublica}
+                            className="mt-4 w-full rounded-2xl bg-slate-950 px-4 py-3 text-sm font-black text-white hover:bg-slate-800"
+                        >
+                            Salvar configuração da Auditoria pública
                         </button>
                     </Card>
 

@@ -26,6 +26,7 @@ import {
     obterParametroUrl,
 } from "../../utils/sstUtils";
 import {
+    obterTokenAuditoriaCampoPublicaConfigurado,
     TOKEN_AUDITORIA_CAMPO_PUBLICA_PADRAO,
     aplicarContatosEmpresaAuditoriaCampoDireta,
     criarFormularioInicialAuditoriaCampoDireta,
@@ -66,7 +67,8 @@ export function NovaAuditoriaCampoDireta({ usuario = null, onAuditoriaSalva, emp
     } = extrairParametrosAuditoriaCampoDireta(parametros);
     const tipoInicial = obterTipoAuditoriaCampoPorParametro(tipoParametro);
     const origem = typeof window !== "undefined" ? window.location.origin : "";
-    const tokenLinkAuditoriaCampo = tokenParametro || TOKEN_AUDITORIA_CAMPO_PUBLICA_PADRAO;
+    const tokenAuditoriaPublicaConfigurado = obterTokenAuditoriaCampoPublicaConfigurado();
+    const tokenLinkAuditoriaCampo = tokenParametro || tokenAuditoriaPublicaConfigurado || TOKEN_AUDITORIA_CAMPO_PUBLICA_PADRAO;
     const montarLinkAuditoriaCampo = (parametrosExtras = {}) => montarLinkAuditoriaCampoDireta({
         origem,
         token: tokenLinkAuditoriaCampo,
@@ -508,7 +510,7 @@ export function NovaAuditoriaCampoDireta({ usuario = null, onAuditoriaSalva, emp
                         </form>
 
                         <p className="mt-4 rounded-2xl bg-slate-50 p-3 text-xs leading-relaxed text-slate-500 ring-1 ring-slate-100">
-                            A consulta pública do QR do funcionário continua liberada sem senha. Esta senha protege somente a abertura da Nova Auditoria de Campo.
+                            A consulta pública do QR do funcionário continua liberada sem senha. Esta senha protege somente a abertura da Nova Auditoria de Campo e deve estar cadastrada no Supabase/RPC.
                         </p>
                     </Card>
                 </div>

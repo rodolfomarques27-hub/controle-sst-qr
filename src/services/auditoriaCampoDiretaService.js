@@ -1,8 +1,16 @@
 import { montarMensagemFluidaAuditoriaCampo } from "./auditoriaCampoService";
 import { reduzirFotoParaAuditoria } from "./imagemService";
 import { normalizarTextoBusca, sanitizarNomeArquivo } from "../utils/sstUtils";
+import {
+    carregarConfiguracaoAuditoriaPublicaSistema,
+    TOKEN_AUDITORIA_CAMPO_PUBLICA_PADRAO,
+} from "../constants/auditoriaPublicaConstants";
 
-export const TOKEN_AUDITORIA_CAMPO_PUBLICA_PADRAO = "TOKEN-AUDITORIA-CAMPO-2026";
+export { TOKEN_AUDITORIA_CAMPO_PUBLICA_PADRAO };
+
+export function obterTokenAuditoriaCampoPublicaConfigurado() {
+    return carregarConfiguracaoAuditoriaPublicaSistema().tokenPublico || TOKEN_AUDITORIA_CAMPO_PUBLICA_PADRAO;
+}
 
 export function obterParametrosAuditoriaCampoDiretaUrl() {
     if (typeof window === "undefined") return new URLSearchParams("");
