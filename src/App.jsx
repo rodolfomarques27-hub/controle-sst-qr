@@ -201,6 +201,7 @@ const NovaAuditoriaCampoDireta = React.lazy(() => import("./components/auditoria
 const hoje = new Date();
 const LIMITE_AUDITORIA_SISTEMA_INICIAL = 300;
 const LIMITE_EMAILS_ENVIADOS_INICIAL = 200;
+const LIMITE_AUDITORIAS_CAMPO_INICIAL = 500;
 
 function CarregandoTela({ mensagem = "Carregando tela..." }) {
     return (
@@ -347,11 +348,15 @@ export default function App() {
         setErroAuditoriasCampo("");
 
         try {
-            const data = await buscarTodosRegistrosSupabase(
-                "auditorias_campo",
-                "*",
-                { campoOrdenacao: "created_at", crescente: false }
-            );
+            const { data, error } = await supabase
+                .from("auditorias_campo")
+                .select("*")
+                .order("created_at", { ascending: false })
+                .limit(LIMITE_AUDITORIAS_CAMPO_INICIAL);
+
+            if (error) {
+                throw error;
+            }
 
             const registrosValidos = (data || []).filter((item) =>
                 item.numero_auditoria ||
