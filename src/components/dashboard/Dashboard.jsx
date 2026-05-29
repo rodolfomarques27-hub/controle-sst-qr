@@ -10,6 +10,7 @@ import {
     Eye,
     HardHat,
     Lock,
+    RefreshCw,
     Upload,
     UserRound,
     XCircle,
@@ -88,8 +89,11 @@ export function Dashboard({
     auditoriasCampo = [],
     onSelectColab,
     onRegistrarEmailEnviado,
+    onAtualizarInformacoes,
+    atualizandoInformacoes = false,
 }) {
     const [enviandoEmail, setEnviandoEmail] = useState(false);
+    const [atualizandoInformacoesLocais, setAtualizandoInformacoesLocais] = useState(false);
     const [usoStorageDashboard, setUsoStorageDashboard] = useState(() => {
         if (typeof window === "undefined") {
             return { totalBytes: 0, arquivos: 0, buckets: [], atualizadoEm: "" };
@@ -358,6 +362,23 @@ export function Dashboard({
 
     // Etapa 71: o uso do Storage não é mais carregado automaticamente na abertura do Dashboard.
     // Isso evita varrer buckets privados no acesso inicial. Use o botão do card para atualizar sob demanda.
+
+    const atualizandoDashboardSstCompleto = Boolean(
+        atualizandoInformacoes || atualizandoInformacoesLocais || carregandoStorageDashboard
+    );
+
+    const atualizarInformacoesDashboard = useCallback(async () => {
+        if (atualizandoDashboardSstCompleto) return;
+
+        setAtualizandoInformacoesLocais(true);
+
+        try {
+            await onAtualizarInformacoes?.();
+            await carregarUsoStorageDashboard();
+        } finally {
+            setAtualizandoInformacoesLocais(false);
+        }
+    }, [atualizandoDashboardSstCompleto, carregarUsoStorageDashboard, onAtualizarInformacoes]);
 
     const resumoDashboardSst = useMemo(() => calcularResumoDashboardSst({
         colaboradores,
@@ -780,13 +801,26 @@ export function Dashboard({
                 titulo="Dashboard SST"
                 subtitulo="Visão executiva dos colaboradores, empresas, documentos, treinamentos, auditoria e armazenamento."
                 acao={
-                    <DashboardHeaderAcoes
-                        setMostrarFiltroPainel={setMostrarFiltroPainel}
-                        enviarAlertasPendenciasCriticas={enviarAlertasPendenciasCriticas}
-                        baixarRelatorioDashboard={baixarRelatorioDashboard}
-                        enviandoEmail={enviandoEmail}
-                        pendencias={pendencias}
-                    />
+                    <div className="flex flex-wrap items-center gap-2">
+                        <button
+                            type="button"
+                            onClick={atualizarInformacoesDashboard}
+                            disabled={atualizandoDashboardSstCompleto}
+                            className="inline-flex items-center gap-2 rounded-2xl bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 shadow-sm ring-1 ring-slate-200 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
+                            title="Atualizar colaboradores, empresas, documentos, auditorias e armazenamento do Dashboard SST"
+                        >
+                            <RefreshCw className={`h-4 w-4 ${atualizandoDashboardSstCompleto ? "animate-spin" : ""}`} />
+                            {atualizandoDashboardSstCompleto ? "Atualizando..." : "Atualizar informações"}
+                        </button>
+
+                        <DashboardHeaderAcoes
+                            setMostrarFiltroPainel={setMostrarFiltroPainel}
+                            enviarAlertasPendenciasCriticas={enviarAlertasPendenciasCriticas}
+                            baixarRelatorioDashboard={baixarRelatorioDashboard}
+                            enviandoEmail={enviandoEmail}
+                            pendencias={pendencias}
+                        />
+                    </div>
                 }
             />
 

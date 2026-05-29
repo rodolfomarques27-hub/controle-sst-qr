@@ -238,6 +238,7 @@ export default function App() {
     const [empresasBanco, setEmpresasBanco] = useState([]);
     const [documentosEmpresas, setDocumentosEmpresas] = useState([]);
     const [carregandoBanco, setCarregandoBanco] = useState(false);
+    const [atualizandoDashboardSst, setAtualizandoDashboardSst] = useState(false);
     const [erroBanco, setErroBanco] = useState("");
     const [colaboradorSelecionado, setColaboradorSelecionado] = useState(null);
     const [consultaPublica, setConsultaPublica] = useState(null);
@@ -967,6 +968,28 @@ export default function App() {
             return false;
         }
     }
+
+    const atualizarInformacoesDashboardSst = useCallback(async () => {
+        setAtualizandoDashboardSst(true);
+
+        try {
+            await carregarColaboradores();
+            await Promise.all([
+                carregarAuditoria(),
+                carregarAuditoriasCampo(),
+            ]);
+            await registrarAuditoria(
+                "ATUALIZAR_DASHBOARD_SST",
+                "dashboard",
+                "Atualizou manualmente as informações do Dashboard SST"
+            );
+        } catch (error) {
+            console.warn("Erro ao atualizar informações do Dashboard SST:", error?.message || error);
+            alert(`Erro ao atualizar informações do Dashboard SST: ${error?.message || String(error)}`);
+        } finally {
+            setAtualizandoDashboardSst(false);
+        }
+    }, [carregarAuditoria, carregarAuditoriasCampo, carregarColaboradores, registrarAuditoria]);
 
     async function adicionarDocumentoEmpresa(novoDoc) {
         setErroBanco("");
@@ -2595,8 +2618,11 @@ export default function App() {
                                 empresasBanco={empresasBanco}
                                 documentosEmpresas={documentosEmpresas}
                                 auditoria={auditoria}
+                                auditoriasCampo={auditoriasCampo}
                                 onSelectColab={selecionarColaborador}
                                 onRegistrarEmailEnviado={registrarEmailEnviado}
+                                onAtualizarInformacoes={atualizarInformacoesDashboardSst}
+                                atualizandoInformacoes={atualizandoDashboardSst}
                             />
                         )}
 
