@@ -1,4 +1,8 @@
+import { supabase } from "../lib/supabaseClient";
+
 export const CHAVE_CONFIG_EVENTOS_AUDITORIA_SISTEMA = "auditoriaSistemaEventosVerificados";
+export const TABELA_CONFIG_AUDITORIA_SISTEMA = "auditoria_sistema_configuracoes";
+export const CHAVE_REGISTRO_EVENTOS_AUDITORIA_SISTEMA = "eventos_verificados";
 
 export const EVENTOS_AUDITORIA_SISTEMA_PADRAO = [
     {
@@ -70,27 +74,38 @@ export function normalizarChaveAcaoAuditoria(acao) {
         .replace(/\s+/g, "_");
 }
 
-export function obterConfiguracaoEventosAuditoriaSistema() {
-    const padrao = EVENTOS_AUDITORIA_SISTEMA_PADRAO.reduce((acc, evento) => {
+export function configuracaoPadraoEventosAuditoriaSistema() {
+    return EVENTOS_AUDITORIA_SISTEMA_PADRAO.reduce((acc, evento) => {
         acc[evento.chave] = true;
         return acc;
     }, {});
+}
 
-    if (typeof window === "undefined") {
+export function normalizarConfiguracaoEventosAuditoriaSistema(configuracao = {}) {
+    const padrao = configuracaoPadraoEventosAuditoriaSistema();
+
+    if (!configuracao || typeof configuracao !== "object") {
         return padrao;
+    }
+
+    return { ...padrao, ...configuracao };
+}
+
+export function obterConfiguracaoEventosAuditoriaSistemaLocal() {
+    if (typeof window === "undefined") {
+        return configuracaoPadraoEventosAuditoriaSistema();
     }
 
     try {
         const salvo = JSON.parse(window.localStorage.getItem(CHAVE_CONFIG_EVENTOS_AUDITORIA_SISTEMA) || "null");
-
-        if (!salvo || typeof salvo !== "object") {
-            return padrao;
-        }
-
-        return { ...padrao, ...salvo };
+        return normalizarConfiguracaoEventosAuditoriaSistema(salvo);
     } catch {
-        return padrao;
+        return configuracaoPadraoEventosAuditoriaSistema();
     }
+}
+
+export function obterConfiguracaoEventosAuditoriaSistema() {
+    return obterConfiguracaoEventosAuditoriaSistemaLocal();
 }
 
 export function salvarConfiguracaoEventosAuditoriaSistema(configuracao) {
@@ -100,8 +115,93 @@ export function salvarConfiguracaoEventosAuditoriaSistema(configuracao) {
 
     window.localStorage.setItem(
         CHAVE_CONFIG_EVENTOS_AUDITORIA_SISTEMA,
-        JSON.stringify(configuracao || {})
+        JSON.stringify(normalizarConfiguracaoEventosAuditoriaSistema(configuracao))
     );
+}
+
+export async function carregarConfiguracaoEventosAuditoriaSistemaSupabase() {
+    const configuracaoLocal = obterConfiguracaoEventosAuditoriaSistemaLocal();
+
+    try {
+        const { data, error } = await supabase
+            .from(TABELA_CONFIG_AUDITORIA_SISTEMA)
+            .select("valor, atualizado_em")
+            .eq("chave", CHAVE_REGISTRO_EVENTOS_AUDITORIA_SISTEMA)
+            .maybeSingle();
+
+        if (error) {
+            return {
+                configuracao: configuracaoLocal,
+                origem: "local",
+                atualizadoEm: null,
+                erro: error.message,
+            };
+        }
+
+        if (!data?.valor) {
+            return {
+                configuracao: configuracaoLocal,
+                origem: "local",
+                atualizadoEm: null,
+                erro: "Configuração ainda não cadastrada no Supabase.",
+            };
+        }
+
+        const configuracao = normalizarConfiguracaoEventosAuditoriaSistema(data.valor);
+        salvarConfiguracaoEventosAuditoriaSistema(configuracao);
+
+        return {
+            configuracao,
+            origem: "supabase",
+            atualizadoEm: data.atualizado_em || null,
+            erro: "",
+        };
+    } catch (error) {
+        return {
+            configuracao: configuracaoLocal,
+            origem: "local",
+            atualizadoEm: null,
+            erro: error?.message || "Não foi possível carregar a configuração do Supabase.",
+        };
+    }
+}
+
+export async function salvarConfiguracaoEventosAuditoriaSistemaSupabase(configuracao) {
+    const configuracaoNormalizada = normalizarConfiguracaoEventosAuditoriaSistema(configuracao);
+    salvarConfiguracaoEventosAuditoriaSistema(configuracaoNormalizada);
+
+    try {
+        const { error } = await supabase
+            .from(TABELA_CONFIG_AUDITORIA_SISTEMA)
+            .upsert(
+                {
+                    chave: CHAVE_REGISTRO_EVENTOS_AUDITORIA_SISTEMA,
+                    valor: configuracaoNormalizada,
+                    atualizado_em: new Date().toISOString(),
+                },
+                { onConflict: "chave" }
+            );
+
+        if (error) {
+            return {
+                ok: false,
+                origem: "local",
+                erro: error.message,
+            };
+        }
+
+        return {
+            ok: true,
+            origem: "supabase",
+            erro: "",
+        };
+    } catch (error) {
+        return {
+            ok: false,
+            origem: "local",
+            erro: error?.message || "Não foi possível salvar a configuração no Supabase.",
+        };
+    }
 }
 
 export function auditoriaEventoHabilitado(acao, configuracao = null) {

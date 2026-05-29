@@ -1,5 +1,5 @@
 /* eslint-disable no-unused-vars */
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { motion } from "framer-motion";
 import {
     ChevronDown,
@@ -21,9 +21,13 @@ import {
 } from "../../utils/sstUtils";
 import {
     auditoriaEventoHabilitado,
+    carregarConfiguracaoEventosAuditoriaSistemaSupabase,
+    configuracaoPadraoEventosAuditoriaSistema,
     montarEventosAuditoriaSistema,
+    normalizarConfiguracaoEventosAuditoriaSistema,
     obterConfiguracaoEventosAuditoriaSistema,
     salvarConfiguracaoEventosAuditoriaSistema,
+    salvarConfiguracaoEventosAuditoriaSistemaSupabase,
 } from "../../services/auditoriaSistemaConfigService";
 
 const hoje = new Date();
@@ -67,29 +71,86 @@ export function RelatorioAuditoria({
     const [configEventosAuditoria, setConfigEventosAuditoria] = useState(() =>
         obterConfiguracaoEventosAuditoriaSistema()
     );
+    const [origemConfigEventosAuditoria, setOrigemConfigEventosAuditoria] = useState("local");
+    const [mensagemConfigEventosAuditoria, setMensagemConfigEventosAuditoria] = useState("");
+    const [carregandoConfigEventosAuditoria, setCarregandoConfigEventosAuditoria] = useState(false);
+    const [salvandoConfigEventosAuditoria, setSalvandoConfigEventosAuditoria] = useState(false);
+
+    useEffect(() => {
+        if (typeof window === "undefined") return undefined;
+
+        const timer = window.setTimeout(async () => {
+            setCarregandoConfigEventosAuditoria(true);
+
+            try {
+                const resultado = await carregarConfiguracaoEventosAuditoriaSistemaSupabase();
+                setConfigEventosAuditoria(resultado.configuracao);
+                setOrigemConfigEventosAuditoria(resultado.origem);
+
+                if (resultado.erro) {
+                    setMensagemConfigEventosAuditoria(
+                        `Usando configuração local. Supabase: ${resultado.erro}`
+                    );
+                } else if (resultado.origem === "supabase") {
+                    setMensagemConfigEventosAuditoria("Configuração carregada do Supabase.");
+                }
+            } finally {
+                setCarregandoConfigEventosAuditoria(false);
+            }
+        }, 0);
+
+        return () => window.clearTimeout(timer);
+    }, []);
+
+    const persistirConfiguracaoEventosAuditoria = async (configuracao, mensagemSucesso = "Configuração salva.") => {
+        const normalizada = normalizarConfiguracaoEventosAuditoriaSistema(configuracao);
+        setConfigEventosAuditoria(normalizada);
+        salvarConfiguracaoEventosAuditoriaSistema(normalizada);
+        setSalvandoConfigEventosAuditoria(true);
+        setMensagemConfigEventosAuditoria("Salvando configuração...");
+
+        try {
+            const resultado = await salvarConfiguracaoEventosAuditoriaSistemaSupabase(normalizada);
+            setOrigemConfigEventosAuditoria(resultado.origem || "local");
+
+            if (resultado.ok) {
+                setMensagemConfigEventosAuditoria(`${mensagemSucesso} Configuração sincronizada no Supabase.`);
+            } else {
+                setMensagemConfigEventosAuditoria(
+                    `${mensagemSucesso} Mantida localmente. Supabase: ${resultado.erro}`
+                );
+            }
+        } finally {
+            setSalvandoConfigEventosAuditoria(false);
+        }
+    };
 
     const alternarEventoAuditoria = (chave) => {
-        setConfigEventosAuditoria((atual) => {
-            const proxima = {
-                ...atual,
-                [chave]: atual[chave] === false,
-            };
+        const proxima = {
+            ...configEventosAuditoria,
+            [chave]: configEventosAuditoria[chave] === false,
+        };
 
-            salvarConfiguracaoEventosAuditoriaSistema(proxima);
-            return proxima;
-        });
+        persistirConfiguracaoEventosAuditoria(proxima, "Evento atualizado.");
     };
 
     const definirTodosEventosAuditoria = (habilitado) => {
-        setConfigEventosAuditoria((atual) => {
-            const proxima = eventosAuditoriaSistema.reduce((acc, evento) => {
-                acc[evento.chave] = habilitado;
-                return acc;
-            }, { ...atual });
+        const proxima = eventosAuditoriaSistema.reduce((acc, evento) => {
+            acc[evento.chave] = habilitado;
+            return acc;
+        }, { ...configEventosAuditoria });
 
-            salvarConfiguracaoEventosAuditoriaSistema(proxima);
-            return proxima;
-        });
+        persistirConfiguracaoEventosAuditoria(
+            proxima,
+            habilitado ? "Todos os eventos foram habilitados." : "Todos os eventos foram desabilitados."
+        );
+    };
+
+    const restaurarPadraoEventosAuditoria = () => {
+        persistirConfiguracaoEventosAuditoria(
+            configuracaoPadraoEventosAuditoriaSistema(),
+            "Configuração padrão restaurada."
+        );
     };
 
     const alternarDetalhesAuditoria = (id) => {
@@ -460,7 +521,7 @@ export function RelatorioAuditoria({
             <CardRecolhivel
                 className="mt-5"
                 titulo="Eventos verificados pela Auditoria de sistema"
-                subtitulo="Habilite ou desabilite quais tipos de evento devem ser registrados e exibidos no relatório de auditoria deste navegador."
+                subtitulo="Habilite ou desabilite quais tipos de evento devem ser registrados e exibidos no relatório. A configuração é salva localmente e sincronizada no Supabase quando a tabela estiver criada."
                 contador={`${eventosHabilitadosAuditoria}/${eventosAuditoriaSistema.length}`}
                 defaultOpen={false}
                 acao={(
@@ -468,20 +529,56 @@ export function RelatorioAuditoria({
                         <button
                             type="button"
                             onClick={() => definirTodosEventosAuditoria(true)}
-                            className="rounded-2xl bg-emerald-50 px-4 py-2 text-sm font-bold text-emerald-700 ring-1 ring-emerald-200 hover:bg-emerald-100"
+                            disabled={salvandoConfigEventosAuditoria}
+                            className="rounded-2xl bg-emerald-50 px-4 py-2 text-sm font-bold text-emerald-700 ring-1 ring-emerald-200 hover:bg-emerald-100 disabled:cursor-not-allowed disabled:opacity-60"
                         >
                             Habilitar todos
                         </button>
                         <button
                             type="button"
                             onClick={() => definirTodosEventosAuditoria(false)}
-                            className="rounded-2xl bg-red-50 px-4 py-2 text-sm font-bold text-red-700 ring-1 ring-red-200 hover:bg-red-100"
+                            disabled={salvandoConfigEventosAuditoria}
+                            className="rounded-2xl bg-red-50 px-4 py-2 text-sm font-bold text-red-700 ring-1 ring-red-200 hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-60"
                         >
                             Desabilitar todos
+                        </button>
+                        <button
+                            type="button"
+                            onClick={restaurarPadraoEventosAuditoria}
+                            disabled={salvandoConfigEventosAuditoria}
+                            className="rounded-2xl bg-slate-50 px-4 py-2 text-sm font-bold text-slate-700 ring-1 ring-slate-200 hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-60"
+                        >
+                            Restaurar padrão
                         </button>
                     </div>
                 )}
             >
+                <div className="mb-4 rounded-3xl bg-slate-50 p-4 text-sm text-slate-600 ring-1 ring-slate-200">
+                    <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
+                        <div>
+                            <p className="font-black text-slate-950">Status da configuração</p>
+                            <p className="mt-1 text-xs leading-relaxed text-slate-500">
+                                Origem atual: <strong>{origemConfigEventosAuditoria === "supabase" ? "Supabase" : "Local do navegador"}</strong>
+                                {carregandoConfigEventosAuditoria ? " · carregando..." : ""}
+                                {salvandoConfigEventosAuditoria ? " · salvando..." : ""}
+                            </p>
+                        </div>
+                        <span className={classNames(
+                            "w-fit rounded-full px-3 py-1 text-xs font-black uppercase ring-1",
+                            origemConfigEventosAuditoria === "supabase"
+                                ? "bg-emerald-50 text-emerald-700 ring-emerald-200"
+                                : "bg-orange-50 text-orange-700 ring-orange-200"
+                        )}>
+                            {origemConfigEventosAuditoria === "supabase" ? "Sincronizado" : "Local"}
+                        </span>
+                    </div>
+                    {mensagemConfigEventosAuditoria && (
+                        <p className="mt-3 rounded-2xl bg-white px-3 py-2 text-xs font-semibold text-slate-500 ring-1 ring-slate-200">
+                            {mensagemConfigEventosAuditoria}
+                        </p>
+                    )}
+                </div>
+
                 <div className="mb-4 grid gap-3 md:grid-cols-3">
                     <div className="rounded-3xl bg-emerald-50 p-4 ring-1 ring-emerald-200">
                         <p className="text-xs font-black uppercase tracking-wide text-emerald-700">Habilitados</p>
@@ -526,8 +623,9 @@ export function RelatorioAuditoria({
                                 <button
                                     type="button"
                                     onClick={() => alternarEventoAuditoria(evento.chave)}
+                                    disabled={salvandoConfigEventosAuditoria}
                                     className={classNames(
-                                        "shrink-0 rounded-2xl px-4 py-2 text-xs font-black uppercase ring-1",
+                                        "shrink-0 rounded-2xl px-4 py-2 text-xs font-black uppercase ring-1 disabled:cursor-not-allowed disabled:opacity-60",
                                         evento.habilitado
                                             ? "bg-emerald-100 text-emerald-700 ring-emerald-200 hover:bg-emerald-200"
                                             : "bg-red-100 text-red-700 ring-red-200 hover:bg-red-200"
