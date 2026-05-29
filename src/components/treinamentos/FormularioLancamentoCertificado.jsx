@@ -47,8 +47,8 @@ export function FormularioLancamentoCertificado({
     onAlternarRecolhido,
 }) {
     return (
-        <Card>
-            <div className="flex flex-col justify-between gap-3 md:flex-row md:items-start">
+        <Card className="self-start">
+            <div className="mb-4 flex flex-col justify-between gap-3 lg:flex-row lg:items-start">
                 <div>
                     <h2 className="flex items-center gap-2 text-lg font-bold text-slate-950">
                         <Upload className="h-4 w-4" />
@@ -59,28 +59,30 @@ export function FormularioLancamentoCertificado({
                     </p>
                 </div>
 
-                <button
-                    type="button"
-                    onClick={onAlternarRecolhido}
-                    className="inline-flex items-center justify-center gap-2 rounded-2xl bg-white px-4 py-2 text-xs font-bold text-slate-700 ring-1 ring-slate-200 hover:bg-slate-50"
-                >
-                    {recolhido ? (
-                        <>
-                            <ChevronDown className="h-4 w-4" />
-                            Abrir card
-                        </>
-                    ) : (
-                        <>
-                            <ChevronUp className="h-4 w-4" />
-                            Recolher card
-                        </>
-                    )}
-                </button>
+                <div className="flex flex-wrap gap-2 lg:justify-end">
+                    <button
+                        type="button"
+                        onClick={onAlternarRecolhido}
+                        className="inline-flex items-center justify-center gap-2 rounded-full bg-white px-3 py-1 text-xs font-bold text-slate-700 ring-1 ring-slate-200 hover:bg-slate-50"
+                    >
+                        {recolhido ? (
+                            <>
+                                <ChevronDown className="h-3.5 w-3.5" />
+                                Abrir
+                            </>
+                        ) : (
+                            <>
+                                <ChevronUp className="h-3.5 w-3.5" />
+                                Recolher
+                            </>
+                        )}
+                    </button>
+                </div>
             </div>
 
             {recolhido ? (
-                <p className="mt-4 rounded-2xl bg-slate-50 px-4 py-3 text-sm text-slate-500">
-                    Card recolhido. Clique em Abrir card para lançar certificado individual ou acessar o envio em lote.
+                <p className="rounded-2xl bg-slate-50 px-4 py-3 text-sm text-slate-500">
+                    Card recolhido. Clique em Abrir para lançar certificado individual ou acessar o envio em lote.
                 </p>
             ) : (
             <div className="mt-5 space-y-3">
