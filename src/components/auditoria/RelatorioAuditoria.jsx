@@ -36,7 +36,10 @@ export function RelatorioAuditoria({
     auditoria = [],
     emailsEnviados = [],
     carregando,
+    carregandoMaisAuditoria = false,
+    existeMaisAuditoria = false,
     onAtualizar,
+    onCarregarMaisAuditoria,
     onListarArquivosStorage,
     onExcluirArquivoStorage,
     onListarUsuariosAuditoria,
@@ -1259,6 +1262,39 @@ export function RelatorioAuditoria({
                             </div>
                         );
                     })}
+
+                    {!carregando && auditoriaVerificada.length > 0 && (
+                        <div className="rounded-3xl border border-dashed border-slate-300 bg-slate-50 p-4">
+                            <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+                                <div>
+                                    <p className="text-sm font-bold text-slate-800">
+                                        Registros carregados: {auditoriaVerificada.length}
+                                    </p>
+                                    <p className="mt-1 text-xs text-slate-500">
+                                        {existeMaisAuditoria
+                                            ? "Existem registros antigos disponíveis. Carregue mais somente quando precisar consultar histórico anterior."
+                                            : "Todos os registros disponíveis para esta consulta já foram carregados."}
+                                    </p>
+                                </div>
+
+                                {existeMaisAuditoria ? (
+                                    <button
+                                        type="button"
+                                        onClick={onCarregarMaisAuditoria}
+                                        disabled={carregandoMaisAuditoria || !onCarregarMaisAuditoria}
+                                        className="inline-flex items-center justify-center gap-2 rounded-2xl bg-slate-950 px-4 py-3 text-sm font-bold text-white hover:bg-slate-800 disabled:cursor-not-allowed disabled:bg-slate-300"
+                                    >
+                                        <RefreshCw className={classNames("h-4 w-4", carregandoMaisAuditoria && "animate-spin")} />
+                                        {carregandoMaisAuditoria ? "Carregando..." : "Carregar mais registros"}
+                                    </button>
+                                ) : (
+                                    <span className="inline-flex items-center justify-center rounded-2xl bg-emerald-50 px-4 py-2 text-xs font-bold text-emerald-700 ring-1 ring-emerald-200">
+                                        Histórico carregado
+                                    </span>
+                                )}
+                            </div>
+                        </div>
+                    )}
                 </div>
             </CardRecolhivel>
         </motion.div>
