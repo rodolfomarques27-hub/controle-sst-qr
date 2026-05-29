@@ -240,11 +240,27 @@ export function ConfiguracoesSistema({ usuario = null, podeAcessarAuditoria = fa
             );
         }
 
+        if (React.isValidElement(conteudo)) {
+            return React.cloneElement(conteudo, {
+                className: classNames(conteudo.props.className || "", "h-full"),
+                children: (
+                    <>
+                        {conteudo.props.children}
+                        <div className="mt-4 flex justify-end border-t border-slate-100 pt-3">
+                            {botaoRecolherBlocoConfiguracao(chave)}
+                        </div>
+                    </>
+                ),
+            });
+        }
+
         return (
-            <div className="relative">
-                {botaoRecolherBlocoConfiguracao(chave, "absolute right-4 top-4 z-10 shadow-sm")}
+            <Card>
                 {conteudo}
-            </div>
+                <div className="mt-4 flex justify-end border-t border-slate-100 pt-3">
+                    {botaoRecolherBlocoConfiguracao(chave)}
+                </div>
+            </Card>
         );
     };
 

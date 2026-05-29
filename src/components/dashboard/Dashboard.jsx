@@ -418,6 +418,7 @@ export function Dashboard({
         desviosCampoCorrigidos,
         topDesviosCampo,
         aniversariantesMes,
+        proximoAniversarioDashboard,
         pendencias,
         colaboradoresPorFuncao,
         maiorQuantidadePorFuncao,
@@ -714,23 +715,10 @@ export function Dashboard({
                                     )}
                                 </div>
 
-                                {ehArmazenamento ? (
-                                    <>
-                                        <p className={`mt-3 border-b border-slate-100 pb-2 text-3xl font-black leading-none ${storageStatusDashboard.valorClasse || "text-slate-950"}`}>
-                                            {storagePercentual}%
-                                        </p>
-                                        <p className="mt-2 text-xs font-medium text-slate-500">
-                                            {totalStorageLabel} / {storageLimiteLabelDashboard}
-                                        </p>
-                                    </>
-                                ) : (
-                                    <>
-                                        <p className={`mt-3 border-b border-slate-100 pb-2 text-3xl font-black leading-none ${estilos.valor || "text-slate-950"}`}>
-                                            {item.valor}
-                                        </p>
-                                        <p className="mt-2 text-xs font-medium text-slate-500">{item.detalhe}</p>
-                                    </>
-                                )}
+                                <p className={`mt-3 border-b border-slate-100 pb-2 text-3xl font-black leading-none ${estilos.valor || "text-slate-950"}`}>
+                                    {item.valor}
+                                </p>
+                                <p className="mt-2 text-xs font-medium text-slate-500">{item.detalhe}</p>
                             </div>
                         </div>
                     </div>
@@ -774,6 +762,7 @@ export function Dashboard({
                 alertasImportantes={alertasImportantes}
                 documentosPorTipo={documentosPorTipo}
                 ultimosDocumentosEnviados={ultimosDocumentosEnviados}
+                proximoAniversarioDashboard={proximoAniversarioDashboard}
             />
         );
     };

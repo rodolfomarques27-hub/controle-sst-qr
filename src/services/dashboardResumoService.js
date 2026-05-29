@@ -220,9 +220,9 @@ export function calcularResumoDashboardSst({
         }, {})
     ).sort((a, b) => b.total - a.total || b.graves - a.graves).slice(0, 5);
 
-    const aniversariantesElegiveis = colaboradores.filter((colaborador) =>
-        deveMostrarAniversarioColaborador(colaborador) && colaboradorContaComoMobilizado(colaborador)
-    );
+    const aniversariantesElegiveis = colaboradores
+        .filter((colaborador) => deveMostrarAniversarioColaborador(colaborador) && colaboradorContaComoMobilizado(colaborador))
+        .map((colaborador) => ajustarProximoAniversarioParaAnoAtual(colaborador, dataReferencia));
     const aniversariantesMes = aniversariantesElegiveis
         .filter((colaborador) => mesAniversarioColaborador(colaborador) === mesAtual + 1)
         .sort((a, b) => (diaAniversarioColaborador(a) || 99) - (diaAniversarioColaborador(b) || 99));
