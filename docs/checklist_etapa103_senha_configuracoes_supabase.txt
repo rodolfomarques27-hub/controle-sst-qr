@@ -1,0 +1,26 @@
+Roteiro 2 - Etapa 103
+Sincronizar senha da aba Configurações no Supabase
+
+1. Executar no Supabase SQL Editor:
+   supabase/sql/etapa103_senha_configuracoes_supabase.sql
+
+2. Conferir no Supabase:
+   select chave, valor from public.auditoria_sistema_configuracoes where chave = 'senha_configuracoes_sistema';
+
+3. Teste no sistema:
+   - Abrir Configurações.
+   - Entrar com senha 2026.
+   - Abrir o card Senha das Configurações.
+   - Alterar para uma senha de teste, por exemplo 3030.
+   - Salvar.
+   - Bloquear Configurações.
+   - Confirmar que 2026 não abre.
+   - Confirmar que 3030 abre.
+   - Recarregar com Ctrl + F5.
+   - Confirmar que a senha continua funcionando.
+   - Restaurar senha padrão.
+
+4. Conferência técnica:
+   - Build deve passar.
+   - Git status deve ficar limpo.
+   - A origem da senha deve aparecer como Supabase quando sincronizada.

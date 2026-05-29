@@ -20,7 +20,9 @@ import {
 } from "./constants/sistemaLimitesConstants";
 import {
     carregarSenhaConfiguracoesSistema,
+    carregarSenhaConfiguracoesSistemaSupabase,
     salvarSenhaConfiguracoesSistema,
+    salvarSenhaConfiguracoesSistemaSupabase,
     SENHA_CONFIGURACOES_PADRAO,
 } from "./constants/configuracoesSegurancaConstants";
 import {
@@ -262,6 +264,8 @@ export default function App() {
     const [tela, setTela] = useState("dashboard");
     const [configuracoesDesbloqueadas, setConfiguracoesDesbloqueadas] = useState(false);
     const [senhaConfiguracoesSistema, setSenhaConfiguracoesSistema] = useState(() => carregarSenhaConfiguracoesSistema());
+    const [origemSenhaConfiguracoesSistema, setOrigemSenhaConfiguracoesSistema] = useState("local");
+    const [mensagemSenhaConfiguracoesSistema, setMensagemSenhaConfiguracoesSistema] = useState("Senha carregada localmente.");
     const [senhaConfiguracoes, setSenhaConfiguracoes] = useState("");
     const [mostrarSenhaConfiguracoes, setMostrarSenhaConfiguracoes] = useState(false);
     const [erroSenhaConfiguracoes, setErroSenhaConfiguracoes] = useState("");
@@ -314,6 +318,26 @@ export default function App() {
             // Ignora indisponibilidade do localStorage.
         }
     }, [menuLateralAberto]);
+
+    useEffect(() => {
+        if (!usuario || !SUPABASE_CONFIGURADO) return;
+
+        let ativo = true;
+        const timer = window.setTimeout(async () => {
+            const resultado = await carregarSenhaConfiguracoesSistemaSupabase(supabase);
+
+            if (!ativo) return;
+
+            setSenhaConfiguracoesSistema(resultado.senha);
+            setOrigemSenhaConfiguracoesSistema(resultado.origem || "local");
+            setMensagemSenhaConfiguracoesSistema(resultado.mensagem || "Senha das Configurações carregada.");
+        }, 0);
+
+        return () => {
+            ativo = false;
+            window.clearTimeout(timer);
+        };
+    }, [usuario]);
 
     const atualizarLimitesCarregamentoSistema = useCallback((novosLimites) => {
         const normalizados = salvarLimitesCarregamentoSistema(novosLimites);
@@ -2651,10 +2675,18 @@ export default function App() {
         setMostrarSenhaConfiguracoes(false);
     };
 
-    const atualizarSenhaConfiguracoesSistema = (novaSenha) => {
-        const senhaSalva = salvarSenhaConfiguracoesSistema(novaSenha);
-        setSenhaConfiguracoesSistema(senhaSalva);
-        return senhaSalva;
+    const atualizarSenhaConfiguracoesSistema = async (novaSenha) => {
+        const senhaLocal = salvarSenhaConfiguracoesSistema(novaSenha);
+        setSenhaConfiguracoesSistema(senhaLocal);
+        setOrigemSenhaConfiguracoesSistema("local");
+        setMensagemSenhaConfiguracoesSistema("Senha salva localmente. Sincronizando com Supabase...");
+
+        const resultado = await salvarSenhaConfiguracoesSistemaSupabase(supabase, senhaLocal, usuario);
+        setSenhaConfiguracoesSistema(resultado.senha);
+        setOrigemSenhaConfiguracoesSistema(resultado.origem || "local");
+        setMensagemSenhaConfiguracoesSistema(resultado.mensagem || "Senha das Configurações atualizada.");
+
+        return resultado;
     };
 
     const renderBloqueioConfiguracoes = () => (
@@ -2991,6 +3023,8 @@ export default function App() {
                                         }}
                                         onSalvarLimites={atualizarLimitesCarregamentoSistema}
                                         senhaConfiguracoesSistema={senhaConfiguracoesSistema}
+                                        origemSenhaConfiguracoesSistema={origemSenhaConfiguracoesSistema}
+                                        mensagemSenhaConfiguracoesSistema={mensagemSenhaConfiguracoesSistema}
                                         onSalvarSenhaConfiguracoes={atualizarSenhaConfiguracoesSistema}
                                     />
                                 </div>

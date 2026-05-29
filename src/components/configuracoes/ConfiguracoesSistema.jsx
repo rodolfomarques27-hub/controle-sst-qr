@@ -119,6 +119,8 @@ export function ConfiguracoesSistema({
     limites = {},
     onSalvarLimites,
     senhaConfiguracoesSistema = SENHA_CONFIGURACOES_PADRAO,
+    origemSenhaConfiguracoesSistema = "local",
+    mensagemSenhaConfiguracoesSistema: mensagemSenhaConfiguracoesSistemaApp = "",
     onSalvarSenhaConfiguracoes,
 }) {
     const [configEventos, setConfigEventos] = useState(() => configuracaoPadraoEventosAuditoriaSistema());
@@ -137,7 +139,9 @@ export function ConfiguracoesSistema({
         nova: "",
         confirmar: "",
     });
-    const [mensagemSenhaConfiguracoes, setMensagemSenhaConfiguracoes] = useState("Senha das Configurações carregada localmente.");
+    const [mensagemSenhaConfiguracoes, setMensagemSenhaConfiguracoes] = useState(
+        mensagemSenhaConfiguracoesSistemaApp || "Senha das Configurações carregada localmente."
+    );
     const [mostrarCamposSenhaConfiguracoes, setMostrarCamposSenhaConfiguracoes] = useState(false);
 
     const [mostrarOrganizacaoCards, setMostrarOrganizacaoCards] = useState(false);
@@ -229,7 +233,7 @@ export function ConfiguracoesSistema({
         setMensagemSenhaConfiguracoes("Preencha os campos e salve para alterar a senha local das Configurações.");
     };
 
-    const salvarSenhaConfiguracoes = (evento) => {
+    const salvarSenhaConfiguracoes = async (evento) => {
         evento.preventDefault();
 
         const senhaAtual = senhaConfiguracoesFormulario.atual.trim();
@@ -251,23 +255,30 @@ export function ConfiguracoesSistema({
             return;
         }
 
+        setMensagemSenhaConfiguracoes("Salvando senha das Configurações...");
+
         if (typeof onSalvarSenhaConfiguracoes === "function") {
-            onSalvarSenhaConfiguracoes(novaSenha);
+            const resultado = await onSalvarSenhaConfiguracoes(novaSenha);
+            setMensagemSenhaConfiguracoes(resultado?.mensagem || "Senha das Configurações atualizada.");
+        } else {
+            setMensagemSenhaConfiguracoes("Senha das Configurações atualizada localmente.");
         }
 
         setSenhaConfiguracoesFormulario({ atual: "", nova: "", confirmar: "" });
-        setMensagemSenhaConfiguracoes("Senha das Configurações atualizada localmente.");
     };
 
-    const restaurarSenhaConfiguracoesPadrao = () => {
+    const restaurarSenhaConfiguracoesPadrao = async () => {
         const senhaPadrao = restaurarSenhaConfiguracoesSistema();
+        setMensagemSenhaConfiguracoes("Restaurando senha padrão das Configurações...");
 
         if (typeof onSalvarSenhaConfiguracoes === "function") {
-            onSalvarSenhaConfiguracoes(senhaPadrao);
+            const resultado = await onSalvarSenhaConfiguracoes(senhaPadrao);
+            setMensagemSenhaConfiguracoes(resultado?.mensagem || "Senha padrão 2026 restaurada.");
+        } else {
+            setMensagemSenhaConfiguracoes("Senha padrão 2026 restaurada localmente.");
         }
 
         setSenhaConfiguracoesFormulario({ atual: "", nova: "", confirmar: "" });
-        setMensagemSenhaConfiguracoes("Senha padrão 2026 restaurada localmente.");
     };
 
     const blocoConfiguracaoVisivel = (chave) => blocosVisiveisConfiguracoes[chave] !== false;
@@ -350,6 +361,12 @@ export function ConfiguracoesSistema({
 
         return () => window.clearTimeout(timer);
     }, [limites]);
+
+    useEffect(() => {
+        if (mensagemSenhaConfiguracoesSistemaApp) {
+            setMensagemSenhaConfiguracoes(mensagemSenhaConfiguracoesSistemaApp);
+        }
+    }, [mensagemSenhaConfiguracoesSistemaApp]);
 
     const alterarLimite = (chave, valor) => {
         setLimitesEditaveis((atual) => ({
@@ -821,7 +838,7 @@ export function ConfiguracoesSistema({
                                 Altere a senha local exigida para abrir a aba Configurações neste navegador.
                             </p>
                             <p className="mt-2 text-xs font-semibold text-slate-500">
-                                Status atual: <span className="font-black text-slate-900">{senhaConfiguracoesSistema === SENHA_CONFIGURACOES_PADRAO ? "Senha padrão 2026" : "Senha personalizada"}</span>
+                                Status atual: <span className="font-black text-slate-900">{senhaConfiguracoesSistema === SENHA_CONFIGURACOES_PADRAO ? "Senha padrão 2026" : "Senha personalizada"}</span> · Origem: <span className="font-black text-slate-900">{origemSenhaConfiguracoesSistema === "supabase" ? "Supabase" : "Local"}</span>
                             </p>
                         </div>
                         <button
