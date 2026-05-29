@@ -212,15 +212,29 @@ export function ConfiguracoesSistema({ usuario = null, podeAcessarAuditoria = fa
                 type="button"
                 onClick={() => alternarRecolhidoBlocoConfiguracao(chave)}
                 className={classNames(
-                    "inline-flex items-center gap-2 rounded-2xl bg-white px-3 py-2 text-xs font-bold text-slate-700 ring-1 ring-slate-200 hover:bg-slate-50",
+                    "inline-flex items-center justify-center gap-2 rounded-2xl bg-slate-950 px-4 py-2 text-xs font-black text-white shadow-sm ring-1 ring-slate-950 hover:bg-slate-800",
                     extraClassName
                 )}
             >
                 {recolhido ? <ChevronDown className="h-3.5 w-3.5" /> : <ChevronUp className="h-3.5 w-3.5" />}
-                {recolhido ? "Abrir" : "Recolher"}
+                {recolhido ? "Abrir card" : "Recolher card"}
             </button>
         );
     };
+
+    const rodapeControleBlocoConfiguracao = (chave) => (
+        <div className="mt-5 rounded-2xl border border-slate-100 bg-slate-50/80 px-4 py-3">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                    <p className="text-[11px] font-black uppercase tracking-wide text-slate-400">Controle do card</p>
+                    <p className="mt-0.5 text-xs font-semibold text-slate-500">
+                        Use este botão para abrir ou recolher somente esta seção.
+                    </p>
+                </div>
+                {botaoRecolherBlocoConfiguracao(chave, "w-full sm:w-auto")}
+            </div>
+        </div>
+    );
 
     const renderBlocoConfiguracaoComControle = (chave, titulo, descricao, conteudo) => {
         if (!blocoConfiguracaoVisivel(chave)) return null;
@@ -228,13 +242,13 @@ export function ConfiguracoesSistema({ usuario = null, podeAcessarAuditoria = fa
         if (blocoConfiguracaoRecolhido(chave)) {
             return (
                 <Card>
-                    <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                    <div className="flex flex-col gap-4">
                         <div>
                             <p className="text-xs font-black uppercase tracking-wide text-slate-400">Card recolhido</p>
                             <h2 className="mt-1 text-lg font-black text-slate-950">{titulo}</h2>
                             <p className="mt-1 text-sm text-slate-500">{descricao}</p>
                         </div>
-                        {botaoRecolherBlocoConfiguracao(chave)}
+                        {rodapeControleBlocoConfiguracao(chave)}
                     </div>
                 </Card>
             );
@@ -246,9 +260,7 @@ export function ConfiguracoesSistema({ usuario = null, podeAcessarAuditoria = fa
                 children: (
                     <>
                         {conteudo.props.children}
-                        <div className="mt-4 flex justify-end border-t border-slate-100 pt-3">
-                            {botaoRecolherBlocoConfiguracao(chave)}
-                        </div>
+                        {rodapeControleBlocoConfiguracao(chave)}
                     </>
                 ),
             });
@@ -257,9 +269,7 @@ export function ConfiguracoesSistema({ usuario = null, podeAcessarAuditoria = fa
         return (
             <Card>
                 {conteudo}
-                <div className="mt-4 flex justify-end border-t border-slate-100 pt-3">
-                    {botaoRecolherBlocoConfiguracao(chave)}
-                </div>
+                {rodapeControleBlocoConfiguracao(chave)}
             </Card>
         );
     };

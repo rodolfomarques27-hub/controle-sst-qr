@@ -14,6 +14,30 @@ import {
     statusGeral,
 } from "../../services/colaboradorDocumentosService";
 
+const obterDataProximoAniversario = (colaborador, dataBase = new Date()) => {
+    const mes = mesAniversarioColaborador(colaborador);
+    const dia = diaAniversarioColaborador(colaborador);
+
+    if (!mes || !dia) return null;
+
+    const hoje = new Date(dataBase.getFullYear(), dataBase.getMonth(), dataBase.getDate());
+    let anoReferencia = hoje.getFullYear();
+    let proximaData = new Date(anoReferencia, mes - 1, dia);
+
+    if (proximaData < hoje) {
+        anoReferencia += 1;
+        proximaData = new Date(anoReferencia, mes - 1, dia);
+    }
+
+    return proximaData;
+};
+
+const formatarProximoAniversario = (colaborador) => {
+    const data = obterDataProximoAniversario(colaborador);
+
+    return data ? data.toLocaleDateString("pt-BR") : "Sem data cadastrada";
+};
+
 export function Aniversariantes({ colaboradores = [], empresasBanco = [] }) {
     const [mes, setMes] = useState("Todos");
     const [empresa, setEmpresa] = useState("Todas");
@@ -103,7 +127,7 @@ export function Aniversariantes({ colaboradores = [], empresasBanco = [] }) {
                 <Card>
                     <p className="text-sm font-semibold text-slate-500">Próximo aniversário</p>
                     <p className="mt-2 text-lg font-bold text-slate-950">{proximo?.colaborador?.nome || "-"}</p>
-                    <p className="mt-1 text-sm text-slate-500">{proximo ? formatarAniversario(obterDataAniversarioColaborador(proximo.colaborador)) : "Sem data cadastrada"}</p>
+                    <p className="mt-1 text-sm text-slate-500">{proximo ? formatarProximoAniversario(proximo.colaborador) : "Sem data cadastrada"}</p>
                 </Card>
                 <Card>
                     <p className="text-sm font-semibold text-slate-500">Exportação</p>
