@@ -4,6 +4,8 @@ import { motion } from "framer-motion";
 import {
     AlertTriangle,
     CheckCircle2,
+    ChevronDown,
+    ChevronUp,
     Copy,
     Database,
     HardDrive,
@@ -52,6 +54,53 @@ import {
 
 const classNames = (...classes) => classes.filter(Boolean).join(" ");
 
+
+const CHAVES_BLOCOS_CONFIGURACOES_PADRAO = [
+    "config-eventos-auditoria",
+    "config-limites-carregamento",
+    "config-auditoria-publica",
+    "config-seguranca-publica",
+    "config-storage-privado",
+    "config-status-etapa",
+];
+
+const BLOCOS_CONFIGURACOES_VISIVEIS_PADRAO = CHAVES_BLOCOS_CONFIGURACOES_PADRAO.reduce((acc, chave) => {
+    acc[chave] = true;
+    return acc;
+}, {});
+
+const BLOCOS_CONFIGURACOES_RECOLHIDOS_PADRAO = CHAVES_BLOCOS_CONFIGURACOES_PADRAO.reduce((acc, chave) => {
+    acc[chave] = false;
+    return acc;
+}, {});
+
+const carregarJsonLocalConfiguracoes = (chave, padrao) => {
+    if (typeof window === "undefined") return padrao;
+
+    try {
+        const salvo = JSON.parse(window.localStorage.getItem(chave) || "null");
+        return salvo && typeof salvo === "object" ? salvo : padrao;
+    } catch {
+        return padrao;
+    }
+};
+
+const carregarOrdemLocalConfiguracoes = () => {
+    if (typeof window === "undefined") return CHAVES_BLOCOS_CONFIGURACOES_PADRAO;
+
+    try {
+        const salvo = JSON.parse(window.localStorage.getItem("configuracoesSistemaOrdemBlocos") || "null");
+        if (!Array.isArray(salvo)) return CHAVES_BLOCOS_CONFIGURACOES_PADRAO;
+
+        return [
+            ...salvo.filter((chave) => CHAVES_BLOCOS_CONFIGURACOES_PADRAO.includes(chave)),
+            ...CHAVES_BLOCOS_CONFIGURACOES_PADRAO.filter((chave) => !salvo.includes(chave)),
+        ];
+    } catch {
+        return CHAVES_BLOCOS_CONFIGURACOES_PADRAO;
+    }
+};
+
 export function ConfiguracoesSistema({ usuario = null, podeAcessarAuditoria = false, limites = {}, onSalvarLimites }) {
     const [configEventos, setConfigEventos] = useState(() => configuracaoPadraoEventosAuditoriaSistema());
     const [origemConfig, setOrigemConfig] = useState("local");
@@ -64,6 +113,17 @@ export function ConfiguracoesSistema({ usuario = null, podeAcessarAuditoria = fa
     const [mensagemAuditoriaPublica, setMensagemAuditoriaPublica] = useState("Configuração pública carregada localmente.");
     const [mensagemStorage, setMensagemStorage] = useState("Checklist de Storage pronto para conferência operacional.");
 
+    const [mostrarOrganizacaoCards, setMostrarOrganizacaoCards] = useState(false);
+    const [blocosVisiveisConfiguracoes, setBlocosVisiveisConfiguracoes] = useState(() => ({
+        ...BLOCOS_CONFIGURACOES_VISIVEIS_PADRAO,
+        ...carregarJsonLocalConfiguracoes("configuracoesSistemaBlocosVisiveis", BLOCOS_CONFIGURACOES_VISIVEIS_PADRAO),
+    }));
+    const [blocosRecolhidosConfiguracoes, setBlocosRecolhidosConfiguracoes] = useState(() => ({
+        ...BLOCOS_CONFIGURACOES_RECOLHIDOS_PADRAO,
+        ...carregarJsonLocalConfiguracoes("configuracoesSistemaBlocosRecolhidos", BLOCOS_CONFIGURACOES_RECOLHIDOS_PADRAO),
+    }));
+    const [ordemBlocosConfiguracoes, setOrdemBlocosConfiguracoes] = useState(() => carregarOrdemLocalConfiguracoes());
+
     const eventosAuditoria = useMemo(() => {
         const normalizada = normalizarConfiguracaoEventosAuditoriaSistema(configEventos);
         return EVENTOS_AUDITORIA_SISTEMA_PADRAO.map((evento) => ({
@@ -73,6 +133,110 @@ export function ConfiguracoesSistema({ usuario = null, podeAcessarAuditoria = fa
     }, [configEventos]);
 
     const totalEventosHabilitados = eventosAuditoria.filter((evento) => evento.habilitado).length;
+
+
+    useEffect(() => {
+        if (typeof window === "undefined") return;
+        window.localStorage.setItem("configuracoesSistemaBlocosVisiveis", JSON.stringify(blocosVisiveisConfiguracoes));
+    }, [blocosVisiveisConfiguracoes]);
+
+    useEffect(() => {
+        if (typeof window === "undefined") return;
+        window.localStorage.setItem("configuracoesSistemaBlocosRecolhidos", JSON.stringify(blocosRecolhidosConfiguracoes));
+    }, [blocosRecolhidosConfiguracoes]);
+
+    useEffect(() => {
+        if (typeof window === "undefined") return;
+        window.localStorage.setItem("configuracoesSistemaOrdemBlocos", JSON.stringify(ordemBlocosConfiguracoes));
+    }, [ordemBlocosConfiguracoes]);
+
+    const moverBlocoConfiguracao = (chave, direcao) => {
+        setOrdemBlocosConfiguracoes((atual) => {
+            const base = [...atual];
+            const indice = base.indexOf(chave);
+            const novoIndice = indice + direcao;
+
+            if (indice < 0 || novoIndice < 0 || novoIndice >= base.length) return atual;
+
+            [base[indice], base[novoIndice]] = [base[novoIndice], base[indice]];
+            return base;
+        });
+    };
+
+    const alternarVisibilidadeBlocoConfiguracao = (chave) => {
+        setBlocosVisiveisConfiguracoes((atual) => ({
+            ...atual,
+            [chave]: atual[chave] === false,
+        }));
+    };
+
+    const alternarRecolhidoBlocoConfiguracao = (chave) => {
+        setBlocosRecolhidosConfiguracoes((atual) => ({
+            ...atual,
+            [chave]: !atual[chave],
+        }));
+    };
+
+    const abrirTodosBlocosConfiguracao = () => {
+        setBlocosRecolhidosConfiguracoes(BLOCOS_CONFIGURACOES_RECOLHIDOS_PADRAO);
+    };
+
+    const recolherTodosBlocosConfiguracao = () => {
+        setBlocosRecolhidosConfiguracoes(CHAVES_BLOCOS_CONFIGURACOES_PADRAO.reduce((acc, chave) => {
+            acc[chave] = true;
+            return acc;
+        }, {}));
+    };
+
+    const restaurarOrganizacaoCardsConfiguracoes = () => {
+        setBlocosVisiveisConfiguracoes(BLOCOS_CONFIGURACOES_VISIVEIS_PADRAO);
+        setBlocosRecolhidosConfiguracoes(BLOCOS_CONFIGURACOES_RECOLHIDOS_PADRAO);
+        setOrdemBlocosConfiguracoes(CHAVES_BLOCOS_CONFIGURACOES_PADRAO);
+    };
+
+    const blocoConfiguracaoVisivel = (chave) => blocosVisiveisConfiguracoes[chave] !== false;
+    const blocoConfiguracaoRecolhido = (chave) => Boolean(blocosRecolhidosConfiguracoes[chave]);
+
+    const botaoRecolherBlocoConfiguracao = (chave) => {
+        const recolhido = blocoConfiguracaoRecolhido(chave);
+
+        return (
+            <button
+                type="button"
+                onClick={() => alternarRecolhidoBlocoConfiguracao(chave)}
+                className="inline-flex items-center gap-2 rounded-2xl bg-white px-3 py-2 text-xs font-bold text-slate-700 ring-1 ring-slate-200 hover:bg-slate-50"
+            >
+                {recolhido ? <ChevronDown className="h-3.5 w-3.5" /> : <ChevronUp className="h-3.5 w-3.5" />}
+                {recolhido ? "Abrir" : "Recolher"}
+            </button>
+        );
+    };
+
+    const renderBlocoConfiguracaoComControle = (chave, titulo, descricao, conteudo) => {
+        if (!blocoConfiguracaoVisivel(chave)) return null;
+
+        if (blocoConfiguracaoRecolhido(chave)) {
+            return (
+                <Card>
+                    <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                        <div>
+                            <p className="text-xs font-black uppercase tracking-wide text-slate-400">Card recolhido</p>
+                            <h2 className="mt-1 text-lg font-black text-slate-950">{titulo}</h2>
+                            <p className="mt-1 text-sm text-slate-500">{descricao}</p>
+                        </div>
+                        {botaoRecolherBlocoConfiguracao(chave)}
+                    </div>
+                </Card>
+            );
+        }
+
+        return (
+            <div className="space-y-2">
+                <div className="flex justify-end">{botaoRecolherBlocoConfiguracao(chave)}</div>
+                {conteudo}
+            </div>
+        );
+    };
 
     useEffect(() => {
         const timer = window.setTimeout(() => {
@@ -309,78 +473,24 @@ export function ConfiguracoesSistema({ usuario = null, podeAcessarAuditoria = fa
         { chave: "config-status-etapa", titulo: "Status", descricao: "Resumo da configuração e usuário atual.", icon: CheckCircle2 },
     ];
 
-    return (
-        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
-            <Header
-                titulo="Configurações do sistema"
-                subtitulo="Centralize parâmetros operacionais, auditoria e limites usados pelo sistema SST."
-                acao={(
-                    <button
-                        type="button"
-                        onClick={carregarConfiguracao}
-                        disabled={carregandoConfig || salvandoConfig}
-                        className="inline-flex items-center gap-2 rounded-2xl bg-slate-950 px-4 py-2.5 text-sm font-bold text-white shadow-sm hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
-                    >
-                        <RefreshCw className={classNames("h-4 w-4", carregandoConfig && "animate-spin")} />
-                        Atualizar configurações
-                    </button>
-                )}
-            />
 
-            <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-                {cardsResumo.map((card) => {
-                    const Icon = card.icon;
-                    return (
-                        <Card key={card.label}>
-                            <div className="flex items-start gap-3">
-                                <div className="rounded-2xl bg-slate-100 p-3 text-slate-700">
-                                    <Icon className="h-4 w-4" />
-                                </div>
-                                <div className="min-w-0">
-                                    <p className="text-sm font-bold text-slate-950">{card.label}</p>
-                                    <p className="mt-2 text-2xl font-black text-slate-950">{card.valor}</p>
-                                    <p className="mt-1 text-xs font-medium text-slate-500">{card.detalhe}</p>
-                                </div>
-                            </div>
-                        </Card>
-                    );
-                })}
-            </div>
+    const secoesConfiguracoesOrdenadas = [
+        ...ordemBlocosConfiguracoes
+            .map((chave) => secoesConfiguracoes.find((secao) => secao.chave === chave))
+            .filter(Boolean),
+        ...secoesConfiguracoes.filter((secao) => !ordemBlocosConfiguracoes.includes(secao.chave)),
+    ];
 
-            <Card className="mt-6 border-blue-100 bg-blue-50/40">
-                <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-                    <div>
-                        <p className="text-xs font-black uppercase tracking-wide text-blue-700">Organização das configurações</p>
-                        <h2 className="mt-1 text-lg font-black text-slate-950">Seções rápidas do sistema</h2>
-                        <p className="mt-1 text-sm text-slate-600">Acesse rapidamente o grupo de configuração que deseja revisar.</p>
-                    </div>
-                    <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
-                        {secoesConfiguracoes.map((secao) => {
-                            const Icon = secao.icon;
+    const secoesConfiguracoesVisiveisOrdenadas = secoesConfiguracoesOrdenadas.filter((secao) => blocoConfiguracaoVisivel(secao.chave));
 
-                            return (
-                                <a
-                                    key={secao.chave}
-                                    href={`#${secao.chave}`}
-                                    className="group rounded-2xl bg-white px-3 py-3 text-left ring-1 ring-blue-100 transition hover:-translate-y-0.5 hover:ring-blue-200"
-                                >
-                                    <div className="flex items-start gap-2">
-                                        <span className="rounded-xl bg-blue-50 p-2 text-blue-700 ring-1 ring-blue-100">
-                                            <Icon className="h-4 w-4" />
-                                        </span>
-                                        <span className="min-w-0">
-                                            <span className="block text-xs font-black text-slate-950 group-hover:text-blue-700">{secao.titulo}</span>
-                                            <span className="mt-0.5 block text-[11px] leading-snug text-slate-500">{secao.descricao}</span>
-                                        </span>
-                                    </div>
-                                </a>
-                            );
-                        })}
-                    </div>
-                </div>
-            </Card>
-
-            <div className="mt-6 grid gap-6 xl:grid-cols-[1.25fr_0.75fr]">
+    const renderBlocoConfiguracao = (chave) => {
+        switch (chave) {
+        case "config-eventos-auditoria":
+            return renderBlocoConfiguracaoComControle(
+                "config-eventos-auditoria",
+                "Eventos da Auditoria de sistema",
+                "Eventos registrados e exibidos na auditoria.",
+                (
                 <Card>
                     <div className="flex flex-col gap-3 border-b border-slate-100 pb-4 md:flex-row md:items-start md:justify-between">
                         <div>
@@ -476,8 +586,15 @@ export function ConfiguracoesSistema({ usuario = null, podeAcessarAuditoria = fa
                         ))}
                     </div>
                 </Card>
+                )
+            );
 
-                <div className="space-y-6">
+        case "config-limites-carregamento":
+            return renderBlocoConfiguracaoComControle(
+                "config-limites-carregamento",
+                "Limites de carregamento",
+                "Quantidade de registros por tela/carga.",
+                (
                     <Card>
                         <div className="flex flex-col gap-3 border-b border-slate-100 pb-4 sm:flex-row sm:items-start sm:justify-between">
                             <div>
@@ -549,7 +666,15 @@ export function ConfiguracoesSistema({ usuario = null, podeAcessarAuditoria = fa
                             Salvar limites de carregamento
                         </button>
                     </Card>
+                )
+            );
 
+        case "config-auditoria-publica":
+            return renderBlocoConfiguracaoComControle(
+                "config-auditoria-publica",
+                "Auditoria pública e QR Code",
+                "Token, senha de referência e link público.",
+                (
                     <Card>
                         <div className="flex flex-col gap-3 border-b border-slate-100 pb-4 sm:flex-row sm:items-start sm:justify-between">
                             <div>
@@ -631,7 +756,15 @@ export function ConfiguracoesSistema({ usuario = null, podeAcessarAuditoria = fa
                             Salvar configuração da Auditoria pública
                         </button>
                     </Card>
+                )
+            );
 
+        case "config-seguranca-publica":
+            return renderBlocoConfiguracaoComControle(
+                "config-seguranca-publica",
+                "Revisão de segurança da Auditoria pública",
+                "Checklist operacional do QR Code público.",
+                (
                     <Card>
                         <div className="flex flex-col gap-3 border-b border-slate-100 pb-4 sm:flex-row sm:items-start sm:justify-between">
                             <div>
@@ -680,7 +813,15 @@ export function ConfiguracoesSistema({ usuario = null, podeAcessarAuditoria = fa
                             ))}
                         </div>
                     </Card>
+                )
+            );
 
+        case "config-storage-privado":
+            return renderBlocoConfiguracaoComControle(
+                "config-storage-privado",
+                "Revisão de Storage e arquivos privados",
+                "Buckets, URLs assinadas e arquivos sensíveis.",
+                (
                     <Card>
                         <div className="flex flex-col gap-3 border-b border-slate-100 pb-4 sm:flex-row sm:items-start sm:justify-between">
                             <div>
@@ -740,7 +881,15 @@ export function ConfiguracoesSistema({ usuario = null, podeAcessarAuditoria = fa
                             ))}
                         </div>
                     </Card>
+                )
+            );
 
+        case "config-status-etapa":
+            return renderBlocoConfiguracaoComControle(
+                "config-status-etapa",
+                "Status da etapa",
+                "Resumo da configuração e usuário atual.",
+                (
                     <Card>
                         <div className="flex items-start gap-3">
                             <div className="rounded-2xl bg-blue-50 p-3 text-blue-700">
@@ -757,19 +906,160 @@ export function ConfiguracoesSistema({ usuario = null, podeAcessarAuditoria = fa
                             </div>
                         </div>
                     </Card>
+                )
+            );
 
-                    {!podeAcessarAuditoria && (
-                        <div className="rounded-3xl bg-orange-50 p-4 text-sm font-semibold text-orange-700 ring-1 ring-orange-200">
-                            <div className="flex items-start gap-2">
-                                <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
-                                <p>
-                                    Você pode visualizar esta tela, mas as configurações da Auditoria de sistema devem ser administradas por usuário com permissão de auditoria.
-                                </p>
+        default:
+            return null;
+        }
+    };
+
+    return (
+        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
+            <Header
+                titulo="Configurações do sistema"
+                subtitulo="Centralize parâmetros operacionais, auditoria e limites usados pelo sistema SST."
+                acao={(
+                    <button
+                        type="button"
+                        onClick={carregarConfiguracao}
+                        disabled={carregandoConfig || salvandoConfig}
+                        className="inline-flex items-center gap-2 rounded-2xl bg-slate-950 px-4 py-2.5 text-sm font-bold text-white shadow-sm hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
+                    >
+                        <RefreshCw className={classNames("h-4 w-4", carregandoConfig && "animate-spin")} />
+                        Atualizar configurações
+                    </button>
+                )}
+            />
+
+            <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+                {cardsResumo.map((card) => {
+                    const Icon = card.icon;
+                    return (
+                        <Card key={card.label}>
+                            <div className="flex items-start gap-3">
+                                <div className="rounded-2xl bg-slate-100 p-3 text-slate-700">
+                                    <Icon className="h-4 w-4" />
+                                </div>
+                                <div className="min-w-0">
+                                    <p className="text-sm font-bold text-slate-950">{card.label}</p>
+                                    <p className="mt-2 text-2xl font-black text-slate-950">{card.valor}</p>
+                                    <p className="mt-1 text-xs font-medium text-slate-500">{card.detalhe}</p>
+                                </div>
                             </div>
-                        </div>
-                    )}
-                </div>
+                        </Card>
+                    );
+                })}
             </div>
+
+            <Card className="mt-6 border-blue-100 bg-blue-50/40">
+                <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+                    <div>
+                        <p className="text-xs font-black uppercase tracking-wide text-blue-700">Organização das configurações</p>
+                        <h2 className="mt-1 text-lg font-black text-slate-950">Seções rápidas do sistema</h2>
+                        <p className="mt-1 text-sm text-slate-600">Abra, recolha, oculte e organize os cards de configuração conforme a rotina de uso.</p>
+                        <div className="mt-3 flex flex-wrap gap-2">
+                            <button
+                                type="button"
+                                onClick={() => setMostrarOrganizacaoCards((valor) => !valor)}
+                                className="rounded-2xl bg-slate-950 px-3 py-2 text-xs font-black text-white hover:bg-slate-800"
+                            >
+                                {mostrarOrganizacaoCards ? "Ocultar organização" : "Organizar cards"}
+                            </button>
+                            <button type="button" onClick={abrirTodosBlocosConfiguracao} className="rounded-2xl bg-white px-3 py-2 text-xs font-bold text-slate-700 ring-1 ring-blue-100 hover:bg-blue-50">Abrir todos</button>
+                            <button type="button" onClick={recolherTodosBlocosConfiguracao} className="rounded-2xl bg-white px-3 py-2 text-xs font-bold text-slate-700 ring-1 ring-blue-100 hover:bg-blue-50">Recolher todos</button>
+                            <button type="button" onClick={restaurarOrganizacaoCardsConfiguracoes} className="rounded-2xl bg-white px-3 py-2 text-xs font-bold text-slate-700 ring-1 ring-blue-100 hover:bg-blue-50">Restaurar organização</button>
+                        </div>
+                    </div>
+                    <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
+                        {secoesConfiguracoesVisiveisOrdenadas.map((secao) => {
+                            const Icon = secao.icon;
+
+                            return (
+                                <a
+                                    key={secao.chave}
+                                    href={`#${secao.chave}`}
+                                    className="group rounded-2xl bg-white px-3 py-3 text-left ring-1 ring-blue-100 transition hover:-translate-y-0.5 hover:ring-blue-200"
+                                >
+                                    <div className="flex items-start gap-2">
+                                        <span className="rounded-xl bg-blue-50 p-2 text-blue-700 ring-1 ring-blue-100">
+                                            <Icon className="h-4 w-4" />
+                                        </span>
+                                        <span className="min-w-0">
+                                            <span className="block text-xs font-black text-slate-950 group-hover:text-blue-700">{secao.titulo}</span>
+                                            <span className="mt-0.5 block text-[11px] leading-snug text-slate-500">{secao.descricao}</span>
+                                        </span>
+                                    </div>
+                                </a>
+                            );
+                        })}
+                    </div>
+                </div>
+
+                {mostrarOrganizacaoCards && (
+                    <div className="mt-4 grid gap-3 lg:grid-cols-2">
+                        {secoesConfiguracoesOrdenadas.map((secao, index) => {
+                            const Icon = secao.icon;
+                            const visivel = blocoConfiguracaoVisivel(secao.chave);
+                            const recolhido = blocoConfiguracaoRecolhido(secao.chave);
+
+                            return (
+                                <div key={secao.chave} className="rounded-3xl bg-white p-3 ring-1 ring-blue-100">
+                                    <div className="flex items-start justify-between gap-3">
+                                        <div className="flex min-w-0 items-start gap-2">
+                                            <span className="rounded-xl bg-blue-50 p-2 text-blue-700 ring-1 ring-blue-100">
+                                                <Icon className="h-4 w-4" />
+                                            </span>
+                                            <div className="min-w-0">
+                                                <p className="text-sm font-black text-slate-950">#{index + 1}. {secao.titulo}</p>
+                                                <p className="mt-1 text-xs leading-relaxed text-slate-500">{secao.descricao}</p>
+                                                <p className="mt-1 text-[11px] font-semibold text-slate-400">
+                                                    {visivel ? "Visível" : "Oculto"} · {recolhido ? "Recolhido" : "Aberto"}
+                                                </p>
+                                            </div>
+                                        </div>
+                                        <div className="flex shrink-0 flex-wrap justify-end gap-1">
+                                            <button type="button" onClick={() => moverBlocoConfiguracao(secao.chave, -1)} disabled={index === 0} className="rounded-xl bg-slate-50 px-2 py-1 text-xs font-black text-slate-600 ring-1 ring-slate-200 disabled:cursor-not-allowed disabled:opacity-40">↑</button>
+                                            <button type="button" onClick={() => moverBlocoConfiguracao(secao.chave, 1)} disabled={index === secoesConfiguracoesOrdenadas.length - 1} className="rounded-xl bg-slate-50 px-2 py-1 text-xs font-black text-slate-600 ring-1 ring-slate-200 disabled:cursor-not-allowed disabled:opacity-40">↓</button>
+                                            <button type="button" onClick={() => alternarRecolhidoBlocoConfiguracao(secao.chave)} className="rounded-xl bg-blue-50 px-2 py-1 text-xs font-black text-blue-700 ring-1 ring-blue-100">{recolhido ? "Abrir" : "Recolher"}</button>
+                                            <button type="button" onClick={() => alternarVisibilidadeBlocoConfiguracao(secao.chave)} className={classNames("rounded-xl px-2 py-1 text-xs font-black ring-1", visivel ? "bg-emerald-50 text-emerald-700 ring-emerald-200" : "bg-slate-100 text-slate-500 ring-slate-200")}>{visivel ? "Visível" : "Oculto"}</button>
+                                        </div>
+                                    </div>
+                                </div>
+                            );
+                        })}
+                    </div>
+                )}
+            </Card>
+
+            <div className="mt-6 grid gap-6 xl:grid-cols-2">
+                {secoesConfiguracoesOrdenadas.map((secao) => (
+                    <React.Fragment key={secao.chave}>{renderBlocoConfiguracao(secao.chave)}</React.Fragment>
+                ))}
+            </div>
+
+            {secoesConfiguracoesVisiveisOrdenadas.length === 0 && (
+                <Card className="mt-6 border-orange-100 bg-orange-50/60">
+                    <div className="flex items-start gap-3">
+                        <AlertTriangle className="mt-1 h-5 w-5 shrink-0 text-orange-600" />
+                        <div>
+                            <h2 className="text-lg font-black text-orange-900">Nenhum card de configuração visível</h2>
+                            <p className="mt-1 text-sm font-semibold text-orange-700">Use Restaurar organização para reexibir os cards da tela Configurações.</p>
+                        </div>
+                    </div>
+                </Card>
+            )}
+
+            {!podeAcessarAuditoria && (
+                <div className="mt-6 rounded-3xl bg-orange-50 p-4 text-sm font-semibold text-orange-700 ring-1 ring-orange-200">
+                    <div className="flex items-start gap-2">
+                        <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
+                        <p>
+                            Você pode visualizar esta tela, mas as configurações da Auditoria de sistema devem ser administradas por usuário com permissão de auditoria.
+                        </p>
+                    </div>
+                </div>
+            )}
         </motion.div>
     );
 }
