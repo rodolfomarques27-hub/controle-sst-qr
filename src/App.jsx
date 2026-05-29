@@ -8,6 +8,12 @@ import {
     abrirArquivoStorage,
 } from "./services/supabaseServices";
 import {
+    codigoPastaCertificado,
+    enviarArquivoCertificado,
+    gerarUrlAssinadaCertificado,
+    removerArquivoCertificadoStorage,
+} from "./services/certificadosStorageService";
+import {
     Card,
     CardRecolhivel,
     FotoAuditoriaPreview,
@@ -1124,7 +1130,12 @@ export default function App() {
 
         for (const item of reconhecidos) {
             const treinamento = item.treinamento;
-            const arquivo = await enviarArquivoCertificado(item.arquivo, colaborador, treinamento.id);
+            const arquivo = await enviarArquivoCertificado({
+                supabase,
+                arquivo: item.arquivo,
+                colaborador,
+                treinamentoId: treinamento.id,
+            });
 
             const payload = {
                 colaborador_id: colaborador.id,
@@ -1163,7 +1174,10 @@ export default function App() {
             }
 
             if ((existente?.url_do_arquivo || existente?.arquivo_url) && (existente.url_do_arquivo || existente.arquivo_url) !== arquivo.arquivoUrl) {
-                await supabase.storage.from("certificados-treinamentos").remove([(existente.url_do_arquivo || existente.arquivo_url)]);
+                await removerArquivoCertificadoStorage({
+                    supabase,
+                    caminho: existente.url_do_arquivo || existente.arquivo_url,
+                });
             }
         }
 
@@ -1384,41 +1398,6 @@ export default function App() {
             setErroBanco(error.message || "Erro ao atualizar colaborador.");
             return false;
         }
-    }
-
-    function codigoPastaCertificado(colaborador) {
-        const codigo = String(colaborador?.codigoFuncionario || colaborador?.codigo_funcionario || "").trim();
-
-        if (!codigo) {
-            throw new Error("O colaborador não possui código do funcionário para organizar o arquivo no Storage.");
-        }
-
-        return sanitizarNomeArquivo(codigo).replace(/\.[^.]+$/, "");
-    }
-
-    async function enviarArquivoCertificado(arquivo, colaborador, treinamentoId) {
-        if (!arquivo) return { arquivoUrl: null, arquivoNome: null };
-        if (!validarArquivoAntesUpload(arquivo, "documentoSimples")) {
-            throw new Error("Certificado/documento fora do limite configurado.");
-        }
-
-        const nomeSeguro = sanitizarNomeArquivo(arquivo.name);
-        const codigoPasta = codigoPastaCertificado(colaborador);
-        const caminho = `${codigoPasta}/${treinamentoId}/${Date.now()}-${nomeSeguro}`;
-
-        const { error } = await supabase.storage
-            .from("certificados-treinamentos")
-            .upload(caminho, arquivo, {
-                cacheControl: "3600",
-                upsert: true,
-                contentType: arquivo.type || "application/pdf",
-            });
-
-        if (error) {
-            throw new Error(`Erro ao enviar certificado: ${error.message}`);
-        }
-
-        return { arquivoUrl: caminho, arquivoNome: nomeSeguro };
     }
 
     async function sincronizarCertificadosDoStorage() {
@@ -1919,11 +1898,12 @@ export default function App() {
             // 1) identifica o colaborador corretamente;
             // 2) salva o arquivo no Storage em pasta organizada pelo código do funcionário;
             // 3) grava/atualiza a referência na tabela certificados usando o UUID real do colaborador.
-            const arquivo = await enviarArquivoCertificado(
-                certificado.arquivo,
-                colaboradorSeguro,
-                treinamentoIdSeguro
-            );
+            const arquivo = await enviarArquivoCertificado({
+                supabase,
+                arquivo: certificado.arquivo,
+                colaborador: colaboradorSeguro,
+                treinamentoId: treinamentoIdSeguro,
+            });
 
             const payload = {
                 colaborador_id: colaboradorIdSeguro,
@@ -1970,7 +1950,10 @@ export default function App() {
             }
 
             if ((existente?.url_do_arquivo || existente?.arquivo_url) && (existente.url_do_arquivo || existente.arquivo_url) !== arquivo.arquivoUrl) {
-                await supabase.storage.from("certificados-treinamentos").remove([(existente.url_do_arquivo || existente.arquivo_url)]);
+                await removerArquivoCertificadoStorage({
+                    supabase,
+                    caminho: existente.url_do_arquivo || existente.arquivo_url,
+                });
             }
 
             const certificadoNormalizado = normalizarCertificado(data);
@@ -2077,16 +2060,17 @@ export default function App() {
             return;
         }
 
-        const { data, error } = await supabase.storage
-            .from("certificados-treinamentos")
-            .createSignedUrl(certificado.arquivoUrl, 60 * 10);
+        try {
+            const signedUrl = await gerarUrlAssinadaCertificado({
+                supabase,
+                caminho: certificado.arquivoUrl,
+                expiracaoSegundos: 60 * 10,
+            });
 
-        if (error) {
-            setErroBanco(`Erro ao gerar link do certificado: ${error.message}`);
-            return;
+            window.open(signedUrl, "_blank", "noopener,noreferrer");
+        } catch (error) {
+            setErroBanco(error.message || "Erro ao gerar link do certificado.");
         }
-
-        window.open(data.signedUrl, "_blank", "noopener,noreferrer");
     }
 
     async function excluirCertificadoTreinamento(certificado) {
@@ -2108,7 +2092,10 @@ export default function App() {
         }
 
         if (certificado.arquivoUrl) {
-            await supabase.storage.from("certificados-treinamentos").remove([certificado.arquivoUrl]);
+            await removerArquivoCertificadoStorage({
+                supabase,
+                caminho: certificado.arquivoUrl,
+            });
         }
 
         setColaboradores((atual) =>
