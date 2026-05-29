@@ -19,6 +19,12 @@ import {
     calcularPercentualUsoStorage,
     classNames,
 } from "../../utils/sstUtils";
+import {
+    auditoriaEventoHabilitado,
+    montarEventosAuditoriaSistema,
+    obterConfiguracaoEventosAuditoriaSistema,
+    salvarConfiguracaoEventosAuditoriaSistema,
+} from "../../services/auditoriaSistemaConfigService";
 
 const hoje = new Date();
 
@@ -58,6 +64,33 @@ export function RelatorioAuditoria({
         funcao: "",
     });
     const [detalhesAuditoriaAbertos, setDetalhesAuditoriaAbertos] = useState({});
+    const [configEventosAuditoria, setConfigEventosAuditoria] = useState(() =>
+        obterConfiguracaoEventosAuditoriaSistema()
+    );
+
+    const alternarEventoAuditoria = (chave) => {
+        setConfigEventosAuditoria((atual) => {
+            const proxima = {
+                ...atual,
+                [chave]: atual[chave] === false,
+            };
+
+            salvarConfiguracaoEventosAuditoriaSistema(proxima);
+            return proxima;
+        });
+    };
+
+    const definirTodosEventosAuditoria = (habilitado) => {
+        setConfigEventosAuditoria((atual) => {
+            const proxima = eventosAuditoriaSistema.reduce((acc, evento) => {
+                acc[evento.chave] = habilitado;
+                return acc;
+            }, { ...atual });
+
+            salvarConfiguracaoEventosAuditoriaSistema(proxima);
+            return proxima;
+        });
+    };
 
     const alternarDetalhesAuditoria = (id) => {
         setDetalhesAuditoriaAbertos((atual) => ({
@@ -66,15 +99,28 @@ export function RelatorioAuditoria({
         }));
     };
 
+    const eventosAuditoriaSistema = useMemo(
+        () => montarEventosAuditoriaSistema(auditoria, configEventosAuditoria),
+        [auditoria, configEventosAuditoria]
+    );
+
+    const auditoriaVerificada = useMemo(
+        () => auditoria.filter((item) => auditoriaEventoHabilitado(item.acao, configEventosAuditoria)),
+        [auditoria, configEventosAuditoria]
+    );
+
+    const eventosHabilitadosAuditoria = eventosAuditoriaSistema.filter((evento) => evento.habilitado).length;
+    const eventosDesabilitadosAuditoria = eventosAuditoriaSistema.length - eventosHabilitadosAuditoria;
+
     const acoes = useMemo(
-        () => Array.from(new Set(auditoria.map((item) => item.acao).filter(Boolean))).sort(),
-        [auditoria]
+        () => Array.from(new Set(auditoriaVerificada.map((item) => item.acao).filter(Boolean))).sort(),
+        [auditoriaVerificada]
     );
 
     const registrosFiltrados = useMemo(() => {
         const termo = normalizarTextoBusca(busca);
 
-        return auditoria.filter((item) => {
+        return auditoriaVerificada.filter((item) => {
             const origemAcesso = item.dados?.origemAcesso || {};
             const texto = normalizarTextoBusca(
                 `${item.usuario_email || ""} ${item.acao || ""} ${item.tabela || ""} ${item.descricao || ""} ${item.registro_id || ""} ${origemAcesso.url || ""} ${origemAcesso.pagina || ""} ${origemAcesso.navegador || ""} ${origemAcesso.plataforma || ""}`
@@ -85,9 +131,9 @@ export function RelatorioAuditoria({
 
             return bateBusca && bateAcao;
         });
-    }, [auditoria, busca, filtroAcao]);
+    }, [auditoriaVerificada, busca, filtroAcao]);
 
-    const ultimosAcessosAuditoria = auditoria
+    const ultimosAcessosAuditoria = auditoriaVerificada
         .filter((item) => normalizarTextoBusca(`${item.acao || ""} ${item.descricao || ""}`).includes("acesso"))
         .sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0))
         .slice(0, 8);
@@ -383,13 +429,13 @@ export function RelatorioAuditoria({
 
                 <CardRecolhivel titulo="Acessos" defaultOpen compacto>
                     <p className="text-3xl font-bold text-emerald-700">
-                        {auditoria.filter((item) => String(item.acao || "").includes("ACESSO")).length}
+                        {auditoriaVerificada.filter((item) => String(item.acao || "").includes("ACESSO")).length}
                     </p>
                 </CardRecolhivel>
 
                 <CardRecolhivel titulo="Alterações" defaultOpen compacto>
                     <p className="text-3xl font-bold text-orange-700">
-                        {auditoria.filter((item) => ["INSERT", "UPDATE", "DELETE"].includes(item.acao)).length}
+                        {auditoriaVerificada.filter((item) => ["INSERT", "UPDATE", "DELETE"].includes(item.acao)).length}
                     </p>
                 </CardRecolhivel>
 
@@ -410,6 +456,94 @@ export function RelatorioAuditoria({
                 ultimosAcessosAuditoria={ultimosAcessosAuditoria}
                 ultimosEmailsAuditoria={ultimosEmailsAuditoria}
             />
+
+            <CardRecolhivel
+                className="mt-5"
+                titulo="Eventos verificados pela Auditoria de sistema"
+                subtitulo="Habilite ou desabilite quais tipos de evento devem ser registrados e exibidos no relatório de auditoria deste navegador."
+                contador={`${eventosHabilitadosAuditoria}/${eventosAuditoriaSistema.length}`}
+                defaultOpen={false}
+                acao={(
+                    <div className="flex flex-wrap gap-2">
+                        <button
+                            type="button"
+                            onClick={() => definirTodosEventosAuditoria(true)}
+                            className="rounded-2xl bg-emerald-50 px-4 py-2 text-sm font-bold text-emerald-700 ring-1 ring-emerald-200 hover:bg-emerald-100"
+                        >
+                            Habilitar todos
+                        </button>
+                        <button
+                            type="button"
+                            onClick={() => definirTodosEventosAuditoria(false)}
+                            className="rounded-2xl bg-red-50 px-4 py-2 text-sm font-bold text-red-700 ring-1 ring-red-200 hover:bg-red-100"
+                        >
+                            Desabilitar todos
+                        </button>
+                    </div>
+                )}
+            >
+                <div className="mb-4 grid gap-3 md:grid-cols-3">
+                    <div className="rounded-3xl bg-emerald-50 p-4 ring-1 ring-emerald-200">
+                        <p className="text-xs font-black uppercase tracking-wide text-emerald-700">Habilitados</p>
+                        <p className="mt-2 text-2xl font-black text-emerald-800">{eventosHabilitadosAuditoria}</p>
+                    </div>
+                    <div className="rounded-3xl bg-red-50 p-4 ring-1 ring-red-200">
+                        <p className="text-xs font-black uppercase tracking-wide text-red-700">Desabilitados</p>
+                        <p className="mt-2 text-2xl font-black text-red-800">{eventosDesabilitadosAuditoria}</p>
+                    </div>
+                    <div className="rounded-3xl bg-slate-50 p-4 ring-1 ring-slate-200">
+                        <p className="text-xs font-black uppercase tracking-wide text-slate-500">Eventos carregados</p>
+                        <p className="mt-2 text-2xl font-black text-slate-950">{auditoria.length}</p>
+                    </div>
+                </div>
+
+                <div className="grid gap-3 lg:grid-cols-2">
+                    {eventosAuditoriaSistema.map((evento) => (
+                        <div
+                            key={evento.chave}
+                            className={classNames(
+                                "rounded-3xl border p-4 transition",
+                                evento.habilitado
+                                    ? "border-emerald-200 bg-emerald-50/70"
+                                    : "border-red-200 bg-red-50/70"
+                            )}
+                        >
+                            <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                                <div className="min-w-0">
+                                    <div className="flex flex-wrap items-center gap-2">
+                                        <span className="rounded-full bg-white px-3 py-1 text-[11px] font-black uppercase text-slate-500 ring-1 ring-slate-200">
+                                            {evento.categoria}
+                                        </span>
+                                        <span className="rounded-full bg-white px-3 py-1 text-[11px] font-bold text-slate-500 ring-1 ring-slate-200">
+                                            {evento.total} registro(s)
+                                        </span>
+                                    </div>
+                                    <p className="mt-2 break-words text-sm font-black text-slate-950">{evento.label}</p>
+                                    <p className="mt-1 text-xs leading-relaxed text-slate-500">{evento.descricao}</p>
+                                    <p className="mt-2 text-[11px] font-bold uppercase tracking-wide text-slate-400">Ação: {evento.chave}</p>
+                                </div>
+
+                                <button
+                                    type="button"
+                                    onClick={() => alternarEventoAuditoria(evento.chave)}
+                                    className={classNames(
+                                        "shrink-0 rounded-2xl px-4 py-2 text-xs font-black uppercase ring-1",
+                                        evento.habilitado
+                                            ? "bg-emerald-100 text-emerald-700 ring-emerald-200 hover:bg-emerald-200"
+                                            : "bg-red-100 text-red-700 ring-red-200 hover:bg-red-200"
+                                    )}
+                                >
+                                    {evento.habilitado ? "Habilitado" : "Desabilitado"}
+                                </button>
+                            </div>
+                        </div>
+                    ))}
+                </div>
+
+                <p className="mt-4 rounded-2xl bg-blue-50 p-3 text-xs leading-relaxed text-blue-700 ring-1 ring-blue-100">
+                    Eventos desabilitados deixam de aparecer nos filtros, cards e CSV da Auditoria de sistema. Novos eventos desabilitados também deixam de ser gravados neste navegador enquanto a configuração estiver salva.
+                </p>
+            </CardRecolhivel>
 
             <CardRecolhivel
                 className="mt-5"

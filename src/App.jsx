@@ -13,6 +13,7 @@ import {
     gerarUrlAssinadaCertificado,
     removerArquivoCertificadoStorage,
 } from "./services/certificadosStorageService";
+import { auditoriaEventoHabilitado } from "./services/auditoriaSistemaConfigService";
 import {
     Card,
     CardRecolhivel,
@@ -421,6 +422,7 @@ export default function App() {
     const registrarAuditoria = useCallback(
         async (acao, tabela, descricao, registroId = null, dados = {}) => {
             if (!usuario?.email) return;
+            if (!auditoriaEventoHabilitado(acao)) return;
 
             await supabase.from("auditoria_sistema").insert({
                 usuario_id: usuario.id || null,
