@@ -206,6 +206,7 @@ const NovaAuditoriaCampoDireta = React.lazy(() => import("./components/auditoria
 const ConfiguracoesSistema = React.lazy(() => import("./components/configuracoes/ConfiguracoesSistema").then((modulo) => ({ default: modulo.ConfiguracoesSistema })));
 
 const hoje = new Date();
+const SENHA_CONFIGURACOES_SISTEMA = "2026";
 
 function CarregandoTela({ mensagem = "Carregando tela..." }) {
     return (
@@ -254,6 +255,10 @@ export default function App() {
     const [usuario, setUsuario] = useState(null);
     const [carregandoSessao, setCarregandoSessao] = useState(() => SUPABASE_CONFIGURADO);
     const [tela, setTela] = useState("dashboard");
+    const [configuracoesDesbloqueadas, setConfiguracoesDesbloqueadas] = useState(false);
+    const [senhaConfiguracoes, setSenhaConfiguracoes] = useState("");
+    const [mostrarSenhaConfiguracoes, setMostrarSenhaConfiguracoes] = useState(false);
+    const [erroSenhaConfiguracoes, setErroSenhaConfiguracoes] = useState("");
     const [menuLateralAberto, setMenuLateralAberto] = useState(() => {
         try {
             const salvo = window.localStorage.getItem("menuLateralAbertoSST");
@@ -2619,6 +2624,90 @@ export default function App() {
         return <LoginScreen onLogin={setUsuario} />;
     }
 
+
+    const validarSenhaConfiguracoes = (evento) => {
+        evento?.preventDefault?.();
+
+        if (senhaConfiguracoes.trim() === SENHA_CONFIGURACOES_SISTEMA) {
+            setConfiguracoesDesbloqueadas(true);
+            setSenhaConfiguracoes("");
+            setErroSenhaConfiguracoes("");
+            return;
+        }
+
+        setErroSenhaConfiguracoes("Senha incorreta para acessar Configurações.");
+    };
+
+    const bloquearConfiguracoesSistema = () => {
+        setConfiguracoesDesbloqueadas(false);
+        setSenhaConfiguracoes("");
+        setErroSenhaConfiguracoes("");
+        setMostrarSenhaConfiguracoes(false);
+    };
+
+    const renderBloqueioConfiguracoes = () => (
+        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
+            <Header
+                titulo="Configurações bloqueadas"
+                subtitulo="Informe a senha de acesso para abrir as configurações operacionais do sistema."
+            />
+            <Card>
+                <div className="mx-auto max-w-xl space-y-5 text-center">
+                    <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-blue-50 text-blue-700 ring-1 ring-blue-100">
+                        <Lock className="h-7 w-7" />
+                    </div>
+                    <div>
+                        <h2 className="text-xl font-black text-slate-950">Acesso restrito às Configurações</h2>
+                        <p className="mt-2 text-sm leading-6 text-slate-500">
+                            Essa área concentra eventos da auditoria, limites de carregamento, token público, checklists de segurança e parâmetros operacionais. Use a senha autorizada para continuar.
+                        </p>
+                    </div>
+
+                    <form onSubmit={validarSenhaConfiguracoes} className="space-y-3 text-left">
+                        <label className="text-xs font-black uppercase tracking-wide text-slate-500">Senha de acesso</label>
+                        <div className="flex gap-2">
+                            <div className="relative flex-1">
+                                <input
+                                    type={mostrarSenhaConfiguracoes ? "text" : "password"}
+                                    value={senhaConfiguracoes}
+                                    onChange={(evento) => {
+                                        setSenhaConfiguracoes(evento.target.value);
+                                        setErroSenhaConfiguracoes("");
+                                    }}
+                                    placeholder="Digite a senha das configurações"
+                                    className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 pr-12 text-sm font-semibold text-slate-800 outline-none transition focus:border-blue-400 focus:ring-4 focus:ring-blue-100"
+                                    autoComplete="off"
+                                />
+                                <button
+                                    type="button"
+                                    onClick={() => setMostrarSenhaConfiguracoes((atual) => !atual)}
+                                    className="absolute right-3 top-1/2 -translate-y-1/2 rounded-full p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-700"
+                                    title={mostrarSenhaConfiguracoes ? "Ocultar senha" : "Mostrar senha"}
+                                >
+                                    {mostrarSenhaConfiguracoes ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                                </button>
+                            </div>
+                            <button
+                                type="submit"
+                                className="rounded-2xl bg-slate-950 px-5 py-3 text-sm font-black text-white shadow-sm hover:bg-slate-800"
+                            >
+                                Acessar
+                            </button>
+                        </div>
+                        {erroSenhaConfiguracoes && (
+                            <p className="rounded-2xl bg-red-50 px-4 py-3 text-sm font-bold text-red-700 ring-1 ring-red-100">
+                                {erroSenhaConfiguracoes}
+                            </p>
+                        )}
+                        <p className="text-xs leading-5 text-slate-500">
+                            Senha provisória padrão: <span className="font-black text-slate-700">2026</span>. Em etapa futura, essa senha poderá ser sincronizada com o Supabase.
+                        </p>
+                    </form>
+                </div>
+            </Card>
+        </motion.div>
+    );
+
     return (
         <div className="min-h-screen bg-slate-100 text-slate-900">
             <div className="flex min-h-screen">
@@ -2869,15 +2958,31 @@ export default function App() {
                         )}
 
                         {tela === "configuracoes" && (
-                            <ConfiguracoesSistema
-                                usuario={usuario}
-                                podeAcessarAuditoria={podeAcessarAuditoria}
-                                limites={{
-                                    ...limitesCarregamentoSistema,
-                                    storageMb: LIMITE_STORAGE_MB,
-                                }}
-                                onSalvarLimites={atualizarLimitesCarregamentoSistema}
-                            />
+                            configuracoesDesbloqueadas ? (
+                                <div className="space-y-4">
+                                    <div className="flex justify-end">
+                                        <button
+                                            type="button"
+                                            onClick={bloquearConfiguracoesSistema}
+                                            className="inline-flex items-center gap-2 rounded-2xl bg-white px-4 py-2 text-sm font-black text-slate-700 shadow-sm ring-1 ring-slate-200 hover:bg-slate-50"
+                                        >
+                                            <Lock className="h-4 w-4" />
+                                            Bloquear Configurações
+                                        </button>
+                                    </div>
+                                    <ConfiguracoesSistema
+                                        usuario={usuario}
+                                        podeAcessarAuditoria={podeAcessarAuditoria}
+                                        limites={{
+                                            ...limitesCarregamentoSistema,
+                                            storageMb: LIMITE_STORAGE_MB,
+                                        }}
+                                        onSalvarLimites={atualizarLimitesCarregamentoSistema}
+                                    />
+                                </div>
+                            ) : (
+                                renderBloqueioConfiguracoes()
+                            )
                         )}
 
                         {tela === "roteiro" && <Requisitos />}
