@@ -6,6 +6,7 @@ import {
     CheckCircle2,
     Copy,
     Database,
+    HardDrive,
     KeyRound,
     Link2,
     RefreshCw,
@@ -43,6 +44,11 @@ import {
     calcularResumoSegurancaAuditoriaPublica,
     montarChecklistSegurancaAuditoriaPublicaTexto,
 } from "../../services/auditoriaPublicaSegurancaService";
+import {
+    avaliarSegurancaStorageSistema,
+    calcularResumoSegurancaStorageSistema,
+    montarChecklistSegurancaStorageSistemaTexto,
+} from "../../services/storageSegurancaService";
 
 const classNames = (...classes) => classes.filter(Boolean).join(" ");
 
@@ -56,6 +62,7 @@ export function ConfiguracoesSistema({ usuario = null, podeAcessarAuditoria = fa
     const [mensagemLimites, setMensagemLimites] = useState("Os limites estão prontos para edição local.");
     const [configAuditoriaPublica, setConfigAuditoriaPublica] = useState(() => carregarConfiguracaoAuditoriaPublicaSistema());
     const [mensagemAuditoriaPublica, setMensagemAuditoriaPublica] = useState("Configuração pública carregada localmente.");
+    const [mensagemStorage, setMensagemStorage] = useState("Checklist de Storage pronto para conferência operacional.");
 
     const eventosAuditoria = useMemo(() => {
         const normalizada = normalizarConfiguracaoEventosAuditoriaSistema(configEventos);
@@ -120,6 +127,13 @@ export function ConfiguracoesSistema({ usuario = null, podeAcessarAuditoria = fa
         [avaliacoesSegurancaAuditoriaPublica]
     );
 
+    const avaliacoesSegurancaStorage = useMemo(() => avaliarSegurancaStorageSistema(), []);
+
+    const resumoSegurancaStorage = useMemo(
+        () => calcularResumoSegurancaStorageSistema(avaliacoesSegurancaStorage),
+        [avaliacoesSegurancaStorage]
+    );
+
     const alterarConfigAuditoriaPublica = (campo, valor) => {
         setConfigAuditoriaPublica((atual) => ({
             ...atual,
@@ -154,6 +168,15 @@ export function ConfiguracoesSistema({ usuario = null, podeAcessarAuditoria = fa
             setMensagemAuditoriaPublica("Checklist de segurança copiado para a área de transferência.");
         } catch {
             setMensagemAuditoriaPublica("Não foi possível copiar o checklist automaticamente.");
+        }
+    };
+
+    const copiarChecklistSegurancaStorage = async () => {
+        try {
+            await navigator.clipboard?.writeText(montarChecklistSegurancaStorageSistemaTexto(avaliacoesSegurancaStorage));
+            setMensagemStorage("Checklist de Storage copiado para a área de transferência.");
+        } catch {
+            setMensagemStorage("Não foi possível copiar o checklist de Storage automaticamente.");
         }
     };
 
@@ -268,6 +291,12 @@ export function ConfiguracoesSistema({ usuario = null, podeAcessarAuditoria = fa
             valor: resumoSegurancaAuditoriaPublica.texto,
             detalhe: resumoSegurancaAuditoriaPublica.detalhe,
             icon: ShieldAlert,
+        },
+        {
+            label: "Segurança Storage",
+            valor: resumoSegurancaStorage.texto,
+            detalhe: resumoSegurancaStorage.detalhe,
+            icon: HardDrive,
         },
     ];
 
@@ -604,6 +633,66 @@ export function ConfiguracoesSistema({ usuario = null, podeAcessarAuditoria = fa
                                         )}>
                                             {item.nivel === "ok" ? "OK" : item.nivel === "critico" ? "Crítico" : item.nivel === "alerta" ? "Atenção" : "Info"}
                                         </span>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    </Card>
+
+                    <Card>
+                        <div className="flex flex-col gap-3 border-b border-slate-100 pb-4 sm:flex-row sm:items-start sm:justify-between">
+                            <div>
+                                <div className="flex items-center gap-2">
+                                    <HardDrive className="h-5 w-5 text-slate-500" />
+                                    <h2 className="text-lg font-black text-slate-950">Revisão de Storage e arquivos privados</h2>
+                                </div>
+                                <p className="mt-1 text-sm text-slate-500">
+                                    Checklist operacional para buckets, URLs assinadas e arquivos sensíveis do sistema SST.
+                                </p>
+                            </div>
+                            <button
+                                type="button"
+                                onClick={copiarChecklistSegurancaStorage}
+                                className="inline-flex items-center justify-center gap-2 rounded-2xl bg-white px-3 py-2 text-xs font-bold text-slate-700 ring-1 ring-slate-200 hover:bg-slate-50"
+                            >
+                                <Copy className="h-3.5 w-3.5" />
+                                Copiar checklist Storage
+                            </button>
+                        </div>
+
+                        {mensagemStorage && (
+                            <div className="mt-4 rounded-2xl bg-blue-50 px-4 py-3 text-xs font-bold text-blue-700 ring-1 ring-blue-200">
+                                {mensagemStorage}
+                            </div>
+                        )}
+
+                        <div className={classNames("mt-4 rounded-2xl px-4 py-3 text-sm font-black ring-1", resumoSegurancaStorage.classe)}>
+                            Status: {resumoSegurancaStorage.texto} · {resumoSegurancaStorage.detalhe}
+                        </div>
+
+                        <div className="mt-4 space-y-3">
+                            {avaliacoesSegurancaStorage.map((item) => (
+                                <div key={item.chave} className="rounded-2xl bg-slate-50 px-3 py-3 ring-1 ring-slate-100">
+                                    <div className="flex items-start justify-between gap-3">
+                                        <div>
+                                            <div className="flex flex-wrap items-center gap-2">
+                                                <span className="rounded-full bg-white px-3 py-1 text-[10px] font-black uppercase tracking-wide text-slate-500 ring-1 ring-slate-200">
+                                                    {item.grupo}
+                                                </span>
+                                                <span className={classNames(
+                                                    "rounded-full px-3 py-1 text-[10px] font-black uppercase tracking-wide ring-1",
+                                                    item.nivel === "ok" && "bg-emerald-50 text-emerald-700 ring-emerald-200",
+                                                    item.nivel === "alerta" && "bg-orange-50 text-orange-700 ring-orange-200",
+                                                    item.nivel === "critico" && "bg-red-50 text-red-700 ring-red-200",
+                                                    item.nivel === "info" && "bg-blue-50 text-blue-700 ring-blue-200"
+                                                )}>
+                                                    {item.nivel === "ok" ? "OK" : item.nivel === "critico" ? "Crítico" : item.nivel === "alerta" ? "Atenção" : "Info"}
+                                                </span>
+                                            </div>
+                                            <p className="mt-3 text-sm font-bold text-slate-900">{item.label}</p>
+                                            <p className="mt-1 text-xs leading-relaxed text-slate-500">{item.descricao}</p>
+                                            <p className="mt-2 text-[11px] font-semibold leading-relaxed text-slate-400">{item.recomendacao}</p>
+                                        </div>
                                     </div>
                                 </div>
                             ))}
