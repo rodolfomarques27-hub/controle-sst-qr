@@ -1,0 +1,42 @@
+ROTEIRO 2 - ETAPA 94
+Limpeza final de código e validação pós-separação
+
+Objetivo:
+- Conferir se as separações do App.jsx não deixaram import faltando.
+- Conferir se não existem arquivos duplicados como App (10).jsx dentro do projeto.
+- Conferir se o build passa.
+- Conferir se o Git está limpo antes da etapa final.
+
+Comando principal:
+powershell -ExecutionPolicy Bypass -File .\scripts\etapa94_limpeza_final_codigo.ps1
+
+Se o script indicar arquivos duplicados:
+- Apague somente os duplicados, como App (9).jsx, App (10).jsx, Dashboard (1).jsx.
+- Não apague src\App.jsx.
+
+Se npm run build passar:
+git status
+
+Se houver mudança de arquivo após ajustes:
+git add .
+git commit -m "Roteiro 2 etapa 94 limpeza final de codigo"
+git push
+git status
+
+Teste manual obrigatório:
+1. Login.
+2. Dashboard SST.
+3. Configurações.
+4. Colaboradores.
+5. Treinamentos.
+6. Base de certificados.
+7. Envio individual.
+8. Envio em lote.
+9. Dashboard Auditoria.
+10. Carregar mais auditorias.
+11. QR Codes de campo.
+12. Nova Auditoria.
+13. Auditoria de sistema.
+14. Carregar mais registros.
+15. Consulta QR pública.
+16. Auditoria pública por link/token.
