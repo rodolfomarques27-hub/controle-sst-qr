@@ -41,9 +41,11 @@ export function DashboardAuditoriaCampo({
     onCarregarMaisAuditoriasCampo,
     carregandoMaisAuditoriasCampo = false,
     existeMaisAuditoriasCampo = false,
+    limiteQrcodesCampo = LIMITE_QRCODES_CAMPO_POR_CARGA,
     onAuditoriaAtualizada,
 }) {
     const [mostrarPersonalizacao, setMostrarPersonalizacao] = useState(false);
+    const limiteQrcodesCampoAtual = Math.max(10, Number(limiteQrcodesCampo || LIMITE_QRCODES_CAMPO_POR_CARGA));
     const [qrcodesCampo, setQrcodesCampo] = useState([]);
     const [qrcodesCampoCarregados, setQrcodesCampoCarregados] = useState(false);
     const [existeMaisQrcodesCampo, setExisteMaisQrcodesCampo] = useState(false);
@@ -596,7 +598,7 @@ export function DashboardAuditoriaCampo({
 
         try {
             const offset = append ? qrcodesCampo.length : 0;
-            const limiteBusca = LIMITE_QRCODES_CAMPO_POR_CARGA + 1;
+            const limiteBusca = limiteQrcodesCampoAtual + 1;
             const { data, error } = await supabase
                 .from("auditoria_campo_qrcodes")
                 .select("*")
@@ -606,10 +608,10 @@ export function DashboardAuditoriaCampo({
             if (error) throw error;
 
             const registros = Array.isArray(data) ? data : [];
-            const registrosVisiveis = registros.slice(0, LIMITE_QRCODES_CAMPO_POR_CARGA);
+            const registrosVisiveis = registros.slice(0, limiteQrcodesCampoAtual);
 
             setQrcodesCampo((atual) => append ? [...atual, ...registrosVisiveis] : registrosVisiveis);
-            setExisteMaisQrcodesCampo(registros.length > LIMITE_QRCODES_CAMPO_POR_CARGA);
+            setExisteMaisQrcodesCampo(registros.length > limiteQrcodesCampoAtual);
             setQrcodesCampoCarregados(true);
             setMensagemQrCampo(append ? "Mais QR Codes carregados." : "QR Codes carregados com sucesso.");
         } catch (error) {
@@ -618,7 +620,7 @@ export function DashboardAuditoriaCampo({
             setCarregandoQrcodesCampo(false);
             setCarregandoMaisQrcodesCampo(false);
         }
-    }, [qrcodesCampo.length]);
+    }, [qrcodesCampo.length, limiteQrcodesCampoAtual]);
 
     const salvarQrCampo = async () => {
         const identificacao = String(qrFormCampo.identificacao || "").trim();

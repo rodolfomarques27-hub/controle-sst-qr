@@ -20,15 +20,24 @@ import {
     salvarConfiguracaoEventosAuditoriaSistema,
     salvarConfiguracaoEventosAuditoriaSistemaSupabase,
 } from "../../services/auditoriaSistemaConfigService";
+import {
+    DESCRICOES_LIMITES_CARREGAMENTO_SISTEMA,
+    LIMITES_CARREGAMENTO_SISTEMA,
+    LIMITES_MAXIMOS_CARREGAMENTO_SISTEMA,
+    LIMITES_MINIMOS_CARREGAMENTO_SISTEMA,
+    normalizarLimitesCarregamentoSistema,
+} from "../../constants/sistemaLimitesConstants";
 
 const classNames = (...classes) => classes.filter(Boolean).join(" ");
 
-export function ConfiguracoesSistema({ usuario = null, podeAcessarAuditoria = false, limites = {} }) {
+export function ConfiguracoesSistema({ usuario = null, podeAcessarAuditoria = false, limites = {}, onSalvarLimites }) {
     const [configEventos, setConfigEventos] = useState(() => configuracaoPadraoEventosAuditoriaSistema());
     const [origemConfig, setOrigemConfig] = useState("local");
     const [mensagemConfig, setMensagemConfig] = useState("Carregando configuração...");
     const [carregandoConfig, setCarregandoConfig] = useState(false);
     const [salvandoConfig, setSalvandoConfig] = useState(false);
+    const [limitesEditaveis, setLimitesEditaveis] = useState(() => normalizarLimitesCarregamentoSistema(limites));
+    const [mensagemLimites, setMensagemLimites] = useState("Os limites estão prontos para edição local.");
 
     const eventosAuditoria = useMemo(() => {
         const normalizada = normalizarConfiguracaoEventosAuditoriaSistema(configEventos);
@@ -39,6 +48,45 @@ export function ConfiguracoesSistema({ usuario = null, podeAcessarAuditoria = fa
     }, [configEventos]);
 
     const totalEventosHabilitados = eventosAuditoria.filter((evento) => evento.habilitado).length;
+
+    useEffect(() => {
+        const timer = window.setTimeout(() => {
+            setLimitesEditaveis(normalizarLimitesCarregamentoSistema(limites));
+        }, 0);
+
+        return () => window.clearTimeout(timer);
+    }, [limites]);
+
+    const alterarLimite = (chave, valor) => {
+        setLimitesEditaveis((atual) => ({
+            ...atual,
+            [chave]: valor,
+        }));
+    };
+
+    const salvarLimites = () => {
+        const normalizados = normalizarLimitesCarregamentoSistema(limitesEditaveis);
+
+        if (typeof onSalvarLimites === "function") {
+            const retorno = onSalvarLimites(normalizados);
+            setLimitesEditaveis(normalizarLimitesCarregamentoSistema(retorno || normalizados));
+        } else {
+            setLimitesEditaveis(normalizados);
+        }
+
+        setMensagemLimites("Limites salvos localmente. Use Atualizar informações ou reabra a tela para aplicar a nova carga.");
+    };
+
+    const restaurarLimites = () => {
+        const padrao = normalizarLimitesCarregamentoSistema(LIMITES_CARREGAMENTO_SISTEMA);
+
+        if (typeof onSalvarLimites === "function") {
+            onSalvarLimites(padrao);
+        }
+
+        setLimitesEditaveis(padrao);
+        setMensagemLimites("Limites padrão restaurados.");
+    };
 
     const carregarConfiguracao = async () => {
         setCarregandoConfig(true);
@@ -130,13 +178,13 @@ export function ConfiguracoesSistema({ usuario = null, podeAcessarAuditoria = fa
         },
         {
             label: "Limite Auditoria sistema",
-            valor: limites.auditoriaSistema || 300,
+            valor: limitesEditaveis.auditoriaSistema || 300,
             detalhe: "registros iniciais",
             icon: SlidersHorizontal,
         },
         {
             label: "Limite Auditorias campo",
-            valor: limites.auditoriasCampo || 500,
+            valor: limitesEditaveis.auditoriasCampo || 500,
             detalhe: "registros iniciais",
             icon: SlidersHorizontal,
         },
@@ -279,31 +327,75 @@ export function ConfiguracoesSistema({ usuario = null, podeAcessarAuditoria = fa
 
                 <div className="space-y-6">
                     <Card>
-                        <div className="flex items-center gap-2">
-                            <SlidersHorizontal className="h-5 w-5 text-slate-500" />
-                            <h2 className="text-lg font-black text-slate-950">Limites de carregamento</h2>
+                        <div className="flex flex-col gap-3 border-b border-slate-100 pb-4 sm:flex-row sm:items-start sm:justify-between">
+                            <div>
+                                <div className="flex items-center gap-2">
+                                    <SlidersHorizontal className="h-5 w-5 text-slate-500" />
+                                    <h2 className="text-lg font-black text-slate-950">Limites de carregamento</h2>
+                                </div>
+                                <p className="mt-1 text-sm text-slate-500">
+                                    Ajuste quantos registros cada tela deve buscar por carga para equilibrar velocidade e histórico disponível.
+                                </p>
+                            </div>
+                            <button
+                                type="button"
+                                onClick={restaurarLimites}
+                                className="inline-flex items-center justify-center gap-2 rounded-2xl bg-white px-3 py-2 text-xs font-bold text-slate-700 ring-1 ring-slate-200 hover:bg-slate-50"
+                            >
+                                <RotateCcw className="h-3.5 w-3.5" />
+                                Restaurar limites
+                            </button>
                         </div>
-                        <p className="mt-1 text-sm text-slate-500">
-                            Estes limites estão definidos no código para manter a abertura inicial mais rápida.
-                        </p>
+
+                        {mensagemLimites && (
+                            <div className="mt-4 rounded-2xl bg-blue-50 px-4 py-3 text-xs font-bold text-blue-700 ring-1 ring-blue-200">
+                                {mensagemLimites}
+                            </div>
+                        )}
+
                         <div className="mt-4 space-y-3">
-                            {[
-                                ["Auditoria de sistema", limites.auditoriaSistema || 300, "registros"],
-                                ["E-mails enviados", limites.emailsEnviados || 200, "registros"],
-                                ["Auditorias de campo", limites.auditoriasCampo || 500, "registros"],
-                                ["Armazenamento", `${limites.storageMb || 1024} MB`, "limite visual"],
-                            ].map(([label, valor, detalhe]) => (
-                                <div key={label} className="flex items-center justify-between gap-3 rounded-2xl bg-slate-50 px-3 py-3 ring-1 ring-slate-100">
+                            {DESCRICOES_LIMITES_CARREGAMENTO_SISTEMA.map((limite) => (
+                                <label key={limite.chave} className="block rounded-2xl bg-slate-50 px-3 py-3 ring-1 ring-slate-100">
+                                    <div className="flex items-start justify-between gap-3">
+                                        <div>
+                                            <p className="text-sm font-bold text-slate-800">{limite.label}</p>
+                                            <p className="mt-1 text-xs text-slate-500">{limite.ajuda}</p>
+                                            <p className="mt-1 text-[11px] font-semibold text-slate-400">
+                                                Mín. {LIMITES_MINIMOS_CARREGAMENTO_SISTEMA[limite.chave]} · Máx. {LIMITES_MAXIMOS_CARREGAMENTO_SISTEMA[limite.chave]} · {limite.detalhe}
+                                            </p>
+                                        </div>
+                                        <input
+                                            type="number"
+                                            min={LIMITES_MINIMOS_CARREGAMENTO_SISTEMA[limite.chave]}
+                                            max={LIMITES_MAXIMOS_CARREGAMENTO_SISTEMA[limite.chave]}
+                                            value={limitesEditaveis[limite.chave] ?? limite.valor}
+                                            onChange={(evento) => alterarLimite(limite.chave, evento.target.value)}
+                                            className="w-24 rounded-2xl border border-slate-200 bg-white px-3 py-2 text-center text-sm font-black text-slate-950 outline-none focus:ring-2 focus:ring-blue-100"
+                                        />
+                                    </div>
+                                </label>
+                            ))}
+
+                            <div className="rounded-2xl bg-slate-50 px-3 py-3 ring-1 ring-slate-100">
+                                <div className="flex items-center justify-between gap-3">
                                     <div>
-                                        <p className="text-sm font-bold text-slate-800">{label}</p>
-                                        <p className="text-xs text-slate-500">{detalhe}</p>
+                                        <p className="text-sm font-bold text-slate-800">Armazenamento</p>
+                                        <p className="text-xs text-slate-500">limite visual do card Storage</p>
                                     </div>
                                     <span className="rounded-xl bg-white px-3 py-1.5 text-sm font-black text-slate-950 ring-1 ring-slate-200">
-                                        {valor}
+                                        {limites.storageMb || 1024} MB
                                     </span>
                                 </div>
-                            ))}
+                            </div>
                         </div>
+
+                        <button
+                            type="button"
+                            onClick={salvarLimites}
+                            className="mt-4 w-full rounded-2xl bg-slate-950 px-4 py-3 text-sm font-black text-white hover:bg-slate-800"
+                        >
+                            Salvar limites de carregamento
+                        </button>
                     </Card>
 
                     <Card>

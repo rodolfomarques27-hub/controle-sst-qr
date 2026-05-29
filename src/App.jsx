@@ -15,10 +15,8 @@ import {
 } from "./services/certificadosStorageService";
 import { auditoriaEventoHabilitado } from "./services/auditoriaSistemaConfigService";
 import {
-    LIMITE_AUDITORIA_SISTEMA_INICIAL,
-    LIMITE_EMAILS_ENVIADOS_INICIAL,
-    LIMITE_AUDITORIAS_CAMPO_INICIAL,
-    LIMITES_CARREGAMENTO_SISTEMA,
+    carregarLimitesCarregamentoSistema,
+    salvarLimitesCarregamentoSistema,
 } from "./constants/sistemaLimitesConstants";
 import {
     Card,
@@ -287,6 +285,7 @@ export default function App() {
     const [auditoriasCampoCarregadas, setAuditoriasCampoCarregadas] = useState(false);
     const [existeMaisAuditoria, setExisteMaisAuditoria] = useState(true);
     const [carregandoMaisAuditoria, setCarregandoMaisAuditoria] = useState(false);
+    const [limitesCarregamentoSistema, setLimitesCarregamentoSistema] = useState(() => carregarLimitesCarregamentoSistema());
     const [podeAcessarAuditoria, setPodeAcessarAuditoria] = useState(false);
     const [verificandoAcessoAuditoria, setVerificandoAcessoAuditoria] = useState(false);
     const [auditoriaLiberada, setAuditoriaLiberada] = useState(() => {
@@ -304,6 +303,12 @@ export default function App() {
             // Ignora indisponibilidade do localStorage.
         }
     }, [menuLateralAberto]);
+
+    const atualizarLimitesCarregamentoSistema = useCallback((novosLimites) => {
+        const normalizados = salvarLimitesCarregamentoSistema(novosLimites);
+        setLimitesCarregamentoSistema(normalizados);
+        return normalizados;
+    }, []);
 
     const carregarEmpresas = useCallback(async () => {
         const { data, error } = await supabase
@@ -341,7 +346,7 @@ export default function App() {
             .from("auditoria_sistema")
             .select("id, created_at, usuario_email, acao, tabela, registro_id, descricao, dados")
             .order("created_at", { ascending: false })
-            .limit(LIMITE_AUDITORIA_SISTEMA_INICIAL);
+            .limit(limitesCarregamentoSistema.auditoriaSistema);
 
         setCarregandoAuditoria(false);
         setAuditoriaCarregada(true);
@@ -355,9 +360,9 @@ export default function App() {
 
         const registros = data || [];
         setAuditoria(registros);
-        setExisteMaisAuditoria(registros.length === LIMITE_AUDITORIA_SISTEMA_INICIAL);
+        setExisteMaisAuditoria(registros.length === limitesCarregamentoSistema.auditoriaSistema);
         return registros;
-    }, []);
+    }, [limitesCarregamentoSistema.auditoriaSistema]);
 
     const carregarMaisAuditoria = useCallback(async () => {
         if (carregandoMaisAuditoria) return [];
@@ -370,7 +375,7 @@ export default function App() {
                 .from("auditoria_sistema")
                 .select("id, created_at, usuario_email, acao, tabela, registro_id, descricao, dados")
                 .order("created_at", { ascending: false })
-                .range(offsetAtual, offsetAtual + LIMITE_AUDITORIA_SISTEMA_INICIAL - 1);
+                .range(offsetAtual, offsetAtual + limitesCarregamentoSistema.auditoriaSistema - 1);
 
             if (error) {
                 throw error;
@@ -385,7 +390,7 @@ export default function App() {
             });
 
             setAuditoriaCarregada(true);
-            setExisteMaisAuditoria(novosRegistros.length === LIMITE_AUDITORIA_SISTEMA_INICIAL);
+            setExisteMaisAuditoria(novosRegistros.length === limitesCarregamentoSistema.auditoriaSistema);
             return novosRegistros;
         } catch (error) {
             console.warn("Erro ao carregar mais registros da auditoria:", error.message);
@@ -394,7 +399,7 @@ export default function App() {
         } finally {
             setCarregandoMaisAuditoria(false);
         }
-    }, [auditoria.length, carregandoMaisAuditoria]);
+    }, [auditoria.length, carregandoMaisAuditoria, limitesCarregamentoSistema.auditoriaSistema]);
 
 
     const carregarEmailsEnviados = useCallback(async () => {
@@ -402,7 +407,7 @@ export default function App() {
             .from("emails_enviados")
             .select("id, empresa_id, colaborador_id, documento_id, destinatario, assunto, tipo_alerta, documento, status_envio, erro, data_envio, enviado_por")
             .order("data_envio", { ascending: false })
-            .limit(LIMITE_EMAILS_ENVIADOS_INICIAL);
+            .limit(limitesCarregamentoSistema.emailsEnviados);
 
         setEmailsEnviadosCarregados(true);
 
@@ -414,7 +419,7 @@ export default function App() {
 
         setEmailsEnviados(data || []);
         return data || [];
-    }, []);
+    }, [limitesCarregamentoSistema.emailsEnviados]);
 
     const carregarAuditoriasCampo = useCallback(async () => {
         setCarregandoAuditoriasCampo(true);
@@ -425,18 +430,18 @@ export default function App() {
                 .from("auditorias_campo")
                 .select("*")
                 .order("created_at", { ascending: false })
-                .limit(LIMITE_AUDITORIAS_CAMPO_INICIAL + 1);
+                .limit(limitesCarregamentoSistema.auditoriasCampo + 1);
 
             if (error) {
                 throw error;
             }
 
             const registrosBrutos = data || [];
-            const registrosVisiveis = registrosBrutos.slice(0, LIMITE_AUDITORIAS_CAMPO_INICIAL);
+            const registrosVisiveis = registrosBrutos.slice(0, limitesCarregamentoSistema.auditoriasCampo);
             const normalizadas = normalizarRegistrosAuditoriasCampo(registrosVisiveis);
 
             setAuditoriasCampo(normalizadas);
-            setExisteMaisAuditoriasCampo(registrosBrutos.length > LIMITE_AUDITORIAS_CAMPO_INICIAL);
+            setExisteMaisAuditoriasCampo(registrosBrutos.length > limitesCarregamentoSistema.auditoriasCampo);
             return normalizadas;
         } catch (error) {
             console.warn("Erro ao carregar auditorias de campo:", error.message);
@@ -448,7 +453,7 @@ export default function App() {
             setAuditoriasCampoCarregadas(true);
             setCarregandoAuditoriasCampo(false);
         }
-    }, []);
+    }, [limitesCarregamentoSistema.auditoriasCampo]);
 
     const carregarMaisAuditoriasCampo = useCallback(async () => {
         if (carregandoMaisAuditoriasCampo || carregandoAuditoriasCampo) return [];
@@ -462,14 +467,14 @@ export default function App() {
                 .from("auditorias_campo")
                 .select("*")
                 .order("created_at", { ascending: false })
-                .range(offsetAtual, offsetAtual + LIMITE_AUDITORIAS_CAMPO_INICIAL);
+                .range(offsetAtual, offsetAtual + limitesCarregamentoSistema.auditoriasCampo);
 
             if (error) {
                 throw error;
             }
 
             const registrosBrutos = data || [];
-            const registrosVisiveis = registrosBrutos.slice(0, LIMITE_AUDITORIAS_CAMPO_INICIAL);
+            const registrosVisiveis = registrosBrutos.slice(0, limitesCarregamentoSistema.auditoriasCampo);
             const normalizadas = normalizarRegistrosAuditoriasCampo(registrosVisiveis);
 
             setAuditoriasCampo((atual) => {
@@ -485,7 +490,7 @@ export default function App() {
             });
 
             setAuditoriasCampoCarregadas(true);
-            setExisteMaisAuditoriasCampo(registrosBrutos.length > LIMITE_AUDITORIAS_CAMPO_INICIAL);
+            setExisteMaisAuditoriasCampo(registrosBrutos.length > limitesCarregamentoSistema.auditoriasCampo);
             return normalizadas;
         } catch (error) {
             console.warn("Erro ao carregar mais auditorias de campo:", error.message);
@@ -495,7 +500,7 @@ export default function App() {
         } finally {
             setCarregandoMaisAuditoriasCampo(false);
         }
-    }, [auditoriasCampo.length, carregandoAuditoriasCampo, carregandoMaisAuditoriasCampo]);
+    }, [auditoriasCampo.length, carregandoAuditoriasCampo, carregandoMaisAuditoriasCampo, limitesCarregamentoSistema.auditoriasCampo]);
 
     const registrarEmailEnviado = useCallback(
         async ({ empresaId = null, colaboradorId = null, documentoId = null, destinatario = "", assunto = "", tipoAlerta = "", documento = "", statusEnvio = "", erro = "" } = {}) => {
@@ -2762,6 +2767,7 @@ export default function App() {
                                 onCarregarMaisAuditoriasCampo={carregarMaisAuditoriasCampo}
                                 carregandoMaisAuditoriasCampo={carregandoMaisAuditoriasCampo}
                                 existeMaisAuditoriasCampo={existeMaisAuditoriasCampo}
+                                limiteQrcodesCampo={limitesCarregamentoSistema.qrcodesCampo}
                                 onAuditoriaAtualizada={(atualizada) =>
                                     setAuditoriasCampo((atual) =>
                                         atualizada?.excluida
@@ -2867,9 +2873,10 @@ export default function App() {
                                 usuario={usuario}
                                 podeAcessarAuditoria={podeAcessarAuditoria}
                                 limites={{
-                                    ...LIMITES_CARREGAMENTO_SISTEMA,
+                                    ...limitesCarregamentoSistema,
                                     storageMb: LIMITE_STORAGE_MB,
                                 }}
+                                onSalvarLimites={atualizarLimitesCarregamentoSistema}
                             />
                         )}
 
