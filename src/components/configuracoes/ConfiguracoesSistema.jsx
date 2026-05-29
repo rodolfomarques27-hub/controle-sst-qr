@@ -11,6 +11,7 @@ import {
     RefreshCw,
     RotateCcw,
     Settings,
+    ShieldAlert,
     ShieldCheck,
     SlidersHorizontal,
 } from "lucide-react";
@@ -37,6 +38,11 @@ import {
     salvarConfiguracaoAuditoriaPublicaSistema,
     TOKEN_AUDITORIA_CAMPO_PUBLICA_PADRAO,
 } from "../../constants/auditoriaPublicaConstants";
+import {
+    avaliarSegurancaAuditoriaPublica,
+    calcularResumoSegurancaAuditoriaPublica,
+    montarChecklistSegurancaAuditoriaPublicaTexto,
+} from "../../services/auditoriaPublicaSegurancaService";
 
 const classNames = (...classes) => classes.filter(Boolean).join(" ");
 
@@ -104,6 +110,16 @@ export function ConfiguracoesSistema({ usuario = null, podeAcessarAuditoria = fa
         tokenPublico: configAuditoriaPublica.tokenPublico,
     }), [configAuditoriaPublica.tokenPublico]);
 
+    const avaliacoesSegurancaAuditoriaPublica = useMemo(
+        () => avaliarSegurancaAuditoriaPublica(configAuditoriaPublica),
+        [configAuditoriaPublica]
+    );
+
+    const resumoSegurancaAuditoriaPublica = useMemo(
+        () => calcularResumoSegurancaAuditoriaPublica(avaliacoesSegurancaAuditoriaPublica),
+        [avaliacoesSegurancaAuditoriaPublica]
+    );
+
     const alterarConfigAuditoriaPublica = (campo, valor) => {
         setConfigAuditoriaPublica((atual) => ({
             ...atual,
@@ -129,6 +145,15 @@ export function ConfiguracoesSistema({ usuario = null, podeAcessarAuditoria = fa
             setMensagemAuditoriaPublica("Link público copiado para a área de transferência.");
         } catch {
             setMensagemAuditoriaPublica("Não foi possível copiar automaticamente. Copie o link manualmente.");
+        }
+    };
+
+    const copiarChecklistSegurancaAuditoriaPublica = async () => {
+        try {
+            await navigator.clipboard?.writeText(montarChecklistSegurancaAuditoriaPublicaTexto(avaliacoesSegurancaAuditoriaPublica));
+            setMensagemAuditoriaPublica("Checklist de segurança copiado para a área de transferência.");
+        } catch {
+            setMensagemAuditoriaPublica("Não foi possível copiar o checklist automaticamente.");
         }
     };
 
@@ -237,6 +262,12 @@ export function ConfiguracoesSistema({ usuario = null, podeAcessarAuditoria = fa
             valor: configAuditoriaPublica.tokenPublico || TOKEN_AUDITORIA_CAMPO_PUBLICA_PADRAO,
             detalhe: "usado em links e QR Codes",
             icon: KeyRound,
+        },
+        {
+            label: "Segurança Auditoria pública",
+            valor: resumoSegurancaAuditoriaPublica.texto,
+            detalhe: resumoSegurancaAuditoriaPublica.detalhe,
+            icon: ShieldAlert,
         },
     ];
 
@@ -528,6 +559,55 @@ export function ConfiguracoesSistema({ usuario = null, podeAcessarAuditoria = fa
                         >
                             Salvar configuração da Auditoria pública
                         </button>
+                    </Card>
+
+                    <Card>
+                        <div className="flex flex-col gap-3 border-b border-slate-100 pb-4 sm:flex-row sm:items-start sm:justify-between">
+                            <div>
+                                <div className="flex items-center gap-2">
+                                    <ShieldAlert className="h-5 w-5 text-slate-500" />
+                                    <h2 className="text-lg font-black text-slate-950">Revisão de segurança da Auditoria pública</h2>
+                                </div>
+                                <p className="mt-1 text-sm text-slate-500">
+                                    Checklist operacional para evitar token padrão, senha fraca no processo e exposição indevida no QR Code.
+                                </p>
+                            </div>
+                            <button
+                                type="button"
+                                onClick={copiarChecklistSegurancaAuditoriaPublica}
+                                className="inline-flex items-center justify-center gap-2 rounded-2xl bg-white px-3 py-2 text-xs font-bold text-slate-700 ring-1 ring-slate-200 hover:bg-slate-50"
+                            >
+                                <Copy className="h-3.5 w-3.5" />
+                                Copiar checklist
+                            </button>
+                        </div>
+
+                        <div className={classNames("mt-4 rounded-2xl px-4 py-3 text-sm font-black ring-1", resumoSegurancaAuditoriaPublica.classe)}>
+                            Status: {resumoSegurancaAuditoriaPublica.texto} · {resumoSegurancaAuditoriaPublica.detalhe}
+                        </div>
+
+                        <div className="mt-4 space-y-3">
+                            {avaliacoesSegurancaAuditoriaPublica.map((item) => (
+                                <div key={item.chave} className="rounded-2xl bg-slate-50 px-3 py-3 ring-1 ring-slate-100">
+                                    <div className="flex items-start justify-between gap-3">
+                                        <div>
+                                            <p className="text-sm font-bold text-slate-900">{item.label}</p>
+                                            <p className="mt-1 text-xs leading-relaxed text-slate-500">{item.descricao}</p>
+                                            <p className="mt-2 text-[11px] font-semibold leading-relaxed text-slate-400">{item.recomendacao}</p>
+                                        </div>
+                                        <span className={classNames(
+                                            "shrink-0 rounded-full px-3 py-1 text-[10px] font-black uppercase tracking-wide ring-1",
+                                            item.nivel === "ok" && "bg-emerald-50 text-emerald-700 ring-emerald-200",
+                                            item.nivel === "alerta" && "bg-orange-50 text-orange-700 ring-orange-200",
+                                            item.nivel === "critico" && "bg-red-50 text-red-700 ring-red-200",
+                                            item.nivel === "info" && "bg-blue-50 text-blue-700 ring-blue-200"
+                                        )}>
+                                            {item.nivel === "ok" ? "OK" : item.nivel === "critico" ? "Crítico" : item.nivel === "alerta" ? "Atenção" : "Info"}
+                                        </span>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
                     </Card>
 
                     <Card>
