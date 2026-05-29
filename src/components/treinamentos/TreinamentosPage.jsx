@@ -684,6 +684,7 @@ export function Treinamentos({
                     setObservacao={setObservacao}
                     arquivoSelecionado={arquivoSelecionado}
                     selecionarArquivoCertificado={selecionarArquivoCertificado}
+                    sugestaoDataArquivo={sugestaoDataArquivo}
                     salvandoCertificado={salvandoCertificado}
                     adicionarTreinamento={adicionarTreinamento}
                     arquivosLote={arquivosLote}
