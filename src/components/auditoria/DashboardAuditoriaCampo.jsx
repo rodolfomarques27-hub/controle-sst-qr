@@ -1533,7 +1533,17 @@ export function DashboardAuditoriaCampo({
                                             <div className="flex shrink-0 items-center gap-1">
                                                 <button type="button" onClick={() => mover(setOrdemCartas, opcao.chave, -1)} disabled={index === 0} className="rounded-lg bg-white px-2 py-1 text-xs font-bold ring-1 ring-slate-200 disabled:cursor-not-allowed disabled:opacity-40">↑</button>
                                                 <button type="button" onClick={() => mover(setOrdemCartas, opcao.chave, 1)} disabled={index === cartasOrdenadas.length - 1} className="rounded-lg bg-white px-2 py-1 text-xs font-bold ring-1 ring-slate-200 disabled:cursor-not-allowed disabled:opacity-40">↓</button>
-                                                <span className={classNames("rounded-full px-2 py-1 text-[10px] font-bold uppercase ring-1", ativo ? "bg-emerald-50 text-emerald-700 ring-emerald-200" : "bg-white text-slate-500 ring-slate-200")}>{ativo ? "Visível" : "Oculto"}</span>
+                                                <button
+                                                    type="button"
+                                                    onClick={(evento) => {
+                                                        evento.stopPropagation();
+                                                        setCartasVisiveis((atual) => ({ ...atual, [opcao.chave]: !ativo }));
+                                                    }}
+                                                    className={classNames("rounded-full px-2 py-1 text-[10px] font-bold uppercase ring-1 transition", ativo ? "bg-emerald-50 text-emerald-700 ring-emerald-200 hover:bg-emerald-100" : "bg-white text-slate-500 ring-slate-200 hover:bg-slate-50")}
+                                                    title={ativo ? "Clique para ocultar este card" : "Clique para mostrar este card"}
+                                                >
+                                                    {ativo ? "Visível" : "Oculto"}
+                                                </button>
                                             </div>
                                         </div>
                                         {ativo && (
@@ -1591,7 +1601,17 @@ export function DashboardAuditoriaCampo({
                                             <div className="flex shrink-0 items-center gap-1">
                                                 <button type="button" onClick={() => mover(setOrdemBlocos, opcao.chave, -1)} disabled={index === 0} className="rounded-lg bg-white px-2 py-1 text-xs font-bold ring-1 ring-slate-200 disabled:cursor-not-allowed disabled:opacity-40">↑</button>
                                                 <button type="button" onClick={() => mover(setOrdemBlocos, opcao.chave, 1)} disabled={index === blocosOrdenados.length - 1} className="rounded-lg bg-white px-2 py-1 text-xs font-bold ring-1 ring-slate-200 disabled:cursor-not-allowed disabled:opacity-40">↓</button>
-                                                <span className={classNames("rounded-full px-2 py-1 text-[10px] font-bold uppercase ring-1", ativo ? "bg-blue-50 text-blue-700 ring-blue-200" : "bg-white text-slate-500 ring-slate-200")}>{ativo ? "Visível" : "Oculto"}</span>
+                                                <button
+                                                    type="button"
+                                                    onClick={(evento) => {
+                                                        evento.stopPropagation();
+                                                        setBlocosVisiveis((atual) => ({ ...atual, [opcao.chave]: !ativo }));
+                                                    }}
+                                                    className={classNames("rounded-full px-2 py-1 text-[10px] font-bold uppercase ring-1 transition", ativo ? "bg-blue-50 text-blue-700 ring-blue-200 hover:bg-blue-100" : "bg-white text-slate-500 ring-slate-200 hover:bg-slate-50")}
+                                                    title={ativo ? "Clique para ocultar este quadro" : "Clique para mostrar este quadro"}
+                                                >
+                                                    {ativo ? "Visível" : "Oculto"}
+                                                </button>
                                             </div>
                                         </div>
                                         {ativo && (
