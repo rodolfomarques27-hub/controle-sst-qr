@@ -72,6 +72,7 @@ import {
     normalizarEmailDestinatario,
 } from "../../utils/sstUtils";
 
+const CACHE_USO_STORAGE_DASHBOARD = "dashboardSstUsoStorageResumo";
 const hoje = new Date();
 
 function emailTstDaEmpresa(colaborador) {
@@ -88,10 +89,27 @@ export function Dashboard({
     onRegistrarEmailEnviado,
 }) {
     const [enviandoEmail, setEnviandoEmail] = useState(false);
-    const [usoStorageDashboard, setUsoStorageDashboard] = useState({
-        totalBytes: 0,
-        arquivos: 0,
-        buckets: [],
+    const [usoStorageDashboard, setUsoStorageDashboard] = useState(() => {
+        if (typeof window === "undefined") {
+            return { totalBytes: 0, arquivos: 0, buckets: [], atualizadoEm: "" };
+        }
+
+        try {
+            const salvo = JSON.parse(window.localStorage.getItem(CACHE_USO_STORAGE_DASHBOARD) || "null");
+
+            if (salvo && typeof salvo === "object") {
+                return {
+                    totalBytes: Number(salvo.totalBytes || 0),
+                    arquivos: Number(salvo.arquivos || 0),
+                    buckets: Array.isArray(salvo.buckets) ? salvo.buckets : [],
+                    atualizadoEm: salvo.atualizadoEm || "",
+                };
+            }
+        } catch {
+            // Mantém valores zerados se o cache local estiver inválido.
+        }
+
+        return { totalBytes: 0, arquivos: 0, buckets: [], atualizadoEm: "" };
     });
     const [carregandoStorageDashboard, setCarregandoStorageDashboard] = useState(false);
     const [mostrarFiltroPainel, setMostrarFiltroPainel] = useState(false);
@@ -318,25 +336,27 @@ export function Dashboard({
                 }
             }
 
-            setUsoStorageDashboard({
+            const resumoStorage = {
                 totalBytes: resumoBuckets.reduce((total, bucket) => total + bucket.bytes, 0),
                 arquivos: resumoBuckets.reduce((total, bucket) => total + bucket.arquivos, 0),
                 buckets: resumoBuckets.sort((a, b) => b.bytes - a.bytes),
-            });
+                atualizadoEm: new Date().toISOString(),
+            };
+
+            setUsoStorageDashboard(resumoStorage);
+
+            if (typeof window !== "undefined") {
+                window.localStorage.setItem(CACHE_USO_STORAGE_DASHBOARD, JSON.stringify(resumoStorage));
+            }
         } catch {
-            setUsoStorageDashboard({ totalBytes: 0, arquivos: 0, buckets: [] });
+            setUsoStorageDashboard((atual) => ({ ...atual, totalBytes: 0, arquivos: 0, buckets: [] }));
         } finally {
             setCarregandoStorageDashboard(false);
         }
     }, []);
 
-    useEffect(() => {
-        const timer = window.setTimeout(() => {
-            carregarUsoStorageDashboard();
-        }, 0);
-
-        return () => window.clearTimeout(timer);
-    }, [carregarUsoStorageDashboard]);
+    // Etapa 71: o uso do Storage não é mais carregado automaticamente na abertura do Dashboard.
+    // Isso evita varrer buckets privados no acesso inicial. Use o botão do card para atualizar sob demanda.
 
     const indicadores = useMemo(() => {
         const avaliacoes = colaboradores.map((colaborador) => {
