@@ -1,5 +1,5 @@
 import React from "react";
-import { CheckCircle2 } from "lucide-react";
+import { CheckCircle2, ChevronDown, ChevronUp } from "lucide-react";
 import { Card } from "../commonComponents";
 import { classNames, formatDate } from "../../utils/sstUtils";
 
@@ -8,12 +8,14 @@ export function AlertasTstTreinamentos({
     enviandoAlertaTst = false,
     onEnviarEmailAlertaTstAutomatico,
     onCopiarAvisoAlertaTst,
+    recolhido = false,
+    onAlternarRecolhido,
 }) {
     const totalAlertas = alertasTstPorEmpresa.reduce((total, grupo) => total + grupo.itens.length, 0);
 
     return (
         <Card className="self-start">
-            <div className="mb-4 flex flex-col justify-between gap-3 lg:flex-row lg:items-center">
+            <div className="mb-4 flex flex-col justify-between gap-3 lg:flex-row lg:items-start">
                 <div>
                     <h2 className="text-lg font-bold text-slate-950">Alertas para TST</h2>
                     <p className="mt-1 text-sm text-slate-500">
@@ -21,12 +23,35 @@ export function AlertasTstTreinamentos({
                     </p>
                 </div>
 
-                <span className="w-fit rounded-full bg-orange-50 px-3 py-1 text-xs font-semibold text-orange-700 ring-1 ring-orange-200">
-                    {totalAlertas} item(ns) em alerta
-                </span>
+                <div className="flex flex-wrap gap-2 lg:justify-end">
+                    <span className="w-fit rounded-full bg-orange-50 px-3 py-1 text-xs font-semibold text-orange-700 ring-1 ring-orange-200">
+                        {totalAlertas} item(ns) em alerta
+                    </span>
+                    <button
+                        type="button"
+                        onClick={onAlternarRecolhido}
+                        className="inline-flex items-center justify-center gap-2 rounded-full bg-white px-3 py-1 text-xs font-bold text-slate-700 ring-1 ring-slate-200 hover:bg-slate-50"
+                    >
+                        {recolhido ? (
+                            <>
+                                <ChevronDown className="h-3.5 w-3.5" />
+                                Abrir
+                            </>
+                        ) : (
+                            <>
+                                <ChevronUp className="h-3.5 w-3.5" />
+                                Recolher
+                            </>
+                        )}
+                    </button>
+                </div>
             </div>
 
-            {alertasTstPorEmpresa.length === 0 ? (
+            {recolhido ? (
+                <p className="rounded-2xl bg-slate-50 px-4 py-3 text-sm text-slate-500">
+                    Card recolhido. {totalAlertas} item(ns) seguem monitorados para alerta ao TST.
+                </p>
+            ) : alertasTstPorEmpresa.length === 0 ? (
                 <div className="rounded-3xl border border-dashed border-slate-300 p-6 text-center">
                     <CheckCircle2 className="mx-auto h-9 w-9 text-emerald-500" />
                     <h3 className="mt-3 font-bold text-slate-900">Nenhum documento vencido ou a vencer</h3>
@@ -112,9 +137,11 @@ export function AlertasTstTreinamentos({
                 </div>
             )}
 
-            <p className="mt-3 rounded-2xl bg-slate-50 p-3 text-xs text-slate-500">
-                O botão de e-mail envia automaticamente pela função Supabase enviar-alerta-tst. Use Copiar aviso como alternativa manual quando precisar enviar pelo Outlook, Gmail ou WhatsApp.
-            </p>
+            {!recolhido && (
+                <p className="mt-3 rounded-2xl bg-slate-50 p-3 text-xs text-slate-500">
+                    O botão de e-mail envia automaticamente pela função Supabase enviar-alerta-tst. Use Copiar aviso como alternativa manual quando precisar enviar pelo Outlook, Gmail ou WhatsApp.
+                </p>
+            )}
         </Card>
     );
 }

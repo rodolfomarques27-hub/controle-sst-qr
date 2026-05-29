@@ -1,5 +1,5 @@
 /* eslint-disable no-unused-vars */
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { motion } from "framer-motion";
 import { Search } from "lucide-react";
 import { supabase } from "../../lib/supabaseClient";
@@ -32,6 +32,24 @@ import {
 } from "../../utils/sstUtils";
 
 const hoje = new Date();
+
+const cardsTreinamentosPadrao = {
+    filtros: false,
+    lancamento: false,
+    alertas: false,
+    base: false,
+};
+
+function carregarCardsTreinamentosRecolhidos() {
+    if (typeof window === "undefined") return cardsTreinamentosPadrao;
+
+    try {
+        const salvo = JSON.parse(window.localStorage.getItem("treinamentosCardsRecolhidos") || "null");
+        return salvo && typeof salvo === "object" ? { ...cardsTreinamentosPadrao, ...salvo } : cardsTreinamentosPadrao;
+    } catch {
+        return cardsTreinamentosPadrao;
+    }
+}
 
 function emailTstDaEmpresa(colaborador) {
     return normalizarEmailDestinatario(colaborador?.empresaTstEmail || "");
@@ -70,6 +88,19 @@ export function Treinamentos({
     const [filtroStatusCertificados, setFiltroStatusCertificados] = useState("Todos");
     const [exigenciasAbertas, setExigenciasAbertas] = useState(false);
     const [enviandoAlertaTst, setEnviandoAlertaTst] = useState(false);
+    const [cardsTreinamentosRecolhidos, setCardsTreinamentosRecolhidos] = useState(carregarCardsTreinamentosRecolhidos);
+
+    useEffect(() => {
+        if (typeof window === "undefined") return;
+        window.localStorage.setItem("treinamentosCardsRecolhidos", JSON.stringify(cardsTreinamentosRecolhidos));
+    }, [cardsTreinamentosRecolhidos]);
+
+    const alternarCardTreinamento = (chave) => {
+        setCardsTreinamentosRecolhidos((atual) => ({
+            ...atual,
+            [chave]: !atual[chave],
+        }));
+    };
 
     const colabSelecionado =
         colaboradores.find((c) => String(c.codigoFuncionario) === String(colabId)) ||
@@ -641,29 +672,52 @@ export function Treinamentos({
             <Header titulo="Treinamentos e certificados" subtitulo="Lançamento de certificados no Supabase, validade e controle automático de status." />
 
             <Card className="mb-5">
-                <div className="grid gap-3 xl:grid-cols-[1fr_220px]">
-                    <div className="relative">
-                        <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-                        <input
-                            value={buscaCertificados}
-                            onChange={(e) => setBuscaCertificados(e.target.value)}
-                            placeholder="Pesquisar certificados por colaborador, empresa, código, treinamento ou arquivo"
-                            className="w-full rounded-2xl border border-slate-200 bg-white py-3 pl-11 pr-4 text-sm outline-none focus:border-slate-400 focus:ring-4 focus:ring-slate-100"
-                        />
+                <div className="flex flex-col justify-between gap-3 md:flex-row md:items-start">
+                    <div>
+                        <h2 className="text-lg font-bold text-slate-950">Filtros da base de certificados</h2>
+                        <p className="mt-1 text-sm text-slate-500">Pesquise e filtre os certificados sem abrir todos os grupos manualmente.</p>
                     </div>
 
-                    <select
-                        value={filtroStatusCertificados}
-                        onChange={(e) => setFiltroStatusCertificados(e.target.value)}
-                        className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 outline-none focus:border-slate-400 focus:ring-4 focus:ring-slate-100"
+                    <button
+                        type="button"
+                        onClick={() => alternarCardTreinamento("filtros")}
+                        className="inline-flex items-center justify-center rounded-2xl bg-white px-4 py-2 text-xs font-bold text-slate-700 ring-1 ring-slate-200 hover:bg-slate-50"
                     >
-                        <option value="Todos">Todos os status</option>
-                        <option value="Pendentes">Pendentes ({totalPorStatusCertificados.pendentes})</option>
-                        <option value="Em dia">Em dia ({totalPorStatusCertificados.emDia})</option>
-                        <option value="A vencer">A vencer ({totalPorStatusCertificados.aVencer})</option>
-                        <option value="Vencido">Vencidos ({totalPorStatusCertificados.vencidos})</option>
-                    </select>
+                        {cardsTreinamentosRecolhidos.filtros ? "Abrir filtros" : "Recolher filtros"}
+                    </button>
                 </div>
+
+                {!cardsTreinamentosRecolhidos.filtros && (
+                    <div className="mt-4 grid gap-3 xl:grid-cols-[1fr_220px]">
+                        <div className="relative">
+                            <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                            <input
+                                value={buscaCertificados}
+                                onChange={(e) => setBuscaCertificados(e.target.value)}
+                                placeholder="Pesquisar certificados por colaborador, empresa, código, treinamento ou arquivo"
+                                className="w-full rounded-2xl border border-slate-200 bg-white py-3 pl-11 pr-4 text-sm outline-none focus:border-slate-400 focus:ring-4 focus:ring-slate-100"
+                            />
+                        </div>
+
+                        <select
+                            value={filtroStatusCertificados}
+                            onChange={(e) => setFiltroStatusCertificados(e.target.value)}
+                            className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 outline-none focus:border-slate-400 focus:ring-4 focus:ring-slate-100"
+                        >
+                            <option value="Todos">Todos os status</option>
+                            <option value="Pendentes">Pendentes ({totalPorStatusCertificados.pendentes})</option>
+                            <option value="Em dia">Em dia ({totalPorStatusCertificados.emDia})</option>
+                            <option value="A vencer">A vencer ({totalPorStatusCertificados.aVencer})</option>
+                            <option value="Vencido">Vencidos ({totalPorStatusCertificados.vencidos})</option>
+                        </select>
+                    </div>
+                )}
+
+                {cardsTreinamentosRecolhidos.filtros && (
+                    <p className="mt-4 rounded-2xl bg-slate-50 px-4 py-3 text-sm text-slate-500">
+                        Card recolhido. Clique em Abrir filtros para pesquisar ou alterar o status exibido.
+                    </p>
+                )}
             </Card>
 
             <div className="grid items-start gap-6 xl:grid-cols-[0.75fr_1.25fr]">
@@ -700,6 +754,8 @@ export function Treinamentos({
                     treinamentosBase={treinamentosBase}
                     salvarCertificadosEmLote={salvarCertificadosEmLote}
                     salvandoLote={salvandoLote}
+                    recolhido={cardsTreinamentosRecolhidos.lancamento}
+                    onAlternarRecolhido={() => alternarCardTreinamento("lancamento")}
                 />
 
                 <div className="space-y-6">
@@ -708,6 +764,8 @@ export function Treinamentos({
                         enviandoAlertaTst={enviandoAlertaTst}
                         onEnviarEmailAlertaTstAutomatico={enviarEmailAlertaTstAutomatico}
                         onCopiarAvisoAlertaTst={copiarAvisoAlertaTst}
+                        recolhido={cardsTreinamentosRecolhidos.alertas}
+                        onAlternarRecolhido={() => alternarCardTreinamento("alertas")}
                     />
 
                     <BaseCertificadosTreinamentos
@@ -726,6 +784,8 @@ export function Treinamentos({
                         enviarDocumentoPendente={enviarDocumentoPendente}
                         onVisualizarCertificado={onVisualizarCertificado}
                         onExcluirCertificado={onExcluirCertificado}
+                        recolhido={cardsTreinamentosRecolhidos.base}
+                        onAlternarRecolhido={() => alternarCardTreinamento("base")}
                     />
                 </div>
             </div>

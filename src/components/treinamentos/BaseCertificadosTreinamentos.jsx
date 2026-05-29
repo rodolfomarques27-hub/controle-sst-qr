@@ -29,16 +29,46 @@ export function BaseCertificadosTreinamentos({
     enviarDocumentoPendente,
     onVisualizarCertificado,
     onExcluirCertificado,
+    recolhido = false,
+    onAlternarRecolhido,
 }) {
     return (
         <Card className="self-start">
-            <div className="mb-4 flex items-center justify-between gap-3">
-                <h2 className="text-lg font-bold text-slate-950">Base de certificados</h2>
-                <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-600">
-                    {documentosFiltrados.length} certificado(s) · {totalPorStatusCertificados.pendentes} pendente(s)
-                </span>
+            <div className="mb-4 flex flex-col justify-between gap-3 md:flex-row md:items-start">
+                <div>
+                    <h2 className="text-lg font-bold text-slate-950">Base de certificados</h2>
+                    <p className="mt-1 text-sm text-slate-500">Consulta, revisão de datas e abertura dos certificados enviados.</p>
+                </div>
+
+                <div className="flex flex-wrap gap-2 md:justify-end">
+                    <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-600">
+                        {documentosFiltrados.length} certificado(s) · {totalPorStatusCertificados.pendentes} pendente(s)
+                    </span>
+                    <button
+                        type="button"
+                        onClick={onAlternarRecolhido}
+                        className="inline-flex items-center justify-center gap-2 rounded-full bg-white px-3 py-1 text-xs font-bold text-slate-700 ring-1 ring-slate-200 hover:bg-slate-50"
+                    >
+                        {recolhido ? (
+                            <>
+                                <ChevronDown className="h-3.5 w-3.5" />
+                                Abrir
+                            </>
+                        ) : (
+                            <>
+                                <ChevronUp className="h-3.5 w-3.5" />
+                                Recolher
+                            </>
+                        )}
+                    </button>
+                </div>
             </div>
 
+            {recolhido ? (
+                <p className="rounded-2xl bg-slate-50 px-4 py-3 text-sm text-slate-500">
+                    Card recolhido. A base possui {documentosFiltrados.length} certificado(s) filtrado(s) e {totalPorStatusCertificados.pendentes} pendência(s).
+                </p>
+            ) : (
             <div className="space-y-3">
                 {documentos.length === 0 && totalPorStatusCertificados.pendentes === 0 && (
                     <div className="rounded-3xl border border-dashed border-slate-300 p-8 text-center">
@@ -354,6 +384,7 @@ export function BaseCertificadosTreinamentos({
                     );
                 })}
             </div>
+            )}
         </Card>
     );
 }

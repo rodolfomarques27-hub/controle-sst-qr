@@ -43,17 +43,46 @@ export function FormularioLancamentoCertificado({
     treinamentosBase = [],
     salvarCertificadosEmLote,
     salvandoLote,
+    recolhido = false,
+    onAlternarRecolhido,
 }) {
     return (
         <Card>
-            <h2 className="flex items-center gap-2 text-lg font-bold text-slate-950">
-                <Upload className="h-4 w-4" />
-                Lançar certificado
-            </h2>
-            <p className="mt-1 text-sm text-slate-500">
-                O arquivo será salvo no Supabase Storage usando o código do funcionário e o registro ficará vinculado ao UUID real do colaborador.
-            </p>
-        
+            <div className="flex flex-col justify-between gap-3 md:flex-row md:items-start">
+                <div>
+                    <h2 className="flex items-center gap-2 text-lg font-bold text-slate-950">
+                        <Upload className="h-4 w-4" />
+                        Lançar certificado
+                    </h2>
+                    <p className="mt-1 text-sm text-slate-500">
+                        O arquivo será salvo no Supabase Storage usando o código do funcionário e o registro ficará vinculado ao UUID real do colaborador.
+                    </p>
+                </div>
+
+                <button
+                    type="button"
+                    onClick={onAlternarRecolhido}
+                    className="inline-flex items-center justify-center gap-2 rounded-2xl bg-white px-4 py-2 text-xs font-bold text-slate-700 ring-1 ring-slate-200 hover:bg-slate-50"
+                >
+                    {recolhido ? (
+                        <>
+                            <ChevronDown className="h-4 w-4" />
+                            Abrir card
+                        </>
+                    ) : (
+                        <>
+                            <ChevronUp className="h-4 w-4" />
+                            Recolher card
+                        </>
+                    )}
+                </button>
+            </div>
+
+            {recolhido ? (
+                <p className="mt-4 rounded-2xl bg-slate-50 px-4 py-3 text-sm text-slate-500">
+                    Card recolhido. Clique em Abrir card para lançar certificado individual ou acessar o envio em lote.
+                </p>
+            ) : (
             <div className="mt-5 space-y-3">
                 <div>
                     <label className="mb-1 block text-xs font-bold uppercase tracking-wide text-slate-500">Colaborador</label>
@@ -210,6 +239,7 @@ export function FormularioLancamentoCertificado({
                     salvandoLote={salvandoLote}
                 />
             </div>
+            )}
         </Card>
     );
 }
