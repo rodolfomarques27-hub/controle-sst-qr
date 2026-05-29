@@ -234,6 +234,9 @@ export default function App() {
     const [carregandoAuditoriasCampo, setCarregandoAuditoriasCampo] = useState(false);
     const [erroAuditoriasCampo, setErroAuditoriasCampo] = useState("");
     const [carregandoAuditoria, setCarregandoAuditoria] = useState(false);
+    const [auditoriaCarregada, setAuditoriaCarregada] = useState(false);
+    const [emailsEnviadosCarregados, setEmailsEnviadosCarregados] = useState(false);
+    const [auditoriasCampoCarregadas, setAuditoriasCampoCarregadas] = useState(false);
     const [podeAcessarAuditoria, setPodeAcessarAuditoria] = useState(false);
     const [verificandoAcessoAuditoria, setVerificandoAcessoAuditoria] = useState(false);
     const [auditoriaLiberada, setAuditoriaLiberada] = useState(() => {
@@ -298,6 +301,7 @@ export default function App() {
         }
 
         setCarregandoAuditoria(false);
+        setAuditoriaCarregada(true);
 
         if (error) {
             console.warn("Erro ao carregar auditoria:", error.message);
@@ -323,6 +327,8 @@ export default function App() {
         } catch (erroConsulta) {
             error = erroConsulta;
         }
+
+        setEmailsEnviadosCarregados(true);
 
         if (error) {
             console.warn("Erro ao carregar histórico de e-mails:", error.message);
@@ -370,6 +376,7 @@ export default function App() {
             setAuditoriasCampo([]);
             return [];
         } finally {
+            setAuditoriasCampoCarregadas(true);
             setCarregandoAuditoriasCampo(false);
         }
     }, []);
@@ -397,6 +404,7 @@ export default function App() {
                 return false;
             }
 
+            setEmailsEnviadosCarregados(true);
             setEmailsEnviados((atual) => [{ id: `${Date.now()}`, ...payload }, ...atual].slice(0, 300));
             return true;
         },
@@ -2274,19 +2282,49 @@ export default function App() {
 
         const timer = window.setTimeout(async () => {
             carregarColaboradores();
-            carregarEmailsEnviados();
-            carregarAuditoriasCampo();
             registrarAuditoria("ACESSO", "sistema", "Usuário acessou o sistema");
-
-            const autorizadoAuditoria = await verificarAcessoAuditoria();
-
-            if (autorizadoAuditoria) {
-                carregarAuditoria();
-            }
+            await verificarAcessoAuditoria();
         }, 0);
 
         return () => window.clearTimeout(timer);
-    }, [usuario, carregarColaboradores, carregarAuditoria, carregarEmailsEnviados, carregarAuditoriasCampo, registrarAuditoria, verificarAcessoAuditoria]);
+    }, [usuario, carregarColaboradores, registrarAuditoria, verificarAcessoAuditoria]);
+
+    useEffect(() => {
+        if (!usuario) return;
+
+        const telaAuditoriaCampoAberta = tela === "auditoriaCampo";
+        const telaAuditoriaSistemaAberta = tela === "auditoria" && podeAcessarAuditoria;
+
+        if (telaAuditoriaCampoAberta && !auditoriasCampoCarregadas && !carregandoAuditoriasCampo) {
+            carregarAuditoriasCampo();
+        }
+
+        if (telaAuditoriaSistemaAberta) {
+            if (!auditoriaCarregada && !carregandoAuditoria) {
+                carregarAuditoria();
+            }
+
+            if (!emailsEnviadosCarregados) {
+                carregarEmailsEnviados();
+            }
+
+            if (!auditoriasCampoCarregadas && !carregandoAuditoriasCampo) {
+                carregarAuditoriasCampo();
+            }
+        }
+    }, [
+        usuario,
+        tela,
+        podeAcessarAuditoria,
+        auditoriaCarregada,
+        carregandoAuditoria,
+        emailsEnviadosCarregados,
+        auditoriasCampoCarregadas,
+        carregandoAuditoriasCampo,
+        carregarAuditoria,
+        carregarEmailsEnviados,
+        carregarAuditoriasCampo,
+    ]);
 
     useEffect(() => {
         if (!usuario || colaboradores.length === 0) return;
@@ -2341,8 +2379,14 @@ export default function App() {
         setEmpresasBanco([]);
         setDocumentosEmpresas([]);
         setColaboradorSelecionado(null);
+        setAuditoria([]);
+        setEmailsEnviados([]);
+        setAuditoriasCampo([]);
         setAuditoriaLiberada(false);
         setPodeAcessarAuditoria(false);
+        setAuditoriaCarregada(false);
+        setEmailsEnviadosCarregados(false);
+        setAuditoriasCampoCarregadas(false);
         try {
             window.sessionStorage.removeItem("auditoriaLiberada");
         } catch {
@@ -2548,7 +2592,10 @@ export default function App() {
                         <NovaAuditoriaCampoDireta
                             usuario={usuario}
                             empresasBanco={empresasBanco}
-                            onAuditoriaSalva={(novaAuditoria) => setAuditoriasCampo((atual) => [novaAuditoria, ...atual])}
+                            onAuditoriaSalva={(novaAuditoria) => {
+                                setAuditoriasCampoCarregadas(true);
+                                setAuditoriasCampo((atual) => [novaAuditoria, ...atual]);
+                            }}
                         />
                     )}
 
