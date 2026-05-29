@@ -197,6 +197,8 @@ import {
 } from "lucide-react";
 
 const hoje = new Date();
+const LIMITE_AUDITORIA_SISTEMA_INICIAL = 300;
+const LIMITE_EMAILS_ENVIADOS_INICIAL = 200;
 
 
 
@@ -287,18 +289,11 @@ export default function App() {
     const carregarAuditoria = useCallback(async () => {
         setCarregandoAuditoria(true);
 
-        let data;
-        let error = null;
-
-        try {
-            data = await buscarTodosRegistrosSupabase(
-                "auditoria_sistema",
-                "id, created_at, usuario_email, acao, tabela, registro_id, descricao, dados",
-                { campoOrdenacao: "created_at", crescente: false }
-            );
-        } catch (erroConsulta) {
-            error = erroConsulta;
-        }
+        const { data, error } = await supabase
+            .from("auditoria_sistema")
+            .select("id, created_at, usuario_email, acao, tabela, registro_id, descricao, dados")
+            .order("created_at", { ascending: false })
+            .limit(LIMITE_AUDITORIA_SISTEMA_INICIAL);
 
         setCarregandoAuditoria(false);
         setAuditoriaCarregada(true);
@@ -315,18 +310,11 @@ export default function App() {
 
 
     const carregarEmailsEnviados = useCallback(async () => {
-        let data;
-        let error = null;
-
-        try {
-            data = await buscarTodosRegistrosSupabase(
-                "emails_enviados",
-                "id, empresa_id, colaborador_id, documento_id, destinatario, assunto, tipo_alerta, documento, status_envio, erro, data_envio, enviado_por",
-                { campoOrdenacao: "data_envio", crescente: false }
-            );
-        } catch (erroConsulta) {
-            error = erroConsulta;
-        }
+        const { data, error } = await supabase
+            .from("emails_enviados")
+            .select("id, empresa_id, colaborador_id, documento_id, destinatario, assunto, tipo_alerta, documento, status_envio, erro, data_envio, enviado_por")
+            .order("data_envio", { ascending: false })
+            .limit(LIMITE_EMAILS_ENVIADOS_INICIAL);
 
         setEmailsEnviadosCarregados(true);
 
@@ -2290,28 +2278,32 @@ export default function App() {
     }, [usuario, carregarColaboradores, registrarAuditoria, verificarAcessoAuditoria]);
 
     useEffect(() => {
-        if (!usuario) return;
+        if (!usuario) return undefined;
 
-        const telaAuditoriaCampoAberta = tela === "auditoriaCampo";
-        const telaAuditoriaSistemaAberta = tela === "auditoria" && podeAcessarAuditoria;
+        const timer = window.setTimeout(() => {
+            const telaAuditoriaCampoAberta = tela === "auditoriaCampo";
+            const telaAuditoriaSistemaAberta = tela === "auditoria" && podeAcessarAuditoria;
 
-        if (telaAuditoriaCampoAberta && !auditoriasCampoCarregadas && !carregandoAuditoriasCampo) {
-            carregarAuditoriasCampo();
-        }
-
-        if (telaAuditoriaSistemaAberta) {
-            if (!auditoriaCarregada && !carregandoAuditoria) {
-                carregarAuditoria();
-            }
-
-            if (!emailsEnviadosCarregados) {
-                carregarEmailsEnviados();
-            }
-
-            if (!auditoriasCampoCarregadas && !carregandoAuditoriasCampo) {
+            if (telaAuditoriaCampoAberta && !auditoriasCampoCarregadas && !carregandoAuditoriasCampo) {
                 carregarAuditoriasCampo();
             }
-        }
+
+            if (telaAuditoriaSistemaAberta) {
+                if (!auditoriaCarregada && !carregandoAuditoria) {
+                    carregarAuditoria();
+                }
+
+                if (!emailsEnviadosCarregados) {
+                    carregarEmailsEnviados();
+                }
+
+                if (!auditoriasCampoCarregadas && !carregandoAuditoriasCampo) {
+                    carregarAuditoriasCampo();
+                }
+            }
+        }, 0);
+
+        return () => window.clearTimeout(timer);
     }, [
         usuario,
         tela,
