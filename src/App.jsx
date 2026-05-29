@@ -177,6 +177,7 @@ import {
     RefreshCw,
     Search,
     Send,
+    Settings,
     ShieldCheck,
     Trash2,
     Upload,
@@ -198,6 +199,7 @@ const Treinamentos = React.lazy(() => import("./components/treinamentos/Treiname
 const RelatorioAuditoria = React.lazy(() => import("./components/auditoria/RelatorioAuditoria").then((modulo) => ({ default: modulo.RelatorioAuditoria })));
 const DashboardAuditoriaCampo = React.lazy(() => import("./components/auditoria/DashboardAuditoriaCampo").then((modulo) => ({ default: modulo.DashboardAuditoriaCampo })));
 const NovaAuditoriaCampoDireta = React.lazy(() => import("./components/auditoria/NovaAuditoriaCampoDireta").then((modulo) => ({ default: modulo.NovaAuditoriaCampoDireta })));
+const ConfiguracoesSistema = React.lazy(() => import("./components/configuracoes/ConfiguracoesSistema").then((modulo) => ({ default: modulo.ConfiguracoesSistema })));
 
 const hoje = new Date();
 const LIMITE_AUDITORIA_SISTEMA_INICIAL = 300;
@@ -2494,6 +2496,7 @@ export default function App() {
         { id: "treinamentos", label: "Treinamentos", icon: ClipboardCheck },
         { id: "qr", label: "Consulta QR", icon: QrCode },
         ...(podeAcessarAuditoria ? [{ id: "auditoria", label: "Auditoria de sistema", icon: Database }] : []),
+        { id: "configuracoes", label: "Configurações", icon: Settings },
         { id: "roteiro", label: "Roteiro", icon: CalendarClock },
     ];
 
@@ -2854,6 +2857,19 @@ export default function App() {
                                     onBloquear={bloquearAuditoria}
                                 />
                             )
+                        )}
+
+                        {tela === "configuracoes" && (
+                            <ConfiguracoesSistema
+                                usuario={usuario}
+                                podeAcessarAuditoria={podeAcessarAuditoria}
+                                limites={{
+                                    auditoriaSistema: LIMITE_AUDITORIA_SISTEMA_INICIAL,
+                                    emailsEnviados: LIMITE_EMAILS_ENVIADOS_INICIAL,
+                                    auditoriasCampo: LIMITE_AUDITORIAS_CAMPO_INICIAL,
+                                    storageMb: LIMITE_STORAGE_MB,
+                                }}
+                            />
                         )}
 
                         {tela === "roteiro" && <Requisitos />}
