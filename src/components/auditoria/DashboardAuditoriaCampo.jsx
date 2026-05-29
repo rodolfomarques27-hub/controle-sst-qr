@@ -28,9 +28,9 @@ import {
 } from "../../services/auditoriaCampoService";
 import { tiposAuditoriaCampoDireta } from "../../constants/sstConstants";
 import { normalizarTextoBusca, formatDate, formatarDataHora, classNames } from "../../utils/sstUtils";
+import { LIMITE_QRCODES_CAMPO_POR_CARGA } from "../../constants/sistemaLimitesConstants";
 
 const TOKEN_AUDITORIA_CAMPO_PUBLICA_PADRAO = "TOKEN-AUDITORIA-CAMPO-2026";
-const LIMITE_QRCODES_CAMPO_POR_CARGA = 50;
 const hoje = new Date();
 
 export function DashboardAuditoriaCampo({

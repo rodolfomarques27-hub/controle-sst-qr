@@ -15,6 +15,12 @@ import {
 } from "./services/certificadosStorageService";
 import { auditoriaEventoHabilitado } from "./services/auditoriaSistemaConfigService";
 import {
+    LIMITE_AUDITORIA_SISTEMA_INICIAL,
+    LIMITE_EMAILS_ENVIADOS_INICIAL,
+    LIMITE_AUDITORIAS_CAMPO_INICIAL,
+    LIMITES_CARREGAMENTO_SISTEMA,
+} from "./constants/sistemaLimitesConstants";
+import {
     Card,
     CardRecolhivel,
     FotoAuditoriaPreview,
@@ -202,9 +208,6 @@ const NovaAuditoriaCampoDireta = React.lazy(() => import("./components/auditoria
 const ConfiguracoesSistema = React.lazy(() => import("./components/configuracoes/ConfiguracoesSistema").then((modulo) => ({ default: modulo.ConfiguracoesSistema })));
 
 const hoje = new Date();
-const LIMITE_AUDITORIA_SISTEMA_INICIAL = 300;
-const LIMITE_EMAILS_ENVIADOS_INICIAL = 200;
-const LIMITE_AUDITORIAS_CAMPO_INICIAL = 500;
 
 function CarregandoTela({ mensagem = "Carregando tela..." }) {
     return (
@@ -2864,9 +2867,7 @@ export default function App() {
                                 usuario={usuario}
                                 podeAcessarAuditoria={podeAcessarAuditoria}
                                 limites={{
-                                    auditoriaSistema: LIMITE_AUDITORIA_SISTEMA_INICIAL,
-                                    emailsEnviados: LIMITE_EMAILS_ENVIADOS_INICIAL,
-                                    auditoriasCampo: LIMITE_AUDITORIAS_CAMPO_INICIAL,
+                                    ...LIMITES_CARREGAMENTO_SISTEMA,
                                     storageMb: LIMITE_STORAGE_MB,
                                 }}
                             />
