@@ -1,0 +1,22 @@
+Roteiro 2 - Etapa 102
+Senha editável da aba Configurações
+
+Checklist de teste:
+1. Abrir o sistema e fazer login.
+2. Clicar em Configurações.
+3. Confirmar que a tela pede senha.
+4. Entrar com senha atual 2026.
+5. Abrir o card Senha das Configurações.
+6. Preencher senha atual: 2026.
+7. Preencher nova senha, exemplo: 3030.
+8. Confirmar nova senha: 3030.
+9. Clicar em Salvar senha das Configurações.
+10. Clicar em Bloquear Configurações.
+11. Tentar acessar com 2026 e confirmar que não entra.
+12. Acessar com 3030 e confirmar que entra.
+13. Recarregar com Ctrl + F5 e confirmar que a senha personalizada continua valendo.
+14. Restaurar senha padrão.
+15. Bloquear Configurações.
+16. Confirmar que a senha 2026 voltou a funcionar.
+
+Observação: esta senha é local do navegador e não substitui permissões, RLS, autenticação nem regras do Supabase.

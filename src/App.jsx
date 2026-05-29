@@ -19,6 +19,11 @@ import {
     salvarLimitesCarregamentoSistema,
 } from "./constants/sistemaLimitesConstants";
 import {
+    carregarSenhaConfiguracoesSistema,
+    salvarSenhaConfiguracoesSistema,
+    SENHA_CONFIGURACOES_PADRAO,
+} from "./constants/configuracoesSegurancaConstants";
+import {
     Card,
     CardRecolhivel,
     FotoAuditoriaPreview,
@@ -206,7 +211,7 @@ const NovaAuditoriaCampoDireta = React.lazy(() => import("./components/auditoria
 const ConfiguracoesSistema = React.lazy(() => import("./components/configuracoes/ConfiguracoesSistema").then((modulo) => ({ default: modulo.ConfiguracoesSistema })));
 
 const hoje = new Date();
-const SENHA_CONFIGURACOES_SISTEMA = "2026";
+
 
 function CarregandoTela({ mensagem = "Carregando tela..." }) {
     return (
@@ -256,6 +261,7 @@ export default function App() {
     const [carregandoSessao, setCarregandoSessao] = useState(() => SUPABASE_CONFIGURADO);
     const [tela, setTela] = useState("dashboard");
     const [configuracoesDesbloqueadas, setConfiguracoesDesbloqueadas] = useState(false);
+    const [senhaConfiguracoesSistema, setSenhaConfiguracoesSistema] = useState(() => carregarSenhaConfiguracoesSistema());
     const [senhaConfiguracoes, setSenhaConfiguracoes] = useState("");
     const [mostrarSenhaConfiguracoes, setMostrarSenhaConfiguracoes] = useState(false);
     const [erroSenhaConfiguracoes, setErroSenhaConfiguracoes] = useState("");
@@ -2628,7 +2634,7 @@ export default function App() {
     const validarSenhaConfiguracoes = (evento) => {
         evento?.preventDefault?.();
 
-        if (senhaConfiguracoes.trim() === SENHA_CONFIGURACOES_SISTEMA) {
+        if (senhaConfiguracoes.trim() === senhaConfiguracoesSistema) {
             setConfiguracoesDesbloqueadas(true);
             setSenhaConfiguracoes("");
             setErroSenhaConfiguracoes("");
@@ -2643,6 +2649,12 @@ export default function App() {
         setSenhaConfiguracoes("");
         setErroSenhaConfiguracoes("");
         setMostrarSenhaConfiguracoes(false);
+    };
+
+    const atualizarSenhaConfiguracoesSistema = (novaSenha) => {
+        const senhaSalva = salvarSenhaConfiguracoesSistema(novaSenha);
+        setSenhaConfiguracoesSistema(senhaSalva);
+        return senhaSalva;
     };
 
     const renderBloqueioConfiguracoes = () => (
@@ -2700,7 +2712,7 @@ export default function App() {
                             </p>
                         )}
                         <p className="text-xs leading-5 text-slate-500">
-                            Senha provisória padrão: <span className="font-black text-slate-700">2026</span>. Em etapa futura, essa senha poderá ser sincronizada com o Supabase.
+                            Senha atual das Configurações: <span className="font-black text-slate-700">{senhaConfiguracoesSistema === SENHA_CONFIGURACOES_PADRAO ? "padrão 2026" : "personalizada"}</span>.
                         </p>
                     </form>
                 </div>
@@ -2978,6 +2990,8 @@ export default function App() {
                                             storageMb: LIMITE_STORAGE_MB,
                                         }}
                                         onSalvarLimites={atualizarLimitesCarregamentoSistema}
+                                        senhaConfiguracoesSistema={senhaConfiguracoesSistema}
+                                        onSalvarSenhaConfiguracoes={atualizarSenhaConfiguracoesSistema}
                                     />
                                 </div>
                             ) : (

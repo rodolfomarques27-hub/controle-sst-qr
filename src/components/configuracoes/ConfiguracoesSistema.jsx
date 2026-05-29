@@ -11,6 +11,7 @@ import {
     HardDrive,
     KeyRound,
     Link2,
+    Lock,
     RefreshCw,
     RotateCcw,
     Settings,
@@ -42,6 +43,10 @@ import {
     TOKEN_AUDITORIA_CAMPO_PUBLICA_PADRAO,
 } from "../../constants/auditoriaPublicaConstants";
 import {
+    SENHA_CONFIGURACOES_PADRAO,
+    restaurarSenhaConfiguracoesSistema,
+} from "../../constants/configuracoesSegurancaConstants";
+import {
     avaliarSegurancaAuditoriaPublica,
     calcularResumoSegurancaAuditoriaPublica,
     montarChecklistSegurancaAuditoriaPublicaTexto,
@@ -63,6 +68,7 @@ const classNames = (...classes) => classes.filter(Boolean).join(" ");
 const CHAVES_BLOCOS_CONFIGURACOES_PADRAO = [
     "config-eventos-auditoria",
     "config-limites-carregamento",
+    "config-senha-configuracoes",
     "config-auditoria-publica",
     "config-seguranca-publica",
     "config-storage-privado",
@@ -107,7 +113,14 @@ const carregarOrdemLocalConfiguracoes = () => {
     }
 };
 
-export function ConfiguracoesSistema({ usuario = null, podeAcessarAuditoria = false, limites = {}, onSalvarLimites }) {
+export function ConfiguracoesSistema({
+    usuario = null,
+    podeAcessarAuditoria = false,
+    limites = {},
+    onSalvarLimites,
+    senhaConfiguracoesSistema = SENHA_CONFIGURACOES_PADRAO,
+    onSalvarSenhaConfiguracoes,
+}) {
     const [configEventos, setConfigEventos] = useState(() => configuracaoPadraoEventosAuditoriaSistema());
     const [origemConfig, setOrigemConfig] = useState("local");
     const [mensagemConfig, setMensagemConfig] = useState("Carregando configuração...");
@@ -119,6 +132,13 @@ export function ConfiguracoesSistema({ usuario = null, podeAcessarAuditoria = fa
     const [mensagemAuditoriaPublica, setMensagemAuditoriaPublica] = useState("Configuração pública carregada localmente.");
     const [mensagemStorage, setMensagemStorage] = useState("Checklist de Storage pronto para conferência operacional.");
     const [mensagemSupabase, setMensagemSupabase] = useState("Checklist Supabase/RLS/RPC pronto para conferência técnica.");
+    const [senhaConfiguracoesFormulario, setSenhaConfiguracoesFormulario] = useState({
+        atual: "",
+        nova: "",
+        confirmar: "",
+    });
+    const [mensagemSenhaConfiguracoes, setMensagemSenhaConfiguracoes] = useState("Senha das Configurações carregada localmente.");
+    const [mostrarCamposSenhaConfiguracoes, setMostrarCamposSenhaConfiguracoes] = useState(false);
 
     const [mostrarOrganizacaoCards, setMostrarOrganizacaoCards] = useState(false);
     const [blocosVisiveisConfiguracoes, setBlocosVisiveisConfiguracoes] = useState(() => ({
@@ -199,6 +219,55 @@ export function ConfiguracoesSistema({ usuario = null, podeAcessarAuditoria = fa
         setBlocosVisiveisConfiguracoes(BLOCOS_CONFIGURACOES_VISIVEIS_PADRAO);
         setBlocosRecolhidosConfiguracoes(BLOCOS_CONFIGURACOES_RECOLHIDOS_PADRAO);
         setOrdemBlocosConfiguracoes(CHAVES_BLOCOS_CONFIGURACOES_PADRAO);
+    };
+
+    const alterarCampoSenhaConfiguracoes = (campo, valor) => {
+        setSenhaConfiguracoesFormulario((atual) => ({
+            ...atual,
+            [campo]: valor,
+        }));
+        setMensagemSenhaConfiguracoes("Preencha os campos e salve para alterar a senha local das Configurações.");
+    };
+
+    const salvarSenhaConfiguracoes = (evento) => {
+        evento.preventDefault();
+
+        const senhaAtual = senhaConfiguracoesFormulario.atual.trim();
+        const novaSenha = senhaConfiguracoesFormulario.nova.trim();
+        const confirmarSenha = senhaConfiguracoesFormulario.confirmar.trim();
+
+        if (senhaAtual !== senhaConfiguracoesSistema) {
+            setMensagemSenhaConfiguracoes("Senha atual incorreta. A senha das Configurações não foi alterada.");
+            return;
+        }
+
+        if (novaSenha.length < 4) {
+            setMensagemSenhaConfiguracoes("A nova senha precisa ter pelo menos 4 caracteres.");
+            return;
+        }
+
+        if (novaSenha !== confirmarSenha) {
+            setMensagemSenhaConfiguracoes("A confirmação da nova senha não confere.");
+            return;
+        }
+
+        if (typeof onSalvarSenhaConfiguracoes === "function") {
+            onSalvarSenhaConfiguracoes(novaSenha);
+        }
+
+        setSenhaConfiguracoesFormulario({ atual: "", nova: "", confirmar: "" });
+        setMensagemSenhaConfiguracoes("Senha das Configurações atualizada localmente.");
+    };
+
+    const restaurarSenhaConfiguracoesPadrao = () => {
+        const senhaPadrao = restaurarSenhaConfiguracoesSistema();
+
+        if (typeof onSalvarSenhaConfiguracoes === "function") {
+            onSalvarSenhaConfiguracoes(senhaPadrao);
+        }
+
+        setSenhaConfiguracoesFormulario({ atual: "", nova: "", confirmar: "" });
+        setMensagemSenhaConfiguracoes("Senha padrão 2026 restaurada localmente.");
     };
 
     const blocoConfiguracaoVisivel = (chave) => blocosVisiveisConfiguracoes[chave] !== false;
@@ -497,6 +566,12 @@ export function ConfiguracoesSistema({ usuario = null, podeAcessarAuditoria = fa
             icon: SlidersHorizontal,
         },
         {
+            label: "Senha Configurações",
+            valor: senhaConfiguracoesSistema === SENHA_CONFIGURACOES_PADRAO ? "Padrão" : "Personalizada",
+            detalhe: senhaConfiguracoesSistema === SENHA_CONFIGURACOES_PADRAO ? "senha 2026" : "salva localmente",
+            icon: Lock,
+        },
+        {
             label: "Token Auditoria pública",
             valor: configAuditoriaPublica.tokenPublico || TOKEN_AUDITORIA_CAMPO_PUBLICA_PADRAO,
             detalhe: "usado em links e QR Codes",
@@ -525,6 +600,7 @@ export function ConfiguracoesSistema({ usuario = null, podeAcessarAuditoria = fa
     const secoesConfiguracoes = [
         { chave: "config-eventos-auditoria", titulo: "Auditoria de sistema", descricao: "Eventos registrados e exibidos na auditoria.", icon: Settings },
         { chave: "config-limites-carregamento", titulo: "Limites", descricao: "Quantidade de registros por tela/carga.", icon: SlidersHorizontal },
+        { chave: "config-senha-configuracoes", titulo: "Senha das Configurações", descricao: "Senha local usada para abrir esta tela.", icon: Lock },
         { chave: "config-auditoria-publica", titulo: "Auditoria pública", descricao: "Token, senha de referência e link público.", icon: KeyRound },
         { chave: "config-seguranca-publica", titulo: "Segurança pública", descricao: "Checklist operacional do QR Code público.", icon: ShieldAlert },
         { chave: "config-storage-privado", titulo: "Storage privado", descricao: "Buckets, URLs assinadas e arquivos sensíveis.", icon: HardDrive },
@@ -725,6 +801,102 @@ export function ConfiguracoesSistema({ usuario = null, podeAcessarAuditoria = fa
                             Salvar limites de carregamento
                         </button>
                     </Card>
+                )
+            );
+
+        case "config-senha-configuracoes":
+            return renderBlocoConfiguracaoComControle(
+                "config-senha-configuracoes",
+                "Senha das Configurações",
+                "Senha local usada para abrir a tela Configurações.",
+                (
+                <Card>
+                    <div className="flex flex-col gap-3 border-b border-slate-100 pb-4 md:flex-row md:items-start md:justify-between">
+                        <div>
+                            <div className="flex items-center gap-2">
+                                <Lock className="h-5 w-5 text-slate-500" />
+                                <h2 id="config-senha-configuracoes" className="scroll-mt-24 text-lg font-black text-slate-950">Senha das Configurações</h2>
+                            </div>
+                            <p className="mt-1 text-sm text-slate-500">
+                                Altere a senha local exigida para abrir a aba Configurações neste navegador.
+                            </p>
+                            <p className="mt-2 text-xs font-semibold text-slate-500">
+                                Status atual: <span className="font-black text-slate-900">{senhaConfiguracoesSistema === SENHA_CONFIGURACOES_PADRAO ? "Senha padrão 2026" : "Senha personalizada"}</span>
+                            </p>
+                        </div>
+                        <button
+                            type="button"
+                            onClick={restaurarSenhaConfiguracoesPadrao}
+                            className="inline-flex items-center gap-2 rounded-2xl bg-white px-3 py-2 text-xs font-bold text-slate-700 ring-1 ring-slate-200 hover:bg-slate-50"
+                        >
+                            <RotateCcw className="h-3.5 w-3.5" />
+                            Restaurar senha padrão
+                        </button>
+                    </div>
+
+                    <div className={classNames(
+                        "mt-4 rounded-2xl px-4 py-3 text-sm font-semibold ring-1",
+                        mensagemSenhaConfiguracoes.includes("atualizada") || mensagemSenhaConfiguracoes.includes("restaurada")
+                            ? "bg-emerald-50 text-emerald-700 ring-emerald-200"
+                            : mensagemSenhaConfiguracoes.includes("incorreta") || mensagemSenhaConfiguracoes.includes("não") || mensagemSenhaConfiguracoes.includes("não confere")
+                                ? "bg-red-50 text-red-700 ring-red-200"
+                                : "bg-blue-50 text-blue-700 ring-blue-200"
+                    )}>
+                        {mensagemSenhaConfiguracoes}
+                    </div>
+
+                    <form onSubmit={salvarSenhaConfiguracoes} className="mt-4 grid gap-3 lg:grid-cols-3">
+                        <label className="space-y-1 text-sm font-semibold text-slate-600">
+                            <span>Senha atual</span>
+                            <input
+                                type={mostrarCamposSenhaConfiguracoes ? "text" : "password"}
+                                value={senhaConfiguracoesFormulario.atual}
+                                onChange={(evento) => alterarCampoSenhaConfiguracoes("atual", evento.target.value)}
+                                className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-800 outline-none focus:border-blue-400 focus:ring-4 focus:ring-blue-100"
+                                autoComplete="off"
+                            />
+                        </label>
+                        <label className="space-y-1 text-sm font-semibold text-slate-600">
+                            <span>Nova senha</span>
+                            <input
+                                type={mostrarCamposSenhaConfiguracoes ? "text" : "password"}
+                                value={senhaConfiguracoesFormulario.nova}
+                                onChange={(evento) => alterarCampoSenhaConfiguracoes("nova", evento.target.value)}
+                                className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-800 outline-none focus:border-blue-400 focus:ring-4 focus:ring-blue-100"
+                                autoComplete="off"
+                            />
+                        </label>
+                        <label className="space-y-1 text-sm font-semibold text-slate-600">
+                            <span>Confirmar nova senha</span>
+                            <input
+                                type={mostrarCamposSenhaConfiguracoes ? "text" : "password"}
+                                value={senhaConfiguracoesFormulario.confirmar}
+                                onChange={(evento) => alterarCampoSenhaConfiguracoes("confirmar", evento.target.value)}
+                                className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-800 outline-none focus:border-blue-400 focus:ring-4 focus:ring-blue-100"
+                                autoComplete="off"
+                            />
+                        </label>
+                        <div className="flex flex-wrap gap-2 lg:col-span-3">
+                            <button
+                                type="button"
+                                onClick={() => setMostrarCamposSenhaConfiguracoes((atual) => !atual)}
+                                className="rounded-2xl bg-white px-4 py-2 text-xs font-black text-slate-700 ring-1 ring-slate-200 hover:bg-slate-50"
+                            >
+                                {mostrarCamposSenhaConfiguracoes ? "Ocultar senhas" : "Mostrar senhas"}
+                            </button>
+                            <button
+                                type="submit"
+                                className="rounded-2xl bg-slate-950 px-4 py-2 text-xs font-black text-white shadow-sm hover:bg-slate-800"
+                            >
+                                Salvar senha das Configurações
+                            </button>
+                        </div>
+                    </form>
+
+                    <p className="mt-4 rounded-2xl bg-amber-50 px-4 py-3 text-xs font-semibold leading-5 text-amber-700 ring-1 ring-amber-100">
+                        Esta senha é local do navegador. Ela não substitui permissões, RLS ou autenticação do Supabase.
+                    </p>
+                </Card>
                 )
             );
 
