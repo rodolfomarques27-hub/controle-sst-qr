@@ -32,6 +32,84 @@ import {
 
 const hoje = new Date();
 
+
+const CARTAS_AUDITORIA_SISTEMA_PADRAO = [
+    "totalEventos",
+    "eventosFiltrados",
+    "acessos",
+    "alteracoes",
+    "emailsMes",
+    "emailsSucesso",
+    "emailsErro",
+];
+
+const BLOCOS_AUDITORIA_SISTEMA_PADRAO = [
+    "atividades",
+    "eventos",
+    "permissoes",
+    "storage",
+    "registros",
+];
+
+const VISIBILIDADE_PADRAO_AUDITORIA = (chaves) =>
+    chaves.reduce((acc, chave) => ({ ...acc, [chave]: true }), {});
+
+const TAMANHOS_PADRAO_AUDITORIA = (chaves, tamanho = "padrao") =>
+    chaves.reduce((acc, chave) => ({ ...acc, [chave]: tamanho }), {});
+
+const carregarPreferenciaAuditoriaSistema = (chave, padrao) => {
+    if (typeof window === "undefined") return padrao;
+
+    try {
+        const salvo = JSON.parse(window.localStorage.getItem(chave) || "null");
+        return salvo && typeof salvo === "object" ? { ...padrao, ...salvo } : padrao;
+    } catch {
+        return padrao;
+    }
+};
+
+const carregarOrdemAuditoriaSistema = (chave, padrao) => {
+    if (typeof window === "undefined") return padrao;
+
+    try {
+        const salvo = JSON.parse(window.localStorage.getItem(chave) || "null");
+        if (!Array.isArray(salvo)) return padrao;
+
+        return [
+            ...salvo.filter((item) => padrao.includes(item)),
+            ...padrao.filter((item) => !salvo.includes(item)),
+        ];
+    } catch {
+        return padrao;
+    }
+};
+
+const moverItemAuditoriaSistema = (lista, chave, direcao) => {
+    const indice = lista.indexOf(chave);
+    if (indice < 0) return lista;
+
+    const destino = direcao === "cima" ? indice - 1 : indice + 1;
+    if (destino < 0 || destino >= lista.length) return lista;
+
+    const proxima = [...lista];
+    [proxima[indice], proxima[destino]] = [proxima[destino], proxima[indice]];
+    return proxima;
+};
+
+const classeTamanhoCartaAuditoriaSistema = (tamanho) => {
+    if (tamanho === "medio") return "md:col-span-2";
+    if (tamanho === "grande") return "md:col-span-2 xl:col-span-3";
+    if (tamanho === "destaque") return "md:col-span-4";
+    return "";
+};
+
+const classeTamanhoBlocoAuditoriaSistema = (tamanho) => {
+    if (tamanho === "medio") return "xl:col-span-2";
+    if (tamanho === "grande") return "xl:col-span-3";
+    if (tamanho === "destaque") return "xl:col-span-4";
+    return "xl:col-span-1";
+};
+
 export function RelatorioAuditoria({
     auditoria = [],
     emailsEnviados = [],
@@ -79,6 +157,39 @@ export function RelatorioAuditoria({
     const [carregandoConfigEventosAuditoria, setCarregandoConfigEventosAuditoria] = useState(false);
     const [salvandoConfigEventosAuditoria, setSalvandoConfigEventosAuditoria] = useState(false);
 
+    const [mostrarPersonalizacaoAuditoria, setMostrarPersonalizacaoAuditoria] = useState(false);
+    const [abaPersonalizacaoAuditoria, setAbaPersonalizacaoAuditoria] = useState("cartas");
+    const [cartasVisiveisAuditoria, setCartasVisiveisAuditoria] = useState(() =>
+        carregarPreferenciaAuditoriaSistema(
+            "auditoriaSistemaCartasVisiveis",
+            VISIBILIDADE_PADRAO_AUDITORIA(CARTAS_AUDITORIA_SISTEMA_PADRAO)
+        )
+    );
+    const [tamanhosCartasAuditoria, setTamanhosCartasAuditoria] = useState(() =>
+        carregarPreferenciaAuditoriaSistema(
+            "auditoriaSistemaTamanhosCartas",
+            TAMANHOS_PADRAO_AUDITORIA(CARTAS_AUDITORIA_SISTEMA_PADRAO, "padrao")
+        )
+    );
+    const [ordemCartasAuditoria, setOrdemCartasAuditoria] = useState(() =>
+        carregarOrdemAuditoriaSistema("auditoriaSistemaOrdemCartas", CARTAS_AUDITORIA_SISTEMA_PADRAO)
+    );
+    const [blocosVisiveisAuditoria, setBlocosVisiveisAuditoria] = useState(() =>
+        carregarPreferenciaAuditoriaSistema(
+            "auditoriaSistemaBlocosVisiveis",
+            VISIBILIDADE_PADRAO_AUDITORIA(BLOCOS_AUDITORIA_SISTEMA_PADRAO)
+        )
+    );
+    const [tamanhosBlocosAuditoria, setTamanhosBlocosAuditoria] = useState(() =>
+        carregarPreferenciaAuditoriaSistema(
+            "auditoriaSistemaTamanhosBlocos",
+            TAMANHOS_PADRAO_AUDITORIA(BLOCOS_AUDITORIA_SISTEMA_PADRAO, "destaque")
+        )
+    );
+    const [ordemBlocosAuditoria, setOrdemBlocosAuditoria] = useState(() =>
+        carregarOrdemAuditoriaSistema("auditoriaSistemaOrdemBlocos", BLOCOS_AUDITORIA_SISTEMA_PADRAO)
+    );
+
     useEffect(() => {
         if (typeof window === "undefined") return undefined;
 
@@ -104,6 +215,37 @@ export function RelatorioAuditoria({
 
         return () => window.clearTimeout(timer);
     }, []);
+
+
+    useEffect(() => {
+        if (typeof window === "undefined") return;
+        window.localStorage.setItem("auditoriaSistemaCartasVisiveis", JSON.stringify(cartasVisiveisAuditoria));
+    }, [cartasVisiveisAuditoria]);
+
+    useEffect(() => {
+        if (typeof window === "undefined") return;
+        window.localStorage.setItem("auditoriaSistemaTamanhosCartas", JSON.stringify(tamanhosCartasAuditoria));
+    }, [tamanhosCartasAuditoria]);
+
+    useEffect(() => {
+        if (typeof window === "undefined") return;
+        window.localStorage.setItem("auditoriaSistemaOrdemCartas", JSON.stringify(ordemCartasAuditoria));
+    }, [ordemCartasAuditoria]);
+
+    useEffect(() => {
+        if (typeof window === "undefined") return;
+        window.localStorage.setItem("auditoriaSistemaBlocosVisiveis", JSON.stringify(blocosVisiveisAuditoria));
+    }, [blocosVisiveisAuditoria]);
+
+    useEffect(() => {
+        if (typeof window === "undefined") return;
+        window.localStorage.setItem("auditoriaSistemaTamanhosBlocos", JSON.stringify(tamanhosBlocosAuditoria));
+    }, [tamanhosBlocosAuditoria]);
+
+    useEffect(() => {
+        if (typeof window === "undefined") return;
+        window.localStorage.setItem("auditoriaSistemaOrdemBlocos", JSON.stringify(ordemBlocosAuditoria));
+    }, [ordemBlocosAuditoria]);
 
     const persistirConfiguracaoEventosAuditoria = async (configuracao, mensagemSucesso = "Configuração salva.") => {
         const normalizada = normalizarConfiguracaoEventosAuditoriaSistema(configuracao);
@@ -161,6 +303,40 @@ export function RelatorioAuditoria({
             ...atual,
             [id]: !atual[id],
         }));
+    };
+
+
+    const alternarCartaAuditoriaSistema = (chave) => {
+        setCartasVisiveisAuditoria((atual) => ({ ...atual, [chave]: !atual[chave] }));
+    };
+
+    const alterarTamanhoCartaAuditoriaSistema = (chave, tamanho) => {
+        setTamanhosCartasAuditoria((atual) => ({ ...atual, [chave]: tamanho }));
+    };
+
+    const moverCartaAuditoriaSistema = (chave, direcao) => {
+        setOrdemCartasAuditoria((atual) => moverItemAuditoriaSistema(atual, chave, direcao));
+    };
+
+    const alternarBlocoAuditoriaSistema = (chave) => {
+        setBlocosVisiveisAuditoria((atual) => ({ ...atual, [chave]: !atual[chave] }));
+    };
+
+    const alterarTamanhoBlocoAuditoriaSistema = (chave, tamanho) => {
+        setTamanhosBlocosAuditoria((atual) => ({ ...atual, [chave]: tamanho }));
+    };
+
+    const moverBlocoAuditoriaSistema = (chave, direcao) => {
+        setOrdemBlocosAuditoria((atual) => moverItemAuditoriaSistema(atual, chave, direcao));
+    };
+
+    const restaurarPersonalizacaoAuditoriaSistema = () => {
+        setCartasVisiveisAuditoria(VISIBILIDADE_PADRAO_AUDITORIA(CARTAS_AUDITORIA_SISTEMA_PADRAO));
+        setTamanhosCartasAuditoria(TAMANHOS_PADRAO_AUDITORIA(CARTAS_AUDITORIA_SISTEMA_PADRAO, "padrao"));
+        setOrdemCartasAuditoria(CARTAS_AUDITORIA_SISTEMA_PADRAO);
+        setBlocosVisiveisAuditoria(VISIBILIDADE_PADRAO_AUDITORIA(BLOCOS_AUDITORIA_SISTEMA_PADRAO));
+        setTamanhosBlocosAuditoria(TAMANHOS_PADRAO_AUDITORIA(BLOCOS_AUDITORIA_SISTEMA_PADRAO, "destaque"));
+        setOrdemBlocosAuditoria(BLOCOS_AUDITORIA_SISTEMA_PADRAO);
     };
 
     const eventosAuditoriaSistema = useMemo(
@@ -414,6 +590,111 @@ export function RelatorioAuditoria({
         }
     };
 
+
+    const cartasResumoAuditoriaSistema = [
+        { chave: "totalEventos", titulo: "Total de eventos", valor: auditoria.length, classe: "text-slate-950" },
+        { chave: "eventosFiltrados", titulo: "Eventos filtrados", valor: registrosFiltrados.length, classe: "text-blue-700" },
+        { chave: "acessos", titulo: "Acessos", valor: auditoriaVerificada.filter((item) => String(item.acao || "").includes("ACESSO")).length, classe: "text-emerald-700" },
+        { chave: "alteracoes", titulo: "Alterações", valor: auditoriaVerificada.filter((item) => ["INSERT", "UPDATE", "DELETE"].includes(item.acao)).length, classe: "text-orange-700" },
+        { chave: "emailsMes", titulo: "E-mails no mês", valor: emailsMesAuditoria.length, classe: "text-blue-700" },
+        { chave: "emailsSucesso", titulo: "E-mails com sucesso", valor: emailsSucessoAuditoria.length, classe: "text-emerald-700" },
+        { chave: "emailsErro", titulo: "E-mails com erro", valor: emailsErroAuditoria.length, classe: "text-red-700" },
+    ];
+
+    const cartasResumoAuditoriaOrdenadas = [
+        ...ordemCartasAuditoria
+            .map((chave) => cartasResumoAuditoriaSistema.find((carta) => carta.chave === chave))
+            .filter(Boolean),
+        ...cartasResumoAuditoriaSistema.filter((carta) => !ordemCartasAuditoria.includes(carta.chave)),
+    ];
+
+    const opcoesBlocosAuditoriaSistema = [
+        { chave: "atividades", titulo: "Últimas atividades" },
+        { chave: "eventos", titulo: "Eventos verificados" },
+        { chave: "permissoes", titulo: "Permissões da Auditoria" },
+        { chave: "storage", titulo: "Arquivos salvos no Storage" },
+        { chave: "registros", titulo: "Registros detalhados" },
+    ];
+
+    const renderControlePersonalizacaoAuditoria = ({ chave, titulo, visivel, tamanho, tipo }) => {
+        const mover = tipo === "cartas" ? moverCartaAuditoriaSistema : moverBlocoAuditoriaSistema;
+        const alternar = tipo === "cartas" ? alternarCartaAuditoriaSistema : alternarBlocoAuditoriaSistema;
+        const alterarTamanho = tipo === "cartas" ? alterarTamanhoCartaAuditoriaSistema : alterarTamanhoBlocoAuditoriaSistema;
+
+        return (
+            <div key={chave} className="rounded-3xl bg-white p-4 ring-1 ring-slate-200">
+                <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+                    <div>
+                        <p className="text-sm font-black text-slate-950">{titulo}</p>
+                        <p className="mt-1 text-xs text-slate-500">Controle de exibição, ordem e tamanho.</p>
+                    </div>
+
+                    <div className="flex flex-wrap items-center gap-2">
+                        <button
+                            type="button"
+                            onClick={() => mover(chave, "cima")}
+                            className="rounded-xl bg-white px-3 py-2 text-xs font-black text-slate-600 ring-1 ring-slate-200 hover:bg-slate-50"
+                        >
+                            ↑
+                        </button>
+                        <button
+                            type="button"
+                            onClick={() => mover(chave, "baixo")}
+                            className="rounded-xl bg-white px-3 py-2 text-xs font-black text-slate-600 ring-1 ring-slate-200 hover:bg-slate-50"
+                        >
+                            ↓
+                        </button>
+                        <button
+                            type="button"
+                            onClick={() => alternar(chave)}
+                            className={classNames(
+                                "rounded-xl px-3 py-2 text-xs font-black uppercase ring-1",
+                                visivel
+                                    ? "bg-emerald-50 text-emerald-700 ring-emerald-200"
+                                    : "bg-red-50 text-red-700 ring-red-200"
+                            )}
+                        >
+                            {visivel ? "Visível" : "Oculto"}
+                        </button>
+                    </div>
+                </div>
+
+                <div className="mt-3 grid gap-2 md:grid-cols-4">
+                    {[
+                        ["padrao", "Padrão"],
+                        ["medio", "Médio"],
+                        ["grande", "Grande"],
+                        ["destaque", "Destaque"],
+                    ].map(([valor, label]) => (
+                        <button
+                            key={valor}
+                            type="button"
+                            onClick={() => alterarTamanho(chave, valor)}
+                            className={classNames(
+                                "rounded-2xl px-3 py-2 text-xs font-black ring-1 transition",
+                                tamanho === valor
+                                    ? "bg-slate-950 text-white ring-slate-950"
+                                    : "bg-white text-slate-700 ring-slate-200 hover:bg-slate-50"
+                            )}
+                        >
+                            {label}
+                        </button>
+                    ))}
+                </div>
+            </div>
+        );
+    };
+
+    const renderBlocoAuditoriaPersonalizado = (chave, conteudo) => {
+        if (blocosVisiveisAuditoria[chave] === false) return null;
+
+        return (
+            <div className={classeTamanhoBlocoAuditoriaSistema(tamanhosBlocosAuditoria[chave])}>
+                {conteudo}
+            </div>
+        );
+    };
+
     const baixarCsvAuditoria = () => {
         const cabecalho = ["Data/Hora", "Usuário", "Ação", "Tabela", "Registro", "Descrição", "Origem do acesso", "Página", "Navegador", "Plataforma"];
         const linhas = registrosFiltrados.map((item) => {
@@ -456,6 +737,19 @@ export function RelatorioAuditoria({
                 acao={
                     <div className="flex flex-wrap gap-2">
                         <button
+                            type="button"
+                            onClick={() => setMostrarPersonalizacaoAuditoria((atual) => !atual)}
+                            className={classNames(
+                                "inline-flex items-center gap-2 rounded-2xl px-4 py-3 text-sm font-semibold ring-1",
+                                mostrarPersonalizacaoAuditoria
+                                    ? "bg-slate-950 text-white ring-slate-950"
+                                    : "bg-white text-slate-700 ring-slate-200 hover:bg-slate-50"
+                            )}
+                        >
+                            Personalizar painel
+                        </button>
+
+                        <button
                             onClick={onAtualizar}
                             className="inline-flex items-center gap-2 rounded-2xl bg-white px-4 py-3 text-sm font-semibold text-slate-700 ring-1 ring-slate-200 hover:bg-slate-50"
                         >
@@ -482,46 +776,97 @@ export function RelatorioAuditoria({
                 }
             />
 
+            {mostrarPersonalizacaoAuditoria && (
+                <div className="mb-5 rounded-[2rem] bg-blue-50 p-5 ring-1 ring-blue-100">
+                    <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+                        <div>
+                            <p className="text-lg font-black text-blue-950">Personalizar painel da Auditoria do sistema</p>
+                            <p className="mt-1 text-sm text-blue-700">Escolha visibilidade, ordem e tamanho dos cards e quadros.</p>
+                        </div>
+
+                        <div className="flex flex-wrap gap-2">
+                            <button
+                                type="button"
+                                onClick={() => setAbaPersonalizacaoAuditoria("cartas")}
+                                className={classNames(
+                                    "rounded-2xl px-4 py-2 text-sm font-black ring-1",
+                                    abaPersonalizacaoAuditoria === "cartas"
+                                        ? "bg-slate-950 text-white ring-slate-950"
+                                        : "bg-white text-slate-700 ring-blue-100"
+                                )}
+                            >
+                                Cartas principais
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => setAbaPersonalizacaoAuditoria("blocos")}
+                                className={classNames(
+                                    "rounded-2xl px-4 py-2 text-sm font-black ring-1",
+                                    abaPersonalizacaoAuditoria === "blocos"
+                                        ? "bg-slate-950 text-white ring-slate-950"
+                                        : "bg-white text-slate-700 ring-blue-100"
+                                )}
+                            >
+                                Organização dos quadros
+                            </button>
+                            <button
+                                type="button"
+                                onClick={restaurarPersonalizacaoAuditoriaSistema}
+                                className="rounded-2xl bg-white px-4 py-2 text-sm font-black text-slate-700 ring-1 ring-blue-100 hover:bg-blue-50"
+                            >
+                                Restaurar
+                            </button>
+                        </div>
+                    </div>
+
+                    <div className="mt-4 grid gap-3 lg:grid-cols-2">
+                        {abaPersonalizacaoAuditoria === "cartas"
+                            ? ordemCartasAuditoria
+                                .map((chave) => cartasResumoAuditoriaSistema.find((carta) => carta.chave === chave))
+                                .filter(Boolean)
+                                .map((carta) => renderControlePersonalizacaoAuditoria({
+                                    chave: carta.chave,
+                                    titulo: carta.titulo,
+                                    visivel: cartasVisiveisAuditoria[carta.chave] !== false,
+                                    tamanho: tamanhosCartasAuditoria[carta.chave] || "padrao",
+                                    tipo: "cartas",
+                                }))
+                            : ordemBlocosAuditoria
+                                .map((chave) => opcoesBlocosAuditoriaSistema.find((bloco) => bloco.chave === chave))
+                                .filter(Boolean)
+                                .map((bloco) => renderControlePersonalizacaoAuditoria({
+                                    chave: bloco.chave,
+                                    titulo: bloco.titulo,
+                                    visivel: blocosVisiveisAuditoria[bloco.chave] !== false,
+                                    tamanho: tamanhosBlocosAuditoria[bloco.chave] || "destaque",
+                                    tipo: "blocos",
+                                }))}
+                    </div>
+                </div>
+            )}
+
             <div className="grid gap-3 md:grid-cols-4">
-                <CardRecolhivel titulo="Total de eventos" defaultOpen compacto>
-                    <p className="text-3xl font-bold text-slate-950">{auditoria.length}</p>
-                </CardRecolhivel>
-
-                <CardRecolhivel titulo="Eventos filtrados" defaultOpen compacto>
-                    <p className="text-3xl font-bold text-blue-700">{registrosFiltrados.length}</p>
-                </CardRecolhivel>
-
-                <CardRecolhivel titulo="Acessos" defaultOpen compacto>
-                    <p className="text-3xl font-bold text-emerald-700">
-                        {auditoriaVerificada.filter((item) => String(item.acao || "").includes("ACESSO")).length}
-                    </p>
-                </CardRecolhivel>
-
-                <CardRecolhivel titulo="Alterações" defaultOpen compacto>
-                    <p className="text-3xl font-bold text-orange-700">
-                        {auditoriaVerificada.filter((item) => ["INSERT", "UPDATE", "DELETE"].includes(item.acao)).length}
-                    </p>
-                </CardRecolhivel>
-
-                <CardRecolhivel titulo="E-mails no mês" defaultOpen compacto>
-                    <p className="text-3xl font-bold text-blue-700">{emailsMesAuditoria.length}</p>
-                </CardRecolhivel>
-
-                <CardRecolhivel titulo="E-mails com sucesso" defaultOpen compacto>
-                    <p className="text-3xl font-bold text-emerald-700">{emailsSucessoAuditoria.length}</p>
-                </CardRecolhivel>
-
-                <CardRecolhivel titulo="E-mails com erro" defaultOpen compacto>
-                    <p className="text-3xl font-bold text-red-700">{emailsErroAuditoria.length}</p>
-                </CardRecolhivel>
+                {cartasResumoAuditoriaOrdenadas
+                    .filter((carta) => cartasVisiveisAuditoria[carta.chave] !== false)
+                    .map((carta) => (
+                        <div key={carta.chave} className={classeTamanhoCartaAuditoriaSistema(tamanhosCartasAuditoria[carta.chave])}>
+                            <CardRecolhivel titulo={carta.titulo} defaultOpen compacto>
+                                <p className={classNames("text-3xl font-bold", carta.classe)}>{carta.valor}</p>
+                            </CardRecolhivel>
+                        </div>
+                    ))}
             </div>
 
-            <AuditoriaAtividades
-                ultimosAcessosAuditoria={ultimosAcessosAuditoria}
-                ultimosEmailsAuditoria={ultimosEmailsAuditoria}
-            />
+            <div className="mt-5 grid gap-5 xl:grid-cols-4">
+                {renderBlocoAuditoriaPersonalizado("atividades", (
+                    <AuditoriaAtividades
+                        ultimosAcessosAuditoria={ultimosAcessosAuditoria}
+                        ultimosEmailsAuditoria={ultimosEmailsAuditoria}
+                    />
+                ))}
 
-            <CardRecolhivel
+                {renderBlocoAuditoriaPersonalizado("eventos", (
+                    <CardRecolhivel
                 className="mt-5"
                 titulo="Eventos verificados pela Auditoria de sistema"
                 subtitulo="Habilite ou desabilite quais tipos de evento devem ser registrados e exibidos no relatório. A configuração é salva localmente e sincronizada no Supabase quando a tabela estiver criada."
@@ -644,9 +989,11 @@ export function RelatorioAuditoria({
                 <p className="mt-4 rounded-2xl bg-blue-50 p-3 text-xs leading-relaxed text-blue-700 ring-1 ring-blue-100">
                     Eventos desabilitados deixam de aparecer nos filtros, cards e CSV da Auditoria de sistema. Novos eventos desabilitados também deixam de ser gravados neste navegador enquanto a configuração estiver salva.
                 </p>
-            </CardRecolhivel>
+                    </CardRecolhivel>
+                ))}
 
-            <CardRecolhivel
+                {renderBlocoAuditoriaPersonalizado("permissoes", (
+                    <CardRecolhivel
                 className="mt-5"
                 titulo="Permissões da Auditoria de sistema"
                 subtitulo="Libere ou bloqueie diretamente pelo sistema quem pode acessar somente a Auditoria de sistema. Dashboard Auditoria e Nova Auditoria continuam liberados para todos."
@@ -763,9 +1110,11 @@ export function RelatorioAuditoria({
                 <p className="mt-3 rounded-2xl bg-slate-50 p-3 text-xs leading-relaxed text-slate-500">
                     Use esta área para liberar ou bloquear somente a Auditoria de sistema sem editar SQL manualmente. O Dashboard Auditoria e a Nova Auditoria permanecem disponíveis para todos os usuários logados.
                 </p>
-            </CardRecolhivel>
+                    </CardRecolhivel>
+                ))}
 
-            <CardRecolhivel
+                {renderBlocoAuditoriaPersonalizado("storage", (
+                    <CardRecolhivel
                 className="mt-5"
                 titulo="Arquivos salvos no Storage"
                 subtitulo="Controle de capacidade, vínculos, tipos de documentos, maiores arquivos e uploads recentes."
@@ -1119,9 +1468,11 @@ export function RelatorioAuditoria({
                         Use excluir apenas para arquivos sem vínculo. Arquivos em uso devem ser tratados pela base correta para manter o histórico do sistema.
                     </p>
                 )}
-            </CardRecolhivel>
+                    </CardRecolhivel>
+                ))}
 
-            <CardRecolhivel
+                {renderBlocoAuditoriaPersonalizado("registros", (
+                    <CardRecolhivel
                 className="mt-5"
                 titulo="Registros detalhados da auditoria"
                 subtitulo="Consulta completa com filtros, origem de acesso e dados extras de cada evento."
@@ -1296,7 +1647,9 @@ export function RelatorioAuditoria({
                         </div>
                     )}
                 </div>
-            </CardRecolhivel>
+                    </CardRecolhivel>
+                ))}
+            </div>
         </motion.div>
     );
 }
