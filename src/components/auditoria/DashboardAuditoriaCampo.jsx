@@ -730,6 +730,14 @@ export function DashboardAuditoriaCampo({
             .replace(/[^a-zA-Z0-9_-]+/g, "-")
             .slice(0, 80);
 
+    const escaparTextoImpressaoQr = (valor) =>
+        String(valor || "")
+            .replace(/&/g, "&amp;")
+            .replace(/</g, "&lt;")
+            .replace(/>/g, "&gt;")
+            .replace(/"/g, "&quot;")
+            .replace(/'/g, "&#039;");
+
     const imprimirQrCampoSalvo = (item) => {
         if (!item) return;
 
@@ -737,8 +745,7 @@ export function DashboardAuditoriaCampo({
         const elementoQr = document.querySelector(`[data-qrcode-campo-id="${chave}"] svg`);
         const qrHtml = elementoQr?.outerHTML || "";
         const identificacao = item.identificacao || item.codigo || "QR Code de campo";
-        const detalhes = [item.tipo_label || item.tipo, item.area, item.local, item.empresa_responsavel].filter(Boolean).join(" · ");
-        const link = item.link || "";
+        const tituloImpressao = escaparTextoImpressaoQr(String(identificacao).trim().toUpperCase());
         const janela = window.open("", "_blank", "width=720,height=760");
 
         if (!janela) {
@@ -746,7 +753,7 @@ export function DashboardAuditoriaCampo({
             return;
         }
 
-        janela.document.write(`<!doctype html><html><head><title>QR Code - ${identificacao}</title><style>body{font-family:Arial,sans-serif;margin:0;padding:32px;text-align:center;color:#0f172a}.card{border:1px solid #e2e8f0;border-radius:24px;padding:28px;display:inline-block;max-width:620px}.qr svg{width:230px;height:230px}.codigo{display:inline-block;margin-top:16px;border-radius:999px;background:#020617;color:#fff;padding:8px 14px;font-size:12px;font-weight:900;letter-spacing:.04em}.titulo{font-size:24px;font-weight:900;margin:18px 0 6px}.muted{color:#64748b;font-size:13px;word-break:break-all;line-height:1.45}.detalhes{font-size:14px;color:#334155;margin-bottom:12px}</style></head><body><div class="card"><div class="qr">${qrHtml}</div><div class="codigo">${item.codigo || "SEM CÓDIGO"}</div><div class="titulo">${identificacao}</div><div class="detalhes">${detalhes || "Sem local vinculado"}</div><div class="muted">${link}</div></div></body></html>`);
+        janela.document.write(`<!doctype html><html><head><title>${tituloImpressao}</title><style>@page{size:auto;margin:16mm}body{font-family:Arial,sans-serif;margin:0;padding:24px;text-align:center;color:#0f172a}.card{display:inline-flex;flex-direction:column;align-items:center;gap:18px}.qr svg{width:260px;height:260px}.titulo{font-size:26px;font-weight:900;letter-spacing:.04em;text-transform:uppercase;color:#020617}@media print{body{padding:0}.card{gap:16px}.qr svg{width:260px;height:260px}}</style></head><body><div class="card"><div class="qr">${qrHtml}</div><div class="titulo">${tituloImpressao}</div></div></body></html>`);
         janela.document.close();
         janela.focus();
         janela.print();
