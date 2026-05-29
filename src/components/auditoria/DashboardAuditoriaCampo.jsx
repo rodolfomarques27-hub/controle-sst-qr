@@ -37,6 +37,9 @@ export function DashboardAuditoriaCampo({
     carregando = false,
     erro = "",
     onRecarregar,
+    onCarregarMaisAuditoriasCampo,
+    carregandoMaisAuditoriasCampo = false,
+    existeMaisAuditoriasCampo = false,
     onAuditoriaAtualizada,
 }) {
     const [mostrarPersonalizacao, setMostrarPersonalizacao] = useState(false);
@@ -212,6 +215,7 @@ export function DashboardAuditoriaCampo({
         if (typeof window === "undefined") return false;
         return window.localStorage.getItem("dashboardAuditoriaCampoBuscarRecolhido") === "true";
     });
+    const [quantidadeHistoricoVisivel, setQuantidadeHistoricoVisivel] = useState(30);
 
     useEffect(() => { if (typeof window !== "undefined") window.localStorage.setItem("dashboardAuditoriaCampoCartasVisiveis", JSON.stringify(cartasVisiveis)); }, [cartasVisiveis]);
     useEffect(() => { if (typeof window !== "undefined") window.localStorage.setItem("dashboardAuditoriaCampoTamanhosCartas", JSON.stringify(tamanhosCartas)); }, [tamanhosCartas]);
@@ -222,6 +226,7 @@ export function DashboardAuditoriaCampo({
     useEffect(() => { if (typeof window !== "undefined") window.localStorage.setItem("dashboardAuditoriaCampoBlocosRecolhidos", JSON.stringify(blocosRecolhidos)); }, [blocosRecolhidos]);
     useEffect(() => { if (typeof window !== "undefined") window.localStorage.setItem("dashboardAuditoriaCampoAuditoriasAbertas", JSON.stringify(auditoriasHistoricoAbertas)); }, [auditoriasHistoricoAbertas]);
     useEffect(() => { if (typeof window !== "undefined") window.localStorage.setItem("dashboardAuditoriaCampoBuscarRecolhido", String(buscarAuditoriaRecolhido)); }, [buscarAuditoriaRecolhido]);
+    useEffect(() => { setQuantidadeHistoricoVisivel(30); }, [filtrosAuditoriaCampo]);
 
     const auditoriasNormalizadas = useMemo(() => auditoriasCampo.map(normalizarAuditoriaCampo), [auditoriasCampo]);
     const opcoesFiltroAuditoriaCampo = useMemo(() => {
@@ -794,7 +799,7 @@ export function DashboardAuditoriaCampo({
 
                     {auditoriasFiltradas.length === 0 ? (
                         <div className="rounded-2xl border border-dashed border-slate-300 p-5 text-center text-sm text-slate-500">Nenhuma auditoria de campo encontrada com os filtros aplicados.</div>
-                    ) : auditoriasFiltradas.slice(0, 30).map((item) => {
+                    ) : auditoriasFiltradas.slice(0, quantidadeHistoricoVisivel).map((item) => {
                         const alvo = identificarAlvoAuditoriaCampo(item);
                         const fotos = fotosAuditoriaCampo(item);
                         const temFotos = Boolean(fotos.antes || fotos.depois);
@@ -927,6 +932,40 @@ export function DashboardAuditoriaCampo({
                             </div>
                         );
                     })}
+
+                    {auditoriasFiltradas.length > 0 && (
+                        <div className="rounded-3xl border border-dashed border-slate-300 bg-slate-50 p-4 text-center">
+                            <p className="text-xs font-semibold text-slate-500">
+                                Histórico exibindo {Math.min(quantidadeHistoricoVisivel, auditoriasFiltradas.length)} de {auditoriasFiltradas.length} auditoria(s) filtrada(s).
+                                {existeMaisAuditoriasCampo ? " Existem registros antigos disponíveis no banco." : " Todo o lote carregado já está disponível."}
+                            </p>
+                            <div className="mt-3 flex flex-wrap justify-center gap-2">
+                                {quantidadeHistoricoVisivel < auditoriasFiltradas.length && (
+                                    <button
+                                        type="button"
+                                        onClick={() => setQuantidadeHistoricoVisivel((valor) => valor + 30)}
+                                        className="inline-flex items-center justify-center gap-2 rounded-2xl bg-white px-4 py-2 text-sm font-bold text-slate-700 ring-1 ring-slate-200 hover:bg-slate-100"
+                                    >
+                                        Mostrar mais na tela
+                                    </button>
+                                )}
+                                {existeMaisAuditoriasCampo && (
+                                    <button
+                                        type="button"
+                                        onClick={async () => {
+                                            await onCarregarMaisAuditoriasCampo?.();
+                                            setQuantidadeHistoricoVisivel((valor) => valor + 30);
+                                        }}
+                                        disabled={carregandoMaisAuditoriasCampo}
+                                        className="inline-flex items-center justify-center gap-2 rounded-2xl bg-slate-950 px-4 py-2 text-sm font-bold text-white hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
+                                    >
+                                        <RefreshCw className={classNames("h-4 w-4", carregandoMaisAuditoriasCampo ? "animate-spin" : "")} />
+                                        {carregandoMaisAuditoriasCampo ? "Carregando..." : "Carregar mais auditorias"}
+                                    </button>
+                                )}
+                            </div>
+                        </div>
+                    )}
                 </div>
             ));
         }

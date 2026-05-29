@@ -221,6 +221,29 @@ function emailTstDaEmpresa(colaborador) {
     return normalizarEmailDestinatario(colaborador?.empresaTstEmail || "");
 }
 
+function registroAuditoriaCampoTemConteudo(item = {}) {
+    return Boolean(
+        item.numero_auditoria ||
+        item.tipo_auditoria ||
+        item.titulo ||
+        item.area ||
+        item.local ||
+        item.maquina_equipamento ||
+        item.situacao_encontrada
+    );
+}
+
+function normalizarRegistrosAuditoriasCampo(registros = []) {
+    return (registros || [])
+        .filter(registroAuditoriaCampoTemConteudo)
+        .map((item) =>
+            normalizarAuditoriaCampo({
+                ...item,
+                desvios: Array.isArray(item.desvios) ? item.desvios : [],
+            })
+        );
+}
+
 
 
 
@@ -250,11 +273,15 @@ export default function App() {
     const [emailsEnviados, setEmailsEnviados] = useState([]);
     const [auditoriasCampo, setAuditoriasCampo] = useState([]);
     const [carregandoAuditoriasCampo, setCarregandoAuditoriasCampo] = useState(false);
+    const [carregandoMaisAuditoriasCampo, setCarregandoMaisAuditoriasCampo] = useState(false);
     const [erroAuditoriasCampo, setErroAuditoriasCampo] = useState("");
+    const [existeMaisAuditoriasCampo, setExisteMaisAuditoriasCampo] = useState(true);
     const [carregandoAuditoria, setCarregandoAuditoria] = useState(false);
     const [auditoriaCarregada, setAuditoriaCarregada] = useState(false);
     const [emailsEnviadosCarregados, setEmailsEnviadosCarregados] = useState(false);
     const [auditoriasCampoCarregadas, setAuditoriasCampoCarregadas] = useState(false);
+    const [existeMaisAuditoria, setExisteMaisAuditoria] = useState(true);
+    const [carregandoMaisAuditoria, setCarregandoMaisAuditoria] = useState(false);
     const [podeAcessarAuditoria, setPodeAcessarAuditoria] = useState(false);
     const [verificandoAcessoAuditoria, setVerificandoAcessoAuditoria] = useState(false);
     const [auditoriaLiberada, setAuditoriaLiberada] = useState(() => {
@@ -317,12 +344,52 @@ export default function App() {
         if (error) {
             console.warn("Erro ao carregar auditoria:", error.message);
             setAuditoria([]);
+            setExisteMaisAuditoria(false);
             return [];
         }
 
-        setAuditoria(data || []);
-        return data || [];
+        const registros = data || [];
+        setAuditoria(registros);
+        setExisteMaisAuditoria(registros.length === LIMITE_AUDITORIA_SISTEMA_INICIAL);
+        return registros;
     }, []);
+
+    const carregarMaisAuditoria = useCallback(async () => {
+        if (carregandoMaisAuditoria) return [];
+
+        const offsetAtual = auditoria.length;
+        setCarregandoMaisAuditoria(true);
+
+        try {
+            const { data, error } = await supabase
+                .from("auditoria_sistema")
+                .select("id, created_at, usuario_email, acao, tabela, registro_id, descricao, dados")
+                .order("created_at", { ascending: false })
+                .range(offsetAtual, offsetAtual + LIMITE_AUDITORIA_SISTEMA_INICIAL - 1);
+
+            if (error) {
+                throw error;
+            }
+
+            const novosRegistros = data || [];
+
+            setAuditoria((atual) => {
+                const idsAtuais = new Set(atual.map((item) => item.id));
+                const novosSemDuplicidade = novosRegistros.filter((item) => !idsAtuais.has(item.id));
+                return [...atual, ...novosSemDuplicidade];
+            });
+
+            setAuditoriaCarregada(true);
+            setExisteMaisAuditoria(novosRegistros.length === LIMITE_AUDITORIA_SISTEMA_INICIAL);
+            return novosRegistros;
+        } catch (error) {
+            console.warn("Erro ao carregar mais registros da auditoria:", error.message);
+            alert(`Erro ao carregar mais registros da Auditoria de sistema: ${error.message}`);
+            return [];
+        } finally {
+            setCarregandoMaisAuditoria(false);
+        }
+    }, [auditoria.length, carregandoMaisAuditoria]);
 
 
     const carregarEmailsEnviados = useCallback(async () => {
@@ -353,41 +420,77 @@ export default function App() {
                 .from("auditorias_campo")
                 .select("*")
                 .order("created_at", { ascending: false })
-                .limit(LIMITE_AUDITORIAS_CAMPO_INICIAL);
+                .limit(LIMITE_AUDITORIAS_CAMPO_INICIAL + 1);
 
             if (error) {
                 throw error;
             }
 
-            const registrosValidos = (data || []).filter((item) =>
-                item.numero_auditoria ||
-                item.tipo_auditoria ||
-                item.titulo ||
-                item.area ||
-                item.local ||
-                item.maquina_equipamento ||
-                item.situacao_encontrada
-            );
-
-            const normalizadas = registrosValidos.map((item) =>
-                normalizarAuditoriaCampo({
-                    ...item,
-                    desvios: Array.isArray(item.desvios) ? item.desvios : [],
-                })
-            );
+            const registrosBrutos = data || [];
+            const registrosVisiveis = registrosBrutos.slice(0, LIMITE_AUDITORIAS_CAMPO_INICIAL);
+            const normalizadas = normalizarRegistrosAuditoriasCampo(registrosVisiveis);
 
             setAuditoriasCampo(normalizadas);
+            setExisteMaisAuditoriasCampo(registrosBrutos.length > LIMITE_AUDITORIAS_CAMPO_INICIAL);
             return normalizadas;
         } catch (error) {
             console.warn("Erro ao carregar auditorias de campo:", error.message);
             setErroAuditoriasCampo(error.message || "Erro ao carregar auditorias de campo.");
             setAuditoriasCampo([]);
+            setExisteMaisAuditoriasCampo(false);
             return [];
         } finally {
             setAuditoriasCampoCarregadas(true);
             setCarregandoAuditoriasCampo(false);
         }
     }, []);
+
+    const carregarMaisAuditoriasCampo = useCallback(async () => {
+        if (carregandoMaisAuditoriasCampo || carregandoAuditoriasCampo) return [];
+
+        const offsetAtual = auditoriasCampo.length;
+        setCarregandoMaisAuditoriasCampo(true);
+        setErroAuditoriasCampo("");
+
+        try {
+            const { data, error } = await supabase
+                .from("auditorias_campo")
+                .select("*")
+                .order("created_at", { ascending: false })
+                .range(offsetAtual, offsetAtual + LIMITE_AUDITORIAS_CAMPO_INICIAL);
+
+            if (error) {
+                throw error;
+            }
+
+            const registrosBrutos = data || [];
+            const registrosVisiveis = registrosBrutos.slice(0, LIMITE_AUDITORIAS_CAMPO_INICIAL);
+            const normalizadas = normalizarRegistrosAuditoriasCampo(registrosVisiveis);
+
+            setAuditoriasCampo((atual) => {
+                const chavesAtuais = new Set(
+                    atual.map((item) => String(item.id || item.numeroAuditoria || item.createdAt || ""))
+                );
+                const novosSemDuplicidade = normalizadas.filter((item) => {
+                    const chave = String(item.id || item.numeroAuditoria || item.createdAt || "");
+                    return chave && !chavesAtuais.has(chave);
+                });
+
+                return [...atual, ...novosSemDuplicidade];
+            });
+
+            setAuditoriasCampoCarregadas(true);
+            setExisteMaisAuditoriasCampo(registrosBrutos.length > LIMITE_AUDITORIAS_CAMPO_INICIAL);
+            return normalizadas;
+        } catch (error) {
+            console.warn("Erro ao carregar mais auditorias de campo:", error.message);
+            setErroAuditoriasCampo(error.message || "Erro ao carregar mais auditorias de campo.");
+            alert(`Erro ao carregar mais auditorias de campo: ${error.message}`);
+            return [];
+        } finally {
+            setCarregandoMaisAuditoriasCampo(false);
+        }
+    }, [auditoriasCampo.length, carregandoAuditoriasCampo, carregandoMaisAuditoriasCampo]);
 
     const registrarEmailEnviado = useCallback(
         async ({ empresaId = null, colaboradorId = null, documentoId = null, destinatario = "", assunto = "", tipoAlerta = "", documento = "", statusEnvio = "", erro = "" } = {}) => {
@@ -2650,6 +2753,9 @@ export default function App() {
                                 carregando={carregandoAuditoriasCampo}
                                 erro={erroAuditoriasCampo}
                                 onRecarregar={carregarAuditoriasCampo}
+                                onCarregarMaisAuditoriasCampo={carregarMaisAuditoriasCampo}
+                                carregandoMaisAuditoriasCampo={carregandoMaisAuditoriasCampo}
+                                existeMaisAuditoriasCampo={existeMaisAuditoriasCampo}
                                 onAuditoriaAtualizada={(atualizada) =>
                                     setAuditoriasCampo((atual) =>
                                         atualizada?.excluida
@@ -2736,7 +2842,10 @@ export default function App() {
                                     auditoria={auditoria}
                                     emailsEnviados={emailsEnviados}
                                     carregando={carregandoAuditoria}
+                                    carregandoMaisAuditoria={carregandoMaisAuditoria}
+                                    existeMaisAuditoria={existeMaisAuditoria}
                                     onAtualizar={async () => { await carregarAuditoria(); await carregarEmailsEnviados(); await carregarAuditoriasCampo(); }}
+                                    onCarregarMaisAuditoria={carregarMaisAuditoria}
                                     onListarArquivosStorage={listarArquivosCertificadosStorage}
                                     onExcluirArquivoStorage={excluirArquivoCertificadoStorage}
                                     onListarUsuariosAuditoria={carregarUsuariosAutorizadosAuditoria}
