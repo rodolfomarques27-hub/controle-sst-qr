@@ -12,6 +12,7 @@ import {
     QrCode,
     RefreshCw,
     Send,
+    Trash2,
 } from "lucide-react";
 import { supabase } from "../../lib/supabaseClient";
 import { Card, FotoAuditoriaPreview, Header } from "../commonComponents";
@@ -56,6 +57,7 @@ export function DashboardAuditoriaCampo({
     const [existeMaisQrcodesCampo, setExisteMaisQrcodesCampo] = useState(false);
     const [carregandoQrcodesCampo, setCarregandoQrcodesCampo] = useState(false);
     const [carregandoMaisQrcodesCampo, setCarregandoMaisQrcodesCampo] = useState(false);
+    const [excluindoQrCampoId, setExcluindoQrCampoId] = useState(null);
     const [mensagemQrCampo, setMensagemQrCampo] = useState("");
     const [qrFormCampo, setQrFormCampo] = useState({
         tipo: "maquina",
@@ -607,6 +609,7 @@ export function DashboardAuditoriaCampo({
             const { data, error } = await supabase
                 .from("auditoria_campo_qrcodes")
                 .select("*")
+                .neq("ativo", false)
                 .order("criado_em", { ascending: false })
                 .range(offset, offset + limiteBusca - 1);
 
@@ -626,6 +629,47 @@ export function DashboardAuditoriaCampo({
             setCarregandoMaisQrcodesCampo(false);
         }
     }, [qrcodesCampo.length, limiteQrcodesCampoAtual]);
+
+    const excluirQrCampo = async (item) => {
+        if (!item) return;
+
+        const identificacao = item.identificacao || item.codigo || "QR Code selecionado";
+        const confirmar = window.confirm(
+            `Deseja realmente excluir o QR Code ${identificacao}?\n\nEssa ação remove o registro da lista de QR Codes salvos.`
+        );
+
+        if (!confirmar) return;
+
+        const chaveExclusao = item.id || item.codigo || identificacao;
+        setExcluindoQrCampoId(chaveExclusao);
+        setMensagemQrCampo("");
+
+        try {
+            let consulta = supabase.from("auditoria_campo_qrcodes").delete();
+
+            if (item.id) {
+                consulta = consulta.eq("id", item.id);
+            } else if (item.codigo) {
+                consulta = consulta.eq("codigo", item.codigo);
+            } else {
+                throw new Error("QR Code sem ID ou código para exclusão.");
+            }
+
+            const { error } = await consulta;
+
+            if (error) throw error;
+
+            setQrcodesCampo((atual) => atual.filter((qr) => {
+                if (item.id) return qr.id !== item.id;
+                return qr.codigo !== item.codigo;
+            }));
+            setMensagemQrCampo(`QR Code ${identificacao} excluído com sucesso.`);
+        } catch (error) {
+            setMensagemQrCampo(`Erro ao excluir QR Code: ${error.message}`);
+        } finally {
+            setExcluindoQrCampoId(null);
+        }
+    };
 
     const salvarQrCampo = async () => {
         const identificacao = String(qrFormCampo.identificacao || "").trim();
@@ -1151,6 +1195,24 @@ export function DashboardAuditoriaCampo({
                                                 <p className="mt-2 truncate text-sm font-black text-slate-900" title={item.identificacao}>{item.identificacao}</p>
                                                 <p className="text-xs text-slate-500">{[item.area, item.local, item.empresa_responsavel].filter(Boolean).join(" · ") || "Sem local vinculado"}</p>
                                                 <p className="mt-1 break-all text-[11px] text-slate-400">{item.link}</p>
+                                                <div className="mt-3 flex flex-wrap gap-2">
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => navigator.clipboard?.writeText(item.link || "")}
+                                                        className="rounded-xl bg-blue-50 px-3 py-2 text-xs font-bold text-blue-700 ring-1 ring-blue-100 hover:bg-blue-100"
+                                                    >
+                                                        Copiar link
+                                                    </button>
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => excluirQrCampo(item)}
+                                                        disabled={excluindoQrCampoId === (item.id || item.codigo || item.identificacao)}
+                                                        className="inline-flex items-center gap-2 rounded-xl bg-red-50 px-3 py-2 text-xs font-bold text-red-700 ring-1 ring-red-100 hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-60"
+                                                    >
+                                                        <Trash2 className="h-3.5 w-3.5" />
+                                                        {excluindoQrCampoId === (item.id || item.codigo || item.identificacao) ? "Excluindo..." : "Excluir QR"}
+                                                    </button>
+                                                </div>
                                             </div>
                                         </div>
                                     ))}
