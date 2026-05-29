@@ -97,6 +97,66 @@ export function calcularResumoStorageDashboard({ usoStorageDashboard = {}, carre
     };
 }
 
+
+function extrairDataNascimentoColaborador(colaborador = {}) {
+    const valor = colaborador.dataNascimento || colaborador.data_nascimento || colaborador.nascimento || colaborador.dataAniversario || colaborador.aniversario;
+    if (!valor) return null;
+
+    if (valor instanceof Date && !Number.isNaN(valor.getTime())) return valor;
+
+    const texto = String(valor).trim();
+    if (!texto) return null;
+
+    const formatoBr = texto.match(/^(\d{1,2})\/(\d{1,2})\/(\d{2,4})$/);
+    if (formatoBr) {
+        const dia = Number(formatoBr[1]);
+        const mes = Number(formatoBr[2]) - 1;
+        const ano = Number(formatoBr[3].length === 2 ? `20${formatoBr[3]}` : formatoBr[3]);
+        const data = new Date(ano, mes, dia);
+        return Number.isNaN(data.getTime()) ? null : data;
+    }
+
+    const data = new Date(texto);
+    return Number.isNaN(data.getTime()) ? null : data;
+}
+
+function formatarDataIsoLocal(data) {
+    const ano = data.getFullYear();
+    const mes = String(data.getMonth() + 1).padStart(2, "0");
+    const dia = String(data.getDate()).padStart(2, "0");
+    return `${ano}-${mes}-${dia}`;
+}
+
+function ajustarProximoAniversarioParaAnoAtual(colaborador, dataReferencia = new Date()) {
+    if (!colaborador) return colaborador;
+
+    const dataNascimento = extrairDataNascimentoColaborador(colaborador);
+    if (!dataNascimento) return colaborador;
+
+    const hojeComparacao = new Date(dataReferencia.getFullYear(), dataReferencia.getMonth(), dataReferencia.getDate());
+    let dataProximoAniversario = new Date(dataReferencia.getFullYear(), dataNascimento.getMonth(), dataNascimento.getDate());
+
+    if (dataProximoAniversario < hojeComparacao) {
+        dataProximoAniversario = new Date(dataReferencia.getFullYear() + 1, dataNascimento.getMonth(), dataNascimento.getDate());
+    }
+
+    const dataIso = formatarDataIsoLocal(dataProximoAniversario);
+
+    return {
+        ...colaborador,
+        dataNascimentoOriginal: colaborador.dataNascimento || colaborador.data_nascimento || colaborador.nascimento || colaborador.dataAniversario || colaborador.aniversario || "",
+        dataProximoAniversario: dataIso,
+        proximoAniversario: dataIso,
+        proximoAniversarioFormatado: formatDate(dataIso),
+        // Mantém compatibilidade com componentes antigos que exibem diretamente a data de nascimento.
+        dataNascimento: dataIso,
+        data_nascimento: dataIso,
+        nascimento: dataIso,
+        dataAniversario: dataIso,
+        aniversario: dataIso,
+    };
+}
+
 export function calcularResumoDashboardSst({
     colaboradores = [],
     empresasBanco = [],
@@ -166,7 +226,7 @@ export function calcularResumoDashboardSst({
     const aniversariantesMes = aniversariantesElegiveis
         .filter((colaborador) => mesAniversarioColaborador(colaborador) === mesAtual + 1)
         .sort((a, b) => (diaAniversarioColaborador(a) || 99) - (diaAniversarioColaborador(b) || 99));
-    const proximoAniversarioDashboard = proximoAniversariante(aniversariantesElegiveis);
+    const proximoAniversarioDashboard = ajustarProximoAniversarioParaAnoAtual(proximoAniversariante(aniversariantesElegiveis), dataReferencia);
 
     const storage = calcularResumoStorageDashboard({ usoStorageDashboard, carregandoStorageDashboard });
 

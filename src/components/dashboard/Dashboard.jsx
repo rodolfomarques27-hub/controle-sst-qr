@@ -447,7 +447,7 @@ export function Dashboard({
         { chave: "colaboradoresBloqueados", label: "Colaboradores bloqueados", valor: colaboradoresBloqueados, icon: Lock, detalhe: "Pendência bloqueante" },
         { chave: "desviosAbertos", label: "Desvios abertos", valor: desviosAbertos, icon: AlertTriangle, detalhe: "Registros não concluídos" },
         { chave: "aniversariantesMes", label: "Aniversariantes do mês", valor: aniversariantesMes.length, icon: UserRound, detalhe: aniversariantesMes.length > 0 ? "Quantidade no mês atual" : "Nenhum aniversariante no mês" },
-        { chave: "armazenamentoUtilizado", label: "Armazenamento utilizado", valor: totalStorageLabel, icon: Upload, detalhe: `${storagePercentual}% do limite visual` },
+        { chave: "armazenamentoUtilizado", label: "Armazenamento", valor: `${storagePercentual}%`, icon: Upload, detalhe: `${totalStorageLabel} / ${storageLimiteLabelDashboard}` },
     ];
 
     const cardsOrdenados = [
@@ -683,7 +683,6 @@ export function Dashboard({
             {cardsVisiveis.map((item) => {
                 const Icon = item.icon;
                 const estilos = estiloCartaDashboard(item.chave) || {};
-                const StatusIcon = storageStatusDashboard.statusIcon || CheckCircle2;
                 const ehArmazenamento = item.chave === "armazenamentoUtilizado";
 
                 return (
@@ -717,27 +716,12 @@ export function Dashboard({
 
                                 {ehArmazenamento ? (
                                     <>
-                                        <div className="mt-3 flex items-end justify-between gap-2 border-b border-slate-100 pb-2">
-                                            <span className={`text-3xl font-black leading-none ${storageStatusDashboard.valorClasse || "text-slate-950"}`}>
-                                                {storagePercentual}%
-                                            </span>
-                                            <span className="pb-0.5 text-[11px] font-bold text-slate-500">
-                                                {totalStorageLabel} / {storageLimiteLabelDashboard}
-                                            </span>
-                                        </div>
-
-                                        <div className="mt-2 flex items-center gap-2">
-                                            <span className={`inline-flex shrink-0 items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-black ring-1 ${storageStatusDashboard.classe || "bg-slate-50 text-slate-600 ring-slate-200"}`}>
-                                                <StatusIcon className="h-3 w-3" />
-                                                {storageStatusDashboard.texto}
-                                            </span>
-                                            <div className={`h-1 flex-1 overflow-hidden rounded-full ${storageStatusDashboard.trilhoClasse || "bg-slate-100"}`}>
-                                                <div
-                                                    className={`h-full rounded-full ${storageStatusDashboard.barraClasse || "bg-emerald-500"}`}
-                                                    style={{ width: `${Math.max(3, storagePercentual)}%` }}
-                                                />
-                                            </div>
-                                        </div>
+                                        <p className={`mt-3 border-b border-slate-100 pb-2 text-3xl font-black leading-none ${storageStatusDashboard.valorClasse || "text-slate-950"}`}>
+                                            {storagePercentual}%
+                                        </p>
+                                        <p className="mt-2 text-xs font-medium text-slate-500">
+                                            {totalStorageLabel} / {storageLimiteLabelDashboard}
+                                        </p>
                                     </>
                                 ) : (
                                     <>

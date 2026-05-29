@@ -204,14 +204,17 @@ export function ConfiguracoesSistema({ usuario = null, podeAcessarAuditoria = fa
     const blocoConfiguracaoVisivel = (chave) => blocosVisiveisConfiguracoes[chave] !== false;
     const blocoConfiguracaoRecolhido = (chave) => Boolean(blocosRecolhidosConfiguracoes[chave]);
 
-    const botaoRecolherBlocoConfiguracao = (chave) => {
+    const botaoRecolherBlocoConfiguracao = (chave, extraClassName = "") => {
         const recolhido = blocoConfiguracaoRecolhido(chave);
 
         return (
             <button
                 type="button"
                 onClick={() => alternarRecolhidoBlocoConfiguracao(chave)}
-                className="inline-flex items-center gap-2 rounded-2xl bg-white px-3 py-2 text-xs font-bold text-slate-700 ring-1 ring-slate-200 hover:bg-slate-50"
+                className={classNames(
+                    "inline-flex items-center gap-2 rounded-2xl bg-white px-3 py-2 text-xs font-bold text-slate-700 ring-1 ring-slate-200 hover:bg-slate-50",
+                    extraClassName
+                )}
             >
                 {recolhido ? <ChevronDown className="h-3.5 w-3.5" /> : <ChevronUp className="h-3.5 w-3.5" />}
                 {recolhido ? "Abrir" : "Recolher"}
@@ -238,8 +241,8 @@ export function ConfiguracoesSistema({ usuario = null, podeAcessarAuditoria = fa
         }
 
         return (
-            <div className="space-y-2">
-                <div className="flex justify-end">{botaoRecolherBlocoConfiguracao(chave)}</div>
+            <div className="relative">
+                {botaoRecolherBlocoConfiguracao(chave, "absolute right-4 top-4 z-10 shadow-sm")}
                 {conteudo}
             </div>
         );
@@ -1035,15 +1038,15 @@ export function ConfiguracoesSistema({ usuario = null, podeAcessarAuditoria = fa
                 {cardsResumo.map((card) => {
                     const Icon = card.icon;
                     return (
-                        <Card key={card.label}>
-                            <div className="flex items-start gap-3">
-                                <div className="rounded-2xl bg-slate-100 p-3 text-slate-700">
+                        <Card key={card.label} className="h-full">
+                            <div className="flex min-h-[126px] items-start gap-3">
+                                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-slate-100 text-slate-700 ring-1 ring-slate-200">
                                     <Icon className="h-4 w-4" />
                                 </div>
-                                <div className="min-w-0">
-                                    <p className="text-sm font-bold text-slate-950">{card.label}</p>
-                                    <p className="mt-2 text-2xl font-black text-slate-950">{card.valor}</p>
-                                    <p className="mt-1 text-xs font-medium text-slate-500">{card.detalhe}</p>
+                                <div className="flex min-w-0 flex-1 flex-col">
+                                    <p className="text-sm font-black leading-snug text-slate-950">{card.label}</p>
+                                    <p className="mt-2 break-words text-xl font-black leading-tight text-slate-950">{card.valor}</p>
+                                    <p className="mt-2 border-t border-slate-100 pt-2 text-xs font-medium leading-relaxed text-slate-500">{card.detalhe}</p>
                                 </div>
                             </div>
                         </Card>
