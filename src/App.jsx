@@ -41,7 +41,15 @@ import {
     listarArquivosCertificadosStorageService,
     sincronizarCertificadosDoStorageService,
 } from "./services/storageAuditoriaService";
-import { auditoriaEventoHabilitado } from "./services/auditoriaSistemaConfigService";
+import {
+    carregarAuditoriaSistemaService,
+    carregarAuditoriasCampoService,
+    carregarEmailsEnviadosService,
+    carregarMaisAuditoriaSistemaService,
+    carregarMaisAuditoriasCampoService,
+    registrarAuditoriaSistemaService,
+    registrarEmailEnviadoService,
+} from "./services/auditoriaSistemaCrudService";
 import {
     carregarLimitesCarregamentoSistema,
     salvarLimitesCarregamentoSistema,
@@ -140,7 +148,6 @@ import {
     descricoesGrauRiscoAuditoriaCampoDireta,
     checklistDinamicoAuditoriaCampo,
 } from "./constants/sstConstants";
-import { normalizarRegistrosAuditoriasCampo } from "./services/appHelpersService";
 import { CarregandoTela } from "./components/CarregandoTela";
 import {
     normalizarDataAniversario,
@@ -153,7 +160,6 @@ import {
     formatarBytes,
     calcularPercentualUsoStorage,
     resumirNavegador,
-    obterOrigemAcesso,
     normalizarEmailDestinatario,
     formatarCnpj,
     formatarTelefone,
@@ -323,26 +329,24 @@ export default function App() {
     const carregarAuditoria = useCallback(async () => {
         setCarregandoAuditoria(true);
 
-        const { data, error } = await supabase
-            .from("auditoria_sistema")
-            .select("id, created_at, usuario_email, acao, tabela, registro_id, descricao, dados")
-            .order("created_at", { ascending: false })
-            .limit(limitesCarregamentoSistema.auditoriaSistema);
+        try {
+            const resultado = await carregarAuditoriaSistemaService({
+                supabase,
+                limite: limitesCarregamentoSistema.auditoriaSistema,
+            });
 
-        setCarregandoAuditoria(false);
-        setAuditoriaCarregada(true);
-
-        if (error) {
+            setAuditoria(resultado.registros);
+            setExisteMaisAuditoria(resultado.existeMais);
+            return resultado.registros;
+        } catch (error) {
             console.warn("Erro ao carregar auditoria:", error.message);
             setAuditoria([]);
             setExisteMaisAuditoria(false);
             return [];
+        } finally {
+            setCarregandoAuditoria(false);
+            setAuditoriaCarregada(true);
         }
-
-        const registros = data || [];
-        setAuditoria(registros);
-        setExisteMaisAuditoria(registros.length === limitesCarregamentoSistema.auditoriaSistema);
-        return registros;
     }, [limitesCarregamentoSistema.auditoriaSistema]);
 
     const carregarMaisAuditoria = useCallback(async () => {
@@ -352,27 +356,21 @@ export default function App() {
         setCarregandoMaisAuditoria(true);
 
         try {
-            const { data, error } = await supabase
-                .from("auditoria_sistema")
-                .select("id, created_at, usuario_email, acao, tabela, registro_id, descricao, dados")
-                .order("created_at", { ascending: false })
-                .range(offsetAtual, offsetAtual + limitesCarregamentoSistema.auditoriaSistema - 1);
-
-            if (error) {
-                throw error;
-            }
-
-            const novosRegistros = data || [];
+            const resultado = await carregarMaisAuditoriaSistemaService({
+                supabase,
+                offsetAtual,
+                limite: limitesCarregamentoSistema.auditoriaSistema,
+            });
 
             setAuditoria((atual) => {
                 const idsAtuais = new Set(atual.map((item) => item.id));
-                const novosSemDuplicidade = novosRegistros.filter((item) => !idsAtuais.has(item.id));
+                const novosSemDuplicidade = resultado.registros.filter((item) => !idsAtuais.has(item.id));
                 return [...atual, ...novosSemDuplicidade];
             });
 
             setAuditoriaCarregada(true);
-            setExisteMaisAuditoria(novosRegistros.length === limitesCarregamentoSistema.auditoriaSistema);
-            return novosRegistros;
+            setExisteMaisAuditoria(resultado.existeMais);
+            return resultado.registros;
         } catch (error) {
             console.warn("Erro ao carregar mais registros da auditoria:", error.message);
             alert(`Erro ao carregar mais registros da Auditoria de sistema: ${error.message}`);
@@ -382,24 +380,22 @@ export default function App() {
         }
     }, [auditoria.length, carregandoMaisAuditoria, limitesCarregamentoSistema.auditoriaSistema]);
 
-
     const carregarEmailsEnviados = useCallback(async () => {
-        const { data, error } = await supabase
-            .from("emails_enviados")
-            .select("id, empresa_id, colaborador_id, documento_id, destinatario, assunto, tipo_alerta, documento, status_envio, erro, data_envio, enviado_por")
-            .order("data_envio", { ascending: false })
-            .limit(limitesCarregamentoSistema.emailsEnviados);
+        try {
+            const registros = await carregarEmailsEnviadosService({
+                supabase,
+                limite: limitesCarregamentoSistema.emailsEnviados,
+            });
 
-        setEmailsEnviadosCarregados(true);
-
-        if (error) {
+            setEmailsEnviados(registros);
+            return registros;
+        } catch (error) {
             console.warn("Erro ao carregar histórico de e-mails:", error.message);
             setEmailsEnviados([]);
             return [];
+        } finally {
+            setEmailsEnviadosCarregados(true);
         }
-
-        setEmailsEnviados(data || []);
-        return data || [];
     }, [limitesCarregamentoSistema.emailsEnviados]);
 
     const carregarAuditoriasCampo = useCallback(async () => {
@@ -407,23 +403,14 @@ export default function App() {
         setErroAuditoriasCampo("");
 
         try {
-            const { data, error } = await supabase
-                .from("auditorias_campo")
-                .select("*")
-                .order("created_at", { ascending: false })
-                .limit(limitesCarregamentoSistema.auditoriasCampo + 1);
+            const resultado = await carregarAuditoriasCampoService({
+                supabase,
+                limite: limitesCarregamentoSistema.auditoriasCampo,
+            });
 
-            if (error) {
-                throw error;
-            }
-
-            const registrosBrutos = data || [];
-            const registrosVisiveis = registrosBrutos.slice(0, limitesCarregamentoSistema.auditoriasCampo);
-            const normalizadas = normalizarRegistrosAuditoriasCampo(registrosVisiveis);
-
-            setAuditoriasCampo(normalizadas);
-            setExisteMaisAuditoriasCampo(registrosBrutos.length > limitesCarregamentoSistema.auditoriasCampo);
-            return normalizadas;
+            setAuditoriasCampo(resultado.auditorias);
+            setExisteMaisAuditoriasCampo(resultado.existeMais);
+            return resultado.auditorias;
         } catch (error) {
             console.warn("Erro ao carregar auditorias de campo:", error.message);
             setErroAuditoriasCampo(error.message || "Erro ao carregar auditorias de campo.");
@@ -444,25 +431,17 @@ export default function App() {
         setErroAuditoriasCampo("");
 
         try {
-            const { data, error } = await supabase
-                .from("auditorias_campo")
-                .select("*")
-                .order("created_at", { ascending: false })
-                .range(offsetAtual, offsetAtual + limitesCarregamentoSistema.auditoriasCampo);
-
-            if (error) {
-                throw error;
-            }
-
-            const registrosBrutos = data || [];
-            const registrosVisiveis = registrosBrutos.slice(0, limitesCarregamentoSistema.auditoriasCampo);
-            const normalizadas = normalizarRegistrosAuditoriasCampo(registrosVisiveis);
+            const resultado = await carregarMaisAuditoriasCampoService({
+                supabase,
+                offsetAtual,
+                limite: limitesCarregamentoSistema.auditoriasCampo,
+            });
 
             setAuditoriasCampo((atual) => {
                 const chavesAtuais = new Set(
                     atual.map((item) => String(item.id || item.numeroAuditoria || item.createdAt || ""))
                 );
-                const novosSemDuplicidade = normalizadas.filter((item) => {
+                const novosSemDuplicidade = resultado.auditorias.filter((item) => {
                     const chave = String(item.id || item.numeroAuditoria || item.createdAt || "");
                     return chave && !chavesAtuais.has(chave);
                 });
@@ -471,8 +450,8 @@ export default function App() {
             });
 
             setAuditoriasCampoCarregadas(true);
-            setExisteMaisAuditoriasCampo(registrosBrutos.length > limitesCarregamentoSistema.auditoriasCampo);
-            return normalizadas;
+            setExisteMaisAuditoriasCampo(resultado.existeMais);
+            return resultado.auditorias;
         } catch (error) {
             console.warn("Erro ao carregar mais auditorias de campo:", error.message);
             setErroAuditoriasCampo(error.message || "Erro ao carregar mais auditorias de campo.");
@@ -485,50 +464,39 @@ export default function App() {
 
     const registrarEmailEnviado = useCallback(
         async ({ empresaId = null, colaboradorId = null, documentoId = null, destinatario = "", assunto = "", tipoAlerta = "", documento = "", statusEnvio = "", erro = "" } = {}) => {
-            const payload = {
-                empresa_id: empresaId || null,
-                colaborador_id: colaboradorId || null,
-                documento_id: documentoId || null,
-                destinatario: destinatario || null,
-                assunto: assunto || null,
-                tipo_alerta: tipoAlerta || null,
-                documento: documento || null,
-                status_envio: statusEnvio || "Registrado",
-                erro: erro || null,
-                data_envio: new Date().toISOString(),
-                enviado_por: usuario?.email || null,
-            };
+            const resultado = await registrarEmailEnviadoService({
+                supabase,
+                usuario,
+                empresaId,
+                colaboradorId,
+                documentoId,
+                destinatario,
+                assunto,
+                tipoAlerta,
+                documento,
+                statusEnvio,
+                erro,
+            });
 
-            const { error } = await supabase.from("emails_enviados").insert(payload);
-
-            if (error) {
-                console.warn("Erro ao registrar histórico de e-mail:", error.message);
-                return false;
-            }
+            if (!resultado.ok) return false;
 
             setEmailsEnviadosCarregados(true);
-            setEmailsEnviados((atual) => [{ id: `${Date.now()}`, ...payload }, ...atual].slice(0, 300));
+            setEmailsEnviados((atual) => [{ id: `${Date.now()}`, ...resultado.payload }, ...atual].slice(0, 300));
             return true;
         },
-        [usuario?.email]
+        [usuario]
     );
 
     const registrarAuditoria = useCallback(
         async (acao, tabela, descricao, registroId = null, dados = {}) => {
-            if (!usuario?.email) return;
-            if (!auditoriaEventoHabilitado(acao)) return;
-
-            await supabase.from("auditoria_sistema").insert({
-                usuario_id: usuario.id || null,
-                usuario_email: usuario.email,
+            return registrarAuditoriaSistemaService({
+                supabase,
+                usuario,
                 acao,
                 tabela,
-                registro_id: registroId ? String(registroId) : null,
                 descricao,
-                dados: {
-                    ...(dados || {}),
-                    origemAcesso: obterOrigemAcesso(),
-                },
+                registroId,
+                dados,
             });
         },
         [usuario]
