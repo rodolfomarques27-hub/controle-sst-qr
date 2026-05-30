@@ -146,14 +146,19 @@ export function prepararArrastePainel(evento) {
     evento.dataTransfer.setData("text/plain", "mover");
 }
 
-export function classeTamanhoCartaDashboard(chave, tamanhosCartasDashboard = {}) {
+export function normalizarTamanhoCartaDashboard(chave, tamanhosCartasDashboard = {}) {
     const tamanho = tamanhosCartasDashboard[chave] || "padrao";
+    return ["padrao", "medio", "grande", "destaque"].includes(tamanho) ? tamanho : "padrao";
+}
 
-    if (tamanho === "destaque") return "sm:col-span-2 lg:col-span-3 xl:col-span-5";
-    if (tamanho === "grande") return "sm:col-span-2 lg:col-span-2 xl:col-span-3";
-    if (tamanho === "medio") return "sm:col-span-2 xl:col-span-2";
+export function classeTamanhoCartaDashboard(chave, tamanhosCartasDashboard = {}) {
+    const tamanho = normalizarTamanhoCartaDashboard(chave, tamanhosCartasDashboard);
 
-    return "";
+    if (tamanho === "destaque") return "dashboard-summary-card--destaque sm:col-span-2 lg:col-span-4 xl:col-span-5";
+    if (tamanho === "grande") return "dashboard-summary-card--grande sm:col-span-2 lg:col-span-3 xl:col-span-3";
+    if (tamanho === "medio") return "dashboard-summary-card--medio sm:col-span-2 xl:col-span-2";
+
+    return "dashboard-summary-card--padrao";
 }
 
 export function classeTamanhoBlocoDashboard(chave, tamanhosBlocosDashboard = {}) {

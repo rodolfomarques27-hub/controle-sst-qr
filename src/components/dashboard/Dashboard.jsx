@@ -60,7 +60,9 @@ import {
     moverItemPainel,
     reordenarPorArrastePainel,
     prepararArrastePainel,
+    normalizarTamanhoCartaDashboard,
     classeTamanhoCartaDashboard,
+    classeValorCartaDashboard,
     classeTamanhoBlocoDashboard,
     estiloCartaDashboard,
 } from "../../services/dashboardService";
@@ -669,8 +671,18 @@ export function Dashboard({
             : "A prévia da Seção 2 mostra somente os quadros do Dashboard SST. Ative os quadros para visualizar a configuração."
         : "Nenhum quadro selecionado para o Dashboard SST. Abra Personalizar painel e escolha as informações que deseja exibir.";
 
+    const obterTamanhoCartaDashboard = useCallback(
+        (chave) => normalizarTamanhoCartaDashboard(chave, tamanhosCartasDashboard),
+        [tamanhosCartasDashboard]
+    );
+
     const obterClasseTamanhoCartaDashboard = useCallback(
         (chave) => classeTamanhoCartaDashboard(chave, tamanhosCartasDashboard),
+        [tamanhosCartasDashboard]
+    );
+
+    const obterClasseValorCartaDashboard = useCallback(
+        (chave) => classeValorCartaDashboard(chave, tamanhosCartasDashboard),
         [tamanhosCartasDashboard]
     );
 
@@ -684,6 +696,7 @@ export function Dashboard({
                 return (
                     <div
                         key={item.chave}
+                        data-dashboard-card-tamanho={obterTamanhoCartaDashboard(item.chave)}
                         className={`dashboard-summary-card rounded-3xl bg-white p-4 shadow-sm ring-1 ring-slate-200 transition hover:shadow-md ${obterClasseTamanhoCartaDashboard(item.chave)}`}
                     >
                         <div className="flex items-start gap-3">
@@ -710,7 +723,7 @@ export function Dashboard({
                                     )}
                                 </div>
 
-                                <p className={`mt-3 border-b border-slate-100 pb-2 text-3xl font-black leading-none ${estilos.valor || "text-slate-950"}`}>
+                                <p className={`mt-3 border-b border-slate-100 pb-2 font-black leading-none ${obterClasseValorCartaDashboard(item.chave)} ${estilos.valor || "text-slate-950"}`}>
                                     {item.valor}
                                 </p>
                                 <p className="mt-2 text-xs font-medium text-slate-500">{item.detalhe}</p>
