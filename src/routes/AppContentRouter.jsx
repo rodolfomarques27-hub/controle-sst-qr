@@ -16,6 +16,7 @@ const RelatorioAuditoria = React.lazy(() => import("../components/auditoria/Rela
 const DashboardAuditoriaCampo = React.lazy(() => import("../components/auditoria/DashboardAuditoriaCampo").then((modulo) => ({ default: modulo.DashboardAuditoriaCampo })));
 const NovaAuditoriaCampoDireta = React.lazy(() => import("../components/auditoria/NovaAuditoriaCampoDireta").then((modulo) => ({ default: modulo.NovaAuditoriaCampoDireta })));
 const ConfiguracoesSistema = React.lazy(() => import("../components/configuracoes/ConfiguracoesSistema").then((modulo) => ({ default: modulo.ConfiguracoesSistema })));
+const ConfiguracoesBloqueio = React.lazy(() => import("../components/configuracoes/ConfiguracoesBloqueio").then((modulo) => ({ default: modulo.ConfiguracoesBloqueio })));
 
 export function AppContentRouter({
     tela,
@@ -44,6 +45,13 @@ export function AppContentRouter({
     origemSenhaConfiguracoesSistema,
     mensagemSenhaConfiguracoesSistema,
     atualizandoDashboardSst,
+    senhaConfiguracoes,
+    mostrarSenhaConfiguracoes,
+    erroSenhaConfiguracoes,
+    setSenhaConfiguracoes,
+    setErroSenhaConfiguracoes,
+    setMostrarSenhaConfiguracoes,
+    onValidarSenhaConfiguracoes,
     onSelectColab,
     onRegistrarEmailEnviado,
     onAtualizarInformacoesDashboardSst,
@@ -79,7 +87,6 @@ export function AppContentRouter({
     onBloquearConfiguracoes,
     onSalvarLimites,
     onSalvarSenhaConfiguracoes,
-    renderBloqueioConfiguracoes,
 }) {
     return (
         <React.Suspense fallback={<CarregandoTela mensagem="Carregando módulo..." />}>
@@ -237,7 +244,16 @@ export function AppContentRouter({
                         />
                     </div>
                 ) : (
-                    renderBloqueioConfiguracoes()
+                    <ConfiguracoesBloqueio
+                        senhaConfiguracoes={senhaConfiguracoes}
+                        senhaConfiguracoesSistema={senhaConfiguracoesSistema}
+                        mostrarSenhaConfiguracoes={mostrarSenhaConfiguracoes}
+                        erroSenhaConfiguracoes={erroSenhaConfiguracoes}
+                        onValidarSenha={onValidarSenhaConfiguracoes}
+                        setSenhaConfiguracoes={setSenhaConfiguracoes}
+                        setErroSenhaConfiguracoes={setErroSenhaConfiguracoes}
+                        setMostrarSenhaConfiguracoes={setMostrarSenhaConfiguracoes}
+                    />
                 )
             )}
 
