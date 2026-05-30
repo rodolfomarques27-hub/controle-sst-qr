@@ -38,20 +38,20 @@ import {
     excluirCertificadoTreinamentoAppService,
 } from "./services/appTreinamentosHandlersService";
 import {
-    carregarAuditoriaSistemaService,
-    carregarAuditoriasCampoService,
-    carregarEmailsEnviadosService,
-    carregarMaisAuditoriaSistemaService,
-    carregarMaisAuditoriasCampoService,
-    registrarAuditoriaSistemaService,
-    registrarEmailEnviadoService,
-} from "./services/auditoriaSistemaCrudService";
-import {
-    alternarUsuarioAutorizadoAuditoriaService,
-    carregarUsuariosAutorizadosAuditoriaService,
-    salvarUsuarioAutorizadoAuditoriaService,
-    verificarAcessoAuditoriaService,
-} from "./services/auditoriaPermissoesService";
+    carregarAuditoriaAppService,
+    carregarMaisAuditoriaAppService,
+    carregarEmailsEnviadosAppService,
+    carregarAuditoriasCampoAppService,
+    carregarMaisAuditoriasCampoAppService,
+    registrarEmailEnviadoAppService,
+    registrarAuditoriaAppService,
+    carregarUsuariosAutorizadosAuditoriaAppService,
+    salvarUsuarioAutorizadoAuditoriaAppService,
+    alternarUsuarioAutorizadoAuditoriaAppService,
+    verificarAcessoAuditoriaAppService,
+    liberarAuditoriaAppService,
+    bloquearAuditoriaAppService,
+} from "./services/appAuditoriaHandlersService";
 import { carregarConsultaPublicaQrService } from "./services/consultaPublicaQrService";
 import {
     carregarLimitesCarregamentoSistema,
@@ -316,144 +316,68 @@ export default function App() {
     }, []);
 
     const carregarAuditoria = useCallback(async () => {
-        setCarregandoAuditoria(true);
-
-        try {
-            const resultado = await carregarAuditoriaSistemaService({
-                supabase,
-                limite: limitesCarregamentoSistema.auditoriaSistema,
-            });
-
-            setAuditoria(resultado.registros);
-            setExisteMaisAuditoria(resultado.existeMais);
-            return resultado.registros;
-        } catch (error) {
-            console.warn("Erro ao carregar auditoria:", error.message);
-            setAuditoria([]);
-            setExisteMaisAuditoria(false);
-            return [];
-        } finally {
-            setCarregandoAuditoria(false);
-            setAuditoriaCarregada(true);
-        }
+        return carregarAuditoriaAppService({
+            supabase,
+            limite: limitesCarregamentoSistema.auditoriaSistema,
+            setCarregandoAuditoria,
+            setAuditoria,
+            setExisteMaisAuditoria,
+            setAuditoriaCarregada,
+        });
     }, [limitesCarregamentoSistema.auditoriaSistema]);
 
     const carregarMaisAuditoria = useCallback(async () => {
-        if (carregandoMaisAuditoria) return [];
-
-        const offsetAtual = auditoria.length;
-        setCarregandoMaisAuditoria(true);
-
-        try {
-            const resultado = await carregarMaisAuditoriaSistemaService({
-                supabase,
-                offsetAtual,
-                limite: limitesCarregamentoSistema.auditoriaSistema,
-            });
-
-            setAuditoria((atual) => {
-                const idsAtuais = new Set(atual.map((item) => item.id));
-                const novosSemDuplicidade = resultado.registros.filter((item) => !idsAtuais.has(item.id));
-                return [...atual, ...novosSemDuplicidade];
-            });
-
-            setAuditoriaCarregada(true);
-            setExisteMaisAuditoria(resultado.existeMais);
-            return resultado.registros;
-        } catch (error) {
-            console.warn("Erro ao carregar mais registros da auditoria:", error.message);
-            alert(`Erro ao carregar mais registros da Auditoria de sistema: ${error.message}`);
-            return [];
-        } finally {
-            setCarregandoMaisAuditoria(false);
-        }
+        return carregarMaisAuditoriaAppService({
+            supabase,
+            auditoria,
+            carregandoMaisAuditoria,
+            limite: limitesCarregamentoSistema.auditoriaSistema,
+            setCarregandoMaisAuditoria,
+            setAuditoria,
+            setAuditoriaCarregada,
+            setExisteMaisAuditoria,
+        });
     }, [auditoria.length, carregandoMaisAuditoria, limitesCarregamentoSistema.auditoriaSistema]);
 
     const carregarEmailsEnviados = useCallback(async () => {
-        try {
-            const registros = await carregarEmailsEnviadosService({
-                supabase,
-                limite: limitesCarregamentoSistema.emailsEnviados,
-            });
-
-            setEmailsEnviados(registros);
-            return registros;
-        } catch (error) {
-            console.warn("Erro ao carregar histórico de e-mails:", error.message);
-            setEmailsEnviados([]);
-            return [];
-        } finally {
-            setEmailsEnviadosCarregados(true);
-        }
+        return carregarEmailsEnviadosAppService({
+            supabase,
+            limite: limitesCarregamentoSistema.emailsEnviados,
+            setEmailsEnviados,
+            setEmailsEnviadosCarregados,
+        });
     }, [limitesCarregamentoSistema.emailsEnviados]);
 
     const carregarAuditoriasCampo = useCallback(async () => {
-        setCarregandoAuditoriasCampo(true);
-        setErroAuditoriasCampo("");
-
-        try {
-            const resultado = await carregarAuditoriasCampoService({
-                supabase,
-                limite: limitesCarregamentoSistema.auditoriasCampo,
-            });
-
-            setAuditoriasCampo(resultado.auditorias);
-            setExisteMaisAuditoriasCampo(resultado.existeMais);
-            return resultado.auditorias;
-        } catch (error) {
-            console.warn("Erro ao carregar auditorias de campo:", error.message);
-            setErroAuditoriasCampo(error.message || "Erro ao carregar auditorias de campo.");
-            setAuditoriasCampo([]);
-            setExisteMaisAuditoriasCampo(false);
-            return [];
-        } finally {
-            setAuditoriasCampoCarregadas(true);
-            setCarregandoAuditoriasCampo(false);
-        }
+        return carregarAuditoriasCampoAppService({
+            supabase,
+            limite: limitesCarregamentoSistema.auditoriasCampo,
+            setCarregandoAuditoriasCampo,
+            setErroAuditoriasCampo,
+            setAuditoriasCampo,
+            setExisteMaisAuditoriasCampo,
+            setAuditoriasCampoCarregadas,
+        });
     }, [limitesCarregamentoSistema.auditoriasCampo]);
 
     const carregarMaisAuditoriasCampo = useCallback(async () => {
-        if (carregandoMaisAuditoriasCampo || carregandoAuditoriasCampo) return [];
-
-        const offsetAtual = auditoriasCampo.length;
-        setCarregandoMaisAuditoriasCampo(true);
-        setErroAuditoriasCampo("");
-
-        try {
-            const resultado = await carregarMaisAuditoriasCampoService({
-                supabase,
-                offsetAtual,
-                limite: limitesCarregamentoSistema.auditoriasCampo,
-            });
-
-            setAuditoriasCampo((atual) => {
-                const chavesAtuais = new Set(
-                    atual.map((item) => String(item.id || item.numeroAuditoria || item.createdAt || ""))
-                );
-                const novosSemDuplicidade = resultado.auditorias.filter((item) => {
-                    const chave = String(item.id || item.numeroAuditoria || item.createdAt || "");
-                    return chave && !chavesAtuais.has(chave);
-                });
-
-                return [...atual, ...novosSemDuplicidade];
-            });
-
-            setAuditoriasCampoCarregadas(true);
-            setExisteMaisAuditoriasCampo(resultado.existeMais);
-            return resultado.auditorias;
-        } catch (error) {
-            console.warn("Erro ao carregar mais auditorias de campo:", error.message);
-            setErroAuditoriasCampo(error.message || "Erro ao carregar mais auditorias de campo.");
-            alert(`Erro ao carregar mais auditorias de campo: ${error.message}`);
-            return [];
-        } finally {
-            setCarregandoMaisAuditoriasCampo(false);
-        }
+        return carregarMaisAuditoriasCampoAppService({
+            supabase,
+            auditoriasCampo,
+            carregandoMaisAuditoriasCampo,
+            carregandoAuditoriasCampo,
+            limite: limitesCarregamentoSistema.auditoriasCampo,
+            setCarregandoMaisAuditoriasCampo,
+            setErroAuditoriasCampo,
+            setAuditoriasCampo,
+            setAuditoriasCampoCarregadas,
+            setExisteMaisAuditoriasCampo,
+        });
     }, [auditoriasCampo.length, carregandoAuditoriasCampo, carregandoMaisAuditoriasCampo, limitesCarregamentoSistema.auditoriasCampo]);
 
     const registrarEmailEnviado = useCallback(
         async ({ empresaId = null, colaboradorId = null, documentoId = null, destinatario = "", assunto = "", tipoAlerta = "", documento = "", statusEnvio = "", erro = "" } = {}) => {
-            const resultado = await registrarEmailEnviadoService({
+            return registrarEmailEnviadoAppService({
                 supabase,
                 usuario,
                 empresaId,
@@ -465,20 +389,16 @@ export default function App() {
                 documento,
                 statusEnvio,
                 erro,
+                setEmailsEnviadosCarregados,
+                setEmailsEnviados,
             });
-
-            if (!resultado.ok) return false;
-
-            setEmailsEnviadosCarregados(true);
-            setEmailsEnviados((atual) => [{ id: `${Date.now()}`, ...resultado.payload }, ...atual].slice(0, 300));
-            return true;
         },
         [usuario]
     );
 
     const registrarAuditoria = useCallback(
         async (acao, tabela, descricao, registroId = null, dados = {}) => {
-            return registrarAuditoriaSistemaService({
+            return registrarAuditoriaAppService({
                 supabase,
                 usuario,
                 acao,
@@ -492,118 +412,57 @@ export default function App() {
     );
 
     const carregarUsuariosAutorizadosAuditoria = useCallback(async () => {
-        try {
-            return await carregarUsuariosAutorizadosAuditoriaService({ supabase });
-        } catch (error) {
-            alert(`Erro ao carregar usuários autorizados: ${error.message}`);
-            return [];
-        }
+        return carregarUsuariosAutorizadosAuditoriaAppService({
+            supabase,
+        });
     }, []);
 
     const salvarUsuarioAutorizadoAuditoria = useCallback(
         async (usuarioAutorizado) => {
-            try {
-                await salvarUsuarioAutorizadoAuditoriaService({
-                    supabase,
-                    usuarioAutorizado,
-                });
-
-                await registrarAuditoria(
-                    "USUARIO_AUDITORIA_AUTORIZADO",
-                    "auditoria_usuarios_autorizados",
-                    `Autorizou usuário para Auditoria: ${usuarioAutorizado.email}`,
-                    usuarioAutorizado.email,
-                    usuarioAutorizado
-                );
-
-                return true;
-            } catch (error) {
-                alert(error.message || "Erro ao autorizar usuário.");
-                return false;
-            }
+            return salvarUsuarioAutorizadoAuditoriaAppService({
+                supabase,
+                usuarioAutorizado,
+                registrarAuditoria,
+            });
         },
         [registrarAuditoria]
     );
 
     const alternarUsuarioAutorizadoAuditoria = useCallback(
         async (usuarioAutorizado) => {
-            try {
-                const resultado = await alternarUsuarioAutorizadoAuditoriaService({
-                    supabase,
-                    usuarioAutorizado,
-                    usuario,
-                });
-
-                await registrarAuditoria(
-                    resultado.novoAcessoAuditoria ? "USUARIO_AUDITORIA_LIBERADO" : "USUARIO_AUDITORIA_BLOQUEADO",
-                    "auditoria_usuarios_autorizados",
-                    `${resultado.novoAcessoAuditoria ? "Liberou" : "Bloqueou"} acesso à Auditoria de sistema: ${usuarioAutorizado.email}`,
-                    usuarioAutorizado.id,
-                    {
-                        email: usuarioAutorizado.email,
-                        pode_acessar_auditoria: resultado.novoAcessoAuditoria,
-                        ativo: usuarioAutorizado.ativo,
-                    }
-                );
-
-                return true;
-            } catch (error) {
-                alert(error.message || "Erro ao atualizar permissão da Auditoria.");
-                return false;
-            }
+            return alternarUsuarioAutorizadoAuditoriaAppService({
+                supabase,
+                usuarioAutorizado,
+                usuario,
+                registrarAuditoria,
+            });
         },
         [registrarAuditoria, usuario]
     );
 
     const verificarAcessoAuditoria = useCallback(async () => {
-        if (!usuario?.email) {
-            setPodeAcessarAuditoria(false);
-            return false;
-        }
-
-        setVerificandoAcessoAuditoria(true);
-
-        try {
-            const acesso = await verificarAcessoAuditoriaService({ supabase, usuario });
-            setPodeAcessarAuditoria(Boolean(acesso));
-            return Boolean(acesso);
-        } catch (error) {
-            console.warn("Erro ao verificar permissão da Auditoria de sistema:", error.message);
-            setPodeAcessarAuditoria(false);
-            return false;
-        } finally {
-            setVerificandoAcessoAuditoria(false);
-        }
+        return verificarAcessoAuditoriaAppService({
+            supabase,
+            usuario,
+            setPodeAcessarAuditoria,
+            setVerificandoAcessoAuditoria,
+        });
     }, [usuario]);
 
     const liberarAuditoria = async () => {
-        const autorizadoAuditoria = await verificarAcessoAuditoria();
-
-        if (!autorizadoAuditoria) {
-            alert("Seu usuário não está autorizado no Supabase para acessar a Auditoria.");
-            return;
-        }
-
-        try {
-            window.sessionStorage.setItem("auditoriaLiberada", "true");
-        } catch {
-            // Sessão indisponível; mantém apenas em memória.
-        }
-
-        setAuditoriaLiberada(true);
-        carregarAuditoria();
-        registrarAuditoria("ACESSO_AUDITORIA", "auditoria_sistema", "Liberou acesso à tela de Auditoria pela regra do Supabase");
+        return liberarAuditoriaAppService({
+            verificarAcessoAuditoria,
+            setAuditoriaLiberada,
+            carregarAuditoria,
+            registrarAuditoria,
+        });
     };
 
     const bloquearAuditoria = () => {
-        try {
-            window.sessionStorage.removeItem("auditoriaLiberada");
-        } catch {
-            // Sessão indisponível; mantém apenas em memória.
-        }
-
-        setAuditoriaLiberada(false);
-        registrarAuditoria("BLOQUEIO_AUDITORIA", "auditoria_sistema", "Bloqueou novamente o acesso à tela de Auditoria");
+        return bloquearAuditoriaAppService({
+            setAuditoriaLiberada,
+            registrarAuditoria,
+        });
     };
 
     const carregarColaboradores = useCallback(async () => {
