@@ -1,6 +1,6 @@
 /* eslint-disable no-unused-vars */
 import React, { useCallback, useEffect, useMemo, useState } from "react";
-import { supabase, SUPABASE_ANON_KEY, SUPABASE_CONFIGURADO, SUPABASE_URL } from "./lib/supabaseClient";
+import { supabase, SUPABASE_CONFIGURADO } from "./lib/supabaseClient";
 import {
     buscarTodosRegistrosSupabase,
     listarTodosArquivosStorage,
