@@ -51,6 +51,12 @@ import {
     registrarEmailEnviadoService,
 } from "./services/auditoriaSistemaCrudService";
 import {
+    alternarUsuarioAutorizadoAuditoriaService,
+    carregarUsuariosAutorizadosAuditoriaService,
+    salvarUsuarioAutorizadoAuditoriaService,
+    verificarAcessoAuditoriaService,
+} from "./services/auditoriaPermissoesService";
+import {
     carregarLimitesCarregamentoSistema,
     salvarLimitesCarregamentoSistema,
 } from "./constants/sistemaLimitesConstants";
@@ -503,106 +509,65 @@ export default function App() {
     );
 
     const carregarUsuariosAutorizadosAuditoria = useCallback(async () => {
-        const { data, error } = await supabase
-            .from("auditoria_usuarios_autorizados")
-            .select("id, created_at, email, nome, funcao, ativo, observacao, user_id, empresa_id, perfil, acesso_global, pode_acessar_auditoria")
-            .order("email", { ascending: true });
-
-        if (error) {
+        try {
+            return await carregarUsuariosAutorizadosAuditoriaService({ supabase });
+        } catch (error) {
             alert(`Erro ao carregar usuários autorizados: ${error.message}`);
             return [];
         }
-
-        return data || [];
     }, []);
 
     const salvarUsuarioAutorizadoAuditoria = useCallback(
         async (usuarioAutorizado) => {
-            if (!usuarioAutorizado?.email) {
-                alert("Informe o e-mail do usuário autorizado.");
-                return false;
-            }
+            try {
+                await salvarUsuarioAutorizadoAuditoriaService({
+                    supabase,
+                    usuarioAutorizado,
+                });
 
-            const { error } = await supabase
-                .from("auditoria_usuarios_autorizados")
-                .upsert(
-                    {
-                        email: usuarioAutorizado.email.toLowerCase(),
-                        nome: usuarioAutorizado.nome || null,
-                        funcao: usuarioAutorizado.funcao || null,
-                        ativo: true,
-                        perfil: usuarioAutorizado.perfil || "usuario",
-                        pode_acessar_auditoria: true,
-                    },
-                    { onConflict: "email" }
+                await registrarAuditoria(
+                    "USUARIO_AUDITORIA_AUTORIZADO",
+                    "auditoria_usuarios_autorizados",
+                    `Autorizou usuário para Auditoria: ${usuarioAutorizado.email}`,
+                    usuarioAutorizado.email,
+                    usuarioAutorizado
                 );
 
-            if (error) {
-                alert(`Erro ao autorizar usuário: ${error.message}`);
+                return true;
+            } catch (error) {
+                alert(error.message || "Erro ao autorizar usuário.");
                 return false;
             }
-
-            await registrarAuditoria(
-                "USUARIO_AUDITORIA_AUTORIZADO",
-                "auditoria_usuarios_autorizados",
-                `Autorizou usuário para Auditoria: ${usuarioAutorizado.email}`,
-                usuarioAutorizado.email,
-                usuarioAutorizado
-            );
-
-            return true;
         },
         [registrarAuditoria]
     );
 
     const alternarUsuarioAutorizadoAuditoria = useCallback(
         async (usuarioAutorizado) => {
-            if (!usuarioAutorizado?.id) return false;
+            try {
+                const resultado = await alternarUsuarioAutorizadoAuditoriaService({
+                    supabase,
+                    usuarioAutorizado,
+                    usuario,
+                });
 
-            const acessoAtual = Boolean(usuarioAutorizado.pode_acessar_auditoria);
-            const novoAcessoAuditoria = !acessoAtual;
+                await registrarAuditoria(
+                    resultado.novoAcessoAuditoria ? "USUARIO_AUDITORIA_LIBERADO" : "USUARIO_AUDITORIA_BLOQUEADO",
+                    "auditoria_usuarios_autorizados",
+                    `${resultado.novoAcessoAuditoria ? "Liberou" : "Bloqueou"} acesso à Auditoria de sistema: ${usuarioAutorizado.email}`,
+                    usuarioAutorizado.id,
+                    {
+                        email: usuarioAutorizado.email,
+                        pode_acessar_auditoria: resultado.novoAcessoAuditoria,
+                        ativo: usuarioAutorizado.ativo,
+                    }
+                );
 
-            if (
-                acessoAtual &&
-                usuario?.email &&
-                usuarioAutorizado.email?.toLowerCase() === usuario.email.toLowerCase()
-            ) {
-                alert("Você não pode bloquear o próprio acesso à Auditoria de sistema pelo sistema.");
+                return true;
+            } catch (error) {
+                alert(error.message || "Erro ao atualizar permissão da Auditoria.");
                 return false;
             }
-
-            if (acessoAtual && usuarioAutorizado.acesso_global) {
-                alert("Este usuário é administrador global. Remova o acesso global no Supabase antes de bloquear a Auditoria de sistema.");
-                return false;
-            }
-
-            const payloadAtualizacao = novoAcessoAuditoria
-                ? { pode_acessar_auditoria: true, ativo: true }
-                : { pode_acessar_auditoria: false };
-
-            const { error } = await supabase
-                .from("auditoria_usuarios_autorizados")
-                .update(payloadAtualizacao)
-                .eq("id", usuarioAutorizado.id);
-
-            if (error) {
-                alert(`Erro ao atualizar permissão da Auditoria: ${error.message}`);
-                return false;
-            }
-
-            await registrarAuditoria(
-                novoAcessoAuditoria ? "USUARIO_AUDITORIA_LIBERADO" : "USUARIO_AUDITORIA_BLOQUEADO",
-                "auditoria_usuarios_autorizados",
-                `${novoAcessoAuditoria ? "Liberou" : "Bloqueou"} acesso à Auditoria de sistema: ${usuarioAutorizado.email}`,
-                usuarioAutorizado.id,
-                {
-                    email: usuarioAutorizado.email,
-                    pode_acessar_auditoria: novoAcessoAuditoria,
-                    ativo: usuarioAutorizado.ativo,
-                }
-            );
-
-            return true;
         },
         [registrarAuditoria, usuario]
     );
@@ -615,18 +580,17 @@ export default function App() {
 
         setVerificandoAcessoAuditoria(true);
 
-        const { data, error } = await supabase.rpc("usuario_pode_acessar_auditoria");
-
-        setVerificandoAcessoAuditoria(false);
-
-        if (error) {
+        try {
+            const acesso = await verificarAcessoAuditoriaService({ supabase, usuario });
+            setPodeAcessarAuditoria(Boolean(acesso));
+            return Boolean(acesso);
+        } catch (error) {
             console.warn("Erro ao verificar permissão da Auditoria de sistema:", error.message);
             setPodeAcessarAuditoria(false);
             return false;
+        } finally {
+            setVerificandoAcessoAuditoria(false);
         }
-
-        setPodeAcessarAuditoria(Boolean(data));
-        return Boolean(data);
     }, [usuario]);
 
     const liberarAuditoria = async () => {
