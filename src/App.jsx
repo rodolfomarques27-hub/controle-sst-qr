@@ -11,7 +11,7 @@ import {
     carregarSenhaConfiguracoesSistema,
     carregarSenhaConfiguracoesSistemaSupabase,
 } from "./constants/configuracoesSegurancaConstants";
-import { estilosGlobais } from "./constants/sstConstants";
+import { estilosGlobais } from "./constants/appLayoutStyles";
 import { validarArquivoAntesUpload } from "./components/FileUploadAviso";
 import { CarregandoTela } from "./components/CarregandoTela";
 import {
