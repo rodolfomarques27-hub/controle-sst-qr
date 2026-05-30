@@ -1,10 +1,5 @@
-/* eslint-disable no-unused-vars */
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import { supabase, SUPABASE_CONFIGURADO } from "./lib/supabaseClient";
-import {
-    obterUrlLogoEmpresa,
-    abrirArquivoStorage,
-} from "./services/supabaseServices";
 import {
     carregarEmpresasAppService,
     carregarDocumentosEmpresasAppService,
@@ -59,12 +54,14 @@ import {
     atualizarSenhaConfiguracoesSistemaAppService,
 } from "./services/appConfiguracoesHandlersService";
 import { carregarConsultaPublicaQrService } from "./services/consultaPublicaQrService";
+import { normalizarDocumentoEmpresa } from "./services/empresaDocumentosService";
 import { carregarLimitesCarregamentoSistema } from "./constants/sistemaLimitesConstants";
 import {
     carregarSenhaConfiguracoesSistema,
     carregarSenhaConfiguracoesSistemaSupabase,
     SENHA_CONFIGURACOES_PADRAO,
 } from "./constants/configuracoesSegurancaConstants";
+import { estilosGlobais } from "./constants/sstConstants";
 import {
     Card,
     Header,
@@ -72,86 +69,6 @@ import {
 } from "./components/commonComponents";
 import { LoginScreen } from "./components/LoginScreen";
 import { validarArquivoAntesUpload } from "./components/FileUploadAviso";
-import { AuditoriaAcessoNegado } from "./components/auditoria/AuditoriaPermissao";
-import {
-    obterCategoriaPadronizadaAuditoriaCampo,
-    obterTipoAuditoriaCampoPorParametro,
-    obterTipoAuditoriaCampoDireta,
-    checklistParaTipoAuditoriaCampo,
-    criarRespostasChecklistDinamico,
-    calcularResultadoChecklistDinamico,
-    notificacaoPadraoAuditoriaCampo,
-    montarPreviewNotificacaoAuditoriaCampo,
-    montarMensagemFluidaAuditoriaCampo,
-    obterRespostaAuditoriaCampo,
-    rotuloPontuacaoAuditoriaCampo,
-    calcularResultadoAuditoriaCampo,
-    classeClassificacaoAuditoriaCampo,
-    identificarAlvoAuditoriaCampo,
-    fotosAuditoriaCampo,
-    auditoriaCampoAberta,
-    auditoriaCampoVencida,
-} from "./services/auditoriaCampoService";
-import {
-    obterFuncoesPersonalizadasSalvas,
-    salvarFuncoesPersonalizadas,
-    obterTodasMatrizesFuncao,
-    obterMatrizFuncao,
-    treinamentosObrigatoriosFuncao,
-    avaliarTreinamentosColaborador,
-    normalizarColaborador,
-    normalizarCertificado,
-    statusDocumento,
-    obterDataAniversarioColaborador,
-    mesAniversarioColaborador,
-    diaAniversarioColaborador,
-    proximoAniversariante,
-    deveMostrarAniversarioColaborador,
-    obterFuncaoCargoColaborador,
-    colaboradorContaComoMobilizado,
-    obterTreinamento,
-    obterTreinamentoIdPorTipo,
-    inferirTreinamentoPorNomeArquivo,
-    dataRealizacaoPorArquivo,
-    extrairDatasComContexto,
-    lerTextoPossivelDoArquivo,
-    detectarDataEmissaoArquivo,
-    analisarArquivosTreinamentoMassa,
-    itemDocumentoCriticoColaborador,
-    documentoEmAnaliseColaborador,
-    classeClassificacaoColaborador,
-    statusGeral,
-} from "./services/colaboradorDocumentosService";
-import {
-    obterDocumentoEmpresa,
-    calcularVencimentoDocumento,
-    normalizarDocumentoEmpresa,
-    statusEmpresaDocumento,
-    calcularSituacaoDocumentalEmpresa,
-    classeStatusEmpresa,
-} from "./services/empresaDocumentosService";
-import {
-    TAMANHO_PAGINA_SUPABASE,
-    estilosGlobais,
-    DAY,
-    FUNCAO_EMAIL_ALERTA_TST,
-    LIMITE_STORAGE_MB,
-    documentosEmpresaBase,
-    STATUS_CLASSIFICACAO_COLABORADOR,
-    IDS_DOCUMENTOS_CRITICOS_COLABORADOR,
-    treinamentosBaseObra,
-    matrizTreinamentosPorFuncao,
-    respostasAuditoriaCampo,
-    categoriasAuditoriaCampo,
-    statusDesvioAuditoriaCampo,
-    gravidadesAuditoriaCampo,
-    tiposAuditoriaCampoDireta,
-    categoriasPadronizadasAuditoriaCampo,
-    statusAuditoriaCampoDireta,
-    grausRiscoAuditoriaCampoDireta,
-    descricoesGrauRiscoAuditoriaCampoDireta,
-    checklistDinamicoAuditoriaCampo,
-} from "./constants/sstConstants";
 import { CarregandoTela } from "./components/CarregandoTela";
 import { AppLayout } from "./components/layout/AppLayout";
 import { AppContentRouter } from "./routes/AppContentRouter";
@@ -159,25 +76,7 @@ import {
     obterTokenQrPublicoApp,
     verificarRotaNovaAuditoriaCampoApp,
 } from "./routes/appRoutesService";
-import {
-    normalizarDataAniversario,
-    diasParaVencer,
-    formatDate,
-    formatarAniversario,
-    formatarDataHora,
-    textoNaoAplicavel,
-    apenasNumeros,
-    formatarBytes,
-    calcularPercentualUsoStorage,
-    resumirNavegador,
-    normalizarEmailDestinatario,
-    formatarCnpj,
-    formatarTelefone,
-    sanitizarNomeArquivo,
-    converterDataParaISO,
-    converterDataIsoDireta,
-    limparTextoPdfBruto,
-} from "./utils/sstUtils";
+import { sanitizarNomeArquivo } from "./utils/sstUtils";
 import { motion } from "framer-motion";
 import {
     Building2,
@@ -190,7 +89,6 @@ import {
     Lock,
     Plus,
     QrCode,
-    RefreshCw,
     Settings,
     ShieldCheck,
     Users,
