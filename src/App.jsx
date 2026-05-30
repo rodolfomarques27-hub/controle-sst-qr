@@ -154,6 +154,7 @@ import {
 } from "./constants/sstConstants";
 import { CarregandoTela } from "./components/CarregandoTela";
 import { AppLayout } from "./components/layout/AppLayout";
+import { AppContentRouter } from "./routes/AppContentRouter";
 import {
     obterTokenQrPublicoApp,
     verificarRotaNovaAuditoriaCampoApp,
@@ -197,18 +198,8 @@ import {
 } from "lucide-react";
 
 
-const ConsultaQR = React.lazy(() => import("./components/qr/ConsultaQR").then((modulo) => ({ default: modulo.ConsultaQR })));
 const ConsultaQRPublica = React.lazy(() => import("./components/qr/ConsultaQRPublica").then((modulo) => ({ default: modulo.ConsultaQRPublica })));
-const Requisitos = React.lazy(() => import("./components/Requisitos").then((modulo) => ({ default: modulo.Requisitos })));
-const Aniversariantes = React.lazy(() => import("./components/aniversariantes/AniversariantesPage").then((modulo) => ({ default: modulo.Aniversariantes })));
-const Dashboard = React.lazy(() => import("./components/dashboard/Dashboard").then((modulo) => ({ default: modulo.Dashboard })));
-const Empresas = React.lazy(() => import("./components/empresas/EmpresasPage").then((modulo) => ({ default: modulo.Empresas })));
-const Colaboradores = React.lazy(() => import("./components/colaboradores/ColaboradoresPage").then((modulo) => ({ default: modulo.Colaboradores })));
-const Treinamentos = React.lazy(() => import("./components/treinamentos/TreinamentosPage").then((modulo) => ({ default: modulo.Treinamentos })));
-const RelatorioAuditoria = React.lazy(() => import("./components/auditoria/RelatorioAuditoria").then((modulo) => ({ default: modulo.RelatorioAuditoria })));
-const DashboardAuditoriaCampo = React.lazy(() => import("./components/auditoria/DashboardAuditoriaCampo").then((modulo) => ({ default: modulo.DashboardAuditoriaCampo })));
 const NovaAuditoriaCampoDireta = React.lazy(() => import("./components/auditoria/NovaAuditoriaCampoDireta").then((modulo) => ({ default: modulo.NovaAuditoriaCampoDireta })));
-const ConfiguracoesSistema = React.lazy(() => import("./components/configuracoes/ConfiguracoesSistema").then((modulo) => ({ default: modulo.ConfiguracoesSistema })));
 
 const hoje = new Date();
 
@@ -1104,176 +1095,83 @@ export default function App() {
             sair={sair}
             onSelecionarTela={selecionarTelaSistema}
         >
-            <React.Suspense fallback={<CarregandoTela mensagem="Carregando módulo..." />}>
-                {tela === "dashboard" && (
-                    <Dashboard
-                        colaboradores={colaboradores}
-                        empresasBanco={empresasBanco}
-                        documentosEmpresas={documentosEmpresas}
-                        auditoria={auditoria}
-                        auditoriasCampo={auditoriasCampo}
-                        onSelectColab={selecionarColaborador}
-                        onRegistrarEmailEnviado={registrarEmailEnviado}
-                        onAtualizarInformacoes={atualizarInformacoesDashboardSst}
-                        atualizandoInformacoes={atualizandoDashboardSst}
-                    />
-                )}
-
-                {tela === "novaAuditoriaCampo" && (
-                    <NovaAuditoriaCampoDireta
-                        usuario={usuario}
-                        empresasBanco={empresasBanco}
-                        onAuditoriaSalva={(novaAuditoria) => {
-                            setAuditoriasCampoCarregadas(true);
-                            setAuditoriasCampo((atual) => [novaAuditoria, ...atual]);
-                        }}
-                    />
-                )}
-
-                {tela === "auditoriaCampo" && (
-                    <DashboardAuditoriaCampo
-                        auditoriasCampo={auditoriasCampo}
-                        carregando={carregandoAuditoriasCampo}
-                        erro={erroAuditoriasCampo}
-                        onRecarregar={carregarAuditoriasCampo}
-                        onCarregarMaisAuditoriasCampo={carregarMaisAuditoriasCampo}
-                        carregandoMaisAuditoriasCampo={carregandoMaisAuditoriasCampo}
-                        existeMaisAuditoriasCampo={existeMaisAuditoriasCampo}
-                        limiteQrcodesCampo={limitesCarregamentoSistema.qrcodesCampo}
-                        onAuditoriaAtualizada={(atualizada) =>
-                            setAuditoriasCampo((atual) =>
-                                atualizada?.excluida
-                                    ? atual.filter((item) => item.id !== atualizada.id)
-                                    : atual.map((item) => item.id === atualizada.id ? atualizada : item)
-                            )
-                        }
-                    />
-                )}
-
-                {tela === "empresas" && (
-                    <Empresas
-                        empresasBanco={empresasBanco}
-                        documentosEmpresas={documentosEmpresas}
-                        colaboradores={colaboradores}
-                        carregandoBanco={carregandoBanco}
-                        erroBanco={erroBanco}
-                        onAtualizarBanco={carregarColaboradores}
-                        onAdicionarEmpresa={adicionarEmpresa}
-                        onAtualizarEmpresa={atualizarEmpresa}
-                        onExcluirEmpresa={excluirEmpresa}
-                        onAdicionarDocumentoEmpresa={adicionarDocumentoEmpresa}
-                        onExcluirDocumentoEmpresa={excluirDocumentoEmpresa}
-                        onVisualizarDocumentoEmpresa={visualizarDocumentoEmpresa}
-                    />
-                )}
-
-                {tela === "colaboradores" && (
-                    <Colaboradores
-                        colaboradores={colaboradores}
-                        empresasBanco={empresasBanco}
-                        carregandoBanco={carregandoBanco}
-                        erroBanco={erroBanco}
-                        onAtualizarBanco={carregarColaboradores}
-                        onAdicionarColaborador={adicionarColaborador}
-                        onAtualizarColaborador={atualizarColaborador}
-                        onExcluirColaborador={excluirColaborador}
-                        onSelectColab={selecionarColaborador}
-                        onEnviarTreinamento={abrirEnvioTreinamento}
-                    />
-                )}
-
-                {tela === "aniversariantes" && (
-                    <Aniversariantes
-                        colaboradores={colaboradores}
-                        empresasBanco={empresasBanco}
-                    />
-                )}
-
-                {tela === "treinamentos" && (
-                    <Treinamentos
-                        key={colaboradorSelecionado?.id || "treinamentos"}
-                        colaboradores={colaboradores}
-                        colaboradorInicialId={colaboradorSelecionado?.id}
-                        onSalvarCertificado={salvarCertificadoTreinamento}
-                        onVisualizarCertificado={visualizarCertificadoTreinamento}
-                        onExcluirCertificado={excluirCertificadoTreinamento}
-                        onAtualizarDatasCertificado={atualizarDatasCertificado}
-                        onSincronizarStorage={sincronizarCertificadosDoStorage}
-                        onRegistrarEmailEnviado={registrarEmailEnviado}
-                    />
-                )}
-
-                {tela === "qr" && (
-                    <ConsultaQR
-                        colaborador={colaboradorSelecionado}
-                        colaboradores={colaboradores}
-                        onSelecionarColaborador={setColaboradorSelecionado}
-                    />
-                )}
-
-                {tela === "auditoria" && (
-                    verificandoAcessoAuditoria ? (
-                        <Card>
-                            <div className="flex items-center gap-3 text-sm font-semibold text-slate-600">
-                                <RefreshCw className="h-4 w-4 animate-spin" />
-                                Verificando permissão da Auditoria de sistema...
-                            </div>
-                        </Card>
-                    ) : !podeAcessarAuditoria ? (
-                        <AuditoriaAcessoNegado />
-                    ) : (
-                        <RelatorioAuditoria
-                            auditoria={auditoria}
-                            emailsEnviados={emailsEnviados}
-                            carregando={carregandoAuditoria}
-                            carregandoMaisAuditoria={carregandoMaisAuditoria}
-                            existeMaisAuditoria={existeMaisAuditoria}
-                            onAtualizar={async () => { await carregarAuditoria(); await carregarEmailsEnviados(); await carregarAuditoriasCampo(); }}
-                            onCarregarMaisAuditoria={carregarMaisAuditoria}
-                            onListarArquivosStorage={listarArquivosCertificadosStorage}
-                            onExcluirArquivoStorage={excluirArquivoCertificadoStorage}
-                            onListarUsuariosAuditoria={carregarUsuariosAutorizadosAuditoria}
-                            onSalvarUsuarioAuditoria={salvarUsuarioAutorizadoAuditoria}
-                            onAlternarUsuarioAuditoria={alternarUsuarioAutorizadoAuditoria}
-                            onBloquear={bloquearAuditoria}
-                        />
+            <AppContentRouter
+                tela={tela}
+                colaboradores={colaboradores}
+                empresasBanco={empresasBanco}
+                documentosEmpresas={documentosEmpresas}
+                auditoria={auditoria}
+                auditoriasCampo={auditoriasCampo}
+                emailsEnviados={emailsEnviados}
+                usuario={usuario}
+                colaboradorSelecionado={colaboradorSelecionado}
+                carregandoBanco={carregandoBanco}
+                erroBanco={erroBanco}
+                carregandoAuditoriasCampo={carregandoAuditoriasCampo}
+                carregandoMaisAuditoriasCampo={carregandoMaisAuditoriasCampo}
+                erroAuditoriasCampo={erroAuditoriasCampo}
+                existeMaisAuditoriasCampo={existeMaisAuditoriasCampo}
+                limitesCarregamentoSistema={limitesCarregamentoSistema}
+                verificandoAcessoAuditoria={verificandoAcessoAuditoria}
+                podeAcessarAuditoria={podeAcessarAuditoria}
+                carregandoAuditoria={carregandoAuditoria}
+                carregandoMaisAuditoria={carregandoMaisAuditoria}
+                existeMaisAuditoria={existeMaisAuditoria}
+                configuracoesDesbloqueadas={configuracoesDesbloqueadas}
+                senhaConfiguracoesSistema={senhaConfiguracoesSistema}
+                origemSenhaConfiguracoesSistema={origemSenhaConfiguracoesSistema}
+                mensagemSenhaConfiguracoesSistema={mensagemSenhaConfiguracoesSistema}
+                atualizandoDashboardSst={atualizandoDashboardSst}
+                onSelectColab={selecionarColaborador}
+                onRegistrarEmailEnviado={registrarEmailEnviado}
+                onAtualizarInformacoesDashboardSst={atualizarInformacoesDashboardSst}
+                onAuditoriaSalva={(novaAuditoria) => {
+                    setAuditoriasCampoCarregadas(true);
+                    setAuditoriasCampo((atual) => [novaAuditoria, ...atual]);
+                }}
+                onAuditoriaAtualizada={(atualizada) =>
+                    setAuditoriasCampo((atual) =>
+                        atualizada?.excluida
+                            ? atual.filter((item) => item.id !== atualizada.id)
+                            : atual.map((item) => item.id === atualizada.id ? atualizada : item)
                     )
-                )}
-
-                {tela === "configuracoes" && (
-                    configuracoesDesbloqueadas ? (
-                        <div className="page-shell space-y-4">
-                            <ConfiguracoesSistema
-                                acaoTopo={(
-                                    <button
-                                        type="button"
-                                        onClick={bloquearConfiguracoesSistema}
-                                        className="inline-flex items-center gap-2 rounded-2xl bg-white px-4 py-2 text-sm font-black text-slate-700 shadow-sm ring-1 ring-slate-200 hover:bg-slate-50"
-                                    >
-                                        <Lock className="h-4 w-4" />
-                                        Bloquear Configurações
-                                    </button>
-                                )}
-                                usuario={usuario}
-                                podeAcessarAuditoria={podeAcessarAuditoria}
-                                limites={{
-                                    ...limitesCarregamentoSistema,
-                                    storageMb: LIMITE_STORAGE_MB,
-                                }}
-                                onSalvarLimites={atualizarLimitesCarregamentoSistema}
-                                senhaConfiguracoesSistema={senhaConfiguracoesSistema}
-                                origemSenhaConfiguracoesSistema={origemSenhaConfiguracoesSistema}
-                                mensagemSenhaConfiguracoesSistema={mensagemSenhaConfiguracoesSistema}
-                                onSalvarSenhaConfiguracoes={atualizarSenhaConfiguracoesSistema}
-                            />
-                        </div>
-                    ) : (
-                        renderBloqueioConfiguracoes()
-                    )
-                )}
-
-                {tela === "roteiro" && <Requisitos />}
-            </React.Suspense>
+                }
+                onRecarregarAuditoriasCampo={carregarAuditoriasCampo}
+                onCarregarMaisAuditoriasCampo={carregarMaisAuditoriasCampo}
+                onAtualizarBanco={carregarColaboradores}
+                onAdicionarEmpresa={adicionarEmpresa}
+                onAtualizarEmpresa={atualizarEmpresa}
+                onExcluirEmpresa={excluirEmpresa}
+                onAdicionarDocumentoEmpresa={adicionarDocumentoEmpresa}
+                onExcluirDocumentoEmpresa={excluirDocumentoEmpresa}
+                onVisualizarDocumentoEmpresa={visualizarDocumentoEmpresa}
+                onAdicionarColaborador={adicionarColaborador}
+                onAtualizarColaborador={atualizarColaborador}
+                onExcluirColaborador={excluirColaborador}
+                onEnviarTreinamento={abrirEnvioTreinamento}
+                onSalvarCertificado={salvarCertificadoTreinamento}
+                onVisualizarCertificado={visualizarCertificadoTreinamento}
+                onExcluirCertificado={excluirCertificadoTreinamento}
+                onAtualizarDatasCertificado={atualizarDatasCertificado}
+                onSincronizarStorage={sincronizarCertificadosDoStorage}
+                onSelecionarColaboradorQr={setColaboradorSelecionado}
+                onAtualizarAuditoria={async () => {
+                    await carregarAuditoria();
+                    await carregarEmailsEnviados();
+                    await carregarAuditoriasCampo();
+                }}
+                onCarregarMaisAuditoria={carregarMaisAuditoria}
+                onListarArquivosStorage={listarArquivosCertificadosStorage}
+                onExcluirArquivoStorage={excluirArquivoCertificadoStorage}
+                onListarUsuariosAuditoria={carregarUsuariosAutorizadosAuditoria}
+                onSalvarUsuarioAuditoria={salvarUsuarioAutorizadoAuditoria}
+                onAlternarUsuarioAuditoria={alternarUsuarioAutorizadoAuditoria}
+                onBloquearAuditoria={bloquearAuditoria}
+                onBloquearConfiguracoes={bloquearConfiguracoesSistema}
+                onSalvarLimites={atualizarLimitesCarregamentoSistema}
+                onSalvarSenhaConfiguracoes={atualizarSenhaConfiguracoesSistema}
+                renderBloqueioConfiguracoes={renderBloqueioConfiguracoes}
+            />
         </AppLayout>
     );
 }
