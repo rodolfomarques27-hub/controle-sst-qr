@@ -27,24 +27,12 @@ import {
 } from "./constants/configuracoesSegurancaConstants";
 import {
     Card,
-    CardRecolhivel,
-    FotoAuditoriaPreview,
-    FotoColaborador,
     Header,
-    LinkPublicoQR,
-    QRCodeReal,
-    StatusPill,
     SupabaseConfiguracaoPendente,
 } from "./components/commonComponents";
 import { LoginScreen } from "./components/LoginScreen";
-import { MobilizacaoBadge } from "./components/MobilizacaoBadge";
-import { FormularioNovoColaborador } from "./components/colaboradores/FormularioNovoColaborador";
-import { ModalNovaFuncaoColaborador } from "./components/colaboradores/ModalNovaFuncaoColaborador";
-import { ModalRevisaoColaborador } from "./components/colaboradores/ModalRevisaoColaborador";
-import { FileUploadAviso, validarArquivoAntesUpload, validarListaArquivosAntesUpload } from "./components/FileUploadAviso";
-import { AuditoriaAcessoNegado, AuditoriaBloqueada } from "./components/auditoria/AuditoriaPermissao";
-import { AuditoriaAtividades } from "./components/auditoria/AuditoriaAtividades";
-import { EditorNotificacaoHistoricoAuditoria } from "./components/auditoria/EditorNotificacaoHistoricoAuditoria";
+import { validarArquivoAntesUpload } from "./components/FileUploadAviso";
+import { AuditoriaAcessoNegado } from "./components/auditoria/AuditoriaPermissao";
 import {
     obterCategoriaPadronizadaAuditoriaCampo,
     obterTipoAuditoriaCampoPorParametro,
@@ -130,11 +118,6 @@ import {
     descricoesGrauRiscoAuditoriaCampoDireta,
     checklistDinamicoAuditoriaCampo,
 } from "./constants/sstConstants";
-import {
-    baixarCSV,
-    baixarPDF,
-} from "./services/exportacaoService";
-import { reduzirFotoParaAuditoria } from "./services/imagemService";
 import { normalizarRegistrosAuditoriasCampo } from "./services/appHelpersService";
 import { CarregandoTela } from "./components/CarregandoTela";
 import {
@@ -162,39 +145,21 @@ import {
     converterDataIsoDireta,
     limparTextoPdfBruto,
 } from "./utils/sstUtils";
-import { QRCodeSVG } from "qrcode.react";
 import { motion } from "framer-motion";
 import {
-    AlertTriangle,
-    BadgeCheck,
     Building2,
     CalendarClock,
-    ChevronDown,
-    ChevronUp,
-    CheckCircle2,
     ClipboardCheck,
     Database,
-    Download,
     Eye,
     EyeOff,
-    FileText,
-    Filter,
-    HardHat,
     LayoutDashboard,
     Lock,
-    Mail,
-    MessageCircle,
     Plus,
     QrCode,
     RefreshCw,
-    Search,
-    Send,
     Settings,
     ShieldCheck,
-    Trash2,
-    Upload,
-    UserPlus,
-    UserRound,
     Users,
     XCircle,
 } from "lucide-react";
