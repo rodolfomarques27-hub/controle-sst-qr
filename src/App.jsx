@@ -56,6 +56,7 @@ import {
     salvarUsuarioAutorizadoAuditoriaService,
     verificarAcessoAuditoriaService,
 } from "./services/auditoriaPermissoesService";
+import { carregarConsultaPublicaQrService } from "./services/consultaPublicaQrService";
 import {
     carregarLimitesCarregamentoSistema,
     salvarLimitesCarregamentoSistema,
@@ -1368,85 +1369,29 @@ export default function App() {
 
         let ativo = true;
 
-        const obterFotoColaboradorQrPorEdgeFunction = async (tokenConsulta) => {
-            const tokenSeguro = String(tokenConsulta || "").trim();
-
-            if (!tokenSeguro) return "";
-
-            try {
-                const { data, error } = await supabase.functions.invoke("gerar-foto-colaborador-qr", {
-                    body: { token: tokenSeguro },
-                });
-
-                if (error || data?.ok === false) {
-                    console.warn(
-                        "Erro ao obter foto pública do colaborador via Edge Function:",
-                        error?.message || data?.erro || "Falha ao gerar URL assinada da foto."
-                    );
-                    return "";
-                }
-
-                return data?.signedUrl || data?.fotoUrl || "";
-            } catch (error) {
-                console.warn("Falha inesperada ao obter foto pública do colaborador:", error?.message || error);
-                return "";
-            }
-        };
-
-        const normalizarConsultaPublicaComFoto = async (dadosConsulta) => {
-            if (!dadosConsulta?.colaborador) return dadosConsulta;
-
-            const colaboradorConsulta = dadosConsulta.colaborador || {};
-            const fotoOriginal =
-                colaboradorConsulta.fotoUrl ||
-                colaboradorConsulta.foto_url ||
-                colaboradorConsulta.foto ||
-                "";
-
-            const fotoEhUrlFinal = /^https?:\/\//i.test(String(fotoOriginal || "")) || String(fotoOriginal || "").startsWith("blob:");
-            const fotoAssinada = fotoEhUrlFinal ? fotoOriginal : await obterFotoColaboradorQrPorEdgeFunction(tokenQr);
-
-            return {
-                ...dadosConsulta,
-                colaborador: {
-                    ...colaboradorConsulta,
-                    fotoUrl: fotoAssinada || "",
-                    fotoNome: colaboradorConsulta.fotoNome || colaboradorConsulta.foto_nome || "",
-                    codigoFuncionario:
-                        colaboradorConsulta.codigoFuncionario ||
-                        colaboradorConsulta.codigo_funcionario ||
-                        "",
-                    statusMobilizacao:
-                        colaboradorConsulta.statusMobilizacao ||
-                        colaboradorConsulta.status_mobilizacao ||
-                        "",
-                    token: colaboradorConsulta.token || colaboradorConsulta.token_qr || tokenQr,
-                },
-            };
-        };
-
         async function carregarConsultaPublica() {
             setCarregandoConsultaPublica(true);
             setErroConsultaPublica("");
 
-            const { data, error } = await supabase.rpc("consulta_publica_qr", {
-                token_param: tokenQr,
-            });
-
-            if (!ativo) return;
-
-            if (error) {
-                setErroConsultaPublica(`Erro ao carregar consulta pública: ${error.message}`);
-                setConsultaPublica(null);
-            } else {
-                const dadosNormalizados = await normalizarConsultaPublicaComFoto(data);
+            try {
+                const dadosNormalizados = await carregarConsultaPublicaQrService({
+                    supabase,
+                    tokenQr,
+                });
 
                 if (!ativo) return;
 
                 setConsultaPublica(dadosNormalizados);
-            }
+            } catch (error) {
+                if (!ativo) return;
 
-            setCarregandoConsultaPublica(false);
+                setErroConsultaPublica(error.message || "Erro ao carregar consulta pública.");
+                setConsultaPublica(null);
+            } finally {
+                if (ativo) {
+                    setCarregandoConsultaPublica(false);
+                }
+            }
         }
 
         carregarConsultaPublica();
