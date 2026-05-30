@@ -134,7 +134,7 @@ export function QRCodeReal({ token, size = 150 }) {
     const urlConsulta = `${window.location.origin}/?qr=${encodeURIComponent(token)}`;
 
     return (
-        <div className="flex items-center justify-center rounded-3xl bg-white p-3 shadow-inner ring-1 ring-slate-200">
+        <div className="flex max-w-full items-center justify-center overflow-hidden rounded-3xl bg-white p-3 shadow-inner ring-1 ring-slate-200">
             <QRCodeSVG
                 value={urlConsulta}
                 size={size}
@@ -153,14 +153,14 @@ export function LinkPublicoQR({ token }) {
     return (
         <div className="mt-2 inline-flex max-w-full items-center gap-2 rounded-full bg-slate-50 px-3 py-1.5 ring-1 ring-slate-200">
             <span className="shrink-0 text-[10px] font-bold uppercase tracking-wide text-slate-400">Link público</span>
-            <span className="max-w-[360px] truncate text-[11px] text-slate-500">{urlConsulta}</span>
+            <span className="min-w-0 max-w-[360px] truncate text-[11px] text-slate-500" title={urlConsulta}>{urlConsulta}</span>
         </div>
     );
 }
 
 export function Card({ children, className = "" }) {
     return (
-        <div className={classNames("rounded-3xl border border-slate-200 bg-white p-5 shadow-sm", className)}>
+        <div className={classNames("min-w-0 rounded-3xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5", className)}>
             {children}
         </div>
     );
@@ -236,16 +236,65 @@ export function CardRecolhivel({
     );
 }
 
-export function Header({ titulo, subtitulo, acao }) {
+export function Header({ titulo, subtitulo, acao, className = "", subtituloClassName = "" }) {
     return (
-        <div className="mb-6 flex flex-col justify-between gap-4 lg:flex-row lg:items-center">
-            <div>
-                <h1 className="text-2xl font-bold tracking-tight text-slate-950">{titulo}</h1>
-                <p className="mt-1 text-sm text-slate-500">{subtitulo}</p>
+        <header className={classNames("page-header mb-6", className)}>
+            <div className="page-header-text min-w-0">
+                <h1 className="texto-quebra-segura text-[1.45rem] font-bold tracking-tight text-slate-950">{titulo}</h1>
+                {subtitulo && (
+                    <p className={classNames("mt-1 max-w-3xl text-sm leading-6 text-slate-500", subtituloClassName)}>
+                        {subtitulo}
+                    </p>
+                )}
             </div>
-            {acao}
-        </div>
+            {acao && <div className="page-actions">{acao}</div>}
+        </header>
     );
+}
+
+
+
+export function PageShell({ children, className = "" }) {
+    return <div className={classNames("page-shell", className)}>{children}</div>;
+}
+
+export function PageActions({ children, className = "" }) {
+    return <div className={classNames("page-actions", className)}>{children}</div>;
+}
+
+export function CardsGrid({ children, className = "" }) {
+    return <div className={classNames("cards-grid grid gap-3", className)}>{children}</div>;
+}
+
+export function InfoCard({ icon: Icon, label, valor, detalhe, className = "" }) {
+    return (
+        <Card className={classNames("info-card summary-card-fixed h-full", className)}>
+            <div className="summary-card-content">
+                {Icon && (
+                    <div className="summary-card-icon flex shrink-0 items-center justify-center rounded-2xl bg-slate-100 text-slate-700 ring-1 ring-slate-200">
+                        <Icon className="h-4 w-4" />
+                    </div>
+                )}
+                <div className="flex min-w-0 flex-1 flex-col">
+                    <p className="summary-card-label texto-quebra-segura">{label}</p>
+                    <p className="summary-card-value texto-quebra-segura">{valor}</p>
+                    {detalhe && <p className="summary-card-detail">{detalhe}</p>}
+                </div>
+            </div>
+        </Card>
+    );
+}
+
+export function ResponsiveTable({ children, className = "" }) {
+    return <div className={classNames("responsive-table w-full max-w-full overflow-x-auto", className)}>{children}</div>;
+}
+
+export function FormGrid({ children, className = "" }) {
+    return <div className={classNames("form-grid grid gap-3", className)}>{children}</div>;
+}
+
+export function ToolbarResponsive({ children, className = "" }) {
+    return <div className={classNames("toolbar-responsive flex flex-wrap items-center justify-end gap-2", className)}>{children}</div>;
 }
 
 export function PasswordInput({

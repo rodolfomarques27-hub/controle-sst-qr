@@ -106,7 +106,14 @@ export function Aniversariantes({ colaboradores = [], empresasBanco = [] }) {
         <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
             <Header
                 titulo="Aniversariantes"
-                subtitulo="Consulta de aniversariantes de todos os meses, com todos os colaboradores autorizados para aparecer no painel. Use os filtros para separar por mês, empresa, função e status."
+                className="header-aniversariantes"
+                subtitulo={(
+                    <>
+                        Consulta de aniversariantes de todos os meses, com todos os colaboradores autorizados para aparecer no painel.
+                        <br className="hidden sm:block" />
+                        Use os filtros para separar por mês, empresa, função e status.
+                    </>
+                )}
                 acao={(
                     <button
                         type="button"

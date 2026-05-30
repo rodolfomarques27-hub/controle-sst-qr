@@ -25,20 +25,20 @@ export function DashboardAuditoriasCampo({
                 </span>
             )}
         >
-            <div className="grid gap-3 md:grid-cols-4">
-                <div className="rounded-2xl bg-slate-50 p-4 ring-1 ring-slate-200">
+            <div className="dashboard-auditoria-grid">
+                <div className="dashboard-auditoria-card rounded-2xl bg-slate-50 p-4 ring-1 ring-slate-200">
                     <p className="text-xs font-bold uppercase tracking-wide text-slate-400">Auditorias do mês</p>
                     <p className="mt-2 text-2xl font-black text-slate-950">{auditoriasCampoMes.length}</p>
                 </div>
-                <div className="rounded-2xl bg-slate-50 p-4 ring-1 ring-slate-200">
+                <div className="dashboard-auditoria-card rounded-2xl bg-slate-50 p-4 ring-1 ring-slate-200">
                     <p className="text-xs font-bold uppercase tracking-wide text-slate-400">Média de conformidade</p>
                     <p className="mt-2 text-2xl font-black text-slate-950">{mediaConformidadeCampo}%</p>
                 </div>
-                <div className="rounded-2xl bg-slate-50 p-4 ring-1 ring-slate-200">
+                <div className="dashboard-auditoria-card rounded-2xl bg-slate-50 p-4 ring-1 ring-slate-200">
                     <p className="text-xs font-bold uppercase tracking-wide text-slate-400">Desvios abertos</p>
                     <p className="mt-2 text-2xl font-black text-red-600">{desviosCampoAbertos}</p>
                 </div>
-                <div className="rounded-2xl bg-slate-50 p-4 ring-1 ring-slate-200">
+                <div className="dashboard-auditoria-card rounded-2xl bg-slate-50 p-4 ring-1 ring-slate-200">
                     <p className="text-xs font-bold uppercase tracking-wide text-slate-400">Desvios corrigidos</p>
                     <p className="mt-2 text-2xl font-black text-emerald-600">{desviosCampoCorrigidos}</p>
                 </div>

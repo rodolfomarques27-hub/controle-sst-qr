@@ -122,6 +122,7 @@ export function ConfiguracoesSistema({
     origemSenhaConfiguracoesSistema = "local",
     mensagemSenhaConfiguracoesSistema: mensagemSenhaConfiguracoesSistemaApp = "",
     onSalvarSenhaConfiguracoes,
+    acaoTopo = null,
 }) {
     const [configEventos, setConfigEventos] = useState(() => configuracaoPadraoEventosAuditoriaSistema());
     const [origemConfig, setOrigemConfig] = useState("local");
@@ -697,7 +698,7 @@ export function ConfiguracoesSistema({
                         </div>
                     )}
 
-                    <div className="mt-4 grid gap-3 lg:grid-cols-2">
+                    <div className="mt-4 config-inner-grid">
                         {eventosAuditoria.map((evento) => (
                             <div key={evento.chave} className="rounded-3xl border border-slate-200 bg-slate-50/70 p-4">
                                 <div className="flex items-start justify-between gap-3">
@@ -862,7 +863,7 @@ export function ConfiguracoesSistema({
                         {mensagemSenhaConfiguracoes}
                     </div>
 
-                    <form onSubmit={salvarSenhaConfiguracoes} className="mt-4 grid gap-3 lg:grid-cols-3">
+                    <form onSubmit={salvarSenhaConfiguracoes} className="form-grid mt-4">
                         <label className="space-y-1 text-sm font-semibold text-slate-600">
                             <span>Senha atual</span>
                             <input
@@ -978,7 +979,7 @@ export function ConfiguracoesSistema({
                                     <Link2 className="h-4 w-4 text-slate-500" />
                                     <p className="text-sm font-bold text-slate-800">Link público atual</p>
                                 </div>
-                                <p className="mt-2 break-all rounded-xl bg-white px-3 py-2 text-xs font-semibold text-slate-500 ring-1 ring-slate-200">
+                                <p className="texto-quebra-segura mt-2 rounded-xl bg-white px-3 py-2 text-xs font-semibold text-slate-500 ring-1 ring-slate-200">
                                     {linkAuditoriaPublica}
                                 </p>
                                 <button
@@ -1232,36 +1233,39 @@ export function ConfiguracoesSistema({
     };
 
     return (
-        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
+        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="page-shell">
             <Header
                 titulo="Configurações do sistema"
                 subtitulo="Centralize parâmetros operacionais, auditoria e limites usados pelo sistema SST."
                 acao={(
-                    <button
-                        type="button"
-                        onClick={carregarConfiguracao}
-                        disabled={carregandoConfig || salvandoConfig}
-                        className="inline-flex items-center gap-2 rounded-2xl bg-slate-950 px-4 py-2.5 text-sm font-bold text-white shadow-sm hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
-                    >
-                        <RefreshCw className={classNames("h-4 w-4", carregandoConfig && "animate-spin")} />
-                        Atualizar configurações
-                    </button>
+                    <div className="top-actions-nowrap">
+                        {acaoTopo}
+                        <button
+                            type="button"
+                            onClick={carregarConfiguracao}
+                            disabled={carregandoConfig || salvandoConfig}
+                            className="inline-flex items-center gap-2 rounded-2xl bg-slate-950 px-4 py-2.5 text-sm font-bold text-white shadow-sm hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
+                        >
+                            <RefreshCw className={classNames("h-4 w-4", carregandoConfig && "animate-spin")} />
+                            Atualizar configurações
+                        </button>
+                    </div>
                 )}
             />
 
-            <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+            <div className="config-summary-grid cards-grid--fixed-5">
                 {cardsResumo.map((card) => {
                     const Icon = card.icon;
                     return (
-                        <Card key={card.label} className="h-full">
-                            <div className="flex min-h-[126px] items-start gap-3">
-                                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-slate-100 text-slate-700 ring-1 ring-slate-200">
+                        <Card key={card.label} className="config-summary-card summary-card-fixed h-full">
+                            <div className="summary-card-content">
+                                <div className="summary-card-icon flex shrink-0 items-center justify-center rounded-2xl bg-slate-100 text-slate-700 ring-1 ring-slate-200">
                                     <Icon className="h-4 w-4" />
                                 </div>
                                 <div className="flex min-w-0 flex-1 flex-col">
-                                    <p className="text-sm font-black leading-snug text-slate-950">{card.label}</p>
-                                    <p className="mt-2 break-words text-xl font-black leading-tight text-slate-950">{card.valor}</p>
-                                    <p className="mt-2 border-t border-slate-100 pt-2 text-xs font-medium leading-relaxed text-slate-500">{card.detalhe}</p>
+                                    <p className="summary-card-label texto-quebra-segura">{card.label}</p>
+                                    <p className={classNames("summary-card-value texto-quebra-segura", card.label === "Token Auditoria pública" && "summary-card-value--token")}>{card.valor}</p>
+                                    <p className="summary-card-detail">{card.detalhe}</p>
                                 </div>
                             </div>
                         </Card>
@@ -1270,7 +1274,7 @@ export function ConfiguracoesSistema({
             </div>
 
             <Card className="mt-6 border-blue-100 bg-blue-50/40">
-                <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+                <div className="flex min-w-0 flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
                     <div>
                         <p className="text-xs font-black uppercase tracking-wide text-blue-700">Organização das configurações</p>
                         <h2 className="mt-1 text-lg font-black text-slate-950">Seções rápidas do sistema</h2>
@@ -1288,7 +1292,7 @@ export function ConfiguracoesSistema({
                             <button type="button" onClick={restaurarOrganizacaoCardsConfiguracoes} className="rounded-2xl bg-white px-3 py-2 text-xs font-bold text-slate-700 ring-1 ring-blue-100 hover:bg-blue-50">Restaurar organização</button>
                         </div>
                     </div>
-                    <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
+                    <div className="cards-grid cards-grid--compact lg:min-w-[420px]">
                         {secoesConfiguracoesVisiveisOrdenadas.map((secao) => {
                             const Icon = secao.icon;
 
@@ -1303,8 +1307,8 @@ export function ConfiguracoesSistema({
                                             <Icon className="h-4 w-4" />
                                         </span>
                                         <span className="min-w-0">
-                                            <span className="block text-xs font-black text-slate-950 group-hover:text-blue-700">{secao.titulo}</span>
-                                            <span className="mt-0.5 block text-[11px] leading-snug text-slate-500">{secao.descricao}</span>
+                                            <span className="texto-quebra-segura block text-xs font-black text-slate-950 group-hover:text-blue-700">{secao.titulo}</span>
+                                            <span className="texto-quebra-segura mt-0.5 block text-[11px] leading-snug text-slate-500">{secao.descricao}</span>
                                         </span>
                                     </div>
                                 </a>
@@ -1314,7 +1318,7 @@ export function ConfiguracoesSistema({
                 </div>
 
                 {mostrarOrganizacaoCards && (
-                    <div className="mt-4 grid gap-3 lg:grid-cols-2">
+                    <div className="mt-4 config-inner-grid">
                         {secoesConfiguracoesOrdenadas.map((secao, index) => {
                             const Icon = secao.icon;
                             const visivel = blocoConfiguracaoVisivel(secao.chave);
@@ -1349,7 +1353,7 @@ export function ConfiguracoesSistema({
                 )}
             </Card>
 
-            <div className="mt-6 grid gap-6 xl:grid-cols-2">
+            <div className="config-sections-grid mt-6">
                 {secoesConfiguracoesOrdenadas.map((secao) => (
                     <React.Fragment key={secao.chave}>{renderBlocoConfiguracao(secao.chave)}</React.Fragment>
                 ))}

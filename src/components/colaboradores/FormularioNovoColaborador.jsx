@@ -1,11 +1,68 @@
-/* eslint-disable no-unused-vars */
-import React from "react";
-import { Upload, Plus, UserPlus } from "lucide-react";
-import { Card } from "../commonComponents";
-import { FileUploadAviso, validarArquivoAntesUpload, validarListaArquivosAntesUpload } from "../FileUploadAviso";
-import { STATUS_CLASSIFICACAO_COLABORADOR } from "../../constants/sstConstants";
-import { obterMatrizFuncao } from "../../services/colaboradorDocumentosService";
-import { classNames, formatDate } from "../../utils/sstUtils";
+import React, { useId } from "react";
+import { Camera, FileText, Plus, Upload, UserPlus, X } from "lucide-react";
+import { classNames } from "../../utils/sstUtils";
+
+const STATUS_MOBILIZACAO = [
+    "Liberado",
+    "Com pendência",
+    "Bloqueado",
+    "Em análise",
+    "Desmobilizado",
+    "Inativo",
+];
+
+const INFORMACOES_STATUS_OBRA = {
+    Liberado: "Conta como mobilizado ativo. Documentos e treinamentos devem permanecer válidos.",
+    "Com pendência": "Conta como mobilizado ativo, mas exige regularização das pendências apontadas.",
+    Bloqueado: "Não conta como mobilizado ativo. Use para pendência bloqueante ou risco documental.",
+    "Em análise": "Não conta como mobilizado ativo. Use enquanto documentos e treinamentos estão em conferência.",
+    Desmobilizado: "Não conta como mobilizado ativo. Use quando o colaborador sair da obra.",
+    Inativo: "Não conta como mobilizado ativo. Use para cadastro sem atuação atual na obra.",
+};
+
+const TIPOS_DOCUMENTOS_MASSA = "ASO, EPI, INTEGRAÇÃO, NR-06, NR-11, NR-12, NR-18, NR-21, NR-25, NR-26, REGISTRO ou OS.";
+
+function CampoTexto({ label, value, onChange, placeholder, type = "text", list, children }) {
+    return (
+        <label className="novo-colaborador-campo-anterior">
+            <span className="novo-colaborador-label-anterior">{label}</span>
+            <input
+                type={type}
+                value={value || ""}
+                onChange={(evento) => onChange(evento.target.value)}
+                placeholder={placeholder}
+                list={list}
+                className="novo-colaborador-input-anterior"
+            />
+            {children}
+        </label>
+    );
+}
+
+function CampoSelect({ label, value, onChange, children, ajuda }) {
+    return (
+        <label className="novo-colaborador-campo-anterior">
+            <span className="novo-colaborador-label-anterior">{label}</span>
+            <select
+                value={value || ""}
+                onChange={(evento) => onChange(evento.target.value)}
+                className="novo-colaborador-input-anterior"
+            >
+                {children}
+            </select>
+            {ajuda && <p className="novo-colaborador-ajuda-anterior">{ajuda}</p>}
+        </label>
+    );
+}
+
+function resumoArquivos(arquivos = []) {
+    const lista = Array.from(arquivos || []);
+
+    if (lista.length === 0) return "Nenhum arquivo selecionado";
+    if (lista.length === 1) return lista[0]?.name || "1 arquivo selecionado";
+
+    return `${lista.length} arquivos selecionados`;
+}
 
 export function FormularioNovoColaborador({
     novo,
@@ -13,289 +70,211 @@ export function FormularioNovoColaborador({
     empresasBanco = [],
     funcoesSugeridas = [],
     treinamentosAplicadosNovo = [],
-    treinamentosParaAdicionarNovo = [],
-    idsAdicionaisNovo = [],
-    arquivosMassaAnaliseNovo = [],
     arquivosMassaReconhecidosNovo = [],
     arquivosMassaNaoReconhecidosNovo = [],
-    removerTreinamentoNovo,
-    adicionarTreinamentoNovo,
     adicionar,
-    salvando = false,
+    salvando,
 }) {
+    const idBase = useId().replace(/:/g, "");
+    const funcoesDatalistId = `${idBase}-funcoes`;
+    const empresasDisponiveis = Array.from(
+        new Map(
+            (empresasBanco || [])
+                .filter((empresa) => String(empresa?.nome || "").trim())
+                .sort((a, b) => String(a.nome || "").localeCompare(String(b.nome || "")))
+                .map((empresa) => [String(empresa.nome || "").trim().toLowerCase(), empresa])
+        ).values()
+    );
+
+    const alterarCampo = (campo, valor) => {
+        setNovo((atual) => ({
+            ...atual,
+            [campo]: valor,
+            mostrarAniversarioDashboard: false,
+        }));
+    };
+
+    const alterarDocumentosMassa = (evento) => {
+        const arquivos = Array.from(evento.target.files || []);
+        setNovo((atual) => ({
+            ...atual,
+            documentosMassa: arquivos,
+            mostrarAniversarioDashboard: false,
+        }));
+    };
+
+    const alterarFoto = (evento) => {
+        const arquivo = evento.target.files?.[0] || null;
+        setNovo((atual) => ({
+            ...atual,
+            foto: arquivo,
+            mostrarAniversarioDashboard: false,
+        }));
+    };
+
+    const limparDocumentosMassa = () => {
+        setNovo((atual) => ({ ...atual, documentosMassa: [], mostrarAniversarioDashboard: false }));
+    };
+
+    const limparFoto = () => {
+        setNovo((atual) => ({ ...atual, foto: null, mostrarAniversarioDashboard: false }));
+    };
+
+    const quantidadeTreinamentos = Array.isArray(treinamentosAplicadosNovo) ? treinamentosAplicadosNovo.length : 0;
+    const documentosSelecionados = Array.from(novo.documentosMassa || []);
+    const documentosReconhecidos = Array.isArray(arquivosMassaReconhecidosNovo) ? arquivosMassaReconhecidosNovo.length : 0;
+    const documentosNaoReconhecidos = Array.isArray(arquivosMassaNaoReconhecidosNovo) ? arquivosMassaNaoReconhecidosNovo.length : 0;
+
     return (
-<Card className="overflow-hidden">
-    <div className="-m-5 mb-5 bg-gradient-to-br from-slate-950 to-slate-800 p-5 text-white">
-        <div className="flex items-center gap-3">
-            <div className="rounded-2xl bg-white/10 p-3">
-                <UserPlus className="h-6 w-6" />
-            </div>
-            <div>
-                <h2 className="text-lg font-bold">Novo colaborador</h2>
-                <p className="text-sm text-slate-300">Foto, código automático e matriz de treinamentos por função.</p>
-            </div>
-        </div>
-    </div>
-
-    <div className="space-y-3">
-        <div>
-            <label className="mb-1 block text-xs font-bold uppercase tracking-wide text-slate-500">
-                Nome completo
-            </label>
-            <input
-                value={novo.nome}
-                onChange={(e) => setNovo({ ...novo, nome: e.target.value })}
-                placeholder="Ex.: João da Silva"
-                className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none focus:border-slate-400 focus:ring-4 focus:ring-slate-100"
-            />
-        </div>
-
-        <div>
-            <label className="mb-1 block text-xs font-bold uppercase tracking-wide text-slate-500">
-                Empresa terceirizada
-            </label>
-            <input
-                value={novo.empresaNome}
-                onChange={(e) => setNovo({ ...novo, empresaNome: e.target.value })}
-                placeholder="Ex.: ABC Montagens"
-                list="empresas-cadastradas"
-                className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none focus:border-slate-400 focus:ring-4 focus:ring-slate-100"
-            />
-            <datalist id="empresas-cadastradas">
-                {empresasBanco.map((e) => (
-                    <option key={e.id} value={e.nome} />
+        <div className="novo-colaborador-layout-anterior">
+            <datalist id={funcoesDatalistId}>
+                {(funcoesSugeridas || []).map((funcao) => (
+                    <option key={funcao.chave || funcao.rotulo} value={funcao.rotulo || ""} />
                 ))}
             </datalist>
-        </div>
 
-        <div>
-            <label className="mb-1 block text-xs font-bold uppercase tracking-wide text-slate-500">
-                Situação na obra
-            </label>
-            <select
-                value={novo.statusMobilizacao}
-                onChange={(e) => setNovo({ ...novo, statusMobilizacao: e.target.value })}
-                className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none focus:border-slate-400 focus:ring-4 focus:ring-slate-100"
-            >
-                {STATUS_CLASSIFICACAO_COLABORADOR.map((status) => (
-                    <option key={status}>{status}</option>
-                ))}
-            </select>
-            <p className="mt-1 text-xs text-slate-400">
-                Liberado e Com pendência entram como mobilização ativa. Bloqueado, Em análise, Desmobilizado e Inativo ficam fora da contagem de mobilizados.
-            </p>
-        </div>
+            <div className="novo-colaborador-row-anterior novo-colaborador-row-anterior-3">
+                <CampoTexto
+                    label="Nome completo"
+                    value={novo.nome}
+                    onChange={(valor) => alterarCampo("nome", valor)}
+                    placeholder="Ex.: João da Silva"
+                />
 
-        <div className="grid gap-3 sm:grid-cols-[1fr_auto] sm:items-end">
-            <div>
-                <label className="mb-1 block text-xs font-bold uppercase tracking-wide text-slate-500">
-                    Data de nascimento
-                </label>
-                <input
+                <CampoTexto
+                    label="Data de nascimento"
                     type="date"
                     value={novo.dataNascimento}
-                    onChange={(e) => setNovo({ ...novo, dataNascimento: e.target.value })}
-                    className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none focus:border-slate-400 focus:ring-4 focus:ring-slate-100"
+                    onChange={(valor) => alterarCampo("dataNascimento", valor)}
                 />
+
+                <CampoSelect
+                    label="Empresa terceirizada"
+                    value={novo.empresaNome}
+                    onChange={(valor) => alterarCampo("empresaNome", valor)}
+                    ajuda={empresasDisponiveis.length ? "Selecione uma empresa já cadastrada no sistema." : "Cadastre uma empresa antes de vincular o colaborador."}
+                >
+                    <option value="">Selecione uma empresa cadastrada</option>
+                    {empresasDisponiveis.map((empresa) => (
+                        <option key={empresa.id || empresa.nome} value={empresa.nome || ""}>
+                            {empresa.nome || "Empresa sem nome"}
+                        </option>
+                    ))}
+                </CampoSelect>
             </div>
-            <label className="flex min-h-[46px] cursor-pointer items-center gap-2 rounded-2xl bg-slate-50 px-3 py-2 text-xs font-semibold text-slate-600 ring-1 ring-slate-200">
-                <input
-                    type="checkbox"
-                    checked={novo.mostrarAniversarioDashboard !== false}
-                    onChange={(e) => setNovo({ ...novo, mostrarAniversarioDashboard: e.target.checked })}
-                    className="h-4 w-4 rounded border-slate-300"
-                />
-                Mostrar em aniversariantes
-            </label>
-        </div>
 
-        <div>
-            <label className="mb-1 block text-xs font-bold uppercase tracking-wide text-slate-500">
-                Função
-            </label>
-            <input
-                value={novo.funcao}
-                onChange={(e) =>
-                    setNovo({
-                        ...novo,
-                        funcao: e.target.value,
-                        treinamentosRemovidos: [],
-                        treinamentosAdicionais: [],
-                    })
-                }
-                placeholder="Ex.: Pedreiro, Soldador, Eletricista, Operador de PEMT"
-                list="funcoes-sugeridas"
-                className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none focus:border-slate-400 focus:ring-4 focus:ring-slate-100"
-            />
-            <datalist id="funcoes-sugeridas">
-                {funcoesSugeridas.map((item) => (
-                    <option key={item.chave} value={item.rotulo} />
-                ))}
-            </datalist>
+            <div className="novo-colaborador-row-anterior novo-colaborador-row-anterior-3">
+                <CampoSelect
+                    label="Situação na obra"
+                    value={novo.statusMobilizacao}
+                    onChange={(valor) => alterarCampo("statusMobilizacao", valor)}
+                    ajuda={INFORMACOES_STATUS_OBRA[novo.statusMobilizacao] || "Selecione a situação atual do colaborador na obra."}
+                >
+                    {STATUS_MOBILIZACAO.map((status) => (
+                        <option key={status} value={status}>{status}</option>
+                    ))}
+                </CampoSelect>
 
-            {novo.funcao && (
-                <div className="mt-2 rounded-2xl bg-slate-50 p-3">
-                    <div className="flex flex-wrap items-center justify-between gap-2">
-                        <p className="text-xs font-bold uppercase tracking-wide text-slate-500">
-                            Matriz aplicada: {obterMatrizFuncao(novo.funcao).rotulo}
-                        </p>
-                        <span className="rounded-full bg-white px-2 py-1 text-[11px] font-semibold text-slate-500 ring-1 ring-slate-200">
-                            {treinamentosAplicadosNovo.length} exigência(s)
+                <CampoTexto
+                    label="Função"
+                    value={novo.funcao}
+                    onChange={(valor) => alterarCampo("funcao", valor)}
+                    placeholder="Ex.: Pedreiro, Soldador, Eletricista, Operador de PEMT"
+                    list={funcoesDatalistId}
+                >
+                    <p className="novo-colaborador-ajuda-anterior">
+                        Matriz automática pela função. {quantidadeTreinamentos > 0 ? `${quantidadeTreinamentos} treinamento(s) previsto(s).` : "Informe a função."}
+                    </p>
+                </CampoTexto>
+
+                <CampoTexto
+                    label="Matrícula da empresa (opcional)"
+                    value={novo.matricula}
+                    onChange={(valor) => alterarCampo("matricula", valor)}
+                    placeholder="Ex.: matrícula da empresa, crachá ou RE"
+                >
+                    <p className="novo-colaborador-ajuda-anterior">
+                        O código do sistema é gerado automaticamente. A matrícula é opcional e serve para crachá ou RE.
+                    </p>
+                </CampoTexto>
+            </div>
+
+            <div className="novo-colaborador-row-anterior novo-colaborador-row-anterior-2 novo-colaborador-uploads-anterior">
+                <div className="novo-colaborador-upload-card-anterior">
+                    <input
+                        id="novo-colaborador-documentos-massa"
+                        type="file"
+                        multiple
+                        accept=".pdf,.png,.jpg,.jpeg,.webp"
+                        onChange={alterarDocumentosMassa}
+                        className="sr-only"
+                    />
+                    <label htmlFor="novo-colaborador-documentos-massa" className="novo-colaborador-upload-label-anterior novo-colaborador-upload-label-documentos">
+                        <FileText className="h-4 w-4 shrink-0" />
+                        <span className="novo-colaborador-upload-info-anterior">
+                            <strong>Subir documentos</strong>
+                            <small>{resumoArquivos(documentosSelecionados)}</small>
+                            <small className="novo-colaborador-upload-tipos-anterior">{TIPOS_DOCUMENTOS_MASSA}</small>
                         </span>
-                    </div>
-
-                    <div className="mt-2 flex flex-wrap gap-1.5">
-                        {treinamentosAplicadosNovo.map((treinamento) => {
-                            const extra = idsAdicionaisNovo.includes(Number(treinamento.id));
-
-                            return (
-                                <span
-                                    key={treinamento.id}
-                                    className={classNames(
-                                        "inline-flex items-center gap-1 rounded-full px-2 py-1 text-[11px] font-medium ring-1",
-                                        extra
-                                            ? "bg-blue-50 text-blue-700 ring-blue-200"
-                                            : "bg-white text-slate-600 ring-slate-200"
-                                    )}
-                                >
-                                    <button
-                                        type="button"
-                                        onClick={() => removerTreinamentoNovo(treinamento.id)}
-                                        title="Retirar este treinamento deste colaborador"
-                                        className="inline-flex h-4 w-4 items-center justify-center rounded-full bg-red-50 text-[10px] font-bold text-red-700 ring-1 ring-red-200 hover:bg-red-100"
-                                    >
-                                        ×
-                                    </button>
-                                    {treinamento.nome}
-                                </span>
-                            );
-                        })}
-
-                        {treinamentosAplicadosNovo.length === 0 && (
-                            <span className="rounded-full bg-red-50 px-2 py-1 text-[11px] font-semibold text-red-700 ring-1 ring-red-200">
-                                Nenhum treinamento selecionado
-                            </span>
-                        )}
-                    </div>
-
-                    <div className="mt-3">
-                        <select
-                            value=""
-                            onChange={(e) => {
-                                adicionarTreinamentoNovo(e.target.value);
-                                e.target.value = "";
-                            }}
-                            className="w-full rounded-2xl border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-600 outline-none focus:border-slate-400 focus:ring-4 focus:ring-slate-100"
-                        >
-                            <option value="">+ Adicionar treinamento/documento para este colaborador</option>
-                            {treinamentosParaAdicionarNovo.map((treinamento) => (
-                                <option key={treinamento.id} value={treinamento.id}>
-                                    {treinamento.nome}
-                                </option>
-                            ))}
-                        </select>
-                        <p className="mt-1 text-[11px] text-slate-400">
-                            Use o × para retirar itens que não se aplicam e o campo acima para adicionar exigências específicas.
-                        </p>
-                    </div>
-                </div>
-            )}
-        </div>
-
-        <div>
-            <label className="mb-1 block text-xs font-bold uppercase tracking-wide text-slate-500">
-                Matrícula da empresa (opcional)
-            </label>
-            <input
-                value={novo.matricula}
-                onChange={(e) => setNovo({ ...novo, matricula: e.target.value })}
-                placeholder="Ex.: matrícula da empresa, crachá ou RE"
-                className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none focus:border-slate-400 focus:ring-4 focus:ring-slate-100"
-            />
-            <p className="mt-1 text-xs text-slate-400">
-                O código do sistema é gerado automaticamente. A matrícula é opcional e serve para código da empresa, crachá ou RE.
-            </p>
-        </div>
-
-        <label className="flex cursor-pointer items-center justify-center gap-2 rounded-2xl border border-dashed border-slate-300 bg-slate-50 px-4 py-4 text-sm font-medium text-slate-600 hover:bg-slate-100">
-            <Upload className="h-4 w-4" />
-            {novo.foto ? novo.foto.name : "Adicionar foto do colaborador"}
-            <input
-                type="file"
-                accept="image/png,image/jpeg,image/webp"
-                className="hidden"
-                onChange={(e) => {
-                    const arquivo = e.target.files?.[0] || null;
-                    if (arquivo && !validarArquivoAntesUpload(arquivo, "fotoAuditoria")) {
-                        e.target.value = "";
-                        return;
-                    }
-                    setNovo({ ...novo, foto: arquivo });
-                }}
-            />
-        </label>
-        <FileUploadAviso arquivo={novo.foto} tipo="fotoAuditoria" />
-
-        <div className="rounded-2xl border border-blue-100 bg-blue-50 p-3">
-            <label className="flex cursor-pointer items-center justify-center gap-2 rounded-2xl border border-dashed border-blue-200 bg-white px-4 py-4 text-sm font-semibold text-blue-700 hover:bg-blue-50">
-                <Upload className="h-4 w-4" />
-                {novo.documentosMassa?.length
-                    ? `${novo.documentosMassa.length} documento(s) selecionado(s)`
-                    : "Subir documentos de treinamentos em massa"}
-                <input
-                    type="file"
-                    multiple
-                    accept="application/pdf,image/png,image/jpeg,image/webp"
-                    className="hidden"
-                    onChange={(e) => {
-                        const arquivos = Array.from(e.target.files || []);
-                        if (!validarListaArquivosAntesUpload(arquivos, "documentoSimples")) {
-                            e.target.value = "";
-                            return;
-                        }
-                        setNovo({
-                            ...novo,
-                            documentosMassa: arquivos,
-                        });
-                    }}
-                />
-            </label>
-            <FileUploadAviso arquivos={novo.documentosMassa} tipo="documentoSimples" />
-
-            <p className="mt-2 text-[11px] leading-relaxed text-blue-900">
-                O sistema identifica o treinamento pelo nome do arquivo, por exemplo: ASO, EPI, INTEGRAÇÃO, NR-06, NR-11, NR-12, NR-18, NR-21, NR-25, NR-26, REGISTRO ou OS.
-            </p>
-
-            {arquivosMassaAnaliseNovo.length > 0 && (
-                <div className="mt-3 max-h-52 space-y-2 overflow-y-auto rounded-2xl bg-white p-2 ring-1 ring-blue-100 scrollbar-discreta">
-                    {arquivosMassaReconhecidosNovo.map((item) => (
-                        <div key={item.nomeArquivo} className="rounded-xl bg-emerald-50 px-3 py-2 text-xs text-emerald-900 ring-1 ring-emerald-100">
-                            <strong>{item.nomeArquivo}</strong>
-                            <br />
-                            {item.treinamento.nome} · Realização: {formatDate(item.dataRealizacao)} · Vencimento: {formatDate(item.dataVencimento)}
+                        <Upload className="h-4 w-4 shrink-0" />
+                    </label>
+                    {documentosSelecionados.length > 0 && (
+                        <div className="novo-colaborador-upload-status-anterior">
+                            <span>{documentosReconhecidos} reconhecido(s)</span>
+                            <span>{documentosNaoReconhecidos} para conferir</span>
+                            <button type="button" onClick={limparDocumentosMassa} title="Limpar documentos">
+                                <X className="h-3.5 w-3.5" />
+                            </button>
                         </div>
-                    ))}
-
-                    {arquivosMassaNaoReconhecidosNovo.map((item) => (
-                        <div key={item.nomeArquivo} className="rounded-xl bg-red-50 px-3 py-2 text-xs text-red-800 ring-1 ring-red-100">
-                            <strong>{item.nomeArquivo}</strong>
-                            <br />
-                            Não reconhecido. Ajuste o nome do arquivo ou envie pela aba Treinamentos.
-                        </div>
-                    ))}
+                    )}
                 </div>
-            )}
-        </div>
 
-        <button
-            onClick={adicionar}
-            disabled={salvando}
-            className="flex w-full items-center justify-center gap-2 rounded-2xl bg-slate-950 px-4 py-3 text-sm font-semibold text-white hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
-        >
-            <Plus className="h-4 w-4" />
-            {salvando ? "Salvando no banco..." : "Cadastrar colaborador"}
-        </button>
-    </div>
-</Card>
+                <div className="novo-colaborador-upload-card-anterior">
+                    <input
+                        id="novo-colaborador-foto"
+                        type="file"
+                        accept="image/*"
+                        onChange={alterarFoto}
+                        className="sr-only"
+                    />
+                    <label htmlFor="novo-colaborador-foto" className="novo-colaborador-upload-label-anterior">
+                        <Camera className="h-4 w-4 shrink-0" />
+                        <span className="novo-colaborador-upload-info-anterior">
+                            <strong>Adicionar foto</strong>
+                            <small>{novo.foto?.name || "Nenhuma foto selecionada"}</small>
+                        </span>
+                        <Upload className="h-4 w-4 shrink-0" />
+                    </label>
+                    {novo.foto && (
+                        <div className="novo-colaborador-upload-status-anterior">
+                            <span className="truncate">{novo.foto.name}</span>
+                            <button type="button" onClick={limparFoto} title="Remover foto">
+                                <X className="h-3.5 w-3.5" />
+                            </button>
+                        </div>
+                    )}
+                </div>
+            </div>
+
+            <button
+                type="button"
+                onClick={adicionar}
+                disabled={salvando}
+                className={classNames(
+                    "novo-colaborador-botao-cadastrar-anterior",
+                    salvando && "cursor-not-allowed opacity-70"
+                )}
+            >
+                {salvando ? (
+                    "Cadastrando colaborador..."
+                ) : (
+                    <>
+                        <Plus className="h-5 w-5" />
+                        Cadastrar colaborador
+                        <UserPlus className="h-5 w-5" />
+                    </>
+                )}
+            </button>
+        </div>
     );
 }

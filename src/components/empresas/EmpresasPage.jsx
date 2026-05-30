@@ -40,6 +40,30 @@ import {
 
 const hoje = new Date();
 
+const CHAVE_CADASTRO_EMPRESAS_RECOLHIDO = "controleSstEmpresasCadastroRecolhido";
+const CHAVE_INFO_EMPRESAS_RECOLHIDA = "controleSstEmpresasInformacoesRecolhidas";
+
+function carregarPreferenciaPainelBoolean(chave, padrao = false) {
+    try {
+        const salvo = window.localStorage.getItem(chave);
+        return salvo === null ? padrao : salvo === "true";
+    } catch {
+        return padrao;
+    }
+}
+
+function salvarPreferenciaPainelBoolean(chave, valor) {
+    const normalizado = Boolean(valor);
+
+    try {
+        window.localStorage.setItem(chave, String(normalizado));
+    } catch {
+        // Ignora navegador sem localStorage disponível.
+    }
+
+    return normalizado;
+}
+
 export function Empresas({
     empresasBanco,
     documentosEmpresas,
@@ -100,6 +124,8 @@ export function Empresas({
     const [salvandoUploadRevisao, setSalvandoUploadRevisao] = useState("");
     const [escoposAbertos, setEscoposAbertos] = useState({});
     const [empresasAbertas, setEmpresasAbertas] = useState({});
+    const [cadastroEmpresasRecolhido, setCadastroEmpresasRecolhido] = useState(() => carregarPreferenciaPainelBoolean(CHAVE_CADASTRO_EMPRESAS_RECOLHIDO, false));
+    const [informacoesEmpresasRecolhidas, setInformacoesEmpresasRecolhidas] = useState(() => carregarPreferenciaPainelBoolean(CHAVE_INFO_EMPRESAS_RECOLHIDA, false));
 
     const alternarEmpresaAberta = (empresaId) => {
         setEmpresasAbertas((atual) => ({
@@ -647,6 +673,20 @@ export function Empresas({
     };
 
 
+    const atualizarCadastroEmpresasRecolhido = (valorOuFuncao) => {
+        setCadastroEmpresasRecolhido((atual) => {
+            const novoValor = typeof valorOuFuncao === "function" ? valorOuFuncao(atual) : valorOuFuncao;
+            return salvarPreferenciaPainelBoolean(CHAVE_CADASTRO_EMPRESAS_RECOLHIDO, novoValor);
+        });
+    };
+
+    const atualizarInformacoesEmpresasRecolhidas = (valorOuFuncao) => {
+        setInformacoesEmpresasRecolhidas((atual) => {
+            const novoValor = typeof valorOuFuncao === "function" ? valorOuFuncao(atual) : valorOuFuncao;
+            return salvarPreferenciaPainelBoolean(CHAVE_INFO_EMPRESAS_RECOLHIDA, novoValor);
+        });
+    };
+
     const empresasFiltradas = empresasBanco.filter((empresa) => {
         const texto = [
             empresa.nome,
@@ -866,9 +906,34 @@ export function Empresas({
                 </div>
             )}
 
-            <div className="grid gap-6 xl:grid-cols-[0.85fr_1.15fr]">
-                <div className="space-y-6">
-                    <Card className="overflow-hidden">
+            <div className="space-y-6">
+                <section className="empresas-section-destaque">
+                    <Card className="empresas-cadastro-unificado border-blue-100 bg-blue-50/40">
+                        <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+                            <div className="min-w-0">
+                                <p className="text-xs font-black uppercase tracking-wide text-blue-700">Cadastro</p>
+                                <h2 className="mt-1 text-lg font-black text-slate-950">Empresas e documentos</h2>
+                                <p className="mt-1 text-sm leading-6 text-slate-600">
+                                    Cadastro de empresas e lançamento de documentos em largura total, sem campos espremidos.
+                                </p>
+                            </div>
+                            <button
+                                type="button"
+                                onClick={() => atualizarCadastroEmpresasRecolhido((valor) => !valor)}
+                                className="inline-flex items-center justify-center gap-2 rounded-2xl bg-white px-4 py-2 text-xs font-black text-slate-700 shadow-sm ring-1 ring-blue-100 hover:bg-blue-50"
+                            >
+                                {cadastroEmpresasRecolhido ? <ChevronDown className="h-4 w-4" /> : <ChevronUp className="h-4 w-4" />}
+                                {cadastroEmpresasRecolhido ? "Abrir cadastro" : "Recolher cadastro"}
+                            </button>
+                        </div>
+
+                    {cadastroEmpresasRecolhido ? (
+                        <p className="mt-4 rounded-2xl bg-slate-50 px-4 py-3 text-sm font-semibold text-slate-500 ring-1 ring-slate-100">
+                            Cadastro recolhido. Clique em Abrir cadastro para incluir empresas ou anexar documentos.
+                        </p>
+                    ) : (
+                        <div className="empresas-cadastro-grid">
+                    <Card className="empresas-form-panel overflow-hidden">
                         <div className="-m-5 mb-5 bg-gradient-to-br from-slate-950 to-slate-800 p-5 text-white">
                             <div className="flex items-center gap-3">
                                 <div className="rounded-2xl bg-white/10 p-3">
@@ -881,7 +946,7 @@ export function Empresas({
                             </div>
                         </div>
 
-                        <div className="space-y-3">
+                        <div className="empresa-form-grid empresa-form-grid--empresa">
                             <input
                                 value={novaEmpresa.nome}
                                 onChange={(e) => setNovaEmpresa({ ...novaEmpresa, nome: e.target.value })}
@@ -1089,11 +1154,11 @@ export function Empresas({
                         </div>
                     </Card>
 
-                    <Card>
+                    <Card className="empresas-form-panel">
                         <h2 className="text-lg font-bold text-slate-950">Adicionar documento da empresa</h2>
                         <p className="mt-1 text-sm text-slate-500">Controle de validade/revisão de LTCAT, PCMSO e PGR.</p>
 
-                        <div className="mt-5 space-y-3">
+                        <div className="empresa-form-grid empresa-form-grid--documento mt-5">
                             <select
                                 value={novoDoc.empresaId}
                                 onChange={(e) => setNovoDoc({ ...novoDoc, empresaId: e.target.value })}
@@ -1184,19 +1249,39 @@ export function Empresas({
                             </button>
                         </div>
                     </Card>
-                </div>
-
-                <Card>
-                    <div className="mb-4 flex items-center justify-between">
-                        <div>
-                            <h2 className="text-lg font-bold text-slate-950">Empresas cadastradas</h2>
-                            <p className="text-sm text-slate-500">Separação entre contratante e terceirizadas.</p>
                         </div>
-                        <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-600">
-                            {empresasFiltradas.length} de {empresasBanco.length} empresa(s)
-                        </span>
+                    )}
+                    </Card>
+                </section>
+
+                <Card className="empresas-info-card">
+                    <div className="mb-5 flex flex-col gap-3 border-b border-slate-100 pb-4 lg:flex-row lg:items-center lg:justify-between">
+                        <div className="min-w-0">
+                            <p className="text-xs font-black uppercase tracking-wide text-slate-400">Base de empresas</p>
+                            <h2 className="mt-1 text-xl font-black text-slate-950">Informações das empresas</h2>
+                            <p className="mt-1 text-sm leading-6 text-slate-500">Separação entre contratante, terceirizadas, subcontratadas e documentos vinculados.</p>
+                        </div>
+                        <div className="flex flex-wrap items-center justify-end gap-2">
+                            <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-bold text-slate-600">
+                                {empresasFiltradas.length} de {empresasBanco.length} empresa(s)
+                            </span>
+                            <button
+                                type="button"
+                                onClick={() => atualizarInformacoesEmpresasRecolhidas((valor) => !valor)}
+                                className="inline-flex items-center justify-center gap-2 rounded-2xl bg-slate-950 px-4 py-2 text-xs font-black text-white shadow-sm hover:bg-slate-800"
+                            >
+                                {informacoesEmpresasRecolhidas ? <ChevronDown className="h-4 w-4" /> : <ChevronUp className="h-4 w-4" />}
+                                {informacoesEmpresasRecolhidas ? "Abrir informações" : "Recolher informações"}
+                            </button>
+                        </div>
                     </div>
 
+                    {informacoesEmpresasRecolhidas ? (
+                        <p className="rounded-2xl bg-slate-50 px-4 py-3 text-sm font-semibold text-slate-500 ring-1 ring-slate-100">
+                            Informações recolhidas. Clique em Abrir informações para visualizar filtros, empresas e documentos.
+                        </p>
+                    ) : (
+                        <>
                     <div className="mb-5 grid gap-3 lg:grid-cols-[1fr_220px_220px]">
                         <div className="relative">
                             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
@@ -1370,8 +1455,11 @@ export function Empresas({
                             </div>
                         </div>
                     )}
+                        </>
+                    )}
 
-                </Card>      </div>
+                </Card>
+            </div>
 
             {empresaEdicao && (
                 <div className="fixed inset-0 z-50 flex items-start justify-center overflow-hidden bg-slate-950/70 p-4 md:items-center">

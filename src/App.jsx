@@ -2754,18 +2754,22 @@ export default function App() {
 
     return (
         <div className="min-h-screen bg-slate-100 text-slate-900">
-            <div className="flex min-h-screen">
+            <style>{estilosGlobais}</style>
+            <div className="app-shell flex min-h-screen">
                 <aside
                     className={classNames(
-                        "hidden border-r border-slate-200 bg-white transition-all duration-300 lg:block",
+                        "app-sidebar hidden border-r border-slate-200 bg-white transition-all duration-300 lg:block",
                         menuLateralAberto ? "w-72 p-5" : "w-20 p-3"
                     )}
                 >
                     <div className={classNames(
-                        "flex items-center rounded-3xl bg-slate-950 text-white",
-                        menuLateralAberto ? "gap-3 p-4" : "justify-center p-3"
+                        "flex items-center bg-slate-950 text-white shadow-sm",
+                        menuLateralAberto ? "gap-3 rounded-3xl p-4" : "mx-auto h-12 w-12 justify-center rounded-2xl p-0"
                     )}>
-                        <div className="rounded-2xl bg-white/10 p-3">
+                        <div className={classNames(
+                            "flex shrink-0 items-center justify-center rounded-2xl bg-white/10",
+                            menuLateralAberto ? "h-12 w-12" : "h-10 w-10"
+                        )}>
                             <ShieldCheck className="h-6 w-6" />
                         </div>
                         {menuLateralAberto && (
@@ -2842,8 +2846,9 @@ export default function App() {
                     )}
                 </aside>
 
-                <main className="flex-1 p-4 md:p-8">
-                    <div className="mb-5 flex items-center justify-between rounded-3xl bg-white p-3 shadow-sm lg:hidden">
+                <main className="app-main">
+                    <div className="app-content">
+                    <div className="mb-5 flex min-w-0 items-center justify-between gap-3 rounded-3xl bg-white p-3 shadow-sm lg:hidden">
                         <div className="flex items-center gap-2 font-bold">
                             <ShieldCheck className="h-5 w-5" />
                             Controle SST QR
@@ -3003,18 +3008,18 @@ export default function App() {
 
                         {tela === "configuracoes" && (
                             configuracoesDesbloqueadas ? (
-                                <div className="space-y-4">
-                                    <div className="flex justify-end">
-                                        <button
-                                            type="button"
-                                            onClick={bloquearConfiguracoesSistema}
-                                            className="inline-flex items-center gap-2 rounded-2xl bg-white px-4 py-2 text-sm font-black text-slate-700 shadow-sm ring-1 ring-slate-200 hover:bg-slate-50"
-                                        >
-                                            <Lock className="h-4 w-4" />
-                                            Bloquear Configurações
-                                        </button>
-                                    </div>
+                                <div className="page-shell space-y-4">
                                     <ConfiguracoesSistema
+                                        acaoTopo={(
+                                            <button
+                                                type="button"
+                                                onClick={bloquearConfiguracoesSistema}
+                                                className="inline-flex items-center gap-2 rounded-2xl bg-white px-4 py-2 text-sm font-black text-slate-700 shadow-sm ring-1 ring-slate-200 hover:bg-slate-50"
+                                            >
+                                                <Lock className="h-4 w-4" />
+                                                Bloquear Configurações
+                                            </button>
+                                        )}
                                         usuario={usuario}
                                         podeAcessarAuditoria={podeAcessarAuditoria}
                                         limites={{
@@ -3035,6 +3040,7 @@ export default function App() {
 
                         {tela === "roteiro" && <Requisitos />}
                     </React.Suspense>
+                    </div>
                 </main>
             </div>
         </div>

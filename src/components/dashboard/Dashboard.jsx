@@ -680,7 +680,7 @@ export function Dashboard({
     }, [tamanhosCartasDashboard]);
 
     const renderCardsPrincipaisDashboard = () => (
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
+        <div className="dashboard-summary-grid">
             {cardsVisiveis.map((item) => {
                 const Icon = item.icon;
                 const estilos = estiloCartaDashboard(item.chave) || {};
@@ -689,7 +689,7 @@ export function Dashboard({
                 return (
                     <div
                         key={item.chave}
-                        className={`rounded-3xl bg-white p-4 shadow-sm ring-1 ring-slate-200 transition hover:shadow-md ${obterClasseTamanhoCartaDashboard(item.chave)}`}
+                        className="dashboard-summary-card rounded-3xl bg-white p-4 shadow-sm ring-1 ring-slate-200 transition hover:shadow-md"
                     >
                         <div className="flex items-start gap-3">
                             <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl ring-1 ${estilos.icone || "bg-slate-50 text-slate-600 ring-slate-100"}`}>
@@ -774,7 +774,7 @@ export function Dashboard({
                 titulo="Dashboard SST"
                 subtitulo="Visão executiva dos colaboradores, empresas, documentos, treinamentos, auditoria e armazenamento."
                 acao={
-                    <div className="flex flex-wrap items-center gap-2">
+                    <div className="top-actions-nowrap">
                         <button
                             type="button"
                             onClick={atualizarInformacoesDashboard}

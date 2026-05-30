@@ -1,7 +1,7 @@
 /* eslint-disable no-unused-vars */
 import React, { useEffect, useMemo, useState } from "react";
 import { motion } from "framer-motion";
-import { Search } from "lucide-react";
+import { Eye, EyeOff, GripVertical, RotateCcw, Search, SlidersHorizontal } from "lucide-react";
 import { supabase } from "../../lib/supabaseClient";
 import { Card, Header } from "../commonComponents";
 import { validarArquivoAntesUpload, validarListaArquivosAntesUpload } from "../FileUploadAviso";
@@ -39,6 +39,49 @@ const cardsTreinamentosPadrao = {
     alertas: false,
     base: false,
 };
+
+const ordemCardsTreinamentosPadrao = ["filtros", "lancamento", "alertas", "base"];
+
+const tamanhosCardsTreinamentosPadrao = {
+    filtros: "full",
+    lancamento: "medio",
+    alertas: "medio",
+    base: "full",
+};
+
+const opcoesTamanhoCardTreinamento = [
+    { valor: "compacto", label: "Padrão", descricao: "1 coluna" },
+    { valor: "medio", label: "Médio", descricao: "2 colunas" },
+    { valor: "largo", label: "Grande", descricao: "3 colunas" },
+    { valor: "full", label: "Destaque", descricao: "linha inteira" },
+];
+
+function normalizarLayoutCardsTreinamentos(layout = {}) {
+    const ordemInformada = Array.isArray(layout.ordem) ? layout.ordem : ordemCardsTreinamentosPadrao;
+    const ordem = [
+        ...ordemInformada.filter((chave) => ordemCardsTreinamentosPadrao.includes(chave)),
+        ...ordemCardsTreinamentosPadrao.filter((chave) => !ordemInformada.includes(chave)),
+    ];
+
+    return {
+        ordem,
+        tamanhos: {
+            ...tamanhosCardsTreinamentosPadrao,
+            ...(layout.tamanhos || {}),
+        },
+    };
+}
+
+function carregarCardsTreinamentosLayout() {
+    if (typeof window === "undefined") return normalizarLayoutCardsTreinamentos();
+
+    try {
+        const salvo = JSON.parse(window.localStorage.getItem("treinamentosCardsLayout") || "null");
+        return normalizarLayoutCardsTreinamentos(salvo || {});
+    } catch {
+        return normalizarLayoutCardsTreinamentos();
+    }
+}
 
 function carregarCardsTreinamentosRecolhidos() {
     if (typeof window === "undefined") return cardsTreinamentosPadrao;
@@ -89,17 +132,97 @@ export function Treinamentos({
     const [exigenciasAbertas, setExigenciasAbertas] = useState(false);
     const [enviandoAlertaTst, setEnviandoAlertaTst] = useState(false);
     const [cardsTreinamentosRecolhidos, setCardsTreinamentosRecolhidos] = useState(carregarCardsTreinamentosRecolhidos);
+    const [layoutCardsTreinamentos, setLayoutCardsTreinamentos] = useState(carregarCardsTreinamentosLayout);
+    const [mostrarPersonalizarTreinamentos, setMostrarPersonalizarTreinamentos] = useState(false);
+    const [cardArrastandoTreinamento, setCardArrastandoTreinamento] = useState("");
+    const [cardDestinoTreinamento, setCardDestinoTreinamento] = useState("");
 
     useEffect(() => {
         if (typeof window === "undefined") return;
         window.localStorage.setItem("treinamentosCardsRecolhidos", JSON.stringify(cardsTreinamentosRecolhidos));
     }, [cardsTreinamentosRecolhidos]);
 
+    useEffect(() => {
+        if (typeof window === "undefined") return;
+        window.localStorage.setItem("treinamentosCardsLayout", JSON.stringify(layoutCardsTreinamentos));
+    }, [layoutCardsTreinamentos]);
+
     const alternarCardTreinamento = (chave) => {
         setCardsTreinamentosRecolhidos((atual) => ({
             ...atual,
             [chave]: !atual[chave],
         }));
+    };
+
+    const moverCardTreinamento = (chave, direcao) => {
+        setLayoutCardsTreinamentos((atual) => {
+            const normalizado = normalizarLayoutCardsTreinamentos(atual);
+            const ordem = [...normalizado.ordem];
+            const indice = ordem.indexOf(chave);
+            const novoIndice = indice + direcao;
+
+            if (indice < 0 || novoIndice < 0 || novoIndice >= ordem.length) return normalizado;
+
+            [ordem[indice], ordem[novoIndice]] = [ordem[novoIndice], ordem[indice]];
+            return { ...normalizado, ordem };
+        });
+    };
+
+    const reposicionarCardTreinamento = (chaveOrigem, chaveDestino) => {
+        if (!chaveOrigem || !chaveDestino || chaveOrigem === chaveDestino) return;
+
+        setLayoutCardsTreinamentos((atual) => {
+            const normalizado = normalizarLayoutCardsTreinamentos(atual);
+            const ordemSemOrigem = normalizado.ordem.filter((chave) => chave !== chaveOrigem);
+            const indiceDestino = ordemSemOrigem.indexOf(chaveDestino);
+
+            if (indiceDestino < 0) return normalizado;
+
+            const novaOrdem = [...ordemSemOrigem];
+            novaOrdem.splice(indiceDestino, 0, chaveOrigem);
+            return { ...normalizado, ordem: novaOrdem };
+        });
+    };
+
+    const iniciarArrastoCardTreinamento = (evento, chave) => {
+        setCardArrastandoTreinamento(chave);
+        setCardDestinoTreinamento("");
+        evento.dataTransfer.effectAllowed = "move";
+        evento.dataTransfer.setData("text/plain", chave);
+    };
+
+    const soltarCardTreinamento = (evento, chaveDestino) => {
+        evento.preventDefault();
+        const chaveOrigem = evento.dataTransfer.getData("text/plain") || cardArrastandoTreinamento;
+        reposicionarCardTreinamento(chaveOrigem, chaveDestino);
+        setCardArrastandoTreinamento("");
+        setCardDestinoTreinamento("");
+    };
+
+    const alterarTamanhoCardTreinamento = (chave, tamanho) => {
+        setLayoutCardsTreinamentos((atual) => {
+            const normalizado = normalizarLayoutCardsTreinamentos(atual);
+            return {
+                ...normalizado,
+                tamanhos: {
+                    ...normalizado.tamanhos,
+                    [chave]: tamanho,
+                },
+            };
+        });
+    };
+
+    const abrirTodosCardsTreinamentos = () => {
+        setCardsTreinamentosRecolhidos({ filtros: false, lancamento: false, alertas: false, base: false });
+    };
+
+    const recolherTodosCardsTreinamentos = () => {
+        setCardsTreinamentosRecolhidos({ filtros: true, lancamento: true, alertas: true, base: true });
+    };
+
+    const restaurarPainelTreinamentos = () => {
+        setCardsTreinamentosRecolhidos(cardsTreinamentosPadrao);
+        setLayoutCardsTreinamentos(normalizarLayoutCardsTreinamentos());
     };
 
     const colabSelecionado =
@@ -667,127 +790,295 @@ export function Treinamentos({
         }
     };
 
+    const opcoesPainelTreinamentos = [
+        { chave: "filtros", titulo: "Filtros da base", descricao: "Busca e status dos certificados." },
+        { chave: "lancamento", titulo: "Lançar certificado", descricao: "Envio individual e em lote." },
+        { chave: "alertas", titulo: "Alertas para TST", descricao: "Pendências agrupadas por empresa." },
+        { chave: "base", titulo: "Base de certificados", descricao: "Lista e revisão dos documentos." },
+    ];
+
     return (
         <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
-            <Header titulo="Treinamentos e certificados" subtitulo="Lançamento de certificados no Supabase, validade e controle automático de status." />
-
-            <Card className="mb-5">
-                <div className="flex flex-col justify-between gap-3 md:flex-row md:items-start">
-                    <div>
-                        <h2 className="text-lg font-bold text-slate-950">Filtros da base de certificados</h2>
-                        <p className="mt-1 text-sm text-slate-500">Pesquise e filtre os certificados sem abrir todos os grupos manualmente.</p>
+            <Header
+                titulo="Treinamentos e certificados"
+                subtitulo="Lançamento de certificados no Supabase, validade e controle automático de status."
+                acao={
+                    <div className="top-actions-nowrap">
+                        <button
+                            type="button"
+                            onClick={() => setMostrarPersonalizarTreinamentos((valor) => !valor)}
+                            className="inline-flex items-center gap-2 rounded-2xl bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 shadow-sm ring-1 ring-slate-200 hover:bg-slate-50"
+                        >
+                            <SlidersHorizontal className="h-4 w-4" />
+                            Personalizar painel
+                        </button>
                     </div>
+                }
+            />
 
-                    <button
-                        type="button"
-                        onClick={() => alternarCardTreinamento("filtros")}
-                        className="inline-flex items-center justify-center rounded-2xl bg-white px-4 py-2 text-xs font-bold text-slate-700 ring-1 ring-slate-200 hover:bg-slate-50"
-                    >
-                        {cardsTreinamentosRecolhidos.filtros ? "Abrir filtros" : "Recolher filtros"}
-                    </button>
-                </div>
-
-                {!cardsTreinamentosRecolhidos.filtros && (
-                    <div className="mt-4 grid gap-3 xl:grid-cols-[1fr_220px]">
-                        <div className="relative">
-                            <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-                            <input
-                                value={buscaCertificados}
-                                onChange={(e) => setBuscaCertificados(e.target.value)}
-                                placeholder="Pesquisar certificados por colaborador, empresa, código, treinamento ou arquivo"
-                                className="w-full rounded-2xl border border-slate-200 bg-white py-3 pl-11 pr-4 text-sm outline-none focus:border-slate-400 focus:ring-4 focus:ring-slate-100"
-                            />
+            {mostrarPersonalizarTreinamentos && (
+                <Card className="mb-5 border-blue-100 bg-blue-50/40">
+                    <div className="treinamentos-personalizacao-dashboard">
+                        <div className="min-w-0">
+                            <div className="min-w-0">
+                                <p className="text-xs font-black uppercase tracking-wide text-blue-700">Personalização</p>
+                                <h2 className="mt-1 text-lg font-black text-slate-950">Painel de Treinamentos e certificados</h2>
+                                <p className="mt-1 text-sm leading-6 text-slate-600">
+                                    Arraste pelo ícone, altere a ordem, visibilidade e tamanho dos blocos principais.
+                                </p>
+                            </div>
+                            <div className="mt-3 flex shrink-0 flex-wrap gap-2 lg:mt-0 lg:justify-end">
+                                <button type="button" onClick={abrirTodosCardsTreinamentos} className="rounded-2xl bg-white px-3 py-2 text-xs font-bold text-slate-700 ring-1 ring-blue-100 hover:bg-blue-50">Abrir todos</button>
+                                <button type="button" onClick={recolherTodosCardsTreinamentos} className="rounded-2xl bg-white px-3 py-2 text-xs font-bold text-slate-700 ring-1 ring-blue-100 hover:bg-blue-50">Recolher todos</button>
+                                <button type="button" onClick={restaurarPainelTreinamentos} className="inline-flex items-center gap-2 rounded-2xl bg-white px-3 py-2 text-xs font-bold text-slate-700 ring-1 ring-blue-100 hover:bg-blue-50">
+                                    <RotateCcw className="h-3.5 w-3.5" />
+                                    Restaurar padrão
+                                </button>
+                            </div>
                         </div>
 
-                        <select
-                            value={filtroStatusCertificados}
-                            onChange={(e) => setFiltroStatusCertificados(e.target.value)}
-                            className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 outline-none focus:border-slate-400 focus:ring-4 focus:ring-slate-100"
-                        >
-                            <option value="Todos">Todos os status</option>
-                            <option value="Pendentes">Pendentes ({totalPorStatusCertificados.pendentes})</option>
-                            <option value="Em dia">Em dia ({totalPorStatusCertificados.emDia})</option>
-                            <option value="A vencer">A vencer ({totalPorStatusCertificados.aVencer})</option>
-                            <option value="Vencido">Vencidos ({totalPorStatusCertificados.vencidos})</option>
-                        </select>
+                        <div className="treinamentos-personalizacao-lista">
+                            {layoutCardsTreinamentos.ordem.map((chave, indice) => {
+                                const opcao = opcoesPainelTreinamentos.find((item) => item.chave === chave);
+                                if (!opcao) return null;
+
+                                const recolhido = cardsTreinamentosRecolhidos[chave];
+                                const tamanhoAtual = layoutCardsTreinamentos.tamanhos[chave] || tamanhosCardsTreinamentosPadrao[chave] || "medio";
+
+                                return (
+                                    <div
+                                        key={opcao.chave}
+                                        draggable
+                                        onDragStart={(evento) => iniciarArrastoCardTreinamento(evento, opcao.chave)}
+                                        onDragOver={(evento) => {
+                                            evento.preventDefault();
+                                            setCardDestinoTreinamento(opcao.chave);
+                                        }}
+                                        onDragLeave={() => setCardDestinoTreinamento("")}
+                                        onDrop={(evento) => soltarCardTreinamento(evento, opcao.chave)}
+                                        onDragEnd={() => {
+                                            setCardArrastandoTreinamento("");
+                                            setCardDestinoTreinamento("");
+                                        }}
+                                        className={`treinamentos-personalizacao-item ${cardArrastandoTreinamento === opcao.chave ? "is-dragging" : ""} ${cardDestinoTreinamento === opcao.chave && cardArrastandoTreinamento !== opcao.chave ? "is-drop-target" : ""}`}
+                                    >
+                                        <div className="treinamentos-personalizacao-item-topo">
+                                            <div className="flex min-w-0 flex-1 items-start gap-3">
+                                                <span className="treinamentos-drag-handle rounded-xl bg-white p-2 text-slate-500 ring-1 ring-blue-100" title="Arraste para mudar a posição">
+                                                    <GripVertical className="h-4 w-4" />
+                                                </span>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => alternarCardTreinamento(opcao.chave)}
+                                                    className="flex min-w-0 flex-1 items-start gap-3 text-left"
+                                                >
+                                                    <span className={recolhido ? "rounded-xl bg-slate-50 p-2 text-slate-500 ring-1 ring-slate-100" : "rounded-xl bg-blue-50 p-2 text-blue-700 ring-1 ring-blue-100"}>
+                                                        {recolhido ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                                                    </span>
+                                                    <span className="min-w-0 flex-1">
+                                                        <span className="block text-sm font-black text-blue-950">#{indice + 1}. {opcao.titulo}</span>
+                                                        <span className="mt-0.5 block text-xs leading-snug text-slate-500">{opcao.descricao}</span>
+                                                    </span>
+                                                </button>
+                                            </div>
+
+                                            <div className="flex shrink-0 flex-wrap justify-end gap-1.5">
+                                                <button
+                                                    type="button"
+                                                    onClick={() => moverCardTreinamento(opcao.chave, -1)}
+                                                    disabled={indice === 0}
+                                                    className="rounded-xl bg-white px-2 py-1 text-xs font-black text-slate-600 ring-1 ring-slate-200 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40"
+                                                    title="Subir card"
+                                                >
+                                                    ↑
+                                                </button>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => moverCardTreinamento(opcao.chave, 1)}
+                                                    disabled={indice === layoutCardsTreinamentos.ordem.length - 1}
+                                                    className="rounded-xl bg-white px-2 py-1 text-xs font-black text-slate-600 ring-1 ring-slate-200 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40"
+                                                    title="Descer card"
+                                                >
+                                                    ↓
+                                                </button>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => alternarCardTreinamento(opcao.chave)}
+                                                    className={recolhido ? "rounded-xl bg-slate-100 px-3 py-1 text-[11px] font-black text-slate-600 ring-1 ring-slate-200" : "rounded-xl bg-blue-100 px-3 py-1 text-[11px] font-black text-blue-700 ring-1 ring-blue-200"}
+                                                >
+                                                    {recolhido ? "RECOLHIDO" : "VISÍVEL"}
+                                                </button>
+                                            </div>
+                                        </div>
+
+                                        <div className="treinamentos-size-grid">
+                                            {opcoesTamanhoCardTreinamento.map((tamanho) => (
+                                                <button
+                                                    key={tamanho.valor}
+                                                    type="button"
+                                                    onClick={() => alterarTamanhoCardTreinamento(opcao.chave, tamanho.valor)}
+                                                    className={tamanhoAtual === tamanho.valor ? "treinamentos-size-option is-active" : "treinamentos-size-option"}
+                                                >
+                                                    {tamanho.label}
+                                                    <span>{tamanho.descricao}</span>
+                                                </button>
+                                            ))}
+                                        </div>
+                                    </div>
+                                );
+                            })}
+                        </div>
                     </div>
-                )}
+                </Card>
+            )}
 
-                {cardsTreinamentosRecolhidos.filtros && (
-                    <p className="mt-4 rounded-2xl bg-slate-50 px-4 py-3 text-sm text-slate-500">
-                        Card recolhido. Clique em Abrir filtros para pesquisar ou alterar o status exibido.
-                    </p>
-                )}
-            </Card>
+            <div className="treinamentos-layout-grid">
+                {layoutCardsTreinamentos.ordem.map((chave, indice) => {
+                    const tamanho = layoutCardsTreinamentos.tamanhos[chave] || tamanhosCardsTreinamentosPadrao[chave] || "medio";
+                    const classePainel = `treinamentos-layout-card treinamentos-layout-card--${tamanho}`;
+                    const estiloPainel = { order: indice };
 
-            <div className="grid items-start gap-6 xl:grid-cols-[0.75fr_1.25fr]">
-                <FormularioLancamentoCertificado
-                    colaboradores={colaboradores}
-                    colabSelecionadoCodigo={colabSelecionadoCodigo}
-                    onAlterarColaboradorCertificado={alterarColaboradorCertificado}
-                    treinamentosDisponiveis={treinamentosDisponiveis}
-                    treinamentoSelecionadoId={treinamentoSelecionadoId}
-                    setTreinamentoId={setTreinamentoId}
-                    avaliacaoSelecionado={avaliacaoSelecionado}
-                    exigenciasAbertas={exigenciasAbertas}
-                    setExigenciasAbertas={setExigenciasAbertas}
-                    dataRealizacao={dataRealizacao}
-                    setDataRealizacao={setDataRealizacao}
-                    vencimento={vencimento}
-                    observacao={observacao}
-                    setObservacao={setObservacao}
-                    arquivoSelecionado={arquivoSelecionado}
-                    selecionarArquivoCertificado={selecionarArquivoCertificado}
-                    sugestaoDataArquivo={sugestaoDataArquivo}
-                    salvandoCertificado={salvandoCertificado}
-                    adicionarTreinamento={adicionarTreinamento}
-                    arquivosLote={arquivosLote}
-                    prepararArquivosLote={prepararArquivosLote}
-                    sincronizarArquivosDoStorage={sincronizarArquivosDoStorage}
-                    sincronizandoStorage={sincronizandoStorage}
-                    resultadoLote={resultadoLote}
-                    colabSelecionado={colabSelecionado}
-                    removerArquivoLote={removerArquivoLote}
-                    alterarColaboradorArquivoLote={alterarColaboradorArquivoLote}
-                    alterarTreinamentoArquivoLote={alterarTreinamentoArquivoLote}
-                    alterarDataArquivoLote={alterarDataArquivoLote}
-                    treinamentosBase={treinamentosBase}
-                    salvarCertificadosEmLote={salvarCertificadosEmLote}
-                    salvandoLote={salvandoLote}
-                    recolhido={cardsTreinamentosRecolhidos.lancamento}
-                    onAlternarRecolhido={() => alternarCardTreinamento("lancamento")}
-                />
+                    if (chave === "filtros") {
+                        return (
+                            <div key={chave} className={classePainel} style={estiloPainel}>
+                                <Card className="h-full">
+                                    <div className="flex flex-col justify-between gap-3 md:flex-row md:items-start">
+                                        <div>
+                                            <h2 className="text-lg font-bold text-slate-950">Filtros da base de certificados</h2>
+                                            <p className="mt-1 text-sm text-slate-500">Pesquise e filtre os certificados sem abrir todos os grupos manualmente.</p>
+                                        </div>
 
-                <div className="space-y-6">
-                    <AlertasTstTreinamentos
-                        alertasTstPorEmpresa={alertasTstPorEmpresa}
-                        enviandoAlertaTst={enviandoAlertaTst}
-                        onEnviarEmailAlertaTstAutomatico={enviarEmailAlertaTstAutomatico}
-                        onCopiarAvisoAlertaTst={copiarAvisoAlertaTst}
-                        recolhido={cardsTreinamentosRecolhidos.alertas}
-                        onAlternarRecolhido={() => alternarCardTreinamento("alertas")}
-                    />
+                                        <button
+                                            type="button"
+                                            onClick={() => alternarCardTreinamento("filtros")}
+                                            className="inline-flex items-center justify-center rounded-2xl bg-white px-4 py-2 text-xs font-bold text-slate-700 ring-1 ring-slate-200 hover:bg-slate-50"
+                                        >
+                                            {cardsTreinamentosRecolhidos.filtros ? "Abrir filtros" : "Recolher filtros"}
+                                        </button>
+                                    </div>
 
-                    <BaseCertificadosTreinamentos
-                        documentos={documentos}
-                        documentosFiltrados={documentosFiltrados}
-                        documentosPorColaborador={documentosPorColaborador}
-                        totalPorStatusCertificados={totalPorStatusCertificados}
-                        gruposCertificadosAbertos={gruposCertificadosAbertos}
-                        setGruposCertificadosAbertos={setGruposCertificadosAbertos}
-                        certificadosAbertos={certificadosAbertos}
-                        setCertificadosAbertos={setCertificadosAbertos}
-                        valoresRevisao={valoresRevisao}
-                        alterarDataRevisao={alterarDataRevisao}
-                        salvarDatasCertificado={salvarDatasCertificado}
-                        salvandoDatasId={salvandoDatasId}
-                        enviarDocumentoPendente={enviarDocumentoPendente}
-                        onVisualizarCertificado={onVisualizarCertificado}
-                        onExcluirCertificado={onExcluirCertificado}
-                        recolhido={cardsTreinamentosRecolhidos.base}
-                        onAlternarRecolhido={() => alternarCardTreinamento("base")}
-                    />
-                </div>
+                                    {!cardsTreinamentosRecolhidos.filtros && (
+                                        <div className="mt-4 grid gap-3 xl:grid-cols-[1fr_220px]">
+                                            <div className="relative">
+                                                <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                                                <input
+                                                    value={buscaCertificados}
+                                                    onChange={(e) => setBuscaCertificados(e.target.value)}
+                                                    placeholder="Pesquisar certificados por colaborador, empresa, código, treinamento ou arquivo"
+                                                    className="w-full rounded-2xl border border-slate-200 bg-white py-3 pl-11 pr-4 text-sm outline-none focus:border-slate-400 focus:ring-4 focus:ring-slate-100"
+                                                />
+                                            </div>
+
+                                            <select
+                                                value={filtroStatusCertificados}
+                                                onChange={(e) => setFiltroStatusCertificados(e.target.value)}
+                                                className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 outline-none focus:border-slate-400 focus:ring-4 focus:ring-slate-100"
+                                            >
+                                                <option value="Todos">Todos os status</option>
+                                                <option value="Pendentes">Pendentes ({totalPorStatusCertificados.pendentes})</option>
+                                                <option value="Em dia">Em dia ({totalPorStatusCertificados.emDia})</option>
+                                                <option value="A vencer">A vencer ({totalPorStatusCertificados.aVencer})</option>
+                                                <option value="Vencido">Vencidos ({totalPorStatusCertificados.vencidos})</option>
+                                            </select>
+                                        </div>
+                                    )}
+
+                                    {cardsTreinamentosRecolhidos.filtros && (
+                                        <p className="mt-4 rounded-2xl bg-slate-50 px-4 py-3 text-sm text-slate-500">
+                                            Card recolhido. Clique em Abrir filtros para pesquisar ou alterar o status exibido.
+                                        </p>
+                                    )}
+                                </Card>
+                            </div>
+                        );
+                    }
+
+                    if (chave === "lancamento") {
+                        return (
+                            <div key={chave} className={classePainel} style={estiloPainel}>
+                                <FormularioLancamentoCertificado
+                                    colaboradores={colaboradores}
+                                    colabSelecionadoCodigo={colabSelecionadoCodigo}
+                                    onAlterarColaboradorCertificado={alterarColaboradorCertificado}
+                                    treinamentosDisponiveis={treinamentosDisponiveis}
+                                    treinamentoSelecionadoId={treinamentoSelecionadoId}
+                                    setTreinamentoId={setTreinamentoId}
+                                    avaliacaoSelecionado={avaliacaoSelecionado}
+                                    exigenciasAbertas={exigenciasAbertas}
+                                    setExigenciasAbertas={setExigenciasAbertas}
+                                    dataRealizacao={dataRealizacao}
+                                    setDataRealizacao={setDataRealizacao}
+                                    vencimento={vencimento}
+                                    observacao={observacao}
+                                    setObservacao={setObservacao}
+                                    arquivoSelecionado={arquivoSelecionado}
+                                    selecionarArquivoCertificado={selecionarArquivoCertificado}
+                                    sugestaoDataArquivo={sugestaoDataArquivo}
+                                    salvandoCertificado={salvandoCertificado}
+                                    adicionarTreinamento={adicionarTreinamento}
+                                    arquivosLote={arquivosLote}
+                                    prepararArquivosLote={prepararArquivosLote}
+                                    sincronizarArquivosDoStorage={sincronizarArquivosDoStorage}
+                                    sincronizandoStorage={sincronizandoStorage}
+                                    resultadoLote={resultadoLote}
+                                    colabSelecionado={colabSelecionado}
+                                    removerArquivoLote={removerArquivoLote}
+                                    alterarColaboradorArquivoLote={alterarColaboradorArquivoLote}
+                                    alterarTreinamentoArquivoLote={alterarTreinamentoArquivoLote}
+                                    alterarDataArquivoLote={alterarDataArquivoLote}
+                                    treinamentosBase={treinamentosBase}
+                                    salvarCertificadosEmLote={salvarCertificadosEmLote}
+                                    salvandoLote={salvandoLote}
+                                    recolhido={cardsTreinamentosRecolhidos.lancamento}
+                                    onAlternarRecolhido={() => alternarCardTreinamento("lancamento")}
+                                />
+                            </div>
+                        );
+                    }
+
+                    if (chave === "alertas") {
+                        return (
+                            <div key={chave} className={classePainel} style={estiloPainel}>
+                                <AlertasTstTreinamentos
+                                    alertasTstPorEmpresa={alertasTstPorEmpresa}
+                                    enviandoAlertaTst={enviandoAlertaTst}
+                                    onEnviarEmailAlertaTstAutomatico={enviarEmailAlertaTstAutomatico}
+                                    onCopiarAvisoAlertaTst={copiarAvisoAlertaTst}
+                                    recolhido={cardsTreinamentosRecolhidos.alertas}
+                                    onAlternarRecolhido={() => alternarCardTreinamento("alertas")}
+                                />
+                            </div>
+                        );
+                    }
+
+                    if (chave === "base") {
+                        return (
+                            <div key={chave} className={classePainel} style={estiloPainel}>
+                                <BaseCertificadosTreinamentos
+                                    documentos={documentos}
+                                    documentosFiltrados={documentosFiltrados}
+                                    documentosPorColaborador={documentosPorColaborador}
+                                    totalPorStatusCertificados={totalPorStatusCertificados}
+                                    gruposCertificadosAbertos={gruposCertificadosAbertos}
+                                    setGruposCertificadosAbertos={setGruposCertificadosAbertos}
+                                    certificadosAbertos={certificadosAbertos}
+                                    setCertificadosAbertos={setCertificadosAbertos}
+                                    valoresRevisao={valoresRevisao}
+                                    alterarDataRevisao={alterarDataRevisao}
+                                    salvarDatasCertificado={salvarDatasCertificado}
+                                    salvandoDatasId={salvandoDatasId}
+                                    enviarDocumentoPendente={enviarDocumentoPendente}
+                                    onVisualizarCertificado={onVisualizarCertificado}
+                                    onExcluirCertificado={onExcluirCertificado}
+                                    recolhido={cardsTreinamentosRecolhidos.base}
+                                    onAlternarRecolhido={() => alternarCardTreinamento("base")}
+                                />
+                            </div>
+                        );
+                    }
+
+                    return null;
+                })}
             </div>
         </motion.div>
     );
