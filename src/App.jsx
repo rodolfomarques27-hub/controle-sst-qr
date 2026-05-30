@@ -12,8 +12,6 @@ import {
     carregarSenhaConfiguracoesSistemaSupabase,
 } from "./constants/configuracoesSegurancaConstants";
 import { estilosGlobais } from "./constants/sstConstants";
-import { SupabaseConfiguracaoPendente } from "./components/commonComponents";
-import { LoginScreen } from "./components/LoginScreen";
 import { validarArquivoAntesUpload } from "./components/FileUploadAviso";
 import { CarregandoTela } from "./components/CarregandoTela";
 import {
@@ -30,9 +28,7 @@ import {
     Plus,
     QrCode,
     Settings,
-    ShieldCheck,
     Users,
-    XCircle,
 } from "lucide-react";
 
 
@@ -40,6 +36,11 @@ const ConsultaQRPublica = React.lazy(() => import("./components/qr/ConsultaQRPub
 const NovaAuditoriaCampoDireta = React.lazy(() => import("./components/auditoria/NovaAuditoriaCampoDireta").then((modulo) => ({ default: modulo.NovaAuditoriaCampoDireta })));
 const AppContentRouter = React.lazy(() => import("./routes/AppContentRouter").then((modulo) => ({ default: modulo.AppContentRouter })));
 const AppLayout = React.lazy(() => import("./components/layout/AppLayout").then((modulo) => ({ default: modulo.AppLayout })));
+const LoginScreen = React.lazy(() => import("./components/LoginScreen").then((modulo) => ({ default: modulo.LoginScreen })));
+const SupabaseConfiguracaoPendente = React.lazy(() => import("./components/commonComponents").then((modulo) => ({ default: modulo.SupabaseConfiguracaoPendente })));
+const AppCarregandoSistema = React.lazy(() => import("./components/layout/AppSystemStates").then((modulo) => ({ default: modulo.AppCarregandoSistema })));
+const AppConsultaPublicaCarregando = React.lazy(() => import("./components/layout/AppSystemStates").then((modulo) => ({ default: modulo.AppConsultaPublicaCarregando })));
+const AppConsultaPublicaErro = React.lazy(() => import("./components/layout/AppSystemStates").then((modulo) => ({ default: modulo.AppConsultaPublicaErro })));
 
 const carregarEmpresasHandlers = () => import("./services/appEmpresasHandlersService");
 const carregarColaboradoresHandlers = () => import("./services/appColaboradoresHandlersService");
@@ -859,17 +860,18 @@ export default function App() {
     };
 
     if (!SUPABASE_CONFIGURADO) {
-        return <SupabaseConfiguracaoPendente />;
+        return (
+            <React.Suspense fallback={<CarregandoTela mensagem="Carregando configuração do Supabase..." />}>
+                <SupabaseConfiguracaoPendente />
+            </React.Suspense>
+        );
     }
 
     if (carregandoSessao) {
         return (
-            <div className="flex min-h-screen items-center justify-center bg-slate-950 text-white">
-                <div className="rounded-3xl bg-white/10 p-6 text-center">
-                    <ShieldCheck className="mx-auto mb-3 h-8 w-8" />
-                    <p className="font-semibold">Carregando sistema...</p>
-                </div>
-            </div>
+            <React.Suspense fallback={<CarregandoTela mensagem="Carregando sistema..." />}>
+                <AppCarregandoSistema />
+            </React.Suspense>
         );
     }
 
@@ -891,26 +893,19 @@ export default function App() {
     if (tokenQrPublico && !usuario) {
         if (carregandoConsultaPublica || carregandoSessao) {
             return (
-                <div className="flex min-h-screen items-center justify-center bg-slate-950 text-white">
-                    <div className="rounded-3xl bg-white/10 p-6 text-center">
-                        <QrCode className="mx-auto mb-3 h-8 w-8" />
-                        <p className="font-semibold">Carregando consulta pública...</p>
-                    </div>
-                </div>
+                <React.Suspense fallback={<CarregandoTela mensagem="Carregando consulta pública..." />}>
+                    <AppConsultaPublicaCarregando />
+                </React.Suspense>
             );
         }
 
         if (erroConsultaPublica || !consultaPublica) {
             return (
-                <div className="flex min-h-screen items-center justify-center bg-slate-100 p-4">
-                    <div className="w-full max-w-lg rounded-[2rem] bg-white p-8 text-center shadow-sm">
-                        <XCircle className="mx-auto mb-3 h-10 w-10 text-red-500" />
-                        <h1 className="text-xl font-bold text-slate-950">QR Code não encontrado</h1>
-                        <p className="mt-2 text-sm text-slate-500">
-                            {erroConsultaPublica || "Não foi possível localizar a consulta pública deste colaborador."}
-                        </p>
-                    </div>
-                </div>
+                <React.Suspense fallback={<CarregandoTela mensagem="Carregando retorno da consulta pública..." />}>
+                    <AppConsultaPublicaErro
+                        mensagem={erroConsultaPublica || "Não foi possível localizar a consulta pública deste colaborador."}
+                    />
+                </React.Suspense>
             );
         }
 
@@ -922,7 +917,11 @@ export default function App() {
     }
 
     if (!usuario) {
-        return <LoginScreen onLogin={setUsuario} />;
+        return (
+            <React.Suspense fallback={<CarregandoTela mensagem="Carregando login..." />}>
+                <LoginScreen onLogin={setUsuario} />
+            </React.Suspense>
+        );
     }
 
 
