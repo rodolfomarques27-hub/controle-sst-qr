@@ -13,6 +13,16 @@ import {
     gerarUrlAssinadaCertificado,
     removerArquivoCertificadoStorage,
 } from "./services/certificadosStorageService";
+import {
+    enviarContratoEmpresaStorage,
+    enviarFotoColaboradorStorage,
+    enviarLogoEmpresaStorage,
+} from "./services/arquivosCadastroService";
+import {
+    excluirDocumentoEmpresaCrud,
+    gerarUrlVisualizacaoDocumentoEmpresa,
+    salvarDocumentoEmpresaCrud,
+} from "./services/empresaDocumentosCrudService";
 import { auditoriaEventoHabilitado } from "./services/auditoriaSistemaConfigService";
 import {
     carregarLimitesCarregamentoSistema,
@@ -785,51 +795,21 @@ export default function App() {
     }, [carregarEmpresas, carregarDocumentosEmpresas]);
 
     async function enviarLogoEmpresa(arquivo, empresaId) {
-        if (!arquivo) return { logoUrl: null, logoNome: null };
-        if (!validarArquivoAntesUpload(arquivo, "fotoAuditoria")) {
-            throw new Error("Arquivo de logo fora do limite configurado.");
-        }
-
-        const nomeSeguro = sanitizarNomeArquivo(arquivo.name);
-        const caminho = `${empresaId || "nova-empresa"}/${Date.now()}-${nomeSeguro}`;
-
-        const { error } = await supabase.storage
-            .from("logos-empresas")
-            .upload(caminho, arquivo, {
-                cacheControl: "3600",
-                upsert: true,
-                contentType: arquivo.type || "image/png",
-            });
-
-        if (error) {
-            throw new Error(`Erro ao enviar logo: ${error.message}`);
-        }
-
-        return { logoUrl: caminho, logoNome: nomeSeguro };
+        return enviarLogoEmpresaStorage({
+            supabase,
+            arquivo,
+            empresaId,
+            validarArquivoAntesUpload,
+        });
     }
 
     async function enviarContratoEmpresa(arquivo, empresaId) {
-        if (!arquivo) return { contratoUrl: null, contratoNome: null };
-        if (!validarArquivoAntesUpload(arquivo, "documentoExtenso")) {
-            throw new Error("Contrato fora do limite configurado.");
-        }
-
-        const nomeSeguro = sanitizarNomeArquivo(arquivo.name);
-        const caminho = `${empresaId || "nova-empresa"}/${Date.now()}-${nomeSeguro}`;
-
-        const { error } = await supabase.storage
-            .from("contratos-empresas")
-            .upload(caminho, arquivo, {
-                cacheControl: "3600",
-                upsert: true,
-                contentType: arquivo.type || "application/pdf",
-            });
-
-        if (error) {
-            throw new Error(`Erro ao enviar contrato: ${error.message}`);
-        }
-
-        return { contratoUrl: caminho, contratoNome: nomeSeguro };
+        return enviarContratoEmpresaStorage({
+            supabase,
+            arquivo,
+            empresaId,
+            validarArquivoAntesUpload,
+        });
     }
 
     async function adicionarEmpresa(novaEmpresa) {
@@ -1077,57 +1057,13 @@ export default function App() {
         setErroBanco("");
 
         try {
-            let arquivoUrl = null;
-            let arquivoNome = novoDoc.arquivo?.name || null;
-
-            if (novoDoc.arquivo) {
-                if (!validarArquivoAntesUpload(novoDoc.arquivo, "documentoExtenso")) {
-                    throw new Error("Documento empresarial fora do limite configurado.");
-                }
-
-                const nomeSeguro = sanitizarNomeArquivo(novoDoc.arquivo.name);
-                const tipoSeguro = sanitizarNomeArquivo(novoDoc.tipo);
-                const caminho = `${novoDoc.empresaId}/${tipoSeguro}-${Date.now()}-${nomeSeguro}`;
-
-                const { error: uploadError } = await supabase.storage
-                    .from("documentos-empresas")
-                    .upload(caminho, novoDoc.arquivo, {
-                        cacheControl: "3600",
-                        upsert: true,
-                        contentType: novoDoc.arquivo.type || "application/pdf",
-                    });
-
-                if (uploadError) {
-                    throw new Error(`Erro no upload do documento: ${uploadError.message}`);
-                }
-
-                arquivoUrl = caminho;
-                arquivoNome = nomeSeguro;
-            }
-
-            const { data, error } = await supabase
-                .from("documentos_empresas")
-                .upsert(
-                    {
-                        empresa_id: novoDoc.empresaId,
-                        tipo_documento: novoDoc.tipo,
-                        data_emissao: novoDoc.dataEmissao,
-                        data_vencimento: novoDoc.dataVencimento,
-                        url_do_arquivo: arquivoUrl,
-                        nome_do_arquivo: arquivoNome,
-                        observacao: novoDoc.observacao || null,
-                        status_validacao: "Validado",
-                    },
-                    { onConflict: "empresa_id,tipo_documento" }
-                )
-                .select("*")
-                .single();
-
-            if (error) {
-                throw new Error(`Erro ao salvar documento: ${error.message}`);
-            }
-
-            const documentoNormalizado = normalizarDocumentoEmpresa(data);
+            const documentoNormalizado = await salvarDocumentoEmpresaCrud({
+                supabase,
+                novoDoc,
+                validarArquivoAntesUpload,
+                sanitizarNomeArquivo,
+                normalizarDocumentoEmpresa,
+            });
 
             setDocumentosEmpresas((atual) => [
                 documentoNormalizado,
@@ -1150,41 +1086,28 @@ export default function App() {
 
         setErroBanco("");
 
-        const { error } = await supabase
-            .from("documentos_empresas")
-            .delete()
-            .eq("id", documento.id);
-
-        if (error) {
-            setErroBanco(`Erro ao remover documento: ${error.message}`);
-            return;
+        try {
+            await excluirDocumentoEmpresaCrud({ supabase, documento });
+            setDocumentosEmpresas((atual) => atual.filter((item) => item.id !== documento.id));
+        } catch (error) {
+            setErroBanco(error.message || "Erro ao remover documento.");
         }
-
-        if ((documento.url_do_arquivo || documento.arquivo_url)) {
-            await supabase.storage.from("documentos-empresas").remove([(documento.url_do_arquivo || documento.arquivo_url)]);
-        }
-
-        setDocumentosEmpresas((atual) => atual.filter((item) => item.id !== documento.id));
     }
 
     async function visualizarDocumentoEmpresa(documento) {
         setErroBanco("");
 
-        if (!(documento?.url_do_arquivo || documento?.arquivo_url)) {
-            setErroBanco("Este documento ainda não possui arquivo anexado para visualização.");
-            return;
+        try {
+            const signedUrl = await gerarUrlVisualizacaoDocumentoEmpresa({
+                supabase,
+                documento,
+                expiracaoSegundos: 60 * 10,
+            });
+
+            window.open(signedUrl, "_blank", "noopener,noreferrer");
+        } catch (error) {
+            setErroBanco(error.message || "Erro ao gerar link de visualização.");
         }
-
-        const { data, error } = await supabase.storage
-            .from("documentos-empresas")
-            .createSignedUrl((documento.url_do_arquivo || documento.arquivo_url), 60 * 10);
-
-        if (error) {
-            setErroBanco(`Erro ao gerar link de visualização: ${error.message}`);
-            return;
-        }
-
-        window.open(data.signedUrl, "_blank", "noopener,noreferrer");
     }
 
     async function obterOuCriarEmpresa(nomeEmpresa) {
@@ -1214,27 +1137,12 @@ export default function App() {
     }
 
     async function enviarFotoColaborador(arquivo, colaboradorId) {
-        if (!arquivo) return { fotoUrl: null, fotoNome: null };
-        if (!validarArquivoAntesUpload(arquivo, "fotoAuditoria")) {
-            throw new Error("Arquivo de imagem fora do limite configurado.");
-        }
-
-        const nomeSeguro = sanitizarNomeArquivo(arquivo.name);
-        const caminho = `${colaboradorId}/${Date.now()}-${nomeSeguro}`;
-
-        const { error } = await supabase.storage
-            .from("fotos-colaboradores")
-            .upload(caminho, arquivo, {
-                cacheControl: "3600",
-                upsert: true,
-                contentType: arquivo.type || "image/png",
-            });
-
-        if (error) {
-            throw new Error(`Erro ao enviar foto do colaborador: ${error.message}`);
-        }
-
-        return { fotoUrl: caminho, fotoNome: nomeSeguro };
+        return enviarFotoColaboradorStorage({
+            supabase,
+            arquivo,
+            colaboradorId,
+            validarArquivoAntesUpload,
+        });
     }
 
     async function salvarCertificadosEmMassaColaborador(colaborador, arquivos = []) {
