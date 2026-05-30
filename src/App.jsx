@@ -6,30 +6,28 @@ import {
     abrirArquivoStorage,
 } from "./services/supabaseServices";
 import {
-    enviarArquivoCertificado,
-    removerArquivoCertificadoStorage,
-} from "./services/certificadosStorageService";
+    carregarEmpresasAppService,
+    carregarDocumentosEmpresasAppService,
+    enviarLogoEmpresaAppService,
+    enviarContratoEmpresaAppService,
+    adicionarEmpresaAppService,
+    atualizarEmpresaAppService,
+    excluirEmpresaAppService,
+    adicionarDocumentoEmpresaAppService,
+    excluirDocumentoEmpresaAppService,
+    visualizarDocumentoEmpresaAppService,
+    obterOuCriarEmpresaAppService,
+} from "./services/appEmpresasHandlersService";
 import {
-    enviarContratoEmpresaStorage,
-    enviarFotoColaboradorStorage,
-    enviarLogoEmpresaStorage,
-} from "./services/arquivosCadastroService";
-import {
-    excluirDocumentoEmpresaCrud,
-    gerarUrlVisualizacaoDocumentoEmpresa,
-    salvarDocumentoEmpresaCrud,
-} from "./services/empresaDocumentosCrudService";
-import {
-    adicionarEmpresaCrud,
-    atualizarEmpresaCrud,
-    excluirEmpresaCrud,
-    obterOuCriarEmpresaCrud,
-} from "./services/empresasCrudService";
-import {
-    adicionarColaboradorCrud,
-    atualizarColaboradorCrud,
-    excluirColaboradorCrud,
-} from "./services/colaboradoresCrudService";
+    carregarColaboradoresAppService,
+    enviarFotoColaboradorAppService,
+    salvarCertificadosEmMassaColaboradorAppService,
+    adicionarColaboradorAppService,
+    atualizarColaboradorAppService,
+    excluirColaboradorAppService,
+    selecionarColaboradorAppService,
+    abrirEnvioTreinamentoAppService,
+} from "./services/appColaboradoresHandlersService";
 import {
     atualizarDatasCertificadoCrud,
     excluirCertificadoTreinamentoCrud,
@@ -305,32 +303,18 @@ export default function App() {
     }, []);
 
     const carregarEmpresas = useCallback(async () => {
-        const { data, error } = await supabase
-            .from("empresas")
-            .select("id, nome, cnpj, responsavel, email, telefone, responsavel_auditoria, email_auditoria, whatsapp_auditoria, receber_auditoria, status, tipo_empresa, logo_url, logo_nome, contrato_url, contrato_nome, numero_contrato, data_inicio_contrato, data_fim_contrato, responsavel_contratante, tst_responsavel, tst_email, tst_whatsapp, escopo_servico, observacao_status, empresa_pai_id")
-            .order("nome", { ascending: true });
-
-        if (error) {
-            throw new Error(`Erro ao carregar empresas: ${error.message}`);
-        }
-
-        setEmpresasBanco(data || []);
-        return data || [];
+        return carregarEmpresasAppService({
+            supabase,
+            setEmpresasBanco,
+        });
     }, []);
 
     const carregarDocumentosEmpresas = useCallback(async () => {
-        const { data, error } = await supabase
-            .from("documentos_empresas")
-            .select("*")
-            .order("created_at", { ascending: false });
-
-        if (error) {
-            throw new Error(`Erro ao carregar documentos das empresas: ${error.message}`);
-        }
-
-        const normalizados = (data || []).map(normalizarDocumentoEmpresa);
-        setDocumentosEmpresas(normalizados);
-        return normalizados;
+        return carregarDocumentosEmpresasAppService({
+            supabase,
+            normalizarDocumentoEmpresa,
+            setDocumentosEmpresas,
+        });
     }, []);
 
     const carregarAuditoria = useCallback(async () => {
@@ -625,119 +609,19 @@ export default function App() {
     };
 
     const carregarColaboradores = useCallback(async () => {
-        setCarregandoBanco(true);
-        setErroBanco("");
-
-        try {
-            const empresas = await carregarEmpresas();
-            await carregarDocumentosEmpresas();
-
-            const { data, error } = await supabase
-                .from("colaboradores")
-                .select(`
-          id,
-          nome,
-          funcao,
-          matricula,
-          codigo_funcionario,
-          status_mobilizacao,
-          data_nascimento,
-          mostrar_aniversario_dashboard,
-          treinamentos_removidos,
-          treinamentos_adicionais,
-          foto_url,
-          foto_nome,
-          token_qr,
-          status,
-          empresa_id,
-          empresas (
-            id,
-            nome,
-            tipo_empresa,
-            empresa_pai_id,
-            tst_responsavel,
-            tst_email,
-            tst_whatsapp,
-            email_auditoria,
-            whatsapp_auditoria,
-            responsavel_auditoria
-          )
-        `)
-                .order("created_at", { ascending: false });
-
-            if (error) {
-                throw new Error(`Erro ao carregar colaboradores: ${error.message}`);
-            }
-
-            const empresasPorId = (empresas || []).reduce((acc, empresa) => {
-                acc[empresa.id] = empresa;
-                return acc;
-            }, {});
-
-            const normalizados = (data || []).map((item) => {
-                const colaborador = normalizarColaborador(item);
-                const empresaAtual = empresasPorId[colaborador.empresaId] || null;
-                const empresaPai = empresaAtual?.empresa_pai_id ? empresasPorId[empresaAtual.empresa_pai_id] : null;
-                const ehSubcontratada = Boolean(empresaPai);
-
-                return {
-                    ...colaborador,
-                    empresaTipo: empresaAtual?.tipo_empresa || colaborador.empresaTipo || "",
-                    empresaPaiId: empresaAtual?.empresa_pai_id || colaborador.empresaPaiId || null,
-                    empresaPaiNome: empresaPai?.nome || colaborador.empresaPaiNome || "",
-                    empresaTstResponsavel: empresaAtual?.tst_responsavel || empresaPai?.tst_responsavel || "",
-                    empresaTstEmail: empresaAtual?.tst_email || empresaPai?.tst_email || "",
-                    empresaTstWhatsapp: empresaAtual?.tst_whatsapp || empresaPai?.tst_whatsapp || "",
-                    empresaEmailAuditoria: empresaAtual?.email_auditoria || empresaPai?.email_auditoria || empresaAtual?.email || empresaPai?.email || "",
-                    empresaWhatsappAuditoria: empresaAtual?.whatsapp_auditoria || empresaPai?.whatsapp_auditoria || empresaAtual?.telefone || empresaPai?.telefone || "",
-                    empresaExibicao: ehSubcontratada
-                        ? `${empresaPai.nome} / Subcontratada: ${empresaAtual.nome}`
-                        : colaborador.empresa,
-                };
-            });
-
-            const idsColaboradores = normalizados.map((colaborador) => colaborador.id);
-            let certificadosPorColaborador = {};
-
-            if (idsColaboradores.length > 0) {
-                const { data: certificadosData, error: certificadosError } = await supabase
-                    .from("certificados")
-                    .select("*")
-                    .in("colaborador_id", idsColaboradores)
-                    .order("created_at", { ascending: false });
-
-                if (certificadosError) {
-                    throw new Error(`Erro ao carregar certificados: ${certificadosError.message}`);
-                }
-
-                certificadosPorColaborador = (certificadosData || []).reduce((acc, item) => {
-                    const certificado = normalizarCertificado(item);
-                    if (!acc[certificado.colaboradorId]) acc[certificado.colaboradorId] = [];
-                    acc[certificado.colaboradorId].push(certificado);
-                    return acc;
-                }, {});
-            }
-
-            const colaboradoresComCertificados = normalizados.map((colaborador) => ({
-                ...colaborador,
-                treinamentos: certificadosPorColaborador[colaborador.id] || [],
-            }));
-
-            setColaboradores(colaboradoresComCertificados);
-            setColaboradorSelecionado((atual) => atual || colaboradoresComCertificados[0] || null);
-
-            if (colaboradoresComCertificados.length === 0 && empresas.length === 0) {
-                setColaboradores([]);
-            }
-        } catch (error) {
-            setErroBanco(error.message || "Erro ao conectar ao banco de dados.");
-        } finally {
-            setCarregandoBanco(false);
-        }
+        return carregarColaboradoresAppService({
+            supabase,
+            carregarEmpresas,
+            carregarDocumentosEmpresas,
+            setCarregandoBanco,
+            setErroBanco,
+            setColaboradores,
+            setColaboradorSelecionado,
+        });
     }, [carregarEmpresas, carregarDocumentosEmpresas]);
 
     async function enviarLogoEmpresa(arquivo, empresaId) {
-        return enviarLogoEmpresaStorage({
+        return enviarLogoEmpresaAppService({
             supabase,
             arquivo,
             empresaId,
@@ -746,7 +630,7 @@ export default function App() {
     }
 
     async function enviarContratoEmpresa(arquivo, empresaId) {
-        return enviarContratoEmpresaStorage({
+        return enviarContratoEmpresaAppService({
             supabase,
             arquivo,
             empresaId,
@@ -755,82 +639,40 @@ export default function App() {
     }
 
     async function adicionarEmpresa(novaEmpresa) {
-        setErroBanco("");
-
-        try {
-            const empresaCadastrada = await adicionarEmpresaCrud({
-                supabase,
-                novaEmpresa,
-                empresasBanco,
-                enviarLogoEmpresa,
-                enviarContratoEmpresa,
-            });
-
-            setEmpresasBanco((atual) => [empresaCadastrada, ...atual].sort((a, b) => a.nome.localeCompare(b.nome)));
-            return true;
-        } catch (error) {
-            setErroBanco(error.message || "Erro ao cadastrar empresa.");
-            return false;
-        }
+        return adicionarEmpresaAppService({
+            supabase,
+            novaEmpresa,
+            empresasBanco,
+            enviarLogoEmpresa,
+            enviarContratoEmpresa,
+            setErroBanco,
+            setEmpresasBanco,
+        });
     }
 
     async function atualizarEmpresa(empresaAtualizada) {
-        setErroBanco("");
-
-        try {
-            const empresaAtualizadaBanco = await atualizarEmpresaCrud({
-                supabase,
-                empresaAtualizada,
-                enviarLogoEmpresa,
-                enviarContratoEmpresa,
-            });
-
-            setEmpresasBanco((atual) =>
-                atual.map((empresa) => (empresa.id === empresaAtualizadaBanco.id ? empresaAtualizadaBanco : empresa)).sort((a, b) => a.nome.localeCompare(b.nome))
-            );
-
-            setColaboradores((atual) =>
-                atual.map((colaborador) =>
-                    colaborador.empresaId === empresaAtualizadaBanco.id ? { ...colaborador, empresa: empresaAtualizadaBanco.nome } : colaborador
-                )
-            );
-
-            return true;
-        } catch (error) {
-            setErroBanco(error.message || "Erro ao atualizar empresa.");
-            return false;
-        }
+        return atualizarEmpresaAppService({
+            supabase,
+            empresaAtualizada,
+            enviarLogoEmpresa,
+            enviarContratoEmpresa,
+            setErroBanco,
+            setEmpresasBanco,
+            setColaboradores,
+        });
     }
 
     async function excluirEmpresa(empresa) {
-        setErroBanco("");
-
-        try {
-            const resultado = await excluirEmpresaCrud({
-                supabase,
-                empresa,
-                colaboradores,
-            });
-
-            const nomeEmpresaNormalizado = resultado.nomeEmpresaNormalizado;
-
-            setEmpresasBanco((atual) => atual.filter((item) => String(item.id) !== String(empresa.id)));
-            setDocumentosEmpresas((atual) => atual.filter((doc) => String(doc.empresa_id || doc.empresaId || "") !== String(empresa.id)));
-            setColaboradores((atual) => atual.filter((colaborador) => {
-                const mesmoId = String(colaborador.empresaId || colaborador.empresa_id || "") === String(empresa.id);
-                const mesmoNome = nomeEmpresaNormalizado && resultado.normalizarNomeEmpresa(colaborador.empresa || colaborador.empresaExibicao || "") === nomeEmpresaNormalizado;
-                return !(mesmoId || mesmoNome);
-            }));
-
-            alert(resultado.mensagem || `Empresa ${empresa.nome || "selecionada"} excluída com sucesso.`);
-            await carregarColaboradores();
-            return true;
-        } catch (error) {
-            setErroBanco(error.message || "Erro ao excluir empresa.");
-            alert(error.message || "Erro ao excluir empresa.");
-            await carregarColaboradores();
-            return false;
-        }
+        return excluirEmpresaAppService({
+            supabase,
+            empresa,
+            colaboradores,
+            carregarColaboradores,
+            setErroBanco,
+            setEmpresasBanco,
+            setDocumentosEmpresas,
+            setColaboradores,
+        });
     }
 
     const atualizarInformacoesDashboardSst = useCallback(async () => {
@@ -856,78 +698,45 @@ export default function App() {
     }, [carregarAuditoria, carregarAuditoriasCampo, carregarColaboradores, registrarAuditoria]);
 
     async function adicionarDocumentoEmpresa(novoDoc) {
-        setErroBanco("");
-
-        try {
-            const documentoNormalizado = await salvarDocumentoEmpresaCrud({
-                supabase,
-                novoDoc,
-                validarArquivoAntesUpload,
-                sanitizarNomeArquivo,
-                normalizarDocumentoEmpresa,
-            });
-
-            setDocumentosEmpresas((atual) => [
-                documentoNormalizado,
-                ...atual.filter(
-                    (item) => !(item.empresa_id === documentoNormalizado.empresa_id && item.tipo_documento === documentoNormalizado.tipo_documento)
-                ),
-            ]);
-
-            return true;
-        } catch (error) {
-            setErroBanco(error.message || "Erro ao salvar documento da empresa.");
-            return false;
-        }
+        return adicionarDocumentoEmpresaAppService({
+            supabase,
+            novoDoc,
+            validarArquivoAntesUpload,
+            sanitizarNomeArquivo,
+            normalizarDocumentoEmpresa,
+            setErroBanco,
+            setDocumentosEmpresas,
+        });
     }
 
     async function excluirDocumentoEmpresa(documento) {
-        const confirmar = window.confirm(`Deseja excluir definitivamente o documento ${documento.tipo_documento} desta empresa?`);
-
-        if (!confirmar) return;
-
-        setErroBanco("");
-
-        try {
-            await excluirDocumentoEmpresaCrud({ supabase, documento });
-            setDocumentosEmpresas((atual) => atual.filter((item) => item.id !== documento.id));
-        } catch (error) {
-            setErroBanco(error.message || "Erro ao remover documento.");
-        }
+        return excluirDocumentoEmpresaAppService({
+            supabase,
+            documento,
+            setErroBanco,
+            setDocumentosEmpresas,
+        });
     }
 
     async function visualizarDocumentoEmpresa(documento) {
-        setErroBanco("");
-
-        try {
-            const signedUrl = await gerarUrlVisualizacaoDocumentoEmpresa({
-                supabase,
-                documento,
-                expiracaoSegundos: 60 * 10,
-            });
-
-            window.open(signedUrl, "_blank", "noopener,noreferrer");
-        } catch (error) {
-            setErroBanco(error.message || "Erro ao gerar link de visualização.");
-        }
+        return visualizarDocumentoEmpresaAppService({
+            supabase,
+            documento,
+            setErroBanco,
+        });
     }
 
     async function obterOuCriarEmpresa(nomeEmpresa) {
-        const resultado = await obterOuCriarEmpresaCrud({
+        return obterOuCriarEmpresaAppService({
             supabase,
             nomeEmpresa,
             empresasBanco,
+            setEmpresasBanco,
         });
-
-        if (resultado.criada) {
-            setEmpresasBanco((atual) => [...atual, resultado.empresa].sort((a, b) => a.nome.localeCompare(b.nome)));
-        }
-
-        return resultado.empresa;
     }
 
     async function enviarFotoColaborador(arquivo, colaboradorId) {
-        return enviarFotoColaboradorStorage({
+        return enviarFotoColaboradorAppService({
             supabase,
             arquivo,
             colaboradorId,
@@ -936,145 +745,37 @@ export default function App() {
     }
 
     async function salvarCertificadosEmMassaColaborador(colaborador, arquivos = []) {
-        const analise = analisarArquivosTreinamentoMassa(arquivos);
-        const reconhecidos = analise.filter((item) => item.reconhecido);
-        const ignorados = analise.filter((item) => !item.reconhecido);
-
-        for (const item of reconhecidos) {
-            const treinamento = item.treinamento;
-            const arquivo = await enviarArquivoCertificado({
-                supabase,
-                arquivo: item.arquivo,
-                colaborador,
-                treinamentoId: treinamento.id,
-            });
-
-            const payload = {
-                colaborador_id: colaborador.id,
-                tipo_treinamento: treinamento.nome,
-                treinamento_codigo: Number(treinamento.id),
-                nome_treinamento: treinamento.nome,
-                data_realizacao: item.dataRealizacao,
-                data_vencimento: item.dataVencimento,
-                arquivo_url: arquivo.arquivoUrl,
-                arquivo_nome: item.arquivo.name,
-                observacao: "Enviado em massa no cadastro do colaborador",
-                status_validacao: "Validado",
-            };
-
-            const { data: existentes, error: buscaError } = await supabase
-                .from("certificados")
-                .select("*")
-                .eq("colaborador_id", colaborador.id)
-                .eq("tipo_treinamento", treinamento.nome)
-                .order("created_at", { ascending: false })
-                .limit(1);
-
-            if (buscaError) {
-                throw new Error(`Erro ao verificar certificado existente: ${buscaError.message}`);
-            }
-
-            const existente = existentes?.[0] || null;
-            const consulta = existente?.id
-                ? supabase.from("certificados").update(payload).eq("id", existente.id)
-                : supabase.from("certificados").insert(payload);
-
-            const { error } = await consulta;
-
-            if (error) {
-                throw new Error(`Erro ao salvar ${item.arquivo.name}: ${error.message}`);
-            }
-
-            if ((existente?.url_do_arquivo || existente?.arquivo_url) && (existente.url_do_arquivo || existente.arquivo_url) !== arquivo.arquivoUrl) {
-                await removerArquivoCertificadoStorage({
-                    supabase,
-                    caminho: existente.url_do_arquivo || existente.arquivo_url,
-                });
-            }
-        }
-
-        return {
-            reconhecidos: reconhecidos.length,
-            ignorados: ignorados.map((item) => item.nomeArquivo),
-        };
+        return salvarCertificadosEmMassaColaboradorAppService({
+            supabase,
+            colaborador,
+            arquivos,
+        });
     }
 
     async function adicionarColaborador(novo) {
-        setErroBanco("");
-
-        try {
-            const empresaCriada = await obterOuCriarEmpresa(novo.empresaNome);
-            const { colaborador, resultadoMassa } = await adicionarColaboradorCrud({
-                supabase,
-                novo,
-                empresa: empresaCriada,
-                enviarFotoColaborador,
-                salvarCertificadosEmMassaColaborador,
-            });
-
-            await carregarColaboradores();
-
-            setColaboradorSelecionado((atual) => atual || colaborador);
-
-            if (resultadoMassa) {
-                const mensagemIgnorados = resultadoMassa.ignorados.length
-                    ? [
-                        "",
-                        "",
-                        "Arquivos não reconhecidos:",
-                        ...resultadoMassa.ignorados.map((nomeArquivo) => `- ${nomeArquivo}`),
-                    ].join(String.fromCharCode(10))
-                    : "";
-
-                alert(
-                    `Colaborador cadastrado. ${resultadoMassa.reconhecidos} documento(s) de treinamento foram vinculados automaticamente.${mensagemIgnorados}`
-                );
-            }
-
-            return true;
-        } catch (error) {
-            setErroBanco(error.message || "Erro ao cadastrar colaborador.");
-            return false;
-        }
+        return adicionarColaboradorAppService({
+            supabase,
+            novo,
+            obterOuCriarEmpresa,
+            enviarFotoColaborador,
+            salvarCertificadosEmMassaColaborador,
+            carregarColaboradores,
+            setErroBanco,
+            setColaboradorSelecionado,
+        });
     }
 
     async function atualizarColaborador(colaboradorAtualizado) {
-        setErroBanco("");
-
-        try {
-            const empresaCriada = await obterOuCriarEmpresa(colaboradorAtualizado.empresaNome);
-            const colaborador = await atualizarColaboradorCrud({
-                supabase,
-                colaboradorAtualizado,
-                empresa: empresaCriada,
-                enviarFotoColaborador,
-            });
-
-            setColaboradores((atual) =>
-                atual.map((item) =>
-                    item.id === colaborador.id
-                        ? {
-                            ...item,
-                            ...colaborador,
-                            treinamentos: item.treinamentos || colaborador.treinamentos || [],
-                        }
-                        : item
-                )
-            );
-
-            if (colaboradorSelecionado?.id === colaborador.id) {
-                setColaboradorSelecionado((atual) => ({
-                    ...atual,
-                    ...colaborador,
-                    treinamentos: atual?.treinamentos || colaborador.treinamentos || [],
-                }));
-            }
-
-            return true;
-        } catch (error) {
-            setErroBanco(error.message || "Erro ao atualizar colaborador.");
-            return false;
-        }
+        return atualizarColaboradorAppService({
+            supabase,
+            colaboradorAtualizado,
+            colaboradorSelecionado,
+            obterOuCriarEmpresa,
+            enviarFotoColaborador,
+            setErroBanco,
+            setColaboradores,
+            setColaboradorSelecionado,
+        });
     }
 
     async function sincronizarCertificadosDoStorage() {
@@ -1303,24 +1004,15 @@ export default function App() {
     }
 
     async function excluirColaborador(colaborador) {
-        const confirmar = window.confirm(`Deseja realmente excluir o colaborador ${colaborador.nome}?`);
-
-        if (!confirmar) return;
-
-        setErroBanco("");
-
-        try {
-            await excluirColaboradorCrud({ supabase, colaborador });
-
-            setColaboradores((atual) => atual.filter((item) => item.id !== colaborador.id));
-
-            if (colaboradorSelecionado?.id === colaborador.id) {
-                const restante = colaboradores.filter((item) => item.id !== colaborador.id);
-                setColaboradorSelecionado(restante[0] || null);
-            }
-        } catch (error) {
-            setErroBanco(error.message || "Erro ao excluir colaborador.");
-        }
+        return excluirColaboradorAppService({
+            supabase,
+            colaborador,
+            colaboradores,
+            colaboradorSelecionado,
+            setErroBanco,
+            setColaboradores,
+            setColaboradorSelecionado,
+        });
     }
 
     useEffect(() => {
@@ -1489,16 +1181,20 @@ export default function App() {
     ];
 
     const selecionarColaborador = (c) => {
-        setColaboradorSelecionado(c);
-        setTela("qr");
-        registrarAuditoria("ACESSO_QR_INTERNO", "colaboradores", `Abriu consulta QR interna de ${c?.nome || "colaborador"}`, c?.id, {
-            codigoFuncionario: c?.codigoFuncionario || null,
+        selecionarColaboradorAppService({
+            colaborador: c,
+            setColaboradorSelecionado,
+            setTela,
+            registrarAuditoria,
         });
     };
 
     const abrirEnvioTreinamento = (c) => {
-        setColaboradorSelecionado(c);
-        setTela("treinamentos");
+        abrirEnvioTreinamentoAppService({
+            colaborador: c,
+            setColaboradorSelecionado,
+            setTela,
+        });
     };
 
     const sair = async () => {
