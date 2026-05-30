@@ -59,7 +59,6 @@ import {
     rotuloPontuacaoAuditoriaCampo,
     calcularResultadoAuditoriaCampo,
     classeClassificacaoAuditoriaCampo,
-    normalizarAuditoriaCampo,
     identificarAlvoAuditoriaCampo,
     fotosAuditoriaCampo,
     auditoriaCampoAberta,
@@ -136,6 +135,8 @@ import {
     baixarPDF,
 } from "./services/exportacaoService";
 import { reduzirFotoParaAuditoria } from "./services/imagemService";
+import { normalizarRegistrosAuditoriasCampo } from "./services/appHelpersService";
+import { CarregandoTela } from "./components/CarregandoTela";
 import {
     normalizarTextoBusca,
     normalizarDataAniversario,
@@ -215,45 +216,6 @@ const ConfiguracoesSistema = React.lazy(() => import("./components/configuracoes
 const hoje = new Date();
 
 
-function CarregandoTela({ mensagem = "Carregando tela..." }) {
-    return (
-        <div className="flex min-h-[320px] items-center justify-center rounded-3xl bg-white p-8 text-slate-600 shadow-sm">
-            <div className="text-center">
-                <RefreshCw className="mx-auto mb-3 h-6 w-6 animate-spin" />
-                <p className="text-sm font-semibold">{mensagem}</p>
-            </div>
-        </div>
-    );
-}
-
-
-
-function emailTstDaEmpresa(colaborador) {
-    return normalizarEmailDestinatario(colaborador?.empresaTstEmail || "");
-}
-
-function registroAuditoriaCampoTemConteudo(item = {}) {
-    return Boolean(
-        item.numero_auditoria ||
-        item.tipo_auditoria ||
-        item.titulo ||
-        item.area ||
-        item.local ||
-        item.maquina_equipamento ||
-        item.situacao_encontrada
-    );
-}
-
-function normalizarRegistrosAuditoriasCampo(registros = []) {
-    return (registros || [])
-        .filter(registroAuditoriaCampoTemConteudo)
-        .map((item) =>
-            normalizarAuditoriaCampo({
-                ...item,
-                desvios: Array.isArray(item.desvios) ? item.desvios : [],
-            })
-        );
-}
 
 
 
@@ -2848,198 +2810,198 @@ export default function App() {
 
                 <main className="app-main">
                     <div className="app-content">
-                    <div className="mb-5 flex min-w-0 items-center justify-between gap-3 rounded-3xl bg-white p-3 shadow-sm lg:hidden">
-                        <div className="flex items-center gap-2 font-bold">
-                            <ShieldCheck className="h-5 w-5" />
-                            Controle SST QR
+                        <div className="mb-5 flex min-w-0 items-center justify-between gap-3 rounded-3xl bg-white p-3 shadow-sm lg:hidden">
+                            <div className="flex items-center gap-2 font-bold">
+                                <ShieldCheck className="h-5 w-5" />
+                                Controle SST QR
+                            </div>
+
+                            <select
+                                value={tela}
+                                onChange={(e) => {
+                                    setTela(e.target.value);
+                                    registrarAuditoria("ACESSO_TELA", "navegacao", `Acessou a tela: ${e.target.value}`);
+                                }}
+                                className="rounded-2xl border border-slate-200 bg-white px-3 py-2 text-sm"
+                            >
+                                {nav.map((n) => (
+                                    <option key={n.id} value={n.id}>
+                                        {n.label}
+                                    </option>
+                                ))}
+                            </select>
                         </div>
 
-                        <select
-                            value={tela}
-                            onChange={(e) => {
-                                setTela(e.target.value);
-                                registrarAuditoria("ACESSO_TELA", "navegacao", `Acessou a tela: ${e.target.value}`);
-                            }}
-                            className="rounded-2xl border border-slate-200 bg-white px-3 py-2 text-sm"
-                        >
-                            {nav.map((n) => (
-                                <option key={n.id} value={n.id}>
-                                    {n.label}
-                                </option>
-                            ))}
-                        </select>
-                    </div>
-
-                    <React.Suspense fallback={<CarregandoTela mensagem="Carregando módulo..." />}>
-                        {tela === "dashboard" && (
-                            <Dashboard
-                                colaboradores={colaboradores}
-                                empresasBanco={empresasBanco}
-                                documentosEmpresas={documentosEmpresas}
-                                auditoria={auditoria}
-                                auditoriasCampo={auditoriasCampo}
-                                onSelectColab={selecionarColaborador}
-                                onRegistrarEmailEnviado={registrarEmailEnviado}
-                                onAtualizarInformacoes={atualizarInformacoesDashboardSst}
-                                atualizandoInformacoes={atualizandoDashboardSst}
-                            />
-                        )}
-
-                        {tela === "novaAuditoriaCampo" && (
-                            <NovaAuditoriaCampoDireta
-                                usuario={usuario}
-                                empresasBanco={empresasBanco}
-                                onAuditoriaSalva={(novaAuditoria) => {
-                                    setAuditoriasCampoCarregadas(true);
-                                    setAuditoriasCampo((atual) => [novaAuditoria, ...atual]);
-                                }}
-                            />
-                        )}
-
-                        {tela === "auditoriaCampo" && (
-                            <DashboardAuditoriaCampo
-                                auditoriasCampo={auditoriasCampo}
-                                carregando={carregandoAuditoriasCampo}
-                                erro={erroAuditoriasCampo}
-                                onRecarregar={carregarAuditoriasCampo}
-                                onCarregarMaisAuditoriasCampo={carregarMaisAuditoriasCampo}
-                                carregandoMaisAuditoriasCampo={carregandoMaisAuditoriasCampo}
-                                existeMaisAuditoriasCampo={existeMaisAuditoriasCampo}
-                                limiteQrcodesCampo={limitesCarregamentoSistema.qrcodesCampo}
-                                onAuditoriaAtualizada={(atualizada) =>
-                                    setAuditoriasCampo((atual) =>
-                                        atualizada?.excluida
-                                            ? atual.filter((item) => item.id !== atualizada.id)
-                                            : atual.map((item) => item.id === atualizada.id ? atualizada : item)
-                                    )
-                                }
-                            />
-                        )}
-
-                        {tela === "empresas" && (
-                            <Empresas
-                                empresasBanco={empresasBanco}
-                                documentosEmpresas={documentosEmpresas}
-                                colaboradores={colaboradores}
-                                carregandoBanco={carregandoBanco}
-                                erroBanco={erroBanco}
-                                onAtualizarBanco={carregarColaboradores}
-                                onAdicionarEmpresa={adicionarEmpresa}
-                                onAtualizarEmpresa={atualizarEmpresa}
-                                onExcluirEmpresa={excluirEmpresa}
-                                onAdicionarDocumentoEmpresa={adicionarDocumentoEmpresa}
-                                onExcluirDocumentoEmpresa={excluirDocumentoEmpresa}
-                                onVisualizarDocumentoEmpresa={visualizarDocumentoEmpresa}
-                            />
-                        )}
-
-                        {tela === "colaboradores" && (
-                            <Colaboradores
-                                colaboradores={colaboradores}
-                                empresasBanco={empresasBanco}
-                                carregandoBanco={carregandoBanco}
-                                erroBanco={erroBanco}
-                                onAtualizarBanco={carregarColaboradores}
-                                onAdicionarColaborador={adicionarColaborador}
-                                onAtualizarColaborador={atualizarColaborador}
-                                onExcluirColaborador={excluirColaborador}
-                                onSelectColab={selecionarColaborador}
-                                onEnviarTreinamento={abrirEnvioTreinamento}
-                            />
-                        )}
-
-                        {tela === "aniversariantes" && (
-                            <Aniversariantes
-                                colaboradores={colaboradores}
-                                empresasBanco={empresasBanco}
-                            />
-                        )}
-
-                        {tela === "treinamentos" && (
-                            <Treinamentos
-                                key={colaboradorSelecionado?.id || "treinamentos"}
-                                colaboradores={colaboradores}
-                                colaboradorInicialId={colaboradorSelecionado?.id}
-                                onSalvarCertificado={salvarCertificadoTreinamento}
-                                onVisualizarCertificado={visualizarCertificadoTreinamento}
-                                onExcluirCertificado={excluirCertificadoTreinamento}
-                                onAtualizarDatasCertificado={atualizarDatasCertificado}
-                                onSincronizarStorage={sincronizarCertificadosDoStorage}
-                                onRegistrarEmailEnviado={registrarEmailEnviado}
-                            />
-                        )}
-
-                        {tela === "qr" && (
-                            <ConsultaQR
-                                colaborador={colaboradorSelecionado}
-                                colaboradores={colaboradores}
-                                onSelecionarColaborador={setColaboradorSelecionado}
-                            />
-                        )}
-
-                        {tela === "auditoria" && (
-                            verificandoAcessoAuditoria ? (
-                                <Card>
-                                    <div className="flex items-center gap-3 text-sm font-semibold text-slate-600">
-                                        <RefreshCw className="h-4 w-4 animate-spin" />
-                                        Verificando permissão da Auditoria de sistema...
-                                    </div>
-                                </Card>
-                            ) : !podeAcessarAuditoria ? (
-                                <AuditoriaAcessoNegado />
-                            ) : (
-                                <RelatorioAuditoria
+                        <React.Suspense fallback={<CarregandoTela mensagem="Carregando módulo..." />}>
+                            {tela === "dashboard" && (
+                                <Dashboard
+                                    colaboradores={colaboradores}
+                                    empresasBanco={empresasBanco}
+                                    documentosEmpresas={documentosEmpresas}
                                     auditoria={auditoria}
-                                    emailsEnviados={emailsEnviados}
-                                    carregando={carregandoAuditoria}
-                                    carregandoMaisAuditoria={carregandoMaisAuditoria}
-                                    existeMaisAuditoria={existeMaisAuditoria}
-                                    onAtualizar={async () => { await carregarAuditoria(); await carregarEmailsEnviados(); await carregarAuditoriasCampo(); }}
-                                    onCarregarMaisAuditoria={carregarMaisAuditoria}
-                                    onListarArquivosStorage={listarArquivosCertificadosStorage}
-                                    onExcluirArquivoStorage={excluirArquivoCertificadoStorage}
-                                    onListarUsuariosAuditoria={carregarUsuariosAutorizadosAuditoria}
-                                    onSalvarUsuarioAuditoria={salvarUsuarioAutorizadoAuditoria}
-                                    onAlternarUsuarioAuditoria={alternarUsuarioAutorizadoAuditoria}
-                                    onBloquear={bloquearAuditoria}
+                                    auditoriasCampo={auditoriasCampo}
+                                    onSelectColab={selecionarColaborador}
+                                    onRegistrarEmailEnviado={registrarEmailEnviado}
+                                    onAtualizarInformacoes={atualizarInformacoesDashboardSst}
+                                    atualizandoInformacoes={atualizandoDashboardSst}
                                 />
-                            )
-                        )}
+                            )}
 
-                        {tela === "configuracoes" && (
-                            configuracoesDesbloqueadas ? (
-                                <div className="page-shell space-y-4">
-                                    <ConfiguracoesSistema
-                                        acaoTopo={(
-                                            <button
-                                                type="button"
-                                                onClick={bloquearConfiguracoesSistema}
-                                                className="inline-flex items-center gap-2 rounded-2xl bg-white px-4 py-2 text-sm font-black text-slate-700 shadow-sm ring-1 ring-slate-200 hover:bg-slate-50"
-                                            >
-                                                <Lock className="h-4 w-4" />
-                                                Bloquear Configurações
-                                            </button>
-                                        )}
-                                        usuario={usuario}
-                                        podeAcessarAuditoria={podeAcessarAuditoria}
-                                        limites={{
-                                            ...limitesCarregamentoSistema,
-                                            storageMb: LIMITE_STORAGE_MB,
-                                        }}
-                                        onSalvarLimites={atualizarLimitesCarregamentoSistema}
-                                        senhaConfiguracoesSistema={senhaConfiguracoesSistema}
-                                        origemSenhaConfiguracoesSistema={origemSenhaConfiguracoesSistema}
-                                        mensagemSenhaConfiguracoesSistema={mensagemSenhaConfiguracoesSistema}
-                                        onSalvarSenhaConfiguracoes={atualizarSenhaConfiguracoesSistema}
+                            {tela === "novaAuditoriaCampo" && (
+                                <NovaAuditoriaCampoDireta
+                                    usuario={usuario}
+                                    empresasBanco={empresasBanco}
+                                    onAuditoriaSalva={(novaAuditoria) => {
+                                        setAuditoriasCampoCarregadas(true);
+                                        setAuditoriasCampo((atual) => [novaAuditoria, ...atual]);
+                                    }}
+                                />
+                            )}
+
+                            {tela === "auditoriaCampo" && (
+                                <DashboardAuditoriaCampo
+                                    auditoriasCampo={auditoriasCampo}
+                                    carregando={carregandoAuditoriasCampo}
+                                    erro={erroAuditoriasCampo}
+                                    onRecarregar={carregarAuditoriasCampo}
+                                    onCarregarMaisAuditoriasCampo={carregarMaisAuditoriasCampo}
+                                    carregandoMaisAuditoriasCampo={carregandoMaisAuditoriasCampo}
+                                    existeMaisAuditoriasCampo={existeMaisAuditoriasCampo}
+                                    limiteQrcodesCampo={limitesCarregamentoSistema.qrcodesCampo}
+                                    onAuditoriaAtualizada={(atualizada) =>
+                                        setAuditoriasCampo((atual) =>
+                                            atualizada?.excluida
+                                                ? atual.filter((item) => item.id !== atualizada.id)
+                                                : atual.map((item) => item.id === atualizada.id ? atualizada : item)
+                                        )
+                                    }
+                                />
+                            )}
+
+                            {tela === "empresas" && (
+                                <Empresas
+                                    empresasBanco={empresasBanco}
+                                    documentosEmpresas={documentosEmpresas}
+                                    colaboradores={colaboradores}
+                                    carregandoBanco={carregandoBanco}
+                                    erroBanco={erroBanco}
+                                    onAtualizarBanco={carregarColaboradores}
+                                    onAdicionarEmpresa={adicionarEmpresa}
+                                    onAtualizarEmpresa={atualizarEmpresa}
+                                    onExcluirEmpresa={excluirEmpresa}
+                                    onAdicionarDocumentoEmpresa={adicionarDocumentoEmpresa}
+                                    onExcluirDocumentoEmpresa={excluirDocumentoEmpresa}
+                                    onVisualizarDocumentoEmpresa={visualizarDocumentoEmpresa}
+                                />
+                            )}
+
+                            {tela === "colaboradores" && (
+                                <Colaboradores
+                                    colaboradores={colaboradores}
+                                    empresasBanco={empresasBanco}
+                                    carregandoBanco={carregandoBanco}
+                                    erroBanco={erroBanco}
+                                    onAtualizarBanco={carregarColaboradores}
+                                    onAdicionarColaborador={adicionarColaborador}
+                                    onAtualizarColaborador={atualizarColaborador}
+                                    onExcluirColaborador={excluirColaborador}
+                                    onSelectColab={selecionarColaborador}
+                                    onEnviarTreinamento={abrirEnvioTreinamento}
+                                />
+                            )}
+
+                            {tela === "aniversariantes" && (
+                                <Aniversariantes
+                                    colaboradores={colaboradores}
+                                    empresasBanco={empresasBanco}
+                                />
+                            )}
+
+                            {tela === "treinamentos" && (
+                                <Treinamentos
+                                    key={colaboradorSelecionado?.id || "treinamentos"}
+                                    colaboradores={colaboradores}
+                                    colaboradorInicialId={colaboradorSelecionado?.id}
+                                    onSalvarCertificado={salvarCertificadoTreinamento}
+                                    onVisualizarCertificado={visualizarCertificadoTreinamento}
+                                    onExcluirCertificado={excluirCertificadoTreinamento}
+                                    onAtualizarDatasCertificado={atualizarDatasCertificado}
+                                    onSincronizarStorage={sincronizarCertificadosDoStorage}
+                                    onRegistrarEmailEnviado={registrarEmailEnviado}
+                                />
+                            )}
+
+                            {tela === "qr" && (
+                                <ConsultaQR
+                                    colaborador={colaboradorSelecionado}
+                                    colaboradores={colaboradores}
+                                    onSelecionarColaborador={setColaboradorSelecionado}
+                                />
+                            )}
+
+                            {tela === "auditoria" && (
+                                verificandoAcessoAuditoria ? (
+                                    <Card>
+                                        <div className="flex items-center gap-3 text-sm font-semibold text-slate-600">
+                                            <RefreshCw className="h-4 w-4 animate-spin" />
+                                            Verificando permissão da Auditoria de sistema...
+                                        </div>
+                                    </Card>
+                                ) : !podeAcessarAuditoria ? (
+                                    <AuditoriaAcessoNegado />
+                                ) : (
+                                    <RelatorioAuditoria
+                                        auditoria={auditoria}
+                                        emailsEnviados={emailsEnviados}
+                                        carregando={carregandoAuditoria}
+                                        carregandoMaisAuditoria={carregandoMaisAuditoria}
+                                        existeMaisAuditoria={existeMaisAuditoria}
+                                        onAtualizar={async () => { await carregarAuditoria(); await carregarEmailsEnviados(); await carregarAuditoriasCampo(); }}
+                                        onCarregarMaisAuditoria={carregarMaisAuditoria}
+                                        onListarArquivosStorage={listarArquivosCertificadosStorage}
+                                        onExcluirArquivoStorage={excluirArquivoCertificadoStorage}
+                                        onListarUsuariosAuditoria={carregarUsuariosAutorizadosAuditoria}
+                                        onSalvarUsuarioAuditoria={salvarUsuarioAutorizadoAuditoria}
+                                        onAlternarUsuarioAuditoria={alternarUsuarioAutorizadoAuditoria}
+                                        onBloquear={bloquearAuditoria}
                                     />
-                                </div>
-                            ) : (
-                                renderBloqueioConfiguracoes()
-                            )
-                        )}
+                                )
+                            )}
 
-                        {tela === "roteiro" && <Requisitos />}
-                    </React.Suspense>
+                            {tela === "configuracoes" && (
+                                configuracoesDesbloqueadas ? (
+                                    <div className="page-shell space-y-4">
+                                        <ConfiguracoesSistema
+                                            acaoTopo={(
+                                                <button
+                                                    type="button"
+                                                    onClick={bloquearConfiguracoesSistema}
+                                                    className="inline-flex items-center gap-2 rounded-2xl bg-white px-4 py-2 text-sm font-black text-slate-700 shadow-sm ring-1 ring-slate-200 hover:bg-slate-50"
+                                                >
+                                                    <Lock className="h-4 w-4" />
+                                                    Bloquear Configurações
+                                                </button>
+                                            )}
+                                            usuario={usuario}
+                                            podeAcessarAuditoria={podeAcessarAuditoria}
+                                            limites={{
+                                                ...limitesCarregamentoSistema,
+                                                storageMb: LIMITE_STORAGE_MB,
+                                            }}
+                                            onSalvarLimites={atualizarLimitesCarregamentoSistema}
+                                            senhaConfiguracoesSistema={senhaConfiguracoesSistema}
+                                            origemSenhaConfiguracoesSistema={origemSenhaConfiguracoesSistema}
+                                            mensagemSenhaConfiguracoesSistema={mensagemSenhaConfiguracoesSistema}
+                                            onSalvarSenhaConfiguracoes={atualizarSenhaConfiguracoesSistema}
+                                        />
+                                    </div>
+                                ) : (
+                                    renderBloqueioConfiguracoes()
+                                )
+                            )}
+
+                            {tela === "roteiro" && <Requisitos />}
+                        </React.Suspense>
                     </div>
                 </main>
             </div>
