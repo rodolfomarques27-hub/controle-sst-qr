@@ -52,16 +52,17 @@ import {
     liberarAuditoriaAppService,
     bloquearAuditoriaAppService,
 } from "./services/appAuditoriaHandlersService";
-import { carregarConsultaPublicaQrService } from "./services/consultaPublicaQrService";
 import {
-    carregarLimitesCarregamentoSistema,
-    salvarLimitesCarregamentoSistema,
-} from "./constants/sistemaLimitesConstants";
+    atualizarLimitesCarregamentoSistemaAppService,
+    validarSenhaConfiguracoesAppService,
+    bloquearConfiguracoesSistemaAppService,
+    atualizarSenhaConfiguracoesSistemaAppService,
+} from "./services/appConfiguracoesHandlersService";
+import { carregarConsultaPublicaQrService } from "./services/consultaPublicaQrService";
+import { carregarLimitesCarregamentoSistema } from "./constants/sistemaLimitesConstants";
 import {
     carregarSenhaConfiguracoesSistema,
     carregarSenhaConfiguracoesSistemaSupabase,
-    salvarSenhaConfiguracoesSistema,
-    salvarSenhaConfiguracoesSistemaSupabase,
     SENHA_CONFIGURACOES_PADRAO,
 } from "./constants/configuracoesSegurancaConstants";
 import {
@@ -295,9 +296,10 @@ export default function App() {
     }, [usuario]);
 
     const atualizarLimitesCarregamentoSistema = useCallback((novosLimites) => {
-        const normalizados = salvarLimitesCarregamentoSistema(novosLimites);
-        setLimitesCarregamentoSistema(normalizados);
-        return normalizados;
+        return atualizarLimitesCarregamentoSistemaAppService({
+            novosLimites,
+            setLimitesCarregamentoSistema,
+        });
     }, []);
 
     const carregarEmpresas = useCallback(async () => {
@@ -999,37 +1001,34 @@ export default function App() {
 
 
     const validarSenhaConfiguracoes = (evento) => {
-        evento?.preventDefault?.();
-
-        if (senhaConfiguracoes.trim() === senhaConfiguracoesSistema) {
-            setConfiguracoesDesbloqueadas(true);
-            setSenhaConfiguracoes("");
-            setErroSenhaConfiguracoes("");
-            return;
-        }
-
-        setErroSenhaConfiguracoes("Senha incorreta para acessar Configurações.");
+        return validarSenhaConfiguracoesAppService({
+            evento,
+            senhaConfiguracoes,
+            senhaConfiguracoesSistema,
+            setConfiguracoesDesbloqueadas,
+            setSenhaConfiguracoes,
+            setErroSenhaConfiguracoes,
+        });
     };
 
     const bloquearConfiguracoesSistema = () => {
-        setConfiguracoesDesbloqueadas(false);
-        setSenhaConfiguracoes("");
-        setErroSenhaConfiguracoes("");
-        setMostrarSenhaConfiguracoes(false);
+        bloquearConfiguracoesSistemaAppService({
+            setConfiguracoesDesbloqueadas,
+            setSenhaConfiguracoes,
+            setErroSenhaConfiguracoes,
+            setMostrarSenhaConfiguracoes,
+        });
     };
 
     const atualizarSenhaConfiguracoesSistema = async (novaSenha) => {
-        const senhaLocal = salvarSenhaConfiguracoesSistema(novaSenha);
-        setSenhaConfiguracoesSistema(senhaLocal);
-        setOrigemSenhaConfiguracoesSistema("local");
-        setMensagemSenhaConfiguracoesSistema("Senha salva localmente. Sincronizando com Supabase...");
-
-        const resultado = await salvarSenhaConfiguracoesSistemaSupabase(supabase, senhaLocal, usuario);
-        setSenhaConfiguracoesSistema(resultado.senha);
-        setOrigemSenhaConfiguracoesSistema(resultado.origem || "local");
-        setMensagemSenhaConfiguracoesSistema(resultado.mensagem || "Senha das Configurações atualizada.");
-
-        return resultado;
+        return atualizarSenhaConfiguracoesSistemaAppService({
+            supabase,
+            usuario,
+            novaSenha,
+            setSenhaConfiguracoesSistema,
+            setOrigemSenhaConfiguracoesSistema,
+            setMensagemSenhaConfiguracoesSistema,
+        });
     };
 
     const renderBloqueioConfiguracoes = () => (
