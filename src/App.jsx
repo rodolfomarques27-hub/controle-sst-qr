@@ -10,7 +10,6 @@ import {
 import {
     codigoPastaCertificado,
     enviarArquivoCertificado,
-    gerarUrlAssinadaCertificado,
     removerArquivoCertificadoStorage,
 } from "./services/certificadosStorageService";
 import {
@@ -34,6 +33,12 @@ import {
     atualizarColaboradorCrud,
     excluirColaboradorCrud,
 } from "./services/colaboradoresCrudService";
+import {
+    atualizarDatasCertificadoCrud,
+    excluirCertificadoTreinamentoCrud,
+    gerarUrlVisualizacaoCertificado,
+    salvarCertificadoTreinamentoCrud,
+} from "./services/certificadosCrudService";
 import { auditoriaEventoHabilitado } from "./services/auditoriaSistemaConfigService";
 import {
     carregarLimitesCarregamentoSistema,
@@ -82,7 +87,6 @@ import {
     avaliarTreinamentosColaborador,
     normalizarColaborador,
     normalizarCertificado,
-    treinamentoSemValidade,
     statusDocumento,
     obterDataAniversarioColaborador,
     mesAniversarioColaborador,
@@ -156,7 +160,6 @@ import {
     classNames,
     obterParametroUrl,
     extrairCaminhoStorage,
-    ehUuid,
     sanitizarNomeArquivo,
     converterDataParaISO,
     converterDataIsoDireta,
@@ -1579,126 +1582,12 @@ export default function App() {
         setErroBanco("");
 
         try {
-            if (!certificado.colaboradorCodigo && !certificado.colaborador?.codigoFuncionario && !certificado.colaborador?.id) {
-                throw new Error("Selecione o colaborador.");
-            }
-
-            if (!certificado.treinamentoId) {
-                throw new Error("Selecione o treinamento/documento.");
-            }
-
-            if (!certificado.dataRealizacao) {
-                throw new Error("Informe a data de realização/emissão.");
-            }
-
-            const treinamentoSemVencimento = treinamentoSemValidade(certificado.treinamentoId);
-
-            if (!treinamentoSemVencimento && !certificado.dataVencimento) {
-                throw new Error("Informe a validade/revisão do certificado.");
-            }
-
-            if (!certificado.arquivo) {
-                throw new Error("Selecione o arquivo PDF ou imagem do certificado.");
-            }
-
-            const codigoInformado = String(
-                certificado.colaboradorCodigo ||
-                certificado.colaborador?.codigoFuncionario ||
-                ""
-            ).trim();
-
-            const idInformadoSomenteSeUuid = ehUuid(certificado.colaborador?.id)
-                ? String(certificado.colaborador.id)
-                : "";
-
-            let colaboradorSeguro =
-                colaboradores.find((c) => String(c.codigoFuncionario) === codigoInformado) ||
-                colaboradores.find((c) => idInformadoSomenteSeUuid && String(c.id) === idInformadoSomenteSeUuid) ||
-                colaboradores.find((c) => String(c.codigoFuncionario) === String(colaboradorSelecionado?.codigoFuncionario || "")) ||
-                null;
-
-            if (!colaboradorSeguro?.id || !ehUuid(colaboradorSeguro.id)) {
-                throw new Error(
-                    "Colaborador inválido. O sistema não encontrou o UUID do colaborador. Volte na aba Colaboradores, clique em Enviar treinamento e tente novamente."
-                );
-            }
-
-            const colaboradorIdSeguro = String(colaboradorSeguro.id);
-            const treinamentoIdSeguro = Number(certificado.treinamentoId);
-
-            if (!Number.isFinite(treinamentoIdSeguro)) {
-                throw new Error("Treinamento/documento inválido. Selecione novamente o documento.");
-            }
-
-            const treinamento = obterTreinamento(treinamentoIdSeguro);
-
-            if (!treinamento) {
-                throw new Error("Treinamento/documento não encontrado na base do sistema.");
-            }
-
-            // Mesmo padrão da foto do colaborador:
-            // 1) identifica o colaborador corretamente;
-            // 2) salva o arquivo no Storage em pasta organizada pelo código do funcionário;
-            // 3) grava/atualiza a referência na tabela certificados usando o UUID real do colaborador.
-            const arquivo = await enviarArquivoCertificado({
+            const certificadoNormalizado = await salvarCertificadoTreinamentoCrud({
                 supabase,
-                arquivo: certificado.arquivo,
-                colaborador: colaboradorSeguro,
-                treinamentoId: treinamentoIdSeguro,
+                certificado,
+                colaboradores,
+                colaboradorSelecionado,
             });
-
-            const payload = {
-                colaborador_id: colaboradorIdSeguro,
-                tipo_treinamento: treinamento.nome,
-                treinamento_codigo: treinamentoIdSeguro,
-                nome_treinamento: treinamento.nome,
-                data_realizacao: certificado.dataRealizacao,
-                data_vencimento: treinamentoSemVencimento ? null : certificado.dataVencimento,
-                arquivo_url: arquivo.arquivoUrl,
-                arquivo_nome: certificado.arquivoNome || arquivo.arquivoNome,
-                observacao: certificado.observacao || null,
-                status_validacao: "Validado",
-            };
-
-            const { data: existentes, error: buscaError } = await supabase
-                .from("certificados")
-                .select("*")
-                .eq("colaborador_id", colaboradorIdSeguro)
-                .eq("tipo_treinamento", treinamento.nome)
-                .order("created_at", { ascending: false })
-                .limit(1);
-
-            if (buscaError) {
-                throw new Error(`Erro ao verificar certificado existente: ${buscaError.message}`);
-            }
-
-            const existente = existentes?.[0] || null;
-
-            const consulta = existente?.id
-                ? supabase
-                    .from("certificados")
-                    .update(payload)
-                    .eq("id", existente.id)
-                : supabase
-                    .from("certificados")
-                    .insert(payload);
-
-            const { data, error } = await consulta
-                .select("*")
-                .single();
-
-            if (error) {
-                throw new Error(`Erro ao salvar certificado na tabela certificados: ${error.message}`);
-            }
-
-            if ((existente?.url_do_arquivo || existente?.arquivo_url) && (existente.url_do_arquivo || existente.arquivo_url) !== arquivo.arquivoUrl) {
-                await removerArquivoCertificadoStorage({
-                    supabase,
-                    caminho: existente.url_do_arquivo || existente.arquivo_url,
-                });
-            }
-
-            const certificadoNormalizado = normalizarCertificado(data);
 
             setColaboradores((atual) =>
                 atual.map((colaborador) => {
@@ -1742,70 +1631,54 @@ export default function App() {
     async function atualizarDatasCertificado(certificado, datas) {
         setErroBanco("");
 
-        if (!certificado?.id) {
-            setErroBanco("Certificado inválido para atualização.");
-            return false;
-        }
+        try {
+            const atualizado = await atualizarDatasCertificadoCrud({
+                supabase,
+                certificado,
+                datas,
+            });
 
-        const { data, error } = await supabase
-            .from("certificados")
-            .update({
-                data_realizacao: datas.realizado,
-                data_vencimento: datas.vencimento || null,
-            })
-            .eq("id", certificado.id)
-            .select("*")
-            .single();
+            setColaboradores((atual) =>
+                atual.map((colaborador) => {
+                    if (String(colaborador.id) !== String(atualizado.colaboradorId)) return colaborador;
 
-        if (error) {
-            setErroBanco(`Erro ao atualizar datas do certificado: ${error.message}`);
-            alert(`Erro ao atualizar datas do certificado: ${error.message}`);
-            return false;
-        }
+                    return {
+                        ...colaborador,
+                        treinamentos: (colaborador.treinamentos || []).map((item) =>
+                            item.id === atualizado.id ? atualizado : item
+                        ),
+                    };
+                })
+            );
 
-        const atualizado = normalizarCertificado(data);
-
-        setColaboradores((atual) =>
-            atual.map((colaborador) => {
-                if (String(colaborador.id) !== String(atualizado.colaboradorId)) return colaborador;
+            setColaboradorSelecionado((atual) => {
+                if (!atual || String(atual.id) !== String(atualizado.colaboradorId)) return atual;
 
                 return {
-                    ...colaborador,
-                    treinamentos: (colaborador.treinamentos || []).map((item) =>
+                    ...atual,
+                    treinamentos: (atual.treinamentos || []).map((item) =>
                         item.id === atualizado.id ? atualizado : item
                     ),
                 };
-            })
-        );
+            });
 
-        setColaboradorSelecionado((atual) => {
-            if (!atual || String(atual.id) !== String(atualizado.colaboradorId)) return atual;
+            await carregarColaboradores();
 
-            return {
-                ...atual,
-                treinamentos: (atual.treinamentos || []).map((item) =>
-                    item.id === atualizado.id ? atualizado : item
-                ),
-            };
-        });
-
-        await carregarColaboradores();
-
-        return true;
+            return true;
+        } catch (error) {
+            setErroBanco(error.message || "Erro ao atualizar datas do certificado.");
+            alert(error.message || "Erro ao atualizar datas do certificado.");
+            return false;
+        }
     }
 
     async function visualizarCertificadoTreinamento(certificado) {
         setErroBanco("");
 
-        if (!certificado?.arquivoUrl) {
-            setErroBanco("Este certificado ainda não possui arquivo anexado.");
-            return;
-        }
-
         try {
-            const signedUrl = await gerarUrlAssinadaCertificado({
+            const signedUrl = await gerarUrlVisualizacaoCertificado({
                 supabase,
-                caminho: certificado.arquivoUrl,
+                certificado,
                 expiracaoSegundos: 60 * 10,
             });
 
@@ -1823,33 +1696,26 @@ export default function App() {
 
         setErroBanco("");
 
-        const { error } = await supabase
-            .from("certificados")
-            .delete()
-            .eq("id", certificado.id);
-
-        if (error) {
-            setErroBanco(`Erro ao excluir certificado: ${error.message}`);
-            return;
-        }
-
-        if (certificado.arquivoUrl) {
-            await removerArquivoCertificadoStorage({
+        try {
+            await excluirCertificadoTreinamentoCrud({
                 supabase,
-                caminho: certificado.arquivoUrl,
+                certificado,
             });
+
+            setColaboradores((atual) =>
+                atual.map((colaborador) => {
+                    if (String(colaborador.id) !== String(certificado.colaboradorId)) return colaborador;
+
+                    return {
+                        ...colaborador,
+                        treinamentos: (colaborador.treinamentos || []).filter((item) => item.id !== certificado.id),
+                    };
+                })
+            );
+        } catch (error) {
+            setErroBanco(error.message || "Erro ao excluir certificado.");
+            alert(error.message || "Erro ao excluir certificado.");
         }
-
-        setColaboradores((atual) =>
-            atual.map((colaborador) => {
-                if (String(colaborador.id) !== String(certificado.colaboradorId)) return colaborador;
-
-                return {
-                    ...colaborador,
-                    treinamentos: (colaborador.treinamentos || []).filter((item) => item.id !== certificado.id),
-                };
-            })
-        );
     }
 
     async function excluirColaborador(colaborador) {
