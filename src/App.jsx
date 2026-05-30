@@ -101,7 +101,7 @@ export default function App() {
     const [limitesCarregamentoSistema, setLimitesCarregamentoSistema] = useState(() => carregarLimitesCarregamentoSistema());
     const [podeAcessarAuditoria, setPodeAcessarAuditoria] = useState(false);
     const [verificandoAcessoAuditoria, setVerificandoAcessoAuditoria] = useState(false);
-    const [auditoriaLiberada, setAuditoriaLiberada] = useState(() => {
+    const [, setAuditoriaLiberada] = useState(() => {
         try {
             return window.sessionStorage.getItem("auditoriaLiberada") === "true";
         } catch {
@@ -194,7 +194,7 @@ export default function App() {
             setAuditoriaCarregada,
             setExisteMaisAuditoria,
         });
-    }, [auditoria.length, carregandoMaisAuditoria, limitesCarregamentoSistema.auditoriaSistema]);
+    }, [auditoria, carregandoMaisAuditoria, limitesCarregamentoSistema.auditoriaSistema]);
 
     const carregarEmailsEnviados = useCallback(async () => {
         const { carregarEmailsEnviadosAppService } = await carregarAuditoriaHandlers();
@@ -236,7 +236,7 @@ export default function App() {
             setAuditoriasCampoCarregadas,
             setExisteMaisAuditoriasCampo,
         });
-    }, [auditoriasCampo.length, carregandoAuditoriasCampo, carregandoMaisAuditoriasCampo, limitesCarregamentoSistema.auditoriasCampo]);
+    }, [auditoriasCampo, carregandoAuditoriasCampo, carregandoMaisAuditoriasCampo, limitesCarregamentoSistema.auditoriasCampo]);
 
     const registrarEmailEnviado = useCallback(
         async ({ empresaId = null, colaboradorId = null, documentoId = null, destinatario = "", assunto = "", tipoAlerta = "", documento = "", statusEnvio = "", erro = "" } = {}) => {
@@ -323,17 +323,6 @@ export default function App() {
             setVerificandoAcessoAuditoria,
         });
     }, [usuario]);
-
-    const liberarAuditoria = async () => {
-        const { liberarAuditoriaAppService } = await carregarAuditoriaHandlers();
-
-        return liberarAuditoriaAppService({
-            verificarAcessoAuditoria,
-            setAuditoriaLiberada,
-            carregarAuditoria,
-            registrarAuditoria,
-        });
-    };
 
     const bloquearAuditoria = async () => {
         const { bloquearAuditoriaAppService } = await carregarAuditoriaHandlers();
