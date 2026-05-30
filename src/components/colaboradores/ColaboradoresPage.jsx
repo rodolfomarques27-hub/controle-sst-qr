@@ -3,6 +3,8 @@ import React, { useMemo, useState } from "react";
 import { motion } from "framer-motion";
 import {
     AlertTriangle,
+    ChevronDown,
+    ChevronUp,
     Download,
     FileText,
     Filter,
@@ -42,6 +44,30 @@ import {
 import { baixarPDF } from "../../services/exportacaoService";
 import { normalizarTextoBusca, formatDate, classNames } from "../../utils/sstUtils";
 
+const CHAVE_NOVO_COLABORADOR_RECOLHIDO = "controleSstColaboradoresNovoColaboradorRecolhido";
+const CHAVE_INFO_COLABORADORES_RECOLHIDA = "controleSstColaboradoresInformacoesRecolhidas";
+
+function carregarPreferenciaPainelBoolean(chave, padrao = false) {
+    try {
+        const salvo = window.localStorage.getItem(chave);
+        return salvo === null ? padrao : salvo === "true";
+    } catch {
+        return padrao;
+    }
+}
+
+function salvarPreferenciaPainelBoolean(chave, valor) {
+    const normalizado = Boolean(valor);
+
+    try {
+        window.localStorage.setItem(chave, String(normalizado));
+    } catch {
+        // Ignora navegador sem localStorage disponível.
+    }
+
+    return normalizado;
+}
+
 export function Colaboradores({
     colaboradores,
     empresasBanco,
@@ -60,6 +86,8 @@ export function Colaboradores({
     const [salvando, setSalvando] = useState(false);
     const [colaboradorEdicao, setColaboradorEdicao] = useState(null);
     const [pendenciasAbertas, setPendenciasAbertas] = useState(null);
+    const [novoColaboradorRecolhido, setNovoColaboradorRecolhido] = useState(() => carregarPreferenciaPainelBoolean(CHAVE_NOVO_COLABORADOR_RECOLHIDO, false));
+    const [informacoesColaboradoresRecolhidas, setInformacoesColaboradoresRecolhidas] = useState(() => carregarPreferenciaPainelBoolean(CHAVE_INFO_COLABORADORES_RECOLHIDA, false));
     const [modalFuncaoAberto, setModalFuncaoAberto] = useState(false);
     const [versaoFuncoes, setVersaoFuncoes] = useState(0);
     const [novaFuncao, setNovaFuncao] = useState({
@@ -73,7 +101,7 @@ export function Colaboradores({
         funcao: "",
         matricula: "",
         dataNascimento: "",
-        mostrarAniversarioDashboard: true,
+        mostrarAniversarioDashboard: false,
         statusMobilizacao: obterStatusInicialColaborador(),
         treinamentosRemovidos: [],
         treinamentosAdicionais: [],
@@ -200,7 +228,7 @@ export function Colaboradores({
             funcao: novo.funcao.trim(),
             matricula: novo.matricula.trim(),
             dataNascimento: novo.dataNascimento || "",
-            mostrarAniversarioDashboard: novo.mostrarAniversarioDashboard !== false,
+            mostrarAniversarioDashboard: false,
             statusMobilizacao: novo.statusMobilizacao,
             treinamentosRemovidos: novo.treinamentosRemovidos || [],
             treinamentosAdicionais: novo.treinamentosAdicionais || [],
@@ -218,7 +246,7 @@ export function Colaboradores({
                 funcao: "",
                 matricula: "",
                 dataNascimento: "",
-                mostrarAniversarioDashboard: true,
+                mostrarAniversarioDashboard: false,
                 statusMobilizacao: obterStatusInicialColaborador(),
                 treinamentosRemovidos: [],
                 treinamentosAdicionais: [],
@@ -247,6 +275,20 @@ export function Colaboradores({
     const arquivosMassaAnaliseNovo = analisarArquivosTreinamentoMassa(novo.documentosMassa || []);
     const arquivosMassaReconhecidosNovo = arquivosMassaAnaliseNovo.filter((item) => item.reconhecido);
     const arquivosMassaNaoReconhecidosNovo = arquivosMassaAnaliseNovo.filter((item) => !item.reconhecido);
+
+    const atualizarNovoColaboradorRecolhido = (valorOuFuncao) => {
+        setNovoColaboradorRecolhido((atual) => {
+            const novoValor = typeof valorOuFuncao === "function" ? valorOuFuncao(atual) : valorOuFuncao;
+            return salvarPreferenciaPainelBoolean(CHAVE_NOVO_COLABORADOR_RECOLHIDO, novoValor);
+        });
+    };
+
+    const atualizarInformacoesColaboradoresRecolhidas = (valorOuFuncao) => {
+        setInformacoesColaboradoresRecolhidas((atual) => {
+            const novoValor = typeof valorOuFuncao === "function" ? valorOuFuncao(atual) : valorOuFuncao;
+            return salvarPreferenciaPainelBoolean(CHAVE_INFO_COLABORADORES_RECOLHIDA, novoValor);
+        });
+    };
 
     const removerTreinamentoNovo = (treinamentoId) => {
         const id = Number(treinamentoId);
@@ -367,25 +409,99 @@ export function Colaboradores({
                 </div>
             )}
 
-            <div className="grid gap-6 xl:grid-cols-[0.82fr_1.18fr]">
-                <FormularioNovoColaborador
-                    novo={novo}
-                    setNovo={setNovo}
-                    empresasBanco={empresasBanco}
-                    funcoesSugeridas={funcoesSugeridas}
-                    treinamentosAplicadosNovo={treinamentosAplicadosNovo}
-                    treinamentosParaAdicionarNovo={treinamentosParaAdicionarNovo}
-                    idsAdicionaisNovo={idsAdicionaisNovo}
-                    arquivosMassaAnaliseNovo={arquivosMassaAnaliseNovo}
-                    arquivosMassaReconhecidosNovo={arquivosMassaReconhecidosNovo}
-                    arquivosMassaNaoReconhecidosNovo={arquivosMassaNaoReconhecidosNovo}
-                    removerTreinamentoNovo={removerTreinamentoNovo}
-                    adicionarTreinamentoNovo={adicionarTreinamentoNovo}
-                    adicionar={adicionar}
-                    salvando={salvando}
-                />
+            <div className="space-y-6">
+                <section className="colaboradores-section-destaque">
+                    {!novoColaboradorRecolhido ? (
+                        <div className="colaborador-formulario-full colaborador-formulario-unificado">
+                            <div className="novo-colaborador-cabecalho-branco">
+                                <div className="novo-colaborador-cabecalho-branco__info">
+                                    <div className="novo-colaborador-cabecalho-branco__icone">
+                                        <Users className="h-5 w-5" />
+                                    </div>
+                                    <div className="min-w-0">
+                                        <p className="novo-colaborador-cabecalho-branco__etiqueta">Cadastro</p>
+                                        <h2 className="novo-colaborador-cabecalho-branco__titulo">Novo colaborador</h2>
+                                        <p className="novo-colaborador-cabecalho-branco__subtitulo">
+                                            Foto, código automático e matriz de treinamentos por função.
+                                        </p>
+                                    </div>
+                                </div>
 
-                <Card>
+                                <button
+                                    type="button"
+                                    onClick={() => atualizarNovoColaboradorRecolhido(true)}
+                                    className="colaborador-form-toggle novo-colaborador-cabecalho-branco__acao"
+                                >
+                                    <ChevronUp className="h-4 w-4" />
+                                    Recolher informação
+                                </button>
+                            </div>
+
+                            <FormularioNovoColaborador
+                                novo={novo}
+                                setNovo={setNovo}
+                                empresasBanco={empresasBanco}
+                                funcoesSugeridas={funcoesSugeridas}
+                                treinamentosAplicadosNovo={treinamentosAplicadosNovo}
+                                treinamentosParaAdicionarNovo={treinamentosParaAdicionarNovo}
+                                idsAdicionaisNovo={idsAdicionaisNovo}
+                                arquivosMassaAnaliseNovo={arquivosMassaAnaliseNovo}
+                                arquivosMassaReconhecidosNovo={arquivosMassaReconhecidosNovo}
+                                arquivosMassaNaoReconhecidosNovo={arquivosMassaNaoReconhecidosNovo}
+                                removerTreinamentoNovo={removerTreinamentoNovo}
+                                adicionarTreinamentoNovo={adicionarTreinamentoNovo}
+                                adicionar={adicionar}
+                                salvando={salvando}
+                            />
+                        </div>
+                    ) : (
+                        <Card className="colaborador-formulario-recolhido border-blue-100 bg-blue-50/40">
+                            <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+                                <div className="min-w-0">
+                                    <p className="text-xs font-black uppercase tracking-wide text-blue-700">Cadastro</p>
+                                    <h2 className="mt-1 text-lg font-black text-slate-950">Novo colaborador</h2>
+                                    <p className="mt-1 text-sm leading-6 text-slate-600">
+                                        Formulário recolhido para deixar a tela mais compacta. Clique em abrir para cadastrar novo funcionário.
+                                    </p>
+                                </div>
+                                <button
+                                    type="button"
+                                    onClick={() => atualizarNovoColaboradorRecolhido(false)}
+                                    className="inline-flex items-center justify-center gap-2 rounded-2xl bg-white px-4 py-2 text-xs font-black text-slate-700 shadow-sm ring-1 ring-blue-100 hover:bg-blue-50"
+                                >
+                                    <ChevronDown className="h-4 w-4" />
+                                    Abrir informações
+                                </button>
+                            </div>
+                        </Card>
+                    )}
+                </section>
+
+                <Card className="colaboradores-info-card">
+                    <div className="mb-5 flex flex-col gap-3 border-b border-slate-100 pb-4 lg:flex-row lg:items-center lg:justify-between">
+                        <div className="min-w-0">
+                            <p className="text-xs font-black uppercase tracking-wide text-slate-400">Base de colaboradores</p>
+                            <h2 className="mt-1 text-xl font-black text-slate-950">Informações dos funcionários</h2>
+                            <p className="mt-1 text-sm leading-6 text-slate-500">
+                                Consulte status, pendências, QR Code, treinamentos e dados cadastrais em um bloco único destacado.
+                            </p>
+                        </div>
+                        <button
+                            type="button"
+                            onClick={() => atualizarInformacoesColaboradoresRecolhidas((valor) => !valor)}
+                            className="inline-flex items-center justify-center gap-2 rounded-2xl bg-slate-950 px-4 py-2 text-xs font-black text-white shadow-sm hover:bg-slate-800"
+                        >
+                            {informacoesColaboradoresRecolhidas ? <ChevronDown className="h-4 w-4" /> : <ChevronUp className="h-4 w-4" />}
+                            {informacoesColaboradoresRecolhidas ? "Abrir informações" : "Recolher informações"}
+                        </button>
+                    </div>
+
+                    {informacoesColaboradoresRecolhidas ? (
+                        <p className="rounded-2xl bg-slate-50 px-4 py-3 text-sm font-semibold text-slate-500 ring-1 ring-slate-100">
+                            Informações recolhidas. Clique em Abrir informações para visualizar filtros, indicadores e lista de colaboradores.
+                        </p>
+                    ) : (
+                        <>
                     <div className="mb-4 flex flex-col gap-3 lg:flex-row">
                         <div className="relative flex-1">
                             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
@@ -425,32 +541,32 @@ export function Colaboradores({
                         </div>
                     </div>
 
-                    <div className="mb-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-7">
-                        <div className="rounded-2xl bg-slate-50 p-3">
+                    <div className="colaboradores-status-grid mb-4">
+                        <div className="colaborador-status-card rounded-2xl bg-slate-50 p-3">
                             <p className="text-xs font-medium text-slate-500">Total</p>
                             <p className="text-2xl font-bold text-slate-950">{colaboradores.length}</p>
                         </div>
-                        <div className="rounded-2xl bg-emerald-50 p-3">
+                        <div className="colaborador-status-card rounded-2xl bg-emerald-50 p-3">
                             <p className="text-xs font-medium text-emerald-700">Liberados</p>
                             <p className="text-2xl font-bold text-emerald-700">{resumoTreinamentos.liberados}</p>
                         </div>
-                        <div className="rounded-2xl bg-blue-50 p-3">
+                        <div className="colaborador-status-card rounded-2xl bg-blue-50 p-3">
                             <p className="text-xs font-medium text-blue-700">Com pendência</p>
                             <p className="text-2xl font-bold text-blue-700">{resumoTreinamentos.comPendencia}</p>
                         </div>
-                        <div className="rounded-2xl bg-red-50 p-3">
+                        <div className="colaborador-status-card rounded-2xl bg-red-50 p-3">
                             <p className="text-xs font-medium text-red-700">Bloqueados</p>
                             <p className="text-2xl font-bold text-red-700">{resumoTreinamentos.bloqueados}</p>
                         </div>
-                        <div className="rounded-2xl bg-violet-50 p-3">
+                        <div className="colaborador-status-card rounded-2xl bg-violet-50 p-3">
                             <p className="text-xs font-medium text-violet-700">Em análise</p>
                             <p className="text-2xl font-bold text-violet-700">{resumoTreinamentos.emAnalise}</p>
                         </div>
-                        <div className="rounded-2xl bg-slate-100 p-3">
+                        <div className="colaborador-status-card rounded-2xl bg-slate-100 p-3">
                             <p className="text-xs font-medium text-slate-700">Desmobilizados</p>
                             <p className="text-2xl font-bold text-slate-700">{resumoTreinamentos.desmobilizados}</p>
                         </div>
-                        <div className="rounded-2xl bg-slate-50 p-3 ring-1 ring-slate-200">
+                        <div className="colaborador-status-card rounded-2xl bg-slate-50 p-3 ring-1 ring-slate-200">
                             <p className="text-xs font-medium text-slate-700">Inativos</p>
                             <p className="text-2xl font-bold text-slate-700">{resumoTreinamentos.inativos}</p>
                         </div>
@@ -672,6 +788,8 @@ export function Colaboradores({
                                 );
                             })}
                     </div>
+                        </>
+                    )}
                 </Card>
             </div>
             <ModalNovaFuncaoColaborador
