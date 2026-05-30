@@ -21,7 +21,6 @@ import { Card, Header, StatusPill } from "../commonComponents";
 import { FileUploadAviso, validarArquivoAntesUpload } from "../FileUploadAviso";
 import { abrirArquivoStorage, obterUrlLogoEmpresa } from "../../services/supabaseServices";
 import {
-    obterDocumentoEmpresa,
     calcularVencimentoDocumento,
     statusEmpresaDocumento,
     calcularSituacaoDocumentalEmpresa,
@@ -62,6 +61,28 @@ function salvarPreferenciaPainelBoolean(chave, valor) {
     }
 
     return normalizado;
+}
+
+function obterResumoDocumentoEmpresa(tipo) {
+    const resumos = {
+        LTCAT: [
+            "3 anos, com revisão antes do prazo quando houver mudança.",
+            "Revisar por alterações de layout, processo, atividade, equipamentos ou agentes nocivos.",
+            "Base legal: previdenciária/eSocial.",
+        ],
+        PCMSO: [
+            "Controle anual recomendado com base nos riscos do PGR.",
+            "Revisar por exames ocupacionais, mudança de função ou alteração da exposição ocupacional.",
+            "Base normativa: NR-07 e PGR/NR-01.",
+        ],
+        PGR: [
+            "Revisar no mínimo a cada 2 anos.",
+            "Antecipar revisão por mudança em processos, layout, equipamentos ou medidas de prevenção.",
+            "Base normativa: NR-01/GRO/PGR.",
+        ],
+    };
+
+    return resumos[tipo] || ["Documento controlado pelo sistema SST.", "Revise conforme regra interna e norma aplicável.", "Base normativa conforme cadastro do documento."];
 }
 
 export function Empresas({
@@ -133,8 +154,6 @@ export function Empresas({
             [empresaId]: !atual[empresaId],
         }));
     };
-
-    const documentoSelecionado = useMemo(() => obterDocumentoEmpresa(novoDoc.tipo), [novoDoc.tipo]);
 
     const documentosPorEmpresa = useMemo(() => {
         return documentosEmpresas.reduce((acc, doc) => {
@@ -467,18 +486,19 @@ export function Empresas({
         const empresaAberta = Boolean(empresasAbertas[empresa.id]);
 
         return (
-            <div key={empresa.id} className={classNames("rounded-3xl border p-4", destaqueContratante ? "border-slate-300 bg-slate-50" : "border-slate-200 bg-white")}>
-                <div className="flex flex-col justify-between gap-3 md:flex-row md:items-start">
-                    <div className="flex min-w-0 items-start gap-3">
-                        <div className="flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-white ring-1 ring-slate-200">
+            <div key={empresa.id} className={classNames("empresa-base-card", destaqueContratante ? "empresa-base-card--contratante" : "")}> 
+                <div className="empresa-base-card__conteudo">
+                    <div className="empresa-base-card__dados">
+                        <div className="empresa-base-card__logo">
                             {logoUrl ? (
                                 <img src={logoUrl} alt={`Logo ${empresa.nome}`} className="h-full w-full object-contain p-1" />
                             ) : (
                                 <Building2 className="h-6 w-6 text-slate-400" />
                             )}
                         </div>
-                        <div className="min-w-0">
-                            <h3 className="break-words font-bold text-slate-950">{empresa.nome}</h3>
+                        <div className="empresa-base-card__texto">
+                            <p className="empresa-base-card__tipo">{(empresa.tipo_empresa || "Terceirizada").replace(" - Idealiza Cidades", "")}</p>
+                            <h3 className="empresa-base-card__nome">{empresa.nome}</h3>
                             <p className="text-sm text-slate-500">{formatarCnpj(empresa.cnpj) || "CNPJ não informado"}</p>
                             <p className="text-xs text-slate-400">
                                 Responsável: {empresa.responsavel || "-"} · {empresa.email || "-"}
@@ -503,41 +523,10 @@ export function Empresas({
                                 </p>
                             )}
 
-                            {empresa.escopo_servico && (
-                                <div className="mt-1 rounded-2xl bg-slate-50 px-3 py-2 text-xs text-slate-500">
-                                    <div className="flex flex-wrap items-start justify-between gap-2">
-                                        <p className={classNames("min-w-0 flex-1 text-justify leading-relaxed", escopoAberto ? "" : "line-clamp-2")}>
-                                            <strong>Escopo:</strong> {empresa.escopo_servico}
-                                        </p>
-                                        <button
-                                            type="button"
-                                            onClick={() =>
-                                                setEscoposAbertos((atual) => ({
-                                                    ...atual,
-                                                    [empresa.id]: !atual[empresa.id],
-                                                }))
-                                            }
-                                            className="inline-flex shrink-0 items-center gap-1 whitespace-nowrap rounded-full bg-white px-2 py-1 text-[11px] font-semibold text-slate-600 ring-1 ring-slate-200 hover:bg-slate-100"
-                                        >
-                                            {escopoAberto ? (
-                                                <>
-                                                    <ChevronUp className="h-3.5 w-3.5" />
-                                                    Recolher
-                                                </>
-                                            ) : (
-                                                <>
-                                                    <ChevronDown className="h-3.5 w-3.5" />
-                                                    Abrir escopo
-                                                </>
-                                            )}
-                                        </button>
-                                    </div>
-                                </div>
-                            )}
                         </div>
                     </div>
 
-                    <div className="flex shrink-0 flex-col items-stretch gap-2 sm:min-w-[155px]">
+                    <div className="empresa-base-card__acoes">
                         <span className={classNames("whitespace-nowrap rounded-full px-3 py-1 text-center text-xs font-semibold ring-1", classeStatusEmpresa(empresa.status))}>
                             {normalizarStatusEmpresa(empresa.status)}
                         </span>
@@ -591,6 +580,31 @@ export function Empresas({
                             <Eye className="h-3.5 w-3.5" />
                             Revisar documentos
                         </button>
+
+                        {empresa.escopo_servico && (
+                            <button
+                                type="button"
+                                onClick={() =>
+                                    setEscoposAbertos((atual) => ({
+                                        ...atual,
+                                        [empresa.id]: !atual[empresa.id],
+                                    }))
+                                }
+                                className="inline-flex items-center justify-center gap-1 whitespace-nowrap rounded-full bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 ring-1 ring-slate-200 hover:bg-slate-50"
+                            >
+                                {escopoAberto ? (
+                                    <>
+                                        <ChevronUp className="h-3.5 w-3.5" />
+                                        Recolher escopo
+                                    </>
+                                ) : (
+                                    <>
+                                        <ChevronDown className="h-3.5 w-3.5" />
+                                        Abrir escopo
+                                    </>
+                                )}
+                            </button>
+                        )}
                     </div>
                 </div>
 
@@ -664,8 +678,15 @@ export function Empresas({
                         </div>
                     </>
                 ) : (
-                    <div className="mt-4 rounded-2xl border border-dashed border-slate-200 bg-slate-50 px-4 py-3 text-center text-xs font-semibold text-slate-500">
+                    <div className="empresa-base-card__resumo-recolhido">
                         Documentos e detalhes recolhidos. Clique em <span className="text-slate-800">Abrir</span> para visualizar PGR, PCMSO, contrato, relatórios e ações da empresa.
+                    </div>
+                )}
+
+                {empresa.escopo_servico && escopoAberto && (
+                    <div className="empresa-base-card__escopo-area">
+                        <p className="empresa-base-card__escopo-titulo">Escopo da empresa</p>
+                        <p className="empresa-base-card__escopo-texto">{empresa.escopo_servico}</p>
                     </div>
                 )}
             </div>
@@ -909,78 +930,84 @@ export function Empresas({
             <div className="space-y-6">
                 <section className="empresas-section-destaque">
                     <Card className="empresas-cadastro-unificado border-blue-100 bg-blue-50/40">
-                        <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-                            <div className="min-w-0">
-                                <p className="text-xs font-black uppercase tracking-wide text-blue-700">Cadastro</p>
-                                <h2 className="mt-1 text-lg font-black text-slate-950">Empresas e documentos</h2>
-                                <p className="mt-1 text-sm leading-6 text-slate-600">
-                                    Cadastro de empresas e lançamento de documentos em largura total, sem campos espremidos.
-                                </p>
+                        <div className="empresas-cadastro-header">
+                            <div className="empresas-cadastro-header__info">
+                                <div className="empresas-cadastro-header__icone">
+                                    <Building2 className="h-5 w-5" />
+                                </div>
+                                <div className="min-w-0">
+                                    <p className="empresas-cadastro-header__etiqueta">Cadastro</p>
+                                    <h2 className="empresas-cadastro-header__titulo">Empresas e documentos</h2>
+                                    <p className="empresas-cadastro-header__subtitulo">
+                                        Cadastro de empresas e lançamento de documentos em um único local, com campos organizados.
+                                    </p>
+                                </div>
                             </div>
                             <button
                                 type="button"
                                 onClick={() => atualizarCadastroEmpresasRecolhido((valor) => !valor)}
-                                className="inline-flex items-center justify-center gap-2 rounded-2xl bg-white px-4 py-2 text-xs font-black text-slate-700 shadow-sm ring-1 ring-blue-100 hover:bg-blue-50"
+                                className="empresas-cadastro-header__acao"
                             >
                                 {cadastroEmpresasRecolhido ? <ChevronDown className="h-4 w-4" /> : <ChevronUp className="h-4 w-4" />}
                                 {cadastroEmpresasRecolhido ? "Abrir cadastro" : "Recolher cadastro"}
                             </button>
                         </div>
 
-                    {cadastroEmpresasRecolhido ? (
-                        <p className="mt-4 rounded-2xl bg-slate-50 px-4 py-3 text-sm font-semibold text-slate-500 ring-1 ring-slate-100">
-                            Cadastro recolhido. Clique em Abrir cadastro para incluir empresas ou anexar documentos.
-                        </p>
-                    ) : (
+                    {cadastroEmpresasRecolhido ? null : (
                         <div className="empresas-cadastro-grid">
-                    <Card className="empresas-form-panel overflow-hidden">
-                        <div className="-m-5 mb-5 bg-gradient-to-br from-slate-950 to-slate-800 p-5 text-white">
+                    <Card className="empresas-form-panel empresas-form-panel--empresa overflow-hidden">
+                        <div className="empresas-form-panel__titulo-escuro">
                             <div className="flex items-center gap-3">
                                 <div className="rounded-2xl bg-white/10 p-3">
                                     <Building2 className="h-6 w-6" />
                                 </div>
                                 <div>
-                                    <h2 className="text-lg font-bold">Adicionar empresa</h2>
-                                    <p className="text-sm text-slate-300">Cadastre contratante, terceirizada ou subcontratada antes de anexar documentos.</p>
+                                    <h2>Adicionar empresa</h2>
+                                    <p>Cadastre contratante, terceirizada ou subcontratada antes de anexar documentos.</p>
                                 </div>
                             </div>
                         </div>
 
-                        <div className="empresa-form-grid empresa-form-grid--empresa">
-                            <input
-                                value={novaEmpresa.nome}
-                                onChange={(e) => setNovaEmpresa({ ...novaEmpresa, nome: e.target.value })}
-                                placeholder="Nome da empresa"
-                                className="w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-slate-400 focus:ring-4 focus:ring-slate-100"
-                            />
-                            <input
-                                value={novaEmpresa.cnpj}
-                                onChange={(e) => setNovaEmpresa({ ...novaEmpresa, cnpj: formatarCnpj(e.target.value) })}
-                                placeholder="CNPJ"
-                                className="w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-slate-400 focus:ring-4 focus:ring-slate-100"
-                            />
-                            <input
-                                value={novaEmpresa.responsavel}
-                                onChange={(e) => setNovaEmpresa({ ...novaEmpresa, responsavel: e.target.value })}
-                                placeholder="Responsável"
-                                className="w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-slate-400 focus:ring-4 focus:ring-slate-100"
-                            />
-                            <input
-                                value={novaEmpresa.email}
-                                onChange={(e) => setNovaEmpresa({ ...novaEmpresa, email: e.target.value })}
-                                placeholder="E-mail"
-                                className="w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-slate-400 focus:ring-4 focus:ring-slate-100"
-                            />
-                            <input
-                                value={novaEmpresa.telefone}
-                                onChange={(e) => setNovaEmpresa({ ...novaEmpresa, telefone: formatarTelefone(e.target.value) })}
-                                placeholder="Telefone"
-                                className="w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-slate-400 focus:ring-4 focus:ring-slate-100"
-                            />
+                        <div className="empresa-form-grid empresa-form-grid--empresa empresa-form-grid--empresa-definitivo">
+                            <div className="empresa-form-linha empresa-form-linha--2">
+                                <input
+                                    value={novaEmpresa.nome}
+                                    onChange={(e) => setNovaEmpresa({ ...novaEmpresa, nome: e.target.value })}
+                                    placeholder="Nome da empresa"
+                                    className="w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-slate-400 focus:ring-4 focus:ring-slate-100"
+                                />
+                                <input
+                                    value={novaEmpresa.cnpj}
+                                    onChange={(e) => setNovaEmpresa({ ...novaEmpresa, cnpj: formatarCnpj(e.target.value) })}
+                                    placeholder="CNPJ"
+                                    className="w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-slate-400 focus:ring-4 focus:ring-slate-100"
+                                />
+                            </div>
 
-                            <div className="rounded-3xl bg-emerald-50/60 p-3 ring-1 ring-emerald-100">
-                                <p className="text-xs font-black uppercase tracking-wide text-emerald-700">Contato para receber auditorias</p>
-                                <div className="mt-3 grid gap-3 md:grid-cols-2">
+                            <div className="empresa-form-linha empresa-form-linha--3">
+                                <input
+                                    value={novaEmpresa.responsavel}
+                                    onChange={(e) => setNovaEmpresa({ ...novaEmpresa, responsavel: e.target.value })}
+                                    placeholder="Responsável"
+                                    className="w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-slate-400 focus:ring-4 focus:ring-slate-100"
+                                />
+                                <input
+                                    value={novaEmpresa.email}
+                                    onChange={(e) => setNovaEmpresa({ ...novaEmpresa, email: e.target.value })}
+                                    placeholder="E-mail"
+                                    className="w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-slate-400 focus:ring-4 focus:ring-slate-100"
+                                />
+                                <input
+                                    value={novaEmpresa.telefone}
+                                    onChange={(e) => setNovaEmpresa({ ...novaEmpresa, telefone: formatarTelefone(e.target.value) })}
+                                    placeholder="Telefone"
+                                    className="w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-slate-400 focus:ring-4 focus:ring-slate-100"
+                                />
+                            </div>
+
+                            <div className="empresa-form-bloco-auditoria">
+                                <p>Contato para receber auditorias</p>
+                                <div className="empresa-form-bloco-auditoria__grid">
                                     <input
                                         value={novaEmpresa.responsavelAuditoria}
                                         onChange={(e) => setNovaEmpresa({ ...novaEmpresa, responsavelAuditoria: e.target.value })}
@@ -998,19 +1025,18 @@ export function Empresas({
                                         value={novaEmpresa.whatsappAuditoria}
                                         onChange={(e) => setNovaEmpresa({ ...novaEmpresa, whatsappAuditoria: formatarTelefone(e.target.value) })}
                                         placeholder="WhatsApp para auditorias"
-                                        className="w-full rounded-2xl border border-emerald-100 px-4 py-3 text-sm outline-none focus:border-emerald-400 focus:ring-4 focus:ring-emerald-100 md:col-span-2"
+                                        className="w-full rounded-2xl border border-emerald-100 px-4 py-3 text-sm outline-none focus:border-emerald-400 focus:ring-4 focus:ring-emerald-100"
                                     />
                                 </div>
                             </div>
 
-                            <div className="grid gap-3 md:grid-cols-2">
+                            <div className="empresa-form-linha empresa-form-linha--3">
                                 <input
                                     value={novaEmpresa.tstResponsavel}
                                     onChange={(e) => setNovaEmpresa({ ...novaEmpresa, tstResponsavel: e.target.value })}
                                     placeholder="Técnico de Segurança responsável"
                                     className="w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-slate-400 focus:ring-4 focus:ring-slate-100"
                                 />
-
                                 <input
                                     type="email"
                                     value={novaEmpresa.tstEmail}
@@ -1022,19 +1048,63 @@ export function Empresas({
                                     value={novaEmpresa.tstWhatsapp}
                                     onChange={(e) => setNovaEmpresa({ ...novaEmpresa, tstWhatsapp: formatarTelefone(e.target.value) })}
                                     placeholder="WhatsApp do TST para auditorias"
-                                    className="w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-slate-400 focus:ring-4 focus:ring-slate-100 md:col-span-2"
+                                    className="w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-slate-400 focus:ring-4 focus:ring-slate-100"
                                 />
                             </div>
 
-                            <select
-                                value={novaEmpresa.tipoEmpresa}
-                                onChange={(e) => setNovaEmpresa({ ...novaEmpresa, tipoEmpresa: e.target.value })}
-                                className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none focus:border-slate-400 focus:ring-4 focus:ring-slate-100"
-                            >
-                                <option>Terceirizada</option>
-                                <option>Subcontratada</option>
-                                <option>Contratante - Idealiza Cidades</option>
-                            </select>
+                            <div className="empresa-form-linha empresa-form-linha--3 empresa-form-linha--uploads">
+                                <select
+                                    value={novaEmpresa.tipoEmpresa}
+                                    onChange={(e) => setNovaEmpresa({ ...novaEmpresa, tipoEmpresa: e.target.value })}
+                                    className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none focus:border-slate-400 focus:ring-4 focus:ring-slate-100"
+                                >
+                                    <option>Terceirizada</option>
+                                    <option>Subcontratada</option>
+                                    <option>Contratante - Idealiza Cidades</option>
+                                </select>
+
+                                <div className="empresa-upload-wrapper">
+                                    <label className="empresa-upload-card">
+                                        <Upload className="h-4 w-4" />
+                                        <span>{novaEmpresa.logo ? novaEmpresa.logo.name : "Adicionar logo"}</span>
+                                        <input
+                                            type="file"
+                                            accept="image/png,image/jpeg,image/webp,image/svg+xml"
+                                            className="hidden"
+                                            onChange={(e) => {
+                                                const arquivo = e.target.files?.[0] || null;
+                                                if (arquivo && !validarArquivoAntesUpload(arquivo, "fotoAuditoria")) {
+                                                    e.target.value = "";
+                                                    return;
+                                                }
+                                                setNovaEmpresa({ ...novaEmpresa, logo: arquivo });
+                                            }}
+                                        />
+                                    </label>
+                                    <FileUploadAviso arquivo={novaEmpresa.logo} tipo="fotoAuditoria" />
+                                </div>
+
+                                <div className="empresa-upload-wrapper">
+                                    <label className="empresa-upload-card empresa-upload-card--contrato">
+                                        <Upload className="h-4 w-4" />
+                                        <span>{novaEmpresa.contratoArquivo ? novaEmpresa.contratoArquivo.name : "Adicionar contrato"}</span>
+                                        <input
+                                            type="file"
+                                            accept="application/pdf,image/png,image/jpeg,image/webp"
+                                            className="hidden"
+                                            onChange={(e) => {
+                                                const arquivo = e.target.files?.[0] || null;
+                                                if (arquivo && !validarArquivoAntesUpload(arquivo, "documentoExtenso")) {
+                                                    e.target.value = "";
+                                                    return;
+                                                }
+                                                setNovaEmpresa({ ...novaEmpresa, contratoArquivo: arquivo });
+                                            }}
+                                        />
+                                    </label>
+                                    <FileUploadAviso arquivo={novaEmpresa.contratoArquivo} tipo="documentoExtenso" />
+                                </div>
+                            </div>
 
                             {novaEmpresa.tipoEmpresa === "Subcontratada" && (
                                 <select
@@ -1053,61 +1123,24 @@ export function Empresas({
                                 </select>
                             )}
 
-                            <label className="flex cursor-pointer items-center justify-center gap-2 rounded-2xl border border-dashed border-slate-300 bg-slate-50 px-4 py-4 text-sm font-medium text-slate-600 hover:bg-slate-100">
-                                <Upload className="h-4 w-4" />
-                                {novaEmpresa.logo ? novaEmpresa.logo.name : "Adicionar logo da empresa"}
-                                <input
-                                    type="file"
-                                    accept="image/png,image/jpeg,image/webp,image/svg+xml"
-                                    className="hidden"
-                                    onChange={(e) => {
-                                        const arquivo = e.target.files?.[0] || null;
-                                        if (arquivo && !validarArquivoAntesUpload(arquivo, "fotoAuditoria")) {
-                                            e.target.value = "";
-                                            return;
-                                        }
-                                        setNovaEmpresa({ ...novaEmpresa, logo: arquivo });
-                                    }}
-                                />
-                            </label>
-                            <FileUploadAviso arquivo={novaEmpresa.logo} tipo="fotoAuditoria" />
-
-                            <label className="flex cursor-pointer items-center justify-center gap-2 rounded-2xl border border-dashed border-blue-200 bg-blue-50 px-4 py-4 text-sm font-semibold text-blue-700 hover:bg-blue-100">
-                                <Upload className="h-4 w-4" />
-                                {novaEmpresa.contratoArquivo ? novaEmpresa.contratoArquivo.name : "Anexar contrato da empresa"}
-                                <input
-                                    type="file"
-                                    accept="application/pdf,image/png,image/jpeg,image/webp"
-                                    className="hidden"
-                                    onChange={(e) => {
-                                        const arquivo = e.target.files?.[0] || null;
-                                        if (arquivo && !validarArquivoAntesUpload(arquivo, "documentoExtenso")) {
-                                            e.target.value = "";
-                                            return;
-                                        }
-                                        setNovaEmpresa({ ...novaEmpresa, contratoArquivo: arquivo });
-                                    }}
-                                />
-                            </label>
-                            <FileUploadAviso arquivo={novaEmpresa.contratoArquivo} tipo="documentoExtenso" />
-
-                            <div className="grid gap-3 md:grid-cols-2">
+                            <div className="empresa-form-linha empresa-form-linha--2">
                                 <input
                                     value={novaEmpresa.numeroContrato}
                                     onChange={(e) => setNovaEmpresa({ ...novaEmpresa, numeroContrato: e.target.value })}
                                     placeholder="Nº do contrato"
                                     className="w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-slate-400 focus:ring-4 focus:ring-slate-100"
                                 />
-
                                 <input
                                     value={novaEmpresa.responsavelContratante}
                                     onChange={(e) => setNovaEmpresa({ ...novaEmpresa, responsavelContratante: e.target.value })}
                                     placeholder="Responsável da contratante"
                                     className="w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-slate-400 focus:ring-4 focus:ring-slate-100"
                                 />
+                            </div>
 
-                                <div>
-                                    <label className="mb-1 block text-xs font-bold uppercase tracking-wide text-slate-500">Início do contrato</label>
+                            <div className="empresa-form-linha empresa-form-linha--3 empresa-form-linha--contrato">
+                                <div className="empresa-campo-contrato">
+                                    <label>Início do contrato</label>
                                     <input
                                         type="date"
                                         value={novaEmpresa.dataInicioContrato}
@@ -1115,9 +1148,8 @@ export function Empresas({
                                         className="w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-slate-400 focus:ring-4 focus:ring-slate-100"
                                     />
                                 </div>
-
-                                <div>
-                                    <label className="mb-1 block text-xs font-bold uppercase tracking-wide text-slate-500">Fim do contrato</label>
+                                <div className="empresa-campo-contrato">
+                                    <label>Fim do contrato</label>
                                     <input
                                         type="date"
                                         value={novaEmpresa.dataFimContrato}
@@ -1125,28 +1157,27 @@ export function Empresas({
                                         className="w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-slate-400 focus:ring-4 focus:ring-slate-100"
                                     />
                                 </div>
+                                <textarea
+                                    value={novaEmpresa.escopoServico}
+                                    onChange={(e) => setNovaEmpresa({ ...novaEmpresa, escopoServico: e.target.value })}
+                                    placeholder="Escopo do serviço"
+                                    rows={1}
+                                    className="empresa-campo-textarea w-full resize-none rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-slate-400 focus:ring-4 focus:ring-slate-100"
+                                />
                             </div>
-
-                            <textarea
-                                value={novaEmpresa.escopoServico}
-                                onChange={(e) => setNovaEmpresa({ ...novaEmpresa, escopoServico: e.target.value })}
-                                placeholder="Escopo do serviço"
-                                rows={3}
-                                className="w-full resize-none rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-slate-400 focus:ring-4 focus:ring-slate-100"
-                            />
 
                             <textarea
                                 value={novaEmpresa.observacaoStatus}
                                 onChange={(e) => setNovaEmpresa({ ...novaEmpresa, observacaoStatus: e.target.value })}
                                 placeholder="Observação de bloqueio, suspensão ou condição especial"
                                 rows={2}
-                                className="w-full resize-none rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-slate-400 focus:ring-4 focus:ring-slate-100"
+                                className="empresa-campo-textarea empresa-campo-textarea--observacao w-full resize-none rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-slate-400 focus:ring-4 focus:ring-slate-100"
                             />
 
                             <button
                                 onClick={adicionarEmpresa}
                                 disabled={salvandoEmpresa}
-                                className="flex w-full items-center justify-center gap-2 rounded-2xl bg-slate-950 px-4 py-3 text-sm font-semibold text-white hover:bg-slate-800 disabled:opacity-60"
+                                className="empresa-botao-cadastrar-final"
                             >
                                 <Plus className="h-4 w-4" />
                                 {salvandoEmpresa ? "Salvando empresa..." : "Cadastrar empresa"}
@@ -1154,7 +1185,7 @@ export function Empresas({
                         </div>
                     </Card>
 
-                    <Card className="empresas-form-panel">
+                    <Card className="empresas-form-panel empresas-form-panel--documento">
                         <h2 className="text-lg font-bold text-slate-950">Adicionar documento da empresa</h2>
                         <p className="mt-1 text-sm text-slate-500">Controle de validade/revisão de LTCAT, PCMSO e PGR.</p>
 
@@ -1172,25 +1203,7 @@ export function Empresas({
                                 ))}
                             </select>
 
-                            <select
-                                value={novoDoc.tipo}
-                                onChange={(e) => alterarTipoDocumento(e.target.value)}
-                                className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none focus:border-slate-400 focus:ring-4 focus:ring-slate-100"
-                            >
-                                {documentosEmpresaBase.map((doc) => (
-                                    <option key={doc.tipo} value={doc.tipo}>
-                                        {doc.nome}
-                                    </option>
-                                ))}
-                            </select>
-
-                            <div className="rounded-2xl bg-slate-50 p-3 text-xs text-slate-600">
-                                <p className="font-bold text-slate-800">{documentoSelecionado.nome}</p>
-                                <p className="mt-1"><strong>Regra:</strong> {documentoSelecionado.regra}</p>
-                                <p className="mt-1 text-slate-500"><strong>Referência:</strong> {documentoSelecionado.fundamento}</p>
-                            </div>
-
-                            <div className="grid gap-3 md:grid-cols-2">
+                            <div className="empresa-doc-campos-datas">
                                 <div>
                                     <label className="mb-1 block text-xs font-bold uppercase tracking-wide text-slate-500">Emissão</label>
                                     <input
@@ -1212,9 +1225,36 @@ export function Empresas({
                                 </div>
                             </div>
 
-                            <label className="flex cursor-pointer items-center justify-center gap-2 rounded-2xl border border-dashed border-slate-300 bg-slate-50 px-4 py-4 text-sm font-medium text-slate-600 hover:bg-slate-100">
+                            <div className="empresa-doc-tipos-grid empresa-doc-tipos-grid--vertical">
+                                {documentosEmpresaBase.map((doc, indice) => (
+                                    <button
+                                        key={doc.tipo}
+                                        type="button"
+                                        onClick={() => alterarTipoDocumento(doc.tipo)}
+                                        className={classNames(
+                                            "empresa-doc-tipo-card empresa-doc-tipo-card--grande",
+                                            novoDoc.tipo === doc.tipo && "empresa-doc-tipo-card--ativo"
+                                        )}
+                                    >
+                                        <div className="empresa-doc-tipo-card__header">
+                                            <div className="empresa-doc-tipo-card__indice">{indice + 1}</div>
+                                            <div className="empresa-doc-tipo-card__titulo-area">
+                                                <strong>{doc.nome}</strong>
+                                                <span>{doc.tipo}</span>
+                                            </div>
+                                        </div>
+                                        <div className="empresa-doc-tipo-card__conteudo">
+                                            {obterResumoDocumentoEmpresa(doc.tipo).map((linha) => (
+                                                <p key={linha}>{linha}</p>
+                                            ))}
+                                        </div>
+                                    </button>
+                                ))}
+                            </div>
+
+                            <label className="empresa-doc-upload-grande flex cursor-pointer items-center justify-center gap-2 rounded-2xl border border-dashed border-slate-300 bg-slate-50 px-4 py-5 text-sm font-medium text-slate-600 hover:bg-slate-100">
                                 <Upload className="h-4 w-4" />
-                                {novoDoc.arquivo ? novoDoc.arquivo.name : "Selecionar PDF do documento"}
+                                <span className="empresa-doc-upload-grande__texto">{novoDoc.arquivo ? novoDoc.arquivo.name : "Selecionar PDF do documento"}</span>
                                 <input
                                     type="file"
                                     accept="application/pdf,image/*"
@@ -1231,21 +1271,13 @@ export function Empresas({
                             </label>
                             <FileUploadAviso arquivo={novoDoc.arquivo} tipo="documentoExtenso" />
 
-                            <textarea
-                                value={novoDoc.observacao}
-                                onChange={(e) => setNovoDoc({ ...novoDoc, observacao: e.target.value })}
-                                placeholder="Observação opcional"
-                                rows={3}
-                                className="w-full resize-none rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-slate-400 focus:ring-4 focus:ring-slate-100"
-                            />
-
                             <button
                                 onClick={adicionarDocumento}
                                 disabled={salvandoDocumento}
                                 className="flex w-full items-center justify-center gap-2 rounded-2xl bg-slate-950 px-4 py-3 text-sm font-semibold text-white hover:bg-slate-800 disabled:opacity-60"
                             >
                                 <FileText className="h-4 w-4" />
-                                {salvandoDocumento ? "Salvando documento..." : "Salvar documento da empresa"}
+                                <span className="empresa-doc-botao-salvar__texto">{salvandoDocumento ? "Salvando documento..." : "Salvar documento da empresa"}</span>
                             </button>
                         </div>
                     </Card>
@@ -1276,13 +1308,9 @@ export function Empresas({
                         </div>
                     </div>
 
-                    {informacoesEmpresasRecolhidas ? (
-                        <p className="rounded-2xl bg-slate-50 px-4 py-3 text-sm font-semibold text-slate-500 ring-1 ring-slate-100">
-                            Informações recolhidas. Clique em Abrir informações para visualizar filtros, empresas e documentos.
-                        </p>
-                    ) : (
+                    {informacoesEmpresasRecolhidas ? null : (
                         <>
-                    <div className="mb-5 grid gap-3 lg:grid-cols-[1fr_220px_220px]">
+                    <div className="empresas-filtros-grid mb-5 grid gap-3 lg:grid-cols-[1fr_220px_220px]">
                         <div className="relative">
                             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
                             <input
@@ -1340,95 +1368,15 @@ export function Empresas({
                     )}
 
                     {!carregandoBanco && empresasFiltradas.length > 0 && (
-                        <div className="space-y-6">
-                            <section>
-                                <div className="mb-3 flex items-center gap-2">
-                                    <div className="rounded-xl bg-slate-950 p-2 text-white">
-                                        <ShieldCheck className="h-4 w-4" />
-                                    </div>
-                                    <div>
-                                        <h3 className="font-bold text-slate-950">Empresa contratante</h3>
-                                        <p className="text-xs text-slate-500">Idealiza Cidades / empresa principal do controle documental</p>
-                                    </div>
-                                </div>
-
-                                {empresasContratantes.length === 0 ? (
-                                    <div className="rounded-3xl border border-dashed border-slate-300 p-5 text-sm text-slate-500">
-                                        Nenhuma empresa contratante cadastrada. Cadastre a empresa como <strong>Contratante - Idealiza Cidades</strong>.
-                                    </div>
-                                ) : (
-                                    <div className="space-y-4">
-                                        {empresasContratantes.map((empresa) => {
-                                            const docs = documentosPorEmpresa[empresa.id] || [];
-                                            return renderEmpresaCard(empresa, docs, true);
-                                        })}
-                                    </div>
-                                )}
-                            </section>
-
-                            <section>
-                                <div className="mb-3 flex items-center gap-2">
-                                    <div className="rounded-xl bg-slate-100 p-2 text-slate-700">
-                                        <Users className="h-4 w-4" />
-                                    </div>
-                                    <div>
-                                        <h3 className="font-bold text-slate-950">Empresas terceirizadas</h3>
-                                        <p className="text-xs text-slate-500">Prestadoras de serviço vinculadas ao controle de documentos</p>
-                                    </div>
-                                </div>
-
-                                {empresasTerceirizadas.length === 0 ? (
-                                    <div className="rounded-3xl border border-dashed border-slate-300 p-5 text-sm text-slate-500">
-                                        Nenhuma empresa terceirizada cadastrada.
-                                    </div>
-                                ) : (
-                                    <div className="space-y-4">
-                                        {empresasTerceirizadas.map((empresa) => {
-                                            const docs = documentosPorEmpresa[empresa.id] || [];
-                                            return renderEmpresaCard(empresa, docs, false);
-                                        })}
-                                    </div>
-                                )}
-                            </section>
-
-                            {gruposSubcontratadas.length > 0 && (
-                                <section className="space-y-5">
-                                    {gruposSubcontratadas.map((grupo) => {
-                                        const nomeContratante = grupo.contratante?.nome || "empresa não vinculada";
-
-                                        return (
-                                            <div key={grupo.contratante?.id || "sem-vinculo"}>
-                                                <div className="mb-3 flex items-center gap-2">
-                                                    <div className="rounded-xl bg-slate-100 p-2 text-slate-700">
-                                                        <Building2 className="h-4 w-4" />
-                                                    </div>
-                                                    <div>
-                                                        <h3 className="font-bold text-slate-950">
-                                                            {grupo.contratante
-                                                                ? `Subcontratadas da ${nomeContratante}`
-                                                                : "Subcontratadas sem empresa contratante"}
-                                                        </h3>
-                                                        <p className="text-xs text-slate-500">
-                                                            {grupo.contratante
-                                                                ? `Empresas contratadas por ${nomeContratante}`
-                                                                : "Empresas subcontratadas ainda sem vínculo com uma terceirizada"}
-                                                        </p>
-                                                    </div>
-                                                </div>
-
-                                                <div className="space-y-4">
-                                                    {grupo.empresas.map((empresa) => {
-                                                        const docs = documentosPorEmpresa[empresa.id] || [];
-                                                        return renderEmpresaCard(empresa, docs, false);
-                                                    })}
-                                                </div>
-                                            </div>
-                                        );
-                                    })}
-                                </section>
-                            )}
+                        <div className="empresas-base-grid-3">
+                            {empresasFiltradas.map((empresa) => {
+                                const docs = documentosPorEmpresa[empresa.id] || [];
+                                const destaqueContratante = (empresa.tipo_empresa || "Terceirizada") === "Contratante - Idealiza Cidades";
+                                return renderEmpresaCard(empresa, docs, destaqueContratante);
+                            })}
                         </div>
                     )}
+
                     {empresasBanco.length > 0 && (
                         <div className="mt-8 border-t border-slate-200 pt-5">
                             <p className="mb-3 text-center text-xs font-semibold uppercase tracking-wide text-slate-400">

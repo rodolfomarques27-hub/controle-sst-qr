@@ -43,7 +43,19 @@ export const estilosGlobais = `
   .app-sidebar {
     flex: 0 0 auto;
     max-height: 100vh;
+    overflow-x: hidden;
     overflow-y: auto;
+    scrollbar-gutter: stable;
+  }
+
+  .app-sidebar *,
+  .app-sidebar nav,
+  .app-sidebar button {
+    max-width: 100%;
+  }
+
+  .app-sidebar nav {
+    overflow-x: hidden;
   }
 
   .app-main {
@@ -1912,6 +1924,1756 @@ export const estilosGlobais = `
   .novo-colaborador-uploads-anterior .novo-colaborador-upload-label-documentos {
     flex: 1 1 auto !important;
     min-height: 4.9rem !important;
+  }
+
+
+  /* ETAPA 20 — Empresas e documentos: cadastro compacto e Base de empresas em grade fixa de 3 cards por linha. */
+  .empresas-cadastro-unificado {
+    background: #ffffff !important;
+    border-color: #dbe7f2 !important;
+    box-shadow: 0 12px 30px rgba(15, 23, 42, 0.05) !important;
+  }
+
+  .empresas-cadastro-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    border-bottom: 1px solid #e2e8f0;
+    padding-bottom: 0.9rem;
+  }
+
+  .empresas-cadastro-header__info {
+    display: flex;
+    min-width: 0;
+    align-items: center;
+    gap: 0.9rem;
+  }
+
+  .empresas-cadastro-header__icone {
+    display: inline-flex;
+    height: 3rem;
+    width: 3rem;
+    flex: 0 0 auto;
+    align-items: center;
+    justify-content: center;
+    border-radius: 1rem;
+    background: #020617;
+    color: #ffffff;
+    box-shadow: 0 10px 20px rgba(15, 23, 42, 0.18);
+  }
+
+  .empresas-cadastro-header__etiqueta {
+    margin: 0;
+    color: #2563eb;
+    font-size: 0.72rem;
+    font-weight: 950;
+    letter-spacing: 0.08em;
+    line-height: 1.1;
+    text-transform: uppercase;
+  }
+
+  .empresas-cadastro-header__titulo {
+    margin: 0.2rem 0 0;
+    color: #020617;
+    font-size: 1.18rem;
+    font-weight: 950;
+    line-height: 1.15;
+  }
+
+  .empresas-cadastro-header__subtitulo {
+    margin: 0.2rem 0 0;
+    color: #64748b;
+    font-size: 0.86rem;
+    font-weight: 600;
+    line-height: 1.35;
+  }
+
+  .empresas-cadastro-header__acao {
+    display: inline-flex;
+    min-height: 2.45rem;
+    flex: 0 0 auto;
+    align-items: center;
+    justify-content: center;
+    gap: 0.45rem;
+    border-radius: 999px;
+    background: #ffffff;
+    padding: 0.65rem 1rem;
+    color: #334155;
+    font-size: 0.78rem;
+    font-weight: 900;
+    box-shadow: inset 0 0 0 1px #d9e4ef;
+  }
+
+  .empresas-cadastro-header__acao:hover {
+    background: #f8fafc;
+  }
+
+  .empresa-doc-tipos-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 0.65rem;
+  }
+
+  .empresa-doc-tipo-card {
+    display: flex;
+    min-width: 0;
+    min-height: 5.05rem;
+    align-items: flex-start;
+    gap: 0.55rem;
+    border-radius: 1rem;
+    background: #f8fafc;
+    padding: 0.75rem;
+    color: #334155;
+    text-align: left;
+    box-shadow: inset 0 0 0 1px #e2e8f0;
+    transition: background 0.16s ease, box-shadow 0.16s ease, transform 0.16s ease;
+  }
+
+  .empresa-doc-tipo-card:hover,
+  .empresa-doc-tipo-card--ativo {
+    background: #eff6ff;
+    box-shadow: inset 0 0 0 1px #bfdbfe;
+  }
+
+  .empresa-doc-tipo-card strong {
+    display: block;
+    color: #0f172a;
+    font-size: 0.78rem;
+    font-weight: 950;
+    line-height: 1.1;
+  }
+
+  .empresa-doc-tipo-card small {
+    display: -webkit-box;
+    margin-top: 0.25rem;
+    overflow: hidden;
+    color: #64748b;
+    font-size: 0.65rem;
+    font-weight: 650;
+    line-height: 0.9rem;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 3;
+  }
+
+  .empresas-info-card {
+    background: #ffffff !important;
+    border-color: #dbe7f2 !important;
+  }
+
+  .empresas-base-grid-3 {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 0.95rem;
+    align-items: stretch;
+  }
+
+  .empresa-base-card {
+    display: flex;
+    min-width: 0;
+    min-height: 12.2rem;
+    flex-direction: column;
+    justify-content: space-between;
+    border: 1px solid #dbe7f2;
+    border-radius: 1.45rem;
+    background: #ffffff;
+    padding: 0.9rem;
+    box-shadow: 0 8px 20px rgba(15, 23, 42, 0.04);
+  }
+
+  .empresa-base-card--contratante {
+    background: #fbfdff;
+  }
+
+  .empresa-base-card__conteudo {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 8.35rem;
+    gap: 0.8rem;
+    align-items: start;
+  }
+
+  .empresa-base-card__dados {
+    display: flex;
+    min-width: 0;
+    gap: 0.75rem;
+    align-items: flex-start;
+  }
+
+  .empresa-base-card__logo {
+    display: flex;
+    height: 3.2rem;
+    width: 3.2rem;
+    flex: 0 0 auto;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    border-radius: 1rem;
+    background: #ffffff;
+    box-shadow: inset 0 0 0 1px #e2e8f0;
+  }
+
+  .empresa-base-card__texto {
+    min-width: 0;
+  }
+
+  .empresa-base-card__tipo {
+    display: inline-flex;
+    margin: 0 0 0.2rem;
+    max-width: 100%;
+    align-items: center;
+    border-radius: 999px;
+    background: #eff6ff;
+    padding: 0.15rem 0.5rem;
+    color: #1d4ed8;
+    font-size: 0.62rem;
+    font-weight: 950;
+    letter-spacing: 0.04em;
+    line-height: 1;
+    text-transform: uppercase;
+  }
+
+  .empresa-base-card__nome {
+    margin: 0;
+    overflow: hidden;
+    color: #0f172a;
+    font-size: 0.94rem;
+    font-weight: 950;
+    line-height: 1.18;
+    text-overflow: ellipsis;
+  }
+
+  .empresa-base-card__acoes {
+    display: flex;
+    min-width: 0;
+    flex-direction: column;
+    gap: 0.45rem;
+  }
+
+  .empresa-base-card__acoes :where(button, span) {
+    min-height: 1.75rem;
+    padding-top: 0.35rem;
+    padding-bottom: 0.35rem;
+    font-size: 0.68rem;
+  }
+
+  .empresa-base-card__resumo-recolhido {
+    margin-top: 0.85rem;
+    border: 1px dashed #dbe7f2;
+    border-radius: 1rem;
+    background: #f8fafc;
+    padding: 0.75rem;
+    text-align: center;
+    color: #64748b;
+    font-size: 0.7rem;
+    font-weight: 750;
+    line-height: 1.15rem;
+  }
+
+  @media (max-width: 1120px) {
+    .empresas-base-grid-3 {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+  }
+
+  @media (max-width: 860px) {
+    .empresas-base-grid-3,
+    .empresa-doc-tipos-grid {
+      grid-template-columns: 1fr;
+    }
+
+    .empresa-base-card__conteudo {
+      grid-template-columns: 1fr;
+    }
+
+    .empresa-base-card__acoes {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+  }
+
+  @media (max-width: 720px) {
+    .empresas-cadastro-header {
+      flex-direction: column;
+      align-items: stretch;
+    }
+
+    .empresas-cadastro-header__acao {
+      width: 100%;
+    }
+
+    .empresa-base-card__acoes {
+      grid-template-columns: 1fr;
+    }
+  }
+
+
+  /* ETAPA 21 — Empresas final: cadastro harmônico, documento preenchendo altura e base de empresas em 3 cards por linha. */
+  .empresas-cadastro-unificado {
+    padding: clamp(0.85rem, 1vw, 1.15rem) !important;
+    background: #ffffff !important;
+  }
+
+  .empresas-cadastro-header {
+    margin-bottom: 0.85rem !important;
+    padding-bottom: 0.85rem !important;
+  }
+
+  .empresas-cadastro-unificado .empresas-cadastro-grid {
+    display: grid !important;
+    grid-template-columns: minmax(0, 1.05fr) minmax(0, 0.95fr) !important;
+    gap: clamp(0.85rem, 1vw, 1.1rem) !important;
+    align-items: stretch !important;
+    margin-top: 0 !important;
+  }
+
+  .empresas-cadastro-grid > .empresas-form-panel {
+    height: auto !important;
+    min-height: 100% !important;
+  }
+
+  .empresas-form-panel {
+    display: flex !important;
+    min-width: 0 !important;
+    flex-direction: column !important;
+    border: 1px solid #dbe7f2 !important;
+    border-radius: 1.35rem !important;
+    background: #ffffff !important;
+    padding: 0.9rem !important;
+    box-shadow: 0 8px 18px rgba(15, 23, 42, 0.035) !important;
+  }
+
+  .empresas-form-panel :where(input, select, textarea) {
+    min-height: 2.35rem !important;
+    border-radius: 0.95rem !important;
+    padding: 0.58rem 0.78rem !important;
+    font-size: 0.78rem !important;
+    font-weight: 650 !important;
+  }
+
+  .empresas-form-panel :where(label.flex) {
+    min-height: 2.35rem !important;
+    border-radius: 0.95rem !important;
+    padding: 0.55rem 0.75rem !important;
+    font-size: 0.74rem !important;
+    font-weight: 850 !important;
+  }
+
+  .empresas-form-panel .-m-5 {
+    margin: -0.9rem -0.9rem 0.75rem -0.9rem !important;
+    padding: 0.82rem 0.9rem !important;
+  }
+
+  .empresas-form-panel .-m-5 h2,
+  .empresas-form-panel > h2 {
+    font-size: 0.98rem !important;
+    line-height: 1.15 !important;
+  }
+
+  .empresas-form-panel .-m-5 p,
+  .empresas-form-panel > p {
+    margin-top: 0.12rem !important;
+    font-size: 0.72rem !important;
+    line-height: 1.2rem !important;
+  }
+
+  .empresa-form-grid {
+    gap: 0.48rem !important;
+  }
+
+  .empresa-form-grid--empresa {
+    display: grid !important;
+    grid-template-columns: repeat(12, minmax(0, 1fr)) !important;
+    align-items: start !important;
+  }
+
+  .empresa-form-grid--empresa > :nth-child(1),
+  .empresa-form-grid--empresa > :nth-child(2) {
+    grid-column: span 6 !important;
+  }
+
+  .empresa-form-grid--empresa > :nth-child(3),
+  .empresa-form-grid--empresa > :nth-child(4),
+  .empresa-form-grid--empresa > :nth-child(5) {
+    grid-column: span 4 !important;
+  }
+
+  .empresa-form-grid--empresa > :nth-child(6),
+  .empresa-form-grid--empresa > :nth-child(7) {
+    grid-column: 1 / -1 !important;
+  }
+
+  .empresa-form-grid--empresa > :nth-child(8) {
+    grid-column: span 4 !important;
+  }
+
+  .empresa-form-grid--empresa > :nth-child(9),
+  .empresa-form-grid--empresa > :nth-child(11) {
+    grid-column: span 4 !important;
+  }
+
+  .empresa-form-grid--empresa > :nth-child(10),
+  .empresa-form-grid--empresa > :nth-child(12) {
+    display: none !important;
+  }
+
+  .empresa-form-grid--empresa > :nth-child(13) {
+    grid-column: 1 / -1 !important;
+  }
+
+  .empresa-form-grid--empresa > textarea {
+    min-height: 2.6rem !important;
+  }
+
+  .empresa-form-grid--empresa > textarea:nth-of-type(1) {
+    grid-column: span 6 !important;
+  }
+
+  .empresa-form-grid--empresa > textarea:nth-of-type(2) {
+    grid-column: span 6 !important;
+  }
+
+  .empresa-form-grid--empresa > button {
+    grid-column: 1 / -1 !important;
+    min-height: 2.45rem !important;
+    border-radius: 0.95rem !important;
+    font-size: 0.78rem !important;
+  }
+
+  .empresa-form-grid--empresa > .rounded-3xl {
+    padding: 0.58rem !important;
+    border-radius: 1rem !important;
+  }
+
+  .empresa-form-grid--empresa > .rounded-3xl p {
+    font-size: 0.68rem !important;
+  }
+
+  .empresa-form-grid--empresa > .rounded-3xl .mt-3 {
+    margin-top: 0.42rem !important;
+    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+    gap: 0.45rem !important;
+  }
+
+  .empresa-form-grid--empresa > .rounded-3xl .md\:col-span-2 {
+    grid-column: span 1 / span 1 !important;
+  }
+
+  .empresa-form-grid--empresa > .grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+    gap: 0.45rem !important;
+  }
+
+  .empresa-form-grid--empresa > .grid .md\:col-span-2 {
+    grid-column: span 1 / span 1 !important;
+  }
+
+  .empresa-form-grid--empresa > .grid label {
+    margin-bottom: 0.18rem !important;
+    font-size: 0.62rem !important;
+  }
+
+  .empresas-form-panel--documento {
+    justify-content: stretch !important;
+  }
+
+  .empresas-form-panel--documento > h2,
+  .empresas-form-panel--documento > p {
+    padding-inline: 0.1rem !important;
+  }
+
+  .empresas-form-panel--documento .empresa-form-grid--documento {
+    display: grid !important;
+    grid-template-columns: repeat(12, minmax(0, 1fr)) !important;
+    flex: 1 1 auto !important;
+    align-content: stretch !important;
+    gap: 0.55rem !important;
+    margin-top: 0.72rem !important;
+  }
+
+  .empresa-form-grid--documento > :nth-child(1),
+  .empresa-form-grid--documento > :nth-child(2) {
+    grid-column: span 6 !important;
+  }
+
+  .empresa-form-grid--documento > .empresa-doc-tipos-grid {
+    grid-column: 1 / -1 !important;
+  }
+
+  .empresa-doc-tipos-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+    gap: 0.45rem !important;
+  }
+
+  .empresa-doc-tipo-card {
+    min-height: 4.6rem !important;
+    border-radius: 0.95rem !important;
+    padding: 0.62rem !important;
+  }
+
+  .empresa-doc-tipo-card strong {
+    font-size: 0.72rem !important;
+  }
+
+  .empresa-doc-tipo-card small {
+    font-size: 0.6rem !important;
+    line-height: 0.78rem !important;
+    -webkit-line-clamp: 4 !important;
+  }
+
+  .empresa-form-grid--documento > .grid {
+    grid-column: 1 / -1 !important;
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    gap: 0.55rem !important;
+  }
+
+  .empresa-form-grid--documento > label.flex {
+    grid-column: span 6 !important;
+    min-height: 5.1rem !important;
+  }
+
+  .empresa-form-grid--documento > textarea {
+    grid-column: span 6 !important;
+    min-height: 5.1rem !important;
+  }
+
+  .empresa-form-grid--documento > button {
+    grid-column: 1 / -1 !important;
+    min-height: 2.55rem !important;
+    border-radius: 0.95rem !important;
+    margin-top: auto !important;
+  }
+
+  .empresas-info-card {
+    padding: clamp(0.9rem, 1vw, 1.1rem) !important;
+  }
+
+  .empresas-info-card > .mb-5 {
+    margin-bottom: 0.75rem !important;
+    padding-bottom: 0.75rem !important;
+  }
+
+  .empresas-filtros-grid {
+    grid-template-columns: minmax(0, 1fr) minmax(170px, 0.26fr) minmax(170px, 0.26fr) !important;
+    gap: 0.65rem !important;
+    margin-bottom: 0.8rem !important;
+  }
+
+  .empresas-base-grid-3 {
+    display: grid !important;
+    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+    gap: 0.75rem !important;
+    align-items: stretch !important;
+  }
+
+  .empresa-base-card {
+    min-height: 10.4rem !important;
+    border-radius: 1.15rem !important;
+    padding: 0.72rem !important;
+    box-shadow: 0 8px 18px rgba(15, 23, 42, 0.035) !important;
+  }
+
+  .empresa-base-card__conteudo {
+    grid-template-columns: minmax(0, 1fr) 7.35rem !important;
+    gap: 0.55rem !important;
+  }
+
+  .empresa-base-card__dados {
+    gap: 0.6rem !important;
+  }
+
+  .empresa-base-card__logo {
+    width: 3rem !important;
+    height: 3rem !important;
+    border-radius: 0.8rem !important;
+  }
+
+  .empresa-base-card__nome {
+    font-size: 0.86rem !important;
+    line-height: 1.12 !important;
+  }
+
+  .empresa-base-card__texto :where(p) {
+    margin-top: 0.12rem !important;
+    font-size: 0.68rem !important;
+    line-height: 1rem !important;
+  }
+
+  .empresa-base-card__tipo {
+    font-size: 0.56rem !important;
+    padding: 0.12rem 0.42rem !important;
+  }
+
+  .empresa-base-card__acoes {
+    gap: 0.33rem !important;
+  }
+
+  .empresa-base-card__acoes :where(button, span) {
+    min-height: 1.52rem !important;
+    padding: 0.25rem 0.45rem !important;
+    font-size: 0.62rem !important;
+  }
+
+  .empresa-base-card__resumo-recolhido {
+    margin-top: 0.55rem !important;
+    padding: 0.55rem !important;
+    font-size: 0.64rem !important;
+    line-height: 0.95rem !important;
+  }
+
+  @media (max-width: 1320px) {
+    .empresas-cadastro-unificado .empresas-cadastro-grid {
+      grid-template-columns: 1fr !important;
+    }
+
+    .empresas-form-panel--documento .empresa-form-grid--documento {
+      min-height: auto !important;
+    }
+  }
+
+  @media (max-width: 1120px) {
+    .empresas-base-grid-3 {
+      grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    }
+  }
+
+  @media (max-width: 860px) {
+    .empresa-form-grid--empresa,
+    .empresas-form-panel--documento .empresa-form-grid--documento,
+    .empresas-filtros-grid,
+    .empresas-base-grid-3 {
+      grid-template-columns: 1fr !important;
+    }
+
+    .empresa-form-grid--empresa > *,
+    .empresa-form-grid--documento > *,
+    .empresa-form-grid--documento > label.flex,
+    .empresa-form-grid--documento > textarea {
+      grid-column: 1 / -1 !important;
+    }
+
+    .empresa-form-grid--empresa > .rounded-3xl .mt-3,
+    .empresa-form-grid--empresa > .grid,
+    .empresa-doc-tipos-grid,
+    .empresa-form-grid--documento > .grid {
+      grid-template-columns: 1fr !important;
+    }
+
+    .empresa-base-card__conteudo {
+      grid-template-columns: 1fr !important;
+    }
+  }
+
+
+  /* ETAPA 22 — Empresas definitivo: cadastro compacto, sem sobreposição e com contrato visível. */
+  .empresas-cadastro-unificado .empresas-cadastro-grid {
+    grid-template-columns: minmax(0, 1.12fr) minmax(0, 0.88fr) !important;
+    align-items: start !important;
+    gap: 0.95rem !important;
+  }
+
+  .empresas-form-panel--empresa {
+    overflow: hidden !important;
+  }
+
+  .empresas-form-panel__titulo-escuro {
+    margin: -0.9rem -0.9rem 0.78rem -0.9rem !important;
+    padding: 0.82rem 0.9rem !important;
+    background: linear-gradient(135deg, #020617 0%, #0f172a 100%) !important;
+    color: #ffffff !important;
+  }
+
+  .empresas-form-panel__titulo-escuro h2 {
+    margin: 0 !important;
+    font-size: 0.98rem !important;
+    font-weight: 950 !important;
+    line-height: 1.15 !important;
+  }
+
+  .empresas-form-panel__titulo-escuro p {
+    margin: 0.12rem 0 0 !important;
+    color: #cbd5e1 !important;
+    font-size: 0.72rem !important;
+    font-weight: 600 !important;
+    line-height: 1.2rem !important;
+  }
+
+  .empresa-form-grid--empresa-definitivo {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 0.62rem !important;
+    align-items: stretch !important;
+  }
+
+  .empresa-form-grid--empresa-definitivo > * {
+    display: block !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    grid-column: auto !important;
+  }
+
+  .empresa-form-grid--empresa-definitivo > button {
+    display: inline-flex !important;
+  }
+
+  .empresa-form-linha {
+    display: grid !important;
+    gap: 0.58rem !important;
+    align-items: start !important;
+    width: 100% !important;
+  }
+
+  .empresa-form-linha--1 {
+    grid-template-columns: 1fr !important;
+  }
+
+  .empresa-form-linha--2 {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
+
+  .empresa-form-linha--3 {
+    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+  }
+
+  .empresa-form-grid--empresa-definitivo :where(input, select, textarea) {
+    min-height: 2.38rem !important;
+    border-radius: 0.95rem !important;
+    padding: 0.58rem 0.78rem !important;
+    font-size: 0.78rem !important;
+    font-weight: 650 !important;
+  }
+
+  .empresa-form-bloco-auditoria {
+    display: grid !important;
+    gap: 0.48rem !important;
+    border-radius: 1.05rem !important;
+    background: #ecfdf5 !important;
+    padding: 0.62rem !important;
+    box-shadow: inset 0 0 0 1px #bbf7d0 !important;
+  }
+
+  .empresa-form-bloco-auditoria > p {
+    margin: 0 !important;
+    color: #047857 !important;
+    font-size: 0.68rem !important;
+    font-weight: 950 !important;
+    letter-spacing: 0.04em !important;
+    line-height: 1 !important;
+    text-transform: uppercase !important;
+  }
+
+  .empresa-form-bloco-auditoria__grid {
+    display: grid !important;
+    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+    gap: 0.5rem !important;
+  }
+
+  .empresa-form-linha--uploads {
+    align-items: stretch !important;
+  }
+
+  .empresa-upload-wrapper {
+    min-width: 0 !important;
+  }
+
+  .empresa-upload-wrapper :where(.text-xs, .text-sm, p, div) {
+    font-size: 0.68rem !important;
+    line-height: 0.9rem !important;
+  }
+
+  .empresa-upload-card {
+    display: flex !important;
+    min-height: 2.38rem !important;
+    height: 100% !important;
+    cursor: pointer !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 0.45rem !important;
+    overflow: hidden !important;
+    border: 1px dashed #cbd5e1 !important;
+    border-radius: 0.95rem !important;
+    background: #f8fafc !important;
+    padding: 0.52rem 0.65rem !important;
+    color: #475569 !important;
+    font-size: 0.74rem !important;
+    font-weight: 850 !important;
+    text-align: center !important;
+  }
+
+  .empresa-upload-card span {
+    display: block !important;
+    min-width: 0 !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    white-space: nowrap !important;
+  }
+
+  .empresa-upload-card--contrato {
+    border-color: #bfdbfe !important;
+    background: #eff6ff !important;
+    color: #1d4ed8 !important;
+  }
+
+  .empresa-form-linha--contrato {
+    align-items: end !important;
+  }
+
+  .empresa-campo-contrato {
+    min-width: 0 !important;
+  }
+
+  .empresa-campo-contrato label {
+    display: block !important;
+    margin: 0 0 0.18rem !important;
+    color: #64748b !important;
+    font-size: 0.6rem !important;
+    font-weight: 900 !important;
+    letter-spacing: 0.04em !important;
+    line-height: 1 !important;
+    text-transform: uppercase !important;
+  }
+
+  .empresa-campo-textarea {
+    min-height: 2.38rem !important;
+    line-height: 1.05rem !important;
+  }
+
+  .empresa-campo-textarea--observacao {
+    min-height: 2.85rem !important;
+  }
+
+  .empresa-botao-cadastrar-final {
+    display: inline-flex !important;
+    min-height: 2.5rem !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 0.5rem !important;
+    border-radius: 0.95rem !important;
+    background: #020617 !important;
+    color: #ffffff !important;
+    font-size: 0.8rem !important;
+    font-weight: 900 !important;
+  }
+
+  .empresa-botao-cadastrar-final:hover {
+    background: #0f172a !important;
+  }
+
+  .empresas-form-panel--documento {
+    min-height: 0 !important;
+  }
+
+  .empresas-form-panel--documento .empresa-form-grid--documento {
+    align-content: start !important;
+  }
+
+  .empresas-form-panel--documento .empresa-doc-tipo-card {
+    min-height: 4.15rem !important;
+  }
+
+  .empresas-form-panel--documento textarea {
+    min-height: 4.6rem !important;
+  }
+
+  @media (max-width: 1320px) {
+    .empresas-cadastro-unificado .empresas-cadastro-grid {
+      grid-template-columns: 1fr !important;
+    }
+  }
+
+  @media (max-width: 900px) {
+    .empresa-form-linha--2,
+    .empresa-form-linha--3,
+    .empresa-form-bloco-auditoria__grid {
+      grid-template-columns: 1fr !important;
+    }
+  }
+
+
+  /* ETAPA 24 — Documento da empresa em cards verticais grandes e base com 2 empresas por linha. */
+  .empresas-form-panel--documento .empresa-form-grid--documento {
+    display: grid !important;
+    grid-template-columns: 1fr !important;
+    gap: 0.85rem !important;
+    align-content: start !important;
+  }
+
+  .empresa-doc-campos-datas {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.75rem;
+  }
+
+  .empresa-doc-tipos-grid--vertical {
+    display: grid !important;
+    grid-template-columns: 1fr !important;
+    gap: 0.8rem !important;
+  }
+
+  .empresa-doc-tipo-card--grande {
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: stretch !important;
+    min-height: 8.75rem !important;
+    gap: 0.8rem !important;
+    padding: 1rem 1.05rem !important;
+    border-radius: 1.15rem !important;
+    text-align: left !important;
+  }
+
+  .empresa-doc-tipo-card__header {
+    display: flex;
+    align-items: center;
+    gap: 0.8rem;
+  }
+
+  .empresa-doc-tipo-card__indice {
+    display: inline-flex;
+    width: 2rem;
+    height: 2rem;
+    flex: 0 0 auto;
+    align-items: center;
+    justify-content: center;
+    border-radius: 999px;
+    background: #dbeafe;
+    color: #1d4ed8;
+    font-size: 0.78rem;
+    font-weight: 900;
+  }
+
+  .empresa-doc-tipo-card__titulo-area strong {
+    display: block;
+    margin: 0;
+    font-size: 0.96rem !important;
+    line-height: 1.1 !important;
+  }
+
+  .empresa-doc-tipo-card__titulo-area span {
+    display: block;
+    margin-top: 0.12rem;
+    color: #64748b;
+    font-size: 0.7rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+
+  .empresa-doc-tipo-card__conteudo {
+    display: grid;
+    gap: 0.45rem;
+  }
+
+  .empresa-doc-tipo-card__conteudo p {
+    margin: 0;
+    color: #334155;
+    font-size: 0.81rem;
+    font-weight: 700;
+    line-height: 1.35;
+  }
+
+  .empresa-doc-tipo-card__conteudo small {
+    display: block !important;
+    margin: 0 !important;
+    color: #64748b !important;
+    font-size: 0.72rem !important;
+    font-weight: 700 !important;
+    line-height: 1.25 !important;
+    -webkit-line-clamp: unset !important;
+    overflow: visible !important;
+  }
+
+  .empresa-doc-observacao {
+    min-height: 5.6rem !important;
+  }
+
+  .empresa-doc-upload-grande {
+    min-height: 5rem !important;
+  }
+
+  .empresas-base-grid-3 {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    gap: 0.9rem !important;
+  }
+
+  @media (max-width: 1120px) {
+    .empresas-base-grid-3 {
+      grid-template-columns: 1fr !important;
+    }
+  }
+
+  @media (max-width: 860px) {
+    .empresa-doc-campos-datas {
+      grid-template-columns: 1fr;
+    }
+  }
+
+
+  /* ETAPA 25 — Resumo dos documentos em 3 linhas sem reticências e sem esticar o cadastro lateral. */
+  .empresas-cadastro-grid > .empresas-form-panel {
+    min-height: auto !important;
+    align-self: start !important;
+  }
+
+  .empresas-form-panel--documento .empresa-form-grid--documento {
+    gap: 0.68rem !important;
+  }
+
+  .empresa-doc-tipos-grid--vertical {
+    gap: 0.62rem !important;
+  }
+
+  .empresa-doc-tipo-card--grande {
+    min-height: 6.9rem !important;
+    gap: 0.55rem !important;
+    padding: 0.82rem 0.92rem !important;
+  }
+
+  .empresa-doc-tipo-card__header {
+    gap: 0.68rem !important;
+  }
+
+  .empresa-doc-tipo-card__indice {
+    width: 1.75rem !important;
+    height: 1.75rem !important;
+    font-size: 0.72rem !important;
+  }
+
+  .empresa-doc-tipo-card__titulo-area strong {
+    font-size: 0.9rem !important;
+  }
+
+  .empresa-doc-tipo-card__titulo-area span {
+    font-size: 0.66rem !important;
+  }
+
+  .empresa-doc-tipo-card__conteudo {
+    display: grid !important;
+    gap: 0.22rem !important;
+  }
+
+  .empresa-doc-tipo-card__conteudo p {
+    margin: 0 !important;
+    color: #334155 !important;
+    font-size: 0.73rem !important;
+    font-weight: 750 !important;
+    line-height: 1.22 !important;
+    overflow: visible !important;
+    text-overflow: clip !important;
+    white-space: normal !important;
+  }
+
+  .empresa-doc-observacao {
+    min-height: 4.55rem !important;
+  }
+
+  .empresa-doc-upload-grande {
+    min-height: 4.35rem !important;
+  }
+
+
+  /* ETAPA 26 — usa o espaço lateral dos cards LTCAT/PCMSO/PGR para reduzir altura e eliminar sobra visual. */
+  .empresa-doc-tipos-grid--vertical {
+    gap: 0.52rem !important;
+  }
+
+  .empresa-doc-tipo-card--grande {
+    display: grid !important;
+    grid-template-columns: minmax(6.9rem, 0.32fr) minmax(0, 1fr) !important;
+    align-items: center !important;
+    min-height: 5.65rem !important;
+    gap: 0.85rem !important;
+    padding: 0.78rem 0.9rem !important;
+  }
+
+  .empresa-doc-tipo-card__header {
+    align-self: stretch !important;
+    align-items: center !important;
+    padding-right: 0.78rem !important;
+    border-right: 1px solid rgba(147, 197, 253, 0.55) !important;
+  }
+
+  .empresa-doc-tipo-card__conteudo {
+    display: grid !important;
+    align-content: center !important;
+    gap: 0.12rem !important;
+  }
+
+  .empresa-doc-tipo-card__conteudo p {
+    margin: 0 !important;
+    font-size: 0.7rem !important;
+    font-weight: 760 !important;
+    line-height: 1.16 !important;
+    white-space: normal !important;
+  }
+
+  .empresa-doc-observacao {
+    min-height: 4.2rem !important;
+  }
+
+  .empresa-doc-upload-grande {
+    min-height: 4.05rem !important;
+  }
+
+  .empresas-form-panel--documento .empresa-form-grid--documento {
+    gap: 0.56rem !important;
+  }
+
+  @media (max-width: 860px) {
+    .empresa-doc-tipo-card--grande {
+      grid-template-columns: 1fr !important;
+      min-height: auto !important;
+    }
+
+    .empresa-doc-tipo-card__header {
+      border-right: 0 !important;
+      border-bottom: 1px solid rgba(147, 197, 253, 0.55) !important;
+      padding-right: 0 !important;
+      padding-bottom: 0.65rem !important;
+    }
+  }
+
+
+  /* ETAPA 27 — cards de LTCAT/PCMSO/PGR mais alinhados ao bloco de datas e usando melhor a largura lateral. */
+  .empresas-form-panel--documento .empresa-form-grid--documento {
+    gap: 0.5rem !important;
+  }
+
+  .empresa-doc-tipo-card--grande {
+    grid-template-columns: minmax(5.35rem, 0.22fr) minmax(0, 1fr) !important;
+    min-height: 5rem !important;
+    gap: 0.72rem !important;
+    padding: 0.72rem 0.82rem !important;
+  }
+
+  .empresa-doc-tipo-card__header {
+    gap: 0.55rem !important;
+    padding-right: 0.62rem !important;
+  }
+
+  .empresa-doc-tipo-card__indice {
+    width: 1.62rem !important;
+    height: 1.62rem !important;
+    font-size: 0.68rem !important;
+  }
+
+  .empresa-doc-tipo-card__titulo-area strong {
+    font-size: 0.84rem !important;
+    line-height: 1.05 !important;
+  }
+
+  .empresa-doc-tipo-card__titulo-area span {
+    font-size: 0.62rem !important;
+    line-height: 1 !important;
+  }
+
+  .empresa-doc-tipo-card__conteudo {
+    gap: 0.08rem !important;
+  }
+
+  .empresa-doc-tipo-card__conteudo p {
+    font-size: 0.68rem !important;
+    line-height: 1.12 !important;
+  }
+
+  .empresa-doc-tipo-card__conteudo small {
+    font-size: 0.67rem !important;
+    line-height: 1.1 !important;
+  }
+
+  @media (max-width: 860px) {
+    .empresa-doc-tipo-card--grande {
+      grid-template-columns: 1fr !important;
+      min-height: auto !important;
+    }
+  }
+
+
+  /* ETAPA 28 — faz LTCAT/PCMSO/PGR ocuparem toda a largura disponível, eliminando a sobra lateral. */
+  .empresa-doc-tipos-grid--vertical {
+    width: 100% !important;
+    max-width: none !important;
+    justify-items: stretch !important;
+    align-items: stretch !important;
+  }
+
+  .empresa-doc-tipos-grid--vertical > * {
+    width: 100% !important;
+    max-width: none !important;
+    justify-self: stretch !important;
+  }
+
+  .empresa-doc-tipo-card--grande {
+    width: 100% !important;
+    max-width: none !important;
+    justify-self: stretch !important;
+    box-sizing: border-box !important;
+    grid-template-columns: minmax(4.7rem, 0.18fr) minmax(0, 1fr) !important;
+    min-height: 4.7rem !important;
+    gap: 0.6rem !important;
+    padding: 0.68rem 0.78rem !important;
+  }
+
+  .empresa-doc-tipo-card__header {
+    min-width: 0 !important;
+    width: 100% !important;
+    gap: 0.45rem !important;
+    padding-right: 0.55rem !important;
+  }
+
+  .empresa-doc-tipo-card__titulo-area {
+    min-width: 0 !important;
+  }
+
+  .empresa-doc-tipo-card__titulo-area strong {
+    font-size: 0.82rem !important;
+  }
+
+  .empresa-doc-tipo-card__titulo-area span {
+    font-size: 0.6rem !important;
+  }
+
+  .empresa-doc-tipo-card__conteudo {
+    min-width: 0 !important;
+    width: 100% !important;
+    gap: 0.05rem !important;
+  }
+
+  .empresa-doc-tipo-card__conteudo p {
+    font-size: 0.67rem !important;
+    line-height: 1.08 !important;
+  }
+
+  .empresa-doc-tipo-card__conteudo small {
+    font-size: 0.65rem !important;
+    line-height: 1.06 !important;
+  }
+
+  @media (max-width: 860px) {
+    .empresa-doc-tipo-card--grande {
+      grid-template-columns: 1fr !important;
+      min-height: auto !important;
+    }
+  }
+
+
+  /* ETAPA 29 — força LTCAT/PCMSO/PGR a terem a mesma largura do seletor "Selecione a empresa". */
+  .empresas-form-panel--documento .empresa-form-grid--documento {
+    width: 100% !important;
+    max-width: none !important;
+    grid-template-columns: minmax(0, 1fr) !important;
+    justify-items: stretch !important;
+  }
+
+  .empresas-form-panel--documento .empresa-form-grid--documento > select,
+  .empresas-form-panel--documento .empresa-form-grid--documento > .empresa-doc-campos-datas,
+  .empresas-form-panel--documento .empresa-form-grid--documento > .empresa-doc-tipos-grid--vertical,
+  .empresas-form-panel--documento .empresa-form-grid--documento > .empresa-doc-upload-grande,
+  .empresas-form-panel--documento .empresa-form-grid--documento > button {
+    grid-column: 1 / -1 !important;
+    width: 100% !important;
+    max-width: none !important;
+    min-width: 0 !important;
+    justify-self: stretch !important;
+    box-sizing: border-box !important;
+  }
+
+  .empresas-form-panel--documento .empresa-doc-tipos-grid--vertical {
+    display: grid !important;
+    width: 100% !important;
+    max-width: none !important;
+    min-width: 0 !important;
+    grid-template-columns: minmax(0, 1fr) !important;
+    justify-items: stretch !important;
+    box-sizing: border-box !important;
+  }
+
+  .empresas-form-panel--documento .empresa-doc-tipos-grid--vertical > .empresa-doc-tipo-card--grande {
+    display: grid !important;
+    width: 100% !important;
+    max-width: none !important;
+    min-width: 0 !important;
+    inline-size: 100% !important;
+    justify-self: stretch !important;
+    box-sizing: border-box !important;
+    margin: 0 !important;
+    grid-template-columns: minmax(4.6rem, 0.17fr) minmax(0, 1fr) !important;
+  }
+
+  .empresas-form-panel--documento .empresa-doc-tipo-card__conteudo {
+    width: 100% !important;
+    max-width: none !important;
+    min-width: 0 !important;
+  }
+
+  .empresas-form-panel--documento .empresa-doc-tipo-card__conteudo p,
+  .empresas-form-panel--documento .empresa-doc-tipo-card__conteudo small {
+    max-width: none !important;
+    overflow: visible !important;
+    white-space: normal !important;
+    text-overflow: clip !important;
+  }
+
+
+  /* ETAPA 30 — impede LTCAT/PCMSO/PGR de invadir a divisória e simplifica o texto do LTCAT. */
+  .empresas-form-panel--documento .empresa-doc-tipos-grid--vertical > .empresa-doc-tipo-card--grande {
+    grid-template-columns: 6.35rem minmax(0, 1fr) !important;
+    min-height: 4.85rem !important;
+    column-gap: 0.72rem !important;
+  }
+
+  .empresas-form-panel--documento .empresa-doc-tipo-card__header {
+    display: grid !important;
+    grid-template-columns: 1.65rem minmax(0, 1fr) !important;
+    align-items: center !important;
+    column-gap: 0.42rem !important;
+    min-width: 0 !important;
+    overflow: hidden !important;
+    padding-right: 0.58rem !important;
+    box-sizing: border-box !important;
+  }
+
+  .empresas-form-panel--documento .empresa-doc-tipo-card__titulo-area {
+    min-width: 0 !important;
+    max-width: 100% !important;
+    overflow: hidden !important;
+  }
+
+  .empresas-form-panel--documento .empresa-doc-tipo-card__titulo-area strong,
+  .empresas-form-panel--documento .empresa-doc-tipo-card__titulo-area span {
+    display: block !important;
+    max-width: 100% !important;
+    overflow: hidden !important;
+    text-overflow: clip !important;
+    white-space: nowrap !important;
+  }
+
+  .empresas-form-panel--documento .empresa-doc-tipo-card__titulo-area strong {
+    font-size: 0.74rem !important;
+    letter-spacing: -0.01em !important;
+    line-height: 1.05 !important;
+  }
+
+  .empresas-form-panel--documento .empresa-doc-tipo-card__titulo-area span {
+    margin-top: 0.1rem !important;
+    font-size: 0.58rem !important;
+    line-height: 1 !important;
+  }
+
+  .empresas-form-panel--documento .empresa-doc-tipo-card__indice {
+    width: 1.55rem !important;
+    height: 1.55rem !important;
+    font-size: 0.66rem !important;
+  }
+
+  .empresas-form-panel--documento .empresa-doc-tipo-card__conteudo {
+    padding-left: 0.05rem !important;
+  }
+
+  @media (max-width: 860px) {
+    .empresas-form-panel--documento .empresa-doc-tipos-grid--vertical > .empresa-doc-tipo-card--grande {
+      grid-template-columns: 1fr !important;
+    }
+
+    .empresas-form-panel--documento .empresa-doc-tipo-card__header {
+      grid-template-columns: 1.65rem minmax(0, 1fr) !important;
+    }
+  }
+
+
+  /* ETAPA 31 — remove observação do cadastro de documento e compacta o painel para alinhar os dois lados. */
+  .empresas-form-panel--documento .empresa-form-grid--documento {
+    gap: 0.5rem !important;
+  }
+
+  .empresa-doc-upload-grande {
+    min-height: 4.1rem !important;
+  }
+
+  .empresas-form-panel--documento .empresa-form-grid--documento > .empresa-doc-upload-grande {
+    margin-top: 0.05rem !important;
+  }
+
+  .empresas-form-panel--documento .empresa-form-grid--documento > button {
+    margin-top: 0.05rem !important;
+  }
+
+
+  /* ETAPA 32 — textos curtos nos botões de upload de empresa. */
+  .empresa-form-linha--uploads :where(label, button) {
+    white-space: nowrap !important;
+  }
+
+
+  /* ETAPA 33 — harmoniza largura dos painéis e reduz o bloco de PDF para alinhar Cadastrar empresa e Salvar documento. */
+  .empresas-cadastro-unificado .empresas-cadastro-grid {
+    grid-template-columns: minmax(0, 1.06fr) minmax(0, 0.94fr) !important;
+    gap: 0.9rem !important;
+    align-items: start !important;
+  }
+
+  .empresas-form-panel--documento {
+    width: 100% !important;
+    max-width: none !important;
+  }
+
+  .empresas-form-panel--documento .empresa-form-grid--documento {
+    gap: 0.44rem !important;
+  }
+
+  .empresas-form-panel--documento .empresa-doc-tipos-grid--vertical {
+    gap: 0.42rem !important;
+  }
+
+  .empresas-form-panel--documento .empresa-doc-tipos-grid--vertical > .empresa-doc-tipo-card--grande {
+    min-height: 4.55rem !important;
+    padding-top: 0.58rem !important;
+    padding-bottom: 0.58rem !important;
+  }
+
+  .empresa-doc-upload-grande,
+  .empresas-form-panel--documento .empresa-form-grid--documento > .empresa-doc-upload-grande {
+    min-height: 3.35rem !important;
+    padding-top: 0.65rem !important;
+    padding-bottom: 0.65rem !important;
+  }
+
+  .empresa-botao-cadastrar-final,
+  .empresas-form-panel--documento .empresa-form-grid--documento > button {
+    min-height: 2.5rem !important;
+  }
+
+  @media (max-width: 1320px) {
+    .empresas-cadastro-unificado .empresas-cadastro-grid {
+      grid-template-columns: 1fr !important;
+    }
+  }
+
+
+  /* ETAPA 34 — largura final dos cards LTCAT/PCMSO/PGR igual ao seletor e alinhamento dos botões finais. */
+  .empresas-cadastro-unificado .empresas-cadastro-grid {
+    grid-template-columns: minmax(0, 1.02fr) minmax(0, 0.98fr) !important;
+    gap: 0.82rem !important;
+    align-items: start !important;
+  }
+
+  .empresas-form-panel--documento,
+  .empresas-form-panel--documento .empresa-form-grid--documento,
+  .empresas-form-panel--documento .empresa-doc-tipos-grid--vertical {
+    width: 100% !important;
+    max-width: none !important;
+    min-width: 0 !important;
+    box-sizing: border-box !important;
+  }
+
+  .empresas-form-panel--documento .empresa-form-grid--documento {
+    display: grid !important;
+    grid-template-columns: minmax(0, 1fr) !important;
+    justify-items: stretch !important;
+    gap: 0.38rem !important;
+  }
+
+  .empresas-form-panel--documento .empresa-form-grid--documento > select,
+  .empresas-form-panel--documento .empresa-doc-campos-datas,
+  .empresas-form-panel--documento .empresa-doc-tipos-grid--vertical,
+  .empresas-form-panel--documento .empresa-doc-upload-grande,
+  .empresas-form-panel--documento .empresa-form-grid--documento > button {
+    display: block !important;
+    width: 100% !important;
+    max-width: none !important;
+    min-width: 0 !important;
+    inline-size: 100% !important;
+    justify-self: stretch !important;
+    grid-column: 1 / -1 !important;
+    margin-left: 0 !important;
+    margin-right: 0 !important;
+    box-sizing: border-box !important;
+  }
+
+  .empresas-form-panel--documento .empresa-doc-tipos-grid--vertical {
+    display: grid !important;
+    grid-template-columns: minmax(0, 1fr) !important;
+    gap: 0.38rem !important;
+    justify-content: stretch !important;
+    justify-items: stretch !important;
+    align-items: stretch !important;
+  }
+
+  .empresas-form-panel--documento .empresa-doc-tipos-grid--vertical > .empresa-doc-tipo-card--grande {
+    display: grid !important;
+    width: 100% !important;
+    max-width: none !important;
+    min-width: 0 !important;
+    inline-size: 100% !important;
+    justify-self: stretch !important;
+    grid-column: 1 / -1 !important;
+    grid-template-columns: 5.65rem minmax(0, 1fr) !important;
+    min-height: 4.25rem !important;
+    gap: 0.58rem !important;
+    padding: 0.55rem 0.7rem !important;
+    margin: 0 !important;
+    box-sizing: border-box !important;
+  }
+
+  .empresas-form-panel--documento .empresa-doc-tipo-card__header {
+    grid-template-columns: 1.45rem minmax(0, 1fr) !important;
+    gap: 0.38rem !important;
+    padding-right: 0.48rem !important;
+    overflow: hidden !important;
+  }
+
+  .empresas-form-panel--documento .empresa-doc-tipo-card__indice {
+    width: 1.45rem !important;
+    height: 1.45rem !important;
+    font-size: 0.62rem !important;
+  }
+
+  .empresas-form-panel--documento .empresa-doc-tipo-card__titulo-area strong {
+    font-size: 0.72rem !important;
+    line-height: 1 !important;
+  }
+
+  .empresas-form-panel--documento .empresa-doc-tipo-card__titulo-area span {
+    font-size: 0.56rem !important;
+    line-height: 1 !important;
+  }
+
+  .empresas-form-panel--documento .empresa-doc-tipo-card__conteudo p {
+    font-size: 0.66rem !important;
+    line-height: 1.08 !important;
+  }
+
+  .empresas-form-panel--documento .empresa-doc-tipo-card__conteudo small {
+    font-size: 0.63rem !important;
+    line-height: 1.05 !important;
+  }
+
+  .empresa-doc-upload-grande,
+  .empresas-form-panel--documento .empresa-form-grid--documento > .empresa-doc-upload-grande {
+    min-height: 2.95rem !important;
+    padding-top: 0.5rem !important;
+    padding-bottom: 0.5rem !important;
+  }
+
+  .empresa-botao-cadastrar-final,
+  .empresas-form-panel--documento .empresa-form-grid--documento > button {
+    min-height: 2.55rem !important;
+  }
+
+  @media (max-width: 1320px) {
+    .empresas-cadastro-unificado .empresas-cadastro-grid {
+      grid-template-columns: 1fr !important;
+    }
+  }
+
+  @media (max-width: 860px) {
+    .empresas-form-panel--documento .empresa-doc-tipos-grid--vertical > .empresa-doc-tipo-card--grande {
+      grid-template-columns: 1fr !important;
+      min-height: auto !important;
+    }
+  }
+
+
+  /* ETAPA 35 — centraliza ícone/texto dos botões e aumenta um pouco o salvar documento para harmonizar com cadastrar empresa. */
+  .empresa-form-linha--uploads .empresa-upload-card,
+  .empresa-doc-upload-grande,
+  .empresa-botao-cadastrar-final,
+  .empresas-form-panel--documento .empresa-form-grid--documento > button {
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    text-align: center !important;
+    gap: 0.55rem !important;
+  }
+
+  .empresa-form-linha--uploads .empresa-upload-card svg,
+  .empresa-doc-upload-grande svg,
+  .empresa-botao-cadastrar-final svg,
+  .empresas-form-panel--documento .empresa-form-grid--documento > button svg {
+    flex: 0 0 auto !important;
+  }
+
+  .empresa-form-linha--uploads .empresa-upload-card span,
+  .empresa-doc-upload-grande span,
+  .empresa-botao-cadastrar-final span,
+  .empresas-form-panel--documento .empresa-form-grid--documento > button span {
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    text-align: center !important;
+  }
+
+  .empresa-doc-upload-grande,
+  .empresas-form-panel--documento .empresa-form-grid--documento > .empresa-doc-upload-grande {
+    min-height: 2.72rem !important;
+    padding-top: 0.44rem !important;
+    padding-bottom: 0.44rem !important;
+  }
+
+  .empresas-form-panel--documento .empresa-form-grid--documento > button {
+    min-height: 3rem !important;
+    padding-top: 0.7rem !important;
+    padding-bottom: 0.7rem !important;
+  }
+
+
+  /* ETAPA 36 — aproxima ícone do texto no selecionar PDF, aumenta um pouco o painel direito e melhora a harmonia final dos botões. */
+  .empresas-cadastro-unificado .empresas-cadastro-grid {
+    grid-template-columns: minmax(0, 0.99fr) minmax(0, 1.01fr) !important;
+    gap: 0.86rem !important;
+  }
+
+  .empresas-form-panel--documento .empresa-form-grid--documento {
+    gap: 0.44rem !important;
+  }
+
+  .empresa-doc-upload-grande,
+  .empresas-form-panel--documento .empresa-form-grid--documento > .empresa-doc-upload-grande {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 0.32rem !important;
+    min-height: 2.68rem !important;
+    padding: 0.42rem 0.9rem !important;
+  }
+
+  .empresa-doc-upload-grande > svg,
+  .empresas-form-panel--documento .empresa-form-grid--documento > .empresa-doc-upload-grande > svg {
+    margin: 0 !important;
+    transform: translateY(-0.02rem) !important;
+  }
+
+  .empresa-doc-upload-grande__texto {
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    margin: 0 !important;
+    line-height: 1.1 !important;
+    white-space: nowrap !important;
+  }
+
+  .empresas-form-panel--documento .empresa-form-grid--documento > button {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 0.42rem !important;
+    min-height: 3.08rem !important;
+    padding: 0.74rem 1rem !important;
+  }
+
+  .empresa-doc-botao-salvar__texto {
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    line-height: 1.1 !important;
+  }
+
+  @media (max-width: 1320px) {
+    .empresas-cadastro-unificado .empresas-cadastro-grid {
+      grid-template-columns: 1fr !important;
+    }
+  }
+
+
+  /* ETAPA 37 — escopo saiu da linha das informações e virou ação própria abaixo de Revisar documentos. */
+  .empresa-base-card__escopo-area {
+    width: 100%;
+    margin-top: 0.75rem;
+    border-radius: 1.1rem;
+    background: #f8fafc;
+    padding: 0.85rem 0.95rem;
+    color: #334155;
+    box-shadow: inset 0 0 0 1px #dbe7f2;
+  }
+
+  .empresa-base-card__escopo-titulo {
+    margin: 0 0 0.35rem;
+    color: #0f172a;
+    font-size: 0.76rem;
+    font-weight: 950;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+  }
+
+  .empresa-base-card__escopo-texto {
+    margin: 0;
+    color: #475569;
+    font-size: 0.78rem;
+    font-weight: 650;
+    line-height: 1.45;
+    text-align: justify;
+  }
+
+  .empresa-base-card__acoes {
+    align-content: start;
+  }
+
+
+  /* ETAPA 38 — alinha Cadastrar empresa com Salvar documento e amplia discretamente o painel de documentos. */
+  .empresas-cadastro-unificado .empresas-cadastro-grid {
+    grid-template-columns: minmax(0, 0.97fr) minmax(0, 1.03fr) !important;
+    align-items: stretch !important;
+    gap: 0.88rem !important;
+  }
+
+  .empresas-cadastro-grid > .empresas-form-panel {
+    height: 100% !important;
+    min-height: 100% !important;
+    align-self: stretch !important;
+  }
+
+  .empresas-form-panel--empresa,
+  .empresas-form-panel--documento {
+    display: flex !important;
+    flex-direction: column !important;
+  }
+
+  .empresa-form-grid--empresa-definitivo,
+  .empresas-form-panel--documento .empresa-form-grid--documento {
+    flex: 1 1 auto !important;
+  }
+
+  .empresa-form-grid--empresa-definitivo {
+    display: flex !important;
+    flex-direction: column !important;
+  }
+
+  .empresas-form-panel--documento .empresa-form-grid--documento {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 0.42rem !important;
+  }
+
+  .empresa-botao-cadastrar-final,
+  .empresas-form-panel--documento .empresa-form-grid--documento > button {
+    margin-top: auto !important;
+    min-height: 3.02rem !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 0.45rem !important;
+    line-height: 1.1 !important;
+  }
+
+  .empresas-form-panel--documento .empresa-doc-upload-grande,
+  .empresas-form-panel--documento .empresa-form-grid--documento > .empresa-doc-upload-grande {
+    min-height: 2.55rem !important;
+    padding-top: 0.36rem !important;
+    padding-bottom: 0.36rem !important;
+  }
+
+  .empresa-doc-upload-grande > svg,
+  .empresa-doc-upload-grande__texto {
+    transform: translateX(-0.15rem) !important;
+  }
+
+  @media (max-width: 1320px) {
+    .empresas-cadastro-unificado .empresas-cadastro-grid {
+      grid-template-columns: 1fr !important;
+    }
+
+    .empresas-cadastro-grid > .empresas-form-panel {
+      height: auto !important;
+      min-height: auto !important;
+    }
   }
 
 `;
