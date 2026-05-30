@@ -1,60 +1,11 @@
 import React, { useCallback, useEffect, useState } from "react";
 import { supabase, SUPABASE_CONFIGURADO } from "./lib/supabaseClient";
 import {
-    carregarEmpresasAppService,
-    carregarDocumentosEmpresasAppService,
-    enviarLogoEmpresaAppService,
-    enviarContratoEmpresaAppService,
-    adicionarEmpresaAppService,
-    atualizarEmpresaAppService,
-    excluirEmpresaAppService,
-    adicionarDocumentoEmpresaAppService,
-    excluirDocumentoEmpresaAppService,
-    visualizarDocumentoEmpresaAppService,
-    obterOuCriarEmpresaAppService,
-} from "./services/appEmpresasHandlersService";
-import {
-    carregarColaboradoresAppService,
-    enviarFotoColaboradorAppService,
-    salvarCertificadosEmMassaColaboradorAppService,
-    adicionarColaboradorAppService,
-    atualizarColaboradorAppService,
-    excluirColaboradorAppService,
-    selecionarColaboradorAppService,
-    abrirEnvioTreinamentoAppService,
-} from "./services/appColaboradoresHandlersService";
-import {
-    sincronizarCertificadosDoStorageAppService,
-    listarArquivosCertificadosStorageAppService,
-    excluirArquivoCertificadoStorageAppService,
-    salvarCertificadoTreinamentoAppService,
-    atualizarDatasCertificadoAppService,
-    visualizarCertificadoTreinamentoAppService,
-    excluirCertificadoTreinamentoAppService,
-} from "./services/appTreinamentosHandlersService";
-import {
-    carregarAuditoriaAppService,
-    carregarMaisAuditoriaAppService,
-    carregarEmailsEnviadosAppService,
-    carregarAuditoriasCampoAppService,
-    carregarMaisAuditoriasCampoAppService,
-    registrarEmailEnviadoAppService,
-    registrarAuditoriaAppService,
-    carregarUsuariosAutorizadosAuditoriaAppService,
-    salvarUsuarioAutorizadoAuditoriaAppService,
-    alternarUsuarioAutorizadoAuditoriaAppService,
-    verificarAcessoAuditoriaAppService,
-    liberarAuditoriaAppService,
-    bloquearAuditoriaAppService,
-} from "./services/appAuditoriaHandlersService";
-import {
     atualizarLimitesCarregamentoSistemaAppService,
     validarSenhaConfiguracoesAppService,
     bloquearConfiguracoesSistemaAppService,
     atualizarSenhaConfiguracoesSistemaAppService,
 } from "./services/appConfiguracoesHandlersService";
-import { carregarConsultaPublicaQrService } from "./services/consultaPublicaQrService";
-import { normalizarDocumentoEmpresa } from "./services/empresaDocumentosService";
 import { carregarLimitesCarregamentoSistema } from "./constants/sistemaLimitesConstants";
 import {
     carregarSenhaConfiguracoesSistema,
@@ -89,6 +40,13 @@ import {
 
 const ConsultaQRPublica = React.lazy(() => import("./components/qr/ConsultaQRPublica").then((modulo) => ({ default: modulo.ConsultaQRPublica })));
 const NovaAuditoriaCampoDireta = React.lazy(() => import("./components/auditoria/NovaAuditoriaCampoDireta").then((modulo) => ({ default: modulo.NovaAuditoriaCampoDireta })));
+
+const carregarEmpresasHandlers = () => import("./services/appEmpresasHandlersService");
+const carregarColaboradoresHandlers = () => import("./services/appColaboradoresHandlersService");
+const carregarTreinamentosHandlers = () => import("./services/appTreinamentosHandlersService");
+const carregarAuditoriaHandlers = () => import("./services/appAuditoriaHandlersService");
+const carregarConsultaPublicaQrHandlers = () => import("./services/consultaPublicaQrService");
+const carregarEmpresaDocumentosHandlers = () => import("./services/empresaDocumentosService");
 
 const hoje = new Date();
 
@@ -186,6 +144,8 @@ export default function App() {
     }, []);
 
     const carregarEmpresas = useCallback(async () => {
+        const { carregarEmpresasAppService } = await carregarEmpresasHandlers();
+
         return carregarEmpresasAppService({
             supabase,
             setEmpresasBanco,
@@ -193,6 +153,13 @@ export default function App() {
     }, []);
 
     const carregarDocumentosEmpresas = useCallback(async () => {
+        const [empresasHandlers, documentosHandlers] = await Promise.all([
+            carregarEmpresasHandlers(),
+            carregarEmpresaDocumentosHandlers(),
+        ]);
+        const { carregarDocumentosEmpresasAppService } = empresasHandlers;
+        const { normalizarDocumentoEmpresa } = documentosHandlers;
+
         return carregarDocumentosEmpresasAppService({
             supabase,
             normalizarDocumentoEmpresa,
@@ -201,6 +168,8 @@ export default function App() {
     }, []);
 
     const carregarAuditoria = useCallback(async () => {
+        const { carregarAuditoriaAppService } = await carregarAuditoriaHandlers();
+
         return carregarAuditoriaAppService({
             supabase,
             limite: limitesCarregamentoSistema.auditoriaSistema,
@@ -212,6 +181,8 @@ export default function App() {
     }, [limitesCarregamentoSistema.auditoriaSistema]);
 
     const carregarMaisAuditoria = useCallback(async () => {
+        const { carregarMaisAuditoriaAppService } = await carregarAuditoriaHandlers();
+
         return carregarMaisAuditoriaAppService({
             supabase,
             auditoria,
@@ -225,6 +196,8 @@ export default function App() {
     }, [auditoria.length, carregandoMaisAuditoria, limitesCarregamentoSistema.auditoriaSistema]);
 
     const carregarEmailsEnviados = useCallback(async () => {
+        const { carregarEmailsEnviadosAppService } = await carregarAuditoriaHandlers();
+
         return carregarEmailsEnviadosAppService({
             supabase,
             limite: limitesCarregamentoSistema.emailsEnviados,
@@ -234,6 +207,8 @@ export default function App() {
     }, [limitesCarregamentoSistema.emailsEnviados]);
 
     const carregarAuditoriasCampo = useCallback(async () => {
+        const { carregarAuditoriasCampoAppService } = await carregarAuditoriaHandlers();
+
         return carregarAuditoriasCampoAppService({
             supabase,
             limite: limitesCarregamentoSistema.auditoriasCampo,
@@ -246,6 +221,8 @@ export default function App() {
     }, [limitesCarregamentoSistema.auditoriasCampo]);
 
     const carregarMaisAuditoriasCampo = useCallback(async () => {
+        const { carregarMaisAuditoriasCampoAppService } = await carregarAuditoriaHandlers();
+
         return carregarMaisAuditoriasCampoAppService({
             supabase,
             auditoriasCampo,
@@ -262,6 +239,8 @@ export default function App() {
 
     const registrarEmailEnviado = useCallback(
         async ({ empresaId = null, colaboradorId = null, documentoId = null, destinatario = "", assunto = "", tipoAlerta = "", documento = "", statusEnvio = "", erro = "" } = {}) => {
+            const { registrarEmailEnviadoAppService } = await carregarAuditoriaHandlers();
+
             return registrarEmailEnviadoAppService({
                 supabase,
                 usuario,
@@ -283,6 +262,8 @@ export default function App() {
 
     const registrarAuditoria = useCallback(
         async (acao, tabela, descricao, registroId = null, dados = {}) => {
+            const { registrarAuditoriaAppService } = await carregarAuditoriaHandlers();
+
             return registrarAuditoriaAppService({
                 supabase,
                 usuario,
@@ -297,6 +278,8 @@ export default function App() {
     );
 
     const carregarUsuariosAutorizadosAuditoria = useCallback(async () => {
+        const { carregarUsuariosAutorizadosAuditoriaAppService } = await carregarAuditoriaHandlers();
+
         return carregarUsuariosAutorizadosAuditoriaAppService({
             supabase,
         });
@@ -304,6 +287,8 @@ export default function App() {
 
     const salvarUsuarioAutorizadoAuditoria = useCallback(
         async (usuarioAutorizado) => {
+            const { salvarUsuarioAutorizadoAuditoriaAppService } = await carregarAuditoriaHandlers();
+
             return salvarUsuarioAutorizadoAuditoriaAppService({
                 supabase,
                 usuarioAutorizado,
@@ -315,6 +300,8 @@ export default function App() {
 
     const alternarUsuarioAutorizadoAuditoria = useCallback(
         async (usuarioAutorizado) => {
+            const { alternarUsuarioAutorizadoAuditoriaAppService } = await carregarAuditoriaHandlers();
+
             return alternarUsuarioAutorizadoAuditoriaAppService({
                 supabase,
                 usuarioAutorizado,
@@ -326,6 +313,8 @@ export default function App() {
     );
 
     const verificarAcessoAuditoria = useCallback(async () => {
+        const { verificarAcessoAuditoriaAppService } = await carregarAuditoriaHandlers();
+
         return verificarAcessoAuditoriaAppService({
             supabase,
             usuario,
@@ -335,6 +324,8 @@ export default function App() {
     }, [usuario]);
 
     const liberarAuditoria = async () => {
+        const { liberarAuditoriaAppService } = await carregarAuditoriaHandlers();
+
         return liberarAuditoriaAppService({
             verificarAcessoAuditoria,
             setAuditoriaLiberada,
@@ -343,7 +334,9 @@ export default function App() {
         });
     };
 
-    const bloquearAuditoria = () => {
+    const bloquearAuditoria = async () => {
+        const { bloquearAuditoriaAppService } = await carregarAuditoriaHandlers();
+
         return bloquearAuditoriaAppService({
             setAuditoriaLiberada,
             registrarAuditoria,
@@ -351,6 +344,8 @@ export default function App() {
     };
 
     const carregarColaboradores = useCallback(async () => {
+        const { carregarColaboradoresAppService } = await carregarColaboradoresHandlers();
+
         return carregarColaboradoresAppService({
             supabase,
             carregarEmpresas,
@@ -363,6 +358,8 @@ export default function App() {
     }, [carregarEmpresas, carregarDocumentosEmpresas]);
 
     async function enviarLogoEmpresa(arquivo, empresaId) {
+        const { enviarLogoEmpresaAppService } = await carregarEmpresasHandlers();
+
         return enviarLogoEmpresaAppService({
             supabase,
             arquivo,
@@ -372,6 +369,8 @@ export default function App() {
     }
 
     async function enviarContratoEmpresa(arquivo, empresaId) {
+        const { enviarContratoEmpresaAppService } = await carregarEmpresasHandlers();
+
         return enviarContratoEmpresaAppService({
             supabase,
             arquivo,
@@ -381,6 +380,8 @@ export default function App() {
     }
 
     async function adicionarEmpresa(novaEmpresa) {
+        const { adicionarEmpresaAppService } = await carregarEmpresasHandlers();
+
         return adicionarEmpresaAppService({
             supabase,
             novaEmpresa,
@@ -393,6 +394,8 @@ export default function App() {
     }
 
     async function atualizarEmpresa(empresaAtualizada) {
+        const { atualizarEmpresaAppService } = await carregarEmpresasHandlers();
+
         return atualizarEmpresaAppService({
             supabase,
             empresaAtualizada,
@@ -405,6 +408,8 @@ export default function App() {
     }
 
     async function excluirEmpresa(empresa) {
+        const { excluirEmpresaAppService } = await carregarEmpresasHandlers();
+
         return excluirEmpresaAppService({
             supabase,
             empresa,
@@ -440,6 +445,13 @@ export default function App() {
     }, [carregarAuditoria, carregarAuditoriasCampo, carregarColaboradores, registrarAuditoria]);
 
     async function adicionarDocumentoEmpresa(novoDoc) {
+        const [empresasHandlers, documentosHandlers] = await Promise.all([
+            carregarEmpresasHandlers(),
+            carregarEmpresaDocumentosHandlers(),
+        ]);
+        const { adicionarDocumentoEmpresaAppService } = empresasHandlers;
+        const { normalizarDocumentoEmpresa } = documentosHandlers;
+
         return adicionarDocumentoEmpresaAppService({
             supabase,
             novoDoc,
@@ -452,6 +464,8 @@ export default function App() {
     }
 
     async function excluirDocumentoEmpresa(documento) {
+        const { excluirDocumentoEmpresaAppService } = await carregarEmpresasHandlers();
+
         return excluirDocumentoEmpresaAppService({
             supabase,
             documento,
@@ -461,6 +475,8 @@ export default function App() {
     }
 
     async function visualizarDocumentoEmpresa(documento) {
+        const { visualizarDocumentoEmpresaAppService } = await carregarEmpresasHandlers();
+
         return visualizarDocumentoEmpresaAppService({
             supabase,
             documento,
@@ -469,6 +485,8 @@ export default function App() {
     }
 
     async function obterOuCriarEmpresa(nomeEmpresa) {
+        const { obterOuCriarEmpresaAppService } = await carregarEmpresasHandlers();
+
         return obterOuCriarEmpresaAppService({
             supabase,
             nomeEmpresa,
@@ -478,6 +496,8 @@ export default function App() {
     }
 
     async function enviarFotoColaborador(arquivo, colaboradorId) {
+        const { enviarFotoColaboradorAppService } = await carregarColaboradoresHandlers();
+
         return enviarFotoColaboradorAppService({
             supabase,
             arquivo,
@@ -487,6 +507,8 @@ export default function App() {
     }
 
     async function salvarCertificadosEmMassaColaborador(colaborador, arquivos = []) {
+        const { salvarCertificadosEmMassaColaboradorAppService } = await carregarColaboradoresHandlers();
+
         return salvarCertificadosEmMassaColaboradorAppService({
             supabase,
             colaborador,
@@ -495,6 +517,8 @@ export default function App() {
     }
 
     async function adicionarColaborador(novo) {
+        const { adicionarColaboradorAppService } = await carregarColaboradoresHandlers();
+
         return adicionarColaboradorAppService({
             supabase,
             novo,
@@ -508,6 +532,8 @@ export default function App() {
     }
 
     async function atualizarColaborador(colaboradorAtualizado) {
+        const { atualizarColaboradorAppService } = await carregarColaboradoresHandlers();
+
         return atualizarColaboradorAppService({
             supabase,
             colaboradorAtualizado,
@@ -521,6 +547,8 @@ export default function App() {
     }
 
     async function sincronizarCertificadosDoStorage() {
+        const { sincronizarCertificadosDoStorageAppService } = await carregarTreinamentosHandlers();
+
         return sincronizarCertificadosDoStorageAppService({
             supabase,
             colaboradores,
@@ -532,6 +560,8 @@ export default function App() {
     }
 
     async function listarArquivosCertificadosStorage() {
+        const { listarArquivosCertificadosStorageAppService } = await carregarTreinamentosHandlers();
+
         return listarArquivosCertificadosStorageAppService({
             colaboradores,
             empresasBanco,
@@ -540,6 +570,8 @@ export default function App() {
     }
 
     async function excluirArquivoCertificadoStorage(arquivo) {
+        const { excluirArquivoCertificadoStorageAppService } = await carregarTreinamentosHandlers();
+
         return excluirArquivoCertificadoStorageAppService({
             supabase,
             arquivo,
@@ -549,6 +581,8 @@ export default function App() {
     }
 
     async function salvarCertificadoTreinamento(certificado) {
+        const { salvarCertificadoTreinamentoAppService } = await carregarTreinamentosHandlers();
+
         return salvarCertificadoTreinamentoAppService({
             supabase,
             certificado,
@@ -562,6 +596,8 @@ export default function App() {
     }
 
     async function atualizarDatasCertificado(certificado, datas) {
+        const { atualizarDatasCertificadoAppService } = await carregarTreinamentosHandlers();
+
         return atualizarDatasCertificadoAppService({
             supabase,
             certificado,
@@ -574,6 +610,8 @@ export default function App() {
     }
 
     async function visualizarCertificadoTreinamento(certificado) {
+        const { visualizarCertificadoTreinamentoAppService } = await carregarTreinamentosHandlers();
+
         return visualizarCertificadoTreinamentoAppService({
             supabase,
             certificado,
@@ -582,6 +620,8 @@ export default function App() {
     }
 
     async function excluirCertificadoTreinamento(certificado) {
+        const { excluirCertificadoTreinamentoAppService } = await carregarTreinamentosHandlers();
+
         return excluirCertificadoTreinamentoAppService({
             supabase,
             certificado,
@@ -591,6 +631,8 @@ export default function App() {
     }
 
     async function excluirColaborador(colaborador) {
+        const { excluirColaboradorAppService } = await carregarColaboradoresHandlers();
+
         return excluirColaboradorAppService({
             supabase,
             colaborador,
@@ -653,6 +695,7 @@ export default function App() {
             setErroConsultaPublica("");
 
             try {
+                const { carregarConsultaPublicaQrService } = await carregarConsultaPublicaQrHandlers();
                 const dadosNormalizados = await carregarConsultaPublicaQrService({
                     supabase,
                     tokenQr,
@@ -767,7 +810,9 @@ export default function App() {
         { id: "roteiro", label: "Roteiro", icon: CalendarClock },
     ];
 
-    const selecionarColaborador = (c) => {
+    const selecionarColaborador = async (c) => {
+        const { selecionarColaboradorAppService } = await carregarColaboradoresHandlers();
+
         selecionarColaboradorAppService({
             colaborador: c,
             setColaboradorSelecionado,
@@ -776,7 +821,9 @@ export default function App() {
         });
     };
 
-    const abrirEnvioTreinamento = (c) => {
+    const abrirEnvioTreinamento = async (c) => {
+        const { abrirEnvioTreinamentoAppService } = await carregarColaboradoresHandlers();
+
         abrirEnvioTreinamentoAppService({
             colaborador: c,
             setColaboradorSelecionado,
