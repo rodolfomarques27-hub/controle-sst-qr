@@ -30,10 +30,7 @@ import {
 import { tiposAuditoriaCampoDireta } from "../../constants/sstConstants";
 import { normalizarTextoBusca, formatDate, formatarDataHora, classNames } from "../../utils/sstUtils";
 import { LIMITE_QRCODES_CAMPO_POR_CARGA } from "../../constants/sistemaLimitesConstants";
-import {
-    carregarConfiguracaoAuditoriaPublicaSistema,
-    TOKEN_AUDITORIA_CAMPO_PUBLICA_PADRAO,
-} from "../../constants/auditoriaPublicaConstants";
+import { carregarConfiguracaoAuditoriaPublicaSistema } from "../../constants/auditoriaPublicaConstants";
 
 const hoje = new Date();
 
@@ -50,7 +47,7 @@ export function DashboardAuditoriaCampo({
 }) {
     const [mostrarPersonalizacao, setMostrarPersonalizacao] = useState(false);
     const [configAuditoriaPublica] = useState(() => carregarConfiguracaoAuditoriaPublicaSistema());
-    const tokenAuditoriaCampoPadrao = configAuditoriaPublica.tokenPublico || TOKEN_AUDITORIA_CAMPO_PUBLICA_PADRAO;
+    const tokenAuditoriaCampoConfigurado = String(configAuditoriaPublica.tokenPublico || "").trim();
     const limiteQrcodesCampoAtual = Math.max(10, Number(limiteQrcodesCampo || LIMITE_QRCODES_CAMPO_POR_CARGA));
     const [qrcodesCampo, setQrcodesCampo] = useState([]);
     const [qrcodesCampoCarregados, setQrcodesCampoCarregados] = useState(false);
@@ -67,7 +64,7 @@ export function DashboardAuditoriaCampo({
         area: "",
         local: "",
         empresaResponsavel: "",
-        token: tokenAuditoriaCampoPadrao,
+        token: tokenAuditoriaCampoConfigurado,
         observacao: "",
     });
 
@@ -586,7 +583,7 @@ export function DashboardAuditoriaCampo({
     const montarLinkQrCampo = useCallback((dados = qrFormCampo) => {
         const origem = typeof window !== "undefined" ? window.location.origin : "";
         const params = new URLSearchParams();
-        const tokenPublico = String(dados.token || tokenAuditoriaCampoPadrao).trim();
+        const tokenPublico = String(dados.token || tokenAuditoriaCampoConfigurado).trim();
         if (tokenPublico) params.set("token", tokenPublico);
         if (dados.tipo) params.set("tipo", dados.tipo);
         if (dados.identificacao) params.set("id", dados.identificacao);
@@ -594,7 +591,7 @@ export function DashboardAuditoriaCampo({
         if (dados.local) params.set("local", dados.local);
         if (dados.empresaResponsavel) params.set("empresa", dados.empresaResponsavel);
         return `${origem}/#/auditoria-campo?${params.toString()}`;
-    }, [qrFormCampo, tokenAuditoriaCampoPadrao]);
+    }, [qrFormCampo, tokenAuditoriaCampoConfigurado]);
 
     const linkQrCampoAtual = useMemo(() => montarLinkQrCampo(qrFormCampo), [montarLinkQrCampo, qrFormCampo]);
 
@@ -675,12 +672,20 @@ export function DashboardAuditoriaCampo({
 
     const salvarQrCampo = async () => {
         const identificacao = String(qrFormCampo.identificacao || "").trim();
+        const tokenPublicoQrCampo = String(qrFormCampo.token || tokenAuditoriaCampoConfigurado || "").trim();
+
         if (!identificacao) {
             setMensagemQrCampo("Informe a identificação do item. Ex.: GERADOR-01, CONTAINER-02, BANHEIRO-01.");
             return;
         }
 
+        if (!tokenPublicoQrCampo) {
+            setMensagemQrCampo("Não foi possível gerar/salvar QR Code: informe o token público ativo do Supabase em Configurações ou no campo Token público cadastrado.");
+            return;
+        }
+
         const tipo = obterTipoAuditoriaCampoDireta(qrFormCampo.tipo);
+        const dadosQrCampo = { ...qrFormCampo, token: tokenPublicoQrCampo };
         const payload = {
             codigo: `${tipo.valor}-${identificacao}`.toUpperCase().replace(/[^A-Z0-9_-]+/g, "-"),
             tipo: tipo.valor,
@@ -689,8 +694,8 @@ export function DashboardAuditoriaCampo({
             area: String(qrFormCampo.area || "").trim() || null,
             local: String(qrFormCampo.local || "").trim() || null,
             empresa_responsavel: String(qrFormCampo.empresaResponsavel || "").trim() || null,
-            token_publico: String(qrFormCampo.token || "").trim() || null,
-            link: montarLinkQrCampo(qrFormCampo),
+            token_publico: tokenPublicoQrCampo,
+            link: montarLinkQrCampo(dadosQrCampo),
             observacao: String(qrFormCampo.observacao || "").trim() || null,
             criado_por: null,
         };
@@ -1213,10 +1218,10 @@ export function DashboardAuditoriaCampo({
                             <label className="block text-xs font-bold uppercase tracking-wide text-slate-500 md:col-span-2">
                                 Token público cadastrado no Supabase
                                 <input value={qrFormCampo.token} onChange={(e) => setQrFormCampo((atual) => ({ ...atual, token: e.target.value }))} placeholder="Cole o token público ativo da tabela auditoria_tokens_publicos" className="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-3 py-2 text-sm normal-case tracking-normal outline-none focus:ring-2 focus:ring-blue-100" />
-                                <span className="mt-1 block text-[11px] font-medium normal-case tracking-normal text-slate-400">Token padrão vindo de Configurações. Ele também precisa existir e estar ativo no Supabase.</span>
+                                <span className="mt-1 block text-[11px] font-medium normal-case tracking-normal text-slate-400">Token operacional vindo de Configurações. Ele também precisa existir e estar ativo no Supabase.</span>
                             </label>
                             <div className="md:col-span-2 rounded-2xl bg-blue-50 px-3 py-2 text-xs font-semibold text-blue-700 ring-1 ring-blue-100">
-                                Token padrão configurado: {tokenAuditoriaCampoPadrao}
+                                Token operacional configurado: {tokenAuditoriaCampoConfigurado || "Não configurado"}
                             </div>
                             <label className="block text-xs font-bold uppercase tracking-wide text-slate-500 md:col-span-2">
                                 Observação

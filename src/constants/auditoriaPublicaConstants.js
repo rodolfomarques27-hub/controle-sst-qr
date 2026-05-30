@@ -1,11 +1,10 @@
 export const CHAVE_STORAGE_CONFIG_AUDITORIA_PUBLICA = "sstAuditoriaPublicaConfig";
 
-export const TOKEN_AUDITORIA_CAMPO_PUBLICA_PADRAO = "TOKEN-AUDITORIA-CAMPO-2026";
 export const SENHA_REFERENCIA_AUDITORIA_CAMPO_PUBLICA_PADRAO = "2026";
 export const ROTA_AUDITORIA_CAMPO_PUBLICA = "/#/auditoria-campo";
 
 export const CONFIG_AUDITORIA_PUBLICA_PADRAO = {
-    tokenPublico: TOKEN_AUDITORIA_CAMPO_PUBLICA_PADRAO,
+    tokenPublico: "",
     senhaReferencia: SENHA_REFERENCIA_AUDITORIA_CAMPO_PUBLICA_PADRAO,
     exigirSenha: true,
 };
@@ -15,9 +14,25 @@ const textoSeguro = (valor, padrao = "") => {
     return texto || padrao;
 };
 
+const pareceTokenInicialDeDesenvolvimento = (valor = "") => {
+    const token = String(valor || "").trim().toUpperCase();
+
+    return token.startsWith("TOKEN-") && token.includes("AUDITORIA") && token.includes("CAMPO");
+};
+
+const normalizarTokenPublicoOperacional = (valor = "") => {
+    const token = textoSeguro(valor);
+
+    if (pareceTokenInicialDeDesenvolvimento(token)) {
+        return "";
+    }
+
+    return token;
+};
+
 export function normalizarConfiguracaoAuditoriaPublica(configuracao = {}) {
     return {
-        tokenPublico: textoSeguro(configuracao.tokenPublico, TOKEN_AUDITORIA_CAMPO_PUBLICA_PADRAO),
+        tokenPublico: normalizarTokenPublicoOperacional(configuracao.tokenPublico),
         senhaReferencia: textoSeguro(configuracao.senhaReferencia, SENHA_REFERENCIA_AUDITORIA_CAMPO_PUBLICA_PADRAO),
         exigirSenha: configuracao.exigirSenha !== false,
     };
@@ -52,7 +67,7 @@ export function restaurarConfiguracaoAuditoriaPublicaPadrao() {
 
 export function montarLinkAuditoriaPublicaSistema({ origem = "", tokenPublico = "" } = {}) {
     const origemFinal = origem || (typeof window !== "undefined" ? window.location.origin : "");
-    const tokenFinal = textoSeguro(tokenPublico, TOKEN_AUDITORIA_CAMPO_PUBLICA_PADRAO);
+    const tokenFinal = normalizarTokenPublicoOperacional(tokenPublico);
     const params = new URLSearchParams();
 
     if (tokenFinal) {

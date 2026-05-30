@@ -40,7 +40,6 @@ import {
     montarLinkAuditoriaPublicaSistema,
     restaurarConfiguracaoAuditoriaPublicaPadrao,
     salvarConfiguracaoAuditoriaPublicaSistema,
-    TOKEN_AUDITORIA_CAMPO_PUBLICA_PADRAO,
 } from "../../constants/auditoriaPublicaConstants";
 import {
     SENHA_CONFIGURACOES_PADRAO,
@@ -444,7 +443,7 @@ export function ConfiguracoesSistema({
     const restaurarConfigAuditoriaPublica = () => {
         const padrao = restaurarConfiguracaoAuditoriaPublicaPadrao();
         setConfigAuditoriaPublica(padrao);
-        setMensagemAuditoriaPublica("Configuração padrão da Auditoria pública restaurada.");
+        setMensagemAuditoriaPublica("Configuração restaurada. O token público ficou vazio até você colar o token ativo do Supabase.");
     };
 
     const copiarLinkAuditoriaPublica = async () => {
@@ -591,8 +590,8 @@ export function ConfiguracoesSistema({
         },
         {
             label: "Token Auditoria pública",
-            valor: configAuditoriaPublica.tokenPublico || TOKEN_AUDITORIA_CAMPO_PUBLICA_PADRAO,
-            detalhe: "usado em links e QR Codes",
+            valor: configAuditoriaPublica.tokenPublico || "Não configurado",
+            detalhe: configAuditoriaPublica.tokenPublico ? "usado em links e QR Codes" : "cadastre o token do Supabase",
             icon: KeyRound,
         },
         {
@@ -953,12 +952,12 @@ export function ConfiguracoesSistema({
 
                         <div className="mt-4 space-y-3">
                             <label className="block rounded-2xl bg-slate-50 px-3 py-3 ring-1 ring-slate-100">
-                                <p className="text-sm font-bold text-slate-800">Token público padrão</p>
-                                <p className="mt-1 text-xs text-slate-500">Usado para gerar links e QR Codes da Nova Auditoria de Campo.</p>
+                                <p className="text-sm font-bold text-slate-800">Token público operacional</p>
+                                <p className="mt-1 text-xs text-slate-500">Usado para gerar links e QR Codes da Nova Auditoria de Campo. Não use token fixo no código.</p>
                                 <input
                                     value={configAuditoriaPublica.tokenPublico || ""}
                                     onChange={(evento) => alterarConfigAuditoriaPublica("tokenPublico", evento.target.value)}
-                                    placeholder="TOKEN-AUDITORIA-CAMPO-2026"
+                                    placeholder="Cole aqui o token ativo do Supabase"
                                     className="mt-3 w-full rounded-2xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-800 outline-none focus:ring-2 focus:ring-blue-100"
                                 />
                             </label>
@@ -980,12 +979,13 @@ export function ConfiguracoesSistema({
                                     <p className="text-sm font-bold text-slate-800">Link público atual</p>
                                 </div>
                                 <p className="texto-quebra-segura mt-2 rounded-xl bg-white px-3 py-2 text-xs font-semibold text-slate-500 ring-1 ring-slate-200">
-                                    {linkAuditoriaPublica}
+                                    {configAuditoriaPublica.tokenPublico ? linkAuditoriaPublica : "Informe o token ativo do Supabase para liberar o link público com token."}
                                 </p>
                                 <button
                                     type="button"
                                     onClick={copiarLinkAuditoriaPublica}
-                                    className="mt-3 inline-flex items-center gap-2 rounded-2xl bg-white px-3 py-2 text-xs font-bold text-slate-700 ring-1 ring-slate-200 hover:bg-slate-100"
+                                    disabled={!configAuditoriaPublica.tokenPublico}
+                                    className="mt-3 inline-flex items-center gap-2 rounded-2xl bg-white px-3 py-2 text-xs font-bold text-slate-700 ring-1 ring-slate-200 hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-60"
                                 >
                                     <Copy className="h-3.5 w-3.5" />
                                     Copiar link

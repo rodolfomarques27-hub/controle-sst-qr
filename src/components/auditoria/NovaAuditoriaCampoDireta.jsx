@@ -27,7 +27,6 @@ import {
 } from "../../utils/sstUtils";
 import {
     obterTokenAuditoriaCampoPublicaConfigurado,
-    TOKEN_AUDITORIA_CAMPO_PUBLICA_PADRAO,
     aplicarContatosEmpresaAuditoriaCampoDireta,
     criarFormularioInicialAuditoriaCampoDireta,
     encontrarEmpresaAuditoriaCampoDireta,
@@ -68,13 +67,14 @@ export function NovaAuditoriaCampoDireta({ usuario = null, onAuditoriaSalva, emp
     const tipoInicial = obterTipoAuditoriaCampoPorParametro(tipoParametro);
     const origem = typeof window !== "undefined" ? window.location.origin : "";
     const tokenAuditoriaPublicaConfigurado = obterTokenAuditoriaCampoPublicaConfigurado();
-    const tokenLinkAuditoriaCampo = tokenParametro || tokenAuditoriaPublicaConfigurado || TOKEN_AUDITORIA_CAMPO_PUBLICA_PADRAO;
+    const tokenLinkAuditoriaCampo = tokenParametro || tokenAuditoriaPublicaConfigurado;
+    const tokenLinkAuditoriaCampoDisponivel = Boolean(tokenLinkAuditoriaCampo);
     const montarLinkAuditoriaCampo = (parametrosExtras = {}) => montarLinkAuditoriaCampoDireta({
         origem,
         token: tokenLinkAuditoriaCampo,
         parametrosExtras,
     });
-    const linkGeral = montarLinkAuditoriaCampo();
+    const linkGeral = tokenLinkAuditoriaCampoDisponivel ? montarLinkAuditoriaCampo() : "";
     const linkGeralDireto = linkGeral;
     const empresasAuditoriaCampo = useMemo(
         () => listarEmpresasAuditoriaCampoDireta(empresasBanco),
@@ -535,9 +535,9 @@ export function NovaAuditoriaCampoDireta({ usuario = null, onAuditoriaSalva, emp
                                 </p>
                                 <div className="mx-auto mt-4 flex w-full max-w-full min-w-0 flex-col gap-2 sm:mx-0 sm:max-w-3xl sm:flex-row sm:items-center">
                                     <div className="w-full min-w-0 overflow-hidden rounded-2xl bg-white px-4 py-3 text-xs font-semibold text-slate-500 ring-1 ring-slate-200">
-                                        <span className="block truncate">{linkGeral}</span>
+                                        <span className="block truncate">{linkGeral || "Configure o token público ativo do Supabase antes de gerar link ou QR Code."}</span>
                                     </div>
-                                    <button type="button" onClick={() => copiarTexto(linkGeral, "Link geral copiado.")} className="inline-flex w-full shrink-0 items-center justify-center gap-2 rounded-2xl bg-slate-950 px-4 py-3 text-sm font-bold text-white hover:bg-slate-800 sm:w-auto">
+                                    <button type="button" onClick={() => linkGeral && copiarTexto(linkGeral, "Link geral copiado.")} disabled={!linkGeral} className="inline-flex w-full shrink-0 items-center justify-center gap-2 rounded-2xl bg-slate-950 px-4 py-3 text-sm font-bold text-white hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto">
                                         <QrCode className="h-4 w-4" />
                                         Copiar link geral
                                     </button>
@@ -546,7 +546,7 @@ export function NovaAuditoriaCampoDireta({ usuario = null, onAuditoriaSalva, emp
                         </div>
                         <div className="mx-auto w-full max-w-[220px] rounded-3xl bg-white p-3 text-center shadow-sm ring-1 ring-slate-200 lg:mx-0 lg:justify-self-end">
                             <div className="mx-auto flex h-32 w-32 items-center justify-center rounded-2xl bg-slate-50 p-2">
-                                <QRCodeSVG value={linkGeral} size={112} level="M" />
+                                {linkGeral ? <QRCodeSVG value={linkGeral} size={112} level="M" /> : <QrCode className="h-12 w-12 text-slate-300" />}
                             </div>
                             <p className="mt-2 text-[11px] font-bold uppercase tracking-wide text-slate-400">QR Code geral</p>
                         </div>

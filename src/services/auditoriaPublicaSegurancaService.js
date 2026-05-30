@@ -1,19 +1,23 @@
 import {
     SENHA_REFERENCIA_AUDITORIA_CAMPO_PUBLICA_PADRAO,
-    TOKEN_AUDITORIA_CAMPO_PUBLICA_PADRAO,
     normalizarConfiguracaoAuditoriaPublica,
 } from "../constants/auditoriaPublicaConstants";
 
 const normalizarTexto = (valor) => String(valor || "").trim();
 const normalizarComparacao = (valor) => normalizarTexto(valor).toUpperCase();
 
+const pareceTokenInicialDeDesenvolvimento = (valor = "") => {
+    const token = normalizarComparacao(valor);
+
+    return token.startsWith("TOKEN-") && token.includes("AUDITORIA") && token.includes("CAMPO");
+};
+
 export function avaliarSegurancaAuditoriaPublica(configuracao = {}) {
     const config = normalizarConfiguracaoAuditoriaPublica(configuracao);
     const token = normalizarTexto(config.tokenPublico);
     const senhaReferencia = normalizarTexto(config.senhaReferencia);
-    const tokenPadrao = normalizarComparacao(TOKEN_AUDITORIA_CAMPO_PUBLICA_PADRAO);
     const senhaPadrao = normalizarTexto(SENHA_REFERENCIA_AUDITORIA_CAMPO_PUBLICA_PADRAO);
-    const tokenAtual = normalizarComparacao(token);
+    const tokenInicialDetectado = pareceTokenInicialDeDesenvolvimento(token);
 
     return [
         {
@@ -21,20 +25,20 @@ export function avaliarSegurancaAuditoriaPublica(configuracao = {}) {
             label: "Token público preenchido",
             ok: Boolean(token),
             nivel: token ? "ok" : "critico",
-            descricao: token ? "Existe token para compor o link público." : "O link público ficaria sem token na URL.",
-            recomendacao: token ? "Mantenha o token salvo e gere novos QR Codes quando houver troca." : "Informe um token público antes de gerar QR Codes.",
+            descricao: token ? "Existe token para compor o link público." : "O link público ficará sem token na URL.",
+            recomendacao: token ? "Mantenha o token salvo e gere novos QR Codes quando houver troca." : "Informe o token público ativo no Supabase antes de gerar QR Codes.",
         },
         {
-            chave: "token_nao_padrao",
-            label: "Token diferente do padrão inicial",
-            ok: tokenAtual && tokenAtual !== tokenPadrao,
-            nivel: tokenAtual && tokenAtual !== tokenPadrao ? "ok" : "alerta",
-            descricao: tokenAtual && tokenAtual !== tokenPadrao
-                ? "O token local configurado não é o valor padrão do roteiro."
-                : "O token ainda parece ser o token padrão usado no desenvolvimento.",
-            recomendacao: tokenAtual && tokenAtual !== tokenPadrao
-                ? "Confirme se esse mesmo token existe e está ativo no Supabase/RPC."
-                : "Troque o token padrão por um valor operacional e cadastre/ative o mesmo token no Supabase.",
+            chave: "token_operacional",
+            label: "Token operacional, sem padrão fixo",
+            ok: Boolean(token) && !tokenInicialDetectado,
+            nivel: Boolean(token) && !tokenInicialDetectado ? "ok" : "alerta",
+            descricao: Boolean(token) && !tokenInicialDetectado
+                ? "O token configurado não parece ser um token inicial de desenvolvimento."
+                : "O token está vazio ou parece ser um token inicial de desenvolvimento.",
+            recomendacao: Boolean(token) && !tokenInicialDetectado
+                ? "Confirme se esse mesmo token existe, está ativo e não está expirado no Supabase."
+                : "Cole o token ativo da tabela auditoria_tokens_publicos e salve a configuração.",
         },
         {
             chave: "token_tamanho",

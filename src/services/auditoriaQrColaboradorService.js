@@ -1,8 +1,11 @@
 import { supabase } from "../lib/supabaseClient";
 import { reduzirFotoParaAuditoria } from "./imagemService";
 import { sanitizarNomeArquivo } from "../utils/sstUtils";
+import { carregarConfiguracaoAuditoriaPublicaSistema } from "../constants/auditoriaPublicaConstants";
 
-export const TOKEN_AUDITORIA_CAMPO_PUBLICA = "TOKEN-AUDITORIA-CAMPO-2026";
+export function obterTokenAuditoriaQrColaboradorConfigurado() {
+    return texto(carregarConfiguracaoAuditoriaPublicaSistema().tokenPublico);
+}
 
 function texto(valor) {
     return String(valor ?? "").trim();
@@ -41,7 +44,7 @@ async function arquivoParaBase64Payload(arquivo) {
 }
 
 export async function validarSenhaAuditoriaQr({
-    tokenAuditoria = TOKEN_AUDITORIA_CAMPO_PUBLICA,
+    tokenAuditoria = obterTokenAuditoriaQrColaboradorConfigurado(),
     senha = "",
 } = {}) {
     const tokenSeguro = texto(tokenAuditoria);
@@ -93,7 +96,7 @@ export async function gerarNumeroAuditoriaQr() {
 }
 
 export async function salvarAuditoriaQrColaborador({
-    tokenAuditoria = TOKEN_AUDITORIA_CAMPO_PUBLICA,
+    tokenAuditoria = obterTokenAuditoriaQrColaboradorConfigurado(),
     senha = "",
     tokenQr = "",
     auditoria = {},

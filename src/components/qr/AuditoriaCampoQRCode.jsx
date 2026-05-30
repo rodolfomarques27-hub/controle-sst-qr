@@ -18,7 +18,7 @@ import {
     gravidadesAuditoriaCampo,
 } from "../../constants/sstConstants";
 import {
-    TOKEN_AUDITORIA_CAMPO_PUBLICA,
+    obterTokenAuditoriaQrColaboradorConfigurado,
     validarSenhaAuditoriaQr,
     gerarNumeroAuditoriaQr,
     salvarAuditoriaQrColaborador,
@@ -66,6 +66,30 @@ export function AuditoriaCampoQRCode({ colaborador = {}, treinamentos = [], onAu
         fotoAntes: null,
         fotoDepois: null,
     });
+
+    const tokenAuditoriaQr = useMemo(() => {
+        const tokenConfigurado = obterTokenAuditoriaQrColaboradorConfigurado();
+
+        if (typeof window === "undefined") {
+            return tokenConfigurado;
+        }
+
+        const parametrosNormais = new URLSearchParams(window.location.search || "");
+        const hash = window.location.hash || "";
+        const queryHash = hash.includes("?") ? hash.slice(hash.indexOf("?") + 1) : "";
+        const parametrosHash = new URLSearchParams(queryHash);
+
+        return (
+            parametrosNormais.get("token") ||
+            parametrosNormais.get("chave") ||
+            parametrosHash.get("token") ||
+            parametrosHash.get("chave") ||
+            colaborador.tokenAuditoriaPublica ||
+            colaborador.token_auditoria_publica ||
+            tokenConfigurado ||
+            ""
+        );
+    }, [colaborador.tokenAuditoriaPublica, colaborador.token_auditoria_publica]);
 
     const resultado = useMemo(() => calcularResultadoAuditoriaCampo(respostas), [respostas]);
     const precisaDesvio = resultado.temDesvioGrave || resultado.itens.some((item) => ["nao_conforme", "observacao_leve"].includes(item.resposta.chave));
@@ -116,6 +140,11 @@ export function AuditoriaCampoQRCode({ colaborador = {}, treinamentos = [], onAu
     const validarAcessoAuditoriaQRCode = async () => {
         setMensagemAcessoAuditoria("");
 
+        if (!tokenAuditoriaQr) {
+            setMensagemAcessoAuditoria("Token público da auditoria não configurado. Gere o QR Code com token ativo ou informe token/chave na URL.");
+            return;
+        }
+
         if (!senhaAuditoriaQr.trim()) {
             setMensagemAcessoAuditoria("Informe a senha de acesso da auditoria.");
             return;
@@ -125,7 +154,7 @@ export function AuditoriaCampoQRCode({ colaborador = {}, treinamentos = [], onAu
 
         try {
             const resposta = await validarSenhaAuditoriaQr({
-                tokenAuditoria: TOKEN_AUDITORIA_CAMPO_PUBLICA,
+                tokenAuditoria: tokenAuditoriaQr,
                 senha: senhaAuditoriaQr,
             });
 
@@ -231,7 +260,7 @@ export function AuditoriaCampoQRCode({ colaborador = {}, treinamentos = [], onAu
             };
 
             const resultadoSalvamento = await salvarAuditoriaQrColaborador({
-                tokenAuditoria: TOKEN_AUDITORIA_CAMPO_PUBLICA,
+                tokenAuditoria: tokenAuditoriaQr,
                 senha: senhaAuditoriaQr,
                 tokenQr: auditoriaPayload.token_qr,
                 auditoria: auditoriaPayload,
