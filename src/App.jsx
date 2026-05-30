@@ -16,7 +16,6 @@ import { SupabaseConfiguracaoPendente } from "./components/commonComponents";
 import { LoginScreen } from "./components/LoginScreen";
 import { validarArquivoAntesUpload } from "./components/FileUploadAviso";
 import { CarregandoTela } from "./components/CarregandoTela";
-import { AppLayout } from "./components/layout/AppLayout";
 import {
     obterTokenQrPublicoApp,
     verificarRotaNovaAuditoriaCampoApp,
@@ -40,6 +39,7 @@ import {
 const ConsultaQRPublica = React.lazy(() => import("./components/qr/ConsultaQRPublica").then((modulo) => ({ default: modulo.ConsultaQRPublica })));
 const NovaAuditoriaCampoDireta = React.lazy(() => import("./components/auditoria/NovaAuditoriaCampoDireta").then((modulo) => ({ default: modulo.NovaAuditoriaCampoDireta })));
 const AppContentRouter = React.lazy(() => import("./routes/AppContentRouter").then((modulo) => ({ default: modulo.AppContentRouter })));
+const AppLayout = React.lazy(() => import("./components/layout/AppLayout").then((modulo) => ({ default: modulo.AppLayout })));
 
 const carregarEmpresasHandlers = () => import("./services/appEmpresasHandlersService");
 const carregarColaboradoresHandlers = () => import("./services/appColaboradoresHandlersService");
@@ -960,18 +960,19 @@ export default function App() {
 
 
     return (
-        <AppLayout
-            estilosGlobais={estilosGlobais}
-            nav={nav}
-            tela={tela}
-            menuLateralAberto={menuLateralAberto}
-            setMenuLateralAberto={setMenuLateralAberto}
-            usuario={usuario}
-            sair={sair}
-            onSelecionarTela={selecionarTelaSistema}
-        >
-            <React.Suspense fallback={<CarregandoTela mensagem="Carregando telas do sistema..." />}>
-                <AppContentRouter
+        <React.Suspense fallback={<CarregandoTela mensagem="Carregando estrutura do sistema..." />}>
+            <AppLayout
+                estilosGlobais={estilosGlobais}
+                nav={nav}
+                tela={tela}
+                menuLateralAberto={menuLateralAberto}
+                setMenuLateralAberto={setMenuLateralAberto}
+                usuario={usuario}
+                sair={sair}
+                onSelecionarTela={selecionarTelaSistema}
+            >
+                <React.Suspense fallback={<CarregandoTela mensagem="Carregando telas do sistema..." />}>
+                    <AppContentRouter
                     tela={tela}
                     colaboradores={colaboradores}
                     empresasBanco={empresasBanco}
@@ -1052,8 +1053,10 @@ export default function App() {
                     onBloquearAuditoria={bloquearAuditoria}
                     onBloquearConfiguracoes={bloquearConfiguracoesSistema}
                     onSalvarLimites={atualizarLimitesCarregamentoSistema}
-                    onSalvarSenhaConfiguracoes={atualizarSenhaConfiguracoesSistema}                />
-            </React.Suspense>
-        </AppLayout>
+                        onSalvarSenhaConfiguracoes={atualizarSenhaConfiguracoesSistema}
+                    />
+                </React.Suspense>
+            </AppLayout>
+        </React.Suspense>
     );
 }
