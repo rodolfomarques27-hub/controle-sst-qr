@@ -496,11 +496,7 @@ export function Colaboradores({
                         </button>
                     </div>
 
-                    {informacoesColaboradoresRecolhidas ? (
-                        <p className="rounded-2xl bg-slate-50 px-4 py-3 text-sm font-semibold text-slate-500 ring-1 ring-slate-100">
-                            Informações recolhidas. Clique em Abrir informações para visualizar filtros, indicadores e lista de colaboradores.
-                        </p>
-                    ) : (
+                    {informacoesColaboradoresRecolhidas ? null : (
                         <>
                     <div className="mb-4 flex flex-col gap-3 lg:flex-row">
                         <div className="relative flex-1">
