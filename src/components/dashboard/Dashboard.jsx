@@ -669,15 +669,10 @@ export function Dashboard({
             : "A prévia da Seção 2 mostra somente os quadros do Dashboard SST. Ative os quadros para visualizar a configuração."
         : "Nenhum quadro selecionado para o Dashboard SST. Abra Personalizar painel e escolha as informações que deseja exibir.";
 
-    const obterClasseTamanhoCartaDashboard = useCallback((chave) => {
-        const tamanho = tamanhosCartasDashboard?.[chave] || "padrao";
-
-        if (tamanho === "destaque") return "sm:col-span-2 lg:col-span-3 xl:col-span-5";
-        if (tamanho === "grande") return "sm:col-span-2 lg:col-span-2 xl:col-span-3";
-        if (tamanho === "medio") return "sm:col-span-2 xl:col-span-2";
-
-        return "";
-    }, [tamanhosCartasDashboard]);
+    const obterClasseTamanhoCartaDashboard = useCallback(
+        (chave) => classeTamanhoCartaDashboard(chave, tamanhosCartasDashboard),
+        [tamanhosCartasDashboard]
+    );
 
     const renderCardsPrincipaisDashboard = () => (
         <div className="dashboard-summary-grid">
@@ -689,7 +684,7 @@ export function Dashboard({
                 return (
                     <div
                         key={item.chave}
-                        className="dashboard-summary-card rounded-3xl bg-white p-4 shadow-sm ring-1 ring-slate-200 transition hover:shadow-md"
+                        className={`dashboard-summary-card rounded-3xl bg-white p-4 shadow-sm ring-1 ring-slate-200 transition hover:shadow-md ${obterClasseTamanhoCartaDashboard(item.chave)}`}
                     >
                         <div className="flex items-start gap-3">
                             <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl ring-1 ${estilos.icone || "bg-slate-50 text-slate-600 ring-slate-100"}`}>

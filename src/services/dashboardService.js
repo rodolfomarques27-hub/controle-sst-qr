@@ -146,9 +146,13 @@ export function prepararArrastePainel(evento) {
     evento.dataTransfer.setData("text/plain", "mover");
 }
 
-export function classeTamanhoCartaDashboard() {
-    // Cards principais padronizados: todos ocupam 1 coluna no grid de 5 por linha.
-    // A organização/visibilidade continua funcionando no Personalizar painel, mas o tamanho fica fixo para manter padrão visual.
+export function classeTamanhoCartaDashboard(chave, tamanhosCartasDashboard = {}) {
+    const tamanho = tamanhosCartasDashboard[chave] || "padrao";
+
+    if (tamanho === "destaque") return "sm:col-span-2 lg:col-span-3 xl:col-span-5";
+    if (tamanho === "grande") return "sm:col-span-2 lg:col-span-2 xl:col-span-3";
+    if (tamanho === "medio") return "sm:col-span-2 xl:col-span-2";
+
     return "";
 }
 
