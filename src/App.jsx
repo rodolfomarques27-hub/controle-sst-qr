@@ -1,5 +1,11 @@
 import React, { useCallback, useEffect, useState } from "react";
 import { supabase, SUPABASE_CONFIGURADO } from "./lib/supabaseClient";
+import { LoginScreen } from "./components/LoginScreen";
+import {
+    AppCarregandoSistema,
+    AppConsultaPublicaCarregando,
+    AppConsultaPublicaErro,
+} from "./components/layout/AppSystemStates";
 import {
     atualizarLimitesCarregamentoSistemaAppService,
     validarSenhaConfiguracoesAppService,
@@ -36,11 +42,7 @@ const ConsultaQRPublica = React.lazy(() => import("./components/qr/ConsultaQRPub
 const NovaAuditoriaCampoDireta = React.lazy(() => import("./components/auditoria/NovaAuditoriaCampoDireta").then((modulo) => ({ default: modulo.NovaAuditoriaCampoDireta })));
 const AppContentRouter = React.lazy(() => import("./routes/AppContentRouter").then((modulo) => ({ default: modulo.AppContentRouter })));
 const AppLayout = React.lazy(() => import("./components/layout/AppLayout").then((modulo) => ({ default: modulo.AppLayout })));
-const LoginScreen = React.lazy(() => import("./components/LoginScreen").then((modulo) => ({ default: modulo.LoginScreen })));
 const SupabaseConfiguracaoPendente = React.lazy(() => import("./components/commonComponents").then((modulo) => ({ default: modulo.SupabaseConfiguracaoPendente })));
-const AppCarregandoSistema = React.lazy(() => import("./components/layout/AppSystemStates").then((modulo) => ({ default: modulo.AppCarregandoSistema })));
-const AppConsultaPublicaCarregando = React.lazy(() => import("./components/layout/AppSystemStates").then((modulo) => ({ default: modulo.AppConsultaPublicaCarregando })));
-const AppConsultaPublicaErro = React.lazy(() => import("./components/layout/AppSystemStates").then((modulo) => ({ default: modulo.AppConsultaPublicaErro })));
 
 const carregarEmpresasHandlers = () => import("./services/appEmpresasHandlersService");
 const carregarColaboradoresHandlers = () => import("./services/appColaboradoresHandlersService");
@@ -857,11 +859,7 @@ export default function App() {
     }
 
     if (carregandoSessao) {
-        return (
-            <React.Suspense fallback={<CarregandoTela mensagem="Carregando sistema..." />}>
-                <AppCarregandoSistema />
-            </React.Suspense>
-        );
+        return <AppCarregandoSistema />;
     }
 
     const tokenQrPublico = obterTokenQrPublicoApp();
@@ -881,20 +879,14 @@ export default function App() {
 
     if (tokenQrPublico && !usuario) {
         if (carregandoConsultaPublica || carregandoSessao) {
-            return (
-                <React.Suspense fallback={<CarregandoTela mensagem="Carregando consulta pública..." />}>
-                    <AppConsultaPublicaCarregando />
-                </React.Suspense>
-            );
+            return <AppConsultaPublicaCarregando />;
         }
 
         if (erroConsultaPublica || !consultaPublica) {
             return (
-                <React.Suspense fallback={<CarregandoTela mensagem="Carregando retorno da consulta pública..." />}>
-                    <AppConsultaPublicaErro
-                        mensagem={erroConsultaPublica || "Não foi possível localizar a consulta pública deste colaborador."}
-                    />
-                </React.Suspense>
+                <AppConsultaPublicaErro
+                    mensagem={erroConsultaPublica || "Não foi possível localizar a consulta pública deste colaborador."}
+                />
             );
         }
 
@@ -906,11 +898,7 @@ export default function App() {
     }
 
     if (!usuario) {
-        return (
-            <React.Suspense fallback={<CarregandoTela mensagem="Carregando login..." />}>
-                <LoginScreen onLogin={setUsuario} />
-            </React.Suspense>
-        );
+        return <LoginScreen onLogin={setUsuario} />;
     }
 
 
