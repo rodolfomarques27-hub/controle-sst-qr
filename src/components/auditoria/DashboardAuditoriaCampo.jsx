@@ -280,6 +280,43 @@ function montarPayloadStatusTratativaAuditoriaQrCampo(status = "") {
     };
 }
 
+function dataAtualIsoEvidenciaCorrecaoQrCampo() {
+    return new Date().toISOString().slice(0, 10);
+}
+
+function sanitizarNomeArquivoEvidenciaCorrecaoQrCampo(nome = "evidencia-correcao.jpg") {
+    return String(nome || "evidencia-correcao.jpg")
+        .normalize("NFD")
+        .replace(/[̀-ͯ]/g, "")
+        .replace(/[^a-zA-Z0-9._-]+/g, "-")
+        .replace(/-+/g, "-")
+        .replace(/^-|-$/g, "") || "evidencia-correcao.jpg";
+}
+
+function criarFormularioEvidenciaCorrecaoQrCampo(auditoria = {}) {
+    return {
+        observacao: "",
+        responsavel: auditoria.responsavelTratativa || auditoria.responsavel_tratativa || "",
+        data: dataAtualIsoEvidenciaCorrecaoQrCampo(),
+        foto: null,
+    };
+}
+
+function montarTextoObservacaoCorrecaoQrCampo({ auditoria = {}, evidencia = {}, fotoDepoisUrl = "" } = {}) {
+    const numero = auditoria.numeroAuditoria || auditoria.numero_auditoria || auditoria.titulo || "Auditoria sem número";
+    const linhas = [
+        "",
+        "--- Correção registrada pelo histórico do QR Code ---",
+        `Auditoria: ${numero}`,
+        `Data da correção: ${evidencia.data || dataAtualIsoEvidenciaCorrecaoQrCampo()}`,
+        `Responsável pela correção: ${evidencia.responsavel || "Não informado"}`,
+        `Observação da correção: ${evidencia.observacao || "Não informada"}`,
+        fotoDepoisUrl ? `Evidência/foto depois: ${fotoDepoisUrl}` : "Evidência/foto depois: não anexada",
+    ];
+
+    return linhas.join("\n");
+}
+
 export function DashboardAuditoriaCampo({
     auditoriasCampo = [],
     carregando = false,
@@ -310,6 +347,10 @@ export function DashboardAuditoriaCampo({
     const [atualizandoStatusAuditoriaQrCampoId, setAtualizandoStatusAuditoriaQrCampoId] = useState("");
     const [mensagemStatusAuditoriaQrCampo, setMensagemStatusAuditoriaQrCampo] = useState({ id: "", texto: "", erro: false });
     const [sobrescritasStatusAuditoriaQrCampo, setSobrescritasStatusAuditoriaQrCampo] = useState({});
+    const [evidenciaCorrecaoQrCampoAberta, setEvidenciaCorrecaoQrCampoAberta] = useState("");
+    const [evidenciasCorrecaoQrCampo, setEvidenciasCorrecaoQrCampo] = useState({});
+    const [salvandoEvidenciaCorrecaoQrCampoId, setSalvandoEvidenciaCorrecaoQrCampoId] = useState("");
+    const [mensagemEvidenciaCorrecaoQrCampo, setMensagemEvidenciaCorrecaoQrCampo] = useState({ id: "", texto: "", erro: false });
     const [empresasCadastradasQrCampo, setEmpresasCadastradasQrCampo] = useState([]);
     const [carregandoEmpresasQrCampo, setCarregandoEmpresasQrCampo] = useState(false);
     const [mensagemEmpresasQrCampo, setMensagemEmpresasQrCampo] = useState("");
@@ -1001,6 +1042,12 @@ export function DashboardAuditoriaCampo({
             return;
         }
 
+        if (normalizarTextoBusca(novoStatus).includes("resolvida") || normalizarTextoBusca(novoStatus).includes("corrigida")) {
+            abrirFormularioEvidenciaCorrecaoQrCampo(auditoria);
+            setMensagemStatusAuditoriaQrCampo({ id: idAuditoria, texto: "Informe a evidência da correção antes de liberar o equipamento.", erro: false });
+            return;
+        }
+
         const payload = montarPayloadStatusTratativaAuditoriaQrCampo(novoStatus);
         const chaveMensagem = idAuditoria;
 
@@ -1042,6 +1089,151 @@ export function DashboardAuditoriaCampo({
             setMensagemStatusAuditoriaQrCampo({ id: chaveMensagem, texto: `Erro ao atualizar status: ${error.message}`, erro: true });
         } finally {
             setAtualizandoStatusAuditoriaQrCampoId("");
+        }
+    };
+
+    const abrirFormularioEvidenciaCorrecaoQrCampo = (auditoria = {}) => {
+        const idAuditoria = String(auditoria?.id || "").trim();
+
+        if (!idAuditoria) {
+            setMensagemEvidenciaCorrecaoQrCampo({ id: String(auditoria?.numeroAuditoria || auditoria?.titulo || "auditoria"), texto: "Não foi possível abrir a evidência: auditoria sem ID no histórico carregado.", erro: true });
+            return;
+        }
+
+        setEvidenciaCorrecaoQrCampoAberta(idAuditoria);
+        setEvidenciasCorrecaoQrCampo((atual) => ({
+            ...atual,
+            [idAuditoria]: atual[idAuditoria] || criarFormularioEvidenciaCorrecaoQrCampo(auditoria),
+        }));
+        setMensagemEvidenciaCorrecaoQrCampo({ id: idAuditoria, texto: "", erro: false });
+    };
+
+    const atualizarFormularioEvidenciaCorrecaoQrCampo = (auditoria, campo, valor) => {
+        const idAuditoria = String(auditoria?.id || "").trim();
+        if (!idAuditoria) return;
+
+        setEvidenciasCorrecaoQrCampo((atual) => ({
+            ...atual,
+            [idAuditoria]: {
+                ...(atual[idAuditoria] || criarFormularioEvidenciaCorrecaoQrCampo(auditoria)),
+                [campo]: valor,
+            },
+        }));
+    };
+
+    const salvarEvidenciaCorrecaoQrCampo = async (auditoria) => {
+        const idAuditoria = String(auditoria?.id || "").trim();
+        const numeroAuditoria = auditoria?.numeroAuditoria || auditoria?.numero_auditoria || auditoria?.titulo || "auditoria selecionada";
+
+        if (!idAuditoria) {
+            setMensagemEvidenciaCorrecaoQrCampo({ id: String(numeroAuditoria), texto: "Não foi possível salvar: auditoria sem ID no histórico carregado.", erro: true });
+            return;
+        }
+
+        const formulario = evidenciasCorrecaoQrCampo[idAuditoria] || criarFormularioEvidenciaCorrecaoQrCampo(auditoria);
+        const observacao = String(formulario.observacao || "").trim();
+        const responsavel = String(formulario.responsavel || "").trim();
+        const dataCorrecao = String(formulario.data || dataAtualIsoEvidenciaCorrecaoQrCampo()).trim();
+
+        if (!observacao) {
+            setMensagemEvidenciaCorrecaoQrCampo({ id: idAuditoria, texto: "Informe a observação da correção antes de liberar o equipamento.", erro: true });
+            return;
+        }
+
+        if (!responsavel) {
+            setMensagemEvidenciaCorrecaoQrCampo({ id: idAuditoria, texto: "Informe o responsável pela correção antes de liberar o equipamento.", erro: true });
+            return;
+        }
+
+        setSalvandoEvidenciaCorrecaoQrCampoId(idAuditoria);
+        setMensagemEvidenciaCorrecaoQrCampo({ id: idAuditoria, texto: "", erro: false });
+
+        try {
+            let fotoDepoisUrl = auditoria.fotoDepoisUrl || auditoria.foto_depois_url || "";
+
+            if (formulario.foto) {
+                const nomeSeguro = sanitizarNomeArquivoEvidenciaCorrecaoQrCampo(formulario.foto.name || "evidencia-correcao.jpg");
+                const numeroSeguro = sanitizarNomeArquivoEvidenciaCorrecaoQrCampo(String(numeroAuditoria || idAuditoria));
+                const caminho = `evidencias-correcao/${idAuditoria}/${Date.now()}-${numeroSeguro}-${nomeSeguro}`;
+                const { error: erroUpload } = await supabase.storage.from("auditorias-campo").upload(caminho, formulario.foto, {
+                    cacheControl: "3600",
+                    upsert: true,
+                    contentType: formulario.foto.type || "image/jpeg",
+                });
+
+                if (erroUpload) throw erroUpload;
+                fotoDepoisUrl = caminho;
+            }
+
+            const notificacaoAtual = auditoria.notificacao && typeof auditoria.notificacao === "object" ? auditoria.notificacao : {};
+            const evidencia = {
+                registradoEm: new Date().toISOString(),
+                dataCorrecao,
+                responsavel,
+                observacao,
+                fotoDepoisUrl: fotoDepoisUrl || null,
+                origem: "Histórico do QR Code de campo",
+            };
+            const evidenciasAnteriores = Array.isArray(notificacaoAtual.evidenciasCorrecao) ? notificacaoAtual.evidenciasCorrecao : [];
+            const observacoesAtuais = String(auditoria.observacoesGerais || auditoria.observacoes_gerais || "").trim();
+            const observacoesAtualizadas = `${observacoesAtuais}${montarTextoObservacaoCorrecaoQrCampo({ auditoria, evidencia, fotoDepoisUrl })}`.trim();
+            const payload = {
+                status_auditoria: "Resolvida",
+                status_desvio: "Corrigido",
+                total_desvios: 0,
+                responsavel_tratativa: responsavel,
+                foto_depois_url: fotoDepoisUrl || null,
+                observacoes_gerais: observacoesAtualizadas || null,
+                notificacao: {
+                    ...notificacaoAtual,
+                    evidenciasCorrecao: [...evidenciasAnteriores, evidencia],
+                    ultimaCorrecaoQrCampo: evidencia,
+                },
+            };
+
+            const { error } = await supabase
+                .from("auditorias_campo")
+                .update(payload)
+                .eq("id", idAuditoria);
+
+            if (error) throw error;
+
+            setSobrescritasStatusAuditoriaQrCampo((atual) => ({
+                ...atual,
+                [idAuditoria]: {
+                    statusAuditoria: payload.status_auditoria,
+                    status_auditoria: payload.status_auditoria,
+                    statusDesvio: payload.status_desvio,
+                    status_desvio: payload.status_desvio,
+                    totalDesvios: payload.total_desvios,
+                    total_desvios: payload.total_desvios,
+                    responsavelTratativa: payload.responsavel_tratativa,
+                    responsavel_tratativa: payload.responsavel_tratativa,
+                    fotoDepoisUrl: payload.foto_depois_url,
+                    foto_depois_url: payload.foto_depois_url,
+                    observacoesGerais: payload.observacoes_gerais,
+                    observacoes_gerais: payload.observacoes_gerais,
+                    notificacao: payload.notificacao,
+                },
+            }));
+
+            setEvidenciaCorrecaoQrCampoAberta("");
+            setEvidenciasCorrecaoQrCampo((atual) => ({
+                ...atual,
+                [idAuditoria]: criarFormularioEvidenciaCorrecaoQrCampo(auditoria),
+            }));
+            setMensagemEvidenciaCorrecaoQrCampo({ id: idAuditoria, texto: "Correção registrada com evidência. Equipamento liberado conforme status Resolvida/Corrigido.", erro: false });
+            setMensagemStatusAuditoriaQrCampo({ id: idAuditoria, texto: "Status atualizado para Resolvida com evidência de correção.", erro: false });
+
+            if (typeof onAuditoriaAtualizada === "function") {
+                await onAuditoriaAtualizada();
+            } else if (typeof onRecarregar === "function") {
+                await onRecarregar();
+            }
+        } catch (error) {
+            setMensagemEvidenciaCorrecaoQrCampo({ id: idAuditoria, texto: `Erro ao registrar correção: ${error.message}`, erro: true });
+        } finally {
+            setSalvandoEvidenciaCorrecaoQrCampoId("");
         }
     };
 
@@ -2183,6 +2375,12 @@ export function DashboardAuditoriaCampo({
                                                                     const tratativaHistorico = resumirTratativaAuditoriaQrCampo(auditoria);
                                                                     const dataHistorico = auditoria.createdAt || auditoria.created_at ? formatarDataHora(auditoria.createdAt || auditoria.created_at) : "Sem data";
                                                                     const numeroHistorico = auditoria.numeroAuditoria || auditoria.numero_auditoria || auditoria.titulo || "Auditoria sem número";
+                                                                    const chaveAuditoriaEvidencia = String(auditoria.id || chaveHistorico);
+                                                                    const formularioEvidencia = evidenciasCorrecaoQrCampo[chaveAuditoriaEvidencia] || criarFormularioEvidenciaCorrecaoQrCampo(auditoria);
+                                                                    const evidenciaAberta = evidenciaCorrecaoQrCampoAberta === chaveAuditoriaEvidencia;
+                                                                    const salvandoEvidencia = salvandoEvidenciaCorrecaoQrCampoId === chaveAuditoriaEvidencia;
+                                                                    const ultimaEvidenciaCorrecao = auditoria.notificacao?.ultimaCorrecaoQrCampo || (Array.isArray(auditoria.notificacao?.evidenciasCorrecao) ? auditoria.notificacao.evidenciasCorrecao[auditoria.notificacao.evidenciasCorrecao.length - 1] : null);
+                                                                    const fotoDepoisEvidencia = auditoria.fotoDepoisUrl || auditoria.foto_depois_url || ultimaEvidenciaCorrecao?.fotoDepoisUrl || "";
 
                                                                     return (
                                                                         <div key={chaveHistorico} className={classNames("rounded-2xl px-3 py-3 ring-1", tratativaHistorico.cardClass)}>
@@ -2259,6 +2457,90 @@ export function DashboardAuditoriaCampo({
                                                                                         );
                                                                                     })}
                                                                                 </div>
+                                                                                {evidenciaAberta && (
+                                                                                    <div className="mt-3 rounded-2xl bg-emerald-50/70 p-3 ring-1 ring-emerald-100">
+                                                                                        <div className="flex flex-wrap items-center justify-between gap-2">
+                                                                                            <div>
+                                                                                                <p className="text-[9px] font-black uppercase tracking-wide text-emerald-700">Evidência da correção</p>
+                                                                                                <p className="mt-0.5 text-[10px] font-bold text-emerald-700">Preencha para marcar como corrigida e liberar o equipamento com comprovação.</p>
+                                                                                            </div>
+                                                                                            <span className="rounded-full bg-white px-2 py-1 text-[10px] font-black text-emerald-700 ring-1 ring-emerald-100">Obrigatório antes de liberar</span>
+                                                                                        </div>
+                                                                                        <div className="mt-3 grid gap-2 lg:grid-cols-3">
+                                                                                            <label className="block text-[9px] font-black uppercase tracking-wide text-slate-500 lg:col-span-2">
+                                                                                                Observação da correção
+                                                                                                <textarea
+                                                                                                    value={formularioEvidencia.observacao || ""}
+                                                                                                    onChange={(evento) => atualizarFormularioEvidenciaCorrecaoQrCampo(auditoria, "observacao", evento.target.value)}
+                                                                                                    rows={3}
+                                                                                                    placeholder="Ex.: Proteção instalada, vazamento eliminado e equipamento testado."
+                                                                                                    className="mt-1 w-full resize-none rounded-xl border border-emerald-100 bg-white px-3 py-2 text-[11px] font-semibold normal-case tracking-normal text-slate-700 outline-none focus:border-emerald-300 focus:ring-2 focus:ring-emerald-100"
+                                                                                                />
+                                                                                            </label>
+                                                                                            <div className="grid gap-2">
+                                                                                                <label className="block text-[9px] font-black uppercase tracking-wide text-slate-500">
+                                                                                                    Responsável
+                                                                                                    <input
+                                                                                                        value={formularioEvidencia.responsavel || ""}
+                                                                                                        onChange={(evento) => atualizarFormularioEvidenciaCorrecaoQrCampo(auditoria, "responsavel", evento.target.value)}
+                                                                                                        placeholder="Responsável pela correção"
+                                                                                                        className="mt-1 w-full rounded-xl border border-emerald-100 bg-white px-3 py-2 text-[11px] font-semibold normal-case tracking-normal text-slate-700 outline-none focus:border-emerald-300 focus:ring-2 focus:ring-emerald-100"
+                                                                                                    />
+                                                                                                </label>
+                                                                                                <label className="block text-[9px] font-black uppercase tracking-wide text-slate-500">
+                                                                                                    Data da correção
+                                                                                                    <input
+                                                                                                        type="date"
+                                                                                                        value={formularioEvidencia.data || dataAtualIsoEvidenciaCorrecaoQrCampo()}
+                                                                                                        onChange={(evento) => atualizarFormularioEvidenciaCorrecaoQrCampo(auditoria, "data", evento.target.value)}
+                                                                                                        className="mt-1 w-full rounded-xl border border-emerald-100 bg-white px-3 py-2 text-[11px] font-semibold normal-case tracking-normal text-slate-700 outline-none focus:border-emerald-300 focus:ring-2 focus:ring-emerald-100"
+                                                                                                    />
+                                                                                                </label>
+                                                                                            </div>
+                                                                                        </div>
+                                                                                        <div className="mt-2 grid gap-2 md:grid-cols-[1fr_auto] md:items-end">
+                                                                                            <label className="block text-[9px] font-black uppercase tracking-wide text-slate-500">
+                                                                                                Foto depois / evidência
+                                                                                                <input
+                                                                                                    type="file"
+                                                                                                    accept="image/*"
+                                                                                                    onChange={(evento) => atualizarFormularioEvidenciaCorrecaoQrCampo(auditoria, "foto", evento.target.files?.[0] || null)}
+                                                                                                    className="mt-1 w-full rounded-xl border border-emerald-100 bg-white px-3 py-2 text-[11px] font-semibold normal-case tracking-normal text-slate-600 outline-none file:mr-3 file:rounded-lg file:border-0 file:bg-emerald-50 file:px-3 file:py-1.5 file:text-[10px] file:font-black file:text-emerald-700 hover:file:bg-emerald-100"
+                                                                                                />
+                                                                                                <span className="mt-1 block text-[10px] font-bold normal-case tracking-normal text-slate-400">Opcional, mas recomendado para comprovar a liberação.</span>
+                                                                                            </label>
+                                                                                            <div className="flex flex-wrap justify-end gap-2">
+                                                                                                <button
+                                                                                                    type="button"
+                                                                                                    onClick={() => setEvidenciaCorrecaoQrCampoAberta("")}
+                                                                                                    disabled={salvandoEvidencia}
+                                                                                                    className="rounded-xl bg-white px-3 py-2 text-[10px] font-black text-slate-600 ring-1 ring-slate-200 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
+                                                                                                >
+                                                                                                    Cancelar
+                                                                                                </button>
+                                                                                                <button
+                                                                                                    type="button"
+                                                                                                    onClick={() => salvarEvidenciaCorrecaoQrCampo(auditoria)}
+                                                                                                    disabled={salvandoEvidencia || !auditoria.id}
+                                                                                                    className="rounded-xl bg-emerald-600 px-3 py-2 text-[10px] font-black text-white hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-60"
+                                                                                                >
+                                                                                                    {salvandoEvidencia ? "Salvando..." : "Salvar correção"}
+                                                                                                </button>
+                                                                                            </div>
+                                                                                        </div>
+                                                                                    </div>
+                                                                                )}
+                                                                                {(ultimaEvidenciaCorrecao || fotoDepoisEvidencia) && !evidenciaAberta && (
+                                                                                    <div className="mt-3 rounded-xl bg-emerald-50 px-3 py-2 ring-1 ring-emerald-100">
+                                                                                        <p className="text-[9px] font-black uppercase tracking-wide text-emerald-700">Evidência registrada</p>
+                                                                                        <p className="mt-1 text-[11px] font-bold text-emerald-800">{ultimaEvidenciaCorrecao?.observacao || "Correção registrada no histórico."}</p>
+                                                                                        <p className="mt-0.5 text-[10px] font-semibold text-emerald-700">Responsável: {ultimaEvidenciaCorrecao?.responsavel || auditoria.responsavelTratativa || auditoria.responsavel_tratativa || "Não informado"} · Data: {ultimaEvidenciaCorrecao?.dataCorrecao || "Não informada"}</p>
+                                                                                        {fotoDepoisEvidencia && <p className="mt-0.5 truncate text-[10px] font-semibold text-emerald-700" title={fotoDepoisEvidencia}>Foto depois: {fotoDepoisEvidencia}</p>}
+                                                                                    </div>
+                                                                                )}
+                                                                                {mensagemEvidenciaCorrecaoQrCampo.id === String(auditoria.id || "") && mensagemEvidenciaCorrecaoQrCampo.texto && (
+                                                                                    <p className={classNames("mt-2 rounded-xl px-3 py-2 text-[11px] font-bold ring-1", mensagemEvidenciaCorrecaoQrCampo.erro ? "bg-red-50 text-red-700 ring-red-100" : "bg-emerald-50 text-emerald-700 ring-emerald-100")}>{mensagemEvidenciaCorrecaoQrCampo.texto}</p>
+                                                                                )}
                                                                                 {mensagemStatusAuditoriaQrCampo.id === String(auditoria.id || "") && mensagemStatusAuditoriaQrCampo.texto && (
                                                                                     <p className={classNames("mt-2 rounded-xl px-3 py-2 text-[11px] font-bold ring-1", mensagemStatusAuditoriaQrCampo.erro ? "bg-red-50 text-red-700 ring-red-100" : "bg-emerald-50 text-emerald-700 ring-emerald-100")}>{mensagemStatusAuditoriaQrCampo.texto}</p>
                                                                                 )}
