@@ -9,7 +9,165 @@ import {
     listarArquivosCertificadosStorageService,
     sincronizarCertificadosDoStorageService,
 } from "./storageAuditoriaService";
-import { obterTreinamento } from "./colaboradorDocumentosService";
+import { obterTreinamento, treinamentoSemValidade } from "./colaboradorDocumentosService";
+
+
+function converterStatusVerificacaoParaStatusCertificado(statusVerificacao = "") {
+    const status = String(statusVerificacao || "").trim().toLowerCase();
+
+    if (status === "aprovado") return "Aprovado";
+    if (status === "atencao") return "Atenção";
+    if (status === "revisao_manual") return "Revisão manual";
+    if (status === "suspeito") return "Suspeito";
+    if (status === "bloqueado") return "Bloqueado";
+    if (status === "erro") return "Erro na verificação";
+
+    return "Pendente de verificação";
+}
+
+function localizarColaboradorParaVerificacao({ certificado = {}, certificadoNormalizado = {}, colaboradores = [], colaboradorSelecionado = null } = {}) {
+    return (
+        colaboradores.find((colaborador) => String(colaborador.id) === String(certificadoNormalizado.colaboradorId || certificado.colaborador_id || certificado.colaboradorId || "")) ||
+        colaboradores.find((colaborador) => String(colaborador.codigoFuncionario) === String(certificado.colaboradorCodigo || certificado.colaborador?.codigoFuncionario || "")) ||
+        colaboradores.find((colaborador) => String(colaborador.id) === String(certificado.colaborador?.id || "")) ||
+        colaboradorSelecionado ||
+        certificado.colaborador ||
+        {}
+    );
+}
+
+function atualizarCertificadoNosEstados({ setColaboradores, setColaboradorSelecionado, certificadoAtualizado }) {
+    setColaboradores((atual) =>
+        atual.map((colaborador) => {
+            if (String(colaborador.id) !== String(certificadoAtualizado.colaboradorId)) return colaborador;
+
+            return {
+                ...colaborador,
+                treinamentos: (colaborador.treinamentos || []).map((item) =>
+                    item.id === certificadoAtualizado.id ? { ...item, ...certificadoAtualizado } : item
+                ),
+            };
+        })
+    );
+
+    setColaboradorSelecionado((atual) => {
+        if (!atual || String(atual.id) !== String(certificadoAtualizado.colaboradorId)) return atual;
+
+        return {
+            ...atual,
+            treinamentos: (atual.treinamentos || []).map((item) =>
+                item.id === certificadoAtualizado.id ? { ...item, ...certificadoAtualizado } : item
+            ),
+        };
+    });
+}
+
+async function executarVerificacaoCertificadoSemBloquearFluxo({
+    supabase,
+    certificado,
+    certificadoNormalizado,
+    colaboradores,
+    colaboradorSelecionado,
+    setColaboradores,
+    setColaboradorSelecionado,
+}) {
+    try {
+        const { verificarCertificadoTreinamento } = await import("./documentosVerificacaoService");
+
+        const treinamentoId = Number(certificadoNormalizado.treinamentoId || certificado.treinamentoId || certificado.treinamento_codigo || 0);
+        const treinamento = obterTreinamento(treinamentoId) || {
+            id: treinamentoId || null,
+            nome: certificadoNormalizado.nomeTreinamento || certificado.nome_treinamento || certificado.tipo_treinamento || "",
+        };
+        const colaborador = localizarColaboradorParaVerificacao({
+            certificado,
+            certificadoNormalizado,
+            colaboradores,
+            colaboradorSelecionado,
+        });
+
+        const certificadoParaVerificacao = {
+            ...certificado,
+            id: certificadoNormalizado.id,
+            colaborador_id: certificadoNormalizado.colaboradorId || certificado.colaborador_id || certificado.colaboradorId || colaborador.id || null,
+            colaboradorId: certificadoNormalizado.colaboradorId || certificado.colaboradorId || colaborador.id || null,
+            treinamento_codigo: treinamentoId || certificado.treinamentoId || null,
+            treinamentoId: treinamentoId || certificado.treinamentoId || null,
+            tipo_treinamento: certificadoNormalizado.nomeTreinamento || certificado.tipo_treinamento || treinamento.nome || "",
+            nome_treinamento: certificadoNormalizado.nomeTreinamento || certificado.nome_treinamento || treinamento.nome || "",
+            data_realizacao: certificadoNormalizado.realizado || certificadoNormalizado.dataRealizacao || certificado.dataRealizacao || certificado.data_realizacao || "",
+            dataRealizacao: certificadoNormalizado.realizado || certificadoNormalizado.dataRealizacao || certificado.dataRealizacao || certificado.data_realizacao || "",
+            data_vencimento: certificadoNormalizado.vencimento || certificadoNormalizado.dataVencimento || certificado.dataVencimento || certificado.data_vencimento || "",
+            dataVencimento: certificadoNormalizado.vencimento || certificadoNormalizado.dataVencimento || certificado.dataVencimento || certificado.data_vencimento || "",
+            arquivo_url: certificadoNormalizado.arquivoUrl || certificado.arquivo_url || certificado.arquivoUrl || "",
+            arquivoUrl: certificadoNormalizado.arquivoUrl || certificado.arquivoUrl || certificado.arquivo_url || "",
+            arquivo_nome: certificadoNormalizado.arquivoNome || certificado.arquivoNome || certificado.arquivo_nome || certificado.arquivo?.name || "",
+            arquivoNome: certificadoNormalizado.arquivoNome || certificado.arquivoNome || certificado.arquivo_nome || certificado.arquivo?.name || "",
+            observacao: certificado.observacao || certificadoNormalizado.observacao || null,
+        };
+
+        const verificacao = await verificarCertificadoTreinamento({
+            supabase,
+            certificado: certificadoParaVerificacao,
+            colaborador,
+            treinamento,
+            arquivo: certificado.arquivo || null,
+            registrosExistentes: [],
+            usuario: null,
+            salvarResultado: true,
+            exigeVencimento: !treinamentoSemValidade(treinamentoId),
+        });
+
+        const statusValidacao = converterStatusVerificacaoParaStatusCertificado(verificacao?.statusVerificacao);
+
+        const { error } = await supabase
+            .from("certificados")
+            .update({ status_validacao: statusValidacao })
+            .eq("id", certificadoNormalizado.id);
+
+        if (error) {
+            throw new Error(`Erro ao atualizar status da verificação documental do certificado: ${error.message}`);
+        }
+
+        const certificadoAtualizado = {
+            ...certificadoNormalizado,
+            statusValidacao,
+            status_validacao: statusValidacao,
+        };
+
+        atualizarCertificadoNosEstados({
+            setColaboradores,
+            setColaboradorSelecionado,
+            certificadoAtualizado,
+        });
+
+        return certificadoAtualizado;
+    } catch (error) {
+        console.warn("Verificação documental não bloqueou o salvamento do certificado:", error?.message || error);
+
+        try {
+            await supabase
+                .from("certificados")
+                .update({ status_validacao: "Erro na verificação" })
+                .eq("id", certificadoNormalizado.id);
+
+            atualizarCertificadoNosEstados({
+                setColaboradores,
+                setColaboradorSelecionado,
+                certificadoAtualizado: {
+                    ...certificadoNormalizado,
+                    statusValidacao: "Erro na verificação",
+                    status_validacao: "Erro na verificação",
+                },
+            });
+        } catch (erroAtualizacao) {
+            console.warn("Não foi possível marcar erro na verificação documental do certificado:", erroAtualizacao?.message || erroAtualizacao);
+        }
+
+        return certificadoNormalizado;
+    }
+}
+
 
 export async function sincronizarCertificadosDoStorageAppService({
     supabase,
@@ -158,6 +316,16 @@ export async function salvarCertificadoTreinamentoAppService({
                 ...atual,
                 treinamentos: [certificadoNormalizado, ...demais],
             };
+        });
+
+        executarVerificacaoCertificadoSemBloquearFluxo({
+            supabase,
+            certificado,
+            certificadoNormalizado,
+            colaboradores,
+            colaboradorSelecionado,
+            setColaboradores,
+            setColaboradorSelecionado,
         });
 
         await carregarColaboradores();
