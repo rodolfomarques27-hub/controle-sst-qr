@@ -14,6 +14,87 @@ import {
     obterOuCriarEmpresaCrud,
 } from "./empresasCrudService";
 
+function converterStatusVerificacaoParaStatusDocumento(statusVerificacao = "") {
+    const status = String(statusVerificacao || "").trim().toLowerCase();
+
+    if (status === "aprovado") return "Aprovado";
+    if (status === "atencao") return "Atenção";
+    if (status === "revisao_manual") return "Revisão manual";
+    if (status === "suspeito") return "Suspeito";
+    if (status === "bloqueado") return "Bloqueado";
+    if (status === "erro") return "Erro na verificação";
+
+    return "Pendente de verificação";
+}
+
+async function executarVerificacaoDocumentoEmpresaSemBloquearFluxo({
+    supabase,
+    novoDoc,
+    documentoNormalizado,
+    normalizarDocumentoEmpresa,
+    setDocumentosEmpresas,
+}) {
+    try {
+        const { verificarDocumentoEmpresa } = await import("./documentosVerificacaoService");
+
+        const verificacao = await verificarDocumentoEmpresa({
+            supabase,
+            documento: documentoNormalizado,
+            empresa: {
+                id: documentoNormalizado.empresa_id || novoDoc.empresaId || null,
+            },
+            arquivo: novoDoc.arquivo || null,
+            registrosExistentes: [],
+            usuario: null,
+            salvarResultado: true,
+        });
+
+        const statusValidacao = converterStatusVerificacaoParaStatusDocumento(verificacao?.statusVerificacao);
+
+        const { data, error } = await supabase
+            .from("documentos_empresas")
+            .update({ status_validacao: statusValidacao })
+            .eq("id", documentoNormalizado.id)
+            .select("*")
+            .single();
+
+        if (error) {
+            throw new Error(`Erro ao atualizar status da verificação documental: ${error.message}`);
+        }
+
+        const documentoAtualizado = normalizarDocumentoEmpresa(data);
+
+        setDocumentosEmpresas((atual) =>
+            atual.map((item) => (item.id === documentoAtualizado.id ? documentoAtualizado : item))
+        );
+
+        return documentoAtualizado;
+    } catch (error) {
+        console.warn("Verificação documental não bloqueou o salvamento do documento:", error?.message || error);
+
+        try {
+            const { data } = await supabase
+                .from("documentos_empresas")
+                .update({ status_validacao: "Erro na verificação" })
+                .eq("id", documentoNormalizado.id)
+                .select("*")
+                .single();
+
+            if (data) {
+                const documentoAtualizado = normalizarDocumentoEmpresa(data);
+
+                setDocumentosEmpresas((atual) =>
+                    atual.map((item) => (item.id === documentoAtualizado.id ? documentoAtualizado : item))
+                );
+            }
+        } catch (erroAtualizacao) {
+            console.warn("Não foi possível marcar erro na verificação documental:", erroAtualizacao?.message || erroAtualizacao);
+        }
+
+        return documentoNormalizado;
+    }
+}
+
 export async function carregarEmpresasAppService({ supabase, setEmpresasBanco }) {
     const { data, error } = await supabase
         .from("empresas")
@@ -197,6 +278,7 @@ export async function adicionarDocumentoEmpresaAppService({
             validarArquivoAntesUpload,
             sanitizarNomeArquivo,
             normalizarDocumentoEmpresa,
+            statusValidacaoInicial: "Pendente de verificação",
         });
 
         setDocumentosEmpresas((atual) => [
@@ -205,6 +287,14 @@ export async function adicionarDocumentoEmpresaAppService({
                 (item) => !(item.empresa_id === documentoNormalizado.empresa_id && item.tipo_documento === documentoNormalizado.tipo_documento)
             ),
         ]);
+
+        executarVerificacaoDocumentoEmpresaSemBloquearFluxo({
+            supabase,
+            novoDoc,
+            documentoNormalizado,
+            normalizarDocumentoEmpresa,
+            setDocumentosEmpresas,
+        });
 
         return true;
     } catch (error) {
