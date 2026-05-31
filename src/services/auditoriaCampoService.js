@@ -9,6 +9,7 @@ import {
     normalizarTextoBusca,
     textoNaoAplicavel,
     formatDate,
+    formatarDataHora,
 } from "../utils/sstUtils";
 
 const hoje = new Date();
@@ -336,6 +337,101 @@ function auditoriaCampoVencida(item = {}) {
     return !concluida && prazo < hoje;
 }
 
+function obterPesoRiscoStatusEquipamentoAuditoriaCampo(valor = "") {
+    const texto = normalizarTextoBusca(valor);
+
+    if (texto.includes("crit")) return 4;
+    if (texto.includes("alto")) return 3;
+    if (texto.includes("medio") || texto.includes("médio")) return 2;
+    if (texto.includes("baixo")) return 1;
+
+    return 0;
+}
+
+function obterRotuloRiscoStatusEquipamentoAuditoriaCampo(peso = 0) {
+    if (peso >= 4) return "Crítico";
+    if (peso === 3) return "Alto";
+    if (peso === 2) return "Médio";
+    if (peso === 1) return "Baixo";
+
+    return "Não informado";
+}
+
+function calcularStatusEquipamentoAuditoriaCampo(historicoAuditorias = []) {
+    const historico = Array.isArray(historicoAuditorias) ? historicoAuditorias : [];
+
+    if (historico.length === 0) {
+        return {
+            status: "Sem auditoria",
+            descricao: "Nenhuma auditoria vinculada ao QR Code foi encontrada no histórico carregado.",
+            orientacao: "Realize a primeira auditoria para formar histórico do equipamento.",
+            ultimaAuditoria: "Não realizada",
+            pendenciasAbertas: 0,
+            maiorRisco: "Não informado",
+            totalAuditorias: 0,
+            chave: "sem_auditoria",
+            containerClass: "bg-slate-50 ring-slate-200",
+            statusClass: "bg-white text-slate-600 ring-slate-200",
+            valueClass: "text-slate-700",
+        };
+    }
+
+    const historicoOrdenado = [...historico].sort((a, b) => new Date(b.createdAt || b.created_at || 0) - new Date(a.createdAt || a.created_at || 0));
+    const auditoriasAbertas = historicoOrdenado.filter(auditoriaCampoAberta);
+    const vencidas = historicoOrdenado.filter(auditoriaCampoVencida);
+    const maiorPesoRisco = historicoOrdenado.reduce((maior, auditoria) => Math.max(maior, obterPesoRiscoStatusEquipamentoAuditoriaCampo(auditoria.grauRisco || auditoria.grau_risco || auditoria.classificacao || "")), 0);
+    const maiorPesoRiscoAberto = auditoriasAbertas.reduce((maior, auditoria) => Math.max(maior, obterPesoRiscoStatusEquipamentoAuditoriaCampo(auditoria.grauRisco || auditoria.grau_risco || auditoria.classificacao || "")), 0);
+    const temDesvioGrave = historicoOrdenado.some((auditoria) => Boolean(auditoria.temDesvioGrave || auditoria.tem_desvio_grave) || normalizarTextoBusca(auditoria.classificacao).includes("acao imediata"));
+    const ultima = historicoOrdenado[0] || {};
+    const ultimaAuditoria = ultima.createdAt || ultima.created_at ? formatarDataHora(ultima.createdAt || ultima.created_at) : "Sem data";
+
+    if (vencidas.length > 0 || temDesvioGrave || maiorPesoRiscoAberto >= 4) {
+        return {
+            status: "Crítico / bloquear uso",
+            descricao: "Existe condição crítica, auditoria vencida ou desvio grave vinculado ao equipamento.",
+            orientacao: "Não utilizar o equipamento até avaliação e liberação do TST responsável.",
+            ultimaAuditoria,
+            pendenciasAbertas: auditoriasAbertas.length,
+            maiorRisco: obterRotuloRiscoStatusEquipamentoAuditoriaCampo(Math.max(maiorPesoRisco, maiorPesoRiscoAberto)),
+            totalAuditorias: historicoOrdenado.length,
+            chave: "critico",
+            containerClass: "bg-red-50 ring-red-100",
+            statusClass: "bg-red-100 text-red-700 ring-red-200",
+            valueClass: "text-red-700",
+        };
+    }
+
+    if (auditoriasAbertas.length > 0 || maiorPesoRiscoAberto >= 3) {
+        return {
+            status: "Atenção",
+            descricao: "Existe pendência aberta para acompanhamento.",
+            orientacao: "Verifique a condição antes do uso e acompanhe a tratativa registrada.",
+            ultimaAuditoria,
+            pendenciasAbertas: auditoriasAbertas.length,
+            maiorRisco: obterRotuloRiscoStatusEquipamentoAuditoriaCampo(Math.max(maiorPesoRisco, maiorPesoRiscoAberto)),
+            totalAuditorias: historicoOrdenado.length,
+            chave: "atencao",
+            containerClass: "bg-orange-50 ring-orange-100",
+            statusClass: "bg-orange-100 text-orange-700 ring-orange-200",
+            valueClass: "text-orange-700",
+        };
+    }
+
+    return {
+        status: "Liberado",
+        descricao: "Sem pendência aberta no histórico carregado.",
+        orientacao: "Equipamento sem bloqueio registrado no histórico carregado. Mantenha a inspeção antes do uso.",
+        ultimaAuditoria,
+        pendenciasAbertas: 0,
+        maiorRisco: obterRotuloRiscoStatusEquipamentoAuditoriaCampo(maiorPesoRisco),
+        totalAuditorias: historicoOrdenado.length,
+        chave: "liberado",
+        containerClass: "bg-emerald-50 ring-emerald-100",
+        statusClass: "bg-emerald-100 text-emerald-700 ring-emerald-200",
+        valueClass: "text-emerald-700",
+    };
+}
+
 
 export {
     obterCategoriaPadronizadaAuditoriaCampo,
@@ -356,4 +452,5 @@ export {
     fotosAuditoriaCampo,
     auditoriaCampoAberta,
     auditoriaCampoVencida,
+    calcularStatusEquipamentoAuditoriaCampo,
 };

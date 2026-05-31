@@ -12,6 +12,7 @@ import {
     calcularResultadoChecklistDinamico,
     rotuloPontuacaoAuditoriaCampo,
     normalizarAuditoriaCampo,
+    calcularStatusEquipamentoAuditoriaCampo,
 } from "../../services/auditoriaCampoService";
 import {
     respostasAuditoriaCampo,
@@ -24,6 +25,7 @@ import {
 import {
     classNames,
     obterParametroUrl,
+    normalizarTextoBusca,
 } from "../../utils/sstUtils";
 import {
     obterTokenAuditoriaCampoPublicaConfigurado,
@@ -44,6 +46,7 @@ import {
 } from "../../services/auditoriaCampoDiretaService";
 import { QRCodeSVG } from "qrcode.react";
 import {
+    AlertTriangle,
     ClipboardCheck,
     Lock,
     Mail,
@@ -68,6 +71,52 @@ function obterTextoAuditoriaCampoValido(valor = "") {
     }
 
     return texto;
+}
+
+function normalizarBuscaStatusEquipamentoQrCampo(valor = "") {
+    return normalizarTextoBusca(valor).replace(/\s+/g, " ").trim();
+}
+
+function textoContemValorStatusEquipamentoQrCampo(texto = "", valor = "") {
+    const textoNormalizado = normalizarBuscaStatusEquipamentoQrCampo(texto);
+    const valorNormalizado = normalizarBuscaStatusEquipamentoQrCampo(valor);
+
+    if (!valorNormalizado) return true;
+    if (!textoNormalizado) return false;
+
+    return textoNormalizado === valorNormalizado || textoNormalizado.includes(valorNormalizado) || valorNormalizado.includes(textoNormalizado);
+}
+
+function auditoriaConfereStatusEquipamentoQrCampo(auditoria = {}, parametros = {}) {
+    const codigo = String(parametros.codigoQrCampo || "").trim();
+    const identificacao = String(parametros.identificacao || "").trim();
+    const area = String(parametros.area || "").trim();
+    const local = String(parametros.local || "").trim();
+    const empresa = String(parametros.empresa || "").trim();
+    const codigoAuditoria = String(auditoria.codigoQrCampo || auditoria.codigo_qr_campo || auditoria.codigo_qr || auditoria.notificacao?.qrCodeCampo?.codigo || "").trim();
+
+    if (codigo && codigoAuditoria && normalizarBuscaStatusEquipamentoQrCampo(codigoAuditoria) === normalizarBuscaStatusEquipamentoQrCampo(codigo)) {
+        return true;
+    }
+
+    const maquinaConfere = identificacao
+        ? textoContemValorStatusEquipamentoQrCampo(auditoria.maquinaEquipamento || auditoria.maquina_equipamento || "", identificacao)
+        : true;
+    const areaConfere = area
+        ? textoContemValorStatusEquipamentoQrCampo(auditoria.area || "", area)
+        : true;
+    const localConfere = local
+        ? textoContemValorStatusEquipamentoQrCampo(auditoria.local || "", local)
+        : true;
+    const empresaConfere = empresa
+        ? textoContemValorStatusEquipamentoQrCampo(auditoria.empresaResponsavel || auditoria.empresa_responsavel || auditoria.empresaNome || auditoria.empresa_nome || "", empresa)
+        : true;
+
+    return maquinaConfere && areaConfere && localConfere && empresaConfere;
+}
+
+function escaparFiltroIlikeAuditoriaCampo(valor = "") {
+    return String(valor || "").replace(/[\%_]/g, "").trim();
 }
 
 export function NovaAuditoriaCampoDireta({ usuario = null, onAuditoriaSalva, empresasBanco = [] }) {
@@ -122,6 +171,9 @@ export function NovaAuditoriaCampoDireta({ usuario = null, onAuditoriaSalva, emp
         empresaParametro,
     }));
     const [respostasChecklist, setRespostasChecklist] = useState(() => criarRespostasChecklistDinamico(tipoInicial.valor));
+    const [historicoStatusEquipamentoQr, setHistoricoStatusEquipamentoQr] = useState([]);
+    const [carregandoStatusEquipamentoQr, setCarregandoStatusEquipamentoQr] = useState(false);
+    const [mensagemStatusEquipamentoQr, setMensagemStatusEquipamentoQr] = useState("");
 
     useEffect(() => {
         if (usuario) {
@@ -221,6 +273,69 @@ export function NovaAuditoriaCampoDireta({ usuario = null, onAuditoriaSalva, emp
         formulario,
         tipoAtual,
     }), [formulario, tipoAtual]);
+
+    const parametrosStatusEquipamentoQr = useMemo(() => ({
+        codigoQrCampo: codigoQrCampoParametro,
+        identificacao: identificacaoParametro || identificacaoQrEspecifica,
+        area: areaParametro,
+        local: localParametro,
+        empresa: empresaParametro,
+    }), [codigoQrCampoParametro, identificacaoParametro, identificacaoQrEspecifica, areaParametro, localParametro, empresaParametro]);
+
+    const statusEquipamentoQrCampo = useMemo(
+        () => calcularStatusEquipamentoAuditoriaCampo(historicoStatusEquipamentoQr),
+        [historicoStatusEquipamentoQr]
+    );
+
+    useEffect(() => {
+        const carregarStatusEquipamentoQr = async () => {
+            const identificacaoConsulta = String(parametrosStatusEquipamentoQr.identificacao || "").trim();
+            const areaConsulta = String(parametrosStatusEquipamentoQr.area || "").trim();
+
+            if (!acessoLiberado || (!identificacaoConsulta && !areaConsulta && !parametrosStatusEquipamentoQr.codigoQrCampo)) {
+                setHistoricoStatusEquipamentoQr([]);
+                setMensagemStatusEquipamentoQr("");
+                return;
+            }
+
+            setCarregandoStatusEquipamentoQr(true);
+            setMensagemStatusEquipamentoQr("");
+
+            try {
+                let consulta = supabase
+                    .from("auditorias_campo")
+                    .select("*")
+                    .order("created_at", { ascending: false })
+                    .limit(50);
+
+                if (identificacaoConsulta) {
+                    consulta = consulta.ilike("maquina_equipamento", `%${escaparFiltroIlikeAuditoriaCampo(identificacaoConsulta)}%`);
+                } else if (areaConsulta) {
+                    consulta = consulta.ilike("area", `%${escaparFiltroIlikeAuditoriaCampo(areaConsulta)}%`);
+                }
+
+                const { data, error } = await consulta;
+
+                if (error) {
+                    throw error;
+                }
+
+                const historicoNormalizado = (data || [])
+                    .map((item) => normalizarAuditoriaCampo(item))
+                    .filter((auditoria) => auditoriaConfereStatusEquipamentoQrCampo(auditoria, parametrosStatusEquipamentoQr));
+
+                setHistoricoStatusEquipamentoQr(historicoNormalizado);
+                setMensagemStatusEquipamentoQr(historicoNormalizado.length === 0 ? "Nenhuma auditoria anterior vinculada foi encontrada para este QR Code." : "");
+            } catch (error) {
+                setHistoricoStatusEquipamentoQr([]);
+                setMensagemStatusEquipamentoQr("Não foi possível consultar o histórico do equipamento agora. A auditoria pode ser registrada normalmente.");
+            } finally {
+                setCarregandoStatusEquipamentoQr(false);
+            }
+        };
+
+        carregarStatusEquipamentoQr();
+    }, [acessoLiberado, parametrosStatusEquipamentoQr]);
 
     const {
         assuntoNotificacaoResponsavel,
@@ -592,6 +707,55 @@ export function NovaAuditoriaCampoDireta({ usuario = null, onAuditoriaSalva, emp
                         </div>
                     </div>
                 </Card>
+
+                {alvoQrAuditoriaAtual && (
+                    <Card className={classNames("overflow-hidden ring-1", statusEquipamentoQrCampo.containerClass)}>
+                        <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+                            <div className="flex min-w-0 items-start gap-3">
+                                <div className={classNames("mt-0.5 flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl ring-1", statusEquipamentoQrCampo.statusClass)}>
+                                    {statusEquipamentoQrCampo.chave === "critico" ? <AlertTriangle className="h-5 w-5" /> : <ShieldCheck className="h-5 w-5" />}
+                                </div>
+                                <div className="min-w-0">
+                                    <p className="text-xs font-black uppercase tracking-[0.18em] text-slate-500">Status do equipamento pelo QR Code</p>
+                                    <div className="mt-1 flex flex-wrap items-center gap-2">
+                                        <span className={classNames("rounded-full px-3 py-1 text-[11px] font-black uppercase ring-1", statusEquipamentoQrCampo.statusClass)}>
+                                            {carregandoStatusEquipamentoQr ? "Consultando histórico..." : statusEquipamentoQrCampo.status}
+                                        </span>
+                                        {codigoQrCampoParametro && (
+                                            <span className="rounded-full bg-white px-3 py-1 text-[10px] font-black uppercase text-slate-600 ring-1 ring-slate-200">
+                                                QR {codigoQrCampoParametro}
+                                            </span>
+                                        )}
+                                    </div>
+                                    <p className="mt-2 text-sm font-semibold leading-relaxed text-slate-700">
+                                        {carregandoStatusEquipamentoQr ? "Buscando auditorias anteriores vinculadas a este equipamento." : statusEquipamentoQrCampo.orientacao}
+                                    </p>
+                                    {mensagemStatusEquipamentoQr && (
+                                        <p className="mt-1 text-xs font-semibold text-slate-500">{mensagemStatusEquipamentoQr}</p>
+                                    )}
+                                </div>
+                            </div>
+                            <div className="grid gap-2 text-center sm:grid-cols-4 lg:min-w-[34rem]">
+                                <div className="rounded-2xl bg-white/80 px-3 py-2 ring-1 ring-white/70">
+                                    <p className="text-[10px] font-black uppercase tracking-wide text-slate-400">Última</p>
+                                    <p className={classNames("mt-1 truncate text-[11px] font-black", statusEquipamentoQrCampo.valueClass)} title={statusEquipamentoQrCampo.ultimaAuditoria}>{statusEquipamentoQrCampo.ultimaAuditoria}</p>
+                                </div>
+                                <div className="rounded-2xl bg-white/80 px-3 py-2 ring-1 ring-white/70">
+                                    <p className="text-[10px] font-black uppercase tracking-wide text-slate-400">Pendências</p>
+                                    <p className={classNames("mt-1 text-[11px] font-black", statusEquipamentoQrCampo.valueClass)}>{statusEquipamentoQrCampo.pendenciasAbertas} aberta(s)</p>
+                                </div>
+                                <div className="rounded-2xl bg-white/80 px-3 py-2 ring-1 ring-white/70">
+                                    <p className="text-[10px] font-black uppercase tracking-wide text-slate-400">Maior risco</p>
+                                    <p className={classNames("mt-1 text-[11px] font-black", statusEquipamentoQrCampo.valueClass)}>{statusEquipamentoQrCampo.maiorRisco}</p>
+                                </div>
+                                <div className="rounded-2xl bg-white/80 px-3 py-2 ring-1 ring-white/70">
+                                    <p className="text-[10px] font-black uppercase tracking-wide text-slate-400">Auditorias</p>
+                                    <p className={classNames("mt-1 text-[11px] font-black", statusEquipamentoQrCampo.valueClass)}>{statusEquipamentoQrCampo.totalAuditorias || 0}</p>
+                                </div>
+                            </div>
+                        </div>
+                    </Card>
+                )}
 
                 <div className="grid gap-5">
                     <div className="space-y-5">
