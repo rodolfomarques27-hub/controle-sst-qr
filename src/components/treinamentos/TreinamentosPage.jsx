@@ -1,7 +1,7 @@
 /* eslint-disable no-unused-vars */
 import React, { useEffect, useMemo, useState } from "react";
 import { motion } from "framer-motion";
-import { Eye, EyeOff, GripVertical, RotateCcw, Search, SlidersHorizontal } from "lucide-react";
+import { Eye, EyeOff, GripVertical, RotateCcw, Search, SlidersHorizontal, Upload } from "lucide-react";
 import { supabase } from "../../lib/supabaseClient";
 import { Card, Header } from "../commonComponents";
 import { validarArquivoAntesUpload, validarListaArquivosAntesUpload } from "../FileUploadAviso";
