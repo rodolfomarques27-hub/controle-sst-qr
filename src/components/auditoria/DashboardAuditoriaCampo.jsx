@@ -1168,6 +1168,168 @@ export function DashboardAuditoriaCampo({
             .map(({ item }) => item);
     }, [qrcodesCampo, buscaQrCampoSalvo, filtroTipoQrCampoSalvo, filtroStatusQrCampoSalvo, obterHistoricoAuditoriasPorQrCampo]);
 
+    const montarDadosRelatorioQrcodesCampo = useCallback((listaQrcodes = qrcodesCampoFiltrados) => {
+        const lista = Array.isArray(listaQrcodes) ? listaQrcodes : [];
+
+        return lista.map((item) => {
+            const historico = obterHistoricoAuditoriasPorQrCampo(item);
+            const statusEquipamento = calcularStatusEquipamentoQrCampo(historico);
+            const ultimaAuditoria = historico[0] || {};
+
+            return {
+                equipamento: item.identificacao || item.codigo || "QR Code sem identificação",
+                tipo: item.tipo_label || item.tipo || "Sem tipo",
+                empresaResponsavel: item.empresa_responsavel || item.empresaResponsavel || "Não informada",
+                area: item.area || "Não informada",
+                local: item.local || "Não informado",
+                statusAutomatico: statusEquipamento.status || "Sem status",
+                ultimaAuditoria: statusEquipamento.ultimaAuditoria || "Não realizada",
+                pendenciasAbertas: statusEquipamento.pendenciasAbertas ?? 0,
+                maiorRisco: statusEquipamento.maiorRisco || "Não informado",
+                codigoQr: item.codigo || obterCodigoHistoricoQrCampo(item) || "Sem código",
+                totalAuditorias: historico.length,
+                ultimaAuditoriaNumero: ultimaAuditoria.numeroAuditoria || ultimaAuditoria.numero_auditoria || ultimaAuditoria.titulo || "",
+                observacao: item.observacao || "",
+            };
+        });
+    }, [qrcodesCampoFiltrados, obterHistoricoAuditoriasPorQrCampo]);
+
+    const escaparValorCsvQrCampo = (valor) => `"${String(valor ?? "").replace(/"/g, '""')}"`;
+
+    const exportarRelatorioQrcodesCampo = () => {
+        const dados = montarDadosRelatorioQrcodesCampo();
+
+        if (dados.length === 0) {
+            setMensagemQrCampo("Nenhum QR Code disponível para exportar com os filtros atuais.");
+            return;
+        }
+
+        const cabecalhos = [
+            "Equipamento",
+            "Tipo",
+            "Empresa responsável",
+            "Área",
+            "Local",
+            "Status automático",
+            "Última auditoria",
+            "Pendências abertas",
+            "Maior risco",
+            "Código QR",
+            "Total de auditorias",
+            "Última auditoria/número",
+            "Observação",
+        ];
+
+        const linhas = dados.map((item) => [
+            item.equipamento,
+            item.tipo,
+            item.empresaResponsavel,
+            item.area,
+            item.local,
+            item.statusAutomatico,
+            item.ultimaAuditoria,
+            item.pendenciasAbertas,
+            item.maiorRisco,
+            item.codigoQr,
+            item.totalAuditorias,
+            item.ultimaAuditoriaNumero,
+            item.observacao,
+        ].map(escaparValorCsvQrCampo).join(";"));
+
+        const csv = `\ufeff${cabecalhos.map(escaparValorCsvQrCampo).join(";")}\n${linhas.join("\n")}`;
+        const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        const dataArquivo = new Date().toISOString().slice(0, 10);
+
+        link.href = url;
+        link.download = `relatorio-qrcodes-campo-${dataArquivo}.csv`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+        setMensagemQrCampo("Relatório dos QR Codes exportado em CSV.");
+    };
+
+    const imprimirRelatorioQrcodesCampo = () => {
+        const dados = montarDadosRelatorioQrcodesCampo();
+
+        if (dados.length === 0) {
+            setMensagemQrCampo("Nenhum QR Code disponível para imprimir com os filtros atuais.");
+            return;
+        }
+
+        const linhasTabela = dados.map((item) => `
+            <tr>
+                <td>${escaparTextoImpressaoQr(item.equipamento)}</td>
+                <td>${escaparTextoImpressaoQr(item.tipo)}</td>
+                <td>${escaparTextoImpressaoQr(item.empresaResponsavel)}</td>
+                <td>${escaparTextoImpressaoQr(item.area)}</td>
+                <td>${escaparTextoImpressaoQr(item.local)}</td>
+                <td><strong>${escaparTextoImpressaoQr(item.statusAutomatico)}</strong></td>
+                <td>${escaparTextoImpressaoQr(item.ultimaAuditoria)}</td>
+                <td>${escaparTextoImpressaoQr(item.pendenciasAbertas)}</td>
+                <td>${escaparTextoImpressaoQr(item.maiorRisco)}</td>
+                <td>${escaparTextoImpressaoQr(item.codigoQr)}</td>
+            </tr>
+        `).join("");
+
+        const janela = window.open("", "_blank", "width=1100,height=760");
+
+        if (!janela) {
+            setMensagemQrCampo("O navegador bloqueou a janela de impressão. Libere pop-ups para imprimir o relatório.");
+            return;
+        }
+
+        janela.document.write(`<!doctype html>
+<html>
+<head>
+    <meta charset="utf-8" />
+    <title>Relatório de QR Codes de campo</title>
+    <style>
+        @page { size: landscape; margin: 10mm; }
+        * { box-sizing: border-box; }
+        body { margin: 0; color: #0f172a; font-family: Arial, Helvetica, sans-serif; background: #fff; }
+        header { margin-bottom: 14px; border-bottom: 2px solid #0f172a; padding-bottom: 10px; }
+        h1 { margin: 0; font-size: 20px; font-weight: 900; text-transform: uppercase; }
+        p { margin: 4px 0 0; color: #475569; font-size: 11px; font-weight: 700; }
+        table { width: 100%; border-collapse: collapse; font-size: 10px; }
+        th { background: #0f172a; color: #fff; padding: 7px 6px; text-align: left; text-transform: uppercase; }
+        td { border-bottom: 1px solid #e2e8f0; padding: 6px; vertical-align: top; }
+        tr:nth-child(even) td { background: #f8fafc; }
+        .rodape { margin-top: 10px; color: #64748b; font-size: 10px; }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>Relatório de QR Codes de campo</h1>
+        <p>Gerado em ${escaparTextoImpressaoQr(formatarDataHora(new Date().toISOString()))} · ${dados.length} registro(s) · filtros atuais aplicados.</p>
+    </header>
+    <table>
+        <thead>
+            <tr>
+                <th>Equipamento</th>
+                <th>Tipo</th>
+                <th>Empresa</th>
+                <th>Área</th>
+                <th>Local</th>
+                <th>Status</th>
+                <th>Última auditoria</th>
+                <th>Pend.</th>
+                <th>Risco</th>
+                <th>Código QR</th>
+            </tr>
+        </thead>
+        <tbody>${linhasTabela}</tbody>
+    </table>
+    <div class="rodape">Relatório gerado pelo Dashboard Auditoria de Campo.</div>
+</body>
+</html>`);
+        janela.document.close();
+        janela.focus();
+        janela.print();
+    };
+
     const limparFiltrosQrcodesCampo = () => {
         setBuscaQrCampoSalvo("");
         setFiltroTipoQrCampoSalvo("todos");
@@ -1640,7 +1802,27 @@ export function DashboardAuditoriaCampo({
                                 <p className="text-sm font-black text-slate-950">QR Codes salvos</p>
                                 <p className="text-xs text-slate-500">Consulta do banco de dados de QR Codes gerados.</p>
                             </div>
-                            <button type="button" onClick={() => carregarQrcodesCampo()} disabled={carregandoQrcodesCampo} className="rounded-xl bg-slate-50 px-3 py-2 text-xs font-bold text-slate-600 ring-1 ring-slate-200 disabled:cursor-not-allowed disabled:opacity-60">{qrcodesCampoCarregados ? "Atualizar" : "Carregar QR Codes"}</button>
+                            <div className="flex flex-wrap items-center justify-end gap-2">
+                                <button type="button" onClick={() => carregarQrcodesCampo()} disabled={carregandoQrcodesCampo} className="rounded-xl bg-slate-50 px-3 py-2 text-xs font-bold text-slate-600 ring-1 ring-slate-200 disabled:cursor-not-allowed disabled:opacity-60">{qrcodesCampoCarregados ? "Atualizar" : "Carregar QR Codes"}</button>
+                                <button
+                                    type="button"
+                                    onClick={exportarRelatorioQrcodesCampo}
+                                    disabled={!qrcodesCampoCarregados || qrcodesCampoFiltrados.length === 0}
+                                    className="inline-flex items-center justify-center gap-2 rounded-xl bg-blue-50 px-3 py-2 text-xs font-bold text-blue-700 ring-1 ring-blue-100 hover:bg-blue-100 disabled:cursor-not-allowed disabled:opacity-50"
+                                >
+                                    <Download className="h-3.5 w-3.5" />
+                                    Exportar relatório
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={imprimirRelatorioQrcodesCampo}
+                                    disabled={!qrcodesCampoCarregados || qrcodesCampoFiltrados.length === 0}
+                                    className="inline-flex items-center justify-center gap-2 rounded-xl bg-white px-3 py-2 text-xs font-bold text-slate-700 ring-1 ring-slate-200 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
+                                >
+                                    <ClipboardCheck className="h-3.5 w-3.5" />
+                                    Imprimir relatório
+                                </button>
+                            </div>
                         </div>
 
                         {qrcodesCampoCarregados && qrcodesCampo.length > 0 && (
