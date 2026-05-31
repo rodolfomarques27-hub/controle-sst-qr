@@ -67,6 +67,7 @@ export function DashboardAuditoriaCampo({
     const [mensagemQrCampo, setMensagemQrCampo] = useState("");
     const [buscaQrCampoSalvo, setBuscaQrCampoSalvo] = useState("");
     const [filtroTipoQrCampoSalvo, setFiltroTipoQrCampoSalvo] = useState("todos");
+    const [historicoQrCampoAberto, setHistoricoQrCampoAberto] = useState("");
     const [empresasCadastradasQrCampo, setEmpresasCadastradasQrCampo] = useState([]);
     const [carregandoEmpresasQrCampo, setCarregandoEmpresasQrCampo] = useState(false);
     const [mensagemEmpresasQrCampo, setMensagemEmpresasQrCampo] = useState("");
@@ -951,6 +952,67 @@ export function DashboardAuditoriaCampo({
         });
     }, [qrcodesCampo, buscaQrCampoSalvo, filtroTipoQrCampoSalvo]);
 
+    const normalizarChaveHistoricoQrCampo = (valor = "") =>
+        normalizarTextoBusca(valor)
+            .replace(/[^a-z0-9]+/g, "")
+            .trim();
+
+    const obterCodigoHistoricoQrCampo = (item = {}) => String(
+        item.codigoQrCampo ||
+        item.codigo_qr_campo ||
+        item.codigo_qr ||
+        item.codigo ||
+        item.notificacao?.qrCodeCampo?.codigo ||
+        item.notificacao?.codigoQrCampo ||
+        ""
+    ).trim();
+
+    const camposCompativeisHistoricoQrCampo = (valorBase = "", valorComparacao = "") => {
+        const base = normalizarChaveHistoricoQrCampo(valorBase);
+        const comparacao = normalizarChaveHistoricoQrCampo(valorComparacao);
+
+        if (!base || !comparacao) return true;
+        return base === comparacao || base.includes(comparacao) || comparacao.includes(base);
+    };
+
+    const obterHistoricoAuditoriasPorQrCampo = useCallback((qrCampo = {}) => {
+        const codigoQr = normalizarChaveHistoricoQrCampo(obterCodigoHistoricoQrCampo(qrCampo));
+        const identificacaoQr = normalizarChaveHistoricoQrCampo(qrCampo.identificacao);
+        const areaQr = qrCampo.area || "";
+        const localQr = qrCampo.local || "";
+        const empresaQr = qrCampo.empresa_responsavel || qrCampo.empresaResponsavel || "";
+
+        return auditoriasNormalizadas
+            .filter((auditoria) => {
+                const codigoAuditoria = normalizarChaveHistoricoQrCampo(obterCodigoHistoricoQrCampo(auditoria));
+
+                if (codigoQr && codigoAuditoria && codigoQr === codigoAuditoria) {
+                    return true;
+                }
+
+                const alvoAuditoria = identificarAlvoAuditoriaCampo(auditoria);
+                const maquinaAuditoria = normalizarChaveHistoricoQrCampo(auditoria.maquinaEquipamento || auditoria.maquina_equipamento || "");
+                const tituloAlvoAuditoria = normalizarChaveHistoricoQrCampo(alvoAuditoria.titulo || "");
+                const alvoConfere = Boolean(identificacaoQr) && (
+                    maquinaAuditoria === identificacaoQr ||
+                    tituloAlvoAuditoria === identificacaoQr ||
+                    maquinaAuditoria.includes(identificacaoQr) ||
+                    tituloAlvoAuditoria.includes(identificacaoQr)
+                );
+
+                if (!alvoConfere) return false;
+
+                const empresaAuditoria = auditoria.empresaResponsavel || auditoria.empresaNome || auditoria.empresa_responsavel || auditoria.empresa_nome || "";
+
+                return (
+                    camposCompativeisHistoricoQrCampo(areaQr, auditoria.area) &&
+                    camposCompativeisHistoricoQrCampo(localQr, auditoria.local) &&
+                    camposCompativeisHistoricoQrCampo(empresaQr, empresaAuditoria)
+                );
+            })
+            .sort((a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime());
+    }, [auditoriasNormalizadas]);
+
     const limparFiltrosQrcodesCampo = () => {
         setBuscaQrCampoSalvo("");
         setFiltroTipoQrCampoSalvo("todos");
@@ -1471,6 +1533,9 @@ export function DashboardAuditoriaCampo({
                                         <p className="rounded-2xl border border-dashed border-slate-300 bg-white p-4 text-center text-sm font-semibold text-slate-500">Nenhum QR Code encontrado com os filtros aplicados.</p>
                                     ) : qrcodesCampoFiltrados.map((item) => {
                                         const chaveQrSalvo = chaveQrCampoSalvo(item);
+                                        const historicoAuditoriasQrCampo = obterHistoricoAuditoriasPorQrCampo(item);
+                                        const historicoQrCampoEstaAberto = historicoQrCampoAberto === chaveQrSalvo;
+                                        const totalHistoricoQrCampo = historicoAuditoriasQrCampo.length;
 
                                         return (
                                         <div key={item.id || item.codigo} className="grid gap-3 overflow-hidden rounded-2xl bg-slate-50 p-3 ring-1 ring-slate-100 sm:grid-cols-[108px_minmax(0,1fr)]">
@@ -1521,6 +1586,57 @@ export function DashboardAuditoriaCampo({
                                                         {excluindoQrCampoId === (item.id || item.codigo || item.identificacao) ? "Excluindo..." : "Excluir QR"}
                                                     </button>
                                                 </div>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setHistoricoQrCampoAberto((atual) => atual === chaveQrSalvo ? "" : chaveQrSalvo)}
+                                                    className={classNames(
+                                                        "mt-2 inline-flex w-full items-center justify-center gap-2 rounded-xl px-3 py-2 text-[11px] font-black ring-1 transition",
+                                                        totalHistoricoQrCampo > 0
+                                                            ? "bg-slate-950 text-white ring-slate-950 hover:bg-slate-800"
+                                                            : "bg-white text-slate-500 ring-slate-200 hover:bg-slate-50"
+                                                    )}
+                                                >
+                                                    <ClipboardCheck className="h-3.5 w-3.5" />
+                                                    {totalHistoricoQrCampo > 0
+                                                        ? `${historicoQrCampoEstaAberto ? "Recolher" : "Ver"} histórico (${totalHistoricoQrCampo})`
+                                                        : "Sem auditorias vinculadas"}
+                                                </button>
+                                                {historicoQrCampoEstaAberto && (
+                                                    <div className="mt-3 rounded-2xl border border-blue-100 bg-white p-3 shadow-sm">
+                                                        <div className="flex items-center justify-between gap-2">
+                                                            <p className="text-[11px] font-black uppercase tracking-wide text-slate-500">Auditorias vinculadas ao QR</p>
+                                                            <span className="rounded-full bg-blue-50 px-2 py-1 text-[10px] font-black text-blue-700 ring-1 ring-blue-100">{totalHistoricoQrCampo}</span>
+                                                        </div>
+                                                        {totalHistoricoQrCampo === 0 ? (
+                                                            <p className="mt-2 rounded-xl bg-slate-50 px-3 py-2 text-[11px] font-bold text-slate-500 ring-1 ring-slate-100">Nenhuma auditoria salva para este QR Code até o momento.</p>
+                                                        ) : (
+                                                            <div className="mt-2 space-y-2">
+                                                                {historicoAuditoriasQrCampo.slice(0, 5).map((auditoria) => {
+                                                                    const alvoHistorico = identificarAlvoAuditoriaCampo(auditoria);
+                                                                    const chaveHistorico = String(auditoria.id || auditoria.numeroAuditoria || auditoria.createdAt || alvoHistorico.titulo);
+                                                                    const statusHistorico = auditoria.statusAuditoria || auditoria.statusDesvio || "Sem status";
+                                                                    const riscoHistorico = auditoria.grauRisco || "Risco não informado";
+
+                                                                    return (
+                                                                        <div key={chaveHistorico} className="rounded-xl bg-slate-50 px-3 py-2 ring-1 ring-slate-100">
+                                                                            <div className="flex items-start justify-between gap-2">
+                                                                                <div className="min-w-0">
+                                                                                    <p className="truncate text-xs font-black text-slate-900">{auditoria.numeroAuditoria || auditoria.titulo || "Auditoria sem número"}</p>
+                                                                                    <p className="mt-0.5 truncate text-[11px] font-semibold text-slate-500" title={alvoHistorico.descricao}>{alvoHistorico.titulo} · {formatarDataHora(auditoria.createdAt)}</p>
+                                                                                </div>
+                                                                                <span className="shrink-0 rounded-full bg-white px-2 py-1 text-[10px] font-black text-slate-600 ring-1 ring-slate-200">{statusHistorico}</span>
+                                                                            </div>
+                                                                            <p className="mt-1 text-[11px] font-bold text-slate-500">{riscoHistorico} · {auditoria.classificacao || "Sem classificação"}</p>
+                                                                        </div>
+                                                                    );
+                                                                })}
+                                                                {totalHistoricoQrCampo > 5 && (
+                                                                    <p className="rounded-xl bg-blue-50 px-3 py-2 text-center text-[11px] font-bold text-blue-700 ring-1 ring-blue-100">Mostrando 5 de {totalHistoricoQrCampo} auditoria(s) vinculada(s).</p>
+                                                                )}
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                )}
                                             </div>
                                         </div>
                                         );
