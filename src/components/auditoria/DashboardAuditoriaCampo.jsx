@@ -58,6 +58,9 @@ export function DashboardAuditoriaCampo({
     const [mensagemQrCampo, setMensagemQrCampo] = useState("");
     const [buscaQrCampoSalvo, setBuscaQrCampoSalvo] = useState("");
     const [filtroTipoQrCampoSalvo, setFiltroTipoQrCampoSalvo] = useState("todos");
+    const [empresasCadastradasQrCampo, setEmpresasCadastradasQrCampo] = useState([]);
+    const [carregandoEmpresasQrCampo, setCarregandoEmpresasQrCampo] = useState(false);
+    const [mensagemEmpresasQrCampo, setMensagemEmpresasQrCampo] = useState("");
     const [qrFormCampo, setQrFormCampo] = useState({
         tipo: "maquina",
         identificacao: "",
@@ -239,6 +242,57 @@ export function DashboardAuditoriaCampo({
     useEffect(() => { if (typeof window !== "undefined") window.localStorage.setItem("dashboardAuditoriaCampoAuditoriasAbertas", JSON.stringify(auditoriasHistoricoAbertas)); }, [auditoriasHistoricoAbertas]);
     useEffect(() => { if (typeof window !== "undefined") window.localStorage.setItem("dashboardAuditoriaCampoBuscarRecolhido", String(buscarAuditoriaRecolhido)); }, [buscarAuditoriaRecolhido]);
     useEffect(() => { setQuantidadeHistoricoVisivel(30); }, [filtrosAuditoriaCampo]);
+
+    const carregarEmpresasCadastradasQrCampo = useCallback(async () => {
+        setCarregandoEmpresasQrCampo(true);
+        setMensagemEmpresasQrCampo("");
+
+        try {
+            const { data, error } = await supabase
+                .from("empresas")
+                .select("id,nome")
+                .order("nome", { ascending: true });
+
+            if (error) throw error;
+
+            const mapaEmpresas = new Map();
+            (Array.isArray(data) ? data : []).forEach((empresa) => {
+                const nome = String(empresa?.nome || "").trim();
+                if (!nome) return;
+                const chave = normalizarTextoBusca(nome);
+                if (!mapaEmpresas.has(chave)) {
+                    mapaEmpresas.set(chave, { id: empresa.id || nome, nome });
+                }
+            });
+
+            setEmpresasCadastradasQrCampo(Array.from(mapaEmpresas.values()));
+        } catch (error) {
+            setMensagemEmpresasQrCampo(`Não foi possível carregar empresas cadastradas: ${error.message}`);
+        } finally {
+            setCarregandoEmpresasQrCampo(false);
+        }
+    }, []);
+
+    useEffect(() => {
+        carregarEmpresasCadastradasQrCampo();
+    }, [carregarEmpresasCadastradasQrCampo]);
+
+    const empresasQrCampoOpcoes = useMemo(() => {
+        const mapaEmpresas = new Map();
+
+        empresasCadastradasQrCampo.forEach((empresa) => {
+            const nome = String(empresa?.nome || "").trim();
+            if (!nome) return;
+            mapaEmpresas.set(normalizarTextoBusca(nome), { id: empresa.id || nome, nome });
+        });
+
+        const empresaAtual = String(qrFormCampo.empresaResponsavel || "").trim();
+        if (empresaAtual && !mapaEmpresas.has(normalizarTextoBusca(empresaAtual))) {
+            mapaEmpresas.set(normalizarTextoBusca(empresaAtual), { id: empresaAtual, nome: empresaAtual });
+        }
+
+        return Array.from(mapaEmpresas.values()).sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR"));
+    }, [empresasCadastradasQrCampo, qrFormCampo.empresaResponsavel]);
 
     const auditoriasNormalizadas = useMemo(() => auditoriasCampo.map(normalizarAuditoriaCampo), [auditoriasCampo]);
     const opcoesFiltroAuditoriaCampo = useMemo(() => {
@@ -1293,7 +1347,28 @@ export function DashboardAuditoriaCampo({
                             </label>
                             <label className="block text-xs font-bold uppercase tracking-wide text-slate-500 md:col-span-2">
                                 Empresa responsável
-                                <input value={qrFormCampo.empresaResponsavel} onChange={(e) => setQrFormCampo((atual) => ({ ...atual, empresaResponsavel: e.target.value }))} placeholder="Ex.: RIBEIRO AQUINO" className="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-3 py-2 text-sm normal-case tracking-normal outline-none focus:ring-2 focus:ring-blue-100" />
+                                <input
+                                    list="empresas-cadastradas-qr-campo"
+                                    value={qrFormCampo.empresaResponsavel}
+                                    onChange={(e) => setQrFormCampo((atual) => ({ ...atual, empresaResponsavel: e.target.value }))}
+                                    placeholder={carregandoEmpresasQrCampo ? "Carregando empresas cadastradas..." : "Selecione ou digite a empresa responsável"}
+                                    className="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-3 py-2 text-sm normal-case tracking-normal outline-none focus:ring-2 focus:ring-blue-100"
+                                />
+                                <datalist id="empresas-cadastradas-qr-campo">
+                                    {empresasQrCampoOpcoes.map((empresa) => (
+                                        <option key={empresa.id || empresa.nome} value={empresa.nome} />
+                                    ))}
+                                </datalist>
+                                <span className="mt-1 block text-[11px] font-medium normal-case tracking-normal text-slate-400">
+                                    {carregandoEmpresasQrCampo
+                                        ? "Buscando empresas cadastradas no sistema..."
+                                        : empresasQrCampoOpcoes.length > 0
+                                            ? `${empresasQrCampoOpcoes.length} empresa(s) cadastrada(s) disponível(is) para seleção.`
+                                            : "Nenhuma empresa cadastrada carregada. Você ainda pode digitar manualmente."}
+                                </span>
+                                {mensagemEmpresasQrCampo && (
+                                    <span className="mt-1 block text-[11px] font-bold normal-case tracking-normal text-amber-600">{mensagemEmpresasQrCampo}</span>
+                                )}
                             </label>
                             <label className="block text-xs font-bold uppercase tracking-wide text-slate-500 md:col-span-2">
                                 Token público cadastrado no Supabase
