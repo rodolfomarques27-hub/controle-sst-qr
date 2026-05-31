@@ -1455,24 +1455,24 @@ export function DashboardAuditoriaCampo({
                                         const chaveQrSalvo = chaveQrCampoSalvo(item);
 
                                         return (
-                                        <div key={item.id || item.codigo} className="grid gap-3 rounded-2xl bg-slate-50 p-3 ring-1 ring-slate-100 sm:grid-cols-[108px_minmax(0,1fr)]">
+                                        <div key={item.id || item.codigo} className="grid gap-3 overflow-hidden rounded-2xl bg-slate-50 p-3 ring-1 ring-slate-100 sm:grid-cols-[108px_minmax(0,1fr)]">
                                             <div className="flex items-start justify-center">
                                                 <div data-qrcode-campo-id={chaveQrSalvo} className="flex aspect-square w-[96px] items-center justify-center self-start rounded-3xl border border-slate-200 bg-white p-3 shadow-sm">
                                                     <QRCodeSVG value={item.link || ""} size={72} level="M" />
                                                 </div>
                                             </div>
-                                            <div className="min-w-0">
+                                            <div className="min-w-0 overflow-hidden">
                                                 <div className="flex flex-wrap items-center gap-2">
                                                     <span className="rounded-full bg-slate-950 px-2 py-1 text-[10px] font-black uppercase text-white">{item.codigo || "Sem código"}</span>
                                                     <span className="rounded-full bg-blue-50 px-2 py-1 text-[10px] font-bold text-blue-700 ring-1 ring-blue-100">{item.tipo_label || item.tipo}</span>
                                                 </div>
                                                 <p className="mt-2 truncate text-sm font-black text-slate-900" title={item.identificacao}>{item.identificacao}</p>
                                                 <p className="truncate text-[11px] font-medium text-slate-500" title={[item.area, item.local, item.empresa_responsavel, item.observacao].filter(Boolean).join(" · ")}>{[item.area, item.local, item.empresa_responsavel, item.observacao].filter(Boolean).join(" · ") || "Sem local vinculado"}</p>
-                                                <div className="mt-3 flex flex-wrap items-center gap-1.5 xl:flex-nowrap">
+                                                <div className="mt-3 grid gap-1.5 sm:grid-cols-2 xl:grid-cols-4">
                                                     <button
                                                         type="button"
                                                         onClick={() => navigator.clipboard?.writeText(item.link || "")}
-                                                        className="inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded-xl bg-blue-50 px-2.5 py-2 text-[11px] font-bold text-blue-700 ring-1 ring-blue-100 hover:bg-blue-100"
+                                                        className="inline-flex w-full min-w-0 items-center justify-center gap-1.5 rounded-xl bg-blue-50 px-2.5 py-2 text-[11px] font-bold text-blue-700 ring-1 ring-blue-100 hover:bg-blue-100"
                                                     >
                                                         Copiar link
                                                     </button>
@@ -1480,7 +1480,7 @@ export function DashboardAuditoriaCampo({
                                                         href={item.link || "#"}
                                                         target="_blank"
                                                         rel="noreferrer"
-                                                        className="inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded-xl bg-emerald-50 px-2.5 py-2 text-[11px] font-bold text-emerald-700 ring-1 ring-emerald-100 hover:bg-emerald-100"
+                                                        className="inline-flex w-full min-w-0 items-center justify-center gap-1.5 rounded-xl bg-emerald-50 px-2.5 py-2 text-[11px] font-bold text-emerald-700 ring-1 ring-emerald-100 hover:bg-emerald-100"
                                                     >
                                                         <QrCode className="h-3.5 w-3.5" />
                                                         Abrir auditoria
@@ -1488,7 +1488,7 @@ export function DashboardAuditoriaCampo({
                                                     <button
                                                         type="button"
                                                         onClick={() => imprimirQrCampoSalvo(item)}
-                                                        className="inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded-xl bg-white px-2.5 py-2 text-[11px] font-bold text-slate-700 ring-1 ring-slate-200 hover:bg-slate-50"
+                                                        className="inline-flex w-full min-w-0 items-center justify-center gap-1.5 rounded-xl bg-white px-2.5 py-2 text-[11px] font-bold text-slate-700 ring-1 ring-slate-200 hover:bg-slate-50"
                                                     >
                                                         <Download className="h-3.5 w-3.5" />
                                                         Imprimir
@@ -1497,7 +1497,7 @@ export function DashboardAuditoriaCampo({
                                                         type="button"
                                                         onClick={() => excluirQrCampo(item)}
                                                         disabled={excluindoQrCampoId === (item.id || item.codigo || item.identificacao)}
-                                                        className="inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded-xl bg-red-50 px-2.5 py-2 text-[11px] font-bold text-red-700 ring-1 ring-red-100 hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-60"
+                                                        className="inline-flex w-full min-w-0 items-center justify-center gap-1.5 rounded-xl bg-red-50 px-2.5 py-2 text-[11px] font-bold text-red-700 ring-1 ring-red-100 hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-60"
                                                     >
                                                         <Trash2 className="h-3.5 w-3.5" />
                                                         {excluindoQrCampoId === (item.id || item.codigo || item.identificacao) ? "Excluindo..." : "Excluir QR"}
