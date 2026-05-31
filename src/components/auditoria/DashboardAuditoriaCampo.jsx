@@ -34,6 +34,15 @@ import { carregarConfiguracaoAuditoriaPublicaSistema } from "../../constants/aud
 
 const hoje = new Date();
 
+function gerarCodigoQrCampoAuditoria(tipoValor = "", identificacao = "") {
+    const tipo = String(tipoValor || "qr").trim() || "qr";
+    const alvo = String(identificacao || "").trim();
+
+    if (!alvo) return "";
+
+    return `${tipo}-${alvo}`.toUpperCase().replace(/[^A-Z0-9_-]+/g, "-");
+}
+
 export function DashboardAuditoriaCampo({
     auditoriasCampo = [],
     carregando = false,
@@ -638,7 +647,15 @@ export function DashboardAuditoriaCampo({
         const origem = typeof window !== "undefined" ? window.location.origin : "";
         const params = new URLSearchParams();
         const tokenPublico = String(dados.token || tokenAuditoriaCampoConfigurado).trim();
+        const tipoSelecionadoLink = obterTipoAuditoriaCampoDireta(dados.tipo || qrFormCampo.tipo);
+        const codigoQrCampo = String(
+            dados.codigo ||
+            dados.codigoQr ||
+            gerarCodigoQrCampoAuditoria(tipoSelecionadoLink.valor, dados.identificacao || "")
+        ).trim();
+
         if (tokenPublico) params.set("token", tokenPublico);
+        if (codigoQrCampo) params.set("codigo_qr", codigoQrCampo);
         if (dados.tipo) params.set("tipo", dados.tipo);
         if (dados.identificacao) params.set("id", dados.identificacao);
         if (dados.area) params.set("area", dados.area);
@@ -741,9 +758,10 @@ export function DashboardAuditoriaCampo({
         }
 
         const tipo = obterTipoAuditoriaCampoDireta(qrFormCampo.tipo);
-        const dadosQrCampo = { ...qrFormCampo, token: tokenPublicoQrCampo };
+        const codigoQrCampo = gerarCodigoQrCampoAuditoria(tipo.valor, identificacao);
+        const dadosQrCampo = { ...qrFormCampo, token: tokenPublicoQrCampo, codigo: codigoQrCampo };
         const payload = {
-            codigo: `${tipo.valor}-${identificacao}`.toUpperCase().replace(/[^A-Z0-9_-]+/g, "-"),
+            codigo: codigoQrCampo,
             tipo: tipo.valor,
             tipo_label: tipo.label,
             identificacao,

@@ -80,9 +80,12 @@ export function NovaAuditoriaCampoDireta({ usuario = null, onAuditoriaSalva, emp
         empresaParametro,
         subareaParametro,
         tokenParametro,
+        codigoQrParametro,
     } = extrairParametrosAuditoriaCampoDireta(parametros);
     const tipoInicial = obterTipoAuditoriaCampoPorParametro(tipoParametro);
     const origem = typeof window !== "undefined" ? window.location.origin : "";
+    const linkOrigemQrCampo = typeof window !== "undefined" ? window.location.href : "";
+    const codigoQrCampoParametro = String(codigoQrParametro || "").trim();
     const tokenAuditoriaPublicaConfigurado = obterTokenAuditoriaCampoPublicaConfigurado();
     const tokenLinkAuditoriaCampo = tokenParametro || tokenAuditoriaPublicaConfigurado;
     const tokenLinkAuditoriaCampoDisponivel = Boolean(tokenLinkAuditoriaCampo);
@@ -207,6 +210,7 @@ export function NovaAuditoriaCampoDireta({ usuario = null, onAuditoriaSalva, emp
             subarea: formulario.subarea || subareaParametro,
             local: formulario.local || localParametro,
             empresa: formulario.empresaResponsavel || empresaParametro,
+            codigo_qr: codigoQrCampoParametro,
         })
         : linkTipoAtual;
     const linkQrAuditoriaAtual = alvoQrAuditoriaAtual ? linkEspecifico : linkGeral;
@@ -214,7 +218,7 @@ export function NovaAuditoriaCampoDireta({ usuario = null, onAuditoriaSalva, emp
         ? `QR Code - ${alvoQrAuditoriaAtual}`
         : "QR Code geral";
     const descricaoQrAuditoriaAtual = alvoQrAuditoriaAtual
-        ? `${tipoAtual.label}: ${alvoQrAuditoriaAtual}`
+        ? `${tipoAtual.label}: ${alvoQrAuditoriaAtual}${codigoQrCampoParametro ? ` · QR ${codigoQrCampoParametro}` : ""}`
         : "Link geral para nova auditoria de campo";
 
     const textoNotificacaoResponsavel = useMemo(() => montarTextoNotificacaoAuditoriaCampoDireta({
@@ -372,6 +376,8 @@ export function NovaAuditoriaCampoDireta({ usuario = null, onAuditoriaSalva, emp
                 textoNotificacaoResponsavel,
                 fotoAntesUrl,
                 fotoDepoisUrl,
+                codigoQrParametro: codigoQrCampoParametro,
+                linkOrigemQrCampo,
             });
 
             const tokenAuditoriaCampo = obterParametroUrl("token") || obterParametroUrl("chave");

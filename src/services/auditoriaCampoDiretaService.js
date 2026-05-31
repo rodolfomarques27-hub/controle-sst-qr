@@ -39,6 +39,7 @@ export function extrairParametrosAuditoriaCampoDireta(parametros = new URLSearch
         empresaParametro: parametros.get("empresa") || parametros.get("empresa_responsavel") || "",
         subareaParametro: parametros.get("subarea") || "",
         tokenParametro: parametros.get("token") || parametros.get("chave") || "",
+        codigoQrParametro: parametros.get("codigo_qr") || parametros.get("codigoQr") || parametros.get("qr") || parametros.get("codigo") || "",
     };
 }
 
@@ -289,8 +290,16 @@ export function montarPayloadAuditoriaCampoDireta({
     textoNotificacaoResponsavel,
     fotoAntesUrl = "",
     fotoDepoisUrl = "",
+    codigoQrParametro = "",
+    linkOrigemQrCampo = "",
 } = {}) {
     const checklistDinamico = montarChecklistDinamicoAuditoriaCampoDireta(resultado);
+    const codigoQrCampo = String(codigoQrParametro || "").trim();
+    const linkQrCampo = String(linkOrigemQrCampo || "").trim();
+    const observacoesOriginais = formulario.observacoesGerais.trim();
+    const registroOrigemQr = codigoQrCampo ? `QR Code de campo vinculado: ${codigoQrCampo}` : "";
+    const observacoesComRastreio = [observacoesOriginais, registroOrigemQr].filter(Boolean).join("\n");
+    const origemAuditoria = codigoQrCampo ? `QR Code de campo / ${codigoQrCampo}` : "Link direto / auditoria-campo";
 
     return {
         tipo_auditoria: formulario.tipoAuditoria,
@@ -311,8 +320,8 @@ export function montarPayloadAuditoriaCampoDireta({
         status_desvio: formulario.statusAuditoria === "Resolvida" ? "Corrigido" : "Aberto",
         foto_antes_url: fotoAntesUrl || null,
         foto_depois_url: fotoDepoisUrl || null,
-        observacoes_gerais: formulario.observacoesGerais.trim() || null,
-        observacao: formulario.observacoesGerais.trim() || formulario.situacaoEncontrada.trim(),
+        observacoes_gerais: observacoesComRastreio || null,
+        observacao: observacoesOriginais || formulario.situacaoEncontrada.trim(),
         checklist: checklistDinamico,
         checklist_dinamico: checklistDinamico,
         pontuacao: resultado.percentual ?? 0,
@@ -320,7 +329,7 @@ export function montarPayloadAuditoriaCampoDireta({
         tem_desvio_grave: Boolean(resultado.temDesvioGrave),
         categoria_desvio_principal: categoriaAtual.label,
         total_desvios: ["Aberta", "Em andamento", "Vencida"].includes(formulario.statusAuditoria) ? 1 : 0,
-        origem: "Link direto / auditoria-campo",
+        origem: origemAuditoria,
         token_qr: tokenParametro || null,
         notificacao: {
             titulo: formulario.titulo.trim(),
@@ -348,6 +357,17 @@ export function montarPayloadAuditoriaCampoDireta({
             whatsappTstResponsavel: whatsappTstFormatado || null,
             textoEnvio: textoNotificacaoResponsavel,
             complementos: formulario.acaoRecomendada ? [formulario.acaoRecomendada.trim()] : [],
+            qrCodeCampo: codigoQrCampo ? {
+                codigo: codigoQrCampo,
+                link: linkQrCampo || null,
+                tipo: tipoAtual.valor,
+                tipoLabel: tipoAtual.label,
+                alvo: formulario.maquinaEquipamento.trim() || formulario.area.trim() || formulario.local.trim() || null,
+                maquinaEquipamento: formulario.maquinaEquipamento.trim() || null,
+                area: formulario.area.trim() || null,
+                local: formulario.local.trim() || null,
+                empresaResponsavel: formulario.empresaResponsavel.trim() || null,
+            } : null,
         },
     };
 }

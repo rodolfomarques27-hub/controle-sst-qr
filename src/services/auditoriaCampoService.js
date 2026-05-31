@@ -107,6 +107,7 @@ function montarMensagemFluidaAuditoriaCampo(auditoria = {}, alvoAuditoria = {}) 
     const numero = auditoria.numeroAuditoria || auditoria.numero_auditoria || "Sem número";
     const tipo = auditoria.tipoAuditoria || auditoria.tipo_auditoria || alvoAuditoria.tipo || "Auditoria de campo";
     const alvo = alvoAuditoria.titulo || auditoria.maquinaEquipamento || auditoria.maquina_equipamento || auditoria.area || auditoria.local || auditoria.nomeColaborador || "Não informado";
+    const codigoQrCampo = auditoria.codigoQrCampo || auditoria.codigo_qr_campo || auditoria.codigo_qr || auditoria.notificacao?.qrCodeCampo?.codigo || auditoria.notificacao?.codigoQrCampo || "";
     const empresa = auditoria.empresaNome || auditoria.empresa_nome || auditoria.empresaResponsavel || auditoria.empresa_responsavel || "Empresa não informada";
     const auditor = auditoria.auditorNome || auditoria.auditor_nome || auditoria.auditor || "Auditor não informado";
     const risco = auditoria.grauRisco || auditoria.grau_risco || "Não informado";
@@ -124,6 +125,7 @@ function montarMensagemFluidaAuditoriaCampo(auditoria = {}, alvoAuditoria = {}) 
         "Resumo da auditoria:",
         `• Tipo: ${tipo}`,
         `• Local/alvo auditado: ${alvo}`,
+        ...(codigoQrCampo ? [`• QR Code de origem: ${codigoQrCampo}`] : []),
         `• Empresa responsável: ${empresa}`,
         `• Grau de risco: ${risco}`,
         `• Status atual: ${status}`,
@@ -199,6 +201,8 @@ function classeClassificacaoAuditoriaCampo(classificacao = "") {
 
 function normalizarAuditoriaCampo(item = {}) {
     const checklist = Array.isArray(item.checklist) ? item.checklist : [];
+    const codigoQrCampo = item.codigo_qr_campo || item.codigoQrCampo || item.codigo_qr || item.notificacao?.qrCodeCampo?.codigo || item.notificacao?.codigoQrCampo || "";
+    const linkQrCampo = item.link_qr_campo || item.linkQrCampo || item.notificacao?.qrCodeCampo?.link || "";
     const desviosBrutos = Array.isArray(item.desvios) ? item.desvios : [];
     const desvios = desviosBrutos.map((desvio) => ({
         ...desvio,
@@ -215,6 +219,8 @@ function normalizarAuditoriaCampo(item = {}) {
         colaboradorId: item.colaborador_id || item.colaboradorId || null,
         empresaId: item.empresa_id || item.empresaId || null,
         tokenQr: item.token_qr || item.tokenQr || "",
+        codigoQrCampo,
+        linkQrCampo,
         colaboradorNome: item.colaborador_nome || item.colaboradorNome || item.colaboradores?.nome || "",
         empresaNome: item.empresa_nome || item.empresaNome || item.empresas?.nome || item.empresa_responsavel || item.empresaResponsavel || "",
         numeroAuditoria: item.numero_auditoria || item.numeroAuditoria || "",
@@ -264,6 +270,7 @@ function identificarAlvoAuditoriaCampo(item = {}) {
     const subarea = textoNaoAplicavel(item.subarea || "");
     const local = textoNaoAplicavel(item.local || "");
     const tipo = String(item.tipoAuditoria || item.tipo_auditoria || "").trim();
+    const codigoQrCampo = item.codigoQrCampo || item.codigo_qr_campo || item.codigo_qr || item.notificacao?.qrCodeCampo?.codigo || item.notificacao?.codigoQrCampo || "";
     const titulo = String(item.titulo || item.assunto || item.numeroAuditoria || item.numero_auditoria || "Auditoria de campo").trim();
 
     if (colaborador) {
@@ -278,7 +285,7 @@ function identificarAlvoAuditoriaCampo(item = {}) {
         return {
             titulo: maquina,
             tipo: tipo && normalizarTextoBusca(tipo).includes("equip") ? "Equipamento auditado" : "Máquina/equipamento auditado",
-            descricao: [area, local, item.empresaResponsavel || item.empresa_responsavel || item.empresaNome || item.empresa_nome].filter(Boolean).join(" · "),
+            descricao: [area, local, item.empresaResponsavel || item.empresa_responsavel || item.empresaNome || item.empresa_nome, codigoQrCampo ? `QR ${codigoQrCampo}` : ""].filter(Boolean).join(" · "),
         };
     }
 
