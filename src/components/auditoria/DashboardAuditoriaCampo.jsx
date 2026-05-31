@@ -43,6 +43,96 @@ function gerarCodigoQrCampoAuditoria(tipoValor = "", identificacao = "") {
     return `${tipo}-${alvo}`.toUpperCase().replace(/[^A-Z0-9_-]+/g, "-");
 }
 
+function obterPesoRiscoEquipamentoQrCampo(valor = "") {
+    const texto = normalizarTextoBusca(valor);
+
+    if (texto.includes("crit")) return 4;
+    if (texto.includes("alto")) return 3;
+    if (texto.includes("medio") || texto.includes("médio")) return 2;
+    if (texto.includes("baixo")) return 1;
+
+    return 0;
+}
+
+function obterRotuloRiscoEquipamentoQrCampo(peso = 0) {
+    if (peso >= 4) return "Crítico";
+    if (peso === 3) return "Alto";
+    if (peso === 2) return "Médio";
+    if (peso === 1) return "Baixo";
+
+    return "Não informado";
+}
+
+function auditoriaEquipamentoQrCampoEstaAberta(auditoria = {}) {
+    const status = normalizarTextoBusca(auditoria.statusAuditoria || auditoria.status_auditoria || auditoria.statusDesvio || auditoria.status_desvio || "");
+    const statusFechado = ["resolvida", "resolvido", "corrigido", "corrigida", "cancelada", "cancelado", "concluido", "concluído", "fechado"].some((termo) => status.includes(termo));
+    const statusAberto = ["aberta", "aberto", "em andamento", "em tratativa", "vencida", "vencido"].some((termo) => status.includes(termo));
+
+    return !statusFechado && (statusAberto || auditoriaCampoAberta(auditoria) || Number(auditoria.totalDesvios || auditoria.total_desvios || 0) > 0);
+}
+
+function calcularStatusEquipamentoQrCampo(historicoAuditorias = []) {
+    const historico = Array.isArray(historicoAuditorias) ? historicoAuditorias : [];
+
+    if (historico.length === 0) {
+        return {
+            status: "Sem auditoria",
+            descricao: "Nenhuma auditoria vinculada",
+            ultimaAuditoria: "Não realizada",
+            pendenciasAbertas: 0,
+            maiorRisco: "Não informado",
+            containerClass: "bg-slate-50 ring-slate-200",
+            statusClass: "bg-white text-slate-600 ring-slate-200",
+            valueClass: "text-slate-700",
+        };
+    }
+
+    const auditoriasAbertas = historico.filter(auditoriaEquipamentoQrCampoEstaAberta);
+    const vencidas = historico.filter(auditoriaCampoVencida);
+    const maiorPesoRisco = historico.reduce((maior, auditoria) => Math.max(maior, obterPesoRiscoEquipamentoQrCampo(auditoria.grauRisco || auditoria.grau_risco || auditoria.classificacao || "")), 0);
+    const maiorPesoRiscoAberto = auditoriasAbertas.reduce((maior, auditoria) => Math.max(maior, obterPesoRiscoEquipamentoQrCampo(auditoria.grauRisco || auditoria.grau_risco || auditoria.classificacao || "")), 0);
+    const temDesvioGrave = historico.some((auditoria) => Boolean(auditoria.temDesvioGrave || auditoria.tem_desvio_grave) || normalizarTextoBusca(auditoria.classificacao).includes("acao imediata"));
+    const ultima = historico[0] || {};
+    const ultimaAuditoria = ultima.createdAt ? formatarDataHora(ultima.createdAt) : "Sem data";
+
+    if (vencidas.length > 0 || temDesvioGrave || maiorPesoRiscoAberto >= 4) {
+        return {
+            status: "Crítico / bloquear uso",
+            descricao: "Existe condição crítica, vencida ou desvio grave",
+            ultimaAuditoria,
+            pendenciasAbertas: auditoriasAbertas.length,
+            maiorRisco: obterRotuloRiscoEquipamentoQrCampo(Math.max(maiorPesoRisco, maiorPesoRiscoAberto)),
+            containerClass: "bg-red-50 ring-red-100",
+            statusClass: "bg-red-100 text-red-700 ring-red-200",
+            valueClass: "text-red-700",
+        };
+    }
+
+    if (auditoriasAbertas.length > 0 || maiorPesoRiscoAberto >= 3) {
+        return {
+            status: "Atenção",
+            descricao: "Existe pendência aberta para acompanhar",
+            ultimaAuditoria,
+            pendenciasAbertas: auditoriasAbertas.length,
+            maiorRisco: obterRotuloRiscoEquipamentoQrCampo(Math.max(maiorPesoRisco, maiorPesoRiscoAberto)),
+            containerClass: "bg-orange-50 ring-orange-100",
+            statusClass: "bg-orange-100 text-orange-700 ring-orange-200",
+            valueClass: "text-orange-700",
+        };
+    }
+
+    return {
+        status: "Liberado",
+        descricao: "Sem pendência aberta no histórico carregado",
+        ultimaAuditoria,
+        pendenciasAbertas: 0,
+        maiorRisco: obterRotuloRiscoEquipamentoQrCampo(maiorPesoRisco),
+        containerClass: "bg-emerald-50 ring-emerald-100",
+        statusClass: "bg-emerald-100 text-emerald-700 ring-emerald-200",
+        valueClass: "text-emerald-700",
+    };
+}
+
 export function DashboardAuditoriaCampo({
     auditoriasCampo = [],
     carregando = false,
@@ -1536,6 +1626,7 @@ export function DashboardAuditoriaCampo({
                                         const historicoAuditoriasQrCampo = obterHistoricoAuditoriasPorQrCampo(item);
                                         const historicoQrCampoEstaAberto = historicoQrCampoAberto === chaveQrSalvo;
                                         const totalHistoricoQrCampo = historicoAuditoriasQrCampo.length;
+                                        const statusEquipamentoQrCampo = calcularStatusEquipamentoQrCampo(historicoAuditoriasQrCampo);
 
                                         return (
                                         <div key={item.id || item.codigo} className="grid gap-3 overflow-hidden rounded-2xl bg-slate-50 p-3 ring-1 ring-slate-100 sm:grid-cols-[108px_minmax(0,1fr)]">
@@ -1551,6 +1642,24 @@ export function DashboardAuditoriaCampo({
                                                 </div>
                                                 <p className="mt-2 truncate text-sm font-black text-slate-900" title={item.identificacao}>{item.identificacao}</p>
                                                 <p className="truncate text-[11px] font-medium text-slate-500" title={[item.area, item.local, item.empresa_responsavel, item.observacao].filter(Boolean).join(" · ")}>{[item.area, item.local, item.empresa_responsavel, item.observacao].filter(Boolean).join(" · ") || "Sem local vinculado"}</p>
+                                                <div className={classNames("mt-3 grid gap-1.5 rounded-2xl p-2 ring-1 sm:grid-cols-2 xl:grid-cols-4", statusEquipamentoQrCampo.containerClass)}>
+                                                    <div className="min-w-0 rounded-xl bg-white/70 px-2 py-1.5 ring-1 ring-white/60">
+                                                        <p className="text-[9px] font-black uppercase tracking-wide text-slate-400">Status</p>
+                                                        <p className={classNames("mt-1 truncate rounded-full px-2 py-1 text-center text-[9px] font-black uppercase ring-1", statusEquipamentoQrCampo.statusClass)} title={statusEquipamentoQrCampo.descricao}>{statusEquipamentoQrCampo.status}</p>
+                                                    </div>
+                                                    <div className="min-w-0 rounded-xl bg-white/70 px-2 py-1.5 ring-1 ring-white/60">
+                                                        <p className="text-[9px] font-black uppercase tracking-wide text-slate-400">Última auditoria</p>
+                                                        <p className={classNames("mt-1 truncate text-[10px] font-black", statusEquipamentoQrCampo.valueClass)} title={statusEquipamentoQrCampo.ultimaAuditoria}>{statusEquipamentoQrCampo.ultimaAuditoria}</p>
+                                                    </div>
+                                                    <div className="min-w-0 rounded-xl bg-white/70 px-2 py-1.5 ring-1 ring-white/60">
+                                                        <p className="text-[9px] font-black uppercase tracking-wide text-slate-400">Pendências</p>
+                                                        <p className={classNames("mt-1 truncate text-[10px] font-black", statusEquipamentoQrCampo.valueClass)}>{statusEquipamentoQrCampo.pendenciasAbertas} aberta(s)</p>
+                                                    </div>
+                                                    <div className="min-w-0 rounded-xl bg-white/70 px-2 py-1.5 ring-1 ring-white/60">
+                                                        <p className="text-[9px] font-black uppercase tracking-wide text-slate-400">Maior risco</p>
+                                                        <p className={classNames("mt-1 truncate text-[10px] font-black", statusEquipamentoQrCampo.valueClass)}>{statusEquipamentoQrCampo.maiorRisco}</p>
+                                                    </div>
+                                                </div>
                                                 <div className="mt-3 grid grid-cols-4 gap-1.5">
                                                     <button
                                                         type="button"
