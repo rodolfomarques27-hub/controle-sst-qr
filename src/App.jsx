@@ -58,14 +58,11 @@ const hoje = new Date();
 
 function AppTransicaoInterna() {
     return (
-        <div className="min-h-screen bg-slate-100 text-slate-600">
-            <div className="flex min-h-screen items-start justify-center px-4 pt-8">
-                <div className="flex items-center gap-3 rounded-2xl bg-white/70 px-4 py-3 text-xs font-black uppercase tracking-wide text-slate-500 shadow-sm ring-1 ring-slate-200 backdrop-blur">
-                    <span className="h-2 w-2 animate-pulse rounded-full bg-slate-500" />
-                    Preparando sistema
-                </div>
-            </div>
-        </div>
+        <CarregandoTela
+            mensagem="Preparando sistema..."
+            subtitulo="Carregando sua área de trabalho com segurança."
+            telaCheia
+        />
     );
 }
 
