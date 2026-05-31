@@ -40,8 +40,11 @@ import {
 
 const ConsultaQRPublica = React.lazy(() => import("./components/qr/ConsultaQRPublica").then((modulo) => ({ default: modulo.ConsultaQRPublica })));
 const NovaAuditoriaCampoDireta = React.lazy(() => import("./components/auditoria/NovaAuditoriaCampoDireta").then((modulo) => ({ default: modulo.NovaAuditoriaCampoDireta })));
-const AppContentRouter = React.lazy(() => import("./routes/AppContentRouter").then((modulo) => ({ default: modulo.AppContentRouter })));
-const AppLayout = React.lazy(() => import("./components/layout/AppLayout").then((modulo) => ({ default: modulo.AppLayout })));
+const importarAppContentRouter = () => import("./routes/AppContentRouter");
+const importarAppLayout = () => import("./components/layout/AppLayout");
+
+const AppContentRouter = React.lazy(() => importarAppContentRouter().then((modulo) => ({ default: modulo.AppContentRouter })));
+const AppLayout = React.lazy(() => importarAppLayout().then((modulo) => ({ default: modulo.AppLayout })));
 const SupabaseConfiguracaoPendente = React.lazy(() => import("./components/commonComponents").then((modulo) => ({ default: modulo.SupabaseConfiguracaoPendente })));
 
 const carregarEmpresasHandlers = () => import("./services/appEmpresasHandlersService");
@@ -52,6 +55,19 @@ const carregarConsultaPublicaQrHandlers = () => import("./services/consultaPubli
 const carregarEmpresaDocumentosHandlers = () => import("./services/empresaDocumentosService");
 
 const hoje = new Date();
+
+function AppTransicaoInterna() {
+    return (
+        <div className="min-h-screen bg-slate-100 text-slate-600">
+            <div className="flex min-h-screen items-start justify-center px-4 pt-8">
+                <div className="flex items-center gap-3 rounded-2xl bg-white/70 px-4 py-3 text-xs font-black uppercase tracking-wide text-slate-500 shadow-sm ring-1 ring-slate-200 backdrop-blur">
+                    <span className="h-2 w-2 animate-pulse rounded-full bg-slate-500" />
+                    Preparando sistema
+                </div>
+            </div>
+        </div>
+    );
+}
 
 
 
@@ -118,6 +134,27 @@ export default function App() {
             // Ignora indisponibilidade do localStorage.
         }
     }, [menuLateralAberto]);
+
+    useEffect(() => {
+        if (!SUPABASE_CONFIGURADO) return undefined;
+
+        const carregarAreaInterna = () => {
+            importarAppLayout();
+            importarAppContentRouter();
+        };
+
+        if (typeof window === "undefined") {
+            return undefined;
+        }
+
+        if (typeof window.requestIdleCallback === "function") {
+            const id = window.requestIdleCallback(carregarAreaInterna, { timeout: 1200 });
+            return () => window.cancelIdleCallback?.(id);
+        }
+
+        const timer = window.setTimeout(carregarAreaInterna, 250);
+        return () => window.clearTimeout(timer);
+    }, []);
 
     useEffect(() => {
         if (!usuario || !SUPABASE_CONFIGURADO) return;
@@ -936,7 +973,7 @@ export default function App() {
 
 
     return (
-        <React.Suspense fallback={<CarregandoTela mensagem="Carregando estrutura do sistema..." />}>
+        <React.Suspense fallback={<AppTransicaoInterna />}>
             <AppLayout
                 estilosGlobais={estilosGlobais}
                 nav={nav}
@@ -947,7 +984,7 @@ export default function App() {
                 sair={sair}
                 onSelecionarTela={selecionarTelaSistema}
             >
-                <React.Suspense fallback={<CarregandoTela mensagem="Carregando telas do sistema..." />}>
+                <React.Suspense fallback={<AppTransicaoInterna />}>
                     <AppContentRouter
                     tela={tela}
                     colaboradores={colaboradores}

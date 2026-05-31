@@ -1,7 +1,6 @@
 import React from "react";
 import { Lock, RefreshCw } from "lucide-react";
 import { Card } from "../components/commonComponents";
-import { CarregandoTela } from "../components/CarregandoTela";
 import { AuditoriaAcessoNegado } from "../components/auditoria/AuditoriaPermissao";
 import { LIMITE_STORAGE_MB } from "../constants/sstConstants";
 
@@ -17,6 +16,17 @@ const DashboardAuditoriaCampo = React.lazy(() => import("../components/auditoria
 const NovaAuditoriaCampoDireta = React.lazy(() => import("../components/auditoria/NovaAuditoriaCampoDireta").then((modulo) => ({ default: modulo.NovaAuditoriaCampoDireta })));
 const ConfiguracoesSistema = React.lazy(() => import("../components/configuracoes/ConfiguracoesSistema").then((modulo) => ({ default: modulo.ConfiguracoesSistema })));
 const ConfiguracoesBloqueio = React.lazy(() => import("../components/configuracoes/ConfiguracoesBloqueio").then((modulo) => ({ default: modulo.ConfiguracoesBloqueio })));
+
+function CarregandoModuloInterno() {
+    return (
+        <div className="min-h-[60vh] rounded-[2rem] bg-slate-50/80 p-4 text-slate-500">
+            <div className="flex items-center gap-3 text-xs font-black uppercase tracking-wide">
+                <span className="h-2 w-2 animate-pulse rounded-full bg-slate-400" />
+                Carregando módulo
+            </div>
+        </div>
+    );
+}
 
 export function AppContentRouter({
     tela,
@@ -89,7 +99,7 @@ export function AppContentRouter({
     onSalvarSenhaConfiguracoes,
 }) {
     return (
-        <React.Suspense fallback={<CarregandoTela mensagem="Carregando módulo..." />}>
+        <React.Suspense fallback={<CarregandoModuloInterno />}>
             {tela === "dashboard" && (
                 <Dashboard
                     colaboradores={colaboradores}
