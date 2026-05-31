@@ -217,10 +217,6 @@ export function NovaAuditoriaCampoDireta({ usuario = null, onAuditoriaSalva, emp
     const rotuloQrAuditoriaAtual = alvoQrAuditoriaAtual
         ? `QR Code - ${alvoQrAuditoriaAtual}`
         : "QR Code geral";
-    const descricaoQrAuditoriaAtual = alvoQrAuditoriaAtual
-        ? `${tipoAtual.label}: ${alvoQrAuditoriaAtual}${codigoQrCampoParametro ? ` · QR ${codigoQrCampoParametro}` : ""}`
-        : "Link geral para nova auditoria de campo";
-
     const textoNotificacaoResponsavel = useMemo(() => montarTextoNotificacaoAuditoriaCampoDireta({
         formulario,
         tipoAtual,
@@ -590,9 +586,8 @@ export function NovaAuditoriaCampoDireta({ usuario = null, onAuditoriaSalva, emp
                             <div className="mx-auto flex h-32 w-32 items-center justify-center rounded-2xl bg-slate-50 p-2">
                                 {linkQrAuditoriaAtual ? <QRCodeSVG value={linkQrAuditoriaAtual} size={112} level="M" /> : <QrCode className="h-12 w-12 text-slate-300" />}
                             </div>
-                            <p className="mt-2 text-[11px] font-bold uppercase tracking-wide text-slate-500">{rotuloQrAuditoriaAtual}</p>
-                            <p className="mt-1 break-words rounded-2xl bg-emerald-50 px-2 py-1 text-[10px] font-bold uppercase tracking-wide text-emerald-700 ring-1 ring-emerald-100">
-                                {descricaoQrAuditoriaAtual}
+                            <p className="mt-2 truncate text-[11px] font-black uppercase tracking-wide text-slate-950" title={alvoQrAuditoriaAtual || rotuloQrAuditoriaAtual}>
+                                {alvoQrAuditoriaAtual || rotuloQrAuditoriaAtual}
                             </p>
                         </div>
                     </div>
