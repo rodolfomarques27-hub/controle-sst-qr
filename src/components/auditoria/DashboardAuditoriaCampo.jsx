@@ -1347,25 +1347,21 @@ export function DashboardAuditoriaCampo({
                             </label>
                             <label className="block text-xs font-bold uppercase tracking-wide text-slate-500 md:col-span-2">
                                 Empresa responsável
-                                <input
-                                    list="empresas-cadastradas-qr-campo"
+                                <select
                                     value={qrFormCampo.empresaResponsavel}
                                     onChange={(e) => setQrFormCampo((atual) => ({ ...atual, empresaResponsavel: e.target.value }))}
-                                    placeholder={carregandoEmpresasQrCampo ? "Carregando empresas cadastradas..." : "Selecione ou digite a empresa responsável"}
-                                    className="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-3 py-2 text-sm normal-case tracking-normal outline-none focus:ring-2 focus:ring-blue-100"
-                                />
-                                <datalist id="empresas-cadastradas-qr-campo">
+                                    disabled={carregandoEmpresasQrCampo}
+                                    className="mt-2 w-full rounded-2xl border border-blue-200 bg-white px-4 py-3 text-sm font-black text-slate-900 normal-case tracking-normal outline-none transition focus:border-blue-300 focus:ring-4 focus:ring-blue-100 disabled:cursor-not-allowed disabled:bg-slate-50 disabled:text-slate-400"
+                                >
+                                    <option value="">
+                                        {carregandoEmpresasQrCampo ? "Carregando empresas cadastradas..." : "Selecione uma empresa cadastrada"}
+                                    </option>
                                     {empresasQrCampoOpcoes.map((empresa) => (
-                                        <option key={empresa.id || empresa.nome} value={empresa.nome} />
+                                        <option key={empresa.id || empresa.nome} value={empresa.nome}>
+                                            {empresa.nome}
+                                        </option>
                                     ))}
-                                </datalist>
-                                <span className="mt-1 block text-[11px] font-medium normal-case tracking-normal text-slate-400">
-                                    {carregandoEmpresasQrCampo
-                                        ? "Buscando empresas cadastradas no sistema..."
-                                        : empresasQrCampoOpcoes.length > 0
-                                            ? `${empresasQrCampoOpcoes.length} empresa(s) cadastrada(s) disponível(is) para seleção.`
-                                            : "Nenhuma empresa cadastrada carregada. Você ainda pode digitar manualmente."}
-                                </span>
+                                </select>
                                 {mensagemEmpresasQrCampo && (
                                     <span className="mt-1 block text-[11px] font-bold normal-case tracking-normal text-amber-600">{mensagemEmpresasQrCampo}</span>
                                 )}
