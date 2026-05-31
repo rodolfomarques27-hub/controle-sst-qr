@@ -251,6 +251,35 @@ function resumirTratativaAuditoriaQrCampo(auditoria = {}) {
     };
 }
 
+const STATUS_TRATATIVA_AUDITORIA_QR_CAMPO = [
+    { valor: "Aberta", label: "Aberta", statusDesvio: "Aberto", totalDesvios: 1, classe: "bg-slate-950 text-white hover:bg-slate-800" },
+    { valor: "Em andamento", label: "Em tratativa", statusDesvio: "Em tratativa", totalDesvios: 1, classe: "bg-blue-50 text-blue-700 ring-1 ring-blue-100 hover:bg-blue-100" },
+    { valor: "Resolvida", label: "Corrigida", statusDesvio: "Corrigido", totalDesvios: 0, classe: "bg-emerald-50 text-emerald-700 ring-1 ring-emerald-100 hover:bg-emerald-100" },
+    { valor: "Cancelada", label: "Cancelar", statusDesvio: "Cancelado", totalDesvios: 0, classe: "bg-slate-100 text-slate-700 ring-1 ring-slate-200 hover:bg-slate-200" },
+    { valor: "Vencida", label: "Vencida", statusDesvio: "Aberto", totalDesvios: 1, classe: "bg-red-50 text-red-700 ring-1 ring-red-100 hover:bg-red-100" },
+];
+
+function obterOpcaoStatusTratativaAuditoriaQrCampo(status = "") {
+    const texto = normalizarTextoBusca(status);
+
+    return STATUS_TRATATIVA_AUDITORIA_QR_CAMPO.find((opcao) => {
+        const valor = normalizarTextoBusca(opcao.valor);
+        const label = normalizarTextoBusca(opcao.label);
+        const desvio = normalizarTextoBusca(opcao.statusDesvio);
+        return texto === valor || texto === label || texto === desvio;
+    }) || STATUS_TRATATIVA_AUDITORIA_QR_CAMPO[0];
+}
+
+function montarPayloadStatusTratativaAuditoriaQrCampo(status = "") {
+    const opcao = obterOpcaoStatusTratativaAuditoriaQrCampo(status);
+
+    return {
+        status_auditoria: opcao.valor,
+        status_desvio: opcao.statusDesvio,
+        total_desvios: opcao.totalDesvios,
+    };
+}
+
 export function DashboardAuditoriaCampo({
     auditoriasCampo = [],
     carregando = false,
@@ -278,6 +307,9 @@ export function DashboardAuditoriaCampo({
     const [filtroStatusQrCampoSalvo, setFiltroStatusQrCampoSalvo] = useState("todos");
     const [historicoQrCampoAberto, setHistoricoQrCampoAberto] = useState("");
     const [statusQrCampoAberto, setStatusQrCampoAberto] = useState("");
+    const [atualizandoStatusAuditoriaQrCampoId, setAtualizandoStatusAuditoriaQrCampoId] = useState("");
+    const [mensagemStatusAuditoriaQrCampo, setMensagemStatusAuditoriaQrCampo] = useState({ id: "", texto: "", erro: false });
+    const [sobrescritasStatusAuditoriaQrCampo, setSobrescritasStatusAuditoriaQrCampo] = useState({});
     const [empresasCadastradasQrCampo, setEmpresasCadastradasQrCampo] = useState([]);
     const [carregandoEmpresasQrCampo, setCarregandoEmpresasQrCampo] = useState(false);
     const [mensagemEmpresasQrCampo, setMensagemEmpresasQrCampo] = useState("");
@@ -514,7 +546,13 @@ export function DashboardAuditoriaCampo({
         return Array.from(mapaEmpresas.values()).sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR"));
     }, [empresasCadastradasQrCampo, qrFormCampo.empresaResponsavel]);
 
-    const auditoriasNormalizadas = useMemo(() => auditoriasCampo.map(normalizarAuditoriaCampo), [auditoriasCampo]);
+    const auditoriasNormalizadas = useMemo(() => auditoriasCampo.map((item) => {
+        const normalizada = normalizarAuditoriaCampo(item);
+        const chaveAuditoria = String(normalizada.id || "");
+        const sobrescrita = chaveAuditoria ? sobrescritasStatusAuditoriaQrCampo[chaveAuditoria] : null;
+
+        return sobrescrita ? { ...normalizada, ...sobrescrita } : normalizada;
+    }), [auditoriasCampo, sobrescritasStatusAuditoriaQrCampo]);
     const opcoesFiltroAuditoriaCampo = useMemo(() => {
         const unicos = (valores) => Array.from(new Set(valores.map((valor) => String(valor || "").trim()).filter(Boolean))).sort((a, b) => a.localeCompare(b, "pt-BR"));
         return {
@@ -951,6 +989,59 @@ export function DashboardAuditoriaCampo({
             setMensagemQrCampo(`Erro ao excluir QR Code: ${error.message}`);
         } finally {
             setExcluindoQrCampoId(null);
+        }
+    };
+
+    const atualizarStatusTratativaAuditoriaQrCampo = async (auditoria, novoStatus) => {
+        const idAuditoria = String(auditoria?.id || "").trim();
+        const numeroAuditoria = auditoria?.numeroAuditoria || auditoria?.numero_auditoria || auditoria?.titulo || "auditoria selecionada";
+
+        if (!idAuditoria) {
+            setMensagemStatusAuditoriaQrCampo({ id: String(numeroAuditoria), texto: "Não foi possível atualizar: auditoria sem ID no histórico carregado.", erro: true });
+            return;
+        }
+
+        const payload = montarPayloadStatusTratativaAuditoriaQrCampo(novoStatus);
+        const chaveMensagem = idAuditoria;
+
+        setAtualizandoStatusAuditoriaQrCampoId(idAuditoria);
+        setMensagemStatusAuditoriaQrCampo({ id: chaveMensagem, texto: "", erro: false });
+
+        try {
+            const { error } = await supabase
+                .from("auditorias_campo")
+                .update(payload)
+                .eq("id", idAuditoria);
+
+            if (error) throw error;
+
+            setSobrescritasStatusAuditoriaQrCampo((atual) => ({
+                ...atual,
+                [idAuditoria]: {
+                    statusAuditoria: payload.status_auditoria,
+                    status_auditoria: payload.status_auditoria,
+                    statusDesvio: payload.status_desvio,
+                    status_desvio: payload.status_desvio,
+                    totalDesvios: payload.total_desvios,
+                    total_desvios: payload.total_desvios,
+                },
+            }));
+
+            setMensagemStatusAuditoriaQrCampo({
+                id: chaveMensagem,
+                texto: `Status atualizado para ${payload.status_auditoria}. O status automático do equipamento será recalculado pelo histórico.`,
+                erro: false,
+            });
+
+            if (typeof onAuditoriaAtualizada === "function") {
+                await onAuditoriaAtualizada();
+            } else if (typeof onRecarregar === "function") {
+                await onRecarregar();
+            }
+        } catch (error) {
+            setMensagemStatusAuditoriaQrCampo({ id: chaveMensagem, texto: `Erro ao atualizar status: ${error.message}`, erro: true });
+        } finally {
+            setAtualizandoStatusAuditoriaQrCampoId("");
         }
     };
 
@@ -2134,6 +2225,43 @@ export function DashboardAuditoriaCampo({
 
                                                                             <div className="mt-2 rounded-xl bg-white/70 px-3 py-2 ring-1 ring-white/60">
                                                                                 <p className={classNames("text-[11px] font-black", tratativaHistorico.bloqueiaUso ? "text-red-700" : tratativaHistorico.requerAtencao ? "text-orange-700" : "text-emerald-700")}>{tratativaHistorico.descricaoTratativa}</p>
+                                                                            </div>
+
+                                                                            <div className="mt-2 rounded-xl bg-white/75 px-3 py-2 ring-1 ring-white/70">
+                                                                                <div className="flex flex-wrap items-center justify-between gap-2">
+                                                                                    <div>
+                                                                                        <p className="text-[9px] font-black uppercase tracking-wide text-slate-400">Atualizar tratativa</p>
+                                                                                        <p className="mt-0.5 text-[10px] font-bold text-slate-500">Use para liberar, cancelar ou manter acompanhamento da pendência.</p>
+                                                                                    </div>
+                                                                                    <span className="rounded-full bg-slate-50 px-2 py-1 text-[10px] font-black text-slate-600 ring-1 ring-slate-200">Atual: {tratativaHistorico.status}</span>
+                                                                                </div>
+                                                                                <div className="mt-2 grid gap-1.5 sm:grid-cols-2 lg:grid-cols-5">
+                                                                                    {STATUS_TRATATIVA_AUDITORIA_QR_CAMPO.map((opcaoStatus) => {
+                                                                                        const statusAtualNormalizado = normalizarTextoBusca(tratativaHistorico.status);
+                                                                                        const statusOpcaoNormalizado = normalizarTextoBusca(opcaoStatus.valor);
+                                                                                        const statusDesvioOpcaoNormalizado = normalizarTextoBusca(opcaoStatus.statusDesvio);
+                                                                                        const opcaoAtual = statusAtualNormalizado === statusOpcaoNormalizado || statusAtualNormalizado === statusDesvioOpcaoNormalizado;
+                                                                                        const atualizandoEstaAuditoria = atualizandoStatusAuditoriaQrCampoId === String(auditoria.id || "");
+
+                                                                                        return (
+                                                                                            <button
+                                                                                                key={`${chaveHistorico}-${opcaoStatus.valor}`}
+                                                                                                type="button"
+                                                                                                onClick={() => atualizarStatusTratativaAuditoriaQrCampo(auditoria, opcaoStatus.valor)}
+                                                                                                disabled={atualizandoEstaAuditoria || !auditoria.id}
+                                                                                                className={classNames(
+                                                                                                    "inline-flex min-h-[2.15rem] items-center justify-center rounded-xl px-2 py-1.5 text-[10px] font-black transition disabled:cursor-not-allowed disabled:opacity-60",
+                                                                                                    opcaoAtual ? "bg-slate-950 text-white ring-1 ring-slate-950" : opcaoStatus.classe
+                                                                                                )}
+                                                                                            >
+                                                                                                {atualizandoEstaAuditoria && opcaoAtual ? "Salvando..." : opcaoStatus.label}
+                                                                                            </button>
+                                                                                        );
+                                                                                    })}
+                                                                                </div>
+                                                                                {mensagemStatusAuditoriaQrCampo.id === String(auditoria.id || "") && mensagemStatusAuditoriaQrCampo.texto && (
+                                                                                    <p className={classNames("mt-2 rounded-xl px-3 py-2 text-[11px] font-bold ring-1", mensagemStatusAuditoriaQrCampo.erro ? "bg-red-50 text-red-700 ring-red-100" : "bg-emerald-50 text-emerald-700 ring-emerald-100")}>{mensagemStatusAuditoriaQrCampo.texto}</p>
+                                                                                )}
                                                                             </div>
                                                                         </div>
                                                                     );
