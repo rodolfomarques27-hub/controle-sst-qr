@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { motion } from "framer-motion";
 import {
     AlertTriangle,
@@ -19,6 +19,8 @@ import {
 
 import { Card, Header, StatusPill } from "../commonComponents";
 import { FileUploadAviso, validarArquivoAntesUpload } from "../FileUploadAviso";
+import ResultadoVerificacaoDocumento from "../documentos/ResultadoVerificacaoDocumento";
+import { supabase } from "../../lib/supabaseClient";
 import { abrirArquivoStorage, obterUrlLogoEmpresa } from "../../services/supabaseServices";
 import {
     calcularVencimentoDocumento,
@@ -147,6 +149,9 @@ export function Empresas({
     const [empresasAbertas, setEmpresasAbertas] = useState({});
     const [cadastroEmpresasRecolhido, setCadastroEmpresasRecolhido] = useState(() => carregarPreferenciaPainelBoolean(CHAVE_CADASTRO_EMPRESAS_RECOLHIDO, false));
     const [informacoesEmpresasRecolhidas, setInformacoesEmpresasRecolhidas] = useState(() => carregarPreferenciaPainelBoolean(CHAVE_INFO_EMPRESAS_RECOLHIDA, false));
+    const [verificacoesDocumentais, setVerificacoesDocumentais] = useState({});
+    const [carregandoVerificacoes, setCarregandoVerificacoes] = useState(false);
+    const [erroVerificacoes, setErroVerificacoes] = useState("");
 
     const alternarEmpresaAberta = (empresaId) => {
         setEmpresasAbertas((atual) => ({
@@ -163,6 +168,78 @@ export function Empresas({
             return acc;
         }, {});
     }, [documentosEmpresas]);
+
+    const idsDocumentosEmpresas = useMemo(() => {
+        return Array.from(
+            new Set(
+                (documentosEmpresas || [])
+                    .map((doc) => String(doc?.id || "").trim())
+                    .filter(Boolean)
+            )
+        );
+    }, [documentosEmpresas]);
+
+    useEffect(() => {
+        let cancelado = false;
+
+        async function carregarVerificacoesDocumentaisEmpresas() {
+            if (!idsDocumentosEmpresas.length) {
+                setVerificacoesDocumentais({});
+                setErroVerificacoes("");
+                return;
+            }
+
+            setCarregandoVerificacoes(true);
+            setErroVerificacoes("");
+
+            try {
+                const { data, error } = await supabase
+                    .from("verificacoes_documentais")
+                    .select("*")
+                    .eq("origem_tipo", "documento_empresa")
+                    .eq("origem_tabela", "documentos_empresas")
+                    .in("documento_id", idsDocumentosEmpresas)
+                    .order("created_at", { ascending: false });
+
+                if (error) {
+                    throw error;
+                }
+
+                if (cancelado) return;
+
+                const ultimasPorDocumento = (data || []).reduce((acc, verificacao) => {
+                    const documentoId = String(verificacao.documento_id || "").trim();
+
+                    if (documentoId && !acc[documentoId]) {
+                        acc[documentoId] = verificacao;
+                    }
+
+                    return acc;
+                }, {});
+
+                setVerificacoesDocumentais(ultimasPorDocumento);
+            } catch (error) {
+                if (!cancelado) {
+                    setErroVerificacoes(error.message || "Erro ao carregar verificações documentais das empresas.");
+                }
+            } finally {
+                if (!cancelado) {
+                    setCarregandoVerificacoes(false);
+                }
+            }
+        }
+
+        carregarVerificacoesDocumentaisEmpresas();
+
+        return () => {
+            cancelado = true;
+        };
+    }, [idsDocumentosEmpresas]);
+
+    const obterVerificacaoDocumentoEmpresa = (doc) => {
+        const documentoId = String(doc?.id || "").trim();
+        return documentoId ? verificacoesDocumentais[documentoId] || null : null;
+    };
 
     const colaboradoresPorEmpresa = useMemo(() => {
         return (colaboradores || []).reduce((acc, colaborador) => {
@@ -614,6 +691,7 @@ export function Empresas({
                             {documentosEmpresaBase.map((tipoDoc) => {
                                 const doc = docs.find((item) => item.tipo_documento === tipoDoc.tipo);
                                 const st = statusEmpresaDocumento(doc?.data_vencimento);
+                                const verificacao = obterVerificacaoDocumentoEmpresa(doc);
 
                                 return (
                                     <div key={tipoDoc.tipo} className="rounded-2xl bg-white p-3 ring-1 ring-slate-200">
@@ -638,6 +716,14 @@ export function Empresas({
                                                 {doc.observacao && (
                                                     <p className="line-clamp-2 text-xs text-slate-500">{doc.observacao}</p>
                                                 )}
+
+                                                <ResultadoVerificacaoDocumento
+                                                    verificacao={verificacao}
+                                                    titulo="Verificação documental"
+                                                    compacto
+                                                    className="mt-3"
+                                                />
+
                                                 <div className="flex flex-wrap gap-2">
                                                     <button
                                                         onClick={() => onVisualizarDocumentoEmpresa(doc)}
@@ -666,6 +752,12 @@ export function Empresas({
                                 );
                             })}
                         </div>
+
+                        {carregandoVerificacoes && (
+                            <p className="mt-3 text-center text-xs font-semibold text-slate-400">
+                                Atualizando verificações documentais...
+                            </p>
+                        )}
 
                         <div className="mt-4 flex justify-center border-t border-slate-200 pt-4">
                             <button
@@ -924,6 +1016,12 @@ export function Empresas({
             {erroBanco && (
                 <div className="mb-5 rounded-2xl bg-red-50 p-4 text-sm font-medium text-red-700 ring-1 ring-red-200">
                     {erroBanco}
+                </div>
+            )}
+
+            {erroVerificacoes && (
+                <div className="mb-5 rounded-2xl bg-amber-50 p-4 text-sm font-medium text-amber-700 ring-1 ring-amber-200">
+                    {erroVerificacoes}
                 </div>
             )}
 
@@ -1750,6 +1848,7 @@ export function Empresas({
                                     const docsAtualizadosRevisao = documentosPorEmpresa[empresaRevisao.empresa.id] || [];
                                     const doc = docsAtualizadosRevisao.find((item) => item.tipo_documento === tipoDoc.tipo);
                                     const st = statusEmpresaDocumento(doc?.data_vencimento);
+                                    const verificacao = obterVerificacaoDocumentoEmpresa(doc);
                                     const dadosUpload = obterUploadRevisao(tipoDoc.tipo);
                                     const chaveUpload = `${empresaRevisao.empresa.id}-${tipoDoc.tipo}`;
 
@@ -1779,6 +1878,15 @@ export function Empresas({
                                                     </p>
                                                 )}
                                             </div>
+
+                                            {doc && (
+                                                <ResultadoVerificacaoDocumento
+                                                    verificacao={verificacao}
+                                                    titulo={`Verificação documental ${tipoDoc.tipo}`}
+                                                    mostrarDetalhesInicial={false}
+                                                    className="mt-3"
+                                                />
+                                            )}
 
                                             <div className="mt-5 min-h-[190px] rounded-2xl bg-slate-50 p-3">
                                                 <p className="mb-2 text-xs font-bold uppercase tracking-wide text-slate-500">
@@ -1858,6 +1966,12 @@ export function Empresas({
                                     );
                                 })}
                             </div>
+
+                            {carregandoVerificacoes && (
+                                <p className="mt-3 text-center text-xs font-semibold text-slate-400">
+                                    Atualizando verificações documentais...
+                                </p>
+                            )}
 
                             <div className="mt-5 rounded-3xl bg-slate-50 p-4 text-sm text-slate-600">
                                 <strong>Observação técnica:</strong> este painel serve para conferência documental. A validade automática é um controle interno e deve ser confirmada pelo responsável de SST conforme o documento emitido, escopo da empresa, alterações de risco e exigências contratuais do cliente.
