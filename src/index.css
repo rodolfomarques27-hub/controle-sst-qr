@@ -1,1 +1,113 @@
 @import "tailwindcss";
+
+:root {
+    color-scheme: light;
+    background: #020617;
+}
+
+html {
+    min-height: 100%;
+    background: #020617;
+}
+
+body {
+    min-height: 100%;
+    margin: 0;
+    background: #020617;
+}
+
+#root {
+    min-height: 100vh;
+    background: #020617;
+}
+
+.app-preloader {
+    position: fixed;
+    inset: 0;
+    z-index: 9999;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background:
+        radial-gradient(circle at top left, rgba(59, 130, 246, 0.20), transparent 34rem),
+        radial-gradient(circle at bottom right, rgba(14, 165, 233, 0.16), transparent 32rem),
+        #020617;
+    color: #ffffff;
+    opacity: 1;
+    transition: opacity 180ms ease;
+}
+
+.app-preloader--hidden {
+    opacity: 0;
+    pointer-events: none;
+}
+
+.app-preloader__card {
+    width: min(90vw, 22rem);
+    border-radius: 1.75rem;
+    padding: 1.5rem;
+    text-align: center;
+    background: rgba(255, 255, 255, 0.10);
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    box-shadow: 0 24px 80px rgba(15, 23, 42, 0.35);
+    backdrop-filter: blur(14px);
+}
+
+.app-preloader__icon {
+    display: inline-flex;
+    width: 3rem;
+    height: 3rem;
+    align-items: center;
+    justify-content: center;
+    border-radius: 1rem;
+    margin-bottom: 0.75rem;
+    background: rgba(255, 255, 255, 0.12);
+}
+
+.app-preloader__shield {
+    width: 1.65rem;
+    height: 1.65rem;
+    color: #ffffff;
+}
+
+.app-preloader__title {
+    margin: 0;
+    font-size: 1rem;
+    font-weight: 800;
+    letter-spacing: -0.01em;
+}
+
+.app-preloader__text {
+    margin: 0.35rem 0 0;
+    font-size: 0.78rem;
+    font-weight: 600;
+    color: rgba(226, 232, 240, 0.82);
+}
+
+.app-preloader__bar {
+    overflow: hidden;
+    height: 0.38rem;
+    margin-top: 1rem;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.16);
+}
+
+.app-preloader__bar::before {
+    content: "";
+    display: block;
+    width: 42%;
+    height: 100%;
+    border-radius: inherit;
+    background: #ffffff;
+    animation: app-preloader-bar 1s ease-in-out infinite;
+}
+
+@keyframes app-preloader-bar {
+    0% {
+        transform: translateX(-110%);
+    }
+
+    100% {
+        transform: translateX(260%);
+    }
+}

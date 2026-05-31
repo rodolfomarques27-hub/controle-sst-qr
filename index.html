@@ -1,12 +1,39 @@
 <!doctype html>
-<html lang="en">
+<html lang="pt-BR">
   <head>
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>controle-sst-qr</title>
+    <meta name="theme-color" content="#020617" />
+    <title>Controle SST QR</title>
+    <style>
+      html,
+      body {
+        min-height: 100%;
+        margin: 0;
+        background: #020617;
+      }
+
+      #root {
+        min-height: 100vh;
+        background: #020617;
+      }
+    </style>
   </head>
   <body>
+    <div id="app-preloader" class="app-preloader" aria-live="polite" aria-label="Carregando Controle SST QR">
+      <div class="app-preloader__card">
+        <div class="app-preloader__icon">
+          <svg class="app-preloader__shield" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z" />
+            <path d="m9 12 2 2 4-4" />
+          </svg>
+        </div>
+        <p class="app-preloader__title">Controle SST QR</p>
+        <p class="app-preloader__text">Carregando sistema...</p>
+        <div class="app-preloader__bar"></div>
+      </div>
+    </div>
     <div id="root"></div>
     <script type="module" src="/src/main.jsx"></script>
   </body>
