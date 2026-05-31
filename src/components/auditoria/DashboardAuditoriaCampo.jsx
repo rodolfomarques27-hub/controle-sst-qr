@@ -133,6 +133,41 @@ function calcularStatusEquipamentoQrCampo(historicoAuditorias = []) {
     };
 }
 
+function obterChaveStatusEquipamentoQrCampo(statusEquipamento = {}) {
+    const status = normalizarTextoBusca(statusEquipamento.status || "");
+
+    if (status.includes("crit") || status.includes("bloquear")) return "critico";
+    if (status.includes("atencao") || status.includes("atenção")) return "atencao";
+    if (status.includes("sem auditoria")) return "sem_auditoria";
+    if (status.includes("liberado")) return "liberado";
+
+    return "outro";
+}
+
+function obterPrioridadeStatusEquipamentoQrCampo(statusEquipamento = {}) {
+    const chave = obterChaveStatusEquipamentoQrCampo(statusEquipamento);
+
+    if (chave === "critico") return 1;
+    if (chave === "atencao") return 2;
+    if (Number(statusEquipamento.pendenciasAbertas || 0) > 0) return 3;
+    if (chave === "sem_auditoria") return 4;
+    if (chave === "liberado") return 5;
+
+    return 6;
+}
+
+function statusEquipamentoQrCampoConfereFiltro(statusEquipamento = {}, filtro = "todos") {
+    if (!filtro || filtro === "todos") return true;
+
+    const chave = obterChaveStatusEquipamentoQrCampo(statusEquipamento);
+
+    if (filtro === "com_pendencia") {
+        return Number(statusEquipamento.pendenciasAbertas || 0) > 0;
+    }
+
+    return chave === filtro;
+}
+
 export function DashboardAuditoriaCampo({
     auditoriasCampo = [],
     carregando = false,
@@ -157,6 +192,7 @@ export function DashboardAuditoriaCampo({
     const [mensagemQrCampo, setMensagemQrCampo] = useState("");
     const [buscaQrCampoSalvo, setBuscaQrCampoSalvo] = useState("");
     const [filtroTipoQrCampoSalvo, setFiltroTipoQrCampoSalvo] = useState("todos");
+    const [filtroStatusQrCampoSalvo, setFiltroStatusQrCampoSalvo] = useState("todos");
     const [historicoQrCampoAberto, setHistoricoQrCampoAberto] = useState("");
     const [statusQrCampoAberto, setStatusQrCampoAberto] = useState("");
     const [empresasCadastradasQrCampo, setEmpresasCadastradasQrCampo] = useState([]);
@@ -1022,27 +1058,6 @@ export function DashboardAuditoriaCampo({
         return tipos.sort((a, b) => a.label.localeCompare(b.label));
     }, [qrcodesCampo]);
 
-    const qrcodesCampoFiltrados = useMemo(() => {
-        const termo = normalizarTextoBusca(buscaQrCampoSalvo);
-
-        return qrcodesCampo.filter((item) => {
-            const tipoConfere = filtroTipoQrCampoSalvo === "todos" || String(item.tipo || "") === filtroTipoQrCampoSalvo;
-            const textoBusca = normalizarTextoBusca([
-                item.codigo,
-                item.tipo,
-                item.tipo_label,
-                item.identificacao,
-                item.area,
-                item.local,
-                item.empresa_responsavel,
-                item.observacao,
-                item.link,
-            ].filter(Boolean).join(" "));
-
-            return tipoConfere && (!termo || textoBusca.includes(termo));
-        });
-    }, [qrcodesCampo, buscaQrCampoSalvo, filtroTipoQrCampoSalvo]);
-
     const normalizarChaveHistoricoQrCampo = (valor = "") =>
         normalizarTextoBusca(valor)
             .replace(/[^a-z0-9]+/g, "")
@@ -1104,9 +1119,59 @@ export function DashboardAuditoriaCampo({
             .sort((a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime());
     }, [auditoriasNormalizadas]);
 
+    const qrcodesCampoFiltrados = useMemo(() => {
+        const termo = normalizarTextoBusca(buscaQrCampoSalvo);
+
+        return qrcodesCampo
+            .map((item) => {
+                const historico = obterHistoricoAuditoriasPorQrCampo(item);
+                const statusEquipamento = calcularStatusEquipamentoQrCampo(historico);
+
+                return {
+                    item,
+                    historico,
+                    statusEquipamento,
+                    prioridadeStatus: obterPrioridadeStatusEquipamentoQrCampo(statusEquipamento),
+                };
+            })
+            .filter(({ item, statusEquipamento }) => {
+                const tipoConfere = filtroTipoQrCampoSalvo === "todos" || String(item.tipo || "") === filtroTipoQrCampoSalvo;
+                const statusConfere = statusEquipamentoQrCampoConfereFiltro(statusEquipamento, filtroStatusQrCampoSalvo);
+                const textoBusca = normalizarTextoBusca([
+                    item.codigo,
+                    item.tipo,
+                    item.tipo_label,
+                    item.identificacao,
+                    item.area,
+                    item.local,
+                    item.empresa_responsavel,
+                    item.observacao,
+                    item.link,
+                    statusEquipamento.status,
+                    statusEquipamento.maiorRisco,
+                ].filter(Boolean).join(" "));
+
+                return tipoConfere && statusConfere && (!termo || textoBusca.includes(termo));
+            })
+            .sort((a, b) => {
+                if (a.prioridadeStatus !== b.prioridadeStatus) {
+                    return a.prioridadeStatus - b.prioridadeStatus;
+                }
+
+                const dataA = new Date(a.historico?.[0]?.createdAt || 0).getTime();
+                const dataB = new Date(b.historico?.[0]?.createdAt || 0).getTime();
+
+                if (dataA !== dataB) return dataB - dataA;
+
+                return String(a.item.identificacao || a.item.codigo || "").localeCompare(String(b.item.identificacao || b.item.codigo || ""), "pt-BR");
+            })
+            .map(({ item }) => item);
+    }, [qrcodesCampo, buscaQrCampoSalvo, filtroTipoQrCampoSalvo, filtroStatusQrCampoSalvo, obterHistoricoAuditoriasPorQrCampo]);
+
     const limparFiltrosQrcodesCampo = () => {
         setBuscaQrCampoSalvo("");
         setFiltroTipoQrCampoSalvo("todos");
+        setFiltroStatusQrCampoSalvo("todos");
     };
 
     const dadosResumoVisualAuditoria = useMemo(() => {
@@ -1579,7 +1644,7 @@ export function DashboardAuditoriaCampo({
                         </div>
 
                         {qrcodesCampoCarregados && qrcodesCampo.length > 0 && (
-                            <div className="mt-3 grid gap-2 rounded-2xl bg-slate-50 p-3 ring-1 ring-slate-100 md:grid-cols-[1fr_220px_auto]">
+                            <div className="mt-3 grid gap-2 rounded-2xl bg-slate-50 p-3 ring-1 ring-slate-100 md:grid-cols-[1fr_180px_190px_auto]">
                                 <label className="relative block">
                                     <span className="sr-only">Pesquisar QR Code</span>
                                     <input
@@ -1600,6 +1665,18 @@ export function DashboardAuditoriaCampo({
                                         <option key={tipo.valor} value={tipo.valor}>{tipo.label}</option>
                                     ))}
                                 </select>
+                                <select
+                                    value={filtroStatusQrCampoSalvo}
+                                    onChange={(evento) => setFiltroStatusQrCampoSalvo(evento.target.value)}
+                                    className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-bold text-slate-700 outline-none focus:border-blue-300 focus:ring-2 focus:ring-blue-100"
+                                >
+                                    <option value="todos">Todos os status</option>
+                                    <option value="critico">Crítico / bloquear</option>
+                                    <option value="atencao">Atenção</option>
+                                    <option value="com_pendencia">Com pendência</option>
+                                    <option value="sem_auditoria">Sem auditoria</option>
+                                    <option value="liberado">Liberado</option>
+                                </select>
                                 <button
                                     type="button"
                                     onClick={limparFiltrosQrcodesCampo}
@@ -1619,7 +1696,7 @@ export function DashboardAuditoriaCampo({
                                 </div>
                             ) : qrcodesCampo.length === 0 ? <p className="rounded-2xl border border-dashed border-slate-300 p-4 text-center text-sm text-slate-500">Nenhum QR Code salvo ainda.</p> : (
                                 <div className="space-y-2">
-                                    <p className="rounded-2xl bg-blue-50 px-3 py-2 text-xs font-bold text-blue-700 ring-1 ring-blue-100">Exibindo {qrcodesCampoFiltrados.length} de {qrcodesCampo.length} QR Code(s) salvo(s).</p>
+                                    <p className="rounded-2xl bg-blue-50 px-3 py-2 text-xs font-bold text-blue-700 ring-1 ring-blue-100">Exibindo {qrcodesCampoFiltrados.length} de {qrcodesCampo.length} QR Code(s) salvo(s), ordenados por prioridade do status.</p>
                                     {qrcodesCampoFiltrados.length === 0 ? (
                                         <p className="rounded-2xl border border-dashed border-slate-300 bg-white p-4 text-center text-sm font-semibold text-slate-500">Nenhum QR Code encontrado com os filtros aplicados.</p>
                                     ) : qrcodesCampoFiltrados.map((item) => {
