@@ -1,0 +1,556 @@
+import {
+    DOCUMENTOS_VERIFICACAO_BUCKETS,
+    DOCUMENTOS_VERIFICACAO_ORIGEM_ANALISE,
+    DOCUMENTOS_VERIFICACAO_ORIGENS,
+    DOCUMENTOS_VERIFICACAO_PESOS,
+    DOCUMENTOS_VERIFICACAO_TABELAS,
+    DOCUMENTOS_VERIFICACAO_TIPOS_INDICIO,
+} from "../constants/documentosVerificacaoConstants";
+import {
+    avaliarArquivoBasicoVerificacao,
+    avaliarDatasCertificadoVerificacao,
+    avaliarDatasDocumentoEmpresaVerificacao,
+    avaliarDuplicidadeVerificacao,
+    avaliarObservacaoVerificacao,
+    criarIndicioVerificacao,
+    filtrarPayloadSupabaseVerificacao,
+    formatarDataIsoVerificacao,
+    gerarHashArquivoVerificacao,
+    limparTextoVerificacao,
+    montarResultadoVerificacaoBase,
+    normalizarTextoVerificacao,
+    obterExtensaoArquivoVerificacao,
+    obterMimeArquivoVerificacao,
+    obterNomeArquivoVerificacao,
+    obterTamanhoArquivoVerificacao,
+    valorUuidOuNullVerificacao,
+} from "../utils/documentosVerificacaoUtils";
+
+function obterArquivoUrlDocumento(documento = {}) {
+    return documento.arquivo_url ||
+        documento.url_do_arquivo ||
+        documento.arquivoUrl ||
+        documento.urlDoArquivo ||
+        "";
+}
+
+function obterArquivoNomeDocumento(documento = {}, arquivo = null) {
+    return obterNomeArquivoVerificacao({
+        arquivo,
+        arquivoNome: documento.arquivo_nome || documento.nome_do_arquivo || documento.arquivoNome || documento.nomeDoArquivo || "",
+    });
+}
+
+function obterEmpresaIdDocumento(documento = {}, empresa = {}) {
+    return documento.empresa_id ||
+        documento.empresaId ||
+        empresa.id ||
+        null;
+}
+
+function obterColaboradorIdCertificado(certificado = {}, colaborador = {}) {
+    return certificado.colaborador_id ||
+        certificado.colaboradorId ||
+        colaborador.id ||
+        certificado.colaborador?.id ||
+        null;
+}
+
+function obterTreinamentoIdUuidCertificado(certificado = {}, treinamento = {}) {
+    return valorUuidOuNullVerificacao(
+        certificado.treinamento_id ||
+        certificado.treinamentoUuid ||
+        treinamento.id ||
+        ""
+    );
+}
+
+function obterTipoCertificado(certificado = {}, treinamento = {}) {
+    return certificado.tipo_treinamento ||
+        certificado.tipoTreinamento ||
+        certificado.nome_treinamento ||
+        certificado.nomeTreinamento ||
+        treinamento.nome ||
+        "";
+}
+
+function montarMetadadosArquivo({ arquivo = null, documento = {}, bucketPadrao = "" } = {}) {
+    const arquivoNome = obterArquivoNomeDocumento(documento, arquivo);
+    const arquivoUrl = obterArquivoUrlDocumento(documento);
+    const tamanhoBytes = obterTamanhoArquivoVerificacao({
+        arquivo,
+        tamanhoBytes: documento.tamanho_bytes || documento.tamanhoBytes || null,
+    });
+    const mimeType = obterMimeArquivoVerificacao({
+        arquivo,
+        mimeType: documento.mime_type || documento.mimeType || "",
+    });
+
+    return {
+        arquivoNome,
+        arquivoUrl,
+        bucket: documento.bucket || bucketPadrao || "",
+        caminhoStorage: documento.caminho_storage || documento.caminhoStorage || arquivoUrl || "",
+        tamanhoBytes,
+        mimeType,
+        extensao: obterExtensaoArquivoVerificacao(arquivoNome),
+    };
+}
+
+function avaliarEmpresaDocumento({ documento = {}, empresa = {} } = {}) {
+    const indicios = [];
+    const empresaIdDocumento = documento.empresa_id || documento.empresaId || "";
+    const empresaId = empresa.id || "";
+
+    if (!empresaIdDocumento && !empresaId) {
+        indicios.push(criarIndicioVerificacao({
+            codigo: "empresa_nao_identificada",
+            tipo: DOCUMENTOS_VERIFICACAO_TIPOS_INDICIO.CADASTRO,
+            titulo: "Empresa não identificada",
+            detalhe: "Não foi possível identificar a empresa vinculada ao documento.",
+            peso: DOCUMENTOS_VERIFICACAO_PESOS.EMPRESA_NAO_IDENTIFICADA,
+            recomendacao: "Vincular o documento a uma empresa cadastrada.",
+        }));
+    }
+
+    if (empresaIdDocumento && empresaId && String(empresaIdDocumento) !== String(empresaId)) {
+        indicios.push(criarIndicioVerificacao({
+            codigo: "divergencia_empresa_documento",
+            tipo: DOCUMENTOS_VERIFICACAO_TIPOS_INDICIO.CADASTRO,
+            titulo: "Divergência de empresa vinculada",
+            detalhe: "O documento está vinculado a uma empresa diferente da empresa informada para análise.",
+            peso: DOCUMENTOS_VERIFICACAO_PESOS.DIVERGENCIA_EMPRESA,
+            recomendacao: "Conferir se o documento pertence à empresa correta.",
+            dados: {
+                empresaIdDocumento,
+                empresaIdAnalise: empresaId,
+            },
+        }));
+    }
+
+    return indicios;
+}
+
+function avaliarCadastroCertificado({ certificado = {}, colaborador = {}, treinamento = {} } = {}) {
+    const indicios = [];
+
+    const colaboradorId = obterColaboradorIdCertificado(certificado, colaborador);
+    const tipoCertificado = normalizarTextoVerificacao(obterTipoCertificado(certificado, treinamento));
+    const nomeTreinamento = normalizarTextoVerificacao(treinamento.nome || "");
+
+    if (!colaboradorId) {
+        indicios.push(criarIndicioVerificacao({
+            codigo: "colaborador_nao_identificado",
+            tipo: DOCUMENTOS_VERIFICACAO_TIPOS_INDICIO.CADASTRO,
+            titulo: "Colaborador não identificado",
+            detalhe: "O certificado não possui colaborador válido vinculado.",
+            peso: DOCUMENTOS_VERIFICACAO_PESOS.COLABORADOR_NAO_IDENTIFICADO,
+            bloqueia: true,
+            recomendacao: "Vincular o certificado ao colaborador correto antes da liberação.",
+        }));
+    }
+
+    if (!tipoCertificado && !nomeTreinamento) {
+        indicios.push(criarIndicioVerificacao({
+            codigo: "treinamento_nao_identificado",
+            tipo: DOCUMENTOS_VERIFICACAO_TIPOS_INDICIO.CADASTRO,
+            titulo: "Treinamento/documento não identificado",
+            detalhe: "O certificado não possui treinamento ou documento vinculado.",
+            peso: DOCUMENTOS_VERIFICACAO_PESOS.TREINAMENTO_NAO_IDENTIFICADO,
+            recomendacao: "Selecionar o treinamento/documento correto.",
+        }));
+    }
+
+    if (tipoCertificado && nomeTreinamento && tipoCertificado !== nomeTreinamento) {
+        indicios.push(criarIndicioVerificacao({
+            codigo: "divergencia_treinamento",
+            tipo: DOCUMENTOS_VERIFICACAO_TIPOS_INDICIO.CADASTRO,
+            titulo: "Divergência no nome do treinamento",
+            detalhe: "O nome do treinamento no certificado analisado diverge do treinamento informado.",
+            peso: DOCUMENTOS_VERIFICACAO_PESOS.DIVERGENCIA_TREINAMENTO,
+            recomendacao: "Conferir se o certificado corresponde ao treinamento selecionado.",
+            dados: {
+                tipoCertificado,
+                nomeTreinamento,
+            },
+        }));
+    }
+
+    return indicios;
+}
+
+export function normalizarVerificacaoDocumental(item = {}) {
+    return {
+        ...item,
+        id: item.id || "",
+        origemTipo: item.origem_tipo || item.origemTipo || "",
+        origemTabela: item.origem_tabela || item.origemTabela || "",
+        documentoId: item.documento_id || item.documentoId || "",
+        empresaId: item.empresa_id || item.empresaId || "",
+        colaboradorId: item.colaborador_id || item.colaboradorId || "",
+        treinamentoId: item.treinamento_id || item.treinamentoId || "",
+        tipoDocumento: item.tipo_documento || item.tipoDocumento || "",
+        nomeDocumento: item.nome_documento || item.nomeDocumento || "",
+        arquivoNome: item.arquivo_nome || item.arquivoNome || "",
+        arquivoUrl: item.arquivo_url || item.arquivoUrl || "",
+        caminhoStorage: item.caminho_storage || item.caminhoStorage || "",
+        mimeType: item.mime_type || item.mimeType || "",
+        tamanhoBytes: item.tamanho_bytes ?? item.tamanhoBytes ?? null,
+        hashArquivo: item.hash_arquivo || item.hashArquivo || "",
+        dataEmissao: item.data_emissao || item.dataEmissao || "",
+        dataRealizacao: item.data_realizacao || item.dataRealizacao || "",
+        dataVencimento: item.data_vencimento || item.dataVencimento || "",
+        statusVerificacao: item.status_verificacao || item.statusVerificacao || "",
+        nivelRisco: item.nivel_risco || item.nivelRisco || "",
+        scoreRisco: item.score_risco ?? item.scoreRisco ?? 0,
+        indicios: Array.isArray(item.indicios) ? item.indicios : [],
+        recomendacoes: Array.isArray(item.recomendacoes) ? item.recomendacoes : [],
+        resumo: item.resumo || "",
+        origemAnalise: item.origem_analise || item.origemAnalise || "",
+        createdAt: item.created_at || item.createdAt || "",
+        updatedAt: item.updated_at || item.updatedAt || "",
+    };
+}
+
+export async function analisarDocumentoEmpresaLocal({
+    documento = {},
+    empresa = {},
+    arquivo = null,
+    registrosExistentes = [],
+    hashArquivoInformado = "",
+} = {}) {
+    const metadadosArquivo = montarMetadadosArquivo({
+        arquivo,
+        documento,
+        bucketPadrao: DOCUMENTOS_VERIFICACAO_BUCKETS.DOCUMENTOS_EMPRESAS,
+    });
+
+    const hashArquivo = hashArquivoInformado || await gerarHashArquivoVerificacao(arquivo);
+
+    const indicios = [
+        ...avaliarArquivoBasicoVerificacao({
+            arquivo,
+            arquivoNome: metadadosArquivo.arquivoNome,
+            mimeType: metadadosArquivo.mimeType,
+            tamanhoBytes: metadadosArquivo.tamanhoBytes,
+            arquivoUrl: metadadosArquivo.arquivoUrl,
+        }),
+        ...avaliarDatasDocumentoEmpresaVerificacao({
+            dataEmissao: documento.data_emissao || documento.dataEmissao,
+            dataVencimento: documento.data_vencimento || documento.dataVencimento,
+        }),
+        ...avaliarEmpresaDocumento({
+            documento,
+            empresa,
+        }),
+        ...avaliarObservacaoVerificacao(documento.observacao),
+        ...avaliarDuplicidadeVerificacao({
+            hashArquivo,
+            arquivoNome: metadadosArquivo.arquivoNome,
+            tamanhoBytes: metadadosArquivo.tamanhoBytes,
+            registrosExistentes,
+            documentoIdAtual: documento.id || null,
+        }),
+    ];
+
+    const resultado = montarResultadoVerificacaoBase({ indicios });
+
+    return {
+        origem_tipo: DOCUMENTOS_VERIFICACAO_ORIGENS.DOCUMENTO_EMPRESA,
+        origem_tabela: DOCUMENTOS_VERIFICACAO_TABELAS.DOCUMENTOS_EMPRESAS,
+        documento_id: valorUuidOuNullVerificacao(documento.id),
+        empresa_id: valorUuidOuNullVerificacao(obterEmpresaIdDocumento(documento, empresa)),
+        colaborador_id: null,
+        treinamento_id: null,
+        tipo_documento: documento.tipo_documento || documento.tipo || documento.tipoDocumento || "",
+        nome_documento: documento.nome_documento || documento.tipo_documento || documento.tipo || "",
+        arquivo_nome: metadadosArquivo.arquivoNome,
+        arquivo_url: metadadosArquivo.arquivoUrl,
+        bucket: metadadosArquivo.bucket,
+        caminho_storage: metadadosArquivo.caminhoStorage,
+        mime_type: metadadosArquivo.mimeType,
+        tamanho_bytes: metadadosArquivo.tamanhoBytes,
+        hash_arquivo: hashArquivo || null,
+        data_emissao: formatarDataIsoVerificacao(documento.data_emissao || documento.dataEmissao),
+        data_realizacao: null,
+        data_vencimento: formatarDataIsoVerificacao(documento.data_vencimento || documento.dataVencimento),
+        origem_analise: DOCUMENTOS_VERIFICACAO_ORIGEM_ANALISE.REGRAS_LOCAIS,
+        ...resultado,
+    };
+}
+
+export async function analisarCertificadoLocal({
+    certificado = {},
+    colaborador = {},
+    treinamento = {},
+    arquivo = null,
+    registrosExistentes = [],
+    hashArquivoInformado = "",
+    exigeVencimento = true,
+} = {}) {
+    const documentoNormalizado = {
+        ...certificado,
+        arquivo_url: certificado.arquivo_url || certificado.arquivoUrl || certificado.url_do_arquivo || "",
+        arquivo_nome: certificado.arquivo_nome || certificado.arquivoNome || certificado.nome_do_arquivo || "",
+    };
+
+    const metadadosArquivo = montarMetadadosArquivo({
+        arquivo,
+        documento: documentoNormalizado,
+        bucketPadrao: DOCUMENTOS_VERIFICACAO_BUCKETS.CERTIFICADOS_TREINAMENTOS,
+    });
+
+    const hashArquivo = hashArquivoInformado || await gerarHashArquivoVerificacao(arquivo);
+
+    const indicios = [
+        ...avaliarArquivoBasicoVerificacao({
+            arquivo,
+            arquivoNome: metadadosArquivo.arquivoNome,
+            mimeType: metadadosArquivo.mimeType,
+            tamanhoBytes: metadadosArquivo.tamanhoBytes,
+            arquivoUrl: metadadosArquivo.arquivoUrl,
+        }),
+        ...avaliarDatasCertificadoVerificacao({
+            dataRealizacao: certificado.data_realizacao || certificado.dataRealizacao,
+            dataVencimento: certificado.data_vencimento || certificado.dataVencimento,
+            exigeVencimento,
+        }),
+        ...avaliarCadastroCertificado({
+            certificado,
+            colaborador,
+            treinamento,
+        }),
+        ...avaliarObservacaoVerificacao(certificado.observacao),
+        ...avaliarDuplicidadeVerificacao({
+            hashArquivo,
+            arquivoNome: metadadosArquivo.arquivoNome,
+            tamanhoBytes: metadadosArquivo.tamanhoBytes,
+            registrosExistentes,
+            documentoIdAtual: certificado.id || null,
+        }),
+    ];
+
+    const resultado = montarResultadoVerificacaoBase({ indicios });
+    const tipoCertificado = obterTipoCertificado(certificado, treinamento);
+
+    return {
+        origem_tipo: DOCUMENTOS_VERIFICACAO_ORIGENS.CERTIFICADO,
+        origem_tabela: DOCUMENTOS_VERIFICACAO_TABELAS.CERTIFICADOS,
+        documento_id: valorUuidOuNullVerificacao(certificado.id),
+        empresa_id: valorUuidOuNullVerificacao(colaborador.empresaId || colaborador.empresa_id || certificado.empresa_id || null),
+        colaborador_id: valorUuidOuNullVerificacao(obterColaboradorIdCertificado(certificado, colaborador)),
+        treinamento_id: obterTreinamentoIdUuidCertificado(certificado, treinamento),
+        tipo_documento: tipoCertificado,
+        nome_documento: tipoCertificado,
+        arquivo_nome: metadadosArquivo.arquivoNome,
+        arquivo_url: metadadosArquivo.arquivoUrl,
+        bucket: metadadosArquivo.bucket,
+        caminho_storage: metadadosArquivo.caminhoStorage,
+        mime_type: metadadosArquivo.mimeType,
+        tamanho_bytes: metadadosArquivo.tamanhoBytes,
+        hash_arquivo: hashArquivo || null,
+        data_emissao: null,
+        data_realizacao: formatarDataIsoVerificacao(certificado.data_realizacao || certificado.dataRealizacao),
+        data_vencimento: formatarDataIsoVerificacao(certificado.data_vencimento || certificado.dataVencimento),
+        origem_analise: DOCUMENTOS_VERIFICACAO_ORIGEM_ANALISE.REGRAS_LOCAIS,
+        ...resultado,
+    };
+}
+
+export async function salvarVerificacaoDocumental({
+    supabase,
+    verificacao,
+    usuario = null,
+} = {}) {
+    if (!supabase) {
+        throw new Error("Cliente Supabase não informado para salvar verificação documental.");
+    }
+
+    if (!verificacao?.origem_tipo || !verificacao?.origem_tabela) {
+        throw new Error("Dados de origem da verificação documental não informados.");
+    }
+
+    const payload = filtrarPayloadSupabaseVerificacao({
+        origem_tipo: verificacao.origem_tipo,
+        origem_tabela: verificacao.origem_tabela,
+        documento_id: valorUuidOuNullVerificacao(verificacao.documento_id),
+        empresa_id: valorUuidOuNullVerificacao(verificacao.empresa_id),
+        colaborador_id: valorUuidOuNullVerificacao(verificacao.colaborador_id),
+        treinamento_id: valorUuidOuNullVerificacao(verificacao.treinamento_id),
+        tipo_documento: limparTextoVerificacao(verificacao.tipo_documento),
+        nome_documento: limparTextoVerificacao(verificacao.nome_documento),
+        arquivo_nome: limparTextoVerificacao(verificacao.arquivo_nome),
+        arquivo_url: limparTextoVerificacao(verificacao.arquivo_url),
+        bucket: limparTextoVerificacao(verificacao.bucket),
+        caminho_storage: limparTextoVerificacao(verificacao.caminho_storage),
+        mime_type: limparTextoVerificacao(verificacao.mime_type),
+        tamanho_bytes: verificacao.tamanho_bytes ?? null,
+        hash_arquivo: limparTextoVerificacao(verificacao.hash_arquivo),
+        data_emissao: verificacao.data_emissao || null,
+        data_realizacao: verificacao.data_realizacao || null,
+        data_vencimento: verificacao.data_vencimento || null,
+        data_referencia: verificacao.data_referencia || new Date().toISOString().slice(0, 10),
+        status_verificacao: verificacao.status_verificacao,
+        nivel_risco: verificacao.nivel_risco,
+        score_risco: Number(verificacao.score_risco || 0),
+        indicios: Array.isArray(verificacao.indicios) ? verificacao.indicios : [],
+        recomendacoes: Array.isArray(verificacao.recomendacoes) ? verificacao.recomendacoes : [],
+        resumo: limparTextoVerificacao(verificacao.resumo),
+        observacao_manual: limparTextoVerificacao(verificacao.observacao_manual),
+        origem_analise: verificacao.origem_analise || DOCUMENTOS_VERIFICACAO_ORIGEM_ANALISE.REGRAS_LOCAIS,
+        modelo_ia: verificacao.modelo_ia || null,
+        retorno_ia: verificacao.retorno_ia || null,
+        ocr_texto: verificacao.ocr_texto || null,
+        analisado_por_ia: Boolean(verificacao.analisado_por_ia),
+        verificado_por: valorUuidOuNullVerificacao(usuario?.id || verificacao.verificado_por),
+        verificado_por_email: limparTextoVerificacao(usuario?.email || verificacao.verificado_por_email),
+    });
+
+    const { data, error } = await supabase
+        .from("verificacoes_documentais")
+        .insert(payload)
+        .select("*")
+        .single();
+
+    if (error) {
+        throw new Error(`Erro ao salvar verificação documental: ${error.message}`);
+    }
+
+    return normalizarVerificacaoDocumental(data);
+}
+
+export async function verificarDocumentoEmpresa({
+    supabase = null,
+    documento = {},
+    empresa = {},
+    arquivo = null,
+    registrosExistentes = [],
+    usuario = null,
+    salvarResultado = false,
+} = {}) {
+    const verificacao = await analisarDocumentoEmpresaLocal({
+        documento,
+        empresa,
+        arquivo,
+        registrosExistentes,
+    });
+
+    if (!salvarResultado) {
+        return normalizarVerificacaoDocumental(verificacao);
+    }
+
+    return salvarVerificacaoDocumental({
+        supabase,
+        verificacao,
+        usuario,
+    });
+}
+
+export async function verificarCertificadoTreinamento({
+    supabase = null,
+    certificado = {},
+    colaborador = {},
+    treinamento = {},
+    arquivo = null,
+    registrosExistentes = [],
+    usuario = null,
+    salvarResultado = false,
+    exigeVencimento = true,
+} = {}) {
+    const verificacao = await analisarCertificadoLocal({
+        certificado,
+        colaborador,
+        treinamento,
+        arquivo,
+        registrosExistentes,
+        exigeVencimento,
+    });
+
+    if (!salvarResultado) {
+        return normalizarVerificacaoDocumental(verificacao);
+    }
+
+    return salvarVerificacaoDocumental({
+        supabase,
+        verificacao,
+        usuario,
+    });
+}
+
+export async function listarVerificacoesDocumentais({
+    supabase,
+    origemTipo = "",
+    origemTabela = "",
+    documentoId = "",
+    empresaId = "",
+    colaboradorId = "",
+    limite = 100,
+} = {}) {
+    if (!supabase) {
+        throw new Error("Cliente Supabase não informado para listar verificações documentais.");
+    }
+
+    let consulta = supabase
+        .from("verificacoes_documentais")
+        .select("*")
+        .order("created_at", { ascending: false })
+        .limit(limite);
+
+    if (origemTipo) {
+        consulta = consulta.eq("origem_tipo", origemTipo);
+    }
+
+    if (origemTabela) {
+        consulta = consulta.eq("origem_tabela", origemTabela);
+    }
+
+    if (documentoId) {
+        consulta = consulta.eq("documento_id", documentoId);
+    }
+
+    if (empresaId) {
+        consulta = consulta.eq("empresa_id", empresaId);
+    }
+
+    if (colaboradorId) {
+        consulta = consulta.eq("colaborador_id", colaboradorId);
+    }
+
+    const { data, error } = await consulta;
+
+    if (error) {
+        throw new Error(`Erro ao listar verificações documentais: ${error.message}`);
+    }
+
+    return (data || []).map(normalizarVerificacaoDocumental);
+}
+
+export async function obterUltimaVerificacaoDocumental({
+    supabase,
+    origemTipo,
+    origemTabela,
+    documentoId,
+} = {}) {
+    if (!supabase) {
+        throw new Error("Cliente Supabase não informado para obter verificação documental.");
+    }
+
+    if (!origemTipo || !origemTabela || !documentoId) {
+        return null;
+    }
+
+    const { data, error } = await supabase
+        .from("verificacoes_documentais")
+        .select("*")
+        .eq("origem_tipo", origemTipo)
+        .eq("origem_tabela", origemTabela)
+        .eq("documento_id", documentoId)
+        .order("created_at", { ascending: false })
+        .limit(1);
+
+    if (error) {
+        throw new Error(`Erro ao obter última verificação documental: ${error.message}`);
+    }
+
+    return data?.[0] ? normalizarVerificacaoDocumental(data[0]) : null;
+}
