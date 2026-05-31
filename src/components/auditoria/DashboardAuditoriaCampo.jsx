@@ -168,6 +168,89 @@ function statusEquipamentoQrCampoConfereFiltro(statusEquipamento = {}, filtro = 
     return chave === filtro;
 }
 
+function classeRiscoTratativaQrCampo(valor = "") {
+    const peso = obterPesoRiscoEquipamentoQrCampo(valor);
+
+    if (peso >= 4) return "bg-red-100 text-red-700 ring-red-200";
+    if (peso === 3) return "bg-orange-100 text-orange-700 ring-orange-200";
+    if (peso === 2) return "bg-amber-100 text-amber-700 ring-amber-200";
+    if (peso === 1) return "bg-emerald-100 text-emerald-700 ring-emerald-200";
+
+    return "bg-slate-100 text-slate-600 ring-slate-200";
+}
+
+function resumirTratativaAuditoriaQrCampo(auditoria = {}) {
+    const aberta = auditoriaEquipamentoQrCampoEstaAberta(auditoria);
+    const vencida = auditoriaCampoVencida(auditoria);
+    const risco = auditoria.grauRisco || auditoria.grau_risco || "Risco não informado";
+    const riscoPeso = obterPesoRiscoEquipamentoQrCampo(risco || auditoria.classificacao || "");
+    const desvioGrave = Boolean(auditoria.temDesvioGrave || auditoria.tem_desvio_grave) || normalizarTextoBusca(auditoria.classificacao).includes("acao imediata");
+    const bloqueiaUso = aberta && (vencida || desvioGrave || riscoPeso >= 4);
+    const requerAtencao = aberta && !bloqueiaUso;
+    const prazoValor = auditoria.prazoAdequacao || auditoria.prazo_adequacao || "";
+    const responsavel = auditoria.responsavelTratativa || auditoria.responsavel_tratativa || "Não informado";
+    const acao = auditoria.acaoRecomendada || auditoria.acao_recomendada || "Ação recomendada não informada.";
+    const situacao = auditoria.situacaoEncontrada || auditoria.situacao_encontrada || auditoria.observacao || "Situação encontrada não informada.";
+    const status = auditoria.statusAuditoria || auditoria.status_auditoria || auditoria.statusDesvio || auditoria.status_desvio || "Sem status";
+
+    if (bloqueiaUso) {
+        return {
+            aberta,
+            vencida,
+            bloqueiaUso,
+            requerAtencao,
+            risco,
+            prazo: prazoValor ? formatDate(prazoValor) : "Não informado",
+            responsavel,
+            acao,
+            situacao,
+            status,
+            rotuloTratativa: "Bloqueia uso",
+            descricaoTratativa: vencida
+                ? "Tratativa vencida. Não liberar o uso até avaliação do TST responsável."
+                : "Condição crítica aberta. Avaliar bloqueio do equipamento até correção.",
+            cardClass: "bg-red-50 ring-red-100",
+            statusClass: "bg-red-100 text-red-700 ring-red-200",
+        };
+    }
+
+    if (requerAtencao) {
+        return {
+            aberta,
+            vencida,
+            bloqueiaUso,
+            requerAtencao,
+            risco,
+            prazo: prazoValor ? formatDate(prazoValor) : "Não informado",
+            responsavel,
+            acao,
+            situacao,
+            status,
+            rotuloTratativa: "Pendência aberta",
+            descricaoTratativa: "Acompanhar responsável, prazo e evidência de correção.",
+            cardClass: "bg-orange-50 ring-orange-100",
+            statusClass: "bg-orange-100 text-orange-700 ring-orange-200",
+        };
+    }
+
+    return {
+        aberta,
+        vencida,
+        bloqueiaUso,
+        requerAtencao,
+        risco,
+        prazo: prazoValor ? formatDate(prazoValor) : "Não informado",
+        responsavel,
+        acao,
+        situacao,
+        status,
+        rotuloTratativa: "Sem bloqueio aberto",
+        descricaoTratativa: "Auditoria sem pendência aberta no histórico carregado.",
+        cardClass: "bg-slate-50 ring-slate-100",
+        statusClass: "bg-emerald-100 text-emerald-700 ring-emerald-200",
+    };
+}
+
 export function DashboardAuditoriaCampo({
     auditoriasCampo = [],
     carregando = false,
@@ -2006,19 +2089,52 @@ export function DashboardAuditoriaCampo({
                                                                 {historicoAuditoriasQrCampo.slice(0, 5).map((auditoria) => {
                                                                     const alvoHistorico = identificarAlvoAuditoriaCampo(auditoria);
                                                                     const chaveHistorico = String(auditoria.id || auditoria.numeroAuditoria || auditoria.createdAt || alvoHistorico.titulo);
-                                                                    const statusHistorico = auditoria.statusAuditoria || auditoria.statusDesvio || "Sem status";
-                                                                    const riscoHistorico = auditoria.grauRisco || "Risco não informado";
+                                                                    const tratativaHistorico = resumirTratativaAuditoriaQrCampo(auditoria);
+                                                                    const dataHistorico = auditoria.createdAt || auditoria.created_at ? formatarDataHora(auditoria.createdAt || auditoria.created_at) : "Sem data";
+                                                                    const numeroHistorico = auditoria.numeroAuditoria || auditoria.numero_auditoria || auditoria.titulo || "Auditoria sem número";
 
                                                                     return (
-                                                                        <div key={chaveHistorico} className="rounded-xl bg-slate-50 px-3 py-2 ring-1 ring-slate-100">
-                                                                            <div className="flex items-start justify-between gap-2">
+                                                                        <div key={chaveHistorico} className={classNames("rounded-2xl px-3 py-3 ring-1", tratativaHistorico.cardClass)}>
+                                                                            <div className="flex flex-wrap items-start justify-between gap-2">
                                                                                 <div className="min-w-0">
-                                                                                    <p className="truncate text-xs font-black text-slate-900">{auditoria.numeroAuditoria || auditoria.titulo || "Auditoria sem número"}</p>
-                                                                                    <p className="mt-0.5 truncate text-[11px] font-semibold text-slate-500" title={alvoHistorico.descricao}>{alvoHistorico.titulo} · {formatarDataHora(auditoria.createdAt)}</p>
+                                                                                    <p className="truncate text-xs font-black text-slate-950">{numeroHistorico}</p>
+                                                                                    <p className="mt-0.5 truncate text-[11px] font-semibold text-slate-500" title={alvoHistorico.descricao}>{alvoHistorico.titulo} · {dataHistorico}</p>
                                                                                 </div>
-                                                                                <span className="shrink-0 rounded-full bg-white px-2 py-1 text-[10px] font-black text-slate-600 ring-1 ring-slate-200">{statusHistorico}</span>
+                                                                                <div className="flex shrink-0 flex-wrap justify-end gap-1.5">
+                                                                                    <span className={classNames("rounded-full px-2 py-1 text-[10px] font-black uppercase ring-1", tratativaHistorico.statusClass)}>{tratativaHistorico.rotuloTratativa}</span>
+                                                                                    <span className={classNames("rounded-full px-2 py-1 text-[10px] font-black uppercase ring-1", classeRiscoTratativaQrCampo(tratativaHistorico.risco))}>{tratativaHistorico.risco}</span>
+                                                                                </div>
                                                                             </div>
-                                                                            <p className="mt-1 text-[11px] font-bold text-slate-500">{riscoHistorico} · {auditoria.classificacao || "Sem classificação"}</p>
+
+                                                                            <div className="mt-2 grid gap-2 md:grid-cols-3">
+                                                                                <div className="rounded-xl bg-white/80 px-3 py-2 ring-1 ring-white/70">
+                                                                                    <p className="text-[9px] font-black uppercase tracking-wide text-slate-400">Status</p>
+                                                                                    <p className="mt-1 truncate text-[11px] font-black text-slate-700" title={tratativaHistorico.status}>{tratativaHistorico.status}</p>
+                                                                                </div>
+                                                                                <div className="rounded-xl bg-white/80 px-3 py-2 ring-1 ring-white/70">
+                                                                                    <p className="text-[9px] font-black uppercase tracking-wide text-slate-400">Prazo</p>
+                                                                                    <p className={classNames("mt-1 truncate text-[11px] font-black", tratativaHistorico.vencida ? "text-red-700" : "text-slate-700")} title={tratativaHistorico.prazo}>{tratativaHistorico.prazo}</p>
+                                                                                </div>
+                                                                                <div className="rounded-xl bg-white/80 px-3 py-2 ring-1 ring-white/70">
+                                                                                    <p className="text-[9px] font-black uppercase tracking-wide text-slate-400">Responsável</p>
+                                                                                    <p className="mt-1 truncate text-[11px] font-black text-slate-700" title={tratativaHistorico.responsavel}>{tratativaHistorico.responsavel}</p>
+                                                                                </div>
+                                                                            </div>
+
+                                                                            <div className="mt-2 grid gap-2 lg:grid-cols-2">
+                                                                                <div className="rounded-xl bg-white/80 px-3 py-2 ring-1 ring-white/70">
+                                                                                    <p className="text-[9px] font-black uppercase tracking-wide text-slate-400">Situação encontrada</p>
+                                                                                    <p className="mt-1 line-clamp-2 text-[11px] font-semibold leading-relaxed text-slate-600" title={tratativaHistorico.situacao}>{tratativaHistorico.situacao}</p>
+                                                                                </div>
+                                                                                <div className="rounded-xl bg-white/80 px-3 py-2 ring-1 ring-white/70">
+                                                                                    <p className="text-[9px] font-black uppercase tracking-wide text-slate-400">Ação recomendada</p>
+                                                                                    <p className="mt-1 line-clamp-2 text-[11px] font-semibold leading-relaxed text-slate-600" title={tratativaHistorico.acao}>{tratativaHistorico.acao}</p>
+                                                                                </div>
+                                                                            </div>
+
+                                                                            <div className="mt-2 rounded-xl bg-white/70 px-3 py-2 ring-1 ring-white/60">
+                                                                                <p className={classNames("text-[11px] font-black", tratativaHistorico.bloqueiaUso ? "text-red-700" : tratativaHistorico.requerAtencao ? "text-orange-700" : "text-emerald-700")}>{tratativaHistorico.descricaoTratativa}</p>
+                                                                            </div>
                                                                         </div>
                                                                     );
                                                                 })}
