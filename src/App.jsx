@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useState } from "react";
 import { supabase, SUPABASE_CONFIGURADO } from "./lib/supabaseClient";
 import { LoginScreen } from "./components/LoginScreen";
+import { SupabaseConfiguracaoPendente } from "./components/commonComponents";
 import {
     AppCarregandoSistema,
     AppConsultaPublicaCarregando,
@@ -37,7 +38,6 @@ import {
     Users,
 } from "lucide-react";
 
-
 const ConsultaQRPublica = React.lazy(() => import("./components/qr/ConsultaQRPublica").then((modulo) => ({ default: modulo.ConsultaQRPublica })));
 const NovaAuditoriaCampoDireta = React.lazy(() => import("./components/auditoria/NovaAuditoriaCampoDireta").then((modulo) => ({ default: modulo.NovaAuditoriaCampoDireta })));
 const importarAppContentRouter = () => import("./routes/AppContentRouter");
@@ -45,7 +45,6 @@ const importarAppLayout = () => import("./components/layout/AppLayout");
 
 const AppContentRouter = React.lazy(() => importarAppContentRouter().then((modulo) => ({ default: modulo.AppContentRouter })));
 const AppLayout = React.lazy(() => importarAppLayout().then((modulo) => ({ default: modulo.AppLayout })));
-const SupabaseConfiguracaoPendente = React.lazy(() => import("./components/commonComponents").then((modulo) => ({ default: modulo.SupabaseConfiguracaoPendente })));
 
 const carregarEmpresasHandlers = () => import("./services/appEmpresasHandlersService");
 const carregarColaboradoresHandlers = () => import("./services/appColaboradoresHandlersService");
@@ -65,11 +64,6 @@ function AppTransicaoInterna() {
         />
     );
 }
-
-
-
-
-
 
 export default function App() {
     const [usuario, setUsuario] = useState(null);
@@ -885,11 +879,7 @@ export default function App() {
     };
 
     if (!SUPABASE_CONFIGURADO) {
-        return (
-            <React.Suspense fallback={<CarregandoTela mensagem="Carregando configuração do Supabase..." />}>
-                <SupabaseConfiguracaoPendente />
-            </React.Suspense>
-        );
+        return <SupabaseConfiguracaoPendente />;
     }
 
     if (carregandoSessao) {
@@ -935,7 +925,6 @@ export default function App() {
         return <LoginScreen onLogin={setUsuario} />;
     }
 
-
     const validarSenhaConfiguracoes = (evento) => {
         return validarSenhaConfiguracoesAppService({
             evento,
@@ -967,8 +956,6 @@ export default function App() {
         });
     };
 
-
-
     return (
         <React.Suspense fallback={<AppTransicaoInterna />}>
             <AppLayout
@@ -983,86 +970,86 @@ export default function App() {
             >
                 <React.Suspense fallback={<AppTransicaoInterna />}>
                     <AppContentRouter
-                    tela={tela}
-                    colaboradores={colaboradores}
-                    empresasBanco={empresasBanco}
-                    documentosEmpresas={documentosEmpresas}
-                    auditoria={auditoria}
-                    auditoriasCampo={auditoriasCampo}
-                    emailsEnviados={emailsEnviados}
-                    usuario={usuario}
-                    colaboradorSelecionado={colaboradorSelecionado}
-                    carregandoBanco={carregandoBanco}
-                    erroBanco={erroBanco}
-                    carregandoAuditoriasCampo={carregandoAuditoriasCampo}
-                    carregandoMaisAuditoriasCampo={carregandoMaisAuditoriasCampo}
-                    erroAuditoriasCampo={erroAuditoriasCampo}
-                    existeMaisAuditoriasCampo={existeMaisAuditoriasCampo}
-                    limitesCarregamentoSistema={limitesCarregamentoSistema}
-                    verificandoAcessoAuditoria={verificandoAcessoAuditoria}
-                    podeAcessarAuditoria={podeAcessarAuditoria}
-                    carregandoAuditoria={carregandoAuditoria}
-                    carregandoMaisAuditoria={carregandoMaisAuditoria}
-                    existeMaisAuditoria={existeMaisAuditoria}
-                    configuracoesDesbloqueadas={configuracoesDesbloqueadas}
-                    senhaConfiguracoesSistema={senhaConfiguracoesSistema}
-                    origemSenhaConfiguracoesSistema={origemSenhaConfiguracoesSistema}
-                    mensagemSenhaConfiguracoesSistema={mensagemSenhaConfiguracoesSistema}
-                    atualizandoDashboardSst={atualizandoDashboardSst}
-                    senhaConfiguracoes={senhaConfiguracoes}
-                    mostrarSenhaConfiguracoes={mostrarSenhaConfiguracoes}
-                    erroSenhaConfiguracoes={erroSenhaConfiguracoes}
-                    setSenhaConfiguracoes={setSenhaConfiguracoes}
-                    setErroSenhaConfiguracoes={setErroSenhaConfiguracoes}
-                    setMostrarSenhaConfiguracoes={setMostrarSenhaConfiguracoes}
-                    onValidarSenhaConfiguracoes={validarSenhaConfiguracoes}
-                    onSelectColab={selecionarColaborador}
-                    onRegistrarEmailEnviado={registrarEmailEnviado}
-                    onAtualizarInformacoesDashboardSst={atualizarInformacoesDashboardSst}
-                    onAuditoriaSalva={(novaAuditoria) => {
-                    setAuditoriasCampoCarregadas(true);
-                    setAuditoriasCampo((atual) => [novaAuditoria, ...atual]);
-                    }}
-                    onAuditoriaAtualizada={(atualizada) =>
-                    setAuditoriasCampo((atual) =>
-                        atualizada?.excluida
-                            ? atual.filter((item) => item.id !== atualizada.id)
-                            : atual.map((item) => item.id === atualizada.id ? atualizada : item)
-                    )
-                    }
-                    onRecarregarAuditoriasCampo={carregarAuditoriasCampo}
-                    onCarregarMaisAuditoriasCampo={carregarMaisAuditoriasCampo}
-                    onAtualizarBanco={carregarColaboradores}
-                    onAdicionarEmpresa={adicionarEmpresa}
-                    onAtualizarEmpresa={atualizarEmpresa}
-                    onExcluirEmpresa={excluirEmpresa}
-                    onAdicionarDocumentoEmpresa={adicionarDocumentoEmpresa}
-                    onExcluirDocumentoEmpresa={excluirDocumentoEmpresa}
-                    onVisualizarDocumentoEmpresa={visualizarDocumentoEmpresa}
-                    onAdicionarColaborador={adicionarColaborador}
-                    onAtualizarColaborador={atualizarColaborador}
-                    onExcluirColaborador={excluirColaborador}
-                    onEnviarTreinamento={abrirEnvioTreinamento}
-                    onSalvarCertificado={salvarCertificadoTreinamento}
-                    onVisualizarCertificado={visualizarCertificadoTreinamento}
-                    onExcluirCertificado={excluirCertificadoTreinamento}
-                    onAtualizarDatasCertificado={atualizarDatasCertificado}
-                    onSincronizarStorage={sincronizarCertificadosDoStorage}
-                    onSelecionarColaboradorQr={setColaboradorSelecionado}
-                    onAtualizarAuditoria={async () => {
-                    await carregarAuditoria();
-                    await carregarEmailsEnviados();
-                    await carregarAuditoriasCampo();
-                    }}
-                    onCarregarMaisAuditoria={carregarMaisAuditoria}
-                    onListarArquivosStorage={listarArquivosCertificadosStorage}
-                    onExcluirArquivoStorage={excluirArquivoCertificadoStorage}
-                    onListarUsuariosAuditoria={carregarUsuariosAutorizadosAuditoria}
-                    onSalvarUsuarioAuditoria={salvarUsuarioAutorizadoAuditoria}
-                    onAlternarUsuarioAuditoria={alternarUsuarioAutorizadoAuditoria}
-                    onBloquearAuditoria={bloquearAuditoria}
-                    onBloquearConfiguracoes={bloquearConfiguracoesSistema}
-                    onSalvarLimites={atualizarLimitesCarregamentoSistema}
+                        tela={tela}
+                        colaboradores={colaboradores}
+                        empresasBanco={empresasBanco}
+                        documentosEmpresas={documentosEmpresas}
+                        auditoria={auditoria}
+                        auditoriasCampo={auditoriasCampo}
+                        emailsEnviados={emailsEnviados}
+                        usuario={usuario}
+                        colaboradorSelecionado={colaboradorSelecionado}
+                        carregandoBanco={carregandoBanco}
+                        erroBanco={erroBanco}
+                        carregandoAuditoriasCampo={carregandoAuditoriasCampo}
+                        carregandoMaisAuditoriasCampo={carregandoMaisAuditoriasCampo}
+                        erroAuditoriasCampo={erroAuditoriasCampo}
+                        existeMaisAuditoriasCampo={existeMaisAuditoriasCampo}
+                        limitesCarregamentoSistema={limitesCarregamentoSistema}
+                        verificandoAcessoAuditoria={verificandoAcessoAuditoria}
+                        podeAcessarAuditoria={podeAcessarAuditoria}
+                        carregandoAuditoria={carregandoAuditoria}
+                        carregandoMaisAuditoria={carregandoMaisAuditoria}
+                        existeMaisAuditoria={existeMaisAuditoria}
+                        configuracoesDesbloqueadas={configuracoesDesbloqueadas}
+                        senhaConfiguracoesSistema={senhaConfiguracoesSistema}
+                        origemSenhaConfiguracoesSistema={origemSenhaConfiguracoesSistema}
+                        mensagemSenhaConfiguracoesSistema={mensagemSenhaConfiguracoesSistema}
+                        atualizandoDashboardSst={atualizandoDashboardSst}
+                        senhaConfiguracoes={senhaConfiguracoes}
+                        mostrarSenhaConfiguracoes={mostrarSenhaConfiguracoes}
+                        erroSenhaConfiguracoes={erroSenhaConfiguracoes}
+                        setSenhaConfiguracoes={setSenhaConfiguracoes}
+                        setErroSenhaConfiguracoes={setErroSenhaConfiguracoes}
+                        setMostrarSenhaConfiguracoes={setMostrarSenhaConfiguracoes}
+                        onValidarSenhaConfiguracoes={validarSenhaConfiguracoes}
+                        onSelectColab={selecionarColaborador}
+                        onRegistrarEmailEnviado={registrarEmailEnviado}
+                        onAtualizarInformacoesDashboardSst={atualizarInformacoesDashboardSst}
+                        onAuditoriaSalva={(novaAuditoria) => {
+                            setAuditoriasCampoCarregadas(true);
+                            setAuditoriasCampo((atual) => [novaAuditoria, ...atual]);
+                        }}
+                        onAuditoriaAtualizada={(atualizada) =>
+                            setAuditoriasCampo((atual) =>
+                                atualizada?.excluida
+                                    ? atual.filter((item) => item.id !== atualizada.id)
+                                    : atual.map((item) => item.id === atualizada.id ? atualizada : item)
+                            )
+                        }
+                        onRecarregarAuditoriasCampo={carregarAuditoriasCampo}
+                        onCarregarMaisAuditoriasCampo={carregarMaisAuditoriasCampo}
+                        onAtualizarBanco={carregarColaboradores}
+                        onAdicionarEmpresa={adicionarEmpresa}
+                        onAtualizarEmpresa={atualizarEmpresa}
+                        onExcluirEmpresa={excluirEmpresa}
+                        onAdicionarDocumentoEmpresa={adicionarDocumentoEmpresa}
+                        onExcluirDocumentoEmpresa={excluirDocumentoEmpresa}
+                        onVisualizarDocumentoEmpresa={visualizarDocumentoEmpresa}
+                        onAdicionarColaborador={adicionarColaborador}
+                        onAtualizarColaborador={atualizarColaborador}
+                        onExcluirColaborador={excluirColaborador}
+                        onEnviarTreinamento={abrirEnvioTreinamento}
+                        onSalvarCertificado={salvarCertificadoTreinamento}
+                        onVisualizarCertificado={visualizarCertificadoTreinamento}
+                        onExcluirCertificado={excluirCertificadoTreinamento}
+                        onAtualizarDatasCertificado={atualizarDatasCertificado}
+                        onSincronizarStorage={sincronizarCertificadosDoStorage}
+                        onSelecionarColaboradorQr={setColaboradorSelecionado}
+                        onAtualizarAuditoria={async () => {
+                            await carregarAuditoria();
+                            await carregarEmailsEnviados();
+                            await carregarAuditoriasCampo();
+                        }}
+                        onCarregarMaisAuditoria={carregarMaisAuditoria}
+                        onListarArquivosStorage={listarArquivosCertificadosStorage}
+                        onExcluirArquivoStorage={excluirArquivoCertificadoStorage}
+                        onListarUsuariosAuditoria={carregarUsuariosAutorizadosAuditoria}
+                        onSalvarUsuarioAuditoria={salvarUsuarioAutorizadoAuditoria}
+                        onAlternarUsuarioAuditoria={alternarUsuarioAutorizadoAuditoria}
+                        onBloquearAuditoria={bloquearAuditoria}
+                        onBloquearConfiguracoes={bloquearConfiguracoesSistema}
+                        onSalvarLimites={atualizarLimitesCarregamentoSistema}
                         onSalvarSenhaConfiguracoes={atualizarSenhaConfiguracoesSistema}
                     />
                 </React.Suspense>
