@@ -158,6 +158,7 @@ export function DashboardAuditoriaCampo({
     const [buscaQrCampoSalvo, setBuscaQrCampoSalvo] = useState("");
     const [filtroTipoQrCampoSalvo, setFiltroTipoQrCampoSalvo] = useState("todos");
     const [historicoQrCampoAberto, setHistoricoQrCampoAberto] = useState("");
+    const [statusQrCampoAberto, setStatusQrCampoAberto] = useState("");
     const [empresasCadastradasQrCampo, setEmpresasCadastradasQrCampo] = useState([]);
     const [carregandoEmpresasQrCampo, setCarregandoEmpresasQrCampo] = useState(false);
     const [mensagemEmpresasQrCampo, setMensagemEmpresasQrCampo] = useState("");
@@ -1625,6 +1626,7 @@ export function DashboardAuditoriaCampo({
                                         const chaveQrSalvo = chaveQrCampoSalvo(item);
                                         const historicoAuditoriasQrCampo = obterHistoricoAuditoriasPorQrCampo(item);
                                         const historicoQrCampoEstaAberto = historicoQrCampoAberto === chaveQrSalvo;
+                                        const statusQrCampoEstaAberto = statusQrCampoAberto === chaveQrSalvo;
                                         const totalHistoricoQrCampo = historicoAuditoriasQrCampo.length;
                                         const statusEquipamentoQrCampo = calcularStatusEquipamentoQrCampo(historicoAuditoriasQrCampo);
 
@@ -1642,24 +1644,6 @@ export function DashboardAuditoriaCampo({
                                                 </div>
                                                 <p className="mt-2 truncate text-sm font-black text-slate-900" title={item.identificacao}>{item.identificacao}</p>
                                                 <p className="truncate text-[11px] font-medium text-slate-500" title={[item.area, item.local, item.empresa_responsavel, item.observacao].filter(Boolean).join(" · ")}>{[item.area, item.local, item.empresa_responsavel, item.observacao].filter(Boolean).join(" · ") || "Sem local vinculado"}</p>
-                                                <div className={classNames("mt-3 grid gap-1.5 rounded-2xl p-2 ring-1 sm:grid-cols-2 xl:grid-cols-4", statusEquipamentoQrCampo.containerClass)}>
-                                                    <div className="min-w-0 rounded-xl bg-white/70 px-2 py-1.5 ring-1 ring-white/60">
-                                                        <p className="text-[9px] font-black uppercase tracking-wide text-slate-400">Status</p>
-                                                        <p className={classNames("mt-1 truncate rounded-full px-2 py-1 text-center text-[9px] font-black uppercase ring-1", statusEquipamentoQrCampo.statusClass)} title={statusEquipamentoQrCampo.descricao}>{statusEquipamentoQrCampo.status}</p>
-                                                    </div>
-                                                    <div className="min-w-0 rounded-xl bg-white/70 px-2 py-1.5 ring-1 ring-white/60">
-                                                        <p className="text-[9px] font-black uppercase tracking-wide text-slate-400">Última auditoria</p>
-                                                        <p className={classNames("mt-1 truncate text-[10px] font-black", statusEquipamentoQrCampo.valueClass)} title={statusEquipamentoQrCampo.ultimaAuditoria}>{statusEquipamentoQrCampo.ultimaAuditoria}</p>
-                                                    </div>
-                                                    <div className="min-w-0 rounded-xl bg-white/70 px-2 py-1.5 ring-1 ring-white/60">
-                                                        <p className="text-[9px] font-black uppercase tracking-wide text-slate-400">Pendências</p>
-                                                        <p className={classNames("mt-1 truncate text-[10px] font-black", statusEquipamentoQrCampo.valueClass)}>{statusEquipamentoQrCampo.pendenciasAbertas} aberta(s)</p>
-                                                    </div>
-                                                    <div className="min-w-0 rounded-xl bg-white/70 px-2 py-1.5 ring-1 ring-white/60">
-                                                        <p className="text-[9px] font-black uppercase tracking-wide text-slate-400">Maior risco</p>
-                                                        <p className={classNames("mt-1 truncate text-[10px] font-black", statusEquipamentoQrCampo.valueClass)}>{statusEquipamentoQrCampo.maiorRisco}</p>
-                                                    </div>
-                                                </div>
                                                 <div className="mt-3 grid grid-cols-4 gap-1.5">
                                                     <button
                                                         type="button"
@@ -1695,21 +1679,61 @@ export function DashboardAuditoriaCampo({
                                                         {excluindoQrCampoId === (item.id || item.codigo || item.identificacao) ? "Excluindo..." : "Excluir QR"}
                                                     </button>
                                                 </div>
-                                                <button
-                                                    type="button"
-                                                    onClick={() => setHistoricoQrCampoAberto((atual) => atual === chaveQrSalvo ? "" : chaveQrSalvo)}
-                                                    className={classNames(
-                                                        "mt-2 inline-flex w-full items-center justify-center gap-2 rounded-xl px-3 py-2 text-[11px] font-black ring-1 transition",
-                                                        totalHistoricoQrCampo > 0
-                                                            ? "bg-slate-950 text-white ring-slate-950 hover:bg-slate-800"
-                                                            : "bg-white text-slate-500 ring-slate-200 hover:bg-slate-50"
-                                                    )}
-                                                >
-                                                    <ClipboardCheck className="h-3.5 w-3.5" />
-                                                    {totalHistoricoQrCampo > 0
-                                                        ? `${historicoQrCampoEstaAberto ? "Recolher" : "Ver"} histórico (${totalHistoricoQrCampo})`
-                                                        : "Sem auditorias vinculadas"}
-                                                </button>
+                                                <div className="mt-2 grid gap-1.5 sm:grid-cols-2">
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => setStatusQrCampoAberto((atual) => atual === chaveQrSalvo ? "" : chaveQrSalvo)}
+                                                        className={classNames(
+                                                            "inline-flex w-full items-center justify-center gap-2 rounded-xl px-3 py-2 text-[11px] font-black ring-1 transition",
+                                                            statusQrCampoEstaAberto
+                                                                ? "bg-blue-50 text-blue-700 ring-blue-200 hover:bg-blue-100"
+                                                                : "bg-white text-slate-600 ring-slate-200 hover:bg-slate-50"
+                                                        )}
+                                                    >
+                                                        <BadgeCheck className="h-3.5 w-3.5" />
+                                                        {statusQrCampoEstaAberto ? "Recolher status" : "Ver status"}
+                                                    </button>
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => setHistoricoQrCampoAberto((atual) => atual === chaveQrSalvo ? "" : chaveQrSalvo)}
+                                                        className={classNames(
+                                                            "inline-flex w-full items-center justify-center gap-2 rounded-xl px-3 py-2 text-[11px] font-black ring-1 transition",
+                                                            totalHistoricoQrCampo > 0
+                                                                ? "bg-slate-950 text-white ring-slate-950 hover:bg-slate-800"
+                                                                : "bg-white text-slate-500 ring-slate-200 hover:bg-slate-50"
+                                                        )}
+                                                    >
+                                                        <ClipboardCheck className="h-3.5 w-3.5" />
+                                                        {totalHistoricoQrCampo > 0
+                                                            ? `${historicoQrCampoEstaAberto ? "Recolher" : "Ver"} histórico (${totalHistoricoQrCampo})`
+                                                            : "Sem auditorias vinculadas"}
+                                                    </button>
+                                                </div>
+                                                {statusQrCampoEstaAberto && (
+                                                    <div className={classNames("mt-3 rounded-2xl p-3 ring-1", statusEquipamentoQrCampo.containerClass)}>
+                                                        <div className="flex flex-wrap items-center justify-between gap-2">
+                                                            <div>
+                                                                <p className="text-[11px] font-black uppercase tracking-wide text-slate-500">Status do equipamento</p>
+                                                                <p className="mt-1 text-[11px] font-semibold text-slate-500">Resumo calculado pelo histórico vinculado a este QR Code.</p>
+                                                            </div>
+                                                            <span className={classNames("rounded-full px-3 py-1 text-[10px] font-black uppercase ring-1", statusEquipamentoQrCampo.statusClass)} title={statusEquipamentoQrCampo.descricao}>{statusEquipamentoQrCampo.status}</span>
+                                                        </div>
+                                                        <div className="mt-3 grid gap-2 sm:grid-cols-3">
+                                                            <div className="rounded-xl bg-white/75 px-3 py-2 ring-1 ring-white/60">
+                                                                <p className="text-[9px] font-black uppercase tracking-wide text-slate-400">Última auditoria</p>
+                                                                <p className={classNames("mt-1 truncate text-[11px] font-black", statusEquipamentoQrCampo.valueClass)} title={statusEquipamentoQrCampo.ultimaAuditoria}>{statusEquipamentoQrCampo.ultimaAuditoria}</p>
+                                                            </div>
+                                                            <div className="rounded-xl bg-white/75 px-3 py-2 ring-1 ring-white/60">
+                                                                <p className="text-[9px] font-black uppercase tracking-wide text-slate-400">Pendências</p>
+                                                                <p className={classNames("mt-1 text-[11px] font-black", statusEquipamentoQrCampo.valueClass)}>{statusEquipamentoQrCampo.pendenciasAbertas} aberta(s)</p>
+                                                            </div>
+                                                            <div className="rounded-xl bg-white/75 px-3 py-2 ring-1 ring-white/60">
+                                                                <p className="text-[9px] font-black uppercase tracking-wide text-slate-400">Maior risco</p>
+                                                                <p className={classNames("mt-1 text-[11px] font-black", statusEquipamentoQrCampo.valueClass)}>{statusEquipamentoQrCampo.maiorRisco}</p>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                )}
                                                 {historicoQrCampoEstaAberto && (
                                                     <div className="mt-3 rounded-2xl border border-blue-100 bg-white p-3 shadow-sm">
                                                         <div className="flex items-center justify-between gap-2">
