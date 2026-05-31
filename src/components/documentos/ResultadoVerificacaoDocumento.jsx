@@ -8,6 +8,7 @@ import {
     FileText,
     ShieldAlert,
     ShieldCheck,
+    Sparkles,
     XCircle,
 } from "lucide-react";
 
@@ -116,6 +117,11 @@ function formatarData(data) {
     return texto;
 }
 
+function obterResumoCurto(resumo, statusTexto, riscoTexto, score) {
+    if (resumo) return resumo;
+    return `Status ${statusTexto.toLowerCase()}, risco ${riscoTexto.toLowerCase()} e score ${score}/100.`;
+}
+
 export default function ResultadoVerificacaoDocumento({
     verificacao = null,
     titulo = "Verificação documental",
@@ -134,7 +140,6 @@ export default function ResultadoVerificacaoDocumento({
         const resumo = normalizarTexto(verificacao?.resumo);
         const arquivoNome = normalizarTexto(verificacao?.arquivo_nome || verificacao?.arquivoNome || verificacao?.nome_do_arquivo);
         const tipoDocumento = normalizarTexto(verificacao?.tipo_documento || verificacao?.tipoDocumento || verificacao?.nome_documento || verificacao?.nomeDocumento);
-        const origemTipo = normalizarTexto(verificacao?.origem_tipo || verificacao?.origemTipo);
         const createdAt = verificacao?.created_at || verificacao?.createdAt || "";
 
         return {
@@ -146,7 +151,6 @@ export default function ResultadoVerificacaoDocumento({
             resumo,
             arquivoNome,
             tipoDocumento,
-            origemTipo,
             createdAt,
         };
     }, [verificacao]);
@@ -155,17 +159,66 @@ export default function ResultadoVerificacaoDocumento({
     const StatusIcon = statusConfig.icone || ShieldCheck;
     const riscoClasse = RISCO_CONFIG[String(dados.nivelRisco || "").toLowerCase()] || RISCO_CONFIG.nao_avaliado;
     const possuiVerificacao = Boolean(verificacao);
+    const riscoTexto = formatarRisco(dados.nivelRisco);
 
     if (!possuiVerificacao) {
         return (
-            <div className={`rounded-2xl border border-dashed border-slate-200 bg-slate-50 p-4 text-sm text-slate-600 ${className}`}>
+            <div className={`rounded-2xl border border-dashed border-slate-200 bg-slate-50/80 p-3 text-sm text-slate-600 ${className}`}>
                 <div className="flex items-center gap-2 font-semibold text-slate-700">
                     <FileText className="h-4 w-4" />
                     {titulo}
                 </div>
-                <p className="mt-2">
+                <p className="mt-2 text-xs leading-relaxed text-slate-500 sm:text-sm">
                     Nenhuma verificação documental registrada para este item até o momento.
                 </p>
+            </div>
+        );
+    }
+
+    if (compacto) {
+        return (
+            <div className={`rounded-2xl border border-slate-200 bg-gradient-to-br from-slate-50 to-white p-3 shadow-sm ${className}`}>
+                <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                        <div className="flex items-center gap-2 text-[11px] font-bold uppercase tracking-[0.14em] text-slate-500">
+                            <Sparkles className="h-3.5 w-3.5 text-emerald-500" />
+                            Análise documental
+                        </div>
+                        <p className="mt-1 text-sm font-semibold leading-tight text-slate-800">
+                            {titulo}
+                        </p>
+                        {dados.createdAt && (
+                            <p className="mt-1 text-[11px] text-slate-400">
+                                Verificado em {formatarData(dados.createdAt)}
+                            </p>
+                        )}
+                    </div>
+
+                    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-white ring-1 ring-slate-200 shadow-sm">
+                        <StatusIcon className="h-4.5 w-4.5 text-slate-600" />
+                    </div>
+                </div>
+
+                <div className="mt-3 flex flex-wrap gap-2">
+                    <span className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-[11px] font-semibold ring-1 ${statusConfig.classe}`}>
+                        <StatusIcon className="h-3.5 w-3.5" />
+                        {statusConfig.texto}
+                    </span>
+
+                    <span className={`inline-flex items-center rounded-full px-3 py-1 text-[11px] font-semibold ring-1 ${riscoClasse}`}>
+                        Risco {riscoTexto}
+                    </span>
+
+                    <span className="inline-flex items-center rounded-full bg-white px-3 py-1 text-[11px] font-semibold text-slate-700 ring-1 ring-slate-200">
+                        Score {dados.score}/100
+                    </span>
+                </div>
+
+                <div className="mt-3 rounded-2xl bg-white/90 p-3 ring-1 ring-slate-100">
+                    <p className="text-sm leading-relaxed text-slate-600 line-clamp-4">
+                        {obterResumoCurto(dados.resumo, statusConfig.texto, riscoTexto, dados.score)}
+                    </p>
+                </div>
             </div>
         );
     }
@@ -174,27 +227,17 @@ export default function ResultadoVerificacaoDocumento({
         <div className={`rounded-2xl border border-slate-200 bg-white p-4 shadow-sm ${className}`}>
             <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                 <div className="min-w-0">
-                    <div className="flex flex-wrap items-center gap-2">
-                        <span className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold ring-1 ${statusConfig.classe}`}>
-                            <StatusIcon className="h-3.5 w-3.5" />
-                            {statusConfig.texto}
-                        </span>
-
-                        <span className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold ring-1 ${riscoClasse}`}>
-                            Risco: {formatarRisco(dados.nivelRisco)}
-                        </span>
-
-                        <span className="inline-flex items-center rounded-full bg-slate-50 px-3 py-1 text-xs font-semibold text-slate-700 ring-1 ring-slate-200">
-                            Score: {dados.score}/100
-                        </span>
+                    <div className="flex items-center gap-2 text-[11px] font-bold uppercase tracking-[0.14em] text-slate-500">
+                        <Sparkles className="h-3.5 w-3.5 text-emerald-500" />
+                        Análise documental
                     </div>
 
-                    <h3 className="mt-3 text-sm font-bold text-slate-900 sm:text-base">
+                    <h3 className="mt-2 text-sm font-bold text-slate-900 sm:text-base">
                         {titulo}
                     </h3>
 
                     {(dados.tipoDocumento || dados.arquivoNome) && (
-                        <p className="mt-1 truncate text-xs text-slate-500 sm:text-sm">
+                        <p className="mt-1 break-words text-xs text-slate-500 sm:text-sm">
                             {dados.tipoDocumento || "Documento"}
                             {dados.arquivoNome ? ` • ${dados.arquivoNome}` : ""}
                         </p>
@@ -207,25 +250,38 @@ export default function ResultadoVerificacaoDocumento({
                     )}
                 </div>
 
-                {!compacto && (
-                    <button
-                        type="button"
-                        onClick={() => setDetalhesAbertos((atual) => !atual)}
-                        className="inline-flex items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700 shadow-sm transition hover:bg-slate-50"
-                    >
-                        {detalhesAbertos ? "Ocultar detalhes" : "Ver detalhes"}
-                        {detalhesAbertos ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
-                    </button>
-                )}
+                <button
+                    type="button"
+                    onClick={() => setDetalhesAbertos((atual) => !atual)}
+                    className="inline-flex items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700 shadow-sm transition hover:bg-slate-50"
+                >
+                    {detalhesAbertos ? "Ocultar detalhes" : "Ver detalhes"}
+                    {detalhesAbertos ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+                </button>
+            </div>
+
+            <div className="mt-4 flex flex-wrap gap-2">
+                <span className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold ring-1 ${statusConfig.classe}`}>
+                    <StatusIcon className="h-3.5 w-3.5" />
+                    {statusConfig.texto}
+                </span>
+
+                <span className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold ring-1 ${riscoClasse}`}>
+                    Risco: {riscoTexto}
+                </span>
+
+                <span className="inline-flex items-center rounded-full bg-slate-50 px-3 py-1 text-xs font-semibold text-slate-700 ring-1 ring-slate-200">
+                    Score: {dados.score}/100
+                </span>
             </div>
 
             {dados.resumo && (
-                <p className="mt-3 rounded-xl bg-slate-50 p-3 text-sm text-slate-700">
+                <p className="mt-3 rounded-xl bg-slate-50 p-3 text-sm leading-relaxed text-slate-700">
                     {dados.resumo}
                 </p>
             )}
 
-            {!compacto && detalhesAbertos && (
+            {detalhesAbertos && (
                 <div className="mt-4 grid gap-4 lg:grid-cols-2">
                     <div className="rounded-xl border border-slate-100 bg-slate-50 p-3">
                         <h4 className="text-xs font-bold uppercase tracking-wide text-slate-500">
@@ -262,7 +318,7 @@ export default function ResultadoVerificacaoDocumento({
                         {dados.recomendacoes.length > 0 ? (
                             <ul className="mt-3 space-y-2 text-sm text-slate-700">
                                 {dados.recomendacoes.map((recomendacao, indice) => (
-                                    <li key={`${recomendacao}-${indice}`} className="rounded-lg bg-white p-3 ring-1 ring-slate-100">
+                                    <li key={`${typeof recomendacao === "string" ? recomendacao : JSON.stringify(recomendacao)}-${indice}`} className="rounded-lg bg-white p-3 ring-1 ring-slate-100">
                                         {typeof recomendacao === "string" ? recomendacao : recomendacao?.texto || recomendacao?.titulo || "Revisar manualmente o documento."}
                                     </li>
                                 ))}
@@ -276,11 +332,9 @@ export default function ResultadoVerificacaoDocumento({
                 </div>
             )}
 
-            {!compacto && (
-                <p className="mt-4 text-xs text-slate-400">
-                    A análise indica inconsistências e indícios. O sistema não confirma falsificação automaticamente.
-                </p>
-            )}
+            <p className="mt-4 text-xs text-slate-400">
+                A análise indica inconsistências e indícios. O sistema não confirma falsificação automaticamente.
+            </p>
         </div>
     );
 }
