@@ -634,7 +634,7 @@ export function DashboardAuditoriaCampo({
 
         const identificacao = item.identificacao || item.codigo || "QR Code selecionado";
         const confirmar = window.confirm(
-            `Deseja realmente excluir o QR Code ${identificacao}?\n\nEssa ação remove o registro da lista de QR Codes salvos.`
+            `Deseja realmente excluir o QR Code ${identificacao}?\n\nEssa ação remove o QR Code da lista ativa e preserva o histórico de auditorias já vinculadas.`
         );
 
         if (!confirmar) return;
@@ -644,7 +644,9 @@ export function DashboardAuditoriaCampo({
         setMensagemQrCampo("");
 
         try {
-            let consulta = supabase.from("auditoria_campo_qrcodes").delete();
+            let consulta = supabase
+                .from("auditoria_campo_qrcodes")
+                .update({ ativo: false });
 
             if (item.id) {
                 consulta = consulta.eq("id", item.id);
@@ -662,7 +664,7 @@ export function DashboardAuditoriaCampo({
                 if (item.id) return qr.id !== item.id;
                 return qr.codigo !== item.codigo;
             }));
-            setMensagemQrCampo(`QR Code ${identificacao} excluído com sucesso.`);
+            setMensagemQrCampo(`QR Code ${identificacao} removido da lista ativa com sucesso. O histórico de auditorias foi preservado.`);
         } catch (error) {
             setMensagemQrCampo(`Erro ao excluir QR Code: ${error.message}`);
         } finally {
@@ -697,6 +699,7 @@ export function DashboardAuditoriaCampo({
             token_publico: tokenPublicoQrCampo,
             link: montarLinkQrCampo(dadosQrCampo),
             observacao: String(qrFormCampo.observacao || "").trim() || null,
+            ativo: true,
             criado_por: null,
         };
 
@@ -716,15 +719,100 @@ export function DashboardAuditoriaCampo({
         }
     };
 
+    const escaparTextoImpressaoQr = (valor) =>
+        String(valor || "")
+            .replace(/&/g, "&amp;")
+            .replace(/</g, "&lt;")
+            .replace(/>/g, "&gt;")
+            .replace(/"/g, "&quot;")
+            .replace(/'/g, "&#039;");
+
+    const montarHtmlImpressaoQrCampo = ({ titulo = "", qrHtml = "" } = {}) => {
+        const tituloImpressao = escaparTextoImpressaoQr(String(titulo || "QR Code de campo").trim().toUpperCase());
+        const conteudoQr = qrHtml || "<p class=\"aviso\">QR Code indisponível para impressão.</p>";
+
+        return `<!doctype html>
+<html>
+<head>
+    <meta charset="utf-8" />
+    <title>${tituloImpressao}</title>
+    <style>
+        @page { size: auto; margin: 14mm; }
+        * { box-sizing: border-box; }
+        html, body { margin: 0; padding: 0; }
+        body {
+            min-height: 100vh;
+            font-family: Arial, Helvetica, sans-serif;
+            color: #020617;
+            background: #ffffff;
+            text-align: center;
+        }
+        .etiqueta {
+            display: inline-flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: flex-start;
+            gap: 18px;
+            width: 100%;
+            max-width: 420px;
+            padding: 8px;
+        }
+        .titulo {
+            margin: 0;
+            color: #020617;
+            font-size: 28px;
+            font-weight: 900;
+            line-height: 1.1;
+            letter-spacing: 0.04em;
+            text-transform: uppercase;
+            overflow-wrap: anywhere;
+        }
+        .qr {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0;
+            background: #ffffff;
+        }
+        .qr svg {
+            width: 270px;
+            height: 270px;
+        }
+        .aviso {
+            margin: 0;
+            color: #64748b;
+            font-size: 14px;
+            font-weight: 700;
+        }
+        @media print {
+            body { padding: 0; }
+            .etiqueta { gap: 16px; max-width: none; }
+            .titulo { font-size: 26px; }
+            .qr svg { width: 260px; height: 260px; }
+        }
+    </style>
+</head>
+<body>
+    <main class="etiqueta">
+        <h1 class="titulo">${tituloImpressao}</h1>
+        <div class="qr">${conteudoQr}</div>
+    </main>
+</body>
+</html>`;
+    };
+
     const imprimirQrCampoAtual = () => {
-        const elemento = document.getElementById("qr-auditoria-campo-para-impressao");
-        if (!elemento) return;
-        const janela = window.open("", "_blank", "width=720,height=720");
+        const elementoQr = document.querySelector("#qr-auditoria-campo-para-impressao svg");
+        const qrHtml = elementoQr?.outerHTML || "";
+        const identificacao = qrFormCampo.identificacao || "Identificação pendente";
+        const janela = window.open("", "_blank", "width=720,height=760");
+
         if (!janela) {
             setMensagemQrCampo("O navegador bloqueou a janela de impressão. Libere pop-ups para imprimir o QR Code.");
             return;
         }
-        janela.document.write(`<!doctype html><html><head><title>QR Code Auditoria de Campo</title><style>body{font-family:Arial,sans-serif;margin:0;padding:32px;text-align:center;color:#0f172a}.card{border:1px solid #e2e8f0;border-radius:24px;padding:28px;display:inline-block}.muted{color:#64748b;font-size:13px;word-break:break-all;max-width:560px}</style></head><body>${elemento.innerHTML}</body></html>`);
+
+        janela.document.write(montarHtmlImpressaoQrCampo({ titulo: identificacao, qrHtml }));
         janela.document.close();
         janela.focus();
         janela.print();
@@ -735,14 +823,6 @@ export function DashboardAuditoriaCampo({
             .replace(/[^a-zA-Z0-9_-]+/g, "-")
             .slice(0, 80);
 
-    const escaparTextoImpressaoQr = (valor) =>
-        String(valor || "")
-            .replace(/&/g, "&amp;")
-            .replace(/</g, "&lt;")
-            .replace(/>/g, "&gt;")
-            .replace(/"/g, "&quot;")
-            .replace(/'/g, "&#039;");
-
     const imprimirQrCampoSalvo = (item) => {
         if (!item) return;
 
@@ -750,7 +830,6 @@ export function DashboardAuditoriaCampo({
         const elementoQr = document.querySelector(`[data-qrcode-campo-id="${chave}"] svg`);
         const qrHtml = elementoQr?.outerHTML || "";
         const identificacao = item.identificacao || item.codigo || "QR Code de campo";
-        const tituloImpressao = escaparTextoImpressaoQr(String(identificacao).trim().toUpperCase());
         const janela = window.open("", "_blank", "width=720,height=760");
 
         if (!janela) {
@@ -758,7 +837,7 @@ export function DashboardAuditoriaCampo({
             return;
         }
 
-        janela.document.write(`<!doctype html><html><head><title>${tituloImpressao}</title><style>@page{size:auto;margin:16mm}body{font-family:Arial,sans-serif;margin:0;padding:24px;text-align:center;color:#0f172a}.card{display:inline-flex;flex-direction:column;align-items:center;gap:18px}.qr svg{width:260px;height:260px}.titulo{font-size:26px;font-weight:900;letter-spacing:.04em;text-transform:uppercase;color:#020617}@media print{body{padding:0}.card{gap:16px}.qr svg{width:260px;height:260px}}</style></head><body><div class="card"><div class="qr">${qrHtml}</div><div class="titulo">${tituloImpressao}</div></div></body></html>`);
+        janela.document.write(montarHtmlImpressaoQrCampo({ titulo: identificacao, qrHtml }));
         janela.document.close();
         janela.focus();
         janela.print();
@@ -792,6 +871,7 @@ export function DashboardAuditoriaCampo({
                 item.area,
                 item.local,
                 item.empresa_responsavel,
+                item.observacao,
                 item.link,
             ].filter(Boolean).join(" "));
 
@@ -1322,6 +1402,15 @@ export function DashboardAuditoriaCampo({
                                                     >
                                                         Copiar link
                                                     </button>
+                                                    <a
+                                                        href={item.link || "#"}
+                                                        target="_blank"
+                                                        rel="noreferrer"
+                                                        className="inline-flex items-center gap-2 rounded-xl bg-emerald-50 px-3 py-2 text-xs font-bold text-emerald-700 ring-1 ring-emerald-100 hover:bg-emerald-100"
+                                                    >
+                                                        <QrCode className="h-3.5 w-3.5" />
+                                                        Abrir auditoria
+                                                    </a>
                                                     <button
                                                         type="button"
                                                         onClick={() => imprimirQrCampoSalvo(item)}
