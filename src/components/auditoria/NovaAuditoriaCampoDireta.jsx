@@ -53,6 +53,23 @@ import {
     Upload,
 } from "lucide-react";
 
+
+function obterTextoAuditoriaCampoValido(valor = "") {
+    const texto = String(valor || "").trim();
+    if (!texto) return "";
+
+    const textoNormalizado = texto
+        .normalize("NFD")
+        .replace(/[̀-ͯ]/g, "")
+        .toLowerCase();
+
+    if (["nao aplicavel", "nao se aplica", "n/a", "na"].includes(textoNormalizado)) {
+        return "";
+    }
+
+    return texto;
+}
+
 export function NovaAuditoriaCampoDireta({ usuario = null, onAuditoriaSalva, empresasBanco = [] }) {
     const parametros = obterParametrosAuditoriaCampoDiretaUrl();
     const {
@@ -174,12 +191,31 @@ export function NovaAuditoriaCampoDireta({ usuario = null, onAuditoriaSalva, emp
     const linkTipoAtual = montarLinkAuditoriaCampo({
         tipo: tipoAtual.parametros[0] || tipoAtual.valor,
     });
-    const linkEspecifico = formulario.maquinaEquipamento
+    const identificacaoQrEspecifica = obterTextoAuditoriaCampoValido(
+        formulario.maquinaEquipamento || identificacaoParametro
+    );
+    const alvoQrAuditoriaAtual =
+        identificacaoQrEspecifica ||
+        obterTextoAuditoriaCampoValido(formulario.area || areaParametro) ||
+        obterTextoAuditoriaCampoValido(formulario.local || localParametro) ||
+        obterTextoAuditoriaCampoValido(formulario.subarea || subareaParametro);
+    const linkEspecifico = identificacaoQrEspecifica
         ? montarLinkAuditoriaCampo({
             tipo: tipoAtual.parametros[0] || tipoAtual.valor,
-            id: formulario.maquinaEquipamento,
+            id: identificacaoQrEspecifica,
+            area: formulario.area || areaParametro,
+            subarea: formulario.subarea || subareaParametro,
+            local: formulario.local || localParametro,
+            empresa: formulario.empresaResponsavel || empresaParametro,
         })
         : linkTipoAtual;
+    const linkQrAuditoriaAtual = alvoQrAuditoriaAtual ? linkEspecifico : linkGeral;
+    const rotuloQrAuditoriaAtual = alvoQrAuditoriaAtual
+        ? `QR Code - ${alvoQrAuditoriaAtual}`
+        : "QR Code geral";
+    const descricaoQrAuditoriaAtual = alvoQrAuditoriaAtual
+        ? `${tipoAtual.label}: ${alvoQrAuditoriaAtual}`
+        : "Link geral para nova auditoria de campo";
 
     const textoNotificacaoResponsavel = useMemo(() => montarTextoNotificacaoAuditoriaCampoDireta({
         formulario,
@@ -535,20 +571,23 @@ export function NovaAuditoriaCampoDireta({ usuario = null, onAuditoriaSalva, emp
                                 </p>
                                 <div className="mx-auto mt-4 flex w-full max-w-full min-w-0 flex-col gap-2 sm:mx-0 sm:max-w-3xl sm:flex-row sm:items-center">
                                     <div className="w-full min-w-0 overflow-hidden rounded-2xl bg-white px-4 py-3 text-xs font-semibold text-slate-500 ring-1 ring-slate-200">
-                                        <span className="block truncate">{linkGeral || "Configure o token público ativo do Supabase antes de gerar link ou QR Code."}</span>
+                                        <span className="block truncate">{linkQrAuditoriaAtual || "Configure o token público ativo do Supabase antes de gerar link ou QR Code."}</span>
                                     </div>
-                                    <button type="button" onClick={() => linkGeral && copiarTexto(linkGeral, "Link geral copiado.")} disabled={!linkGeral} className="inline-flex w-full shrink-0 items-center justify-center gap-2 rounded-2xl bg-slate-950 px-4 py-3 text-sm font-bold text-white hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto">
+                                    <button type="button" onClick={() => linkQrAuditoriaAtual && copiarTexto(linkQrAuditoriaAtual, alvoQrAuditoriaAtual ? "Link do QR Code específico copiado." : "Link geral copiado.")} disabled={!linkQrAuditoriaAtual} className="inline-flex w-full shrink-0 items-center justify-center gap-2 rounded-2xl bg-slate-950 px-4 py-3 text-sm font-bold text-white hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto">
                                         <QrCode className="h-4 w-4" />
-                                        Copiar link geral
+                                        {alvoQrAuditoriaAtual ? "Copiar link do QR" : "Copiar link geral"}
                                     </button>
                                 </div>
                             </div>
                         </div>
                         <div className="mx-auto w-full max-w-[220px] rounded-3xl bg-white p-3 text-center shadow-sm ring-1 ring-slate-200 lg:mx-0 lg:justify-self-end">
                             <div className="mx-auto flex h-32 w-32 items-center justify-center rounded-2xl bg-slate-50 p-2">
-                                {linkGeral ? <QRCodeSVG value={linkGeral} size={112} level="M" /> : <QrCode className="h-12 w-12 text-slate-300" />}
+                                {linkQrAuditoriaAtual ? <QRCodeSVG value={linkQrAuditoriaAtual} size={112} level="M" /> : <QrCode className="h-12 w-12 text-slate-300" />}
                             </div>
-                            <p className="mt-2 text-[11px] font-bold uppercase tracking-wide text-slate-400">QR Code geral</p>
+                            <p className="mt-2 text-[11px] font-bold uppercase tracking-wide text-slate-500">{rotuloQrAuditoriaAtual}</p>
+                            <p className="mt-1 break-words rounded-2xl bg-emerald-50 px-2 py-1 text-[10px] font-bold uppercase tracking-wide text-emerald-700 ring-1 ring-emerald-100">
+                                {descricaoQrAuditoriaAtual}
+                            </p>
                         </div>
                     </div>
                 </Card>
