@@ -102,6 +102,36 @@ function limitarTextoPainel(valor = "", limite = 900) {
     return `${texto.slice(0, limite)}...`;
 }
 
+function textoParecePdfBrutoPainel(valor = "") {
+    const texto = String(valor || "");
+    const amostra = texto.slice(0, 5000);
+
+    if (!amostra) return false;
+
+    const marcadores = [
+        /%PDF-\d/i,
+        /\/BitsPerComponent\b/i,
+        /\/DCTDecode\b/i,
+        /\/Subtype\s*\/Image\b/i,
+        /\/XObject\b/i,
+        /stream\s+[\s\S]{0,80}?(?:�|JFIF|Exif)/i,
+        /endstream\s+endobj/i,
+    ];
+
+    const quantidadeEstranha = (amostra.match(/[�\uFFFD]/g) || []).length;
+    const proporcaoEstranha = quantidadeEstranha / Math.max(1, amostra.length);
+
+    return marcadores.some((regex) => regex.test(amostra)) || proporcaoEstranha > 0.025;
+}
+
+function obterTextoOcrPainel(valor = "") {
+    const texto = normalizarTexto(valor);
+
+    if (!texto || textoParecePdfBrutoPainel(texto)) return "";
+
+    return texto;
+}
+
 function obterLeituraDocumentalLocal(retornoIa) {
     const objeto = normalizarObjeto(retornoIa);
 
@@ -112,6 +142,7 @@ function formatarTipoLeitura(tipo = "") {
     const chave = String(tipo || "").trim().toLowerCase();
 
     if (chave === "pdf_texto_local") return "PDF com texto local";
+    if (chave === "pdf_sem_texto_legivel") return "PDF sem texto confiável";
     if (chave === "imagem_dependente_ocr") return "Imagem depende de OCR";
     if (chave === "nome_arquivo") return "Nome do arquivo";
     if (chave === "sem_arquivo_local") return "Sem arquivo local";
@@ -219,6 +250,12 @@ function DetalhesVerificacao({ dados, resumoCurto }) {
                         </p>
                     )}
 
+                    {dados.ocrTextoOculto && (
+                        <p className="mt-3 rounded-lg bg-white p-3 text-xs leading-relaxed text-blue-900 ring-1 ring-blue-100">
+                            O texto bruto do PDF não foi exibido porque aparenta ser código interno do arquivo, imagem embutida ou conteúdo binário. A leitura será tratada como não confiável para comparação automática de datas.
+                        </p>
+                    )}
+
                     {Array.isArray(dados.leituraDocumentalLocal?.avisos) && dados.leituraDocumentalLocal.avisos.length > 0 && (
                         <ul className="mt-3 space-y-1 text-xs text-blue-900">
                             {dados.leituraDocumentalLocal.avisos.map((aviso, indice) => (
@@ -310,7 +347,9 @@ export default function ResultadoVerificacaoDocumento({
         const arquivoNome = normalizarTexto(verificacao?.arquivo_nome || verificacao?.arquivoNome || verificacao?.nome_do_arquivo);
         const tipoDocumento = normalizarTexto(verificacao?.tipo_documento || verificacao?.tipoDocumento || verificacao?.nome_documento || verificacao?.nomeDocumento);
         const createdAt = verificacao?.created_at || verificacao?.createdAt || "";
-        const ocrTexto = normalizarTexto(verificacao?.ocr_texto || verificacao?.ocrTexto);
+        const ocrTextoBruto = normalizarTexto(verificacao?.ocr_texto || verificacao?.ocrTexto);
+        const ocrTexto = obterTextoOcrPainel(ocrTextoBruto);
+        const ocrTextoOculto = Boolean(ocrTextoBruto && !ocrTexto);
         const leituraDocumentalLocal = obterLeituraDocumentalLocal(verificacao?.retorno_ia || verificacao?.retornoIa);
 
         return {
@@ -324,6 +363,7 @@ export default function ResultadoVerificacaoDocumento({
             tipoDocumento,
             createdAt,
             ocrTexto,
+            ocrTextoOculto,
             leituraDocumentalLocal,
         };
     }, [verificacao]);

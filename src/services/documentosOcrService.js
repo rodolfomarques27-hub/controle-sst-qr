@@ -14,6 +14,7 @@ import {
 const LIMITE_BYTES_LEITURA_LOCAL = 8 * 1024 * 1024;
 const LIMITE_TEXTO_OCR_SALVAR = 6000;
 const TOLERANCIA_DIAS_COMPARACAO = 2;
+const CONFIANCA_MINIMA_COMPARACAO_DATAS = 58;
 
 const DATAS_PADRAO_IGNORADAS = new Set([
     "1900-01-01",
@@ -48,6 +49,38 @@ const MESES_PT_BR = Object.freeze({
     dezembro: 12,
     dez: 12,
 });
+
+const TERMOS_DOCUMENTAIS_CONFIAVEIS = [
+    "aso",
+    "atestado",
+    "certificado",
+    "pcmsO",
+    "pcmso",
+    "pgr",
+    "ltcat",
+    "documento",
+    "treinamento",
+    "curso",
+    "empresa",
+    "cnpj",
+    "cpf",
+    "colaborador",
+    "funcionario",
+    "funcionário",
+    "emissao",
+    "emissão",
+    "realizacao",
+    "realização",
+    "validade",
+    "vencimento",
+    "assinatura",
+    "medico",
+    "médico",
+    "exame",
+    "saude",
+    "saúde",
+    "ocupacional",
+];
 
 function arquivoPossuiArrayBuffer(arquivo = null) {
     return Boolean(
@@ -99,8 +132,39 @@ function limparTextoPossivelDocumento(texto = "") {
         .trim();
 }
 
+function proporcaoCaracteresEstranhos(texto = "") {
+    const valor = String(texto || "");
+    if (!valor) return 0;
+
+    const estranhos = (valor.match(/[�\uFFFD]/g) || []).length;
+    return estranhos / valor.length;
+}
+
+function textoParecePdfBrutoOuImagemEmbutida(texto = "") {
+    const valor = String(texto || "");
+    const amostra = valor.slice(0, 5000);
+
+    if (!amostra) return false;
+
+    const marcadoresPdfBruto = [
+        /%PDF-\d/i,
+        /\/BitsPerComponent\b/i,
+        /\/DCTDecode\b/i,
+        /\/Subtype\s*\/Image\b/i,
+        /\/XObject\b/i,
+        /stream\s+[\s\S]{0,80}?(?:�|JFIF|Exif)/i,
+        /endstream\s+endobj/i,
+    ];
+
+    return marcadoresPdfBruto.some((regex) => regex.test(amostra)) || proporcaoCaracteresEstranhos(amostra) > 0.025;
+}
+
 function limitarTextoParaSalvar(texto = "") {
     const limpo = limparTextoPossivelDocumento(texto);
+
+    if (!limpo || textoParecePdfBrutoOuImagemEmbutida(limpo)) {
+        return "";
+    }
 
     if (limpo.length <= LIMITE_TEXTO_OCR_SALVAR) {
         return limpo;
@@ -182,7 +246,8 @@ function classificarContextoData(contexto = "") {
 function registrarDataEncontrada({ mapa, iso, contexto, origem }) {
     if (!iso || DATAS_PADRAO_IGNORADAS.has(iso)) return;
 
-    const existente = mapa.get(iso);
+    const chave = `${iso}__${origem || "texto"}`;
+    const existente = mapa.get(chave);
     const categorias = classificarContextoData(contexto);
 
     if (existente) {
@@ -196,7 +261,7 @@ function registrarDataEncontrada({ mapa, iso, contexto, origem }) {
         return;
     }
 
-    mapa.set(iso, {
+    mapa.set(chave, {
         iso,
         br: formatarDataBr(iso),
         contexto,
@@ -245,24 +310,151 @@ export function extrairDatasTextoDocumental(texto = "", origem = "texto") {
         });
     }
 
-    return Array.from(mapa.values()).sort((a, b) => a.iso.localeCompare(b.iso));
+    return Array.from(mapa.values()).sort((a, b) => {
+        const porData = a.iso.localeCompare(b.iso);
+        return porData !== 0 ? porData : String(a.origem || "").localeCompare(String(b.origem || ""));
+    });
 }
 
 function filtrarDatasPorCategoria(datas = [], categoria = "") {
     return datas.filter((data) => Array.isArray(data.categorias) && data.categorias.includes(categoria));
 }
 
-function calcularConfiancaLeitura({ textoExtraido = "", datasEncontradas = [], tipoLeitura = "", textoLimitado = false } = {}) {
+function contarTokensLegiveis(texto = "") {
+    const tokens = normalizarTextoVerificacao(texto).match(/[a-z]{3,}/g) || [];
+    return tokens.length;
+}
+
+function contarTermosDocumentais(texto = "") {
+    const normalizado = normalizarTextoVerificacao(texto);
+
+    return TERMOS_DOCUMENTAIS_CONFIAVEIS.reduce((total, termo) => {
+        return normalizado.includes(normalizarTextoVerificacao(termo)) ? total + 1 : total;
+    }, 0);
+}
+
+function textoPossuiConteudoDocumentoConfiavel(texto = "") {
+    const limpo = limparTextoPossivelDocumento(texto);
+
+    if (!textoContemConteudoMinimo(limpo)) return false;
+    if (textoParecePdfBrutoOuImagemEmbutida(limpo)) return false;
+
+    const tokens = contarTokensLegiveis(limpo);
+    const termos = contarTermosDocumentais(limpo);
+
+    return tokens >= 8 || termos >= 2 || (limpo.length >= 180 && tokens >= 4);
+}
+
+function calcularConfiancaLeitura({ textoExtraido = "", datasTexto = [], tipoLeitura = "", textoLimitado = false } = {}) {
     let score = 0;
 
-    if (textoContemConteudoMinimo(textoExtraido)) score += 35;
-    if (tipoLeitura === "pdf_texto_local") score += 20;
-    if (tipoLeitura === "nome_arquivo") score += 10;
-    score += Math.min(30, datasEncontradas.length * 10);
+    if (textoContemConteudoMinimo(textoExtraido)) score += 20;
+    if (textoPossuiConteudoDocumentoConfiavel(textoExtraido)) score += 35;
+    if (tipoLeitura === "pdf_texto_local") score += 15;
+    score += Math.min(25, datasTexto.length * 10);
 
     if (textoLimitado) score -= 8;
 
     return Math.max(0, Math.min(100, Math.round(score)));
+}
+
+function unescapePdfLiteral(valor = "") {
+    return String(valor || "")
+        .replace(/\\n/g, " ")
+        .replace(/\\r/g, " ")
+        .replace(/\\t/g, " ")
+        .replace(/\\b/g, " ")
+        .replace(/\\f/g, " ")
+        .replace(/\\([()\\])/g, "$1")
+        .replace(/\\([0-7]{1,3})/g, (_, octal) => {
+            try {
+                return String.fromCharCode(parseInt(octal, 8));
+            } catch {
+                return " ";
+            }
+        });
+}
+
+function extrairStringsLiteraisPdf(textoPdf = "") {
+    const bruto = String(textoPdf || "");
+    const resultados = [];
+    let atual = "";
+    let dentro = false;
+    let escape = false;
+    let profundidade = 0;
+
+    for (let indice = 0; indice < bruto.length; indice += 1) {
+        const caractere = bruto[indice];
+
+        if (!dentro) {
+            if (caractere === "(") {
+                dentro = true;
+                profundidade = 1;
+                atual = "";
+                escape = false;
+            }
+            continue;
+        }
+
+        if (escape) {
+            atual += `\\${caractere}`;
+            escape = false;
+            continue;
+        }
+
+        if (caractere === "\\") {
+            escape = true;
+            continue;
+        }
+
+        if (caractere === "(") {
+            profundidade += 1;
+            atual += caractere;
+            continue;
+        }
+
+        if (caractere === ")") {
+            profundidade -= 1;
+
+            if (profundidade <= 0) {
+                const limpo = limparTextoPossivelDocumento(unescapePdfLiteral(atual));
+
+                if (
+                    limpo.length >= 2 &&
+                    !textoParecePdfBrutoOuImagemEmbutida(limpo) &&
+                    (/[a-zA-ZÀ-ÿ]/.test(limpo) || /\d{1,2}[\/.-]\d{1,2}[\/.-]\d{2,4}/.test(limpo)) &&
+                    !/^[A-Za-z0-9+/=]{28,}$/.test(limpo)
+                ) {
+                    resultados.push(limpo);
+                }
+
+                dentro = false;
+                atual = "";
+                escape = false;
+                profundidade = 0;
+                continue;
+            }
+        }
+
+        atual += caractere;
+    }
+
+    return resultados;
+}
+
+function extrairTextoLegivelPdf(bytes) {
+    const textoUtf8 = decodificarBytes(bytes, "utf-8");
+    const textoWin1252 = decodificarBytes(bytes, "windows-1252");
+    const bruto = textoWin1252.length > textoUtf8.length ? textoWin1252 : textoUtf8;
+
+    const stringsPdf = extrairStringsLiteraisPdf(bruto);
+    const textoExtraido = limparTextoPossivelDocumento(stringsPdf.join(" "));
+
+    if (textoPossuiConteudoDocumentoConfiavel(textoExtraido)) {
+        return textoExtraido;
+    }
+
+    return "";
 }
 
 function montarRetornoLeituraBase({
@@ -276,21 +468,45 @@ function montarRetornoLeituraBase({
     avisos = [],
     erro = "",
 } = {}) {
-    const textoParaDatas = [textoExtraido, arquivoNome].filter(Boolean).join(" ");
-    const datasEncontradas = extrairDatasTextoDocumental(textoParaDatas, textoExtraido ? tipoLeitura : "nome_arquivo");
-    const datasAssinaturaDigital = filtrarDatasPorCategoria(datasEncontradas, "assinatura_digital");
-    const datasProvaveisVencimento = filtrarDatasPorCategoria(datasEncontradas, "vencimento");
-    const datasProvaveisEmissaoRealizacao = filtrarDatasPorCategoria(datasEncontradas, "emissao_realizacao");
+    const textoSeguro = limitarTextoParaSalvar(textoExtraido);
+    const datasTexto = textoSeguro ? extrairDatasTextoDocumental(textoSeguro, tipoLeitura) : [];
+    const datasNomeArquivo = arquivoNome ? extrairDatasTextoDocumental(arquivoNome, "nome_arquivo") : [];
+    const datasEncontradas = [...datasTexto, ...datasNomeArquivo];
+    const datasComparaveis = datasTexto;
     const confianca = calcularConfiancaLeitura({
-        textoExtraido,
-        datasEncontradas,
+        textoExtraido: textoSeguro,
+        datasTexto,
         tipoLeitura,
         textoLimitado,
     });
+    const comparacaoDatasPermitida = Boolean(
+        textoSeguro &&
+        datasComparaveis.length > 0 &&
+        confianca >= CONFIANCA_MINIMA_COMPARACAO_DATAS &&
+        textoPossuiConteudoDocumentoConfiavel(textoSeguro) &&
+        tipoLeitura === "pdf_texto_local"
+    );
+    const datasAssinaturaDigital = comparacaoDatasPermitida
+        ? filtrarDatasPorCategoria(datasComparaveis, "assinatura_digital")
+        : [];
+    const datasProvaveisVencimento = comparacaoDatasPermitida
+        ? filtrarDatasPorCategoria(datasComparaveis, "vencimento")
+        : [];
+    const datasProvaveisEmissaoRealizacao = comparacaoDatasPermitida
+        ? filtrarDatasPorCategoria(datasComparaveis, "emissao_realizacao")
+        : [];
 
-    const resumo = datasEncontradas.length
-        ? `Leitura local encontrou ${datasEncontradas.length} data(s): ${datasEncontradas.map((data) => data.br).join(", ")}.`
-        : "Leitura local não encontrou datas confiáveis no arquivo.";
+    let resumo = "Leitura local não encontrou camada de texto confiável para comparar datas automaticamente.";
+
+    if (datasComparaveis.length) {
+        resumo = `Leitura local encontrou ${datasComparaveis.length} data(s) no texto do documento: ${datasComparaveis.map((data) => data.br).join(", ")}.`;
+    } else if (datasNomeArquivo.length) {
+        resumo = `Foram encontradas data(s) apenas no nome do arquivo: ${datasNomeArquivo.map((data) => data.br).join(", ")}. Essas datas não foram usadas para apontar divergência automática.`;
+    }
+
+    if (!comparacaoDatasPermitida && datasComparaveis.length) {
+        resumo += " A confiança da leitura ainda é insuficiente para comparar com o cadastro sem revisão manual.";
+    }
 
     return {
         executado,
@@ -299,12 +515,15 @@ function montarRetornoLeituraBase({
         mimeType,
         extensao,
         confianca,
-        textoExtraido: limitarTextoParaSalvar(textoExtraido),
+        textoExtraido: textoSeguro,
         textoLimitado,
         datasEncontradas,
+        datasDocumentoConfiaveis: datasComparaveis,
+        datasNomeArquivo,
         datasAssinaturaDigital,
         datasProvaveisVencimento,
         datasProvaveisEmissaoRealizacao,
+        comparacaoDatasPermitida,
         avisos,
         erro,
         resumo,
@@ -324,7 +543,7 @@ export async function executarLeituraDocumentalLocal({ arquivo = null, arquivoNo
             mimeType: mime,
             extensao,
             textoExtraido: "",
-            avisos: nome ? ["Somente o nome do arquivo foi usado para tentativa de identificar datas."] : [],
+            avisos: nome ? ["Somente o nome do arquivo foi avaliado. Datas no nome não geram divergência automática."] : [],
         });
     }
 
@@ -359,22 +578,21 @@ export async function executarLeituraDocumentalLocal({ arquivo = null, arquivoNo
         const tamanhoOriginal = buffer.byteLength;
         const textoLimitado = tamanhoOriginal > LIMITE_BYTES_LEITURA_LOCAL;
         const bytes = new Uint8Array(buffer.slice(0, LIMITE_BYTES_LEITURA_LOCAL));
-        const textoUtf8 = decodificarBytes(bytes, "utf-8");
-        const textoWin1252 = decodificarBytes(bytes, "windows-1252");
-        const textoExtraido = limparTextoPossivelDocumento(`${textoUtf8} ${textoWin1252}`);
+        const textoExtraido = extrairTextoLegivelPdf(bytes);
         const avisos = [];
 
         if (textoLimitado) {
             avisos.push("Leitura limitada aos primeiros 8 MB para preservar performance no navegador.");
         }
 
-        if (!textoContemConteudoMinimo(textoExtraido)) {
-            avisos.push("Não foi encontrada camada de texto legível. O PDF pode ser digitalizado como imagem.");
+        if (!textoExtraido) {
+            avisos.push("Não foi encontrada camada de texto confiável. O PDF pode ser uma imagem escaneada ou estar com texto compactado.");
+            avisos.push("Datas encontradas somente no nome do arquivo não serão usadas para acusar divergência com o cadastro.");
         }
 
         return montarRetornoLeituraBase({
             executado: true,
-            tipoLeitura: "pdf_texto_local",
+            tipoLeitura: textoExtraido ? "pdf_texto_local" : "pdf_sem_texto_legivel",
             arquivoNome: nome,
             mimeType: mime,
             extensao,
@@ -430,12 +648,15 @@ function compararCampoDataCadastro({
 } = {}) {
     const dataCadastroIso = formatarDataIsoVerificacao(dataCadastro);
 
-    if (!dataCadastroIso || !leitura?.datasEncontradas?.length) return null;
+    if (!dataCadastroIso || !leitura?.comparacaoDatasPermitida) return null;
+
+    const datasConfiaveis = leitura.datasDocumentoConfiaveis || [];
+    if (!datasConfiaveis.length) return null;
 
     const datasPreferenciais = categoriaPreferencial
-        ? filtrarDatasPorCategoria(leitura.datasEncontradas, categoriaPreferencial)
+        ? filtrarDatasPorCategoria(datasConfiaveis, categoriaPreferencial)
         : [];
-    const baseComparacao = datasPreferenciais.length ? datasPreferenciais : leitura.datasEncontradas;
+    const baseComparacao = datasPreferenciais.length ? datasPreferenciais : datasConfiaveis;
 
     if (datasContemCadastro(dataCadastroIso, baseComparacao)) return null;
 
@@ -449,15 +670,15 @@ function compararCampoDataCadastro({
         tipo: DOCUMENTOS_VERIFICACAO_TIPOS_INDICIO.OCR,
         titulo: `${labelCampo} cadastrada não localizada na leitura do documento`,
         detalhe: maisProxima
-            ? `${labelCampo} cadastrada: ${formatarDataBr(dataCadastroIso)}. Data mais próxima lida no arquivo: ${maisProxima.br} (${maisProxima.diferencaDias} dia(s) de diferença).`
-            : `${labelCampo} cadastrada: ${formatarDataBr(dataCadastroIso)}. Datas lidas no arquivo: ${leitura.datasEncontradas.map((data) => data.br).join(", ")}.`,
+            ? `${labelCampo} cadastrada: ${formatarDataBr(dataCadastroIso)}. Data mais próxima lida no texto do arquivo: ${maisProxima.br} (${maisProxima.diferencaDias} dia(s) de diferença).`
+            : `${labelCampo} cadastrada: ${formatarDataBr(dataCadastroIso)}. Datas lidas no texto do arquivo: ${baseComparacao.map((data) => data.br).join(", ")}.`,
         peso,
         recomendacao: "Conferir manualmente se a data cadastrada no sistema corresponde à data real do documento.",
         dados: {
             dataCadastro: dataCadastroIso,
             dataMaisProximaDocumento: maisProxima?.iso || null,
             diferencaDias: maisProxima?.diferencaDias ?? null,
-            datasEncontradas: leitura.datasEncontradas.map((data) => data.iso),
+            datasEncontradas: baseComparacao.map((data) => data.iso),
         },
     });
 }
@@ -467,6 +688,8 @@ function avaliarAssinaturaDigitalLeitura({ leitura, dataVencimento } = {}) {
     const hoje = new Date();
     const hojeMeioDia = new Date(hoje.getFullYear(), hoje.getMonth(), hoje.getDate(), 12, 0, 0);
     const vencimento = obterDataSeguraVerificacao(dataVencimento);
+
+    if (!leitura?.comparacaoDatasPermitida) return indicios;
 
     for (const dataAssinatura of leitura?.datasAssinaturaDigital || []) {
         const assinatura = obterDataSeguraVerificacao(dataAssinatura.iso);
@@ -515,7 +738,12 @@ export function avaliarLeituraDocumentalComCadastro({
 
     if (!leitura) return indicios;
 
-    if (leitura.executado && !leitura.datasEncontradas?.length && textoContemConteudoMinimo(leitura.textoExtraido)) {
+    if (
+        leitura.comparacaoDatasPermitida &&
+        leitura.executado &&
+        !leitura.datasDocumentoConfiaveis?.length &&
+        textoContemConteudoMinimo(leitura.textoExtraido)
+    ) {
         indicios.push(criarIndicioVerificacao({
             codigo: "nenhuma_data_localizada_leitura_documental",
             tipo: DOCUMENTOS_VERIFICACAO_TIPOS_INDICIO.OCR,
@@ -530,7 +758,7 @@ export function avaliarLeituraDocumentalComCadastro({
         }));
     }
 
-    if (leitura.datasEncontradas?.length) {
+    if (leitura.comparacaoDatasPermitida) {
         const indicioDataEmissao = origemTipo === "certificado"
             ? compararCampoDataCadastro({
                 leitura,
@@ -573,13 +801,17 @@ export function montarRetornoLeituraParaPersistencia(leitura = null) {
         executado: Boolean(leitura.executado),
         confianca: leitura.confianca,
         resumo: leitura.resumo,
+        comparacao_datas_permitida: Boolean(leitura.comparacaoDatasPermitida),
         datas_encontradas: (leitura.datasEncontradas || []).map((data) => ({
             iso: data.iso,
             br: data.br,
             categorias: data.categorias,
             ocorrencias: data.ocorrencias,
             contexto: data.contexto,
+            origem: data.origem,
         })),
+        datas_documento_confiaveis: (leitura.datasDocumentoConfiaveis || []).map((data) => data.iso),
+        datas_nome_arquivo: (leitura.datasNomeArquivo || []).map((data) => data.iso),
         datas_assinatura_digital: (leitura.datasAssinaturaDigital || []).map((data) => data.iso),
         datas_provaveis_vencimento: (leitura.datasProvaveisVencimento || []).map((data) => data.iso),
         datas_provaveis_emissao_realizacao: (leitura.datasProvaveisEmissaoRealizacao || []).map((data) => data.iso),
