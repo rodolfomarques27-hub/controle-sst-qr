@@ -620,7 +620,9 @@ export function Colaboradores({
                                                         className="flex h-20 w-20 shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-slate-100 text-slate-700 transition group-hover:bg-slate-950 group-hover:text-white"
                                                     >
                                                         <FotoColaborador
-                                                            src={obterFotoColaboradorSrc(c)}
+                                                            src={c}
+                                                            colaborador={c}
+                                                            colaboradorId={c.id}
                                                             nome={c.nome}
                                                             className="h-full w-full rounded-2xl"
                                                             iconClassName="h-8 w-8"

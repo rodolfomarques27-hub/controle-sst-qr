@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { QRCodeSVG } from "qrcode.react";
 import { ChevronDown, ChevronUp, Eye, EyeOff, Lock, UserRound } from "lucide-react";
-import { SUPABASE_ANON_KEY, SUPABASE_URL } from "../lib/supabaseClient";
+import { supabase, SUPABASE_ANON_KEY, SUPABASE_URL } from "../lib/supabaseClient";
 import { useStorageUrl } from "../hooks/useStorageUrl";
 import { classNames } from "../utils/sstUtils";
 
@@ -41,16 +41,106 @@ export function obterFotoColaboradorSrc(colaboradorOuSrc = {}) {
     return encontrado ? encontrado.trim() : "";
 }
 
-export function FotoColaborador({ src, nome, className = "h-12 w-12", iconClassName = "h-5 w-5" }) {
+function obterIdColaboradorFoto(colaboradorOuSrc = {}, colaboradorId = "") {
+    if (colaboradorId) return String(colaboradorId);
+    if (!colaboradorOuSrc || typeof colaboradorOuSrc !== "object") return "";
+
+    return String(
+        colaboradorOuSrc.id ||
+        colaboradorOuSrc.colaboradorId ||
+        colaboradorOuSrc.colaborador_id ||
+        colaboradorOuSrc.funcionarioId ||
+        colaboradorOuSrc.funcionario_id ||
+        ""
+    ).trim();
+}
+
+function normalizarCaminhoStorageFotoColaborador(valor = "") {
+    const texto = String(valor || "").trim();
+    if (!texto) return "";
+
+    if (/^(data:|blob:)/i.test(texto)) {
+        return texto;
+    }
+
+    const semQuery = texto.split("?")[0];
+    const marcadorStorage = "/storage/v1/object/";
+    const marcadorBucket = "/fotos-colaboradores/";
+
+    if (/^https?:\/\//i.test(texto) && semQuery.includes(marcadorStorage) && semQuery.includes(marcadorBucket)) {
+        const posicao = semQuery.indexOf(marcadorBucket);
+        return decodeURIComponent(semQuery.slice(posicao + marcadorBucket.length));
+    }
+
+    if (/^https?:\/\//i.test(texto)) {
+        return texto;
+    }
+
+    return texto
+        .replace(/^fotos-colaboradores\//i, "")
+        .replace(/^\/+/g, "")
+        .trim();
+}
+
+function escolherArquivoFotoMaisRecente(arquivos = []) {
+    const imagens = (arquivos || [])
+        .filter((arquivo) => arquivo?.name && !arquivo.name.endsWith("/"))
+        .filter((arquivo) => /\.(png|jpe?g|webp|gif|bmp)$/i.test(arquivo.name));
+
+    return imagens[0] || (arquivos || []).find((arquivo) => arquivo?.name && !arquivo.name.endsWith("/")) || null;
+}
+
+export function FotoColaborador({ src, colaborador = null, colaboradorId = "", nome, className = "h-12 w-12", iconClassName = "h-5 w-5" }) {
+    const origem = colaborador || src;
+    const idParaBusca = obterIdColaboradorFoto(origem, colaboradorId);
     const [erroImagem, setErroImagem] = useState(false);
-    const srcNormalizada = obterFotoColaboradorSrc(src);
-    const fonteExterna = /^(https?:|data:|blob:)/i.test(srcNormalizada);
-    const urlAssinada = useStorageUrl("fotos-colaboradores", fonteExterna ? "" : srcNormalizada, 600);
-    const url = fonteExterna ? srcNormalizada : urlAssinada;
+    const [caminhoFallback, setCaminhoFallback] = useState("");
+    const [tentouFallback, setTentouFallback] = useState(false);
+
+    const srcNormalizada = normalizarCaminhoStorageFotoColaborador(obterFotoColaboradorSrc(origem));
+    const caminhoPreferencial = erroImagem && caminhoFallback ? caminhoFallback : srcNormalizada || caminhoFallback;
+    const fonteExterna = /^(https?:|data:|blob:)/i.test(caminhoPreferencial);
+    const urlAssinada = useStorageUrl("fotos-colaboradores", fonteExterna ? "" : caminhoPreferencial, 600);
+    const url = fonteExterna ? caminhoPreferencial : urlAssinada;
 
     useEffect(() => {
         setErroImagem(false);
-    }, [url]);
+    }, [caminhoPreferencial]);
+
+    useEffect(() => {
+        let ativo = true;
+
+        async function buscarFotoPorPastaColaborador() {
+            if (!idParaBusca || tentouFallback) return;
+            if (srcNormalizada && !erroImagem) return;
+
+            setTentouFallback(true);
+
+            try {
+                const { data, error } = await supabase.storage
+                    .from("fotos-colaboradores")
+                    .list(idParaBusca, {
+                        limit: 50,
+                        sortBy: { column: "created_at", order: "desc" },
+                    });
+
+                if (error || !ativo) return;
+
+                const arquivo = escolherArquivoFotoMaisRecente(data || []);
+                if (arquivo?.name) {
+                    setCaminhoFallback(`${idParaBusca}/${arquivo.name}`);
+                }
+            } catch {
+                // Mantém o placeholder quando não houver política de leitura/listagem para o bucket.
+            }
+        }
+
+        buscarFotoPorPastaColaborador();
+
+        return () => {
+            ativo = false;
+        };
+    }, [idParaBusca, srcNormalizada, erroImagem, tentouFallback]);
 
     if (!url || erroImagem) {
         return (

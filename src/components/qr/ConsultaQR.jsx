@@ -74,7 +74,6 @@ export function ConsultaQR({ colaborador, colaboradores = [], onSelecionarColabo
 
     const geral = statusGeral(colaboradorAtual);
     const treinamentos = colaboradorAtual.treinamentos || [];
-    const foto = obterFotoColaboradorSrc(colaboradorAtual);
     const urlConsultaColaborador = typeof window !== "undefined" ? `${window.location.origin}/?qr=${encodeURIComponent(colaboradorAtual.token)}` : "";
     const idImpressaoQrColaborador = `qr-colaborador-impressao-${colaboradorAtual.id || colaboradorAtual.token}`;
     const imprimirQrColaborador = () => {
@@ -132,7 +131,9 @@ export function ConsultaQR({ colaborador, colaboradores = [], onSelecionarColabo
                                         className="flex w-full items-center gap-3 rounded-xl px-3 py-2 text-left hover:bg-slate-50"
                                     >
                                         <FotoColaborador
-                                            src={obterFotoColaboradorSrc(item)}
+                                            src={item}
+                                            colaborador={item}
+                                            colaboradorId={item.id}
                                             nome={item.nome}
                                             className="h-9 w-9 rounded-xl"
                                             iconClassName="h-4 w-4"
@@ -177,7 +178,9 @@ export function ConsultaQR({ colaborador, colaboradores = [], onSelecionarColabo
                 <div className="rounded-[1.5rem] bg-white p-5 md:p-8">
                     <div className="consulta-qr-perfil-grid grid gap-5 lg:grid-cols-[104px_1fr_178px] lg:items-start">
                         <FotoColaborador
-                            src={foto}
+                            src={colaboradorAtual}
+                            colaborador={colaboradorAtual}
+                            colaboradorId={colaboradorAtual.id}
                             nome={colaboradorAtual.nome}
                             className="h-24 w-24 rounded-3xl"
                             iconClassName="h-10 w-10"

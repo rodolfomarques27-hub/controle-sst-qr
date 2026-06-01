@@ -87,7 +87,9 @@ export function ConsultaQRPublica({ dados }) {
                         </div>
 
                         <FotoColaborador
-                            src={obterFotoColaboradorSrc(colaborador)}
+                            src={colaborador}
+                            colaborador={colaborador}
+                            colaboradorId={colaborador.id || colaborador.colaboradorId || colaborador.colaborador_id}
                             nome={colaborador.nome}
                             className="h-28 w-28 rounded-3xl"
                             iconClassName="h-11 w-11"
