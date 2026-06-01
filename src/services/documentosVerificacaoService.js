@@ -25,6 +25,11 @@ import {
     obterTamanhoArquivoVerificacao,
     valorUuidOuNullVerificacao,
 } from "../utils/documentosVerificacaoUtils";
+import {
+    avaliarLeituraDocumentalComCadastro,
+    executarLeituraDocumentalLocal,
+    montarRetornoLeituraParaPersistencia,
+} from "./documentosOcrService";
 
 function obterArquivoUrlDocumento(documento = {}) {
     return documento.arquivo_url ||
@@ -280,6 +285,10 @@ export function normalizarVerificacaoDocumental(item = {}) {
         recomendacoes: Array.isArray(item.recomendacoes) ? item.recomendacoes : [],
         resumo: item.resumo || "",
         origemAnalise: item.origem_analise || item.origemAnalise || "",
+        modeloIa: item.modelo_ia || item.modeloIa || "",
+        retornoIa: item.retorno_ia || item.retornoIa || null,
+        ocrTexto: item.ocr_texto || item.ocrTexto || "",
+        analisadoPorIa: Boolean(item.analisado_por_ia || item.analisadoPorIa),
         createdAt: item.created_at || item.createdAt || "",
         updatedAt: item.updated_at || item.updatedAt || "",
     };
@@ -300,6 +309,12 @@ export async function analisarDocumentoEmpresaLocal({
 
     const arquivoValidoParaHash = obterArquivoValidoVerificacao(arquivo);
     const hashArquivo = hashArquivoInformado || (arquivoValidoParaHash ? await gerarHashArquivoVerificacao(arquivoValidoParaHash) : "");
+    const leituraDocumental = await executarLeituraDocumentalLocal({
+        arquivo: arquivoValidoParaHash,
+        arquivoNome: metadadosArquivo.arquivoNome,
+        mimeType: metadadosArquivo.mimeType,
+    });
+    const retornoLeituraDocumental = montarRetornoLeituraParaPersistencia(leituraDocumental);
 
     const indiciosArquivo = filtrarIndiciosArquivoSemArquivoLocal({
         arquivo,
@@ -318,6 +333,12 @@ export async function analisarDocumentoEmpresaLocal({
         ...avaliarDatasDocumentoEmpresaVerificacao({
             dataEmissao: documento.data_emissao || documento.dataEmissao,
             dataVencimento: documento.data_vencimento || documento.dataVencimento,
+        }),
+        ...avaliarLeituraDocumentalComCadastro({
+            leitura: leituraDocumental,
+            dataEmissao: documento.data_emissao || documento.dataEmissao,
+            dataVencimento: documento.data_vencimento || documento.dataVencimento,
+            origemTipo: DOCUMENTOS_VERIFICACAO_ORIGENS.DOCUMENTO_EMPRESA,
         }),
         ...avaliarEmpresaDocumento({
             documento,
@@ -354,7 +375,12 @@ export async function analisarDocumentoEmpresaLocal({
         data_emissao: formatarDataIsoVerificacao(documento.data_emissao || documento.dataEmissao),
         data_realizacao: null,
         data_vencimento: formatarDataIsoVerificacao(documento.data_vencimento || documento.dataVencimento),
-        origem_analise: DOCUMENTOS_VERIFICACAO_ORIGEM_ANALISE.REGRAS_LOCAIS,
+        origem_analise: leituraDocumental?.executado || leituraDocumental?.datasEncontradas?.length
+            ? DOCUMENTOS_VERIFICACAO_ORIGEM_ANALISE.OCR_LOCAL
+            : DOCUMENTOS_VERIFICACAO_ORIGEM_ANALISE.REGRAS_LOCAIS,
+        retorno_ia: retornoLeituraDocumental ? { leitura_documental_local: retornoLeituraDocumental } : null,
+        ocr_texto: leituraDocumental?.textoExtraido || null,
+        analisado_por_ia: false,
         ...resultado,
     };
 }
@@ -385,6 +411,12 @@ export async function analisarCertificadoLocal({
 
     const arquivoValidoParaHash = obterArquivoValidoVerificacao(arquivo);
     const hashArquivo = hashArquivoInformado || (arquivoValidoParaHash ? await gerarHashArquivoVerificacao(arquivoValidoParaHash) : "");
+    const leituraDocumental = await executarLeituraDocumentalLocal({
+        arquivo: arquivoValidoParaHash,
+        arquivoNome: metadadosArquivo.arquivoNome,
+        mimeType: metadadosArquivo.mimeType,
+    });
+    const retornoLeituraDocumental = montarRetornoLeituraParaPersistencia(leituraDocumental);
 
     const indiciosArquivo = filtrarIndiciosArquivoSemArquivoLocal({
         arquivo: arquivoValidoParaHash,
@@ -404,6 +436,12 @@ export async function analisarCertificadoLocal({
             dataRealizacao: certificado.data_realizacao || certificado.dataRealizacao,
             dataVencimento: certificado.data_vencimento || certificado.dataVencimento,
             exigeVencimento,
+        }),
+        ...avaliarLeituraDocumentalComCadastro({
+            leitura: leituraDocumental,
+            dataRealizacao: certificado.data_realizacao || certificado.dataRealizacao,
+            dataVencimento: certificado.data_vencimento || certificado.dataVencimento,
+            origemTipo: DOCUMENTOS_VERIFICACAO_ORIGENS.CERTIFICADO,
         }),
         ...avaliarCadastroCertificado({
             certificado,
@@ -442,7 +480,12 @@ export async function analisarCertificadoLocal({
         data_emissao: null,
         data_realizacao: formatarDataIsoVerificacao(certificado.data_realizacao || certificado.dataRealizacao),
         data_vencimento: formatarDataIsoVerificacao(certificado.data_vencimento || certificado.dataVencimento),
-        origem_analise: DOCUMENTOS_VERIFICACAO_ORIGEM_ANALISE.REGRAS_LOCAIS,
+        origem_analise: leituraDocumental?.executado || leituraDocumental?.datasEncontradas?.length
+            ? DOCUMENTOS_VERIFICACAO_ORIGEM_ANALISE.OCR_LOCAL
+            : DOCUMENTOS_VERIFICACAO_ORIGEM_ANALISE.REGRAS_LOCAIS,
+        retorno_ia: retornoLeituraDocumental ? { leitura_documental_local: retornoLeituraDocumental } : null,
+        ocr_texto: leituraDocumental?.textoExtraido || null,
+        analisado_por_ia: false,
         ...resultado,
     };
 }

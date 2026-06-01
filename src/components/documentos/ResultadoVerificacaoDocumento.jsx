@@ -77,6 +77,49 @@ function normalizarLista(valor) {
     return [];
 }
 
+function normalizarObjeto(valor) {
+    if (!valor) return null;
+
+    if (typeof valor === "object") return valor;
+
+    if (typeof valor === "string") {
+        try {
+            const convertido = JSON.parse(valor);
+            return convertido && typeof convertido === "object" ? convertido : null;
+        } catch {
+            return null;
+        }
+    }
+
+    return null;
+}
+
+function limitarTextoPainel(valor = "", limite = 900) {
+    const texto = normalizarTexto(valor);
+
+    if (texto.length <= limite) return texto;
+
+    return `${texto.slice(0, limite)}...`;
+}
+
+function obterLeituraDocumentalLocal(retornoIa) {
+    const objeto = normalizarObjeto(retornoIa);
+
+    return objeto?.leitura_documental_local || objeto?.ocr_local || null;
+}
+
+function formatarTipoLeitura(tipo = "") {
+    const chave = String(tipo || "").trim().toLowerCase();
+
+    if (chave === "pdf_texto_local") return "PDF com texto local";
+    if (chave === "imagem_dependente_ocr") return "Imagem depende de OCR";
+    if (chave === "nome_arquivo") return "Nome do arquivo";
+    if (chave === "sem_arquivo_local") return "Sem arquivo local";
+    if (chave === "erro_leitura_local") return "Erro na leitura local";
+
+    return chave || "Não informado";
+}
+
 function obterTituloIndicio(indicio) {
     if (!indicio) return "Indício sem descrição";
     if (typeof indicio === "string") return indicio;
@@ -138,6 +181,53 @@ function DetalhesVerificacao({ dados, resumoCurto }) {
                 <div className="rounded-xl bg-white p-3 text-xs text-slate-500 ring-1 ring-slate-100">
                     <strong className="text-slate-700">Documento:</strong> {dados.tipoDocumento || "Documento"}
                     {dados.arquivoNome ? ` • ${dados.arquivoNome}` : ""}
+                </div>
+            )}
+
+            {(dados.ocrTexto || dados.leituraDocumentalLocal) && (
+                <div className="rounded-xl border border-blue-100 bg-blue-50/70 p-3">
+                    <h4 className="text-xs font-bold uppercase tracking-wide text-blue-700">
+                        Leitura local / OCR documental
+                    </h4>
+
+                    {dados.leituraDocumentalLocal && (
+                        <div className="mt-3 grid gap-2 text-xs text-blue-900 sm:grid-cols-3">
+                            <div className="rounded-lg bg-white/80 p-2 ring-1 ring-blue-100">
+                                <strong className="block text-blue-700">Tipo</strong>
+                                {formatarTipoLeitura(dados.leituraDocumentalLocal.tipo_leitura || dados.leituraDocumentalLocal.tipoLeitura)}
+                            </div>
+                            <div className="rounded-lg bg-white/80 p-2 ring-1 ring-blue-100">
+                                <strong className="block text-blue-700">Confiança</strong>
+                                {Number(dados.leituraDocumentalLocal.confianca || 0)}/100
+                            </div>
+                            <div className="rounded-lg bg-white/80 p-2 ring-1 ring-blue-100">
+                                <strong className="block text-blue-700">Datas lidas</strong>
+                                {(dados.leituraDocumentalLocal.datas_encontradas || dados.leituraDocumentalLocal.datasEncontradas || []).length || 0}
+                            </div>
+                        </div>
+                    )}
+
+                    {dados.leituraDocumentalLocal?.resumo && (
+                        <p className="mt-3 rounded-lg bg-white/80 p-2 text-xs leading-relaxed text-blue-900 ring-1 ring-blue-100">
+                            {dados.leituraDocumentalLocal.resumo}
+                        </p>
+                    )}
+
+                    {dados.ocrTexto && (
+                        <p className="mt-3 rounded-lg bg-white p-3 text-xs leading-relaxed text-slate-600 ring-1 ring-blue-100">
+                            {limitarTextoPainel(dados.ocrTexto)}
+                        </p>
+                    )}
+
+                    {Array.isArray(dados.leituraDocumentalLocal?.avisos) && dados.leituraDocumentalLocal.avisos.length > 0 && (
+                        <ul className="mt-3 space-y-1 text-xs text-blue-900">
+                            {dados.leituraDocumentalLocal.avisos.map((aviso, indice) => (
+                                <li key={`${aviso}-${indice}`} className="rounded-lg bg-white/80 px-2 py-1 ring-1 ring-blue-100">
+                                    {aviso}
+                                </li>
+                            ))}
+                        </ul>
+                    )}
                 </div>
             )}
 
@@ -220,6 +310,8 @@ export default function ResultadoVerificacaoDocumento({
         const arquivoNome = normalizarTexto(verificacao?.arquivo_nome || verificacao?.arquivoNome || verificacao?.nome_do_arquivo);
         const tipoDocumento = normalizarTexto(verificacao?.tipo_documento || verificacao?.tipoDocumento || verificacao?.nome_documento || verificacao?.nomeDocumento);
         const createdAt = verificacao?.created_at || verificacao?.createdAt || "";
+        const ocrTexto = normalizarTexto(verificacao?.ocr_texto || verificacao?.ocrTexto);
+        const leituraDocumentalLocal = obterLeituraDocumentalLocal(verificacao?.retorno_ia || verificacao?.retornoIa);
 
         return {
             status,
@@ -231,6 +323,8 @@ export default function ResultadoVerificacaoDocumento({
             arquivoNome,
             tipoDocumento,
             createdAt,
+            ocrTexto,
+            leituraDocumentalLocal,
         };
     }, [verificacao]);
 
