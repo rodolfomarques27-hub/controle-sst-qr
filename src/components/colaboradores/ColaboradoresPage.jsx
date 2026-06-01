@@ -17,7 +17,7 @@ import {
     Upload,
     Users,
 } from "lucide-react";
-import { Card, FotoColaborador, Header } from "../commonComponents";
+import { Card, FotoColaborador, Header, obterFotoColaboradorSrc } from "../commonComponents";
 import { MobilizacaoBadge } from "../MobilizacaoBadge";
 import { FormularioNovoColaborador } from "./FormularioNovoColaborador";
 import { ModalNovaFuncaoColaborador } from "./ModalNovaFuncaoColaborador";
@@ -371,7 +371,7 @@ export function Colaboradores({
             statusMobilizacao: colaborador.statusMobilizacao || obterStatusInicialColaborador(),
             treinamentosRemovidos: colaborador.treinamentosRemovidos || [],
             treinamentosAdicionais: colaborador.treinamentosAdicionais || [],
-            fotoAtual: colaborador.fotoUrl || "",
+            fotoAtual: obterFotoColaboradorSrc(colaborador),
             fotoNomeAtual: colaborador.fotoNome || "",
             foto: null,
         });
@@ -620,7 +620,7 @@ export function Colaboradores({
                                                         className="flex h-20 w-20 shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-slate-100 text-slate-700 transition group-hover:bg-slate-950 group-hover:text-white"
                                                     >
                                                         <FotoColaborador
-                                                            src={c.fotoUrl}
+                                                            src={obterFotoColaboradorSrc(c)}
                                                             nome={c.nome}
                                                             className="h-full w-full rounded-2xl"
                                                             iconClassName="h-8 w-8"

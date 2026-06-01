@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useState } from "react";
 import { ClipboardCheck, ShieldCheck } from "lucide-react";
 import { supabase } from "../../lib/supabaseClient";
-import { FotoColaborador, StatusPill } from "../commonComponents";
+import { FotoColaborador, StatusPill, obterFotoColaboradorSrc } from "../commonComponents";
 import { MobilizacaoBadge } from "../MobilizacaoBadge";
 import { AuditoriaCampoQRCode, statusGeralConsultaPublica } from "./AuditoriaCampoQRCode";
 import {
@@ -77,17 +77,17 @@ export function ConsultaQRPublica({ dados }) {
         : null;
 
     return (
-        <div className="min-h-screen bg-slate-100 p-4 text-slate-900">
-            <div className="mx-auto max-w-5xl rounded-[2rem] bg-slate-950 p-3 shadow-2xl">
+        <div className="consulta-qr-publica-page min-h-screen bg-slate-100 p-4 text-slate-900">
+            <div className="consulta-qr-publica-card mx-auto max-w-5xl rounded-[2rem] bg-slate-950 p-3 shadow-2xl">
                 <div className="rounded-[1.5rem] bg-white p-5 md:p-8">
-                    <div className="flex flex-col items-center text-center">
+                    <div className="consulta-qr-publica-perfil flex flex-col items-center text-center">
                         <div className="mb-3 inline-flex items-center gap-2 rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-700">
                             <ShieldCheck className="h-3.5 w-3.5" />
                             Verificação SST
                         </div>
 
                         <FotoColaborador
-                            src={colaborador.fotoUrl}
+                            src={obterFotoColaboradorSrc(colaborador)}
                             nome={colaborador.nome}
                             className="h-28 w-28 rounded-3xl"
                             iconClassName="h-11 w-11"

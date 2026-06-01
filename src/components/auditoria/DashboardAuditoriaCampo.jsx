@@ -339,6 +339,7 @@ export function DashboardAuditoriaCampo({
     const [carregandoMaisQrcodesCampo, setCarregandoMaisQrcodesCampo] = useState(false);
     const [excluindoQrCampoId, setExcluindoQrCampoId] = useState(null);
     const [mensagemQrCampo, setMensagemQrCampo] = useState("");
+    const [tentouCargaInicialAuditoriasCampo, setTentouCargaInicialAuditoriasCampo] = useState(false);
     const [buscaQrCampoSalvo, setBuscaQrCampoSalvo] = useState("");
     const [filtroTipoQrCampoSalvo, setFiltroTipoQrCampoSalvo] = useState("todos");
     const [filtroStatusQrCampoSalvo, setFiltroStatusQrCampoSalvo] = useState("todos");
@@ -569,6 +570,19 @@ export function DashboardAuditoriaCampo({
     useEffect(() => {
         carregarEmpresasCadastradasQrCampo();
     }, [carregarEmpresasCadastradasQrCampo]);
+
+    useEffect(() => {
+        if (tentouCargaInicialAuditoriasCampo || carregando || auditoriasCampo.length > 0 || typeof onRecarregar !== "function") {
+            return undefined;
+        }
+
+        const timer = window.setTimeout(() => {
+            setTentouCargaInicialAuditoriasCampo(true);
+            onRecarregar();
+        }, 250);
+
+        return () => window.clearTimeout(timer);
+    }, [auditoriasCampo.length, carregando, onRecarregar, tentouCargaInicialAuditoriasCampo]);
 
     const empresasQrCampoOpcoes = useMemo(() => {
         const mapaEmpresas = new Map();

@@ -3,7 +3,7 @@ import React, { useMemo, useState } from "react";
 import { QRCodeSVG } from "qrcode.react";
 import { motion } from "framer-motion";
 import { ClipboardCheck, Download, QrCode, Search, ShieldCheck } from "lucide-react";
-import { Card, FotoColaborador, Header, LinkPublicoQR, QRCodeReal, StatusPill } from "../commonComponents";
+import { Card, FotoColaborador, Header, LinkPublicoQR, QRCodeReal, StatusPill, obterFotoColaboradorSrc } from "../commonComponents";
 import { MobilizacaoBadge } from "../MobilizacaoBadge";
 import { DAY } from "../../constants/sstConstants";
 import { obterTreinamento, statusDocumento, statusGeral, treinamentoSemValidade } from "../../services/colaboradorDocumentosService";
@@ -53,7 +53,7 @@ export function ConsultaQR({ colaborador, colaboradores = [], onSelecionarColabo
 
     if (!colaboradorAtual) {
         return (
-            <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
+            <motion.div className="consulta-qr-page" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
                 <Header
                     titulo="Consulta por QR Code"
                     subtitulo="Selecione um colaborador para visualizar a consulta de treinamentos."
@@ -74,7 +74,7 @@ export function ConsultaQR({ colaborador, colaboradores = [], onSelecionarColabo
 
     const geral = statusGeral(colaboradorAtual);
     const treinamentos = colaboradorAtual.treinamentos || [];
-    const foto = colaboradorAtual.fotoUrl || "";
+    const foto = obterFotoColaboradorSrc(colaboradorAtual);
     const urlConsultaColaborador = typeof window !== "undefined" ? `${window.location.origin}/?qr=${encodeURIComponent(colaboradorAtual.token)}` : "";
     const idImpressaoQrColaborador = `qr-colaborador-impressao-${colaboradorAtual.id || colaboradorAtual.token}`;
     const imprimirQrColaborador = () => {
@@ -89,7 +89,7 @@ export function ConsultaQR({ colaborador, colaboradores = [], onSelecionarColabo
     };
 
     return (
-        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
+        <motion.div className="consulta-qr-page" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
             <Header
                 titulo="Consulta por QR Code"
                 subtitulo="Consulta real por token. O QR Code abre a situação do colaborador pelo link gerado."
@@ -132,7 +132,7 @@ export function ConsultaQR({ colaborador, colaboradores = [], onSelecionarColabo
                                         className="flex w-full items-center gap-3 rounded-xl px-3 py-2 text-left hover:bg-slate-50"
                                     >
                                         <FotoColaborador
-                                            src={item.fotoUrl}
+                                            src={obterFotoColaboradorSrc(item)}
                                             nome={item.nome}
                                             className="h-9 w-9 rounded-xl"
                                             iconClassName="h-4 w-4"
@@ -173,9 +173,9 @@ export function ConsultaQR({ colaborador, colaboradores = [], onSelecionarColabo
                 </div>
             </Card>
 
-            <div className="mx-auto max-w-5xl rounded-[2rem] bg-slate-950 p-3 shadow-2xl">
+            <div className="consulta-qr-card mx-auto max-w-5xl rounded-[2rem] bg-slate-950 p-3 shadow-2xl">
                 <div className="rounded-[1.5rem] bg-white p-5 md:p-8">
-                    <div className="grid gap-5 lg:grid-cols-[104px_1fr_178px] lg:items-start">
+                    <div className="consulta-qr-perfil-grid grid gap-5 lg:grid-cols-[104px_1fr_178px] lg:items-start">
                         <FotoColaborador
                             src={foto}
                             nome={colaboradorAtual.nome}
@@ -183,7 +183,7 @@ export function ConsultaQR({ colaborador, colaboradores = [], onSelecionarColabo
                             iconClassName="h-10 w-10"
                         />
 
-                        <div className="min-w-0">
+                        <div className="consulta-qr-info min-w-0">
                             <div className="mb-2 inline-flex items-center gap-2 rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-700">
                                 <ShieldCheck className="h-3.5 w-3.5" />
                                 Verificação SST
@@ -215,7 +215,7 @@ export function ConsultaQR({ colaborador, colaboradores = [], onSelecionarColabo
                             </button>
                         </div>
 
-                        <div className="flex justify-center lg:justify-end">
+                        <div className="consulta-qr-code-area flex justify-center lg:justify-end">
                             <QRCodeReal token={colaboradorAtual.token} />
                         </div>
                     </div>

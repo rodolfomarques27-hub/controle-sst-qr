@@ -5,9 +5,52 @@ import { SUPABASE_ANON_KEY, SUPABASE_URL } from "../lib/supabaseClient";
 import { useStorageUrl } from "../hooks/useStorageUrl";
 import { classNames } from "../utils/sstUtils";
 
+export function obterFotoColaboradorSrc(colaboradorOuSrc = {}) {
+    if (!colaboradorOuSrc) return "";
+
+    if (typeof colaboradorOuSrc === "string") {
+        return colaboradorOuSrc.trim();
+    }
+
+    if (typeof colaboradorOuSrc !== "object") {
+        return "";
+    }
+
+    const candidatos = [
+        colaboradorOuSrc.fotoUrl,
+        colaboradorOuSrc.foto_url,
+        colaboradorOuSrc.fotoPath,
+        colaboradorOuSrc.foto_path,
+        colaboradorOuSrc.fotoStoragePath,
+        colaboradorOuSrc.foto_storage_path,
+        colaboradorOuSrc.fotoColaborador,
+        colaboradorOuSrc.foto_colaborador,
+        colaboradorOuSrc.foto,
+        colaboradorOuSrc.avatarUrl,
+        colaboradorOuSrc.avatar_url,
+        colaboradorOuSrc.imagemUrl,
+        colaboradorOuSrc.imagem_url,
+        colaboradorOuSrc.imagem,
+        colaboradorOuSrc.path,
+        colaboradorOuSrc.caminho,
+        colaboradorOuSrc.caminhoStorage,
+        colaboradorOuSrc.caminho_storage,
+    ];
+
+    const encontrado = candidatos.find((valor) => typeof valor === "string" && valor.trim());
+    return encontrado ? encontrado.trim() : "";
+}
+
 export function FotoColaborador({ src, nome, className = "h-12 w-12", iconClassName = "h-5 w-5" }) {
     const [erroImagem, setErroImagem] = useState(false);
-    const url = useStorageUrl("fotos-colaboradores", src, 600);
+    const srcNormalizada = obterFotoColaboradorSrc(src);
+    const fonteExterna = /^(https?:|data:|blob:)/i.test(srcNormalizada);
+    const urlAssinada = useStorageUrl("fotos-colaboradores", fonteExterna ? "" : srcNormalizada, 600);
+    const url = fonteExterna ? srcNormalizada : urlAssinada;
+
+    useEffect(() => {
+        setErroImagem(false);
+    }, [url]);
 
     if (!url || erroImagem) {
         return (
@@ -22,6 +65,7 @@ export function FotoColaborador({ src, nome, className = "h-12 w-12", iconClassN
             src={url}
             alt={`Foto ${nome || "colaborador"}`}
             className={classNames("shrink-0 object-cover", className)}
+            loading="lazy"
             onError={() => setErroImagem(true)}
         />
     );

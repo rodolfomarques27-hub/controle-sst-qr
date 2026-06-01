@@ -1007,128 +1007,146 @@ ${estilosGlobaisBase}
 }
 
 
+/* ROTEIRO 6 — ETAPA 19
+   Correção mobile: fotos padronizadas, QR centralizado, auditoria com melhor leitura e tabelas sem corte visual. */
+@media (max-width: 767.98px) {
+    .consulta-qr-page,
+    .consulta-qr-publica-page {
+        width: 100% !important;
+        max-width: 100% !important;
+        overflow-x: hidden !important;
+    }
 
-/* ROTEIRO 6 — ETAPA 18
-   Ajuste fino da sidebar recolhida:
-   - centraliza todos os ícones no eixo real da coluna;
-   - reduz a coluna recolhida para eliminar sensação de deslocamento;
-   - troca o logo recolhido para um botão único, sem quadrado interno pesado. */
-@media (min-width: 1024px) {
-    .app-sidebar[data-sidebar-expanded="false"] {
-        width: 4.5rem !important;
-        min-width: 4.5rem !important;
-        max-width: 4.5rem !important;
-        flex-basis: 4.5rem !important;
+    .consulta-qr-card,
+    .consulta-qr-publica-card {
+        width: 100% !important;
+        max-width: 100% !important;
+        border-radius: 1.45rem !important;
+        padding: 0.55rem !important;
+    }
+
+    .consulta-qr-card > div,
+    .consulta-qr-publica-card > div {
+        border-radius: 1.2rem !important;
+        padding: 1rem !important;
+    }
+
+    .consulta-qr-perfil-grid {
+        display: flex !important;
+        flex-direction: column !important;
         align-items: center !important;
-        justify-content: flex-start !important;
-        padding: 0.75rem 0.5rem !important;
+        justify-content: center !important;
+        text-align: center !important;
+        gap: 1rem !important;
     }
 
-    .app-shell:not([data-sidebar-open="true"]) .app-main {
-        width: calc(100% - 4.5rem) !important;
-        margin-left: 4.5rem !important;
+    .consulta-qr-info {
+        width: 100% !important;
+        display: flex !important;
+        flex-direction: column !important;
+        align-items: center !important;
+        text-align: center !important;
     }
 
-    .app-sidebar[data-sidebar-expanded="false"] .app-sidebar-brand,
-    .app-sidebar[data-sidebar-expanded="false"] .app-sidebar-toggle,
-    .app-sidebar[data-sidebar-expanded="false"] .app-sidebar-nav-button,
-    .app-sidebar[data-sidebar-expanded="false"] .app-sidebar-user-compact button {
+    .consulta-qr-info .flex.flex-wrap,
+    .consulta-qr-info > .flex,
+    .consulta-qr-publica-perfil > .flex {
+        justify-content: center !important;
+        text-align: center !important;
+    }
+
+    .consulta-qr-info h2,
+    .consulta-qr-publica-perfil h2 {
+        max-width: 100% !important;
+        text-align: center !important;
+        font-size: 1.55rem !important;
+        line-height: 1.1 !important;
+    }
+
+    .consulta-qr-info p,
+    .consulta-qr-publica-perfil p {
+        text-align: center !important;
+    }
+
+    .consulta-qr-info a,
+    .consulta-qr-info button,
+    .consulta-qr-code-area,
+    .consulta-qr-code-area > * {
         margin-left: auto !important;
         margin-right: auto !important;
     }
 
-    .app-sidebar[data-sidebar-expanded="false"] .app-sidebar-brand {
-        width: 3rem !important;
-        height: 3rem !important;
-        min-width: 3rem !important;
-        min-height: 3rem !important;
-        padding: 0 !important;
-        border-radius: 1rem !important;
-        background: radial-gradient(circle at 35% 25%, #172033 0%, #020617 58%, #000413 100%) !important;
-        box-shadow: 0 9px 18px rgba(15, 23, 42, 0.18), inset 0 0 0 1px rgba(255, 255, 255, 0.12) !important;
-    }
-
-    .app-sidebar[data-sidebar-expanded="false"] .app-sidebar-brand-icon {
-        width: 3rem !important;
-        height: 3rem !important;
-        min-width: 3rem !important;
-        min-height: 3rem !important;
-        border-radius: 1rem !important;
-        background: transparent !important;
-        box-shadow: none !important;
-    }
-
-    .app-sidebar[data-sidebar-expanded="false"] .app-sidebar-brand-icon svg {
-        width: 1.32rem !important;
-        height: 1.32rem !important;
-        stroke-width: 2.25 !important;
-    }
-
-    .app-sidebar[data-sidebar-expanded="false"] .app-sidebar-toggle {
-        width: 2.55rem !important;
-        height: 2.55rem !important;
-        min-width: 2.55rem !important;
-        min-height: 2.55rem !important;
-        display: flex !important;
-        align-items: center !important;
-        justify-content: center !important;
-    }
-
-    .app-sidebar[data-sidebar-expanded="false"] .app-sidebar-nav {
+    .consulta-qr-info button {
         width: 100% !important;
-        min-width: 0 !important;
-        display: flex !important;
-        flex-direction: column !important;
-        align-items: center !important;
-        justify-content: flex-start !important;
-        gap: 0.38rem !important;
-        padding-left: 0 !important;
-        padding-right: 0 !important;
+        justify-content: center !important;
+        min-height: 2.65rem !important;
     }
 
-    .app-sidebar[data-sidebar-expanded="false"] .app-sidebar-nav-button {
-        width: 2.6rem !important;
-        height: 2.6rem !important;
-        min-width: 2.6rem !important;
-        min-height: 2.6rem !important;
-        max-width: 2.6rem !important;
-        max-height: 2.6rem !important;
-        display: flex !important;
-        align-items: center !important;
+    .consulta-qr-code-area {
+        width: 100% !important;
         justify-content: center !important;
-        padding: 0 !important;
-        border-radius: 0.95rem !important;
+    }
+
+    .consulta-qr-code-area :where(svg, canvas) {
+        max-width: min(72vw, 17rem) !important;
+        height: auto !important;
+    }
+
+    .consulta-qr-card .rounded-3xl.border,
+    .consulta-qr-publica-card .rounded-3xl.border {
         text-align: center !important;
-        line-height: 1 !important;
     }
 
-    .app-sidebar[data-sidebar-expanded="false"] .app-sidebar-nav-icon {
-        width: 1rem !important;
-        height: 1rem !important;
-        min-width: 1rem !important;
-        min-height: 1rem !important;
-        margin: 0 !important;
-        display: block !important;
-        transform: none !important;
-        stroke-width: 2.18 !important;
+    .consulta-qr-card .grid.grid-cols-2,
+    .consulta-qr-publica-card .grid.grid-cols-2 {
+        grid-template-columns: 1fr !important;
     }
 
-    .app-sidebar[data-sidebar-expanded="false"] .app-sidebar-user-compact {
-        width: 100% !important;
-        display: flex !important;
+    .responsive-table,
+    .dashboard-mobile-table-scroll,
+    .app-main :where(.overflow-x-auto) {
+        max-width: 100% !important;
+        overflow-x: auto !important;
+        overflow-y: hidden !important;
+        -webkit-overflow-scrolling: touch !important;
+        overscroll-behavior-x: contain !important;
+    }
+
+    .responsive-table table,
+    .app-main :where(.overflow-x-auto table) {
+        min-width: 46rem !important;
+    }
+
+    .dashboard-campo-summary-grid,
+    .auditoria-summary-grid,
+    .dashboard-auditoria-grid {
+        grid-template-columns: 1fr !important;
+        gap: 0.82rem !important;
+    }
+
+    .dashboard-campo-summary-card,
+    .auditoria-summary-card,
+    .dashboard-auditoria-card {
+        min-height: 7.4rem !important;
+        border-radius: 1.35rem !important;
+        padding: 1rem !important;
+    }
+
+    .dashboard-campo-summary-card :where(p, span, div),
+    .auditoria-summary-card :where(p, span, div),
+    .dashboard-auditoria-card :where(p, span, div) {
+        overflow-wrap: anywhere !important;
+    }
+
+    .colaboradores-section-destaque .group .flex.items-start.gap-4 {
         align-items: center !important;
-        justify-content: center !important;
-        padding: 0 !important;
     }
 
-    .app-sidebar[data-sidebar-expanded="false"] .app-sidebar-user-compact button {
-        width: 2.6rem !important;
-        height: 2.6rem !important;
-        min-width: 2.6rem !important;
-        min-height: 2.6rem !important;
-        max-width: 2.6rem !important;
-        padding: 0 !important;
-        border-radius: 0.95rem !important;
+    .colaboradores-section-destaque .group .h-20.w-20,
+    .colaboradores-section-destaque .group img.h-20.w-20 {
+        width: 4.75rem !important;
+        height: 4.75rem !important;
     }
 }
+
 `;

@@ -697,6 +697,9 @@ export function Dashboard({
                     <div
                         key={item.chave}
                         data-dashboard-card-tamanho={obterTamanhoCartaDashboard(item.chave)}
+                        data-dashboard-storage-card={ehArmazenamento ? "true" : undefined}
+                        data-dashboard-storage-level={ehArmazenamento ? (storagePercentual >= 90 ? "critico" : storagePercentual >= 70 ? "atencao" : "normal") : undefined}
+                        style={ehArmazenamento ? { "--storage-percent": `${storagePercentual}%` } : undefined}
                         className={`dashboard-summary-card rounded-3xl bg-white p-4 shadow-sm ring-1 ring-slate-200 transition hover:shadow-md ${obterClasseTamanhoCartaDashboard(item.chave)}`}
                     >
                         <div className="flex items-start gap-3">
@@ -716,6 +719,7 @@ export function Dashboard({
                                             onClick={carregarUsoStorageDashboard}
                                             disabled={carregandoStorageDashboard}
                                             title="Atualizar armazenamento"
+                                            data-storage-extra-icon="true"
                                             className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200 hover:bg-emerald-100 disabled:opacity-60"
                                         >
                                             <Upload className="h-4 w-4" />
