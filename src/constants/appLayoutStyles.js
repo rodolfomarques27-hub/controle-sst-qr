@@ -717,4 +717,142 @@ ${estilosGlobaisBase}
     }
 }
 
+
+/* ROTEIRO 6 — ETAPA 15
+   Ajuste do espaço em branco no mobile e melhoria do card de Armazenamento.
+   A identificação do card é feita no AppLayout para não depender de alterar o App.jsx. */
+.dashboard-summary-card[data-dashboard-storage-card="true"],
+.summary-card-fixed[data-dashboard-storage-card="true"],
+.info-card[data-dashboard-storage-card="true"] {
+    position: relative;
+    padding-bottom: 1.45rem !important;
+}
+
+.dashboard-summary-card[data-dashboard-storage-card="true"]::after,
+.summary-card-fixed[data-dashboard-storage-card="true"]::after,
+.info-card[data-dashboard-storage-card="true"]::after {
+    content: "";
+    position: absolute;
+    left: 1rem;
+    right: 1rem;
+    bottom: 0.8rem;
+    height: 0.42rem;
+    border-radius: 999px;
+    background: linear-gradient(
+        90deg,
+        #22c55e 0%,
+        #22c55e var(--storage-percent, 0%),
+        #e2e8f0 var(--storage-percent, 0%),
+        #e2e8f0 100%
+    );
+    box-shadow: inset 0 0 0 1px rgba(15, 23, 42, 0.04);
+}
+
+.dashboard-summary-card[data-dashboard-storage-level="atencao"]::after,
+.summary-card-fixed[data-dashboard-storage-level="atencao"]::after,
+.info-card[data-dashboard-storage-level="atencao"]::after {
+    background: linear-gradient(
+        90deg,
+        #f97316 0%,
+        #f97316 var(--storage-percent, 0%),
+        #ffedd5 var(--storage-percent, 0%),
+        #ffedd5 100%
+    );
+}
+
+.dashboard-summary-card[data-dashboard-storage-level="critico"]::after,
+.summary-card-fixed[data-dashboard-storage-level="critico"]::after,
+.info-card[data-dashboard-storage-level="critico"]::after {
+    background: linear-gradient(
+        90deg,
+        #ef4444 0%,
+        #ef4444 var(--storage-percent, 0%),
+        #fee2e2 var(--storage-percent, 0%),
+        #fee2e2 100%
+    );
+}
+
+.dashboard-summary-card[data-dashboard-storage-card="true"] [data-storage-extra-icon="true"],
+.summary-card-fixed[data-dashboard-storage-card="true"] [data-storage-extra-icon="true"],
+.info-card[data-dashboard-storage-card="true"] [data-storage-extra-icon="true"] {
+    display: none !important;
+}
+
+.dashboard-summary-card[data-dashboard-storage-card="true"] .summary-card-label,
+.summary-card-fixed[data-dashboard-storage-card="true"] .summary-card-label,
+.info-card[data-dashboard-storage-card="true"] .summary-card-label,
+.dashboard-summary-card[data-dashboard-storage-card="true"] p:first-child,
+.summary-card-fixed[data-dashboard-storage-card="true"] p:first-child,
+.info-card[data-dashboard-storage-card="true"] p:first-child {
+    white-space: nowrap !important;
+    word-break: normal !important;
+    overflow-wrap: normal !important;
+    overflow: visible !important;
+    text-overflow: clip !important;
+    font-size: 0.76rem !important;
+    line-height: 1rem !important;
+    letter-spacing: -0.02em !important;
+}
+
+.dashboard-summary-card[data-dashboard-storage-card="true"] .summary-card-detail,
+.summary-card-fixed[data-dashboard-storage-card="true"] .summary-card-detail,
+.info-card[data-dashboard-storage-card="true"] .summary-card-detail {
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+}
+
+@media (max-width: 767.98px) {
+    .page-header {
+        justify-content: flex-start !important;
+        min-height: 0 !important;
+        height: auto !important;
+        margin-bottom: 0.55rem !important;
+    }
+
+    .page-header-text {
+        flex: 0 1 auto !important;
+    }
+
+    .page-actions {
+        flex: 0 0 auto !important;
+        margin-top: 0.18rem !important;
+    }
+
+    .page-shell > .page-header + *,
+    .app-content > .page-header + *,
+    .app-content > div > .page-header + * {
+        margin-top: 0 !important;
+    }
+
+    .app-main :where(.mb-6) {
+        margin-bottom: 0.75rem !important;
+    }
+
+    .dashboard-summary-card[data-dashboard-storage-card="true"],
+    .summary-card-fixed[data-dashboard-storage-card="true"],
+    .info-card[data-dashboard-storage-card="true"] {
+        min-height: 7.2rem !important;
+        padding-bottom: 1.5rem !important;
+    }
+
+    .dashboard-summary-card[data-dashboard-storage-card="true"]::after,
+    .summary-card-fixed[data-dashboard-storage-card="true"]::after,
+    .info-card[data-dashboard-storage-card="true"]::after {
+        left: 0.85rem;
+        right: 0.85rem;
+        bottom: 0.7rem;
+        height: 0.46rem;
+    }
+
+    .dashboard-summary-card[data-dashboard-storage-card="true"] .summary-card-label,
+    .summary-card-fixed[data-dashboard-storage-card="true"] .summary-card-label,
+    .info-card[data-dashboard-storage-card="true"] .summary-card-label,
+    .dashboard-summary-card[data-dashboard-storage-card="true"] p:first-child,
+    .summary-card-fixed[data-dashboard-storage-card="true"] p:first-child,
+    .info-card[data-dashboard-storage-card="true"] p:first-child {
+        font-size: 0.78rem !important;
+    }
+}
+
 `;
