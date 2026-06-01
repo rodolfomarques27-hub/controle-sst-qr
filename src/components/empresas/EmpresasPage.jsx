@@ -687,7 +687,7 @@ export function Empresas({
 
                 {empresaAberta ? (
                     <>
-                        <div className="mt-4 grid gap-3 lg:grid-cols-3">
+                        <div className="mt-4 grid gap-3">
                             {documentosEmpresaBase.map((tipoDoc) => {
                                 const doc = docs.find((item) => item.tipo_documento === tipoDoc.tipo);
                                 const st = statusEmpresaDocumento(doc?.data_vencimento);
@@ -1843,7 +1843,7 @@ export function Empresas({
                         </div>
 
                         <div className="scrollbar-discreta flex-1 overflow-y-auto px-6 py-5">
-                            <div className="grid items-stretch gap-4 md:grid-cols-3">
+                            <div className="grid gap-4">
                                 {documentosEmpresaBase.map((tipoDoc) => {
                                     const docsAtualizadosRevisao = documentosPorEmpresa[empresaRevisao.empresa.id] || [];
                                     const doc = docsAtualizadosRevisao.find((item) => item.tipo_documento === tipoDoc.tipo);
@@ -1853,7 +1853,7 @@ export function Empresas({
                                     const chaveUpload = `${empresaRevisao.empresa.id}-${tipoDoc.tipo}`;
 
                                     return (
-                                        <div key={tipoDoc.tipo} className="flex h-full min-h-[610px] flex-col rounded-3xl border border-slate-200 p-4">
+                                        <div key={tipoDoc.tipo} className="flex h-full flex-col rounded-3xl border border-slate-200 p-4">
                                             <div className="mb-3 flex min-h-[88px] items-start justify-between gap-2">
                                                 <div className="pr-2">
                                                     <h3 className="text-lg font-bold text-slate-950">{tipoDoc.nome}</h3>
@@ -1864,7 +1864,7 @@ export function Empresas({
                                                 </div>
                                             </div>
 
-                                            <div className="flex min-h-[245px] flex-col justify-between rounded-2xl bg-white text-sm text-slate-600">
+                                            <div className="flex flex-col justify-between rounded-2xl bg-white text-sm text-slate-600">
                                                 <div className="space-y-2">
                                                     <p className="min-h-[96px] leading-relaxed"><strong>Regra:</strong> {tipoDoc.regra}</p>
                                                     <p><strong>Emissão:</strong> {doc ? formatDate(doc.data_emissao) : "Documento não enviado"}</p>
