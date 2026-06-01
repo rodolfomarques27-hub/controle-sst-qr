@@ -694,11 +694,11 @@ export function Empresas({
                                 const verificacao = obterVerificacaoDocumentoEmpresa(doc);
 
                                 return (
-                                    <div key={tipoDoc.tipo} className="rounded-2xl bg-white p-3 ring-1 ring-slate-200">
-                                        <div className="mb-2 flex items-start justify-between gap-2">
-                                            <div>
-                                                <p className="font-bold text-slate-900">{tipoDoc.nome}</p>
-                                                <p className="text-xs text-slate-400">
+                                    <div key={tipoDoc.tipo} className="overflow-hidden rounded-2xl bg-white ring-1 ring-slate-200">
+                                        <div className="flex items-start justify-between gap-3 bg-blue-700 px-4 py-3 text-white">
+                                            <div className="min-w-0">
+                                                <p className="text-base font-black tracking-tight text-white">{tipoDoc.nome}</p>
+                                                <p className="mt-0.5 text-xs text-blue-100">
                                                     {doc ? `Emissão: ${formatDate(doc.data_emissao)}` : "Documento ainda não cadastrado"}
                                                 </p>
                                             </div>
@@ -706,7 +706,7 @@ export function Empresas({
                                         </div>
 
                                         {doc ? (
-                                            <div className="space-y-2">
+                                            <div className="space-y-2 p-4">
                                                 <p className="text-xs text-slate-500">
                                                     <strong>Revisão:</strong> {doc.data_vencimento ? formatDate(doc.data_vencimento) : "Sem revisão definida"}
                                                 </p>
@@ -746,7 +746,7 @@ export function Empresas({
                                                 </div>
                                             </div>
                                         ) : (
-                                            <p className="text-xs text-slate-500">Documento ainda não cadastrado para esta empresa.</p>
+                                            <p className="p-4 text-xs text-slate-500">Documento ainda não cadastrado para esta empresa.</p>
                                         )}
                                     </div>
                                 );
@@ -1853,18 +1853,18 @@ export function Empresas({
                                     const chaveUpload = `${empresaRevisao.empresa.id}-${tipoDoc.tipo}`;
 
                                     return (
-                                        <div key={tipoDoc.tipo} className="flex h-full flex-col rounded-3xl border border-slate-200 p-4">
-                                            <div className="mb-3 flex min-h-[88px] items-start justify-between gap-2">
-                                                <div className="pr-2">
-                                                    <h3 className="text-lg font-bold text-slate-950">{tipoDoc.nome}</h3>
-                                                    <p className="min-h-[48px] text-xs leading-relaxed text-slate-400">{tipoDoc.fundamento}</p>
+                                        <div key={tipoDoc.tipo} className="flex h-full flex-col overflow-hidden rounded-3xl border border-slate-200 bg-white">
+                                            <div className="flex items-start justify-between gap-3 bg-blue-700 px-5 py-4 text-white">
+                                                <div className="min-w-0 pr-2">
+                                                    <h3 className="text-lg font-black tracking-tight text-white">{tipoDoc.nome}</h3>
+                                                    <p className="mt-1 text-xs leading-relaxed text-blue-100">{tipoDoc.fundamento}</p>
                                                 </div>
                                                 <div className="shrink-0">
-                                                    {doc ? <StatusPill status={st} small /> : <span className="rounded-full bg-red-50 px-2 py-1 text-xs font-semibold text-red-700 ring-1 ring-red-200">Pendente</span>}
+                                                    {doc ? <StatusPill status={st} small /> : <span className="rounded-full bg-white/15 px-2 py-1 text-xs font-semibold text-white ring-1 ring-white/30">Pendente</span>}
                                                 </div>
                                             </div>
 
-                                            <div className="flex flex-col justify-between rounded-2xl bg-white text-sm text-slate-600">
+                                            <div className="flex flex-col justify-between bg-white p-4 text-sm text-slate-600">
                                                 <div className="space-y-2">
                                                     <p className="min-h-[96px] leading-relaxed"><strong>Regra:</strong> {tipoDoc.regra}</p>
                                                     <p><strong>Emissão:</strong> {doc ? formatDate(doc.data_emissao) : "Documento não enviado"}</p>
@@ -1884,11 +1884,11 @@ export function Empresas({
                                                     verificacao={verificacao}
                                                     titulo={`Verificação documental ${tipoDoc.tipo}`}
                                                     mostrarDetalhesInicial={false}
-                                                    className="mt-3"
+                                                    className="mx-4 mt-3"
                                                 />
                                             )}
 
-                                            <div className="mt-5 min-h-[190px] rounded-2xl bg-slate-50 p-3">
+                                            <div className="mx-4 mb-4 mt-5 min-h-[190px] rounded-2xl bg-slate-50 p-3">
                                                 <p className="mb-2 text-xs font-bold uppercase tracking-wide text-slate-500">
                                                     {doc ? "Substituir documento" : "Enviar documento"}
                                                 </p>
