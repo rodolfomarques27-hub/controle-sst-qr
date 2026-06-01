@@ -133,7 +133,10 @@ function DetalhesVerificacao({ dados }) {
                 {dados.indicios.length > 0 ? (
                     <div className="mt-3 space-y-2">
                         {dados.indicios.map((indicio, indice) => (
-                            <div key={`${obterTituloIndicio(indicio)}-${indice}`} className="rounded-lg bg-white p-3 text-sm text-slate-700 ring-1 ring-slate-100">
+                            <div
+                                key={`${obterTituloIndicio(indicio)}-${indice}`}
+                                className="rounded-lg bg-white p-3 text-sm text-slate-700 ring-1 ring-slate-100"
+                            >
                                 <p className="font-semibold text-slate-900">
                                     {obterTituloIndicio(indicio)}
                                 </p>
@@ -196,8 +199,12 @@ export default function ResultadoVerificacaoDocumento({
         const indicios = normalizarLista(verificacao?.indicios);
         const recomendacoes = normalizarLista(verificacao?.recomendacoes);
         const resumo = normalizarTexto(verificacao?.resumo);
-        const arquivoNome = normalizarTexto(verificacao?.arquivo_nome || verificacao?.arquivoNome || verificacao?.nome_do_arquivo);
-        const tipoDocumento = normalizarTexto(verificacao?.tipo_documento || verificacao?.tipoDocumento || verificacao?.nome_documento || verificacao?.nomeDocumento);
+        const arquivoNome = normalizarTexto(
+            verificacao?.arquivo_nome || verificacao?.arquivoNome || verificacao?.nome_do_arquivo,
+        );
+        const tipoDocumento = normalizarTexto(
+            verificacao?.tipo_documento || verificacao?.tipoDocumento || verificacao?.nome_documento || verificacao?.nomeDocumento,
+        );
         const createdAt = verificacao?.created_at || verificacao?.createdAt || "";
 
         return {
@@ -236,68 +243,65 @@ export default function ResultadoVerificacaoDocumento({
 
     if (compacto) {
         return (
-            <div className={`rounded-2xl border border-slate-200 bg-gradient-to-r from-slate-50 via-white to-white p-3 shadow-sm ${className}`}>
-                <div className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
+            <div className={`rounded-2xl border border-slate-200 bg-white p-3 shadow-sm ${className}`}>
+                <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0 flex-1">
-                        <div className="flex flex-wrap items-center gap-2 text-[11px] font-bold uppercase tracking-[0.14em] text-slate-500">
-                            <Sparkles className="h-3.5 w-3.5 text-emerald-500" />
-                            Análise documental
+                        <div className="flex items-center gap-2 text-[11px] font-bold uppercase tracking-[0.14em] text-slate-500">
+                            <Sparkles className="h-3.5 w-3.5 shrink-0 text-emerald-500" />
+                            <span>Análise documental</span>
                         </div>
 
-                        <div className="mt-2 flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
-                            <div className="min-w-0 flex-1">
-                                <p className="text-sm font-semibold leading-tight text-slate-800">
-                                    {titulo}
-                                </p>
-                                {(dados.tipoDocumento || dados.arquivoNome) && (
-                                    <p className="mt-1 truncate text-xs text-slate-500">
-                                        {dados.tipoDocumento || "Documento"}
-                                        {dados.arquivoNome ? ` • ${dados.arquivoNome}` : ""}
-                                    </p>
-                                )}
-                                {dados.createdAt && (
-                                    <p className="mt-1 text-[11px] text-slate-400">
-                                        Verificado em {formatarData(dados.createdAt)}
-                                    </p>
-                                )}
-                            </div>
+                        <p className="mt-1 text-sm font-semibold leading-tight text-slate-800">
+                            {titulo}
+                        </p>
 
-                            <div className="flex flex-wrap gap-2 lg:justify-end">
-                                <span className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-[11px] font-semibold ring-1 ${statusConfig.classe}`}>
-                                    <StatusIcon className="h-3.5 w-3.5" />
-                                    {statusConfig.texto}
-                                </span>
-
-                                <span className={`inline-flex items-center rounded-full px-3 py-1 text-[11px] font-semibold ring-1 ${riscoClasse}`}>
-                                    Risco {riscoTexto}
-                                </span>
-
-                                <span className="inline-flex items-center rounded-full bg-white px-3 py-1 text-[11px] font-semibold text-slate-700 ring-1 ring-slate-200">
-                                    Score {dados.score}/100
-                                </span>
-                            </div>
-                        </div>
+                        {dados.createdAt && (
+                            <p className="mt-1 text-[11px] text-slate-400">
+                                Verificado em {formatarData(dados.createdAt)}
+                            </p>
+                        )}
                     </div>
 
                     <button
                         type="button"
                         onClick={() => setDetalhesAbertos((atual) => !atual)}
-                        className="inline-flex shrink-0 items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700 shadow-sm transition hover:bg-slate-50"
+                        className="inline-flex shrink-0 items-center justify-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-semibold text-slate-700 transition hover:bg-slate-100"
                     >
                         {detalhesAbertos ? "Recolher" : "Abrir"}
                         {detalhesAbertos ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
                     </button>
                 </div>
 
-                <div className="mt-3 rounded-2xl bg-white/90 p-3 ring-1 ring-slate-100">
-                    <p className="text-sm leading-relaxed text-slate-600">
-                        {resumoCurto}
-                    </p>
+                <div className="mt-3 flex flex-wrap items-center gap-2">
+                    <span className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-[11px] font-semibold ring-1 ${statusConfig.classe}`}>
+                        <StatusIcon className="h-3.5 w-3.5" />
+                        {statusConfig.texto}
+                    </span>
+
+                    <span className={`inline-flex items-center rounded-full px-3 py-1 text-[11px] font-semibold ring-1 ${riscoClasse}`}>
+                        Risco {riscoTexto}
+                    </span>
+
+                    <span className="inline-flex items-center rounded-full bg-slate-50 px-3 py-1 text-[11px] font-semibold text-slate-700 ring-1 ring-slate-200">
+                        Score {dados.score}/100
+                    </span>
                 </div>
+
+                <p className="mt-3 text-sm leading-relaxed text-slate-600 line-clamp-2">
+                    {resumoCurto}
+                </p>
 
                 {detalhesAbertos && (
                     <>
+                        {(dados.tipoDocumento || dados.arquivoNome) && (
+                            <div className="mt-4 rounded-xl bg-slate-50 p-3 text-xs text-slate-500 ring-1 ring-slate-100">
+                                <strong className="text-slate-700">Documento:</strong> {dados.tipoDocumento || "Documento"}
+                                {dados.arquivoNome ? ` • ${dados.arquivoNome}` : ""}
+                            </div>
+                        )}
+
                         <DetalhesVerificacao dados={dados} />
+
                         <p className="mt-4 text-xs text-slate-400">
                             A análise indica inconsistências e indícios. O sistema não confirma falsificação automaticamente.
                         </p>
