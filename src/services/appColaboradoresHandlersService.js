@@ -14,6 +14,53 @@ import {
     normalizarCertificado,
 } from "./colaboradorDocumentosService";
 
+function obterFotoUrlColaboradorAppService(colaborador = {}, origem = {}) {
+    return String(
+        colaborador.fotoUrl ||
+        colaborador.foto_url ||
+        origem.foto_url ||
+        origem.fotoUrl ||
+        origem.foto ||
+        origem.foto_colaborador ||
+        origem.avatar_url ||
+        origem.avatarUrl ||
+        ""
+    ).trim();
+}
+
+function obterFotoNomeColaboradorAppService(colaborador = {}, origem = {}) {
+    return String(
+        colaborador.fotoNome ||
+        colaborador.foto_nome ||
+        origem.foto_nome ||
+        origem.fotoNome ||
+        ""
+    ).trim();
+}
+
+function reforcarCamposFotoColaboradorAppService(colaborador = {}, origem = {}) {
+    const fotoUrl = obterFotoUrlColaboradorAppService(colaborador, origem);
+    const fotoNome = obterFotoNomeColaboradorAppService(colaborador, origem);
+
+    return {
+        ...colaborador,
+        fotoUrl,
+        foto_url: fotoUrl,
+        fotoNome,
+        foto_nome: fotoNome,
+    };
+}
+
+function localizarColaboradorAtualizadoAppService(lista = [], atual = null) {
+    if (!atual) return lista[0] || null;
+
+    return (
+        lista.find((item) => String(item.id || "") === String(atual.id || "")) ||
+        lista.find((item) => String(item.codigoFuncionario || item.codigo_funcionario || "") === String(atual.codigoFuncionario || atual.codigo_funcionario || "")) ||
+        atual
+    );
+}
+
 export async function carregarColaboradoresAppService({
     supabase,
     carregarEmpresas,
@@ -73,7 +120,7 @@ export async function carregarColaboradoresAppService({
         }, {});
 
         const normalizados = (data || []).map((item) => {
-            const colaborador = normalizarColaborador(item);
+            const colaborador = reforcarCamposFotoColaboradorAppService(normalizarColaborador(item), item);
             const empresaAtual = empresasPorId[colaborador.empresaId] || null;
             const empresaPai = empresaAtual?.empresa_pai_id ? empresasPorId[empresaAtual.empresa_pai_id] : null;
             const ehSubcontratada = Boolean(empresaPai);
@@ -122,7 +169,7 @@ export async function carregarColaboradoresAppService({
         }));
 
         setColaboradores(colaboradoresComCertificados);
-        setColaboradorSelecionado((atual) => atual || colaboradoresComCertificados[0] || null);
+        setColaboradorSelecionado((atual) => localizarColaboradorAtualizadoAppService(colaboradoresComCertificados, atual));
 
         if (colaboradoresComCertificados.length === 0 && empresas.length === 0) {
             setColaboradores([]);
@@ -230,13 +277,14 @@ export async function adicionarColaboradorAppService({
 
     try {
         const empresaCriada = await obterOuCriarEmpresa(novo.empresaNome);
-        const { colaborador, resultadoMassa } = await adicionarColaboradorCrud({
+        const { colaborador: colaboradorSalvo, resultadoMassa } = await adicionarColaboradorCrud({
             supabase,
             novo,
             empresa: empresaCriada,
             enviarFotoColaborador,
             salvarCertificadosEmMassaColaborador,
         });
+        const colaborador = reforcarCamposFotoColaboradorAppService(colaboradorSalvo, colaboradorSalvo);
 
         await carregarColaboradores();
 
@@ -278,12 +326,13 @@ export async function atualizarColaboradorAppService({
 
     try {
         const empresaCriada = await obterOuCriarEmpresa(colaboradorAtualizado.empresaNome);
-        const colaborador = await atualizarColaboradorCrud({
+        const colaboradorSalvo = await atualizarColaboradorCrud({
             supabase,
             colaboradorAtualizado,
             empresa: empresaCriada,
             enviarFotoColaborador,
         });
+        const colaborador = reforcarCamposFotoColaboradorAppService(colaboradorSalvo, colaboradorSalvo);
 
         setColaboradores((atual) =>
             atual.map((item) =>
