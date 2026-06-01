@@ -15,6 +15,7 @@ const LIMITE_BYTES_LEITURA_LOCAL = 8 * 1024 * 1024;
 const LIMITE_TEXTO_OCR_SALVAR = 6000;
 const TOLERANCIA_DIAS_COMPARACAO = 2;
 const CONFIANCA_MINIMA_COMPARACAO_DATAS = 58;
+const COMPARACAO_AUTOMATICA_DATAS_OCR_ATIVA = false;
 
 const DATAS_PADRAO_IGNORADAS = new Set([
     "1900-01-01",
@@ -213,7 +214,7 @@ function montarDataIso(diaValor, mesValor, anoValor) {
         return null;
     }
 
-    return data.toISOString().slice(0, 10);
+    return `${ano}-${String(mes).padStart(2, "0")}-${String(dia).padStart(2, "0")}`;
 }
 
 function formatarDataBr(iso = "") {
@@ -480,6 +481,7 @@ function montarRetornoLeituraBase({
         textoLimitado,
     });
     const comparacaoDatasPermitida = Boolean(
+        COMPARACAO_AUTOMATICA_DATAS_OCR_ATIVA &&
         textoSeguro &&
         datasComparaveis.length > 0 &&
         confianca >= CONFIANCA_MINIMA_COMPARACAO_DATAS &&
@@ -505,7 +507,7 @@ function montarRetornoLeituraBase({
     }
 
     if (!comparacaoDatasPermitida && datasComparaveis.length) {
-        resumo += " A confiança da leitura ainda é insuficiente para comparar com o cadastro sem revisão manual.";
+        resumo += " A comparação automática entre datas lidas e datas cadastradas está desativada nesta etapa para evitar falso alerta; a validação principal continua pelas regras locais já existentes.";
     }
 
     return {
@@ -729,68 +731,15 @@ function avaliarAssinaturaDigitalLeitura({ leitura, dataVencimento } = {}) {
 
 export function avaliarLeituraDocumentalComCadastro({
     leitura,
-    dataEmissao,
-    dataRealizacao,
-    dataVencimento,
-    origemTipo = "documento_empresa",
 } = {}) {
-    const indicios = [];
+    if (!leitura) return [];
 
-    if (!leitura) return indicios;
-
-    if (
-        leitura.comparacaoDatasPermitida &&
-        leitura.executado &&
-        !leitura.datasDocumentoConfiaveis?.length &&
-        textoContemConteudoMinimo(leitura.textoExtraido)
-    ) {
-        indicios.push(criarIndicioVerificacao({
-            codigo: "nenhuma_data_localizada_leitura_documental",
-            tipo: DOCUMENTOS_VERIFICACAO_TIPOS_INDICIO.OCR,
-            titulo: "Nenhuma data localizada na leitura local do documento",
-            detalhe: "O arquivo possui algum texto legível, mas nenhuma data foi localizada nos formatos esperados.",
-            peso: DOCUMENTOS_VERIFICACAO_PESOS.NENHUMA_DATA_LOCALIZADA_DOCUMENTO,
-            recomendacao: "Conferir manualmente datas, assinatura, emissão e validade do documento.",
-            dados: {
-                tipoLeitura: leitura.tipoLeitura,
-                confianca: leitura.confianca,
-            },
-        }));
-    }
-
-    if (leitura.comparacaoDatasPermitida) {
-        const indicioDataEmissao = origemTipo === "certificado"
-            ? compararCampoDataCadastro({
-                leitura,
-                dataCadastro: dataRealizacao,
-                labelCampo: "Data de realização/emissão",
-                codigo: "data_realizacao_nao_localizada_documento",
-                categoriaPreferencial: "emissao_realizacao",
-            })
-            : compararCampoDataCadastro({
-                leitura,
-                dataCadastro: dataEmissao,
-                labelCampo: "Data de emissão",
-                codigo: "data_emissao_nao_localizada_documento",
-                categoriaPreferencial: "emissao_realizacao",
-            });
-
-        const indicioVencimento = compararCampoDataCadastro({
-            leitura,
-            dataCadastro: dataVencimento,
-            labelCampo: "Data de vencimento",
-            codigo: "data_vencimento_nao_localizada_documento",
-            categoriaPreferencial: "vencimento",
-            pesoPadrao: DOCUMENTOS_VERIFICACAO_PESOS.DATA_VENCIMENTO_DIVERGENTE_DOCUMENTO,
-        });
-
-        if (indicioDataEmissao) indicios.push(indicioDataEmissao);
-        if (indicioVencimento) indicios.push(indicioVencimento);
-    }
-
-    indicios.push(...avaliarAssinaturaDigitalLeitura({ leitura, dataVencimento }));
-
-    return indicios;
+    // Etapa de estabilização: a leitura local/OCR fica apenas informativa.
+    // A verificação documental principal continua sendo feita pelas regras locais
+    // de arquivo, cadastro, vencimento, duplicidade e observação.
+    // Isso evita falso indício quando o PDF possui camada técnica, texto parcial,
+    // imagem escaneada ou datas encontradas somente no nome do arquivo.
+    return [];
 }
 
 export function montarRetornoLeituraParaPersistencia(leitura = null) {
