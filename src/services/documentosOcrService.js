@@ -348,6 +348,174 @@ function textoPossuiConteudoDocumentoConfiavel(texto = "") {
     return tokens >= 8 || termos >= 2 || (limpo.length >= 180 && tokens >= 4);
 }
 
+
+function limitarTextoResumo(valor = "", limite = 170) {
+    const texto = limparTextoPossivelDocumento(valor)
+        .replace(/\s+([,.;:])/g, "$1")
+        .trim();
+
+    if (!texto) return "";
+    if (texto.length <= limite) return texto;
+
+    return `${texto.slice(0, limite).trim()}...`;
+}
+
+function encontrarPrimeiroGrupo(texto = "", regex, grupo = 1) {
+    const match = String(texto || "").match(regex);
+    return limparTextoPossivelDocumento(match?.[grupo] || "");
+}
+
+function obterTipoDocumentoResumo(texto = "", arquivoNome = "") {
+    const base = normalizarTextoVerificacao(`${arquivoNome} ${texto.slice(0, 1500)}`);
+
+    if (base.includes("programa de controle medico de saude ocupacional") || base.includes("pcmso")) {
+        return "PCMSO - Programa de Controle Médico de Saúde Ocupacional";
+    }
+
+    if (base.includes("programa de gerenciamento de riscos") || /\bpgr\b/.test(base)) {
+        return "PGR - Programa de Gerenciamento de Riscos";
+    }
+
+    if (base.includes("laudo tecnico das condicoes ambientais") || base.includes("ltcat")) {
+        return "LTCAT - Laudo Técnico das Condições Ambientais do Trabalho";
+    }
+
+    if (base.includes("atestado de saude ocupacional") || /\baso\b/.test(base)) {
+        return "ASO - Atestado de Saúde Ocupacional";
+    }
+
+    if (base.includes("certificado")) {
+        return "Certificado / comprovante de treinamento";
+    }
+
+    return "";
+}
+
+function obterEmpresaResumo(texto = "") {
+    return limitarTextoResumo(
+        encontrarPrimeiroGrupo(
+            texto,
+            /Empresa:\s*([\s\S]{3,180}?)(?:\s+CPF\s*\/\s*CNPJ|\s+CNPJ|\s+Endere[cç]o|\s+Unidade:|\s+CPF\b|$)/i
+        ),
+        120
+    );
+}
+
+function obterCnpjResumo(texto = "") {
+    return encontrarPrimeiroGrupo(texto, /\b(\d{2}\.\d{3}\.\d{3}\/\d{4}-\d{2})\b/);
+}
+
+function obterVigenciaResumo(texto = "") {
+    const match = String(texto || "").match(/Vig[êe]ncia:[^0-9]{0,180}([0-3]?\d[\/.-][01]?\d[\/.-](?:19|20)\d{2})\s+a\s+([0-3]?\d[\/.-][01]?\d[\/.-](?:19|20)\d{2})/i);
+
+    if (!match) return "";
+
+    return `${match[1]} a ${match[2]}`;
+}
+
+function obterAssinaturaResumo(texto = "") {
+    const frase = encontrarPrimeiroGrupo(
+        texto,
+        /(Documento assinado digitalmente[\s\S]{0,280}?\.)/i
+    );
+
+    return limitarTextoResumo(frase, 220);
+}
+
+function obterDataAssinaturaResumo(texto = "") {
+    return encontrarPrimeiroGrupo(
+        texto,
+        /\bem:\s*([0-3]?\d[\/.-][01]?\d[\/.-](?:19|20)\d{2})\b/i
+    );
+}
+
+function obterCodigoVerificacaoResumo(texto = "") {
+    return encontrarPrimeiroGrupo(
+        texto,
+        /C[oó]digo de verifica[cç][aã]o de autenticidade:\s*([A-Z0-9._-]{6,80})/i
+    );
+}
+
+function obterTotalFuncionariosResumo(texto = "") {
+    return encontrarPrimeiroGrupo(
+        texto,
+        /Total de funcion[aá]rios:\s*(\d{1,6})\b/i
+    );
+}
+
+function montarResumoTextualDocumento({
+    textoExtraido = "",
+    arquivoNome = "",
+    datasDocumentoConfiaveis = [],
+    paginasLidas = 0,
+    totalPaginas = 0,
+} = {}) {
+    const texto = limparTextoPossivelDocumento(textoExtraido);
+    const resumo = [];
+
+    if (!texto) return resumo;
+
+    const tipoDocumento = obterTipoDocumentoResumo(texto, arquivoNome);
+    const empresa = obterEmpresaResumo(texto);
+    const cnpj = obterCnpjResumo(texto);
+    const vigencia = obterVigenciaResumo(texto);
+    const assinatura = obterAssinaturaResumo(texto);
+    const dataAssinatura = obterDataAssinaturaResumo(texto);
+    const codigoVerificacao = obterCodigoVerificacaoResumo(texto);
+    const totalFuncionarios = obterTotalFuncionariosResumo(texto);
+    const datasUnicas = Array.from(new Set((datasDocumentoConfiaveis || []).map((data) => data.br).filter(Boolean)));
+
+    if (tipoDocumento) {
+        resumo.push(`Documento identificado: ${tipoDocumento}.`);
+    }
+
+    if (empresa) {
+        resumo.push(`Empresa identificada: ${empresa}${cnpj ? `, CNPJ ${cnpj}` : ""}.`);
+    } else if (cnpj) {
+        resumo.push(`CNPJ identificado no documento: ${cnpj}.`);
+    }
+
+    if (vigencia) {
+        resumo.push(`Vigência localizada no texto: ${vigencia}.`);
+    } else if (datasUnicas.length) {
+        resumo.push(`Datas localizadas no texto: ${datasUnicas.slice(0, 6).join(", ")}.`);
+    }
+
+    if (dataAssinatura) {
+        resumo.push(`Data de assinatura digital localizada: ${dataAssinatura}.`);
+    }
+
+    if (assinatura) {
+        resumo.push(assinatura);
+    }
+
+    if (codigoVerificacao) {
+        resumo.push(`Código de verificação de autenticidade localizado: ${codigoVerificacao}.`);
+    }
+
+    if (totalFuncionarios) {
+        resumo.push(`Total de funcionários citado no documento: ${totalFuncionarios}.`);
+    }
+
+    if (paginasLidas && totalPaginas) {
+        resumo.push(`Leitura feita nas ${paginasLidas} primeiras página(s) de ${totalPaginas}, para preservar performance no navegador.`);
+    }
+
+    if (!resumo.length) {
+        resumo.push("Texto extraído com sucesso, mas sem campos principais suficientes para resumo automático confiável.");
+    }
+
+    return Array.from(new Set(resumo)).slice(0, 8);
+}
+
+function montarPreviaTextoDocumento(texto = "") {
+    const limpo = limparTextoPossivelDocumento(texto);
+
+    if (!limpo) return "";
+
+    return limitarTextoResumo(limpo, 360);
+}
+
 function calcularConfiancaLeitura({ textoExtraido = "", datasTexto = [], tipoLeitura = "", textoLimitado = false } = {}) {
     let score = 0;
 
@@ -572,6 +740,8 @@ function montarRetornoLeituraBase({
     extensao = "",
     textoExtraido = "",
     textoLimitado = false,
+    paginasLidas = 0,
+    totalPaginas = 0,
     avisos = [],
     erro = "",
 } = {}) {
@@ -580,6 +750,14 @@ function montarRetornoLeituraBase({
     const datasNomeArquivo = arquivoNome ? extrairDatasTextoDocumental(arquivoNome, "nome_arquivo") : [];
     const datasEncontradas = [...datasTexto, ...datasNomeArquivo];
     const datasComparaveis = datasTexto;
+    const resumoTextual = montarResumoTextualDocumento({
+        textoExtraido: textoSeguro,
+        arquivoNome,
+        datasDocumentoConfiaveis: datasComparaveis,
+        paginasLidas,
+        totalPaginas,
+    });
+    const textoPrevia = montarPreviaTextoDocumento(textoSeguro);
     const confianca = calcularConfiancaLeitura({
         textoExtraido: textoSeguro,
         datasTexto,
@@ -624,7 +802,11 @@ function montarRetornoLeituraBase({
         extensao,
         confianca,
         textoExtraido: textoSeguro,
+        textoPrevia,
+        resumoTextual,
         textoLimitado,
+        paginasLidas,
+        totalPaginas,
         datasEncontradas,
         datasDocumentoConfiaveis: datasComparaveis,
         datasNomeArquivo,
@@ -711,6 +893,8 @@ export async function executarLeituraDocumentalLocal({ arquivo = null, arquivoNo
             extensao,
             textoExtraido,
             textoLimitado,
+            paginasLidas: leituraPdfJs.paginasLidas || 0,
+            totalPaginas: leituraPdfJs.totalPaginas || 0,
             avisos,
         });
     } catch (error) {
@@ -861,6 +1045,10 @@ export function montarRetornoLeituraParaPersistencia(leitura = null) {
         executado: Boolean(leitura.executado),
         confianca: leitura.confianca,
         resumo: leitura.resumo,
+        resumo_textual: leitura.resumoTextual || [],
+        texto_previa: leitura.textoPrevia || "",
+        paginas_lidas: leitura.paginasLidas || 0,
+        total_paginas: leitura.totalPaginas || 0,
         comparacao_datas_permitida: Boolean(leitura.comparacaoDatasPermitida),
         datas_encontradas: (leitura.datasEncontradas || []).map((data) => ({
             iso: data.iso,

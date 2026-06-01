@@ -132,6 +132,168 @@ function obterTextoOcrPainel(valor = "") {
     return texto;
 }
 
+
+function limitarTextoResumoPainel(valor = "", limite = 170) {
+    const texto = normalizarTexto(valor).replace(/\s+/g, " ").trim();
+
+    if (!texto) return "";
+    if (texto.length <= limite) return texto;
+
+    return `${texto.slice(0, limite).trim()}...`;
+}
+
+function obterPrimeiroGrupoPainel(texto = "", regex, grupo = 1) {
+    const match = String(texto || "").match(regex);
+    return normalizarTexto(match?.[grupo] || "").replace(/\s+/g, " ").trim();
+}
+
+function obterTipoDocumentoResumoPainel(texto = "", arquivoNome = "") {
+    const base = `${arquivoNome} ${texto.slice(0, 1500)}`
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .toLowerCase();
+
+    if (base.includes("programa de controle medico de saude ocupacional") || base.includes("pcmso")) {
+        return "PCMSO - Programa de Controle Médico de Saúde Ocupacional";
+    }
+
+    if (base.includes("programa de gerenciamento de riscos") || /\bpgr\b/.test(base)) {
+        return "PGR - Programa de Gerenciamento de Riscos";
+    }
+
+    if (base.includes("laudo tecnico das condicoes ambientais") || base.includes("ltcat")) {
+        return "LTCAT - Laudo Técnico das Condições Ambientais do Trabalho";
+    }
+
+    if (base.includes("atestado de saude ocupacional") || /\baso\b/.test(base)) {
+        return "ASO - Atestado de Saúde Ocupacional";
+    }
+
+    if (base.includes("certificado")) {
+        return "Certificado / comprovante de treinamento";
+    }
+
+    return "";
+}
+
+function obterEmpresaResumoPainel(texto = "") {
+    return limitarTextoResumoPainel(
+        obterPrimeiroGrupoPainel(
+            texto,
+            /Empresa:\s*([\s\S]{3,180}?)(?:\s+CPF\s*\/\s*CNPJ|\s+CNPJ|\s+Endere[cç]o|\s+Unidade:|\s+CPF\b|$)/i
+        ),
+        120
+    );
+}
+
+function obterCnpjResumoPainel(texto = "") {
+    return obterPrimeiroGrupoPainel(texto, /\b(\d{2}\.\d{3}\.\d{3}\/\d{4}-\d{2})\b/);
+}
+
+function obterVigenciaResumoPainel(texto = "") {
+    const match = String(texto || "").match(/Vig[êe]ncia:[^0-9]{0,180}([0-3]?\d[\/.-][01]?\d[\/.-](?:19|20)\d{2})\s+a\s+([0-3]?\d[\/.-][01]?\d[\/.-](?:19|20)\d{2})/i);
+
+    if (!match) return "";
+
+    return `${match[1]} a ${match[2]}`;
+}
+
+function obterDataAssinaturaResumoPainel(texto = "") {
+    return obterPrimeiroGrupoPainel(texto, /\bem:\s*([0-3]?\d[\/.-][01]?\d[\/.-](?:19|20)\d{2})\b/i);
+}
+
+function obterCodigoVerificacaoResumoPainel(texto = "") {
+    return obterPrimeiroGrupoPainel(texto, /C[oó]digo de verifica[cç][aã]o de autenticidade:\s*([A-Z0-9._-]{6,80})/i);
+}
+
+function obterTotalFuncionariosResumoPainel(texto = "") {
+    return obterPrimeiroGrupoPainel(texto, /Total de funcion[aá]rios:\s*(\d{1,6})\b/i);
+}
+
+function normalizarResumoTextualPainel(valor) {
+    if (Array.isArray(valor)) {
+        return valor.map((item) => normalizarTexto(item)).filter(Boolean);
+    }
+
+    if (typeof valor === "string") {
+        try {
+            const convertido = JSON.parse(valor);
+            return Array.isArray(convertido)
+                ? convertido.map((item) => normalizarTexto(item)).filter(Boolean)
+                : [];
+        } catch {
+            return valor.trim() ? [valor.trim()] : [];
+        }
+    }
+
+    return [];
+}
+
+function montarResumoTextoOcrPainel({ texto = "", arquivoNome = "", leitura = null } = {}) {
+    const resumoSalvo = normalizarResumoTextualPainel(leitura?.resumo_textual || leitura?.resumoTextual);
+
+    if (resumoSalvo.length) return resumoSalvo;
+
+    const conteudo = normalizarTexto(texto).replace(/\s+/g, " ").trim();
+    const resumo = [];
+
+    if (!conteudo) return resumo;
+
+    const tipoDocumento = obterTipoDocumentoResumoPainel(conteudo, arquivoNome);
+    const empresa = obterEmpresaResumoPainel(conteudo);
+    const cnpj = obterCnpjResumoPainel(conteudo);
+    const vigencia = obterVigenciaResumoPainel(conteudo);
+    const dataAssinatura = obterDataAssinaturaResumoPainel(conteudo);
+    const codigoVerificacao = obterCodigoVerificacaoResumoPainel(conteudo);
+    const totalFuncionarios = obterTotalFuncionariosResumoPainel(conteudo);
+
+    if (tipoDocumento) resumo.push(`Documento identificado: ${tipoDocumento}.`);
+    if (empresa) resumo.push(`Empresa identificada: ${empresa}${cnpj ? `, CNPJ ${cnpj}` : ""}.`);
+    else if (cnpj) resumo.push(`CNPJ identificado no documento: ${cnpj}.`);
+    if (vigencia) resumo.push(`Vigência localizada no texto: ${vigencia}.`);
+    if (dataAssinatura) resumo.push(`Data de assinatura digital localizada: ${dataAssinatura}.`);
+    if (codigoVerificacao) resumo.push(`Código de verificação de autenticidade localizado: ${codigoVerificacao}.`);
+    if (totalFuncionarios) resumo.push(`Total de funcionários citado no documento: ${totalFuncionarios}.`);
+
+    if (!resumo.length) {
+        resumo.push(limitarTextoResumoPainel(conteudo, 360));
+    }
+
+    return Array.from(new Set(resumo)).filter(Boolean).slice(0, 8);
+}
+
+function formatarDataLeituraPainel(valor = "") {
+    const texto = String(valor || "").slice(0, 10);
+    const partes = texto.split("-");
+
+    if (partes.length === 3) {
+        return `${partes[2]}/${partes[1]}/${partes[0]}`;
+    }
+
+    return valor;
+}
+
+function obterDatasLidasPainel(leitura = null) {
+    const datasDocumento = leitura?.datas_documento_confiaveis || leitura?.datasDocumentoConfiaveis;
+
+    if (Array.isArray(datasDocumento) && datasDocumento.length) {
+        return Array.from(new Set(datasDocumento.map((data) => formatarDataLeituraPainel(data)).filter(Boolean)));
+    }
+
+    const datasEncontradas = leitura?.datas_encontradas || leitura?.datasEncontradas;
+
+    if (Array.isArray(datasEncontradas)) {
+        return Array.from(new Set(
+            datasEncontradas
+                .filter((data) => String(data?.origem || "") !== "nome_arquivo")
+                .map((data) => data?.br || formatarDataLeituraPainel(data?.iso || data))
+                .filter(Boolean)
+        ));
+    }
+
+    return [];
+}
+
 function obterLeituraDocumentalLocal(retornoIa) {
     const objeto = normalizarObjeto(retornoIa);
 
@@ -233,7 +395,7 @@ function DetalhesVerificacao({ dados, resumoCurto }) {
                             </div>
                             <div className="rounded-lg bg-white/80 p-2 ring-1 ring-blue-100">
                                 <strong className="block text-blue-700">Datas lidas</strong>
-                                {(dados.leituraDocumentalLocal.datas_encontradas || dados.leituraDocumentalLocal.datasEncontradas || []).length || 0}
+                                {dados.datasLidasOcr.length || 0}
                             </div>
                         </div>
                     )}
@@ -244,10 +406,24 @@ function DetalhesVerificacao({ dados, resumoCurto }) {
                         </p>
                     )}
 
-                    {dados.ocrTexto && (
-                        <p className="mt-3 rounded-lg bg-white p-3 text-xs leading-relaxed text-slate-600 ring-1 ring-blue-100">
-                            {limitarTextoPainel(dados.ocrTexto)}
+                    {dados.datasLidasOcr.length > 0 && (
+                        <p className="mt-2 rounded-lg bg-white/80 p-2 text-xs leading-relaxed text-blue-900 ring-1 ring-blue-100">
+                            <strong>Datas únicas lidas no texto:</strong> {dados.datasLidasOcr.join(", ")}
                         </p>
+                    )}
+
+                    {dados.resumoTextoOcr.length > 0 && (
+                        <div className="mt-3 rounded-lg bg-white p-3 text-xs leading-relaxed text-blue-950 ring-1 ring-blue-100">
+                            <strong className="mb-2 block text-blue-700">Resumo do texto lido</strong>
+                            <ul className="space-y-1.5">
+                                {dados.resumoTextoOcr.map((item, indice) => (
+                                    <li key={`${item}-${indice}`} className="flex gap-2">
+                                        <span className="mt-1 h-1.5 w-1.5 shrink-0 rounded-full bg-blue-500" />
+                                        <span>{item}</span>
+                                    </li>
+                                ))}
+                            </ul>
+                        </div>
                     )}
 
                     {dados.ocrTextoOculto && (
@@ -351,6 +527,12 @@ export default function ResultadoVerificacaoDocumento({
         const ocrTexto = obterTextoOcrPainel(ocrTextoBruto);
         const ocrTextoOculto = Boolean(ocrTextoBruto && !ocrTexto);
         const leituraDocumentalLocal = obterLeituraDocumentalLocal(verificacao?.retorno_ia || verificacao?.retornoIa);
+        const resumoTextoOcr = montarResumoTextoOcrPainel({
+            texto: ocrTexto,
+            arquivoNome,
+            leitura: leituraDocumentalLocal,
+        });
+        const datasLidasOcr = obterDatasLidasPainel(leituraDocumentalLocal);
 
         return {
             status,
@@ -365,6 +547,8 @@ export default function ResultadoVerificacaoDocumento({
             ocrTexto,
             ocrTextoOculto,
             leituraDocumentalLocal,
+            resumoTextoOcr,
+            datasLidasOcr,
         };
     }, [verificacao]);
 
