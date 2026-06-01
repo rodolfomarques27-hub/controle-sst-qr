@@ -32,6 +32,8 @@ export function AppLayout({
                         <AppMobileHeader
                             nav={nav}
                             tela={tela}
+                            usuario={usuario}
+                            sair={sair}
                             onSelecionarTela={onSelecionarTela}
                         />
 
