@@ -1149,4 +1149,149 @@ ${estilosGlobaisBase}
     }
 }
 
+
+
+/* ROTEIRO 6 — ETAPA 20
+   Correção final do ícone cortado na sidebar recolhida.
+   O ajuste deixa a coluna recolhida com centro óptico fixo, remove recortes do botão ativo
+   e simplifica o logo superior para não parecer um quadrado dentro de outro. */
+@media (min-width: 1024px) {
+    .app-sidebar[data-sidebar-expanded="false"] {
+        width: 5rem !important;
+        min-width: 5rem !important;
+        max-width: 5rem !important;
+        padding: 0.72rem 0.55rem !important;
+        align-items: center !important;
+        overflow: visible !important;
+    }
+
+    .app-sidebar[data-sidebar-expanded="false"] .app-sidebar-brand,
+    .app-sidebar[data-sidebar-expanded="false"] .app-sidebar-toggle,
+    .app-sidebar[data-sidebar-expanded="false"] .app-sidebar-nav,
+    .app-sidebar[data-sidebar-expanded="false"] .app-sidebar-user-compact {
+        width: 100% !important;
+        max-width: 100% !important;
+        margin-left: auto !important;
+        margin-right: auto !important;
+        justify-items: center !important;
+        justify-content: center !important;
+        align-items: center !important;
+        text-align: center !important;
+        box-sizing: border-box !important;
+    }
+
+    .app-sidebar[data-sidebar-expanded="false"] .app-sidebar-brand {
+        width: 2.95rem !important;
+        height: 2.95rem !important;
+        min-width: 2.95rem !important;
+        min-height: 2.95rem !important;
+        padding: 0 !important;
+        border-radius: 1rem !important;
+        background: #020617 !important;
+        overflow: visible !important;
+        box-shadow: 0 10px 22px rgba(15, 23, 42, 0.18), inset 0 0 0 1px rgba(255, 255, 255, 0.08) !important;
+    }
+
+    .app-sidebar[data-sidebar-expanded="false"] .app-sidebar-brand-icon {
+        width: 2.95rem !important;
+        height: 2.95rem !important;
+        min-width: 2.95rem !important;
+        min-height: 2.95rem !important;
+        border-radius: 1rem !important;
+        background: transparent !important;
+        color: #ffffff !important;
+        box-shadow: none !important;
+    }
+
+    .app-sidebar[data-sidebar-expanded="false"] .app-sidebar-brand-icon svg {
+        width: 1.22rem !important;
+        height: 1.22rem !important;
+        display: block !important;
+        margin: 0 !important;
+        overflow: visible !important;
+        stroke-width: 2.25 !important;
+    }
+
+    .app-sidebar[data-sidebar-expanded="false"] .app-sidebar-toggle {
+        width: 2.55rem !important;
+        height: 2.55rem !important;
+        min-width: 2.55rem !important;
+        min-height: 2.55rem !important;
+        padding: 0 !important;
+        border-radius: 0.95rem !important;
+        overflow: visible !important;
+    }
+
+    .app-sidebar[data-sidebar-expanded="false"] .app-sidebar-toggle span {
+        display: inline-flex !important;
+        width: 1rem !important;
+        height: 1rem !important;
+        align-items: center !important;
+        justify-content: center !important;
+        line-height: 1 !important;
+        transform: translateY(-0.02rem) !important;
+    }
+
+    .app-sidebar[data-sidebar-expanded="false"] .app-sidebar-nav {
+        display: grid !important;
+        grid-template-columns: 1fr !important;
+        gap: 0.46rem !important;
+        padding: 0 !important;
+        overflow: visible !important;
+        scrollbar-width: none !important;
+    }
+
+    .app-sidebar[data-sidebar-expanded="false"] .app-sidebar-nav-button {
+        display: inline-flex !important;
+        width: 2.55rem !important;
+        height: 2.55rem !important;
+        min-width: 2.55rem !important;
+        min-height: 2.55rem !important;
+        max-width: 2.55rem !important;
+        max-height: 2.55rem !important;
+        margin: 0 auto !important;
+        padding: 0 !important;
+        align-items: center !important;
+        justify-content: center !important;
+        justify-self: center !important;
+        border-radius: 0.95rem !important;
+        overflow: visible !important;
+        box-sizing: border-box !important;
+    }
+
+    .app-sidebar[data-sidebar-expanded="false"] .app-sidebar-nav-button.bg-slate-950 {
+        background: #020617 !important;
+        box-shadow: 0 9px 18px rgba(15, 23, 42, 0.15) !important;
+    }
+
+    .app-sidebar[data-sidebar-expanded="false"] .app-sidebar-nav-icon {
+        display: block !important;
+        width: 1.05rem !important;
+        height: 1.05rem !important;
+        min-width: 1.05rem !important;
+        min-height: 1.05rem !important;
+        margin: 0 !important;
+        overflow: visible !important;
+        stroke-width: 2.25 !important;
+        transform: none !important;
+    }
+
+    .app-sidebar[data-sidebar-expanded="false"] .app-sidebar-user-compact {
+        margin-top: auto !important;
+        padding: 0 !important;
+        overflow: visible !important;
+    }
+
+    .app-sidebar[data-sidebar-expanded="false"] .app-sidebar-user-compact button {
+        width: 2.55rem !important;
+        height: 2.55rem !important;
+        min-width: 2.55rem !important;
+        min-height: 2.55rem !important;
+        padding: 0 !important;
+        border-radius: 0.95rem !important;
+        font-size: 0.62rem !important;
+        overflow: visible !important;
+    }
+}
+
 `;

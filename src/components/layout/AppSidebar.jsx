@@ -40,14 +40,18 @@ export function AppSidebar({
                 menuExpandido ? "w-72 p-5" : "w-20 p-3"
             )}
         >
-            <div className={classNames(
-                "app-sidebar-brand flex items-center bg-slate-950 text-white shadow-sm",
-                menuExpandido ? "gap-3 rounded-3xl p-4" : "mx-auto h-14 w-14 justify-center rounded-2xl p-0"
-            )}>
-                <div className={classNames(
-                    "app-sidebar-brand-icon flex shrink-0 items-center justify-center rounded-2xl bg-white/10",
-                    menuExpandido ? "h-12 w-12" : "h-11 w-11"
-                )}>
+            <div
+                className={classNames(
+                    "app-sidebar-brand flex items-center bg-slate-950 text-white shadow-sm",
+                    menuExpandido ? "gap-3 rounded-3xl p-4" : "mx-auto h-12 w-12 justify-center rounded-2xl p-0"
+                )}
+            >
+                <div
+                    className={classNames(
+                        "app-sidebar-brand-icon flex shrink-0 items-center justify-center rounded-2xl",
+                        menuExpandido ? "h-12 w-12 bg-white/10" : "h-12 w-12 bg-transparent"
+                    )}
+                >
                     <ShieldCheck className={classNames("shrink-0", menuExpandido ? "h-6 w-6" : "h-5 w-5")} />
                 </div>
                 {menuExpandido && (
@@ -71,10 +75,12 @@ export function AppSidebar({
                 {menuExpandido && <span>{menuLateralAberto ? "Ocultar menu" : "Fixar menu"}</span>}
             </button>
 
-            <nav className={classNames(
-                "app-sidebar-nav scrollbar-discreta mt-6",
-                menuExpandido ? "space-y-2" : "grid justify-items-center gap-2"
-            )}>
+            <nav
+                className={classNames(
+                    "app-sidebar-nav scrollbar-discreta mt-6",
+                    menuExpandido ? "space-y-2" : "grid justify-items-center gap-2"
+                )}
+            >
                 {nav.map((item) => {
                     const Icon = item.icon;
 
@@ -84,7 +90,7 @@ export function AppSidebar({
                             onClick={() => onSelecionarTela(item.id, item.label)}
                             className={classNames(
                                 "app-sidebar-nav-button flex items-center rounded-2xl text-left text-sm font-medium transition",
-                                menuExpandido ? "w-full gap-3 px-4 py-3" : "h-11 w-11 justify-center p-0",
+                                menuExpandido ? "w-full gap-3 px-4 py-3" : "h-10 w-10 justify-center p-0",
                                 tela === item.id
                                     ? "bg-slate-950 text-white shadow-sm"
                                     : "text-slate-600 hover:bg-slate-100 hover:text-slate-950"
