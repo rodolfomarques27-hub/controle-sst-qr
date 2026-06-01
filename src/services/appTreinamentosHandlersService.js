@@ -380,6 +380,50 @@ export async function atualizarDatasCertificadoAppService({
             };
         });
 
+        const dataRealizacaoAtualizada = atualizado.realizado || atualizado.dataRealizacao || atualizado.data_realizacao || datas.realizado || certificado.realizado || certificado.dataRealizacao || certificado.data_realizacao || "";
+        const dataVencimentoAtualizada = atualizado.vencimento || atualizado.dataVencimento || atualizado.data_vencimento || datas.vencimento || certificado.vencimento || certificado.dataVencimento || certificado.data_vencimento || "";
+        const treinamentoIdAtualizado = Number(atualizado.treinamentoId || certificado.treinamentoId || certificado.treinamento_codigo || 0);
+        const treinamentoAtualizado = certificado.treinamento || obterTreinamento(treinamentoIdAtualizado) || {
+            id: treinamentoIdAtualizado || null,
+            nome: atualizado.nomeTreinamento || certificado.nomeTreinamento || certificado.nome_treinamento || certificado.tipo_treinamento || "",
+        };
+        const colaboradorAtualizado = certificado.colaborador || certificado.colaborador_dados || null;
+
+        await executarVerificacaoCertificadoSemBloquearFluxo({
+            supabase,
+            certificado: {
+                ...certificado,
+                ...atualizado,
+                colaborador: colaboradorAtualizado || certificado.colaborador || {},
+                treinamento: treinamentoAtualizado,
+                treinamentoId: treinamentoIdAtualizado || atualizado.treinamentoId || certificado.treinamentoId || null,
+                treinamento_codigo: treinamentoIdAtualizado || certificado.treinamento_codigo || null,
+                tipo_treinamento: atualizado.nomeTreinamento || certificado.nomeTreinamento || certificado.nome_treinamento || certificado.tipo_treinamento || treinamentoAtualizado.nome || "",
+                nome_treinamento: atualizado.nomeTreinamento || certificado.nomeTreinamento || certificado.nome_treinamento || certificado.tipo_treinamento || treinamentoAtualizado.nome || "",
+                dataRealizacao: dataRealizacaoAtualizada,
+                data_realizacao: dataRealizacaoAtualizada,
+                dataVencimento: dataVencimentoAtualizada,
+                data_vencimento: dataVencimentoAtualizada,
+                realizado: dataRealizacaoAtualizada,
+                vencimento: dataVencimentoAtualizada,
+            },
+            certificadoNormalizado: {
+                ...atualizado,
+                treinamentoId: treinamentoIdAtualizado || atualizado.treinamentoId || certificado.treinamentoId || null,
+                nomeTreinamento: atualizado.nomeTreinamento || certificado.nomeTreinamento || certificado.nome_treinamento || certificado.tipo_treinamento || treinamentoAtualizado.nome || "",
+                dataRealizacao: dataRealizacaoAtualizada,
+                data_realizacao: dataRealizacaoAtualizada,
+                dataVencimento: dataVencimentoAtualizada,
+                data_vencimento: dataVencimentoAtualizada,
+                realizado: dataRealizacaoAtualizada,
+                vencimento: dataVencimentoAtualizada,
+            },
+            colaboradores: colaboradorAtualizado ? [colaboradorAtualizado] : [],
+            colaboradorSelecionado: colaboradorAtualizado || null,
+            setColaboradores,
+            setColaboradorSelecionado,
+        });
+
         await carregarColaboradores();
 
         return true;
