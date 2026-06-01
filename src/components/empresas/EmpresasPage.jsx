@@ -707,10 +707,10 @@ export function Empresas({
 
                                         {doc ? (
                                             <div className="space-y-3 p-4">
-                                                <div className="grid gap-x-5 gap-y-1.5 rounded-2xl bg-slate-50 px-3 py-2.5 text-xs leading-relaxed text-slate-600 md:grid-cols-[minmax(150px,0.8fr)_minmax(170px,0.9fr)_minmax(0,1.4fr)]">
+                                                <div className="grid gap-x-3 gap-y-1.5 rounded-2xl bg-slate-50 px-3 py-2.5 text-xs leading-relaxed text-slate-600 md:grid-cols-[110px_145px_minmax(0,1fr)]">
                                                     <p className="min-w-0"><strong className="text-slate-700">Emissão:</strong> {doc.data_emissao ? formatDate(doc.data_emissao) : "Documento não enviado"}</p>
                                                     <p className="min-w-0"><strong className="text-slate-700">Revisão:</strong> {doc.data_vencimento ? formatDate(doc.data_vencimento) : "Sem revisão definida"}</p>
-                                                    <p className="min-w-0 truncate"><strong className="text-slate-700">Arquivo:</strong> {doc.arquivo_nome || "Arquivo ainda não anexado"}</p>
+                                                    <p className="min-w-0 break-words"><strong className="text-slate-700">Arquivo:</strong> {doc.arquivo_nome || "Arquivo ainda não anexado"}</p>
                                                 </div>
                                                 {doc.observacao && (
                                                     <p className="line-clamp-2 text-xs text-slate-500">{doc.observacao}</p>
@@ -1868,10 +1868,10 @@ export function Empresas({
                                             <div className="px-5 py-4 text-sm text-slate-600">
                                                 <div className="space-y-3">
                                                     <p className="leading-relaxed"><strong>Regra:</strong> {tipoDoc.regra}</p>
-                                                    <div className="grid gap-x-5 gap-y-1.5 rounded-2xl bg-slate-50 px-3 py-2.5 text-xs leading-relaxed text-slate-600 md:grid-cols-[minmax(150px,0.8fr)_minmax(190px,0.9fr)_minmax(0,1.4fr)]">
+                                                    <div className="grid gap-x-3 gap-y-1.5 rounded-2xl bg-slate-50 px-3 py-2.5 text-xs leading-relaxed text-slate-600 md:grid-cols-[110px_145px_minmax(0,1fr)]">
                                                         <p className="min-w-0"><strong className="text-slate-700">Emissão:</strong> {doc ? formatDate(doc.data_emissao) : "Documento não enviado"}</p>
                                                         <p className="min-w-0"><strong className="text-slate-700">Próxima revisão:</strong> {doc?.data_vencimento ? formatDate(doc.data_vencimento) : "Sem revisão definida"}</p>
-                                                        <p className="min-w-0 truncate"><strong className="text-slate-700">Arquivo:</strong> {doc?.arquivo_nome || "Arquivo ainda não anexado"}</p>
+                                                        <p className="min-w-0 break-words"><strong className="text-slate-700">Arquivo:</strong> {doc?.arquivo_nome || "Arquivo ainda não anexado"}</p>
                                                     </div>
                                                 </div>
 
