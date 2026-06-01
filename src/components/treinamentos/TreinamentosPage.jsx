@@ -31,7 +31,24 @@ import {
     normalizarEmailDestinatario,
 } from "../../utils/sstUtils";
 
-const hoje = new Date();
+const obterDataHojeIso = () => new Date().toISOString().slice(0, 10);
+
+function normalizarDataLancamentoCertificado(data) {
+    const texto = String(data || "").trim();
+
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(texto)) return "";
+
+    const dataObj = new Date(`${texto}T00:00:00`);
+
+    if (Number.isNaN(dataObj.getTime())) return "";
+
+    const ano = Number(texto.slice(0, 4));
+    const anoMaximo = new Date().getFullYear() + 1;
+
+    if (ano < 2000 || ano > anoMaximo) return "";
+
+    return texto;
+}
 
 const cardsTreinamentosPadrao = {
     filtros: false,
@@ -114,7 +131,7 @@ export function Treinamentos({
                 ?.codigoFuncionario || ""
     );
     const [treinamentoId, setTreinamentoId] = useState(treinamentosBase[0].id);
-    const [dataRealizacao, setDataRealizacao] = useState(hoje.toISOString().slice(0, 10));
+    const [dataRealizacao, setDataRealizacao] = useState(() => obterDataHojeIso());
     const [arquivoSelecionado, setArquivoSelecionado] = useState(null);
     const [sugestaoDataArquivo, setSugestaoDataArquivo] = useState(null);
     const [observacao, setObservacao] = useState("");
@@ -254,6 +271,7 @@ export function Treinamentos({
 
         setColabId(String(novoColaboradorCodigo));
         setTreinamentoId(Number(primeiroTreinamento));
+        setDataRealizacao(obterDataHojeIso());
     };
 
     const adicionarTreinamento = async () => {
@@ -286,6 +304,7 @@ export function Treinamentos({
             setArquivoSelecionado(null);
             setSugestaoDataArquivo(null);
             setObservacao("");
+            setDataRealizacao(obterDataHojeIso());
         }
     };
 
@@ -302,11 +321,17 @@ export function Treinamentos({
             return;
         }
 
+        const dataBaseLote = normalizarDataLancamentoCertificado(dataRealizacao) || obterDataHojeIso();
+
+        if (dataBaseLote !== dataRealizacao) {
+            setDataRealizacao(dataBaseLote);
+        }
+
         const preparados = await prepararArquivosTreinamentoLote({
             listaArquivos: arquivos,
             colaboradores,
             colabSelecionado,
-            dataRealizacao,
+            dataRealizacao: dataBaseLote,
         });
 
         setArquivosLote(preparados);
@@ -318,7 +343,8 @@ export function Treinamentos({
     };
 
     const alterarTreinamentoArquivoLote = (arquivoId, treinamentoId) => {
-        setArquivosLote((atual) => atualizarTreinamentoArquivoLote(atual, arquivoId, treinamentoId, dataRealizacao));
+        const dataBaseLote = normalizarDataLancamentoCertificado(dataRealizacao) || obterDataHojeIso();
+        setArquivosLote((atual) => atualizarTreinamentoArquivoLote(atual, arquivoId, treinamentoId, dataBaseLote));
     };
 
     const alterarDataArquivoLote = (arquivoId, data) => {
@@ -333,14 +359,25 @@ export function Treinamentos({
 
         if (!validarArquivoAntesUpload(arquivo, "documentoSimples")) return;
 
+        const dataPadraoUpload = obterDataHojeIso();
+
         setArquivoSelecionado(arquivo);
+        setDataRealizacao(dataPadraoUpload);
 
         const sugestao = await detectarDataEmissaoArquivo(arquivo);
+        const dataDetectada = normalizarDataLancamentoCertificado(sugestao?.data);
+        const sugestaoNormalizada = sugestao?.data && !dataDetectada
+            ? {
+                ...sugestao,
+                data: "",
+                mensagem: sugestao.mensagem || "Data detectada ignorada por estar fora do intervalo esperado. Confira manualmente.",
+            }
+            : sugestao;
 
-        setSugestaoDataArquivo(sugestao);
+        setSugestaoDataArquivo(sugestaoNormalizada);
 
-        if (sugestao.data) {
-            setDataRealizacao(sugestao.data);
+        if (dataDetectada) {
+            setDataRealizacao(dataDetectada);
         }
     };
 
@@ -417,6 +454,7 @@ export function Treinamentos({
         if (falhas === 0) {
             setArquivosLote([]);
             setObservacao("");
+            setDataRealizacao(obterDataHojeIso());
         }
     };
 
@@ -483,6 +521,7 @@ export function Treinamentos({
         setArquivoSelecionado(null);
         setSugestaoDataArquivo(null);
         setObservacao("");
+        setDataRealizacao(obterDataHojeIso());
 
         window.scrollTo({ top: 0, behavior: "smooth" });
     };
