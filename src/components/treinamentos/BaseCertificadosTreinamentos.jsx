@@ -13,6 +13,7 @@ import {
     treinamentoSemValidade,
 } from "../../services/colaboradorDocumentosService";
 import { formatDate, classNames } from "../../utils/sstUtils";
+import { VerificacaoCertificadoTreinamento } from "./VerificacaoCertificadoTreinamento";
 
 export function BaseCertificadosTreinamentos({
     documentos = [],
@@ -328,6 +329,10 @@ export function BaseCertificadosTreinamentos({
                                                             Excluir
                                                         </button>
                                                     </div>
+                                                </div>
+
+                                                <div className="mt-3">
+                                                    <VerificacaoCertificadoTreinamento certificado={d} />
                                                 </div>
 
                                                 {aberto && (
