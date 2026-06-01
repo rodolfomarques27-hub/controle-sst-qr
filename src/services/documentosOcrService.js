@@ -13,6 +13,8 @@ import {
 
 const LIMITE_BYTES_LEITURA_LOCAL = 8 * 1024 * 1024;
 const LIMITE_TEXTO_OCR_SALVAR = 6000;
+const LIMITE_TEXTO_PDFJS = 12000;
+const PAGINAS_MAXIMAS_PDFJS = 6;
 const TOLERANCIA_DIAS_COMPARACAO = 2;
 const CONFIANCA_MINIMA_COMPARACAO_DATAS = 58;
 const COMPARACAO_AUTOMATICA_DATAS_OCR_ATIVA = false;
@@ -458,6 +460,110 @@ function extrairTextoLegivelPdf(bytes) {
     return "";
 }
 
+async function carregarPdfJsDocumental() {
+    const pdfjsLib = await import("pdfjs-dist");
+
+    try {
+        if (pdfjsLib?.GlobalWorkerOptions && !pdfjsLib.GlobalWorkerOptions.workerSrc) {
+            pdfjsLib.GlobalWorkerOptions.workerSrc = new URL(
+                "pdfjs-dist/build/pdf.worker.mjs",
+                import.meta.url
+            ).toString();
+        }
+    } catch {
+        // Se o worker não puder ser configurado, o PDF.js ainda pode tentar usar fallback.
+    }
+
+    return pdfjsLib;
+}
+
+async function extrairTextoPdfComPdfJs(buffer) {
+    if (!buffer || !buffer.byteLength) {
+        return { texto: "", paginasLidas: 0, totalPaginas: 0, avisos: [] };
+    }
+
+    const avisos = [];
+
+    try {
+        const pdfjsLib = await carregarPdfJsDocumental();
+        const tarefa = pdfjsLib.getDocument({
+            data: new Uint8Array(buffer.slice(0)),
+            disableFontFace: true,
+            useSystemFonts: true,
+            verbosity: 0,
+        });
+
+        const pdf = await tarefa.promise;
+        const totalPaginas = Number(pdf?.numPages || 0);
+        const paginasParaLer = Math.min(totalPaginas || 0, PAGINAS_MAXIMAS_PDFJS);
+        const partes = [];
+
+        for (let numeroPagina = 1; numeroPagina <= paginasParaLer; numeroPagina += 1) {
+            const pagina = await pdf.getPage(numeroPagina);
+            const conteudo = await pagina.getTextContent({
+                includeMarkedContent: false,
+                disableNormalization: false,
+            });
+
+            const textoPagina = limparTextoPossivelDocumento(
+                (conteudo?.items || [])
+                    .map((item) => item?.str || "")
+                    .filter(Boolean)
+                    .join(" ")
+            );
+
+            if (textoPagina) {
+                partes.push(`Página ${numeroPagina}: ${textoPagina}`);
+            }
+
+            if (partes.join(" ").length >= LIMITE_TEXTO_PDFJS) {
+                avisos.push("Leitura textual limitada para preservar performance no navegador.");
+                break;
+            }
+        }
+
+        try {
+            await pdf.destroy();
+        } catch {
+            // Liberação de memória sem bloquear o fluxo.
+        }
+
+        const texto = limparTextoPossivelDocumento(partes.join(" ")).slice(0, LIMITE_TEXTO_PDFJS);
+
+        if (textoPossuiConteudoDocumentoConfiavel(texto)) {
+            if (totalPaginas > paginasParaLer) {
+                avisos.push(`Leitura textual feita nas ${paginasParaLer} primeiras página(s) de ${totalPaginas}.`);
+            }
+
+            return {
+                texto,
+                paginasLidas: paginasParaLer,
+                totalPaginas,
+                avisos,
+            };
+        }
+
+        return {
+            texto: "",
+            paginasLidas: paginasParaLer,
+            totalPaginas,
+            avisos: [
+                ...avisos,
+                "PDF.js não encontrou texto documental confiável nas páginas analisadas.",
+            ],
+        };
+    } catch (error) {
+        return {
+            texto: "",
+            paginasLidas: 0,
+            totalPaginas: 0,
+            avisos: [
+                `Leitura PDF.js indisponível: ${error?.message || "erro desconhecido"}.`,
+            ],
+        };
+    }
+}
+
 function montarRetornoLeituraBase({
     executado = false,
     tipoLeitura = "nao_executado",
@@ -580,15 +686,20 @@ export async function executarLeituraDocumentalLocal({ arquivo = null, arquivoNo
         const tamanhoOriginal = buffer.byteLength;
         const textoLimitado = tamanhoOriginal > LIMITE_BYTES_LEITURA_LOCAL;
         const bytes = new Uint8Array(buffer.slice(0, LIMITE_BYTES_LEITURA_LOCAL));
-        const textoExtraido = extrairTextoLegivelPdf(bytes);
-        const avisos = [];
+        const leituraPdfJs = await extrairTextoPdfComPdfJs(buffer);
+        const textoExtraido = leituraPdfJs.texto || extrairTextoLegivelPdf(bytes);
+        const avisos = [...(leituraPdfJs.avisos || [])];
 
         if (textoLimitado) {
-            avisos.push("Leitura limitada aos primeiros 8 MB para preservar performance no navegador.");
+            avisos.push("Leitura bruta limitada aos primeiros 8 MB para preservar performance no navegador.");
+        }
+
+        if (textoExtraido && leituraPdfJs.texto) {
+            avisos.push("Texto extraído pela camada textual do PDF usando PDF.js, sem API paga.");
         }
 
         if (!textoExtraido) {
-            avisos.push("Não foi encontrada camada de texto confiável. O PDF pode ser uma imagem escaneada ou estar com texto compactado.");
+            avisos.push("Não foi encontrada camada de texto confiável. O PDF pode ser uma imagem escaneada, conter apenas imagens ou exigir OCR real de imagem.");
             avisos.push("Datas encontradas somente no nome do arquivo não serão usadas para acusar divergência com o cadastro.");
         }
 
