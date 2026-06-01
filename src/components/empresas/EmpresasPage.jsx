@@ -687,32 +687,31 @@ export function Empresas({
 
                 {empresaAberta ? (
                     <>
-                        <div className="mt-4 grid gap-3 lg:grid-cols-3">
+                        <div className="mt-4 grid gap-3">
                             {documentosEmpresaBase.map((tipoDoc) => {
                                 const doc = docs.find((item) => item.tipo_documento === tipoDoc.tipo);
                                 const st = statusEmpresaDocumento(doc?.data_vencimento);
                                 const verificacao = obterVerificacaoDocumentoEmpresa(doc);
 
                                 return (
-                                    <div key={tipoDoc.tipo} className="rounded-2xl bg-white p-3 ring-1 ring-slate-200">
-                                        <div className="mb-2 flex items-start justify-between gap-2">
-                                            <div>
-                                                <p className="font-bold text-slate-900">{tipoDoc.nome}</p>
-                                                <p className="text-xs text-slate-400">
-                                                    {doc ? `Emissão: ${formatDate(doc.data_emissao)}` : "Documento ainda não cadastrado"}
+                                    <div key={tipoDoc.tipo} className="overflow-hidden rounded-2xl bg-white ring-1 ring-slate-200">
+                                        <div className="flex items-start justify-between gap-3 bg-blue-950 px-4 py-3 text-white">
+                                            <div className="min-w-0">
+                                                <p className="font-bold text-white">{tipoDoc.nome}</p>
+                                                <p className="mt-1 text-xs text-blue-100">
+                                                    {doc ? "Documento cadastrado" : "Documento ainda não cadastrado"}
                                                 </p>
                                             </div>
                                             {doc && <StatusPill status={st} small />}
                                         </div>
 
                                         {doc ? (
-                                            <div className="space-y-2">
-                                                <p className="text-xs text-slate-500">
-                                                    <strong>Revisão:</strong> {doc.data_vencimento ? formatDate(doc.data_vencimento) : "Sem revisão definida"}
-                                                </p>
-                                                <p className="truncate text-xs text-slate-500">
-                                                    <strong>Arquivo:</strong> {doc.arquivo_nome || "Arquivo ainda não anexado"}
-                                                </p>
+                                            <div className="space-y-3 p-4">
+                                                <div className="grid gap-2 rounded-2xl bg-slate-50 p-3 text-xs text-slate-600 md:grid-cols-[160px_180px_minmax(0,1fr)]">
+                                                    <p><strong>Emissão:</strong> {doc.data_emissao ? formatDate(doc.data_emissao) : "Documento não enviado"}</p>
+                                                    <p><strong>Revisão:</strong> {doc.data_vencimento ? formatDate(doc.data_vencimento) : "Sem revisão definida"}</p>
+                                                    <p className="truncate"><strong>Arquivo:</strong> {doc.arquivo_nome || "Arquivo ainda não anexado"}</p>
+                                                </div>
                                                 {doc.observacao && (
                                                     <p className="line-clamp-2 text-xs text-slate-500">{doc.observacao}</p>
                                                 )}
@@ -746,7 +745,9 @@ export function Empresas({
                                                 </div>
                                             </div>
                                         ) : (
-                                            <p className="text-xs text-slate-500">Documento ainda não cadastrado para esta empresa.</p>
+                                            <div className="p-4">
+                                                <p className="text-xs text-slate-500">Documento ainda não cadastrado para esta empresa.</p>
+                                            </div>
                                         )}
                                     </div>
                                 );
@@ -1843,7 +1844,7 @@ export function Empresas({
                         </div>
 
                         <div className="scrollbar-discreta flex-1 overflow-y-auto px-6 py-5">
-                            <div className="grid items-stretch gap-4 md:grid-cols-3">
+                            <div className="grid gap-4">
                                 {documentosEmpresaBase.map((tipoDoc) => {
                                     const docsAtualizadosRevisao = documentosPorEmpresa[empresaRevisao.empresa.id] || [];
                                     const doc = docsAtualizadosRevisao.find((item) => item.tipo_documento === tipoDoc.tipo);
@@ -1853,23 +1854,25 @@ export function Empresas({
                                     const chaveUpload = `${empresaRevisao.empresa.id}-${tipoDoc.tipo}`;
 
                                     return (
-                                        <div key={tipoDoc.tipo} className="flex h-full min-h-[610px] flex-col rounded-3xl border border-slate-200 p-4">
-                                            <div className="mb-3 flex min-h-[88px] items-start justify-between gap-2">
-                                                <div className="pr-2">
-                                                    <h3 className="text-lg font-bold text-slate-950">{tipoDoc.nome}</h3>
-                                                    <p className="min-h-[48px] text-xs leading-relaxed text-slate-400">{tipoDoc.fundamento}</p>
+                                        <div key={tipoDoc.tipo} className="overflow-hidden rounded-3xl border border-slate-200 bg-white">
+                                            <div className="flex items-start justify-between gap-3 bg-blue-950 px-5 py-4 text-white">
+                                                <div className="min-w-0 pr-2">
+                                                    <h3 className="text-lg font-bold text-white">{tipoDoc.nome}</h3>
+                                                    <p className="mt-1 text-xs leading-relaxed text-blue-100">{tipoDoc.fundamento}</p>
                                                 </div>
                                                 <div className="shrink-0">
                                                     {doc ? <StatusPill status={st} small /> : <span className="rounded-full bg-red-50 px-2 py-1 text-xs font-semibold text-red-700 ring-1 ring-red-200">Pendente</span>}
                                                 </div>
                                             </div>
 
-                                            <div className="flex min-h-[245px] flex-col justify-between rounded-2xl bg-white text-sm text-slate-600">
-                                                <div className="space-y-2">
-                                                    <p className="min-h-[96px] leading-relaxed"><strong>Regra:</strong> {tipoDoc.regra}</p>
-                                                    <p><strong>Emissão:</strong> {doc ? formatDate(doc.data_emissao) : "Documento não enviado"}</p>
-                                                    <p><strong>Próxima revisão:</strong> {doc?.data_vencimento ? formatDate(doc.data_vencimento) : "Sem revisão definida"}</p>
-                                                    <p className="break-words"><strong>Arquivo:</strong> {doc?.arquivo_nome || "Arquivo ainda não anexado"}</p>
+                                            <div className="px-5 py-4 text-sm text-slate-600">
+                                                <div className="space-y-3">
+                                                    <p className="leading-relaxed"><strong>Regra:</strong> {tipoDoc.regra}</p>
+                                                    <div className="grid gap-2 rounded-2xl bg-slate-50 p-3 text-xs text-slate-600 md:grid-cols-[160px_190px_minmax(0,1fr)]">
+                                                        <p><strong>Emissão:</strong> {doc ? formatDate(doc.data_emissao) : "Documento não enviado"}</p>
+                                                        <p><strong>Próxima revisão:</strong> {doc?.data_vencimento ? formatDate(doc.data_vencimento) : "Sem revisão definida"}</p>
+                                                        <p className="truncate"><strong>Arquivo:</strong> {doc?.arquivo_nome || "Arquivo ainda não anexado"}</p>
+                                                    </div>
                                                 </div>
 
                                                 {doc?.observacao && (
@@ -1884,11 +1887,11 @@ export function Empresas({
                                                     verificacao={verificacao}
                                                     titulo={`Verificação documental ${tipoDoc.tipo}`}
                                                     mostrarDetalhesInicial={false}
-                                                    className="mt-3"
+                                                    className="mx-5 mt-1"
                                                 />
                                             )}
 
-                                            <div className="mt-5 min-h-[190px] rounded-2xl bg-slate-50 p-3">
+                                            <div className="mx-5 mt-4 rounded-2xl bg-slate-50 p-3">
                                                 <p className="mb-2 text-xs font-bold uppercase tracking-wide text-slate-500">
                                                     {doc ? "Substituir documento" : "Enviar documento"}
                                                 </p>
@@ -1943,7 +1946,7 @@ export function Empresas({
                                             </div>
 
                                             {doc && (
-                                                <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2">
+                                                <div className="mx-5 mb-5 mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2">
                                                     <button
                                                         onClick={() => onVisualizarDocumentoEmpresa(doc)}
                                                         disabled={!doc.arquivo_url}

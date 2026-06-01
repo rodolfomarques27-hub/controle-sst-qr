@@ -127,11 +127,20 @@ function obterResumoCurto(resumo, statusTexto, riscoTexto, score) {
     return `Status ${statusTexto.toLowerCase()}, risco ${riscoTexto.toLowerCase()} e score ${score}/100.`;
 }
 
-function DetalhesVerificacao({ dados, compacto = false }) {
-    const classeGrid = compacto ? "mt-3 grid gap-3" : "mt-4 grid gap-4 lg:grid-cols-2";
-
+function DetalhesVerificacao({ dados, resumoCurto }) {
     return (
-        <div className={classeGrid}>
+        <div className="mt-4 space-y-3">
+            <div className="rounded-xl bg-slate-50 p-3 text-sm leading-relaxed text-slate-700 ring-1 ring-slate-100">
+                {resumoCurto}
+            </div>
+
+            {(dados.tipoDocumento || dados.arquivoNome) && (
+                <div className="rounded-xl bg-white p-3 text-xs text-slate-500 ring-1 ring-slate-100">
+                    <strong className="text-slate-700">Documento:</strong> {dados.tipoDocumento || "Documento"}
+                    {dados.arquivoNome ? ` • ${dados.arquivoNome}` : ""}
+                </div>
+            )}
+
             <div className="rounded-xl border border-slate-100 bg-slate-50 p-3">
                 <h4 className="text-xs font-bold uppercase tracking-wide text-slate-500">
                     Indícios encontrados
@@ -148,7 +157,7 @@ function DetalhesVerificacao({ dados, compacto = false }) {
                                     {obterTituloIndicio(indicio)}
                                 </p>
                                 {obterDetalheIndicio(indicio) && (
-                                    <p className="mt-1 text-xs leading-relaxed text-slate-500">
+                                    <p className="mt-1 text-xs text-slate-500">
                                         {obterDetalheIndicio(indicio)}
                                     </p>
                                 )}
@@ -156,7 +165,7 @@ function DetalhesVerificacao({ dados, compacto = false }) {
                         ))}
                     </div>
                 ) : (
-                    <p className="mt-3 text-sm leading-relaxed text-slate-600">
+                    <p className="mt-3 text-sm text-slate-600">
                         Nenhum indício relevante encontrado pelas regras locais.
                     </p>
                 )}
@@ -172,18 +181,22 @@ function DetalhesVerificacao({ dados, compacto = false }) {
                         {dados.recomendacoes.map((recomendacao, indice) => (
                             <li
                                 key={`${obterTextoRecomendacao(recomendacao)}-${indice}`}
-                                className="rounded-lg bg-white p-3 leading-relaxed ring-1 ring-slate-100"
+                                className="rounded-lg bg-white p-3 ring-1 ring-slate-100"
                             >
                                 {obterTextoRecomendacao(recomendacao)}
                             </li>
                         ))}
                     </ul>
                 ) : (
-                    <p className="mt-3 text-sm leading-relaxed text-slate-600">
+                    <p className="mt-3 text-sm text-slate-600">
                         Nenhuma recomendação adicional registrada.
                     </p>
                 )}
             </div>
+
+            <p className="text-xs text-slate-400">
+                A análise indica inconsistências e indícios. O sistema não confirma falsificação automaticamente.
+            </p>
         </div>
     );
 }
@@ -230,13 +243,13 @@ export default function ResultadoVerificacaoDocumento({
 
     if (!possuiVerificacao) {
         return (
-            <div className={`rounded-xl border border-dashed border-slate-200 bg-slate-50/80 px-3 py-2 text-xs text-slate-600 ${className}`}>
+            <div className={`rounded-2xl border border-dashed border-slate-200 bg-slate-50/80 p-3 text-sm text-slate-600 ${className}`}>
                 <div className="flex items-center gap-2 font-semibold text-slate-700">
-                    <FileText className="h-3.5 w-3.5" />
+                    <FileText className="h-4 w-4" />
                     {titulo}
                 </div>
-                <p className="mt-1 leading-relaxed text-slate-500">
-                    Sem verificação registrada.
+                <p className="mt-2 text-xs leading-relaxed text-slate-500 sm:text-sm">
+                    Nenhuma verificação documental registrada para este item até o momento.
                 </p>
             </div>
         );
@@ -244,65 +257,51 @@ export default function ResultadoVerificacaoDocumento({
 
     if (compacto) {
         return (
-            <div className={`rounded-xl border border-slate-200 bg-white px-3 py-2 shadow-sm ${className}`}>
-                <div className="flex flex-wrap items-center gap-2">
-                    <span className="inline-flex items-center gap-1.5 text-xs font-bold text-slate-700">
-                        <Sparkles className="h-3.5 w-3.5 shrink-0 text-emerald-500" />
-                        Verificação
-                    </span>
+            <div className={`rounded-2xl border border-slate-200 bg-white p-3 shadow-sm ${className}`}>
+                <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+                    <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-2 text-[11px] font-bold uppercase tracking-[0.14em] text-slate-500">
+                            <Sparkles className="h-3.5 w-3.5 shrink-0 text-emerald-500" />
+                            <span>Análise documental</span>
+                        </div>
 
-                    <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-semibold ring-1 ${statusConfig.classe}`}>
-                        <StatusIcon className="h-3.5 w-3.5" />
-                        {statusConfig.texto}
-                    </span>
+                        <p className="mt-1 text-sm font-semibold leading-tight text-slate-800">
+                            {titulo}
+                        </p>
 
-                    <span className={`inline-flex items-center rounded-full px-2.5 py-1 text-[11px] font-semibold ring-1 ${riscoClasse}`}>
-                        Risco {riscoTexto}
-                    </span>
+                        {dados.createdAt && (
+                            <p className="mt-1 text-[11px] text-slate-400">
+                                Verificado em {formatarData(dados.createdAt)}
+                            </p>
+                        )}
+                    </div>
 
-                    <span className="inline-flex items-center rounded-full bg-slate-50 px-2.5 py-1 text-[11px] font-semibold text-slate-700 ring-1 ring-slate-200">
-                        Score {dados.score}/100
-                    </span>
+                    <div className="flex flex-wrap items-center gap-2 lg:justify-end">
+                        <span className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-[11px] font-semibold ring-1 ${statusConfig.classe}`}>
+                            <StatusIcon className="h-3.5 w-3.5" />
+                            {statusConfig.texto}
+                        </span>
 
-                    <button
-                        type="button"
-                        onClick={() => setDetalhesAbertos((atual) => !atual)}
-                        className="ml-auto inline-flex shrink-0 items-center justify-center gap-1.5 rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-1.5 text-[11px] font-semibold text-slate-700 transition hover:bg-slate-100"
-                    >
-                        {detalhesAbertos ? "Recolher" : "Abrir"}
-                        {detalhesAbertos ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
-                    </button>
+                        <span className={`inline-flex items-center rounded-full px-3 py-1 text-[11px] font-semibold ring-1 ${riscoClasse}`}>
+                            Risco {riscoTexto}
+                        </span>
+
+                        <span className="inline-flex items-center rounded-full bg-slate-50 px-3 py-1 text-[11px] font-semibold text-slate-700 ring-1 ring-slate-200">
+                            Score {dados.score}/100
+                        </span>
+
+                        <button
+                            type="button"
+                            onClick={() => setDetalhesAbertos((atual) => !atual)}
+                            className="inline-flex items-center justify-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs font-semibold text-slate-700 transition hover:bg-slate-100"
+                        >
+                            {detalhesAbertos ? "Recolher" : "Abrir"}
+                            {detalhesAbertos ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+                        </button>
+                    </div>
                 </div>
 
-                {detalhesAbertos && (
-                    <div className="mt-3 rounded-xl border border-slate-100 bg-slate-50/80 p-3">
-                        {(dados.tipoDocumento || dados.arquivoNome || dados.createdAt) && (
-                            <div className="mb-3 rounded-lg bg-white p-2.5 text-xs leading-relaxed text-slate-500 ring-1 ring-slate-100">
-                                {(dados.tipoDocumento || dados.arquivoNome) && (
-                                    <p className="break-words">
-                                        <strong className="text-slate-700">Documento:</strong> {dados.tipoDocumento || "Documento"}
-                                        {dados.arquivoNome ? ` • ${dados.arquivoNome}` : ""}
-                                    </p>
-                                )}
-                                {dados.createdAt && (
-                                    <p className="mt-1">
-                                        <strong className="text-slate-700">Verificado em:</strong> {formatarData(dados.createdAt)}
-                                    </p>
-                                )}
-                            </div>
-                        )}
-
-                        <p className="rounded-lg bg-white p-2.5 text-sm leading-relaxed text-slate-600 ring-1 ring-slate-100">
-                            {resumoCurto}
-                        </p>
-
-                        <DetalhesVerificacao dados={dados} compacto />
-
-                        <p className="mt-3 text-xs leading-relaxed text-slate-400">
-                            A análise indica inconsistências e indícios. O sistema não confirma falsificação automaticamente.
-                        </p>
-                    </div>
-                )}
+                {detalhesAbertos && <DetalhesVerificacao dados={dados} resumoCurto={resumoCurto} />}
             </div>
         );
     }
@@ -359,17 +358,13 @@ export default function ResultadoVerificacaoDocumento({
                 </span>
             </div>
 
-            {dados.resumo && (
+            {detalhesAbertos ? (
+                <DetalhesVerificacao dados={dados} resumoCurto={resumoCurto} />
+            ) : dados.resumo ? (
                 <p className="mt-3 rounded-xl bg-slate-50 p-3 text-sm leading-relaxed text-slate-700">
                     {dados.resumo}
                 </p>
-            )}
-
-            {detalhesAbertos && <DetalhesVerificacao dados={dados} />}
-
-            <p className="mt-4 text-xs text-slate-400">
-                A análise indica inconsistências e indícios. O sistema não confirma falsificação automaticamente.
-            </p>
+            ) : null}
         </div>
     );
 }
