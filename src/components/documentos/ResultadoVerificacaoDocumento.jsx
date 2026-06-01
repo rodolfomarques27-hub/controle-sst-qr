@@ -258,25 +258,36 @@ export default function ResultadoVerificacaoDocumento({
     if (compacto) {
         return (
             <div className={`rounded-2xl border border-slate-200 bg-white p-3 shadow-sm ${className}`}>
-                <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-                    <div className="min-w-0 flex-1">
-                        <div className="flex items-center gap-2 text-[11px] font-bold uppercase tracking-[0.14em] text-slate-500">
-                            <Sparkles className="h-3.5 w-3.5 shrink-0 text-emerald-500" />
-                            <span>Análise documental</span>
-                        </div>
-
-                        <p className="mt-1 text-sm font-semibold leading-tight text-slate-800">
-                            {titulo}
-                        </p>
-
-                        {dados.createdAt && (
-                            <p className="mt-1 text-[11px] text-slate-400">
-                                Verificado em {formatarData(dados.createdAt)}
-                            </p>
-                        )}
+                <div className="min-w-0">
+                    <div className="flex items-center gap-2 text-[11px] font-bold uppercase tracking-[0.14em] text-slate-500">
+                        <Sparkles className="h-3.5 w-3.5 shrink-0 text-emerald-500" />
+                        <span>Análise documental</span>
                     </div>
 
-                    <div className="flex flex-wrap items-center gap-2 lg:justify-end">
+                    <div className="mt-1 flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
+                        <div className="min-w-0">
+                            <p className="text-sm font-semibold leading-tight text-slate-800">
+                                {titulo}
+                            </p>
+
+                            {dados.createdAt && (
+                                <p className="mt-1 text-[11px] text-slate-400">
+                                    Verificado em {formatarData(dados.createdAt)}
+                                </p>
+                            )}
+                        </div>
+
+                        <button
+                            type="button"
+                            onClick={() => setDetalhesAbertos((atual) => !atual)}
+                            className="inline-flex shrink-0 items-center justify-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs font-semibold text-slate-700 transition hover:bg-slate-100"
+                        >
+                            {detalhesAbertos ? "Recolher" : "Abrir"}
+                            {detalhesAbertos ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+                        </button>
+                    </div>
+
+                    <div className="mt-3 flex flex-wrap items-center gap-2">
                         <span className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-[11px] font-semibold ring-1 ${statusConfig.classe}`}>
                             <StatusIcon className="h-3.5 w-3.5" />
                             {statusConfig.texto}
@@ -289,15 +300,6 @@ export default function ResultadoVerificacaoDocumento({
                         <span className="inline-flex items-center rounded-full bg-slate-50 px-3 py-1 text-[11px] font-semibold text-slate-700 ring-1 ring-slate-200">
                             Score {dados.score}/100
                         </span>
-
-                        <button
-                            type="button"
-                            onClick={() => setDetalhesAbertos((atual) => !atual)}
-                            className="inline-flex items-center justify-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs font-semibold text-slate-700 transition hover:bg-slate-100"
-                        >
-                            {detalhesAbertos ? "Recolher" : "Abrir"}
-                            {detalhesAbertos ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
-                        </button>
                     </div>
                 </div>
 
