@@ -1006,4 +1006,129 @@ ${estilosGlobaisBase}
     }
 }
 
+
+
+/* ROTEIRO 6 — ETAPA 18
+   Ajuste fino da sidebar recolhida:
+   - centraliza todos os ícones no eixo real da coluna;
+   - reduz a coluna recolhida para eliminar sensação de deslocamento;
+   - troca o logo recolhido para um botão único, sem quadrado interno pesado. */
+@media (min-width: 1024px) {
+    .app-sidebar[data-sidebar-expanded="false"] {
+        width: 4.5rem !important;
+        min-width: 4.5rem !important;
+        max-width: 4.5rem !important;
+        flex-basis: 4.5rem !important;
+        align-items: center !important;
+        justify-content: flex-start !important;
+        padding: 0.75rem 0.5rem !important;
+    }
+
+    .app-shell:not([data-sidebar-open="true"]) .app-main {
+        width: calc(100% - 4.5rem) !important;
+        margin-left: 4.5rem !important;
+    }
+
+    .app-sidebar[data-sidebar-expanded="false"] .app-sidebar-brand,
+    .app-sidebar[data-sidebar-expanded="false"] .app-sidebar-toggle,
+    .app-sidebar[data-sidebar-expanded="false"] .app-sidebar-nav-button,
+    .app-sidebar[data-sidebar-expanded="false"] .app-sidebar-user-compact button {
+        margin-left: auto !important;
+        margin-right: auto !important;
+    }
+
+    .app-sidebar[data-sidebar-expanded="false"] .app-sidebar-brand {
+        width: 3rem !important;
+        height: 3rem !important;
+        min-width: 3rem !important;
+        min-height: 3rem !important;
+        padding: 0 !important;
+        border-radius: 1rem !important;
+        background: radial-gradient(circle at 35% 25%, #172033 0%, #020617 58%, #000413 100%) !important;
+        box-shadow: 0 9px 18px rgba(15, 23, 42, 0.18), inset 0 0 0 1px rgba(255, 255, 255, 0.12) !important;
+    }
+
+    .app-sidebar[data-sidebar-expanded="false"] .app-sidebar-brand-icon {
+        width: 3rem !important;
+        height: 3rem !important;
+        min-width: 3rem !important;
+        min-height: 3rem !important;
+        border-radius: 1rem !important;
+        background: transparent !important;
+        box-shadow: none !important;
+    }
+
+    .app-sidebar[data-sidebar-expanded="false"] .app-sidebar-brand-icon svg {
+        width: 1.32rem !important;
+        height: 1.32rem !important;
+        stroke-width: 2.25 !important;
+    }
+
+    .app-sidebar[data-sidebar-expanded="false"] .app-sidebar-toggle {
+        width: 2.55rem !important;
+        height: 2.55rem !important;
+        min-width: 2.55rem !important;
+        min-height: 2.55rem !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+    }
+
+    .app-sidebar[data-sidebar-expanded="false"] .app-sidebar-nav {
+        width: 100% !important;
+        min-width: 0 !important;
+        display: flex !important;
+        flex-direction: column !important;
+        align-items: center !important;
+        justify-content: flex-start !important;
+        gap: 0.38rem !important;
+        padding-left: 0 !important;
+        padding-right: 0 !important;
+    }
+
+    .app-sidebar[data-sidebar-expanded="false"] .app-sidebar-nav-button {
+        width: 2.6rem !important;
+        height: 2.6rem !important;
+        min-width: 2.6rem !important;
+        min-height: 2.6rem !important;
+        max-width: 2.6rem !important;
+        max-height: 2.6rem !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        padding: 0 !important;
+        border-radius: 0.95rem !important;
+        text-align: center !important;
+        line-height: 1 !important;
+    }
+
+    .app-sidebar[data-sidebar-expanded="false"] .app-sidebar-nav-icon {
+        width: 1rem !important;
+        height: 1rem !important;
+        min-width: 1rem !important;
+        min-height: 1rem !important;
+        margin: 0 !important;
+        display: block !important;
+        transform: none !important;
+        stroke-width: 2.18 !important;
+    }
+
+    .app-sidebar[data-sidebar-expanded="false"] .app-sidebar-user-compact {
+        width: 100% !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        padding: 0 !important;
+    }
+
+    .app-sidebar[data-sidebar-expanded="false"] .app-sidebar-user-compact button {
+        width: 2.6rem !important;
+        height: 2.6rem !important;
+        min-width: 2.6rem !important;
+        min-height: 2.6rem !important;
+        max-width: 2.6rem !important;
+        padding: 0 !important;
+        border-radius: 0.95rem !important;
+    }
+}
 `;
