@@ -917,4 +917,93 @@ ${estilosGlobaisBase}
     }
 }
 
+
+/* ROTEIRO 6 — ETAPA 17
+   Acabamento da sidebar recolhida: ícones centralizados, alvo visual fixo e logo mais limpo. */
+@media (min-width: 1024px) {
+    .app-sidebar[data-sidebar-expanded="false"] {
+        align-items: center !important;
+        padding-left: 0.65rem !important;
+        padding-right: 0.65rem !important;
+    }
+
+    .app-sidebar[data-sidebar-expanded="false"] .app-sidebar-brand {
+        display: flex !important;
+        width: 3.35rem !important;
+        height: 3.35rem !important;
+        align-items: center !important;
+        justify-content: center !important;
+        border-radius: 1.15rem !important;
+        background: linear-gradient(145deg, #020617 0%, #0f172a 100%) !important;
+        box-shadow: 0 10px 22px rgba(15, 23, 42, 0.16), inset 0 0 0 1px rgba(255, 255, 255, 0.06) !important;
+    }
+
+    .app-sidebar-brand-icon {
+        box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.10);
+    }
+
+    .app-sidebar[data-sidebar-expanded="false"] .app-sidebar-brand-icon {
+        width: 2.45rem !important;
+        height: 2.45rem !important;
+        border-radius: 0.95rem !important;
+        background: rgba(255, 255, 255, 0.08) !important;
+    }
+
+    .app-sidebar[data-sidebar-expanded="false"] .app-sidebar-toggle {
+        width: 2.55rem !important;
+        height: 2.55rem !important;
+        min-height: 2.55rem !important;
+        margin-left: auto !important;
+        margin-right: auto !important;
+        padding: 0 !important;
+        border-radius: 1rem !important;
+    }
+
+    .app-sidebar[data-sidebar-expanded="false"] .app-sidebar-nav {
+        width: 100% !important;
+        display: grid !important;
+        justify-items: center !important;
+        align-content: start !important;
+        gap: 0.42rem !important;
+        padding-right: 0 !important;
+    }
+
+    .app-sidebar[data-sidebar-expanded="false"] .app-sidebar-nav-button {
+        width: 2.75rem !important;
+        height: 2.75rem !important;
+        min-width: 2.75rem !important;
+        min-height: 2.75rem !important;
+        padding: 0 !important;
+        display: inline-flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        border-radius: 1rem !important;
+    }
+
+    .app-sidebar[data-sidebar-expanded="false"] .app-sidebar-nav-button.bg-slate-950 {
+        box-shadow: 0 10px 18px rgba(15, 23, 42, 0.16) !important;
+    }
+
+    .app-sidebar[data-sidebar-expanded="false"] .app-sidebar-nav-icon {
+        width: 1.02rem !important;
+        height: 1.02rem !important;
+        margin: 0 !important;
+        stroke-width: 2.15 !important;
+    }
+
+    .app-sidebar[data-sidebar-expanded="false"] .app-sidebar-user-compact {
+        width: 100% !important;
+        margin-top: auto !important;
+        display: flex !important;
+        justify-content: center !important;
+    }
+
+    .app-sidebar[data-sidebar-expanded="false"] .app-sidebar-user-compact button {
+        width: 2.75rem !important;
+        height: 2.75rem !important;
+        border-radius: 1rem !important;
+        font-size: 0.66rem !important;
+    }
+}
+
 `;

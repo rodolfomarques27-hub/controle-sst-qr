@@ -32,6 +32,7 @@ export function AppSidebar({
 
     return (
         <aside
+            data-sidebar-expanded={menuExpandido ? "true" : "false"}
             onMouseEnter={abrirTemporariamente}
             onMouseLeave={fecharTemporariamente}
             className={classNames(
@@ -41,13 +42,13 @@ export function AppSidebar({
         >
             <div className={classNames(
                 "app-sidebar-brand flex items-center bg-slate-950 text-white shadow-sm",
-                menuExpandido ? "gap-3 rounded-3xl p-4" : "mx-auto h-12 w-12 justify-center rounded-2xl p-0"
+                menuExpandido ? "gap-3 rounded-3xl p-4" : "mx-auto h-14 w-14 justify-center rounded-2xl p-0"
             )}>
                 <div className={classNames(
-                    "flex shrink-0 items-center justify-center rounded-2xl bg-white/10",
-                    menuExpandido ? "h-12 w-12" : "h-10 w-10"
+                    "app-sidebar-brand-icon flex shrink-0 items-center justify-center rounded-2xl bg-white/10",
+                    menuExpandido ? "h-12 w-12" : "h-11 w-11"
                 )}>
-                    <ShieldCheck className="h-6 w-6" />
+                    <ShieldCheck className={classNames("shrink-0", menuExpandido ? "h-6 w-6" : "h-5 w-5")} />
                 </div>
                 {menuExpandido && (
                     <div className="min-w-0 flex-1">
@@ -61,8 +62,8 @@ export function AppSidebar({
                 type="button"
                 onClick={alternarMenuFixo}
                 className={classNames(
-                    "app-sidebar-toggle mt-3 flex w-full items-center justify-center gap-2 rounded-2xl bg-slate-50 px-3 py-2 text-xs font-semibold text-slate-600 ring-1 ring-slate-200 hover:bg-slate-100",
-                    !menuExpandido && "h-10 px-0"
+                    "app-sidebar-toggle mt-3 flex items-center justify-center gap-2 rounded-2xl bg-slate-50 px-3 py-2 text-xs font-semibold text-slate-600 ring-1 ring-slate-200 hover:bg-slate-100",
+                    menuExpandido ? "w-full" : "mx-auto h-10 w-10 px-0"
                 )}
                 title={menuLateralAberto ? "Fixar menu recolhido" : "Fixar menu aberto"}
             >
@@ -70,7 +71,10 @@ export function AppSidebar({
                 {menuExpandido && <span>{menuLateralAberto ? "Ocultar menu" : "Fixar menu"}</span>}
             </button>
 
-            <nav className="app-sidebar-nav scrollbar-discreta mt-6 space-y-2">
+            <nav className={classNames(
+                "app-sidebar-nav scrollbar-discreta mt-6",
+                menuExpandido ? "space-y-2" : "grid justify-items-center gap-2"
+            )}>
                 {nav.map((item) => {
                     const Icon = item.icon;
 
@@ -79,15 +83,15 @@ export function AppSidebar({
                             key={item.id}
                             onClick={() => onSelecionarTela(item.id, item.label)}
                             className={classNames(
-                                "flex w-full items-center rounded-2xl text-left text-sm font-medium transition",
-                                menuExpandido ? "gap-3 px-4 py-3" : "justify-center px-0 py-3",
+                                "app-sidebar-nav-button flex items-center rounded-2xl text-left text-sm font-medium transition",
+                                menuExpandido ? "w-full gap-3 px-4 py-3" : "h-11 w-11 justify-center p-0",
                                 tela === item.id
                                     ? "bg-slate-950 text-white shadow-sm"
                                     : "text-slate-600 hover:bg-slate-100 hover:text-slate-950"
                             )}
                             title={!menuExpandido ? item.label : undefined}
                         >
-                            <Icon className="h-4 w-4 shrink-0" />
+                            <Icon className="app-sidebar-nav-icon h-4 w-4 shrink-0" />
                             {menuExpandido && <span className="truncate">{item.label}</span>}
                         </button>
                     );
