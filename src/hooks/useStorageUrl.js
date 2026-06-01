@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { criarUrlAssinadaStorage } from "../services/supabaseServices";
+import { SUPABASE_URL } from "../lib/supabaseClient";
 
 function valorEhUrlFinal(valor) {
     const texto = String(valor || "").trim();
@@ -55,6 +56,15 @@ function normalizarCaminhoStorage(valor = "", bucket = "") {
         .trim();
 }
 
+function montarUrlPublicaStorage(bucket = "", caminho = "") {
+    const base = String(SUPABASE_URL || "").replace(/\/$/, "");
+    const caminhoLimpo = String(caminho || "").replace(/^\/+/, "");
+
+    if (!base || !bucket || !caminhoLimpo) return "";
+
+    return `${base}/storage/v1/object/public/${bucket}/${caminhoLimpo.split("/").map(encodeURIComponent).join("/")}`;
+}
+
 export function useStorageUrl(bucket, caminhoOuUrl, validadeSegundos = 600) {
     const [url, setUrl] = useState("");
 
@@ -84,7 +94,7 @@ export function useStorageUrl(bucket, caminhoOuUrl, validadeSegundos = 600) {
                 console.warn(`Erro ao gerar URL assinada do bucket ${bucket}:`, error?.message || error);
 
                 if (!cancelado) {
-                    setUrl("");
+                    setUrl(montarUrlPublicaStorage(bucket, valor));
                 }
             }
         }
