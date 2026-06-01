@@ -423,4 +423,298 @@ ${estilosGlobaisBase}
     }
 }
 
+
+
+
+/* ROTEIRO 6 — ETAPA 14
+   Correção fina do mobile e sidebar:
+   - remove travamento/efeito pesado do cabeçalho sticky no celular;
+   - compacta o cabeçalho mobile;
+   - deixa os cards do dashboard com altura menor no celular;
+   - impede o card de armazenamento de estourar;
+   - melhora o scroll interno da lateral;
+   - prepara a lateral para abrir temporariamente por aproximação/hover. */
+.app-sidebar {
+    position: sticky;
+    top: 0;
+    height: 100vh;
+    max-height: 100vh;
+    overflow: hidden !important;
+}
+
+.app-sidebar-brand,
+.app-sidebar-toggle,
+.app-sidebar-user,
+.app-sidebar-user-compact {
+    flex: 0 0 auto;
+}
+
+.app-sidebar-nav {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-x: hidden;
+    overflow-y: auto;
+    padding-right: 0.15rem;
+    scrollbar-width: none;
+}
+
+.app-sidebar-nav::-webkit-scrollbar {
+    width: 0;
+    height: 0;
+}
+
+.app-sidebar:hover .app-sidebar-nav {
+    scrollbar-width: thin;
+}
+
+.app-sidebar:hover .app-sidebar-nav::-webkit-scrollbar {
+    width: 5px;
+}
+
+.app-sidebar-user {
+    overflow: hidden;
+}
+
+.app-sidebar-user p {
+    max-width: 100%;
+}
+
+.dashboard-summary-card,
+.summary-card-fixed,
+.config-summary-card,
+.auditoria-summary-card,
+.dashboard-campo-summary-card {
+    min-width: 0 !important;
+    overflow: hidden !important;
+}
+
+.dashboard-summary-card *,
+.summary-card-fixed *,
+.config-summary-card *,
+.auditoria-summary-card *,
+.dashboard-campo-summary-card * {
+    min-width: 0;
+}
+
+.dashboard-summary-card :where(p, span, strong, div),
+.summary-card-fixed :where(p, span, strong, div),
+.config-summary-card :where(p, span, strong, div),
+.auditoria-summary-card :where(p, span, strong, div),
+.dashboard-campo-summary-card :where(p, span, strong, div) {
+    overflow-wrap: anywhere;
+}
+
+.dashboard-summary-card .summary-card-value,
+.dashboard-summary-card p:nth-child(2),
+.summary-card-fixed .summary-card-value {
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+@media (max-width: 767.98px) {
+    html,
+    body,
+    #root {
+        overflow-x: hidden !important;
+        overflow-y: auto !important;
+        height: auto !important;
+        min-height: 100% !important;
+        touch-action: pan-y !important;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    body {
+        overscroll-behavior-y: auto !important;
+    }
+
+    .app-shell,
+    .app-main,
+    .app-content,
+    .page-shell {
+        overflow-x: hidden !important;
+        overflow-y: visible !important;
+        min-height: 0 !important;
+    }
+
+    .app-main {
+        padding: 0.72rem 0.72rem calc(1.1rem + env(safe-area-inset-bottom)) !important;
+    }
+
+    .app-mobile-header {
+        position: relative !important;
+        top: auto !important;
+        z-index: 5 !important;
+        display: grid !important;
+        gap: 0.52rem !important;
+        margin-bottom: 0.72rem !important;
+        border-radius: 1.18rem !important;
+        padding: 0.62rem !important;
+        box-shadow: 0 8px 20px rgba(15, 23, 42, 0.07) !important;
+        backdrop-filter: none !important;
+    }
+
+    .app-mobile-header__topo {
+        gap: 0.48rem !important;
+    }
+
+    .app-mobile-header__marca {
+        gap: 0.52rem !important;
+    }
+
+    .app-mobile-header__logo {
+        width: 2.15rem !important;
+        height: 2.15rem !important;
+        border-radius: 0.82rem !important;
+    }
+
+    .app-mobile-header__nome {
+        font-size: 0.86rem !important;
+        line-height: 1.05 !important;
+    }
+
+    .app-mobile-header__usuario {
+        max-width: 11rem !important;
+        font-size: 0.64rem !important;
+        line-height: 0.9rem !important;
+        overflow: hidden !important;
+        text-overflow: ellipsis !important;
+        white-space: nowrap !important;
+    }
+
+    .app-mobile-header__sair {
+        min-height: 2.05rem !important;
+        padding: 0.45rem 0.62rem !important;
+        font-size: 0.68rem !important;
+    }
+
+    .app-mobile-header__navegacao,
+    .app-mobile-header__tela-atual {
+        display: none !important;
+    }
+
+    .app-mobile-header__select {
+        display: block !important;
+        min-height: 2.38rem !important;
+        border-radius: 0.9rem !important;
+        padding: 0.5rem 0.68rem !important;
+        font-size: 0.9rem !important;
+        font-weight: 850 !important;
+        line-height: 1.1rem !important;
+    }
+
+    .page-header {
+        margin-bottom: 0.55rem !important;
+        gap: 0.45rem !important;
+    }
+
+    .page-header-text h1 {
+        font-size: 1.18rem !important;
+    }
+
+    .page-header-text p {
+        font-size: 0.74rem !important;
+        line-height: 1.18rem !important;
+    }
+
+    .page-actions,
+    .page-actions > *,
+    .page-actions > .flex,
+    .page-actions > .top-actions-nowrap,
+    .top-actions-nowrap,
+    .toolbar-responsive {
+        gap: 0.42rem !important;
+        margin-top: 0 !important;
+    }
+
+    .page-actions button,
+    .top-actions-nowrap button,
+    .toolbar-responsive button {
+        min-height: 2.38rem !important;
+        border-radius: 0.9rem !important;
+        padding: 0.58rem 0.74rem !important;
+        font-size: 0.78rem !important;
+    }
+
+    .dashboard-summary-grid {
+        grid-template-columns: 1fr !important;
+        gap: 0.62rem !important;
+    }
+
+    .dashboard-summary-card,
+    .summary-card-fixed,
+    .config-summary-card,
+    .auditoria-summary-card,
+    .dashboard-campo-summary-card {
+        height: auto !important;
+        min-height: 7.4rem !important;
+        max-height: none !important;
+        border-radius: 1.2rem !important;
+        padding: 0.85rem !important;
+    }
+
+    .dashboard-summary-card > div,
+    .summary-card-fixed .summary-card-content,
+    .config-summary-card .summary-card-content,
+    .auditoria-summary-card .summary-card-content,
+    .dashboard-campo-summary-card .summary-card-content {
+        min-height: 0 !important;
+        height: auto !important;
+    }
+
+    .summary-card-fixed .summary-card-label,
+    .config-summary-card .summary-card-label,
+    .auditoria-summary-card .summary-card-label,
+    .dashboard-campo-summary-card .summary-card-label {
+        min-height: 0 !important;
+        max-height: none !important;
+        font-size: 0.78rem !important;
+        line-height: 1.05rem !important;
+    }
+
+    .summary-card-fixed .summary-card-value,
+    .config-summary-card .summary-card-value,
+    .auditoria-summary-card .summary-card-value,
+    .dashboard-campo-summary-card .summary-card-value,
+    .dashboard-summary-card p:nth-child(2) {
+        font-size: 1.35rem !important;
+        line-height: 1.1 !important;
+        max-height: none !important;
+    }
+
+    .summary-card-fixed .summary-card-detail,
+    .config-summary-card .summary-card-detail,
+    .auditoria-summary-card .summary-card-detail,
+    .dashboard-campo-summary-card .summary-card-detail {
+        font-size: 0.72rem !important;
+        line-height: 1rem !important;
+    }
+
+    .dashboard-summary-card :where(svg, .summary-card-icon),
+    .summary-card-fixed .summary-card-icon,
+    .config-summary-card .summary-card-icon,
+    .auditoria-summary-card .summary-card-icon,
+    .dashboard-campo-summary-card .summary-card-icon {
+        width: 2.15rem !important;
+        height: 2.15rem !important;
+        flex-basis: 2.15rem !important;
+    }
+
+    .responsive-table {
+        max-width: 100% !important;
+        overflow-x: auto !important;
+        -webkit-overflow-scrolling: touch !important;
+    }
+}
+
+@media (max-width: 380px) {
+    .app-mobile-header__usuario {
+        max-width: 8.2rem !important;
+    }
+
+    .app-mobile-header__sair span {
+        display: none !important;
+    }
+}
+
 `;
