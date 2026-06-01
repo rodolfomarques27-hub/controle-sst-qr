@@ -13,6 +13,7 @@ import {
     verificarCertificadoTreinamento,
 } from "../../services/documentosVerificacaoService";
 import {
+    detectarDataEmissaoArquivo,
     obterTreinamento,
     treinamentoSemValidade,
 } from "../../services/colaboradorDocumentosService";
@@ -20,6 +21,132 @@ import ResultadoVerificacaoDocumento from "../documentos/ResultadoVerificacaoDoc
 
 const ORIGEM_TIPO_CERTIFICADO = "certificado";
 const ORIGEM_TABELA_CERTIFICADOS = "certificados";
+
+const BUCKET_PADRAO_CERTIFICADOS = "certificados-treinamentos";
+
+function obterBucketCertificado(certificado = {}) {
+    return certificado.bucket ||
+        certificado.bucketNome ||
+        certificado.bucket_nome ||
+        BUCKET_PADRAO_CERTIFICADOS;
+}
+
+function removerQueryStringCaminho(caminho = "") {
+    return String(caminho || "").split("?")[0].trim();
+}
+
+function normalizarCaminhoStorageCertificado(caminhoInformado = "", bucket = BUCKET_PADRAO_CERTIFICADOS) {
+    const texto = String(caminhoInformado || "").trim();
+
+    if (!texto) return "";
+
+    if (!/^https?:\/\//i.test(texto)) {
+        return removerQueryStringCaminho(texto);
+    }
+
+    try {
+        const url = new URL(texto);
+        const path = decodeURIComponent(url.pathname || "");
+        const marcadores = [
+            `/storage/v1/object/public/${bucket}/`,
+            `/storage/v1/object/sign/${bucket}/`,
+            `/object/public/${bucket}/`,
+            `/object/sign/${bucket}/`,
+            `/${bucket}/`,
+        ];
+
+        for (const marcador of marcadores) {
+            const indice = path.indexOf(marcador);
+
+            if (indice >= 0) {
+                return removerQueryStringCaminho(path.slice(indice + marcador.length));
+            }
+        }
+
+        return removerQueryStringCaminho(path.split("/").pop() || "");
+    } catch {
+        return removerQueryStringCaminho(texto);
+    }
+}
+
+function obterCaminhoStorageCertificado(certificado = {}) {
+    const bucket = obterBucketCertificado(certificado);
+    const caminho =
+        certificado.caminhoStorage ||
+        certificado.caminho_storage ||
+        certificado.storagePath ||
+        certificado.storage_path ||
+        certificado.arquivoUrl ||
+        certificado.arquivo_url ||
+        certificado.urlDoArquivo ||
+        certificado.url_do_arquivo ||
+        "";
+
+    return normalizarCaminhoStorageCertificado(caminho, bucket);
+}
+
+function obterMimeArquivoCertificado(certificado = {}, blob = null) {
+    return certificado.mimeType ||
+        certificado.mime_type ||
+        certificado.tipoArquivo ||
+        certificado.tipo_arquivo ||
+        blob?.type ||
+        "application/pdf";
+}
+
+function criarArquivoBrowserParaAnalise({ blob, nomeArquivo = "", mimeType = "" } = {}) {
+    if (!blob) return null;
+
+    const nome = nomeArquivo || "certificado.pdf";
+    const tipo = mimeType || blob.type || "application/pdf";
+
+    if (typeof File !== "undefined") {
+        return new File([blob], nome, { type: tipo });
+    }
+
+    return blob;
+}
+
+async function baixarArquivoCertificadoParaAnalise({ certificado = {} } = {}) {
+    const bucket = obterBucketCertificado(certificado);
+    const caminho = obterCaminhoStorageCertificado(certificado);
+    const nomeArquivo = obterNomeArquivoCertificado(certificado) || caminho.split("/").pop() || "certificado.pdf";
+
+    if (!caminho) {
+        return {
+            arquivo: null,
+            bucket,
+            caminho,
+            aviso: "Arquivo salvo sem caminho de Storage para baixar na reanálise.",
+        };
+    }
+
+    const { data, error } = await supabase.storage
+        .from(bucket)
+        .download(caminho);
+
+    if (error) {
+        return {
+            arquivo: null,
+            bucket,
+            caminho,
+            aviso: `Não foi possível baixar o arquivo salvo para reanálise (${error.message}). A análise usará apenas os dados cadastrados.`,
+        };
+    }
+
+    const arquivo = criarArquivoBrowserParaAnalise({
+        blob: data,
+        nomeArquivo,
+        mimeType: obterMimeArquivoCertificado(certificado, data),
+    });
+
+    return {
+        arquivo,
+        bucket,
+        caminho,
+        aviso: "",
+    };
+}
 
 function obterIdCertificado(certificado = {}) {
     return certificado.id ||
@@ -206,8 +333,17 @@ function montarCertificadoParaReanalise(certificado = {}, certificadoId = "") {
             dataVencimento,
             arquivo_url: arquivoUrl,
             arquivoUrl,
+            url_do_arquivo: arquivoUrl,
+            caminho_storage: certificado.caminho_storage || certificado.caminhoStorage || arquivoUrl,
+            caminhoStorage: certificado.caminhoStorage || certificado.caminho_storage || arquivoUrl,
+            bucket: obterBucketCertificado(certificado),
             arquivo_nome: arquivoNome,
             arquivoNome,
+            nome_do_arquivo: arquivoNome,
+            mime_type: certificado.mime_type || certificado.mimeType || certificado.tipo_arquivo || certificado.tipoArquivo || "",
+            mimeType: certificado.mimeType || certificado.mime_type || certificado.tipoArquivo || certificado.tipo_arquivo || "",
+            tamanho_bytes: certificado.tamanho_bytes ?? certificado.tamanhoBytes ?? certificado.arquivo_tamanho ?? certificado.arquivoTamanho ?? null,
+            tamanhoBytes: certificado.tamanhoBytes ?? certificado.tamanho_bytes ?? certificado.arquivoTamanho ?? certificado.arquivo_tamanho ?? null,
             observacao: certificado.observacao || null,
         },
     };
@@ -309,6 +445,8 @@ export function VerificacaoCertificadoTreinamento({ certificado = {} }) {
     const [carregando, setCarregando] = useState(false);
     const [reanalisando, setReanalisando] = useState(false);
     const [erro, setErro] = useState("");
+    const [avisoArquivoAnalise, setAvisoArquivoAnalise] = useState("");
+    const [dataDetectadaArquivo, setDataDetectadaArquivo] = useState("");
     const [verificacao, setVerificacao] = useState(null);
     const [statusAtualValidacao, setStatusAtualValidacao] = useState(() => obterStatusValidacaoCertificado(certificado));
 
@@ -358,8 +496,31 @@ export function VerificacaoCertificadoTreinamento({ certificado = {} }) {
         setAberto(true);
         setReanalisando(true);
         setErro("");
+        setAvisoArquivoAnalise("");
+        setDataDetectadaArquivo("");
 
         try {
+            const arquivoAnalise = await baixarArquivoCertificadoParaAnalise({ certificado });
+
+            if (arquivoAnalise.aviso) {
+                setAvisoArquivoAnalise(arquivoAnalise.aviso);
+            }
+
+            let dataDetectada = "";
+
+            if (arquivoAnalise.arquivo) {
+                try {
+                    const sugestao = await detectarDataEmissaoArquivo(arquivoAnalise.arquivo);
+                    dataDetectada = sugestao?.data || "";
+
+                    if (dataDetectada) {
+                        setDataDetectadaArquivo(dataDetectada);
+                    }
+                } catch (erroDeteccaoData) {
+                    console.warn("Não foi possível detectar data no arquivo salvo:", erroDeteccaoData?.message || erroDeteccaoData);
+                }
+            }
+
             const {
                 treinamentoId,
                 treinamento,
@@ -367,12 +528,17 @@ export function VerificacaoCertificadoTreinamento({ certificado = {} }) {
                 certificadoParaVerificacao,
             } = montarCertificadoParaReanalise(certificado, certificadoId);
 
+            if (dataDetectada) {
+                certificadoParaVerificacao.data_detectada_documento = dataDetectada;
+                certificadoParaVerificacao.dataDetectadaDocumento = dataDetectada;
+            }
+
             const resultado = await verificarCertificadoTreinamento({
                 supabase,
                 certificado: certificadoParaVerificacao,
                 colaborador,
                 treinamento,
-                arquivo: null,
+                arquivo: arquivoAnalise.arquivo || null,
                 registrosExistentes: [],
                 usuario: null,
                 salvarResultado: true,
@@ -506,6 +672,30 @@ export function VerificacaoCertificadoTreinamento({ certificado = {} }) {
                                 certificado={certificado}
                                 verificacao={verificacao}
                             />
+
+                            {(dataDetectadaArquivo || avisoArquivoAnalise) && (
+                                <div className="mb-3 rounded-2xl border border-blue-100 bg-blue-50 px-4 py-3 text-xs text-blue-800">
+                                    <p className="font-black uppercase tracking-wide">Arquivo salvo na reanálise</p>
+
+                                    {dataDetectadaArquivo ? (
+                                        <p className="mt-1 font-semibold">
+                                            Data detectada no arquivo: {formatarDataPainel(dataDetectadaArquivo)}
+                                        </p>
+                                    ) : (
+                                        <p className="mt-1 font-semibold">
+                                            Data detectada no arquivo: não localizada automaticamente.
+                                        </p>
+                                    )}
+
+                                    {avisoArquivoAnalise && (
+                                        <p className="mt-1 text-blue-700">{avisoArquivoAnalise}</p>
+                                    )}
+
+                                    <p className="mt-1 text-blue-700">
+                                        A data detectada serve como apoio para conferência. A aprovação continua usando as datas cadastradas até que o TST revise e salve o cadastro.
+                                    </p>
+                                </div>
+                            )}
 
                             {ResultadoVerificacaoDocumento ? (
                                 <ResultadoVerificacaoDocumento

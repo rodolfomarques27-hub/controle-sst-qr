@@ -31,6 +31,10 @@ function obterArquivoUrlDocumento(documento = {}) {
         documento.url_do_arquivo ||
         documento.arquivoUrl ||
         documento.urlDoArquivo ||
+        documento.caminho_storage ||
+        documento.caminhoStorage ||
+        documento.storage_path ||
+        documento.storagePath ||
         "";
 }
 
@@ -74,12 +78,67 @@ function obterTipoCertificado(certificado = {}, treinamento = {}) {
         "";
 }
 
+function obterNumeroOuNullVerificacao(...valores) {
+    for (const valor of valores) {
+        if (valor === null || valor === undefined || valor === "") continue;
+
+        const numero = Number(valor);
+
+        if (Number.isFinite(numero)) {
+            return numero;
+        }
+    }
+
+    return null;
+}
+
+function obterTamanhoBytesDocumento(documento = {}) {
+    return obterNumeroOuNullVerificacao(
+        documento.tamanho_bytes,
+        documento.tamanhoBytes,
+        documento.arquivo_tamanho,
+        documento.arquivoTamanho,
+        documento.file_size,
+        documento.fileSize,
+        documento.size,
+        documento.bytes
+    );
+}
+
+function documentoPossuiReferenciaArquivo(documento = {}, arquivo = null) {
+    return Boolean(
+        arquivo ||
+        obterArquivoUrlDocumento(documento) ||
+        obterArquivoNomeDocumento(documento, null) ||
+        documento.caminho_storage ||
+        documento.caminhoStorage
+    );
+}
+
+function filtrarIndiciosArquivoSemArquivoLocal({ indicios = [], arquivo = null, documento = {} } = {}) {
+    if (arquivo || !documentoPossuiReferenciaArquivo(documento, arquivo)) {
+        return indicios;
+    }
+
+    return indicios.filter((indicio = {}) => {
+        const texto = `${indicio.codigo || ""} ${indicio.titulo || ""} ${indicio.detalhe || ""}`.toLowerCase();
+
+        const indicaTamanhoZero =
+            texto.includes("arquivo_muito_pequeno") ||
+            texto.includes("arquivo muito pequeno") ||
+            texto.includes("tamanho identificado: 0 bytes") ||
+            texto.includes("0 bytes");
+
+        return !indicaTamanhoZero;
+    });
+}
+
 function montarMetadadosArquivo({ arquivo = null, documento = {}, bucketPadrao = "" } = {}) {
     const arquivoNome = obterArquivoNomeDocumento(documento, arquivo);
     const arquivoUrl = obterArquivoUrlDocumento(documento);
     const tamanhoBytes = obterTamanhoArquivoVerificacao({
         arquivo,
-        tamanhoBytes: documento.tamanho_bytes || documento.tamanhoBytes || null,
+        tamanhoBytes: obterTamanhoBytesDocumento(documento),
     });
     const mimeType = obterMimeArquivoVerificacao({
         arquivo,
@@ -227,14 +286,20 @@ export async function analisarDocumentoEmpresaLocal({
 
     const hashArquivo = hashArquivoInformado || await gerarHashArquivoVerificacao(arquivo);
 
-    const indicios = [
-        ...avaliarArquivoBasicoVerificacao({
+    const indiciosArquivo = filtrarIndiciosArquivoSemArquivoLocal({
+        arquivo,
+        documento,
+        indicios: avaliarArquivoBasicoVerificacao({
             arquivo,
             arquivoNome: metadadosArquivo.arquivoNome,
             mimeType: metadadosArquivo.mimeType,
             tamanhoBytes: metadadosArquivo.tamanhoBytes,
             arquivoUrl: metadadosArquivo.arquivoUrl,
         }),
+    });
+
+    const indicios = [
+        ...indiciosArquivo,
         ...avaliarDatasDocumentoEmpresaVerificacao({
             dataEmissao: documento.data_emissao || documento.dataEmissao,
             dataVencimento: documento.data_vencimento || documento.dataVencimento,
@@ -290,8 +355,11 @@ export async function analisarCertificadoLocal({
 } = {}) {
     const documentoNormalizado = {
         ...certificado,
-        arquivo_url: certificado.arquivo_url || certificado.arquivoUrl || certificado.url_do_arquivo || "",
-        arquivo_nome: certificado.arquivo_nome || certificado.arquivoNome || certificado.nome_do_arquivo || "",
+        arquivo_url: certificado.arquivo_url || certificado.arquivoUrl || certificado.url_do_arquivo || certificado.urlDoArquivo || certificado.caminho_storage || certificado.caminhoStorage || "",
+        arquivo_nome: certificado.arquivo_nome || certificado.arquivoNome || certificado.nome_do_arquivo || certificado.nomeDoArquivo || "",
+        caminho_storage: certificado.caminho_storage || certificado.caminhoStorage || certificado.arquivo_url || certificado.arquivoUrl || "",
+        mime_type: certificado.mime_type || certificado.mimeType || certificado.tipo_arquivo || certificado.tipoArquivo || "",
+        tamanho_bytes: obterTamanhoBytesDocumento(certificado),
     };
 
     const metadadosArquivo = montarMetadadosArquivo({
@@ -302,14 +370,20 @@ export async function analisarCertificadoLocal({
 
     const hashArquivo = hashArquivoInformado || await gerarHashArquivoVerificacao(arquivo);
 
-    const indicios = [
-        ...avaliarArquivoBasicoVerificacao({
+    const indiciosArquivo = filtrarIndiciosArquivoSemArquivoLocal({
+        arquivo,
+        documento: documentoNormalizado,
+        indicios: avaliarArquivoBasicoVerificacao({
             arquivo,
             arquivoNome: metadadosArquivo.arquivoNome,
             mimeType: metadadosArquivo.mimeType,
             tamanhoBytes: metadadosArquivo.tamanhoBytes,
             arquivoUrl: metadadosArquivo.arquivoUrl,
         }),
+    });
+
+    const indicios = [
+        ...indiciosArquivo,
         ...avaliarDatasCertificadoVerificacao({
             dataRealizacao: certificado.data_realizacao || certificado.dataRealizacao,
             dataVencimento: certificado.data_vencimento || certificado.dataVencimento,
