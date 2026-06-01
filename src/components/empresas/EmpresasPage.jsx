@@ -17,7 +17,7 @@ import {
     Users,
 } from "lucide-react";
 
-import { Card, Header, StatusPill } from "../commonComponents";
+import { Card, Header } from "../commonComponents";
 import { FileUploadAviso, validarArquivoAntesUpload } from "../FileUploadAviso";
 import ResultadoVerificacaoDocumento from "../documentos/ResultadoVerificacaoDocumento";
 import { supabase } from "../../lib/supabaseClient";
@@ -63,6 +63,30 @@ function salvarPreferenciaPainelBoolean(chave, valor) {
     }
 
     return normalizado;
+}
+
+
+function StatusDocumentoEmpresaPill({ status, small = false }) {
+    const dados = status && typeof status === "object"
+        ? status
+        : {
+            texto: String(status || "Pendente"),
+            classe: "bg-slate-50 text-slate-700 ring-slate-200",
+            detalhe: "Status documental da empresa.",
+        };
+
+    return (
+        <span
+            title={dados.detalhe || dados.texto || "Status documental"}
+            className={classNames(
+                "inline-flex items-center justify-center whitespace-nowrap rounded-full text-center font-semibold ring-1",
+                small ? "px-2 py-1 text-xs" : "px-3 py-1 text-sm",
+                dados.classe || "bg-slate-50 text-slate-700 ring-slate-200"
+            )}
+        >
+            {dados.texto || "Pendente"}
+        </span>
+    );
 }
 
 function obterResumoDocumentoEmpresa(tipo) {
@@ -702,7 +726,7 @@ export function Empresas({
                                                     {doc ? "Documento cadastrado" : "Documento ainda não cadastrado"}
                                                 </p>
                                             </div>
-                                            {doc && <StatusPill status={st} small />}
+                                            {doc && <StatusDocumentoEmpresaPill status={st} small />}
                                         </div>
 
                                         {doc ? (
@@ -1861,7 +1885,7 @@ export function Empresas({
                                                     <p className="mt-1 text-xs leading-relaxed text-blue-100">{tipoDoc.fundamento}</p>
                                                 </div>
                                                 <div className="shrink-0">
-                                                    {doc ? <StatusPill status={st} small /> : <span className="rounded-full bg-red-50 px-2 py-1 text-xs font-semibold text-red-700 ring-1 ring-red-200">Pendente</span>}
+                                                    {doc ? <StatusDocumentoEmpresaPill status={st} small /> : <span className="rounded-full bg-red-50 px-2 py-1 text-xs font-semibold text-red-700 ring-1 ring-red-200">Pendente</span>}
                                                 </div>
                                             </div>
 
