@@ -91,7 +91,10 @@ export function AppLayout({
     return (
         <div className="min-h-screen bg-slate-100 text-slate-900">
             <style>{estilosGlobais}</style>
-            <div className="app-shell flex min-h-screen">
+            <div
+                className="app-shell flex min-h-screen"
+                data-sidebar-open={menuLateralAberto ? "true" : "false"}
+            >
                 <AppSidebar
                     nav={nav}
                     tela={tela}

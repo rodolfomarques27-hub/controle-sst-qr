@@ -855,4 +855,66 @@ ${estilosGlobaisBase}
     }
 }
 
+/* ROTEIRO 6 — ETAPA 16
+   Sidebar fixa no desktop para páginas longas.
+   Objetivo: evitar coluna lateral vazia quando o conteúdo é alto e manter a navegação sempre acessível. */
+@media (min-width: 1024px) {
+    .app-shell {
+        display: block !important;
+        min-height: 100vh !important;
+        width: 100% !important;
+        overflow-x: hidden !important;
+    }
+
+    .app-sidebar {
+        position: fixed !important;
+        inset: 0 auto 0 0 !important;
+        z-index: 60 !important;
+        height: 100dvh !important;
+        max-height: 100dvh !important;
+        border-right: 1px solid #e2e8f0 !important;
+        box-shadow: 10px 0 28px rgba(15, 23, 42, 0.035) !important;
+    }
+
+    .app-main {
+        width: calc(100% - 5rem) !important;
+        min-height: 100vh !important;
+        margin-left: 5rem !important;
+        transition: margin-left 0.24s ease, width 0.24s ease, padding 0.24s ease !important;
+    }
+
+    .app-shell[data-sidebar-open="true"] .app-main {
+        width: calc(100% - 18rem) !important;
+        margin-left: 18rem !important;
+    }
+
+    .app-content,
+    .page-shell {
+        max-width: min(100%, 1640px) !important;
+    }
+
+    .app-sidebar-nav {
+        padding-bottom: 0.4rem !important;
+    }
+
+    .app-sidebar-user,
+    .app-sidebar-user-compact {
+        margin-top: 0.85rem !important;
+    }
+}
+
+@media (min-width: 1024px) and (max-width: 1180px) {
+    .app-shell[data-sidebar-open="true"] .app-main {
+        width: calc(100% - 16rem) !important;
+        margin-left: 16rem !important;
+    }
+}
+
+@media (max-width: 1023.98px) {
+    .app-main {
+        width: 100% !important;
+        margin-left: 0 !important;
+    }
+}
+
 `;
