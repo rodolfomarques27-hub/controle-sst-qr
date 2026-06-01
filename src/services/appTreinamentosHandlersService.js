@@ -11,6 +11,27 @@ import {
 } from "./storageAuditoriaService";
 import { obterTreinamento, treinamentoSemValidade } from "./colaboradorDocumentosService";
 
+function arquivoPossuiArrayBuffer(arquivo = null) {
+    return Boolean(
+        arquivo &&
+        typeof arquivo === "object" &&
+        typeof arquivo.arrayBuffer === "function"
+    );
+}
+
+function obterArquivoValidoParaAnalise(arquivo = null) {
+    return arquivoPossuiArrayBuffer(arquivo) ? arquivo : null;
+}
+
+function obterNomeArquivoEntrada(arquivo = null) {
+    if (!arquivo) return "";
+
+    if (typeof arquivo === "string") {
+        return arquivo;
+    }
+
+    return arquivo.name || arquivo.nome || arquivo.filename || "";
+}
 
 function converterStatusVerificacaoParaStatusCertificado(statusVerificacao = "") {
     const status = String(statusVerificacao || "").trim().toLowerCase();
@@ -86,6 +107,9 @@ async function executarVerificacaoCertificadoSemBloquearFluxo({
             colaboradorSelecionado,
         });
 
+        const arquivoValidoParaAnalise = obterArquivoValidoParaAnalise(certificado.arquivo);
+        const nomeArquivoEntrada = obterNomeArquivoEntrada(certificado.arquivo);
+
         const certificadoParaVerificacao = {
             ...certificado,
             id: certificadoNormalizado.id,
@@ -101,8 +125,8 @@ async function executarVerificacaoCertificadoSemBloquearFluxo({
             dataVencimento: certificadoNormalizado.vencimento || certificadoNormalizado.dataVencimento || certificado.dataVencimento || certificado.data_vencimento || "",
             arquivo_url: certificadoNormalizado.arquivoUrl || certificado.arquivo_url || certificado.arquivoUrl || "",
             arquivoUrl: certificadoNormalizado.arquivoUrl || certificado.arquivoUrl || certificado.arquivo_url || "",
-            arquivo_nome: certificadoNormalizado.arquivoNome || certificado.arquivoNome || certificado.arquivo_nome || certificado.arquivo?.name || "",
-            arquivoNome: certificadoNormalizado.arquivoNome || certificado.arquivoNome || certificado.arquivo_nome || certificado.arquivo?.name || "",
+            arquivo_nome: certificadoNormalizado.arquivoNome || certificado.arquivoNome || certificado.arquivo_nome || nomeArquivoEntrada || "",
+            arquivoNome: certificadoNormalizado.arquivoNome || certificado.arquivoNome || certificado.arquivo_nome || nomeArquivoEntrada || "",
             observacao: certificado.observacao || certificadoNormalizado.observacao || null,
         };
 
@@ -111,7 +135,7 @@ async function executarVerificacaoCertificadoSemBloquearFluxo({
             certificado: certificadoParaVerificacao,
             colaborador,
             treinamento,
-            arquivo: certificado.arquivo || null,
+            arquivo: arquivoValidoParaAnalise,
             registrosExistentes: [],
             usuario: null,
             salvarResultado: true,

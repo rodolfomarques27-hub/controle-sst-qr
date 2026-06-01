@@ -78,6 +78,19 @@ function obterTipoCertificado(certificado = {}, treinamento = {}) {
         "";
 }
 
+
+function arquivoPossuiArrayBufferVerificacao(arquivo = null) {
+    return Boolean(
+        arquivo &&
+        typeof arquivo === "object" &&
+        typeof arquivo.arrayBuffer === "function"
+    );
+}
+
+function obterArquivoValidoVerificacao(arquivo = null) {
+    return arquivoPossuiArrayBufferVerificacao(arquivo) ? arquivo : null;
+}
+
 function obterNumeroOuNullVerificacao(...valores) {
     for (const valor of valores) {
         if (valor === null || valor === undefined || valor === "") continue;
@@ -134,14 +147,15 @@ function filtrarIndiciosArquivoSemArquivoLocal({ indicios = [], arquivo = null, 
 }
 
 function montarMetadadosArquivo({ arquivo = null, documento = {}, bucketPadrao = "" } = {}) {
-    const arquivoNome = obterArquivoNomeDocumento(documento, arquivo);
+    const arquivoValido = obterArquivoValidoVerificacao(arquivo);
+    const arquivoNome = obterArquivoNomeDocumento(documento, arquivoValido);
     const arquivoUrl = obterArquivoUrlDocumento(documento);
     const tamanhoBytes = obterTamanhoArquivoVerificacao({
-        arquivo,
+        arquivo: arquivoValido,
         tamanhoBytes: obterTamanhoBytesDocumento(documento),
     });
     const mimeType = obterMimeArquivoVerificacao({
-        arquivo,
+        arquivo: arquivoValido,
         mimeType: documento.mime_type || documento.mimeType || "",
     });
 
@@ -284,13 +298,14 @@ export async function analisarDocumentoEmpresaLocal({
         bucketPadrao: DOCUMENTOS_VERIFICACAO_BUCKETS.DOCUMENTOS_EMPRESAS,
     });
 
-    const hashArquivo = hashArquivoInformado || await gerarHashArquivoVerificacao(arquivo);
+    const arquivoValidoParaHash = obterArquivoValidoVerificacao(arquivo);
+    const hashArquivo = hashArquivoInformado || (arquivoValidoParaHash ? await gerarHashArquivoVerificacao(arquivoValidoParaHash) : "");
 
     const indiciosArquivo = filtrarIndiciosArquivoSemArquivoLocal({
         arquivo,
         documento,
         indicios: avaliarArquivoBasicoVerificacao({
-            arquivo,
+            arquivo: arquivoValidoParaHash,
             arquivoNome: metadadosArquivo.arquivoNome,
             mimeType: metadadosArquivo.mimeType,
             tamanhoBytes: metadadosArquivo.tamanhoBytes,
@@ -368,13 +383,14 @@ export async function analisarCertificadoLocal({
         bucketPadrao: DOCUMENTOS_VERIFICACAO_BUCKETS.CERTIFICADOS_TREINAMENTOS,
     });
 
-    const hashArquivo = hashArquivoInformado || await gerarHashArquivoVerificacao(arquivo);
+    const arquivoValidoParaHash = obterArquivoValidoVerificacao(arquivo);
+    const hashArquivo = hashArquivoInformado || (arquivoValidoParaHash ? await gerarHashArquivoVerificacao(arquivoValidoParaHash) : "");
 
     const indiciosArquivo = filtrarIndiciosArquivoSemArquivoLocal({
-        arquivo,
+        arquivo: arquivoValidoParaHash,
         documento: documentoNormalizado,
         indicios: avaliarArquivoBasicoVerificacao({
-            arquivo,
+            arquivo: arquivoValidoParaHash,
             arquivoNome: metadadosArquivo.arquivoNome,
             mimeType: metadadosArquivo.mimeType,
             tamanhoBytes: metadadosArquivo.tamanhoBytes,
