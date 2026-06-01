@@ -122,6 +122,64 @@ function obterResumoCurto(resumo, statusTexto, riscoTexto, score) {
     return `Status ${statusTexto.toLowerCase()}, risco ${riscoTexto.toLowerCase()} e score ${score}/100.`;
 }
 
+function DetalhesVerificacao({ dados }) {
+    return (
+        <div className="mt-4 grid gap-4 lg:grid-cols-2">
+            <div className="rounded-xl border border-slate-100 bg-slate-50 p-3">
+                <h4 className="text-xs font-bold uppercase tracking-wide text-slate-500">
+                    Indícios encontrados
+                </h4>
+
+                {dados.indicios.length > 0 ? (
+                    <div className="mt-3 space-y-2">
+                        {dados.indicios.map((indicio, indice) => (
+                            <div key={`${obterTituloIndicio(indicio)}-${indice}`} className="rounded-lg bg-white p-3 text-sm text-slate-700 ring-1 ring-slate-100">
+                                <p className="font-semibold text-slate-900">
+                                    {obterTituloIndicio(indicio)}
+                                </p>
+                                {obterDetalheIndicio(indicio) && (
+                                    <p className="mt-1 text-xs text-slate-500">
+                                        {obterDetalheIndicio(indicio)}
+                                    </p>
+                                )}
+                            </div>
+                        ))}
+                    </div>
+                ) : (
+                    <p className="mt-3 text-sm text-slate-600">
+                        Nenhum indício relevante encontrado pelas regras locais.
+                    </p>
+                )}
+            </div>
+
+            <div className="rounded-xl border border-slate-100 bg-slate-50 p-3">
+                <h4 className="text-xs font-bold uppercase tracking-wide text-slate-500">
+                    Recomendações
+                </h4>
+
+                {dados.recomendacoes.length > 0 ? (
+                    <ul className="mt-3 space-y-2 text-sm text-slate-700">
+                        {dados.recomendacoes.map((recomendacao, indice) => (
+                            <li
+                                key={`${typeof recomendacao === "string" ? recomendacao : JSON.stringify(recomendacao)}-${indice}`}
+                                className="rounded-lg bg-white p-3 ring-1 ring-slate-100"
+                            >
+                                {typeof recomendacao === "string"
+                                    ? recomendacao
+                                    : recomendacao?.texto || recomendacao?.titulo || "Revisar manualmente o documento."}
+                            </li>
+                        ))}
+                    </ul>
+                ) : (
+                    <p className="mt-3 text-sm text-slate-600">
+                        Nenhuma recomendação adicional registrada.
+                    </p>
+                )}
+            </div>
+        </div>
+    );
+}
+
 export default function ResultadoVerificacaoDocumento({
     verificacao = null,
     titulo = "Verificação documental",
@@ -160,6 +218,7 @@ export default function ResultadoVerificacaoDocumento({
     const riscoClasse = RISCO_CONFIG[String(dados.nivelRisco || "").toLowerCase()] || RISCO_CONFIG.nao_avaliado;
     const possuiVerificacao = Boolean(verificacao);
     const riscoTexto = formatarRisco(dados.nivelRisco);
+    const resumoCurto = obterResumoCurto(dados.resumo, statusConfig.texto, riscoTexto, dados.score);
 
     if (!possuiVerificacao) {
         return (
@@ -177,48 +236,73 @@ export default function ResultadoVerificacaoDocumento({
 
     if (compacto) {
         return (
-            <div className={`rounded-2xl border border-slate-200 bg-gradient-to-br from-slate-50 to-white p-3 shadow-sm ${className}`}>
-                <div className="flex items-start justify-between gap-3">
-                    <div className="min-w-0">
-                        <div className="flex items-center gap-2 text-[11px] font-bold uppercase tracking-[0.14em] text-slate-500">
+            <div className={`rounded-2xl border border-slate-200 bg-gradient-to-r from-slate-50 via-white to-white p-3 shadow-sm ${className}`}>
+                <div className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
+                    <div className="min-w-0 flex-1">
+                        <div className="flex flex-wrap items-center gap-2 text-[11px] font-bold uppercase tracking-[0.14em] text-slate-500">
                             <Sparkles className="h-3.5 w-3.5 text-emerald-500" />
                             Análise documental
                         </div>
-                        <p className="mt-1 text-sm font-semibold leading-tight text-slate-800">
-                            {titulo}
-                        </p>
-                        {dados.createdAt && (
-                            <p className="mt-1 text-[11px] text-slate-400">
-                                Verificado em {formatarData(dados.createdAt)}
-                            </p>
-                        )}
+
+                        <div className="mt-2 flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+                            <div className="min-w-0 flex-1">
+                                <p className="text-sm font-semibold leading-tight text-slate-800">
+                                    {titulo}
+                                </p>
+                                {(dados.tipoDocumento || dados.arquivoNome) && (
+                                    <p className="mt-1 truncate text-xs text-slate-500">
+                                        {dados.tipoDocumento || "Documento"}
+                                        {dados.arquivoNome ? ` • ${dados.arquivoNome}` : ""}
+                                    </p>
+                                )}
+                                {dados.createdAt && (
+                                    <p className="mt-1 text-[11px] text-slate-400">
+                                        Verificado em {formatarData(dados.createdAt)}
+                                    </p>
+                                )}
+                            </div>
+
+                            <div className="flex flex-wrap gap-2 lg:justify-end">
+                                <span className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-[11px] font-semibold ring-1 ${statusConfig.classe}`}>
+                                    <StatusIcon className="h-3.5 w-3.5" />
+                                    {statusConfig.texto}
+                                </span>
+
+                                <span className={`inline-flex items-center rounded-full px-3 py-1 text-[11px] font-semibold ring-1 ${riscoClasse}`}>
+                                    Risco {riscoTexto}
+                                </span>
+
+                                <span className="inline-flex items-center rounded-full bg-white px-3 py-1 text-[11px] font-semibold text-slate-700 ring-1 ring-slate-200">
+                                    Score {dados.score}/100
+                                </span>
+                            </div>
+                        </div>
                     </div>
 
-                    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-white ring-1 ring-slate-200 shadow-sm">
-                        <StatusIcon className="h-4.5 w-4.5 text-slate-600" />
-                    </div>
-                </div>
-
-                <div className="mt-3 flex flex-wrap gap-2">
-                    <span className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-[11px] font-semibold ring-1 ${statusConfig.classe}`}>
-                        <StatusIcon className="h-3.5 w-3.5" />
-                        {statusConfig.texto}
-                    </span>
-
-                    <span className={`inline-flex items-center rounded-full px-3 py-1 text-[11px] font-semibold ring-1 ${riscoClasse}`}>
-                        Risco {riscoTexto}
-                    </span>
-
-                    <span className="inline-flex items-center rounded-full bg-white px-3 py-1 text-[11px] font-semibold text-slate-700 ring-1 ring-slate-200">
-                        Score {dados.score}/100
-                    </span>
+                    <button
+                        type="button"
+                        onClick={() => setDetalhesAbertos((atual) => !atual)}
+                        className="inline-flex shrink-0 items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700 shadow-sm transition hover:bg-slate-50"
+                    >
+                        {detalhesAbertos ? "Recolher" : "Abrir"}
+                        {detalhesAbertos ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+                    </button>
                 </div>
 
                 <div className="mt-3 rounded-2xl bg-white/90 p-3 ring-1 ring-slate-100">
-                    <p className="text-sm leading-relaxed text-slate-600 line-clamp-4">
-                        {obterResumoCurto(dados.resumo, statusConfig.texto, riscoTexto, dados.score)}
+                    <p className="text-sm leading-relaxed text-slate-600">
+                        {resumoCurto}
                     </p>
                 </div>
+
+                {detalhesAbertos && (
+                    <>
+                        <DetalhesVerificacao dados={dados} />
+                        <p className="mt-4 text-xs text-slate-400">
+                            A análise indica inconsistências e indícios. O sistema não confirma falsificação automaticamente.
+                        </p>
+                    </>
+                )}
             </div>
         );
     }
@@ -281,56 +365,7 @@ export default function ResultadoVerificacaoDocumento({
                 </p>
             )}
 
-            {detalhesAbertos && (
-                <div className="mt-4 grid gap-4 lg:grid-cols-2">
-                    <div className="rounded-xl border border-slate-100 bg-slate-50 p-3">
-                        <h4 className="text-xs font-bold uppercase tracking-wide text-slate-500">
-                            Indícios encontrados
-                        </h4>
-
-                        {dados.indicios.length > 0 ? (
-                            <div className="mt-3 space-y-2">
-                                {dados.indicios.map((indicio, indice) => (
-                                    <div key={`${obterTituloIndicio(indicio)}-${indice}`} className="rounded-lg bg-white p-3 text-sm text-slate-700 ring-1 ring-slate-100">
-                                        <p className="font-semibold text-slate-900">
-                                            {obterTituloIndicio(indicio)}
-                                        </p>
-                                        {obterDetalheIndicio(indicio) && (
-                                            <p className="mt-1 text-xs text-slate-500">
-                                                {obterDetalheIndicio(indicio)}
-                                            </p>
-                                        )}
-                                    </div>
-                                ))}
-                            </div>
-                        ) : (
-                            <p className="mt-3 text-sm text-slate-600">
-                                Nenhum indício relevante encontrado pelas regras locais.
-                            </p>
-                        )}
-                    </div>
-
-                    <div className="rounded-xl border border-slate-100 bg-slate-50 p-3">
-                        <h4 className="text-xs font-bold uppercase tracking-wide text-slate-500">
-                            Recomendações
-                        </h4>
-
-                        {dados.recomendacoes.length > 0 ? (
-                            <ul className="mt-3 space-y-2 text-sm text-slate-700">
-                                {dados.recomendacoes.map((recomendacao, indice) => (
-                                    <li key={`${typeof recomendacao === "string" ? recomendacao : JSON.stringify(recomendacao)}-${indice}`} className="rounded-lg bg-white p-3 ring-1 ring-slate-100">
-                                        {typeof recomendacao === "string" ? recomendacao : recomendacao?.texto || recomendacao?.titulo || "Revisar manualmente o documento."}
-                                    </li>
-                                ))}
-                            </ul>
-                        ) : (
-                            <p className="mt-3 text-sm text-slate-600">
-                                Nenhuma recomendação adicional registrada.
-                            </p>
-                        )}
-                    </div>
-                </div>
-            )}
+            {detalhesAbertos && <DetalhesVerificacao dados={dados} />}
 
             <p className="mt-4 text-xs text-slate-400">
                 A análise indica inconsistências e indícios. O sistema não confirma falsificação automaticamente.
