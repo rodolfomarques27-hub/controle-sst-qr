@@ -1892,10 +1892,19 @@ export function Empresas({
                                             <div className="px-5 py-4 text-sm text-slate-600">
                                                 <div className="space-y-3">
                                                     <p className="leading-relaxed"><strong>Regra:</strong> {tipoDoc.regra}</p>
-                                                    <div className="grid gap-x-4 gap-y-1.5 rounded-2xl bg-slate-50 px-3 py-2.5 text-xs leading-relaxed text-slate-600 md:grid-cols-[max-content_max-content_minmax(0,1fr)] md:items-center">
-                                                        <p className="min-w-0 whitespace-nowrap"><strong className="text-slate-700">Emissão:</strong> {" "}{doc ? formatDate(doc.data_emissao) : "Documento não enviado"}</p>
-                                                        <p className="min-w-0 whitespace-nowrap"><strong className="text-slate-700">Revisão:</strong> {" "}{doc?.data_vencimento ? formatDate(doc.data_vencimento) : "Sem revisão definida"}</p>
-                                                        <p className="min-w-0 break-words md:truncate" title={doc?.arquivo_nome || "Arquivo ainda não anexado"}><strong className="text-slate-700">Arquivo:</strong> {" "}{doc?.arquivo_nome || "Arquivo ainda não anexado"}</p>
+                                                    <div className="flex min-w-0 flex-wrap items-center gap-x-8 gap-y-2 rounded-2xl bg-slate-50 px-3 py-2.5 text-xs leading-relaxed text-slate-600">
+                                                        <span className="inline-flex shrink-0 items-center gap-1 whitespace-nowrap">
+                                                            <strong className="inline text-slate-700">Emissão:</strong>
+                                                            <span>{doc ? formatDate(doc.data_emissao) : "Documento não enviado"}</span>
+                                                        </span>
+                                                        <span className="inline-flex shrink-0 items-center gap-1 whitespace-nowrap">
+                                                            <strong className="inline text-slate-700">Revisão:</strong>
+                                                            <span>{doc?.data_vencimento ? formatDate(doc.data_vencimento) : "Sem revisão definida"}</span>
+                                                        </span>
+                                                        <span className="inline-flex min-w-0 flex-1 items-center gap-1 whitespace-nowrap" title={doc?.arquivo_nome || "Arquivo ainda não anexado"}>
+                                                            <strong className="inline shrink-0 text-slate-700">Arquivo:</strong>
+                                                            <span className="min-w-0 truncate">{doc?.arquivo_nome || "Arquivo ainda não anexado"}</span>
+                                                        </span>
                                                     </div>
                                                 </div>
 
