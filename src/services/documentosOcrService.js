@@ -907,33 +907,37 @@ async function lerTextoPaginaPdfJs(pdf, numeroPagina) {
     );
 }
 
-function textoPaginaPossuiDataDocumentalPrincipal(textoPagina = "") {
+function contextoIndicaDataDocumentalPrincipal(contexto = "") {
+    const texto = normalizarTextoVerificacao(contexto);
+
+    if (!texto) return false;
+    if (contextoIndicaReferenciaLegal(contexto)) return false;
+    if (contextoIndicaCodigoOuCadastroNaoData(contexto)) return false;
+
+    return /vigencia|vigência|validade|vencimento|proxima revisao|próxima revisão|revisao do documento|revisão do documento|data de emissao|data de emissão|emitido em|emissao do documento|emissão do documento|elaborado em|elaboracao|elaboração|assinado em|assinatura digital|icp-brasil|responsavel tecnico|responsável técnico|data do documento|periodo de validade|período de validade|periodo de vigencia|período de vigência/.test(texto);
+}
+
+function textoPossuiDataDocumentalPrincipal(textoPagina = "") {
     const texto = limparTextoPossivelDocumento(textoPagina);
 
     if (!textoPossuiConteudoDocumentoConfiavel(texto)) return false;
 
+    const vigencia = extrairVigenciaPrincipalTexto(texto);
+    if (vigencia?.inicio && vigencia?.fim) return true;
+
+    if (extrairAssinaturaDigitalTexto(texto).length > 0) return true;
+
     const datasTexto = extrairDatasTextoDocumental(texto, "pdf_texto_local");
     if (!datasTexto.length) return false;
 
-    const classificadas = classificarDatasOcrDocumental({
-        textoExtraido: texto,
-        datasTexto,
-        datasNomeArquivo: [],
-    });
-
-    if ((classificadas.vigencia || []).length >= 2) return true;
-    if ((classificadas.assinaturaDigital || []).length > 0) return true;
-
-    const textoNormalizado = normalizarTextoVerificacao(texto);
-    const temTermoPrincipal = /vigencia|vigência|validade|vencimento|emissao|emissão|emitido|elaborado|elaboração|elaboracao|assinado|assinatura|revisao|revisão|responsavel tecnico|responsável técnico|data do documento|data de elaboracao|data de elaboração|data de emissão|data de emissao/.test(textoNormalizado);
-    const datasAproveitaveis = datasTexto.filter((data) => {
+    return datasTexto.some((data) => {
         if (!data?.iso) return false;
-        if (contextoIndicaReferenciaLegal(data.contexto)) return false;
-        if (contextoIndicaCodigoOuCadastroNaoData(data.contexto)) return false;
-        return true;
+        return contextoIndicaDataDocumentalPrincipal(data.contexto || "");
     });
+}
 
-    return Boolean(temTermoPrincipal && datasAproveitaveis.length > 0);
+function textoPaginaPossuiDataDocumentalPrincipal(textoPagina = "") {
+    return textoPossuiDataDocumentalPrincipal(textoPagina);
 }
 
 function montarSequenciaBuscaPaginas(totalPaginas = 0, paginasIniciais = 0) {
@@ -1057,8 +1061,7 @@ async function extrairTextoPdfComPdfJs(buffer) {
         let textoInicial = montarTextoPdfOrdenado(registrosPaginas);
         let precisaBuscaAmpliada = Boolean(
             totalPaginas > paginasIniciais &&
-            textoPossuiConteudoDocumentoConfiavel(textoInicial) &&
-            !textoPaginaPossuiDataDocumentalPrincipal(textoInicial)
+            !textoPossuiDataDocumentalPrincipal(textoInicial)
         );
 
         if (!textoInicial && totalPaginas > paginasIniciais) {
