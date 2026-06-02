@@ -128,12 +128,15 @@ async function executarVerificacaoDocumentoEmpresaSemBloquearFluxo({
 
         const statusValidacao = converterStatusVerificacaoParaStatusDocumento(verificacao?.statusVerificacao);
         const datasOcr = obterDatasVigenciaOcrVerificacao(verificacao);
-        const possuiDivergenciaEmpresa = verificacaoPossuiDivergenciaEmpresa(verificacao);
         const atualizacaoDocumento = {
             status_validacao: statusValidacao,
         };
 
-        if (!possuiDivergenciaEmpresa && datasOcr.dataEmissao && datasOcr.dataVencimento) {
+        // Se a leitura PDF.js localizar vigência confiável, atualiza as datas do cadastro
+        // para refletir o documento enviado. Mesmo quando houver divergência de empresa,
+        // o documento continua bloqueado pelo status_validacao, mas as datas exibidas
+        // passam a corresponder ao conteúdo real do arquivo.
+        if (datasOcr.dataEmissao && datasOcr.dataVencimento) {
             atualizacaoDocumento.data_emissao = datasOcr.dataEmissao;
             atualizacaoDocumento.data_vencimento = datasOcr.dataVencimento;
         }

@@ -129,6 +129,12 @@ export function criarIndicioVerificacao({
 }
 
 export function calcularScoreVerificacao(indicios = []) {
+    const possuiBloqueio = indicios.some((indicio) => indicio?.bloqueia);
+
+    if (possuiBloqueio) {
+        return 100;
+    }
+
     const total = indicios.reduce((soma, indicio) => soma + Number(indicio?.peso || 0), 0);
     return Math.max(0, Math.min(100, Math.round(total)));
 }
@@ -170,8 +176,11 @@ export function montarRecomendacoesVerificacao(indicios = []) {
 }
 
 export function montarResumoVerificacao({ indicios = [], status, score, nivelRisco } = {}) {
+    const scoreNormalizado = Math.max(0, Math.min(100, Number(score || 0)));
+    const conformidade = Math.max(0, Math.min(100, 100 - scoreNormalizado));
+
     if (!indicios.length) {
-        return `${DOCUMENTOS_VERIFICACAO_MENSAGENS_PADRAO.SEM_INDICIOS} Status: ${status}. Risco técnico: ${score}/100. Conformidade: ${100 - score}/100. Risco: ${nivelRisco}.`;
+        return `${DOCUMENTOS_VERIFICACAO_MENSAGENS_PADRAO.SEM_INDICIOS} Status: ${status}. Risco técnico: ${scoreNormalizado}/100. Conformidade: ${conformidade}/100. Risco: ${nivelRisco}.`;
     }
 
     const principais = indicios
@@ -182,7 +191,7 @@ export function montarResumoVerificacao({ indicios = [], status, score, nivelRis
         .filter(Boolean)
         .join("; ");
 
-    return `Indícios identificados: ${principais}. Status: ${status}. Risco técnico: ${score}/100. Conformidade: ${100 - score}/100. Risco: ${nivelRisco}.`;
+    return `Indícios identificados: ${principais}. Status: ${status}. Risco técnico: ${scoreNormalizado}/100. Conformidade: ${conformidade}/100. Risco: ${nivelRisco}.`;
 }
 
 export function montarResultadoVerificacaoBase({ indicios = [], erro = "" } = {}) {
