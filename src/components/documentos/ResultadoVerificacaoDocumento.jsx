@@ -493,6 +493,30 @@ function obterResumoCurto(resumo, statusTexto, riscoTexto, scoreRisco, conformid
     return `Status ${statusTexto.toLowerCase()}, risco ${riscoTexto.toLowerCase()}, risco técnico ${scoreRisco}/100 e conformidade ${conformidade}/100.`;
 }
 
+function PainelAnaliseManual({ dados }) {
+    const possuiIndicios = Array.isArray(dados?.indicios) && dados.indicios.length > 0;
+    const exigeRevisao = possuiIndicios || ["revisao_manual", "suspeito", "bloqueado", "erro"].includes(String(dados?.status || "").toLowerCase());
+
+    if (!exigeRevisao) return null;
+
+    return (
+        <div className="rounded-xl border border-orange-100 bg-orange-50/70 p-3 text-sm text-orange-950">
+            <h4 className="text-xs font-bold uppercase tracking-wide text-orange-700">
+                Análise manual recomendada
+            </h4>
+            <p className="mt-2 leading-relaxed">
+                O sistema encontrou indícios ou informações que dependem de conferência humana. Antes de aprovar, valide o documento original, a empresa, as datas, assinatura e dados cadastrais.
+            </p>
+            <ul className="mt-3 grid gap-2 text-xs text-orange-900 sm:grid-cols-2">
+                <li className="rounded-lg bg-white/80 p-2 ring-1 ring-orange-100">1. Abrir o PDF original e conferir empresa/CNPJ.</li>
+                <li className="rounded-lg bg-white/80 p-2 ring-1 ring-orange-100">2. Conferir emissão, vigência, revisão ou assinatura técnica.</li>
+                <li className="rounded-lg bg-white/80 p-2 ring-1 ring-orange-100">3. Validar assinatura digital, QR Code ou código de autenticidade, quando houver.</li>
+                <li className="rounded-lg bg-white/80 p-2 ring-1 ring-orange-100">4. Registrar a decisão no campo de observação antes de substituir/aprovar o documento.</li>
+            </ul>
+        </div>
+    );
+}
+
 function DetalhesVerificacao({ dados, resumoCurto }) {
     return (
         <div className="mt-4 space-y-3">
@@ -633,6 +657,8 @@ function DetalhesVerificacao({ dados, resumoCurto }) {
                     </p>
                 )}
             </div>
+
+            <PainelAnaliseManual dados={dados} />
 
             <div className="rounded-xl border border-slate-100 bg-slate-50 p-3">
                 <h4 className="text-xs font-bold uppercase tracking-wide text-slate-500">

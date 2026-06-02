@@ -241,7 +241,7 @@ function classificarContextoData(contexto = "") {
         categorias.push("vencimento");
     }
 
-    if (/emissao|emissão|emitido|realizacao|realização|realizado|conclusao|conclusão|concluido|concluído|treinamento|curso|data de inicio|data de início|inicio|início/.test(texto)) {
+    if (/emissao|emissão|emitido|realizacao|realização|realizado|conclusao|conclusão|concluido|concluído|treinamento|curso|data de inicio|data de início|inicio|início|encerramento|responsavel tecnico|responsável técnico|ultima datada|última datada|datada e assinada|cidade\s*,/.test(texto)) {
         categorias.push("emissao_realizacao");
     }
 
@@ -442,6 +442,47 @@ function extrairAssinaturaDigitalTexto(texto = "") {
     return resultados;
 }
 
+function extrairDatasEncerramentoTexto(texto = "") {
+    const conteudo = limparTextoPossivelDocumento(texto);
+    const resultados = [];
+    const usados = new Set();
+
+    if (!conteudo) return resultados;
+
+    const padroesBloco = [
+        /(?:\b\d{1,2}\.?\s*)?encerramento[\s\S]{0,1800}/gi,
+        /(?:ultima|última)\s+datada\s+e\s+assinada[\s\S]{0,1200}/gi,
+        /respons[aá]vel\s+t[eé]cnico[\s\S]{0,900}/gi,
+        /[A-ZÀ-Ú][A-ZÀ-Ú\s]{2,80}\s*,\s*[0-3]?\d\s+de\s+[a-zA-ZÀ-ÿçÇ]+\s+de\s+(?:19|20)\d{2}[\s\S]{0,700}/g,
+    ];
+
+    for (const padrao of padroesBloco) {
+        for (const match of conteudo.matchAll(padrao)) {
+            const bloco = limparTextoPossivelDocumento(match[0] || "");
+            if (!bloco) continue;
+
+            const datas = extrairDatasTextoDocumental(bloco, "texto").filter((data) => {
+                if (!data?.iso) return false;
+                if (contextoIndicaReferenciaLegal(data.contexto || bloco)) return false;
+                if (contextoIndicaCodigoOuCadastroNaoData(data.contexto || bloco)) return false;
+                return true;
+            });
+
+            for (const data of datas) {
+                if (usados.has(data.iso)) continue;
+                usados.add(data.iso);
+                resultados.push({
+                    ...data,
+                    contexto: obterContextoTexto(conteudo, match.index || 0, 260) || bloco,
+                    origem: "texto",
+                });
+            }
+        }
+    }
+
+    return resultados.sort((a, b) => a.iso.localeCompare(b.iso));
+}
+
 function classificarDatasOcrDocumental({ textoExtraido = "", datasTexto = [], datasNomeArquivo = [] } = {}) {
     const classificadas = {
         vigencia: [],
@@ -476,6 +517,14 @@ function classificarDatasOcrDocumental({ textoExtraido = "", datasTexto = [], da
             rotulo: "Assinatura digital",
         });
         usadas.add(assinatura.iso);
+    }
+
+    for (const encerramento of extrairDatasEncerramentoTexto(textoExtraido)) {
+        adicionarDataClassificada(classificadas.outrasRelevantes, encerramento, {
+            tipo: "encerramento_documento",
+            rotulo: "Data de encerramento / assinatura técnica do documento",
+        });
+        usadas.add(encerramento.iso);
     }
 
     for (const data of datasTexto || []) {
@@ -665,6 +714,9 @@ function montarCamposExtraidosDocumento({ textoExtraido = "", arquivoNome = "", 
     const inicioVigencia = vigenciaClassificada.find((data) => data?.tipo === "inicio_vigencia") || vigenciaClassificada[0] || null;
     const fimVigencia = vigenciaClassificada.find((data) => data?.tipo === "fim_vigencia") || vigenciaClassificada[1] || null;
     const assinaturaClassificada = Array.isArray(datasClassificadas?.assinaturaDigital) ? datasClassificadas.assinaturaDigital[0] : null;
+    const dataEncerramento = Array.isArray(datasClassificadas?.outrasRelevantes)
+        ? datasClassificadas.outrasRelevantes.find((data) => String(data?.tipo || "") === "encerramento_documento")
+        : null;
 
     return {
         tipo_documento: tipoDocumento || "",
@@ -674,8 +726,10 @@ function montarCamposExtraidosDocumento({ textoExtraido = "", arquivoNome = "", 
         vigencia_inicio_br: inicioVigencia?.br || "",
         vigencia_fim: fimVigencia?.iso || "",
         vigencia_fim_br: fimVigencia?.br || "",
-        assinatura_data: assinaturaClassificada?.iso || dataIsoDeTextoDataBr(dataAssinaturaTexto) || "",
-        assinatura_data_br: assinaturaClassificada?.br || dataAssinaturaTexto || "",
+        assinatura_data: assinaturaClassificada?.iso || dataIsoDeTextoDataBr(dataAssinaturaTexto) || dataEncerramento?.iso || "",
+        assinatura_data_br: assinaturaClassificada?.br || dataAssinaturaTexto || dataEncerramento?.br || "",
+        data_encerramento: dataEncerramento?.iso || "",
+        data_encerramento_br: dataEncerramento?.br || "",
         codigo_verificacao: codigoVerificacao || "",
         total_funcionarios: totalFuncionarios || "",
     };
@@ -702,6 +756,7 @@ function montarResumoTextualDocumento({
     const dataAssinatura = obterDataAssinaturaResumo(texto);
     const codigoVerificacao = obterCodigoVerificacaoResumo(texto);
     const totalFuncionarios = obterTotalFuncionariosResumo(texto);
+    const dataEncerramento = extrairDatasEncerramentoTexto(texto)[0] || null;
     const datasUnicas = Array.from(new Set((datasDocumentoConfiaveis || []).map((data) => data.br).filter(Boolean)));
 
     if (tipoDocumento) {
@@ -722,6 +777,8 @@ function montarResumoTextualDocumento({
 
     if (dataAssinatura) {
         resumo.push(`Data de assinatura digital localizada: ${dataAssinatura}.`);
+    } else if (dataEncerramento?.br) {
+        resumo.push(`Data de encerramento/assinatura técnica localizada: ${dataEncerramento.br}.`);
     }
 
     if (assinatura) {
@@ -914,7 +971,11 @@ function contextoIndicaDataDocumentalPrincipal(contexto = "") {
     if (contextoIndicaReferenciaLegal(contexto)) return false;
     if (contextoIndicaCodigoOuCadastroNaoData(contexto)) return false;
 
-    return /vigencia|vigência|validade|vencimento|proxima revisao|próxima revisão|revisao do documento|revisão do documento|data de emissao|data de emissão|emitido em|emissao do documento|emissão do documento|elaborado em|elaboracao|elaboração|assinado em|assinatura digital|icp-brasil|responsavel tecnico|responsável técnico|data do documento|periodo de validade|período de validade|periodo de vigencia|período de vigência/.test(texto);
+    const padraoPrincipalForte = /vigencia|vigência|periodo de vigencia|período de vigência|data de emissao|data de emissão|emissao do documento|emissão do documento|emitido em|elaborado em|elaboracao|elaboração|assinado em|assinatura digital|icp-brasil|encerramento|ultima datada|última datada|datada e assinada|responsavel tecnico|responsável técnico/;
+
+    if (padraoPrincipalForte.test(texto)) return true;
+
+    return /validade do documento|vencimento do documento|data de validade|data de vencimento|proxima revisao|próxima revisão|revisao do documento|revisão do documento/.test(texto);
 }
 
 function textoPossuiDataDocumentalPrincipal(textoPagina = "") {
@@ -926,6 +987,7 @@ function textoPossuiDataDocumentalPrincipal(textoPagina = "") {
     if (vigencia?.inicio && vigencia?.fim) return true;
 
     if (extrairAssinaturaDigitalTexto(texto).length > 0) return true;
+    if (extrairDatasEncerramentoTexto(texto).length > 0) return true;
 
     const datasTexto = extrairDatasTextoDocumental(texto, "pdf_texto_local");
     if (!datasTexto.length) return false;
