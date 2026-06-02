@@ -27,6 +27,80 @@ function converterStatusVerificacaoParaStatusDocumento(statusVerificacao = "") {
     return "Pendente de verificação";
 }
 
+
+async function obterEmpresaDocumentoParaVerificacao({ supabase, empresaId }) {
+    if (!supabase || !empresaId) return { id: empresaId || null };
+
+    try {
+        const { data, error } = await supabase
+            .from("empresas")
+            .select("id, nome, cnpj")
+            .eq("id", empresaId)
+            .maybeSingle();
+
+        if (error) {
+            console.warn("Não foi possível carregar empresa para verificação documental:", error.message);
+            return { id: empresaId };
+        }
+
+        return data || { id: empresaId };
+    } catch (error) {
+        console.warn("Falha ao consultar empresa para verificação documental:", error?.message || error);
+        return { id: empresaId };
+    }
+}
+
+function obterLeituraLocalVerificacao(verificacao = {}) {
+    return verificacao?.retornoIa?.leitura_documental_local ||
+        verificacao?.retorno_ia?.leitura_documental_local ||
+        verificacao?.retornoIa?.leituraDocumentalLocal ||
+        verificacao?.retorno_ia?.leituraDocumentalLocal ||
+        null;
+}
+
+function obterCamposExtraidosVerificacao(verificacao = {}) {
+    const leitura = obterLeituraLocalVerificacao(verificacao);
+    return leitura?.campos_extraidos || leitura?.camposExtraidos || null;
+}
+
+function verificacaoPossuiDivergenciaEmpresa(verificacao = {}) {
+    const indicios = Array.isArray(verificacao?.indicios) ? verificacao.indicios : [];
+
+    return indicios.some((indicio = {}) => {
+        const codigo = String(indicio?.codigo || "").toLowerCase();
+        return codigo.includes("documento_diverge_empresa") || codigo.includes("empresa_documento_diverge");
+    });
+}
+
+function obterDatasVigenciaOcrVerificacao(verificacao = {}) {
+    const campos = obterCamposExtraidosVerificacao(verificacao);
+
+    if (campos?.vigencia_inicio && campos?.vigencia_fim) {
+        return {
+            dataEmissao: campos.vigencia_inicio,
+            dataVencimento: campos.vigencia_fim,
+        };
+    }
+
+    const leitura = obterLeituraLocalVerificacao(verificacao);
+    const classificadas = leitura?.datas_classificadas || leitura?.datasClassificadas || {};
+    const vigencia = Array.isArray(classificadas?.vigencia) ? classificadas.vigencia : [];
+    const inicio = vigencia.find((data) => data?.tipo === "inicio_vigencia") || vigencia[0] || null;
+    const fim = vigencia.find((data) => data?.tipo === "fim_vigencia") || vigencia[1] || null;
+
+    if (inicio?.iso && fim?.iso) {
+        return {
+            dataEmissao: inicio.iso,
+            dataVencimento: fim.iso,
+        };
+    }
+
+    return {
+        dataEmissao: "",
+        dataVencimento: "",
+    };
+}
+
 async function executarVerificacaoDocumentoEmpresaSemBloquearFluxo({
     supabase,
     novoDoc,
@@ -37,12 +111,15 @@ async function executarVerificacaoDocumentoEmpresaSemBloquearFluxo({
     try {
         const { verificarDocumentoEmpresa } = await import("./documentosVerificacaoService");
 
+        const empresaParaVerificacao = await obterEmpresaDocumentoParaVerificacao({
+            supabase,
+            empresaId: documentoNormalizado.empresa_id || novoDoc.empresaId || null,
+        });
+
         const verificacao = await verificarDocumentoEmpresa({
             supabase,
             documento: documentoNormalizado,
-            empresa: {
-                id: documentoNormalizado.empresa_id || novoDoc.empresaId || null,
-            },
+            empresa: empresaParaVerificacao,
             arquivo: novoDoc.arquivo || null,
             registrosExistentes: [],
             usuario: null,
@@ -50,10 +127,20 @@ async function executarVerificacaoDocumentoEmpresaSemBloquearFluxo({
         });
 
         const statusValidacao = converterStatusVerificacaoParaStatusDocumento(verificacao?.statusVerificacao);
+        const datasOcr = obterDatasVigenciaOcrVerificacao(verificacao);
+        const possuiDivergenciaEmpresa = verificacaoPossuiDivergenciaEmpresa(verificacao);
+        const atualizacaoDocumento = {
+            status_validacao: statusValidacao,
+        };
+
+        if (!possuiDivergenciaEmpresa && datasOcr.dataEmissao && datasOcr.dataVencimento) {
+            atualizacaoDocumento.data_emissao = datasOcr.dataEmissao;
+            atualizacaoDocumento.data_vencimento = datasOcr.dataVencimento;
+        }
 
         const { data, error } = await supabase
             .from("documentos_empresas")
-            .update({ status_validacao: statusValidacao })
+            .update(atualizacaoDocumento)
             .eq("id", documentoNormalizado.id)
             .select("*")
             .single();

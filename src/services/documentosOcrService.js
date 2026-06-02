@@ -650,6 +650,35 @@ function obterTotalFuncionariosResumo(texto = "") {
     );
 }
 
+
+function montarCamposExtraidosDocumento({ textoExtraido = "", arquivoNome = "", datasClassificadas = {} } = {}) {
+    const texto = limparTextoPossivelDocumento(textoExtraido);
+    const tipoDocumento = obterTipoDocumentoResumo(texto, arquivoNome);
+    const empresaNome = obterEmpresaResumo(texto);
+    const cnpj = obterCnpjResumo(texto);
+    const codigoVerificacao = obterCodigoVerificacaoResumo(texto);
+    const totalFuncionarios = obterTotalFuncionariosResumo(texto);
+    const dataAssinaturaTexto = obterDataAssinaturaResumo(texto);
+    const vigenciaClassificada = Array.isArray(datasClassificadas?.vigencia) ? datasClassificadas.vigencia : [];
+    const inicioVigencia = vigenciaClassificada.find((data) => data?.tipo === "inicio_vigencia") || vigenciaClassificada[0] || null;
+    const fimVigencia = vigenciaClassificada.find((data) => data?.tipo === "fim_vigencia") || vigenciaClassificada[1] || null;
+    const assinaturaClassificada = Array.isArray(datasClassificadas?.assinaturaDigital) ? datasClassificadas.assinaturaDigital[0] : null;
+
+    return {
+        tipo_documento: tipoDocumento || "",
+        empresa_nome: empresaNome || "",
+        cnpj: cnpj || "",
+        vigencia_inicio: inicioVigencia?.iso || "",
+        vigencia_inicio_br: inicioVigencia?.br || "",
+        vigencia_fim: fimVigencia?.iso || "",
+        vigencia_fim_br: fimVigencia?.br || "",
+        assinatura_data: assinaturaClassificada?.iso || dataIsoDeTextoDataBr(dataAssinaturaTexto) || "",
+        assinatura_data_br: assinaturaClassificada?.br || dataAssinaturaTexto || "",
+        codigo_verificacao: codigoVerificacao || "",
+        total_funcionarios: totalFuncionarios || "",
+    };
+}
+
 function montarResumoTextualDocumento({
     textoExtraido = "",
     arquivoNome = "",
@@ -963,6 +992,11 @@ function montarRetornoLeituraBase({
         datasNomeArquivo,
     });
     const datasRelevantesClassificadas = obterDatasRelevantesClassificadas(datasClassificadas);
+    const camposExtraidos = montarCamposExtraidosDocumento({
+        textoExtraido: textoSeguro,
+        arquivoNome,
+        datasClassificadas,
+    });
     const resumoTextual = montarResumoTextualDocumento({
         textoExtraido: textoSeguro,
         arquivoNome,
@@ -1019,6 +1053,7 @@ function montarRetornoLeituraBase({
         textoExtraido: textoSeguro,
         textoPrevia,
         resumoTextual,
+        camposExtraidos,
         textoLimitado,
         paginasLidas,
         totalPaginas,
@@ -1241,17 +1276,111 @@ function avaliarAssinaturaDigitalLeitura({ leitura, dataVencimento } = {}) {
     return indicios;
 }
 
+function normalizarDocumentoTextoComparacao(valor = "") {
+    return normalizarTextoVerificacao(valor)
+        .replace(/(ltda|me|epp|eireli|sa|s\/a|ss|s\/s|construtora|construcoes|construções|pavimentadora|pavimentacao|pavimentação|comercio|comércio|servicos|serviços|empresa|grupo)/g, " ")
+        .replace(/[^a-z0-9]+/g, " ")
+        .replace(/\s+/g, " ")
+        .trim();
+}
+
+function obterTokensComparacaoEmpresa(valor = "") {
+    return normalizarDocumentoTextoComparacao(valor)
+        .split(" ")
+        .map((token) => token.trim())
+        .filter((token) => token.length >= 3);
+}
+
+function calcularSimilaridadeNomeEmpresa(nomeA = "", nomeB = "") {
+    const tokensA = Array.from(new Set(obterTokensComparacaoEmpresa(nomeA)));
+    const tokensB = Array.from(new Set(obterTokensComparacaoEmpresa(nomeB)));
+
+    if (!tokensA.length || !tokensB.length) return 1;
+
+    const intersecao = tokensA.filter((token) => tokensB.includes(token));
+    return intersecao.length / Math.min(tokensA.length, tokensB.length);
+}
+
+function apenasDigitosDocumento(valor = "") {
+    return String(valor || "").replace(/\D/g, "");
+}
+
+function formatarCnpjDocumento(valor = "") {
+    const digitos = apenasDigitosDocumento(valor);
+
+    if (digitos.length !== 14) return valor || "";
+
+    return `${digitos.slice(0, 2)}.${digitos.slice(2, 5)}.${digitos.slice(5, 8)}/${digitos.slice(8, 12)}-${digitos.slice(12, 14)}`;
+}
+
+function obterCamposExtraidosDaLeitura(leitura = {}) {
+    return leitura?.camposExtraidos || leitura?.campos_extraidos || {};
+}
+
+function avaliarEmpresaExtraidaDocumento({ leitura, empresa = {} } = {}) {
+    const indicios = [];
+    const campos = obterCamposExtraidosDaLeitura(leitura);
+    const cnpjDocumento = apenasDigitosDocumento(campos?.cnpj);
+    const cnpjEmpresa = apenasDigitosDocumento(empresa?.cnpj || empresa?.cpf_cnpj || empresa?.documento || "");
+    const nomeDocumento = limparTextoPossivelDocumento(campos?.empresa_nome || "");
+    const nomeEmpresa = limparTextoPossivelDocumento(empresa?.nome || empresa?.razao_social || empresa?.razaoSocial || "");
+
+    if (cnpjDocumento && cnpjEmpresa && cnpjDocumento !== cnpjEmpresa) {
+        indicios.push(criarIndicioVerificacao({
+            codigo: "cnpj_documento_diverge_empresa_selecionada",
+            tipo: DOCUMENTOS_VERIFICACAO_TIPOS_INDICIO.CADASTRO,
+            titulo: "CNPJ do documento diverge da empresa selecionada",
+            detalhe: `O documento indica CNPJ ${formatarCnpjDocumento(cnpjDocumento)}${nomeDocumento ? ` para ${nomeDocumento}` : ""}. A empresa selecionada possui CNPJ ${formatarCnpjDocumento(cnpjEmpresa)}${nomeEmpresa ? ` (${nomeEmpresa})` : ""}.`,
+            peso: DOCUMENTOS_VERIFICACAO_PESOS.DIVERGENCIA_EMPRESA,
+            bloqueia: true,
+            recomendacao: "Não aprovar este documento para a empresa selecionada. Conferir se o arquivo foi enviado na empresa correta ou substituir pelo documento correspondente.",
+            dados: {
+                cnpjDocumento: formatarCnpjDocumento(cnpjDocumento),
+                cnpjEmpresaSelecionada: formatarCnpjDocumento(cnpjEmpresa),
+                empresaDocumento: nomeDocumento,
+                empresaSelecionada: nomeEmpresa,
+            },
+        }));
+
+        return indicios;
+    }
+
+    if (nomeDocumento && nomeEmpresa) {
+        const similaridade = calcularSimilaridadeNomeEmpresa(nomeDocumento, nomeEmpresa);
+
+        if (similaridade < 0.35) {
+            indicios.push(criarIndicioVerificacao({
+                codigo: "nome_empresa_documento_diverge_empresa_selecionada",
+                tipo: DOCUMENTOS_VERIFICACAO_TIPOS_INDICIO.CADASTRO,
+                titulo: "Nome da empresa no documento diverge da empresa selecionada",
+                detalhe: `O documento indica ${nomeDocumento}. A empresa selecionada é ${nomeEmpresa}.`,
+                peso: DOCUMENTOS_VERIFICACAO_PESOS.DIVERGENCIA_EMPRESA,
+                bloqueia: false,
+                recomendacao: "Conferir manualmente se o documento pertence à empresa correta. Se o CNPJ também divergir, o documento deve ser substituído.",
+                dados: {
+                    empresaDocumento: nomeDocumento,
+                    empresaSelecionada: nomeEmpresa,
+                    similaridade,
+                },
+            }));
+        }
+    }
+
+    return indicios;
+}
+
 export function avaliarLeituraDocumentalComCadastro({
     leitura,
+    empresa = {},
 } = {}) {
     if (!leitura) return [];
 
-    // Etapa de estabilização: a leitura local/OCR fica apenas informativa.
-    // A verificação documental principal continua sendo feita pelas regras locais
-    // de arquivo, cadastro, vencimento, duplicidade e observação.
-    // Isso evita falso indício quando o PDF possui camada técnica, texto parcial,
-    // imagem escaneada ou datas encontradas somente no nome do arquivo.
-    return [];
+    // Nesta etapa a leitura local/OCR continua sem comparar datas automaticamente,
+    // para evitar falsos alertas. A exceção segura é a conferência de empresa/CNPJ,
+    // pois evita aprovar documento enviado na empresa errada.
+    return [
+        ...avaliarEmpresaExtraidaDocumento({ leitura, empresa }),
+    ];
 }
 
 export function montarRetornoLeituraParaPersistencia(leitura = null) {
@@ -1263,6 +1392,7 @@ export function montarRetornoLeituraParaPersistencia(leitura = null) {
         confianca: leitura.confianca,
         resumo: leitura.resumo,
         resumo_textual: leitura.resumoTextual || [],
+        campos_extraidos: leitura.camposExtraidos || null,
         texto_previa: leitura.textoPrevia || "",
         paginas_lidas: leitura.paginasLidas || 0,
         total_paginas: leitura.totalPaginas || 0,

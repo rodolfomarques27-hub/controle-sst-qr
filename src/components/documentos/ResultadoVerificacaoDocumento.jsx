@@ -472,9 +472,9 @@ function formatarData(data) {
     return texto;
 }
 
-function obterResumoCurto(resumo, statusTexto, riscoTexto, score) {
+function obterResumoCurto(resumo, statusTexto, riscoTexto, scoreRisco, conformidade) {
     if (resumo) return resumo;
-    return `Status ${statusTexto.toLowerCase()}, risco ${riscoTexto.toLowerCase()} e score ${score}/100.`;
+    return `Status ${statusTexto.toLowerCase()}, risco ${riscoTexto.toLowerCase()}, risco técnico ${scoreRisco}/100 e conformidade ${conformidade}/100.`;
 }
 
 function DetalhesVerificacao({ dados, resumoCurto }) {
@@ -665,10 +665,15 @@ export default function ResultadoVerificacaoDocumento({
         const datasRelevantesOcr = obterDatasRelevantesPainel(datasClassificadasOcr);
         const datasLidasOcr = obterDatasLidasPainel(leituraDocumentalLocal);
 
+        const scoreRisco = Number.isFinite(score) ? Math.max(0, Math.min(100, score)) : 0;
+        const conformidade = Math.max(0, Math.min(100, 100 - scoreRisco));
+
         return {
             status,
             nivelRisco,
-            score: Number.isFinite(score) ? Math.max(0, Math.min(100, score)) : 0,
+            score: scoreRisco,
+            scoreRisco,
+            conformidade,
             indicios,
             recomendacoes,
             resumo,
@@ -690,7 +695,7 @@ export default function ResultadoVerificacaoDocumento({
     const riscoClasse = RISCO_CONFIG[String(dados.nivelRisco || "").toLowerCase()] || RISCO_CONFIG.nao_avaliado;
     const possuiVerificacao = Boolean(verificacao);
     const riscoTexto = formatarRisco(dados.nivelRisco);
-    const resumoCurto = obterResumoCurto(dados.resumo, statusConfig.texto, riscoTexto, dados.score);
+    const resumoCurto = obterResumoCurto(dados.resumo, statusConfig.texto, riscoTexto, dados.scoreRisco, dados.conformidade);
 
     if (!possuiVerificacao) {
         return (
@@ -748,8 +753,12 @@ export default function ResultadoVerificacaoDocumento({
                             Risco {riscoTexto}
                         </span>
 
-                        <span className="inline-flex items-center rounded-full bg-slate-50 px-3 py-1 text-[11px] font-semibold text-slate-700 ring-1 ring-slate-200">
-                            Score {dados.score}/100
+                        <span className="inline-flex items-center rounded-full bg-emerald-50 px-3 py-1 text-[11px] font-semibold text-emerald-700 ring-1 ring-emerald-200">
+                            Conformidade {dados.conformidade}/100
+                        </span>
+
+                        <span className="inline-flex items-center rounded-full bg-slate-50 px-3 py-1 text-[11px] font-semibold text-slate-600 ring-1 ring-slate-200">
+                            Risco técnico {dados.scoreRisco}/100
                         </span>
                     </div>
                 </div>
@@ -806,8 +815,12 @@ export default function ResultadoVerificacaoDocumento({
                     Risco: {riscoTexto}
                 </span>
 
-                <span className="inline-flex items-center rounded-full bg-slate-50 px-3 py-1 text-xs font-semibold text-slate-700 ring-1 ring-slate-200">
-                    Score: {dados.score}/100
+                <span className="inline-flex items-center rounded-full bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700 ring-1 ring-emerald-200">
+                    Conformidade: {dados.conformidade}/100
+                </span>
+
+                <span className="inline-flex items-center rounded-full bg-slate-50 px-3 py-1 text-xs font-semibold text-slate-600 ring-1 ring-slate-200">
+                    Risco técnico: {dados.scoreRisco}/100
                 </span>
             </div>
 

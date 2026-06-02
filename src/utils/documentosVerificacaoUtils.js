@@ -171,7 +171,7 @@ export function montarRecomendacoesVerificacao(indicios = []) {
 
 export function montarResumoVerificacao({ indicios = [], status, score, nivelRisco } = {}) {
     if (!indicios.length) {
-        return `${DOCUMENTOS_VERIFICACAO_MENSAGENS_PADRAO.SEM_INDICIOS} Status: ${status}. Score: ${score}. Risco: ${nivelRisco}.`;
+        return `${DOCUMENTOS_VERIFICACAO_MENSAGENS_PADRAO.SEM_INDICIOS} Status: ${status}. Risco técnico: ${score}/100. Conformidade: ${100 - score}/100. Risco: ${nivelRisco}.`;
     }
 
     const principais = indicios
@@ -182,7 +182,7 @@ export function montarResumoVerificacao({ indicios = [], status, score, nivelRis
         .filter(Boolean)
         .join("; ");
 
-    return `Indícios identificados: ${principais}. Status: ${status}. Score: ${score}. Risco: ${nivelRisco}.`;
+    return `Indícios identificados: ${principais}. Status: ${status}. Risco técnico: ${score}/100. Conformidade: ${100 - score}/100. Risco: ${nivelRisco}.`;
 }
 
 export function montarResultadoVerificacaoBase({ indicios = [], erro = "" } = {}) {

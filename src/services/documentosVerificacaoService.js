@@ -336,6 +336,7 @@ export async function analisarDocumentoEmpresaLocal({
         }),
         ...avaliarLeituraDocumentalComCadastro({
             leitura: leituraDocumental,
+            empresa,
             dataEmissao: documento.data_emissao || documento.dataEmissao,
             dataVencimento: documento.data_vencimento || documento.dataVencimento,
             origemTipo: DOCUMENTOS_VERIFICACAO_ORIGENS.DOCUMENTO_EMPRESA,
