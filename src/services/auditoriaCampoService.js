@@ -4,7 +4,7 @@ import {
     tiposAuditoriaCampoDireta,
     categoriasPadronizadasAuditoriaCampo,
     checklistDinamicoAuditoriaCampo,
-} from "../constants/sstConstants";
+} from "../constants/auditoriaCampoConstants";
 import {
     normalizarTextoBusca,
     textoNaoAplicavel,

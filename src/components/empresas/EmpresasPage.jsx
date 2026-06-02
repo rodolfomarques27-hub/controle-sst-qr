@@ -29,7 +29,7 @@ import {
     normalizarStatusEmpresa,
     classeStatusEmpresa,
 } from "../../services/empresaDocumentosService";
-import { documentosEmpresaBase } from "../../constants/sstConstants";
+import { documentosEmpresaBase } from "../../constants/documentosEmpresaConstants";
 import { baixarPDF } from "../../services/exportacaoService";
 import {
     classNames,

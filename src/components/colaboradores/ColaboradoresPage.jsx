@@ -40,7 +40,7 @@ import {
     treinamentosBase,
     treinamentosBaseObra,
     STATUS_CLASSIFICACAO_COLABORADOR,
-} from "../../constants/sstConstants";
+} from "../../constants/treinamentosConstants";
 import { baixarPDF } from "../../services/exportacaoService";
 import { normalizarTextoBusca, formatDate, classNames } from "../../utils/sstUtils";
 

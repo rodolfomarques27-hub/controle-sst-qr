@@ -1,4 +1,4 @@
-import { documentosEmpresaBase } from "../constants/sstConstants";
+import { documentosEmpresaBase } from "../constants/documentosEmpresaConstants";
 
 const DIAS_ALERTA_DOCUMENTO_EMPRESA = 30;
 const UM_DIA_MS = 1000 * 60 * 60 * 24;

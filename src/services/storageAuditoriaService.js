@@ -7,7 +7,7 @@ import {
     calcularVencimentoTreinamento,
     obterTreinamento,
 } from "./colaboradorDocumentosService";
-import { treinamentosBase } from "../constants/sstConstants";
+import { treinamentosBase } from "../constants/treinamentosConstants";
 import { extrairCaminhoStorage } from "../utils/sstUtils";
 
 export async function sincronizarCertificadosDoStorageService({

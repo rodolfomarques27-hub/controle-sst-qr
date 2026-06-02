@@ -3,7 +3,7 @@ import { Lock, RefreshCw } from "lucide-react";
 import { Card } from "../components/commonComponents";
 import { CarregandoTela } from "../components/CarregandoTela";
 import { AuditoriaAcessoNegado } from "../components/auditoria/AuditoriaPermissao";
-import { LIMITE_STORAGE_MB } from "../constants/sstConstants";
+import { LIMITE_STORAGE_MB } from "../constants/sistemaConstants";
 
 const ConsultaQR = React.lazy(() => import("../components/qr/ConsultaQR").then((modulo) => ({ default: modulo.ConsultaQR })));
 const Requisitos = React.lazy(() => import("../components/Requisitos").then((modulo) => ({ default: modulo.Requisitos })));

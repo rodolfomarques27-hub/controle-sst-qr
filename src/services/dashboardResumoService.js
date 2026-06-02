@@ -17,7 +17,7 @@ import {
     statusEmpresaDocumento,
     normalizarStatusEmpresa,
 } from "./empresaDocumentosService";
-import { LIMITE_STORAGE_MB } from "../constants/sstConstants";
+import { LIMITE_STORAGE_MB } from "../constants/sistemaConstants";
 import {
     normalizarTextoBusca,
     diasParaVencer,

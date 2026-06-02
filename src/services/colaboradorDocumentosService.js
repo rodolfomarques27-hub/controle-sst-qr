@@ -3,7 +3,7 @@ import {
     treinamentosBase,
     IDS_DOCUMENTOS_CRITICOS_COLABORADOR,
     matrizTreinamentosPorFuncao,
-} from "../constants/sstConstants";
+} from "../constants/treinamentosConstants";
 import {
     normalizarTextoBusca,
     normalizarDataAniversario,

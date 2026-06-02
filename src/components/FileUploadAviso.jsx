@@ -4,7 +4,7 @@ import {
     UPLOAD_LIMITE_FORTE_MB,
     UPLOAD_MENSAGEM_ARQUIVO_GRANDE,
     perfisUpload,
-} from "../constants/sstConstants";
+} from "../constants/sistemaConstants";
 import { classNames, formatarBytes } from "../utils/sstUtils";
 
 function obterPerfilUpload(tipo = "documentoSimples") {

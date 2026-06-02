@@ -27,7 +27,7 @@ import {
     auditoriaCampoAberta,
     auditoriaCampoVencida,
 } from "../../services/auditoriaCampoService";
-import { tiposAuditoriaCampoDireta } from "../../constants/sstConstants";
+import { tiposAuditoriaCampoDireta } from "../../constants/auditoriaCampoConstants";
 import { normalizarTextoBusca, formatDate, formatarDataHora, classNames } from "../../utils/sstUtils";
 import { LIMITE_QRCODES_CAMPO_POR_CARGA } from "../../constants/sistemaLimitesConstants";
 import { carregarConfiguracaoAuditoriaPublicaSistema } from "../../constants/auditoriaPublicaConstants";

@@ -1,4 +1,4 @@
-import { estilosGlobais as estilosGlobaisBase } from "./sstConstants";
+import { estilosGlobais as estilosGlobaisBase } from "./appGlobalStyles";
 
 export const estilosGlobais = `
 ${estilosGlobaisBase}

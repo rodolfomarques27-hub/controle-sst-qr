@@ -1,5 +1,5 @@
 import { supabase } from "../lib/supabaseClient";
-import { TAMANHO_PAGINA_SUPABASE } from "../constants/sstConstants";
+import { TAMANHO_PAGINA_SUPABASE } from "../constants/sistemaConstants";
 import { abrirArquivoUrl, extrairCaminhoStorage } from "../utils/sstUtils";
 
 export async function buscarTodosRegistrosSupabase(tabela, colunas = "*", opcoes = {}) {

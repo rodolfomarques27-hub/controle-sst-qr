@@ -23,7 +23,8 @@ import {
     atualizarTreinamentoArquivoLote,
     atualizarDataArquivoLote,
 } from "../../services/treinamentosService";
-import { treinamentosBase, FUNCAO_EMAIL_ALERTA_TST } from "../../constants/sstConstants";
+import { FUNCAO_EMAIL_ALERTA_TST } from "../../constants/sistemaConstants";
+import { treinamentosBase } from "../../constants/treinamentosConstants";
 import {
     normalizarTextoBusca,
     diasParaVencer,

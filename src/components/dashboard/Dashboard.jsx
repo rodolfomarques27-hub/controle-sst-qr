@@ -46,7 +46,7 @@ import {
 import {
     FUNCAO_EMAIL_ALERTA_TST,
     LIMITE_STORAGE_MB,
-} from "../../constants/sstConstants";
+} from "../../constants/sistemaConstants";
 import { baixarPDF } from "../../services/exportacaoService";
 import {
     painelPadraoDashboard,
