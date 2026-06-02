@@ -273,25 +273,139 @@ function formatarDataLeituraPainel(valor = "") {
     return valor;
 }
 
-function obterDatasLidasPainel(leitura = null) {
+function normalizarDataClassificadaPainel(data, extras = {}) {
+    if (!data) return null;
+
+    if (typeof data === "string") {
+        return {
+            iso: data,
+            br: formatarDataLeituraPainel(data),
+            ...extras,
+        };
+    }
+
+    const iso = data.iso || data.data || "";
+    const br = data.br || formatarDataLeituraPainel(iso);
+
+    if (!iso && !br) return null;
+
+    return {
+        ...data,
+        iso,
+        br,
+        tipo: data.tipo || extras.tipo || "",
+        rotulo: data.rotulo || extras.rotulo || "",
+        motivo: data.motivo || extras.motivo || "",
+    };
+}
+
+function normalizarListaDatasClassificadasPainel(valor, extras = {}) {
+    if (!Array.isArray(valor)) return [];
+
+    const mapa = new Map();
+
+    valor.forEach((data) => {
+        const item = normalizarDataClassificadaPainel(data, extras);
+        if (!item) return;
+
+        const chave = `${item.iso || item.br}__${item.tipo || ""}__${item.motivo || ""}`;
+        if (!mapa.has(chave)) mapa.set(chave, item);
+    });
+
+    return Array.from(mapa.values());
+}
+
+function obterDatasClassificadasPainel(leitura = null) {
+    const classificadas = leitura?.datas_classificadas || leitura?.datasClassificadas;
+
+    if (classificadas && typeof classificadas === "object") {
+        return {
+            vigencia: normalizarListaDatasClassificadasPainel(classificadas.vigencia),
+            assinaturaDigital: normalizarListaDatasClassificadasPainel(classificadas.assinaturaDigital || classificadas.assinatura_digital),
+            referenciasLegais: normalizarListaDatasClassificadasPainel(classificadas.referenciasLegais || classificadas.referencias_legais),
+            ignoradas: normalizarListaDatasClassificadasPainel(classificadas.ignoradas),
+            outrasRelevantes: normalizarListaDatasClassificadasPainel(classificadas.outrasRelevantes || classificadas.outras_relevantes),
+            nomeArquivo: normalizarListaDatasClassificadasPainel(classificadas.nomeArquivo || classificadas.nome_arquivo),
+        };
+    }
+
+    const datasRelevantes = leitura?.datas_relevantes_classificadas || leitura?.datasRelevantesClassificadas;
+
+    if (Array.isArray(datasRelevantes) && datasRelevantes.length) {
+        return {
+            vigencia: normalizarListaDatasClassificadasPainel(datasRelevantes.filter((data) => String(data?.tipo || "").includes("vigencia"))),
+            assinaturaDigital: normalizarListaDatasClassificadasPainel(datasRelevantes.filter((data) => String(data?.tipo || "") === "assinatura_digital")),
+            referenciasLegais: [],
+            ignoradas: [],
+            outrasRelevantes: normalizarListaDatasClassificadasPainel(datasRelevantes.filter((data) => !String(data?.tipo || "").includes("vigencia") && String(data?.tipo || "") !== "assinatura_digital")),
+            nomeArquivo: [],
+        };
+    }
+
     const datasDocumento = leitura?.datas_documento_confiaveis || leitura?.datasDocumentoConfiaveis;
 
     if (Array.isArray(datasDocumento) && datasDocumento.length) {
-        return Array.from(new Set(datasDocumento.map((data) => formatarDataLeituraPainel(data)).filter(Boolean)));
+        return {
+            vigencia: [],
+            assinaturaDigital: [],
+            referenciasLegais: [],
+            ignoradas: [],
+            outrasRelevantes: normalizarListaDatasClassificadasPainel(datasDocumento, {
+                tipo: "data_documental",
+                rotulo: "Data textual localizada",
+            }),
+            nomeArquivo: [],
+        };
     }
 
-    const datasEncontradas = leitura?.datas_encontradas || leitura?.datasEncontradas;
+    return {
+        vigencia: [],
+        assinaturaDigital: [],
+        referenciasLegais: [],
+        ignoradas: [],
+        outrasRelevantes: [],
+        nomeArquivo: [],
+    };
+}
 
-    if (Array.isArray(datasEncontradas)) {
-        return Array.from(new Set(
-            datasEncontradas
-                .filter((data) => String(data?.origem || "") !== "nome_arquivo")
-                .map((data) => data?.br || formatarDataLeituraPainel(data?.iso || data))
-                .filter(Boolean)
-        ));
-    }
+function obterDatasRelevantesPainel(datasClassificadas = {}) {
+    return [
+        ...(datasClassificadas.vigencia || []),
+        ...(datasClassificadas.assinaturaDigital || []),
+        ...(datasClassificadas.outrasRelevantes || []),
+    ];
+}
 
-    return [];
+function obterDatasLidasPainel(leitura = null) {
+    const classificadas = obterDatasClassificadasPainel(leitura);
+    return Array.from(new Set(obterDatasRelevantesPainel(classificadas).map((data) => data.br).filter(Boolean)));
+}
+
+function descreverVigenciaPainel(datas = []) {
+    const inicio = datas.find((data) => String(data.tipo || "") === "inicio_vigencia") || datas[0];
+    const fim = datas.find((data) => String(data.tipo || "") === "fim_vigencia") || datas[1];
+
+    if (inicio?.br && fim?.br) return `${inicio.br} a ${fim.br}`;
+    return datas.map((data) => data.br).filter(Boolean).join(", ");
+}
+
+function renderizarListaDatasClassificadas(titulo, datas = [], classe = "") {
+    if (!Array.isArray(datas) || !datas.length) return null;
+
+    return (
+        <div className={`rounded-lg bg-white/80 p-2 text-xs leading-relaxed text-blue-900 ring-1 ring-blue-100 ${classe}`}>
+            <strong className="block text-blue-700">{titulo}</strong>
+            <ul className="mt-1 space-y-1">
+                {datas.map((data, indice) => (
+                    <li key={`${titulo}-${data.iso || data.br}-${indice}`}>
+                        <span className="font-semibold">{data.br}</span>
+                        {data.rotulo ? ` — ${data.rotulo}` : ""}
+                        {data.motivo ? ` — ${data.motivo}` : ""}
+                    </li>
+                ))}
+            </ul>
+        </div>
+    );
 }
 
 function obterLeituraDocumentalLocal(retornoIa) {
@@ -394,8 +508,8 @@ function DetalhesVerificacao({ dados, resumoCurto }) {
                                 {Number(dados.leituraDocumentalLocal.confianca || 0)}/100
                             </div>
                             <div className="rounded-lg bg-white/80 p-2 ring-1 ring-blue-100">
-                                <strong className="block text-blue-700">Datas lidas</strong>
-                                {dados.datasLidasOcr.length || 0}
+                                <strong className="block text-blue-700">Datas relevantes</strong>
+                                {dados.datasRelevantesOcr.length || 0}
                             </div>
                         </div>
                     )}
@@ -406,10 +520,25 @@ function DetalhesVerificacao({ dados, resumoCurto }) {
                         </p>
                     )}
 
-                    {dados.datasLidasOcr.length > 0 && (
-                        <p className="mt-2 rounded-lg bg-white/80 p-2 text-xs leading-relaxed text-blue-900 ring-1 ring-blue-100">
-                            <strong>Datas únicas lidas no texto:</strong> {dados.datasLidasOcr.join(", ")}
-                        </p>
+                    {dados.datasRelevantesOcr.length > 0 && (
+                        <div className="mt-2 grid gap-2">
+                            {dados.datasClassificadasOcr.vigencia.length > 0 && (
+                                <p className="rounded-lg bg-white/80 p-2 text-xs leading-relaxed text-blue-900 ring-1 ring-blue-100">
+                                    <strong className="text-blue-700">Vigência identificada:</strong> {descreverVigenciaPainel(dados.datasClassificadasOcr.vigencia)}
+                                </p>
+                            )}
+
+                            {renderizarListaDatasClassificadas("Assinatura digital", dados.datasClassificadasOcr.assinaturaDigital)}
+                            {renderizarListaDatasClassificadas("Outras datas documentais", dados.datasClassificadasOcr.outrasRelevantes)}
+                        </div>
+                    )}
+
+                    {(dados.datasClassificadasOcr.referenciasLegais.length > 0 || dados.datasClassificadasOcr.ignoradas.length > 0 || dados.datasClassificadasOcr.nomeArquivo.length > 0) && (
+                        <div className="mt-2 grid gap-2 text-xs text-blue-900 lg:grid-cols-2">
+                            {renderizarListaDatasClassificadas("Referências legais / normativas", dados.datasClassificadasOcr.referenciasLegais)}
+                            {renderizarListaDatasClassificadas("Datas ignoradas pela análise", dados.datasClassificadasOcr.ignoradas)}
+                            {renderizarListaDatasClassificadas("Datas somente no nome do arquivo", dados.datasClassificadasOcr.nomeArquivo, "lg:col-span-2")}
+                        </div>
                     )}
 
                     {dados.resumoTextoOcr.length > 0 && (
@@ -532,6 +661,8 @@ export default function ResultadoVerificacaoDocumento({
             arquivoNome,
             leitura: leituraDocumentalLocal,
         });
+        const datasClassificadasOcr = obterDatasClassificadasPainel(leituraDocumentalLocal);
+        const datasRelevantesOcr = obterDatasRelevantesPainel(datasClassificadasOcr);
         const datasLidasOcr = obterDatasLidasPainel(leituraDocumentalLocal);
 
         return {
@@ -548,6 +679,8 @@ export default function ResultadoVerificacaoDocumento({
             ocrTextoOculto,
             leituraDocumentalLocal,
             resumoTextoOcr,
+            datasClassificadasOcr,
+            datasRelevantesOcr,
             datasLidasOcr,
         };
     }, [verificacao]);

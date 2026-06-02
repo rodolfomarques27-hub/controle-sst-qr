@@ -323,6 +323,213 @@ function filtrarDatasPorCategoria(datas = [], categoria = "") {
     return datas.filter((data) => Array.isArray(data.categorias) && data.categorias.includes(categoria));
 }
 
+function dataIsoDeTextoDataBr(valor = "") {
+    const match = String(valor || "").match(/\b([0-3]?\d)[\/.-]([01]?\d)[\/.-]((?:19|20)\d{2}|\d{2})\b/);
+
+    if (!match) return null;
+
+    return montarDataIso(match[1], match[2], match[3]);
+}
+
+function normalizarChaveData(data = {}) {
+    return data?.iso || data?.br || "";
+}
+
+function formatarEntradaDataClassificada(data = {}, extras = {}) {
+    const iso = data?.iso || dataIsoDeTextoDataBr(data?.br || "");
+
+    if (!iso) return null;
+
+    return {
+        iso,
+        br: data?.br || formatarDataBr(iso),
+        contexto: data?.contexto || "",
+        categorias: Array.isArray(data?.categorias) ? data.categorias : [],
+        ocorrencias: Number(data?.ocorrencias || 1),
+        origem: data?.origem || "texto",
+        ...extras,
+    };
+}
+
+function adicionarDataClassificada(lista, data, extras = {}) {
+    const item = formatarEntradaDataClassificada(data, extras);
+
+    if (!item) return;
+
+    const chave = `${item.iso}__${extras.tipo || ""}__${extras.motivo || ""}`;
+    const existe = lista.some((registro) => `${registro.iso}__${registro.tipo || ""}__${registro.motivo || ""}` === chave);
+
+    if (!existe) {
+        lista.push(item);
+    }
+}
+
+function contextoIndicaReferenciaLegal(contexto = "") {
+    const texto = normalizarTextoVerificacao(contexto);
+
+    return /portaria|norma regulamentadora|nr\s*[-º0-9]|nr-?\d|redacao dada|redação dada|conforme nr|lei|art\.?|medida provisoria|medida provisória|mp\s*2\.200|seprt|ministerio do trabalho|ministério do trabalho/.test(texto);
+}
+
+function contextoIndicaCodigoOuCadastroNaoData(contexto = "") {
+    const texto = normalizarTextoVerificacao(contexto);
+
+    return /cnae|codigo documento interno|código documento interno|codigo interno|código interno|grupo de risco|versao\/revisao|versão\/revisão|cpf\s*\/\s*cnpj|cnpj\s*:/.test(texto);
+}
+
+function extrairVigenciaPrincipalTexto(texto = "") {
+    const conteudo = limparTextoPossivelDocumento(texto);
+    const padroes = [
+        /Vig[êe]ncia:[^0-9]{0,220}([0-3]?\d[\/.-][01]?\d[\/.-](?:19|20)\d{2})\s+a\s+([0-3]?\d[\/.-][01]?\d[\/.-](?:19|20)\d{2})/i,
+        /(?:validade|per[ií]odo|vig[êe]ncia)[^0-9]{0,220}([0-3]?\d[\/.-][01]?\d[\/.-](?:19|20)\d{2})\s+(?:a|até|ate)\s+([0-3]?\d[\/.-][01]?\d[\/.-](?:19|20)\d{2})/i,
+    ];
+
+    for (const padrao of padroes) {
+        const match = conteudo.match(padrao);
+
+        if (!match) continue;
+
+        const inicioIso = dataIsoDeTextoDataBr(match[1]);
+        const fimIso = dataIsoDeTextoDataBr(match[2]);
+
+        if (inicioIso && fimIso) {
+            return {
+                inicio: {
+                    iso: inicioIso,
+                    br: formatarDataBr(inicioIso),
+                    contexto: obterContextoTexto(conteudo, match.index || 0, 160),
+                    origem: "texto",
+                },
+                fim: {
+                    iso: fimIso,
+                    br: formatarDataBr(fimIso),
+                    contexto: obterContextoTexto(conteudo, match.index || 0, 160),
+                    origem: "texto",
+                },
+            };
+        }
+    }
+
+    return null;
+}
+
+function extrairAssinaturaDigitalTexto(texto = "") {
+    const conteudo = limparTextoPossivelDocumento(texto);
+    const padroes = [
+        /(?:assinado digitalmente|assinatura digital|icp-brasil)[\s\S]{0,320}?\bem:\s*([0-3]?\d[\/.-][01]?\d[\/.-](?:19|20)\d{2})\b/i,
+        /\bem:\s*([0-3]?\d[\/.-][01]?\d[\/.-](?:19|20)\d{2})[\s\S]{0,220}?(?:assinado digitalmente|assinatura digital|icp-brasil)/i,
+    ];
+    const resultados = [];
+
+    for (const padrao of padroes) {
+        const match = conteudo.match(padrao);
+
+        if (!match) continue;
+
+        const iso = dataIsoDeTextoDataBr(match[1]);
+
+        if (iso) {
+            resultados.push({
+                iso,
+                br: formatarDataBr(iso),
+                contexto: obterContextoTexto(conteudo, match.index || 0, 160),
+                origem: "texto",
+            });
+        }
+    }
+
+    return resultados;
+}
+
+function classificarDatasOcrDocumental({ textoExtraido = "", datasTexto = [], datasNomeArquivo = [] } = {}) {
+    const classificadas = {
+        vigencia: [],
+        assinaturaDigital: [],
+        referenciasLegais: [],
+        ignoradas: [],
+        outrasRelevantes: [],
+        nomeArquivo: (datasNomeArquivo || []).map((data) => formatarEntradaDataClassificada(data, { motivo: "Data encontrada no nome do arquivo" })).filter(Boolean),
+    };
+    const usadas = new Set();
+    const vigencia = extrairVigenciaPrincipalTexto(textoExtraido);
+
+    if (vigencia?.inicio) {
+        adicionarDataClassificada(classificadas.vigencia, vigencia.inicio, {
+            tipo: "inicio_vigencia",
+            rotulo: "Início da vigência",
+        });
+        usadas.add(vigencia.inicio.iso);
+    }
+
+    if (vigencia?.fim) {
+        adicionarDataClassificada(classificadas.vigencia, vigencia.fim, {
+            tipo: "fim_vigencia",
+            rotulo: "Fim da vigência / próxima revisão",
+        });
+        usadas.add(vigencia.fim.iso);
+    }
+
+    for (const assinatura of extrairAssinaturaDigitalTexto(textoExtraido)) {
+        adicionarDataClassificada(classificadas.assinaturaDigital, assinatura, {
+            tipo: "assinatura_digital",
+            rotulo: "Assinatura digital",
+        });
+        usadas.add(assinatura.iso);
+    }
+
+    for (const data of datasTexto || []) {
+        if (!data?.iso) continue;
+
+        if (usadas.has(data.iso)) continue;
+
+        if (contextoIndicaCodigoOuCadastroNaoData(data.contexto)) {
+            adicionarDataClassificada(classificadas.ignoradas, data, {
+                tipo: "ignorada",
+                motivo: "Possível código, CNAE, CNPJ, versão ou dado cadastral; não usar como data documental.",
+            });
+            continue;
+        }
+
+        if (contextoIndicaReferenciaLegal(data.contexto)) {
+            adicionarDataClassificada(classificadas.referenciasLegais, data, {
+                tipo: "referencia_legal",
+                motivo: "Referência legal/normativa citada no documento.",
+            });
+            continue;
+        }
+
+        if (Array.isArray(data.categorias) && data.categorias.includes("assinatura_digital")) {
+            adicionarDataClassificada(classificadas.assinaturaDigital, data, {
+                tipo: "assinatura_digital",
+                rotulo: "Assinatura digital provável",
+            });
+            continue;
+        }
+
+        if (Array.isArray(data.categorias) && data.categorias.includes("vencimento")) {
+            adicionarDataClassificada(classificadas.outrasRelevantes, data, {
+                tipo: "data_documental",
+                rotulo: "Data documental provável",
+            });
+            continue;
+        }
+
+        adicionarDataClassificada(classificadas.outrasRelevantes, data, {
+            tipo: "data_documental",
+            rotulo: "Outra data localizada no texto",
+        });
+    }
+
+    return classificadas;
+}
+
+function obterDatasRelevantesClassificadas(datasClassificadas = {}) {
+    return [
+        ...(datasClassificadas.vigencia || []),
+        ...(datasClassificadas.assinaturaDigital || []),
+        ...(datasClassificadas.outrasRelevantes || []),
+    ];
+}
+
 function contarTokensLegiveis(texto = "") {
     const tokens = normalizarTextoVerificacao(texto).match(/[a-z]{3,}/g) || [];
     return tokens.length;
@@ -750,6 +957,12 @@ function montarRetornoLeituraBase({
     const datasNomeArquivo = arquivoNome ? extrairDatasTextoDocumental(arquivoNome, "nome_arquivo") : [];
     const datasEncontradas = [...datasTexto, ...datasNomeArquivo];
     const datasComparaveis = datasTexto;
+    const datasClassificadas = classificarDatasOcrDocumental({
+        textoExtraido: textoSeguro,
+        datasTexto,
+        datasNomeArquivo,
+    });
+    const datasRelevantesClassificadas = obterDatasRelevantesClassificadas(datasClassificadas);
     const resumoTextual = montarResumoTextualDocumento({
         textoExtraido: textoSeguro,
         arquivoNome,
@@ -784,14 +997,16 @@ function montarRetornoLeituraBase({
 
     let resumo = "Leitura local não encontrou camada de texto confiável para comparar datas automaticamente.";
 
-    if (datasComparaveis.length) {
-        resumo = `Leitura local encontrou ${datasComparaveis.length} data(s) no texto do documento: ${datasComparaveis.map((data) => data.br).join(", ")}.`;
+    if (datasRelevantesClassificadas.length) {
+        resumo = `Leitura local encontrou ${datasRelevantesClassificadas.length} data(s) documental(is) relevante(s): ${datasRelevantesClassificadas.map((data) => data.br).join(", ")}.`;
+    } else if (datasComparaveis.length) {
+        resumo = `Leitura local encontrou ${datasComparaveis.length} data(s), mas nenhuma foi classificada como vigência, assinatura ou data documental principal.`;
     } else if (datasNomeArquivo.length) {
         resumo = `Foram encontradas data(s) apenas no nome do arquivo: ${datasNomeArquivo.map((data) => data.br).join(", ")}. Essas datas não foram usadas para apontar divergência automática.`;
     }
 
-    if (!comparacaoDatasPermitida && datasComparaveis.length) {
-        resumo += " A comparação automática entre datas lidas e datas cadastradas está desativada nesta etapa para evitar falso alerta; a validação principal continua pelas regras locais já existentes.";
+    if (!comparacaoDatasPermitida && datasRelevantesClassificadas.length) {
+        resumo += " A comparação automática entre datas lidas e datas cadastradas segue desativada para evitar falso alerta; a validação principal continua pelas regras locais já existentes.";
     }
 
     return {
@@ -809,6 +1024,8 @@ function montarRetornoLeituraBase({
         totalPaginas,
         datasEncontradas,
         datasDocumentoConfiaveis: datasComparaveis,
+        datasRelevantesClassificadas,
+        datasClassificadas,
         datasNomeArquivo,
         datasAssinaturaDigital,
         datasProvaveisVencimento,
@@ -1059,6 +1276,14 @@ export function montarRetornoLeituraParaPersistencia(leitura = null) {
             origem: data.origem,
         })),
         datas_documento_confiaveis: (leitura.datasDocumentoConfiaveis || []).map((data) => data.iso),
+        datas_relevantes_classificadas: (leitura.datasRelevantesClassificadas || []).map((data) => ({
+            iso: data.iso,
+            br: data.br,
+            tipo: data.tipo || "",
+            rotulo: data.rotulo || "",
+            motivo: data.motivo || "",
+        })),
+        datas_classificadas: leitura.datasClassificadas || null,
         datas_nome_arquivo: (leitura.datasNomeArquivo || []).map((data) => data.iso),
         datas_assinatura_digital: (leitura.datasAssinaturaDigital || []).map((data) => data.iso),
         datas_provaveis_vencimento: (leitura.datasProvaveisVencimento || []).map((data) => data.iso),
