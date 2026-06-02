@@ -1892,10 +1892,10 @@ export function Empresas({
                                             <div className="px-5 py-4 text-sm text-slate-600">
                                                 <div className="space-y-3">
                                                     <p className="leading-relaxed"><strong>Regra:</strong> {tipoDoc.regra}</p>
-                                                    <div className="grid gap-x-3 gap-y-1.5 rounded-2xl bg-slate-50 px-3 py-2.5 text-xs leading-relaxed text-slate-600 md:grid-cols-[110px_145px_minmax(0,1fr)]">
-                                                        <p className="min-w-0"><strong className="text-slate-700">Emissão:</strong> {doc ? formatDate(doc.data_emissao) : "Documento não enviado"}</p>
-                                                        <p className="min-w-0"><strong className="text-slate-700">Próxima revisão:</strong> {doc?.data_vencimento ? formatDate(doc.data_vencimento) : "Sem revisão definida"}</p>
-                                                        <p className="min-w-0 break-words"><strong className="text-slate-700">Arquivo:</strong> {doc?.arquivo_nome || "Arquivo ainda não anexado"}</p>
+                                                    <div className="grid gap-x-4 gap-y-1.5 rounded-2xl bg-slate-50 px-3 py-2.5 text-xs leading-relaxed text-slate-600 md:grid-cols-[max-content_max-content_minmax(0,1fr)] md:items-center">
+                                                        <p className="min-w-0 whitespace-nowrap"><strong className="text-slate-700">Emissão:</strong> {" "}{doc ? formatDate(doc.data_emissao) : "Documento não enviado"}</p>
+                                                        <p className="min-w-0 whitespace-nowrap"><strong className="text-slate-700">Revisão:</strong> {" "}{doc?.data_vencimento ? formatDate(doc.data_vencimento) : "Sem revisão definida"}</p>
+                                                        <p className="min-w-0 break-words md:truncate" title={doc?.arquivo_nome || "Arquivo ainda não anexado"}><strong className="text-slate-700">Arquivo:</strong> {" "}{doc?.arquivo_nome || "Arquivo ainda não anexado"}</p>
                                                     </div>
                                                 </div>
 
