@@ -20,8 +20,8 @@ const PAGINAS_MAXIMAS_BUSCA_PROFUNDA_PDFJS = 160;
 const TOLERANCIA_DIAS_COMPARACAO = 2;
 const CONFIANCA_MINIMA_COMPARACAO_DATAS = 58;
 const COMPARACAO_AUTOMATICA_DATAS_OCR_ATIVA = false;
-const ANO_MINIMO_DATA_DOCUMENTAL_RELEVANTE = 2024;
-const ANO_MINIMO_DATA_FORTE_ASSINATURA_ENCERRAMENTO = 2020;
+const ANO_MINIMO_DATA_DOCUMENTAL_RELEVANTE = 2022;
+const ANO_MINIMO_DATA_FORTE_ASSINATURA_ENCERRAMENTO = 2022;
 
 const DATAS_PADRAO_IGNORADAS = new Set([
     "1900-01-01",
@@ -521,7 +521,7 @@ function extrairDatasEncerramentoTexto(texto = "") {
         }
     }
 
-    return resultados.sort((a, b) => a.iso.localeCompare(b.iso));
+    return resultados.sort((a, b) => b.iso.localeCompare(a.iso));
 }
 
 function classificarDatasOcrDocumental({ textoExtraido = "", datasTexto = [], datasNomeArquivo = [] } = {}) {
@@ -575,18 +575,18 @@ function classificarDatasOcrDocumental({ textoExtraido = "", datasTexto = [], da
 
         const contextoForteEncerramento = contextoIndicaEncerramentoOuAssinaturaForte(data.contexto || "");
 
-        if (contextoForteEncerramento && !contextoIndicaReferenciaLegal(data.contexto || "")) {
-            adicionarDataClassificada(classificadas.outrasRelevantes, data, {
-                tipo: "encerramento_documento",
-                rotulo: "Data de encerramento / assinatura técnica do documento",
+        if (dataEhAntigaSemContextoForte(data, data.contexto || "")) {
+            adicionarDataClassificada(classificadas.ignoradas, data, {
+                tipo: "ignorada",
+                motivo: `Data anterior a ${ANO_MINIMO_DATA_DOCUMENTAL_RELEVANTE}; não usar como data documental, mesmo quando aparecer em página de encerramento ou rodapé.`,
             });
             continue;
         }
 
-        if (dataEhAntigaSemContextoForte(data)) {
-            adicionarDataClassificada(classificadas.ignoradas, data, {
-                tipo: "ignorada",
-                motivo: `Data anterior a ${ANO_MINIMO_DATA_DOCUMENTAL_RELEVANTE}; não usar como data documental, salvo assinatura ou encerramento com contexto forte.`,
+        if (contextoForteEncerramento && !contextoIndicaReferenciaLegal(data.contexto || "")) {
+            adicionarDataClassificada(classificadas.outrasRelevantes, data, {
+                tipo: "encerramento_documento",
+                rotulo: "Data de encerramento / assinatura técnica do documento",
             });
             continue;
         }
