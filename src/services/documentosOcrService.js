@@ -708,14 +708,43 @@ function obterTipoDocumentoResumo(texto = "", arquivoNome = "") {
     return "";
 }
 
+function valorPareceSomenteDocumentoFiscal(valor = "") {
+    const texto = limparTextoPossivelDocumento(valor);
+    const digitos = texto.replace(/\D/g, "");
+    const semPontuacao = texto.replace(/[.\-/\s]/g, "");
+
+    if (!texto) return false;
+    if (/^\d{2}\.\d{3}\.\d{3}\/\d{4}-\d{2}$/.test(texto)) return true;
+    if (/^\d{3}\.\d{3}\.\d{3}-\d{2}$/.test(texto)) return true;
+    if ((digitos.length === 14 || digitos.length === 11) && semPontuacao === digitos) return true;
+
+    return false;
+}
+
 function obterEmpresaResumo(texto = "") {
-    return limitarTextoResumo(
+    const conteudo = limparTextoPossivelDocumento(texto);
+    const porCampoEmpresa = limitarTextoResumo(
         encontrarPrimeiroGrupo(
-            texto,
+            conteudo,
             /Empresa:\s*([\s\S]{3,180}?)(?:\s+CPF\s*\/\s*CNPJ|\s+CNPJ|\s+Endere[cç]o|\s+Unidade:|\s+CPF\b|$)/i
         ),
         120
     );
+
+    if (porCampoEmpresa && !valorPareceSomenteDocumentoFiscal(porCampoEmpresa)) {
+        return porCampoEmpresa;
+    }
+
+    const porRazaoSocialAntesCnpj = encontrarPrimeiroGrupo(
+        conteudo,
+        /([A-ZÀ-Ú0-9][A-ZÀ-Ú0-9\s&.,'ºª-]{6,180}?(?:LTDA|EIRELI|S\/?A|S\.A\.|ME|EPP))\s*[-–—]?\s*\d{2}\.\d{3}\.\d{3}\/\d{4}-\d{2}/i
+    );
+
+    if (porRazaoSocialAntesCnpj && !valorPareceSomenteDocumentoFiscal(porRazaoSocialAntesCnpj)) {
+        return limitarTextoResumo(porRazaoSocialAntesCnpj, 120);
+    }
+
+    return "";
 }
 
 function obterCnpjResumo(texto = "") {
@@ -1633,8 +1662,15 @@ function avaliarEmpresaExtraidaDocumento({ leitura, empresa = {} } = {}) {
     const campos = obterCamposExtraidosDaLeitura(leitura);
     const cnpjDocumento = apenasDigitosDocumento(campos?.cnpj);
     const cnpjEmpresa = apenasDigitosDocumento(empresa?.cnpj || empresa?.cpf_cnpj || empresa?.documento || "");
-    const nomeDocumento = limparTextoPossivelDocumento(campos?.empresa_nome || "");
+    const nomeDocumentoExtraido = limparTextoPossivelDocumento(campos?.empresa_nome || "");
+    const nomeDocumento = valorPareceSomenteDocumentoFiscal(nomeDocumentoExtraido) ? "" : nomeDocumentoExtraido;
     const nomeEmpresa = limparTextoPossivelDocumento(empresa?.nome || empresa?.razao_social || empresa?.razaoSocial || "");
+
+    // CNPJ igual é a validação mais forte. Quando o CNPJ extraído bate com o cadastro,
+    // não gerar divergência apenas porque o nome foi lido parcialmente ou como número.
+    if (cnpjDocumento && cnpjEmpresa && cnpjDocumento === cnpjEmpresa) {
+        return indicios;
+    }
 
     if (cnpjDocumento && cnpjEmpresa && cnpjDocumento !== cnpjEmpresa) {
         indicios.push(criarIndicioVerificacao({
