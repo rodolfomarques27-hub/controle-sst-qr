@@ -17,7 +17,7 @@ import {
     Users,
 } from "lucide-react";
 
-import { Card, Header } from "../commonComponents";
+import { Card, Header, StatusPill } from "../commonComponents";
 import { FileUploadAviso, validarArquivoAntesUpload } from "../FileUploadAviso";
 import ResultadoVerificacaoDocumento from "../documentos/ResultadoVerificacaoDocumento";
 import { supabase } from "../../lib/supabaseClient";
@@ -63,30 +63,6 @@ function salvarPreferenciaPainelBoolean(chave, valor) {
     }
 
     return normalizado;
-}
-
-
-function StatusDocumentoEmpresaPill({ status, small = false }) {
-    const dados = status && typeof status === "object"
-        ? status
-        : {
-            texto: String(status || "Pendente"),
-            classe: "bg-slate-50 text-slate-700 ring-slate-200",
-            detalhe: "Status documental da empresa.",
-        };
-
-    return (
-        <span
-            title={dados.detalhe || dados.texto || "Status documental"}
-            className={classNames(
-                "inline-flex items-center justify-center whitespace-nowrap rounded-full text-center font-semibold ring-1",
-                small ? "px-2 py-1 text-xs" : "px-3 py-1 text-sm",
-                dados.classe || "bg-slate-50 text-slate-700 ring-slate-200"
-            )}
-        >
-            {dados.texto || "Pendente"}
-        </span>
-    );
 }
 
 function obterResumoDocumentoEmpresa(tipo) {
@@ -263,6 +239,79 @@ export function Empresas({
     const obterVerificacaoDocumentoEmpresa = (doc) => {
         const documentoId = String(doc?.id || "").trim();
         return documentoId ? verificacoesDocumentais[documentoId] || null : null;
+    };
+
+    const aprovarVerificacaoDocumentoManual = async ({ verificacao, documento, observacaoManual = "" } = {}) => {
+        if (!verificacao?.id) {
+            throw new Error("Verificação documental não localizada para aprovação manual.");
+        }
+
+        if (!documento?.id) {
+            throw new Error("Documento da empresa não localizado para aprovação manual.");
+        }
+
+        const observacao = String(observacaoManual || "").trim();
+        const confirmar = window.confirm(
+            "Confirmar aprovação manual definitiva deste documento?\n\n" +
+            "Use esta ação somente depois de abrir o PDF original e conferir empresa, CNPJ, datas, assinatura e autenticidade."
+        );
+
+        if (!confirmar) return;
+
+        const resumoManual = observacao
+            ? `Aprovado manualmente após conferência humana. Observação: ${observacao}`
+            : "Aprovado manualmente após conferência humana. Conformidade 100/100 e risco técnico 0/100.";
+
+        const recomendacoesManuais = [
+            {
+                tipo: "aprovacao_manual",
+                texto: "Documento aprovado manualmente pelo responsável após conferência do arquivo original, empresa, CNPJ, datas e assinatura/autenticidade.",
+            },
+        ];
+
+        const { data, error } = await supabase
+            .from("verificacoes_documentais")
+            .update({
+                status_verificacao: "aprovado",
+                nivel_risco: "baixo",
+                score_risco: 0,
+                indicios: [],
+                recomendacoes: recomendacoesManuais,
+                resumo: resumoManual,
+                observacao_manual: observacao || "Aprovação manual registrada no painel de revisão documental.",
+            })
+            .eq("id", verificacao.id)
+            .select("*")
+            .single();
+
+        if (error) {
+            throw new Error(`Erro ao aprovar manualmente a verificação documental: ${error.message}`);
+        }
+
+        const { error: erroDocumento } = await supabase
+            .from("documentos_empresas")
+            .update({ status_validacao: "Aprovado" })
+            .eq("id", documento.id);
+
+        if (erroDocumento) {
+            throw new Error(`A verificação foi aprovada, mas o status do documento não foi atualizado: ${erroDocumento.message}`);
+        }
+
+        setVerificacoesDocumentais((atual) => ({
+            ...atual,
+            [String(documento.id)]: data || {
+                ...verificacao,
+                status_verificacao: "aprovado",
+                nivel_risco: "baixo",
+                score_risco: 0,
+                indicios: [],
+                recomendacoes: recomendacoesManuais,
+                resumo: resumoManual,
+                observacao_manual: observacao,
+            },
+        }));
+
+        alert("Documento aprovado manualmente e marcado como válido.");
     };
 
     const colaboradoresPorEmpresa = useMemo(() => {
@@ -726,7 +775,7 @@ export function Empresas({
                                                     {doc ? "Documento cadastrado" : "Documento ainda não cadastrado"}
                                                 </p>
                                             </div>
-                                            {doc && <StatusDocumentoEmpresaPill status={st} small />}
+                                            {doc && <StatusPill status={st} small />}
                                         </div>
 
                                         {doc ? (
@@ -745,6 +794,9 @@ export function Empresas({
                                                     titulo="Verificação documental"
                                                     compacto
                                                     className="mt-3"
+                                                    onAprovarManual={({ observacaoManual }) =>
+                                                        aprovarVerificacaoDocumentoManual({ verificacao, documento: doc, observacaoManual })
+                                                    }
                                                 />
 
                                                 <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2">
@@ -1885,26 +1937,17 @@ export function Empresas({
                                                     <p className="mt-1 text-xs leading-relaxed text-blue-100">{tipoDoc.fundamento}</p>
                                                 </div>
                                                 <div className="shrink-0">
-                                                    {doc ? <StatusDocumentoEmpresaPill status={st} small /> : <span className="rounded-full bg-red-50 px-2 py-1 text-xs font-semibold text-red-700 ring-1 ring-red-200">Pendente</span>}
+                                                    {doc ? <StatusPill status={st} small /> : <span className="rounded-full bg-red-50 px-2 py-1 text-xs font-semibold text-red-700 ring-1 ring-red-200">Pendente</span>}
                                                 </div>
                                             </div>
 
                                             <div className="px-5 py-4 text-sm text-slate-600">
                                                 <div className="space-y-3">
                                                     <p className="leading-relaxed"><strong>Regra:</strong> {tipoDoc.regra}</p>
-                                                    <div className="flex min-w-0 flex-wrap items-center gap-x-8 gap-y-2 rounded-2xl bg-slate-50 px-3 py-2.5 text-xs leading-relaxed text-slate-600">
-                                                        <span className="inline-flex shrink-0 items-center gap-1 whitespace-nowrap">
-                                                            <strong className="inline text-slate-700">Emissão:</strong>
-                                                            <span>{doc ? formatDate(doc.data_emissao) : "Documento não enviado"}</span>
-                                                        </span>
-                                                        <span className="inline-flex shrink-0 items-center gap-1 whitespace-nowrap">
-                                                            <strong className="inline text-slate-700">Revisão:</strong>
-                                                            <span>{doc?.data_vencimento ? formatDate(doc.data_vencimento) : "Sem revisão definida"}</span>
-                                                        </span>
-                                                        <span className="inline-flex min-w-0 flex-1 items-center gap-1 whitespace-nowrap" title={doc?.arquivo_nome || "Arquivo ainda não anexado"}>
-                                                            <strong className="inline shrink-0 text-slate-700">Arquivo:</strong>
-                                                            <span className="min-w-0 truncate">{doc?.arquivo_nome || "Arquivo ainda não anexado"}</span>
-                                                        </span>
+                                                    <div className="grid gap-x-3 gap-y-1.5 rounded-2xl bg-slate-50 px-3 py-2.5 text-xs leading-relaxed text-slate-600 md:grid-cols-[110px_145px_minmax(0,1fr)]">
+                                                        <p className="min-w-0"><strong className="text-slate-700">Emissão:</strong> {doc ? formatDate(doc.data_emissao) : "Documento não enviado"}</p>
+                                                        <p className="min-w-0"><strong className="text-slate-700">Próxima revisão:</strong> {doc?.data_vencimento ? formatDate(doc.data_vencimento) : "Sem revisão definida"}</p>
+                                                        <p className="min-w-0 break-words"><strong className="text-slate-700">Arquivo:</strong> {doc?.arquivo_nome || "Arquivo ainda não anexado"}</p>
                                                     </div>
                                                 </div>
 
@@ -1921,6 +1964,9 @@ export function Empresas({
                                                     titulo={`Verificação documental ${tipoDoc.tipo}`}
                                                     mostrarDetalhesInicial={false}
                                                     className="mx-5 mt-1"
+                                                    onAprovarManual={({ observacaoManual }) =>
+                                                        aprovarVerificacaoDocumentoManual({ verificacao, documento: doc, observacaoManual })
+                                                    }
                                                 />
                                             )}
 

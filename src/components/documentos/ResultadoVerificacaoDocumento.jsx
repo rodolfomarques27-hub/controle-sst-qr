@@ -493,9 +493,16 @@ function obterResumoCurto(resumo, statusTexto, riscoTexto, scoreRisco, conformid
     return `Status ${statusTexto.toLowerCase()}, risco ${riscoTexto.toLowerCase()}, risco técnico ${scoreRisco}/100 e conformidade ${conformidade}/100.`;
 }
 
-function PainelAnaliseManual({ dados }) {
+function PainelAnaliseManual({
+    dados,
+    onAprovarManual = null,
+    aprovandoManual = false,
+    erroAprovacaoManual = "",
+}) {
+    const [observacaoManual, setObservacaoManual] = useState("");
     const possuiIndicios = Array.isArray(dados?.indicios) && dados.indicios.length > 0;
-    const exigeRevisao = possuiIndicios || ["revisao_manual", "suspeito", "bloqueado", "erro"].includes(String(dados?.status || "").toLowerCase());
+    const statusAtual = String(dados?.status || "").toLowerCase();
+    const exigeRevisao = possuiIndicios || ["revisao_manual", "suspeito", "bloqueado", "erro"].includes(statusAtual);
 
     if (!exigeRevisao) return null;
 
@@ -513,11 +520,57 @@ function PainelAnaliseManual({ dados }) {
                 <li className="rounded-lg bg-white/80 p-2 ring-1 ring-orange-100">3. Validar assinatura digital, QR Code ou código de autenticidade, quando houver.</li>
                 <li className="rounded-lg bg-white/80 p-2 ring-1 ring-orange-100">4. Registrar a decisão no campo de observação antes de substituir/aprovar o documento.</li>
             </ul>
+
+            {onAprovarManual && (
+                <div className="mt-3 rounded-xl bg-white/85 p-3 ring-1 ring-orange-100">
+                    <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                        <div className="min-w-0 text-xs leading-relaxed text-orange-950">
+                            <p className="font-bold text-orange-800">Aprovação manual definitiva</p>
+                            <p className="mt-1">
+                                Após a conferência humana, esta ação altera o documento para aprovado, com conformidade 100/100 e risco técnico 0/100.
+                            </p>
+                        </div>
+                        <div className="flex shrink-0 flex-wrap gap-2 text-[11px] font-bold">
+                            <span className="rounded-full bg-emerald-50 px-3 py-1 text-emerald-700 ring-1 ring-emerald-200">Conformidade 100/100</span>
+                            <span className="rounded-full bg-slate-50 px-3 py-1 text-slate-700 ring-1 ring-slate-200">Risco técnico 0/100</span>
+                        </div>
+                    </div>
+
+                    <textarea
+                        value={observacaoManual}
+                        onChange={(evento) => setObservacaoManual(evento.target.value)}
+                        placeholder="Descreva a conferência manual realizada antes da aprovação definitiva."
+                        className="mt-3 min-h-[4.75rem] w-full rounded-xl border border-orange-100 bg-white px-3 py-2 text-xs text-slate-700 outline-none transition focus:border-orange-300 focus:ring-4 focus:ring-orange-100"
+                    />
+
+                    {erroAprovacaoManual && (
+                        <p className="mt-2 rounded-lg bg-red-50 px-3 py-2 text-xs font-semibold text-red-700 ring-1 ring-red-100">
+                            {erroAprovacaoManual}
+                        </p>
+                    )}
+
+                    <button
+                        type="button"
+                        disabled={aprovandoManual}
+                        onClick={() => onAprovarManual({ observacaoManual })}
+                        className="mt-3 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-emerald-600 px-4 py-2.5 text-xs font-bold text-white shadow-sm transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto"
+                    >
+                        <CheckCircle2 className="h-4 w-4" />
+                        {aprovandoManual ? "Aprovando manualmente..." : "Aprovar manualmente e validar documento"}
+                    </button>
+                </div>
+            )}
         </div>
     );
 }
 
-function DetalhesVerificacao({ dados, resumoCurto }) {
+function DetalhesVerificacao({
+    dados,
+    resumoCurto,
+    onAprovarManual = null,
+    aprovandoManual = false,
+    erroAprovacaoManual = "",
+}) {
     return (
         <div className="mt-4 space-y-3">
             <div className="rounded-xl bg-slate-50 p-3 text-sm leading-relaxed text-slate-700 ring-1 ring-slate-100">
@@ -658,7 +711,7 @@ function DetalhesVerificacao({ dados, resumoCurto }) {
                 )}
             </div>
 
-            <PainelAnaliseManual dados={dados} />
+            <PainelAnaliseManual dados={dados} onAprovarManual={onAprovarManual} aprovandoManual={aprovandoManual} erroAprovacaoManual={erroAprovacaoManual} />
 
             <div className="rounded-xl border border-slate-100 bg-slate-50 p-3">
                 <h4 className="text-xs font-bold uppercase tracking-wide text-slate-500">
@@ -696,8 +749,26 @@ export default function ResultadoVerificacaoDocumento({
     compacto = false,
     mostrarDetalhesInicial = false,
     className = "",
+    onAprovarManual = null,
 }) {
     const [detalhesAbertos, setDetalhesAbertos] = useState(Boolean(mostrarDetalhesInicial));
+    const [aprovandoManual, setAprovandoManual] = useState(false);
+    const [erroAprovacaoManual, setErroAprovacaoManual] = useState("");
+
+    async function executarAprovacaoManual(payload = {}) {
+        if (!onAprovarManual || aprovandoManual) return;
+
+        setErroAprovacaoManual("");
+        setAprovandoManual(true);
+
+        try {
+            await onAprovarManual(payload);
+        } catch (error) {
+            setErroAprovacaoManual(error?.message || "Erro ao aprovar manualmente o documento.");
+        } finally {
+            setAprovandoManual(false);
+        }
+    }
 
     const dados = useMemo(() => {
         const status = verificacao?.status_verificacao || verificacao?.statusVerificacao || "pendente";
@@ -822,7 +893,7 @@ export default function ResultadoVerificacaoDocumento({
                     </div>
                 </div>
 
-                {detalhesAbertos && <DetalhesVerificacao dados={dados} resumoCurto={resumoCurto} />}
+                {detalhesAbertos && <DetalhesVerificacao dados={dados} resumoCurto={resumoCurto} onAprovarManual={executarAprovacaoManual} aprovandoManual={aprovandoManual} erroAprovacaoManual={erroAprovacaoManual} />}
             </div>
         );
     }
@@ -884,7 +955,7 @@ export default function ResultadoVerificacaoDocumento({
             </div>
 
             {detalhesAbertos ? (
-                <DetalhesVerificacao dados={dados} resumoCurto={resumoCurto} />
+                <DetalhesVerificacao dados={dados} resumoCurto={resumoCurto} onAprovarManual={executarAprovacaoManual} aprovandoManual={aprovandoManual} erroAprovacaoManual={erroAprovacaoManual} />
             ) : dados.resumo ? (
                 <p className="mt-3 rounded-xl bg-slate-50 p-3 text-sm leading-relaxed text-slate-700">
                     {dados.resumo}

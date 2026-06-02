@@ -20,6 +20,8 @@ const PAGINAS_MAXIMAS_BUSCA_PROFUNDA_PDFJS = 160;
 const TOLERANCIA_DIAS_COMPARACAO = 2;
 const CONFIANCA_MINIMA_COMPARACAO_DATAS = 58;
 const COMPARACAO_AUTOMATICA_DATAS_OCR_ATIVA = false;
+const ANO_MINIMO_DATA_DOCUMENTAL_RELEVANTE = 2024;
+const ANO_MINIMO_DATA_FORTE_ASSINATURA_ENCERRAMENTO = 2020;
 
 const DATAS_PADRAO_IGNORADAS = new Set([
     "1900-01-01",
@@ -229,6 +231,32 @@ function formatarDataBr(iso = "") {
     return `${partes[2]}/${partes[1]}/${partes[0]}`;
 }
 
+function obterAnoDataIso(iso = "") {
+    const ano = Number(String(iso || "").slice(0, 4));
+    return Number.isInteger(ano) ? ano : null;
+}
+
+function contextoIndicaEncerramentoOuAssinaturaForte(contexto = "") {
+    const texto = normalizarTextoVerificacao(contexto);
+
+    return /encerramento|ultima datada|última datada|datada e assinada|responsavel tecnico|responsável técnico|sao jose dos campos|são josé dos campos|assinatura tecnica|assinatura técnica|assinado digitalmente|assinatura digital|icp-brasil|elaborado em|emitido em/.test(texto);
+}
+
+function dataEhAntigaSemContextoForte(data = {}, contextoAlternativo = "") {
+    const iso = typeof data === "string" ? data : data?.iso || "";
+    const ano = obterAnoDataIso(iso);
+
+    if (!ano || ano >= ANO_MINIMO_DATA_DOCUMENTAL_RELEVANTE) return false;
+
+    const contexto = typeof data === "object" ? data?.contexto || contextoAlternativo : contextoAlternativo;
+
+    if (ano >= ANO_MINIMO_DATA_FORTE_ASSINATURA_ENCERRAMENTO && contextoIndicaEncerramentoOuAssinaturaForte(contexto)) {
+        return false;
+    }
+
+    return true;
+}
+
 function classificarContextoData(contexto = "") {
     const texto = normalizarTextoVerificacao(contexto);
     const categorias = [];
@@ -394,6 +422,13 @@ function extrairVigenciaPrincipalTexto(texto = "") {
         const fimIso = dataIsoDeTextoDataBr(match[2]);
 
         if (inicioIso && fimIso) {
+            const anoInicio = obterAnoDataIso(inicioIso);
+            const anoFim = obterAnoDataIso(fimIso);
+
+            if ((anoInicio && anoInicio < ANO_MINIMO_DATA_DOCUMENTAL_RELEVANTE) || (anoFim && anoFim < ANO_MINIMO_DATA_DOCUMENTAL_RELEVANTE)) {
+                continue;
+            }
+
             return {
                 inicio: {
                     iso: inicioIso,
@@ -463,8 +498,10 @@ function extrairDatasEncerramentoTexto(texto = "") {
 
             const datas = extrairDatasTextoDocumental(bloco, "texto").filter((data) => {
                 if (!data?.iso) return false;
-                if (contextoIndicaReferenciaLegal(data.contexto || bloco)) return false;
-                if (contextoIndicaCodigoOuCadastroNaoData(data.contexto || bloco)) return false;
+                const contextoCompleto = `${data.contexto || ""} ${bloco}`;
+                if (contextoIndicaReferenciaLegal(contextoCompleto)) return false;
+                if (contextoIndicaCodigoOuCadastroNaoData(contextoCompleto)) return false;
+                if (dataEhAntigaSemContextoForte(data, contextoCompleto)) return false;
                 return true;
             });
 
@@ -531,6 +568,14 @@ function classificarDatasOcrDocumental({ textoExtraido = "", datasTexto = [], da
         if (!data?.iso) continue;
 
         if (usadas.has(data.iso)) continue;
+
+        if (dataEhAntigaSemContextoForte(data)) {
+            adicionarDataClassificada(classificadas.ignoradas, data, {
+                tipo: "ignorada",
+                motivo: `Data anterior a ${ANO_MINIMO_DATA_DOCUMENTAL_RELEVANTE}; não usar como data documental, salvo assinatura ou encerramento com contexto forte.`,
+            });
+            continue;
+        }
 
         if (contextoIndicaCodigoOuCadastroNaoData(data.contexto)) {
             adicionarDataClassificada(classificadas.ignoradas, data, {
@@ -994,7 +1039,8 @@ function textoPossuiDataDocumentalPrincipal(textoPagina = "") {
 
     return datasTexto.some((data) => {
         if (!data?.iso) return false;
-        return contextoIndicaDataDocumentalPrincipal(data.contexto || "");
+        if (dataEhAntigaSemContextoForte(data, texto)) return false;
+        return contextoIndicaDataDocumentalPrincipal(`${data.contexto || ""} ${texto}`);
     });
 }
 
