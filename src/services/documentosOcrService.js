@@ -13,8 +13,10 @@ import {
 
 const LIMITE_BYTES_LEITURA_LOCAL = 8 * 1024 * 1024;
 const LIMITE_TEXTO_OCR_SALVAR = 6000;
-const LIMITE_TEXTO_PDFJS = 12000;
+const LIMITE_TEXTO_PDFJS = 18000;
 const PAGINAS_MAXIMAS_PDFJS = 6;
+const PAGINAS_FINAIS_BUSCA_PDFJS = 10;
+const PAGINAS_MAXIMAS_BUSCA_PROFUNDA_PDFJS = 160;
 const TOLERANCIA_DIAS_COMPARACAO = 2;
 const CONFIANCA_MINIMA_COMPARACAO_DATAS = 58;
 const COMPARACAO_AUTOMATICA_DATAS_OCR_ATIVA = false;
@@ -685,6 +687,7 @@ function montarResumoTextualDocumento({
     datasDocumentoConfiaveis = [],
     paginasLidas = 0,
     totalPaginas = 0,
+    buscaAmpliada = null,
 } = {}) {
     const texto = limparTextoPossivelDocumento(textoExtraido);
     const resumo = [];
@@ -734,7 +737,15 @@ function montarResumoTextualDocumento({
     }
 
     if (paginasLidas && totalPaginas) {
-        resumo.push(`Leitura feita nas ${paginasLidas} primeiras página(s) de ${totalPaginas}, para preservar performance no navegador.`);
+        if (buscaAmpliada?.executada) {
+            resumo.push(
+                buscaAmpliada.encontrouDataPrincipal
+                    ? `Busca ampliada analisou ${paginasLidas} página(s) de ${totalPaginas} e localizou data documental provável na página ${buscaAmpliada.paginaDataPrincipal}.`
+                    : `Busca ampliada analisou ${paginasLidas} página(s) de ${totalPaginas}, sem localizar vigência, emissão, revisão ou assinatura confiável.`
+            );
+        } else {
+            resumo.push(`Leitura feita nas ${paginasLidas} primeiras página(s) de ${totalPaginas}, para preservar performance no navegador.`);
+        }
     }
 
     if (!resumo.length) {
@@ -881,9 +892,116 @@ async function carregarPdfJsDocumental() {
     return pdfjsLib;
 }
 
+async function lerTextoPaginaPdfJs(pdf, numeroPagina) {
+    const pagina = await pdf.getPage(numeroPagina);
+    const conteudo = await pagina.getTextContent({
+        includeMarkedContent: false,
+        disableNormalization: false,
+    });
+
+    return limparTextoPossivelDocumento(
+        (conteudo?.items || [])
+            .map((item) => item?.str || "")
+            .filter(Boolean)
+            .join(" ")
+    );
+}
+
+function textoPaginaPossuiDataDocumentalPrincipal(textoPagina = "") {
+    const texto = limparTextoPossivelDocumento(textoPagina);
+
+    if (!textoPossuiConteudoDocumentoConfiavel(texto)) return false;
+
+    const datasTexto = extrairDatasTextoDocumental(texto, "pdf_texto_local");
+    if (!datasTexto.length) return false;
+
+    const classificadas = classificarDatasOcrDocumental({
+        textoExtraido: texto,
+        datasTexto,
+        datasNomeArquivo: [],
+    });
+
+    if ((classificadas.vigencia || []).length >= 2) return true;
+    if ((classificadas.assinaturaDigital || []).length > 0) return true;
+
+    const textoNormalizado = normalizarTextoVerificacao(texto);
+    const temTermoPrincipal = /vigencia|vigência|validade|vencimento|emissao|emissão|emitido|elaborado|elaboração|elaboracao|assinado|assinatura|revisao|revisão|responsavel tecnico|responsável técnico|data do documento|data de elaboracao|data de elaboração|data de emissão|data de emissao/.test(textoNormalizado);
+    const datasAproveitaveis = datasTexto.filter((data) => {
+        if (!data?.iso) return false;
+        if (contextoIndicaReferenciaLegal(data.contexto)) return false;
+        if (contextoIndicaCodigoOuCadastroNaoData(data.contexto)) return false;
+        return true;
+    });
+
+    return Boolean(temTermoPrincipal && datasAproveitaveis.length > 0);
+}
+
+function montarSequenciaBuscaPaginas(totalPaginas = 0, paginasIniciais = 0) {
+    const total = Number(totalPaginas || 0);
+    const inicio = Number(paginasIniciais || 0);
+
+    if (!total || total <= inicio) return [];
+
+    const paginas = [];
+    const jaIncluidas = new Set();
+
+    function adicionar(numero) {
+        const valor = Number(numero || 0);
+        if (!Number.isInteger(valor) || valor < 1 || valor > total || valor <= inicio) return;
+        if (jaIncluidas.has(valor)) return;
+        jaIncluidas.add(valor);
+        paginas.push(valor);
+    }
+
+    const inicioFinais = Math.max(inicio + 1, total - PAGINAS_FINAIS_BUSCA_PDFJS + 1);
+    for (let pagina = inicioFinais; pagina <= total; pagina += 1) {
+        adicionar(pagina);
+    }
+
+    const limiteProfundo = Math.min(total, PAGINAS_MAXIMAS_BUSCA_PROFUNDA_PDFJS);
+    for (let pagina = inicio + 1; pagina <= limiteProfundo; pagina += 1) {
+        adicionar(pagina);
+    }
+
+    return paginas;
+}
+
+function montarTextoPdfOrdenado(registrosPaginas = []) {
+    const registrosValidos = (registrosPaginas || []).filter((registro) => registro?.texto);
+    const mapa = new Map();
+
+    const relevantes = registrosValidos.filter((registro) => registro.relevante);
+    const iniciais = registrosValidos.filter((registro) => registro.numero <= PAGINAS_MAXIMAS_PDFJS && !registro.relevante);
+    const demais = registrosValidos.filter((registro) => registro.numero > PAGINAS_MAXIMAS_PDFJS && !registro.relevante);
+
+    [...relevantes, ...iniciais, ...demais]
+        .sort((a, b) => {
+            if (a.relevante && !b.relevante) return -1;
+            if (!a.relevante && b.relevante) return 1;
+            return a.numero - b.numero;
+        })
+        .forEach((registro) => {
+            if (!mapa.has(registro.numero)) {
+                mapa.set(registro.numero, registro);
+            }
+        });
+
+    return limparTextoPossivelDocumento(
+        Array.from(mapa.values())
+            .map((registro) => `Página ${registro.numero}: ${registro.texto}`)
+            .join(" ")
+    ).slice(0, LIMITE_TEXTO_PDFJS);
+}
+
 async function extrairTextoPdfComPdfJs(buffer) {
     if (!buffer || !buffer.byteLength) {
-        return { texto: "", paginasLidas: 0, totalPaginas: 0, avisos: [] };
+        return {
+            texto: "",
+            paginasLidas: 0,
+            totalPaginas: 0,
+            avisos: [],
+            buscaAmpliada: null,
+        };
     }
 
     const avisos = [];
@@ -899,30 +1017,65 @@ async function extrairTextoPdfComPdfJs(buffer) {
 
         const pdf = await tarefa.promise;
         const totalPaginas = Number(pdf?.numPages || 0);
-        const paginasParaLer = Math.min(totalPaginas || 0, PAGINAS_MAXIMAS_PDFJS);
-        const partes = [];
+        const paginasIniciais = Math.min(totalPaginas || 0, PAGINAS_MAXIMAS_PDFJS);
+        const registrosPaginas = [];
+        const paginasLidasSet = new Set();
+        let encontrouDataPrincipal = false;
+        let paginaDataPrincipal = 0;
+        let buscaAmpliadaExecutada = false;
+        let buscaAmpliadaInterrompida = false;
 
-        for (let numeroPagina = 1; numeroPagina <= paginasParaLer; numeroPagina += 1) {
-            const pagina = await pdf.getPage(numeroPagina);
-            const conteudo = await pagina.getTextContent({
-                includeMarkedContent: false,
-                disableNormalization: false,
+        async function lerPagina(numeroPagina, origem = "inicial") {
+            if (!numeroPagina || paginasLidasSet.has(numeroPagina)) return null;
+
+            const textoPagina = await lerTextoPaginaPdfJs(pdf, numeroPagina);
+            paginasLidasSet.add(numeroPagina);
+
+            if (!textoPagina) return null;
+
+            const relevante = textoPaginaPossuiDataDocumentalPrincipal(textoPagina);
+
+            registrosPaginas.push({
+                numero: numeroPagina,
+                texto: textoPagina,
+                relevante,
+                origem,
             });
 
-            const textoPagina = limparTextoPossivelDocumento(
-                (conteudo?.items || [])
-                    .map((item) => item?.str || "")
-                    .filter(Boolean)
-                    .join(" ")
-            );
-
-            if (textoPagina) {
-                partes.push(`Página ${numeroPagina}: ${textoPagina}`);
+            if (relevante && !encontrouDataPrincipal) {
+                encontrouDataPrincipal = true;
+                paginaDataPrincipal = numeroPagina;
             }
 
-            if (partes.join(" ").length >= LIMITE_TEXTO_PDFJS) {
-                avisos.push("Leitura textual limitada para preservar performance no navegador.");
-                break;
+            return registrosPaginas[registrosPaginas.length - 1];
+        }
+
+        for (let numeroPagina = 1; numeroPagina <= paginasIniciais; numeroPagina += 1) {
+            await lerPagina(numeroPagina, "inicial");
+        }
+
+        let textoInicial = montarTextoPdfOrdenado(registrosPaginas);
+        let precisaBuscaAmpliada = Boolean(
+            totalPaginas > paginasIniciais &&
+            textoPossuiConteudoDocumentoConfiavel(textoInicial) &&
+            !textoPaginaPossuiDataDocumentalPrincipal(textoInicial)
+        );
+
+        if (!textoInicial && totalPaginas > paginasIniciais) {
+            precisaBuscaAmpliada = true;
+        }
+
+        if (precisaBuscaAmpliada) {
+            buscaAmpliadaExecutada = true;
+            const sequenciaBusca = montarSequenciaBuscaPaginas(totalPaginas, paginasIniciais);
+
+            for (const numeroPagina of sequenciaBusca) {
+                await lerPagina(numeroPagina, numeroPagina > totalPaginas - PAGINAS_FINAIS_BUSCA_PDFJS ? "final" : "ampliada");
+
+                if (encontrouDataPrincipal) {
+                    buscaAmpliadaInterrompida = true;
+                    break;
+                }
             }
         }
 
@@ -932,29 +1085,57 @@ async function extrairTextoPdfComPdfJs(buffer) {
             // Liberação de memória sem bloquear o fluxo.
         }
 
-        const texto = limparTextoPossivelDocumento(partes.join(" ")).slice(0, LIMITE_TEXTO_PDFJS);
+        const texto = montarTextoPdfOrdenado(registrosPaginas);
+        const paginasLidas = paginasLidasSet.size;
+        const buscaAmpliada = buscaAmpliadaExecutada
+            ? {
+                executada: true,
+                paginasLidas,
+                totalPaginas,
+                paginaDataPrincipal,
+                encontrouDataPrincipal,
+                interrompidaAoEncontrar: buscaAmpliadaInterrompida,
+                limitePaginas: PAGINAS_MAXIMAS_BUSCA_PROFUNDA_PDFJS,
+            }
+            : null;
+
+        if (texto && texto.length >= LIMITE_TEXTO_PDFJS) {
+            avisos.push("Leitura textual limitada para preservar performance no navegador.");
+        }
+
+        if (buscaAmpliadaExecutada) {
+            avisos.push(
+                encontrouDataPrincipal
+                    ? `Busca ampliada realizada: data documental provável localizada na página ${paginaDataPrincipal} após analisar ${paginasLidas} página(s) de ${totalPaginas}.`
+                    : `Busca ampliada realizada em ${paginasLidas} página(s) de ${totalPaginas}, sem localizar vigência, emissão, revisão ou assinatura confiável.`
+            );
+        } else if (totalPaginas > paginasIniciais) {
+            avisos.push(`Leitura textual feita nas ${paginasIniciais} primeiras página(s) de ${totalPaginas}.`);
+        }
+
+        if (totalPaginas > PAGINAS_MAXIMAS_BUSCA_PROFUNDA_PDFJS && buscaAmpliadaExecutada && !encontrouDataPrincipal) {
+            avisos.push(`Para preservar performance, a busca profunda automática foi limitada a ${PAGINAS_MAXIMAS_BUSCA_PROFUNDA_PDFJS} páginas mais as páginas finais.`);
+        }
 
         if (textoPossuiConteudoDocumentoConfiavel(texto)) {
-            if (totalPaginas > paginasParaLer) {
-                avisos.push(`Leitura textual feita nas ${paginasParaLer} primeiras página(s) de ${totalPaginas}.`);
-            }
-
             return {
                 texto,
-                paginasLidas: paginasParaLer,
+                paginasLidas,
                 totalPaginas,
                 avisos,
+                buscaAmpliada,
             };
         }
 
         return {
             texto: "",
-            paginasLidas: paginasParaLer,
+            paginasLidas,
             totalPaginas,
             avisos: [
                 ...avisos,
                 "PDF.js não encontrou texto documental confiável nas páginas analisadas.",
             ],
+            buscaAmpliada,
         };
     } catch (error) {
         return {
@@ -964,6 +1145,7 @@ async function extrairTextoPdfComPdfJs(buffer) {
             avisos: [
                 `Leitura PDF.js indisponível: ${error?.message || "erro desconhecido"}.`,
             ],
+            buscaAmpliada: null,
         };
     }
 }
@@ -978,6 +1160,7 @@ function montarRetornoLeituraBase({
     textoLimitado = false,
     paginasLidas = 0,
     totalPaginas = 0,
+    buscaAmpliada = null,
     avisos = [],
     erro = "",
 } = {}) {
@@ -1003,6 +1186,7 @@ function montarRetornoLeituraBase({
         datasDocumentoConfiaveis: datasComparaveis,
         paginasLidas,
         totalPaginas,
+        buscaAmpliada,
     });
     const textoPrevia = montarPreviaTextoDocumento(textoSeguro);
     const confianca = calcularConfiancaLeitura({
@@ -1057,6 +1241,7 @@ function montarRetornoLeituraBase({
         textoLimitado,
         paginasLidas,
         totalPaginas,
+        buscaAmpliada,
         datasEncontradas,
         datasDocumentoConfiaveis: datasComparaveis,
         datasRelevantesClassificadas,
@@ -1147,6 +1332,7 @@ export async function executarLeituraDocumentalLocal({ arquivo = null, arquivoNo
             textoLimitado,
             paginasLidas: leituraPdfJs.paginasLidas || 0,
             totalPaginas: leituraPdfJs.totalPaginas || 0,
+            buscaAmpliada: leituraPdfJs.buscaAmpliada || null,
             avisos,
         });
     } catch (error) {
@@ -1396,6 +1582,7 @@ export function montarRetornoLeituraParaPersistencia(leitura = null) {
         texto_previa: leitura.textoPrevia || "",
         paginas_lidas: leitura.paginasLidas || 0,
         total_paginas: leitura.totalPaginas || 0,
+        busca_ampliada: leitura.buscaAmpliada || null,
         comparacao_datas_permitida: Boolean(leitura.comparacaoDatasPermitida),
         datas_encontradas: (leitura.datasEncontradas || []).map((data) => ({
             iso: data.iso,

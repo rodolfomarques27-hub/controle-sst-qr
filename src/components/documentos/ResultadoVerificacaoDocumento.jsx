@@ -381,6 +381,22 @@ function obterDatasLidasPainel(leitura = null) {
     return Array.from(new Set(obterDatasRelevantesPainel(classificadas).map((data) => data.br).filter(Boolean)));
 }
 
+function obterBuscaAmpliadaPainel(leitura = null) {
+    const busca = leitura?.busca_ampliada || leitura?.buscaAmpliada || null;
+
+    if (!busca || typeof busca !== "object") return null;
+
+    return {
+        executada: Boolean(busca.executada),
+        paginasLidas: Number(busca.paginas_lidas || busca.paginasLidas || 0),
+        totalPaginas: Number(busca.total_paginas || busca.totalPaginas || 0),
+        paginaDataPrincipal: Number(busca.pagina_data_principal || busca.paginaDataPrincipal || 0),
+        encontrouDataPrincipal: Boolean(busca.encontrou_data_principal ?? busca.encontrouDataPrincipal),
+        interrompidaAoEncontrar: Boolean(busca.interrompida_ao_encontrar ?? busca.interrompidaAoEncontrar),
+        limitePaginas: Number(busca.limite_paginas || busca.limitePaginas || 0),
+    };
+}
+
 function descreverVigenciaPainel(datas = []) {
     const inicio = datas.find((data) => String(data.tipo || "") === "inicio_vigencia") || datas[0];
     const fim = datas.find((data) => String(data.tipo || "") === "fim_vigencia") || datas[1];
@@ -518,6 +534,21 @@ function DetalhesVerificacao({ dados, resumoCurto }) {
                         <p className="mt-3 rounded-lg bg-white/80 p-2 text-xs leading-relaxed text-blue-900 ring-1 ring-blue-100">
                             {dados.leituraDocumentalLocal.resumo}
                         </p>
+                    )}
+
+                    {dados.buscaAmpliadaOcr?.executada && (
+                        <div className="mt-2 rounded-lg bg-white/80 p-2 text-xs leading-relaxed text-blue-900 ring-1 ring-blue-100">
+                            <strong className="block text-blue-700">Busca ampliada no PDF</strong>
+                            {dados.buscaAmpliadaOcr.encontrouDataPrincipal ? (
+                                <span>
+                                    Foram analisadas {dados.buscaAmpliadaOcr.paginasLidas} página(s) de {dados.buscaAmpliadaOcr.totalPaginas}. Data documental provável localizada na página {dados.buscaAmpliadaOcr.paginaDataPrincipal}.
+                                </span>
+                            ) : (
+                                <span>
+                                    Foram analisadas {dados.buscaAmpliadaOcr.paginasLidas} página(s) de {dados.buscaAmpliadaOcr.totalPaginas}, sem localizar vigência, emissão, revisão ou assinatura confiável.
+                                </span>
+                            )}
+                        </div>
                     )}
 
                     {dados.datasRelevantesOcr.length > 0 && (
@@ -664,6 +695,7 @@ export default function ResultadoVerificacaoDocumento({
         const datasClassificadasOcr = obterDatasClassificadasPainel(leituraDocumentalLocal);
         const datasRelevantesOcr = obterDatasRelevantesPainel(datasClassificadasOcr);
         const datasLidasOcr = obterDatasLidasPainel(leituraDocumentalLocal);
+        const buscaAmpliadaOcr = obterBuscaAmpliadaPainel(leituraDocumentalLocal);
 
         const scoreRisco = Number.isFinite(score) ? Math.max(0, Math.min(100, score)) : 0;
         const conformidade = Math.max(0, Math.min(100, 100 - scoreRisco));
@@ -687,6 +719,7 @@ export default function ResultadoVerificacaoDocumento({
             datasClassificadasOcr,
             datasRelevantesOcr,
             datasLidasOcr,
+            buscaAmpliadaOcr,
         };
     }, [verificacao]);
 
