@@ -17,7 +17,7 @@ import {
     Users,
 } from "lucide-react";
 
-import { Card, Header, StatusPill } from "../commonComponents";
+import { Card, Header } from "../commonComponents";
 import { FileUploadAviso, validarArquivoAntesUpload } from "../FileUploadAviso";
 import ResultadoVerificacaoDocumento from "../documentos/ResultadoVerificacaoDocumento";
 import { supabase } from "../../lib/supabaseClient";
@@ -43,6 +43,52 @@ const hoje = new Date();
 
 const CHAVE_CADASTRO_EMPRESAS_RECOLHIDO = "controleSstEmpresasCadastroRecolhido";
 const CHAVE_INFO_EMPRESAS_RECOLHIDA = "controleSstEmpresasInformacoesRecolhidas";
+
+
+const STATUS_DOCUMENTO_PILL_CLASSES = {
+    em_dia: "bg-emerald-50 text-emerald-700 ring-emerald-200",
+    "em dia": "bg-emerald-50 text-emerald-700 ring-emerald-200",
+    aprovado: "bg-emerald-50 text-emerald-700 ring-emerald-200",
+    regular: "bg-emerald-50 text-emerald-700 ring-emerald-200",
+    vencendo: "bg-amber-50 text-amber-700 ring-amber-200",
+    a_vencer: "bg-amber-50 text-amber-700 ring-amber-200",
+    "a vencer": "bg-amber-50 text-amber-700 ring-amber-200",
+    atencao: "bg-amber-50 text-amber-700 ring-amber-200",
+    atenção: "bg-amber-50 text-amber-700 ring-amber-200",
+    vencido: "bg-red-50 text-red-700 ring-red-200",
+    bloqueado: "bg-red-50 text-red-700 ring-red-200",
+    pendente: "bg-red-50 text-red-700 ring-red-200",
+    sem_documento: "bg-red-50 text-red-700 ring-red-200",
+    "sem documento": "bg-red-50 text-red-700 ring-red-200",
+};
+
+function normalizarChaveStatusDocumento(valor = "") {
+    return String(valor || "")
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .trim()
+        .toLowerCase()
+        .replace(/\s+/g, "_");
+}
+
+function StatusPill({ status = null, small = false }) {
+    const statusObjeto = status && typeof status === "object" ? status : null;
+    const textoStatus = String(statusObjeto?.texto || statusObjeto?.label || status || "Pendente").trim() || "Pendente";
+    const chaveStatus = normalizarChaveStatusDocumento(statusObjeto?.chave || statusObjeto?.status || textoStatus);
+    const classeStatus = statusObjeto?.classe || statusObjeto?.className || STATUS_DOCUMENTO_PILL_CLASSES[chaveStatus] || STATUS_DOCUMENTO_PILL_CLASSES[textoStatus.toLowerCase()] || "bg-slate-50 text-slate-700 ring-slate-200";
+
+    return (
+        <span
+            className={classNames(
+                "inline-flex shrink-0 items-center justify-center rounded-full font-semibold ring-1",
+                small ? "px-2.5 py-1 text-[11px]" : "px-3 py-1.5 text-xs",
+                classeStatus
+            )}
+        >
+            {textoStatus}
+        </span>
+    );
+}
 
 function carregarPreferenciaPainelBoolean(chave, padrao = false) {
     try {
