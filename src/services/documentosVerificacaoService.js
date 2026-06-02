@@ -25,11 +25,16 @@ import {
     obterTamanhoArquivoVerificacao,
     valorUuidOuNullVerificacao,
 } from "../utils/documentosVerificacaoUtils";
-import {
-    avaliarLeituraDocumentalComCadastro,
-    executarLeituraDocumentalLocal,
-    montarRetornoLeituraParaPersistencia,
-} from "./documentosOcrService";
+
+let moduloOcrDocumentalPromise = null;
+
+async function carregarModuloOcrDocumental() {
+    if (!moduloOcrDocumentalPromise) {
+        moduloOcrDocumentalPromise = import("./documentosOcrService");
+    }
+
+    return moduloOcrDocumentalPromise;
+}
 
 function obterArquivoUrlDocumento(documento = {}) {
     return documento.arquivo_url ||
@@ -309,6 +314,11 @@ export async function analisarDocumentoEmpresaLocal({
 
     const arquivoValidoParaHash = obterArquivoValidoVerificacao(arquivo);
     const hashArquivo = hashArquivoInformado || (arquivoValidoParaHash ? await gerarHashArquivoVerificacao(arquivoValidoParaHash) : "");
+    const {
+        avaliarLeituraDocumentalComCadastro,
+        executarLeituraDocumentalLocal,
+        montarRetornoLeituraParaPersistencia,
+    } = await carregarModuloOcrDocumental();
     const leituraDocumental = await executarLeituraDocumentalLocal({
         arquivo: arquivoValidoParaHash,
         arquivoNome: metadadosArquivo.arquivoNome,
@@ -412,6 +422,11 @@ export async function analisarCertificadoLocal({
 
     const arquivoValidoParaHash = obterArquivoValidoVerificacao(arquivo);
     const hashArquivo = hashArquivoInformado || (arquivoValidoParaHash ? await gerarHashArquivoVerificacao(arquivoValidoParaHash) : "");
+    const {
+        avaliarLeituraDocumentalComCadastro,
+        executarLeituraDocumentalLocal,
+        montarRetornoLeituraParaPersistencia,
+    } = await carregarModuloOcrDocumental();
     const leituraDocumental = await executarLeituraDocumentalLocal({
         arquivo: arquivoValidoParaHash,
         arquivoNome: metadadosArquivo.arquivoNome,
