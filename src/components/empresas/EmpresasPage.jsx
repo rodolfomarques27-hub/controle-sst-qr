@@ -133,6 +133,101 @@ function obterResumoDocumentoEmpresa(tipo) {
     return resumos[tipo] || ["Documento controlado pelo sistema SST.", "Revise conforme regra interna e norma aplicável.", "Base normativa conforme cadastro do documento."];
 }
 
+function dataIsoValidaPainelDocumento(valor = "") {
+    const texto = String(valor || "").slice(0, 10);
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(texto)) return false;
+
+    const [ano, mes, dia] = texto.split("-").map(Number);
+    const data = new Date(ano, mes - 1, dia, 12, 0, 0);
+
+    return (
+        data.getFullYear() === ano &&
+        data.getMonth() === mes - 1 &&
+        data.getDate() === dia
+    );
+}
+
+function obterLeituraVerificacaoPainel(verificacao = {}) {
+    return verificacao?.retornoIa?.leitura_documental_local ||
+        verificacao?.retorno_ia?.leitura_documental_local ||
+        verificacao?.retornoIa?.leituraDocumentalLocal ||
+        verificacao?.retorno_ia?.leituraDocumentalLocal ||
+        null;
+}
+
+function obterCamposExtraidosVerificacaoPainel(verificacao = {}) {
+    const leitura = obterLeituraVerificacaoPainel(verificacao);
+    return leitura?.campos_extraidos || leitura?.camposExtraidos || null;
+}
+
+function obterDatasOcrParaDocumentoPainel({ verificacao = {}, documento = {} } = {}) {
+    const campos = obterCamposExtraidosVerificacaoPainel(verificacao);
+    const tipoDocumento = documento?.tipo_documento || documento?.tipo || "";
+
+    if (dataIsoValidaPainelDocumento(campos?.vigencia_inicio) && dataIsoValidaPainelDocumento(campos?.vigencia_fim)) {
+        return {
+            dataEmissao: campos.vigencia_inicio,
+            dataVencimento: campos.vigencia_fim,
+        };
+    }
+
+    const leitura = obterLeituraVerificacaoPainel(verificacao);
+    const classificadas = leitura?.datas_classificadas || leitura?.datasClassificadas || {};
+    const vigencia = Array.isArray(classificadas?.vigencia) ? classificadas.vigencia : [];
+    const inicio = vigencia.find((data) => data?.tipo === "inicio_vigencia") || vigencia[0] || null;
+    const fim = vigencia.find((data) => data?.tipo === "fim_vigencia") || vigencia[1] || null;
+
+    if (dataIsoValidaPainelDocumento(inicio?.iso) && dataIsoValidaPainelDocumento(fim?.iso)) {
+        return {
+            dataEmissao: inicio.iso,
+            dataVencimento: fim.iso,
+        };
+    }
+
+    const encerramento = campos?.data_encerramento || campos?.assinatura_data || "";
+
+    if (dataIsoValidaPainelDocumento(encerramento)) {
+        return {
+            dataEmissao: encerramento,
+            dataVencimento: calcularVencimentoDocumento(tipoDocumento, encerramento),
+        };
+    }
+
+    const outrasRelevantes = Array.isArray(classificadas?.outrasRelevantes) ? classificadas.outrasRelevantes : [];
+    const dataEncerramentoClassificada = outrasRelevantes.find((data) => String(data?.tipo || "") === "encerramento_documento") || null;
+
+    if (dataIsoValidaPainelDocumento(dataEncerramentoClassificada?.iso)) {
+        return {
+            dataEmissao: dataEncerramentoClassificada.iso,
+            dataVencimento: calcularVencimentoDocumento(tipoDocumento, dataEncerramentoClassificada.iso),
+        };
+    }
+
+    return {
+        dataEmissao: "",
+        dataVencimento: "",
+    };
+}
+
+function ResumoDocumentoInline({ documento = null }) {
+    return (
+        <div className="flex min-w-0 flex-nowrap items-center gap-8 overflow-x-auto rounded-2xl bg-slate-50 px-3 py-2.5 text-xs leading-relaxed text-slate-600">
+            <p className="inline-flex shrink-0 items-baseline gap-1 whitespace-nowrap">
+                <strong className="text-slate-700">Emissão:</strong>
+                <span>{documento?.data_emissao ? formatDate(documento.data_emissao) : "Documento não enviado"}</span>
+            </p>
+            <p className="inline-flex shrink-0 items-baseline gap-1 whitespace-nowrap">
+                <strong className="text-slate-700">Revisão:</strong>
+                <span>{documento?.data_vencimento ? formatDate(documento.data_vencimento) : "Sem revisão definida"}</span>
+            </p>
+            <p className="inline-flex min-w-0 items-baseline gap-1 whitespace-nowrap">
+                <strong className="shrink-0 text-slate-700">Arquivo:</strong>
+                <span className="min-w-0 truncate">{documento?.arquivo_nome || "Arquivo ainda não anexado"}</span>
+            </p>
+        </div>
+    );
+}
+
 export function Empresas({
     empresasBanco,
     documentosEmpresas,
@@ -334,13 +429,30 @@ export function Empresas({
             throw new Error(`Erro ao aprovar manualmente a verificação documental: ${error.message}`);
         }
 
+        const datasOcr = obterDatasOcrParaDocumentoPainel({ verificacao, documento });
+        const atualizacaoDocumento = {
+            status_validacao: "Aprovado",
+        };
+
+        if (datasOcr.dataEmissao) {
+            atualizacaoDocumento.data_emissao = datasOcr.dataEmissao;
+        }
+
+        if (datasOcr.dataVencimento) {
+            atualizacaoDocumento.data_vencimento = datasOcr.dataVencimento;
+        }
+
         const { error: erroDocumento } = await supabase
             .from("documentos_empresas")
-            .update({ status_validacao: "Aprovado" })
+            .update(atualizacaoDocumento)
             .eq("id", documento.id);
 
         if (erroDocumento) {
-            throw new Error(`A verificação foi aprovada, mas o status do documento não foi atualizado: ${erroDocumento.message}`);
+            throw new Error(`A verificação foi aprovada, mas o status/datas do documento não foram atualizados: ${erroDocumento.message}`);
+        }
+
+        if (typeof onAtualizarBanco === "function") {
+            await onAtualizarBanco();
         }
 
         setVerificacoesDocumentais((atual) => ({
@@ -826,11 +938,7 @@ export function Empresas({
 
                                         {doc ? (
                                             <div className="space-y-3 p-4">
-                                                <div className="grid gap-x-3 gap-y-1.5 rounded-2xl bg-slate-50 px-3 py-2.5 text-xs leading-relaxed text-slate-600 md:grid-cols-[110px_145px_minmax(0,1fr)]">
-                                                    <p className="min-w-0"><strong className="text-slate-700">Emissão:</strong> {doc.data_emissao ? formatDate(doc.data_emissao) : "Documento não enviado"}</p>
-                                                    <p className="min-w-0"><strong className="text-slate-700">Revisão:</strong> {doc.data_vencimento ? formatDate(doc.data_vencimento) : "Sem revisão definida"}</p>
-                                                    <p className="min-w-0 break-words"><strong className="text-slate-700">Arquivo:</strong> {doc.arquivo_nome || "Arquivo ainda não anexado"}</p>
-                                                </div>
+                                                <ResumoDocumentoInline documento={doc} />
                                                 {doc.observacao && (
                                                     <p className="line-clamp-2 text-xs text-slate-500">{doc.observacao}</p>
                                                 )}
@@ -1990,11 +2098,7 @@ export function Empresas({
                                             <div className="px-5 py-4 text-sm text-slate-600">
                                                 <div className="space-y-3">
                                                     <p className="leading-relaxed"><strong>Regra:</strong> {tipoDoc.regra}</p>
-                                                    <div className="grid gap-x-3 gap-y-1.5 rounded-2xl bg-slate-50 px-3 py-2.5 text-xs leading-relaxed text-slate-600 md:grid-cols-[110px_145px_minmax(0,1fr)]">
-                                                        <p className="min-w-0"><strong className="text-slate-700">Emissão:</strong> {doc ? formatDate(doc.data_emissao) : "Documento não enviado"}</p>
-                                                        <p className="min-w-0"><strong className="text-slate-700">Próxima revisão:</strong> {doc?.data_vencimento ? formatDate(doc.data_vencimento) : "Sem revisão definida"}</p>
-                                                        <p className="min-w-0 break-words"><strong className="text-slate-700">Arquivo:</strong> {doc?.arquivo_nome || "Arquivo ainda não anexado"}</p>
-                                                    </div>
+                                                    <ResumoDocumentoInline documento={doc} />
                                                 </div>
 
                                                 {doc?.observacao && (

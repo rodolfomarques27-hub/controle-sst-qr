@@ -72,13 +72,57 @@ function verificacaoPossuiDivergenciaEmpresa(verificacao = {}) {
     });
 }
 
-function obterDatasVigenciaOcrVerificacao(verificacao = {}) {
-    const campos = obterCamposExtraidosVerificacao(verificacao);
+function dataIsoValidaDocumentoEmpresa(valor = "") {
+    const texto = String(valor || "").slice(0, 10);
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(texto)) return false;
 
-    if (campos?.vigencia_inicio && campos?.vigencia_fim) {
+    const [ano, mes, dia] = texto.split("-").map(Number);
+    const data = new Date(ano, mes - 1, dia, 12, 0, 0);
+
+    return (
+        data.getFullYear() === ano &&
+        data.getMonth() === mes - 1 &&
+        data.getDate() === dia
+    );
+}
+
+function formatarIsoDocumentoEmpresa(data) {
+    if (!(data instanceof Date) || Number.isNaN(data.getTime())) return "";
+
+    return [
+        data.getFullYear(),
+        String(data.getMonth() + 1).padStart(2, "0"),
+        String(data.getDate()).padStart(2, "0"),
+    ].join("-");
+}
+
+function calcularVencimentoDocumentoPorTipoOcr(tipo = "", dataEmissao = "") {
+    const iso = String(dataEmissao || "").slice(0, 10);
+    if (!dataIsoValidaDocumentoEmpresa(iso)) return "";
+
+    const tipoNormalizado = String(tipo || "").trim().toUpperCase();
+    const [ano, mes, dia] = iso.split("-").map(Number);
+    const data = new Date(ano, mes - 1, dia, 12, 0, 0);
+
+    if (tipoNormalizado === "LTCAT") {
+        data.setFullYear(data.getFullYear() + 3);
+    } else {
+        data.setFullYear(data.getFullYear() + 1);
+    }
+
+    data.setDate(data.getDate() - 1);
+    return formatarIsoDocumentoEmpresa(data);
+}
+
+function obterDatasVigenciaOcrVerificacao(verificacao = {}, documento = {}) {
+    const campos = obterCamposExtraidosVerificacao(verificacao);
+    const tipoDocumento = documento?.tipo_documento || documento?.tipo || "";
+
+    if (dataIsoValidaDocumentoEmpresa(campos?.vigencia_inicio) && dataIsoValidaDocumentoEmpresa(campos?.vigencia_fim)) {
         return {
             dataEmissao: campos.vigencia_inicio,
             dataVencimento: campos.vigencia_fim,
+            origem: "vigencia_ocr",
         };
     }
 
@@ -88,16 +132,39 @@ function obterDatasVigenciaOcrVerificacao(verificacao = {}) {
     const inicio = vigencia.find((data) => data?.tipo === "inicio_vigencia") || vigencia[0] || null;
     const fim = vigencia.find((data) => data?.tipo === "fim_vigencia") || vigencia[1] || null;
 
-    if (inicio?.iso && fim?.iso) {
+    if (dataIsoValidaDocumentoEmpresa(inicio?.iso) && dataIsoValidaDocumentoEmpresa(fim?.iso)) {
         return {
             dataEmissao: inicio.iso,
             dataVencimento: fim.iso,
+            origem: "vigencia_ocr",
+        };
+    }
+
+    const encerramento = campos?.data_encerramento || campos?.assinatura_data || "";
+
+    if (dataIsoValidaDocumentoEmpresa(encerramento)) {
+        return {
+            dataEmissao: encerramento,
+            dataVencimento: calcularVencimentoDocumentoPorTipoOcr(tipoDocumento, encerramento),
+            origem: "encerramento_ou_assinatura_ocr",
+        };
+    }
+
+    const outrasRelevantes = Array.isArray(classificadas?.outrasRelevantes) ? classificadas.outrasRelevantes : [];
+    const dataEncerramentoClassificada = outrasRelevantes.find((data) => String(data?.tipo || "") === "encerramento_documento") || null;
+
+    if (dataIsoValidaDocumentoEmpresa(dataEncerramentoClassificada?.iso)) {
+        return {
+            dataEmissao: dataEncerramentoClassificada.iso,
+            dataVencimento: calcularVencimentoDocumentoPorTipoOcr(tipoDocumento, dataEncerramentoClassificada.iso),
+            origem: "encerramento_ou_assinatura_ocr",
         };
     }
 
     return {
         dataEmissao: "",
         dataVencimento: "",
+        origem: "",
     };
 }
 
@@ -127,7 +194,7 @@ async function executarVerificacaoDocumentoEmpresaSemBloquearFluxo({
         });
 
         const statusValidacao = converterStatusVerificacaoParaStatusDocumento(verificacao?.statusVerificacao);
-        const datasOcr = obterDatasVigenciaOcrVerificacao(verificacao);
+        const datasOcr = obterDatasVigenciaOcrVerificacao(verificacao, documentoNormalizado);
         const atualizacaoDocumento = {
             status_validacao: statusValidacao,
         };

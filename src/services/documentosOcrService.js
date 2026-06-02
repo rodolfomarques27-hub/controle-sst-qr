@@ -499,8 +499,12 @@ function extrairDatasEncerramentoTexto(texto = "") {
             const datas = extrairDatasTextoDocumental(bloco, "texto").filter((data) => {
                 if (!data?.iso) return false;
                 const contextoCompleto = `${data.contexto || ""} ${bloco}`;
-                if (contextoIndicaReferenciaLegal(contextoCompleto)) return false;
-                if (contextoIndicaCodigoOuCadastroNaoData(contextoCompleto)) return false;
+                const contextoForte = contextoIndicaEncerramentoOuAssinaturaForte(contextoCompleto);
+
+                // Em páginas de encerramento é comum aparecer CNPJ/código no rodapé.
+                // Quando o contexto forte existe, o rodapé não deve invalidar a data principal.
+                if (!contextoForte && contextoIndicaReferenciaLegal(contextoCompleto)) return false;
+                if (!contextoForte && contextoIndicaCodigoOuCadastroNaoData(contextoCompleto)) return false;
                 if (dataEhAntigaSemContextoForte(data, contextoCompleto)) return false;
                 return true;
             });
@@ -568,6 +572,16 @@ function classificarDatasOcrDocumental({ textoExtraido = "", datasTexto = [], da
         if (!data?.iso) continue;
 
         if (usadas.has(data.iso)) continue;
+
+        const contextoForteEncerramento = contextoIndicaEncerramentoOuAssinaturaForte(data.contexto || "");
+
+        if (contextoForteEncerramento && !contextoIndicaReferenciaLegal(data.contexto || "")) {
+            adicionarDataClassificada(classificadas.outrasRelevantes, data, {
+                tipo: "encerramento_documento",
+                rotulo: "Data de encerramento / assinatura técnica do documento",
+            });
+            continue;
+        }
 
         if (dataEhAntigaSemContextoForte(data)) {
             adicionarDataClassificada(classificadas.ignoradas, data, {
