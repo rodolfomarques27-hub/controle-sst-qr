@@ -18,7 +18,6 @@ import {
     carregarSenhaConfiguracoesSistema,
     carregarSenhaConfiguracoesSistemaSupabase,
 } from "./constants/configuracoesSegurancaConstants";
-import { estilosGlobais } from "./constants/appLayoutStyles";
 import { validarArquivoAntesUpload } from "./components/FileUploadAviso";
 import { CarregandoTela } from "./components/CarregandoTela";
 import {
@@ -959,7 +958,6 @@ export default function App() {
     return (
         <React.Suspense fallback={<AppTransicaoInterna />}>
             <AppLayout
-                estilosGlobais={estilosGlobais}
                 nav={nav}
                 tela={tela}
                 menuLateralAberto={menuLateralAberto}

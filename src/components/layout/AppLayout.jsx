@@ -3,7 +3,6 @@ import { AppMobileHeader } from "./AppMobileHeader";
 import { AppSidebar } from "./AppSidebar";
 
 export function AppLayout({
-    estilosGlobais,
     nav = [],
     tela,
     menuLateralAberto,
@@ -90,7 +89,6 @@ export function AppLayout({
 
     return (
         <div className="min-h-screen bg-slate-100 text-slate-900">
-            <style>{estilosGlobais}</style>
             <div
                 className="app-shell flex min-h-screen"
                 data-sidebar-open={menuLateralAberto ? "true" : "false"}
