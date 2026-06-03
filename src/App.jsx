@@ -1,6 +1,5 @@
 import React, { useCallback, useEffect, useState } from "react";
 import { supabase, SUPABASE_CONFIGURADO } from "./lib/supabaseClient";
-import { LoginScreen } from "./components/LoginScreen";
 import { SupabaseConfiguracaoPendente } from "./components/commonComponents";
 import {
     AppCarregandoSistema,
@@ -37,6 +36,7 @@ import {
     Users,
 } from "lucide-react";
 
+const LoginScreen = React.lazy(() => import("./components/LoginScreen").then((modulo) => ({ default: modulo.LoginScreen })));
 const ConsultaQRPublica = React.lazy(() => import("./components/qr/ConsultaQRPublica").then((modulo) => ({ default: modulo.ConsultaQRPublica })));
 const NovaAuditoriaCampoDireta = React.lazy(() => import("./components/auditoria/NovaAuditoriaCampoDireta").then((modulo) => ({ default: modulo.NovaAuditoriaCampoDireta })));
 const importarAppContentRouter = () => import("./routes/AppContentRouter");
@@ -921,7 +921,19 @@ export default function App() {
     }
 
     if (!usuario) {
-        return <LoginScreen onLogin={setUsuario} />;
+        return (
+            <React.Suspense
+                fallback={
+                    <CarregandoTela
+                        mensagem="Carregando acesso..."
+                        subtitulo="Preparando login seguro."
+                        telaCheia
+                    />
+                }
+            >
+                <LoginScreen onLogin={setUsuario} />
+            </React.Suspense>
+        );
     }
 
     const validarSenhaConfiguracoes = (evento) => {
