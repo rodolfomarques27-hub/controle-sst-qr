@@ -1,5 +1,4 @@
 import React from "react";
-import { motion } from "framer-motion";
 import { BadgeCheck, Database } from "lucide-react";
 import { Card, Header } from "./commonComponents";
 
@@ -22,7 +21,7 @@ export function Requisitos() {
     ];
 
     return (
-        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
+        <div>
             <Header titulo="Roteiro técnico do projeto" subtitulo="Etapas para transformar este protótipo em sistema real." />
 
             <div className="grid gap-6 xl:grid-cols-[1fr_1fr]">
@@ -55,6 +54,6 @@ export function Requisitos() {
                     </div>
                 </Card>
             </div>
-        </motion.div>
+        </div>
     );
 }

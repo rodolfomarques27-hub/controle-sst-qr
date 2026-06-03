@@ -1,4 +1,3 @@
-import { motion } from "framer-motion";
 import { Eye, EyeOff, Lock } from "lucide-react";
 import { Card, Header } from "../commonComponents";
 import { SENHA_CONFIGURACOES_PADRAO } from "../../constants/configuracoesSegurancaConstants";
@@ -14,7 +13,7 @@ export function ConfiguracoesBloqueio({
     setMostrarSenhaConfiguracoes,
 }) {
     return (
-        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
+        <div>
             <Header
                 titulo="Configurações bloqueadas"
                 subtitulo="Informe a senha de acesso para abrir as configurações operacionais do sistema."
@@ -73,6 +72,6 @@ export function ConfiguracoesBloqueio({
                     </form>
                 </div>
             </Card>
-        </motion.div>
+        </div>
     );
 }

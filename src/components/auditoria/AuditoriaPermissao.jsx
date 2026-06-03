@@ -1,11 +1,10 @@
 import React from "react";
-import { motion } from "framer-motion";
 import { Lock, ShieldCheck } from "lucide-react";
 import { Card, Header } from "../commonComponents";
 
 export function AuditoriaAcessoNegado() {
     return (
-        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
+        <div>
             <Header
                 titulo="Acesso não autorizado"
                 subtitulo="Seu usuário não possui permissão cadastrada no Supabase para acessar a Auditoria de sistema."
@@ -27,13 +26,13 @@ export function AuditoriaAcessoNegado() {
                     </div>
                 </Card>
             </div>
-        </motion.div>
+        </div>
     );
 }
 
 export function AuditoriaBloqueada({ onLiberar }) {
     return (
-        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
+        <div>
             <Header
                 titulo="Auditoria de sistema protegida"
                 subtitulo="Acesso restrito apenas aos registros internos da Auditoria de sistema."
@@ -64,6 +63,6 @@ export function AuditoriaBloqueada({ onLiberar }) {
                     </button>
                 </Card>
             </div>
-        </motion.div>
+        </div>
     );
 }
