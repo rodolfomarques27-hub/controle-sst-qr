@@ -121,7 +121,14 @@ export function carregarConfiguracaoAuditoriaPublicaSistema() {
 
     try {
         const salvo = JSON.parse(window.localStorage.getItem(CHAVE_STORAGE_CONFIG_AUDITORIA_PUBLICA) || "null");
-        return normalizarConfiguracaoAuditoriaPublica(salvo || CONFIG_AUDITORIA_PUBLICA_PADRAO);
+        const normalizado = normalizarConfiguracaoAuditoriaPublica(salvo || CONFIG_AUDITORIA_PUBLICA_PADRAO);
+
+        // O token operacional não é mais fonte oficial no navegador.
+        // Ele deve ser carregado do Supabase para evitar token fixo/local obsoleto.
+        return {
+            ...normalizado,
+            tokenPublico: "",
+        };
     } catch {
         return CONFIG_AUDITORIA_PUBLICA_PADRAO;
     }
@@ -129,16 +136,29 @@ export function carregarConfiguracaoAuditoriaPublicaSistema() {
 
 export function salvarConfiguracaoAuditoriaPublicaSistema(configuracao = {}) {
     const normalizada = normalizarConfiguracaoAuditoriaPublica(configuracao);
+    const persistida = {
+        ...normalizada,
+        tokenPublico: "",
+    };
 
     if (typeof window !== "undefined") {
-        window.localStorage.setItem(CHAVE_STORAGE_CONFIG_AUDITORIA_PUBLICA, JSON.stringify(normalizada));
+        window.localStorage.setItem(CHAVE_STORAGE_CONFIG_AUDITORIA_PUBLICA, JSON.stringify(persistida));
     }
 
-    return normalizada;
+    return persistida;
+}
+
+export function limparConfiguracaoAuditoriaPublicaLocal() {
+    if (typeof window !== "undefined") {
+        window.localStorage.removeItem(CHAVE_STORAGE_CONFIG_AUDITORIA_PUBLICA);
+    }
+
+    return CONFIG_AUDITORIA_PUBLICA_PADRAO;
 }
 
 export function restaurarConfiguracaoAuditoriaPublicaPadrao() {
-    return salvarConfiguracaoAuditoriaPublicaSistema(CONFIG_AUDITORIA_PUBLICA_PADRAO);
+    limparConfiguracaoAuditoriaPublicaLocal();
+    return CONFIG_AUDITORIA_PUBLICA_PADRAO;
 }
 
 export function montarUrlConsultaQrColaboradorPublica({

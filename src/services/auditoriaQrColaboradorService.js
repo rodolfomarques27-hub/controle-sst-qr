@@ -1,13 +1,22 @@
 import { supabase } from "../lib/supabaseClient";
 import { reduzirFotoParaAuditoria } from "./imagemService";
 import { sanitizarNomeArquivo } from "../utils/sstUtils";
-import {
-    carregarConfiguracaoAuditoriaPublicaSistema,
-    obterTokenAuditoriaPublicaUrl,
-} from "../constants/auditoriaPublicaConstants";
+import { obterTokenAuditoriaPublicaUrl } from "../constants/auditoriaPublicaConstants";
+import { carregarTokenAuditoriaPublicaAtivoSupabase } from "./auditoriaSistemaConfigService";
 
 export function obterTokenAuditoriaQrColaboradorConfigurado() {
-    return texto(obterTokenAuditoriaPublicaUrl() || carregarConfiguracaoAuditoriaPublicaSistema().tokenPublico);
+    return texto(obterTokenAuditoriaPublicaUrl());
+}
+
+export async function resolverTokenAuditoriaQrColaborador(tokenAuditoria = "") {
+    const tokenInformado = texto(tokenAuditoria);
+    if (tokenInformado) return tokenInformado;
+
+    const tokenUrl = texto(obterTokenAuditoriaPublicaUrl());
+    if (tokenUrl) return tokenUrl;
+
+    const resultado = await carregarTokenAuditoriaPublicaAtivoSupabase();
+    return texto(resultado?.tokenPublico);
 }
 
 function texto(valor) {
@@ -50,14 +59,14 @@ export async function validarSenhaAuditoriaQr({
     tokenAuditoria = obterTokenAuditoriaQrColaboradorConfigurado(),
     senha = "",
 } = {}) {
-    const tokenSeguro = texto(tokenAuditoria || obterTokenAuditoriaQrColaboradorConfigurado());
+    const tokenSeguro = await resolverTokenAuditoriaQrColaborador(tokenAuditoria);
     const senhaSegura = texto(senha);
 
     if (!tokenSeguro) {
         return {
             ok: false,
             autorizado: false,
-            mensagem: "Token público da auditoria não configurado. Gere o QR Code com token ativo ou informe token/chave na URL.",
+            mensagem: "Token público da auditoria não informado.",
         };
     }
 
@@ -106,12 +115,12 @@ export async function salvarAuditoriaQrColaborador({
     desvio = null,
     fotos = {},
 } = {}) {
-    const tokenAuditoriaSeguro = texto(tokenAuditoria || obterTokenAuditoriaQrColaboradorConfigurado());
+    const tokenAuditoriaSeguro = await resolverTokenAuditoriaQrColaborador(tokenAuditoria);
     const senhaSegura = texto(senha);
     const tokenQrSeguro = texto(tokenQr || auditoria?.token_qr);
 
     if (!tokenAuditoriaSeguro) {
-        throw new Error("Token público da auditoria não configurado. Gere o QR Code com token ativo ou informe token/chave na URL.");
+        throw new Error("Token público da auditoria não informado.");
     }
 
     if (!senhaSegura) {

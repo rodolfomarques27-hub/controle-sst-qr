@@ -3,49 +3,44 @@ import React, { useEffect, useMemo, useState } from "react";
 import { QRCodeSVG } from "qrcode.react";
 import { motion } from "framer-motion";
 import { ClipboardCheck, Download, QrCode, Search, ShieldCheck } from "lucide-react";
-import { supabase } from "../../lib/supabaseClient";
-import { Card, FotoColaborador, Header, StatusPill, obterFotoColaboradorSrc } from "../commonComponents";
+import { Card, FotoColaborador, Header, QRCodeReal, StatusPill, obterFotoColaboradorSrc } from "../commonComponents";
 import { MobilizacaoBadge } from "../MobilizacaoBadge";
 import { DAY } from "../../constants/sstConstants";
-import {
-    carregarConfiguracaoAuditoriaPublicaSistema,
-    montarUrlConsultaQrColaboradorPublica,
-} from "../../constants/auditoriaPublicaConstants";
 import { obterTreinamento, statusDocumento, statusGeral, treinamentoSemValidade } from "../../services/colaboradorDocumentosService";
 import { classNames, diasParaVencer, formatDate, normalizarTextoBusca } from "../../utils/sstUtils";
+import { montarUrlConsultaQrColaboradorPublica } from "../../constants/auditoriaPublicaConstants";
+import { carregarTokenAuditoriaPublicaAtivoSupabase } from "../../services/auditoriaSistemaConfigService";
 
 export function ConsultaQR({ colaborador, colaboradores = [], onSelecionarColaborador }) {
     const [busca, setBusca] = useState("");
     const [filtroEmpresaQR, setFiltroEmpresaQR] = useState("Todas");
-    const [tokenAuditoriaPublicaSistema, setTokenAuditoriaPublicaSistema] = useState(() => carregarConfiguracaoAuditoriaPublicaSistema().tokenPublico);
+    const [tokenAuditoriaPublica, setTokenAuditoriaPublica] = useState("");
+    const [mensagemTokenAuditoriaPublica, setMensagemTokenAuditoriaPublica] = useState("Carregando token público da auditoria...");
+
+    const colaboradorAtual =
+        colaboradores.find((item) => String(item.id) === String(colaborador?.id)) ||
+        colaborador ||
+        colaboradores[0] ||
+        null;
+
 
     useEffect(() => {
         let ativo = true;
 
-        const carregarTokenAuditoriaPublica = async () => {
-            const tokenLocal = carregarConfiguracaoAuditoriaPublicaSistema().tokenPublico;
+        async function carregarTokenAuditoriaPublica() {
+            const resultado = await carregarTokenAuditoriaPublicaAtivoSupabase();
 
-            if (tokenLocal) {
-                if (ativo) setTokenAuditoriaPublicaSistema(tokenLocal);
+            if (!ativo) return;
+
+            if (resultado?.tokenPublico) {
+                setTokenAuditoriaPublica(resultado.tokenPublico);
+                setMensagemTokenAuditoriaPublica("Token público da auditoria carregado do Supabase.");
                 return;
             }
 
-            try {
-                const { data, error } = await supabase
-                    .from("auditoria_tokens_publicos")
-                    .select("token")
-                    .eq("ativo", true)
-                    .order("created_at", { ascending: false })
-                    .limit(1)
-                    .maybeSingle();
-
-                if (!error && ativo) {
-                    setTokenAuditoriaPublicaSistema(String(data?.token || "").trim());
-                }
-            } catch {
-                if (ativo) setTokenAuditoriaPublicaSistema("");
-            }
-        };
+            setTokenAuditoriaPublica("");
+            setMensagemTokenAuditoriaPublica(resultado?.erro || "Token público da auditoria não encontrado no Supabase.");
+        }
 
         carregarTokenAuditoriaPublica();
 
@@ -53,12 +48,6 @@ export function ConsultaQR({ colaborador, colaboradores = [], onSelecionarColabo
             ativo = false;
         };
     }, []);
-
-    const colaboradorAtual =
-        colaboradores.find((item) => String(item.id) === String(colaborador?.id)) ||
-        colaborador ||
-        colaboradores[0] ||
-        null;
 
     const empresasConsultaQR = useMemo(() => {
         const nomes = colaboradores
@@ -115,14 +104,12 @@ export function ConsultaQR({ colaborador, colaboradores = [], onSelecionarColabo
 
     const geral = statusGeral(colaboradorAtual);
     const treinamentos = colaboradorAtual.treinamentos || [];
-    const origemConsulta = typeof window !== "undefined" ? window.location.origin : "";
-    const tokenAuditoriaPublica = tokenAuditoriaPublicaSistema;
-    const auditoriaPublicaConfigurada = Boolean(tokenAuditoriaPublica);
-    const urlConsultaColaborador = montarUrlConsultaQrColaboradorPublica({
-        origem: origemConsulta,
-        tokenQrColaborador: colaboradorAtual.token,
-        tokenAuditoriaPublica,
-    });
+    const urlConsultaColaborador = typeof window !== "undefined"
+        ? montarUrlConsultaQrColaboradorPublica({
+            tokenQrColaborador: colaboradorAtual.token,
+            tokenAuditoriaPublica,
+        })
+        : "";
     const idImpressaoQrColaborador = `qr-colaborador-impressao-${colaboradorAtual.id || colaboradorAtual.token}`;
     const imprimirQrColaborador = () => {
         const elemento = document.getElementById(idImpressaoQrColaborador);
@@ -249,24 +236,17 @@ export function ConsultaQR({ colaborador, colaboradores = [], onSelecionarColabo
                                 Código: {colaboradorAtual.codigoFuncionario}
                             </p>
 
-                            <div className="mt-3 w-full max-w-full rounded-2xl bg-slate-50 px-3 py-2 text-xs ring-1 ring-slate-200">
-                                <div className="flex min-w-0 flex-col gap-1 sm:flex-row sm:items-center">
-                                    <span className="shrink-0 font-black uppercase tracking-wide text-slate-400">Link público</span>
-                                    <a
-                                        href={urlConsultaColaborador}
-                                        target="_blank"
-                                        rel="noreferrer"
-                                        className="min-w-0 truncate font-semibold text-blue-700 hover:text-blue-900"
-                                        title={urlConsultaColaborador}
-                                    >
-                                        {urlConsultaColaborador}
-                                    </a>
-                                </div>
-                                {!auditoriaPublicaConfigurada && (
-                                    <p className="mt-2 rounded-xl bg-amber-50 px-3 py-2 text-[11px] font-semibold text-amber-700 ring-1 ring-amber-100">
-                                        Atenção: o QR do colaborador foi gerado sem token de auditoria pública. A consulta SST abre normalmente, mas a Auditoria de Campo pelo QR exigirá configurar o token ativo.
-                                    </p>
-                                )}
+                            <div className="mt-4 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-left">
+                                <p className="text-[11px] font-black uppercase tracking-wide text-slate-400">Link público</p>
+                                <p className="texto-quebra-segura mt-1 text-xs font-semibold text-slate-600">
+                                    {urlConsultaColaborador || "Link público indisponível."}
+                                </p>
+                                <p className={classNames(
+                                    "mt-2 text-[11px] font-bold",
+                                    tokenAuditoriaPublica ? "text-emerald-600" : "text-orange-600"
+                                )}>
+                                    {mensagemTokenAuditoriaPublica}
+                                </p>
                             </div>
                             <div id={idImpressaoQrColaborador} className="hidden">
                                 <div className="cartao">
@@ -285,10 +265,7 @@ export function ConsultaQR({ colaborador, colaboradores = [], onSelecionarColabo
                         </div>
 
                         <div className="consulta-qr-code-area flex justify-center lg:justify-end">
-                            <div className="rounded-3xl bg-white p-3 text-center shadow-sm ring-1 ring-slate-200">
-                                <QRCodeSVG value={urlConsultaColaborador} size={156} level="H" includeMargin bgColor="#ffffff" fgColor="#0f172a" />
-                                <p className="mt-2 text-[11px] font-black uppercase tracking-wide text-slate-500">QR colaborador</p>
-                            </div>
+                            <QRCodeReal token={colaboradorAtual.token} />
                         </div>
                     </div>
 

@@ -256,3 +256,87 @@ export function montarEventosAuditoriaSistema(registros = [], configuracao = nul
         return String(a.label || a.chave).localeCompare(String(b.label || b.chave), "pt-BR");
     });
 }
+
+export const TABELA_AUDITORIA_TOKENS_PUBLICOS = "auditoria_tokens_publicos";
+
+const textoTokenAuditoriaPublica = (valor) => String(valor ?? "").trim();
+
+function tokenAuditoriaPublicaValido(valor) {
+    const token = textoTokenAuditoriaPublica(valor);
+    return token.length >= 10 ? token : "";
+}
+
+function normalizarRegistroTokenAuditoriaPublica(registro = {}, origem = "supabase") {
+    const token = tokenAuditoriaPublicaValido(registro?.token);
+
+    return {
+        ok: Boolean(token),
+        origem,
+        tokenPublico: token,
+        id: registro?.id || null,
+        descricao: registro?.descricao || registro?.nome || "",
+        requerSenha: registro?.requer_senha !== false,
+        ativo: registro?.ativo === true,
+        dataExpiracao: registro?.data_expiracao || null,
+        criadoEm: registro?.created_at || registro?.criado_em || null,
+        erro: token ? "" : "Token ativo não encontrado.",
+    };
+}
+
+export async function carregarTokenAuditoriaPublicaAtivoSupabase() {
+    try {
+        const { data, error } = await supabase
+            .from(TABELA_AUDITORIA_TOKENS_PUBLICOS)
+            .select("id, token, descricao, ativo, requer_senha, data_expiracao, created_at")
+            .eq("ativo", true)
+            .order("created_at", { ascending: false })
+            .limit(1)
+            .maybeSingle();
+
+        if (error) {
+            return {
+                ok: false,
+                origem: "supabase",
+                tokenPublico: "",
+                id: null,
+                descricao: "",
+                requerSenha: true,
+                ativo: false,
+                dataExpiracao: null,
+                criadoEm: null,
+                erro: error.message || "Não foi possível carregar o token público ativo.",
+            };
+        }
+
+        if (!data?.token) {
+            return {
+                ok: false,
+                origem: "supabase",
+                tokenPublico: "",
+                id: null,
+                descricao: "",
+                requerSenha: true,
+                ativo: false,
+                dataExpiracao: null,
+                criadoEm: null,
+                erro: "Nenhum token público ativo encontrado na tabela auditoria_tokens_publicos.",
+            };
+        }
+
+        return normalizarRegistroTokenAuditoriaPublica(data, "supabase");
+    } catch (error) {
+        return {
+            ok: false,
+            origem: "supabase",
+            tokenPublico: "",
+            id: null,
+            descricao: "",
+            requerSenha: true,
+            ativo: false,
+            dataExpiracao: null,
+            criadoEm: null,
+            erro: error?.message || "Não foi possível carregar o token público ativo.",
+        };
+    }
+}
+

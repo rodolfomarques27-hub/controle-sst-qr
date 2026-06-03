@@ -22,6 +22,7 @@ import {
 import { Header, Card } from "../commonComponents";
 import {
     carregarConfiguracaoEventosAuditoriaSistemaSupabase,
+    carregarTokenAuditoriaPublicaAtivoSupabase,
     configuracaoPadraoEventosAuditoriaSistema,
     EVENTOS_AUDITORIA_SISTEMA_PADRAO,
     normalizarConfiguracaoEventosAuditoriaSistema,
@@ -131,7 +132,9 @@ export function ConfiguracoesSistema({
     const [limitesEditaveis, setLimitesEditaveis] = useState(() => normalizarLimitesCarregamentoSistema(limites));
     const [mensagemLimites, setMensagemLimites] = useState("Os limites estão prontos para edição local.");
     const [configAuditoriaPublica, setConfigAuditoriaPublica] = useState(() => carregarConfiguracaoAuditoriaPublicaSistema());
-    const [mensagemAuditoriaPublica, setMensagemAuditoriaPublica] = useState("Configuração pública carregada localmente.");
+    const [mensagemAuditoriaPublica, setMensagemAuditoriaPublica] = useState("Carregando token público da auditoria no Supabase...");
+    const [carregandoAuditoriaPublica, setCarregandoAuditoriaPublica] = useState(false);
+    const [origemAuditoriaPublica, setOrigemAuditoriaPublica] = useState("supabase");
     const [mensagemStorage, setMensagemStorage] = useState("Checklist de Storage pronto para conferência operacional.");
     const [mensagemSupabase, setMensagemSupabase] = useState("Checklist Supabase/RLS/RPC pronto para conferência técnica.");
     const [senhaConfiguracoesFormulario, setSenhaConfiguracoesFormulario] = useState({
@@ -435,15 +438,21 @@ export function ConfiguracoesSistema({
     };
 
     const salvarConfigAuditoriaPublica = () => {
-        const normalizada = salvarConfiguracaoAuditoriaPublicaSistema(configAuditoriaPublica);
-        setConfigAuditoriaPublica(normalizada);
-        setMensagemAuditoriaPublica("Configuração da Auditoria pública salva localmente. Gere novos QR Codes para usar o token atualizado.");
+        const normalizada = salvarConfiguracaoAuditoriaPublicaSistema({
+            senhaReferencia: configAuditoriaPublica.senhaReferencia,
+            exigirSenha: configAuditoriaPublica.exigirSenha,
+        });
+
+        setConfigAuditoriaPublica((atual) => ({
+            ...normalizada,
+            tokenPublico: atual.tokenPublico,
+        }));
+        setMensagemAuditoriaPublica("Senha de referência salva localmente. O token público continua vindo do Supabase.");
     };
 
-    const restaurarConfigAuditoriaPublica = () => {
-        const padrao = restaurarConfiguracaoAuditoriaPublicaPadrao();
-        setConfigAuditoriaPublica(padrao);
-        setMensagemAuditoriaPublica("Configuração restaurada. O token público ficou vazio até você colar o token ativo do Supabase.");
+    const restaurarConfigAuditoriaPublica = async () => {
+        restaurarConfiguracaoAuditoriaPublicaPadrao();
+        await carregarConfiguracaoAuditoriaPublicaSupabase();
     };
 
     const copiarLinkAuditoriaPublica = async () => {
@@ -482,6 +491,37 @@ export function ConfiguracoesSistema({
         }
     };
 
+
+    const carregarConfiguracaoAuditoriaPublicaSupabase = async () => {
+        setCarregandoAuditoriaPublica(true);
+        setMensagemAuditoriaPublica("Carregando token público ativo no Supabase...");
+
+        try {
+            const configuracaoLocal = carregarConfiguracaoAuditoriaPublicaSistema();
+            const resultado = await carregarTokenAuditoriaPublicaAtivoSupabase();
+
+            setOrigemAuditoriaPublica(resultado?.origem || "supabase");
+
+            if (resultado?.tokenPublico) {
+                setConfigAuditoriaPublica({
+                    ...configuracaoLocal,
+                    tokenPublico: resultado.tokenPublico,
+                    exigirSenha: resultado.requerSenha !== false,
+                });
+                setMensagemAuditoriaPublica("Token público ativo carregado do Supabase. O navegador não é mais a fonte oficial do token.");
+                return;
+            }
+
+            setConfigAuditoriaPublica({
+                ...configuracaoLocal,
+                tokenPublico: "",
+            });
+            setMensagemAuditoriaPublica(resultado?.erro || "Nenhum token público ativo foi encontrado no Supabase.");
+        } finally {
+            setCarregandoAuditoriaPublica(false);
+        }
+    };
+
     const carregarConfiguracao = async () => {
         setCarregandoConfig(true);
         setMensagemConfig("Carregando configuração dos eventos...");
@@ -510,6 +550,15 @@ export function ConfiguracoesSistema({
 
         return () => window.clearTimeout(timer);
     }, []);
+
+    useEffect(() => {
+        const timer = window.setTimeout(() => {
+            carregarConfiguracaoAuditoriaPublicaSupabase();
+        }, 0);
+
+        return () => window.clearTimeout(timer);
+    }, []);
+
 
     const persistirConfiguracao = async (proximaConfiguracao, mensagemSucesso = "Configuração salva.") => {
         const normalizada = normalizarConfiguracaoEventosAuditoriaSistema(proximaConfiguracao);
@@ -591,7 +640,7 @@ export function ConfiguracoesSistema({
         {
             label: "Token Auditoria pública",
             valor: configAuditoriaPublica.tokenPublico || "Não configurado",
-            detalhe: configAuditoriaPublica.tokenPublico ? "usado em links e QR Codes" : "cadastre o token do Supabase",
+            detalhe: configAuditoriaPublica.tokenPublico ? "carregado do Supabase" : "token ativo não encontrado no Supabase",
             icon: KeyRound,
         },
         {
@@ -953,13 +1002,16 @@ export function ConfiguracoesSistema({
                         <div className="mt-4 space-y-3">
                             <label className="block rounded-2xl bg-slate-50 px-3 py-3 ring-1 ring-slate-100">
                                 <p className="text-sm font-bold text-slate-800">Token público operacional</p>
-                                <p className="mt-1 text-xs text-slate-500">Usado para gerar links e QR Codes da Nova Auditoria de Campo. Não use token fixo no código.</p>
+                                <p className="mt-1 text-xs text-slate-500">Carregado diretamente da tabela auditoria_tokens_publicos. O navegador não salva mais token fixo/local.</p>
                                 <input
                                     value={configAuditoriaPublica.tokenPublico || ""}
-                                    onChange={(evento) => alterarConfigAuditoriaPublica("tokenPublico", evento.target.value)}
-                                    placeholder="Cole aqui o token ativo do Supabase"
-                                    className="mt-3 w-full rounded-2xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-800 outline-none focus:ring-2 focus:ring-blue-100"
+                                    readOnly
+                                    placeholder={carregandoAuditoriaPublica ? "Carregando token ativo do Supabase..." : "Token ativo não encontrado no Supabase"}
+                                    className="mt-3 w-full cursor-not-allowed rounded-2xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700 outline-none"
                                 />
+                                <p className="mt-2 text-[11px] font-bold uppercase tracking-wide text-slate-400">
+                                    Origem: {origemAuditoriaPublica === "supabase" ? "Supabase" : origemAuditoriaPublica}
+                                </p>
                             </label>
 
                             <label className="block rounded-2xl bg-slate-50 px-3 py-3 ring-1 ring-slate-100">
@@ -979,7 +1031,7 @@ export function ConfiguracoesSistema({
                                     <p className="text-sm font-bold text-slate-800">Link público atual</p>
                                 </div>
                                 <p className="texto-quebra-segura mt-2 rounded-xl bg-white px-3 py-2 text-xs font-semibold text-slate-500 ring-1 ring-slate-200">
-                                    {configAuditoriaPublica.tokenPublico ? linkAuditoriaPublica : "Informe o token ativo do Supabase para liberar o link público com token."}
+                                    {configAuditoriaPublica.tokenPublico ? linkAuditoriaPublica : "Token ativo não encontrado no Supabase. Verifique a tabela auditoria_tokens_publicos."}
                                 </p>
                                 <button
                                     type="button"
@@ -993,7 +1045,7 @@ export function ConfiguracoesSistema({
                             </div>
 
                             <div className="rounded-2xl bg-orange-50 px-3 py-3 text-xs font-semibold leading-relaxed text-orange-700 ring-1 ring-orange-200">
-                                Segurança: alterar a senha aqui não altera a senha validada pelo Supabase. Para mudar a senha real, atualize também o registro/token usado pela RPC validar_acesso_auditoria_publica.
+                                Segurança: o token público é carregado do Supabase. Alterar a senha de referência aqui não altera a senha validada pela RPC validar_acesso_auditoria_publica.
                             </div>
                         </div>
 
@@ -1002,7 +1054,7 @@ export function ConfiguracoesSistema({
                             onClick={salvarConfigAuditoriaPublica}
                             className="mt-4 w-full rounded-2xl bg-slate-950 px-4 py-3 text-sm font-black text-white hover:bg-slate-800"
                         >
-                            Salvar configuração da Auditoria pública
+                            Salvar referência da Auditoria pública
                         </button>
                     </Card>
                 )
