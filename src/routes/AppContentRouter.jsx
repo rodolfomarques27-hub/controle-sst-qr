@@ -2,7 +2,6 @@ import React from "react";
 import { Lock, RefreshCw } from "lucide-react";
 import { Card } from "../components/commonComponents";
 import { CarregandoTela } from "../components/CarregandoTela";
-import { AuditoriaAcessoNegado } from "../components/auditoria/AuditoriaPermissao";
 import { LIMITE_STORAGE_MB } from "../constants/sistemaConstants";
 
 const ConsultaQR = React.lazy(() => import("../components/qr/ConsultaQR").then((modulo) => ({ default: modulo.ConsultaQR })));
@@ -17,6 +16,7 @@ const DashboardAuditoriaCampo = React.lazy(() => import("../components/auditoria
 const NovaAuditoriaCampoDireta = React.lazy(() => import("../components/auditoria/NovaAuditoriaCampoDireta").then((modulo) => ({ default: modulo.NovaAuditoriaCampoDireta })));
 const ConfiguracoesSistema = React.lazy(() => import("../components/configuracoes/ConfiguracoesSistema").then((modulo) => ({ default: modulo.ConfiguracoesSistema })));
 const ConfiguracoesBloqueio = React.lazy(() => import("../components/configuracoes/ConfiguracoesBloqueio").then((modulo) => ({ default: modulo.ConfiguracoesBloqueio })));
+const AuditoriaAcessoNegado = React.lazy(() => import("../components/auditoria/AuditoriaPermissao").then((modulo) => ({ default: modulo.AuditoriaAcessoNegado })));
 
 
 export function AppContentRouter({
