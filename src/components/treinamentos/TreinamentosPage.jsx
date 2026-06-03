@@ -1,6 +1,5 @@
 /* eslint-disable no-unused-vars */
 import React, { useEffect, useMemo, useState } from "react";
-import { motion } from "framer-motion";
 import { Eye, EyeOff, GripVertical, RotateCcw, Search, SlidersHorizontal, Upload } from "lucide-react";
 import { supabase } from "../../lib/supabaseClient";
 import { Card, Header } from "../commonComponents";
@@ -838,7 +837,7 @@ export function Treinamentos({
     ];
 
     return (
-        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
+        <div>
             <Header
                 titulo="Treinamentos e certificados"
                 subtitulo="Lançamento de certificados no Supabase, validade e controle automático de status."
@@ -1120,7 +1119,7 @@ export function Treinamentos({
                     return null;
                 })}
             </div>
-        </motion.div>
+        </div>
     );
 }
 

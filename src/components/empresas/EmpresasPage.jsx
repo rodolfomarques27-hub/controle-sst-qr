@@ -1,5 +1,4 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { motion } from "framer-motion";
 import {
     AlertTriangle,
     Building2,
@@ -1229,7 +1228,7 @@ export function Empresas({
 
 
     return (
-        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
+        <div>
             <Header
                 titulo="Empresas e documentos"
                 subtitulo="Cadastro de empresas terceirizadas e controle de LTCAT, PCMSO e PGR."
@@ -2212,6 +2211,6 @@ export function Empresas({
                     </div>
                 </div>
             )}
-        </motion.div>
+        </div>
     );
 }
