@@ -236,41 +236,55 @@ async function carregarResumoStoragePorApi({ supabase }) {
     return finalizarResumoStorageReal(registros, "storage-api");
 }
 
-async function carregarResumoStoragePorTabelaObjects({ supabase }) {
-    const limite = 1000;
-    let offset = 0;
-    const registros = [];
+async function carregarResumoStoragePorRpc({ supabase }) {
+    const { data, error } = await supabase.rpc("resumo_storage_sst");
 
-    while (true) {
-        const { data, error } = await supabase
-            .schema("storage")
-            .from("objects")
-            .select("bucket_id,name,metadata,created_at")
-            .in("bucket_id", STORAGE_BUCKETS_RESUMO_REAL)
-            .range(offset, offset + limite - 1);
+    if (error) throw error;
 
-        if (error) throw error;
+    const registros = Array.isArray(data) ? data : [];
+    const buckets = registros
+        .map((item) => {
+            const bucket = String(item?.bucket_id || item?.bucket || "").trim();
+            const bytes = Number(item?.tamanho_bytes ?? item?.bytes ?? 0) || 0;
+            const arquivos = Number(item?.total_arquivos ?? item?.arquivos ?? 0) || 0;
+            const mimeTypes = Array.isArray(item?.mime_types)
+                ? item.mime_types.filter(Boolean).map((tipo) => String(tipo))
+                : [];
 
-        const lote = Array.isArray(data) ? data : [];
-        registros.push(...lote);
+            return {
+                bucket,
+                bytes,
+                mb: Math.round((bytes / BYTES_MB) * 100) / 100,
+                arquivos,
+                mimeTypes: [...new Set(mimeTypes)].sort(),
+            };
+        })
+        .filter((item) => item.bucket && STORAGE_BUCKETS_RESUMO_REAL.includes(item.bucket))
+        .sort((a, b) => b.bytes - a.bytes);
 
-        if (lote.length < limite) break;
-        offset += limite;
-    }
+    const totalBytes = buckets.reduce((total, bucket) => total + bucket.bytes, 0);
+    const arquivos = buckets.reduce((total, bucket) => total + bucket.arquivos, 0);
 
-    return finalizarResumoStorageReal(registros, "storage.objects");
+    return {
+        totalBytes,
+        totalMb: Math.round((totalBytes / BYTES_MB) * 100) / 100,
+        arquivos,
+        buckets,
+        atualizadoEm: new Date().toISOString(),
+        origem: "rpc-resumo_storage_sst",
+    };
 }
 
 export async function calcularUsoStorageRealSistema({ supabase } = {}) {
     if (!supabase) return montarResumoVazioStorageReal();
 
     try {
-        const resumoTabela = await carregarResumoStoragePorTabelaObjects({ supabase });
-        if (resumoTabela.arquivos > 0 || resumoTabela.totalBytes > 0) {
-            return resumoTabela;
+        const resumoRpc = await carregarResumoStoragePorRpc({ supabase });
+        if (resumoRpc.arquivos > 0 || resumoRpc.totalBytes > 0) {
+            return resumoRpc;
         }
     } catch (error) {
-        console.warn("Não foi possível calcular o Storage via storage.objects. Tentando Storage API.", error?.message || error);
+        console.warn("Não foi possível calcular o Storage pela RPC resumo_storage_sst. Tentando Storage API.", error?.message || error);
     }
 
     try {

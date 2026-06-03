@@ -4962,3 +4962,252 @@
         overflow: visible !important;
     }
 }
+
+/* ROTEIRO 7 — ETAPA 5.3
+   Correções unificadas:
+   1) mobile horizontal do Dashboard SST sem área vazia exagerada;
+   2) Pendências críticas compactas no celular horizontal, tentando manter tudo em uma visão;
+   3) mantém desktop e mobile vertical no padrão já aprovado. */
+.dashboard-blocos-grid {
+    min-width: 0;
+}
+
+.dashboard-blocos-grid > * {
+    min-width: 0;
+}
+
+@media (max-width: 1023.98px) and (orientation: landscape),
+       (hover: none) and (pointer: coarse) and (max-height: 560px) {
+    html,
+    body,
+    #root {
+        overflow-x: hidden !important;
+    }
+
+    .app-main {
+        padding: 0.48rem 0.58rem calc(0.72rem + env(safe-area-inset-bottom)) !important;
+    }
+
+    .app-content,
+    .page-shell {
+        max-width: 100% !important;
+        width: 100% !important;
+        margin-inline: 0 !important;
+    }
+
+    .app-mobile-header {
+        margin-bottom: 0.42rem !important;
+        padding: 0.46rem 0.55rem !important;
+        border-radius: 1rem !important;
+        box-shadow: 0 6px 16px rgba(15, 23, 42, 0.06) !important;
+    }
+
+    .app-mobile-header__topo,
+    .app-mobile-header__tela-atual {
+        display: none !important;
+    }
+
+    .app-mobile-header__select {
+        min-height: 2.2rem !important;
+        border-radius: 0.85rem !important;
+        padding: 0.45rem 0.62rem !important;
+        font-size: 0.82rem !important;
+    }
+
+    .page-header {
+        margin-bottom: 0.38rem !important;
+        gap: 0.3rem !important;
+    }
+
+    .page-header-text h1 {
+        font-size: 1.12rem !important;
+        line-height: 1.08 !important;
+    }
+
+    .page-header-text p {
+        margin-top: 0.18rem !important;
+        font-size: 0.7rem !important;
+        line-height: 1rem !important;
+    }
+
+    .page-actions,
+    .toolbar-responsive {
+        gap: 0.32rem !important;
+    }
+
+    .page-actions button,
+    .toolbar-responsive button,
+    .top-actions-nowrap button {
+        min-height: 2.1rem !important;
+        border-radius: 0.75rem !important;
+        padding: 0.42rem 0.58rem !important;
+        font-size: 0.7rem !important;
+        line-height: 0.9rem !important;
+    }
+
+    .dashboard-summary-grid {
+        grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+        gap: 0.48rem !important;
+    }
+
+    .dashboard-summary-card,
+    .summary-card-fixed,
+    .config-summary-card,
+    .auditoria-summary-card,
+    .dashboard-campo-summary-card,
+    .dashboard-auditoria-card {
+        min-height: 5.35rem !important;
+        max-height: none !important;
+        border-radius: 1rem !important;
+        padding: 0.62rem !important;
+    }
+
+    .dashboard-summary-card :where(.summary-card-label, p:first-child),
+    .summary-card-fixed .summary-card-label,
+    .config-summary-card .summary-card-label,
+    .auditoria-summary-card .summary-card-label,
+    .dashboard-campo-summary-card .summary-card-label {
+        min-height: 0 !important;
+        max-height: none !important;
+        font-size: 0.66rem !important;
+        line-height: 0.86rem !important;
+    }
+
+    .dashboard-summary-card :where(.summary-card-value, p:nth-child(2)),
+    .summary-card-fixed .summary-card-value,
+    .config-summary-card .summary-card-value,
+    .auditoria-summary-card .summary-card-value,
+    .dashboard-campo-summary-card .summary-card-value {
+        font-size: 1.08rem !important;
+        line-height: 1.05 !important;
+        max-height: none !important;
+    }
+
+    .summary-card-fixed .summary-card-detail,
+    .config-summary-card .summary-card-detail,
+    .auditoria-summary-card .summary-card-detail,
+    .dashboard-campo-summary-card .summary-card-detail,
+    .dashboard-summary-card :where(.text-xs, .text-sm) {
+        font-size: 0.62rem !important;
+        line-height: 0.82rem !important;
+    }
+
+    .dashboard-summary-card :where(svg, .summary-card-icon),
+    .summary-card-fixed .summary-card-icon,
+    .config-summary-card .summary-card-icon,
+    .auditoria-summary-card .summary-card-icon,
+    .dashboard-campo-summary-card .summary-card-icon {
+        width: 1.75rem !important;
+        height: 1.75rem !important;
+        flex-basis: 1.75rem !important;
+    }
+
+    .dashboard-blocos-grid {
+        display: grid !important;
+        grid-template-columns: 1fr !important;
+        gap: 0.65rem !important;
+        margin-top: 0.62rem !important;
+    }
+
+    .dashboard-blocos-grid > * {
+        grid-column: 1 / -1 !important;
+    }
+
+    .dashboard-blocos-grid :where(.rounded-3xl, .rounded-2xl) {
+        border-radius: 1.05rem !important;
+    }
+
+    .dashboard-blocos-grid :where(.p-6) {
+        padding: 0.85rem !important;
+    }
+
+    .dashboard-blocos-grid :where(.p-5) {
+        padding: 0.75rem !important;
+    }
+
+    .dashboard-blocos-grid :where(.mb-5, .mb-6) {
+        margin-bottom: 0.55rem !important;
+    }
+
+    .dashboard-blocos-grid h2,
+    .dashboard-blocos-grid h3 {
+        font-size: 1rem !important;
+        line-height: 1.1 !important;
+    }
+
+    .dashboard-blocos-grid p {
+        font-size: 0.72rem !important;
+        line-height: 1rem !important;
+    }
+
+    .dashboard-blocos-grid .responsive-table,
+    .dashboard-blocos-grid :where(.overflow-x-auto) {
+        overflow-x: hidden !important;
+        max-width: 100% !important;
+    }
+
+    .dashboard-blocos-grid .responsive-table table,
+    .dashboard-blocos-grid :where(.overflow-x-auto table) {
+        width: 100% !important;
+        min-width: 0 !important;
+        table-layout: fixed !important;
+    }
+
+    .dashboard-blocos-grid :where(th, td) {
+        padding: 0.46rem 0.5rem !important;
+        font-size: 0.68rem !important;
+        line-height: 0.9rem !important;
+        vertical-align: middle !important;
+    }
+
+    .dashboard-blocos-grid :where(th:nth-child(1), td:nth-child(1)) {
+        width: 38% !important;
+    }
+
+    .dashboard-blocos-grid :where(th:nth-child(2), td:nth-child(2)) {
+        width: 24% !important;
+    }
+
+    .dashboard-blocos-grid :where(th:nth-child(3), td:nth-child(3)) {
+        width: 14% !important;
+    }
+
+    .dashboard-blocos-grid :where(th:nth-child(4), td:nth-child(4)) {
+        width: 24% !important;
+    }
+
+    .dashboard-blocos-grid :where(td img, td .h-12.w-12, td .h-14.w-14) {
+        width: 2.25rem !important;
+        height: 2.25rem !important;
+        min-width: 2.25rem !important;
+    }
+
+    .dashboard-blocos-grid :where(td .gap-4) {
+        gap: 0.55rem !important;
+    }
+
+    .dashboard-blocos-grid :where(td button, td a, td .rounded-full, td .rounded-xl) {
+        min-height: 1.85rem !important;
+        padding: 0.32rem 0.48rem !important;
+        font-size: 0.66rem !important;
+        line-height: 0.82rem !important;
+        white-space: nowrap !important;
+    }
+
+    .dashboard-blocos-grid :where(td .text-lg, td .text-base, td .text-sm) {
+        font-size: 0.72rem !important;
+        line-height: 0.95rem !important;
+    }
+
+    .dashboard-blocos-grid :where(td .text-xs) {
+        font-size: 0.62rem !important;
+        line-height: 0.8rem !important;
+    }
+}
+
+@media (max-width: 767.98px) {
+    .dashboard-blocos-grid {
+        gap: 0.72rem !important;
+        margin-top: 0.72rem !important;
+    }
+}
