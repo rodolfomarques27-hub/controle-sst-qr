@@ -1,7 +1,6 @@
 /* eslint-disable no-unused-vars */
 import React, { useEffect, useMemo, useState } from "react";
 import { QRCodeSVG } from "qrcode.react";
-import { motion } from "framer-motion";
 import { ClipboardCheck, Download, QrCode, Search, ShieldCheck } from "lucide-react";
 import { Card, FotoColaborador, Header, QRCodeReal, StatusPill, obterFotoColaboradorSrc } from "../commonComponents";
 import { MobilizacaoBadge } from "../MobilizacaoBadge";
@@ -83,7 +82,7 @@ export function ConsultaQR({ colaborador, colaboradores = [], onSelecionarColabo
 
     if (!colaboradorAtual) {
         return (
-            <motion.div className="consulta-qr-page" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
+            <div className="consulta-qr-page">
                 <Header
                     titulo="Consulta por QR Code"
                     subtitulo="Selecione um colaborador para visualizar a consulta de treinamentos."
@@ -98,7 +97,7 @@ export function ConsultaQR({ colaborador, colaboradores = [], onSelecionarColabo
                         </p>
                     </div>
                 </Card>
-            </motion.div>
+            </div>
         );
     }
 
@@ -123,7 +122,7 @@ export function ConsultaQR({ colaborador, colaboradores = [], onSelecionarColabo
     };
 
     return (
-        <motion.div className="consulta-qr-page" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
+        <div className="consulta-qr-page">
             <Header
                 titulo="Consulta por QR Code"
                 subtitulo="Consulta real por token. O QR Code abre a situação do colaborador pelo link gerado."
@@ -360,6 +359,6 @@ export function ConsultaQR({ colaborador, colaboradores = [], onSelecionarColabo
                     </div>
                 </div>
             </div>
-        </motion.div>
+        </div>
     );
 }

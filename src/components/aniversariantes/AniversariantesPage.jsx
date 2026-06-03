@@ -1,5 +1,4 @@
 import React, { useState } from "react";
-import { motion } from "framer-motion";
 import { Download } from "lucide-react";
 import { Card, Header } from "../commonComponents";
 import { STATUS_CLASSIFICACAO_COLABORADOR } from "../../constants/sstConstants";
@@ -103,7 +102,7 @@ export function Aniversariantes({ colaboradores = [], empresasBanco = [] }) {
     };
 
     return (
-        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
+        <div>
             <Header
                 titulo="Aniversariantes"
                 className="header-aniversariantes"
@@ -205,6 +204,6 @@ export function Aniversariantes({ colaboradores = [], empresasBanco = [] }) {
                     </table>
                 </div>
             </Card>
-        </motion.div>
+        </div>
     );
 }
