@@ -24,6 +24,7 @@ import {
     fotosAuditoriaCampo,
     auditoriaCampoAberta,
     auditoriaCampoVencida,
+    carregarAuditoriasCampoDiretoDashboard,
 } from "../../services/auditoriaCampoService";
 import { tiposAuditoriaCampoDireta } from "../../constants/sstConstants";
 import { normalizarTextoBusca, formatDate, formatarDataHora, classNames } from "../../utils/sstUtils";
@@ -349,6 +350,13 @@ export function DashboardAuditoriaCampo({
     const [configAuditoriaPublica] = useState(() => carregarConfiguracaoAuditoriaPublicaSistema());
     const tokenAuditoriaCampoConfigurado = String(configAuditoriaPublica.tokenPublico || "").trim();
     const limiteQrcodesCampoAtual = Math.max(10, Number(limiteQrcodesCampo || LIMITE_QRCODES_CAMPO_POR_CARGA));
+    const auditoriasCampoRecebidas = Array.isArray(auditoriasCampo) ? auditoriasCampo : [];
+    const [auditoriasCampoFallback, setAuditoriasCampoFallback] = useState([]);
+    const [carregandoAuditoriasCampoFallback, setCarregandoAuditoriasCampoFallback] = useState(false);
+    const [erroAuditoriasCampoFallback, setErroAuditoriasCampoFallback] = useState("");
+    const auditoriasCampoEfetivas = auditoriasCampoRecebidas.length > 0 ? auditoriasCampoRecebidas : auditoriasCampoFallback;
+    const carregandoAuditoriasCampoEfetivo = Boolean(carregando || carregandoAuditoriasCampoFallback);
+    const erroAuditoriasCampoEfetivo = erro || erroAuditoriasCampoFallback;
     const [qrcodesCampo, setQrcodesCampo] = useState([]);
     const [qrcodesCampoCarregados, setQrcodesCampoCarregados] = useState(false);
     const [existeMaisQrcodesCampo, setExisteMaisQrcodesCampo] = useState(false);
@@ -587,12 +595,50 @@ export function DashboardAuditoriaCampo({
         carregarEmpresasCadastradasQrCampo();
     }, [carregarEmpresasCadastradasQrCampo]);
 
+    const carregarAuditoriasCampoFallbackDashboard = useCallback(async () => {
+        if (carregandoAuditoriasCampoFallback) return;
+
+        setCarregandoAuditoriasCampoFallback(true);
+        setErroAuditoriasCampoFallback("");
+
+        try {
+            const resultado = await carregarAuditoriasCampoDiretoDashboard({
+                supabase,
+                limite: 1000,
+            });
+
+            setAuditoriasCampoFallback(resultado.auditorias || []);
+        } catch (error) {
+            console.warn("Erro no carregamento direto das auditorias de campo:", error?.message || error);
+            setErroAuditoriasCampoFallback(error?.message || "Não foi possível carregar auditorias de campo no modo mobile.");
+            setAuditoriasCampoFallback([]);
+        } finally {
+            setCarregandoAuditoriasCampoFallback(false);
+        }
+    }, [carregandoAuditoriasCampoFallback]);
+
+    useEffect(() => {
+        if (auditoriasCampoRecebidas.length > 0) return;
+        if (carregando || carregandoAuditoriasCampoFallback) return;
+
+        const timer = window.setTimeout(() => {
+            carregarAuditoriasCampoFallbackDashboard();
+        }, 700);
+
+        return () => window.clearTimeout(timer);
+    }, [
+        auditoriasCampoRecebidas.length,
+        carregando,
+        carregandoAuditoriasCampoFallback,
+        carregarAuditoriasCampoFallbackDashboard,
+    ]);
+
     const [auditoriasCampoCargaInicialSolicitada, setAuditoriasCampoCargaInicialSolicitada] = useState(false);
 
     useEffect(() => {
         if (auditoriasCampoCargaInicialSolicitada) return;
         if (carregando) return;
-        if ((auditoriasCampo || []).length > 0) {
+        if (auditoriasCampoEfetivas.length > 0) {
             setAuditoriasCampoCargaInicialSolicitada(true);
             return;
         }
@@ -604,7 +650,7 @@ export function DashboardAuditoriaCampo({
         }, 180);
 
         return () => window.clearTimeout(timer);
-    }, [auditoriasCampo, auditoriasCampoCargaInicialSolicitada, carregando, onRecarregar]);
+    }, [auditoriasCampoEfetivas.length, auditoriasCampoCargaInicialSolicitada, carregando, onRecarregar]);
 
     const empresasQrCampoOpcoes = useMemo(() => {
         const mapaEmpresas = new Map();
@@ -623,13 +669,13 @@ export function DashboardAuditoriaCampo({
         return Array.from(mapaEmpresas.values()).sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR"));
     }, [empresasCadastradasQrCampo, qrFormCampo.empresaResponsavel]);
 
-    const auditoriasNormalizadas = useMemo(() => auditoriasCampo.map((item) => {
+    const auditoriasNormalizadas = useMemo(() => auditoriasCampoEfetivas.map((item) => {
         const normalizada = normalizarAuditoriaCampo(item);
         const chaveAuditoria = String(normalizada.id || "");
         const sobrescrita = chaveAuditoria ? sobrescritasStatusAuditoriaQrCampo[chaveAuditoria] : null;
 
         return sobrescrita ? { ...normalizada, ...sobrescrita } : normalizada;
-    }), [auditoriasCampo, sobrescritasStatusAuditoriaQrCampo]);
+    }), [auditoriasCampoEfetivas, sobrescritasStatusAuditoriaQrCampo]);
     const opcoesFiltroAuditoriaCampo = useMemo(() => {
         const unicos = (valores) => Array.from(new Set(valores.map((valor) => String(valor || "").trim()).filter(Boolean))).sort((a, b) => a.localeCompare(b, "pt-BR"));
         return {
@@ -2727,7 +2773,7 @@ export function DashboardAuditoriaCampo({
                 acao={(
                     <div className="flex flex-wrap items-center gap-2">
                         <button type="button" onClick={onRecarregar} className="inline-flex items-center gap-2 rounded-2xl bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 shadow-sm ring-1 ring-slate-200 hover:bg-slate-50">
-                            <RefreshCw className={classNames("h-4 w-4", carregando ? "animate-spin" : "")} />
+                            <RefreshCw className={classNames("h-4 w-4", carregandoAuditoriasCampoEfetivo ? "animate-spin" : "")} />
                             Atualizar dados
                         </button>
                         <button type="button" onClick={() => setMostrarPersonalizacao((valor) => !valor)} className="inline-flex items-center gap-2 rounded-2xl bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 shadow-sm ring-1 ring-slate-200 hover:bg-slate-50">
@@ -2738,9 +2784,9 @@ export function DashboardAuditoriaCampo({
                 )}
             />
 
-            {erro && (
+            {erroAuditoriasCampoEfetivo && (
                 <div className="mb-4 rounded-2xl bg-red-50 px-4 py-3 text-sm font-semibold text-red-700 ring-1 ring-red-200">
-                    Erro ao carregar auditorias de campo: {erro}
+                    Erro ao carregar auditorias de campo: {erroAuditoriasCampoEfetivo}
                 </div>
             )}
 

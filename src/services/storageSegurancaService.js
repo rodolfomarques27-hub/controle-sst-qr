@@ -90,6 +90,201 @@ export function avaliarSegurancaStorageSistema() {
     ];
 }
 
+
+const BYTES_MB = 1024 * 1024;
+const STORAGE_BUCKETS_RESUMO_REAL = BUCKETS_STORAGE_SST.map((bucket) => bucket.chave);
+
+function normalizarTamanhoArquivoStorage(item = {}) {
+    return Number(
+        item?.metadata?.size ??
+        item?.metadata?.Size ??
+        item?.size ??
+        0
+    ) || 0;
+}
+
+function normalizarMimeStorage(item = {}) {
+    return String(
+        item?.metadata?.mimetype ??
+        item?.metadata?.mimeType ??
+        item?.metadata?.contentType ??
+        item?.mimetype ??
+        ""
+    ).trim();
+}
+
+function montarResumoVazioStorageReal() {
+    return {
+        totalBytes: 0,
+        totalMb: 0,
+        arquivos: 0,
+        buckets: [],
+        atualizadoEm: new Date().toISOString(),
+        origem: "vazio",
+    };
+}
+
+function finalizarResumoStorageReal(registros = [], origem = "storage.objects") {
+    const mapaBuckets = new Map();
+
+    (Array.isArray(registros) ? registros : []).forEach((item) => {
+        const bucket = String(item?.bucket_id || item?.bucket || "").trim();
+        if (!bucket || !STORAGE_BUCKETS_RESUMO_REAL.includes(bucket)) return;
+
+        const bytes = normalizarTamanhoArquivoStorage(item);
+        const mimetype = normalizarMimeStorage(item);
+        const atual = mapaBuckets.get(bucket) || {
+            bucket,
+            bytes: 0,
+            arquivos: 0,
+            mimeTypes: new Set(),
+        };
+
+        atual.bytes += bytes;
+        atual.arquivos += 1;
+        if (mimetype) atual.mimeTypes.add(mimetype);
+        mapaBuckets.set(bucket, atual);
+    });
+
+    const buckets = Array.from(mapaBuckets.values())
+        .map((bucket) => ({
+            bucket: bucket.bucket,
+            bytes: bucket.bytes,
+            mb: Math.round((bucket.bytes / BYTES_MB) * 100) / 100,
+            arquivos: bucket.arquivos,
+            mimeTypes: Array.from(bucket.mimeTypes).sort(),
+        }))
+        .sort((a, b) => b.bytes - a.bytes);
+
+    const totalBytes = buckets.reduce((total, bucket) => total + bucket.bytes, 0);
+    const arquivos = buckets.reduce((total, bucket) => total + bucket.arquivos, 0);
+
+    return {
+        totalBytes,
+        totalMb: Math.round((totalBytes / BYTES_MB) * 100) / 100,
+        arquivos,
+        buckets,
+        atualizadoEm: new Date().toISOString(),
+        origem,
+    };
+}
+
+async function listarObjetosStoragePorApi({ supabase, bucket, prefixo = "" }) {
+    const todos = [];
+    const limite = 1000;
+    let offset = 0;
+
+    while (true) {
+        const { data, error } = await supabase.storage.from(bucket).list(prefixo, {
+            limit: limite,
+            offset,
+            sortBy: { column: "name", order: "asc" },
+        });
+
+        if (error) throw error;
+
+        const lote = Array.isArray(data) ? data : [];
+        todos.push(...lote);
+
+        if (lote.length < limite) break;
+        offset += limite;
+    }
+
+    return todos;
+}
+
+async function carregarObjetosStoragePorApi({ supabase, bucket, prefixo = "" }) {
+    const itens = await listarObjetosStoragePorApi({ supabase, bucket, prefixo });
+    const arquivos = [];
+
+    for (const item of itens) {
+        const nome = String(item?.name || "").trim();
+        if (!nome) continue;
+
+        const caminho = prefixo ? `${prefixo}/${nome}` : nome;
+        const bytes = normalizarTamanhoArquivoStorage(item);
+        const ehArquivo = Boolean(item?.id || item?.created_at || item?.updated_at || bytes > 0 || normalizarMimeStorage(item));
+
+        if (ehArquivo) {
+            arquivos.push({
+                bucket_id: bucket,
+                name: caminho,
+                metadata: item.metadata || { size: bytes, mimetype: normalizarMimeStorage(item) },
+            });
+            continue;
+        }
+
+        const arquivosFilhos = await carregarObjetosStoragePorApi({ supabase, bucket, prefixo: caminho });
+        arquivos.push(...arquivosFilhos);
+    }
+
+    return arquivos;
+}
+
+async function carregarResumoStoragePorApi({ supabase }) {
+    const registros = [];
+
+    for (const bucket of STORAGE_BUCKETS_RESUMO_REAL) {
+        try {
+            const arquivos = await carregarObjetosStoragePorApi({ supabase, bucket });
+            registros.push(...arquivos);
+        } catch (error) {
+            console.warn(`Não foi possível calcular o Storage pelo bucket ${bucket}:`, error?.message || error);
+        }
+    }
+
+    return finalizarResumoStorageReal(registros, "storage-api");
+}
+
+async function carregarResumoStoragePorTabelaObjects({ supabase }) {
+    const limite = 1000;
+    let offset = 0;
+    const registros = [];
+
+    while (true) {
+        const { data, error } = await supabase
+            .schema("storage")
+            .from("objects")
+            .select("bucket_id,name,metadata,created_at")
+            .in("bucket_id", STORAGE_BUCKETS_RESUMO_REAL)
+            .range(offset, offset + limite - 1);
+
+        if (error) throw error;
+
+        const lote = Array.isArray(data) ? data : [];
+        registros.push(...lote);
+
+        if (lote.length < limite) break;
+        offset += limite;
+    }
+
+    return finalizarResumoStorageReal(registros, "storage.objects");
+}
+
+export async function calcularUsoStorageRealSistema({ supabase } = {}) {
+    if (!supabase) return montarResumoVazioStorageReal();
+
+    try {
+        const resumoTabela = await carregarResumoStoragePorTabelaObjects({ supabase });
+        if (resumoTabela.arquivos > 0 || resumoTabela.totalBytes > 0) {
+            return resumoTabela;
+        }
+    } catch (error) {
+        console.warn("Não foi possível calcular o Storage via storage.objects. Tentando Storage API.", error?.message || error);
+    }
+
+    try {
+        const resumoApi = await carregarResumoStoragePorApi({ supabase });
+        if (resumoApi.arquivos > 0 || resumoApi.totalBytes > 0) {
+            return resumoApi;
+        }
+    } catch (error) {
+        console.warn("Não foi possível calcular o Storage pela Storage API.", error?.message || error);
+    }
+
+    return montarResumoVazioStorageReal();
+}
+
 export function calcularResumoSegurancaStorageSistema(avaliacoes = []) {
     const criticos = avaliacoes.filter((item) => item.nivel === "critico").length;
     const alertas = avaliacoes.filter((item) => item.nivel === "alerta").length;

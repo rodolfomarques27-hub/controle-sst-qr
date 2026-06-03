@@ -433,6 +433,43 @@ function calcularStatusEquipamentoAuditoriaCampo(historicoAuditorias = []) {
 }
 
 
+
+async function carregarAuditoriasCampoDiretoDashboard({ supabase, limite = 1000, offset = 0 } = {}) {
+    if (!supabase) {
+        return { auditorias: [], existeMais: false };
+    }
+
+    const inicio = Math.max(0, Number(offset || 0));
+    const tamanho = Math.max(1, Math.min(Number(limite || 1000), 1000));
+    const fim = inicio + tamanho - 1;
+
+    const montarConsulta = (select) => supabase
+        .from("auditorias_campo")
+        .select(select)
+        .order("created_at", { ascending: false })
+        .range(inicio, fim);
+
+    try {
+        const { data, error } = await montarConsulta("*, desvios:auditoria_campo_desvios(*)");
+        if (error) throw error;
+
+        const auditorias = Array.isArray(data) ? data : [];
+        return {
+            auditorias,
+            existeMais: auditorias.length >= tamanho,
+        };
+    } catch (erroRelacao) {
+        const { data, error } = await montarConsulta("*");
+        if (error) throw error;
+
+        const auditorias = Array.isArray(data) ? data : [];
+        return {
+            auditorias,
+            existeMais: auditorias.length >= tamanho,
+        };
+    }
+}
+
 export {
     obterCategoriaPadronizadaAuditoriaCampo,
     obterTipoAuditoriaCampoPorParametro,
@@ -453,4 +490,5 @@ export {
     auditoriaCampoAberta,
     auditoriaCampoVencida,
     calcularStatusEquipamentoAuditoriaCampo,
+    carregarAuditoriasCampoDiretoDashboard,
 };

@@ -16,8 +16,8 @@ import {
     XCircle,
 } from "lucide-react";
 import { supabase } from "../../lib/supabaseClient";
-import { listarTodosArquivosStorage } from "../../services/supabaseServices";
 import { Header } from "../commonComponents";
+import { calcularUsoStorageRealSistema } from "../../services/storageSegurancaService";
 import { DashboardBlocosGrid } from "./DashboardBlocosGrid";
 import { DashboardHeaderAcoes } from "./DashboardHeaderAcoes";
 import { DashboardPreviewFiltro } from "./DashboardPreviewFiltro";
@@ -302,68 +302,40 @@ export function Dashboard({
         setCarregandoStorageDashboard(true);
 
         try {
-            const buckets = ["certificados-treinamentos", "documentos-empresas", "contratos-empresas", "logos-empresas", "fotos-colaboradores", "auditorias-campo"];
-            const resumoBuckets = [];
-
-            const listarNivel = async (bucket, prefixo = "") => {
-                let data;
-
-                try {
-                    data = await listarTodosArquivosStorage(bucket, prefixo);
-                } catch (error) {
-                    console.warn(`Erro ao listar bucket ${bucket}:`, error.message);
-                    return { bytes: 0, arquivos: 0 };
-                }
-
-                let bytes = 0;
-                let arquivos = 0;
-
-                for (const item of data || []) {
-                    const caminho = prefixo ? `${prefixo}/${item.name}` : item.name;
-                    const pareceArquivo = item.name && /\.[a-z0-9]{2,5}$/i.test(item.name);
-
-                    if (pareceArquivo) {
-                        bytes += Number(item.metadata?.size || 0);
-                        arquivos += 1;
-                    } else {
-                        const sub = await listarNivel(bucket, caminho);
-                        bytes += sub.bytes;
-                        arquivos += sub.arquivos;
-                    }
-                }
-
-                return { bytes, arquivos };
-            };
-
-            for (const bucket of buckets) {
-                const resumo = await listarNivel(bucket);
-
-                if (resumo.arquivos > 0 || resumo.bytes > 0) {
-                    resumoBuckets.push({ bucket, ...resumo });
-                }
-            }
-
-            const resumoStorage = {
-                totalBytes: resumoBuckets.reduce((total, bucket) => total + bucket.bytes, 0),
-                arquivos: resumoBuckets.reduce((total, bucket) => total + bucket.arquivos, 0),
-                buckets: resumoBuckets.sort((a, b) => b.bytes - a.bytes),
-                atualizadoEm: new Date().toISOString(),
-            };
+            const resumoStorage = await calcularUsoStorageRealSistema({ supabase });
 
             setUsoStorageDashboard(resumoStorage);
 
             if (typeof window !== "undefined") {
                 window.localStorage.setItem(CACHE_USO_STORAGE_DASHBOARD, JSON.stringify(resumoStorage));
             }
-        } catch {
+        } catch (error) {
+            console.warn("Erro ao carregar uso real do Storage:", error?.message || error);
             setUsoStorageDashboard((atual) => ({ ...atual, totalBytes: 0, arquivos: 0, buckets: [] }));
         } finally {
             setCarregandoStorageDashboard(false);
         }
     }, []);
 
-    // Etapa 71: o uso do Storage não é mais carregado automaticamente na abertura do Dashboard.
-    // Isso evita varrer buckets privados no acesso inicial. Use o botão do card para atualizar sob demanda.
+    useEffect(() => {
+        const origemConfiavel = ["storage.objects", "storage-api"].includes(String(usoStorageDashboard?.origem || ""));
+        const semResumoValido = !usoStorageDashboard?.totalBytes || !usoStorageDashboard?.arquivos;
+        const precisaAtualizarResumo = semResumoValido || !origemConfiavel;
+
+        if (!precisaAtualizarResumo || carregandoStorageDashboard) return;
+
+        const timer = window.setTimeout(() => {
+            carregarUsoStorageDashboard();
+        }, 250);
+
+        return () => window.clearTimeout(timer);
+    }, [
+        carregarUsoStorageDashboard,
+        carregandoStorageDashboard,
+        usoStorageDashboard?.arquivos,
+        usoStorageDashboard?.origem,
+        usoStorageDashboard?.totalBytes,
+    ]);
 
     const atualizandoDashboardSstCompleto = Boolean(
         atualizandoInformacoes || atualizandoInformacoesLocais || carregandoStorageDashboard
