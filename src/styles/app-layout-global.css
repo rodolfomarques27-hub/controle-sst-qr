@@ -4963,393 +4963,62 @@
     }
 }
 
-/* ROTEIRO 7 — ETAPA 5.3
-   Correções unificadas:
-   1) mobile horizontal do Dashboard SST sem área vazia exagerada;
-   2) Pendências críticas compactas no celular horizontal, tentando manter tudo em uma visão;
-   3) mantém desktop e mobile vertical no padrão já aprovado. */
-.dashboard-blocos-grid {
-    min-width: 0;
-}
-
-.dashboard-blocos-grid > * {
-    min-width: 0;
-}
-
-@media (max-width: 1023.98px) and (orientation: landscape),
-       (hover: none) and (pointer: coarse) and (max-height: 560px) {
-    html,
-    body,
-    #root {
-        overflow-x: hidden !important;
-    }
-
-    .app-main {
-        padding: 0.48rem 0.58rem calc(0.72rem + env(safe-area-inset-bottom)) !important;
-    }
-
-    .app-content,
-    .page-shell {
-        max-width: 100% !important;
-        width: 100% !important;
-        margin-inline: 0 !important;
-    }
-
-    .app-mobile-header {
-        margin-bottom: 0.42rem !important;
-        padding: 0.46rem 0.55rem !important;
-        border-radius: 1rem !important;
-        box-shadow: 0 6px 16px rgba(15, 23, 42, 0.06) !important;
-    }
-
-    .app-mobile-header__topo,
-    .app-mobile-header__tela-atual {
-        display: none !important;
-    }
-
-    .app-mobile-header__select {
-        min-height: 2.2rem !important;
-        border-radius: 0.85rem !important;
-        padding: 0.45rem 0.62rem !important;
-        font-size: 0.82rem !important;
-    }
-
-    .page-header {
-        margin-bottom: 0.38rem !important;
-        gap: 0.3rem !important;
-    }
-
-    .page-header-text h1 {
-        font-size: 1.12rem !important;
-        line-height: 1.08 !important;
-    }
-
-    .page-header-text p {
-        margin-top: 0.18rem !important;
-        font-size: 0.7rem !important;
-        line-height: 1rem !important;
-    }
-
-    .page-actions,
-    .toolbar-responsive {
-        gap: 0.32rem !important;
-    }
-
-    .page-actions button,
-    .toolbar-responsive button,
-    .top-actions-nowrap button {
-        min-height: 2.1rem !important;
-        border-radius: 0.75rem !important;
-        padding: 0.42rem 0.58rem !important;
-        font-size: 0.7rem !important;
-        line-height: 0.9rem !important;
-    }
-
-    .dashboard-summary-grid {
-        grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
-        gap: 0.48rem !important;
-    }
-
-    .dashboard-summary-card,
-    .summary-card-fixed,
-    .config-summary-card,
-    .auditoria-summary-card,
-    .dashboard-campo-summary-card,
-    .dashboard-auditoria-card {
-        min-height: 5.35rem !important;
-        max-height: none !important;
-        border-radius: 1rem !important;
-        padding: 0.62rem !important;
-    }
-
-    .dashboard-summary-card :where(.summary-card-label, p:first-child),
-    .summary-card-fixed .summary-card-label,
-    .config-summary-card .summary-card-label,
-    .auditoria-summary-card .summary-card-label,
-    .dashboard-campo-summary-card .summary-card-label {
-        min-height: 0 !important;
-        max-height: none !important;
-        font-size: 0.66rem !important;
-        line-height: 0.86rem !important;
-    }
-
-    .dashboard-summary-card :where(.summary-card-value, p:nth-child(2)),
-    .summary-card-fixed .summary-card-value,
-    .config-summary-card .summary-card-value,
-    .auditoria-summary-card .summary-card-value,
-    .dashboard-campo-summary-card .summary-card-value {
-        font-size: 1.08rem !important;
-        line-height: 1.05 !important;
-        max-height: none !important;
-    }
-
-    .summary-card-fixed .summary-card-detail,
-    .config-summary-card .summary-card-detail,
-    .auditoria-summary-card .summary-card-detail,
-    .dashboard-campo-summary-card .summary-card-detail,
-    .dashboard-summary-card :where(.text-xs, .text-sm) {
-        font-size: 0.62rem !important;
-        line-height: 0.82rem !important;
-    }
-
-    .dashboard-summary-card :where(svg, .summary-card-icon),
-    .summary-card-fixed .summary-card-icon,
-    .config-summary-card .summary-card-icon,
-    .auditoria-summary-card .summary-card-icon,
-    .dashboard-campo-summary-card .summary-card-icon {
-        width: 1.75rem !important;
-        height: 1.75rem !important;
-        flex-basis: 1.75rem !important;
-    }
-
-    .dashboard-blocos-grid {
-        display: grid !important;
-        grid-template-columns: 1fr !important;
-        gap: 0.65rem !important;
-        margin-top: 0.62rem !important;
-    }
-
-    .dashboard-blocos-grid > * {
-        grid-column: 1 / -1 !important;
-    }
-
-    .dashboard-blocos-grid :where(.rounded-3xl, .rounded-2xl) {
-        border-radius: 1.05rem !important;
-    }
-
-    .dashboard-blocos-grid :where(.p-6) {
-        padding: 0.85rem !important;
-    }
-
-    .dashboard-blocos-grid :where(.p-5) {
-        padding: 0.75rem !important;
-    }
-
-    .dashboard-blocos-grid :where(.mb-5, .mb-6) {
-        margin-bottom: 0.55rem !important;
-    }
-
-    .dashboard-blocos-grid h2,
-    .dashboard-blocos-grid h3 {
-        font-size: 1rem !important;
-        line-height: 1.1 !important;
-    }
-
-    .dashboard-blocos-grid p {
-        font-size: 0.72rem !important;
-        line-height: 1rem !important;
-    }
-
-    .dashboard-blocos-grid .responsive-table,
-    .dashboard-blocos-grid :where(.overflow-x-auto) {
-        overflow-x: hidden !important;
-        max-width: 100% !important;
-    }
-
-    .dashboard-blocos-grid .responsive-table table,
-    .dashboard-blocos-grid :where(.overflow-x-auto table) {
-        width: 100% !important;
-        min-width: 0 !important;
-        table-layout: fixed !important;
-    }
-
-    .dashboard-blocos-grid :where(th, td) {
-        padding: 0.46rem 0.5rem !important;
-        font-size: 0.68rem !important;
-        line-height: 0.9rem !important;
-        vertical-align: middle !important;
-    }
-
-    .dashboard-blocos-grid :where(th:nth-child(1), td:nth-child(1)) {
-        width: 38% !important;
-    }
-
-    .dashboard-blocos-grid :where(th:nth-child(2), td:nth-child(2)) {
-        width: 24% !important;
-    }
-
-    .dashboard-blocos-grid :where(th:nth-child(3), td:nth-child(3)) {
-        width: 14% !important;
-    }
-
-    .dashboard-blocos-grid :where(th:nth-child(4), td:nth-child(4)) {
-        width: 24% !important;
-    }
-
-    .dashboard-blocos-grid :where(td img, td .h-12.w-12, td .h-14.w-14) {
-        width: 2.25rem !important;
-        height: 2.25rem !important;
-        min-width: 2.25rem !important;
-    }
-
-    .dashboard-blocos-grid :where(td .gap-4) {
-        gap: 0.55rem !important;
-    }
-
-    .dashboard-blocos-grid :where(td button, td a, td .rounded-full, td .rounded-xl) {
-        min-height: 1.85rem !important;
-        padding: 0.32rem 0.48rem !important;
-        font-size: 0.66rem !important;
-        line-height: 0.82rem !important;
-        white-space: nowrap !important;
-    }
-
-    .dashboard-blocos-grid :where(td .text-lg, td .text-base, td .text-sm) {
-        font-size: 0.72rem !important;
-        line-height: 0.95rem !important;
-    }
-
-    .dashboard-blocos-grid :where(td .text-xs) {
-        font-size: 0.62rem !important;
-        line-height: 0.8rem !important;
-    }
-}
-
-@media (max-width: 767.98px) {
-    .dashboard-blocos-grid {
-        gap: 0.72rem !important;
-        margin-top: 0.72rem !important;
-    }
-}
-
-/* ROTEIRO 7 — ETAPA 5.5
-   Acerto final mobile horizontal do Dashboard SST.
-   Objetivos:
-   - manter o cabeçalho Controle SST QR visível também no celular em paisagem;
-   - centralizar e padronizar largura dos botões superiores;
-   - reduzir área vazia entre cabeçalho, ações e cards;
-   - evitar sobreposição entre status, botão E-mail e QR nas Pendências críticas. */
+/* ROTEIRO 7 — ETAPA 5.6
+   Ajuste final do mobile horizontal:
+   - reduz espaço em branco entre cabeçalho, título, ações e primeiros cards;
+   - compacta as abas Dashboard SST e Treinamentos em paisagem;
+   - harmoniza Pendências críticas, dando respiro ao QR na borda direita. */
 @media (max-width: 1023.98px) and (orientation: landscape),
        (max-width: 1023.98px) and (max-height: 540px) {
-    html,
-    body,
-    #root {
-        width: 100% !important;
-        min-width: 0 !important;
-        overflow-x: hidden !important;
-        background: #f1f5f9 !important;
-    }
-
-    .app-shell,
-    .app-main,
-    .app-content,
-    .page-shell {
-        width: 100% !important;
-        max-width: 100% !important;
-        min-width: 0 !important;
-        overflow-x: hidden !important;
-    }
-
     .app-main {
-        padding: 0.48rem 0.58rem 0.8rem !important;
+        min-height: auto !important;
+        padding: 0.36rem 0.5rem 0.68rem !important;
+    }
+
+    .app-content,
+    .page-shell,
+    .app-content > div,
+    .page-shell > div {
+        min-height: 0 !important;
     }
 
     .app-mobile-header {
-        display: grid !important;
-        gap: 0.42rem !important;
-        margin: 0 0 0.48rem !important;
-        border: 1px solid #dbe7f2 !important;
-        border-radius: 1.08rem !important;
-        background: rgba(255, 255, 255, 0.96) !important;
-        padding: 0.52rem !important;
-        box-shadow: 0 8px 20px rgba(15, 23, 42, 0.07) !important;
+        margin-bottom: 0.34rem !important;
+        padding: 0.44rem 0.52rem !important;
     }
 
     .app-mobile-header__topo {
-        display: flex !important;
-        align-items: center !important;
-        justify-content: space-between !important;
-        gap: 0.55rem !important;
-        min-width: 0 !important;
-    }
-
-    .app-mobile-header__marca {
-        display: flex !important;
-        min-width: 0 !important;
-        align-items: center !important;
-        gap: 0.55rem !important;
-    }
-
-    .app-mobile-header__logo {
-        display: inline-flex !important;
-        width: 2.15rem !important;
-        height: 2.15rem !important;
-        flex: 0 0 2.15rem !important;
-        align-items: center !important;
-        justify-content: center !important;
-        border-radius: 0.82rem !important;
-        background: #020617 !important;
-        color: #ffffff !important;
-    }
-
-    .app-mobile-header__nome {
-        display: block !important;
-        margin: 0 !important;
-        color: #020617 !important;
-        font-size: 0.86rem !important;
-        font-weight: 950 !important;
-        line-height: 1.05 !important;
-    }
-
-    .app-mobile-header__usuario {
-        display: block !important;
-        max-width: 13rem !important;
-        margin: 0.12rem 0 0 !important;
-        overflow: hidden !important;
-        color: #64748b !important;
-        font-size: 0.62rem !important;
-        font-weight: 750 !important;
-        line-height: 0.88rem !important;
-        text-overflow: ellipsis !important;
-        white-space: nowrap !important;
-    }
-
-    .app-mobile-header__sair {
-        display: inline-flex !important;
-        min-width: 2.2rem !important;
-        min-height: 2.1rem !important;
-        align-items: center !important;
-        justify-content: center !important;
-        border-radius: 999px !important;
-        padding: 0.42rem 0.58rem !important;
-    }
-
-    .app-mobile-header__navegacao {
-        display: block !important;
-        width: 100% !important;
-        min-width: 0 !important;
-    }
-
-    .app-mobile-header__tela-atual {
-        display: none !important;
+        min-height: 2.18rem !important;
     }
 
     .app-mobile-header__select {
-        display: block !important;
-        width: 100% !important;
-        min-height: 2.35rem !important;
-        border-radius: 0.9rem !important;
-        padding: 0.5rem 0.72rem !important;
-        font-size: 0.86rem !important;
-        font-weight: 900 !important;
-        line-height: 1.05rem !important;
+        min-height: 2.18rem !important;
     }
 
     .page-header {
-        margin: 0 0 0.38rem !important;
-        gap: 0.25rem !important;
+        min-height: 0 !important;
+        height: auto !important;
+        margin: 0 0 0.28rem !important;
+        padding: 0 !important;
+        gap: 0.18rem !important;
+        justify-content: flex-start !important;
+    }
+
+    .page-header-text {
+        flex: 0 1 auto !important;
+        margin: 0 !important;
     }
 
     .page-header-text h1 {
         margin: 0 !important;
-        font-size: 1.04rem !important;
-        line-height: 1.08 !important;
+        font-size: 1rem !important;
+        line-height: 1.04 !important;
     }
 
     .page-header-text p {
-        margin-top: 0.15rem !important;
-        font-size: 0.66rem !important;
-        line-height: 0.98rem !important;
+        margin-top: 0.08rem !important;
+        font-size: 0.64rem !important;
+        line-height: 0.86rem !important;
     }
 
     .page-actions,
@@ -5358,163 +5027,157 @@
     .page-actions > .top-actions-nowrap,
     .top-actions-nowrap,
     .toolbar-responsive {
-        display: grid !important;
         width: min(100%, 28rem) !important;
         max-width: 28rem !important;
-        margin-left: auto !important;
-        margin-right: auto !important;
-        grid-template-columns: 1fr !important;
-        gap: 0.34rem !important;
-        justify-content: center !important;
-        align-items: stretch !important;
+        margin-top: 0.18rem !important;
+        margin-bottom: 0 !important;
+        gap: 0.26rem !important;
     }
 
     .page-actions button,
     .top-actions-nowrap button,
     .toolbar-responsive button {
-        width: 100% !important;
-        max-width: 28rem !important;
-        min-height: 2.18rem !important;
-        justify-content: center !important;
-        border-radius: 0.85rem !important;
-        padding: 0.48rem 0.75rem !important;
-        font-size: 0.72rem !important;
-        line-height: 0.95rem !important;
-        text-align: center !important;
-        white-space: nowrap !important;
+        min-height: 2rem !important;
+        padding: 0.4rem 0.7rem !important;
+        border-radius: 0.78rem !important;
+        font-size: 0.68rem !important;
+        line-height: 0.86rem !important;
     }
 
-    .page-actions + *,
+    .app-main .space-y-3 > :not([hidden]) ~ :not([hidden]),
+    .app-main .space-y-4 > :not([hidden]) ~ :not([hidden]),
+    .app-main .space-y-5 > :not([hidden]) ~ :not([hidden]),
+    .app-main .space-y-6 > :not([hidden]) ~ :not([hidden]),
+    .app-main .space-y-8 > :not([hidden]) ~ :not([hidden]),
+    .app-main .space-y-10 > :not([hidden]) ~ :not([hidden]) {
+        margin-top: 0.46rem !important;
+    }
+
+    .app-main :where(.mt-3, .mt-4, .mt-5, .mt-6, .mt-8, .mt-10),
+    .app-main :where(.my-4, .my-5, .my-6, .my-8, .my-10) {
+        margin-top: 0.46rem !important;
+    }
+
+    .app-main :where(.mb-4, .mb-5, .mb-6, .mb-8, .mb-10) {
+        margin-bottom: 0.46rem !important;
+    }
+
     .page-header + *,
+    .page-actions + *,
     .dashboard-summary-grid,
     .dashboard-blocos-grid,
-    .page-shell > .mt-6,
-    .page-shell > .mt-3 {
-        margin-top: 0.45rem !important;
+    .treinamentos-layout-grid {
+        margin-top: 0.4rem !important;
     }
 
     .dashboard-summary-grid {
-        grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
-        gap: 0.48rem !important;
+        gap: 0.42rem !important;
     }
 
     .dashboard-summary-grid > .dashboard-summary-card,
     .dashboard-summary-card,
     .summary-card-fixed {
-        min-height: 5.9rem !important;
-        height: auto !important;
-        max-height: none !important;
-        border-radius: 0.95rem !important;
-        padding: 0.58rem !important;
+        min-height: 5.25rem !important;
+        padding: 0.52rem !important;
     }
 
-    .dashboard-summary-card :where(p, span, strong, div),
-    .summary-card-fixed :where(p, span, strong, div) {
-        line-height: 1.05 !important;
+    .dashboard-blocos-grid,
+    .treinamentos-layout-grid {
+        gap: 0.5rem !important;
+        align-items: start !important;
     }
 
-    .dashboard-summary-card p:first-child,
-    .summary-card-fixed .summary-card-label {
-        font-size: 0.68rem !important;
-        line-height: 0.84rem !important;
+    .treinamentos-layout-card,
+    .treinamentos-layout-card > *,
+    .dashboard-blocos-grid > * {
+        min-height: 0 !important;
+        align-self: start !important;
     }
 
-    .dashboard-summary-card p:nth-child(2),
-    .summary-card-fixed .summary-card-value {
-        font-size: 1.18rem !important;
+    .treinamentos-layout-card :where(.rounded-3xl, .rounded-2xl),
+    .dashboard-blocos-grid :where(.rounded-3xl, .rounded-2xl) {
+        border-radius: 0.96rem !important;
+    }
+
+    .treinamentos-layout-card :where(.p-6, .p-5, .p-4),
+    .dashboard-blocos-grid :where(.p-6, .p-5, .p-4) {
+        padding: 0.72rem !important;
+    }
+
+    .treinamentos-layout-card :where(h2, h3),
+    .dashboard-blocos-grid :where(h2, h3) {
+        font-size: 0.96rem !important;
         line-height: 1.08 !important;
     }
 
-    .dashboard-summary-card p:last-child,
-    .summary-card-fixed .summary-card-detail {
-        font-size: 0.62rem !important;
-        line-height: 0.86rem !important;
+    .treinamentos-layout-card :where(p),
+    .dashboard-blocos-grid :where(p) {
+        font-size: 0.68rem !important;
+        line-height: 0.92rem !important;
     }
 
-    .dashboard-summary-card :where(svg, .summary-card-icon),
-    .summary-card-fixed .summary-card-icon {
-        width: 1.85rem !important;
-        height: 1.85rem !important;
-        flex-basis: 1.85rem !important;
-    }
-
-    .dashboard-summary-card[data-dashboard-storage-card="true"] {
-        padding-bottom: 1.1rem !important;
-    }
-
-    .dashboard-summary-card[data-dashboard-storage-card="true"]::after {
-        left: 0.65rem !important;
-        right: 0.65rem !important;
-        bottom: 0.48rem !important;
-        height: 0.34rem !important;
-    }
-
-    .responsive-table,
-    .dashboard-mobile-table-scroll,
-    .app-main :where(.overflow-x-auto) {
-        width: 100% !important;
-        max-width: 100% !important;
+    .dashboard-blocos-grid .responsive-table,
+    .dashboard-blocos-grid :where(.overflow-x-auto) {
+        padding-right: 0.72rem !important;
         overflow-x: auto !important;
         overflow-y: hidden !important;
-        -webkit-overflow-scrolling: touch !important;
-        overscroll-behavior-x: contain !important;
+        scroll-padding-right: 0.9rem !important;
     }
 
-    .responsive-table table,
-    .app-main :where(.overflow-x-auto table) {
-        min-width: 52rem !important;
+    .dashboard-blocos-grid .responsive-table table,
+    .dashboard-blocos-grid :where(.overflow-x-auto table) {
+        min-width: 58rem !important;
+        width: 100% !important;
         table-layout: fixed !important;
     }
 
-    .responsive-table th,
-    .responsive-table td,
-    .app-main :where(.overflow-x-auto table th),
-    .app-main :where(.overflow-x-auto table td) {
-        padding: 0.42rem 0.5rem !important;
-        font-size: 0.64rem !important;
-        line-height: 0.86rem !important;
-        vertical-align: middle !important;
+    .dashboard-blocos-grid :where(th:nth-child(1), td:nth-child(1)) {
+        width: 30% !important;
     }
 
-    .responsive-table td :where(button, a),
-    .app-main :where(.overflow-x-auto table td button),
-    .app-main :where(.overflow-x-auto table td a) {
-        min-width: 3.3rem !important;
-        min-height: 1.85rem !important;
-        max-width: 4.8rem !important;
-        padding: 0.36rem 0.5rem !important;
+    .dashboard-blocos-grid :where(th:nth-child(2), td:nth-child(2)) {
+        width: 28% !important;
+    }
+
+    .dashboard-blocos-grid :where(th:nth-child(3), td:nth-child(3)) {
+        width: 12% !important;
+    }
+
+    .dashboard-blocos-grid :where(th:nth-child(4), td:nth-child(4)) {
+        width: 12% !important;
+    }
+
+    .dashboard-blocos-grid :where(th:nth-child(5), td:nth-child(5)) {
+        width: 10% !important;
+    }
+
+    .dashboard-blocos-grid :where(th:nth-child(6), td:nth-child(6)) {
+        width: 8% !important;
+        padding-right: 0.85rem !important;
+    }
+
+    .dashboard-blocos-grid :where(td:last-child, th:last-child) {
+        padding-right: 0.95rem !important;
+    }
+
+    .dashboard-blocos-grid :where(td button, td a) {
+        min-width: 3.25rem !important;
+        min-height: 1.8rem !important;
+        padding: 0.34rem 0.52rem !important;
         border-radius: 999px !important;
         font-size: 0.62rem !important;
         line-height: 0.78rem !important;
-        white-space: nowrap !important;
     }
 
-    .responsive-table td :where(.rounded-full, .rounded-2xl, .rounded-3xl),
-    .app-main :where(.overflow-x-auto table td .rounded-full),
-    .app-main :where(.overflow-x-auto table td .rounded-2xl),
-    .app-main :where(.overflow-x-auto table td .rounded-3xl) {
-        white-space: nowrap !important;
+    .dashboard-blocos-grid :where(td:last-child button, td:last-child a) {
+        min-width: 3.55rem !important;
+        margin-right: 0.22rem !important;
     }
 }
 
-@media (max-width: 767.98px) and (orientation: landscape) {
-    .dashboard-summary-grid {
-        grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
-    }
-}
-
-@media (max-width: 680px) and (orientation: landscape) {
-    .dashboard-summary-grid {
-        grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
-    }
-
-    .page-actions,
-    .page-actions > *,
-    .page-actions > .flex,
-    .page-actions > .top-actions-nowrap,
-    .top-actions-nowrap,
-    .toolbar-responsive {
-        width: min(100%, 24rem) !important;
-        max-width: 24rem !important;
+@media (max-width: 760px) and (orientation: landscape) {
+    .dashboard-blocos-grid .responsive-table table,
+    .dashboard-blocos-grid :where(.overflow-x-auto table) {
+        min-width: 60rem !important;
     }
 }
