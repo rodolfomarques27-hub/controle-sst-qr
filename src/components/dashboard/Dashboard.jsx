@@ -757,7 +757,7 @@ export function Dashboard({
                 titulo="Dashboard SST"
                 subtitulo="Visão executiva dos colaboradores, empresas, documentos, treinamentos, auditoria e armazenamento."
                 acao={
-                    <div className="top-actions-nowrap">
+                    <div className="top-actions-nowrap dashboard-sst-actions-horizontal">
                         <button
                             type="button"
                             onClick={atualizarInformacoesDashboard}

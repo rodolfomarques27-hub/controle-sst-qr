@@ -5753,3 +5753,126 @@
     text-overflow: ellipsis !important;
   }
 }
+
+
+/* ROTEIRO 7 — ETAPA 5.11
+   Correção definitiva e exclusiva dos botões do Dashboard SST no mobile horizontal.
+   Esta regra usa a classe dashboard-sst-actions-horizontal para não afetar Treinamentos,
+   Aniversariantes, Dashboard Auditoria ou outras telas. */
+@media (max-width: 1023.98px) and (orientation: landscape),
+       (max-width: 1023.98px) and (max-height: 540px) {
+  .page-actions:has(.dashboard-sst-actions-horizontal) {
+    display: block !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+    margin-top: 0.5rem !important;
+    overflow: visible !important;
+  }
+
+  .page-actions:has(.dashboard-sst-actions-horizontal) > * {
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+  }
+
+  .dashboard-sst-actions-horizontal {
+    display: grid !important;
+    width: min(100%, 52rem) !important;
+    max-width: 52rem !important;
+    min-width: 0 !important;
+    grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+    grid-auto-flow: column !important;
+    grid-auto-columns: minmax(0, 1fr) !important;
+    align-items: stretch !important;
+    justify-content: start !important;
+    justify-items: stretch !important;
+    gap: 0.42rem !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    overflow: visible !important;
+  }
+
+  .dashboard-sst-actions-horizontal > :not(button):not(a) {
+    display: contents !important;
+  }
+
+  .dashboard-sst-actions-horizontal button,
+  .dashboard-sst-actions-horizontal a {
+    display: inline-flex !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
+    height: 2.34rem !important;
+    min-height: 2.34rem !important;
+    max-height: 2.34rem !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 0.3rem !important;
+    border-radius: 0.9rem !important;
+    padding: 0.42rem 0.42rem !important;
+    box-sizing: border-box !important;
+    font-size: clamp(0.5rem, 1.18vw, 0.72rem) !important;
+    line-height: 0.88rem !important;
+    font-weight: 900 !important;
+    text-align: center !important;
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+  }
+
+  .dashboard-sst-actions-horizontal button svg,
+  .dashboard-sst-actions-horizontal a svg {
+    width: 0.86rem !important;
+    height: 0.86rem !important;
+    min-width: 0.86rem !important;
+    max-width: 0.86rem !important;
+    flex: 0 0 0.86rem !important;
+    margin: 0 !important;
+  }
+
+  .dashboard-sst-actions-horizontal button span,
+  .dashboard-sst-actions-horizontal a span,
+  .dashboard-sst-actions-horizontal button strong,
+  .dashboard-sst-actions-horizontal a strong,
+  .dashboard-sst-actions-horizontal button div,
+  .dashboard-sst-actions-horizontal a div {
+    display: inline-block !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    white-space: nowrap !important;
+    line-height: 0.88rem !important;
+  }
+}
+
+@media (max-width: 760px) and (orientation: landscape),
+       (max-height: 430px) and (max-width: 900px) {
+  .dashboard-sst-actions-horizontal {
+    width: 100% !important;
+    max-width: 100% !important;
+    gap: 0.28rem !important;
+  }
+
+  .dashboard-sst-actions-horizontal button,
+  .dashboard-sst-actions-horizontal a {
+    height: 2.16rem !important;
+    min-height: 2.16rem !important;
+    max-height: 2.16rem !important;
+    border-radius: 0.78rem !important;
+    padding: 0.34rem 0.28rem !important;
+    gap: 0.22rem !important;
+    font-size: clamp(0.46rem, 1.08vw, 0.58rem) !important;
+    line-height: 0.78rem !important;
+  }
+
+  .dashboard-sst-actions-horizontal button svg,
+  .dashboard-sst-actions-horizontal a svg {
+    width: 0.72rem !important;
+    height: 0.72rem !important;
+    min-width: 0.72rem !important;
+    max-width: 0.72rem !important;
+    flex-basis: 0.72rem !important;
+  }
+}
