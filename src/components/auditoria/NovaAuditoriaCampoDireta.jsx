@@ -24,7 +24,6 @@ import {
 } from "../../constants/sstConstants";
 import {
     classNames,
-    obterParametroUrl,
     normalizarTextoBusca,
 } from "../../utils/sstUtils";
 import {
@@ -119,6 +118,100 @@ function escaparFiltroIlikeAuditoriaCampo(valor = "") {
     return String(valor || "").replace(/[\%_]/g, "").trim();
 }
 
+const PARAMETROS_TOKEN_AUDITORIA_PUBLICA = [
+    "token",
+    "chave",
+    "qr",
+    "token_publico",
+    "tokenPublico",
+    "auditoria_token",
+    "auditoriaToken",
+];
+
+function normalizarTokenAuditoriaPublica(valor = "") {
+    return String(valor ?? "").trim();
+}
+
+function obterParametroDeColecaoAuditoriaPublica(parametros, nome) {
+    if (!parametros || !nome) return "";
+
+    if (typeof parametros.get === "function") {
+        return normalizarTokenAuditoriaPublica(parametros.get(nome));
+    }
+
+    if (Object.prototype.hasOwnProperty.call(parametros, nome)) {
+        return normalizarTokenAuditoriaPublica(parametros[nome]);
+    }
+
+    return "";
+}
+
+function montarSearchParamsSeguroAuditoriaPublica(texto = "") {
+    const valor = String(texto || "").trim();
+    if (!valor) return null;
+
+    try {
+        const normalizado = valor.startsWith("?") ? valor.slice(1) : valor.replace(/^#/, "");
+        return new URLSearchParams(normalizado);
+    } catch {
+        return null;
+    }
+}
+
+function obterParametroUrlAtualAuditoriaPublica(nome) {
+    if (typeof window === "undefined" || !nome) return "";
+
+    const tentativas = [];
+
+    try {
+        const url = new URL(window.location.href);
+        tentativas.push(url.searchParams);
+    } catch {
+        // Ignora URL inválida e usa os fallbacks abaixo.
+    }
+
+    const searchAtual = montarSearchParamsSeguroAuditoriaPublica(window.location.search);
+    if (searchAtual) tentativas.push(searchAtual);
+
+    const hashAtual = String(window.location.hash || "");
+    if (hashAtual) {
+        const hashSemSinal = hashAtual.replace(/^#/, "");
+        const indiceInterrogacao = hashSemSinal.indexOf("?");
+
+        if (indiceInterrogacao >= 0) {
+            const paramsHash = montarSearchParamsSeguroAuditoriaPublica(hashSemSinal.slice(indiceInterrogacao + 1));
+            if (paramsHash) tentativas.push(paramsHash);
+        }
+
+        if (hashSemSinal.includes("=") && indiceInterrogacao < 0) {
+            const paramsHashDireto = montarSearchParamsSeguroAuditoriaPublica(hashSemSinal);
+            if (paramsHashDireto) tentativas.push(paramsHashDireto);
+        }
+    }
+
+    for (const params of tentativas) {
+        const encontrado = normalizarTokenAuditoriaPublica(params.get(nome));
+        if (encontrado) return encontrado;
+    }
+
+    return "";
+}
+
+function obterTokenAuditoriaPublicaCompatibilidade(parametros = {}, tokenExtraido = "") {
+    const tokenDireto = normalizarTokenAuditoriaPublica(tokenExtraido);
+    if (tokenDireto) return tokenDireto;
+
+    for (const nome of PARAMETROS_TOKEN_AUDITORIA_PUBLICA) {
+        const tokenColecao = obterParametroDeColecaoAuditoriaPublica(parametros, nome);
+        if (tokenColecao) return tokenColecao;
+
+        const tokenUrlAtual = obterParametroUrlAtualAuditoriaPublica(nome);
+        if (tokenUrlAtual) return tokenUrlAtual;
+    }
+
+    return "";
+}
+
 export function NovaAuditoriaCampoDireta({ usuario = null, onAuditoriaSalva, empresasBanco = [] }) {
     const parametros = obterParametrosAuditoriaCampoDiretaUrl();
     const {
@@ -135,8 +228,9 @@ export function NovaAuditoriaCampoDireta({ usuario = null, onAuditoriaSalva, emp
     const origem = typeof window !== "undefined" ? window.location.origin : "";
     const linkOrigemQrCampo = typeof window !== "undefined" ? window.location.href : "";
     const codigoQrCampoParametro = String(codigoQrParametro || "").trim();
+    const tokenAuditoriaPublicaParametro = obterTokenAuditoriaPublicaCompatibilidade(parametros, tokenParametro);
     const tokenAuditoriaPublicaConfigurado = obterTokenAuditoriaCampoPublicaConfigurado();
-    const tokenLinkAuditoriaCampo = tokenParametro || tokenAuditoriaPublicaConfigurado;
+    const tokenLinkAuditoriaCampo = tokenAuditoriaPublicaParametro || tokenAuditoriaPublicaConfigurado;
     const tokenLinkAuditoriaCampoDisponivel = Boolean(tokenLinkAuditoriaCampo);
     const montarLinkAuditoriaCampo = (parametrosExtras = {}) => montarLinkAuditoriaCampoDireta({
         origem,
@@ -151,13 +245,13 @@ export function NovaAuditoriaCampoDireta({ usuario = null, onAuditoriaSalva, emp
     );
 
 
-    const tokenAuditoriaPublicaInformado = Boolean(tokenParametro);
+    const tokenAuditoriaPublicaInformado = Boolean(tokenAuditoriaPublicaParametro);
     const [senhaAcessoAuditoria, setSenhaAcessoAuditoria] = useState("");
     const [acessoAuditoriaValidado, setAcessoAuditoriaValidado] = useState(() => Boolean(usuario));
     const [validandoAcessoAuditoria, setValidandoAcessoAuditoria] = useState(false);
     const [mensagemAcessoAuditoria, setMensagemAcessoAuditoria] = useState("");
     const acessoLiberado = Boolean(usuario) || (tokenAuditoriaPublicaInformado && acessoAuditoriaValidado);
-    const mensagemAcesso = tokenParametro ? "" : "Link inválido. Informe um token público de auditoria na URL.";
+    const mensagemAcesso = tokenAuditoriaPublicaParametro ? "" : "Link inválido. Informe um token público de auditoria na URL.";
     const [salvando, setSalvando] = useState(false);
     const [mensagem, setMensagem] = useState("");
     const [auditoriaSalva, setAuditoriaSalva] = useState(null);
@@ -185,12 +279,12 @@ export function NovaAuditoriaCampoDireta({ usuario = null, onAuditoriaSalva, emp
         setAcessoAuditoriaValidado(false);
         setSenhaAcessoAuditoria("");
         setMensagemAcessoAuditoria("");
-    }, [usuario, tokenParametro]);
+    }, [usuario, tokenAuditoriaPublicaParametro]);
 
     const validarSenhaAuditoriaPublica = async (evento) => {
         evento?.preventDefault?.();
 
-        if (!tokenParametro) {
+        if (!tokenAuditoriaPublicaParametro) {
             setMensagemAcessoAuditoria("Token público da auditoria não informado na URL.");
             return;
         }
@@ -205,7 +299,7 @@ export function NovaAuditoriaCampoDireta({ usuario = null, onAuditoriaSalva, emp
 
         try {
             const { data, error } = await supabase.rpc("validar_acesso_auditoria_publica", {
-                p_token: tokenParametro,
+                p_token: tokenAuditoriaPublicaParametro,
                 p_senha: senhaAcessoAuditoria.trim(),
             });
 
@@ -478,7 +572,7 @@ export function NovaAuditoriaCampoDireta({ usuario = null, onAuditoriaSalva, emp
                 resultado,
                 categoriaAtual,
                 tipoAtual,
-                tokenParametro,
+                tokenParametro: tokenAuditoriaPublicaParametro,
                 contatosEmpresaAuditoria,
                 emailResponsavelAuditoria,
                 whatsappResponsavelFormatado,
@@ -491,7 +585,7 @@ export function NovaAuditoriaCampoDireta({ usuario = null, onAuditoriaSalva, emp
                 linkOrigemQrCampo,
             });
 
-            const tokenAuditoriaCampo = obterParametroUrl("token") || obterParametroUrl("chave");
+            const tokenAuditoriaCampo = tokenAuditoriaPublicaParametro;
             let data = null;
 
             if (tokenAuditoriaCampo) {

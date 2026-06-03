@@ -9,6 +9,15 @@ export const CONFIG_AUDITORIA_PUBLICA_PADRAO = {
     exigirSenha: true,
 };
 
+export const PARAMETROS_TOKEN_AUDITORIA_PUBLICA = [
+    "token",
+    "chave",
+    "token_publico",
+    "tokenPublico",
+    "auditoria_token",
+    "auditoriaToken",
+];
+
 const textoSeguro = (valor, padrao = "") => {
     const texto = String(valor ?? "").trim();
     return texto || padrao;
@@ -20,7 +29,7 @@ const pareceTokenInicialDeDesenvolvimento = (valor = "") => {
     return token.startsWith("TOKEN-") && token.includes("AUDITORIA") && token.includes("CAMPO");
 };
 
-const normalizarTokenPublicoOperacional = (valor = "") => {
+export const normalizarTokenPublicoOperacional = (valor = "") => {
     const token = textoSeguro(valor);
 
     if (pareceTokenInicialDeDesenvolvimento(token)) {
@@ -29,6 +38,73 @@ const normalizarTokenPublicoOperacional = (valor = "") => {
 
     return token;
 };
+
+function montarSearchParamsSeguro(texto = "") {
+    const valor = String(texto || "").trim();
+    if (!valor) return null;
+
+    try {
+        const normalizado = valor.startsWith("?") ? valor.slice(1) : valor.replace(/^#/, "");
+        return new URLSearchParams(normalizado);
+    } catch {
+        return null;
+    }
+}
+
+export function obterParametroUrlAuditoriaPublica(nome, { aceitarHash = true } = {}) {
+    if (typeof window === "undefined" || !nome) return "";
+
+    const tentativas = [];
+
+    try {
+        const url = new URL(window.location.href);
+        tentativas.push(url.searchParams);
+    } catch {
+        // Mantém fallbacks abaixo.
+    }
+
+    const searchAtual = montarSearchParamsSeguro(window.location.search);
+    if (searchAtual) tentativas.push(searchAtual);
+
+    if (aceitarHash) {
+        const hashAtual = String(window.location.hash || "");
+
+        if (hashAtual) {
+            const hashSemSinal = hashAtual.replace(/^#/, "");
+            const indiceInterrogacao = hashSemSinal.indexOf("?");
+
+            if (indiceInterrogacao >= 0) {
+                const paramsHash = montarSearchParamsSeguro(hashSemSinal.slice(indiceInterrogacao + 1));
+                if (paramsHash) tentativas.push(paramsHash);
+            }
+
+            if (hashSemSinal.includes("=") && indiceInterrogacao < 0) {
+                const paramsHashDireto = montarSearchParamsSeguro(hashSemSinal);
+                if (paramsHashDireto) tentativas.push(paramsHashDireto);
+            }
+        }
+    }
+
+    for (const params of tentativas) {
+        const encontrado = normalizarTokenPublicoOperacional(params.get(nome));
+        if (encontrado) return encontrado;
+    }
+
+    return "";
+}
+
+export function obterTokenAuditoriaPublicaUrl({ aceitarQr = false } = {}) {
+    const parametros = aceitarQr
+        ? [...PARAMETROS_TOKEN_AUDITORIA_PUBLICA, "qr"]
+        : PARAMETROS_TOKEN_AUDITORIA_PUBLICA;
+
+    for (const nome of parametros) {
+        const token = obterParametroUrlAuditoriaPublica(nome);
+        if (token) return token;
+    }
+
+    return "";
+}
 
 export function normalizarConfiguracaoAuditoriaPublica(configuracao = {}) {
     return {
@@ -63,6 +139,28 @@ export function salvarConfiguracaoAuditoriaPublicaSistema(configuracao = {}) {
 
 export function restaurarConfiguracaoAuditoriaPublicaPadrao() {
     return salvarConfiguracaoAuditoriaPublicaSistema(CONFIG_AUDITORIA_PUBLICA_PADRAO);
+}
+
+export function montarUrlConsultaQrColaboradorPublica({
+    origem = "",
+    tokenQrColaborador = "",
+    tokenAuditoriaPublica = "",
+} = {}) {
+    const origemFinal = origem || (typeof window !== "undefined" ? window.location.origin : "");
+    const tokenQrFinal = textoSeguro(tokenQrColaborador);
+    const tokenAuditoriaFinal = normalizarTokenPublicoOperacional(tokenAuditoriaPublica);
+    const params = new URLSearchParams();
+
+    if (tokenQrFinal) {
+        params.set("qr", tokenQrFinal);
+    }
+
+    if (tokenAuditoriaFinal) {
+        params.set("token", tokenAuditoriaFinal);
+    }
+
+    const consulta = params.toString();
+    return `${origemFinal}/${consulta ? `?${consulta}` : ""}`;
 }
 
 export function montarLinkAuditoriaPublicaSistema({ origem = "", tokenPublico = "" } = {}) {

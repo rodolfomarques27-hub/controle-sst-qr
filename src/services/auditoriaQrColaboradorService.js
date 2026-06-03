@@ -1,10 +1,13 @@
 import { supabase } from "../lib/supabaseClient";
 import { reduzirFotoParaAuditoria } from "./imagemService";
 import { sanitizarNomeArquivo } from "../utils/sstUtils";
-import { carregarConfiguracaoAuditoriaPublicaSistema } from "../constants/auditoriaPublicaConstants";
+import {
+    carregarConfiguracaoAuditoriaPublicaSistema,
+    obterTokenAuditoriaPublicaUrl,
+} from "../constants/auditoriaPublicaConstants";
 
 export function obterTokenAuditoriaQrColaboradorConfigurado() {
-    return texto(carregarConfiguracaoAuditoriaPublicaSistema().tokenPublico);
+    return texto(obterTokenAuditoriaPublicaUrl() || carregarConfiguracaoAuditoriaPublicaSistema().tokenPublico);
 }
 
 function texto(valor) {
@@ -47,14 +50,14 @@ export async function validarSenhaAuditoriaQr({
     tokenAuditoria = obterTokenAuditoriaQrColaboradorConfigurado(),
     senha = "",
 } = {}) {
-    const tokenSeguro = texto(tokenAuditoria);
+    const tokenSeguro = texto(tokenAuditoria || obterTokenAuditoriaQrColaboradorConfigurado());
     const senhaSegura = texto(senha);
 
     if (!tokenSeguro) {
         return {
             ok: false,
             autorizado: false,
-            mensagem: "Token público da auditoria não informado.",
+            mensagem: "Token público da auditoria não configurado. Gere o QR Code com token ativo ou informe token/chave na URL.",
         };
     }
 
@@ -103,12 +106,12 @@ export async function salvarAuditoriaQrColaborador({
     desvio = null,
     fotos = {},
 } = {}) {
-    const tokenAuditoriaSeguro = texto(tokenAuditoria);
+    const tokenAuditoriaSeguro = texto(tokenAuditoria || obterTokenAuditoriaQrColaboradorConfigurado());
     const senhaSegura = texto(senha);
     const tokenQrSeguro = texto(tokenQr || auditoria?.token_qr);
 
     if (!tokenAuditoriaSeguro) {
-        throw new Error("Token público da auditoria não informado.");
+        throw new Error("Token público da auditoria não configurado. Gere o QR Code com token ativo ou informe token/chave na URL.");
     }
 
     if (!senhaSegura) {

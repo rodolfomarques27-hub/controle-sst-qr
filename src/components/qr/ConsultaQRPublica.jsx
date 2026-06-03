@@ -14,6 +14,7 @@ import {
     treinamentoSemValidade,
 } from "../../services/colaboradorDocumentosService";
 import { DAY } from "../../constants/sstConstants";
+import { obterTokenAuditoriaPublicaUrl } from "../../constants/auditoriaPublicaConstants";
 import {
     classNames,
     diasParaVencer,
@@ -25,6 +26,7 @@ export function ConsultaQRPublica({ dados }) {
     const colaborador = dados?.colaborador || {};
     const treinamentos = dados?.treinamentos || [];
     const geral = statusGeralConsultaPublica(colaborador, treinamentos);
+    const tokenAuditoriaPublicaUrl = obterTokenAuditoriaPublicaUrl();
     const [auditoriasCampoQr, setAuditoriasCampoQr] = useState([]);
     const [carregandoAuditoriasCampoQr, setCarregandoAuditoriasCampoQr] = useState(false);
 
@@ -133,6 +135,7 @@ export function ConsultaQRPublica({ dados }) {
                     <AuditoriaCampoQRCode
                         colaborador={colaborador}
                         treinamentos={treinamentos}
+                        tokenAuditoria={tokenAuditoriaPublicaUrl}
                         onAuditoriaSalva={(novaAuditoria) => setAuditoriasCampoQr((atual) => [novaAuditoria, ...atual])}
                     />
 
