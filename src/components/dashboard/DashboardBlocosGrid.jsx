@@ -21,9 +21,13 @@ export function DashboardBlocosGrid({
     }
 
     return (
-        <div className={classNames("dashboard-blocos-grid grid gap-6 md:grid-cols-2 xl:grid-cols-6", mostrarFiltroPainel ? "mt-3" : "mt-6")}>
+        <div className={classNames("grid gap-6 md:grid-cols-2 xl:grid-cols-6", mostrarFiltroPainel ? "mt-3" : "mt-6")}>
             {blocosDashboardExibidos.map((chave) => (
-                <div key={chave} className={classNames("min-w-0", classeTamanhoBlocoDashboard(chave, tamanhosBlocosDashboard))}>
+                <div
+                    key={chave}
+                    data-dashboard-bloco={chave}
+                    className={classNames("min-w-0", classeTamanhoBlocoDashboard(chave, tamanhosBlocosDashboard))}
+                >
                     {renderBlocoDashboard(chave)}
                 </div>
             ))}

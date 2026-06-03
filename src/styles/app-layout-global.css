@@ -6084,3 +6084,316 @@
     }
 }
 
+
+/* ROTEIRO 7 — ETAPA 5.13
+   Correção final e isolada para mobile horizontal.
+   Objetivos:
+   1) desfazer o efeito global que estava esmagando botões em outras abas;
+   2) aplicar 2x2 somente nos botões do Dashboard SST;
+   3) recuperar Pendências críticas em uma tela horizontal, sem textos sobrepostos;
+   4) deixar o card de Armazenamento sem corte de texto/barra.
+*/
+@media (max-width: 1023.98px) and (orientation: landscape),
+       (max-width: 1023.98px) and (max-height: 540px) {
+    /* Reset das ações globais: outras abas voltam ao comportamento normal. */
+    .page-actions,
+    .page-actions > *,
+    .page-actions > .flex,
+    .page-actions > .top-actions-nowrap,
+    .top-actions-nowrap,
+    .toolbar-responsive {
+        display: flex !important;
+        width: auto !important;
+        max-width: 100% !important;
+        min-width: 0 !important;
+        flex: 0 1 auto !important;
+        flex-wrap: wrap !important;
+        align-items: center !important;
+        justify-content: flex-start !important;
+        justify-items: initial !important;
+        grid-template-columns: none !important;
+        grid-auto-flow: row !important;
+        gap: 0.42rem !important;
+        overflow: visible !important;
+        margin-top: 0.42rem !important;
+    }
+
+    .page-actions > *,
+    .page-actions > .flex > *,
+    .page-actions > .top-actions-nowrap > *,
+    .top-actions-nowrap > *,
+    .toolbar-responsive > * {
+        width: auto !important;
+        max-width: 100% !important;
+        min-width: 0 !important;
+        flex: 0 1 auto !important;
+    }
+
+    .page-actions button,
+    .page-actions a,
+    .top-actions-nowrap button,
+    .top-actions-nowrap a,
+    .toolbar-responsive button,
+    .toolbar-responsive a {
+        display: inline-flex !important;
+        width: auto !important;
+        max-width: 100% !important;
+        min-width: 0 !important;
+        flex: 0 1 auto !important;
+        min-height: 2.36rem !important;
+        height: auto !important;
+        align-items: center !important;
+        justify-content: center !important;
+        gap: 0.42rem !important;
+        border-radius: 0.95rem !important;
+        padding: 0.52rem 0.78rem !important;
+        font-size: 0.74rem !important;
+        line-height: 0.95rem !important;
+        white-space: nowrap !important;
+        overflow: hidden !important;
+        text-overflow: ellipsis !important;
+        box-sizing: border-box !important;
+    }
+
+    /* Solução isolada: somente Dashboard SST fica em 2x2. */
+    .dashboard-sst-actions-horizontal {
+        display: grid !important;
+        width: min(100%, 44rem) !important;
+        max-width: 44rem !important;
+        min-width: 0 !important;
+        grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+        grid-auto-flow: row !important;
+        align-items: stretch !important;
+        justify-content: start !important;
+        justify-items: stretch !important;
+        gap: 0.42rem !important;
+        overflow: visible !important;
+        margin-top: 0.48rem !important;
+    }
+
+    .dashboard-sst-actions-horizontal > :not(button):not(a) {
+        display: contents !important;
+    }
+
+    .dashboard-sst-actions-horizontal > *,
+    .dashboard-sst-actions-horizontal button,
+    .dashboard-sst-actions-horizontal a {
+        width: 100% !important;
+        max-width: 100% !important;
+        min-width: 0 !important;
+        justify-self: stretch !important;
+        box-sizing: border-box !important;
+    }
+
+    .dashboard-sst-actions-horizontal button,
+    .dashboard-sst-actions-horizontal a {
+        display: inline-flex !important;
+        height: 2.46rem !important;
+        min-height: 2.46rem !important;
+        align-items: center !important;
+        justify-content: center !important;
+        gap: 0.38rem !important;
+        border-radius: 0.95rem !important;
+        padding: 0.5rem 0.62rem !important;
+        font-size: clamp(0.62rem, 1.28vw, 0.78rem) !important;
+        line-height: 0.95rem !important;
+        font-weight: 900 !important;
+        white-space: nowrap !important;
+        overflow: hidden !important;
+        text-overflow: ellipsis !important;
+    }
+
+    .dashboard-sst-actions-horizontal button svg,
+    .dashboard-sst-actions-horizontal a svg {
+        width: 0.9rem !important;
+        height: 0.9rem !important;
+        min-width: 0.9rem !important;
+        flex: 0 0 0.9rem !important;
+    }
+
+    .dashboard-sst-actions-horizontal button span,
+    .dashboard-sst-actions-horizontal a span,
+    .dashboard-sst-actions-horizontal button div,
+    .dashboard-sst-actions-horizontal a div {
+        display: inline-block !important;
+        min-width: 0 !important;
+        max-width: 100% !important;
+        overflow: hidden !important;
+        text-overflow: ellipsis !important;
+        white-space: nowrap !important;
+    }
+
+    /* Armazenamento: altura suficiente para valor, detalhe e barra. */
+    .dashboard-summary-card[data-dashboard-storage-card="true"],
+    .summary-card-fixed[data-dashboard-storage-card="true"],
+    .info-card[data-dashboard-storage-card="true"] {
+        min-height: 7.15rem !important;
+        height: auto !important;
+        max-height: none !important;
+        padding: 0.75rem 0.85rem 1.58rem !important;
+        overflow: hidden !important;
+    }
+
+    .dashboard-summary-card[data-dashboard-storage-card="true"]::after,
+    .summary-card-fixed[data-dashboard-storage-card="true"]::after,
+    .info-card[data-dashboard-storage-card="true"]::after {
+        left: 0.85rem !important;
+        right: 0.85rem !important;
+        bottom: 0.62rem !important;
+        height: 0.38rem !important;
+    }
+
+    .dashboard-summary-card[data-dashboard-storage-card="true"] p:nth-child(2),
+    .summary-card-fixed[data-dashboard-storage-card="true"] p:nth-child(2),
+    .info-card[data-dashboard-storage-card="true"] p:nth-child(2) {
+        max-height: none !important;
+        overflow: visible !important;
+        font-size: 1.48rem !important;
+        line-height: 1.5rem !important;
+    }
+
+    .dashboard-summary-card[data-dashboard-storage-card="true"] p:last-child,
+    .summary-card-fixed[data-dashboard-storage-card="true"] p:last-child,
+    .info-card[data-dashboard-storage-card="true"] p:last-child,
+    .dashboard-summary-card[data-dashboard-storage-card="true"] .summary-card-detail,
+    .summary-card-fixed[data-dashboard-storage-card="true"] .summary-card-detail,
+    .info-card[data-dashboard-storage-card="true"] .summary-card-detail {
+        display: block !important;
+        max-height: 1.35rem !important;
+        margin-top: 0.34rem !important;
+        padding-top: 0.28rem !important;
+        font-size: 0.64rem !important;
+        line-height: 0.9rem !important;
+        white-space: nowrap !important;
+        overflow: hidden !important;
+        text-overflow: ellipsis !important;
+    }
+}
+
+/* Pendências críticas: ajuste específico do bloco, sem mexer nos demais blocos do Dashboard. */
+@media (max-width: 1023.98px) and (orientation: landscape),
+       (max-width: 1023.98px) and (max-height: 540px) {
+    [data-dashboard-bloco="pendencias"] .responsive-table,
+    [data-dashboard-bloco="pendencias"] :where(.overflow-x-auto) {
+        width: 100% !important;
+        max-width: 100% !important;
+        overflow-x: hidden !important;
+        overflow-y: hidden !important;
+        padding-right: 0 !important;
+        border-radius: 1rem !important;
+    }
+
+    [data-dashboard-bloco="pendencias"] table {
+        width: 100% !important;
+        min-width: 0 !important;
+        max-width: 100% !important;
+        table-layout: fixed !important;
+        border-collapse: collapse !important;
+    }
+
+    [data-dashboard-bloco="pendencias"] :where(th, td) {
+        min-width: 0 !important;
+        max-width: 100% !important;
+        overflow: hidden !important;
+        vertical-align: middle !important;
+        padding: 0.38rem 0.28rem !important;
+        font-size: clamp(0.48rem, 1.05vw, 0.64rem) !important;
+        line-height: 0.82rem !important;
+    }
+
+    [data-dashboard-bloco="pendencias"] :where(th:nth-child(1), td:nth-child(1)) {
+        width: 31% !important;
+    }
+
+    [data-dashboard-bloco="pendencias"] :where(th:nth-child(2), td:nth-child(2)) {
+        width: 27% !important;
+    }
+
+    [data-dashboard-bloco="pendencias"] :where(th:nth-child(3), td:nth-child(3)) {
+        width: 12% !important;
+    }
+
+    [data-dashboard-bloco="pendencias"] :where(th:nth-child(4), td:nth-child(4)) {
+        width: 10% !important;
+    }
+
+    [data-dashboard-bloco="pendencias"] :where(th:nth-child(5), td:nth-child(5)) {
+        width: 10% !important;
+    }
+
+    [data-dashboard-bloco="pendencias"] :where(th:nth-child(6), td:nth-child(6)) {
+        width: 10% !important;
+        padding-right: 0.42rem !important;
+    }
+
+    [data-dashboard-bloco="pendencias"] td :where(p, span, strong, div) {
+        max-width: 100% !important;
+        overflow: hidden !important;
+        text-overflow: ellipsis !important;
+    }
+
+    [data-dashboard-bloco="pendencias"] td:nth-child(1) :where(p, span, strong, div),
+    [data-dashboard-bloco="pendencias"] td:nth-child(2) :where(p, span, strong, div) {
+        display: -webkit-box !important;
+        -webkit-box-orient: vertical !important;
+        -webkit-line-clamp: 2 !important;
+        white-space: normal !important;
+        overflow: hidden !important;
+    }
+
+    [data-dashboard-bloco="pendencias"] td:nth-child(3),
+    [data-dashboard-bloco="pendencias"] td:nth-child(4),
+    [data-dashboard-bloco="pendencias"] td:nth-child(5),
+    [data-dashboard-bloco="pendencias"] td:nth-child(6) {
+        text-align: center !important;
+        white-space: nowrap !important;
+    }
+
+    [data-dashboard-bloco="pendencias"] :where(td button, td a) {
+        display: inline-flex !important;
+        width: 100% !important;
+        min-width: 0 !important;
+        max-width: 100% !important;
+        min-height: 1.58rem !important;
+        height: 1.58rem !important;
+        align-items: center !important;
+        justify-content: center !important;
+        border-radius: 999px !important;
+        padding: 0.22rem 0.3rem !important;
+        font-size: clamp(0.42rem, 0.92vw, 0.56rem) !important;
+        line-height: 0.65rem !important;
+        white-space: nowrap !important;
+        overflow: hidden !important;
+        text-overflow: ellipsis !important;
+    }
+}
+
+@media (max-width: 760px) and (orientation: landscape),
+       (max-height: 430px) and (max-width: 900px) {
+    .dashboard-sst-actions-horizontal {
+        width: min(100%, 34rem) !important;
+        gap: 0.32rem !important;
+    }
+
+    .dashboard-sst-actions-horizontal button,
+    .dashboard-sst-actions-horizontal a {
+        height: 2.26rem !important;
+        min-height: 2.26rem !important;
+        padding: 0.42rem 0.42rem !important;
+        font-size: clamp(0.54rem, 1.16vw, 0.66rem) !important;
+        gap: 0.24rem !important;
+    }
+
+    [data-dashboard-bloco="pendencias"] :where(th, td) {
+        padding: 0.32rem 0.2rem !important;
+        font-size: clamp(0.42rem, 0.9vw, 0.56rem) !important;
+        line-height: 0.72rem !important;
+    }
+
+    [data-dashboard-bloco="pendencias"] :where(td button, td a) {
+        height: 1.42rem !important;
+        min-height: 1.42rem !important;
+        padding: 0.18rem 0.2rem !important;
+        font-size: clamp(0.38rem, 0.82vw, 0.5rem) !important;
+    }
+}
