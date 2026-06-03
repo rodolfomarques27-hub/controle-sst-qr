@@ -1,6 +1,5 @@
 /* eslint-disable no-unused-vars */
 import React, { useEffect, useMemo, useState } from "react";
-import { motion } from "framer-motion";
 import {
     AlertTriangle,
     CheckCircle2,
@@ -1285,7 +1284,7 @@ export function ConfiguracoesSistema({
     };
 
     return (
-        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="page-shell">
+        <div className="page-shell">
             <Header
                 titulo="Configurações do sistema"
                 subtitulo="Centralize parâmetros operacionais, auditoria e limites usados pelo sistema SST."
@@ -1433,6 +1432,6 @@ export function ConfiguracoesSistema({
                     </div>
                 </div>
             )}
-        </motion.div>
+        </div>
     );
 }

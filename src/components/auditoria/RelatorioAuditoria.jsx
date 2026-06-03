@@ -1,6 +1,5 @@
 /* eslint-disable no-unused-vars */
 import React, { useEffect, useMemo, useState } from "react";
-import { motion } from "framer-motion";
 import {
     ChevronDown,
     ChevronUp,
@@ -730,7 +729,7 @@ export function RelatorioAuditoria({
     };
 
     return (
-        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
+        <div>
             <Header
                 titulo="Auditoria do sistema"
                 subtitulo="Relatório de acessos, consultas QR e alterações feitas no banco de dados."
@@ -1650,7 +1649,7 @@ export function RelatorioAuditoria({
                     </CardRecolhivel>
                 ))}
             </div>
-        </motion.div>
+        </div>
     );
 }
 
