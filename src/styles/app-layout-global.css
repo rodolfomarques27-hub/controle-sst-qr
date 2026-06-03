@@ -4963,59 +4963,297 @@
     }
 }
 
-/* ROTEIRO 7 — ETAPA 5.7
-   Ajuste final do cabeçalho mobile horizontal.
-   Objetivo: impedir quebra do bloco do ícone/logo, manter logo + nome + e-mail alinhados
-   e preservar o botão Sair na mesma linha, como já acontece no mobile vertical. */
-@media (max-width: 1023.98px) and (orientation: landscape) {
+/* ROTEIRO 7 — ETAPA 5.6
+   Ajuste final do mobile horizontal:
+   - reduz espaço em branco entre cabeçalho, título, ações e primeiros cards;
+   - compacta as abas Dashboard SST e Treinamentos em paisagem;
+   - harmoniza Pendências críticas, dando respiro ao QR na borda direita. */
+@media (max-width: 1023.98px) and (orientation: landscape),
+       (max-width: 1023.98px) and (max-height: 540px) {
     .app-main {
-        padding-top: 0.72rem !important;
+        min-height: auto !important;
+        padding: 0.36rem 0.5rem 0.68rem !important;
+    }
+
+    .app-content,
+    .page-shell,
+    .app-content > div,
+    .page-shell > div {
+        min-height: 0 !important;
     }
 
     .app-mobile-header {
-        display: block !important;
-        gap: 0 !important;
-        margin-bottom: 0.85rem !important;
-        border-radius: 1.45rem !important;
-        padding: 0.9rem !important;
+        margin-bottom: 0.34rem !important;
+        padding: 0.44rem 0.52rem !important;
     }
 
     .app-mobile-header__topo {
-        display: flex !important;
-        min-width: 0 !important;
+        min-height: 2.18rem !important;
+    }
+
+    .app-mobile-header__select {
+        min-height: 2.18rem !important;
+    }
+
+    .page-header {
+        min-height: 0 !important;
+        height: auto !important;
+        margin: 0 0 0.28rem !important;
+        padding: 0 !important;
+        gap: 0.18rem !important;
+        justify-content: flex-start !important;
+    }
+
+    .page-header-text {
+        flex: 0 1 auto !important;
+        margin: 0 !important;
+    }
+
+    .page-header-text h1 {
+        margin: 0 !important;
+        font-size: 1rem !important;
+        line-height: 1.04 !important;
+    }
+
+    .page-header-text p {
+        margin-top: 0.08rem !important;
+        font-size: 0.64rem !important;
+        line-height: 0.86rem !important;
+    }
+
+    .page-actions,
+    .page-actions > *,
+    .page-actions > .flex,
+    .page-actions > .top-actions-nowrap,
+    .top-actions-nowrap,
+    .toolbar-responsive {
+        width: min(100%, 28rem) !important;
+        max-width: 28rem !important;
+        margin-top: 0.18rem !important;
+        margin-bottom: 0 !important;
+        gap: 0.26rem !important;
+    }
+
+    .page-actions button,
+    .top-actions-nowrap button,
+    .toolbar-responsive button {
+        min-height: 2rem !important;
+        padding: 0.4rem 0.7rem !important;
+        border-radius: 0.78rem !important;
+        font-size: 0.68rem !important;
+        line-height: 0.86rem !important;
+    }
+
+    .app-main .space-y-3 > :not([hidden]) ~ :not([hidden]),
+    .app-main .space-y-4 > :not([hidden]) ~ :not([hidden]),
+    .app-main .space-y-5 > :not([hidden]) ~ :not([hidden]),
+    .app-main .space-y-6 > :not([hidden]) ~ :not([hidden]),
+    .app-main .space-y-8 > :not([hidden]) ~ :not([hidden]),
+    .app-main .space-y-10 > :not([hidden]) ~ :not([hidden]) {
+        margin-top: 0.46rem !important;
+    }
+
+    .app-main :where(.mt-3, .mt-4, .mt-5, .mt-6, .mt-8, .mt-10),
+    .app-main :where(.my-4, .my-5, .my-6, .my-8, .my-10) {
+        margin-top: 0.46rem !important;
+    }
+
+    .app-main :where(.mb-4, .mb-5, .mb-6, .mb-8, .mb-10) {
+        margin-bottom: 0.46rem !important;
+    }
+
+    .page-header + *,
+    .page-actions + *,
+    .dashboard-summary-grid,
+    .dashboard-blocos-grid,
+    .treinamentos-layout-grid {
+        margin-top: 0.4rem !important;
+    }
+
+    .dashboard-summary-grid {
+        gap: 0.42rem !important;
+    }
+
+    .dashboard-summary-grid > .dashboard-summary-card,
+    .dashboard-summary-card,
+    .summary-card-fixed {
+        min-height: 5.25rem !important;
+        padding: 0.52rem !important;
+    }
+
+    .dashboard-blocos-grid,
+    .treinamentos-layout-grid {
+        gap: 0.5rem !important;
+        align-items: start !important;
+    }
+
+    .treinamentos-layout-card,
+    .treinamentos-layout-card > *,
+    .dashboard-blocos-grid > * {
+        min-height: 0 !important;
+        align-self: start !important;
+    }
+
+    .treinamentos-layout-card :where(.rounded-3xl, .rounded-2xl),
+    .dashboard-blocos-grid :where(.rounded-3xl, .rounded-2xl) {
+        border-radius: 0.96rem !important;
+    }
+
+    .treinamentos-layout-card :where(.p-6, .p-5, .p-4),
+    .dashboard-blocos-grid :where(.p-6, .p-5, .p-4) {
+        padding: 0.72rem !important;
+    }
+
+    .treinamentos-layout-card :where(h2, h3),
+    .dashboard-blocos-grid :where(h2, h3) {
+        font-size: 0.96rem !important;
+        line-height: 1.08 !important;
+    }
+
+    .treinamentos-layout-card :where(p),
+    .dashboard-blocos-grid :where(p) {
+        font-size: 0.68rem !important;
+        line-height: 0.92rem !important;
+    }
+
+    .dashboard-blocos-grid .responsive-table,
+    .dashboard-blocos-grid :where(.overflow-x-auto) {
+        padding-right: 0.72rem !important;
+        overflow-x: auto !important;
+        overflow-y: hidden !important;
+        scroll-padding-right: 0.9rem !important;
+    }
+
+    .dashboard-blocos-grid .responsive-table table,
+    .dashboard-blocos-grid :where(.overflow-x-auto table) {
+        min-width: 58rem !important;
+        width: 100% !important;
+        table-layout: fixed !important;
+    }
+
+    .dashboard-blocos-grid :where(th:nth-child(1), td:nth-child(1)) {
+        width: 30% !important;
+    }
+
+    .dashboard-blocos-grid :where(th:nth-child(2), td:nth-child(2)) {
+        width: 28% !important;
+    }
+
+    .dashboard-blocos-grid :where(th:nth-child(3), td:nth-child(3)) {
+        width: 12% !important;
+    }
+
+    .dashboard-blocos-grid :where(th:nth-child(4), td:nth-child(4)) {
+        width: 12% !important;
+    }
+
+    .dashboard-blocos-grid :where(th:nth-child(5), td:nth-child(5)) {
+        width: 10% !important;
+    }
+
+    .dashboard-blocos-grid :where(th:nth-child(6), td:nth-child(6)) {
+        width: 8% !important;
+        padding-right: 0.85rem !important;
+    }
+
+    .dashboard-blocos-grid :where(td:last-child, th:last-child) {
+        padding-right: 0.95rem !important;
+    }
+
+    .dashboard-blocos-grid :where(td button, td a) {
+        min-width: 3.25rem !important;
+        min-height: 1.8rem !important;
+        padding: 0.34rem 0.52rem !important;
+        border-radius: 999px !important;
+        font-size: 0.62rem !important;
+        line-height: 0.78rem !important;
+    }
+
+    .dashboard-blocos-grid :where(td:last-child button, td:last-child a) {
+        min-width: 3.55rem !important;
+        margin-right: 0.22rem !important;
+    }
+}
+
+@media (max-width: 760px) and (orientation: landscape) {
+    .dashboard-blocos-grid .responsive-table table,
+    .dashboard-blocos-grid :where(.overflow-x-auto table) {
+        min-width: 60rem !important;
+    }
+}
+
+/* ROTEIRO 7 — ETAPA 5.8
+   Correção sobre a base 5.6: mantém o espaçamento compacto já aprovado
+   e corrige somente a quebra do bloco logo + Controle SST QR no mobile horizontal. */
+@media (max-width: 1023.98px) and (orientation: landscape),
+       (max-width: 1023.98px) and (max-height: 540px) {
+    .app-mobile-header {
+        display: grid !important;
+        grid-template-rows: auto auto !important;
+        row-gap: 0.36rem !important;
+        min-height: 0 !important;
+        height: auto !important;
+        margin: 0 0 0.34rem 0 !important;
+        padding: 0.48rem 0.56rem !important;
+        border: 1px solid #dbe7f2 !important;
+        border-radius: 1.18rem !important;
+        background: rgba(255, 255, 255, 0.96) !important;
+        box-shadow: 0 10px 24px rgba(15, 23, 42, 0.075) !important;
+        backdrop-filter: none !important;
+    }
+
+    .app-mobile-header__topo {
+        display: grid !important;
+        grid-template-columns: minmax(0, 1fr) auto !important;
         align-items: center !important;
-        justify-content: space-between !important;
-        gap: 0.85rem !important;
+        justify-content: normal !important;
+        gap: 0.62rem !important;
+        min-width: 0 !important;
+        min-height: 2.28rem !important;
+        height: auto !important;
     }
 
     .app-mobile-header__marca {
         display: flex !important;
-        min-width: 0 !important;
-        flex: 1 1 auto !important;
+        flex-direction: row !important;
         align-items: center !important;
-        gap: 0.8rem !important;
+        justify-content: flex-start !important;
+        gap: 0.56rem !important;
+        min-width: 0 !important;
+        max-width: 100% !important;
+        height: auto !important;
+    }
+
+    .app-mobile-header__marca > :not(.app-mobile-header__logo):not(.app-mobile-header__tela-icone) {
+        min-width: 0 !important;
+        max-width: 100% !important;
     }
 
     .app-mobile-header__logo,
     .app-mobile-header__tela-icone {
-        width: 3rem !important;
-        height: 3rem !important;
-        min-width: 3rem !important;
-        min-height: 3rem !important;
-        border-radius: 1rem !important;
-        flex: 0 0 auto !important;
+        width: 2.28rem !important;
+        height: 2.28rem !important;
+        min-width: 2.28rem !important;
+        min-height: 2.28rem !important;
+        flex: 0 0 2.28rem !important;
+        border-radius: 0.9rem !important;
     }
 
     .app-mobile-header__nome {
-        font-size: 1rem !important;
-        line-height: 1.1 !important;
+        display: block !important;
+        font-size: 0.9rem !important;
+        line-height: 1.05rem !important;
+        font-weight: 900 !important;
+        white-space: nowrap !important;
+        overflow: hidden !important;
+        text-overflow: ellipsis !important;
     }
 
     .app-mobile-header__usuario {
         display: block !important;
-        max-width: 100% !important;
-        font-size: 0.74rem !important;
-        line-height: 1rem !important;
+        max-width: min(46vw, 18rem) !important;
+        font-size: 0.66rem !important;
+        line-height: 0.86rem !important;
         white-space: nowrap !important;
         overflow: hidden !important;
         text-overflow: ellipsis !important;
@@ -5026,10 +5264,13 @@
         flex: 0 0 auto !important;
         align-items: center !important;
         justify-content: center !important;
-        min-height: 2.8rem !important;
-        padding: 0.62rem 0.9rem !important;
-        border-radius: 1rem !important;
+        min-height: 2.24rem !important;
+        height: 2.24rem !important;
+        padding: 0.42rem 0.72rem !important;
+        border-radius: 0.92rem !important;
         white-space: nowrap !important;
+        font-size: 0.72rem !important;
+        line-height: 0.9rem !important;
     }
 
     .app-mobile-header__sair span {
@@ -5044,12 +5285,13 @@
     .app-mobile-header__select {
         display: block !important;
         width: 100% !important;
-        min-height: 3rem !important;
-        margin-top: 0.75rem !important;
-        border-radius: 1.1rem !important;
-        padding: 0.72rem 0.95rem !important;
-        font-size: 0.98rem !important;
+        min-height: 2.22rem !important;
+        height: 2.22rem !important;
+        margin: 0 !important;
+        border-radius: 0.88rem !important;
+        padding: 0.42rem 0.66rem !important;
+        font-size: 0.84rem !important;
         font-weight: 900 !important;
-        line-height: 1.15rem !important;
+        line-height: 0.98rem !important;
     }
 }
