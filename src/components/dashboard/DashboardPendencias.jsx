@@ -1,35 +1,159 @@
-import React from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { ChevronUp, Mail, QrCode } from "lucide-react";
+import { supabase } from "../../lib/supabaseClient";
 import { formatDate } from "../../utils/sstUtils";
+
+const FOTO_BUCKET_COLABORADORES = "fotos-colaboradores";
+const CACHE_FOTOS_ASSINADAS = new Map();
 
 function textoSeguro(valor, fallback = "-") {
     if (valor === null || valor === undefined || valor === "") return fallback;
     return String(valor);
 }
 
-function obterFotoColaborador(colaborador = {}) {
-    return (
-        colaborador.fotoUrl ||
-        colaborador.foto_url ||
-        colaborador.fotoPublicaUrl ||
-        colaborador.foto_publica_url ||
-        colaborador.avatarUrl ||
-        colaborador.avatar_url ||
-        colaborador.foto ||
-        ""
+function primeiroValorValido(...valores) {
+    return valores.find((valor) => valor !== null && valor !== undefined && String(valor).trim() !== "") || "";
+}
+
+function normalizarTexto(valor = "") {
+    return String(valor || "").trim();
+}
+
+function ehUrlPronta(valor = "") {
+    const texto = normalizarTexto(valor);
+    return /^(https?:|blob:|data:)/i.test(texto) || texto.startsWith("/");
+}
+
+function extrairCaminhoFotoStorage(valor = "") {
+    const texto = normalizarTexto(valor);
+    if (!texto) return "";
+
+    if (texto.includes("/storage/v1/object/")) {
+        const marcadorPublico = `/object/public/${FOTO_BUCKET_COLABORADORES}/`;
+        const marcadorAutenticado = `/object/authenticated/${FOTO_BUCKET_COLABORADORES}/`;
+        const marcadorAssinado = `/object/sign/${FOTO_BUCKET_COLABORADORES}/`;
+
+        const indicePublico = texto.indexOf(marcadorPublico);
+        if (indicePublico >= 0) {
+            return decodeURIComponent(texto.slice(indicePublico + marcadorPublico.length).split("?")[0]);
+        }
+
+        const indiceAutenticado = texto.indexOf(marcadorAutenticado);
+        if (indiceAutenticado >= 0) {
+            return decodeURIComponent(texto.slice(indiceAutenticado + marcadorAutenticado.length).split("?")[0]);
+        }
+
+        const indiceAssinado = texto.indexOf(marcadorAssinado);
+        if (indiceAssinado >= 0) {
+            return decodeURIComponent(texto.slice(indiceAssinado + marcadorAssinado.length).split("?")[0]);
+        }
+    }
+
+    const marcadorBucket = `${FOTO_BUCKET_COLABORADORES}/`;
+    const indiceBucket = texto.indexOf(marcadorBucket);
+    if (indiceBucket >= 0) {
+        return texto.slice(indiceBucket + marcadorBucket.length).replace(/^\/+/, "");
+    }
+
+    if (!ehUrlPronta(texto)) {
+        return texto.replace(/^\/+/, "");
+    }
+
+    return "";
+}
+
+function obterCandidatosFoto(item = {}, colaborador = {}) {
+    const empresa = colaborador.empresa || item.empresa || {};
+
+    return [
+        item.fotoUrl,
+        item.foto_url,
+        item.fotoColaboradorUrl,
+        item.foto_colaborador_url,
+        item.colaboradorFotoUrl,
+        item.colaborador_foto_url,
+        item.avatarUrl,
+        item.avatar_url,
+        colaborador.fotoUrl,
+        colaborador.foto_url,
+        colaborador.fotoPublicaUrl,
+        colaborador.foto_publica_url,
+        colaborador.fotoAssinadaUrl,
+        colaborador.foto_assinada_url,
+        colaborador.fotoColaboradorUrl,
+        colaborador.foto_colaborador_url,
+        colaborador.avatarUrl,
+        colaborador.avatar_url,
+        colaborador.imagemUrl,
+        colaborador.imagem_url,
+        colaborador.urlFoto,
+        colaborador.url_foto,
+        colaborador.fotoPerfil,
+        colaborador.foto_perfil,
+        colaborador.foto_path,
+        colaborador.fotoPath,
+        colaborador.caminhoFoto,
+        colaborador.caminho_foto,
+        colaborador.foto,
+        empresa.logo_url,
+        empresa.logoUrl,
+        item.logoEmpresaUrl,
+        item.logo_empresa_url,
+    ].filter((valor) => valor !== null && valor !== undefined && String(valor).trim() !== "");
+}
+
+function obterNomeColaborador(colaborador = {}, item = {}) {
+    return textoSeguro(
+        primeiroValorValido(
+            colaborador.nome,
+            colaborador.nomeCompleto,
+            colaborador.nome_completo,
+            item.colaboradorNome,
+            item.colaborador_nome,
+            item.nomeColaborador,
+            item.nome_colaborador
+        ),
+        "Colaborador"
     );
 }
 
-function obterNomeColaborador(colaborador = {}) {
-    return textoSeguro(colaborador.nome || colaborador.nomeCompleto || colaborador.nome_completo, "Colaborador");
+function obterEmpresaColaborador(colaborador = {}, item = {}) {
+    const empresa = colaborador.empresa || item.empresa || {};
+
+    return textoSeguro(
+        primeiroValorValido(
+            colaborador.empresaExibicao,
+            colaborador.empresa,
+            colaborador.empresaNome,
+            colaborador.empresa_nome,
+            colaborador.nomeEmpresa,
+            colaborador.nome_empresa,
+            empresa.nome,
+            empresa.razao_social,
+            item.empresaNome,
+            item.empresa_nome,
+            item.nomeEmpresa,
+            item.nome_empresa
+        ),
+        "Empresa não informada"
+    );
 }
 
-function obterEmpresaColaborador(colaborador = {}) {
-    return textoSeguro(colaborador.empresaExibicao || colaborador.empresa || colaborador.empresaNome || colaborador.empresa_nome, "Empresa não informada");
-}
-
-function obterSituacaoColaborador(colaborador = {}) {
-    return textoSeguro(colaborador.statusMobilizacao || colaborador.situacaoObra || colaborador.situacao_obra || colaborador.status || "", "");
+function obterSituacaoColaborador(colaborador = {}, item = {}) {
+    return textoSeguro(
+        primeiroValorValido(
+            colaborador.statusMobilizacao,
+            colaborador.status_mobilizacao,
+            colaborador.situacaoObra,
+            colaborador.situacao_obra,
+            colaborador.situacao,
+            colaborador.status,
+            item.situacaoObra,
+            item.situacao_obra,
+            item.statusColaborador
+        ),
+        ""
+    );
 }
 
 function obterStatusClasse(item = {}) {
@@ -56,17 +180,70 @@ function obterStatusTexto(item = {}) {
 }
 
 function obterTreinamentoTexto(item = {}) {
-    return textoSeguro(item.treinamento?.nome || item.treinamentoNome || item.documento || item.nomeTreinamento, "Documento não informado");
+    return textoSeguro(
+        primeiroValorValido(
+            item.treinamento?.nome,
+            item.treinamentoNome,
+            item.treinamento_nome,
+            item.documento,
+            item.nomeTreinamento,
+            item.nome_treinamento,
+            item.tipoDocumento,
+            item.tipo_documento
+        ),
+        "Documento não informado"
+    );
 }
 
 function obterVencimentoTexto(item = {}) {
-    const vencimento = item.vencimento || item.realizado?.vencimento || item.dataVencimento || item.vencimentoDocumento;
+    const vencimento = primeiroValorValido(
+        item.vencimento,
+        item.realizado?.vencimento,
+        item.dataVencimento,
+        item.data_vencimento,
+        item.vencimentoDocumento,
+        item.vencimento_documento
+    );
+
     return vencimento ? formatDate(vencimento) : "Sem data";
 }
 
-function AvatarColaborador({ colaborador }) {
-    const foto = obterFotoColaborador(colaborador);
-    const nome = obterNomeColaborador(colaborador);
+async function resolverFotoColaborador(candidatos = []) {
+    for (const candidato of candidatos) {
+        const valor = normalizarTexto(candidato);
+        if (!valor) continue;
+
+        if (ehUrlPronta(valor)) {
+            return valor;
+        }
+
+        const caminhoStorage = extrairCaminhoFotoStorage(valor);
+        if (!caminhoStorage) continue;
+
+        const chaveCache = `${FOTO_BUCKET_COLABORADORES}/${caminhoStorage}`;
+        if (CACHE_FOTOS_ASSINADAS.has(chaveCache)) {
+            return CACHE_FOTOS_ASSINADAS.get(chaveCache);
+        }
+
+        const { data, error } = await supabase.storage
+            .from(FOTO_BUCKET_COLABORADORES)
+            .createSignedUrl(caminhoStorage, 60 * 60);
+
+        if (!error && data?.signedUrl) {
+            CACHE_FOTOS_ASSINADAS.set(chaveCache, data.signedUrl);
+            return data.signedUrl;
+        }
+    }
+
+    return "";
+}
+
+function AvatarColaborador({ item, colaborador }) {
+    const nome = obterNomeColaborador(colaborador, item);
+    const candidatosFoto = useMemo(() => obterCandidatosFoto(item, colaborador), [item, colaborador]);
+    const [fotoResolvida, setFotoResolvida] = useState("");
+    const [fotoComErro, setFotoComErro] = useState(false);
+
     const iniciais = nome
         .split(" ")
         .filter(Boolean)
@@ -75,8 +252,31 @@ function AvatarColaborador({ colaborador }) {
         .join("")
         .toUpperCase();
 
-    if (foto) {
-        return <img src={foto} alt={nome} className="dashboard-pendencias-final__foto" loading="lazy" />;
+    useEffect(() => {
+        let ativo = true;
+        setFotoComErro(false);
+        setFotoResolvida("");
+
+        resolverFotoColaborador(candidatosFoto).then((url) => {
+            if (ativo) setFotoResolvida(url || "");
+        });
+
+        return () => {
+            ativo = false;
+        };
+    }, [candidatosFoto]);
+
+    if (fotoResolvida && !fotoComErro) {
+        return (
+            <img
+                src={fotoResolvida}
+                alt={nome}
+                className="dashboard-pendencias-final__foto"
+                loading="lazy"
+                referrerPolicy="no-referrer"
+                onError={() => setFotoComErro(true)}
+            />
+        );
     }
 
     return <span className="dashboard-pendencias-final__foto dashboard-pendencias-final__foto--fallback">{iniciais || "ST"}</span>;
@@ -128,18 +328,18 @@ export function DashboardPendencias({
                     ) : (
                         <div className="dashboard-pendencias-final__lista">
                             {pendencias.map((item, indice) => {
-                                const colaborador = item.colaborador || {};
-                                const nome = obterNomeColaborador(colaborador);
-                                const empresa = obterEmpresaColaborador(colaborador);
-                                const situacao = obterSituacaoColaborador(colaborador);
+                                const colaborador = item.colaborador || item.colaboradorDados || item.colaborador_dados || {};
+                                const nome = obterNomeColaborador(colaborador, item);
+                                const empresa = obterEmpresaColaborador(colaborador, item);
+                                const situacao = obterSituacaoColaborador(colaborador, item);
                                 const treinamento = obterTreinamentoTexto(item);
                                 const vencimento = obterVencimentoTexto(item);
                                 const statusTexto = obterStatusTexto(item);
 
                                 return (
-                                    <div key={`${colaborador.id || colaborador.codigoFuncionario || nome}-${item.treinamento?.id || treinamento}-${indice}`} className="dashboard-pendencias-final__linha">
+                                    <div key={`${colaborador.id || colaborador.codigoFuncionario || colaborador.codigo_funcionario || nome}-${item.treinamento?.id || treinamento}-${indice}`} className="dashboard-pendencias-final__linha">
                                         <div className="dashboard-pendencias-final__colaborador">
-                                            <AvatarColaborador colaborador={colaborador} />
+                                            <AvatarColaborador item={item} colaborador={colaborador} />
                                             <div className="dashboard-pendencias-final__colaborador-texto">
                                                 <strong title={nome}>{nome}</strong>
                                                 <span title={`${empresa}${situacao ? ` · ${situacao}` : ""}`}>
