@@ -1,6 +1,5 @@
 /* eslint-disable no-unused-vars */
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { motion } from "framer-motion";
 import {
     AlertTriangle,
     BadgeCheck,
@@ -752,7 +751,7 @@ export function Dashboard({
 
 
     return (
-        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
+        <div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
             <Header
                 titulo="Dashboard SST"
                 subtitulo="Visão executiva dos colaboradores, empresas, documentos, treinamentos, auditoria e armazenamento."
@@ -827,6 +826,6 @@ export function Dashboard({
             />
 
 
-        </motion.div>
+        </div>
     );
 }

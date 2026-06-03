@@ -1,6 +1,5 @@
 /* eslint-disable no-unused-vars */
 import React, { useMemo, useState } from "react";
-import { motion } from "framer-motion";
 import {
     AlertTriangle,
     ChevronDown,
@@ -378,7 +377,7 @@ export function Colaboradores({
     };
 
     return (
-        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
+        <div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
             <Header
                 titulo="Colaboradores"
                 subtitulo="Cadastro com foto, código automático, matriz de treinamentos por função e alerta de vencimentos."
@@ -806,7 +805,7 @@ export function Colaboradores({
                 funcoesSugeridas={funcoesSugeridas}
                 onAtualizarColaborador={onAtualizarColaborador}
             />
-        </motion.div>
+        </div>
     );
 }
 
