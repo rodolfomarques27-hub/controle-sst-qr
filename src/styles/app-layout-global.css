@@ -7103,3 +7103,312 @@
         line-height: 0.54rem !important;
     }
 }
+
+
+/* ROTEIRO 7 — ETAPA 5.16
+   Correção final somente do bloco Pendências críticas no mobile horizontal.
+   Motivo: a tabela real usa 4 colunas visuais no Dashboard:
+   Colaborador | Treinamento | Vencimento | Status/Ações.
+   As regras anteriores tratavam como 6 colunas e espremiam status, e-mail e QR.
+   Esta regra sobrescreve apenas [data-dashboard-bloco="pendencias"]. */
+@media (max-width: 1023.98px) and (orientation: landscape),
+       (max-width: 1023.98px) and (max-height: 540px) {
+    [data-dashboard-bloco="pendencias"] {
+        width: 100% !important;
+        max-width: 100% !important;
+        min-width: 0 !important;
+    }
+
+    [data-dashboard-bloco="pendencias"] :where(.rounded-3xl, .rounded-2xl) {
+        width: 100% !important;
+        max-width: 100% !important;
+        min-width: 0 !important;
+        overflow: hidden !important;
+    }
+
+    [data-dashboard-bloco="pendencias"] :where(.responsive-table, .overflow-x-auto) {
+        width: 100% !important;
+        max-width: 100% !important;
+        min-width: 0 !important;
+        overflow-x: hidden !important;
+        overflow-y: hidden !important;
+        border-radius: 1rem !important;
+        padding-right: 0 !important;
+    }
+
+    [data-dashboard-bloco="pendencias"] table,
+    [data-dashboard-bloco="pendencias"] thead,
+    [data-dashboard-bloco="pendencias"] tbody {
+        display: block !important;
+        width: 100% !important;
+        max-width: 100% !important;
+        min-width: 0 !important;
+        border-collapse: separate !important;
+        table-layout: auto !important;
+    }
+
+    [data-dashboard-bloco="pendencias"] tr {
+        display: grid !important;
+        width: 100% !important;
+        max-width: 100% !important;
+        min-width: 0 !important;
+        grid-template-columns: minmax(0, 31fr) minmax(0, 30fr) minmax(3.9rem, 13fr) minmax(8.7rem, 26fr) !important;
+        align-items: center !important;
+        column-gap: 0 !important;
+    }
+
+    [data-dashboard-bloco="pendencias"] th,
+    [data-dashboard-bloco="pendencias"] td {
+        display: flex !important;
+        min-width: 0 !important;
+        max-width: 100% !important;
+        height: 100% !important;
+        align-items: center !important;
+        box-sizing: border-box !important;
+        overflow: hidden !important;
+        padding: 0.44rem 0.46rem !important;
+        color: #334155 !important;
+        font-size: 0.62rem !important;
+        line-height: 0.82rem !important;
+        text-align: left !important;
+        vertical-align: middle !important;
+        white-space: normal !important;
+    }
+
+    [data-dashboard-bloco="pendencias"] th {
+        min-height: 1.72rem !important;
+        color: #64748b !important;
+        font-size: 0.56rem !important;
+        line-height: 0.68rem !important;
+        font-weight: 950 !important;
+        letter-spacing: 0.025em !important;
+        text-transform: uppercase !important;
+        white-space: nowrap !important;
+        text-overflow: clip !important;
+    }
+
+    [data-dashboard-bloco="pendencias"] td {
+        min-height: 3.45rem !important;
+    }
+
+    [data-dashboard-bloco="pendencias"] th:nth-child(1),
+    [data-dashboard-bloco="pendencias"] td:nth-child(1) {
+        justify-content: flex-start !important;
+        padding-left: 0.58rem !important;
+    }
+
+    [data-dashboard-bloco="pendencias"] th:nth-child(2),
+    [data-dashboard-bloco="pendencias"] td:nth-child(2) {
+        justify-content: flex-start !important;
+    }
+
+    [data-dashboard-bloco="pendencias"] th:nth-child(3),
+    [data-dashboard-bloco="pendencias"] td:nth-child(3) {
+        justify-content: center !important;
+        text-align: center !important;
+        white-space: nowrap !important;
+    }
+
+    [data-dashboard-bloco="pendencias"] th:nth-child(4),
+    [data-dashboard-bloco="pendencias"] td:nth-child(4) {
+        justify-content: flex-end !important;
+        text-align: right !important;
+        padding-right: 0.72rem !important;
+        white-space: nowrap !important;
+    }
+
+    [data-dashboard-bloco="pendencias"] td:nth-child(1) > div,
+    [data-dashboard-bloco="pendencias"] td:nth-child(1) .flex {
+        display: flex !important;
+        width: 100% !important;
+        max-width: 100% !important;
+        min-width: 0 !important;
+        align-items: center !important;
+        gap: 0.42rem !important;
+        overflow: hidden !important;
+    }
+
+    [data-dashboard-bloco="pendencias"] td:nth-child(1) :where(img, .h-10, .h-11, .h-12, .w-10, .w-11, .w-12) {
+        width: 1.78rem !important;
+        height: 1.78rem !important;
+        min-width: 1.78rem !important;
+        min-height: 1.78rem !important;
+        max-width: 1.78rem !important;
+        max-height: 1.78rem !important;
+        border-radius: 999px !important;
+        object-fit: cover !important;
+    }
+
+    [data-dashboard-bloco="pendencias"] td:nth-child(1) :where(strong, .font-semibold, .font-bold, .font-extrabold, .font-black),
+    [data-dashboard-bloco="pendencias"] td:nth-child(1) :where(p, span):not(.inline-flex):not(.rounded-full),
+    [data-dashboard-bloco="pendencias"] td:nth-child(2) :where(p, span, strong, div),
+    [data-dashboard-bloco="pendencias"] td:nth-child(3) :where(p, span, strong, div) {
+        min-width: 0 !important;
+        max-width: 100% !important;
+        overflow: hidden !important;
+        text-overflow: ellipsis !important;
+        word-break: normal !important;
+        overflow-wrap: normal !important;
+    }
+
+    [data-dashboard-bloco="pendencias"] td:nth-child(1) :where(strong, .font-semibold, .font-bold, .font-extrabold, .font-black) {
+        display: block !important;
+        font-size: 0.62rem !important;
+        line-height: 0.76rem !important;
+        white-space: nowrap !important;
+    }
+
+    [data-dashboard-bloco="pendencias"] td:nth-child(1) :where(p, span):not(.inline-flex):not(.rounded-full) {
+        display: block !important;
+        font-size: 0.58rem !important;
+        line-height: 0.72rem !important;
+        white-space: nowrap !important;
+    }
+
+    [data-dashboard-bloco="pendencias"] td:nth-child(2) :where(p, span, strong, div) {
+        display: -webkit-box !important;
+        max-height: 1.52rem !important;
+        white-space: normal !important;
+        -webkit-line-clamp: 2 !important;
+        -webkit-box-orient: vertical !important;
+    }
+
+    [data-dashboard-bloco="pendencias"] td:nth-child(3) {
+        color: #475569 !important;
+        font-size: 0.58rem !important;
+        font-weight: 750 !important;
+        line-height: 0.72rem !important;
+    }
+
+    [data-dashboard-bloco="pendencias"] td:nth-child(4) > div,
+    [data-dashboard-bloco="pendencias"] td:nth-child(4) .flex {
+        display: flex !important;
+        width: 100% !important;
+        max-width: 100% !important;
+        min-width: 0 !important;
+        align-items: center !important;
+        justify-content: flex-end !important;
+        gap: 0.28rem !important;
+        overflow: hidden !important;
+        white-space: nowrap !important;
+    }
+
+    [data-dashboard-bloco="pendencias"] td:nth-child(4) :where(.rounded-full, .inline-flex):not(button):not(a) {
+        display: inline-flex !important;
+        width: auto !important;
+        max-width: 3.9rem !important;
+        min-width: 0 !important;
+        min-height: 1.52rem !important;
+        height: 1.52rem !important;
+        flex: 0 1 auto !important;
+        align-items: center !important;
+        justify-content: center !important;
+        border-radius: 999px !important;
+        padding: 0.18rem 0.42rem !important;
+        font-size: 0.54rem !important;
+        line-height: 0.64rem !important;
+        font-weight: 900 !important;
+        white-space: nowrap !important;
+        overflow: hidden !important;
+        text-overflow: ellipsis !important;
+    }
+
+    [data-dashboard-bloco="pendencias"] td:nth-child(4) :where(button, a) {
+        display: inline-flex !important;
+        width: auto !important;
+        min-width: 2.15rem !important;
+        max-width: 2.95rem !important;
+        min-height: 1.52rem !important;
+        height: 1.52rem !important;
+        flex: 0 0 auto !important;
+        align-items: center !important;
+        justify-content: center !important;
+        border-radius: 999px !important;
+        padding: 0.18rem 0.32rem !important;
+        font-size: 0.5rem !important;
+        line-height: 0.6rem !important;
+        font-weight: 900 !important;
+        white-space: nowrap !important;
+        overflow: hidden !important;
+        text-overflow: ellipsis !important;
+    }
+
+    [data-dashboard-bloco="pendencias"] td:nth-child(4) :where(button, a):last-child {
+        min-width: 2.05rem !important;
+        max-width: 2.35rem !important;
+        margin-right: 0.08rem !important;
+    }
+}
+
+@media (max-width: 740px) and (orientation: landscape),
+       (max-height: 410px) and (max-width: 860px) {
+    [data-dashboard-bloco="pendencias"] tr {
+        grid-template-columns: minmax(0, 30fr) minmax(0, 29fr) minmax(3.5rem, 12fr) minmax(7.8rem, 29fr) !important;
+    }
+
+    [data-dashboard-bloco="pendencias"] th,
+    [data-dashboard-bloco="pendencias"] td {
+        padding-left: 0.28rem !important;
+        padding-right: 0.28rem !important;
+        font-size: 0.52rem !important;
+        line-height: 0.66rem !important;
+    }
+
+    [data-dashboard-bloco="pendencias"] th:nth-child(1),
+    [data-dashboard-bloco="pendencias"] td:nth-child(1) {
+        padding-left: 0.44rem !important;
+    }
+
+    [data-dashboard-bloco="pendencias"] th:nth-child(4),
+    [data-dashboard-bloco="pendencias"] td:nth-child(4) {
+        padding-right: 0.48rem !important;
+    }
+
+    [data-dashboard-bloco="pendencias"] td:nth-child(1) > div,
+    [data-dashboard-bloco="pendencias"] td:nth-child(1) .flex {
+        gap: 0.3rem !important;
+    }
+
+    [data-dashboard-bloco="pendencias"] td:nth-child(1) :where(img, .h-10, .h-11, .h-12, .w-10, .w-11, .w-12) {
+        width: 1.55rem !important;
+        height: 1.55rem !important;
+        min-width: 1.55rem !important;
+        min-height: 1.55rem !important;
+        max-width: 1.55rem !important;
+        max-height: 1.55rem !important;
+    }
+
+    [data-dashboard-bloco="pendencias"] td:nth-child(1) :where(strong, .font-semibold, .font-bold, .font-extrabold, .font-black) {
+        font-size: 0.52rem !important;
+        line-height: 0.64rem !important;
+    }
+
+    [data-dashboard-bloco="pendencias"] td:nth-child(1) :where(p, span):not(.inline-flex):not(.rounded-full) {
+        font-size: 0.48rem !important;
+        line-height: 0.58rem !important;
+    }
+
+    [data-dashboard-bloco="pendencias"] td:nth-child(4) > div,
+    [data-dashboard-bloco="pendencias"] td:nth-child(4) .flex {
+        gap: 0.2rem !important;
+    }
+
+    [data-dashboard-bloco="pendencias"] td:nth-child(4) :where(.rounded-full, .inline-flex):not(button):not(a),
+    [data-dashboard-bloco="pendencias"] td:nth-child(4) :where(button, a) {
+        min-height: 1.32rem !important;
+        height: 1.32rem !important;
+        padding: 0.12rem 0.22rem !important;
+        font-size: 0.43rem !important;
+        line-height: 0.52rem !important;
+    }
+
+    [data-dashboard-bloco="pendencias"] td:nth-child(4) :where(button, a) {
+        min-width: 1.88rem !important;
+        max-width: 2.55rem !important;
+    }
+
+    [data-dashboard-bloco="pendencias"] td:nth-child(4) :where(button, a):last-child {
+        min-width: 1.8rem !important;
+        max-width: 2rem !important;
+    }
+}
