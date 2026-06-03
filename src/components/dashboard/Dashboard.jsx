@@ -1,5 +1,5 @@
 /* eslint-disable no-unused-vars */
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { motion } from "framer-motion";
 import {
     AlertTriangle,
@@ -119,6 +119,7 @@ export function Dashboard({
         return { totalBytes: 0, arquivos: 0, buckets: [], atualizadoEm: "" };
     });
     const [carregandoStorageDashboard, setCarregandoStorageDashboard] = useState(false);
+    const storageAutoCarregadoDashboardRef = useRef(false);
     const [mostrarFiltroPainel, setMostrarFiltroPainel] = useState(false);
     const [abaPersonalizacaoPainel, setAbaPersonalizacaoPainel] = useState("cartas");
     const [cartaArrastandoDashboard, setCartaArrastandoDashboard] = useState(null);
@@ -318,24 +319,22 @@ export function Dashboard({
     }, []);
 
     useEffect(() => {
-        const origemConfiavel = ["storage.objects", "storage-api"].includes(String(usoStorageDashboard?.origem || ""));
-        const semResumoValido = !usoStorageDashboard?.totalBytes || !usoStorageDashboard?.arquivos;
-        const precisaAtualizarResumo = semResumoValido || !origemConfiavel;
+        if (storageAutoCarregadoDashboardRef.current) return;
 
-        if (!precisaAtualizarResumo || carregandoStorageDashboard) return;
+        const origemAtual = String(usoStorageDashboard?.origem || "");
+        const origemConfiavel = ["storage.objects", "storage-api", "rpc", "rpc-resumo_storage_sst", "resumo_storage_sst"].includes(origemAtual);
+        const temResumoValido = Number(usoStorageDashboard?.totalBytes || 0) > 0 && Number(usoStorageDashboard?.arquivos || 0) > 0;
+
+        if (temResumoValido && origemConfiavel) return;
+
+        storageAutoCarregadoDashboardRef.current = true;
 
         const timer = window.setTimeout(() => {
             carregarUsoStorageDashboard();
-        }, 250);
+        }, 350);
 
         return () => window.clearTimeout(timer);
-    }, [
-        carregarUsoStorageDashboard,
-        carregandoStorageDashboard,
-        usoStorageDashboard?.arquivos,
-        usoStorageDashboard?.origem,
-        usoStorageDashboard?.totalBytes,
-    ]);
+    }, [carregarUsoStorageDashboard]);
 
     const atualizandoDashboardSstCompleto = Boolean(
         atualizandoInformacoes || atualizandoInformacoesLocais || carregandoStorageDashboard
