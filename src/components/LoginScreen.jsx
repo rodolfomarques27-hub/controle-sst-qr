@@ -1,5 +1,4 @@
 import React, { useState } from "react";
-import { motion } from "framer-motion";
 import { LogIn, ShieldCheck } from "lucide-react";
 import { supabase } from "../lib/supabaseClient";
 import { PasswordInput } from "./commonComponents";
@@ -42,11 +41,7 @@ export function LoginScreen({ onLogin }) {
 
     return (
         <div className="flex min-h-screen items-center justify-center bg-slate-950 p-4">
-            <motion.div
-                initial={{ opacity: 0, y: 18 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="w-full max-w-md rounded-[2rem] bg-white p-8 shadow-2xl"
-            >
+            <div className="w-full max-w-md rounded-[2rem] bg-white p-8 shadow-2xl">
                 <div className="mb-6 flex items-center gap-3">
                     <div className="rounded-3xl bg-slate-950 p-4 text-white">
                         <ShieldCheck className="h-7 w-7" />
@@ -112,7 +107,7 @@ export function LoginScreen({ onLogin }) {
                 <p className="mt-4 rounded-2xl bg-slate-50 p-3 text-xs text-slate-500">
                     O acesso é validado pelo Supabase. Só entra quem tiver e-mail e senha cadastrados.
                 </p>
-            </motion.div>
+            </div>
         </div>
     );
 }
