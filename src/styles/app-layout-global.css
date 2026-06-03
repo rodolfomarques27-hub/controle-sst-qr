@@ -4657,7 +4657,7 @@
         width: 1.02rem !important;
         height: 1.02rem !important;
         margin: 0 !important;
-        stroke-width: 2.15 !important;
+        stroke-width: 2.15px !important;
     }
 
     .app-sidebar[data-sidebar-expanded="false"] .app-sidebar-user-compact {
@@ -4878,7 +4878,7 @@
         display: block !important;
         margin: 0 !important;
         overflow: visible !important;
-        stroke-width: 2.25 !important;
+        stroke-width: 2.25px !important;
     }
 
     .app-sidebar[data-sidebar-expanded="false"] .app-sidebar-toggle {
@@ -4941,7 +4941,7 @@
         min-height: 1.05rem !important;
         margin: 0 !important;
         overflow: visible !important;
-        stroke-width: 2.25 !important;
+        stroke-width: 2.25px !important;
         transform: none !important;
     }
 
