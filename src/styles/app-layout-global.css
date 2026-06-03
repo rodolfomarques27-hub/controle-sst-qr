@@ -5379,3 +5379,377 @@
         max-width: 48rem !important;
     }
 }
+
+/* ROTEIRO 7 — ETAPA 5.10
+   Arquivo completo consolidado.
+   Ajuste final mobile:
+   - botões de ação em uma única linha no modo horizontal;
+   - textos protegidos para não estourar fora do botão/card;
+   - ícone/logo do cabeçalho padronizado no vertical e horizontal;
+   - sobrescreve o comportamento anterior da Etapa 5.9 que dividia os botões em 2 linhas. */
+
+/* PADRÃO ÚNICO DO ÍCONE/LOGO NO MOBILE */
+@media (max-width: 1023.98px) {
+  .app-mobile-header__marca {
+    display: flex !important;
+    min-width: 0 !important;
+    align-items: center !important;
+    gap: 0.72rem !important;
+  }
+
+  .app-mobile-header__logo,
+  .app-mobile-header__tela-icone,
+  .app-mobile-header__marca > :first-child {
+    display: inline-flex !important;
+    width: 3rem !important;
+    height: 3rem !important;
+    min-width: 3rem !important;
+    min-height: 3rem !important;
+    max-width: 3rem !important;
+    max-height: 3rem !important;
+    flex: 0 0 3rem !important;
+    align-items: center !important;
+    justify-content: center !important;
+    border-radius: 1rem !important;
+    background: #020617 !important;
+    color: #ffffff !important;
+    box-shadow: 0 10px 24px rgba(15, 23, 42, 0.16) !important;
+    overflow: hidden !important;
+    box-sizing: border-box !important;
+  }
+
+  .app-mobile-header__logo svg,
+  .app-mobile-header__tela-icone svg,
+  .app-mobile-header__marca > :first-child svg {
+    width: 1.35rem !important;
+    height: 1.35rem !important;
+    min-width: 1.35rem !important;
+    min-height: 1.35rem !important;
+    color: #ffffff !important;
+    stroke: currentColor !important;
+    overflow: visible !important;
+  }
+
+  .app-mobile-header__nome,
+  .app-mobile-header__usuario {
+    min-width: 0 !important;
+    max-width: 100% !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    white-space: nowrap !important;
+  }
+
+  .app-mobile-header__nome {
+    font-size: 1rem !important;
+    line-height: 1.08 !important;
+    font-weight: 950 !important;
+  }
+
+  .app-mobile-header__usuario {
+    font-size: 0.74rem !important;
+    line-height: 1rem !important;
+    font-weight: 800 !important;
+  }
+}
+
+/* MOBILE HORIZONTAL — CABEÇALHO COMPACTO E SEM QUEBRA */
+@media (max-width: 1023.98px) and (orientation: landscape),
+       (max-width: 1023.98px) and (max-height: 540px) {
+  .app-mobile-header {
+    display: grid !important;
+    grid-template-rows: auto auto !important;
+    row-gap: 0.44rem !important;
+    width: 100% !important;
+    min-height: 0 !important;
+    height: auto !important;
+    margin: 0 0 0.46rem 0 !important;
+    padding: 0.58rem 0.64rem !important;
+    border: 1px solid #dbe7f2 !important;
+    border-radius: 1.18rem !important;
+    background: rgba(255, 255, 255, 0.96) !important;
+    box-shadow: 0 10px 24px rgba(15, 23, 42, 0.075) !important;
+    backdrop-filter: none !important;
+  }
+
+  .app-mobile-header__topo {
+    display: grid !important;
+    grid-template-columns: minmax(0, 1fr) auto !important;
+    min-width: 0 !important;
+    align-items: center !important;
+    justify-content: normal !important;
+    gap: 0.72rem !important;
+  }
+
+  .app-mobile-header__marca {
+    display: flex !important;
+    flex-direction: row !important;
+    flex: 1 1 auto !important;
+    min-width: 0 !important;
+    align-items: center !important;
+    justify-content: flex-start !important;
+  }
+
+  .app-mobile-header__sair {
+    display: inline-flex !important;
+    flex: 0 0 auto !important;
+    align-items: center !important;
+    justify-content: center !important;
+    width: auto !important;
+    min-width: max-content !important;
+    max-width: max-content !important;
+    min-height: 2.48rem !important;
+    height: 2.48rem !important;
+    padding: 0.5rem 0.82rem !important;
+    border-radius: 0.95rem !important;
+    white-space: nowrap !important;
+    font-size: 0.78rem !important;
+    line-height: 0.95rem !important;
+  }
+
+  .app-mobile-header__sair span {
+    display: inline !important;
+  }
+
+  .app-mobile-header__navegacao,
+  .app-mobile-header__tela-atual {
+    display: none !important;
+  }
+
+  .app-mobile-header__select {
+    display: block !important;
+    width: 100% !important;
+    min-height: 2.52rem !important;
+    height: 2.52rem !important;
+    margin: 0 !important;
+    border-radius: 0.95rem !important;
+    padding: 0.52rem 0.72rem !important;
+    font-size: 0.88rem !important;
+    font-weight: 900 !important;
+    line-height: 1.02rem !important;
+  }
+}
+
+/* MOBILE HORIZONTAL — BOTÕES DO DASHBOARD EM UMA ÚNICA LINHA */
+@media (max-width: 1023.98px) and (orientation: landscape),
+       (max-width: 1023.98px) and (max-height: 540px) {
+  .page-actions,
+  .page-actions > *,
+  .page-actions > .flex,
+  .page-actions > .top-actions-nowrap,
+  .top-actions-nowrap,
+  .toolbar-responsive {
+    display: grid !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+    grid-auto-flow: column !important;
+    align-items: stretch !important;
+    justify-content: stretch !important;
+    justify-items: stretch !important;
+    gap: 0.45rem !important;
+    margin-top: 0.62rem !important;
+    overflow: hidden !important;
+  }
+
+  .page-actions > *,
+  .page-actions > .flex > *,
+  .page-actions > .top-actions-nowrap > *,
+  .top-actions-nowrap > *,
+  .toolbar-responsive > * {
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
+    justify-self: stretch !important;
+  }
+
+  .page-actions button,
+  .page-actions a,
+  .page-actions > * button,
+  .page-actions > * a,
+  .page-actions > .flex button,
+  .page-actions > .flex a,
+  .page-actions > .top-actions-nowrap button,
+  .page-actions > .top-actions-nowrap a,
+  .top-actions-nowrap button,
+  .top-actions-nowrap a,
+  .toolbar-responsive button,
+  .toolbar-responsive a {
+    display: inline-flex !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
+    min-height: 2.44rem !important;
+    height: 2.44rem !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 0.34rem !important;
+    border-radius: 0.92rem !important;
+    padding: 0.46rem 0.48rem !important;
+    font-size: clamp(0.55rem, 1.45vw, 0.76rem) !important;
+    line-height: 0.92rem !important;
+    font-weight: 900 !important;
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+  }
+
+  .page-actions button svg,
+  .page-actions a svg,
+  .page-actions > * button svg,
+  .page-actions > * a svg,
+  .page-actions > .flex button svg,
+  .page-actions > .flex a svg,
+  .page-actions > .top-actions-nowrap button svg,
+  .page-actions > .top-actions-nowrap a svg,
+  .top-actions-nowrap button svg,
+  .top-actions-nowrap a svg,
+  .toolbar-responsive button svg,
+  .toolbar-responsive a svg {
+    width: 0.9rem !important;
+    height: 0.9rem !important;
+    min-width: 0.9rem !important;
+    flex: 0 0 0.9rem !important;
+  }
+
+  .page-actions button span,
+  .page-actions a span,
+  .page-actions > * button span,
+  .page-actions > * a span,
+  .page-actions > .flex button span,
+  .page-actions > .flex a span,
+  .page-actions > .top-actions-nowrap button span,
+  .page-actions > .top-actions-nowrap a span,
+  .top-actions-nowrap button span,
+  .top-actions-nowrap a span,
+  .toolbar-responsive button span,
+  .toolbar-responsive a span {
+    display: inline-block !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    white-space: nowrap !important;
+  }
+}
+
+/* MOBILE HORIZONTAL MUITO ESTREITO — mantém uma linha, mas reduz texto para não explodir. */
+@media (max-width: 760px) and (orientation: landscape),
+       (max-height: 430px) and (max-width: 900px) {
+  .page-actions,
+  .page-actions > *,
+  .page-actions > .flex,
+  .page-actions > .top-actions-nowrap,
+  .top-actions-nowrap,
+  .toolbar-responsive {
+    grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+    gap: 0.32rem !important;
+  }
+
+  .page-actions button,
+  .page-actions a,
+  .top-actions-nowrap button,
+  .top-actions-nowrap a,
+  .toolbar-responsive button,
+  .toolbar-responsive a {
+    min-height: 2.26rem !important;
+    height: 2.26rem !important;
+    padding: 0.42rem 0.38rem !important;
+    font-size: clamp(0.5rem, 1.35vw, 0.64rem) !important;
+    gap: 0.26rem !important;
+  }
+
+  .page-actions button svg,
+  .page-actions a svg,
+  .top-actions-nowrap button svg,
+  .top-actions-nowrap a svg,
+  .toolbar-responsive button svg,
+  .toolbar-responsive a svg {
+    width: 0.82rem !important;
+    height: 0.82rem !important;
+    min-width: 0.82rem !important;
+    flex-basis: 0.82rem !important;
+  }
+}
+
+/* MOBILE HORIZONTAL — PROTEÇÃO PARA TEXTOS NÃO ESTOURAREM CARDS */
+@media (max-width: 1023.98px) and (orientation: landscape),
+       (max-width: 1023.98px) and (max-height: 540px) {
+  .dashboard-summary-card,
+  .summary-card-fixed,
+  .config-summary-card,
+  .auditoria-summary-card,
+  .dashboard-campo-summary-card,
+  .rounded-3xl,
+  .rounded-2xl {
+    min-width: 0 !important;
+    max-width: 100% !important;
+    overflow: hidden !important;
+  }
+
+  .dashboard-summary-card *,
+  .summary-card-fixed *,
+  .config-summary-card *,
+  .auditoria-summary-card *,
+  .dashboard-campo-summary-card *,
+  .rounded-3xl *,
+  .rounded-2xl * {
+    min-width: 0 !important;
+  }
+
+  .dashboard-summary-card :where(p, span, strong, h2, h3, div),
+  .summary-card-fixed :where(p, span, strong, h2, h3, div),
+  .config-summary-card :where(p, span, strong, h2, h3, div),
+  .auditoria-summary-card :where(p, span, strong, h2, h3, div),
+  .dashboard-campo-summary-card :where(p, span, strong, h2, h3, div) {
+    overflow-wrap: anywhere !important;
+    word-break: normal !important;
+  }
+
+  .dashboard-summary-card .summary-card-label,
+  .summary-card-fixed .summary-card-label,
+  .config-summary-card .summary-card-label,
+  .auditoria-summary-card .summary-card-label,
+  .dashboard-campo-summary-card .summary-card-label {
+    display: -webkit-box !important;
+    max-height: 2.3rem !important;
+    overflow: hidden !important;
+    -webkit-line-clamp: 2 !important;
+    -webkit-box-orient: vertical !important;
+  }
+
+  .dashboard-summary-card .summary-card-detail,
+  .summary-card-fixed .summary-card-detail,
+  .config-summary-card .summary-card-detail,
+  .auditoria-summary-card .summary-card-detail,
+  .dashboard-campo-summary-card .summary-card-detail {
+    display: -webkit-box !important;
+    max-height: 2.1rem !important;
+    overflow: hidden !important;
+    -webkit-line-clamp: 2 !important;
+    -webkit-box-orient: vertical !important;
+  }
+}
+
+/* MOBILE VERTICAL — mantém padrão aprovado e só padroniza o ícone. */
+@media (max-width: 767.98px) and (orientation: portrait) {
+  .page-actions,
+  .page-actions > *,
+  .page-actions > .flex,
+  .page-actions > .top-actions-nowrap,
+  .top-actions-nowrap,
+  .toolbar-responsive {
+    width: 100% !important;
+    max-width: 100% !important;
+  }
+
+  .page-actions button,
+  .page-actions > * button,
+  .page-actions > .flex button,
+  .page-actions > .top-actions-nowrap button,
+  .top-actions-nowrap button,
+  .toolbar-responsive button {
+    max-width: 100% !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+  }
+}
