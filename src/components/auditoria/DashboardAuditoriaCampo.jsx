@@ -1089,22 +1089,28 @@ export function DashboardAuditoriaCampo({
     const linkQrCampoAtual = useMemo(() => montarLinkQrCampo(qrFormCampo), [montarLinkQrCampo, qrFormCampo]);
 
     const montarLinkQrCampoSalvo = useCallback((item = {}) => {
-        const tokenSalvo = String(item.token_publico || item.tokenPublico || tokenAuditoriaCampoConfigurado || "").trim();
+        const tokenAtivoAtual = String(tokenAuditoriaCampoConfigurado || "").trim();
+        const tokenSalvoNoQr = String(item.token_publico || item.tokenPublico || "").trim();
         const linkSalvo = String(item.link || "").trim();
-
-        if (linkSalvo && (linkSalvo.includes("token=") || !tokenSalvo)) {
-            return linkSalvo;
-        }
-
-        return montarLinkQrCampo({
+        const tokenParaLink = tokenAtivoAtual || tokenSalvoNoQr;
+        const dadosLinkAtualizado = {
             tipo: item.tipo || "maquina",
             identificacao: item.identificacao || "",
             area: item.area || "",
             local: item.local || "",
             empresaResponsavel: item.empresa_responsavel || item.empresaResponsavel || "",
-            token: tokenSalvo,
+            token: tokenParaLink,
             codigo: item.codigo || item.codigo_qr || "",
-        });
+        };
+
+        // Importante: QR salvo antigo pode ter link persistido com token expirado.
+        // Quando existir token ativo carregado do Supabase, o link exibido/copiadο é sempre reconstruído
+        // com o token operacional atual, sem reaproveitar o link antigo salvo no banco.
+        if (tokenParaLink) {
+            return montarLinkQrCampo(dadosLinkAtualizado);
+        }
+
+        return linkSalvo || montarLinkQrCampo(dadosLinkAtualizado);
     }, [montarLinkQrCampo, tokenAuditoriaCampoConfigurado]);
 
     const carregarQrcodesCampo = useCallback(async ({ append = false } = {}) => {
