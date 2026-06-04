@@ -14,7 +14,6 @@ import {
 } from "lucide-react";
 import { supabase } from "../../lib/supabaseClient";
 import { Card, FotoAuditoriaPreview, Header } from "../commonComponents";
-import { EditorNotificacaoHistoricoAuditoria } from "./EditorNotificacaoHistoricoAuditoria";
 import {
     obterTipoAuditoriaCampoDireta,
     montarMensagemFluidaAuditoriaCampo,
@@ -34,6 +33,12 @@ import { carregarConfiguracaoAuditoriaPublicaSistema } from "../../constants/aud
 
 const QRCodeSVGLazy = React.lazy(() =>
     import("qrcode.react").then((modulo) => ({ default: modulo.QRCodeSVG }))
+);
+
+const EditorNotificacaoHistoricoAuditoriaLazy = React.lazy(() =>
+    import("./EditorNotificacaoHistoricoAuditoria").then((modulo) => ({
+        default: modulo.EditorNotificacaoHistoricoAuditoria,
+    }))
 );
 
 function QRCodeCampoLazy(props) {
@@ -2049,7 +2054,15 @@ export function DashboardAuditoriaCampo({
                                         )}
 
                                         <div className="border-t border-slate-100 px-4 pb-4 pt-4">
-                                            <EditorNotificacaoHistoricoAuditoria auditoria={{ ...item, emailResponsavel: contatoEmail, whatsappResponsavel: contatoWhatsapp }} onAtualizada={onAuditoriaAtualizada} />
+                                            <React.Suspense
+                                                fallback={(
+                                                    <div className="rounded-2xl bg-slate-50 p-3 text-xs font-bold uppercase tracking-wide text-slate-500 ring-1 ring-slate-100">
+                                                        Carregando editor de notificação...
+                                                    </div>
+                                                )}
+                                            >
+                                                <EditorNotificacaoHistoricoAuditoriaLazy auditoria={{ ...item, emailResponsavel: contatoEmail, whatsappResponsavel: contatoWhatsapp }} onAtualizada={onAuditoriaAtualizada} />
+                                            </React.Suspense>
                                         </div>
                                     </>
                                 )}
