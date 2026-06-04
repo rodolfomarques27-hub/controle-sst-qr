@@ -232,20 +232,12 @@ export function NovaAuditoriaCampoDireta({ usuario = null, onAuditoriaSalva, emp
         let ativo = true;
 
         async function carregarTokenAtivoAuditoriaPublica() {
-            if (tokenParametro) {
-                if (ativo) {
-                    setTokenAuditoriaPublicaSupabase("");
-                    setTokenAuditoriaPublicaOrigemQrCampo(false);
-                }
-                return;
-            }
-
             setCarregandoTokenAuditoriaPublica(true);
 
             try {
                 const resultadoQrCampo = await carregarTokenAuditoriaCampoPorCodigoQr(codigoQrCampoParametro);
                 const tokenAtivoSupabase = await carregarTokenAuditoriaPublicaAtivoDireto();
-                const tokenFinal = resultadoQrCampo.token || (resultadoQrCampo.encontrado ? tokenAtivoSupabase : tokenAtivoSupabase);
+                const tokenFinal = resultadoQrCampo.token || tokenAtivoSupabase;
                 const liberarPorQrCampoSalvo = Boolean(resultadoQrCampo.encontrado && tokenFinal);
 
                 if (ativo) {
@@ -268,7 +260,7 @@ export function NovaAuditoriaCampoDireta({ usuario = null, onAuditoriaSalva, emp
         return () => {
             ativo = false;
         };
-    }, [tokenParametro, codigoQrCampoParametro]);
+    }, [codigoQrCampoParametro]);
 
     useEffect(() => {
         if (usuario) {
@@ -285,7 +277,12 @@ export function NovaAuditoriaCampoDireta({ usuario = null, onAuditoriaSalva, emp
     const validarSenhaAuditoriaPublica = async (evento) => {
         evento?.preventDefault?.();
 
-        if (!tokenAcessoAuditoriaCampo) {
+        const tokensParaValidar = Array.from(new Set([
+            tokenAcessoAuditoriaCampo,
+            tokenAuditoriaPublicaOrigemQrCampo ? tokenAuditoriaPublicaSupabase : "",
+        ].map((valor) => normalizarTokenAuditoriaCampoDireta(valor)).filter(Boolean)));
+
+        if (tokensParaValidar.length === 0) {
             setMensagemAcessoAuditoria("Token público da auditoria não informado ou QR Code sem token ativo.");
             return;
         }
@@ -299,25 +296,32 @@ export function NovaAuditoriaCampoDireta({ usuario = null, onAuditoriaSalva, emp
         setMensagemAcessoAuditoria("");
 
         try {
-            const { data, error } = await supabase.rpc("validar_acesso_auditoria_publica", {
-                p_token: tokenAcessoAuditoriaCampo,
-                p_senha: senhaAcessoAuditoria.trim(),
-            });
+            let ultimaMensagemErro = "Senha inválida ou token público inativo.";
 
-            if (error) {
-                throw error;
+            for (const tokenTentativa of tokensParaValidar) {
+                const { data, error } = await supabase.rpc("validar_acesso_auditoria_publica", {
+                    p_token: tokenTentativa,
+                    p_senha: senhaAcessoAuditoria.trim(),
+                });
+
+                if (error) {
+                    ultimaMensagemErro = error?.message || ultimaMensagemErro;
+                    continue;
+                }
+
+                const autorizado = Boolean(data?.autorizado || data?.ok === true);
+
+                if (autorizado) {
+                    setAcessoAuditoriaValidado(true);
+                    setMensagemAcessoAuditoria("");
+                    return;
+                }
+
+                ultimaMensagemErro = data?.mensagem || ultimaMensagemErro;
             }
 
-            const autorizado = Boolean(data?.autorizado || data?.ok === true);
-
-            if (!autorizado) {
-                setAcessoAuditoriaValidado(false);
-                setMensagemAcessoAuditoria(data?.mensagem || "Senha inválida ou token público inativo.");
-                return;
-            }
-
-            setAcessoAuditoriaValidado(true);
-            setMensagemAcessoAuditoria("");
+            setAcessoAuditoriaValidado(false);
+            setMensagemAcessoAuditoria(ultimaMensagemErro);
         } catch (error) {
             setAcessoAuditoriaValidado(false);
             setMensagemAcessoAuditoria(error?.message || "Erro ao validar senha da auditoria.");
