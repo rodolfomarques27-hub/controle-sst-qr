@@ -44,6 +44,10 @@ import {
     uploadFotoAuditoriaCampoDireta,
     validarFormularioAuditoriaCampoDireta,
 } from "../../services/auditoriaCampoDiretaService";
+import {
+    carregarTokenAuditoriaPublicaAtivoPadrao,
+    validarAcessoAuditoriaPublicaPadrao,
+} from "../../services/auditoriaPublicaTokenService";
 import { QRCodeSVG } from "qrcode.react";
 import {
     AlertTriangle,
@@ -155,17 +159,8 @@ async function carregarTokenAuditoriaCampoPorCodigoQr(codigoQrCampo = "") {
 }
 
 async function carregarTokenAuditoriaPublicaAtivoDireto() {
-    const { data, error } = await supabase
-        .from("auditoria_tokens_publicos")
-        .select("token")
-        .eq("ativo", true)
-        .order("created_at", { ascending: false })
-        .limit(1)
-        .maybeSingle();
-
-    if (error) throw error;
-
-    return normalizarTokenAuditoriaCampoDireta(data?.token);
+    const resultado = await carregarTokenAuditoriaPublicaAtivoPadrao();
+    return normalizarTokenAuditoriaCampoDireta(resultado?.tokenPublico);
 }
 
 export function NovaAuditoriaCampoDireta({ usuario = null, onAuditoriaSalva, empresasBanco = [] }) {
@@ -237,7 +232,18 @@ export function NovaAuditoriaCampoDireta({ usuario = null, onAuditoriaSalva, emp
             setCarregandoTokenAuditoriaPublica(true);
 
             try {
-                const resultadoQrCampo = await carregarTokenAuditoriaCampoPorCodigoQr(codigoQrCampoParametro);
+                let resultadoQrCampo = { encontrado: false, token: "", erro: "" };
+
+                try {
+                    resultadoQrCampo = await carregarTokenAuditoriaCampoPorCodigoQr(codigoQrCampoParametro);
+                } catch (errorQrCampo) {
+                    resultadoQrCampo = {
+                        encontrado: false,
+                        token: "",
+                        erro: errorQrCampo?.message || "Não foi possível consultar o QR Code salvo.",
+                    };
+                }
+
                 const tokenAtivoSupabase = await carregarTokenAuditoriaPublicaAtivoDireto();
 
                 if (ativo) {
@@ -280,23 +286,6 @@ export function NovaAuditoriaCampoDireta({ usuario = null, onAuditoriaSalva, emp
     const validarSenhaAuditoriaPublica = async (evento) => {
         evento?.preventDefault?.();
 
-        const tokensParaValidar = Array.from(new Set([
-            tokenAuditoriaPublicaValidado,
-            tokenParametro,
-            tokenAuditoriaQrCampoSalvo,
-            tokenAuditoriaPublicaSupabase,
-            obterTokenAuditoriaCampoPublicaConfigurado(),
-        ].map((valor) => normalizarTokenAuditoriaCampoDireta(valor)).filter(Boolean)));
-
-        if (tokensParaValidar.length === 0) {
-            setMensagemAcessoAuditoria(
-                carregandoTokenAuditoriaPublica
-                    ? "Aguarde o carregamento do token público ativo e tente novamente."
-                    : "Token público da auditoria não informado ou QR Code sem token ativo."
-            );
-            return;
-        }
-
         if (!senhaAcessoAuditoria.trim()) {
             setMensagemAcessoAuditoria("Informe a senha de acesso da auditoria.");
             return;
@@ -306,34 +295,29 @@ export function NovaAuditoriaCampoDireta({ usuario = null, onAuditoriaSalva, emp
         setMensagemAcessoAuditoria("");
 
         try {
-            let ultimaMensagemErro = "Senha inválida ou token público inativo.";
+            const resultado = await validarAcessoAuditoriaPublicaPadrao({
+                senha: senhaAcessoAuditoria.trim(),
+                tokens: [
+                    tokenAuditoriaPublicaSupabase,
+                    tokenAuditoriaPublicaValidado,
+                    tokenAuditoriaQrCampoSalvo,
+                    tokenParametro,
+                    obterTokenAuditoriaCampoPublicaConfigurado(),
+                ],
+            });
 
-            for (const tokenTentativa of tokensParaValidar) {
-                const { data, error } = await supabase.rpc("validar_acesso_auditoria_publica", {
-                    p_token: tokenTentativa,
-                    p_senha: senhaAcessoAuditoria.trim(),
-                });
+            const autorizado = Boolean(resultado?.autorizado || resultado?.ok === true);
 
-                if (error) {
-                    ultimaMensagemErro = error?.message || ultimaMensagemErro;
-                    continue;
-                }
-
-                const autorizado = Boolean(data?.autorizado || data?.ok === true);
-
-                if (autorizado) {
-                    setTokenAuditoriaPublicaValidado(tokenTentativa);
-                    setAcessoAuditoriaValidado(true);
-                    setMensagemAcessoAuditoria("");
-                    return;
-                }
-
-                ultimaMensagemErro = data?.mensagem || ultimaMensagemErro;
+            if (!autorizado) {
+                setTokenAuditoriaPublicaValidado("");
+                setAcessoAuditoriaValidado(false);
+                setMensagemAcessoAuditoria(resultado?.mensagem || "Senha inválida ou token público inativo.");
+                return;
             }
 
-            setTokenAuditoriaPublicaValidado("");
-            setAcessoAuditoriaValidado(false);
-            setMensagemAcessoAuditoria(ultimaMensagemErro);
+            setTokenAuditoriaPublicaValidado(resultado?.tokenValidado || tokenAuditoriaPublicaSupabase || tokenAuditoriaQrCampoSalvo || tokenParametro || "");
+            setAcessoAuditoriaValidado(true);
+            setMensagemAcessoAuditoria("");
         } catch (error) {
             setTokenAuditoriaPublicaValidado("");
             setAcessoAuditoriaValidado(false);

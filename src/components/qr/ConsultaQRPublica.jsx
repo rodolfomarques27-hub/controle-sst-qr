@@ -15,6 +15,7 @@ import {
 } from "../../services/colaboradorDocumentosService";
 import { DAY } from "../../constants/sstConstants";
 import { obterTokenAuditoriaPublicaUrl } from "../../constants/auditoriaPublicaConstants";
+import { carregarTokenAuditoriaPublicaAtivoPadrao } from "../../services/auditoriaPublicaTokenService";
 import {
     classNames,
     diasParaVencer,
@@ -27,8 +28,31 @@ export function ConsultaQRPublica({ dados }) {
     const treinamentos = dados?.treinamentos || [];
     const geral = statusGeralConsultaPublica(colaborador, treinamentos);
     const tokenAuditoriaPublicaUrl = obterTokenAuditoriaPublicaUrl();
+    const [tokenAuditoriaPublicaEfetivo, setTokenAuditoriaPublicaEfetivo] = useState(tokenAuditoriaPublicaUrl);
     const [auditoriasCampoQr, setAuditoriasCampoQr] = useState([]);
     const [carregandoAuditoriasCampoQr, setCarregandoAuditoriasCampoQr] = useState(false);
+
+
+    useEffect(() => {
+        let ativo = true;
+
+        async function carregarTokenPublicoAuditoria() {
+            const resultado = await carregarTokenAuditoriaPublicaAtivoPadrao();
+            if (!ativo) return;
+
+            if (resultado?.tokenPublico) {
+                setTokenAuditoriaPublicaEfetivo(resultado.tokenPublico);
+            } else if (tokenAuditoriaPublicaUrl) {
+                setTokenAuditoriaPublicaEfetivo(tokenAuditoriaPublicaUrl);
+            }
+        }
+
+        carregarTokenPublicoAuditoria();
+
+        return () => {
+            ativo = false;
+        };
+    }, [tokenAuditoriaPublicaUrl]);
 
     const carregarAuditoriasCampoQr = useCallback(async () => {
         if (!dados) {
@@ -135,7 +159,7 @@ export function ConsultaQRPublica({ dados }) {
                     <AuditoriaCampoQRCode
                         colaborador={colaborador}
                         treinamentos={treinamentos}
-                        tokenAuditoria={tokenAuditoriaPublicaUrl}
+                        tokenAuditoria={tokenAuditoriaPublicaEfetivo || tokenAuditoriaPublicaUrl}
                         onAuditoriaSalva={(novaAuditoria) => setAuditoriasCampoQr((atual) => [novaAuditoria, ...atual])}
                     />
 

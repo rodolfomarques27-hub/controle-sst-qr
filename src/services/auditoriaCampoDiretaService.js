@@ -1,10 +1,10 @@
 import { montarMensagemFluidaAuditoriaCampo } from "./auditoriaCampoService";
 import { reduzirFotoParaAuditoria } from "./imagemService";
 import { normalizarTextoBusca, sanitizarNomeArquivo } from "../utils/sstUtils";
-import { carregarConfiguracaoAuditoriaPublicaSistema } from "../constants/auditoriaPublicaConstants";
+import { obterTokenAuditoriaPublicaUrl } from "../constants/auditoriaPublicaConstants";
 
 export function obterTokenAuditoriaCampoPublicaConfigurado() {
-    return String(carregarConfiguracaoAuditoriaPublicaSistema().tokenPublico || "").trim();
+    return String(obterTokenAuditoriaPublicaUrl() || "").trim();
 }
 
 export function obterParametrosAuditoriaCampoDiretaUrl() {

@@ -28,7 +28,7 @@ import {
 import { tiposAuditoriaCampoDireta } from "../../constants/sstConstants";
 import { normalizarTextoBusca, formatDate, formatarDataHora, classNames } from "../../utils/sstUtils";
 import { LIMITE_QRCODES_CAMPO_POR_CARGA } from "../../constants/sistemaLimitesConstants";
-import { carregarTokenAuditoriaPublicaAtivoSupabase } from "../../services/auditoriaSistemaConfigService";
+import { carregarTokenAuditoriaPublicaAtivoPadrao } from "../../services/auditoriaPublicaTokenService";
 
 
 const QRCodeSVGLazy = React.lazy(() =>
@@ -575,7 +575,7 @@ export function DashboardAuditoriaCampo({
             setMensagemTokenAuditoriaCampo("Carregando token público ativo do Supabase...");
 
             try {
-                const resultado = await carregarTokenAuditoriaPublicaAtivoSupabase();
+                const resultado = await carregarTokenAuditoriaPublicaAtivoPadrao();
                 const tokenAtivo = String(resultado?.tokenPublico || "").trim();
 
                 if (!componenteAtivo) return;
@@ -2297,7 +2297,7 @@ export function DashboardAuditoriaCampo({
                                 </span>
                             </label>
                             <div className={classNames("md:col-span-2 rounded-2xl px-3 py-2 text-xs font-semibold ring-1", tokenAuditoriaCampoConfigurado ? "bg-emerald-50 text-emerald-700 ring-emerald-100" : carregandoTokenAuditoriaCampo ? "bg-blue-50 text-blue-700 ring-blue-100" : "bg-red-50 text-red-700 ring-red-100")}>
-                                Token operacional carregado do Supabase: {tokenAuditoriaCampoConfigurado ? "Configurado" : carregandoTokenAuditoriaCampo ? "Carregando..." : "Não configurado"}
+                                Token operacional padrão carregado: {tokenAuditoriaCampoConfigurado ? "Configurado" : carregandoTokenAuditoriaCampo ? "Carregando..." : "Não configurado"}
                             </div>
                             <label className="block text-xs font-bold uppercase tracking-wide text-slate-500 md:col-span-2">
                                 Observação

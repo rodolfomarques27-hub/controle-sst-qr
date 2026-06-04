@@ -8,7 +8,7 @@ import { DAY } from "../../constants/sstConstants";
 import { obterTreinamento, statusDocumento, statusGeral, treinamentoSemValidade } from "../../services/colaboradorDocumentosService";
 import { classNames, diasParaVencer, formatDate, normalizarTextoBusca } from "../../utils/sstUtils";
 import { montarUrlConsultaQrColaboradorPublica } from "../../constants/auditoriaPublicaConstants";
-import { carregarTokenAuditoriaPublicaAtivoSupabase } from "../../services/auditoriaSistemaConfigService";
+import { carregarTokenAuditoriaPublicaAtivoPadrao } from "../../services/auditoriaPublicaTokenService";
 
 export function ConsultaQR({ colaborador, colaboradores = [], onSelecionarColaborador }) {
     const [busca, setBusca] = useState("");
@@ -27,13 +27,13 @@ export function ConsultaQR({ colaborador, colaboradores = [], onSelecionarColabo
         let ativo = true;
 
         async function carregarTokenAuditoriaPublica() {
-            const resultado = await carregarTokenAuditoriaPublicaAtivoSupabase();
+            const resultado = await carregarTokenAuditoriaPublicaAtivoPadrao();
 
             if (!ativo) return;
 
             if (resultado?.tokenPublico) {
                 setTokenAuditoriaPublica(resultado.tokenPublico);
-                setMensagemTokenAuditoriaPublica("Token público da auditoria carregado do Supabase.");
+                setMensagemTokenAuditoriaPublica("Token público padrão da auditoria carregado.");
                 return;
             }
 

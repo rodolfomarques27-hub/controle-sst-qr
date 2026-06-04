@@ -2,25 +2,25 @@ import { supabase } from "../lib/supabaseClient";
 import { reduzirFotoParaAuditoria } from "./imagemService";
 import { sanitizarNomeArquivo } from "../utils/sstUtils";
 import { obterTokenAuditoriaPublicaUrl } from "../constants/auditoriaPublicaConstants";
-import { carregarTokenAuditoriaPublicaAtivoSupabase } from "./auditoriaSistemaConfigService";
+import {
+    resolverTokenAuditoriaPublicaPadrao,
+    validarAcessoAuditoriaPublicaPadrao,
+} from "./auditoriaPublicaTokenService";
+
+function texto(valor) {
+    return String(valor ?? "").trim();
+}
 
 export function obterTokenAuditoriaQrColaboradorConfigurado() {
     return texto(obterTokenAuditoriaPublicaUrl());
 }
 
 export async function resolverTokenAuditoriaQrColaborador(tokenAuditoria = "") {
-    const tokenInformado = texto(tokenAuditoria);
-    if (tokenInformado) return tokenInformado;
+    const resultado = await resolverTokenAuditoriaPublicaPadrao({
+        tokens: [tokenAuditoria, obterTokenAuditoriaQrColaboradorConfigurado()],
+    });
 
-    const tokenUrl = texto(obterTokenAuditoriaPublicaUrl());
-    if (tokenUrl) return tokenUrl;
-
-    const resultado = await carregarTokenAuditoriaPublicaAtivoSupabase();
     return texto(resultado?.tokenPublico);
-}
-
-function texto(valor) {
-    return String(valor ?? "").trim();
 }
 
 async function arquivoParaBase64Payload(arquivo) {
@@ -59,35 +59,12 @@ export async function validarSenhaAuditoriaQr({
     tokenAuditoria = obterTokenAuditoriaQrColaboradorConfigurado(),
     senha = "",
 } = {}) {
-    const tokenSeguro = await resolverTokenAuditoriaQrColaborador(tokenAuditoria);
-    const senhaSegura = texto(senha);
-
-    if (!tokenSeguro) {
-        return {
-            ok: false,
-            autorizado: false,
-            mensagem: "Token público da auditoria não informado.",
-        };
-    }
-
-    if (!senhaSegura) {
-        return {
-            ok: false,
-            autorizado: false,
-            mensagem: "Informe a senha de acesso da auditoria.",
-        };
-    }
-
-    const { data, error } = await supabase.rpc("validar_acesso_auditoria_publica", {
-        p_token: tokenSeguro,
-        p_senha: senhaSegura,
+    const resultado = await validarAcessoAuditoriaPublicaPadrao({
+        senha,
+        tokens: [tokenAuditoria, obterTokenAuditoriaQrColaboradorConfigurado()],
     });
 
-    if (error) {
-        throw new Error(error.message || "Não foi possível validar a senha da auditoria.");
-    }
-
-    return data || {
+    return resultado || {
         ok: false,
         autorizado: false,
         mensagem: "Resposta inválida ao validar acesso da auditoria.",
@@ -115,12 +92,20 @@ export async function salvarAuditoriaQrColaborador({
     desvio = null,
     fotos = {},
 } = {}) {
-    const tokenAuditoriaSeguro = await resolverTokenAuditoriaQrColaborador(tokenAuditoria);
+    const validacao = await validarAcessoAuditoriaPublicaPadrao({
+        senha,
+        tokens: [tokenAuditoria, obterTokenAuditoriaQrColaboradorConfigurado()],
+    });
+    const tokenAuditoriaSeguro = texto(validacao?.tokenValidado) || await resolverTokenAuditoriaQrColaborador(tokenAuditoria);
     const senhaSegura = texto(senha);
     const tokenQrSeguro = texto(tokenQr || auditoria?.token_qr);
 
     if (!tokenAuditoriaSeguro) {
         throw new Error("Token público da auditoria não informado.");
+    }
+
+    if (!validacao?.autorizado) {
+        throw new Error(validacao?.mensagem || "Senha da auditoria inválida.");
     }
 
     if (!senhaSegura) {
