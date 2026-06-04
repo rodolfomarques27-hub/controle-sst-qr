@@ -185,11 +185,13 @@ export function NovaAuditoriaCampoDireta({ usuario = null, onAuditoriaSalva, emp
     const linkOrigemQrCampo = typeof window !== "undefined" ? window.location.href : "";
     const codigoQrCampoParametro = String(codigoQrParametro || "").trim();
     const [tokenAuditoriaPublicaSupabase, setTokenAuditoriaPublicaSupabase] = useState("");
+    const [tokenAuditoriaQrCampoSalvo, setTokenAuditoriaQrCampoSalvo] = useState("");
     const [tokenAuditoriaPublicaOrigemQrCampo, setTokenAuditoriaPublicaOrigemQrCampo] = useState(false);
+    const [tokenAuditoriaPublicaValidado, setTokenAuditoriaPublicaValidado] = useState("");
     const [carregandoTokenAuditoriaPublica, setCarregandoTokenAuditoriaPublica] = useState(false);
     const tokenAuditoriaPublicaConfigurado = tokenAuditoriaPublicaSupabase || obterTokenAuditoriaCampoPublicaConfigurado();
-    const tokenAcessoAuditoriaCampo = tokenParametro || (tokenAuditoriaPublicaOrigemQrCampo ? tokenAuditoriaPublicaSupabase : "");
-    const tokenLinkAuditoriaCampo = tokenParametro || tokenAuditoriaPublicaConfigurado;
+    const tokenAcessoAuditoriaCampo = tokenAuditoriaPublicaValidado || tokenParametro || tokenAuditoriaQrCampoSalvo || tokenAuditoriaPublicaConfigurado;
+    const tokenLinkAuditoriaCampo = tokenParametro || tokenAuditoriaQrCampoSalvo || tokenAuditoriaPublicaConfigurado;
     const tokenLinkAuditoriaCampoDisponivel = Boolean(tokenLinkAuditoriaCampo);
     const montarLinkAuditoriaCampo = (parametrosExtras = {}) => montarLinkAuditoriaCampoDireta({
         origem,
@@ -237,17 +239,17 @@ export function NovaAuditoriaCampoDireta({ usuario = null, onAuditoriaSalva, emp
             try {
                 const resultadoQrCampo = await carregarTokenAuditoriaCampoPorCodigoQr(codigoQrCampoParametro);
                 const tokenAtivoSupabase = await carregarTokenAuditoriaPublicaAtivoDireto();
-                const tokenFinal = resultadoQrCampo.token || tokenAtivoSupabase;
-                const liberarPorQrCampoSalvo = Boolean(resultadoQrCampo.encontrado && tokenFinal);
 
                 if (ativo) {
-                    setTokenAuditoriaPublicaSupabase(tokenFinal);
-                    setTokenAuditoriaPublicaOrigemQrCampo(liberarPorQrCampoSalvo);
+                    setTokenAuditoriaPublicaSupabase(tokenAtivoSupabase);
+                    setTokenAuditoriaQrCampoSalvo(resultadoQrCampo.token || "");
+                    setTokenAuditoriaPublicaOrigemQrCampo(Boolean(resultadoQrCampo.encontrado));
                 }
             } catch (error) {
                 console.warn("Não foi possível carregar o token público ativo da auditoria:", error?.message || error);
                 if (ativo) {
                     setTokenAuditoriaPublicaSupabase("");
+                    setTokenAuditoriaQrCampoSalvo("");
                     setTokenAuditoriaPublicaOrigemQrCampo(false);
                 }
             } finally {
@@ -272,18 +274,26 @@ export function NovaAuditoriaCampoDireta({ usuario = null, onAuditoriaSalva, emp
         setAcessoAuditoriaValidado(false);
         setSenhaAcessoAuditoria("");
         setMensagemAcessoAuditoria("");
-    }, [usuario, tokenAcessoAuditoriaCampo]);
+        setTokenAuditoriaPublicaValidado("");
+    }, [usuario, tokenParametro, codigoQrCampoParametro]);
 
     const validarSenhaAuditoriaPublica = async (evento) => {
         evento?.preventDefault?.();
 
         const tokensParaValidar = Array.from(new Set([
-            tokenAcessoAuditoriaCampo,
-            tokenAuditoriaPublicaOrigemQrCampo ? tokenAuditoriaPublicaSupabase : "",
+            tokenAuditoriaPublicaValidado,
+            tokenParametro,
+            tokenAuditoriaQrCampoSalvo,
+            tokenAuditoriaPublicaSupabase,
+            obterTokenAuditoriaCampoPublicaConfigurado(),
         ].map((valor) => normalizarTokenAuditoriaCampoDireta(valor)).filter(Boolean)));
 
         if (tokensParaValidar.length === 0) {
-            setMensagemAcessoAuditoria("Token público da auditoria não informado ou QR Code sem token ativo.");
+            setMensagemAcessoAuditoria(
+                carregandoTokenAuditoriaPublica
+                    ? "Aguarde o carregamento do token público ativo e tente novamente."
+                    : "Token público da auditoria não informado ou QR Code sem token ativo."
+            );
             return;
         }
 
@@ -312,6 +322,7 @@ export function NovaAuditoriaCampoDireta({ usuario = null, onAuditoriaSalva, emp
                 const autorizado = Boolean(data?.autorizado || data?.ok === true);
 
                 if (autorizado) {
+                    setTokenAuditoriaPublicaValidado(tokenTentativa);
                     setAcessoAuditoriaValidado(true);
                     setMensagemAcessoAuditoria("");
                     return;
@@ -320,9 +331,11 @@ export function NovaAuditoriaCampoDireta({ usuario = null, onAuditoriaSalva, emp
                 ultimaMensagemErro = data?.mensagem || ultimaMensagemErro;
             }
 
+            setTokenAuditoriaPublicaValidado("");
             setAcessoAuditoriaValidado(false);
             setMensagemAcessoAuditoria(ultimaMensagemErro);
         } catch (error) {
+            setTokenAuditoriaPublicaValidado("");
             setAcessoAuditoriaValidado(false);
             setMensagemAcessoAuditoria(error?.message || "Erro ao validar senha da auditoria.");
         } finally {
@@ -577,7 +590,7 @@ export function NovaAuditoriaCampoDireta({ usuario = null, onAuditoriaSalva, emp
                 resultado,
                 categoriaAtual,
                 tipoAtual,
-                tokenParametro: tokenAcessoAuditoriaCampo,
+                tokenParametro: tokenAuditoriaPublicaValidado || tokenAcessoAuditoriaCampo,
                 contatosEmpresaAuditoria,
                 emailResponsavelAuditoria,
                 whatsappResponsavelFormatado,
@@ -590,7 +603,7 @@ export function NovaAuditoriaCampoDireta({ usuario = null, onAuditoriaSalva, emp
                 linkOrigemQrCampo,
             });
 
-            const tokenAuditoriaCampo = tokenAcessoAuditoriaCampo || obterParametroUrl("token") || obterParametroUrl("chave");
+            const tokenAuditoriaCampo = tokenAuditoriaPublicaValidado || tokenAcessoAuditoriaCampo || obterParametroUrl("token") || obterParametroUrl("chave");
             let data = null;
 
             if (tokenAuditoriaCampo) {
