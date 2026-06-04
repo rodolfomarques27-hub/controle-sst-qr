@@ -119,6 +119,55 @@ function escaparFiltroIlikeAuditoriaCampo(valor = "") {
     return String(valor || "").replace(/[\%_]/g, "").trim();
 }
 
+function normalizarTokenAuditoriaCampoDireta(valor = "") {
+    return String(valor || "").trim();
+}
+
+async function carregarTokenAuditoriaCampoPorCodigoQr(codigoQrCampo = "") {
+    const codigo = String(codigoQrCampo || "").trim();
+
+    if (!codigo) {
+        return { encontrado: false, token: "", erro: "" };
+    }
+
+    const { data, error } = await supabase
+        .from("auditoria_campo_qrcodes")
+        .select("token_publico, ativo")
+        .eq("codigo", codigo)
+        .neq("ativo", false)
+        .order("criado_em", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+    if (error) {
+        return { encontrado: false, token: "", erro: error.message || "Não foi possível consultar o QR Code salvo." };
+    }
+
+    if (!data) {
+        return { encontrado: false, token: "", erro: "QR Code salvo não encontrado no banco." };
+    }
+
+    return {
+        encontrado: true,
+        token: normalizarTokenAuditoriaCampoDireta(data.token_publico),
+        erro: "",
+    };
+}
+
+async function carregarTokenAuditoriaPublicaAtivoDireto() {
+    const { data, error } = await supabase
+        .from("auditoria_tokens_publicos")
+        .select("token")
+        .eq("ativo", true)
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+    if (error) throw error;
+
+    return normalizarTokenAuditoriaCampoDireta(data?.token);
+}
+
 export function NovaAuditoriaCampoDireta({ usuario = null, onAuditoriaSalva, empresasBanco = [] }) {
     const parametros = obterParametrosAuditoriaCampoDiretaUrl();
     const {
@@ -136,8 +185,10 @@ export function NovaAuditoriaCampoDireta({ usuario = null, onAuditoriaSalva, emp
     const linkOrigemQrCampo = typeof window !== "undefined" ? window.location.href : "";
     const codigoQrCampoParametro = String(codigoQrParametro || "").trim();
     const [tokenAuditoriaPublicaSupabase, setTokenAuditoriaPublicaSupabase] = useState("");
+    const [tokenAuditoriaPublicaOrigemQrCampo, setTokenAuditoriaPublicaOrigemQrCampo] = useState(false);
     const [carregandoTokenAuditoriaPublica, setCarregandoTokenAuditoriaPublica] = useState(false);
     const tokenAuditoriaPublicaConfigurado = tokenAuditoriaPublicaSupabase || obterTokenAuditoriaCampoPublicaConfigurado();
+    const tokenAcessoAuditoriaCampo = tokenParametro || (tokenAuditoriaPublicaOrigemQrCampo ? tokenAuditoriaPublicaSupabase : "");
     const tokenLinkAuditoriaCampo = tokenParametro || tokenAuditoriaPublicaConfigurado;
     const tokenLinkAuditoriaCampoDisponivel = Boolean(tokenLinkAuditoriaCampo);
     const montarLinkAuditoriaCampo = (parametrosExtras = {}) => montarLinkAuditoriaCampoDireta({
@@ -153,13 +204,13 @@ export function NovaAuditoriaCampoDireta({ usuario = null, onAuditoriaSalva, emp
     );
 
 
-    const tokenAuditoriaPublicaInformado = Boolean(tokenParametro);
+    const tokenAuditoriaPublicaInformado = Boolean(tokenAcessoAuditoriaCampo);
     const [senhaAcessoAuditoria, setSenhaAcessoAuditoria] = useState("");
     const [acessoAuditoriaValidado, setAcessoAuditoriaValidado] = useState(() => Boolean(usuario));
     const [validandoAcessoAuditoria, setValidandoAcessoAuditoria] = useState(false);
     const [mensagemAcessoAuditoria, setMensagemAcessoAuditoria] = useState("");
     const acessoLiberado = Boolean(usuario) || (tokenAuditoriaPublicaInformado && acessoAuditoriaValidado);
-    const mensagemAcesso = tokenParametro ? "" : "Link inválido. Informe um token público de auditoria na URL.";
+    const mensagemAcesso = tokenAcessoAuditoriaCampo ? "" : "Link inválido. Informe um token público de auditoria na URL ou abra por um QR Code ativo.";
     const [salvando, setSalvando] = useState(false);
     const [mensagem, setMensagem] = useState("");
     const [auditoriaSalva, setAuditoriaSalva] = useState(null);
@@ -182,29 +233,31 @@ export function NovaAuditoriaCampoDireta({ usuario = null, onAuditoriaSalva, emp
 
         async function carregarTokenAtivoAuditoriaPublica() {
             if (tokenParametro) {
-                if (ativo) setTokenAuditoriaPublicaSupabase("");
+                if (ativo) {
+                    setTokenAuditoriaPublicaSupabase("");
+                    setTokenAuditoriaPublicaOrigemQrCampo(false);
+                }
                 return;
             }
 
             setCarregandoTokenAuditoriaPublica(true);
 
             try {
-                const { data, error } = await supabase
-                    .from("auditoria_tokens_publicos")
-                    .select("token")
-                    .eq("ativo", true)
-                    .order("created_at", { ascending: false })
-                    .limit(1)
-                    .maybeSingle();
-
-                if (error) throw error;
+                const resultadoQrCampo = await carregarTokenAuditoriaCampoPorCodigoQr(codigoQrCampoParametro);
+                const tokenAtivoSupabase = await carregarTokenAuditoriaPublicaAtivoDireto();
+                const tokenFinal = resultadoQrCampo.token || (resultadoQrCampo.encontrado ? tokenAtivoSupabase : tokenAtivoSupabase);
+                const liberarPorQrCampoSalvo = Boolean(resultadoQrCampo.encontrado && tokenFinal);
 
                 if (ativo) {
-                    setTokenAuditoriaPublicaSupabase(String(data?.token || "").trim());
+                    setTokenAuditoriaPublicaSupabase(tokenFinal);
+                    setTokenAuditoriaPublicaOrigemQrCampo(liberarPorQrCampoSalvo);
                 }
             } catch (error) {
                 console.warn("Não foi possível carregar o token público ativo da auditoria:", error?.message || error);
-                if (ativo) setTokenAuditoriaPublicaSupabase("");
+                if (ativo) {
+                    setTokenAuditoriaPublicaSupabase("");
+                    setTokenAuditoriaPublicaOrigemQrCampo(false);
+                }
             } finally {
                 if (ativo) setCarregandoTokenAuditoriaPublica(false);
             }
@@ -215,7 +268,7 @@ export function NovaAuditoriaCampoDireta({ usuario = null, onAuditoriaSalva, emp
         return () => {
             ativo = false;
         };
-    }, [tokenParametro]);
+    }, [tokenParametro, codigoQrCampoParametro]);
 
     useEffect(() => {
         if (usuario) {
@@ -227,13 +280,13 @@ export function NovaAuditoriaCampoDireta({ usuario = null, onAuditoriaSalva, emp
         setAcessoAuditoriaValidado(false);
         setSenhaAcessoAuditoria("");
         setMensagemAcessoAuditoria("");
-    }, [usuario, tokenParametro]);
+    }, [usuario, tokenAcessoAuditoriaCampo]);
 
     const validarSenhaAuditoriaPublica = async (evento) => {
         evento?.preventDefault?.();
 
-        if (!tokenParametro) {
-            setMensagemAcessoAuditoria("Token público da auditoria não informado na URL.");
+        if (!tokenAcessoAuditoriaCampo) {
+            setMensagemAcessoAuditoria("Token público da auditoria não informado ou QR Code sem token ativo.");
             return;
         }
 
@@ -247,7 +300,7 @@ export function NovaAuditoriaCampoDireta({ usuario = null, onAuditoriaSalva, emp
 
         try {
             const { data, error } = await supabase.rpc("validar_acesso_auditoria_publica", {
-                p_token: tokenParametro,
+                p_token: tokenAcessoAuditoriaCampo,
                 p_senha: senhaAcessoAuditoria.trim(),
             });
 
@@ -520,7 +573,7 @@ export function NovaAuditoriaCampoDireta({ usuario = null, onAuditoriaSalva, emp
                 resultado,
                 categoriaAtual,
                 tipoAtual,
-                tokenParametro,
+                tokenParametro: tokenAcessoAuditoriaCampo,
                 contatosEmpresaAuditoria,
                 emailResponsavelAuditoria,
                 whatsappResponsavelFormatado,
@@ -533,7 +586,7 @@ export function NovaAuditoriaCampoDireta({ usuario = null, onAuditoriaSalva, emp
                 linkOrigemQrCampo,
             });
 
-            const tokenAuditoriaCampo = obterParametroUrl("token") || obterParametroUrl("chave");
+            const tokenAuditoriaCampo = tokenAcessoAuditoriaCampo || obterParametroUrl("token") || obterParametroUrl("chave");
             let data = null;
 
             if (tokenAuditoriaCampo) {
@@ -639,7 +692,25 @@ export function NovaAuditoriaCampoDireta({ usuario = null, onAuditoriaSalva, emp
         </div>
     );
 
-    if (!usuario && !tokenAuditoriaPublicaInformado) {
+    if (!usuario && !tokenAuditoriaPublicaInformado && carregandoTokenAuditoriaPublica) {
+        return (
+            <div className="min-h-screen bg-slate-100 p-4 text-slate-900">
+                <div className="mx-auto flex min-h-[calc(100vh-2rem)] max-w-xl items-center justify-center">
+                    <Card className="w-full">
+                        <div className="text-center">
+                            <ShieldCheck className="mx-auto h-10 w-10 text-blue-600" />
+                            <h1 className="mt-3 text-2xl font-black text-slate-950">Validando QR Code</h1>
+                            <p className="mt-2 text-sm leading-relaxed text-slate-500">
+                                Carregando token público ativo vinculado ao QR Code da auditoria.
+                            </p>
+                        </div>
+                    </Card>
+                </div>
+            </div>
+        );
+    }
+
+    if (!usuario && !tokenAuditoriaPublicaInformado && !carregandoTokenAuditoriaPublica) {
         return (
             <div className="min-h-screen bg-slate-100 p-4 text-slate-900">
                 <div className="mx-auto flex min-h-[calc(100vh-2rem)] max-w-xl items-center justify-center">
@@ -648,7 +719,7 @@ export function NovaAuditoriaCampoDireta({ usuario = null, onAuditoriaSalva, emp
                             <ShieldCheck className="mx-auto h-10 w-10 text-red-600" />
                             <h1 className="mt-3 text-2xl font-black text-slate-950">Link inválido</h1>
                             <p className="mt-2 text-sm leading-relaxed text-slate-500">
-                                Abra o formulário por um link com token público ativo cadastrado no Supabase.
+                                Abra o formulário por um link com token público ativo ou por um QR Code salvo com token operacional.
                             </p>
                         </div>
                         {mensagemAcesso && <p className="mt-6 rounded-2xl bg-red-50 p-3 text-sm font-semibold text-red-700 ring-1 ring-red-100">{mensagemAcesso}</p>}

@@ -28,7 +28,7 @@ import {
 import { tiposAuditoriaCampoDireta } from "../../constants/sstConstants";
 import { normalizarTextoBusca, formatDate, formatarDataHora, classNames } from "../../utils/sstUtils";
 import { LIMITE_QRCODES_CAMPO_POR_CARGA } from "../../constants/sistemaLimitesConstants";
-import { carregarConfiguracaoAuditoriaPublicaSistema } from "../../constants/auditoriaPublicaConstants";
+import { carregarTokenAuditoriaPublicaAtivoSupabase } from "../../services/auditoriaSistemaConfigService";
 
 
 const QRCodeSVGLazy = React.lazy(() =>
@@ -352,8 +352,9 @@ export function DashboardAuditoriaCampo({
     onAuditoriaAtualizada,
 }) {
     const [mostrarPersonalizacao, setMostrarPersonalizacao] = useState(false);
-    const [configAuditoriaPublica] = useState(() => carregarConfiguracaoAuditoriaPublicaSistema());
-    const tokenAuditoriaCampoConfigurado = String(configAuditoriaPublica.tokenPublico || "").trim();
+    const [tokenAuditoriaCampoConfigurado, setTokenAuditoriaCampoConfigurado] = useState("");
+    const [carregandoTokenAuditoriaCampo, setCarregandoTokenAuditoriaCampo] = useState(false);
+    const [mensagemTokenAuditoriaCampo, setMensagemTokenAuditoriaCampo] = useState("");
     const limiteQrcodesCampoAtual = Math.max(10, Number(limiteQrcodesCampo || LIMITE_QRCODES_CAMPO_POR_CARGA));
     const auditoriasCampoRecebidas = Array.isArray(auditoriasCampo) ? auditoriasCampo : [];
     const [auditoriasCampoFallback, setAuditoriasCampoFallback] = useState([]);
@@ -565,6 +566,50 @@ export function DashboardAuditoriaCampo({
     useEffect(() => { if (typeof window !== "undefined") window.localStorage.setItem("dashboardAuditoriaCampoAuditoriasAbertas", JSON.stringify(auditoriasHistoricoAbertas)); }, [auditoriasHistoricoAbertas]);
     useEffect(() => { if (typeof window !== "undefined") window.localStorage.setItem("dashboardAuditoriaCampoBuscarRecolhido", String(buscarAuditoriaRecolhido)); }, [buscarAuditoriaRecolhido]);
     useEffect(() => { setQuantidadeHistoricoVisivel(30); }, [filtrosAuditoriaCampo]);
+
+    useEffect(() => {
+        let componenteAtivo = true;
+
+        async function carregarTokenAuditoriaCampo() {
+            setCarregandoTokenAuditoriaCampo(true);
+            setMensagemTokenAuditoriaCampo("Carregando token público ativo do Supabase...");
+
+            try {
+                const resultado = await carregarTokenAuditoriaPublicaAtivoSupabase();
+                const tokenAtivo = String(resultado?.tokenPublico || "").trim();
+
+                if (!componenteAtivo) return;
+
+                if (!resultado?.ok || !tokenAtivo) {
+                    setTokenAuditoriaCampoConfigurado("");
+                    setMensagemTokenAuditoriaCampo(resultado?.erro || "Token público ativo não encontrado no Supabase.");
+                    return;
+                }
+
+                setTokenAuditoriaCampoConfigurado(tokenAtivo);
+                setMensagemTokenAuditoriaCampo("Token público ativo carregado automaticamente do Supabase.");
+                setQrFormCampo((atual) => {
+                    const tokenAtual = String(atual.token || "").trim();
+                    return tokenAtual ? atual : { ...atual, token: tokenAtivo };
+                });
+            } catch (error) {
+                if (!componenteAtivo) return;
+
+                setTokenAuditoriaCampoConfigurado("");
+                setMensagemTokenAuditoriaCampo(error?.message || "Não foi possível carregar o token público ativo do Supabase.");
+            } finally {
+                if (componenteAtivo) {
+                    setCarregandoTokenAuditoriaCampo(false);
+                }
+            }
+        }
+
+        carregarTokenAuditoriaCampo();
+
+        return () => {
+            componenteAtivo = false;
+        };
+    }, []);
 
     const carregarEmpresasCadastradasQrCampo = useCallback(async () => {
         setCarregandoEmpresasQrCampo(true);
@@ -1042,6 +1087,25 @@ export function DashboardAuditoriaCampo({
     }, [qrFormCampo, tokenAuditoriaCampoConfigurado]);
 
     const linkQrCampoAtual = useMemo(() => montarLinkQrCampo(qrFormCampo), [montarLinkQrCampo, qrFormCampo]);
+
+    const montarLinkQrCampoSalvo = useCallback((item = {}) => {
+        const tokenSalvo = String(item.token_publico || item.tokenPublico || tokenAuditoriaCampoConfigurado || "").trim();
+        const linkSalvo = String(item.link || "").trim();
+
+        if (linkSalvo && (linkSalvo.includes("token=") || !tokenSalvo)) {
+            return linkSalvo;
+        }
+
+        return montarLinkQrCampo({
+            tipo: item.tipo || "maquina",
+            identificacao: item.identificacao || "",
+            area: item.area || "",
+            local: item.local || "",
+            empresaResponsavel: item.empresa_responsavel || item.empresaResponsavel || "",
+            token: tokenSalvo,
+            codigo: item.codigo || item.codigo_qr || "",
+        });
+    }, [montarLinkQrCampo, tokenAuditoriaCampoConfigurado]);
 
     const carregarQrcodesCampo = useCallback(async ({ append = false } = {}) => {
         if (append) {
@@ -2227,11 +2291,13 @@ export function DashboardAuditoriaCampo({
                             </label>
                             <label className="block text-xs font-bold uppercase tracking-wide text-slate-500 md:col-span-2">
                                 Token público cadastrado no Supabase
-                                <input value={qrFormCampo.token} onChange={(e) => setQrFormCampo((atual) => ({ ...atual, token: e.target.value }))} placeholder="Cole o token público ativo da tabela auditoria_tokens_publicos" className="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-3 py-2 text-sm normal-case tracking-normal outline-none focus:ring-2 focus:ring-blue-100" />
-                                <span className="mt-1 block text-[11px] font-medium normal-case tracking-normal text-slate-400">Token operacional vindo de Configurações. Ele também precisa existir e estar ativo no Supabase.</span>
+                                <input value={qrFormCampo.token} onChange={(e) => setQrFormCampo((atual) => ({ ...atual, token: e.target.value }))} placeholder="Carregado automaticamente do Supabase ou cole o token público ativo" className="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-3 py-2 text-sm normal-case tracking-normal outline-none focus:ring-2 focus:ring-blue-100" />
+                                <span className={classNames("mt-1 block text-[11px] font-medium normal-case tracking-normal", tokenAuditoriaCampoConfigurado ? "text-emerald-600" : "text-amber-600")}>
+                                    {mensagemTokenAuditoriaCampo || "O token é carregado automaticamente da tabela auditoria_tokens_publicos."}
+                                </span>
                             </label>
-                            <div className="md:col-span-2 rounded-2xl bg-blue-50 px-3 py-2 text-xs font-semibold text-blue-700 ring-1 ring-blue-100">
-                                Token operacional configurado: {tokenAuditoriaCampoConfigurado || "Não configurado"}
+                            <div className={classNames("md:col-span-2 rounded-2xl px-3 py-2 text-xs font-semibold ring-1", tokenAuditoriaCampoConfigurado ? "bg-emerald-50 text-emerald-700 ring-emerald-100" : carregandoTokenAuditoriaCampo ? "bg-blue-50 text-blue-700 ring-blue-100" : "bg-red-50 text-red-700 ring-red-100")}>
+                                Token operacional carregado do Supabase: {tokenAuditoriaCampoConfigurado ? "Configurado" : carregandoTokenAuditoriaCampo ? "Carregando..." : "Não configurado"}
                             </div>
                             <label className="block text-xs font-bold uppercase tracking-wide text-slate-500 md:col-span-2">
                                 Observação
@@ -2349,12 +2415,13 @@ export function DashboardAuditoriaCampo({
                                         const statusQrCampoEstaAberto = statusQrCampoAberto === chaveQrSalvo;
                                         const totalHistoricoQrCampo = historicoAuditoriasQrCampo.length;
                                         const statusEquipamentoQrCampo = calcularStatusEquipamentoQrCampo(historicoAuditoriasQrCampo);
+                                        const linkQrCampoSalvo = montarLinkQrCampoSalvo(item);
 
                                         return (
                                         <div key={item.id || item.codigo} className="grid gap-3 overflow-hidden rounded-2xl bg-slate-50 p-3 ring-1 ring-slate-100 sm:grid-cols-[108px_minmax(0,1fr)]">
                                             <div className="flex items-start justify-center">
                                                 <div data-qrcode-campo-id={chaveQrSalvo} className="flex aspect-square w-[96px] items-center justify-center self-start rounded-3xl border border-slate-200 bg-white p-3 shadow-sm">
-                                                    <QRCodeCampoLazy value={item.link || ""} size={72} level="M" />
+                                                    <QRCodeCampoLazy value={linkQrCampoSalvo} size={72} level="M" />
                                                 </div>
                                             </div>
                                             <div className="min-w-0 overflow-hidden">
@@ -2367,13 +2434,13 @@ export function DashboardAuditoriaCampo({
                                                 <div className="mt-3 grid grid-cols-4 gap-1.5">
                                                     <button
                                                         type="button"
-                                                        onClick={() => navigator.clipboard?.writeText(item.link || "")}
+                                                        onClick={() => navigator.clipboard?.writeText(linkQrCampoSalvo)}
                                                         className="inline-flex h-9 w-full min-w-0 items-center justify-center gap-0.5 whitespace-nowrap rounded-xl bg-blue-50 px-1.5 py-1 text-[9px] font-black leading-none tracking-[-0.03em] text-blue-700 ring-1 ring-blue-100 hover:bg-blue-100"
                                                     >
                                                         Copiar link
                                                     </button>
                                                     <a
-                                                        href={item.link || "#"}
+                                                        href={linkQrCampoSalvo || "#"}
                                                         target="_blank"
                                                         rel="noreferrer"
                                                         className="inline-flex h-9 w-full min-w-0 items-center justify-center gap-0.5 whitespace-nowrap rounded-xl bg-emerald-50 px-1.5 py-1 text-[9px] font-black leading-none tracking-[-0.03em] text-emerald-700 ring-1 ring-emerald-100 hover:bg-emerald-100"
