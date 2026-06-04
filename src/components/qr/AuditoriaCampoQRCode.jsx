@@ -41,6 +41,7 @@ export function AuditoriaCampoQRCode({ colaborador = {}, treinamentos = [], onAu
     const [acessoAuditoriaLiberado, setAcessoAuditoriaLiberado] = useState(false);
     const [validandoAcessoAuditoria, setValidandoAcessoAuditoria] = useState(false);
     const [mensagemAcessoAuditoria, setMensagemAcessoAuditoria] = useState("");
+    const [tokenAuditoriaQrValidado, setTokenAuditoriaQrValidado] = useState("");
     const [respostas, setRespostas] = useState({
         epi: "conforme",
         frente_trabalho: "conforme",
@@ -140,11 +141,6 @@ export function AuditoriaCampoQRCode({ colaborador = {}, treinamentos = [], onAu
     const validarAcessoAuditoriaQRCode = async () => {
         setMensagemAcessoAuditoria("");
 
-        if (!tokenAuditoriaQr) {
-            setMensagemAcessoAuditoria("Token público da auditoria não configurado. Gere o QR Code com token ativo ou informe token/chave na URL.");
-            return;
-        }
-
         if (!senhaAuditoriaQr.trim()) {
             setMensagemAcessoAuditoria("Informe a senha de acesso da auditoria.");
             return;
@@ -154,19 +150,22 @@ export function AuditoriaCampoQRCode({ colaborador = {}, treinamentos = [], onAu
 
         try {
             const resposta = await validarSenhaAuditoriaQr({
-                tokenAuditoria: tokenAuditoriaQr,
+                tokenAuditoria: tokenAuditoriaQrValidado || tokenAuditoriaQr,
                 senha: senhaAuditoriaQr,
             });
 
             if (resposta?.autorizado !== true) {
+                setTokenAuditoriaQrValidado("");
                 setMensagemAcessoAuditoria(resposta?.mensagem || "Senha inválida para abrir a auditoria.");
                 setAcessoAuditoriaLiberado(false);
                 return;
             }
 
+            setTokenAuditoriaQrValidado(resposta?.tokenValidado || tokenAuditoriaQrValidado || tokenAuditoriaQr || "");
             setAcessoAuditoriaLiberado(true);
             setMensagemAcessoAuditoria("Acesso liberado. Preencha a auditoria abaixo.");
         } catch (error) {
+            setTokenAuditoriaQrValidado("");
             setMensagemAcessoAuditoria(error?.message || "Não foi possível validar a senha da auditoria.");
             setAcessoAuditoriaLiberado(false);
         } finally {
@@ -260,7 +259,7 @@ export function AuditoriaCampoQRCode({ colaborador = {}, treinamentos = [], onAu
             };
 
             const resultadoSalvamento = await salvarAuditoriaQrColaborador({
-                tokenAuditoria: tokenAuditoriaQr,
+                tokenAuditoria: tokenAuditoriaQrValidado || tokenAuditoriaQr,
                 senha: senhaAuditoriaQr,
                 tokenQr: auditoriaPayload.token_qr,
                 auditoria: auditoriaPayload,
@@ -286,6 +285,7 @@ export function AuditoriaCampoQRCode({ colaborador = {}, treinamentos = [], onAu
             setComplementoNotificacao("");
             setNotificacaoEdicaoAberta(false);
             setAcessoAuditoriaLiberado(false);
+            setTokenAuditoriaQrValidado("");
             setSenhaAuditoriaQr("");
             setMensagemAcessoAuditoria("");
             setDesvio({
@@ -323,6 +323,7 @@ export function AuditoriaCampoQRCode({ colaborador = {}, treinamentos = [], onAu
                             const proximo = !valor;
                             if (proximo) {
                                 setAcessoAuditoriaLiberado(false);
+                                setTokenAuditoriaQrValidado("");
                                 setSenhaAuditoriaQr("");
                                 setMensagemAcessoAuditoria("");
                                 setMensagem("");

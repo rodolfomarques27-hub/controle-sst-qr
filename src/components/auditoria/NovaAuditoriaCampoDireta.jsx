@@ -185,8 +185,8 @@ export function NovaAuditoriaCampoDireta({ usuario = null, onAuditoriaSalva, emp
     const [tokenAuditoriaPublicaValidado, setTokenAuditoriaPublicaValidado] = useState("");
     const [carregandoTokenAuditoriaPublica, setCarregandoTokenAuditoriaPublica] = useState(false);
     const tokenAuditoriaPublicaConfigurado = tokenAuditoriaPublicaSupabase || obterTokenAuditoriaCampoPublicaConfigurado();
-    const tokenAcessoAuditoriaCampo = tokenAuditoriaPublicaValidado || tokenParametro || tokenAuditoriaQrCampoSalvo || tokenAuditoriaPublicaConfigurado;
-    const tokenLinkAuditoriaCampo = tokenParametro || tokenAuditoriaQrCampoSalvo || tokenAuditoriaPublicaConfigurado;
+    const tokenAcessoAuditoriaCampo = tokenAuditoriaPublicaValidado || tokenAuditoriaPublicaSupabase || tokenAuditoriaQrCampoSalvo || tokenParametro || tokenAuditoriaPublicaConfigurado;
+    const tokenLinkAuditoriaCampo = tokenAuditoriaPublicaSupabase || tokenAuditoriaPublicaValidado || tokenAuditoriaQrCampoSalvo || tokenParametro || tokenAuditoriaPublicaConfigurado;
     const tokenLinkAuditoriaCampoDisponivel = Boolean(tokenLinkAuditoriaCampo);
     const montarLinkAuditoriaCampo = (parametrosExtras = {}) => montarLinkAuditoriaCampoDireta({
         origem,
@@ -201,13 +201,13 @@ export function NovaAuditoriaCampoDireta({ usuario = null, onAuditoriaSalva, emp
     );
 
 
-    const tokenAuditoriaPublicaInformado = Boolean(tokenAcessoAuditoriaCampo);
+    const tokenAuditoriaPublicaInformado = Boolean(tokenAcessoAuditoriaCampo) || (!usuario && !carregandoTokenAuditoriaPublica);
     const [senhaAcessoAuditoria, setSenhaAcessoAuditoria] = useState("");
     const [acessoAuditoriaValidado, setAcessoAuditoriaValidado] = useState(() => Boolean(usuario));
     const [validandoAcessoAuditoria, setValidandoAcessoAuditoria] = useState(false);
     const [mensagemAcessoAuditoria, setMensagemAcessoAuditoria] = useState("");
     const acessoLiberado = Boolean(usuario) || (tokenAuditoriaPublicaInformado && acessoAuditoriaValidado);
-    const mensagemAcesso = tokenAcessoAuditoriaCampo ? "" : "Link inválido. Informe um token público de auditoria na URL ou abra por um QR Code ativo.";
+    const mensagemAcesso = "";
     const [salvando, setSalvando] = useState(false);
     const [mensagem, setMensagem] = useState("");
     const [auditoriaSalva, setAuditoriaSalva] = useState(null);
