@@ -24,13 +24,13 @@ const ESTILOS_PENDENCIAS_DESKTOP = `
     }
 
     .dashboard-pendencias-final__cabecalho > span:nth-child(4) {
-        text-align: right;
-        justify-self: end;
+        text-align: center;
+        justify-self: center;
     }
 
     .dashboard-pendencias-final__acoes {
-        justify-content: flex-end;
-        justify-self: end;
+        justify-content: center;
+        justify-self: center;
         min-width: 300px;
     }
 
