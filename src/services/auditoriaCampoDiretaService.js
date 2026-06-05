@@ -79,6 +79,7 @@ export function criarFormularioInicialAuditoriaCampoDireta({
         local: localParametro,
         maquinaEquipamento: identificacaoParametro,
         empresaResponsavel: empresaParametro,
+        empresaId: null,
         auditorNome: "",
         grauRisco: "Baixo",
         situacaoEncontrada: "",
@@ -100,32 +101,84 @@ export function criarFormularioInicialAuditoriaCampoDireta({
 function normalizarNomeEmpresaAuditoria(valor) {
     return String(valor || "")
         .normalize("NFD")
-        .replace(/[\u0300-\u036f]/g, "")
+        .replace(/[̀-ͯ]/g, "")
         .trim()
         .toLowerCase();
+}
+
+function primeiroValorEmpresaAuditoria(...valores) {
+    return valores.find((valor) => String(valor ?? "").trim()) || "";
+}
+
+function contarContatosEmpresaAuditoria(empresa = {}) {
+    return [
+        empresa.responsavel_auditoria,
+        empresa.responsavel,
+        empresa.email_auditoria,
+        empresa.email,
+        empresa.whatsapp_auditoria,
+        empresa.telefone,
+        empresa.tst_responsavel,
+        empresa.tst_email,
+        empresa.tst_whatsapp,
+    ].filter((valor) => String(valor ?? "").trim()).length;
+}
+
+function mesclarEmpresaAuditoriaContato(base = {}, nova = {}) {
+    const preferirNova = contarContatosEmpresaAuditoria(nova) > contarContatosEmpresaAuditoria(base);
+    const principal = preferirNova ? nova : base;
+    const secundaria = preferirNova ? base : nova;
+
+    return {
+        ...secundaria,
+        ...principal,
+        id: primeiroValorEmpresaAuditoria(principal.id, secundaria.id, principal.empresa_id, secundaria.empresa_id) || null,
+        empresa_id: primeiroValorEmpresaAuditoria(principal.empresa_id, secundaria.empresa_id, principal.id, secundaria.id) || null,
+        nome: primeiroValorEmpresaAuditoria(principal.nome, secundaria.nome, principal.empresa_nome, secundaria.empresa_nome),
+        status: primeiroValorEmpresaAuditoria(principal.status, secundaria.status),
+        tipo_empresa: primeiroValorEmpresaAuditoria(principal.tipo_empresa, secundaria.tipo_empresa, principal.tipoEmpresa, secundaria.tipoEmpresa),
+        responsavel_auditoria: primeiroValorEmpresaAuditoria(principal.responsavel_auditoria, secundaria.responsavel_auditoria, principal.responsavel, secundaria.responsavel),
+        responsavel: primeiroValorEmpresaAuditoria(principal.responsavel, secundaria.responsavel, principal.responsavel_auditoria, secundaria.responsavel_auditoria),
+        email_auditoria: primeiroValorEmpresaAuditoria(principal.email_auditoria, secundaria.email_auditoria, principal.email, secundaria.email),
+        email: primeiroValorEmpresaAuditoria(principal.email, secundaria.email, principal.email_auditoria, secundaria.email_auditoria),
+        whatsapp_auditoria: primeiroValorEmpresaAuditoria(principal.whatsapp_auditoria, secundaria.whatsapp_auditoria, principal.whatsapp, secundaria.whatsapp, principal.telefone, secundaria.telefone),
+        telefone: primeiroValorEmpresaAuditoria(principal.telefone, secundaria.telefone, principal.whatsapp_auditoria, secundaria.whatsapp_auditoria, principal.whatsapp, secundaria.whatsapp),
+        tst_responsavel: primeiroValorEmpresaAuditoria(principal.tst_responsavel, secundaria.tst_responsavel, principal.tstResponsavel, secundaria.tstResponsavel),
+        tst_email: primeiroValorEmpresaAuditoria(principal.tst_email, secundaria.tst_email, principal.tstEmail, secundaria.tstEmail),
+        tst_whatsapp: primeiroValorEmpresaAuditoria(principal.tst_whatsapp, secundaria.tst_whatsapp, principal.tstWhatsapp, secundaria.tstWhatsapp),
+    };
 }
 
 export function listarEmpresasAuditoriaCampoDireta(empresasBanco = []) {
     const mapa = new Map();
 
     (empresasBanco || []).forEach((empresa) => {
-        if (!empresa?.nome) return;
-        const chave = normalizarNomeEmpresaAuditoria(empresa.nome);
-        if (!mapa.has(chave)) mapa.set(chave, empresa);
+        if (!empresa?.nome && !empresa?.empresa_nome) return;
+        const nome = String(empresa.nome || empresa.empresa_nome || "").trim();
+        const chave = normalizarNomeEmpresaAuditoria(nome);
+        if (!chave) return;
+
+        const normalizada = mesclarEmpresaAuditoriaContato({ nome }, empresa);
+        const existente = mapa.get(chave);
+        mapa.set(chave, existente ? mesclarEmpresaAuditoriaContato(existente, normalizada) : normalizada);
     });
 
     return Array.from(mapa.values())
+        .filter((empresa) => String(empresa.nome || "").trim())
         .sort((a, b) => String(a.nome).localeCompare(String(b.nome), "pt-BR"));
 }
 
 export function encontrarEmpresaAuditoriaCampoDireta(empresasAuditoriaCampo = [], nomeEmpresa = "") {
-    const nomeNormalizado = normalizarTextoBusca(nomeEmpresa).trim();
+    const valorBusca = String(nomeEmpresa || "").trim();
+    const nomeNormalizado = normalizarTextoBusca(valorBusca).trim();
 
     if (!nomeNormalizado) return null;
 
-    return empresasAuditoriaCampo.find((empresa) =>
-        normalizarTextoBusca(empresa.nome).trim() === nomeNormalizado
-    ) || null;
+    return empresasAuditoriaCampo.find((empresa) => {
+        const idEmpresa = String(empresa.id || empresa.empresa_id || "").trim();
+        const nomeEmpresaAtual = normalizarTextoBusca(empresa.nome || empresa.empresa_nome || "").trim();
+        return idEmpresa === valorBusca || nomeEmpresaAtual === nomeNormalizado;
+    }) || null;
 }
 
 export function obterContatosEmpresaAuditoriaCampoDireta(empresaSelecionadaAuditoria) {
@@ -141,53 +194,206 @@ export function obterContatosEmpresaAuditoriaCampoDireta(empresaSelecionadaAudit
     }
 
     return {
-        responsavel: empresaSelecionadaAuditoria.responsavel_auditoria || empresaSelecionadaAuditoria.responsavel || "",
-        email: empresaSelecionadaAuditoria.email_auditoria || empresaSelecionadaAuditoria.email || "",
-        whatsapp: empresaSelecionadaAuditoria.whatsapp_auditoria || empresaSelecionadaAuditoria.telefone || "",
-        tstResponsavel: empresaSelecionadaAuditoria.tst_responsavel || "",
-        tstEmail: empresaSelecionadaAuditoria.tst_email || "",
-        tstWhatsapp: empresaSelecionadaAuditoria.tst_whatsapp || "",
+        responsavel: primeiroValorEmpresaAuditoria(
+            empresaSelecionadaAuditoria.responsavel_auditoria,
+            empresaSelecionadaAuditoria.responsavel,
+            empresaSelecionadaAuditoria.responsavelAuditoria
+        ),
+        email: primeiroValorEmpresaAuditoria(
+            empresaSelecionadaAuditoria.email_auditoria,
+            empresaSelecionadaAuditoria.email,
+            empresaSelecionadaAuditoria.emailAuditoria
+        ),
+        whatsapp: primeiroValorEmpresaAuditoria(
+            empresaSelecionadaAuditoria.whatsapp_auditoria,
+            empresaSelecionadaAuditoria.whatsapp,
+            empresaSelecionadaAuditoria.telefone,
+            empresaSelecionadaAuditoria.whatsappAuditoria
+        ),
+        tstResponsavel: primeiroValorEmpresaAuditoria(
+            empresaSelecionadaAuditoria.tst_responsavel,
+            empresaSelecionadaAuditoria.tstResponsavel
+        ),
+        tstEmail: primeiroValorEmpresaAuditoria(
+            empresaSelecionadaAuditoria.tst_email,
+            empresaSelecionadaAuditoria.tstEmail
+        ),
+        tstWhatsapp: primeiroValorEmpresaAuditoria(
+            empresaSelecionadaAuditoria.tst_whatsapp,
+            empresaSelecionadaAuditoria.tstWhatsapp
+        ),
     };
 }
 
-export function aplicarContatosEmpresaAuditoriaCampoDireta(formularioAtual, empresa, nomeEmpresa = "") {
+export function formatarTelefoneAuditoriaCampoDireta(valor = "") {
+    let digitos = String(valor || "").replace(/\D/g, "");
+
+    if (digitos.startsWith("55") && digitos.length > 11) {
+        digitos = digitos.slice(2);
+    }
+
+    digitos = digitos.slice(0, 11);
+
+    if (!digitos) return "";
+
+    if (digitos.length <= 2) return digitos;
+    if (digitos.length <= 6) return `${digitos.slice(0, 2)} ${digitos.slice(2)}`;
+    if (digitos.length <= 10) return `${digitos.slice(0, 2)} ${digitos.slice(2, 6)}-${digitos.slice(6)}`;
+
+    return `${digitos.slice(0, 2)} ${digitos.slice(2, 7)}-${digitos.slice(7)}`;
+}
+
+export function aplicarContatosEmpresaAuditoriaCampoDireta(formularioAtual, empresa, nomeEmpresa = "", opcoes = {}) {
     if (!empresa) {
         return {
             ...formularioAtual,
             empresaResponsavel: nomeEmpresa,
+            empresaId: null,
+            empresa_id: null,
         };
     }
 
     const contatos = obterContatosEmpresaAuditoriaCampoDireta(empresa);
+    const forcar = Boolean(opcoes?.forcar);
+    const aplicarValor = (valorAtual, valorNovo) => {
+        const novoTratado = String(valorNovo || "").trim();
+        if (forcar) return novoTratado || valorAtual || "";
+        return valorAtual || novoTratado || "";
+    };
 
     return {
         ...formularioAtual,
         empresaResponsavel: empresa.nome,
-        responsavelTratativa: formularioAtual.responsavelTratativa || contatos.responsavel,
-        emailResponsavel: contatos.email || formularioAtual.emailResponsavel,
-        whatsappResponsavel: contatos.whatsapp || formularioAtual.whatsappResponsavel,
-        nomeTstResponsavel: contatos.tstResponsavel || formularioAtual.nomeTstResponsavel,
-        emailTstResponsavel: contatos.tstEmail || formularioAtual.emailTstResponsavel,
-        whatsappTstResponsavel: contatos.tstWhatsapp || formularioAtual.whatsappTstResponsavel,
+        empresaId: empresa.id || empresa.empresa_id || null,
+        empresa_id: empresa.id || empresa.empresa_id || null,
+        responsavelTratativa: aplicarValor(formularioAtual.responsavelTratativa, contatos.responsavel),
+        emailResponsavel: aplicarValor(formularioAtual.emailResponsavel, contatos.email),
+        whatsappResponsavel: aplicarValor(formularioAtual.whatsappResponsavel, formatarTelefoneAuditoriaCampoDireta(contatos.whatsapp)),
+        nomeTstResponsavel: aplicarValor(formularioAtual.nomeTstResponsavel, contatos.tstResponsavel),
+        emailTstResponsavel: aplicarValor(formularioAtual.emailTstResponsavel, contatos.tstEmail),
+        whatsappTstResponsavel: aplicarValor(formularioAtual.whatsappTstResponsavel, formatarTelefoneAuditoriaCampoDireta(contatos.tstWhatsapp)),
     };
 }
 
-export function montarTextoNotificacaoAuditoriaCampoDireta({ formulario, tipoAtual }) {
-    return [
-        `Auditoria de campo: ${formulario.titulo || "Sem título"}`,
-        `Tipo: ${tipoAtual.label}`,
-        `Empresa responsável: ${formulario.empresaResponsavel || "Não informada"}`,
-        `Área: ${formulario.area || "Não informada"}`,
-        `Local: ${formulario.local || "Não informado"}`,
-        `Grau de risco: ${formulario.grauRisco}`,
-        `Status: ${formulario.statusAuditoria}`,
-        `Auditor: ${formulario.auditorNome || "Não informado"}`,
+export function valorAuditoriaCampoInformado(valor = "") {
+    const texto = String(valor || "").trim();
+    if (!texto) return "";
+
+    const normalizado = normalizarTextoBusca(texto).replace(/\s+/g, " ").trim();
+
+    if (["nao aplicavel", "nao se aplica", "n/a", "na", "nao informado", "nao informada"].includes(normalizado)) {
+        return "";
+    }
+
+    return texto;
+}
+
+export function formatarDataAuditoriaCampoDireta(valor = "") {
+    const texto = String(valor || "").trim();
+    if (!texto) return "";
+
+    const formatoIso = texto.match(/^(\d{4})-(\d{2})-(\d{2})/);
+    if (formatoIso) {
+        return `${formatoIso[3]}/${formatoIso[2]}/${formatoIso[1]}`;
+    }
+
+    const data = new Date(texto);
+    if (Number.isNaN(data.getTime())) return texto;
+
+    return data.toLocaleDateString("pt-BR");
+}
+
+export function formatarNumeroAuditoriaCampoDireta(valor = "") {
+    const texto = String(valor || "").trim();
+    if (!texto) return "";
+
+    const encontrado = texto.match(/^AUD-(\d{4})-(\d+)$/i);
+    if (!encontrado) return texto;
+
+    return `AUD-${String(encontrado[2]).padStart(4, "0")}-${encontrado[1]}`;
+}
+
+function adicionarLinhaResumoAuditoria(linhas, label, valor, { data = false } = {}) {
+    const texto = valorAuditoriaCampoInformado(valor);
+    if (!texto) return;
+
+    linhas.push(`${label}: ${data ? formatarDataAuditoriaCampoDireta(texto) : texto}`);
+}
+
+export function montarTextoNotificacaoAuditoriaCampoDireta({ formulario, tipoAtual, numeroAuditoria = "" }) {
+    const numero = formatarNumeroAuditoriaCampoDireta(numeroAuditoria || formulario?.numeroAuditoria || formulario?.numero_auditoria || "");
+    const linhas = [
+        "Prezado,",
         "",
-        `Situação encontrada: ${formulario.situacaoEncontrada || "Não informada"}`,
-        `Ação recomendada: ${formulario.acaoRecomendada || "Não informada"}`,
-        `Responsável pela tratativa: ${formulario.responsavelTratativa || "Não informado"}`,
-        `Prazo: ${formulario.prazoAdequacao || "Não informado"}`,
-    ].join("\n");
+        numero
+            ? `Foi realizada uma nova auditoria de campo nº ${numero}. Seguem abaixo as informações para acompanhamento e tratativa.`
+            : "Foi realizada uma nova auditoria de campo. Seguem abaixo as informações para acompanhamento e tratativa.",
+        "",
+        "Resumo técnico da auditoria:",
+    ];
+
+    adicionarLinhaResumoAuditoria(linhas, "Tipo", tipoAtual?.label || formulario?.tipoAuditoria);
+    adicionarLinhaResumoAuditoria(linhas, "Empresa responsável", formulario?.empresaResponsavel);
+    adicionarLinhaResumoAuditoria(linhas, "Área", formulario?.area);
+    adicionarLinhaResumoAuditoria(linhas, "Subárea", formulario?.subarea);
+    adicionarLinhaResumoAuditoria(linhas, "Local", formulario?.local);
+    adicionarLinhaResumoAuditoria(linhas, "Máquina/equipamento", formulario?.maquinaEquipamento);
+    adicionarLinhaResumoAuditoria(linhas, "Grau de risco", formulario?.grauRisco);
+    adicionarLinhaResumoAuditoria(linhas, "Status", formulario?.statusAuditoria);
+    adicionarLinhaResumoAuditoria(linhas, "Auditor", formulario?.auditorNome);
+    adicionarLinhaResumoAuditoria(linhas, "Responsável pela tratativa", formulario?.responsavelTratativa);
+    adicionarLinhaResumoAuditoria(linhas, "Prazo para adequação", formulario?.prazoAdequacao, { data: true });
+
+    const situacao = valorAuditoriaCampoInformado(formulario?.situacaoEncontrada);
+    if (situacao) {
+        linhas.push("", "Situação encontrada:", situacao);
+    }
+
+    const acao = valorAuditoriaCampoInformado(formulario?.acaoRecomendada);
+    if (acao) {
+        linhas.push("", "Ação recomendada:", acao);
+    }
+
+    const observacoes = valorAuditoriaCampoInformado(formulario?.observacoesGerais);
+    if (observacoes) {
+        linhas.push("", "Observações complementares:", observacoes);
+    }
+
+    if (formulario?.fotoAntes || formulario?.fotoDepois || formulario?.fotoAntesUrl || formulario?.fotoDepoisUrl) {
+        linhas.push("", "Evidências:", "As fotos/evidências foram anexadas ao registro da auditoria no sistema.");
+    }
+
+    linhas.push("", "Em caso de dúvida, fico à disposição para orientar a tratativa e acompanhar a regularização.");
+
+    return linhas.join("\n");
+}
+
+export function montarResumoAuditoriaCampoDiretaFinal({ auditoria = {}, formulario = {}, tipoAtual = {} } = {}) {
+    const numero = auditoria.numeroAuditoria || auditoria.numero_auditoria || formulario.numeroAuditoria || formulario.numero_auditoria || auditoria.id || "";
+    const formularioResumo = {
+        tipoAuditoria: formulario.tipoAuditoria || auditoria.tipoAuditoria || auditoria.tipo_auditoria,
+        empresaResponsavel: formulario.empresaResponsavel || auditoria.empresaResponsavel || auditoria.empresa_responsavel || auditoria.empresaNome || auditoria.empresa_nome,
+        area: formulario.area || auditoria.area,
+        subarea: formulario.subarea || auditoria.subarea,
+        local: formulario.local || auditoria.local,
+        maquinaEquipamento: formulario.maquinaEquipamento || auditoria.maquinaEquipamento || auditoria.maquina_equipamento,
+        grauRisco: formulario.grauRisco || auditoria.grauRisco || auditoria.grau_risco,
+        statusAuditoria: formulario.statusAuditoria || auditoria.statusAuditoria || auditoria.status_auditoria,
+        auditorNome: formulario.auditorNome || auditoria.auditorNome || auditoria.auditor_nome,
+        responsavelTratativa: formulario.responsavelTratativa || auditoria.responsavelTratativa || auditoria.responsavel_tratativa,
+        prazoAdequacao: formulario.prazoAdequacao || auditoria.prazoAdequacao || auditoria.prazo_adequacao,
+        situacaoEncontrada: formulario.situacaoEncontrada || auditoria.situacaoEncontrada || auditoria.situacao_encontrada,
+        acaoRecomendada: formulario.acaoRecomendada || auditoria.acaoRecomendada || auditoria.acao_recomendada,
+        observacoesGerais: formulario.observacoesGerais || auditoria.observacoesGerais || auditoria.observacoes_gerais,
+        fotoAntes: formulario.fotoAntes || auditoria.fotoAntesUrl || auditoria.foto_antes_url,
+        fotoDepois: formulario.fotoDepois || auditoria.fotoDepoisUrl || auditoria.foto_depois_url,
+    };
+
+    return montarTextoNotificacaoAuditoriaCampoDireta({
+        formulario: formularioResumo,
+        tipoAtual,
+        numeroAuditoria: numero,
+    });
 }
 
 export function formatarWhatsappBrasilAuditoriaCampoDireta(valor = "") {
@@ -254,7 +460,6 @@ export async function gerarNumeroAuditoriaCampoDireta(supabaseClient) {
     return `AUD-${ano}-${String(Date.now()).slice(-4)}`;
 }
 
-
 function normalizarSegmentoCaminhoAuditoriaCampo(valor = "", fallback = "sem-identificacao") {
     const texto = String(valor || "")
         .normalize("NFD")
@@ -317,7 +522,6 @@ export async function uploadFotoAuditoriaCampoDireta({
 
     return caminho;
 }
-
 export function montarPayloadAuditoriaCampoDireta({
     formulario,
     resultado,
@@ -344,6 +548,7 @@ export function montarPayloadAuditoriaCampoDireta({
     const origemAuditoria = codigoQrCampo ? `QR Code de campo / ${codigoQrCampo}` : "Link direto / auditoria-campo";
 
     return {
+        empresa_id: formulario.empresaId || formulario.empresa_id || null,
         tipo_auditoria: formulario.tipoAuditoria,
         titulo: formulario.titulo.trim(),
         area: formulario.area.trim() || null,

@@ -207,15 +207,17 @@ function normalizarEmpresaAuditoriaPublica(item = {}) {
     return {
         ...item,
         id: item.id || item.empresa_id || null,
+        empresa_id: item.empresa_id || item.id || null,
         nome: String(item.nome || item.empresa_nome || item.empresa || "").trim(),
         status: item.status || "",
         tipo_empresa: item.tipo_empresa || item.tipoEmpresa || "",
-        responsavel_auditoria: item.responsavel_auditoria || item.responsavelAuditoria || "",
-        responsavel: item.responsavel || "",
-        email_auditoria: item.email_auditoria || item.emailAuditoria || "",
-        email: item.email || "",
-        whatsapp_auditoria: item.whatsapp_auditoria || item.whatsappAuditoria || "",
-        telefone: item.telefone || "",
+        responsavel_auditoria: item.responsavel_auditoria || item.responsavelAuditoria || item.responsavel || "",
+        responsavel: item.responsavel || item.responsavel_auditoria || item.responsavelAuditoria || "",
+        email_auditoria: item.email_auditoria || item.emailAuditoria || item.email || "",
+        email: item.email || item.email_auditoria || item.emailAuditoria || "",
+        whatsapp_auditoria: item.whatsapp_auditoria || item.whatsappAuditoria || item.whatsapp || item.telefone || "",
+        whatsapp: item.whatsapp || item.whatsapp_auditoria || item.whatsappAuditoria || item.telefone || "",
+        telefone: item.telefone || item.whatsapp_auditoria || item.whatsappAuditoria || item.whatsapp || "",
         tst_responsavel: item.tst_responsavel || item.tstResponsavel || "",
         tst_email: item.tst_email || item.tstEmail || "",
         tst_whatsapp: item.tst_whatsapp || item.tstWhatsapp || "",
@@ -256,7 +258,7 @@ export async function carregarEmpresasAuditoriaPublicaControlada({ token = "", s
         return {
             ok: true,
             empresas,
-            mensagem: empresas.length ? "Empresas carregadas com segurança." : "Nenhuma empresa cadastrada foi retornada pela consulta controlada.",
+            mensagem: empresas.length ? "Empresas e contatos carregados com segurança." : "Nenhuma empresa cadastrada foi retornada pela consulta controlada.",
         };
     } catch (error) {
         return {
@@ -266,4 +268,3 @@ export async function carregarEmpresasAuditoriaPublicaControlada({ token = "", s
         };
     }
 }
-
