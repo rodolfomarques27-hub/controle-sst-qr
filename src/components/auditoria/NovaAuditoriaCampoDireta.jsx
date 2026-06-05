@@ -329,11 +329,26 @@ export function NovaAuditoriaCampoDireta({ usuario = null, onAuditoriaSalva, emp
 
 
     const nomeEmpresaAtualAuditoria = String(formulario.empresaResponsavel || empresaParametro || "").trim();
+    const empresasParaSelecaoAuditoriaCampo = useMemo(() => {
+        const lista = [...empresasAuditoriaCampo];
+        const empresaAtual = nomeEmpresaAtualAuditoria;
+
+        if (empresaAtual && !lista.some((empresa) => normalizarTextoBusca(empresa.nome).trim() === normalizarTextoBusca(empresaAtual).trim())) {
+            lista.unshift({
+                id: `empresa-publica-${empresaAtual}`,
+                nome: empresaAtual,
+                origemPublica: true,
+            });
+        }
+
+        return lista;
+    }, [empresasAuditoriaCampo, nomeEmpresaAtualAuditoria]);
     const empresaSelecionadaAuditoria = encontrarEmpresaAuditoriaCampoDireta(
         empresasAuditoriaCampo,
         nomeEmpresaAtualAuditoria
     );
     const contatosEmpresaAuditoria = obterContatosEmpresaAuditoriaCampoDireta(empresaSelecionadaAuditoria);
+    const possuiEmpresasCadastradasAuditoriaCampo = empresasAuditoriaCampo.length > 0;
 
     const tipoAtual = obterTipoAuditoriaCampoDireta(formulario.tipoAuditoria);
     const categoriaAtual = obterCategoriaPadronizadaAuditoriaCampo(formulario.categoriaAuditoria);
@@ -960,12 +975,13 @@ export function NovaAuditoriaCampoDireta({ usuario = null, onAuditoriaSalva, emp
                                 <div>
                                     <label className="text-xs font-bold uppercase tracking-wide text-slate-500">Empresa responsável</label>
                                     <select
-                                        value={empresasAuditoriaCampo.some((empresa) => empresa.nome === formulario.empresaResponsavel) ? formulario.empresaResponsavel : ""}
+                                        value={empresasParaSelecaoAuditoriaCampo.some((empresa) => empresa.nome === formulario.empresaResponsavel) ? formulario.empresaResponsavel : ""}
                                         onChange={(e) => alterarEmpresaResponsavelAuditoria(e.target.value)}
-                                        className="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold outline-none focus:ring-2 focus:ring-slate-300"
+                                        disabled={empresasParaSelecaoAuditoriaCampo.length === 0}
+                                        className="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold outline-none focus:ring-2 focus:ring-slate-300 disabled:cursor-not-allowed disabled:bg-slate-50 disabled:text-slate-400"
                                     >
-                                        <option value="">Selecionar empresa cadastrada</option>
-                                        {empresasAuditoriaCampo.map((empresa) => (
+                                        <option value="">{possuiEmpresasCadastradasAuditoriaCampo ? "Selecionar empresa cadastrada" : "Empresa informada no QR ou digitação manual"}</option>
+                                        {empresasParaSelecaoAuditoriaCampo.map((empresa) => (
                                             <option key={empresa.id || empresa.nome} value={empresa.nome}>{empresa.nome}</option>
                                         ))}
                                     </select>
@@ -973,16 +989,18 @@ export function NovaAuditoriaCampoDireta({ usuario = null, onAuditoriaSalva, emp
                                         value={formulario.empresaResponsavel || ""}
                                         onChange={(e) => alterarFormulario("empresaResponsavel", e.target.value)}
                                         list="empresas-auditoria-campo"
-                                        placeholder="Ou digite manualmente"
+                                        placeholder={possuiEmpresasCadastradasAuditoriaCampo ? "Ou digite manualmente" : "Digite a empresa responsável"}
                                         className="mt-2 w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-slate-300"
                                     />
                                     <datalist id="empresas-auditoria-campo">
-                                        {empresasAuditoriaCampo.map((empresa) => (
+                                        {empresasParaSelecaoAuditoriaCampo.map((empresa) => (
                                             <option key={empresa.id || empresa.nome} value={empresa.nome} />
                                         ))}
                                     </datalist>
                                     <p className="mt-1 text-[11px] text-slate-400">
-                                        Ao selecionar uma empresa cadastrada, o app preenche automaticamente e-mail, WhatsApp e TST responsável quando esses dados existirem no cadastro.
+                                        {possuiEmpresasCadastradasAuditoriaCampo
+                                            ? "Ao selecionar uma empresa cadastrada, o app preenche automaticamente e-mail, WhatsApp e TST responsável quando esses dados existirem no cadastro."
+                                            : "Na auditoria pública, a lista completa de empresas do banco permanece protegida. Use a empresa vinculada ao QR Code ou digite a empresa responsável manualmente."}
                                     </p>
                                 </div>
                                 {renderCampoTexto("auditorNome", "Nome do auditor", "Quem está realizando a auditoria")}
