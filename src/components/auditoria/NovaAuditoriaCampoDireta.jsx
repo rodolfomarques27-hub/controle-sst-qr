@@ -31,9 +31,6 @@ import {
     obterTokenAuditoriaCampoPublicaConfigurado,
     aplicarContatosEmpresaAuditoriaCampoDireta,
     criarFormularioInicialAuditoriaCampoDireta,
-    formatarNumeroAuditoriaCampoDireta,
-    formatarTelefoneAuditoriaCampoDireta,
-    formatarWhatsappBrasilAuditoriaCampoDireta,
     encontrarEmpresaAuditoriaCampoDireta,
     extrairParametrosAuditoriaCampoDireta,
     gerarNumeroAuditoriaCampoDireta,
@@ -47,6 +44,8 @@ import {
     obterParametrosAuditoriaCampoDiretaUrl,
     uploadFotoAuditoriaCampoDireta,
     validarFormularioAuditoriaCampoDireta,
+    formatarTelefoneAuditoriaCampoDireta,
+    formatarNumeroAuditoriaCampoDireta,
 } from "../../services/auditoriaCampoDiretaService";
 import {
     carregarEmpresasAuditoriaPublicaControlada,
@@ -201,17 +200,16 @@ export function NovaAuditoriaCampoDireta({ usuario = null, onAuditoriaSalva, emp
     });
     const linkGeral = tokenLinkAuditoriaCampoDisponivel ? montarLinkAuditoriaCampo() : "";
     const linkGeralDireto = linkGeral;
-    const [empresasPublicasAuditoria, setEmpresasPublicasAuditoria] = useState([]);
+    const [empresasPublicasAuditoriaCampo, setEmpresasPublicasAuditoriaCampo] = useState([]);
     const [carregandoEmpresasPublicasAuditoria, setCarregandoEmpresasPublicasAuditoria] = useState(false);
     const [mensagemEmpresasPublicasAuditoria, setMensagemEmpresasPublicasAuditoria] = useState("");
     const [empresaManualHabilitada, setEmpresaManualHabilitada] = useState(() => Boolean(String(empresaParametro || "").trim()));
     const empresasAuditoriaCampo = useMemo(
         () => listarEmpresasAuditoriaCampoDireta([
-            ...(empresasBanco || []),
-            ...(empresasPublicasAuditoria || []),
-            ...(String(empresaParametro || "").trim() ? [{ id: `qr-${empresaParametro}`, nome: empresaParametro }] : []),
+            ...(Array.isArray(empresasBanco) ? empresasBanco : []),
+            ...empresasPublicasAuditoriaCampo,
         ]),
-        [empresasBanco, empresasPublicasAuditoria, empresaParametro]
+        [empresasBanco, empresasPublicasAuditoriaCampo]
     );
 
 
@@ -295,54 +293,7 @@ export function NovaAuditoriaCampoDireta({ usuario = null, onAuditoriaSalva, emp
         setSenhaAcessoAuditoria("");
         setMensagemAcessoAuditoria("");
         setTokenAuditoriaPublicaValidado("");
-        setEmpresasPublicasAuditoria([]);
-        setMensagemEmpresasPublicasAuditoria("");
     }, [usuario, tokenParametro, codigoQrCampoParametro]);
-
-    const carregarEmpresasPublicasControladasAuditoria = async (tokenValidado = "") => {
-        if (usuario) return;
-
-        const tokenSeguro = String(tokenValidado || tokenAuditoriaPublicaValidado || tokenAcessoAuditoriaCampo || "").trim();
-        const senhaSegura = senhaAcessoAuditoria.trim();
-
-        if (!tokenSeguro || !senhaSegura) {
-            setEmpresasPublicasAuditoria([]);
-            return;
-        }
-
-        setCarregandoEmpresasPublicasAuditoria(true);
-        setMensagemEmpresasPublicasAuditoria("");
-
-        try {
-            const resultado = await carregarEmpresasAuditoriaPublicaControlada({
-                token: tokenSeguro,
-                senha: senhaSegura,
-            });
-
-            if (!resultado.ok) {
-                setEmpresasPublicasAuditoria([]);
-                setMensagemEmpresasPublicasAuditoria(resultado.mensagem || "Não foi possível carregar empresas cadastradas no acesso público.");
-                return;
-            }
-
-            setEmpresasPublicasAuditoria(resultado.empresas || []);
-            setMensagemEmpresasPublicasAuditoria(resultado.mensagem || "Empresas cadastradas carregadas com segurança.");
-
-            const empresaVindaDoQr = String(empresaParametro || "").trim();
-            if (empresaVindaDoQr && resultado.empresas?.length) {
-                const empresaEncontrada = encontrarEmpresaAuditoriaCampoDireta(resultado.empresas, empresaVindaDoQr);
-                if (empresaEncontrada) {
-                    setEmpresaManualHabilitada(false);
-                    setFormulario((atual) => aplicarContatosEmpresaAuditoriaCampoDireta(atual, empresaEncontrada, empresaEncontrada.nome));
-                }
-            }
-        } catch (error) {
-            setEmpresasPublicasAuditoria([]);
-            setMensagemEmpresasPublicasAuditoria(error?.message || "Não foi possível carregar empresas cadastradas no acesso público.");
-        } finally {
-            setCarregandoEmpresasPublicasAuditoria(false);
-        }
-    };
 
     const validarSenhaAuditoriaPublica = async (evento) => {
         evento?.preventDefault?.();
@@ -376,11 +327,9 @@ export function NovaAuditoriaCampoDireta({ usuario = null, onAuditoriaSalva, emp
                 return;
             }
 
-            const tokenValidadoFinal = resultado?.tokenValidado || tokenAuditoriaPublicaSupabase || tokenAuditoriaQrCampoSalvo || tokenParametro || "";
-            setTokenAuditoriaPublicaValidado(tokenValidadoFinal);
+            setTokenAuditoriaPublicaValidado(resultado?.tokenValidado || tokenAuditoriaPublicaSupabase || tokenAuditoriaQrCampoSalvo || tokenParametro || "");
             setAcessoAuditoriaValidado(true);
             setMensagemAcessoAuditoria("");
-            await carregarEmpresasPublicasControladasAuditoria(tokenValidadoFinal);
         } catch (error) {
             setTokenAuditoriaPublicaValidado("");
             setAcessoAuditoriaValidado(false);
@@ -390,6 +339,71 @@ export function NovaAuditoriaCampoDireta({ usuario = null, onAuditoriaSalva, emp
         }
     };
 
+
+    useEffect(() => {
+        let ativo = true;
+
+        async function carregarEmpresasPublicasAuditoria() {
+            if (usuario) {
+                setEmpresasPublicasAuditoriaCampo([]);
+                setMensagemEmpresasPublicasAuditoria("");
+                return;
+            }
+
+            const tokenSeguro = tokenAuditoriaPublicaValidado || tokenAuditoriaQrCampoSalvo || tokenAuditoriaPublicaSupabase || tokenParametro || "";
+
+            if (!acessoAuditoriaValidado || !tokenSeguro || !senhaAcessoAuditoria.trim()) {
+                setEmpresasPublicasAuditoriaCampo([]);
+                setMensagemEmpresasPublicasAuditoria("");
+                return;
+            }
+
+            setCarregandoEmpresasPublicasAuditoria(true);
+            setMensagemEmpresasPublicasAuditoria("Carregando empresas cadastradas após validação da senha...");
+
+            try {
+                const resultado = await carregarEmpresasAuditoriaPublicaControlada({
+                    token: tokenSeguro,
+                    senha: senhaAcessoAuditoria.trim(),
+                });
+
+                if (!ativo) return;
+
+                setEmpresasPublicasAuditoriaCampo(resultado.empresas || []);
+                setMensagemEmpresasPublicasAuditoria(resultado.mensagem || "");
+
+                if ((resultado.empresas || []).length > 0) {
+                    const empresaAtual = encontrarEmpresaAuditoriaCampoDireta(resultado.empresas, formulario.empresaResponsavel || empresaParametro);
+
+                    if (empresaAtual) {
+                        setEmpresaManualHabilitada(false);
+                        setFormulario((atual) => aplicarContatosEmpresaAuditoriaCampoDireta(atual, empresaAtual, empresaAtual.nome));
+                    }
+                }
+            } catch (error) {
+                if (!ativo) return;
+                setEmpresasPublicasAuditoriaCampo([]);
+                setMensagemEmpresasPublicasAuditoria(error?.message || "Não foi possível carregar empresas cadastradas na auditoria pública.");
+            } finally {
+                if (ativo) setCarregandoEmpresasPublicasAuditoria(false);
+            }
+        }
+
+        carregarEmpresasPublicasAuditoria();
+
+        return () => {
+            ativo = false;
+        };
+    }, [
+        acessoAuditoriaValidado,
+        usuario,
+        tokenAuditoriaPublicaValidado,
+        tokenAuditoriaQrCampoSalvo,
+        tokenAuditoriaPublicaSupabase,
+        tokenParametro,
+        senhaAcessoAuditoria,
+        empresaParametro,
+    ]);
 
     const nomeEmpresaAtualAuditoria = String(formulario.empresaResponsavel || empresaParametro || "").trim();
     const empresaSelecionadaAuditoria = encontrarEmpresaAuditoriaCampoDireta(
@@ -513,53 +527,62 @@ export function NovaAuditoriaCampoDireta({ usuario = null, onAuditoriaSalva, emp
         textoNotificacaoResponsavel,
     });
 
-    const resumoAuditoriaSalva = useMemo(() => auditoriaSalva ? montarResumoAuditoriaCampoDiretaFinal({
-        auditoria: auditoriaSalva,
-        formulario,
-        tipoAtual,
-    }) : "", [auditoriaSalva, formulario, tipoAtual]);
-    const numeroAuditoriaSalvaFormatado = auditoriaSalva ? formatarNumeroAuditoriaCampoDireta(auditoriaSalva.numeroAuditoria || auditoriaSalva.numero_auditoria || auditoriaSalva.id || "") : "";
-    const whatsappAuditoriaSalva = auditoriaSalva ? formatarWhatsappBrasilAuditoriaCampoDireta(formulario.whatsappResponsavel || formulario.whatsappTstResponsavel || "") : "";
-    const emailAuditoriaSalva = auditoriaSalva ? String(formulario.emailResponsavel || formulario.emailTstResponsavel || "").trim() : "";
-    const linkWhatsappAuditoriaSalva = whatsappAuditoriaSalva && resumoAuditoriaSalva
-        ? `https://wa.me/${whatsappAuditoriaSalva}?text=${encodeURIComponent(resumoAuditoriaSalva)}`
+    const resumoAuditoriaSalva = useMemo(
+        () => auditoriaSalva
+            ? montarResumoAuditoriaCampoDiretaFinal({ auditoria: auditoriaSalva, formulario, tipoAtual })
+            : "",
+        [auditoriaSalva, formulario, tipoAtual]
+    );
+    const linkWhatsappAuditoriaSalva = auditoriaSalva && whatsappResponsavelFormatado
+        ? `https://wa.me/${whatsappResponsavelFormatado}?text=${encodeURIComponent(resumoAuditoriaSalva)}`
         : "";
-    const linkEmailAuditoriaSalva = emailAuditoriaSalva && resumoAuditoriaSalva
-        ? `mailto:${emailAuditoriaSalva}?subject=${encodeURIComponent(`Auditoria de campo ${numeroAuditoriaSalvaFormatado || "registrada"}`)}&body=${encodeURIComponent(resumoAuditoriaSalva)}`
+    const linkEmailAuditoriaSalva = auditoriaSalva && emailResponsavelAuditoria
+        ? `mailto:${emailResponsavelAuditoria}?subject=${encodeURIComponent(`Auditoria de campo - ${formatarNumeroAuditoriaCampoDireta(auditoriaSalva.numeroAuditoria || auditoriaSalva.id || "")}`)}&body=${encodeURIComponent(resumoAuditoriaSalva)}`
         : "";
 
     const aplicarContatosEmpresaAuditoria = (nomeEmpresa) => {
-        if (nomeEmpresa === OPCAO_EMPRESA_MANUAL_AUDITORIA) {
-            setEmpresaManualHabilitada(true);
-            setFormulario((atual) => ({ ...atual, empresaResponsavel: "" }));
-            return;
-        }
-
         const empresa = encontrarEmpresaAuditoriaCampoDireta(empresasAuditoriaCampo, nomeEmpresa);
-        setEmpresaManualHabilitada(!empresa && Boolean(String(nomeEmpresa || "").trim()));
+
         setFormulario((atual) => aplicarContatosEmpresaAuditoriaCampoDireta(atual, empresa, nomeEmpresa));
     };
 
     const alterarFormulario = (campo, valor) => {
-        const valorTratado = ["whatsappResponsavel", "whatsappTstResponsavel"].includes(campo)
+        const valorTratado = String(campo || "").toLowerCase().includes("whatsapp")
             ? formatarTelefoneAuditoriaCampoDireta(valor)
             : valor;
 
         setFormulario((atual) => ({ ...atual, [campo]: valorTratado }));
     };
 
-    const alterarEmpresaResponsavelAuditoria = (valor) => {
-        aplicarContatosEmpresaAuditoria(valor);
-    };
-
     const alterarEmpresaManualAuditoria = (valor) => {
         setEmpresaManualHabilitada(true);
-        setFormulario((atual) => ({ ...atual, empresaResponsavel: valor }));
+        setFormulario((atual) => ({
+            ...atual,
+            empresaResponsavel: valor,
+            empresaId: null,
+            empresa_id: null,
+            responsavelTratativa: atual.responsavelTratativa,
+            emailResponsavel: atual.emailResponsavel,
+            whatsappResponsavel: atual.whatsappResponsavel,
+            nomeTstResponsavel: atual.nomeTstResponsavel,
+            emailTstResponsavel: atual.emailTstResponsavel,
+            whatsappTstResponsavel: atual.whatsappTstResponsavel,
+        }));
+    };
+
+    const alterarEmpresaResponsavelAuditoria = (valor) => {
+        if (valor === OPCAO_EMPRESA_MANUAL_AUDITORIA) {
+            setEmpresaManualHabilitada(true);
+            return;
+        }
+
+        setEmpresaManualHabilitada(false);
+        aplicarContatosEmpresaAuditoria(valor);
     };
 
     useEffect(() => {
         if (!formulario.empresaResponsavel || !empresaSelecionadaAuditoria) return;
-        if (formulario.emailResponsavel && formulario.whatsappResponsavel && formulario.emailTstResponsavel) return;
+        if (formulario.responsavelTratativa && formulario.emailResponsavel && formulario.whatsappResponsavel && formulario.nomeTstResponsavel && formulario.emailTstResponsavel && formulario.whatsappTstResponsavel) return;
 
         const timer = window.setTimeout(() => {
             setFormulario((atual) => aplicarContatosEmpresaAuditoriaCampoDireta(
@@ -646,6 +669,8 @@ export function NovaAuditoriaCampoDireta({ usuario = null, onAuditoriaSalva, emp
         setMensagem("");
 
         try {
+            const tokenAuditoriaCampo = tokenAuditoriaPublicaValidado || tokenAcessoAuditoriaCampo || obterParametroUrl("token") || obterParametroUrl("chave");
+            const uploadPublicoAuditoria = Boolean(!usuario && tokenAuditoriaCampo);
             const referenciaUploadFotos = `auditoria-pendente-${Date.now()}`;
             const fotoAntesUrl = await uploadFotoAuditoriaCampoDireta({
                 supabaseClient: supabase,
@@ -653,6 +678,8 @@ export function NovaAuditoriaCampoDireta({ usuario = null, onAuditoriaSalva, emp
                 numeroAuditoria: referenciaUploadFotos,
                 tipo: "foto-antes",
                 validarArquivoAntesUpload,
+                tokenPublico: tokenAuditoriaCampo,
+                publico: uploadPublicoAuditoria,
             });
             const fotoDepoisUrl = await uploadFotoAuditoriaCampoDireta({
                 supabaseClient: supabase,
@@ -660,6 +687,8 @@ export function NovaAuditoriaCampoDireta({ usuario = null, onAuditoriaSalva, emp
                 numeroAuditoria: referenciaUploadFotos,
                 tipo: "foto-depois",
                 validarArquivoAntesUpload,
+                tokenPublico: tokenAuditoriaCampo,
+                publico: uploadPublicoAuditoria,
             });
 
             const payload = montarPayloadAuditoriaCampoDireta({
@@ -680,7 +709,6 @@ export function NovaAuditoriaCampoDireta({ usuario = null, onAuditoriaSalva, emp
                 linkOrigemQrCampo,
             });
 
-            const tokenAuditoriaCampo = tokenAuditoriaPublicaValidado || tokenAcessoAuditoriaCampo || obterParametroUrl("token") || obterParametroUrl("chave");
             let data = null;
 
             if (tokenAuditoriaCampo) {
@@ -764,7 +792,7 @@ export function NovaAuditoriaCampoDireta({ usuario = null, onAuditoriaSalva, emp
                 desvios: [],
             });
             setAuditoriaSalva(normalizada);
-            setMensagem(`Auditoria ${formatarNumeroAuditoriaCampoDireta(numeroGerado)} salva com sucesso.`);
+            setMensagem(`Auditoria ${numeroGerado} salva com sucesso.`);
             if (onAuditoriaSalva) onAuditoriaSalva(normalizada);
         } catch (error) {
             setMensagem(error.message || "Erro ao salvar auditoria de campo.");
@@ -1254,43 +1282,50 @@ export function NovaAuditoriaCampoDireta({ usuario = null, onAuditoriaSalva, emp
                             <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
                                 <div>
                                     <p className="text-xs font-bold uppercase tracking-wide text-emerald-700">Auditoria salva</p>
-                                    <h2 className="mt-1 text-xl font-black text-emerald-950">{numeroAuditoriaSalvaFormatado || auditoriaSalva.numeroAuditoria || auditoriaSalva.id}</h2>
-                                    <p className="mt-1 text-sm text-emerald-700">Resumo técnico gerado para encaminhamento ao encarregado ou responsável pela tratativa.</p>
+                                    <h2 className="mt-1 text-xl font-black text-emerald-950">{formatarNumeroAuditoriaCampoDireta(auditoriaSalva.numeroAuditoria || auditoriaSalva.id)}</h2>
+                                    <p className="mt-1 text-sm text-emerald-700">Resumo técnico pronto para encaminhar ao encarregado e acompanhar a tratativa.</p>
                                 </div>
                                 <button type="button" onClick={limparFormularioAuditoriaCampo} className="rounded-2xl bg-emerald-600 px-4 py-3 text-sm font-bold text-white hover:bg-emerald-700">Nova auditoria</button>
                             </div>
-                            <pre className="max-h-96 overflow-auto whitespace-pre-wrap rounded-3xl bg-white p-4 text-sm font-semibold leading-relaxed text-slate-800 ring-1 ring-emerald-100">{resumoAuditoriaSalva}</pre>
+
+                            {resumoAuditoriaSalva && (
+                                <pre className="max-h-72 overflow-auto whitespace-pre-wrap rounded-3xl bg-white p-4 text-xs leading-relaxed text-slate-700 ring-1 ring-emerald-100">
+                                    {resumoAuditoriaSalva}
+                                </pre>
+                            )}
+
                             <div className="grid gap-2 md:grid-cols-3">
-                                <button type="button" onClick={() => copiarTexto(resumoAuditoriaSalva, "Resumo da auditoria copiado.")} className="inline-flex items-center justify-center gap-2 rounded-2xl bg-white px-4 py-3 text-sm font-bold text-slate-700 ring-1 ring-slate-200 hover:bg-slate-50">
+                                <button
+                                    type="button"
+                                    onClick={() => copiarTexto(resumoAuditoriaSalva, "Resumo da auditoria copiado.")}
+                                    className="inline-flex items-center justify-center gap-2 rounded-2xl bg-white px-4 py-3 text-xs font-bold text-emerald-700 ring-1 ring-emerald-100 hover:bg-emerald-50"
+                                >
                                     <ClipboardCheck className="h-4 w-4" />
                                     Copiar resumo
                                 </button>
                                 {linkWhatsappAuditoriaSalva ? (
-                                    <a href={linkWhatsappAuditoriaSalva} target="_blank" rel="noreferrer" className="inline-flex items-center justify-center gap-2 rounded-2xl bg-emerald-600 px-4 py-3 text-sm font-bold text-white hover:bg-emerald-700">
+                                    <a href={linkWhatsappAuditoriaSalva} target="_blank" rel="noreferrer" className="inline-flex items-center justify-center gap-2 rounded-2xl bg-white px-4 py-3 text-xs font-bold text-emerald-700 ring-1 ring-emerald-100 hover:bg-emerald-50">
                                         <MessageCircle className="h-4 w-4" />
                                         Enviar WhatsApp
                                     </a>
                                 ) : (
-                                    <button type="button" disabled className="inline-flex cursor-not-allowed items-center justify-center gap-2 rounded-2xl bg-emerald-100 px-4 py-3 text-sm font-bold text-emerald-400">
+                                    <button type="button" disabled className="inline-flex cursor-not-allowed items-center justify-center gap-2 rounded-2xl bg-white px-4 py-3 text-xs font-bold text-slate-400 ring-1 ring-slate-200">
                                         <MessageCircle className="h-4 w-4" />
-                                        WhatsApp sem número
+                                        WhatsApp indisponível
                                     </button>
                                 )}
                                 {linkEmailAuditoriaSalva ? (
-                                    <a href={linkEmailAuditoriaSalva} className="inline-flex items-center justify-center gap-2 rounded-2xl bg-white px-4 py-3 text-sm font-bold text-slate-700 ring-1 ring-slate-200 hover:bg-slate-50">
+                                    <a href={linkEmailAuditoriaSalva} className="inline-flex items-center justify-center gap-2 rounded-2xl bg-white px-4 py-3 text-xs font-bold text-emerald-700 ring-1 ring-emerald-100 hover:bg-emerald-50">
                                         <Mail className="h-4 w-4" />
                                         Enviar e-mail
                                     </a>
                                 ) : (
-                                    <button type="button" disabled className="inline-flex cursor-not-allowed items-center justify-center gap-2 rounded-2xl bg-white px-4 py-3 text-sm font-bold text-slate-400 ring-1 ring-slate-200">
+                                    <button type="button" disabled className="inline-flex cursor-not-allowed items-center justify-center gap-2 rounded-2xl bg-white px-4 py-3 text-xs font-bold text-slate-400 ring-1 ring-slate-200">
                                         <Mail className="h-4 w-4" />
-                                        E-mail sem endereço
+                                        E-mail indisponível
                                     </button>
                                 )}
                             </div>
-                            <p className="text-xs font-semibold leading-relaxed text-emerald-700">
-                                As fotos anexadas ficam vinculadas ao registro da auditoria. O WhatsApp e o e-mail do navegador enviam o resumo técnico; envio automático com anexo ou link assinado deve ser tratado na etapa de serviço de e-mail.
-                            </p>
                         </div>
                     </Card>
                 )}

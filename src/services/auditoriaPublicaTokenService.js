@@ -209,6 +209,15 @@ function normalizarEmpresaAuditoriaPublica(item = {}) {
         nome: String(item.nome || item.empresa_nome || item.empresa || "").trim(),
         status: item.status || "",
         tipo_empresa: item.tipo_empresa || item.tipoEmpresa || "",
+        responsavel_auditoria: item.responsavel_auditoria || item.responsavelAuditoria || item.responsavel || "",
+        responsavel: item.responsavel || item.responsavel_auditoria || "",
+        email_auditoria: item.email_auditoria || item.emailAuditoria || item.email || "",
+        email: item.email || item.email_auditoria || "",
+        whatsapp_auditoria: item.whatsapp_auditoria || item.whatsappAuditoria || item.whatsapp || item.telefone || "",
+        telefone: item.telefone || item.whatsapp_auditoria || "",
+        tst_responsavel: item.tst_responsavel || item.tstResponsavel || "",
+        tst_email: item.tst_email || item.tstEmail || "",
+        tst_whatsapp: item.tst_whatsapp || item.tstWhatsapp || "",
     };
 }
 
@@ -246,7 +255,7 @@ export async function carregarEmpresasAuditoriaPublicaControlada({ token = "", s
         return {
             ok: true,
             empresas,
-            mensagem: empresas.length ? "Empresas carregadas com segurança." : "Nenhuma empresa cadastrada foi retornada pela consulta controlada.",
+            mensagem: empresas.length ? "Empresas e contatos carregados com segurança." : "Nenhuma empresa cadastrada foi retornada pela consulta controlada.",
         };
     } catch (error) {
         return {
