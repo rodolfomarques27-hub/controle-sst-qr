@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from "react";
-import { CheckCircle2, Eye, EyeOff, Mail, MessageCircle, Plus, Trash2 } from "lucide-react";
+import { CheckCircle2, Eye, EyeOff, Lock, Mail, MessageCircle, Plus, ShieldCheck, Trash2 } from "lucide-react";
 import { supabase } from "../../lib/supabaseClient";
 import { FUNCAO_EMAIL_ALERTA_TST, statusDesvioAuditoriaCampo } from "../../constants/sstConstants";
 import { FotoAuditoriaPreview } from "../commonComponents";
@@ -32,6 +32,9 @@ export function EditorNotificacaoHistoricoAuditoria({ auditoria = {}, onAtualiza
     const [novoComplemento, setNovoComplemento] = useState("");
     const [exclusaoAberta, setExclusaoAberta] = useState(false);
     const [confirmacaoExclusao, setConfirmacaoExclusao] = useState("");
+    const [senhaExclusao, setSenhaExclusao] = useState("");
+    const [mostrarSenhaExclusao, setMostrarSenhaExclusao] = useState(false);
+    const [motivoExclusao, setMotivoExclusao] = useState("");
     const [excluindo, setExcluindo] = useState(false);
     const [enviandoEmailAuditoria, setEnviandoEmailAuditoria] = useState(false);
     const [observacoesStatus, setObservacoesStatus] = useState({
@@ -193,6 +196,118 @@ export function EditorNotificacaoHistoricoAuditoria({ auditoria = {}, onAtualiza
         }
     };
 
+    const obterUsuarioLogadoParaExclusao = async () => {
+        const { data, error } = await supabase.auth.getUser();
+
+        if (error) {
+            throw new Error(error.message || "Não foi possível identificar o usuário logado.");
+        }
+
+        const usuario = data?.user || null;
+
+        if (!usuario?.email) {
+            throw new Error("Faça login novamente antes de excluir auditorias.");
+        }
+
+        return usuario;
+    };
+
+    const verificarPermissaoExclusaoAuditoria = async (usuario) => {
+        try {
+            const { data, error } = await supabase.rpc("usuario_pode_acessar_auditoria");
+
+            if (error) throw error;
+
+            if (!data) {
+                throw new Error("Seu usuário não tem permissão para excluir auditorias.");
+            }
+        } catch (error) {
+            throw new Error(error?.message || "Não foi possível validar sua permissão para excluir auditorias.");
+        }
+
+        try {
+            const { data, error } = await supabase
+                .from("auditoria_usuarios_autorizados")
+                .select("email, nome, perfil, ativo, acesso_global, pode_acessar_auditoria")
+                .eq("email", String(usuario.email || "").trim().toLowerCase())
+                .maybeSingle();
+
+            if (error) {
+                console.warn("Não foi possível conferir o cadastro de permissão da auditoria:", error.message || error);
+                return;
+            }
+
+            if (data && (data.ativo === false || data.pode_acessar_auditoria === false)) {
+                throw new Error("Seu acesso à Auditoria de sistema está bloqueado.");
+            }
+        } catch (error) {
+            throw new Error(error?.message || "Não foi possível validar o usuário autorizado.");
+        }
+    };
+
+    const validarSenhaUsuarioExclusao = async (usuario) => {
+        const senhaTratada = String(senhaExclusao || "").trim();
+
+        if (!senhaTratada) {
+            throw new Error("Informe a senha do usuário logado para confirmar a exclusão.");
+        }
+
+        const { error } = await supabase.auth.signInWithPassword({
+            email: usuario.email,
+            password: senhaTratada,
+        });
+
+        if (error) {
+            throw new Error("Senha do usuário logado inválida. Exclusão bloqueada.");
+        }
+    };
+
+    const registrarExclusaoAuditoriaSistema = async ({ usuario, motivo }) => {
+        const descricao = [
+            `Auditoria de campo excluída por ${usuario.email}.`,
+            `Auditoria: ${auditoria.numeroAuditoria || auditoria.id}.`,
+            `Alvo: ${alvoAuditoria.titulo || auditoria.titulo || "Não informado"}.`,
+            motivo ? `Motivo: ${motivo}.` : "Motivo não informado.",
+        ].join(" ");
+
+        const payloadCompleto = {
+            acao: "DELETE",
+            tabela: "auditorias_campo",
+            descricao,
+            usuario_email: usuario.email,
+            usuario_id: usuario.id,
+            registro_id: String(auditoria.id),
+            detalhes: {
+                auditoriaId: auditoria.id,
+                numeroAuditoria: auditoria.numeroAuditoria || auditoria.numero_auditoria || "",
+                alvo: alvoAuditoria.titulo || auditoria.titulo || "",
+                motivo,
+                confirmadoPorSenha: true,
+                excluidoEm: new Date().toISOString(),
+            },
+        };
+
+        const payloadMinimo = {
+            acao: "DELETE",
+            tabela: "auditorias_campo",
+            descricao,
+        };
+
+        try {
+            const { error } = await supabase.from("auditoria_sistema").insert(payloadCompleto);
+
+            if (!error) return;
+
+            const { error: erroFallback } = await supabase.from("auditoria_sistema").insert(payloadMinimo);
+
+            if (erroFallback) {
+                console.warn("Não foi possível registrar log manual de exclusão da auditoria:", erroFallback.message || erroFallback);
+            }
+        } catch (error) {
+            console.warn("Não foi possível registrar log manual de exclusão da auditoria:", error?.message || error);
+        }
+    };
+
     const excluirAuditoria = async () => {
         if (!auditoria.id) {
             setMensagem("Não foi possível excluir: auditoria sem ID.");
@@ -204,13 +319,26 @@ export function EditorNotificacaoHistoricoAuditoria({ auditoria = {}, onAtualiza
             return;
         }
 
-        const confirmou = window.confirm("Confirma a exclusão definitiva desta auditoria de campo?");
+        const motivoTratado = motivoExclusao.trim();
+
+        if (!motivoTratado) {
+            setMensagem("Informe o motivo da exclusão para manter a rastreabilidade.");
+            return;
+        }
+
+        const confirmou = window.confirm("Confirma a exclusão definitiva desta auditoria de campo? A senha do usuário logado será validada antes da remoção.");
         if (!confirmou) return;
 
         setExcluindo(true);
         setMensagem("");
 
         try {
+            const usuario = await obterUsuarioLogadoParaExclusao();
+
+            await verificarPermissaoExclusaoAuditoria(usuario);
+            await validarSenhaUsuarioExclusao(usuario);
+            await registrarExclusaoAuditoriaSistema({ usuario, motivo: motivoTratado });
+
             const { error: erroDesvios } = await supabase
                 .from("auditoria_campo_desvios")
                 .delete()
@@ -225,8 +353,19 @@ export function EditorNotificacaoHistoricoAuditoria({ auditoria = {}, onAtualiza
 
             if (erroAuditoria) throw erroAuditoria;
 
-            if (typeof onAtualizada === "function") onAtualizada({ ...auditoria, excluida: true });
-            setMensagem("Auditoria excluída com sucesso.");
+            if (typeof onAtualizada === "function") {
+                onAtualizada({
+                    ...auditoria,
+                    excluida: true,
+                    excluidaPor: usuario.email,
+                    motivoExclusao: motivoTratado,
+                });
+            }
+
+            setConfirmacaoExclusao("");
+            setSenhaExclusao("");
+            setMotivoExclusao("");
+            setMensagem(`Auditoria excluída com sucesso por ${usuario.email}.`);
         } catch (error) {
             setMensagem(`Erro ao excluir auditoria: ${error.message}`);
         } finally {
@@ -271,25 +410,59 @@ export function EditorNotificacaoHistoricoAuditoria({ auditoria = {}, onAtualiza
 
             {exclusaoAberta && (
                 <div className="mt-3 rounded-2xl border border-red-200 bg-red-50 p-3">
-                    <p className="text-sm font-bold text-red-800">Excluir auditoria</p>
-                    <p className="mt-1 text-xs text-red-700">Esta ação remove a auditoria e seus desvios vinculados. Digite EXCLUIR para confirmar.</p>
-                    <div className="mt-3 flex flex-col gap-2 sm:flex-row">
+                    <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+                        <div>
+                            <p className="text-sm font-bold text-red-800">Excluir auditoria</p>
+                            <p className="mt-1 text-xs text-red-700">Esta ação remove a auditoria e seus desvios vinculados. Informe o motivo, digite EXCLUIR e confirme com a senha do usuário logado.</p>
+                        </div>
+                        <div className="inline-flex items-center gap-1 rounded-full bg-white px-3 py-1 text-[11px] font-bold text-red-700 ring-1 ring-red-100">
+                            <ShieldCheck className="h-3.5 w-3.5" />
+                            Validação obrigatória
+                        </div>
+                    </div>
+
+                    <div className="mt-3 grid gap-2 lg:grid-cols-[1.2fr_0.8fr_0.8fr_auto]">
+                        <input
+                            value={motivoExclusao}
+                            onChange={(e) => setMotivoExclusao(e.target.value)}
+                            placeholder="Motivo da exclusão"
+                            className="min-w-0 rounded-2xl border border-red-200 bg-white px-4 py-3 text-sm outline-none focus:ring-4 focus:ring-red-100"
+                        />
                         <input
                             value={confirmacaoExclusao}
                             onChange={(e) => setConfirmacaoExclusao(e.target.value)}
                             placeholder="Digite EXCLUIR"
-                            className="min-w-0 flex-1 rounded-2xl border border-red-200 bg-white px-4 py-3 text-sm outline-none focus:ring-4 focus:ring-red-100"
+                            className="min-w-0 rounded-2xl border border-red-200 bg-white px-4 py-3 text-sm font-bold outline-none focus:ring-4 focus:ring-red-100"
                         />
+                        <div className="relative min-w-0">
+                            <input
+                                type={mostrarSenhaExclusao ? "text" : "password"}
+                                value={senhaExclusao}
+                                onChange={(e) => setSenhaExclusao(e.target.value)}
+                                placeholder="Senha do usuário"
+                                className="w-full rounded-2xl border border-red-200 bg-white px-4 py-3 pr-11 text-sm outline-none focus:ring-4 focus:ring-red-100"
+                            />
+                            <button
+                                type="button"
+                                onClick={() => setMostrarSenhaExclusao((valor) => !valor)}
+                                className="absolute right-3 top-1/2 -translate-y-1/2 rounded-full p-1 text-red-500 hover:bg-red-50"
+                                title={mostrarSenhaExclusao ? "Ocultar senha" : "Mostrar senha"}
+                            >
+                                {mostrarSenhaExclusao ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                            </button>
+                        </div>
                         <button
                             type="button"
                             disabled={excluindo}
                             onClick={excluirAuditoria}
                             className="inline-flex items-center justify-center gap-2 rounded-2xl bg-red-600 px-4 py-3 text-sm font-bold text-white hover:bg-red-700 disabled:opacity-60"
                         >
-                            <Trash2 className="h-4 w-4" />
-                            {excluindo ? "Excluindo..." : "Confirmar exclusão"}
+                            {excluindo ? <Lock className="h-4 w-4 animate-pulse" /> : <Trash2 className="h-4 w-4" />}
+                            {excluindo ? "Validando..." : "Confirmar exclusão"}
                         </button>
                     </div>
+
+                    <p className="mt-2 text-[11px] font-semibold text-red-700">A exclusão só continua se o usuário estiver logado, autorizado na Auditoria de sistema e a senha informada estiver correta.</p>
                 </div>
             )}
 
