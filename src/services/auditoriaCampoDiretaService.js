@@ -254,7 +254,28 @@ export async function gerarNumeroAuditoriaCampoDireta(supabaseClient) {
     return `AUD-${ano}-${String(Date.now()).slice(-4)}`;
 }
 
-export async function uploadFotoAuditoriaCampoDireta({ supabaseClient, arquivo, numeroAuditoria, tipo, validarArquivoAntesUpload }) {
+function normalizarSegmentoCaminhoAuditoriaCampo(valor = "", fallback = "sem-identificacao") {
+    const texto = String(valor || "")
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .trim()
+        .replace(/[^a-zA-Z0-9_-]+/g, "-")
+        .replace(/-+/g, "-")
+        .replace(/^-+|-+$/g, "")
+        .slice(0, 120);
+
+    return texto || fallback;
+}
+
+export async function uploadFotoAuditoriaCampoDireta({
+    supabaseClient,
+    arquivo,
+    numeroAuditoria,
+    tipo,
+    validarArquivoAntesUpload,
+    tokenPublico = "",
+    publico = false,
+}) {
     if (!arquivo) return "";
 
     const otimizada = await reduzirFotoParaAuditoria(arquivo, { maxLado: 1400, alvoBytes: 800 * 1024 });
@@ -264,14 +285,34 @@ export async function uploadFotoAuditoriaCampoDireta({ supabaseClient, arquivo, 
     }
 
     const nomeSeguro = sanitizarNomeArquivo(otimizada.name || `${tipo}.jpg`);
-    const caminho = `auditorias-publicas/${numeroAuditoria}/${tipo}-${Date.now()}-${nomeSeguro}`;
+    const tipoSeguro = normalizarSegmentoCaminhoAuditoriaCampo(tipo, "foto");
+    const numeroSeguro = normalizarSegmentoCaminhoAuditoriaCampo(numeroAuditoria, `auditoria-${Date.now()}`);
+    const tokenSeguro = normalizarSegmentoCaminhoAuditoriaCampo(tokenPublico || obterTokenAuditoriaPublicaUrl(), "");
+
+    if (publico && !tokenSeguro) {
+        throw new Error("Token público da auditoria não localizado para enviar foto. Abra o formulário pelo QR Code ou link público atualizado.");
+    }
+
+    const diretorio = publico
+        ? `auditorias-publicas/${tokenSeguro}/${numeroSeguro}`
+        : `auditorias-internas/${numeroSeguro}`;
+    const caminho = `${diretorio}/${tipoSeguro}-${Date.now()}-${nomeSeguro}`;
+
     const { error } = await supabaseClient.storage.from("auditorias-campo").upload(caminho, otimizada, {
         cacheControl: "3600",
-        upsert: true,
+        upsert: false,
         contentType: otimizada.type || "image/jpeg",
     });
 
-    if (error) throw new Error(`Erro ao enviar ${tipo}: ${error.message}`);
+    if (error) {
+        const mensagem = error.message || "erro desconhecido";
+
+        if (mensagem.toLowerCase().includes("row-level security")) {
+            throw new Error(`Erro ao enviar ${tipo}: o Storage bloqueou o upload público por RLS. Verifique a policy do bucket auditorias-campo para o caminho ${publico ? "auditorias-publicas/{token}/..." : "auditorias-internas/..."}.`);
+        }
+
+        throw new Error(`Erro ao enviar ${tipo}: ${mensagem}`);
+    }
 
     return caminho;
 }

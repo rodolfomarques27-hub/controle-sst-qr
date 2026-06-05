@@ -553,13 +553,18 @@ export function NovaAuditoriaCampoDireta({ usuario = null, onAuditoriaSalva, emp
         setMensagem("");
 
         try {
-            const referenciaUploadFotos = `auditoria-pendente-${Date.now()}`;
+            const tokenAuditoriaCampo = tokenAuditoriaPublicaValidado || tokenAcessoAuditoriaCampo || obterParametroUrl("token") || obterParametroUrl("chave");
+            const fluxoPublicoAuditoria = Boolean(tokenAuditoriaCampo && !usuario);
+            const referenciaUploadFotos = `${fluxoPublicoAuditoria ? "auditoria-publica" : "auditoria-interna"}-${Date.now()}`;
+
             const fotoAntesUrl = await uploadFotoAuditoriaCampoDireta({
                 supabaseClient: supabase,
                 arquivo: formulario.fotoAntes,
                 numeroAuditoria: referenciaUploadFotos,
                 tipo: "foto-antes",
                 validarArquivoAntesUpload,
+                tokenPublico: fluxoPublicoAuditoria ? tokenAuditoriaCampo : "",
+                publico: fluxoPublicoAuditoria,
             });
             const fotoDepoisUrl = await uploadFotoAuditoriaCampoDireta({
                 supabaseClient: supabase,
@@ -567,6 +572,8 @@ export function NovaAuditoriaCampoDireta({ usuario = null, onAuditoriaSalva, emp
                 numeroAuditoria: referenciaUploadFotos,
                 tipo: "foto-depois",
                 validarArquivoAntesUpload,
+                tokenPublico: fluxoPublicoAuditoria ? tokenAuditoriaCampo : "",
+                publico: fluxoPublicoAuditoria,
             });
 
             const payload = montarPayloadAuditoriaCampoDireta({
@@ -587,7 +594,6 @@ export function NovaAuditoriaCampoDireta({ usuario = null, onAuditoriaSalva, emp
                 linkOrigemQrCampo,
             });
 
-            const tokenAuditoriaCampo = tokenAuditoriaPublicaValidado || tokenAcessoAuditoriaCampo || obterParametroUrl("token") || obterParametroUrl("chave");
             let data = null;
 
             if (tokenAuditoriaCampo) {
