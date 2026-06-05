@@ -79,6 +79,7 @@ export function criarFormularioInicialAuditoriaCampoDireta({
         local: localParametro,
         maquinaEquipamento: identificacaoParametro,
         empresaResponsavel: empresaParametro,
+        empresaId: null,
         auditorNome: "",
         grauRisco: "Baixo",
         situacaoEncontrada: "",
@@ -103,6 +104,147 @@ function normalizarNomeEmpresaAuditoria(valor) {
         .replace(/[\u0300-\u036f]/g, "")
         .trim()
         .toLowerCase();
+}
+
+function normalizarTelefoneAuditoriaCampo(valor = "") {
+    return String(valor || "").replace(/\D/g, "");
+}
+
+export function formatarTelefoneAuditoriaCampoDireta(valor = "") {
+    const digitosOriginais = normalizarTelefoneAuditoriaCampo(valor);
+    const digitos = digitosOriginais.startsWith("55") && digitosOriginais.length > 11
+        ? digitosOriginais.slice(2)
+        : digitosOriginais;
+
+    if (!digitos) return "";
+    if (digitos.length <= 2) return digitos;
+    if (digitos.length <= 6) return `${digitos.slice(0, 2)} ${digitos.slice(2)}`;
+
+    const ddd = digitos.slice(0, 2);
+    const restante = digitos.slice(2, 11);
+
+    if (restante.length <= 4) return `${ddd} ${restante}`;
+
+    const parteInicial = restante.length >= 9 ? restante.slice(0, 5) : restante.slice(0, 4);
+    const parteFinal = restante.length >= 9 ? restante.slice(5, 9) : restante.slice(4, 8);
+
+    return `${ddd} ${parteInicial}${parteFinal ? `-${parteFinal}` : ""}`.trim();
+}
+
+export function formatarDataAuditoriaCampoDireta(valor = "") {
+    if (!valor) return "";
+
+    const texto = String(valor || "").trim();
+    if (!texto) return "";
+
+    const iso = texto.match(/^(\d{4})-(\d{2})-(\d{2})/);
+    if (iso) {
+        return `${iso[3]}/${iso[2]}/${iso[1]}`;
+    }
+
+    const br = texto.match(/^(\d{1,2})\/(\d{1,2})\/(\d{2,4})$/);
+    if (br) {
+        const dia = br[1].padStart(2, "0");
+        const mes = br[2].padStart(2, "0");
+        const ano = br[3].length === 2 ? `20${br[3]}` : br[3];
+        return `${dia}/${mes}/${ano}`;
+    }
+
+    const data = new Date(texto);
+    if (Number.isNaN(data.getTime())) return texto;
+
+    const dia = String(data.getDate()).padStart(2, "0");
+    const mes = String(data.getMonth() + 1).padStart(2, "0");
+    const ano = data.getFullYear();
+
+    return `${dia}/${mes}/${ano}`;
+}
+
+function normalizarEmpresaAuditoriaCampoDireta(empresa = {}) {
+    const nome = String(empresa.nome || empresa.empresa_nome || empresa.razao_social || "").trim();
+
+    if (!nome) return null;
+
+    return {
+        id: empresa.id || empresa.empresa_id || null,
+        nome,
+        status: empresa.status || "",
+        tipo_empresa: empresa.tipo_empresa || empresa.tipoEmpresa || "",
+        responsavel: empresa.responsavel_auditoria || empresa.responsavel || "",
+        email: empresa.email_auditoria || empresa.email || "",
+        telefone: formatarTelefoneAuditoriaCampoDireta(empresa.whatsapp_auditoria || empresa.telefone || empresa.whatsapp || ""),
+        responsavel_auditoria: empresa.responsavel_auditoria || empresa.responsavel || "",
+        email_auditoria: empresa.email_auditoria || empresa.email || "",
+        whatsapp_auditoria: formatarTelefoneAuditoriaCampoDireta(empresa.whatsapp_auditoria || empresa.telefone || empresa.whatsapp || ""),
+        tst_responsavel: empresa.tst_responsavel || "",
+        tst_email: empresa.tst_email || "",
+        tst_whatsapp: formatarTelefoneAuditoriaCampoDireta(empresa.tst_whatsapp || ""),
+    };
+}
+
+export async function carregarEmpresasAuditoriaPublicaControlada({
+    supabaseClient,
+    tokenPublico = "",
+    senha = "",
+} = {}) {
+    if (!supabaseClient) {
+        return {
+            ok: false,
+            empresas: [],
+            erro: "Cliente Supabase indisponível para carregar empresas.",
+        };
+    }
+
+    const token = String(tokenPublico || "").trim();
+    const senhaSegura = String(senha || "").trim();
+
+    try {
+        const { data, error } = await supabaseClient.rpc("listar_empresas_auditoria_publica", {
+            p_token: token,
+            p_senha: senhaSegura,
+        });
+
+        if (!error && Array.isArray(data)) {
+            return {
+                ok: true,
+                origem: "rpc",
+                empresas: data.map(normalizarEmpresaAuditoriaCampoDireta).filter(Boolean),
+                erro: "",
+            };
+        }
+    } catch {
+        // Se a RPC ainda não existir no Supabase, tenta a consulta direta abaixo.
+    }
+
+    try {
+        const { data, error } = await supabaseClient
+            .from("empresas")
+            .select("id, nome, status, tipo_empresa, responsavel, email, telefone, responsavel_auditoria, email_auditoria, whatsapp_auditoria, tst_responsavel, tst_email, tst_whatsapp")
+            .order("nome", { ascending: true });
+
+        if (error) {
+            return {
+                ok: false,
+                origem: "supabase",
+                empresas: [],
+                erro: error.message || "A lista de empresas está protegida pelo Supabase.",
+            };
+        }
+
+        return {
+            ok: true,
+            origem: "supabase",
+            empresas: (data || []).map(normalizarEmpresaAuditoriaCampoDireta).filter(Boolean),
+            erro: "",
+        };
+    } catch (error) {
+        return {
+            ok: false,
+            origem: "supabase",
+            empresas: [],
+            erro: error?.message || "Não foi possível carregar a lista controlada de empresas.",
+        };
+    }
 }
 
 export function listarEmpresasAuditoriaCampoDireta(empresasBanco = []) {
@@ -143,10 +285,10 @@ export function obterContatosEmpresaAuditoriaCampoDireta(empresaSelecionadaAudit
     return {
         responsavel: empresaSelecionadaAuditoria.responsavel_auditoria || empresaSelecionadaAuditoria.responsavel || "",
         email: empresaSelecionadaAuditoria.email_auditoria || empresaSelecionadaAuditoria.email || "",
-        whatsapp: empresaSelecionadaAuditoria.whatsapp_auditoria || empresaSelecionadaAuditoria.telefone || "",
+        whatsapp: formatarTelefoneAuditoriaCampoDireta(empresaSelecionadaAuditoria.whatsapp_auditoria || empresaSelecionadaAuditoria.telefone || ""),
         tstResponsavel: empresaSelecionadaAuditoria.tst_responsavel || "",
         tstEmail: empresaSelecionadaAuditoria.tst_email || "",
-        tstWhatsapp: empresaSelecionadaAuditoria.tst_whatsapp || "",
+        tstWhatsapp: formatarTelefoneAuditoriaCampoDireta(empresaSelecionadaAuditoria.tst_whatsapp || ""),
     };
 }
 
@@ -155,6 +297,7 @@ export function aplicarContatosEmpresaAuditoriaCampoDireta(formularioAtual, empr
         return {
             ...formularioAtual,
             empresaResponsavel: nomeEmpresa,
+            empresaId: null,
         };
     }
 
@@ -163,6 +306,7 @@ export function aplicarContatosEmpresaAuditoriaCampoDireta(formularioAtual, empr
     return {
         ...formularioAtual,
         empresaResponsavel: empresa.nome,
+        empresaId: empresa.id || null,
         responsavelTratativa: formularioAtual.responsavelTratativa || contatos.responsavel,
         emailResponsavel: contatos.email || formularioAtual.emailResponsavel,
         whatsappResponsavel: contatos.whatsapp || formularioAtual.whatsappResponsavel,
@@ -172,26 +316,81 @@ export function aplicarContatosEmpresaAuditoriaCampoDireta(formularioAtual, empr
     };
 }
 
-export function montarTextoNotificacaoAuditoriaCampoDireta({ formulario, tipoAtual }) {
-    return [
-        `Auditoria de campo: ${formulario.titulo || "Sem título"}`,
-        `Tipo: ${tipoAtual.label}`,
-        `Empresa responsável: ${formulario.empresaResponsavel || "Não informada"}`,
-        `Área: ${formulario.area || "Não informada"}`,
-        `Local: ${formulario.local || "Não informado"}`,
-        `Grau de risco: ${formulario.grauRisco}`,
-        `Status: ${formulario.statusAuditoria}`,
-        `Auditor: ${formulario.auditorNome || "Não informado"}`,
-        "",
-        `Situação encontrada: ${formulario.situacaoEncontrada || "Não informada"}`,
-        `Ação recomendada: ${formulario.acaoRecomendada || "Não informada"}`,
-        `Responsável pela tratativa: ${formulario.responsavelTratativa || "Não informado"}`,
-        `Prazo: ${formulario.prazoAdequacao || "Não informado"}`,
-    ].join("\n");
+export function montarTextoNotificacaoAuditoriaCampoDireta({
+    formulario,
+    tipoAtual,
+    numeroAuditoria = "",
+    fotoAntesUrl = "",
+    fotoDepoisUrl = "",
+    saudacao = false,
+} = {}) {
+    const linhas = [];
+
+    if (saudacao) {
+        linhas.push("Olá! Tudo bem?", "");
+        linhas.push(`O registro da auditoria ${numeroAuditoria || "de campo"} foi concluído com sucesso.`);
+        linhas.push("");
+        linhas.push("Resumo da auditoria:");
+    } else {
+        linhas.push(`Auditoria de campo: ${formulario.titulo || "Sem título"}`);
+    }
+
+    const adicionar = (rotulo, valor) => {
+        const texto = String(valor || "").trim();
+        if (!texto) return;
+        linhas.push(`${rotulo}: ${texto}`);
+    };
+
+    adicionar("Tipo", tipoAtual?.label || formulario.tipoAuditoria);
+    adicionar("Empresa responsável", formulario.empresaResponsavel);
+    adicionar("Área", formulario.area);
+    adicionar("Subárea", formulario.subarea);
+    adicionar("Local", formulario.local);
+    adicionar("Máquina/equipamento", formulario.maquinaEquipamento);
+    adicionar("Grau de risco", formulario.grauRisco);
+    adicionar("Status", formulario.statusAuditoria);
+    adicionar("Auditor", formulario.auditorNome);
+    adicionar("Responsável pela tratativa", formulario.responsavelTratativa);
+    adicionar("Prazo para adequação", formatarDataAuditoriaCampoDireta(formulario.prazoAdequacao));
+
+    if (formulario.situacaoEncontrada) {
+        linhas.push("", "Situação encontrada:", formulario.situacaoEncontrada.trim());
+    }
+
+    if (formulario.acaoRecomendada) {
+        linhas.push("", "Ação recomendada:", formulario.acaoRecomendada.trim());
+    }
+
+    const fotos = [
+        fotoAntesUrl ? "Foto antes anexada à auditoria." : "",
+        fotoDepoisUrl ? "Foto depois anexada à auditoria." : "",
+    ].filter(Boolean);
+
+    if (fotos.length > 0) {
+        linhas.push("", "Evidências fotográficas:", ...fotos);
+        linhas.push("As fotos ficam disponíveis no registro da auditoria no sistema.");
+    }
+
+    if (saudacao) {
+        linhas.push("", "Por favor, avaliar a tratativa, executar as ações necessárias e retornar com as evidências de correção quando aplicável.");
+    }
+
+    return linhas.join("\n").trim();
+}
+
+export function montarResumoAuditoriaCampoDireta({ auditoria = {}, formulario = {}, tipoAtual = {}, fotoAntesUrl = "", fotoDepoisUrl = "" } = {}) {
+    return montarTextoNotificacaoAuditoriaCampoDireta({
+        formulario,
+        tipoAtual,
+        numeroAuditoria: auditoria.numeroAuditoria || auditoria.numero_auditoria || auditoria.id || "",
+        fotoAntesUrl: fotoAntesUrl || auditoria.fotoAntesUrl || auditoria.foto_antes_url || "",
+        fotoDepoisUrl: fotoDepoisUrl || auditoria.fotoDepoisUrl || auditoria.foto_depois_url || "",
+        saudacao: true,
+    });
 }
 
 export function formatarWhatsappBrasilAuditoriaCampoDireta(valor = "") {
-    const apenasDigitos = String(valor || "").replace(/\D/g, "");
+    const apenasDigitos = normalizarTelefoneAuditoriaCampo(valor);
 
     if (!apenasDigitos) return "";
 
@@ -254,28 +453,7 @@ export async function gerarNumeroAuditoriaCampoDireta(supabaseClient) {
     return `AUD-${ano}-${String(Date.now()).slice(-4)}`;
 }
 
-function normalizarSegmentoCaminhoAuditoriaCampo(valor = "", fallback = "sem-identificacao") {
-    const texto = String(valor || "")
-        .normalize("NFD")
-        .replace(/[\u0300-\u036f]/g, "")
-        .trim()
-        .replace(/[^a-zA-Z0-9_-]+/g, "-")
-        .replace(/-+/g, "-")
-        .replace(/^-+|-+$/g, "")
-        .slice(0, 120);
-
-    return texto || fallback;
-}
-
-export async function uploadFotoAuditoriaCampoDireta({
-    supabaseClient,
-    arquivo,
-    numeroAuditoria,
-    tipo,
-    validarArquivoAntesUpload,
-    tokenPublico = "",
-    publico = false,
-}) {
+export async function uploadFotoAuditoriaCampoDireta({ supabaseClient, arquivo, numeroAuditoria, tipo, validarArquivoAntesUpload }) {
     if (!arquivo) return "";
 
     const otimizada = await reduzirFotoParaAuditoria(arquivo, { maxLado: 1400, alvoBytes: 800 * 1024 });
@@ -285,34 +463,14 @@ export async function uploadFotoAuditoriaCampoDireta({
     }
 
     const nomeSeguro = sanitizarNomeArquivo(otimizada.name || `${tipo}.jpg`);
-    const tipoSeguro = normalizarSegmentoCaminhoAuditoriaCampo(tipo, "foto");
-    const numeroSeguro = normalizarSegmentoCaminhoAuditoriaCampo(numeroAuditoria, `auditoria-${Date.now()}`);
-    const tokenSeguro = normalizarSegmentoCaminhoAuditoriaCampo(tokenPublico || obterTokenAuditoriaPublicaUrl(), "");
-
-    if (publico && !tokenSeguro) {
-        throw new Error("Token público da auditoria não localizado para enviar foto. Abra o formulário pelo QR Code ou link público atualizado.");
-    }
-
-    const diretorio = publico
-        ? `auditorias-publicas/${tokenSeguro}/${numeroSeguro}`
-        : `auditorias-internas/${numeroSeguro}`;
-    const caminho = `${diretorio}/${tipoSeguro}-${Date.now()}-${nomeSeguro}`;
-
+    const caminho = `auditorias-publicas/${numeroAuditoria}/${tipo}-${Date.now()}-${nomeSeguro}`;
     const { error } = await supabaseClient.storage.from("auditorias-campo").upload(caminho, otimizada, {
         cacheControl: "3600",
-        upsert: false,
+        upsert: true,
         contentType: otimizada.type || "image/jpeg",
     });
 
-    if (error) {
-        const mensagem = error.message || "erro desconhecido";
-
-        if (mensagem.toLowerCase().includes("row-level security")) {
-            throw new Error(`Erro ao enviar ${tipo}: o Storage bloqueou o upload público por RLS. Verifique a policy do bucket auditorias-campo para o caminho ${publico ? "auditorias-publicas/{token}/..." : "auditorias-internas/..."}.`);
-        }
-
-        throw new Error(`Erro ao enviar ${tipo}: ${mensagem}`);
-    }
+    if (error) throw new Error(`Erro ao enviar ${tipo}: ${error.message}`);
 
     return caminho;
 }
@@ -351,6 +509,7 @@ export function montarPayloadAuditoriaCampoDireta({
         maquina_equipamento: formulario.maquinaEquipamento.trim() || null,
         empresa_responsavel: formulario.empresaResponsavel.trim() || null,
         empresa_nome: formulario.empresaResponsavel.trim() || null,
+        empresa_id: formulario.empresaId || null,
         auditor_nome: formulario.auditorNome.trim() || "Não informado",
         grau_risco: formulario.grauRisco,
         situacao_encontrada: formulario.situacaoEncontrada.trim(),
@@ -388,7 +547,7 @@ export function montarPayloadAuditoriaCampoDireta({
                 pontuacao: resultado.percentual ?? 0,
                 statusAuditoria: formulario.statusAuditoria,
                 responsavelTratativa: formulario.responsavelTratativa.trim(),
-                prazoAdequacao: formulario.prazoAdequacao,
+                prazoAdequacao: formatarDataAuditoriaCampoDireta(formulario.prazoAdequacao),
             }, { tipo: tipoAtual.label, titulo: formulario.titulo.trim() }),
             auditor: formulario.auditorNome.trim() || "Não informado",
             emailResponsavel: emailResponsavelAuditoria || null,

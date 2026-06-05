@@ -38,11 +38,15 @@ import {
     montarLinkAuditoriaCampoDireta,
     montarLinksNotificacaoAuditoriaCampoDireta,
     montarPayloadAuditoriaCampoDireta,
+    montarResumoAuditoriaCampoDireta,
     montarTextoNotificacaoAuditoriaCampoDireta,
     obterContatosEmpresaAuditoriaCampoDireta,
     obterParametrosAuditoriaCampoDiretaUrl,
     uploadFotoAuditoriaCampoDireta,
     validarFormularioAuditoriaCampoDireta,
+    carregarEmpresasAuditoriaPublicaControlada,
+    formatarDataAuditoriaCampoDireta,
+    formatarTelefoneAuditoriaCampoDireta,
 } from "../../services/auditoriaCampoDiretaService";
 import {
     carregarTokenAuditoriaPublicaAtivoPadrao,
@@ -59,6 +63,8 @@ import {
     ShieldCheck,
     Upload,
 } from "lucide-react";
+
+const VALOR_EMPRESA_MANUAL_AUDITORIA = "__empresa_nao_cadastrada__";
 
 
 function obterTextoAuditoriaCampoValido(valor = "") {
@@ -195,9 +201,15 @@ export function NovaAuditoriaCampoDireta({ usuario = null, onAuditoriaSalva, emp
     });
     const linkGeral = tokenLinkAuditoriaCampoDisponivel ? montarLinkAuditoriaCampo() : "";
     const linkGeralDireto = linkGeral;
+    const [empresasPublicasAuditoriaCampo, setEmpresasPublicasAuditoriaCampo] = useState([]);
+    const [carregandoEmpresasPublicasAuditoriaCampo, setCarregandoEmpresasPublicasAuditoriaCampo] = useState(false);
+    const [mensagemEmpresasPublicasAuditoriaCampo, setMensagemEmpresasPublicasAuditoriaCampo] = useState("");
     const empresasAuditoriaCampo = useMemo(
-        () => listarEmpresasAuditoriaCampoDireta(empresasBanco),
-        [empresasBanco]
+        () => listarEmpresasAuditoriaCampoDireta([
+            ...(Array.isArray(empresasBanco) ? empresasBanco : []),
+            ...(Array.isArray(empresasPublicasAuditoriaCampo) ? empresasPublicasAuditoriaCampo : []),
+        ]),
+        [empresasBanco, empresasPublicasAuditoriaCampo]
     );
 
 
@@ -327,28 +339,71 @@ export function NovaAuditoriaCampoDireta({ usuario = null, onAuditoriaSalva, emp
         }
     };
 
-
-    const nomeEmpresaAtualAuditoria = String(formulario.empresaResponsavel || empresaParametro || "").trim();
-    const empresasParaSelecaoAuditoriaCampo = useMemo(() => {
-        const lista = [...empresasAuditoriaCampo];
-        const empresaAtual = nomeEmpresaAtualAuditoria;
-
-        if (empresaAtual && !lista.some((empresa) => normalizarTextoBusca(empresa.nome).trim() === normalizarTextoBusca(empresaAtual).trim())) {
-            lista.unshift({
-                id: `empresa-publica-${empresaAtual}`,
-                nome: empresaAtual,
-                origemPublica: true,
-            });
+    useEffect(() => {
+        if (usuario || !acessoLiberado) {
+            setEmpresasPublicasAuditoriaCampo([]);
+            setMensagemEmpresasPublicasAuditoriaCampo("");
+            setCarregandoEmpresasPublicasAuditoriaCampo(false);
+            return;
         }
 
-        return lista;
-    }, [empresasAuditoriaCampo, nomeEmpresaAtualAuditoria]);
+        let ativo = true;
+
+        async function carregarEmpresasPublicas() {
+            setCarregandoEmpresasPublicasAuditoriaCampo(true);
+            setMensagemEmpresasPublicasAuditoriaCampo("");
+
+            const tokenPublico = tokenAuditoriaPublicaValidado || tokenAcessoAuditoriaCampo || tokenParametro || tokenAuditoriaPublicaSupabase || tokenAuditoriaQrCampoSalvo || "";
+
+            try {
+                const resultado = await carregarEmpresasAuditoriaPublicaControlada({
+                    supabaseClient: supabase,
+                    tokenPublico,
+                    senha: senhaAcessoAuditoria,
+                });
+
+                if (!ativo) return;
+
+                setEmpresasPublicasAuditoriaCampo(resultado.empresas || []);
+
+                if (!resultado.ok) {
+                    setMensagemEmpresasPublicasAuditoriaCampo(
+                        resultado.erro ||
+                        "Não foi possível carregar a lista controlada de empresas. Use a opção Empresa não cadastrada somente como exceção."
+                    );
+                }
+            } catch (error) {
+                if (!ativo) return;
+                setEmpresasPublicasAuditoriaCampo([]);
+                setMensagemEmpresasPublicasAuditoriaCampo(error?.message || "Não foi possível carregar a lista controlada de empresas.");
+            } finally {
+                if (ativo) setCarregandoEmpresasPublicasAuditoriaCampo(false);
+            }
+        }
+
+        carregarEmpresasPublicas();
+
+        return () => {
+            ativo = false;
+        };
+    }, [
+        usuario,
+        acessoLiberado,
+        tokenAuditoriaPublicaValidado,
+        tokenAcessoAuditoriaCampo,
+        tokenParametro,
+        tokenAuditoriaPublicaSupabase,
+        tokenAuditoriaQrCampoSalvo,
+        senhaAcessoAuditoria,
+    ]);
+
+
+    const nomeEmpresaAtualAuditoria = String(formulario.empresaResponsavel || empresaParametro || "").trim();
     const empresaSelecionadaAuditoria = encontrarEmpresaAuditoriaCampoDireta(
         empresasAuditoriaCampo,
         nomeEmpresaAtualAuditoria
     );
     const contatosEmpresaAuditoria = obterContatosEmpresaAuditoriaCampoDireta(empresaSelecionadaAuditoria);
-    const possuiEmpresasCadastradasAuditoriaCampo = empresasAuditoriaCampo.length > 0;
 
     const tipoAtual = obterTipoAuditoriaCampoDireta(formulario.tipoAuditoria);
     const categoriaAtual = obterCategoriaPadronizadaAuditoriaCampo(formulario.categoriaAuditoria);
@@ -465,6 +520,25 @@ export function NovaAuditoriaCampoDireta({ usuario = null, onAuditoriaSalva, emp
         textoNotificacaoResponsavel,
     });
 
+    const resumoAuditoriaSalvaTexto = useMemo(() => {
+        if (!auditoriaSalva) return "";
+
+        return montarResumoAuditoriaCampoDireta({
+            auditoria: auditoriaSalva,
+            formulario,
+            tipoAtual,
+            fotoAntesUrl: auditoriaSalva.fotoAntesUrl || auditoriaSalva.foto_antes_url || "",
+            fotoDepoisUrl: auditoriaSalva.fotoDepoisUrl || auditoriaSalva.foto_depois_url || "",
+        });
+    }, [auditoriaSalva, formulario, tipoAtual]);
+
+    const linkEmailAuditoriaSalva = auditoriaSalva && emailResponsavelAuditoria
+        ? `mailto:${emailResponsavelAuditoria}?subject=${encodeURIComponent(`Auditoria de campo - ${auditoriaSalva.numeroAuditoria || auditoriaSalva.id || ""}`)}&body=${encodeURIComponent(resumoAuditoriaSalvaTexto)}`
+        : "";
+    const linkWhatsappAuditoriaSalva = auditoriaSalva && whatsappResponsavelFormatado
+        ? `https://wa.me/${whatsappResponsavelFormatado}?text=${encodeURIComponent(resumoAuditoriaSalvaTexto)}`
+        : "";
+
     const aplicarContatosEmpresaAuditoria = (nomeEmpresa) => {
         const empresa = encontrarEmpresaAuditoriaCampoDireta(empresasAuditoriaCampo, nomeEmpresa);
 
@@ -472,10 +546,27 @@ export function NovaAuditoriaCampoDireta({ usuario = null, onAuditoriaSalva, emp
     };
 
     const alterarFormulario = (campo, valor) => {
-        setFormulario((atual) => ({ ...atual, [campo]: valor }));
+        const valorTratado = String(campo || "").toLowerCase().includes("whatsapp")
+            ? formatarTelefoneAuditoriaCampoDireta(valor)
+            : valor;
+
+        setFormulario((atual) => ({
+            ...atual,
+            [campo]: valorTratado,
+            ...(campo === "empresaResponsavel" ? { empresaId: null } : {}),
+        }));
     };
 
     const alterarEmpresaResponsavelAuditoria = (valor) => {
+        if (valor === VALOR_EMPRESA_MANUAL_AUDITORIA) {
+            setFormulario((atual) => ({
+                ...atual,
+                empresaId: null,
+                empresaResponsavel: "",
+            }));
+            return;
+        }
+
         aplicarContatosEmpresaAuditoria(valor);
     };
 
@@ -569,17 +660,16 @@ export function NovaAuditoriaCampoDireta({ usuario = null, onAuditoriaSalva, emp
 
         try {
             const tokenAuditoriaCampo = tokenAuditoriaPublicaValidado || tokenAcessoAuditoriaCampo || obterParametroUrl("token") || obterParametroUrl("chave");
-            const fluxoPublicoAuditoria = Boolean(tokenAuditoriaCampo && !usuario);
-            const referenciaUploadFotos = `${fluxoPublicoAuditoria ? "auditoria-publica" : "auditoria-interna"}-${Date.now()}`;
-
+            const auditoriaPublica = !usuario && Boolean(tokenAuditoriaCampo);
+            const referenciaUploadFotos = `auditoria-pendente-${Date.now()}`;
             const fotoAntesUrl = await uploadFotoAuditoriaCampoDireta({
                 supabaseClient: supabase,
                 arquivo: formulario.fotoAntes,
                 numeroAuditoria: referenciaUploadFotos,
                 tipo: "foto-antes",
                 validarArquivoAntesUpload,
-                tokenPublico: fluxoPublicoAuditoria ? tokenAuditoriaCampo : "",
-                publico: fluxoPublicoAuditoria,
+                tokenPublico: tokenAuditoriaCampo,
+                publico: auditoriaPublica,
             });
             const fotoDepoisUrl = await uploadFotoAuditoriaCampoDireta({
                 supabaseClient: supabase,
@@ -587,8 +677,8 @@ export function NovaAuditoriaCampoDireta({ usuario = null, onAuditoriaSalva, emp
                 numeroAuditoria: referenciaUploadFotos,
                 tipo: "foto-depois",
                 validarArquivoAntesUpload,
-                tokenPublico: fluxoPublicoAuditoria ? tokenAuditoriaCampo : "",
-                publico: fluxoPublicoAuditoria,
+                tokenPublico: tokenAuditoriaCampo,
+                publico: auditoriaPublica,
             });
 
             const payload = montarPayloadAuditoriaCampoDireta({
@@ -975,33 +1065,43 @@ export function NovaAuditoriaCampoDireta({ usuario = null, onAuditoriaSalva, emp
                                 <div>
                                     <label className="text-xs font-bold uppercase tracking-wide text-slate-500">Empresa responsável</label>
                                     <select
-                                        value={empresasParaSelecaoAuditoriaCampo.some((empresa) => empresa.nome === formulario.empresaResponsavel) ? formulario.empresaResponsavel : ""}
+                                        value={empresaSelecionadaAuditoria ? empresaSelecionadaAuditoria.nome : (formulario.empresaResponsavel ? VALOR_EMPRESA_MANUAL_AUDITORIA : "")}
                                         onChange={(e) => alterarEmpresaResponsavelAuditoria(e.target.value)}
-                                        disabled={empresasParaSelecaoAuditoriaCampo.length === 0}
-                                        className="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold outline-none focus:ring-2 focus:ring-slate-300 disabled:cursor-not-allowed disabled:bg-slate-50 disabled:text-slate-400"
+                                        className="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold outline-none focus:ring-2 focus:ring-slate-300"
                                     >
-                                        <option value="">{possuiEmpresasCadastradasAuditoriaCampo ? "Selecionar empresa cadastrada" : "Empresa informada no QR ou digitação manual"}</option>
-                                        {empresasParaSelecaoAuditoriaCampo.map((empresa) => (
+                                        <option value="">
+                                            {carregandoEmpresasPublicasAuditoriaCampo ? "Carregando empresas cadastradas..." : "Selecione uma empresa cadastrada"}
+                                        </option>
+                                        {empresasAuditoriaCampo.map((empresa) => (
                                             <option key={empresa.id || empresa.nome} value={empresa.nome}>{empresa.nome}</option>
                                         ))}
+                                        <option value={VALOR_EMPRESA_MANUAL_AUDITORIA}>Empresa não cadastrada / informar manualmente</option>
                                     </select>
-                                    <input
-                                        value={formulario.empresaResponsavel || ""}
-                                        onChange={(e) => alterarFormulario("empresaResponsavel", e.target.value)}
-                                        list="empresas-auditoria-campo"
-                                        placeholder={possuiEmpresasCadastradasAuditoriaCampo ? "Ou digite manualmente" : "Digite a empresa responsável"}
-                                        className="mt-2 w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-slate-300"
-                                    />
-                                    <datalist id="empresas-auditoria-campo">
-                                        {empresasParaSelecaoAuditoriaCampo.map((empresa) => (
-                                            <option key={empresa.id || empresa.nome} value={empresa.nome} />
-                                        ))}
-                                    </datalist>
-                                    <p className="mt-1 text-[11px] text-slate-400">
-                                        {possuiEmpresasCadastradasAuditoriaCampo
-                                            ? "Ao selecionar uma empresa cadastrada, o app preenche automaticamente e-mail, WhatsApp e TST responsável quando esses dados existirem no cadastro."
-                                            : "Na auditoria pública, a lista completa de empresas do banco permanece protegida. Use a empresa vinculada ao QR Code ou digite a empresa responsável manualmente."}
-                                    </p>
+
+                                    {(!empresaSelecionadaAuditoria && formulario.empresaResponsavel) || empresasAuditoriaCampo.length === 0 ? (
+                                        <input
+                                            value={formulario.empresaResponsavel || ""}
+                                            onChange={(e) => alterarFormulario("empresaResponsavel", e.target.value)}
+                                            placeholder="Digite a empresa somente quando ela não estiver cadastrada"
+                                            className="mt-2 w-full rounded-2xl border border-orange-200 bg-orange-50 px-4 py-3 text-sm font-semibold text-orange-800 outline-none focus:ring-2 focus:ring-orange-200"
+                                        />
+                                    ) : null}
+
+                                    {empresaSelecionadaAuditoria ? (
+                                        <p className="mt-1 rounded-2xl bg-emerald-50 px-3 py-2 text-[11px] font-semibold text-emerald-700 ring-1 ring-emerald-100">
+                                            Empresa cadastrada selecionada. Os relatórios usarão o nome padronizado do banco.
+                                        </p>
+                                    ) : (
+                                        <p className="mt-1 text-[11px] text-slate-400">
+                                            Selecione uma empresa cadastrada para evitar duplicidade nos relatórios. Use digitação manual somente como exceção.
+                                        </p>
+                                    )}
+
+                                    {mensagemEmpresasPublicasAuditoriaCampo && (
+                                        <p className="mt-2 rounded-2xl bg-orange-50 px-3 py-2 text-[11px] font-semibold text-orange-700 ring-1 ring-orange-100">
+                                            {mensagemEmpresasPublicasAuditoriaCampo}
+                                        </p>
+                                    )}
                                 </div>
                                 {renderCampoTexto("auditorNome", "Nome do auditor", "Quem está realizando a auditoria")}
                                 <datalist id="opcoes-area-auditoria-campo">
@@ -1139,6 +1239,17 @@ export function NovaAuditoriaCampoDireta({ usuario = null, onAuditoriaSalva, emp
                                         </select>
                                     </div>
                                 ))}
+                                {checklistAtual.length % 2 !== 0 && (
+                                    <div className="rounded-2xl bg-blue-50 p-3 ring-1 ring-blue-100">
+                                        <p className="text-sm font-black text-blue-900">Padrão de avaliação</p>
+                                        <p className="mt-2 text-xs leading-relaxed text-blue-700">
+                                            Use Conforme quando o item estiver adequado, Não conforme quando exigir correção, Observação leve para acompanhamento e Desvio grave quando houver risco imediato.
+                                        </p>
+                                        <p className="mt-2 rounded-xl bg-white px-3 py-2 text-[11px] font-bold text-blue-700 ring-1 ring-blue-100">
+                                            Este card mantém o checklist em pares e ajuda o auditor a aplicar o mesmo critério em campo.
+                                        </p>
+                                    </div>
+                                )}
                             </div>
                         </CardRecolhivel>
 
@@ -1171,13 +1282,66 @@ export function NovaAuditoriaCampoDireta({ usuario = null, onAuditoriaSalva, emp
 
                 {auditoriaSalva && (
                     <Card className="border-emerald-200 bg-emerald-50">
-                        <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-                            <div>
-                                <p className="text-xs font-bold uppercase tracking-wide text-emerald-700">Auditoria salva</p>
-                                <h2 className="mt-1 text-xl font-black text-emerald-950">{auditoriaSalva.numeroAuditoria || auditoriaSalva.id}</h2>
-                                <p className="mt-1 text-sm text-emerald-700">Ela já pode aparecer no Dashboard Auditoria de Campo e relatórios.</p>
+                        <div className="flex flex-col gap-4">
+                            <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+                                <div>
+                                    <p className="text-xs font-bold uppercase tracking-wide text-emerald-700">Auditoria salva com sucesso</p>
+                                    <h2 className="mt-1 text-xl font-black text-emerald-950">{auditoriaSalva.numeroAuditoria || auditoriaSalva.id}</h2>
+                                    <p className="mt-1 text-sm leading-relaxed text-emerald-700">
+                                        Olá! O registro da auditoria foi concluído com sucesso. O resumo abaixo pode ser enviado ao encarregado sem necessidade de acesso ao sistema.
+                                    </p>
+                                </div>
+                                <button type="button" onClick={limparFormularioAuditoriaCampo} className="rounded-2xl bg-emerald-600 px-4 py-3 text-sm font-bold text-white hover:bg-emerald-700">Nova auditoria</button>
                             </div>
-                            <button type="button" onClick={limparFormularioAuditoriaCampo} className="rounded-2xl bg-emerald-600 px-4 py-3 text-sm font-bold text-white hover:bg-emerald-700">Nova auditoria</button>
+
+                            <div className="rounded-3xl bg-white p-4 text-sm leading-relaxed text-slate-700 ring-1 ring-emerald-100">
+                                <p className="mb-2 text-xs font-black uppercase tracking-wide text-slate-500">Resumo para envio</p>
+                                <pre className="whitespace-pre-wrap font-sans text-sm leading-relaxed">{resumoAuditoriaSalvaTexto}</pre>
+                            </div>
+
+                            {(auditoriaSalva.fotoAntesUrl || auditoriaSalva.fotoDepoisUrl) && (
+                                <div className="rounded-3xl bg-white p-4 text-xs leading-relaxed text-slate-500 ring-1 ring-emerald-100">
+                                    <p className="font-black uppercase tracking-wide text-slate-600">Fotos/evidências</p>
+                                    <p className="mt-1">
+                                        As fotos foram anexadas ao registro da auditoria. Por segurança, o WhatsApp e o e-mail enviam o resumo e informam que as evidências estão no sistema; anexo automático de foto exige fluxo de e-mail com backend ou link seguro assinado.
+                                    </p>
+                                </div>
+                            )}
+
+                            <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
+                                <button
+                                    type="button"
+                                    onClick={() => copiarTexto(resumoAuditoriaSalvaTexto, "Resumo da auditoria copiado.")}
+                                    className="inline-flex items-center justify-center gap-2 rounded-2xl bg-white px-4 py-3 text-sm font-bold text-slate-700 ring-1 ring-slate-200 hover:bg-slate-100"
+                                >
+                                    Copiar resumo
+                                </button>
+                                {linkWhatsappAuditoriaSalva ? (
+                                    <a href={linkWhatsappAuditoriaSalva} target="_blank" rel="noreferrer" className="inline-flex items-center justify-center gap-2 rounded-2xl bg-emerald-600 px-4 py-3 text-sm font-bold text-white hover:bg-emerald-700">
+                                        <MessageCircle className="h-4 w-4" />
+                                        Enviar WhatsApp
+                                    </a>
+                                ) : (
+                                    <button type="button" disabled className="inline-flex cursor-not-allowed items-center justify-center gap-2 rounded-2xl bg-emerald-100 px-4 py-3 text-sm font-bold text-emerald-300">
+                                        <MessageCircle className="h-4 w-4" />
+                                        WhatsApp sem número
+                                    </button>
+                                )}
+                                {linkEmailAuditoriaSalva ? (
+                                    <a href={linkEmailAuditoriaSalva} className="inline-flex items-center justify-center gap-2 rounded-2xl bg-white px-4 py-3 text-sm font-bold text-slate-700 ring-1 ring-slate-200 hover:bg-slate-100">
+                                        <Mail className="h-4 w-4" />
+                                        Enviar e-mail
+                                    </a>
+                                ) : (
+                                    <button type="button" disabled className="inline-flex cursor-not-allowed items-center justify-center gap-2 rounded-2xl bg-white px-4 py-3 text-sm font-bold text-slate-400 ring-1 ring-slate-200">
+                                        <Mail className="h-4 w-4" />
+                                        E-mail não informado
+                                    </button>
+                                )}
+                                <button type="button" onClick={limparFormularioAuditoriaCampo} className="rounded-2xl bg-slate-950 px-4 py-3 text-sm font-bold text-white hover:bg-slate-800">
+                                    Nova auditoria
+                                </button>
+                            </div>
                         </div>
                     </Card>
                 )}
