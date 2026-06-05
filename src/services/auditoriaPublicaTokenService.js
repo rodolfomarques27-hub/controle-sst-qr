@@ -202,3 +202,57 @@ export async function validarAcessoAuditoriaPublicaPadrao({ senha = "", tokens =
         mensagem: ultimaMensagem,
     };
 }
+
+function normalizarEmpresaAuditoriaPublica(item = {}) {
+    return {
+        id: item.id || item.empresa_id || null,
+        nome: String(item.nome || item.empresa_nome || item.empresa || "").trim(),
+        status: item.status || "",
+        tipo_empresa: item.tipo_empresa || item.tipoEmpresa || "",
+    };
+}
+
+export async function carregarEmpresasAuditoriaPublicaControlada({ token = "", senha = "" } = {}) {
+    const tokenSeguro = normalizarTokenAuditoriaPublica(token);
+    const senhaSegura = texto(senha);
+
+    if (!tokenSeguro || !senhaSegura) {
+        return {
+            ok: false,
+            empresas: [],
+            mensagem: "Token e senha são obrigatórios para carregar a lista controlada de empresas.",
+        };
+    }
+
+    try {
+        const { data, error } = await supabase.rpc("listar_empresas_auditoria_publica", {
+            p_token: tokenSeguro,
+            p_senha: senhaSegura,
+        });
+
+        if (error) {
+            return {
+                ok: false,
+                empresas: [],
+                mensagem: error.message || "Não foi possível carregar empresas pela RPC pública controlada.",
+            };
+        }
+
+        const empresas = (Array.isArray(data) ? data : [])
+            .map(normalizarEmpresaAuditoriaPublica)
+            .filter((empresa) => empresa.nome)
+            .sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR"));
+
+        return {
+            ok: true,
+            empresas,
+            mensagem: empresas.length ? "Empresas carregadas com segurança." : "Nenhuma empresa cadastrada foi retornada pela consulta controlada.",
+        };
+    } catch (error) {
+        return {
+            ok: false,
+            empresas: [],
+            mensagem: error?.message || "Não foi possível carregar a lista controlada de empresas.",
+        };
+    }
+}
