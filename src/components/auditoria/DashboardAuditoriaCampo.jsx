@@ -2186,17 +2186,17 @@ export function DashboardAuditoriaCampo({
             return blocoWrapper(chave, "Resumo visual das auditorias", "Distribuição por status, categoria padronizada e grau de risco para leitura gerencial.", (
                 <div className="space-y-4">
                     <div className="grid gap-3 md:grid-cols-3">
-                        <div className="rounded-3xl bg-slate-950 p-4 text-white shadow-sm">
+                        <div className="rounded-3xl bg-slate-950 p-4 text-center text-white shadow-sm">
                             <p className="text-xs font-black uppercase tracking-wide text-slate-300">Total analisado</p>
                             <p className="mt-2 text-3xl font-black">{auditoriasNormalizadas.length}</p>
                             <p className="mt-1 text-xs text-slate-300">auditoria(s) no histórico</p>
                         </div>
-                        <div className="rounded-3xl bg-red-50 p-4 ring-1 ring-red-100">
+                        <div className="rounded-3xl bg-red-50 p-4 text-center ring-1 ring-red-100">
                             <p className="text-xs font-black uppercase tracking-wide text-red-600">Críticas / ação imediata</p>
                             <p className="mt-2 text-3xl font-black text-red-700">{auditoriasCriticas}</p>
                             <p className="mt-1 text-xs text-red-600">priorizar acompanhamento</p>
                         </div>
-                        <div className="rounded-3xl bg-orange-50 p-4 ring-1 ring-orange-100">
+                        <div className="rounded-3xl bg-orange-50 p-4 text-center ring-1 ring-orange-100">
                             <p className="text-xs font-black uppercase tracking-wide text-orange-600">Vencidas</p>
                             <p className="mt-2 text-3xl font-black text-orange-700">{auditoriasVencidas}</p>
                             <p className="mt-1 text-xs text-orange-600">fora do prazo de adequação</p>
@@ -2329,7 +2329,7 @@ export function DashboardAuditoriaCampo({
                         </div>
                     </div>
 
-                    <div className="rounded-3xl border border-slate-200 bg-white p-4">
+                    <div className="self-start rounded-3xl border border-slate-200 bg-white p-4">
                         <div className="flex flex-wrap items-start justify-between gap-3">
                             <div>
                                 <p className="text-sm font-black text-slate-950">QR Codes salvos</p>
@@ -2424,10 +2424,10 @@ export function DashboardAuditoriaCampo({
                                         const linkQrCampoSalvo = montarLinkQrCampoSalvo(item);
 
                                         return (
-                                        <div key={item.id || item.codigo} className="grid gap-3 overflow-hidden rounded-2xl bg-slate-50 p-3 ring-1 ring-slate-100 sm:grid-cols-[108px_minmax(0,1fr)]">
+                                        <div key={item.id || item.codigo} className="grid gap-3 overflow-visible rounded-2xl bg-slate-50 p-4 ring-1 ring-slate-100 sm:grid-cols-[118px_minmax(0,1fr)]">
                                             <div className="flex items-start justify-center">
-                                                <div data-qrcode-campo-id={chaveQrSalvo} className="flex aspect-square w-[96px] items-center justify-center self-start rounded-3xl border border-slate-200 bg-white p-3 shadow-sm">
-                                                    <QRCodeCampoLazy value={linkQrCampoSalvo} size={72} level="M" />
+                                                <div data-qrcode-campo-id={chaveQrSalvo} className="flex aspect-square w-[104px] items-center justify-center self-start rounded-3xl border border-slate-200 bg-white p-3 shadow-sm">
+                                                    <QRCodeCampoLazy value={linkQrCampoSalvo} size={80} level="M" />
                                                 </div>
                                             </div>
                                             <div className="min-w-0 overflow-hidden">
@@ -2437,11 +2437,11 @@ export function DashboardAuditoriaCampo({
                                                 </div>
                                                 <p className="mt-2 truncate text-sm font-black text-slate-900" title={item.identificacao}>{item.identificacao}</p>
                                                 <p className="truncate text-[11px] font-medium text-slate-500" title={[item.area, item.local, item.empresa_responsavel, item.observacao].filter(Boolean).join(" · ")}>{[item.area, item.local, item.empresa_responsavel, item.observacao].filter(Boolean).join(" · ") || "Sem local vinculado"}</p>
-                                                <div className="mt-3 grid grid-cols-4 gap-1.5">
+                                                <div className="mt-3 grid gap-1.5 sm:grid-cols-2 2xl:grid-cols-4">
                                                     <button
                                                         type="button"
                                                         onClick={() => navigator.clipboard?.writeText(linkQrCampoSalvo)}
-                                                        className="inline-flex h-9 w-full min-w-0 items-center justify-center gap-0.5 whitespace-nowrap rounded-xl bg-blue-50 px-1.5 py-1 text-[9px] font-black leading-none tracking-[-0.03em] text-blue-700 ring-1 ring-blue-100 hover:bg-blue-100"
+                                                        className="inline-flex min-h-10 w-full min-w-0 items-center justify-center gap-1 rounded-xl bg-blue-50 px-2 py-2 text-center text-[10px] font-black leading-tight tracking-[-0.02em] text-blue-700 ring-1 ring-blue-100 hover:bg-blue-100"
                                                     >
                                                         Copiar link
                                                     </button>
@@ -2449,7 +2449,7 @@ export function DashboardAuditoriaCampo({
                                                         href={linkQrCampoSalvo || "#"}
                                                         target="_blank"
                                                         rel="noreferrer"
-                                                        className="inline-flex h-9 w-full min-w-0 items-center justify-center gap-0.5 whitespace-nowrap rounded-xl bg-emerald-50 px-1.5 py-1 text-[9px] font-black leading-none tracking-[-0.03em] text-emerald-700 ring-1 ring-emerald-100 hover:bg-emerald-100"
+                                                        className="inline-flex min-h-10 w-full min-w-0 items-center justify-center gap-1 rounded-xl bg-emerald-50 px-2 py-2 text-center text-[10px] font-black leading-tight tracking-[-0.02em] text-emerald-700 ring-1 ring-emerald-100 hover:bg-emerald-100"
                                                     >
                                                         <QrCode className="h-2.5 w-2.5 flex-none" />
                                                         Abrir auditoria
@@ -2457,7 +2457,7 @@ export function DashboardAuditoriaCampo({
                                                     <button
                                                         type="button"
                                                         onClick={() => imprimirQrCampoSalvo(item)}
-                                                        className="inline-flex h-9 w-full min-w-0 items-center justify-center gap-0.5 whitespace-nowrap rounded-xl bg-white px-1.5 py-1 text-[9px] font-black leading-none tracking-[-0.03em] text-slate-700 ring-1 ring-slate-200 hover:bg-slate-50"
+                                                        className="inline-flex min-h-10 w-full min-w-0 items-center justify-center gap-1 rounded-xl bg-white px-2 py-2 text-center text-[10px] font-black leading-tight tracking-[-0.02em] text-slate-700 ring-1 ring-slate-200 hover:bg-slate-50"
                                                     >
                                                         <Download className="h-2.5 w-2.5 flex-none" />
                                                         Imprimir
@@ -2466,7 +2466,7 @@ export function DashboardAuditoriaCampo({
                                                         type="button"
                                                         onClick={() => excluirQrCampo(item)}
                                                         disabled={excluindoQrCampoId === (item.id || item.codigo || item.identificacao)}
-                                                        className="inline-flex h-9 w-full min-w-0 items-center justify-center gap-0.5 whitespace-nowrap rounded-xl bg-red-50 px-1.5 py-1 text-[9px] font-black leading-none tracking-[-0.03em] text-red-700 ring-1 ring-red-100 hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-60"
+                                                        className="inline-flex min-h-10 w-full min-w-0 items-center justify-center gap-1 rounded-xl bg-red-50 px-2 py-2 text-center text-[10px] font-black leading-tight tracking-[-0.02em] text-red-700 ring-1 ring-red-100 hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-60"
                                                     >
                                                         <Trash2 className="h-2.5 w-2.5 flex-none" />
                                                         {excluindoQrCampoId === (item.id || item.codigo || item.identificacao) ? "Excluindo..." : "Excluir QR"}
@@ -2477,7 +2477,7 @@ export function DashboardAuditoriaCampo({
                                                         type="button"
                                                         onClick={() => setStatusQrCampoAberto((atual) => atual === chaveQrSalvo ? "" : chaveQrSalvo)}
                                                         className={classNames(
-                                                            "inline-flex w-full items-center justify-center gap-2 rounded-xl px-3 py-2 text-[11px] font-black ring-1 transition",
+                                                            "inline-flex min-h-[42px] w-full items-center justify-center gap-2 rounded-xl px-3 py-2.5 text-center text-[11px] font-black leading-tight ring-1 transition",
                                                             statusQrCampoEstaAberto
                                                                 ? "bg-blue-50 text-blue-700 ring-blue-200 hover:bg-blue-100"
                                                                 : "bg-white text-slate-600 ring-slate-200 hover:bg-slate-50"
@@ -2490,7 +2490,7 @@ export function DashboardAuditoriaCampo({
                                                         type="button"
                                                         onClick={() => setHistoricoQrCampoAberto((atual) => atual === chaveQrSalvo ? "" : chaveQrSalvo)}
                                                         className={classNames(
-                                                            "inline-flex w-full items-center justify-center gap-2 rounded-xl px-3 py-2 text-[11px] font-black ring-1 transition",
+                                                            "inline-flex min-h-[42px] w-full items-center justify-center gap-2 rounded-xl px-3 py-2.5 text-center text-[11px] font-black leading-tight ring-1 transition",
                                                             totalHistoricoQrCampo > 0
                                                                 ? "bg-slate-950 text-white ring-slate-950 hover:bg-slate-800"
                                                                 : "bg-white text-slate-500 ring-slate-200 hover:bg-slate-50"
@@ -2780,13 +2780,13 @@ export function DashboardAuditoriaCampo({
         if (chave === "empresas") {
             return blocoWrapper(chave, "Ranking por empresa", "Resumo de auditorias, desvios e média por empresa.", (
                 <div className="overflow-hidden rounded-2xl border border-slate-200">
-                    <table className="w-full text-left text-sm">
-                        <thead className="bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
+                    <table className="w-full text-sm">
+                        <thead className="bg-slate-50 text-center text-xs uppercase tracking-wide text-slate-500">
                             <tr>
-                                <th className="px-4 py-3">Empresa</th>
-                                <th className="px-4 py-3">Auditorias</th>
-                                <th className="px-4 py-3">Média</th>
-                                <th className="px-4 py-3">Desvios</th>
+                                <th className="px-4 py-3 text-left">Empresa</th>
+                                <th className="px-4 py-3 text-center">Auditorias</th>
+                                <th className="px-4 py-3 text-center">Média</th>
+                                <th className="px-4 py-3 text-center">Desvios</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-100">
@@ -2794,10 +2794,10 @@ export function DashboardAuditoriaCampo({
                                 <tr><td colSpan="4" className="px-4 py-5 text-center text-slate-500">Nenhuma empresa auditada.</td></tr>
                             ) : empresasAuditoria.map((item) => (
                                 <tr key={item.empresa}>
-                                    <td className="px-4 py-3 font-semibold text-slate-900">{item.empresa}</td>
-                                    <td className="px-4 py-3 text-slate-600">{item.auditorias}</td>
-                                    <td className="px-4 py-3 text-slate-600">{item.media}%</td>
-                                    <td className="px-4 py-3 text-slate-600">{item.desvios}</td>
+                                    <td className="px-4 py-3 text-left font-semibold text-slate-900">{item.empresa}</td>
+                                    <td className="px-4 py-3 text-center font-bold text-slate-700">{item.auditorias}</td>
+                                    <td className="px-4 py-3 text-center font-bold text-slate-700">{item.media}%</td>
+                                    <td className="px-4 py-3 text-center font-bold text-slate-700">{item.desvios}</td>
                                 </tr>
                             ))}
                         </tbody>
@@ -2808,14 +2808,14 @@ export function DashboardAuditoriaCampo({
         if (chave === "areas") {
             return blocoWrapper(chave, "Ranking por área/local", "Áreas, locais ou máquinas com mais auditorias e desvios registrados.", (
                 <div className="overflow-hidden rounded-2xl border border-slate-200">
-                    <table className="w-full text-left text-sm">
-                        <thead className="bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
+                    <table className="w-full text-sm">
+                        <thead className="bg-slate-50 text-center text-xs uppercase tracking-wide text-slate-500">
                             <tr>
-                                <th className="px-4 py-3">Área / Local / Máquina</th>
-                                <th className="px-4 py-3">Auditorias</th>
-                                <th className="px-4 py-3">Média</th>
-                                <th className="px-4 py-3">Desvios</th>
-                                <th className="px-4 py-3">Risco alto/crítico</th>
+                                <th className="px-4 py-3 text-left">Área / Local / Máquina</th>
+                                <th className="px-4 py-3 text-center">Auditorias</th>
+                                <th className="px-4 py-3 text-center">Média</th>
+                                <th className="px-4 py-3 text-center">Desvios</th>
+                                <th className="px-4 py-3 text-center">Risco alto/crítico</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-100">
@@ -2827,11 +2827,11 @@ export function DashboardAuditoriaCampo({
                                 </tr>
                             ) : areasAuditoria.map((item) => (
                                 <tr key={item.area}>
-                                    <td className="px-4 py-3 font-semibold text-slate-900">{item.area}</td>
-                                    <td className="px-4 py-3 text-slate-600">{item.auditorias}</td>
-                                    <td className="px-4 py-3 text-slate-600">{item.media}%</td>
-                                    <td className="px-4 py-3 text-slate-600">{item.desvios}</td>
-                                    <td className="px-4 py-3">
+                                    <td className="px-4 py-3 text-left font-semibold text-slate-900">{item.area}</td>
+                                    <td className="px-4 py-3 text-center font-bold text-slate-700">{item.auditorias}</td>
+                                    <td className="px-4 py-3 text-center font-bold text-slate-700">{item.media}%</td>
+                                    <td className="px-4 py-3 text-center font-bold text-slate-700">{item.desvios}</td>
+                                    <td className="px-4 py-3 text-center">
                                         <span className={classNames(
                                             "rounded-full px-3 py-1 text-xs font-bold ring-1",
                                             item.riscosAltos > 0
