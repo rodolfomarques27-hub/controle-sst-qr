@@ -231,19 +231,8 @@ export function calcularResumoDashboardSst({
     const storage = calcularResumoStorageDashboard({ usoStorageDashboard, carregandoStorageDashboard });
 
     const pendencias = indicadores.itens
-        .filter((item) => ["pendente", "vencido", "vencendo"].includes(item.status.chave))
-        .sort((a, b) => {
-            const ordem = { vencido: 1, vencendo: 2, pendente: 3 };
-            const ordemStatus = ordem[a.status.chave] - ordem[b.status.chave];
-
-            if (ordemStatus !== 0) return ordemStatus;
-
-            if (!a.vencimento && !b.vencimento) return a.colaborador.nome.localeCompare(b.colaborador.nome);
-            if (!a.vencimento) return 1;
-            if (!b.vencimento) return -1;
-
-            return diasParaVencer(a.vencimento) - diasParaVencer(b.vencimento);
-        });
+        .filter((item) => possuiDocumentoEnviadoPendencia(item))
+        .sort(compararPendenciasCriticas);
 
     const colaboradoresPorFuncao = Object.values(
         colaboradoresMobilizados.reduce((acc, colaborador) => {
@@ -381,6 +370,85 @@ export function calcularResumoDashboardSst({
         alertasImportantes,
         ...storage,
     };
+}
+
+
+function possuiDocumentoEnviadoPendencia(item = {}) {
+    const statusChave = item.status?.chave || "";
+    const realizado = item.realizado || null;
+
+    if (!realizado) return false;
+    if (!["vencido", "vencendo"].includes(statusChave)) return false;
+
+    return Boolean(
+        realizado.id ||
+        realizado.arquivo ||
+        realizado.arquivoUrl ||
+        realizado.arquivo_url ||
+        realizado.nomeArquivo ||
+        realizado.nome_arquivo ||
+        realizado.nome_do_arquivo ||
+        realizado.tipoTreinamento ||
+        realizado.tipo_treinamento ||
+        realizado.nomeTreinamento ||
+        realizado.nome_treinamento ||
+        realizado.createdAt ||
+        realizado.created_at ||
+        realizado.realizado ||
+        realizado.data_realizacao ||
+        realizado.vencimento ||
+        realizado.data_vencimento
+    );
+}
+
+function obterTimestampPendencia(item = {}) {
+    const realizado = item.realizado || {};
+    const candidatos = [
+        realizado.updatedAt,
+        realizado.updated_at,
+        realizado.createdAt,
+        realizado.created_at,
+        realizado.dataAtualizacao,
+        realizado.data_atualizacao,
+        realizado.dataUpload,
+        realizado.data_upload,
+        realizado.realizado,
+        realizado.data_realizacao,
+        item.createdAt,
+        item.created_at,
+        item.vencimento,
+        realizado.vencimento,
+        realizado.data_vencimento,
+    ];
+
+    for (const candidato of candidatos) {
+        if (!candidato) continue;
+        const data = new Date(candidato);
+        if (!Number.isNaN(data.getTime())) return data.getTime();
+    }
+
+    return 0;
+}
+
+function compararPendenciasCriticas(a = {}, b = {}) {
+    const dataB = obterTimestampPendencia(b);
+    const dataA = obterTimestampPendencia(a);
+
+    if (dataB !== dataA) return dataB - dataA;
+
+    const ordem = { vencido: 1, vencendo: 2 };
+    const ordemStatus = (ordem[a.status?.chave] || 99) - (ordem[b.status?.chave] || 99);
+
+    if (ordemStatus !== 0) return ordemStatus;
+
+    if (!a.vencimento && !b.vencimento) {
+        return (a.colaborador?.nome || "").localeCompare(b.colaborador?.nome || "");
+    }
+
+    if (!a.vencimento) return 1;
+    if (!b.vencimento) return -1;
+
+    return diasParaVencer(a.vencimento) - diasParaVencer(b.vencimento);
 }
 
 function calcularRankingPendenciasEmpresa({ colaboradores = [], empresasBanco = [], documentosEmpresas = [], indicadores = { itens: [] } }) {

@@ -5,6 +5,65 @@ import { formatDate } from "../../utils/sstUtils";
 
 const FOTO_BUCKET_COLABORADORES = "fotos-colaboradores";
 const CACHE_FOTOS_ASSINADAS = new Map();
+const LIMITE_INICIAL_PENDENCIAS = 15;
+
+const ESTILOS_PENDENCIAS_DESKTOP = `
+@media (min-width: 1024px) {
+    .dashboard-pendencias-final__cabecalho,
+    .dashboard-pendencias-final__linha {
+        display: grid;
+        grid-template-columns: minmax(300px, 1.45fr) minmax(330px, 1.45fr) minmax(150px, 0.6fr) minmax(300px, 1fr);
+        column-gap: 24px;
+        align-items: center;
+    }
+
+    .dashboard-pendencias-final__cabecalho > span:nth-child(3),
+    .dashboard-pendencias-final__vencimento {
+        text-align: center;
+        justify-self: center;
+    }
+
+    .dashboard-pendencias-final__cabecalho > span:nth-child(4) {
+        text-align: right;
+        justify-self: end;
+    }
+
+    .dashboard-pendencias-final__acoes {
+        justify-content: flex-end;
+        justify-self: end;
+        min-width: 300px;
+    }
+
+    .dashboard-pendencias-final__treinamento {
+        min-width: 0;
+    }
+}
+
+.dashboard-pendencias-final__rodape-lista {
+    display: flex;
+    justify-content: center;
+    padding: 16px 0 4px;
+}
+
+.dashboard-pendencias-final__mostrar-mais {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    border-radius: 999px;
+    border: 1px solid #dbeafe;
+    background: #ffffff;
+    padding: 10px 16px;
+    font-size: 12px;
+    font-weight: 800;
+    color: #1e3a8a;
+    box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+}
+
+.dashboard-pendencias-final__mostrar-mais:hover {
+    background: #eff6ff;
+}
+`;
 
 function textoSeguro(valor, fallback = "-") {
     if (valor === null || valor === undefined || valor === "") return fallback;
@@ -292,17 +351,27 @@ export function DashboardPendencias({
 }) {
     const recolhido = Boolean(blocosRecolhidosDashboard?.pendencias);
     const totalPendencias = pendencias.length;
+    const [mostrarTodasPendencias, setMostrarTodasPendencias] = useState(false);
+    const possuiMaisPendencias = totalPendencias > LIMITE_INICIAL_PENDENCIAS;
+    const pendenciasVisiveis = mostrarTodasPendencias
+        ? pendencias
+        : pendencias.slice(0, LIMITE_INICIAL_PENDENCIAS);
+
+    useEffect(() => {
+        setMostrarTodasPendencias(false);
+    }, [totalPendencias]);
 
     return (
         <section className="dashboard-pendencias-final rounded-3xl bg-white p-5 shadow-sm ring-1 ring-slate-200">
+            <style>{ESTILOS_PENDENCIAS_DESKTOP}</style>
             <div className="dashboard-pendencias-final__topo">
                 <div className="min-w-0">
                     <h2 className="dashboard-pendencias-final__titulo">Pendências críticas</h2>
-                    <p className="dashboard-pendencias-final__subtitulo">Treinamentos pendentes, vencidos ou a vencer em até 30 dias.</p>
+                    <p className="dashboard-pendencias-final__subtitulo">Certificados enviados, vencidos ou a vencer em até 30 dias.</p>
                 </div>
 
                 <div className="dashboard-pendencias-final__controles">
-                    <span className="dashboard-pendencias-final__contador">{totalPendencias} itens</span>
+                    <span className="dashboard-pendencias-final__contador">{possuiMaisPendencias && !mostrarTodasPendencias ? `${pendenciasVisiveis.length} de ${totalPendencias}` : `${totalPendencias} itens`}</span>
                     <button
                         type="button"
                         onClick={() => alternarBlocoRecolhidoDashboard?.("pendencias")}
@@ -327,7 +396,7 @@ export function DashboardPendencias({
                         <div className="dashboard-pendencias-final__vazio">Nenhuma pendência crítica encontrada.</div>
                     ) : (
                         <div className="dashboard-pendencias-final__lista">
-                            {pendencias.map((item, indice) => {
+                            {pendenciasVisiveis.map((item, indice) => {
                                 const colaborador = item.colaborador || item.colaboradorDados || item.colaborador_dados || {};
                                 const nome = obterNomeColaborador(colaborador, item);
                                 const empresa = obterEmpresaColaborador(colaborador, item);
@@ -381,6 +450,20 @@ export function DashboardPendencias({
                                     </div>
                                 );
                             })}
+
+                            {possuiMaisPendencias && (
+                                <div className="dashboard-pendencias-final__rodape-lista">
+                                    <button
+                                        type="button"
+                                        onClick={() => setMostrarTodasPendencias((valorAtual) => !valorAtual)}
+                                        className="dashboard-pendencias-final__mostrar-mais"
+                                    >
+                                        {mostrarTodasPendencias
+                                            ? "Mostrar menos"
+                                            : `Mostrar mais ${totalPendencias - LIMITE_INICIAL_PENDENCIAS} item(ns)`}
+                                    </button>
+                                </div>
+                            )}
                         </div>
                     )}
                 </div>
