@@ -1171,6 +1171,56 @@ export function NovaAuditoriaCampoDireta({ usuario = null, onAuditoriaSalva, emp
                         </CardRecolhivel>
 
                         <CardRecolhivel titulo="Responsáveis e notificação" subtitulo="Dados de tratativa e contatos ficam recolhidos para não poluir a tela durante o preenchimento inicial." defaultOpen={false} persistKey="novaAuditoriaCampo:responsaveisNotificacao">
+                            <div className="mb-4 rounded-3xl bg-blue-50 p-4 ring-1 ring-blue-100">
+                                <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+                                    <div>
+                                        <p className="text-sm font-black text-blue-950">Empresa para preenchimento automático</p>
+                                        <p className="mt-1 text-xs leading-relaxed text-blue-700">
+                                            Selecione a empresa cadastrada para preencher responsável, e-mail, WhatsApp e TST. Use digitação manual somente quando a empresa não estiver cadastrada.
+                                        </p>
+                                    </div>
+                                    <button
+                                        type="button"
+                                        disabled={!empresaSelecionadaAuditoria}
+                                        onClick={() => setFormulario((atual) => aplicarContatosEmpresaAuditoriaCampoDireta(atual, empresaSelecionadaAuditoria, empresaSelecionadaAuditoria?.nome || formulario.empresaResponsavel, { forcar: true }))}
+                                        className="inline-flex items-center justify-center rounded-2xl bg-white px-4 py-2 text-xs font-black text-blue-700 ring-1 ring-blue-200 hover:bg-blue-100 disabled:cursor-not-allowed disabled:text-slate-400 disabled:ring-slate-200"
+                                    >
+                                        Preencher contatos da empresa
+                                    </button>
+                                </div>
+
+                                <select
+                                    value={empresaSelecionadaAuditoria ? (empresaSelecionadaAuditoria.id || empresaSelecionadaAuditoria.nome) : empresaManualHabilitada ? OPCAO_EMPRESA_MANUAL_AUDITORIA : ""}
+                                    onChange={(e) => alterarEmpresaResponsavelAuditoria(e.target.value)}
+                                    className="mt-3 w-full rounded-2xl border border-blue-100 bg-white px-4 py-3 text-sm font-semibold outline-none focus:ring-2 focus:ring-blue-200"
+                                >
+                                    <option value="">Selecione uma empresa cadastrada</option>
+                                    {empresasAuditoriaCampo.map((empresa) => (
+                                        <option key={empresa.id || empresa.nome} value={empresa.id || empresa.nome}>{empresa.nome}</option>
+                                    ))}
+                                    <option value={OPCAO_EMPRESA_MANUAL_AUDITORIA}>Empresa não cadastrada / informar manualmente</option>
+                                </select>
+
+                                {empresaManualHabilitada && (
+                                    <input
+                                        value={formulario.empresaResponsavel || ""}
+                                        onChange={(e) => alterarEmpresaManualAuditoria(e.target.value)}
+                                        list="empresas-auditoria-campo"
+                                        placeholder="Digite o nome completo da empresa"
+                                        className="mt-2 w-full rounded-2xl border border-blue-100 bg-white px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-blue-200"
+                                    />
+                                )}
+
+                                {empresaSelecionadaAuditoria ? (
+                                    <p className="mt-2 rounded-2xl bg-emerald-50 px-3 py-2 text-xs font-semibold text-emerald-700 ring-1 ring-emerald-100">
+                                        Empresa vinculada: {empresaSelecionadaAuditoria.nome}. {contatosEmpresaAuditoria.responsavel || contatosEmpresaAuditoria.email || contatosEmpresaAuditoria.whatsapp || contatosEmpresaAuditoria.tstResponsavel ? "Contatos encontrados no cadastro." : "Cadastro sem contatos preenchidos."}
+                                    </p>
+                                ) : (
+                                    <p className="mt-2 rounded-2xl bg-white px-3 py-2 text-xs font-semibold text-blue-700 ring-1 ring-blue-100">
+                                        Nenhuma empresa cadastrada selecionada. Os campos abaixo permanecerão manuais até selecionar uma empresa.
+                                    </p>
+                                )}
+                            </div>
                             <div className="grid gap-4 md:grid-cols-2">
                                 {renderCampoTexto("responsavelTratativa", "Responsável pela tratativa")}
                                 {renderCampoTexto("prazoAdequacao", "Prazo para adequação", "", "date")}
