@@ -1004,6 +1004,67 @@ export async function baixarRelatorioColaboradoresTreinamentosPDF({
         padding-top: 2px;
     }
 
+    .cabecalho-relatorio--aniversariantes {
+        gap: 9px;
+    }
+
+    .marca-relatorio-controle {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 16px;
+        text-align: left;
+    }
+
+    .escudo-controle-sst-relatorio {
+        width: 62px;
+        height: 62px;
+        display: grid;
+        place-items: center;
+        border-radius: 16px;
+        background: #111827;
+        border: 1px solid rgba(255,255,255,0.12);
+        box-shadow: inset 0 0 0 1px rgba(255,255,255,0.05), 0 10px 24px rgba(15,23,42,0.18);
+        color: #ffffff;
+        flex: 0 0 auto;
+    }
+
+    .escudo-controle-sst-relatorio svg {
+        width: 34px;
+        height: 34px;
+        display: block;
+        fill: none;
+        stroke: currentColor;
+        stroke-width: 1.9;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+    }
+
+    .marca-relatorio-controle__textos h1 {
+        margin: 0;
+        color: #07162f;
+        font-size: 31px;
+        line-height: 1.02;
+        letter-spacing: 0.035em;
+        text-transform: uppercase;
+        font-weight: 900;
+    }
+
+    .marca-relatorio-controle__textos p {
+        margin: 5px 0 0;
+        color: var(--azul);
+        font-size: 15px;
+        font-weight: 900;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+    }
+
+    .linha-cabecalho-aniversariantes {
+        height: 2px;
+        border-radius: 999px;
+        background: linear-gradient(90deg, transparent, var(--azul), transparent);
+    }
+
     .cabecalho-relatorio--modelo-aprovado .marca-empresa {
         display: flex;
         align-items: center;
@@ -1691,6 +1752,67 @@ export async function baixarRelatorioPendenciasTreinamentosPDF({
         gap: 10px;
         margin-bottom: 14px;
         padding-top: 2px;
+    }
+
+    .cabecalho-relatorio--aniversariantes {
+        gap: 9px;
+    }
+
+    .marca-relatorio-controle {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 16px;
+        text-align: left;
+    }
+
+    .escudo-controle-sst-relatorio {
+        width: 62px;
+        height: 62px;
+        display: grid;
+        place-items: center;
+        border-radius: 16px;
+        background: #111827;
+        border: 1px solid rgba(255,255,255,0.12);
+        box-shadow: inset 0 0 0 1px rgba(255,255,255,0.05), 0 10px 24px rgba(15,23,42,0.18);
+        color: #ffffff;
+        flex: 0 0 auto;
+    }
+
+    .escudo-controle-sst-relatorio svg {
+        width: 34px;
+        height: 34px;
+        display: block;
+        fill: none;
+        stroke: currentColor;
+        stroke-width: 1.9;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+    }
+
+    .marca-relatorio-controle__textos h1 {
+        margin: 0;
+        color: #07162f;
+        font-size: 31px;
+        line-height: 1.02;
+        letter-spacing: 0.035em;
+        text-transform: uppercase;
+        font-weight: 900;
+    }
+
+    .marca-relatorio-controle__textos p {
+        margin: 5px 0 0;
+        color: var(--azul);
+        font-size: 15px;
+        font-weight: 900;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+    }
+
+    .linha-cabecalho-aniversariantes {
+        height: 2px;
+        border-radius: 999px;
+        background: linear-gradient(90deg, transparent, var(--azul), transparent);
     }
 
     .cabecalho-relatorio--modelo-aprovado .marca-empresa {
@@ -2391,6 +2513,17 @@ function obterIniciaisPessoaRelatorio(nome = "") {
         .toUpperCase();
 }
 
+function montarEscudoControleSstRelatorio() {
+    return `
+        <div class="escudo-controle-sst-relatorio" aria-hidden="true">
+            <svg viewBox="0 0 24 24" focusable="false">
+                <path d="M12 3.25 5.75 5.65v5.1c0 4.35 2.56 8.08 6.25 9.35 3.69-1.27 6.25-5 6.25-9.35v-5.1L12 3.25Z" />
+                <path d="m9.4 11.85 1.75 1.75 3.7-4" />
+            </svg>
+        </div>
+    `;
+}
+
 function calcularResumoAniversariantesRelatorio(aniversariantes = []) {
     const hoje = new Date();
     const mesAtual = hoje.getMonth() + 1;
@@ -2491,19 +2624,16 @@ function montarSecaoAniversariantesRelatorio({ aniversariantes = [], filtros = {
 
     return `
         <section class="pagina-relatorio pagina-relatorio-aniversariantes">
-            <header class="cabecalho-relatorio cabecalho-relatorio--modelo-aprovado">
-                <div class="marca-empresa">
-                    ${montarLogoEmpresaHtml({ nome: "Controle SST QR", logoUrl: "/favicon.svg" })}
-                    <div class="marca-empresa-textos">
+            <header class="cabecalho-relatorio cabecalho-relatorio--modelo-aprovado cabecalho-relatorio--aniversariantes">
+                <div class="marca-relatorio-controle">
+                    ${montarEscudoControleSstRelatorio()}
+                    <div class="marca-relatorio-controle__textos">
                         <h1>CONTROLE SST QR</h1>
+                        <p>${escaparHTML(titulo)}</p>
                     </div>
                 </div>
 
-                <div class="titulo-relatorio-cabecalho">
-                    <span></span>
-                    <strong>${escaparHTML(titulo)}</strong>
-                    <span></span>
-                </div>
+                <div class="linha-cabecalho-aniversariantes"></div>
 
                 <div class="dados-empresa">
                     <div class="dados-empresa__item dados-empresa__item--empresa"><span>${ICONES_CABECALHO_RELATORIO_COLABORADORES.empresa}</span><strong>Empresa:</strong><em>${escaparHTML(empresaCabecalho.nome || "-")}</em></div>
@@ -2522,18 +2652,6 @@ function montarSecaoAniversariantesRelatorio({ aniversariantes = [], filtros = {
                     <div><strong>Função:</strong><span>${escaparHTML(filtros.funcao || "Todas")}</span></div>
                     <div><strong>Status:</strong><span>${escaparHTML(filtros.status || "Todos")}</span></div>
                     <div><strong>Busca:</strong><span>${escaparHTML(filtros.busca || "-")}</span></div>
-                </div>
-            </section>
-
-            <section class="bloco">
-                <h2>Resumo geral</h2>
-                <div class="kpis kpis-aniversariantes">
-                    ${montarCartaoResumoRelatorio({ icone: ICONES_RELATORIO_COLABORADORES.total, titulo: "Total filtrado", valor: resumo.total, classe: "kpi-total" })}
-                    ${montarCartaoResumoRelatorio({ icone: ICONES_RELATORIO_COLABORADORES.vencer, titulo: `Aniversários em ${mesAtualNome}`, valor: resumo.aniversariantesMesAtual, classe: "kpi-vencendo" })}
-                    ${montarCartaoResumoRelatorio({ icone: ICONES_RELATORIO_COLABORADORES.liberados, titulo: "Mês com mais aniversariantes", valor: resumo.mesComMais?.nome || "-", classe: "kpi-ok" })}
-                    ${montarCartaoResumoRelatorio({ icone: ICONES_RELATORIO_COLABORADORES.analise, titulo: "Maior quantidade no mês", valor: resumo.mesComMais?.total || 0, classe: "kpi-info" })}
-                    ${montarCartaoResumoRelatorio({ icone: ICONES_RELATORIO_COLABORADORES.pendencia, titulo: "Próximo aniversariante", valor: resumo.proximo?.nome || "-", classe: "kpi-alerta" })}
-                    ${montarCartaoResumoRelatorio({ icone: ICONES_RELATORIO_COLABORADORES.vencidos, titulo: "Dias restantes", valor: Number.isFinite(Number(resumo.proximo?.diasRestantes)) ? `${resumo.proximo.diasRestantes}` : "-", classe: "kpi-vencido" })}
                 </div>
             </section>
 
@@ -2647,6 +2765,67 @@ export async function baixarRelatorioAniversariantesPDF({
         gap: 10px;
         margin-bottom: 14px;
         padding-top: 2px;
+    }
+
+    .cabecalho-relatorio--aniversariantes {
+        gap: 9px;
+    }
+
+    .marca-relatorio-controle {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 16px;
+        text-align: left;
+    }
+
+    .escudo-controle-sst-relatorio {
+        width: 62px;
+        height: 62px;
+        display: grid;
+        place-items: center;
+        border-radius: 16px;
+        background: #111827;
+        border: 1px solid rgba(255,255,255,0.12);
+        box-shadow: inset 0 0 0 1px rgba(255,255,255,0.05), 0 10px 24px rgba(15,23,42,0.18);
+        color: #ffffff;
+        flex: 0 0 auto;
+    }
+
+    .escudo-controle-sst-relatorio svg {
+        width: 34px;
+        height: 34px;
+        display: block;
+        fill: none;
+        stroke: currentColor;
+        stroke-width: 1.9;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+    }
+
+    .marca-relatorio-controle__textos h1 {
+        margin: 0;
+        color: #07162f;
+        font-size: 31px;
+        line-height: 1.02;
+        letter-spacing: 0.035em;
+        text-transform: uppercase;
+        font-weight: 900;
+    }
+
+    .marca-relatorio-controle__textos p {
+        margin: 5px 0 0;
+        color: var(--azul);
+        font-size: 15px;
+        font-weight: 900;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+    }
+
+    .linha-cabecalho-aniversariantes {
+        height: 2px;
+        border-radius: 999px;
+        background: linear-gradient(90deg, transparent, var(--azul), transparent);
     }
 
     .cabecalho-relatorio--modelo-aprovado .marca-empresa {
@@ -2901,8 +3080,8 @@ export async function baixarRelatorioAniversariantesPDF({
         grid-template-columns: repeat(12, 1fr);
         align-items: end;
         gap: 8px;
-        padding: 16px 14px 14px;
-        min-height: 160px;
+        padding: 22px 14px 14px;
+        min-height: 166px;
         background: linear-gradient(180deg, #fff, #fbfdff);
     }
 
@@ -2910,14 +3089,16 @@ export async function baixarRelatorioAniversariantesPDF({
         display: grid;
         justify-items: center;
         align-items: end;
-        gap: 5px;
+        gap: 9px;
         min-width: 0;
     }
 
     .grafico-mes strong {
+        display: block;
         color: #07162f;
         font-size: 11px;
         line-height: 1;
+        margin-bottom: 3px;
     }
 
     .grafico-barra {
