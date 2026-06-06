@@ -1274,7 +1274,7 @@ export function Empresas({
                             <button
                                 type="button"
                                 onClick={() => atualizarCadastroEmpresasRecolhido((valor) => !valor)}
-                                className="empresas-cadastro-header__acao"
+                                className="inline-flex items-center justify-center gap-2 rounded-2xl bg-slate-950 px-4 py-2 text-xs font-black text-white shadow-sm hover:bg-slate-800"
                             >
                                 {cadastroEmpresasRecolhido ? <ChevronDown className="h-4 w-4" /> : <ChevronUp className="h-4 w-4" />}
                                 {cadastroEmpresasRecolhido ? "Abrir cadastro" : "Recolher cadastro"}
@@ -1291,7 +1291,7 @@ export function Empresas({
                                 </div>
                                 <div>
                                     <h2>Adicionar empresa</h2>
-                                    <p>Cadastro de empresas contratante, terceirizada ou subcontratada</p>
+                                    <p>Cadastro de empresas contratantes, terceirizadas ou subcontratadas</p>
                                 </div>
                             </div>
                         </div>
@@ -1392,9 +1392,9 @@ export function Empresas({
                                 </select>
 
                                 <div className="empresa-upload-wrapper">
-                                    <label className="empresa-upload-card min-h-[54px]">
+                                    <label className="empresa-upload-card h-[52px] min-h-[52px]">
                                         <Upload className="h-4 w-4" />
-                                        <span className="min-w-0 break-words text-center leading-tight">{novaEmpresa.logo ? novaEmpresa.logo.name : "Adicionar logo"}</span>
+                                        <span className="block min-w-0 truncate text-center text-[13px] leading-tight">{novaEmpresa.logo ? novaEmpresa.logo.name : "Adicionar logo"}</span>
                                         <input
                                             type="file"
                                             accept="image/png,image/jpeg,image/webp,image/svg+xml"
@@ -1413,9 +1413,9 @@ export function Empresas({
                                 </div>
 
                                 <div className="empresa-upload-wrapper">
-                                    <label className="empresa-upload-card empresa-upload-card--contrato min-h-[54px]">
+                                    <label className="empresa-upload-card empresa-upload-card--contrato h-[52px] min-h-[52px]">
                                         <Upload className="h-4 w-4" />
-                                        <span className="min-w-0 break-words text-center leading-tight">{novaEmpresa.contratoArquivo ? novaEmpresa.contratoArquivo.name : "Adicionar contrato"}</span>
+                                        <span className="block min-w-0 truncate text-center text-[13px] leading-tight">{novaEmpresa.contratoArquivo ? novaEmpresa.contratoArquivo.name : "Adicionar contrato"}</span>
                                         <input
                                             type="file"
                                             accept="application/pdf,image/png,image/jpeg,image/webp"
@@ -1486,18 +1486,18 @@ export function Empresas({
                                     />
                                 </div>
                                 <textarea
-                                    value={novaEmpresa.escopoServico}
-                                    onChange={(e) => setNovaEmpresa({ ...novaEmpresa, escopoServico: e.target.value })}
-                                    placeholder="Escopo do trabalho"
+                                    value={novaEmpresa.observacaoStatus}
+                                    onChange={(e) => setNovaEmpresa({ ...novaEmpresa, observacaoStatus: e.target.value })}
+                                    placeholder="Observações"
                                     rows={1}
                                     className="empresa-campo-textarea w-full resize-none rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-slate-400 focus:ring-4 focus:ring-slate-100"
                                 />
                             </div>
 
                             <textarea
-                                value={novaEmpresa.observacaoStatus}
-                                onChange={(e) => setNovaEmpresa({ ...novaEmpresa, observacaoStatus: e.target.value })}
-                                placeholder="Observações"
+                                value={novaEmpresa.escopoServico}
+                                onChange={(e) => setNovaEmpresa({ ...novaEmpresa, escopoServico: e.target.value })}
+                                placeholder="Escopo do trabalho"
                                 rows={2}
                                 className="empresa-campo-textarea empresa-campo-textarea--observacao w-full resize-none rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-slate-400 focus:ring-4 focus:ring-slate-100"
                             />
@@ -1513,9 +1513,18 @@ export function Empresas({
                         </div>
                     </Card>
 
-                    <Card className="empresas-form-panel empresas-form-panel--documento">
-                        <h2 className="text-lg font-bold text-slate-950">Adicionar documento da empresa</h2>
-                        <p className="mt-1 text-sm text-slate-500">Controle de validade/revisão de LTCAT, PCMSO e PGR.</p>
+                    <Card className="empresas-form-panel empresas-form-panel--documento overflow-hidden">
+                        <div className="empresas-form-panel__titulo-escuro">
+                            <div className="flex items-center gap-3">
+                                <div className="rounded-2xl bg-white/10 p-3">
+                                    <FileText className="h-6 w-6" />
+                                </div>
+                                <div>
+                                    <h2>Adicionar documento da empresa</h2>
+                                    <p>Controle de validade/revisão de LTCAT, PCMSO e PGR.</p>
+                                </div>
+                            </div>
+                        </div>
 
                         <div className="empresa-form-grid empresa-form-grid--documento mt-5">
                             <select
@@ -2000,21 +2009,21 @@ export function Empresas({
                                 </div>
 
                                 <div className="md:col-span-2">
-                                    <label className="mb-1 block text-xs font-bold uppercase tracking-wide text-slate-500">Escopo do trabalho</label>
-                                    <textarea
-                                        value={empresaEdicao.escopoServico}
-                                        onChange={(e) => setEmpresaEdicao({ ...empresaEdicao, escopoServico: e.target.value })}
-                                        rows={3}
-                                        className="w-full resize-none rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-slate-400 focus:ring-4 focus:ring-slate-100"
-                                    />
-                                </div>
-
-                                <div className="md:col-span-2">
                                     <label className="mb-1 block text-xs font-bold uppercase tracking-wide text-slate-500">Observações</label>
                                     <textarea
                                         value={empresaEdicao.observacaoStatus}
                                         onChange={(e) => setEmpresaEdicao({ ...empresaEdicao, observacaoStatus: e.target.value })}
                                         rows={2}
+                                        className="w-full resize-none rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-slate-400 focus:ring-4 focus:ring-slate-100"
+                                    />
+                                </div>
+
+                                <div className="md:col-span-2">
+                                    <label className="mb-1 block text-xs font-bold uppercase tracking-wide text-slate-500">Escopo do trabalho</label>
+                                    <textarea
+                                        value={empresaEdicao.escopoServico}
+                                        onChange={(e) => setEmpresaEdicao({ ...empresaEdicao, escopoServico: e.target.value })}
+                                        rows={3}
                                         className="w-full resize-none rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-slate-400 focus:ring-4 focus:ring-slate-100"
                                     />
                                 </div>
