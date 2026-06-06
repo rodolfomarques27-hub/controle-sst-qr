@@ -582,12 +582,15 @@ async function baixarRelatorioHtmlComoPdf({ html, nomeArquivo }) {
     const iframe = document.createElement("iframe");
 
     iframe.style.position = "fixed";
-    iframe.style.left = "-10000px";
+    iframe.style.left = "0";
     iframe.style.top = "0";
-    iframe.style.width = "210mm";
-    iframe.style.minHeight = "297mm";
+    iframe.style.width = "900px";
+    iframe.style.height = "1400px";
     iframe.style.border = "0";
     iframe.style.background = "#ffffff";
+    iframe.style.opacity = "0";
+    iframe.style.pointerEvents = "none";
+    iframe.style.zIndex = "-1";
     iframe.setAttribute("aria-hidden", "true");
 
     document.body.appendChild(iframe);
@@ -603,7 +606,14 @@ async function baixarRelatorioHtmlComoPdf({ html, nomeArquivo }) {
     documento.write(html);
     documento.close();
 
-    await new Promise((resolve) => setTimeout(resolve, 350));
+    await new Promise((resolve) => setTimeout(resolve, 450));
+
+    try {
+        await documento.fonts?.ready;
+    } catch {
+        // segue normalmente se o navegador não expuser document.fonts
+    }
+
     await aguardarImagensRelatorio(documento, 6000);
 
     const paginasHtml = Array.from(documento.querySelectorAll(".pagina-relatorio"));
@@ -618,14 +628,23 @@ async function baixarRelatorioHtmlComoPdf({ html, nomeArquivo }) {
     let primeiraPagina = true;
 
     for (const paginaHtml of paginasHtml) {
+        const larguraCapturaPx = Math.ceil(paginaHtml.scrollWidth || paginaHtml.getBoundingClientRect().width || 794);
+        const alturaCapturaPx = Math.ceil(paginaHtml.scrollHeight || paginaHtml.getBoundingClientRect().height || 1123);
+
         const canvas = await html2canvas(paginaHtml, {
             scale: 2,
             useCORS: true,
             allowTaint: false,
             backgroundColor: "#ffffff",
             logging: false,
-            windowWidth: paginaHtml.scrollWidth,
-            windowHeight: paginaHtml.scrollHeight,
+            width: larguraCapturaPx,
+            height: alturaCapturaPx,
+            windowWidth: Math.max(larguraCapturaPx, 900),
+            windowHeight: Math.max(alturaCapturaPx, 1400),
+            scrollX: 0,
+            scrollY: 0,
+            x: 0,
+            y: 0,
         });
 
         const larguraPdfMm = 210;
