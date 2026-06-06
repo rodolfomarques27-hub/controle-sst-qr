@@ -1025,9 +1025,13 @@ export async function baixarRelatorioColaboradoresTreinamentosPDF({
     thead th {
         background: linear-gradient(180deg, #075bbd, #033f88);
         color: #fff;
-        padding: 9px 6px;
+        height: 42px;
+        padding: 6px 6px;
         border-right: 1px solid rgba(255,255,255,0.25);
         text-align: center;
+        vertical-align: middle;
+        line-height: 1.12;
+        white-space: normal;
     }
 
     tbody td {
