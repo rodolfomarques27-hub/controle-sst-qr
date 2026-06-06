@@ -2424,17 +2424,47 @@ function calcularResumoAniversariantesRelatorio(aniversariantes = []) {
     };
 }
 
+function textoQuantidadeColaboradoresRelatorio(total = 0) {
+    const quantidade = Number(total) || 0;
+    return `${quantidade} ${quantidade === 1 ? "colaborador" : "colaboradores"}`;
+}
+
+function montarEscudoSistemaAniversariantesHtml() {
+    return `
+        <div class="escudo-sistema-relatorio">
+            <img src="/favicon.svg" alt="Escudo Controle SST QR" />
+        </div>
+    `;
+}
+
+function montarFiltrosCompactosAniversariantesRelatorio(filtros = {}) {
+    const itens = [
+        ["Mês", filtros.mes || "Todos os meses"],
+        ["Empresa", filtros.empresa || "Todas"],
+        ["Função", filtros.funcao || "Todas"],
+        ["Status", filtros.status || "Todos"],
+        ["Busca", filtros.busca || "-"],
+    ];
+
+    return itens.map(([rotulo, valor]) => `
+        <span><strong>${escaparHTML(rotulo)}:</strong> ${escaparHTML(valor)}</span>
+    `).join("");
+}
+
 function montarGraficoAniversariantesRelatorio(totaisPorMes = [], maiorTotal = 0) {
     return `
-        <div class="grafico-aniversariantes">
+        <div class="grafico-aniversariantes-compacto">
             ${totaisPorMes.map((item) => {
-                const altura = maiorTotal > 0 ? Math.max(18, Math.round((item.total / maiorTotal) * 92)) : 18;
+                const largura = maiorTotal > 0 ? Math.max(8, Math.round((item.total / maiorTotal) * 100)) : 0;
+                const classeSemDados = item.total > 0 ? "" : " grafico-linha-mes--vazio";
 
                 return `
-                    <div class="grafico-mes">
+                    <div class="grafico-linha-mes${classeSemDados}">
+                        <span class="grafico-linha-label">${escaparHTML(item.curto)}</span>
+                        <div class="grafico-linha-trilho">
+                            <i style="width:${largura}%"></i>
+                        </div>
                         <strong>${escaparHTML(item.total)}</strong>
-                        <div class="grafico-barra" style="height:${altura}px"></div>
-                        <span>${escaparHTML(item.curto)}</span>
                     </div>
                 `;
             }).join("")}
@@ -2442,14 +2472,13 @@ function montarGraficoAniversariantesRelatorio(totaisPorMes = [], maiorTotal = 0
     `;
 }
 
-function montarLinhaAniversarianteRelatorio(colaborador = {}, indice = 0) {
+function montarLinhaAniversarianteRelatorio(colaborador = {}) {
     const fotoColaborador = colaborador.fotoUrl
         ? `<img src="${escaparHTML(colaborador.fotoUrl)}" alt="Foto ${escaparHTML(colaborador.nome || "colaborador")}" />`
         : escaparHTML(obterIniciaisPessoaRelatorio(colaborador.nome || "C"));
 
     return `
         <tr>
-            <td>${indice + 1}</td>
             <td class="coluna-colaborador-aniversario">
                 <div class="colaborador-aniversario-identificacao">
                     <div class="avatar-aniversariante ${colaborador.fotoUrl ? "avatar-aniversariante--foto" : ""}">${fotoColaborador}</div>
@@ -2459,123 +2488,125 @@ function montarLinhaAniversarianteRelatorio(colaborador = {}, indice = 0) {
                     </div>
                 </div>
             </td>
-            <td>${escaparHTML(colaborador.funcao || "-")}</td>
+            <td class="coluna-empresa-funcao-aniversario">
+                <strong>${escaparHTML(colaborador.empresaExibicao || colaborador.empresaNome || "Empresa não informada")}</strong>
+                <span>${escaparHTML(colaborador.funcao || "-")}</span>
+            </td>
             <td>${escaparHTML(colaborador.dataNascimento || "-")}</td>
-            <td>${escaparHTML(colaborador.dia || "-")}</td>
-            <td>${escaparHTML(colaborador.mesNome || obterNomeMesRelatorioAniversariantes(colaborador.mes))}</td>
-            <td>${escaparHTML(colaborador.proximoAniversario || "-")}</td>
+            <td>
+                <strong class="data-proximo-aniversario">${escaparHTML(colaborador.proximoAniversario || "-")}</strong>
+                <span class="mes-dia-aniversario">${escaparHTML(colaborador.dia || "-")} de ${escaparHTML(colaborador.mesNome || obterNomeMesRelatorioAniversariantes(colaborador.mes))}</span>
+            </td>
             <td><span class="status-texto ${classeStatusRelatorio(colaborador.statusGeral)}">${escaparHTML(colaborador.statusGeral || "-")}</span></td>
         </tr>
+    `;
+}
+
+function montarProximoAniversarioResumoRelatorio(proximo = null) {
+    if (!proximo) {
+        return `
+            <div class="resumo-proximo-aniversario resumo-proximo-aniversario--vazio">
+                <span>Próximo aniversário</span>
+                <strong>-</strong>
+                <em>Nenhum registro disponível</em>
+            </div>
+        `;
+    }
+
+    return `
+        <div class="resumo-proximo-aniversario">
+            <span>Próximo aniversário</span>
+            <strong>${escaparHTML(proximo.nome || "-")}</strong>
+            <em>${escaparHTML(proximo.proximoAniversario || "-")} · faltam ${escaparHTML(proximo.diasRestantes ?? "-")} dias</em>
+        </div>
     `;
 }
 
 function montarSecaoAniversariantesRelatorio({ aniversariantes = [], filtros = {}, dataEmissao = "", titulo = "Relatório de aniversariantes" } = {}) {
     const resumo = calcularResumoAniversariantesRelatorio(aniversariantes);
     const empresaSelecionada = String(filtros.empresa || "Todas").trim();
-    const empresaCabecalho = empresaSelecionada && empresaSelecionada !== "Todas"
-        ? {
-            nome: empresaSelecionada,
-            cnpj: aniversariantes.find((item) => item.empresaExibicao === empresaSelecionada || item.empresaNome === empresaSelecionada)?.empresaCnpj || "-",
-            responsavel: aniversariantes.find((item) => item.empresaExibicao === empresaSelecionada || item.empresaNome === empresaSelecionada)?.empresaResponsavel || "-",
-            logoUrl: aniversariantes.find((item) => item.empresaExibicao === empresaSelecionada || item.empresaNome === empresaSelecionada)?.empresaLogoUrl || "",
-        }
-        : {
-            nome: "Controle SST QR",
-            cnpj: "Todas as empresas",
-            responsavel: "Painel de aniversariantes",
-            logoUrl: "",
-        };
-
-    const linhasTabela = aniversariantes.map((colaborador, indice) => montarLinhaAniversarianteRelatorio(colaborador, indice)).join("");
-    const mesAtualNome = obterNomeMesRelatorioAniversariantes(resumo.mesAtual);
+    const linhasTabela = aniversariantes.map((colaborador) => montarLinhaAniversarianteRelatorio(colaborador)).join("");
+    const mesDestaque = resumo.mesComMais
+        ? `${resumo.mesComMais.nome} · ${textoQuantidadeColaboradoresRelatorio(resumo.mesComMais.total)}`
+        : "Sem aniversariantes";
 
     return `
-        <section class="pagina-relatorio pagina-relatorio-aniversariantes">
-            <header class="cabecalho-relatorio cabecalho-relatorio--modelo-aprovado">
-                <div class="marca-empresa">
-                    ${montarLogoEmpresaHtml(empresaCabecalho)}
-                    <div class="marca-empresa-textos">
-                        <h1>${escaparHTML(empresaCabecalho.nome || "Controle SST QR")}</h1>
-                        <p>Controle SST QR</p>
+        <section class="pagina-relatorio pagina-relatorio-aniversariantes pagina-relatorio-aniversariantes--enxuto">
+            <header class="cabecalho-aniversariantes-pdf">
+                <div class="marca-aniversariantes-pdf">
+                    ${montarEscudoSistemaAniversariantesHtml()}
+                    <div class="marca-aniversariantes-texto">
+                        <span>Controle SST QR</span>
+                        <h1>${escaparHTML(titulo)}</h1>
+                        <p>Painel anual de aniversariantes</p>
                     </div>
                 </div>
-
-                <div class="titulo-relatorio-cabecalho">
-                    <span></span>
-                    <strong>${escaparHTML(titulo)}</strong>
-                    <span></span>
-                </div>
-
-                <div class="dados-empresa">
-                    <div class="dados-empresa__item dados-empresa__item--empresa"><span>${ICONES_CABECALHO_RELATORIO_COLABORADORES.empresa}</span><strong>Empresa:</strong><em>${escaparHTML(empresaCabecalho.nome || "-")}</em></div>
-                    <div class="dados-empresa__item dados-empresa__item--cnpj"><span>${ICONES_CABECALHO_RELATORIO_COLABORADORES.cnpj}</span><strong>CNPJ:</strong><em>${escaparHTML(empresaCabecalho.cnpj || "-")}</em></div>
-                    <div class="dados-empresa__item dados-empresa__item--responsavel"><span>${ICONES_CABECALHO_RELATORIO_COLABORADORES.responsavel}</span><strong>Responsável:</strong><em>${escaparHTML(empresaCabecalho.responsavel || "-")}</em></div>
-                    <div class="dados-empresa__item dados-empresa__item--data"><span>${ICONES_CABECALHO_RELATORIO_COLABORADORES.data}</span><strong>Data de emissão:</strong><em>${escaparHTML(dataEmissao)}</em></div>
-                    <div class="dados-empresa__item dados-empresa__item--sistema"><span>${ICONES_CABECALHO_RELATORIO_COLABORADORES.sistema}</span><strong>Sistema:</strong><em>Controle SST QR</em></div>
+                <div class="emissao-aniversariantes-pdf">
+                    <span>Data de emissão</span>
+                    <strong>${escaparHTML(dataEmissao)}</strong>
                 </div>
             </header>
 
-            <section class="bloco bloco-filtros-aniversariantes">
-                <h2>Filtros aplicados</h2>
-                <div class="filtros-relatorio-aniversariantes">
-                    <div><strong>Mês:</strong><span>${escaparHTML(filtros.mes || "Todos os meses")}</span></div>
-                    <div><strong>Empresa:</strong><span>${escaparHTML(filtros.empresa || "Todas")}</span></div>
-                    <div><strong>Função:</strong><span>${escaparHTML(filtros.funcao || "Todas")}</span></div>
-                    <div><strong>Status:</strong><span>${escaparHTML(filtros.status || "Todos")}</span></div>
-                    <div><strong>Busca:</strong><span>${escaparHTML(filtros.busca || "-")}</span></div>
+            <section class="faixa-informacoes-aniversariantes">
+                <div><strong>Empresa:</strong> ${escaparHTML(empresaSelecionada || "Todas")}</div>
+                <div><strong>Responsável:</strong> Painel de aniversariantes</div>
+                <div><strong>Sistema:</strong> Controle SST QR</div>
+            </section>
+
+            <section class="filtros-compactos-aniversariantes">
+                <strong>Filtros aplicados</strong>
+                <div>${montarFiltrosCompactosAniversariantesRelatorio(filtros)}</div>
+            </section>
+
+            <section class="resumo-aniversariantes-pdf">
+                <h2>Resumo do relatório</h2>
+                <div class="resumo-aniversariantes-grid">
+                    <div class="resumo-aniversariantes-item">
+                        <span>Total de aniversariantes</span>
+                        <strong>${escaparHTML(textoQuantidadeColaboradoresRelatorio(resumo.total))}</strong>
+                        <em>Com data de nascimento cadastrada</em>
+                    </div>
+                    <div class="resumo-aniversariantes-item">
+                        <span>Mês destaque</span>
+                        <strong>${escaparHTML(mesDestaque)}</strong>
+                        <em>Maior concentração no período filtrado</em>
+                    </div>
+                    ${montarProximoAniversarioResumoRelatorio(resumo.proximo)}
                 </div>
             </section>
 
-            <section class="bloco">
-                <h2>Resumo geral</h2>
-                <div class="kpis kpis-aniversariantes">
-                    ${montarCartaoResumoRelatorio({ icone: ICONES_RELATORIO_COLABORADORES.total, titulo: "Total filtrado", valor: resumo.total, classe: "kpi-total" })}
-                    ${montarCartaoResumoRelatorio({ icone: ICONES_RELATORIO_COLABORADORES.vencer, titulo: `Aniversários em ${mesAtualNome}`, valor: resumo.aniversariantesMesAtual, classe: "kpi-vencendo" })}
-                    ${montarCartaoResumoRelatorio({ icone: ICONES_RELATORIO_COLABORADORES.liberados, titulo: "Mês com mais aniversariantes", valor: resumo.mesComMais?.nome || "-", classe: "kpi-ok" })}
-                    ${montarCartaoResumoRelatorio({ icone: ICONES_RELATORIO_COLABORADORES.analise, titulo: "Maior quantidade no mês", valor: resumo.mesComMais?.total || 0, classe: "kpi-info" })}
-                    ${montarCartaoResumoRelatorio({ icone: ICONES_RELATORIO_COLABORADORES.pendencia, titulo: "Próximo aniversariante", valor: resumo.proximo?.nome || "-", classe: "kpi-alerta" })}
-                    ${montarCartaoResumoRelatorio({ icone: ICONES_RELATORIO_COLABORADORES.vencidos, titulo: "Dias restantes", valor: Number.isFinite(Number(resumo.proximo?.diasRestantes)) ? `${resumo.proximo.diasRestantes}` : "-", classe: "kpi-vencido" })}
-                </div>
-            </section>
-
-            <section class="bloco">
+            <section class="bloco bloco-grafico-aniversariantes">
                 <h2>Aniversariantes por mês</h2>
                 ${montarGraficoAniversariantesRelatorio(resumo.totaisPorMes, resumo.maiorTotal)}
             </section>
 
-            <section class="bloco">
+            <section class="bloco bloco-lista-aniversariantes">
                 <h2>Lista de aniversariantes</h2>
-                <table class="tabela-aniversariantes-relatorio">
+                <table class="tabela-aniversariantes-relatorio tabela-aniversariantes-relatorio--enxuta">
                     <colgroup>
-                        <col class="col-numero" />
                         <col class="col-colaborador" />
-                        <col class="col-funcao" />
+                        <col class="col-empresa-funcao" />
                         <col class="col-nascimento" />
-                        <col class="col-dia" />
-                        <col class="col-mes" />
                         <col class="col-proximo" />
                         <col class="col-status" />
                     </colgroup>
                     <thead>
                         <tr>
-                            <th><div class="th-conteudo">#</div></th>
                             <th><div class="th-conteudo">Colaborador</div></th>
-                            <th><div class="th-conteudo">Função</div></th>
-                            <th><div class="th-conteudo">Data de nascimento</div></th>
-                            <th><div class="th-conteudo">Dia</div></th>
-                            <th><div class="th-conteudo">Mês</div></th>
+                            <th><div class="th-conteudo">Empresa / função</div></th>
+                            <th><div class="th-conteudo">Nascimento</div></th>
                             <th><div class="th-conteudo">Próximo aniversário</div></th>
                             <th><div class="th-conteudo">Status</div></th>
                         </tr>
                     </thead>
                     <tbody>
-                        ${linhasTabela || `<tr><td colspan="8">Nenhum aniversariante encontrado.</td></tr>`}
+                        ${linhasTabela || `<tr><td colspan="5">Nenhum aniversariante encontrado.</td></tr>`}
                     </tbody>
                 </table>
             </section>
 
-            <footer class="rodape-relatorio">
-                <span>🛡 Controle SST QR</span>
+            <footer class="rodape-relatorio rodape-relatorio-aniversariantes">
+                <span>Controle SST QR</span>
                 <span>Relatório visual de aniversariantes</span>
             </footer>
         </section>
@@ -3079,6 +3110,401 @@ export async function baixarRelatorioAniversariantesPDF({
         border-radius: 0 0 12px 12px;
         font-size: 11px;
         font-weight: 800;
+    }
+
+
+    .pagina-relatorio-aniversariantes--enxuto {
+        padding: 9mm;
+    }
+
+    .cabecalho-aniversariantes-pdf {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 18px;
+        padding: 0 0 12px;
+        border-bottom: 2px solid #d9e3f2;
+        margin-bottom: 10px;
+    }
+
+    .marca-aniversariantes-pdf {
+        display: flex;
+        align-items: center;
+        gap: 14px;
+        min-width: 0;
+    }
+
+    .escudo-sistema-relatorio {
+        width: 58px;
+        height: 58px;
+        display: grid;
+        place-items: center;
+        border-radius: 16px;
+        border: 2px solid var(--azul);
+        background: #f8fbff;
+        overflow: hidden;
+        flex: 0 0 auto;
+    }
+
+    .escudo-sistema-relatorio img {
+        width: 42px;
+        height: 42px;
+        display: block;
+        object-fit: contain;
+    }
+
+    .marca-aniversariantes-texto {
+        min-width: 0;
+    }
+
+    .marca-aniversariantes-texto span {
+        display: block;
+        color: var(--azul);
+        font-size: 12px;
+        font-weight: 900;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+        margin-bottom: 2px;
+    }
+
+    .marca-aniversariantes-texto h1 {
+        margin: 0;
+        color: #07162f;
+        font-size: 24px;
+        line-height: 1.08;
+        font-weight: 900;
+        letter-spacing: 0.02em;
+        text-transform: uppercase;
+    }
+
+    .marca-aniversariantes-texto p {
+        margin: 4px 0 0;
+        color: #475569;
+        font-size: 11px;
+        font-weight: 800;
+    }
+
+    .emissao-aniversariantes-pdf {
+        min-width: 118px;
+        padding: 9px 12px;
+        border: 1px solid var(--linha);
+        border-radius: 12px;
+        background: #fbfdff;
+        text-align: center;
+    }
+
+    .emissao-aniversariantes-pdf span {
+        display: block;
+        color: #475569;
+        font-size: 8.5px;
+        font-weight: 900;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+    }
+
+    .emissao-aniversariantes-pdf strong {
+        display: block;
+        color: #0f172a;
+        font-size: 12px;
+        margin-top: 3px;
+    }
+
+    .faixa-informacoes-aniversariantes {
+        display: grid;
+        grid-template-columns: 1.1fr 1fr 0.9fr;
+        gap: 8px;
+        margin: 10px 0;
+    }
+
+    .faixa-informacoes-aniversariantes div,
+    .filtros-compactos-aniversariantes {
+        border: 1px solid var(--linha);
+        border-radius: 12px;
+        background: #fbfdff;
+        padding: 9px 11px;
+        color: #334155;
+        font-size: 10px;
+        line-height: 1.3;
+        font-weight: 800;
+    }
+
+    .faixa-informacoes-aniversariantes strong,
+    .filtros-compactos-aniversariantes strong {
+        color: #0f172a;
+        font-weight: 900;
+    }
+
+    .filtros-compactos-aniversariantes {
+        display: grid;
+        gap: 6px;
+        margin-bottom: 10px;
+    }
+
+    .filtros-compactos-aniversariantes > strong {
+        color: var(--azul);
+        font-size: 11px;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+    }
+
+    .filtros-compactos-aniversariantes div {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px 14px;
+        align-items: center;
+    }
+
+    .filtros-compactos-aniversariantes span {
+        display: inline-block;
+        color: #475569;
+        font-size: 9.5px;
+        font-weight: 800;
+    }
+
+    .resumo-aniversariantes-pdf {
+        border: 1px solid var(--linha);
+        border-radius: 14px;
+        overflow: hidden;
+        background: #fff;
+        margin-top: 10px;
+    }
+
+    .resumo-aniversariantes-pdf h2,
+    .bloco-grafico-aniversariantes h2,
+    .bloco-lista-aniversariantes h2 {
+        min-height: 34px;
+        margin: 0;
+        padding: 0 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: var(--azul);
+        font-size: 13px;
+        text-align: center;
+        text-transform: uppercase;
+        letter-spacing: 0.03em;
+        line-height: 1.1;
+        background: #f8fbff;
+        border-bottom: 1px solid var(--linha);
+    }
+
+    .resumo-aniversariantes-grid {
+        display: grid;
+        grid-template-columns: 0.9fr 1fr 1.35fr;
+        gap: 10px;
+        padding: 11px;
+    }
+
+    .resumo-aniversariantes-item,
+    .resumo-proximo-aniversario {
+        min-height: 84px;
+        border: 1px solid var(--linha);
+        border-radius: 12px;
+        padding: 11px 12px;
+        background: linear-gradient(180deg, #fff, #fbfdff);
+        display: grid;
+        align-content: center;
+        gap: 5px;
+        overflow: hidden;
+    }
+
+    .resumo-aniversariantes-item span,
+    .resumo-proximo-aniversario span {
+        color: #475569;
+        font-size: 9px;
+        font-weight: 900;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+    }
+
+    .resumo-aniversariantes-item strong,
+    .resumo-proximo-aniversario strong {
+        color: #07162f;
+        font-size: 14px;
+        line-height: 1.12;
+        font-weight: 900;
+        text-transform: uppercase;
+        overflow-wrap: anywhere;
+    }
+
+    .resumo-proximo-aniversario strong {
+        font-size: 13px;
+        text-transform: none;
+    }
+
+    .resumo-aniversariantes-item em,
+    .resumo-proximo-aniversario em {
+        color: #64748b;
+        font-size: 9px;
+        line-height: 1.25;
+        font-style: normal;
+        font-weight: 800;
+    }
+
+    .bloco-grafico-aniversariantes {
+        margin-top: 10px;
+    }
+
+    .grafico-aniversariantes-compacto {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 6px 16px;
+        padding: 11px 13px 12px;
+        background: linear-gradient(180deg, #fff, #fbfdff);
+    }
+
+    .grafico-linha-mes {
+        display: grid;
+        grid-template-columns: 34px minmax(0, 1fr) 22px;
+        align-items: center;
+        gap: 7px;
+        min-height: 16px;
+    }
+
+    .grafico-linha-label {
+        color: #334155;
+        font-size: 9px;
+        font-weight: 900;
+        text-transform: uppercase;
+    }
+
+    .grafico-linha-trilho {
+        height: 8px;
+        border-radius: 999px;
+        background: #e9eef6;
+        overflow: hidden;
+        border: 1px solid #d9e3f2;
+    }
+
+    .grafico-linha-trilho i {
+        display: block;
+        min-width: 0;
+        height: 100%;
+        border-radius: 999px;
+        background: linear-gradient(90deg, #064fae, #0b78e3);
+    }
+
+    .grafico-linha-mes--vazio .grafico-linha-trilho i {
+        background: transparent;
+    }
+
+    .grafico-linha-mes strong {
+        color: #0f172a;
+        font-size: 9px;
+        font-weight: 900;
+        text-align: right;
+    }
+
+    .bloco-lista-aniversariantes {
+        margin-top: 10px;
+    }
+
+    .tabela-aniversariantes-relatorio--enxuta {
+        width: 100%;
+        table-layout: fixed;
+        border-collapse: collapse;
+        font-size: 9px;
+    }
+
+    .tabela-aniversariantes-relatorio--enxuta .col-colaborador { width: 32%; }
+    .tabela-aniversariantes-relatorio--enxuta .col-empresa-funcao { width: 25%; }
+    .tabela-aniversariantes-relatorio--enxuta .col-nascimento { width: 13%; }
+    .tabela-aniversariantes-relatorio--enxuta .col-proximo { width: 16%; }
+    .tabela-aniversariantes-relatorio--enxuta .col-status { width: 14%; }
+
+    .tabela-aniversariantes-relatorio--enxuta thead tr {
+        height: 38px;
+    }
+
+    .tabela-aniversariantes-relatorio--enxuta thead th {
+        height: 38px;
+        background: linear-gradient(180deg, #075bbd, #033f88);
+        color: #fff;
+        border-right: 1px solid rgba(255,255,255,0.25);
+        padding: 0;
+        text-align: center;
+        vertical-align: middle;
+        overflow: hidden;
+    }
+
+    .tabela-aniversariantes-relatorio--enxuta .th-conteudo {
+        height: 38px;
+        min-height: 38px;
+        padding: 0 7px;
+        font-size: 8.6px;
+        line-height: 1.08;
+    }
+
+    .tabela-aniversariantes-relatorio--enxuta tbody td {
+        min-height: 46px;
+        padding: 8px 8px;
+        border-bottom: 1px solid var(--linha);
+        border-right: 1px solid var(--linha);
+        text-align: center;
+        vertical-align: middle;
+        overflow: hidden;
+        overflow-wrap: anywhere;
+        line-height: 1.18;
+    }
+
+    .tabela-aniversariantes-relatorio--enxuta tbody tr:nth-child(even) {
+        background: #fbfdff;
+    }
+
+    .coluna-colaborador-aniversario {
+        text-align: left !important;
+    }
+
+    .coluna-empresa-funcao-aniversario {
+        text-align: left !important;
+    }
+
+    .coluna-empresa-funcao-aniversario strong {
+        display: block;
+        color: #0f172a;
+        font-size: 9px;
+        line-height: 1.15;
+        font-weight: 900;
+    }
+
+    .coluna-empresa-funcao-aniversario span,
+    .mes-dia-aniversario {
+        display: block;
+        margin-top: 3px;
+        color: #64748b;
+        font-size: 8.2px;
+        font-weight: 800;
+        line-height: 1.15;
+    }
+
+    .data-proximo-aniversario {
+        display: block;
+        color: #0f172a;
+        font-size: 9px;
+        line-height: 1.15;
+        font-weight: 900;
+    }
+
+    .tabela-aniversariantes-relatorio--enxuta .status-texto {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        max-width: 100%;
+        white-space: normal;
+        border-radius: 999px !important;
+        border: 1px solid currentColor !important;
+        padding: 3px 7px !important;
+        background: #fff !important;
+        font-size: 8px;
+        line-height: 1.12;
+        font-weight: 900;
+        text-align: center;
+    }
+
+    .rodape-relatorio-aniversariantes {
+        margin-top: 12px;
+        padding: 9px 13px;
+        font-size: 10px;
     }
 
     @media print {
