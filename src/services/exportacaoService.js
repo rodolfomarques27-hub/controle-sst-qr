@@ -241,22 +241,24 @@ async function resolverFotoColaboradorRelatorio(valor = "") {
     const texto = String(valor || "").trim();
 
     if (!texto) return "";
-    if (ehUrlProntaRelatorio(texto)) return texto;
 
     const caminho = extrairCaminhoFotoColaboradorRelatorio(texto);
-    if (!caminho) return "";
 
-    try {
-        const { data, error } = await supabase.storage
-            .from("fotos-colaboradores")
-            .createSignedUrl(caminho, 60 * 60);
+    if (caminho) {
+        try {
+            const { data, error } = await supabase.storage
+                .from("fotos-colaboradores")
+                .createSignedUrl(caminho, 60 * 60);
 
-        if (!error && data?.signedUrl) {
-            return data.signedUrl;
+            if (!error && data?.signedUrl) {
+                return data.signedUrl;
+            }
+        } catch (error) {
+            console.warn("Não foi possível assinar foto do colaborador para o relatório:", error?.message || error);
         }
-    } catch (error) {
-        console.warn("Não foi possível assinar foto do colaborador para o relatório:", error?.message || error);
     }
+
+    if (ehUrlProntaRelatorio(texto)) return texto;
 
     return "";
 }
@@ -277,6 +279,30 @@ async function prepararColaboradoresRelatorio(colaboradores = []) {
         }))
     );
 }
+
+async function aguardarImagensRelatorio(documento, tempoMaximo = 3500) {
+    const imagens = Array.from(documento?.images || []);
+
+    if (!imagens.length) return;
+
+    const carregamentos = imagens.map((imagem) => {
+        if (imagem.complete && imagem.naturalWidth > 0) {
+            return Promise.resolve();
+        }
+
+        return new Promise((resolve) => {
+            const finalizar = () => resolve();
+            imagem.addEventListener("load", finalizar, { once: true });
+            imagem.addEventListener("error", finalizar, { once: true });
+        });
+    });
+
+    await Promise.race([
+        Promise.all(carregamentos),
+        new Promise((resolve) => setTimeout(resolve, tempoMaximo)),
+    ]);
+}
+
 
 function limitarListaRelatorio(lista = [], limite = 5) {
     const itens = limparListaRelatorio(lista);
@@ -1085,7 +1111,9 @@ ${conteudo}
     documento.write(html);
     documento.close();
 
-    setTimeout(() => {
+    setTimeout(async () => {
+        await aguardarImagensRelatorio(documento);
+
         iframe.contentWindow?.focus();
         iframe.contentWindow?.print();
 
@@ -1094,5 +1122,5 @@ ${conteudo}
                 document.body.removeChild(iframe);
             }
         }, 1800);
-    }, 500);
+    }, 250);
 }

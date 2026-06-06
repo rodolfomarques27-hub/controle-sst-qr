@@ -169,7 +169,7 @@ export function Colaboradores({
                 empresaCnpj: c.empresaCnpj || empresaBase.cnpj || "",
                 empresaResponsavel: c.empresaResponsavel || empresaBase.responsavel || empresaBase.responsavel_auditoria || "",
                 empresaLogoUrl: logoUrl,
-                fotoUrl: obterFotoColaboradorSrc(c) || c.fotoUrl || c.foto_url || c.fotoColaboradorUrl || c.foto_colaborador_url || "",
+                fotoUrl: c.fotoUrl || c.foto_url || c.fotoColaboradorUrl || c.foto_colaborador_url || obterFotoColaboradorSrc(c) || "",
                 funcao: c.funcao,
                 matricula: c.matricula,
                 statusMobilizacao: c.statusMobilizacao,
