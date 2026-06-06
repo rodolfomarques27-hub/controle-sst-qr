@@ -3031,7 +3031,7 @@ export async function baixarRelatorioAniversariantesPDF({
         height: 38px;
         display: grid;
         place-items: center;
-        border-radius: 12px;
+        border-radius: 999px;
         background: #e2e8f0;
         color: #475569;
         font-weight: 900;

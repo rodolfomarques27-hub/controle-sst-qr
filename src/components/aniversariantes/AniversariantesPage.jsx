@@ -414,13 +414,13 @@ export function Aniversariantes({ colaboradores = [], empresasBanco = [] }) {
                                     <tr key={colaborador.id} className="group">
                                         <td className="rounded-l-3xl border-y border-l border-slate-200 bg-white px-4 py-3 align-middle transition group-hover:border-slate-300 group-hover:bg-slate-50">
                                             <div className="flex min-w-[280px] items-center gap-3">
-                                                <div className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-slate-100 text-sm font-black text-slate-600 ring-1 ring-slate-200">
+                                                <div className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-full bg-slate-100 text-sm font-black text-slate-600 ring-1 ring-slate-200">
                                                     <FotoColaborador
                                                         src={colaborador}
                                                         colaborador={colaborador}
                                                         colaboradorId={colaborador.id}
                                                         nome={colaborador.nome}
-                                                        className="h-full w-full rounded-2xl"
+                                                        className="h-full w-full rounded-full object-cover"
                                                         iconClassName="h-5 w-5"
                                                     />
                                                 </div>
