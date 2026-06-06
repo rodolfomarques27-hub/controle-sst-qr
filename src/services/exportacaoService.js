@@ -201,11 +201,11 @@ const ICONES_RELATORIO_COLABORADORES = {
 };
 
 const ICONES_CABECALHO_RELATORIO_COLABORADORES = {
-    empresa: `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 21V8l8-5 8 5v13h-5v-6H9v6H4Zm2-2h1v-6h10v6h1V9.1l-6-3.75-6 3.75V19Zm5-8h2V9h-2v2Zm-4 0h2V9H7v2Zm8 0h2V9h-2v2Z"/></svg>`,
-    cnpj: `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 2h12a2 2 0 0 1 2 2v16a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2Zm0 2v16h12V4H6Zm2 3h8v2H8V7Zm0 4h8v2H8v-2Zm0 4h5v2H8v-2Z"/></svg>`,
-    responsavel: `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 12a5 5 0 1 0-5-5 5 5 0 0 0 5 5Zm0 2c-4.42 0-8 2.24-8 5v1h16v-1c0-2.76-3.58-5-8-5Z"/></svg>`,
-    data: `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 2h2v2h6V2h2v2h3v18H4V4h3V2Zm13 8H4v10h16V10ZM6 12h4v4H6v-4Z"/></svg>`,
-    sistema: `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2 4 5v6c0 5.05 3.41 9.76 8 11 4.59-1.24 8-5.95 8-11V5l-8-3Zm0 2.2L18 6.45V11c0 4-2.55 7.74-6 8.9C8.55 18.74 6 15 6 11V6.45l6-2.25Z"/></svg>`,
+    empresa: `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 21h18"/><path d="M5 21V7l7-4 7 4v14"/><path d="M9 21v-8h6v8"/><path d="M9 9h.01"/><path d="M15 9h.01"/></svg>`,
+    cnpj: `<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="3" width="14" height="18" rx="2"/><path d="M9 8h6"/><path d="M9 12h6"/><path d="M9 16h3"/></svg>`,
+    responsavel: `<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21c1.8-4 5-6 8-6s6.2 2 8 6"/></svg>`,
+    data: `<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="5" width="16" height="16" rx="2"/><path d="M16 3v4"/><path d="M8 3v4"/><path d="M4 10h16"/><path d="M8 14h3"/><path d="M13 14h3"/><path d="M8 17h3"/></svg>`,
+    sistema: `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3 5 6v5c0 4.6 2.9 8.8 7 10 4.1-1.2 7-5.4 7-10V6l-7-3Z"/><path d="m9.5 12 1.8 1.8 3.7-4"/></svg>`,
 };
 
 
@@ -491,11 +491,11 @@ function montarSecaoEmpresaRelatorio(empresa = {}, indiceEmpresa = 0, dataEmissa
                 </div>
 
                 <div class="dados-empresa">
-                    <div><span>${ICONES_CABECALHO_RELATORIO_COLABORADORES.empresa}</span><strong>Empresa:</strong><em>${escaparHTML(empresa.nome || "-")}</em></div>
-                    <div><span>${ICONES_CABECALHO_RELATORIO_COLABORADORES.cnpj}</span><strong>CNPJ:</strong><em>${escaparHTML(empresa.cnpj || "-")}</em></div>
-                    <div><span>${ICONES_CABECALHO_RELATORIO_COLABORADORES.responsavel}</span><strong>Responsável:</strong><em>${escaparHTML(empresa.responsavel || "-")}</em></div>
-                    <div><span>${ICONES_CABECALHO_RELATORIO_COLABORADORES.data}</span><strong>Data de emissão:</strong><em>${escaparHTML(dataEmissao)}</em></div>
-                    <div><span>${ICONES_CABECALHO_RELATORIO_COLABORADORES.sistema}</span><strong>Sistema:</strong><em>Controle SST QR</em></div>
+                    <div class="dados-empresa__item dados-empresa__item--empresa"><span>${ICONES_CABECALHO_RELATORIO_COLABORADORES.empresa}</span><strong>Empresa:</strong><em>${escaparHTML(empresa.nome || "-")}</em></div>
+                    <div class="dados-empresa__item dados-empresa__item--cnpj"><span>${ICONES_CABECALHO_RELATORIO_COLABORADORES.cnpj}</span><strong>CNPJ:</strong><em>${escaparHTML(empresa.cnpj || "-")}</em></div>
+                    <div class="dados-empresa__item dados-empresa__item--responsavel"><span>${ICONES_CABECALHO_RELATORIO_COLABORADORES.responsavel}</span><strong>Responsável:</strong><em>${escaparHTML(empresa.responsavel || "-")}</em></div>
+                    <div class="dados-empresa__item dados-empresa__item--data"><span>${ICONES_CABECALHO_RELATORIO_COLABORADORES.data}</span><strong>Data de emissão:</strong><em>${escaparHTML(dataEmissao)}</em></div>
+                    <div class="dados-empresa__item dados-empresa__item--sistema"><span>${ICONES_CABECALHO_RELATORIO_COLABORADORES.sistema}</span><strong>Sistema:</strong><em>Controle SST QR</em></div>
                 </div>
             </header>
 
@@ -685,28 +685,29 @@ export async function baixarRelatorioColaboradoresTreinamentosPDF({
 
     .dados-empresa {
         display: grid;
-        grid-template-columns: 1.08fr 1.06fr 1.36fr 1.12fr 1.05fr;
+        grid-template-columns: 1.05fr 1.28fr 1.42fr 0.78fr 0.92fr;
         gap: 0;
         align-items: center;
         border-bottom: 1px solid var(--linha);
-        padding: 9px 0 11px;
+        padding: 8px 0 10px;
     }
 
-    .dados-empresa div {
+    .dados-empresa__item {
         display: grid;
-        grid-template-columns: 24px minmax(0, 1fr);
-        gap: 1px 7px;
+        grid-template-columns: 21px minmax(0, 1fr);
+        gap: 1px 6px;
         align-items: center;
         border-right: 1px solid var(--linha);
-        min-height: 38px;
-        padding: 0 10px;
+        min-height: 36px;
+        padding: 0 8px;
+        overflow: hidden;
     }
 
-    .dados-empresa div:first-child {
+    .dados-empresa__item:first-child {
         padding-left: 0;
     }
 
-    .dados-empresa div:last-child {
+    .dados-empresa__item:last-child {
         border-right: 0;
         padding-right: 0;
     }
@@ -719,16 +720,28 @@ export async function baixarRelatorioColaboradoresTreinamentosPDF({
     }
 
     .dados-empresa span svg {
-        width: 22px;
-        height: 22px;
-        fill: currentColor;
+        width: 19px;
+        height: 19px;
         display: block;
+        fill: none;
+        stroke: currentColor;
+        stroke-width: 1.9;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+    }
+
+    .dados-empresa span svg * {
+        fill: none;
+        stroke: currentColor;
+        stroke-width: 1.9;
+        stroke-linecap: round;
+        stroke-linejoin: round;
     }
 
     .dados-empresa strong {
         display: block;
         min-width: 0;
-        font-size: 9px;
+        font-size: 8.6px;
         line-height: 1.05;
         color: #334155;
         white-space: nowrap;
@@ -738,11 +751,33 @@ export async function baixarRelatorioColaboradoresTreinamentosPDF({
         display: block;
         min-width: 0;
         font-style: normal;
-        font-size: 9px;
-        line-height: 1.12;
+        font-size: 8.6px;
+        line-height: 1.08;
         font-weight: 800;
         color: #0f172a;
         white-space: nowrap;
+    }
+
+    .dados-empresa__item--cnpj {
+        grid-template-columns: 20px minmax(0, 1fr);
+        padding-left: 9px;
+        padding-right: 9px;
+    }
+
+    .dados-empresa__item--cnpj em {
+        font-size: 8.3px;
+        letter-spacing: -0.04em;
+    }
+
+    .dados-empresa__item--data {
+        grid-template-columns: 19px minmax(0, 1fr);
+        padding-left: 7px;
+        padding-right: 7px;
+    }
+
+    .dados-empresa__item--data strong,
+    .dados-empresa__item--data em {
+        font-size: 8.2px;
     }
 
     .bloco {
