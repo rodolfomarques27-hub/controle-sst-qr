@@ -549,6 +549,35 @@ function montarSecaoEmpresaRelatorio(empresa = {}, indiceEmpresa = 0, dataEmissa
 }
 
 
+
+async function aguardarImagesRelatorio(documento, tempoMaximo = 6000) {
+    const imagens = Array.from(documento?.images || []);
+
+    if (!imagens.length) return;
+
+    const carregamentos = imagens.map((imagem) => {
+        if (imagem.complete && imagem.naturalWidth > 0) {
+            return Promise.resolve();
+        }
+
+        return new Promise((resolve) => {
+            const finalizar = () => resolve();
+            imagem.addEventListener("load", finalizar, { once: true });
+            imagem.addEventListener("error", finalizar, { once: true });
+        });
+    });
+
+    await Promise.race([
+        Promise.all(carregamentos),
+        new Promise((resolve) => setTimeout(resolve, tempoMaximo)),
+    ]);
+}
+
+async function aguardarImagensRelatorio(documento, tempoMaximo = 6000) {
+    return aguardarImagesRelatorio(documento, tempoMaximo);
+}
+
+
 async function baixarRelatorioHtmlComoPdf({ html, nomeArquivo }) {
     const iframe = document.createElement("iframe");
 
