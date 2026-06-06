@@ -1,4 +1,5 @@
 // Serviços de exportação CSV/PDF do sistema SST.
+import { supabase } from "../lib/supabaseClient";
 // Funções puras de geração/download local no navegador.
 
 export function escaparCSV(valor) {
@@ -189,6 +190,85 @@ function limparListaRelatorio(lista = []) {
         .filter(Boolean);
 }
 
+const ICONES_RELATORIO_COLABORADORES = {
+    total: `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M16 11c1.66 0 3-1.34 3-3s-1.34-3-3-3-3 1.34-3 3 1.34 3 3 3Zm-8 0c1.66 0 3-1.34 3-3S9.66 5 8 5 5 6.34 5 8s1.34 3 3 3Zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5C15 14.17 10.33 13 8 13Zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5Z"/></svg>`,
+    liberados: `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2a10 10 0 1 0 .01 20.01A10 10 0 0 0 12 2Zm-1.2 13.9-3.7-3.7 1.4-1.4 2.3 2.3 5-5 1.4 1.4-6.4 6.4Z"/></svg>`,
+    pendencia: `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M1 21h22L12 2 1 21Zm12-3h-2v-2h2v2Zm0-4h-2v-4h2v4Z"/></svg>`,
+    bloqueados: `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M17 9V7A5 5 0 0 0 7 7v2H5v13h14V9h-2ZM9 7a3 3 0 0 1 6 0v2H9V7Zm4 10.73V20h-2v-2.27A2 2 0 1 1 13 17.73Z"/></svg>`,
+    analise: `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m21.71 20.29-5.01-5.01A8 8 0 1 0 15.29 16.7l5 5.01 1.42-1.42ZM10.5 17a6.5 6.5 0 1 1 0-13 6.5 6.5 0 0 1 0 13Z"/></svg>`,
+    vencidos: `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 2h2v2h6V2h2v2h3v18H4V4h3V2Zm13 8H4v10h16V10ZM6 12h5v5H6v-5Zm12.3 6.3-1.4 1.4-2.4-2.4-2.4 2.4-1.4-1.4 2.4-2.4-2.4-2.4 1.4-1.4 2.4 2.4 2.4-2.4 1.4 1.4-2.4 2.4 2.4 2.4Z"/></svg>`,
+    vencer: `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 1a11 11 0 1 0 .01 22.01A11 11 0 0 0 12 1Zm1 12.4 4 2.4-1 1.7-5-3V6h2v7.4Z"/></svg>`,
+};
+
+function ehUrlProntaRelatorio(valor = "") {
+    return /^(https?:|blob:|data:)/i.test(String(valor || "").trim());
+}
+
+function extrairCaminhoFotoColaboradorRelatorio(valor = "") {
+    const texto = String(valor || "").trim();
+    if (!texto) return "";
+
+    const marcadores = [
+        "/storage/v1/object/sign/fotos-colaboradores/",
+        "/storage/v1/object/public/fotos-colaboradores/",
+        "fotos-colaboradores/",
+    ];
+
+    for (const marcador of marcadores) {
+        const indice = texto.indexOf(marcador);
+        if (indice >= 0) {
+            return decodeURIComponent(texto.slice(indice + marcador.length).split("?")[0]).replace(/^\/+/, "");
+        }
+    }
+
+    if (!ehUrlProntaRelatorio(texto)) {
+        return texto.replace(/^\/+/, "");
+    }
+
+    return "";
+}
+
+async function resolverFotoColaboradorRelatorio(valor = "") {
+    const texto = String(valor || "").trim();
+
+    if (!texto) return "";
+    if (ehUrlProntaRelatorio(texto)) return texto;
+
+    const caminho = extrairCaminhoFotoColaboradorRelatorio(texto);
+    if (!caminho) return "";
+
+    try {
+        const { data, error } = await supabase.storage
+            .from("fotos-colaboradores")
+            .createSignedUrl(caminho, 60 * 60);
+
+        if (!error && data?.signedUrl) {
+            return data.signedUrl;
+        }
+    } catch (error) {
+        console.warn("Não foi possível assinar foto do colaborador para o relatório:", error?.message || error);
+    }
+
+    return "";
+}
+
+async function prepararColaboradoresRelatorio(colaboradores = []) {
+    return Promise.all(
+        (Array.isArray(colaboradores) ? colaboradores : []).map(async (colaborador) => ({
+            ...colaborador,
+            fotoUrl: await resolverFotoColaboradorRelatorio(
+                colaborador.fotoUrl ||
+                colaborador.foto_url ||
+                colaborador.fotoColaboradorUrl ||
+                colaborador.foto_colaborador_url ||
+                colaborador.avatarUrl ||
+                colaborador.avatar_url ||
+                ""
+            ),
+        }))
+    );
+}
+
 function limitarListaRelatorio(lista = [], limite = 5) {
     const itens = limparListaRelatorio(lista);
     const principais = itens.slice(0, limite);
@@ -341,11 +421,15 @@ function montarSecaoEmpresaRelatorio(empresa = {}, indiceEmpresa = 0, dataEmissa
         const vencidos = limparListaRelatorio(colaborador.vencidos);
         const vencendo = limparListaRelatorio(colaborador.vencendo);
 
+        const fotoColaborador = colaborador.fotoUrl
+            ? `<img src="${escaparHTML(colaborador.fotoUrl)}" alt="Foto ${escaparHTML(colaborador.nome || "colaborador")}" />`
+            : escaparHTML(obterIniciaisEmpresa(colaborador.nome || "C"));
+
         return `
             <section class="detalhe-colaborador">
                 <div class="detalhe-topo">
                     <div class="numero-colaborador">${indice + 1}</div>
-                    <div class="avatar-colaborador">${escaparHTML(obterIniciaisEmpresa(colaborador.nome || "C"))}</div>
+                    <div class="avatar-colaborador ${colaborador.fotoUrl ? "avatar-colaborador--foto" : ""}">${fotoColaborador}</div>
                     <div class="detalhe-identificacao">
                         <h3>${escaparHTML(colaborador.nome || "-")}</h3>
                         <p><strong>Código:</strong> ${escaparHTML(colaborador.codigo || "-")}</p>
@@ -403,13 +487,13 @@ function montarSecaoEmpresaRelatorio(empresa = {}, indiceEmpresa = 0, dataEmissa
             <section class="bloco">
                 <h2>Resumo geral</h2>
                 <div class="kpis">
-                    ${montarCartaoResumoRelatorio({ icone: "👥", titulo: "Total", valor: resumo.total, classe: "kpi-total" })}
-                    ${montarCartaoResumoRelatorio({ icone: "✅", titulo: "Liberados", valor: resumo.liberados, classe: "kpi-ok" })}
-                    ${montarCartaoResumoRelatorio({ icone: "⚠️", titulo: "Com pendência", valor: resumo.comPendencia, classe: "kpi-alerta" })}
-                    ${montarCartaoResumoRelatorio({ icone: "🔒", titulo: "Bloqueados", valor: resumo.bloqueados, classe: "kpi-critico" })}
-                    ${montarCartaoResumoRelatorio({ icone: "🔎", titulo: "Em análise", valor: resumo.emAnalise, classe: "kpi-info" })}
-                    ${montarCartaoResumoRelatorio({ icone: "🗓", titulo: "Vencidos", valor: resumo.vencidos, classe: "kpi-vencido" })}
-                    ${montarCartaoResumoRelatorio({ icone: "◷", titulo: "A vencer", valor: resumo.vencendo, classe: "kpi-vencendo" })}
+                    ${montarCartaoResumoRelatorio({ icone: ICONES_RELATORIO_COLABORADORES.total, titulo: "Total", valor: resumo.total, classe: "kpi-total" })}
+                    ${montarCartaoResumoRelatorio({ icone: ICONES_RELATORIO_COLABORADORES.liberados, titulo: "Liberados", valor: resumo.liberados, classe: "kpi-ok" })}
+                    ${montarCartaoResumoRelatorio({ icone: ICONES_RELATORIO_COLABORADORES.pendencia, titulo: "Com pendência", valor: resumo.comPendencia, classe: "kpi-alerta" })}
+                    ${montarCartaoResumoRelatorio({ icone: ICONES_RELATORIO_COLABORADORES.bloqueados, titulo: "Bloqueados", valor: resumo.bloqueados, classe: "kpi-critico" })}
+                    ${montarCartaoResumoRelatorio({ icone: ICONES_RELATORIO_COLABORADORES.analise, titulo: "Em análise", valor: resumo.emAnalise, classe: "kpi-info" })}
+                    ${montarCartaoResumoRelatorio({ icone: ICONES_RELATORIO_COLABORADORES.vencidos, titulo: "Vencidos", valor: resumo.vencidos, classe: "kpi-vencido" })}
+                    ${montarCartaoResumoRelatorio({ icone: ICONES_RELATORIO_COLABORADORES.vencer, titulo: "A vencer", valor: resumo.vencendo, classe: "kpi-vencendo" })}
                 </div>
             </section>
 
@@ -441,19 +525,20 @@ function montarSecaoEmpresaRelatorio(empresa = {}, indiceEmpresa = 0, dataEmissa
 
             <footer class="rodape-relatorio">
                 <span>🛡 Controle SST QR</span>
-                <span>Relatório gerado automaticamente</span>
+                <span>Relatório visual por empresa</span>
             </footer>
         </section>
     `;
 }
 
-export function baixarRelatorioColaboradoresTreinamentosPDF({
+export async function baixarRelatorioColaboradoresTreinamentosPDF({
     nomeArquivo = "relatorio-colaboradores-treinamentos.pdf",
     colaboradores = [],
     titulo = "Relatório de colaboradores e treinamentos",
 } = {}) {
     const dataEmissao = new Date().toLocaleDateString("pt-BR");
-    const empresas = agruparPorEmpresaRelatorio(colaboradores);
+    const colaboradoresPreparados = await prepararColaboradoresRelatorio(colaboradores);
+    const empresas = agruparPorEmpresaRelatorio(colaboradoresPreparados);
 
     if (!empresas.length) {
         alert("Nenhum colaborador encontrado para gerar o relatório.");
@@ -494,7 +579,7 @@ export function baixarRelatorioColaboradoresTreinamentosPDF({
         width: 210mm;
         min-height: 297mm;
         margin: 16px auto;
-        padding: 12mm;
+        padding: 10mm;
         background: #fff;
         border: 1px solid #d8e2ef;
         border-radius: 18px;
@@ -506,8 +591,8 @@ export function baixarRelatorioColaboradoresTreinamentosPDF({
 
     .cabecalho-relatorio {
         display: grid;
-        gap: 14px;
-        margin-bottom: 14px;
+        gap: 12px;
+        margin-bottom: 12px;
     }
 
     .marca-empresa {
@@ -625,7 +710,7 @@ export function baixarRelatorioColaboradoresTreinamentosPDF({
     }
 
     .kpi {
-        min-height: 105px;
+        min-height: 100px;
         display: grid;
         place-items: center;
         text-align: center;
@@ -636,9 +721,19 @@ export function baixarRelatorioColaboradoresTreinamentosPDF({
     }
 
     .kpi-icone {
-        font-size: 28px;
-        line-height: 1;
+        display: grid;
+        place-items: center;
+        width: 34px;
+        height: 34px;
         margin-bottom: 5px;
+        color: var(--azul);
+    }
+
+    .kpi-icone svg {
+        width: 34px;
+        height: 34px;
+        fill: currentColor;
+        display: block;
     }
 
     .kpi-titulo {
@@ -724,7 +819,7 @@ export function baixarRelatorioColaboradoresTreinamentosPDF({
 
     .detalhe-topo {
         display: grid;
-        grid-template-columns: 34px 58px 1.15fr 1fr;
+        grid-template-columns: 34px 58px 1.08fr 1fr;
         gap: 12px;
         align-items: center;
         padding: 12px;
@@ -753,6 +848,20 @@ export function baixarRelatorioColaboradoresTreinamentosPDF({
         color: #475569;
         font-weight: 900;
         font-size: 18px;
+        overflow: hidden;
+        border: 1px solid #d8e2ef;
+    }
+
+    .avatar-colaborador img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        display: block;
+    }
+
+    .avatar-colaborador--foto {
+        background: #fff;
+        color: transparent;
     }
 
     .detalhe-identificacao h3 {
@@ -781,7 +890,7 @@ export function baixarRelatorioColaboradoresTreinamentosPDF({
     }
 
     .lista-card {
-        min-height: 140px;
+        min-height: 132px;
         border: 1px solid var(--linha);
         border-radius: 10px;
         padding: 10px;

@@ -150,7 +150,7 @@ export function Colaboradores({
         );
     };
 
-    const baixarRelatorioColaboradores = () => {
+    const baixarRelatorioColaboradores = async () => {
         const colaboradoresRelatorio = filtrados.map((c) => {
             const avaliacao = avaliarTreinamentosColaborador(c);
             const geral = statusGeral(c);
@@ -168,6 +168,7 @@ export function Colaboradores({
                 empresaCnpj: c.empresaCnpj || empresaBase.cnpj || "",
                 empresaResponsavel: c.empresaResponsavel || empresaBase.responsavel || empresaBase.responsavel_auditoria || "",
                 empresaLogoUrl: logoUrl,
+                fotoUrl: obterFotoColaboradorSrc(c) || c.fotoUrl || c.foto_url || c.fotoColaboradorUrl || c.foto_colaborador_url || "",
                 funcao: c.funcao,
                 matricula: c.matricula,
                 statusMobilizacao: c.statusMobilizacao,
@@ -183,7 +184,7 @@ export function Colaboradores({
             };
         });
 
-        baixarRelatorioColaboradoresTreinamentosPDF({
+        await baixarRelatorioColaboradoresTreinamentosPDF({
             nomeArquivo: "relatorio-colaboradores-treinamentos.pdf",
             titulo: "Relatório de colaboradores e treinamentos",
             colaboradores: colaboradoresRelatorio,
