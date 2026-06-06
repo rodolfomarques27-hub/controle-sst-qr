@@ -685,24 +685,31 @@ export async function baixarRelatorioColaboradoresTreinamentosPDF({
 
     .dados-empresa {
         display: grid;
-        grid-template-columns: 1.05fr 0.9fr 1.18fr 0.9fr 0.85fr;
-        gap: 10px;
-        align-items: stretch;
+        grid-template-columns: 1.08fr 1.06fr 1.36fr 1.12fr 1.05fr;
+        gap: 0;
+        align-items: center;
         border-bottom: 1px solid var(--linha);
-        padding: 10px 0 12px;
+        padding: 9px 0 11px;
     }
 
     .dados-empresa div {
         display: grid;
-        grid-template-columns: 26px 1fr;
-        gap: 2px 7px;
+        grid-template-columns: 24px minmax(0, 1fr);
+        gap: 1px 7px;
         align-items: center;
         border-right: 1px solid var(--linha);
-        min-height: 42px;
-        padding-right: 8px;
+        min-height: 38px;
+        padding: 0 10px;
     }
 
-    .dados-empresa div:last-child { border-right: 0; }
+    .dados-empresa div:first-child {
+        padding-left: 0;
+    }
+
+    .dados-empresa div:last-child {
+        border-right: 0;
+        padding-right: 0;
+    }
 
     .dados-empresa span {
         grid-row: span 2;
@@ -712,22 +719,30 @@ export async function baixarRelatorioColaboradoresTreinamentosPDF({
     }
 
     .dados-empresa span svg {
-        width: 25px;
-        height: 25px;
+        width: 22px;
+        height: 22px;
         fill: currentColor;
         display: block;
     }
 
     .dados-empresa strong {
-        font-size: 10px;
+        display: block;
+        min-width: 0;
+        font-size: 9px;
+        line-height: 1.05;
         color: #334155;
+        white-space: nowrap;
     }
 
     .dados-empresa em {
+        display: block;
+        min-width: 0;
         font-style: normal;
-        font-size: 10px;
+        font-size: 9px;
+        line-height: 1.12;
         font-weight: 800;
         color: #0f172a;
+        white-space: nowrap;
     }
 
     .bloco {
