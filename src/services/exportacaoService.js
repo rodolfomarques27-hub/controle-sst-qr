@@ -991,12 +991,18 @@ export async function baixarRelatorioColaboradoresTreinamentosPDF({
     }
 
     .bloco h2 {
+        min-height: 42px;
         margin: 0;
-        padding: 10px 12px;
+        padding: 0 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
         color: var(--azul);
         font-size: 15px;
+        text-align: center;
         text-transform: uppercase;
         letter-spacing: 0.02em;
+        line-height: 1.1;
         background: #f8fbff;
         border-bottom: 1px solid var(--linha);
     }
@@ -1063,9 +1069,10 @@ export async function baixarRelatorioColaboradoresTreinamentosPDF({
     }
 
     thead th {
+        position: relative;
         background: linear-gradient(180deg, #075bbd, #033f88);
         color: #fff;
-        height: 42px;
+        height: 44px;
         padding: 0;
         border-right: 1px solid rgba(255,255,255,0.25);
         text-align: center;
@@ -1075,12 +1082,13 @@ export async function baixarRelatorioColaboradoresTreinamentosPDF({
     }
 
     .th-conteudo {
-        min-height: 42px;
-        height: 42px;
+        position: absolute;
+        inset: 0;
         width: 100%;
-        display: flex;
-        align-items: center;
-        justify-content: center;
+        min-height: 44px;
+        height: 44px;
+        display: grid;
+        place-items: center;
         padding: 4px 6px;
         text-align: center;
         line-height: 1.08;
