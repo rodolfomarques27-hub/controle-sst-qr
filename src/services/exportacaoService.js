@@ -200,6 +200,15 @@ const ICONES_RELATORIO_COLABORADORES = {
     vencer: `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 1a11 11 0 1 0 .01 22.01A11 11 0 0 0 12 1Zm1 12.4 4 2.4-1 1.7-5-3V6h2v7.4Z"/></svg>`,
 };
 
+const ICONES_CABECALHO_RELATORIO_COLABORADORES = {
+    empresa: `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 21V8l8-5 8 5v13h-5v-6H9v6H4Zm2-2h1v-6h10v6h1V9.1l-6-3.75-6 3.75V19Zm5-8h2V9h-2v2Zm-4 0h2V9H7v2Zm8 0h2V9h-2v2Z"/></svg>`,
+    cnpj: `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 2h12a2 2 0 0 1 2 2v16a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2Zm0 2v16h12V4H6Zm2 3h8v2H8V7Zm0 4h8v2H8v-2Zm0 4h5v2H8v-2Z"/></svg>`,
+    responsavel: `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 12a5 5 0 1 0-5-5 5 5 0 0 0 5 5Zm0 2c-4.42 0-8 2.24-8 5v1h16v-1c0-2.76-3.58-5-8-5Z"/></svg>`,
+    data: `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 2h2v2h6V2h2v2h3v18H4V4h3V2Zm13 8H4v10h16V10ZM6 12h4v4H6v-4Z"/></svg>`,
+    sistema: `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2 4 5v6c0 5.05 3.41 9.76 8 11 4.59-1.24 8-5.95 8-11V5l-8-3Zm0 2.2L18 6.45V11c0 4-2.55 7.74-6 8.9C8.55 18.74 6 15 6 11V6.45l6-2.25Z"/></svg>`,
+};
+
+
 function ehUrlProntaRelatorio(valor = "") {
     return /^(https?:|blob:|data:)/i.test(String(valor || "").trim());
 }
@@ -466,21 +475,27 @@ function montarSecaoEmpresaRelatorio(empresa = {}, indiceEmpresa = 0, dataEmissa
 
     return `
         <section class="pagina-relatorio ${indiceEmpresa > 0 ? "quebra-pagina" : ""}">
-            <header class="cabecalho-relatorio">
+            <header class="cabecalho-relatorio cabecalho-relatorio--modelo-aprovado">
                 <div class="marca-empresa">
                     ${montarLogoEmpresaHtml(empresa)}
-                    <div>
+                    <div class="marca-empresa-textos">
                         <h1>${escaparHTML(empresa.nome || "Empresa")}</h1>
-                        <p>Relatório de colaboradores e treinamentos</p>
+                        <p>Controle SST QR</p>
                     </div>
                 </div>
-                <div class="linha-titulo"></div>
+
+                <div class="titulo-relatorio-cabecalho">
+                    <span></span>
+                    <strong>Relatório de colaboradores e treinamentos</strong>
+                    <span></span>
+                </div>
+
                 <div class="dados-empresa">
-                    <div><span>🏢</span><strong>Empresa:</strong><em>${escaparHTML(empresa.nome || "-")}</em></div>
-                    <div><span>▣</span><strong>CNPJ:</strong><em>${escaparHTML(empresa.cnpj || "-")}</em></div>
-                    <div><span>♙</span><strong>Responsável:</strong><em>${escaparHTML(empresa.responsavel || "-")}</em></div>
-                    <div><span>🗓</span><strong>Data de emissão:</strong><em>${escaparHTML(dataEmissao)}</em></div>
-                    <div><span>🛡</span><strong>Sistema:</strong><em>Controle SST QR</em></div>
+                    <div><span>${ICONES_CABECALHO_RELATORIO_COLABORADORES.empresa}</span><strong>Empresa:</strong><em>${escaparHTML(empresa.nome || "-")}</em></div>
+                    <div><span>${ICONES_CABECALHO_RELATORIO_COLABORADORES.cnpj}</span><strong>CNPJ:</strong><em>${escaparHTML(empresa.cnpj || "-")}</em></div>
+                    <div><span>${ICONES_CABECALHO_RELATORIO_COLABORADORES.responsavel}</span><strong>Responsável:</strong><em>${escaparHTML(empresa.responsavel || "-")}</em></div>
+                    <div><span>${ICONES_CABECALHO_RELATORIO_COLABORADORES.data}</span><strong>Data de emissão:</strong><em>${escaparHTML(dataEmissao)}</em></div>
+                    <div><span>${ICONES_CABECALHO_RELATORIO_COLABORADORES.sistema}</span><strong>Sistema:</strong><em>Controle SST QR</em></div>
                 </div>
             </header>
 
@@ -591,72 +606,96 @@ export async function baixarRelatorioColaboradoresTreinamentosPDF({
 
     .cabecalho-relatorio {
         display: grid;
-        gap: 12px;
-        margin-bottom: 12px;
+        gap: 10px;
+        margin-bottom: 14px;
+        padding-top: 2px;
     }
 
-    .marca-empresa {
+    .cabecalho-relatorio--modelo-aprovado .marca-empresa {
         display: flex;
         align-items: center;
         justify-content: center;
-        gap: 18px;
+        gap: 16px;
         text-align: left;
     }
 
     .empresa-logo-img {
-        width: 76px;
-        height: 76px;
+        width: 74px;
+        height: 74px;
         object-fit: contain;
-        border-radius: 14px;
+        border-radius: 10px;
     }
 
     .empresa-logo-fallback {
-        width: 76px;
-        height: 76px;
+        width: 74px;
+        height: 74px;
         display: grid;
         place-items: center;
         border: 3px solid var(--azul);
         color: var(--azul);
-        border-radius: 18px;
+        border-radius: 16px;
         font-size: 26px;
         font-weight: 900;
     }
 
+    .marca-empresa-textos {
+        min-width: 0;
+    }
+
     .marca-empresa h1 {
         margin: 0;
-        color: #0f172a;
+        color: #07162f;
         font-size: 31px;
-        letter-spacing: 0.05em;
+        line-height: 1.02;
+        letter-spacing: 0.035em;
         text-transform: uppercase;
     }
 
     .marca-empresa p {
         margin: 4px 0 0;
         color: var(--azul);
-        font-size: 18px;
-        font-weight: 800;
-        letter-spacing: 0.10em;
+        font-size: 16px;
+        font-weight: 900;
+        letter-spacing: 0.16em;
         text-transform: uppercase;
     }
 
-    .linha-titulo {
+    .titulo-relatorio-cabecalho {
+        display: grid;
+        grid-template-columns: minmax(70px, 1fr) auto minmax(70px, 1fr);
+        align-items: center;
+        gap: 16px;
+        margin-top: 2px;
+    }
+
+    .titulo-relatorio-cabecalho span {
         height: 2px;
+        border-radius: 999px;
         background: linear-gradient(90deg, transparent, var(--azul), transparent);
+    }
+
+    .titulo-relatorio-cabecalho strong {
+        color: #07162f;
+        font-size: 15px;
+        font-weight: 900;
+        letter-spacing: 0.02em;
+        text-transform: uppercase;
+        white-space: nowrap;
     }
 
     .dados-empresa {
         display: grid;
-        grid-template-columns: 1.05fr 1fr 1.05fr 1fr 0.9fr;
-        gap: 8px;
+        grid-template-columns: 1.05fr 0.9fr 1.18fr 0.9fr 0.85fr;
+        gap: 10px;
         align-items: stretch;
         border-bottom: 1px solid var(--linha);
-        padding-bottom: 12px;
+        padding: 10px 0 12px;
     }
 
     .dados-empresa div {
         display: grid;
-        grid-template-columns: 22px 1fr;
-        gap: 2px 6px;
+        grid-template-columns: 26px 1fr;
+        gap: 2px 7px;
         align-items: center;
         border-right: 1px solid var(--linha);
         min-height: 42px;
@@ -667,8 +706,16 @@ export async function baixarRelatorioColaboradoresTreinamentosPDF({
 
     .dados-empresa span {
         grid-row: span 2;
+        display: grid;
+        place-items: center;
         color: var(--azul);
-        font-size: 18px;
+    }
+
+    .dados-empresa span svg {
+        width: 25px;
+        height: 25px;
+        fill: currentColor;
+        display: block;
     }
 
     .dados-empresa strong {
@@ -679,7 +726,7 @@ export async function baixarRelatorioColaboradoresTreinamentosPDF({
     .dados-empresa em {
         font-style: normal;
         font-size: 10px;
-        font-weight: 700;
+        font-weight: 800;
         color: #0f172a;
     }
 
