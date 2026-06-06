@@ -1078,8 +1078,8 @@ export async function baixarRelatorioColaboradoresTreinamentosPDF({
 
     .detalhe-topo {
         display: grid;
-        grid-template-columns: 34px 58px minmax(245px, 1.05fr) minmax(255px, 1.18fr);
-        gap: 12px;
+        grid-template-columns: 34px 58px minmax(215px, 0.92fr) minmax(330px, 1.45fr);
+        gap: 10px;
         align-items: center;
         padding: 12px;
         background: #fbfdff;
@@ -1141,6 +1141,10 @@ export async function baixarRelatorioColaboradoresTreinamentosPDF({
         color: transparent;
     }
 
+    .detalhe-identificacao {
+        min-width: 0;
+    }
+
     .detalhe-identificacao h3 {
         margin: 0 0 6px;
         color: var(--azul);
@@ -1158,39 +1162,45 @@ export async function baixarRelatorioColaboradoresTreinamentosPDF({
         display: grid;
         gap: 6px;
         border-left: 1px solid var(--linha);
-        padding-left: 14px;
+        padding-left: 12px;
         min-width: 0;
+        overflow: visible;
     }
 
     .detalhe-status-linha {
-        display: grid;
-        grid-template-columns: max-content minmax(0, 1fr);
+        display: flex;
         align-items: baseline;
-        column-gap: 6px;
+        gap: 6px;
         min-width: 0;
+        max-width: 100%;
         white-space: nowrap;
         font-size: 10px;
         line-height: 1.25;
+        overflow: visible;
     }
 
     .detalhe-status-linha strong {
+        flex: 0 0 auto;
         display: inline-block;
-        min-width: max-content;
         font-weight: 900;
         color: #0f172a;
         white-space: nowrap;
     }
 
     .detalhe-status-linha span {
+        flex: 0 1 auto;
         display: inline-block;
         min-width: 0;
         font-weight: 800;
         white-space: nowrap;
+        overflow: visible;
+        text-overflow: clip;
     }
 
     .detalhe-status-linha--empresa span {
-        overflow: hidden;
-        text-overflow: ellipsis;
+        max-width: none;
+        overflow: visible;
+        text-overflow: clip;
     }
 
     .detalhe-status-valor {
