@@ -530,7 +530,17 @@ function montarSecaoEmpresaRelatorio(empresa = {}, indiceEmpresa = 0, dataEmissa
 
             <section class="bloco">
                 <h2>Resumo por colaborador</h2>
-                <table>
+                <table class="tabela-resumo-colaboradores">
+                    <colgroup>
+                        <col class="col-numero" />
+                        <col class="col-colaborador" />
+                        <col class="col-funcao" />
+                        <col class="col-situacao" />
+                        <col class="col-status" />
+                        <col class="col-pendentes" />
+                        <col class="col-vencidos" />
+                        <col class="col-vencer" />
+                    </colgroup>
                     <thead>
                         <tr>
                             <th><div class="th-conteudo">#</div></th>
@@ -1065,11 +1075,24 @@ export async function baixarRelatorioColaboradoresTreinamentosPDF({
     table {
         width: 100%;
         border-collapse: collapse;
+        table-layout: fixed;
         font-size: 10px;
     }
 
+    .tabela-resumo-colaboradores .col-numero { width: 4%; }
+    .tabela-resumo-colaboradores .col-colaborador { width: 30%; }
+    .tabela-resumo-colaboradores .col-funcao { width: 14%; }
+    .tabela-resumo-colaboradores .col-situacao { width: 12%; }
+    .tabela-resumo-colaboradores .col-status { width: 15%; }
+    .tabela-resumo-colaboradores .col-pendentes { width: 8%; }
+    .tabela-resumo-colaboradores .col-vencidos { width: 8%; }
+    .tabela-resumo-colaboradores .col-vencer { width: 9%; }
+
+    thead tr {
+        height: 44px;
+    }
+
     thead th {
-        position: relative;
         background: linear-gradient(180deg, #075bbd, #033f88);
         color: #fff;
         height: 44px;
@@ -1079,21 +1102,21 @@ export async function baixarRelatorioColaboradoresTreinamentosPDF({
         vertical-align: middle;
         line-height: 1;
         white-space: normal;
+        overflow: hidden;
     }
 
     .th-conteudo {
-        position: absolute;
-        inset: 0;
         width: 100%;
-        min-height: 44px;
         height: 44px;
-        display: grid;
-        place-items: center;
-        padding: 4px 6px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 4px 5px;
         text-align: center;
         line-height: 1.08;
         font-weight: 900;
         white-space: normal;
+        overflow: hidden;
     }
 
     tbody td {
@@ -1102,6 +1125,8 @@ export async function baixarRelatorioColaboradoresTreinamentosPDF({
         border-right: 1px solid var(--linha);
         text-align: center;
         vertical-align: middle;
+        overflow: hidden;
+        overflow-wrap: anywhere;
     }
 
     tbody tr:nth-child(even) { background: #fbfdff; }
@@ -1109,6 +1134,8 @@ export async function baixarRelatorioColaboradoresTreinamentosPDF({
     .texto-forte {
         font-weight: 800;
         text-align: left;
+        line-height: 1.15;
+        overflow-wrap: anywhere;
     }
 
     .badge {
