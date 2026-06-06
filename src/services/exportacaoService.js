@@ -201,7 +201,7 @@ const ICONES_RELATORIO_COLABORADORES = {
 };
 
 const ICONES_CABECALHO_RELATORIO_COLABORADORES = {
-    empresa: `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 21h18"/><path d="M6 21V6l7-3 5 2v16"/><path d="M9 9h1"/><path d="M9 12h1"/><path d="M9 15h1"/><path d="M13 8h1"/><path d="M13 11h1"/><path d="M13 14h1"/><path d="M16 21v-5h-3v5"/></svg>`,
+    empresa: `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 21h18"/><path d="M8 21V9.2c0-.8.46-1.52 1.18-1.86L14 5l4.82 2.34C19.54 7.68 20 8.4 20 9.2V21"/><path d="M4.5 21v-7.4c0-.73.39-1.4 1.02-1.76L8 10.45"/><path d="M20 12.05l2.48 1.39c.63.36 1.02 1.03 1.02 1.76V21"/><path d="M11 10.5h1.2"/><path d="M15 10.5h1.2"/><path d="M11 13.5h1.2"/><path d="M15 13.5h1.2"/><path d="M11 16.5h1.2"/><path d="M15 16.5h1.2"/><path d="M13 21v-3.2h3V21"/></svg>`,
     cnpj: `<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="3" width="14" height="18" rx="2"/><path d="M9 8h6"/><path d="M9 12h6"/><path d="M9 16h3"/></svg>`,
     responsavel: `<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21c1.8-4 5-6 8-6s6.2 2 8 6"/></svg>`,
     data: `<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="5" width="16" height="16" rx="2"/><path d="M16 3v4"/><path d="M8 3v4"/><path d="M4 10h16"/><path d="M8 14h3"/><path d="M13 14h3"/><path d="M8 17h3"/></svg>`,
@@ -685,7 +685,7 @@ export async function baixarRelatorioColaboradoresTreinamentosPDF({
 
     .dados-empresa {
         display: grid;
-        grid-template-columns: 1.02fr 1.34fr 1.32fr 0.9fr 0.88fr;
+        grid-template-columns: 1.08fr 1.28fr 1.42fr 0.96fr 0.98fr;
         gap: 0;
         align-items: center;
         border-bottom: 1px solid var(--linha);
@@ -694,12 +694,12 @@ export async function baixarRelatorioColaboradoresTreinamentosPDF({
 
     .dados-empresa__item {
         display: grid;
-        grid-template-columns: 21px minmax(0, 1fr);
-        gap: 1px 6px;
+        grid-template-columns: 22px minmax(0, 1fr);
+        gap: 1px 7px;
         align-items: center;
         border-right: 1px solid var(--linha);
         min-height: 36px;
-        padding: 0 8px;
+        padding: 0 9px;
         overflow: hidden;
     }
 
@@ -720,12 +720,12 @@ export async function baixarRelatorioColaboradoresTreinamentosPDF({
     }
 
     .dados-empresa span svg {
-        width: 19px;
-        height: 19px;
+        width: 20px;
+        height: 20px;
         display: block;
         fill: none;
         stroke: currentColor;
-        stroke-width: 1.9;
+        stroke-width: 1.85;
         stroke-linecap: round;
         stroke-linejoin: round;
     }
@@ -733,7 +733,7 @@ export async function baixarRelatorioColaboradoresTreinamentosPDF({
     .dados-empresa span svg * {
         fill: none;
         stroke: currentColor;
-        stroke-width: 1.9;
+        stroke-width: 1.85;
         stroke-linecap: round;
         stroke-linejoin: round;
     }
@@ -771,8 +771,8 @@ export async function baixarRelatorioColaboradoresTreinamentosPDF({
 
     .dados-empresa__item--data {
         grid-template-columns: 20px minmax(0, 1fr);
-        padding-left: 8px;
-        padding-right: 8px;
+        padding-left: 10px;
+        padding-right: 10px;
     }
 
     .dados-empresa__item--data strong,
@@ -1072,44 +1072,35 @@ ${conteudo}
 </body>
 </html>`;
 
-    const janela = window.open("", "_blank", "noopener,noreferrer");
+    const iframe = document.createElement("iframe");
+    iframe.style.position = "fixed";
+    iframe.style.right = "0";
+    iframe.style.bottom = "0";
+    iframe.style.width = "0";
+    iframe.style.height = "0";
+    iframe.style.border = "0";
+    iframe.setAttribute("aria-hidden", "true");
+    document.body.appendChild(iframe);
 
-    if (!janela) {
-        const iframe = document.createElement("iframe");
-        iframe.style.position = "fixed";
-        iframe.style.right = "0";
-        iframe.style.bottom = "0";
-        iframe.style.width = "0";
-        iframe.style.height = "0";
-        iframe.style.border = "0";
-        iframe.setAttribute("aria-hidden", "true");
-        document.body.appendChild(iframe);
-
-        const documento = iframe.contentWindow?.document;
-        if (!documento) {
-            document.body.removeChild(iframe);
-            alert("Não foi possível abrir o relatório. Permita pop-ups para salvar em PDF.");
-            return;
-        }
-
-        documento.open();
-        documento.write(html);
-        documento.close();
-
-        iframe.onload = () => {
-            setTimeout(() => {
-                iframe.contentWindow?.focus();
-                iframe.contentWindow?.print();
-                setTimeout(() => {
-                    document.body.removeChild(iframe);
-                }, 1500);
-            }, 350);
-        };
-
+    const documento = iframe.contentWindow?.document;
+    if (!documento) {
+        document.body.removeChild(iframe);
+        alert("Não foi possível abrir o relatório para salvar em PDF.");
         return;
     }
 
-    janela.document.open();
-    janela.document.write(html);
-    janela.document.close();
+    documento.open();
+    documento.write(html);
+    documento.close();
+
+    setTimeout(() => {
+        iframe.contentWindow?.focus();
+        iframe.contentWindow?.print();
+
+        setTimeout(() => {
+            if (document.body.contains(iframe)) {
+                document.body.removeChild(iframe);
+            }
+        }, 1800);
+    }, 500);
 }
