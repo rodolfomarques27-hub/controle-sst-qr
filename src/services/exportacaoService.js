@@ -1,5 +1,7 @@
 // Serviços de exportação CSV/PDF do sistema SST.
 import { supabase } from "../lib/supabaseClient";
+import html2canvas from "html2canvas";
+import jsPDF from "jspdf";
 // Funções puras de geração/download local no navegador.
 
 export function escaparCSV(valor) {
@@ -241,24 +243,22 @@ async function resolverFotoColaboradorRelatorio(valor = "") {
     const texto = String(valor || "").trim();
 
     if (!texto) return "";
+    if (ehUrlProntaRelatorio(texto)) return texto;
 
     const caminho = extrairCaminhoFotoColaboradorRelatorio(texto);
+    if (!caminho) return "";
 
-    if (caminho) {
-        try {
-            const { data, error } = await supabase.storage
-                .from("fotos-colaboradores")
-                .createSignedUrl(caminho, 60 * 60);
+    try {
+        const { data, error } = await supabase.storage
+            .from("fotos-colaboradores")
+            .createSignedUrl(caminho, 60 * 60);
 
-            if (!error && data?.signedUrl) {
-                return data.signedUrl;
-            }
-        } catch (error) {
-            console.warn("Não foi possível assinar foto do colaborador para o relatório:", error?.message || error);
+        if (!error && data?.signedUrl) {
+            return data.signedUrl;
         }
+    } catch (error) {
+        console.warn("Não foi possível assinar foto do colaborador para o relatório:", error?.message || error);
     }
-
-    if (ehUrlProntaRelatorio(texto)) return texto;
 
     return "";
 }
@@ -279,30 +279,6 @@ async function prepararColaboradoresRelatorio(colaboradores = []) {
         }))
     );
 }
-
-async function aguardarImagensRelatorio(documento, tempoMaximo = 3500) {
-    const imagens = Array.from(documento?.images || []);
-
-    if (!imagens.length) return;
-
-    const carregamentos = imagens.map((imagem) => {
-        if (imagem.complete && imagem.naturalWidth > 0) {
-            return Promise.resolve();
-        }
-
-        return new Promise((resolve) => {
-            const finalizar = () => resolve();
-            imagem.addEventListener("load", finalizar, { once: true });
-            imagem.addEventListener("error", finalizar, { once: true });
-        });
-    });
-
-    await Promise.race([
-        Promise.all(carregamentos),
-        new Promise((resolve) => setTimeout(resolve, tempoMaximo)),
-    ]);
-}
-
 
 function limitarListaRelatorio(lista = [], limite = 5) {
     const itens = limparListaRelatorio(lista);
@@ -571,6 +547,104 @@ function montarSecaoEmpresaRelatorio(empresa = {}, indiceEmpresa = 0, dataEmissa
         </section>
     `;
 }
+
+
+async function baixarRelatorioHtmlComoPdf({ html, nomeArquivo }) {
+    const iframe = document.createElement("iframe");
+
+    iframe.style.position = "fixed";
+    iframe.style.left = "-10000px";
+    iframe.style.top = "0";
+    iframe.style.width = "210mm";
+    iframe.style.minHeight = "297mm";
+    iframe.style.border = "0";
+    iframe.style.background = "#ffffff";
+    iframe.setAttribute("aria-hidden", "true");
+
+    document.body.appendChild(iframe);
+
+    const documento = iframe.contentWindow?.document;
+    if (!documento) {
+        document.body.removeChild(iframe);
+        alert("Não foi possível preparar o relatório para download em PDF.");
+        return;
+    }
+
+    documento.open();
+    documento.write(html);
+    documento.close();
+
+    await new Promise((resolve) => setTimeout(resolve, 350));
+    await aguardarImagensRelatorio(documento, 6000);
+
+    const paginasHtml = Array.from(documento.querySelectorAll(".pagina-relatorio"));
+
+    if (!paginasHtml.length) {
+        document.body.removeChild(iframe);
+        alert("Não foi possível encontrar o conteúdo do relatório para gerar o PDF.");
+        return;
+    }
+
+    const pdf = new jsPDF("p", "mm", "a4");
+    let primeiraPagina = true;
+
+    for (const paginaHtml of paginasHtml) {
+        const canvas = await html2canvas(paginaHtml, {
+            scale: 2,
+            useCORS: true,
+            allowTaint: false,
+            backgroundColor: "#ffffff",
+            logging: false,
+            windowWidth: paginaHtml.scrollWidth,
+            windowHeight: paginaHtml.scrollHeight,
+        });
+
+        const larguraPdfMm = 210;
+        const alturaPaginaPdfMm = 297;
+        const alturaFatiaPx = Math.floor((canvas.width * alturaPaginaPdfMm) / larguraPdfMm);
+
+        let origemYPx = 0;
+
+        while (origemYPx < canvas.height) {
+            const alturaAtualPx = Math.min(alturaFatiaPx, canvas.height - origemYPx);
+            const canvasFatia = document.createElement("canvas");
+
+            canvasFatia.width = canvas.width;
+            canvasFatia.height = alturaAtualPx;
+
+            const contexto = canvasFatia.getContext("2d");
+            contexto.fillStyle = "#ffffff";
+            contexto.fillRect(0, 0, canvasFatia.width, canvasFatia.height);
+            contexto.drawImage(
+                canvas,
+                0,
+                origemYPx,
+                canvas.width,
+                alturaAtualPx,
+                0,
+                0,
+                canvas.width,
+                alturaAtualPx
+            );
+
+            const imagem = canvasFatia.toDataURL("image/jpeg", 0.96);
+            const alturaImagemMm = (alturaAtualPx * larguraPdfMm) / canvas.width;
+
+            if (!primeiraPagina) {
+                pdf.addPage();
+            }
+
+            pdf.addImage(imagem, "JPEG", 0, 0, larguraPdfMm, alturaImagemMm, undefined, "FAST");
+
+            primeiraPagina = false;
+            origemYPx += alturaAtualPx;
+        }
+    }
+
+    document.body.removeChild(iframe);
+    pdf.save(nomeArquivo.endsWith(".pdf") ? nomeArquivo : `${nomeArquivo}.pdf`);
+}
+
 
 export async function baixarRelatorioColaboradoresTreinamentosPDF({
     nomeArquivo = "relatorio-colaboradores-treinamentos.pdf",
@@ -1090,37 +1164,8 @@ ${conteudo}
 </body>
 </html>`;
 
-    const iframe = document.createElement("iframe");
-    iframe.style.position = "fixed";
-    iframe.style.right = "0";
-    iframe.style.bottom = "0";
-    iframe.style.width = "0";
-    iframe.style.height = "0";
-    iframe.style.border = "0";
-    iframe.setAttribute("aria-hidden", "true");
-    document.body.appendChild(iframe);
-
-    const documento = iframe.contentWindow?.document;
-    if (!documento) {
-        document.body.removeChild(iframe);
-        alert("Não foi possível abrir o relatório para salvar em PDF.");
-        return;
-    }
-
-    documento.open();
-    documento.write(html);
-    documento.close();
-
-    setTimeout(async () => {
-        await aguardarImagensRelatorio(documento);
-
-        iframe.contentWindow?.focus();
-        iframe.contentWindow?.print();
-
-        setTimeout(() => {
-            if (document.body.contains(iframe)) {
-                document.body.removeChild(iframe);
-            }
-        }, 1800);
-    }, 250);
+    await baixarRelatorioHtmlComoPdf({
+        html,
+        nomeArquivo,
+    });
 }
