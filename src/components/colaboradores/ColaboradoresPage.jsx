@@ -85,6 +85,7 @@ export function Colaboradores({
     const [filtroClassificacao, setFiltroClassificacao] = useState("Todos");
     const [salvando, setSalvando] = useState(false);
     const [colaboradorEdicao, setColaboradorEdicao] = useState(null);
+    const [colaboradorExclusao, setColaboradorExclusao] = useState(null);
     const [pendenciasAbertas, setPendenciasAbertas] = useState(null);
     const [novoColaboradorRecolhido, setNovoColaboradorRecolhido] = useState(() => carregarPreferenciaPainelBoolean(CHAVE_NOVO_COLABORADOR_RECOLHIDO, false));
     const [informacoesColaboradoresRecolhidas, setInformacoesColaboradoresRecolhidas] = useState(() => carregarPreferenciaPainelBoolean(CHAVE_INFO_COLABORADORES_RECOLHIDA, false));
@@ -381,6 +382,23 @@ export function Colaboradores({
             foto: null,
         });
     };
+
+    const solicitarExclusaoColaborador = (colaborador) => {
+        setColaboradorExclusao(colaborador);
+    };
+
+    const cancelarExclusaoColaborador = () => {
+        setColaboradorExclusao(null);
+    };
+
+    const confirmarExclusaoColaborador = async () => {
+        if (!colaboradorExclusao) return;
+
+        const alvo = colaboradorExclusao;
+        setColaboradorExclusao(null);
+        await onExcluirColaborador(alvo);
+    };
+
 
     return (
         <div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
@@ -789,7 +807,7 @@ export function Colaboradores({
                                                 </button>
 
                                                 <button
-                                                    onClick={() => onExcluirColaborador(c)}
+                                                    onClick={() => solicitarExclusaoColaborador(c)}
                                                     className="inline-flex items-center justify-center gap-2 rounded-xl bg-red-50 px-3 py-2 text-xs font-semibold text-red-700 ring-1 ring-red-200 hover:bg-red-100"
                                                 >
                                                     <Trash2 className="h-3.5 w-3.5" />
@@ -805,6 +823,51 @@ export function Colaboradores({
                     )}
                 </Card>
             </div>
+            {colaboradorExclusao && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/55 px-4 py-6 backdrop-blur-sm">
+                    <div className="w-full max-w-lg rounded-3xl border border-red-100 bg-white p-6 shadow-2xl">
+                        <div className="flex items-start gap-4">
+                            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-red-50 text-red-700 ring-1 ring-red-100">
+                                <AlertTriangle className="h-6 w-6" />
+                            </div>
+
+                            <div className="min-w-0">
+                                <p className="text-xs font-black uppercase tracking-wide text-red-600">Confirmação obrigatória</p>
+                                <h3 className="mt-1 text-xl font-black text-slate-950">Tem certeza que deseja excluir este funcionário?</h3>
+                                <p className="mt-2 text-sm leading-6 text-slate-600">
+                                    Esta ação remove o cadastro do colaborador do sistema. Confira os dados antes de confirmar.
+                                </p>
+                            </div>
+                        </div>
+
+                        <div className="mt-5 rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-700">
+                            <p><strong>Funcionário:</strong> {colaboradorExclusao.nome || "Não informado"}</p>
+                            <p><strong>Código:</strong> {colaboradorExclusao.codigoFuncionario || "-"}</p>
+                            <p><strong>Empresa:</strong> {colaboradorExclusao.empresaExibicao || colaboradorExclusao.empresa || "-"}</p>
+                            <p><strong>Função:</strong> {colaboradorExclusao.funcao || "-"}</p>
+                        </div>
+
+                        <div className="mt-6 grid gap-3 sm:grid-cols-2">
+                            <button
+                                type="button"
+                                onClick={cancelarExclusaoColaborador}
+                                className="inline-flex items-center justify-center rounded-2xl bg-white px-4 py-3 text-sm font-black text-slate-700 ring-1 ring-slate-200 hover:bg-slate-50"
+                            >
+                                Cancelar
+                            </button>
+
+                            <button
+                                type="button"
+                                onClick={confirmarExclusaoColaborador}
+                                className="inline-flex items-center justify-center rounded-2xl bg-red-600 px-4 py-3 text-sm font-black text-white shadow-sm hover:bg-red-700"
+                            >
+                                Sim, excluir funcionário
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
             <ModalNovaFuncaoColaborador
                 aberto={modalFuncaoAberto}
                 novaFuncao={novaFuncao}

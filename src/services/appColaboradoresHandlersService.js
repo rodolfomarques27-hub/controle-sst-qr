@@ -378,10 +378,6 @@ export async function excluirColaboradorAppService({
     setColaboradores,
     setColaboradorSelecionado,
 }) {
-    const confirmar = window.confirm(`Deseja realmente excluir o colaborador ${colaborador.nome}?`);
-
-    if (!confirmar) return;
-
     setErroBanco("");
 
     try {
