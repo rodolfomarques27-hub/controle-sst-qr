@@ -1075,11 +1075,16 @@ export async function baixarRelatorioColaboradoresTreinamentosPDF({
     .numero-colaborador {
         width: 26px;
         height: 26px;
-        display: grid;
-        place-items: center;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        align-self: center;
+        justify-self: center;
         background: var(--azul);
         color: #fff;
         font-weight: 900;
+        line-height: 1;
+        text-align: center;
         border-radius: 7px;
     }
 
@@ -1125,6 +1130,17 @@ export async function baixarRelatorioColaboradoresTreinamentosPDF({
     .detalhe-status {
         border-left: 1px solid var(--linha);
         padding-left: 14px;
+    }
+
+    .detalhe-status .badge {
+        display: inline;
+        background: transparent !important;
+        border-radius: 0;
+        padding: 0;
+        font-size: 10px;
+        font-weight: 900;
+        line-height: inherit;
+        white-space: normal;
     }
 
     .detalhe-grids {
