@@ -533,14 +533,14 @@ function montarSecaoEmpresaRelatorio(empresa = {}, indiceEmpresa = 0, dataEmissa
                 <table>
                     <thead>
                         <tr>
-                            <th>#</th>
-                            <th>Colaborador</th>
-                            <th>Função</th>
-                            <th>Situação na obra</th>
-                            <th>Status geral</th>
-                            <th>Pendentes</th>
-                            <th>Vencidos</th>
-                            <th>A vencer</th>
+                            <th><div class="th-conteudo">#</div></th>
+                            <th><div class="th-conteudo">Colaborador</div></th>
+                            <th><div class="th-conteudo">Função</div></th>
+                            <th><div class="th-conteudo">Situação na<br />obra</div></th>
+                            <th><div class="th-conteudo">Status geral</div></th>
+                            <th><div class="th-conteudo">Pendentes</div></th>
+                            <th><div class="th-conteudo">Vencidos</div></th>
+                            <th><div class="th-conteudo">A<br />vencer</div></th>
                         </tr>
                     </thead>
                     <tbody>
@@ -591,6 +591,41 @@ async function aguardarImagensRelatorio(documento, tempoMaximo = 6000) {
     return aguardarImagesRelatorio(documento, tempoMaximo);
 }
 
+
+function canvasTemConteudoVisivelRelatorio(canvas, origemYPx, alturaPx) {
+    const largura = canvas.width;
+    const altura = Math.max(1, Math.min(alturaPx, canvas.height - origemYPx));
+    const contexto = canvas.getContext("2d", { willReadFrequently: true });
+
+    if (!contexto || altura <= 0) return false;
+
+    const passoX = Math.max(8, Math.floor(largura / 70));
+    const passoY = Math.max(8, Math.floor(altura / 80));
+    let pixelsComConteudo = 0;
+
+    for (let y = 0; y < altura; y += passoY) {
+        const linhaY = Math.min(canvas.height - 1, origemYPx + y);
+        const dados = contexto.getImageData(0, linhaY, largura, 1).data;
+
+        for (let x = 0; x < largura; x += passoX) {
+            const indice = x * 4;
+            const r = dados[indice];
+            const g = dados[indice + 1];
+            const b = dados[indice + 2];
+            const a = dados[indice + 3];
+
+            if (a > 0 && (r < 245 || g < 245 || b < 245)) {
+                pixelsComConteudo += 1;
+
+                if (pixelsComConteudo >= 12) {
+                    return true;
+                }
+            }
+        }
+    }
+
+    return false;
+}
 
 async function baixarRelatorioHtmlComoPdf({ html, nomeArquivo }) {
     const iframe = document.createElement("iframe");
@@ -669,6 +704,11 @@ async function baixarRelatorioHtmlComoPdf({ html, nomeArquivo }) {
 
         while (origemYPx < canvas.height) {
             const alturaAtualPx = Math.min(alturaFatiaPx, canvas.height - origemYPx);
+
+            if (!canvasTemConteudoVisivelRelatorio(canvas, origemYPx, alturaAtualPx)) {
+                break;
+            }
+
             const canvasFatia = document.createElement("canvas");
 
             canvasFatia.width = canvas.width;
@@ -1026,11 +1066,25 @@ export async function baixarRelatorioColaboradoresTreinamentosPDF({
         background: linear-gradient(180deg, #075bbd, #033f88);
         color: #fff;
         height: 42px;
-        padding: 6px 6px;
+        padding: 0;
         border-right: 1px solid rgba(255,255,255,0.25);
         text-align: center;
         vertical-align: middle;
-        line-height: 1.12;
+        line-height: 1;
+        white-space: normal;
+    }
+
+    .th-conteudo {
+        min-height: 42px;
+        height: 42px;
+        width: 100%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 4px 6px;
+        text-align: center;
+        line-height: 1.08;
+        font-weight: 900;
         white-space: normal;
     }
 
