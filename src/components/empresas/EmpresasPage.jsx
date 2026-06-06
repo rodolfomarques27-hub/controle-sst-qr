@@ -1380,21 +1380,21 @@ export function Empresas({
                                 />
                             </div>
 
-                            <div className="empresa-form-linha empresa-form-linha--3 empresa-form-linha--uploads">
+                            <div className="empresa-form-linha empresa-form-linha--3 empresa-form-linha--uploads grid grid-cols-1 gap-2 sm:grid-cols-3">
                                 <select
                                     value={novaEmpresa.tipoEmpresa}
                                     onChange={(e) => setNovaEmpresa({ ...novaEmpresa, tipoEmpresa: e.target.value })}
-                                    className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none focus:border-slate-400 focus:ring-4 focus:ring-slate-100"
+                                    className="min-w-0 w-full rounded-2xl border border-slate-200 bg-white px-3 py-3 text-center text-[13px] outline-none focus:border-slate-400 focus:ring-4 focus:ring-slate-100"
                                 >
                                     <option>Terceirizada</option>
                                     <option>Subcontratada</option>
                                     <option>Contratante - Idealiza Cidades</option>
                                 </select>
 
-                                <div className="empresa-upload-wrapper">
-                                    <label className="empresa-upload-card h-[52px] min-h-[52px]">
-                                        <Upload className="h-4 w-4" />
-                                        <span className="block min-w-0 truncate text-center text-[13px] leading-tight">{novaEmpresa.logo ? novaEmpresa.logo.name : "Adicionar logo"}</span>
+                                <div className="empresa-upload-wrapper min-w-0 w-full">
+                                    <label className="empresa-upload-card h-[52px] min-h-[52px] w-full overflow-hidden px-2">
+                                        <Upload className="h-4 w-4 shrink-0" />
+                                        <span className="block min-w-0 truncate text-center text-[12px] leading-tight">{novaEmpresa.logo ? novaEmpresa.logo.name : "Adicionar logo"}</span>
                                         <input
                                             type="file"
                                             accept="image/png,image/jpeg,image/webp,image/svg+xml"
@@ -1412,10 +1412,10 @@ export function Empresas({
                                     <FileUploadAviso arquivo={novaEmpresa.logo} tipo="fotoAuditoria" />
                                 </div>
 
-                                <div className="empresa-upload-wrapper">
-                                    <label className="empresa-upload-card empresa-upload-card--contrato h-[52px] min-h-[52px]">
-                                        <Upload className="h-4 w-4" />
-                                        <span className="block min-w-0 truncate text-center text-[13px] leading-tight">{novaEmpresa.contratoArquivo ? novaEmpresa.contratoArquivo.name : "Adicionar contrato"}</span>
+                                <div className="empresa-upload-wrapper min-w-0 w-full">
+                                    <label className="empresa-upload-card empresa-upload-card--contrato h-[52px] min-h-[52px] w-full overflow-hidden px-2">
+                                        <Upload className="h-4 w-4 shrink-0" />
+                                        <span className="block min-w-0 truncate text-center text-[12px] leading-tight">{novaEmpresa.contratoArquivo ? novaEmpresa.contratoArquivo.name : "Adicionar contrato"}</span>
                                         <input
                                             type="file"
                                             accept="application/pdf,image/png,image/jpeg,image/webp"
