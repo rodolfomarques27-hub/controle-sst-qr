@@ -1080,22 +1080,23 @@ export async function baixarRelatorioColaboradoresTreinamentosPDF({
     }
 
     .tabela-resumo-colaboradores .col-numero { width: 4%; }
-    .tabela-resumo-colaboradores .col-colaborador { width: 30%; }
-    .tabela-resumo-colaboradores .col-funcao { width: 14%; }
-    .tabela-resumo-colaboradores .col-situacao { width: 12%; }
-    .tabela-resumo-colaboradores .col-status { width: 15%; }
-    .tabela-resumo-colaboradores .col-pendentes { width: 8%; }
-    .tabela-resumo-colaboradores .col-vencidos { width: 8%; }
+    .tabela-resumo-colaboradores .col-colaborador { width: 28%; }
+    .tabela-resumo-colaboradores .col-funcao { width: 15%; }
+    .tabela-resumo-colaboradores .col-situacao { width: 13%; }
+    .tabela-resumo-colaboradores .col-status { width: 13%; }
+    .tabela-resumo-colaboradores .col-pendentes { width: 9%; }
+    .tabela-resumo-colaboradores .col-vencidos { width: 9%; }
     .tabela-resumo-colaboradores .col-vencer { width: 9%; }
 
     thead tr {
-        height: 44px;
+        height: 46px;
     }
 
     thead th {
+        position: relative;
         background: linear-gradient(180deg, #075bbd, #033f88);
         color: #fff;
-        height: 44px;
+        height: 46px;
         padding: 0;
         border-right: 1px solid rgba(255,255,255,0.25);
         text-align: center;
@@ -1106,17 +1107,31 @@ export async function baixarRelatorioColaboradoresTreinamentosPDF({
     }
 
     .th-conteudo {
-        width: 100%;
-        height: 44px;
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        width: calc(100% - 12px);
+        min-height: 22px;
         display: flex;
         align-items: center;
         justify-content: center;
-        padding: 4px 5px;
+        transform: translate(-50%, -50%);
+        padding: 0 6px;
+        box-sizing: border-box;
         text-align: center;
         line-height: 1.08;
+        font-size: 9.4px;
         font-weight: 900;
         white-space: normal;
-        overflow: hidden;
+        overflow: visible;
+    }
+
+    .tabela-resumo-colaboradores th:nth-child(6) .th-conteudo,
+    .tabela-resumo-colaboradores th:nth-child(7) .th-conteudo,
+    .tabela-resumo-colaboradores th:nth-child(8) .th-conteudo {
+        width: calc(100% - 16px);
+        padding-left: 8px;
+        padding-right: 8px;
     }
 
     tbody td {
