@@ -98,6 +98,10 @@ export async function carregarColaboradoresAppService({
           empresas (
             id,
             nome,
+            cnpj,
+            responsavel,
+            logo_url,
+            logo_nome,
             tipo_empresa,
             empresa_pai_id,
             tst_responsavel,
@@ -128,6 +132,10 @@ export async function carregarColaboradoresAppService({
             return {
                 ...colaborador,
                 empresaTipo: empresaAtual?.tipo_empresa || colaborador.empresaTipo || "",
+                empresaCnpj: empresaAtual?.cnpj || empresaPai?.cnpj || colaborador.empresaCnpj || "",
+                empresaResponsavel: empresaAtual?.responsavel || empresaAtual?.responsavel_auditoria || empresaPai?.responsavel || empresaPai?.responsavel_auditoria || colaborador.empresaResponsavel || "",
+                empresaLogoUrl: empresaAtual?.logo_url || empresaPai?.logo_url || colaborador.empresaLogoUrl || "",
+                empresaLogoNome: empresaAtual?.logo_nome || empresaPai?.logo_nome || colaborador.empresaLogoNome || "",
                 empresaPaiId: empresaAtual?.empresa_pai_id || colaborador.empresaPaiId || null,
                 empresaPaiNome: empresaPai?.nome || colaborador.empresaPaiNome || "",
                 empresaTstResponsavel: empresaAtual?.tst_responsavel || empresaPai?.tst_responsavel || "",

@@ -40,7 +40,8 @@ import {
     treinamentosBaseObra,
     STATUS_CLASSIFICACAO_COLABORADOR,
 } from "../../constants/treinamentosConstants";
-import { baixarPDF } from "../../services/exportacaoService";
+import { baixarPDF, baixarRelatorioColaboradoresTreinamentosPDF } from "../../services/exportacaoService";
+import { obterUrlLogoEmpresa } from "../../services/supabaseServices";
 import { normalizarTextoBusca, formatDate, classNames } from "../../utils/sstUtils";
 
 const CHAVE_NOVO_COLABORADOR_RECOLHIDO = "controleSstColaboradoresNovoColaboradorRecolhido";
@@ -138,51 +139,55 @@ export function Colaboradores({
         };
     }, [colaboradores]);
 
-    const baixarRelatorioColaboradores = () => {
-        const linhas = [
-            [
-                "Colaborador",
-                "Código",
-                "Empresa",
-                "Função",
-                "Matrícula",
-                "Situação na obra",
-                "Matriz aplicada",
-                "Status geral",
-                "Treinamentos obrigatórios",
-                "Treinamentos adicionados",
-                "Treinamentos removidos",
-                "Treinamentos válidos",
-                "Pendentes",
-                "Vencidos",
-                "A vencer",
-            ],
-        ];
+    const obterEmpresaRelatorio = (colaborador = {}) => {
+        const empresaId = String(colaborador.empresaId || colaborador.empresa_id || "").trim();
+        const empresaNome = normalizarTextoBusca(colaborador.empresa || colaborador.empresaNome || "");
 
-        filtrados.forEach((c) => {
+        return (
+            empresasBanco.find((item) => String(item.id || "") === empresaId) ||
+            empresasBanco.find((item) => normalizarTextoBusca(item.nome || "") === empresaNome) ||
+            {}
+        );
+    };
+
+    const baixarRelatorioColaboradores = () => {
+        const colaboradoresRelatorio = filtrados.map((c) => {
             const avaliacao = avaliarTreinamentosColaborador(c);
             const geral = statusGeral(c);
+            const empresaBase = obterEmpresaRelatorio(c);
+            const logoRaw = c.empresaLogoUrl || c.empresa_logo_url || empresaBase.logo_url || empresaBase.logoUrl || "";
+            const logoUrl = logoRaw ? obterUrlLogoEmpresa(logoRaw) : "";
 
-            linhas.push([
-                c.nome,
-                c.codigoFuncionario,
-                c.empresaExibicao || c.empresa,
-                c.funcao,
-                c.matricula,
-                c.statusMobilizacao,
-                avaliacao.matriz.rotulo,
-                geral.texto,
-                avaliacao.itens.map((item) => item.treinamento.nome).join(" | "),
-                (c.treinamentosAdicionais || []).map((id) => obterTreinamento(id)?.nome).filter(Boolean).join(" | "),
-                (c.treinamentosRemovidos || []).map((id) => obterTreinamento(id)?.nome).filter(Boolean).join(" | "),
-                avaliacao.emDia.map((item) => item.treinamento.nome).join(" | "),
-                avaliacao.pendentes.map((item) => item.treinamento.nome).join(" | "),
-                avaliacao.vencidos.map((item) => item.treinamento.nome).join(" | "),
-                avaliacao.vencendo.map((item) => `${item.treinamento.nome} - vence ${formatDate(item.realizado?.vencimento)}`).join(" | "),
-            ]);
+            return {
+                id: c.id,
+                nome: c.nome,
+                codigo: c.codigoFuncionario,
+                empresaId: c.empresaId || empresaBase.id || c.empresa,
+                empresaNome: c.empresa || empresaBase.nome || "Empresa não informada",
+                empresaExibicao: c.empresaExibicao || c.empresa || empresaBase.nome || "",
+                empresaCnpj: c.empresaCnpj || empresaBase.cnpj || "",
+                empresaResponsavel: c.empresaResponsavel || empresaBase.responsavel || empresaBase.responsavel_auditoria || "",
+                empresaLogoUrl: logoUrl,
+                funcao: c.funcao,
+                matricula: c.matricula,
+                statusMobilizacao: c.statusMobilizacao,
+                matriz: avaliacao.matriz.rotulo,
+                statusGeral: geral.texto,
+                obrigatorios: avaliacao.itens.map((item) => item.treinamento.nome),
+                validos: avaliacao.emDia.map((item) => item.treinamento.nome),
+                pendentes: avaliacao.pendentes.map((item) => item.treinamento.nome),
+                vencidos: avaliacao.vencidos.map((item) => item.treinamento.nome),
+                vencendo: avaliacao.vencendo.map((item) => `${item.treinamento.nome} - vence ${formatDate(item.realizado?.vencimento)}`),
+                adicionados: (c.treinamentosAdicionais || []).map((id) => obterTreinamento(id)?.nome).filter(Boolean),
+                removidos: (c.treinamentosRemovidos || []).map((id) => obterTreinamento(id)?.nome).filter(Boolean),
+            };
         });
 
-        baixarPDF("relatorio-colaboradores-treinamentos.pdf", "Relatorio de colaboradores e treinamentos", linhas);
+        baixarRelatorioColaboradoresTreinamentosPDF({
+            nomeArquivo: "relatorio-colaboradores-treinamentos.pdf",
+            titulo: "Relatório de colaboradores e treinamentos",
+            colaboradores: colaboradoresRelatorio,
+        });
     };
 
     const baixarRelatorioPendencias = () => {
