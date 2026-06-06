@@ -1061,14 +1061,6 @@ export async function baixarRelatorioColaboradoresTreinamentosPDF({
 </head>
 <body>
 ${conteudo}
-<script>
-    document.title = ${JSON.stringify(nomeArquivo)};
-    window.addEventListener("load", function () {
-        setTimeout(function () {
-            window.print();
-        }, 350);
-    });
-</script>
 </body>
 </html>`;
 
