@@ -439,7 +439,12 @@ function montarSecaoEmpresaRelatorio(empresa = {}, indiceEmpresa = 0, dataEmissa
         return `
             <section class="detalhe-colaborador">
                 <div class="detalhe-topo">
-                    <div class="numero-colaborador">${indice + 1}</div>
+                    <div class="numero-colaborador">
+                        <svg viewBox="0 0 26 26" aria-hidden="true" focusable="false">
+                            <rect x="0" y="0" width="26" height="26" rx="7"></rect>
+                            <text x="13" y="13" dominant-baseline="central" text-anchor="middle">${indice + 1}</text>
+                        </svg>
+                    </div>
                     <div class="avatar-colaborador ${colaborador.fotoUrl ? "avatar-colaborador--foto" : ""}">${fotoColaborador}</div>
                     <div class="detalhe-identificacao">
                         <h3>${escaparHTML(colaborador.nome || "-")}</h3>
@@ -448,9 +453,18 @@ function montarSecaoEmpresaRelatorio(empresa = {}, indiceEmpresa = 0, dataEmissa
                         <p><strong>Matriz aplicada:</strong> ${escaparHTML(colaborador.matriz || "-")}</p>
                     </div>
                     <div class="detalhe-status">
-                        <p><strong>Empresa:</strong> ${escaparHTML(colaborador.empresaExibicao || colaborador.empresaNome || empresa.nome || "-")}</p>
-                        <p><strong>Situação na obra:</strong> <span class="badge ${classeStatusRelatorio(colaborador.statusMobilizacao)}">${escaparHTML(colaborador.statusMobilizacao || "-")}</span></p>
-                        <p><strong>Status geral:</strong> <span class="badge ${classeStatusRelatorio(colaborador.statusGeral)}">${escaparHTML(colaborador.statusGeral || "-")}</span></p>
+                        <div class="detalhe-status-linha detalhe-status-linha--empresa">
+                            <strong>Empresa:</strong>
+                            <span>${escaparHTML(colaborador.empresaExibicao || colaborador.empresaNome || empresa.nome || "-")}</span>
+                        </div>
+                        <div class="detalhe-status-linha">
+                            <strong>Situação na obra:</strong>
+                            <span class="detalhe-status-valor ${classeStatusRelatorio(colaborador.statusMobilizacao)}">${escaparHTML(colaborador.statusMobilizacao || "-")}</span>
+                        </div>
+                        <div class="detalhe-status-linha">
+                            <strong>Status geral:</strong>
+                            <span class="detalhe-status-valor ${classeStatusRelatorio(colaborador.statusGeral)}">${escaparHTML(colaborador.statusGeral || "-")}</span>
+                        </div>
                     </div>
                 </div>
                 <div class="detalhe-grids">
@@ -1064,7 +1078,7 @@ export async function baixarRelatorioColaboradoresTreinamentosPDF({
 
     .detalhe-topo {
         display: grid;
-        grid-template-columns: 34px 58px 1.08fr 1fr;
+        grid-template-columns: 34px 58px minmax(245px, 1.05fr) minmax(255px, 1.18fr);
         gap: 12px;
         align-items: center;
         padding: 12px;
@@ -1079,14 +1093,26 @@ export async function baixarRelatorioColaboradoresTreinamentosPDF({
         align-self: center;
         justify-self: center;
         padding: 0;
-        background: var(--azul);
-        color: #fff;
+        line-height: 0;
+    }
+
+    .numero-colaborador svg {
+        width: 26px;
+        height: 26px;
+        display: block;
+        overflow: visible;
+    }
+
+    .numero-colaborador rect {
+        fill: var(--azul);
+    }
+
+    .numero-colaborador text {
+        fill: #fff;
+        font-family: Arial, Helvetica, sans-serif;
         font-size: 14px;
         font-weight: 900;
-        line-height: 26px;
-        text-align: center;
-        border-radius: 7px;
-        box-sizing: border-box;
+        line-height: 1;
     }
 
     .avatar-colaborador {
@@ -1129,31 +1155,58 @@ export async function baixarRelatorioColaboradoresTreinamentosPDF({
     }
 
     .detalhe-status {
+        display: grid;
+        gap: 6px;
         border-left: 1px solid var(--linha);
         padding-left: 14px;
+        min-width: 0;
     }
 
-    .detalhe-status p {
-        display: flex;
+    .detalhe-status-linha {
+        display: grid;
+        grid-template-columns: max-content minmax(0, 1fr);
         align-items: baseline;
-        gap: 4px;
+        column-gap: 6px;
+        min-width: 0;
         white-space: nowrap;
-    }
-
-    .detalhe-status p strong {
-        flex: 0 0 auto;
-    }
-
-    .detalhe-status .badge {
-        display: inline;
-        background: transparent !important;
-        border-radius: 0;
-        padding: 0;
         font-size: 10px;
+        line-height: 1.25;
+    }
+
+    .detalhe-status-linha strong {
+        display: inline-block;
+        min-width: max-content;
         font-weight: 900;
-        line-height: inherit;
+        color: #0f172a;
         white-space: nowrap;
     }
+
+    .detalhe-status-linha span {
+        display: inline-block;
+        min-width: 0;
+        font-weight: 800;
+        white-space: nowrap;
+    }
+
+    .detalhe-status-linha--empresa span {
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    .detalhe-status-valor {
+        background: transparent !important;
+        border: 0 !important;
+        border-radius: 0 !important;
+        padding: 0 !important;
+        box-shadow: none !important;
+        font-weight: 900 !important;
+    }
+
+    .detalhe-status-valor.status-ok { color: var(--verde) !important; }
+    .detalhe-status-valor.status-alerta { color: var(--laranja) !important; }
+    .detalhe-status-valor.status-critico { color: var(--vermelho) !important; }
+    .detalhe-status-valor.status-info { color: var(--azul) !important; }
+    .detalhe-status-valor.status-neutro { color: #475569 !important; }
 
     .detalhe-grids {
         display: grid;
