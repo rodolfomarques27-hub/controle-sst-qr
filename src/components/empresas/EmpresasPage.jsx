@@ -1380,21 +1380,21 @@ export function Empresas({
                                 />
                             </div>
 
-                            <div className="empresa-form-linha empresa-form-linha--3 empresa-form-linha--uploads grid grid-cols-1 gap-2 sm:grid-cols-3">
+                            <div className="empresa-form-linha empresa-form-linha--3 empresa-form-linha--uploads">
                                 <select
                                     value={novaEmpresa.tipoEmpresa}
                                     onChange={(e) => setNovaEmpresa({ ...novaEmpresa, tipoEmpresa: e.target.value })}
-                                    className="min-w-0 w-full rounded-2xl border border-slate-200 bg-white px-3 py-3 text-center text-[13px] outline-none focus:border-slate-400 focus:ring-4 focus:ring-slate-100"
+                                    className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none focus:border-slate-400 focus:ring-4 focus:ring-slate-100"
                                 >
                                     <option>Terceirizada</option>
                                     <option>Subcontratada</option>
                                     <option>Contratante - Idealiza Cidades</option>
                                 </select>
 
-                                <div className="empresa-upload-wrapper min-w-0 w-full">
-                                    <label className="empresa-upload-card h-[52px] min-h-[52px] w-full overflow-hidden px-2">
-                                        <Upload className="h-4 w-4 shrink-0" />
-                                        <span className="block min-w-0 truncate text-center text-[12px] leading-tight">{novaEmpresa.logo ? novaEmpresa.logo.name : "Adicionar logo"}</span>
+                                <div className="empresa-upload-wrapper">
+                                    <label className="empresa-upload-card h-[52px] min-h-[52px]">
+                                        <Upload className="h-4 w-4" />
+                                        <span className="block min-w-0 truncate text-center text-[13px] leading-tight">{novaEmpresa.logo ? novaEmpresa.logo.name : "Adicionar logo"}</span>
                                         <input
                                             type="file"
                                             accept="image/png,image/jpeg,image/webp,image/svg+xml"
@@ -1412,10 +1412,10 @@ export function Empresas({
                                     <FileUploadAviso arquivo={novaEmpresa.logo} tipo="fotoAuditoria" />
                                 </div>
 
-                                <div className="empresa-upload-wrapper min-w-0 w-full">
-                                    <label className="empresa-upload-card empresa-upload-card--contrato h-[52px] min-h-[52px] w-full overflow-hidden px-2">
-                                        <Upload className="h-4 w-4 shrink-0" />
-                                        <span className="block min-w-0 truncate text-center text-[12px] leading-tight">{novaEmpresa.contratoArquivo ? novaEmpresa.contratoArquivo.name : "Adicionar contrato"}</span>
+                                <div className="empresa-upload-wrapper">
+                                    <label className="empresa-upload-card empresa-upload-card--contrato h-[52px] min-h-[52px]">
+                                        <Upload className="h-4 w-4" />
+                                        <span className="block min-w-0 truncate text-center text-[13px] leading-tight">{novaEmpresa.contratoArquivo ? novaEmpresa.contratoArquivo.name : "add. contrato"}</span>
                                         <input
                                             type="file"
                                             accept="application/pdf,image/png,image/jpeg,image/webp"
@@ -1456,13 +1456,13 @@ export function Empresas({
                                     value={novaEmpresa.numeroContrato}
                                     onChange={(e) => setNovaEmpresa({ ...novaEmpresa, numeroContrato: e.target.value })}
                                     placeholder="Nº do contrato"
-                                    className="w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-slate-400 focus:ring-4 focus:ring-slate-100"
+                                    className="w-full rounded-2xl border border-slate-200 px-4 py-3 text-center text-sm outline-none focus:border-slate-400 focus:ring-4 focus:ring-slate-100"
                                 />
                                 <input
                                     value={novaEmpresa.responsavelContratante}
                                     onChange={(e) => setNovaEmpresa({ ...novaEmpresa, responsavelContratante: e.target.value })}
                                     placeholder="Responsável da contratante"
-                                    className="w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-slate-400 focus:ring-4 focus:ring-slate-100"
+                                    className="w-full rounded-2xl border border-slate-200 px-4 py-3 text-center text-sm outline-none focus:border-slate-400 focus:ring-4 focus:ring-slate-100"
                                 />
                             </div>
 
@@ -1971,7 +1971,7 @@ export function Empresas({
                                 </div>
 
                                 <div>
-                                    <label className="mb-1 block text-xs font-bold uppercase tracking-wide text-slate-500">Nº do contrato</label>
+                                    <label className="mb-1 block text-center text-xs font-bold uppercase tracking-wide text-slate-500">Nº do contrato</label>
                                     <input
                                         value={empresaEdicao.numeroContrato}
                                         onChange={(e) => setEmpresaEdicao({ ...empresaEdicao, numeroContrato: e.target.value })}
@@ -1980,7 +1980,7 @@ export function Empresas({
                                 </div>
 
                                 <div>
-                                    <label className="mb-1 block text-xs font-bold uppercase tracking-wide text-slate-500">Responsável da contratante</label>
+                                    <label className="mb-1 block text-center text-xs font-bold uppercase tracking-wide text-slate-500">Responsável da contratante</label>
                                     <input
                                         value={empresaEdicao.responsavelContratante}
                                         onChange={(e) => setEmpresaEdicao({ ...empresaEdicao, responsavelContratante: e.target.value })}
