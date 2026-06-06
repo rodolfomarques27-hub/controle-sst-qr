@@ -1012,26 +1012,27 @@ export async function baixarRelatorioColaboradoresTreinamentosPDF({
         display: flex;
         align-items: center;
         justify-content: center;
-        gap: 16px;
+        gap: 14px;
         text-align: left;
+        flex-wrap: nowrap;
     }
 
     .escudo-controle-sst-relatorio {
-        width: 62px;
-        height: 62px;
+        width: 56px;
+        height: 56px;
         display: grid;
         place-items: center;
-        border-radius: 16px;
+        border-radius: 18px;
         background: #111827;
-        border: 1px solid rgba(255,255,255,0.12);
-        box-shadow: inset 0 0 0 1px rgba(255,255,255,0.05), 0 10px 24px rgba(15,23,42,0.18);
         color: #ffffff;
         flex: 0 0 auto;
+        box-shadow: none;
+        border: 0;
     }
 
     .escudo-controle-sst-relatorio svg {
-        width: 34px;
-        height: 34px;
+        width: 28px;
+        height: 28px;
         display: block;
         fill: none;
         stroke: currentColor;
@@ -1050,19 +1051,72 @@ export async function baixarRelatorioColaboradoresTreinamentosPDF({
         font-weight: 900;
     }
 
-    .marca-relatorio-controle__textos p {
-        margin: 5px 0 0;
+    .data-emissao-cabecalho {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        min-height: 42px;
+        margin-left: 8px;
+        padding: 8px 12px;
+        border: 1px solid var(--linha);
+        border-radius: 12px;
+        background: #fbfdff;
+        color: #0f172a;
+        white-space: nowrap;
+    }
+
+    .data-emissao-cabecalho span {
+        width: 20px;
+        height: 20px;
+        display: grid;
+        place-items: center;
         color: var(--azul);
-        font-size: 15px;
+        flex: 0 0 auto;
+        overflow: visible;
+    }
+
+    .data-emissao-cabecalho span svg {
+        width: 18px;
+        height: 18px;
+        display: block;
+        overflow: visible;
+        fill: none;
+        stroke: currentColor;
+        stroke-width: 1.85;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+    }
+
+    .data-emissao-cabecalho span svg * {
+        fill: none;
+        stroke: currentColor;
+        stroke-width: 1.85;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+    }
+
+    .data-emissao-cabecalho strong {
+        display: block;
+        margin: 0 0 2px;
+        color: #334155;
+        font-size: 8.2px;
+        line-height: 1;
         font-weight: 900;
-        letter-spacing: 0.06em;
         text-transform: uppercase;
     }
 
-    .linha-cabecalho-aniversariantes {
-        height: 2px;
-        border-radius: 999px;
-        background: linear-gradient(90deg, transparent, var(--azul), transparent);
+    .data-emissao-cabecalho em {
+        display: block;
+        margin: 0;
+        color: #0f172a;
+        font-style: normal;
+        font-size: 9.2px;
+        line-height: 1;
+        font-weight: 900;
+    }
+
+    .titulo-relatorio-cabecalho--aniversariantes {
+        margin-top: 0;
     }
 
     .cabecalho-relatorio--modelo-aprovado .marca-empresa {
@@ -1148,13 +1202,13 @@ export async function baixarRelatorioColaboradoresTreinamentosPDF({
 
     .dados-empresa__item {
         display: grid;
-        grid-template-columns: 22px minmax(0, 1fr);
+        grid-template-columns: 20px minmax(0, 1fr);
         gap: 1px 7px;
         align-items: center;
         border-right: 1px solid var(--linha);
         min-height: 36px;
         padding: 0 9px;
-        overflow: hidden;
+        overflow: visible;
     }
 
     .dados-empresa__item:first-child {
@@ -1762,26 +1816,26 @@ export async function baixarRelatorioPendenciasTreinamentosPDF({
         display: flex;
         align-items: center;
         justify-content: center;
-        gap: 16px;
+        gap: 14px;
         text-align: left;
     }
 
     .escudo-controle-sst-relatorio {
-        width: 62px;
-        height: 62px;
+        width: 56px;
+        height: 56px;
         display: grid;
         place-items: center;
-        border-radius: 16px;
+        border-radius: 18px;
         background: #111827;
-        border: 1px solid rgba(255,255,255,0.12);
-        box-shadow: inset 0 0 0 1px rgba(255,255,255,0.05), 0 10px 24px rgba(15,23,42,0.18);
         color: #ffffff;
         flex: 0 0 auto;
+        box-shadow: none;
+        border: 0;
     }
 
     .escudo-controle-sst-relatorio svg {
-        width: 34px;
-        height: 34px;
+        width: 28px;
+        height: 28px;
         display: block;
         fill: none;
         stroke: currentColor;
@@ -1800,19 +1854,8 @@ export async function baixarRelatorioPendenciasTreinamentosPDF({
         font-weight: 900;
     }
 
-    .marca-relatorio-controle__textos p {
-        margin: 5px 0 0;
-        color: var(--azul);
-        font-size: 15px;
-        font-weight: 900;
-        letter-spacing: 0.06em;
-        text-transform: uppercase;
-    }
-
-    .linha-cabecalho-aniversariantes {
-        height: 2px;
-        border-radius: 999px;
-        background: linear-gradient(90deg, transparent, var(--azul), transparent);
+    .titulo-relatorio-cabecalho--aniversariantes {
+        margin-top: 0;
     }
 
     .cabecalho-relatorio--modelo-aprovado .marca-empresa {
@@ -1898,13 +1941,13 @@ export async function baixarRelatorioPendenciasTreinamentosPDF({
 
     .dados-empresa__item {
         display: grid;
-        grid-template-columns: 22px minmax(0, 1fr);
+        grid-template-columns: 20px minmax(0, 1fr);
         gap: 1px 7px;
         align-items: center;
         border-right: 1px solid var(--linha);
         min-height: 36px;
         padding: 0 9px;
-        overflow: hidden;
+        overflow: visible;
     }
 
     .dados-empresa__item:first-child {
@@ -2604,24 +2647,7 @@ function montarLinhaAniversarianteRelatorio(colaborador = {}, indice = 0) {
 
 function montarSecaoAniversariantesRelatorio({ aniversariantes = [], filtros = {}, dataEmissao = "", titulo = "Relatório de aniversariantes" } = {}) {
     const resumo = calcularResumoAniversariantesRelatorio(aniversariantes);
-    const empresaSelecionada = String(filtros.empresa || "Todas").trim();
-    const empresaCabecalho = empresaSelecionada && empresaSelecionada !== "Todas"
-        ? {
-            nome: empresaSelecionada,
-            cnpj: aniversariantes.find((item) => item.empresaExibicao === empresaSelecionada || item.empresaNome === empresaSelecionada)?.empresaCnpj || "-",
-            responsavel: aniversariantes.find((item) => item.empresaExibicao === empresaSelecionada || item.empresaNome === empresaSelecionada)?.empresaResponsavel || "-",
-            logoUrl: aniversariantes.find((item) => item.empresaExibicao === empresaSelecionada || item.empresaNome === empresaSelecionada)?.empresaLogoUrl || "",
-        }
-        : {
-            nome: "Controle SST QR",
-            cnpj: "Todas as empresas",
-            responsavel: "Painel de aniversariantes",
-            logoUrl: "",
-        };
-
     const linhasTabela = aniversariantes.map((colaborador, indice) => montarLinhaAniversarianteRelatorio(colaborador, indice)).join("");
-    const mesAtualNome = obterNomeMesRelatorioAniversariantes(resumo.mesAtual);
-
     return `
         <section class="pagina-relatorio pagina-relatorio-aniversariantes">
             <header class="cabecalho-relatorio cabecalho-relatorio--modelo-aprovado cabecalho-relatorio--aniversariantes">
@@ -2629,18 +2655,20 @@ function montarSecaoAniversariantesRelatorio({ aniversariantes = [], filtros = {
                     ${montarEscudoControleSstRelatorio()}
                     <div class="marca-relatorio-controle__textos">
                         <h1>CONTROLE SST QR</h1>
-                        <p>${escaparHTML(titulo)}</p>
+                    </div>
+                    <div class="data-emissao-cabecalho">
+                        <span>${ICONES_CABECALHO_RELATORIO_COLABORADORES.data}</span>
+                        <div>
+                            <strong>Data de emissão</strong>
+                            <em>${escaparHTML(dataEmissao)}</em>
+                        </div>
                     </div>
                 </div>
 
-                <div class="linha-cabecalho-aniversariantes"></div>
-
-                <div class="dados-empresa">
-                    <div class="dados-empresa__item dados-empresa__item--empresa"><span>${ICONES_CABECALHO_RELATORIO_COLABORADORES.empresa}</span><strong>Empresa:</strong><em>${escaparHTML(empresaCabecalho.nome || "-")}</em></div>
-                    <div class="dados-empresa__item dados-empresa__item--cnpj"><span>${ICONES_CABECALHO_RELATORIO_COLABORADORES.cnpj}</span><strong>CNPJ:</strong><em>${escaparHTML(empresaCabecalho.cnpj || "-")}</em></div>
-                    <div class="dados-empresa__item dados-empresa__item--responsavel"><span>${ICONES_CABECALHO_RELATORIO_COLABORADORES.responsavel}</span><strong>Responsável:</strong><em>${escaparHTML(empresaCabecalho.responsavel || "-")}</em></div>
-                    <div class="dados-empresa__item dados-empresa__item--data"><span>${ICONES_CABECALHO_RELATORIO_COLABORADORES.data}</span><strong>Data de emissão:</strong><em>${escaparHTML(dataEmissao)}</em></div>
-                    <div class="dados-empresa__item dados-empresa__item--sistema"><span>${ICONES_CABECALHO_RELATORIO_COLABORADORES.sistema}</span><strong>Sistema:</strong><em>Controle SST QR</em></div>
+                <div class="titulo-relatorio-cabecalho titulo-relatorio-cabecalho--aniversariantes">
+                    <span></span>
+                    <strong>${escaparHTML(titulo)}</strong>
+                    <span></span>
                 </div>
             </header>
 
@@ -2775,26 +2803,26 @@ export async function baixarRelatorioAniversariantesPDF({
         display: flex;
         align-items: center;
         justify-content: center;
-        gap: 16px;
+        gap: 14px;
         text-align: left;
     }
 
     .escudo-controle-sst-relatorio {
-        width: 62px;
-        height: 62px;
+        width: 56px;
+        height: 56px;
         display: grid;
         place-items: center;
-        border-radius: 16px;
+        border-radius: 18px;
         background: #111827;
-        border: 1px solid rgba(255,255,255,0.12);
-        box-shadow: inset 0 0 0 1px rgba(255,255,255,0.05), 0 10px 24px rgba(15,23,42,0.18);
         color: #ffffff;
         flex: 0 0 auto;
+        box-shadow: none;
+        border: 0;
     }
 
     .escudo-controle-sst-relatorio svg {
-        width: 34px;
-        height: 34px;
+        width: 28px;
+        height: 28px;
         display: block;
         fill: none;
         stroke: currentColor;
@@ -2813,19 +2841,8 @@ export async function baixarRelatorioAniversariantesPDF({
         font-weight: 900;
     }
 
-    .marca-relatorio-controle__textos p {
-        margin: 5px 0 0;
-        color: var(--azul);
-        font-size: 15px;
-        font-weight: 900;
-        letter-spacing: 0.06em;
-        text-transform: uppercase;
-    }
-
-    .linha-cabecalho-aniversariantes {
-        height: 2px;
-        border-radius: 999px;
-        background: linear-gradient(90deg, transparent, var(--azul), transparent);
+    .titulo-relatorio-cabecalho--aniversariantes {
+        margin-top: 0;
     }
 
     .cabecalho-relatorio--modelo-aprovado .marca-empresa {
@@ -2911,13 +2928,13 @@ export async function baixarRelatorioAniversariantesPDF({
 
     .dados-empresa__item {
         display: grid;
-        grid-template-columns: 22px minmax(0, 1fr);
+        grid-template-columns: 20px minmax(0, 1fr);
         gap: 1px 7px;
         align-items: center;
         border-right: 1px solid var(--linha);
         min-height: 36px;
         padding: 0 9px;
-        overflow: hidden;
+        overflow: visible;
     }
 
     .dados-empresa__item:first-child { padding-left: 0; }
@@ -2930,11 +2947,18 @@ export async function baixarRelatorioAniversariantesPDF({
         color: var(--azul);
     }
 
-    .dados-empresa span svg,
-    .dados-empresa span svg * {
-        width: 20px;
-        height: 20px;
+    .dados-empresa span svg {
+        width: 18px;
+        height: 18px;
         display: block;
+        fill: none;
+        stroke: currentColor;
+        stroke-width: 1.85;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+    }
+
+    .dados-empresa span svg * {
         fill: none;
         stroke: currentColor;
         stroke-width: 1.85;
@@ -2960,6 +2984,16 @@ export async function baixarRelatorioAniversariantesPDF({
         font-weight: 800;
         color: #0f172a;
         white-space: nowrap;
+    }
+
+    .dados-empresa__item--cnpj {
+        grid-template-columns: 18px minmax(0, 1fr);
+        padding-left: 10px;
+    }
+
+    .dados-empresa__item--cnpj span svg {
+        width: 16px;
+        height: 16px;
     }
 
     .bloco {
@@ -3080,8 +3114,8 @@ export async function baixarRelatorioAniversariantesPDF({
         grid-template-columns: repeat(12, 1fr);
         align-items: end;
         gap: 8px;
-        padding: 22px 14px 14px;
-        min-height: 166px;
+        padding: 28px 14px 14px;
+        min-height: 174px;
         background: linear-gradient(180deg, #fff, #fbfdff);
     }
 
@@ -3089,7 +3123,7 @@ export async function baixarRelatorioAniversariantesPDF({
         display: grid;
         justify-items: center;
         align-items: end;
-        gap: 9px;
+        gap: 13px;
         min-width: 0;
     }
 
@@ -3098,7 +3132,7 @@ export async function baixarRelatorioAniversariantesPDF({
         color: #07162f;
         font-size: 11px;
         line-height: 1;
-        margin-bottom: 3px;
+        margin-bottom: 8px;
     }
 
     .grafico-barra {
@@ -3123,20 +3157,20 @@ export async function baixarRelatorioAniversariantesPDF({
     }
 
     .tabela-aniversariantes-relatorio .col-numero { width: 4%; }
-    .tabela-aniversariantes-relatorio .col-colaborador { width: 28%; }
-    .tabela-aniversariantes-relatorio .col-funcao { width: 14%; }
+    .tabela-aniversariantes-relatorio .col-colaborador { width: 27%; }
+    .tabela-aniversariantes-relatorio .col-funcao { width: 13%; }
     .tabela-aniversariantes-relatorio .col-nascimento { width: 13%; }
     .tabela-aniversariantes-relatorio .col-dia { width: 6%; }
     .tabela-aniversariantes-relatorio .col-mes { width: 10%; }
-    .tabela-aniversariantes-relatorio .col-proximo { width: 13%; }
-    .tabela-aniversariantes-relatorio .col-status { width: 12%; }
+    .tabela-aniversariantes-relatorio .col-proximo { width: 12%; }
+    .tabela-aniversariantes-relatorio .col-status { width: 15%; }
 
-    thead tr { height: 46px; }
+    thead tr { height: 56px; }
 
     thead th {
         background: linear-gradient(180deg, #075bbd, #033f88);
         color: #fff;
-        height: 46px;
+        height: 56px;
         padding: 0;
         border-right: 1px solid rgba(255,255,255,0.25);
         text-align: center;
@@ -3148,15 +3182,15 @@ export async function baixarRelatorioAniversariantesPDF({
 
     .th-conteudo {
         width: 100%;
-        height: 46px;
-        min-height: 46px;
+        height: 56px;
+        min-height: 56px;
         display: flex;
         align-items: center;
         justify-content: center;
-        padding: 0 7px;
+        padding: 0 8px;
         box-sizing: border-box;
         text-align: center;
-        line-height: 1.08;
+        line-height: 1.12;
         font-size: 8.8px;
         font-weight: 900;
         white-space: normal;
