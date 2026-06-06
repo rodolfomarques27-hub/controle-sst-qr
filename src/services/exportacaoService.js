@@ -1010,35 +1010,11 @@ export async function baixarRelatorioColaboradoresTreinamentosPDF({
 
     .marca-relatorio-controle {
         display: flex;
-        align-items: center;
+        align-items: baseline;
         justify-content: center;
         gap: 14px;
         text-align: left;
         flex-wrap: nowrap;
-    }
-
-    .escudo-controle-sst-relatorio {
-        width: 56px;
-        height: 56px;
-        display: grid;
-        place-items: center;
-        border-radius: 18px;
-        background: #111827;
-        color: #ffffff;
-        flex: 0 0 auto;
-        box-shadow: none;
-        border: 0;
-    }
-
-    .escudo-controle-sst-relatorio svg {
-        width: 28px;
-        height: 28px;
-        display: block;
-        fill: none;
-        stroke: currentColor;
-        stroke-width: 1.9;
-        stroke-linecap: round;
-        stroke-linejoin: round;
     }
 
     .marca-relatorio-controle__textos h1 {
@@ -1053,66 +1029,38 @@ export async function baixarRelatorioColaboradoresTreinamentosPDF({
 
     .data-emissao-cabecalho {
         display: inline-flex;
-        align-items: center;
-        gap: 8px;
-        min-height: 42px;
-        margin-left: 8px;
-        padding: 8px 12px;
-        border: 1px solid var(--linha);
-        border-radius: 12px;
-        background: #fbfdff;
-        color: #0f172a;
+        align-items: baseline;
+        gap: 5px;
+        min-height: auto;
+        margin-left: 2px;
+        padding: 0 0 0 14px;
+        border: 0;
+        border-left: 1px solid #cbd5e1;
+        border-radius: 0;
+        background: transparent;
+        color: #475569;
         white-space: nowrap;
     }
 
-    .data-emissao-cabecalho span {
-        width: 20px;
-        height: 20px;
-        display: grid;
-        place-items: center;
-        color: var(--azul);
-        flex: 0 0 auto;
-        overflow: visible;
-    }
-
-    .data-emissao-cabecalho span svg {
-        width: 18px;
-        height: 18px;
-        display: block;
-        overflow: visible;
-        fill: none;
-        stroke: currentColor;
-        stroke-width: 1.85;
-        stroke-linecap: round;
-        stroke-linejoin: round;
-    }
-
-    .data-emissao-cabecalho span svg * {
-        fill: none;
-        stroke: currentColor;
-        stroke-width: 1.85;
-        stroke-linecap: round;
-        stroke-linejoin: round;
-    }
-
     .data-emissao-cabecalho strong {
-        display: block;
-        margin: 0 0 2px;
-        color: #334155;
-        font-size: 8.2px;
+        display: inline;
+        margin: 0;
+        color: #64748b;
+        font-size: 9px;
         line-height: 1;
-        font-weight: 900;
+        font-weight: 800;
         text-transform: uppercase;
+        letter-spacing: 0.02em;
     }
 
     .data-emissao-cabecalho em {
-        display: block;
+        display: inline;
         margin: 0;
-        color: #0f172a;
+        color: #334155;
         font-style: normal;
-        font-size: 9.2px;
+        font-size: 10px;
         line-height: 1;
-        font-weight: 900;
+        font-weight: 800;
     }
 
     .titulo-relatorio-cabecalho--aniversariantes {
@@ -2652,16 +2600,12 @@ function montarSecaoAniversariantesRelatorio({ aniversariantes = [], filtros = {
         <section class="pagina-relatorio pagina-relatorio-aniversariantes">
             <header class="cabecalho-relatorio cabecalho-relatorio--modelo-aprovado cabecalho-relatorio--aniversariantes">
                 <div class="marca-relatorio-controle">
-                    ${montarEscudoControleSstRelatorio()}
                     <div class="marca-relatorio-controle__textos">
                         <h1>CONTROLE SST QR</h1>
                     </div>
                     <div class="data-emissao-cabecalho">
-                        <span>${ICONES_CABECALHO_RELATORIO_COLABORADORES.data}</span>
-                        <div>
-                            <strong>Data de emissão</strong>
-                            <em>${escaparHTML(dataEmissao)}</em>
-                        </div>
+                        <strong>Data de emissão</strong>
+                        <em>${escaparHTML(dataEmissao)}</em>
                     </div>
                 </div>
 
