@@ -12,12 +12,12 @@ const STATUS_MOBILIZACAO = [
 ];
 
 const INFORMACOES_STATUS_OBRA = {
-    Liberado: "Conta como mobilizado ativo. Documentos e treinamentos devem permanecer válidos.",
-    "Com pendência": "Conta como mobilizado ativo, mas exige regularização das pendências apontadas.",
-    Bloqueado: "Não conta como mobilizado ativo. Use para pendência bloqueante ou risco documental.",
-    "Em análise": "Não conta como mobilizado ativo. Use enquanto documentos e treinamentos estão em conferência.",
-    Desmobilizado: "Não conta como mobilizado ativo. Use quando o colaborador sair da obra.",
-    Inativo: "Não conta como mobilizado ativo. Use para cadastro sem atuação atual na obra.",
+    Liberado: "Mobilizado ativo.",
+    "Com pendência": "Mobilizado com pendências.",
+    Bloqueado: "Bloqueado por pendência crítica.",
+    "Em análise": "Em conferência documental.",
+    Desmobilizado: "Fora da obra.",
+    Inativo: "Cadastro sem atuação atual.",
 };
 
 const TIPOS_DOCUMENTOS_MASSA = "ASO, EPI, INTEGRAÇÃO, NR-06, NR-11, NR-12, NR-18, NR-21, NR-25, NR-26, REGISTRO ou OS.";
