@@ -1,3 +1,20 @@
+import { reduzirFotoParaAuditoria } from "./imagemService";
+
+function arquivoEhImagem(arquivo) {
+    return String(arquivo?.type || "").toLowerCase().startsWith("image/");
+}
+
+async function otimizarImagemDocumentoEmpresa(arquivo) {
+    if (!arquivo || !arquivoEhImagem(arquivo)) return arquivo;
+
+    return reduzirFotoParaAuditoria(arquivo, {
+        maxLado: 1600,
+        alvoBytes: 1200 * 1024,
+        qualidadeInicial: 0.86,
+        qualidadeMinima: 0.58,
+    });
+}
+
 export async function salvarDocumentoEmpresaCrud({
     supabase,
     novoDoc,
@@ -9,20 +26,22 @@ export async function salvarDocumentoEmpresaCrud({
     let arquivoNome = novoDoc.arquivo?.name || null;
 
     if (novoDoc.arquivo) {
-        if (!validarArquivoAntesUpload(novoDoc.arquivo, "documentoExtenso")) {
+        const arquivoFinal = await otimizarImagemDocumentoEmpresa(novoDoc.arquivo);
+
+        if (!validarArquivoAntesUpload(arquivoFinal, "documentoExtenso")) {
             throw new Error("Documento empresarial fora do limite configurado.");
         }
 
-        const nomeSeguro = sanitizarNomeArquivo(novoDoc.arquivo.name);
+        const nomeSeguro = sanitizarNomeArquivo(arquivoFinal.name);
         const tipoSeguro = sanitizarNomeArquivo(novoDoc.tipo);
         const caminho = `${novoDoc.empresaId}/${tipoSeguro}-${Date.now()}-${nomeSeguro}`;
 
         const { error: uploadError } = await supabase.storage
             .from("documentos-empresas")
-            .upload(caminho, novoDoc.arquivo, {
+            .upload(caminho, arquivoFinal, {
                 cacheControl: "3600",
                 upsert: true,
-                contentType: novoDoc.arquivo.type || "application/pdf",
+                contentType: arquivoFinal.type || "application/pdf",
             });
 
         if (uploadError) {
