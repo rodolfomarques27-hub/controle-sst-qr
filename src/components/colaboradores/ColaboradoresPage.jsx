@@ -456,12 +456,17 @@ export function Colaboradores({
                     ) : (
                         <Card className="colaborador-formulario-recolhido border-blue-100 bg-blue-50/40">
                             <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-                                <div className="min-w-0">
-                                    <p className="text-xs font-black uppercase tracking-wide text-blue-700">Cadastro</p>
-                                    <h2 className="mt-1 text-lg font-black text-slate-950">Novo colaborador</h2>
-                                    <p className="mt-1 text-sm leading-6 text-slate-600">
-                                        Formulário recolhido para deixar a tela mais compacta. Clique em abrir para cadastrar novo funcionário.
-                                    </p>
+                                <div className="flex min-w-0 items-start gap-3">
+                                    <div className="novo-colaborador-cabecalho-branco__icone shrink-0">
+                                        <Users className="h-5 w-5" />
+                                    </div>
+                                    <div className="min-w-0">
+                                        <p className="text-xs font-black uppercase tracking-wide text-blue-700">Cadastro</p>
+                                        <h2 className="mt-1 text-lg font-black text-slate-950">Novo colaborador</h2>
+                                        <p className="mt-1 text-sm leading-6 text-slate-600">
+                                            Formulário recolhido para deixar a tela mais compacta. Clique em abrir para cadastrar novo funcionário.
+                                        </p>
+                                    </div>
                                 </div>
                                 <button
                                     type="button"
@@ -478,12 +483,17 @@ export function Colaboradores({
 
                 <Card className="colaboradores-info-card">
                     <div className="mb-5 flex flex-col gap-3 border-b border-slate-100 pb-4 lg:flex-row lg:items-center lg:justify-between">
-                        <div className="min-w-0">
-                            <p className="text-xs font-black uppercase tracking-wide text-slate-400">Base de colaboradores</p>
-                            <h2 className="mt-1 text-xl font-black text-slate-950">Informações dos funcionários</h2>
-                            <p className="mt-1 text-sm leading-6 text-slate-500">
-                                Consulte status, pendências, QR Code, treinamentos e dados cadastrais em um bloco único destacado.
-                            </p>
+                        <div className="flex min-w-0 items-start gap-3">
+                            <div className="rounded-2xl bg-slate-950 p-3 text-white shadow-sm">
+                                <Users className="h-5 w-5" />
+                            </div>
+                            <div className="min-w-0">
+                                <p className="text-xs font-black uppercase tracking-wide text-slate-400">Base de colaboradores</p>
+                                <h2 className="mt-1 text-xl font-black text-slate-950">Informações dos funcionários</h2>
+                                <p className="mt-1 text-sm leading-6 text-slate-500">
+                                    Consulte status, pendências, QR Code, treinamentos e dados cadastrais em um bloco único destacado.
+                                </p>
+                            </div>
                         </div>
                         <button
                             type="button"
