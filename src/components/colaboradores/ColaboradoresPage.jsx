@@ -40,7 +40,7 @@ import {
     treinamentosBaseObra,
     STATUS_CLASSIFICACAO_COLABORADOR,
 } from "../../constants/treinamentosConstants";
-import { baixarPDF, baixarRelatorioColaboradoresTreinamentosPDF } from "../../services/exportacaoService";
+import { baixarRelatorioColaboradoresTreinamentosPDF, baixarRelatorioPendenciasTreinamentosPDF } from "../../services/exportacaoService";
 import { obterUrlLogoEmpresa } from "../../services/supabaseServices";
 import { normalizarTextoBusca, formatDate, classNames } from "../../utils/sstUtils";
 
@@ -169,7 +169,7 @@ export function Colaboradores({
                 empresaCnpj: c.empresaCnpj || empresaBase.cnpj || "",
                 empresaResponsavel: c.empresaResponsavel || empresaBase.responsavel || empresaBase.responsavel_auditoria || "",
                 empresaLogoUrl: logoUrl,
-                fotoUrl: c.fotoUrl || c.foto_url || c.fotoColaboradorUrl || c.foto_colaborador_url || obterFotoColaboradorSrc(c) || "",
+                fotoUrl: obterFotoColaboradorSrc(c) || c.fotoUrl || c.foto_url || c.fotoColaboradorUrl || c.foto_colaborador_url || "",
                 funcao: c.funcao,
                 matricula: c.matricula,
                 statusMobilizacao: c.statusMobilizacao,
@@ -192,32 +192,43 @@ export function Colaboradores({
         });
     };
 
-    const baixarRelatorioPendencias = () => {
-        const linhas = [
-            ["Colaborador", "Código", "Empresa", "Função", "Situação na obra", "Treinamento", "Situação", "Vencimento", "Base"],
-        ];
+    const baixarRelatorioPendencias = async () => {
+        const pendencias = [];
 
         filtrados.forEach((c) => {
             const avaliacao = avaliarTreinamentosColaborador(c);
+            const empresaBase = obterEmpresaRelatorio(c);
+            const logoRaw = c.empresaLogoUrl || c.empresa_logo_url || empresaBase.logo_url || empresaBase.logoUrl || "";
+            const logoUrl = logoRaw ? obterUrlLogoEmpresa(logoRaw) : "";
 
             avaliacao.itens
                 .filter((item) => ["pendente", "vencido", "vencendo"].includes(item.status.chave))
                 .forEach((item) => {
-                    linhas.push([
-                        c.nome,
-                        c.codigoFuncionario,
-                        c.empresa,
-                        c.funcao,
-                        c.statusMobilizacao,
-                        item.treinamento.nome,
-                        item.status.texto,
-                        item.realizado?.vencimento ? formatDate(item.realizado.vencimento) : "Sem certificado lançado",
-                        item.treinamento.base || "",
-                    ]);
+                    pendencias.push({
+                        colaboradorId: c.id,
+                        colaborador: c.nome,
+                        codigo: c.codigoFuncionario,
+                        empresaId: c.empresaId || empresaBase.id || c.empresa,
+                        empresaNome: c.empresa || empresaBase.nome || "Empresa não informada",
+                        empresaExibicao: c.empresaExibicao || c.empresa || empresaBase.nome || "",
+                        empresaCnpj: c.empresaCnpj || empresaBase.cnpj || "",
+                        empresaResponsavel: c.empresaResponsavel || empresaBase.responsavel || empresaBase.responsavel_auditoria || "",
+                        empresaLogoUrl: logoUrl,
+                        funcao: c.funcao,
+                        statusMobilizacao: c.statusMobilizacao,
+                        treinamento: item.treinamento.nome,
+                        situacao: item.status.texto,
+                        vencimento: item.realizado?.vencimento ? formatDate(item.realizado.vencimento) : "Sem certificado lançado",
+                        base: item.treinamento.base || "",
+                    });
                 });
         });
 
-        baixarPDF("relatorio-pendencias-treinamentos.pdf", "Relatorio de pendencias de treinamentos", linhas);
+        await baixarRelatorioPendenciasTreinamentosPDF({
+            nomeArquivo: "relatorio-pendencias-treinamentos.pdf",
+            titulo: "Relatório de pendências de treinamentos",
+            pendencias,
+        });
     };
 
     const adicionar = async () => {
