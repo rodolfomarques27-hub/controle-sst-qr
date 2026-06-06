@@ -429,7 +429,7 @@ export function Colaboradores({
                                 <button
                                     type="button"
                                     onClick={() => atualizarNovoColaboradorRecolhido(true)}
-                                    className="colaborador-form-toggle novo-colaborador-cabecalho-branco__acao"
+                                    className="inline-flex items-center justify-center gap-2 rounded-2xl bg-slate-950 px-4 py-2 text-xs font-black text-white shadow-sm hover:bg-slate-800"
                                 >
                                     <ChevronUp className="h-4 w-4" />
                                     Recolher informação
@@ -466,7 +466,7 @@ export function Colaboradores({
                                 <button
                                     type="button"
                                     onClick={() => atualizarNovoColaboradorRecolhido(false)}
-                                    className="inline-flex items-center justify-center gap-2 rounded-2xl bg-white px-4 py-2 text-xs font-black text-slate-700 shadow-sm ring-1 ring-blue-100 hover:bg-blue-50"
+                                    className="inline-flex items-center justify-center gap-2 rounded-2xl bg-slate-950 px-4 py-2 text-xs font-black text-white shadow-sm hover:bg-slate-800"
                                 >
                                     <ChevronDown className="h-4 w-4" />
                                     Abrir informações
@@ -537,31 +537,31 @@ export function Colaboradores({
                     </div>
 
                     <div className="colaboradores-status-grid mb-4">
-                        <div className="colaborador-status-card rounded-2xl bg-slate-50 p-3">
+                        <div className="colaborador-status-card flex min-h-[92px] flex-col items-center justify-center rounded-2xl bg-slate-50 p-3 text-center">
                             <p className="text-xs font-medium text-slate-500">Total</p>
                             <p className="text-2xl font-bold text-slate-950">{colaboradores.length}</p>
                         </div>
-                        <div className="colaborador-status-card rounded-2xl bg-emerald-50 p-3">
+                        <div className="colaborador-status-card flex min-h-[92px] flex-col items-center justify-center rounded-2xl bg-emerald-50 p-3 text-center">
                             <p className="text-xs font-medium text-emerald-700">Liberados</p>
                             <p className="text-2xl font-bold text-emerald-700">{resumoTreinamentos.liberados}</p>
                         </div>
-                        <div className="colaborador-status-card rounded-2xl bg-blue-50 p-3">
+                        <div className="colaborador-status-card flex min-h-[92px] flex-col items-center justify-center rounded-2xl bg-blue-50 p-3 text-center">
                             <p className="text-xs font-medium text-blue-700">Com pendência</p>
                             <p className="text-2xl font-bold text-blue-700">{resumoTreinamentos.comPendencia}</p>
                         </div>
-                        <div className="colaborador-status-card rounded-2xl bg-red-50 p-3">
+                        <div className="colaborador-status-card flex min-h-[92px] flex-col items-center justify-center rounded-2xl bg-red-50 p-3 text-center">
                             <p className="text-xs font-medium text-red-700">Bloqueados</p>
                             <p className="text-2xl font-bold text-red-700">{resumoTreinamentos.bloqueados}</p>
                         </div>
-                        <div className="colaborador-status-card rounded-2xl bg-violet-50 p-3">
+                        <div className="colaborador-status-card flex min-h-[92px] flex-col items-center justify-center rounded-2xl bg-violet-50 p-3 text-center">
                             <p className="text-xs font-medium text-violet-700">Em análise</p>
                             <p className="text-2xl font-bold text-violet-700">{resumoTreinamentos.emAnalise}</p>
                         </div>
-                        <div className="colaborador-status-card rounded-2xl bg-slate-100 p-3">
+                        <div className="colaborador-status-card flex min-h-[92px] flex-col items-center justify-center rounded-2xl bg-slate-100 p-3 text-center">
                             <p className="text-xs font-medium text-slate-700">Desmobilizados</p>
                             <p className="text-2xl font-bold text-slate-700">{resumoTreinamentos.desmobilizados}</p>
                         </div>
-                        <div className="colaborador-status-card rounded-2xl bg-slate-50 p-3 ring-1 ring-slate-200">
+                        <div className="colaborador-status-card flex min-h-[92px] flex-col items-center justify-center rounded-2xl bg-slate-50 p-3 text-center ring-1 ring-slate-200">
                             <p className="text-xs font-medium text-slate-700">Inativos</p>
                             <p className="text-2xl font-bold text-slate-700">{resumoTreinamentos.inativos}</p>
                         </div>

@@ -1,4 +1,4 @@
-import React, { useId } from "react";
+import React from "react";
 import { Camera, FileText, Plus, Upload, UserPlus, X } from "lucide-react";
 import { classNames } from "../../utils/sstUtils";
 
@@ -22,9 +22,9 @@ const INFORMACOES_STATUS_OBRA = {
 
 const TIPOS_DOCUMENTOS_MASSA = "ASO, EPI, INTEGRAÇÃO, NR-06, NR-11, NR-12, NR-18, NR-21, NR-25, NR-26, REGISTRO ou OS.";
 
-function CampoTexto({ label, value, onChange, placeholder, type = "text", list, children }) {
+function CampoTexto({ label, value, onChange, placeholder, type = "text", list, children, className = "", inputClassName = "" }) {
     return (
-        <label className="novo-colaborador-campo-anterior">
+        <label className={classNames("novo-colaborador-campo-anterior min-w-0", className)}>
             <span className="novo-colaborador-label-anterior">{label}</span>
             <input
                 type={type}
@@ -32,25 +32,28 @@ function CampoTexto({ label, value, onChange, placeholder, type = "text", list, 
                 onChange={(evento) => onChange(evento.target.value)}
                 placeholder={placeholder}
                 list={list}
-                className="novo-colaborador-input-anterior"
+                className={classNames("novo-colaborador-input-anterior", inputClassName)}
             />
             {children}
         </label>
     );
 }
 
-function CampoSelect({ label, value, onChange, children, ajuda }) {
+function CampoSelect({ label, value, onChange, children, ajuda, ajudaInline = "", className = "", inputClassName = "" }) {
     return (
-        <label className="novo-colaborador-campo-anterior">
-            <span className="novo-colaborador-label-anterior">{label}</span>
+        <label className={classNames("novo-colaborador-campo-anterior min-w-0", className)}>
+            <span className={classNames("novo-colaborador-label-anterior", ajudaInline && "flex flex-wrap items-center gap-2")}> 
+                <span>{label}</span>
+                {ajudaInline && <small className="text-[11px] font-semibold normal-case tracking-normal text-slate-500">{ajudaInline}</small>}
+            </span>
             <select
                 value={value || ""}
                 onChange={(evento) => onChange(evento.target.value)}
-                className="novo-colaborador-input-anterior"
+                className={classNames("novo-colaborador-input-anterior", inputClassName)}
             >
                 {children}
             </select>
-            {ajuda && <p className="novo-colaborador-ajuda-anterior">{ajuda}</p>}
+            {ajuda && !ajudaInline && <p className="novo-colaborador-ajuda-anterior">{ajuda}</p>}
         </label>
     );
 }
@@ -75,8 +78,6 @@ export function FormularioNovoColaborador({
     adicionar,
     salvando,
 }) {
-    const idBase = useId().replace(/:/g, "");
-    const funcoesDatalistId = `${idBase}-funcoes`;
     const empresasDisponiveis = Array.from(
         new Map(
             (empresasBanco || [])
@@ -85,6 +86,16 @@ export function FormularioNovoColaborador({
                 .map((empresa) => [String(empresa.nome || "").trim().toLowerCase(), empresa])
         ).values()
     );
+
+    const funcoesDisponiveis = Array.from(
+        new Map(
+            (funcoesSugeridas || [])
+                .filter((funcao) => String(funcao?.rotulo || "").trim())
+                .sort((a, b) => String(a.rotulo || "").localeCompare(String(b.rotulo || "")))
+                .map((funcao) => [String(funcao.rotulo || "").trim().toLowerCase(), funcao])
+        ).values()
+    );
+    const funcaoAtualExisteNaLista = funcoesDisponiveis.some((funcao) => String(funcao.rotulo || "") === String(novo.funcao || ""));
 
     const alterarCampo = (campo, valor) => {
         setNovo((atual) => ({
@@ -127,18 +138,13 @@ export function FormularioNovoColaborador({
 
     return (
         <div className="novo-colaborador-layout-anterior">
-            <datalist id={funcoesDatalistId}>
-                {(funcoesSugeridas || []).map((funcao) => (
-                    <option key={funcao.chave || funcao.rotulo} value={funcao.rotulo || ""} />
-                ))}
-            </datalist>
-
-            <div className="novo-colaborador-row-anterior novo-colaborador-row-anterior-3">
+            <div className="grid gap-3 lg:grid-cols-[1fr_0.72fr_1.55fr]">
                 <CampoTexto
                     label="Nome completo"
                     value={novo.nome}
                     onChange={(valor) => alterarCampo("nome", valor)}
                     placeholder="Ex.: João da Silva"
+                    inputClassName="text-center"
                 />
 
                 <CampoTexto
@@ -146,13 +152,15 @@ export function FormularioNovoColaborador({
                     type="date"
                     value={novo.dataNascimento}
                     onChange={(valor) => alterarCampo("dataNascimento", valor)}
+                    inputClassName="text-center"
                 />
 
                 <CampoSelect
                     label="Empresa terceirizada"
                     value={novo.empresaNome}
                     onChange={(valor) => alterarCampo("empresaNome", valor)}
-                    ajuda={empresasDisponiveis.length ? "Selecione uma empresa já cadastrada no sistema." : "Cadastre uma empresa antes de vincular o colaborador."}
+                    ajudaInline={empresasDisponiveis.length ? "Selecione uma empresa cadastrada." : "Cadastre uma empresa antes."}
+                    inputClassName="text-center"
                 >
                     <option value="">Selecione uma empresa cadastrada</option>
                     {empresasDisponiveis.map((empresa) => (
@@ -163,35 +171,41 @@ export function FormularioNovoColaborador({
                 </CampoSelect>
             </div>
 
-            <div className="novo-colaborador-row-anterior novo-colaborador-row-anterior-3">
+            <div className="grid gap-3 lg:grid-cols-[1fr_1.05fr_1fr]">
                 <CampoSelect
                     label="Situação na obra"
                     value={novo.statusMobilizacao}
                     onChange={(valor) => alterarCampo("statusMobilizacao", valor)}
                     ajuda={INFORMACOES_STATUS_OBRA[novo.statusMobilizacao] || "Selecione a situação atual do colaborador na obra."}
+                    inputClassName="text-center"
                 >
                     {STATUS_MOBILIZACAO.map((status) => (
                         <option key={status} value={status}>{status}</option>
                     ))}
                 </CampoSelect>
 
-                <CampoTexto
+                <CampoSelect
                     label="Função"
                     value={novo.funcao}
                     onChange={(valor) => alterarCampo("funcao", valor)}
-                    placeholder="Ex.: Pedreiro, Soldador, Eletricista, Operador de PEMT"
-                    list={funcoesDatalistId}
+                    ajuda={`Matriz automática pela função. ${quantidadeTreinamentos > 0 ? `${quantidadeTreinamentos} treinamento(s) previsto(s).` : "Selecione a função."}`}
+                    inputClassName="text-center"
                 >
-                    <p className="novo-colaborador-ajuda-anterior">
-                        Matriz automática pela função. {quantidadeTreinamentos > 0 ? `${quantidadeTreinamentos} treinamento(s) previsto(s).` : "Informe a função."}
-                    </p>
-                </CampoTexto>
+                    <option value="">Selecione uma função</option>
+                    {novo.funcao && !funcaoAtualExisteNaLista && <option value={novo.funcao}>{novo.funcao}</option>}
+                    {funcoesDisponiveis.map((funcao) => (
+                        <option key={funcao.chave || funcao.rotulo} value={funcao.rotulo || ""}>
+                            {funcao.rotulo || "Função sem nome"}
+                        </option>
+                    ))}
+                </CampoSelect>
 
                 <CampoTexto
                     label="Matrícula da empresa (opcional)"
                     value={novo.matricula}
                     onChange={(valor) => alterarCampo("matricula", valor)}
                     placeholder="Ex.: matrícula da empresa, crachá ou RE"
+                    inputClassName="text-center"
                 >
                     <p className="novo-colaborador-ajuda-anterior">
                         O código do sistema é gerado automaticamente. A matrícula é opcional e serve para crachá ou RE.
