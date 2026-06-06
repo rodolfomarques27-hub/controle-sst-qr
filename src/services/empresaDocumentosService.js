@@ -194,11 +194,28 @@ export function classeStatusEmpresa(status = "") {
     return "bg-slate-50 text-slate-700 ring-slate-200";
 }
 
+function statusValidacaoDocumentoEmpresaCritico(documento = {}) {
+    const status = normalizarTexto(
+        documento.status_validacao ||
+        documento.statusValidacao ||
+        documento.status_verificacao ||
+        documento.statusVerificacao ||
+        ""
+    );
+
+    if (["bloqueado", "suspeito", "erro na verificacao", "erro", "revisao manual", "revisao_manual"].includes(status)) {
+        return true;
+    }
+
+    return false;
+}
+
 export function calcularSituacaoDocumentalEmpresa(documentos = []) {
     const listaDocumentos = Array.isArray(documentos) ? documentos : [];
     const tiposObrigatorios = documentosEmpresaBase.map((documento) => documento.tipo);
 
     const pendentes = [];
+    const bloqueados = [];
     const vencidos = [];
     const vencendo = [];
     const emDia = [];
@@ -208,6 +225,11 @@ export function calcularSituacaoDocumentalEmpresa(documentos = []) {
 
         if (!documento) {
             pendentes.push(tipo);
+            return;
+        }
+
+        if (statusValidacaoDocumentoEmpresaCritico(documento)) {
+            bloqueados.push(tipo);
             return;
         }
 
@@ -231,6 +253,20 @@ export function calcularSituacaoDocumentalEmpresa(documentos = []) {
         emDia.push(tipo);
     });
 
+    if (bloqueados.length) {
+        return {
+            chave: "bloqueado",
+            texto: "Com pendência",
+            classe: "bg-red-50 text-red-700 ring-red-200",
+            detalhe: `Documento(s) com verificação crítica ou bloqueada: ${bloqueados.join(", ")}.`,
+            pendentes,
+            bloqueados,
+            vencidos,
+            vencendo,
+            emDia,
+        };
+    }
+
     if (vencidos.length) {
         return {
             chave: "vencido",
@@ -238,6 +274,7 @@ export function calcularSituacaoDocumentalEmpresa(documentos = []) {
             classe: "bg-red-50 text-red-700 ring-red-200",
             detalhe: `Documento(s) vencido(s): ${vencidos.join(", ")}.`,
             pendentes,
+            bloqueados,
             vencidos,
             vencendo,
             emDia,
@@ -251,6 +288,7 @@ export function calcularSituacaoDocumentalEmpresa(documentos = []) {
             classe: "bg-amber-50 text-amber-700 ring-amber-200",
             detalhe: `Documento(s) pendente(s): ${pendentes.join(", ")}.`,
             pendentes,
+            bloqueados,
             vencidos,
             vencendo,
             emDia,
@@ -264,6 +302,7 @@ export function calcularSituacaoDocumentalEmpresa(documentos = []) {
             classe: "bg-orange-50 text-orange-700 ring-orange-200",
             detalhe: `Documento(s) próximo(s) do vencimento: ${vencendo.join(", ")}.`,
             pendentes,
+            bloqueados,
             vencidos,
             vencendo,
             emDia,
@@ -274,8 +313,9 @@ export function calcularSituacaoDocumentalEmpresa(documentos = []) {
         chave: "em_dia",
         texto: "Sem pendência",
         classe: "bg-emerald-50 text-emerald-700 ring-emerald-200",
-        detalhe: "Todos os documentos obrigatórios da empresa estão cadastrados e em dia.",
+        detalhe: "Todos os documentos obrigatórios da empresa estão cadastrados, verificados e em dia.",
         pendentes,
+        bloqueados,
         vencidos,
         vencendo,
         emDia,
