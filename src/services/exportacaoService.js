@@ -201,7 +201,7 @@ const ICONES_RELATORIO_COLABORADORES = {
 };
 
 const ICONES_CABECALHO_RELATORIO_COLABORADORES = {
-    empresa: `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 21h18"/><path d="M5 21V7l7-4 7 4v14"/><path d="M9 21v-8h6v8"/><path d="M9 9h.01"/><path d="M15 9h.01"/></svg>`,
+    empresa: `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 21h18"/><path d="M6 21V6l7-3 5 2v16"/><path d="M9 9h1"/><path d="M9 12h1"/><path d="M9 15h1"/><path d="M13 8h1"/><path d="M13 11h1"/><path d="M13 14h1"/><path d="M16 21v-5h-3v5"/></svg>`,
     cnpj: `<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="3" width="14" height="18" rx="2"/><path d="M9 8h6"/><path d="M9 12h6"/><path d="M9 16h3"/></svg>`,
     responsavel: `<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21c1.8-4 5-6 8-6s6.2 2 8 6"/></svg>`,
     data: `<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="5" width="16" height="16" rx="2"/><path d="M16 3v4"/><path d="M8 3v4"/><path d="M4 10h16"/><path d="M8 14h3"/><path d="M13 14h3"/><path d="M8 17h3"/></svg>`,
@@ -685,7 +685,7 @@ export async function baixarRelatorioColaboradoresTreinamentosPDF({
 
     .dados-empresa {
         display: grid;
-        grid-template-columns: 1.05fr 1.28fr 1.42fr 0.78fr 0.92fr;
+        grid-template-columns: 1.02fr 1.34fr 1.32fr 0.9fr 0.88fr;
         gap: 0;
         align-items: center;
         border-bottom: 1px solid var(--linha);
@@ -765,19 +765,19 @@ export async function baixarRelatorioColaboradoresTreinamentosPDF({
     }
 
     .dados-empresa__item--cnpj em {
-        font-size: 8.3px;
-        letter-spacing: -0.04em;
+        font-size: 8.6px;
+        letter-spacing: -0.025em;
     }
 
     .dados-empresa__item--data {
-        grid-template-columns: 19px minmax(0, 1fr);
-        padding-left: 7px;
-        padding-right: 7px;
+        grid-template-columns: 20px minmax(0, 1fr);
+        padding-left: 8px;
+        padding-right: 8px;
     }
 
     .dados-empresa__item--data strong,
     .dados-empresa__item--data em {
-        font-size: 8.2px;
+        font-size: 8.4px;
     }
 
     .bloco {
@@ -1075,16 +1075,37 @@ ${conteudo}
     const janela = window.open("", "_blank", "noopener,noreferrer");
 
     if (!janela) {
-        const blob = new Blob([html], { type: "text/html;charset=utf-8" });
-        const url = URL.createObjectURL(blob);
-        const link = document.createElement("a");
+        const iframe = document.createElement("iframe");
+        iframe.style.position = "fixed";
+        iframe.style.right = "0";
+        iframe.style.bottom = "0";
+        iframe.style.width = "0";
+        iframe.style.height = "0";
+        iframe.style.border = "0";
+        iframe.setAttribute("aria-hidden", "true");
+        document.body.appendChild(iframe);
 
-        link.href = url;
-        link.download = nomeArquivo.replace(/\.pdf$/i, ".html");
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        URL.revokeObjectURL(url);
+        const documento = iframe.contentWindow?.document;
+        if (!documento) {
+            document.body.removeChild(iframe);
+            alert("Não foi possível abrir o relatório. Permita pop-ups para salvar em PDF.");
+            return;
+        }
+
+        documento.open();
+        documento.write(html);
+        documento.close();
+
+        iframe.onload = () => {
+            setTimeout(() => {
+                iframe.contentWindow?.focus();
+                iframe.contentWindow?.print();
+                setTimeout(() => {
+                    document.body.removeChild(iframe);
+                }, 1500);
+            }, 350);
+        };
+
         return;
     }
 
