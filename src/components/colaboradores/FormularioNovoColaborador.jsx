@@ -1,5 +1,5 @@
 import React from "react";
-import { Camera, FileText, Plus, Upload, UserPlus, X } from "lucide-react";
+import { Camera, ChevronDown, FileText, Plus, Upload, UserPlus, X } from "lucide-react";
 import { classNames } from "../../utils/sstUtils";
 
 const STATUS_MOBILIZACAO = [
@@ -58,6 +58,45 @@ function CampoSelect({ label, value, onChange, children, ajuda, ajudaInline = ""
     );
 }
 
+function CampoFuncaoLivre({ label, value, onChange, funcoesDisponiveis = [], ajuda, className = "" }) {
+    const valorAtual = String(value || "");
+
+    return (
+        <label className={classNames("novo-colaborador-campo-anterior min-w-0", className)}>
+            <span className="novo-colaborador-label-anterior">{label}</span>
+            <div className="flex w-full items-stretch gap-2">
+                <input
+                    type="text"
+                    value={valorAtual}
+                    onChange={(evento) => onChange(evento.target.value)}
+                    placeholder="Digite ou selecione uma função"
+                    className="novo-colaborador-input-anterior min-w-0 flex-1 text-center"
+                />
+                <div className="relative w-14 shrink-0">
+                    <select
+                        aria-label="Selecionar função cadastrada"
+                        value=""
+                        onChange={(evento) => {
+                            const proximaFuncao = evento.target.value;
+                            if (proximaFuncao) onChange(proximaFuncao);
+                        }}
+                        className="novo-colaborador-input-anterior h-full w-full cursor-pointer appearance-none px-2 text-center text-transparent"
+                    >
+                        <option value="">Selecionar função</option>
+                        {funcoesDisponiveis.map((funcao) => (
+                            <option key={funcao.chave || funcao.rotulo} value={funcao.rotulo || ""} className="text-slate-900">
+                                {funcao.rotulo || "Função sem nome"}
+                            </option>
+                        ))}
+                    </select>
+                    <ChevronDown className="pointer-events-none absolute left-1/2 top-1/2 h-4 w-4 -translate-x-1/2 -translate-y-1/2 text-slate-700" />
+                </div>
+            </div>
+            {ajuda && <p className="novo-colaborador-ajuda-anterior">{ajuda}</p>}
+        </label>
+    );
+}
+
 function resumoArquivos(arquivos = []) {
     const lista = Array.from(arquivos || []);
 
@@ -95,8 +134,6 @@ export function FormularioNovoColaborador({
                 .map((funcao) => [String(funcao.rotulo || "").trim().toLowerCase(), funcao])
         ).values()
     );
-    const funcaoAtualExisteNaLista = funcoesDisponiveis.some((funcao) => String(funcao.rotulo || "") === String(novo.funcao || ""));
-
     const alterarCampo = (campo, valor) => {
         setNovo((atual) => ({
             ...atual,
@@ -156,10 +193,10 @@ export function FormularioNovoColaborador({
                 />
 
                 <CampoSelect
-                    label="Empresa terceirizada"
+                    label="Empresa terceirizada:"
                     value={novo.empresaNome}
                     onChange={(valor) => alterarCampo("empresaNome", valor)}
-                    ajudaInline={empresasDisponiveis.length ? "Selecione uma empresa cadastrada." : "Cadastre uma empresa antes."}
+                    ajudaInline={empresasDisponiveis.length ? "(Selecione uma empresa cadastrada)" : "(Cadastre uma empresa antes)"}
                     inputClassName="text-center"
                 >
                     <option value="">Selecione uma empresa cadastrada</option>
@@ -184,21 +221,13 @@ export function FormularioNovoColaborador({
                     ))}
                 </CampoSelect>
 
-                <CampoSelect
+                <CampoFuncaoLivre
                     label="Função"
                     value={novo.funcao}
                     onChange={(valor) => alterarCampo("funcao", valor)}
-                    ajuda={`Matriz automática pela função. ${quantidadeTreinamentos > 0 ? `${quantidadeTreinamentos} treinamento(s) previsto(s).` : "Selecione a função."}`}
-                    inputClassName="text-center"
-                >
-                    <option value="">Selecione uma função</option>
-                    {novo.funcao && !funcaoAtualExisteNaLista && <option value={novo.funcao}>{novo.funcao}</option>}
-                    {funcoesDisponiveis.map((funcao) => (
-                        <option key={funcao.chave || funcao.rotulo} value={funcao.rotulo || ""}>
-                            {funcao.rotulo || "Função sem nome"}
-                        </option>
-                    ))}
-                </CampoSelect>
+                    funcoesDisponiveis={funcoesDisponiveis}
+                    ajuda={`Matriz automática pela função. ${quantidadeTreinamentos > 0 ? `${quantidadeTreinamentos} treinamento(s) previsto(s).` : "Digite uma função nova ou selecione uma função cadastrada."}`}
+                />
 
                 <CampoTexto
                     label="Matrícula da empresa (opcional)"
