@@ -1409,7 +1409,9 @@ export function Empresas({
                                             }}
                                         />
                                     </label>
-                                    <FileUploadAviso arquivo={novaEmpresa.logo} tipo="fotoAuditoria" />
+                                    <div className="w-full min-w-0 [&>*]:w-full [&>*]:max-w-none">
+                                        <FileUploadAviso arquivo={novaEmpresa.logo} tipo="fotoAuditoria" />
+                                    </div>
                                 </div>
 
                                 <div className="empresa-upload-wrapper">
@@ -1430,7 +1432,9 @@ export function Empresas({
                                             }}
                                         />
                                     </label>
-                                    <FileUploadAviso arquivo={novaEmpresa.contratoArquivo} tipo="documentoExtenso" />
+                                    <div className="w-full min-w-0 [&>*]:w-full [&>*]:max-w-none">
+                                        <FileUploadAviso arquivo={novaEmpresa.contratoArquivo} tipo="documentoExtenso" />
+                                    </div>
                                 </div>
                             </div>
 
@@ -1606,7 +1610,9 @@ export function Empresas({
                                     }}
                                 />
                             </label>
-                            <FileUploadAviso arquivo={novoDoc.arquivo} tipo="documentoExtenso" />
+                            <div className="w-full min-w-0 [&>*]:w-full [&>*]:max-w-none">
+                                <FileUploadAviso arquivo={novoDoc.arquivo} tipo="documentoExtenso" />
+                            </div>
 
                             <button
                                 onClick={adicionarDocumento}
@@ -1935,7 +1941,9 @@ export function Empresas({
                                             }}
                                         />
                                     </label>
-                                    <FileUploadAviso arquivo={empresaEdicao.logo} tipo="fotoAuditoria" />
+                                    <div className="w-full min-w-0 [&>*]:w-full [&>*]:max-w-none">
+                                        <FileUploadAviso arquivo={empresaEdicao.logo} tipo="fotoAuditoria" />
+                                    </div>
                                 </div>
 
                                 <div className="md:col-span-2">
@@ -1957,7 +1965,9 @@ export function Empresas({
                                             }}
                                         />
                                     </label>
-                                    <FileUploadAviso arquivo={empresaEdicao.contratoArquivo} tipo="documentoExtenso" />
+                                    <div className="w-full min-w-0 [&>*]:w-full [&>*]:max-w-none">
+                                        <FileUploadAviso arquivo={empresaEdicao.contratoArquivo} tipo="documentoExtenso" />
+                                    </div>
                                     {empresaEdicao.contratoUrlAtual && (
                                         <button
                                             type="button"
