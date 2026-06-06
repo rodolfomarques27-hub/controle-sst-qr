@@ -318,7 +318,9 @@ export function Aniversariantes({ colaboradores = [], empresasBanco = [] }) {
                                 </p>
                             </div>
                             <span className="rounded-full bg-slate-950 px-3 py-1 text-xs font-bold text-white">
-                                {resumoMensal.mesComMais?.total || 0} maior mês
+                                {resumoMensal.mesComMais
+                                    ? `Mês destaque: ${resumoMensal.mesComMais.nome} · ${resumoMensal.mesComMais.total} ${resumoMensal.mesComMais.total === 1 ? "colaborador" : "colaboradores"}`
+                                    : "Sem aniversariantes"}
                             </span>
                         </div>
 
