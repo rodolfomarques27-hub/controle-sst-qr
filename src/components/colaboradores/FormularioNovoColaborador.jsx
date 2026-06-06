@@ -72,7 +72,7 @@ function CampoFuncaoLivre({ label, value, onChange, funcoesDisponiveis = [], aju
                     placeholder="Digite ou selecione uma função"
                     className="novo-colaborador-input-anterior min-w-0 flex-1 text-center"
                 />
-                <div className="relative w-14 shrink-0">
+                <div className="relative w-[190px] shrink-0">
                     <select
                         aria-label="Selecionar função cadastrada"
                         value=""
@@ -80,7 +80,7 @@ function CampoFuncaoLivre({ label, value, onChange, funcoesDisponiveis = [], aju
                             const proximaFuncao = evento.target.value;
                             if (proximaFuncao) onChange(proximaFuncao);
                         }}
-                        className="novo-colaborador-input-anterior h-full w-full cursor-pointer appearance-none px-2 text-center text-transparent"
+                        className="novo-colaborador-input-anterior h-full w-full cursor-pointer appearance-none px-3 pr-10 text-center text-xs font-bold text-slate-950"
                     >
                         <option value="">Selecionar função</option>
                         {funcoesDisponiveis.map((funcao) => (
@@ -89,7 +89,7 @@ function CampoFuncaoLivre({ label, value, onChange, funcoesDisponiveis = [], aju
                             </option>
                         ))}
                     </select>
-                    <ChevronDown className="pointer-events-none absolute left-1/2 top-1/2 h-4 w-4 -translate-x-1/2 -translate-y-1/2 text-slate-700" />
+                    <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-700" />
                 </div>
             </div>
             {ajuda && <p className="novo-colaborador-ajuda-anterior">{ajuda}</p>}
