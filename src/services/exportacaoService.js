@@ -546,310 +546,6 @@ function montarSecaoEmpresaRelatorio(empresa = {}, indiceEmpresa = 0, dataEmissa
     `;
 }
 
-
-function textoPdfRelatorio(valor) {
-    const texto = limparTextoPDF(valor);
-    return texto ? texto : "-";
-}
-
-function escaparStringPdfRelatorio(valor) {
-    return textoPdfRelatorio(valor).replace(/\\/g, "\\\\").replace(/\(/g, "\\(").replace(/\)/g, "\\)");
-}
-
-function bytesAsciiRelatorio(texto) {
-    const bytes = new Uint8Array(String(texto).length);
-    for (let i = 0; i < bytes.length; i += 1) {
-        bytes[i] = String(texto).charCodeAt(i) & 0xff;
-    }
-    return bytes;
-}
-
-function concatenarBytesRelatorio(partes = []) {
-    const total = partes.reduce((soma, parte) => soma + parte.length, 0);
-    const saida = new Uint8Array(total);
-    let offset = 0;
-
-    partes.forEach((parte) => {
-        saida.set(parte, offset);
-        offset += parte.length;
-    });
-
-    return saida;
-}
-
-function base64ParaBytesRelatorio(base64 = "") {
-    const binario = window.atob(base64);
-    const bytes = new Uint8Array(binario.length);
-
-    for (let i = 0; i < binario.length; i += 1) {
-        bytes[i] = binario.charCodeAt(i);
-    }
-
-    return bytes;
-}
-
-function carregarImagemElementoRelatorio(src) {
-    return new Promise((resolve) => {
-        const imagem = new Image();
-        imagem.crossOrigin = "anonymous";
-
-        imagem.onload = () => resolve(imagem);
-        imagem.onerror = () => resolve(null);
-        imagem.src = src;
-    });
-}
-
-async function carregarImagemJpegRelatorio(url, tamanhoMaximo = 180) {
-    const endereco = String(url || "").trim();
-    if (!endereco) return null;
-
-    try {
-        const resposta = await fetch(endereco, { mode: "cors", cache: "no-store" });
-        if (!resposta.ok) throw new Error(`HTTP ${resposta.status}`);
-
-        const blob = await resposta.blob();
-        const objectUrl = URL.createObjectURL(blob);
-        const imagem = await carregarImagemElementoRelatorio(objectUrl);
-        URL.revokeObjectURL(objectUrl);
-
-        if (!imagem) return null;
-
-        const escala = Math.min(1, tamanhoMaximo / Math.max(imagem.naturalWidth || 1, imagem.naturalHeight || 1));
-        const largura = Math.max(1, Math.round((imagem.naturalWidth || 1) * escala));
-        const altura = Math.max(1, Math.round((imagem.naturalHeight || 1) * escala));
-
-        const canvas = document.createElement("canvas");
-        canvas.width = largura;
-        canvas.height = altura;
-
-        const contexto = canvas.getContext("2d");
-        contexto.fillStyle = "#ffffff";
-        contexto.fillRect(0, 0, largura, altura);
-        contexto.drawImage(imagem, 0, 0, largura, altura);
-
-        const dataUrl = canvas.toDataURL("image/jpeg", 0.86);
-        const base64 = dataUrl.split(",")[1] || "";
-
-        return {
-            bytes: base64ParaBytesRelatorio(base64),
-            width: largura,
-            height: altura,
-        };
-    } catch (error) {
-        console.warn("Não foi possível carregar imagem para o PDF:", error?.message || error);
-        return null;
-    }
-}
-
-function criarDocumentoPdfRelatorio() {
-    const largura = 595;
-    const altura = 842;
-    const objetos = [];
-    const paginas = [];
-    const cacheImagem = new Map();
-
-    const adicionarObjeto = (conteudo) => {
-        const bytes = typeof conteudo === "string" ? bytesAsciiRelatorio(conteudo) : conteudo;
-        objetos.push(bytes);
-        return objetos.length;
-    };
-
-    const adicionarImagem = async (url, tamanhoMaximo = 180) => {
-        const chave = String(url || "").trim();
-        if (!chave) return null;
-        if (cacheImagem.has(chave)) return cacheImagem.get(chave);
-
-        const imagem = await carregarImagemJpegRelatorio(chave, tamanhoMaximo);
-        if (!imagem) {
-            cacheImagem.set(chave, null);
-            return null;
-        }
-
-        const id = objetos.length + 1;
-        const nome = `Im${id}`;
-        const objetoImagem = concatenarBytesRelatorio([
-            bytesAsciiRelatorio(`<< /Type /XObject /Subtype /Image /Width ${imagem.width} /Height ${imagem.height} /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode /Length ${imagem.bytes.length} >>\nstream\n`),
-            imagem.bytes,
-            bytesAsciiRelatorio("\nendstream"),
-        ]);
-
-        adicionarObjeto(objetoImagem);
-
-        const registro = {
-            id,
-            nome,
-            width: imagem.width,
-            height: imagem.height,
-        };
-
-        cacheImagem.set(chave, registro);
-        return registro;
-    };
-
-    const novaPagina = () => {
-        const pagina = {
-            comandos: [],
-            imagens: new Map(),
-        };
-        paginas.push(pagina);
-        return pagina;
-    };
-
-    const cor = (r, g, b) => `${r} ${g} ${b}`;
-    const yPdf = (y) => altura - y;
-
-    const texto = (pagina, x, y, valor, tamanho = 9, fonte = "F1", rgb = [0, 0, 0]) => {
-        pagina.comandos.push(
-            `BT ${cor(...rgb)} rg /${fonte} ${tamanho} Tf ${x} ${yPdf(y)} Td (${escaparStringPdfRelatorio(valor)}) Tj ET`
-        );
-    };
-
-    const textoCentro = (pagina, x, y, valor, tamanho = 9, fonte = "F1", rgb = [0, 0, 0]) => {
-        const txt = textoPdfRelatorio(valor);
-        const larguraEstimada = txt.length * tamanho * 0.48;
-        texto(pagina, x - larguraEstimada / 2, y, txt, tamanho, fonte, rgb);
-    };
-
-    const retangulo = (pagina, x, y, w, h, rgb = [1, 1, 1], stroke = null, lw = 0.7) => {
-        const comandoStroke = stroke
-            ? `${lw} w ${cor(...stroke)} RG ${x} ${yPdf(y + h)} ${w} ${h} re B`
-            : `${x} ${yPdf(y + h)} ${w} ${h} re f`;
-
-        pagina.comandos.push(`q ${cor(...rgb)} rg ${comandoStroke} Q`);
-    };
-
-    const linha = (pagina, x1, y1, x2, y2, rgb = [0.78, 0.84, 0.92], lw = 0.8) => {
-        pagina.comandos.push(`q ${lw} w ${cor(...rgb)} RG ${x1} ${yPdf(y1)} m ${x2} ${yPdf(y2)} l S Q`);
-    };
-
-    const imagem = (pagina, img, x, y, w, h) => {
-        if (!img) return;
-        pagina.imagens.set(img.nome, img);
-        pagina.comandos.push(`q ${w} 0 0 ${h} ${x} ${yPdf(y + h)} cm /${img.nome} Do Q`);
-    };
-
-    const circuloFallback = (pagina, x, y, w, h, letras = "C", rgb = [0.88, 0.91, 0.95]) => {
-        retangulo(pagina, x, y, w, h, rgb, [0.78, 0.84, 0.92], 0.6);
-        textoCentro(pagina, x + w / 2, y + h / 2 + 4, letras, 13, "F2", [0.2, 0.27, 0.36]);
-    };
-
-    const finalizar = () => {
-        const paginasRootId = adicionarObjeto("PAGES_PLACEHOLDER");
-        const idsPaginas = [];
-
-        paginas.forEach((pagina) => {
-            const conteudo = pagina.comandos.join("\n");
-            const conteudoId = adicionarObjeto(`<< /Length ${conteudo.length} >>\nstream\n${conteudo}\nendstream`);
-
-            const xobjects = Array.from(pagina.imagens.values())
-                .map((img) => `/${img.nome} ${img.id} 0 R`)
-                .join(" ");
-
-            const recursosImagem = xobjects ? `/XObject << ${xobjects} >>` : "";
-
-            const paginaId = adicionarObjeto(`<< /Type /Page /Parent ${paginasRootId} 0 R /MediaBox [0 0 ${largura} ${altura}] /Resources << /Font << /F1 << /Type /Font /Subtype /Type1 /BaseFont /Helvetica >> /F2 << /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold >> >> ${recursosImagem} >> /Contents ${conteudoId} 0 R >>`);
-            idsPaginas.push(paginaId);
-        });
-
-        objetos[paginasRootId - 1] = bytesAsciiRelatorio(`<< /Type /Pages /Kids [${idsPaginas.map((id) => `${id} 0 R`).join(" ")}] /Count ${idsPaginas.length} >>`);
-
-        const catalogoId = adicionarObjeto(`<< /Type /Catalog /Pages ${paginasRootId} 0 R >>`);
-
-        const partes = [bytesAsciiRelatorio("%PDF-1.4\n")];
-        const offsets = [0];
-        let posicao = partes[0].length;
-
-        objetos.forEach((objeto, indice) => {
-            offsets.push(posicao);
-            const cabecalho = bytesAsciiRelatorio(`${indice + 1} 0 obj\n`);
-            const rodape = bytesAsciiRelatorio("\nendobj\n");
-            partes.push(cabecalho, objeto, rodape);
-            posicao += cabecalho.length + objeto.length + rodape.length;
-        });
-
-        const inicioXref = posicao;
-        let xref = `xref\n0 ${objetos.length + 1}\n0000000000 65535 f \n`;
-        offsets.slice(1).forEach((offset) => {
-            xref += `${String(offset).padStart(10, "0")} 00000 n \n`;
-        });
-        xref += `trailer\n<< /Size ${objetos.length + 1} /Root ${catalogoId} 0 R >>\nstartxref\n${inicioXref}\n%%EOF`;
-
-        partes.push(bytesAsciiRelatorio(xref));
-        return concatenarBytesRelatorio(partes);
-    };
-
-    return {
-        largura,
-        altura,
-        adicionarImagem,
-        novaPagina,
-        texto,
-        textoCentro,
-        retangulo,
-        linha,
-        imagem,
-        circuloFallback,
-        finalizar,
-    };
-}
-
-function desenharIconeCabecalhoPdf(pdf, pagina, tipo, x, y) {
-    const azul = [0.02, 0.29, 0.67];
-
-    pdf.retangulo(pagina, x, y, 18, 18, [1, 1, 1], null);
-    const c = pagina.comandos;
-
-    if (tipo === "empresa") {
-        c.push(`q 1.7 w ${corPdfRelatorio(azul)} RG ${x + 1} ${pdfYRelatorio(y + 17)} m ${x + 17} ${pdfYRelatorio(y + 17)} l S Q`);
-        c.push(`q 1.7 w ${corPdfRelatorio(azul)} RG ${x + 5} ${pdfYRelatorio(y + 17)} m ${x + 5} ${pdfYRelatorio(y + 6)} l ${x + 10} ${pdfYRelatorio(y + 3)} l ${x + 15} ${pdfYRelatorio(y + 6)} l ${x + 15} ${pdfYRelatorio(y + 17)} l S Q`);
-        c.push(`q ${corPdfRelatorio(azul)} rg ${x + 8} ${pdfYRelatorio(y + 10)} 2 2 re f ${x + 12} ${pdfYRelatorio(y + 10)} 2 2 re f ${x + 8} ${pdfYRelatorio(y + 14)} 2 2 re f ${x + 12} ${pdfYRelatorio(y + 14)} 2 2 re f Q`);
-        return;
-    }
-
-    const letras = {
-        cnpj: "ID",
-        responsavel: "P",
-        data: "D",
-        sistema: "S",
-    };
-
-    pdf.textoCentro(pagina, x + 9, y + 13, letras[tipo] || "", 8, "F2", azul);
-}
-
-function corPdfRelatorio(rgb = [0, 0, 0]) {
-    return `${rgb[0]} ${rgb[1]} ${rgb[2]}`;
-}
-
-function pdfYRelatorio(y) {
-    return 842 - y;
-}
-
-function quebrarTextoCurtoRelatorio(valor = "", limite = 24) {
-    const texto = textoPdfRelatorio(valor);
-    if (texto.length <= limite) return [texto];
-
-    const palavras = texto.split(/\s+/);
-    const linhas = [];
-    let linhaAtual = "";
-
-    palavras.forEach((palavra) => {
-        if (`${linhaAtual} ${palavra}`.trim().length > limite) {
-            if (linhaAtual) linhas.push(linhaAtual);
-            linhaAtual = palavra;
-        } else {
-            linhaAtual = `${linhaAtual} ${palavra}`.trim();
-        }
-    });
-
-    if (linhaAtual) linhas.push(linhaAtual);
-
-    return linhas.slice(0, 2);
-}
-
-function iniciaisRelatorio(nome = "") {
-    return obterIniciaisEmpresa(nome || "C").slice(0, 2);
-}
-
 export async function baixarRelatorioColaboradoresTreinamentosPDF({
     nomeArquivo = "relatorio-colaboradores-treinamentos.pdf",
     colaboradores = [],
@@ -864,216 +560,539 @@ export async function baixarRelatorioColaboradoresTreinamentosPDF({
         return;
     }
 
-    const pdf = criarDocumentoPdfRelatorio();
-    const azul = [0.02, 0.29, 0.67];
-    const azulEscuro = [0.02, 0.12, 0.27];
-    const verde = [0.02, 0.55, 0.25];
-    const laranja = [0.95, 0.45, 0];
-    const vermelho = [0.88, 0.05, 0.05];
-    const roxo = [0.42, 0.16, 0.85];
-    const cinzaLinha = [0.82, 0.87, 0.94];
+    const conteudo = empresas.map((empresa, indice) => montarSecaoEmpresaRelatorio(empresa, indice, dataEmissao)).join("");
 
-    const desenharCabecalho = async (pagina, empresa) => {
-        const logo = await pdf.adicionarImagem(empresa.logoUrl, 160);
-
-        if (logo) {
-            pdf.imagem(pagina, logo, 188, 24, 64, 64);
-        } else {
-            pdf.circuloFallback(pagina, 188, 24, 64, 64, obterIniciaisEmpresa(empresa.nome), [0.95, 0.97, 1]);
-        }
-
-        pdf.texto(pagina, 268, 46, empresa.nome || "Empresa", 24, "F2", azulEscuro);
-        pdf.texto(pagina, 268, 66, "CONTROLE SST QR", 14, "F2", azul);
-
-        pdf.linha(pagina, 35, 103, 157, 103, azul, 1.2);
-        pdf.textoCentro(pagina, 297.5, 108, titulo, 13, "F2", azulEscuro);
-        pdf.linha(pagina, 438, 103, 560, 103, azul, 1.2);
-
-        const dados = [
-            { tipo: "empresa", label: "Empresa:", valor: empresa.nome || "-", x: 38, w: 115 },
-            { tipo: "cnpj", label: "CNPJ:", valor: empresa.cnpj || "-", x: 163, w: 116 },
-            { tipo: "responsavel", label: "Responsável:", valor: empresa.responsavel || "-", x: 291, w: 130 },
-            { tipo: "data", label: "Data de emissão:", valor: dataEmissao, x: 433, w: 70 },
-            { tipo: "sistema", label: "Sistema:", valor: "Controle SST QR", x: 514, w: 68 },
-        ];
-
-        dados.forEach((item, indice) => {
-            if (indice > 0) pdf.linha(pagina, item.x - 10, 126, item.x - 10, 166, cinzaLinha, 0.8);
-            desenharIconeCabecalhoPdf(pdf, pagina, item.tipo, item.x, 132);
-            pdf.texto(pagina, item.x + 25, 137, item.label, 7.5, "F2", [0.18, 0.24, 0.34]);
-
-            const linhasValor = quebrarTextoCurtoRelatorio(item.valor, item.tipo === "responsavel" ? 25 : 17);
-            linhasValor.forEach((linha, idx) => {
-                pdf.texto(pagina, item.x + 25, 152 + idx * 10, linha, 7.3, "F2", [0, 0, 0]);
-            });
-        });
-
-        pdf.linha(pagina, 34, 177, 561, 177, cinzaLinha, 0.9);
-    };
-
-    const desenharKpi = (pagina, x, y, w, h, label, valor, corIcone, simbolo) => {
-        pdf.retangulo(pagina, x, y, w, h, [1, 1, 1], [0.84, 0.88, 0.94], 0.8);
-        pdf.textoCentro(pagina, x + w / 2, y + 24, simbolo, 18, "F2", corIcone);
-        pdf.textoCentro(pagina, x + w / 2, y + 47, label, 7.4, "F2", [0.05, 0.09, 0.16]);
-        pdf.textoCentro(pagina, x + w / 2, y + 72, String(valor), 20, "F2", [0.02, 0.04, 0.08]);
-    };
-
-    const desenharResumo = (pagina, empresa, y) => {
-        const resumo = calcularResumoEmpresaRelatorio(empresa.colaboradores || []);
-
-        pdf.retangulo(pagina, 34, y, 527, 112, [1, 1, 1], [0.84, 0.88, 0.94], 0.8);
-        pdf.texto(pagina, 45, y + 22, "RESUMO GERAL", 12, "F2", azul);
-
-        const larguraKpi = 68;
-        const gap = 6;
-        const baseX = 45;
-        const baseY = y + 36;
-
-        desenharKpi(pagina, baseX + (larguraKpi + gap) * 0, baseY, larguraKpi, 64, "Total", resumo.total, azul, "T");
-        desenharKpi(pagina, baseX + (larguraKpi + gap) * 1, baseY, larguraKpi, 64, "Liberados", resumo.liberados, verde, "OK");
-        desenharKpi(pagina, baseX + (larguraKpi + gap) * 2, baseY, larguraKpi, 64, "Pendência", resumo.comPendencia, laranja, "!");
-        desenharKpi(pagina, baseX + (larguraKpi + gap) * 3, baseY, larguraKpi, 64, "Bloqueados", resumo.bloqueados, vermelho, "X");
-        desenharKpi(pagina, baseX + (larguraKpi + gap) * 4, baseY, larguraKpi, 64, "Em análise", resumo.emAnalise, azul, "?");
-        desenharKpi(pagina, baseX + (larguraKpi + gap) * 5, baseY, larguraKpi, 64, "Vencidos", resumo.vencidos, vermelho, "V");
-        desenharKpi(pagina, baseX + (larguraKpi + gap) * 6, baseY, larguraKpi, 64, "A vencer", resumo.vencendo, roxo, "H");
-
-        return y + 124;
-    };
-
-    const desenharTabela = (pagina, empresa, y) => {
-        pdf.retangulo(pagina, 34, y, 527, 28, [1, 1, 1], [0.84, 0.88, 0.94], 0.8);
-        pdf.texto(pagina, 45, y + 18, "RESUMO POR COLABORADOR", 12, "F2", azul);
-
-        const yTabela = y + 33;
-        const colunas = [
-            { label: "#", x: 34, w: 25 },
-            { label: "Colaborador", x: 59, w: 120 },
-            { label: "Função", x: 179, w: 82 },
-            { label: "Situação", x: 261, w: 78 },
-            { label: "Status", x: 339, w: 75 },
-            { label: "Pend.", x: 414, w: 48 },
-            { label: "Venc.", x: 462, w: 48 },
-            { label: "A vencer", x: 510, w: 51 },
-        ];
-
-        pdf.retangulo(pagina, 34, yTabela, 527, 22, azul, azul, 0.8);
-        colunas.forEach((coluna) => {
-            pdf.textoCentro(pagina, coluna.x + coluna.w / 2, yTabela + 14, coluna.label, 7.5, "F2", [1, 1, 1]);
-            pdf.linha(pagina, coluna.x + coluna.w, yTabela, coluna.x + coluna.w, yTabela + 22, [0.38, 0.6, 0.88], 0.4);
-        });
-
-        let yLinha = yTabela + 22;
-        empresa.colaboradores.slice(0, 8).forEach((colaborador, indice) => {
-            const pendentes = Number(colaborador.pendentes?.length || colaborador.pendentesTotal || 0) || 0;
-            const vencidos = Number(colaborador.vencidos?.length || colaborador.vencidosTotal || 0) || 0;
-            const vencendo = Number(colaborador.vencendo?.length || colaborador.vencendoTotal || 0) || 0;
-
-            pdf.retangulo(pagina, 34, yLinha, 527, 24, indice % 2 === 0 ? [1, 1, 1] : [0.98, 0.99, 1], [0.86, 0.89, 0.94], 0.4);
-            pdf.textoCentro(pagina, 46.5, yLinha + 15, String(indice + 1), 7.2, "F1", [0, 0, 0]);
-            pdf.texto(pagina, 64, yLinha + 15, colaborador.nome || "-", 7.1, "F2", [0, 0, 0]);
-            pdf.texto(pagina, 184, yLinha + 15, colaborador.funcao || "-", 6.8, "F1", [0, 0, 0]);
-            pdf.textoCentro(pagina, 300, yLinha + 15, colaborador.statusMobilizacao || "-", 6.8, "F2", classeStatusRelatorio(colaborador.statusMobilizacao).includes("critico") ? vermelho : azul);
-            pdf.textoCentro(pagina, 376, yLinha + 15, colaborador.statusGeral || "-", 6.8, "F2", classeStatusRelatorio(colaborador.statusGeral).includes("critico") ? vermelho : azul);
-            pdf.textoCentro(pagina, 438, yLinha + 15, String(pendentes), 7.2, "F1", [0, 0, 0]);
-            pdf.textoCentro(pagina, 486, yLinha + 15, String(vencidos), 7.2, "F1", [0, 0, 0]);
-            pdf.textoCentro(pagina, 535, yLinha + 15, String(vencendo), 7.2, "F1", [0, 0, 0]);
-
-            yLinha += 24;
-        });
-
-        return yLinha + 16;
-    };
-
-    const desenharDetalheColaborador = async (pagina, colaborador, indice, y) => {
-        const foto = await pdf.adicionarImagem(colaborador.fotoUrl, 140);
-
-        pdf.retangulo(pagina, 34, y, 527, 96, [1, 1, 1], [0.84, 0.88, 0.94], 0.8);
-        pdf.retangulo(pagina, 42, y + 12, 18, 18, azul, azul, 0.6);
-        pdf.textoCentro(pagina, 51, y + 25, String(indice + 1), 8, "F2", [1, 1, 1]);
-
-        if (foto) {
-            pdf.imagem(pagina, foto, 70, y + 18, 54, 54);
-        } else {
-            pdf.circuloFallback(pagina, 70, y + 18, 54, 54, iniciaisRelatorio(colaborador.nome), [0.88, 0.91, 0.95]);
-        }
-
-        pdf.texto(pagina, 140, y + 28, colaborador.nome || "-", 12, "F2", azul);
-        pdf.texto(pagina, 140, y + 45, `Código: ${colaborador.codigo || "-"}`, 7.5, "F1", [0.05, 0.09, 0.16]);
-        pdf.texto(pagina, 140, y + 58, `Função: ${colaborador.funcao || "-"}`, 7.5, "F1", [0.05, 0.09, 0.16]);
-        pdf.texto(pagina, 140, y + 71, `Matriz aplicada: ${colaborador.matriz || "-"}`, 7.5, "F1", [0.05, 0.09, 0.16]);
-
-        pdf.linha(pagina, 350, y + 15, 350, y + 82, [0.72, 0.78, 0.86], 0.8);
-        pdf.texto(pagina, 370, y + 34, `Empresa: ${colaborador.empresaExibicao || colaborador.empresaNome || "-"}`, 7.5, "F1", [0.05, 0.09, 0.16]);
-        pdf.texto(pagina, 370, y + 52, `Situação: ${colaborador.statusMobilizacao || "-"}`, 7.5, "F2", azul);
-        pdf.texto(pagina, 370, y + 70, `Status geral: ${colaborador.statusGeral || "-"}`, 7.5, "F2", classeStatusRelatorio(colaborador.statusGeral).includes("critico") ? vermelho : azul);
-
-        const listas = [
-            { titulo: `VÁLIDOS (${limparListaRelatorio(colaborador.validos).length})`, lista: colaborador.validos, cor: verde, vazio: "Nenhum válido." },
-            { titulo: `PENDENTES (${limparListaRelatorio(colaborador.pendentes).length})`, lista: colaborador.pendentes, cor: laranja, vazio: "Sem pendências." },
-            { titulo: `VENCIDOS (${limparListaRelatorio(colaborador.vencidos).length})`, lista: colaborador.vencidos, cor: vermelho, vazio: "Nenhum vencido." },
-            { titulo: `A VENCER (${limparListaRelatorio(colaborador.vencendo).length})`, lista: colaborador.vencendo, cor: roxo, vazio: "Nenhum a vencer." },
-        ];
-
-        const cardY = y + 110;
-        const cardW = 124;
-        listas.forEach((item, idx) => {
-            const x = 34 + idx * 132;
-            pdf.retangulo(pagina, x, cardY, cardW, 100, [1, 1, 1], [0.84, 0.88, 0.94], 0.7);
-            pdf.texto(pagina, x + 8, cardY + 18, item.titulo, 8, "F2", item.cor);
-
-            const resumo = limitarListaRelatorio(item.lista, 4);
-            if (!resumo.itens.length) {
-                pdf.texto(pagina, x + 8, cardY + 36, item.vazio, 6.8, "F1", [0.2, 0.27, 0.36]);
-            } else {
-                resumo.itens.forEach((linhaItem, linhaIndice) => {
-                    pdf.texto(pagina, x + 8, cardY + 36 + linhaIndice * 12, `• ${linhaItem}`, 6.2, "F1", [0.05, 0.09, 0.16]);
-                });
-
-                if (resumo.restantes) {
-                    pdf.texto(pagina, x + 8, cardY + 36 + resumo.itens.length * 12, `+ ${resumo.restantes} outro(s)`, 6.5, "F2", azul);
-                }
-            }
-        });
-
-        return y + 225;
-    };
-
-    for (const [indiceEmpresa, empresa] of empresas.entries()) {
-        let pagina = pdf.novaPagina();
-        await desenharCabecalho(pagina, empresa);
-        let y = 195;
-        y = desenharResumo(pagina, empresa, y);
-        y = desenharTabela(pagina, empresa, y);
-
-        pdf.texto(pagina, 45, y + 6, "DETALHAMENTO", 12, "F2", azul);
-        y += 14;
-
-        for (let i = 0; i < empresa.colaboradores.length; i += 1) {
-            if (y > 590) {
-                pagina = pdf.novaPagina();
-                await desenharCabecalho(pagina, empresa);
-                pdf.texto(pagina, 45, 195, "DETALHAMENTO - CONTINUAÇÃO", 12, "F2", azul);
-                y = 215;
-            }
-
-            y = await desenharDetalheColaborador(pagina, empresa.colaboradores[i], i, y);
-        }
-
-        pdf.retangulo(pagina, 34, 803, 527, 24, azul, azul, 0.6);
-        pdf.texto(pagina, 48, 819, "Controle SST QR", 9, "F2", [1, 1, 1]);
-        pdf.texto(pagina, 482, 819, `Empresa ${indiceEmpresa + 1} de ${empresas.length}`, 8, "F2", [1, 1, 1]);
+    const html = `<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8" />
+<title>${escaparHTML(titulo)}</title>
+<style>
+    :root {
+        --azul: #064fae;
+        --azul-escuro: #032b63;
+        --linha: #d9e3f2;
+        --texto: #0f172a;
+        --suave: #f8fbff;
+        --verde: #078a42;
+        --laranja: #f28c00;
+        --vermelho: #e01414;
+        --roxo: #6d28d9;
     }
 
-    const bytes = pdf.finalizar();
-    const blob = new Blob([bytes], { type: "application/pdf" });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
+    * { box-sizing: border-box; }
+    body {
+        margin: 0;
+        background: #eef4fb;
+        color: var(--texto);
+        font-family: Arial, Helvetica, sans-serif;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+    }
 
-    link.href = url;
-    link.download = nomeArquivo.endsWith(".pdf") ? nomeArquivo : `${nomeArquivo}.pdf`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+    .pagina-relatorio {
+        width: 210mm;
+        min-height: 297mm;
+        margin: 16px auto;
+        padding: 10mm;
+        background: #fff;
+        border: 1px solid #d8e2ef;
+        border-radius: 18px;
+        box-shadow: 0 12px 36px rgba(15, 23, 42, 0.12);
+        position: relative;
+    }
 
-    setTimeout(() => URL.revokeObjectURL(url), 1000);
+    .quebra-pagina { page-break-before: always; }
+
+    .cabecalho-relatorio {
+        display: grid;
+        gap: 10px;
+        margin-bottom: 14px;
+        padding-top: 2px;
+    }
+
+    .cabecalho-relatorio--modelo-aprovado .marca-empresa {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 16px;
+        text-align: left;
+    }
+
+    .empresa-logo-img {
+        width: 74px;
+        height: 74px;
+        object-fit: contain;
+        border-radius: 10px;
+    }
+
+    .empresa-logo-fallback {
+        width: 74px;
+        height: 74px;
+        display: grid;
+        place-items: center;
+        border: 3px solid var(--azul);
+        color: var(--azul);
+        border-radius: 16px;
+        font-size: 26px;
+        font-weight: 900;
+    }
+
+    .marca-empresa-textos {
+        min-width: 0;
+    }
+
+    .marca-empresa h1 {
+        margin: 0;
+        color: #07162f;
+        font-size: 31px;
+        line-height: 1.02;
+        letter-spacing: 0.035em;
+        text-transform: uppercase;
+    }
+
+    .marca-empresa p {
+        margin: 4px 0 0;
+        color: var(--azul);
+        font-size: 16px;
+        font-weight: 900;
+        letter-spacing: 0.16em;
+        text-transform: uppercase;
+    }
+
+    .titulo-relatorio-cabecalho {
+        display: grid;
+        grid-template-columns: minmax(70px, 1fr) auto minmax(70px, 1fr);
+        align-items: center;
+        gap: 16px;
+        margin-top: 2px;
+    }
+
+    .titulo-relatorio-cabecalho span {
+        height: 2px;
+        border-radius: 999px;
+        background: linear-gradient(90deg, transparent, var(--azul), transparent);
+    }
+
+    .titulo-relatorio-cabecalho strong {
+        color: #07162f;
+        font-size: 15px;
+        font-weight: 900;
+        letter-spacing: 0.02em;
+        text-transform: uppercase;
+        white-space: nowrap;
+    }
+
+    .dados-empresa {
+        display: grid;
+        grid-template-columns: 1.08fr 1.28fr 1.42fr 0.96fr 0.98fr;
+        gap: 0;
+        align-items: center;
+        border-bottom: 1px solid var(--linha);
+        padding: 8px 0 10px;
+    }
+
+    .dados-empresa__item {
+        display: grid;
+        grid-template-columns: 22px minmax(0, 1fr);
+        gap: 1px 7px;
+        align-items: center;
+        border-right: 1px solid var(--linha);
+        min-height: 36px;
+        padding: 0 9px;
+        overflow: hidden;
+    }
+
+    .dados-empresa__item:first-child {
+        padding-left: 0;
+    }
+
+    .dados-empresa__item:last-child {
+        border-right: 0;
+        padding-right: 0;
+    }
+
+    .dados-empresa span {
+        grid-row: span 2;
+        display: grid;
+        place-items: center;
+        color: var(--azul);
+    }
+
+    .dados-empresa span svg {
+        width: 20px;
+        height: 20px;
+        display: block;
+        fill: none;
+        stroke: currentColor;
+        stroke-width: 1.85;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+    }
+
+    .dados-empresa span svg * {
+        fill: none;
+        stroke: currentColor;
+        stroke-width: 1.85;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+    }
+
+    .dados-empresa strong {
+        display: block;
+        min-width: 0;
+        font-size: 8.6px;
+        line-height: 1.05;
+        color: #334155;
+        white-space: nowrap;
+    }
+
+    .dados-empresa em {
+        display: block;
+        min-width: 0;
+        font-style: normal;
+        font-size: 8.6px;
+        line-height: 1.08;
+        font-weight: 800;
+        color: #0f172a;
+        white-space: nowrap;
+    }
+
+    .dados-empresa__item--cnpj {
+        grid-template-columns: 20px minmax(0, 1fr);
+        padding-left: 9px;
+        padding-right: 9px;
+    }
+
+    .dados-empresa__item--cnpj em {
+        font-size: 8.6px;
+        letter-spacing: -0.025em;
+    }
+
+    .dados-empresa__item--data {
+        grid-template-columns: 20px minmax(0, 1fr);
+        padding-left: 10px;
+        padding-right: 10px;
+    }
+
+    .dados-empresa__item--data strong,
+    .dados-empresa__item--data em {
+        font-size: 8.4px;
+    }
+
+    .bloco {
+        border: 1px solid var(--linha);
+        border-radius: 14px;
+        margin-top: 12px;
+        overflow: hidden;
+        background: #fff;
+    }
+
+    .bloco h2 {
+        margin: 0;
+        padding: 10px 12px;
+        color: var(--azul);
+        font-size: 15px;
+        text-transform: uppercase;
+        letter-spacing: 0.02em;
+        background: #f8fbff;
+        border-bottom: 1px solid var(--linha);
+    }
+
+    .kpis {
+        display: grid;
+        grid-template-columns: repeat(7, 1fr);
+        gap: 10px;
+        padding: 12px;
+    }
+
+    .kpi {
+        min-height: 100px;
+        display: grid;
+        place-items: center;
+        text-align: center;
+        border: 1px solid var(--linha);
+        border-radius: 10px;
+        padding: 10px 6px;
+        background: #fff;
+    }
+
+    .kpi-icone {
+        display: grid;
+        place-items: center;
+        width: 34px;
+        height: 34px;
+        margin-bottom: 5px;
+        color: var(--azul);
+    }
+
+    .kpi-icone svg {
+        width: 34px;
+        height: 34px;
+        fill: currentColor;
+        display: block;
+    }
+
+    .kpi-titulo {
+        min-height: 26px;
+        font-size: 10px;
+        font-weight: 800;
+    }
+
+    .kpi-valor {
+        font-size: 27px;
+        font-weight: 900;
+        color: #0f172a;
+    }
+
+    .kpi-total .kpi-icone,
+    .kpi-info .kpi-icone { color: var(--azul); }
+
+    .kpi-ok .kpi-icone { color: var(--verde); }
+    .kpi-alerta .kpi-icone { color: var(--laranja); }
+    .kpi-critico .kpi-icone,
+    .kpi-vencido .kpi-icone { color: var(--vermelho); }
+    .kpi-vencendo .kpi-icone { color: var(--roxo); }
+
+    table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 10px;
+    }
+
+    thead th {
+        background: linear-gradient(180deg, #075bbd, #033f88);
+        color: #fff;
+        padding: 9px 6px;
+        border-right: 1px solid rgba(255,255,255,0.25);
+        text-align: center;
+    }
+
+    tbody td {
+        padding: 8px 6px;
+        border-bottom: 1px solid var(--linha);
+        border-right: 1px solid var(--linha);
+        text-align: center;
+        vertical-align: middle;
+    }
+
+    tbody tr:nth-child(even) { background: #fbfdff; }
+
+    .texto-forte {
+        font-weight: 800;
+        text-align: left;
+    }
+
+    .badge {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 999px;
+        padding: 4px 8px;
+        font-size: 9px;
+        font-weight: 900;
+        white-space: nowrap;
+    }
+
+    .status-ok { background: #e9f9ef; color: var(--verde); }
+    .status-alerta { background: #fff4df; color: var(--laranja); }
+    .status-critico { background: #fff0f0; color: var(--vermelho); }
+    .status-info { background: #eef5ff; color: var(--azul); }
+    .status-neutro { background: #f1f5f9; color: #475569; }
+
+    .bloco-detalhamento {
+        border: 0;
+        overflow: visible;
+    }
+
+    .detalhe-colaborador {
+        border: 1px solid var(--linha);
+        border-radius: 14px;
+        margin-top: 12px;
+        overflow: hidden;
+        page-break-inside: avoid;
+        background: #fff;
+    }
+
+    .detalhe-topo {
+        display: grid;
+        grid-template-columns: 34px 58px 1.08fr 1fr;
+        gap: 12px;
+        align-items: center;
+        padding: 12px;
+        background: #fbfdff;
+        border-bottom: 1px solid var(--linha);
+    }
+
+    .numero-colaborador {
+        width: 26px;
+        height: 26px;
+        display: grid;
+        place-items: center;
+        background: var(--azul);
+        color: #fff;
+        font-weight: 900;
+        border-radius: 7px;
+    }
+
+    .avatar-colaborador {
+        width: 58px;
+        height: 58px;
+        display: grid;
+        place-items: center;
+        border-radius: 999px;
+        background: #e2e8f0;
+        color: #475569;
+        font-weight: 900;
+        font-size: 18px;
+        overflow: hidden;
+        border: 1px solid #d8e2ef;
+    }
+
+    .avatar-colaborador img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        display: block;
+    }
+
+    .avatar-colaborador--foto {
+        background: #fff;
+        color: transparent;
+    }
+
+    .detalhe-identificacao h3 {
+        margin: 0 0 6px;
+        color: var(--azul);
+        font-size: 15px;
+        text-transform: uppercase;
+    }
+
+    .detalhe-identificacao p,
+    .detalhe-status p {
+        margin: 3px 0;
+        font-size: 10px;
+    }
+
+    .detalhe-status {
+        border-left: 1px solid var(--linha);
+        padding-left: 14px;
+    }
+
+    .detalhe-grids {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 10px;
+        padding: 12px;
+    }
+
+    .lista-card {
+        min-height: 132px;
+        border: 1px solid var(--linha);
+        border-radius: 10px;
+        padding: 10px;
+        background: #fff;
+    }
+
+    .lista-card h4 {
+        margin: 0 0 8px;
+        font-size: 11px;
+        text-transform: uppercase;
+    }
+
+    .lista-card ul {
+        margin: 0;
+        padding-left: 16px;
+    }
+
+    .lista-card li {
+        margin-bottom: 5px;
+        font-size: 9px;
+        line-height: 1.32;
+    }
+
+    .lista-card-ok h4 { color: var(--verde); }
+    .lista-card-pendente h4 { color: var(--laranja); }
+    .lista-card-vencido h4 { color: var(--vermelho); }
+    .lista-card-vencendo h4 { color: var(--roxo); }
+
+    .lista-vazia {
+        margin: 0;
+        color: #475569;
+        font-size: 9px;
+        line-height: 1.35;
+    }
+
+    .mais-itens {
+        color: var(--azul);
+        font-weight: 900;
+    }
+
+    .rodape-relatorio {
+        display: flex;
+        justify-content: space-between;
+        margin-top: 14px;
+        padding: 10px 14px;
+        color: #fff;
+        background: linear-gradient(90deg, #032b63, #075bbd);
+        border-radius: 0 0 12px 12px;
+        font-size: 11px;
+        font-weight: 800;
+    }
+
+    @media print {
+        @page { size: A4; margin: 8mm; }
+
+        body { background: #fff; }
+
+        .pagina-relatorio {
+            width: auto;
+            min-height: auto;
+            margin: 0;
+            padding: 0;
+            border: 0;
+            border-radius: 0;
+            box-shadow: none;
+        }
+
+        .quebra-pagina { page-break-before: always; }
+    }
+</style>
+</head>
+<body>
+${conteudo}
+</body>
+</html>`;
+
+    const iframe = document.createElement("iframe");
+    iframe.style.position = "fixed";
+    iframe.style.right = "0";
+    iframe.style.bottom = "0";
+    iframe.style.width = "0";
+    iframe.style.height = "0";
+    iframe.style.border = "0";
+    iframe.setAttribute("aria-hidden", "true");
+    document.body.appendChild(iframe);
+
+    const documento = iframe.contentWindow?.document;
+    if (!documento) {
+        document.body.removeChild(iframe);
+        alert("Não foi possível abrir o relatório para salvar em PDF.");
+        return;
+    }
+
+    documento.open();
+    documento.write(html);
+    documento.close();
+
+    setTimeout(() => {
+        iframe.contentWindow?.focus();
+        iframe.contentWindow?.print();
+
+        setTimeout(() => {
+            if (document.body.contains(iframe)) {
+                document.body.removeChild(iframe);
+            }
+        }, 1800);
+    }, 500);
 }
