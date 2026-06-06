@@ -177,7 +177,12 @@ export function Aniversariantes({ colaboradores = [], empresasBanco = [] }) {
 
     const proximo = useMemo(() => proximoAniversariante(colaboradoresComAniversario), [colaboradoresComAniversario]);
     const diasAteProximo = proximo?.colaborador ? calcularDiasAteAniversario(proximo.colaborador) : null;
-    const aniversariantesMesAtual = resumoMensal.totais.find((item) => item.numero === resumoMensal.mesAtual)?.total || 0;
+    const filtrosAtivos = mes !== "Todos" || empresa !== "Todas" || funcao !== "Todas" || status !== "Todos" || Boolean(normalizarTextoBusca(busca));
+    const tituloResumoRegistros = filtrosAtivos ? "Registros encontrados" : "Total de aniversariantes";
+    const textoQuantidadeRegistros = filtrados.length === 1 ? "colaborador encontrado" : "colaboradores encontrados";
+    const textoApoioRegistros = filtrosAtivos
+        ? "Resultado conforme os filtros aplicados."
+        : "Colaboradores com data de nascimento cadastrada.";
 
     const obterEmpresaRelatorio = (colaborador = {}) => {
         const empresaId = String(colaborador.empresaId || colaborador.empresa_id || "").trim();
@@ -282,9 +287,12 @@ export function Aniversariantes({ colaboradores = [], empresasBanco = [] }) {
                             <Users className="h-6 w-6" />
                         </div>
                         <div>
-                            <p className="text-sm font-semibold text-slate-500">Registros filtrados</p>
-                            <p className="mt-1 text-3xl font-bold text-slate-950">{filtrados.length}</p>
-                            <p className="mt-1 text-xs text-slate-500">{aniversariantesMesAtual} aniversariante(s) no mês atual.</p>
+                            <p className="text-sm font-semibold text-slate-500">{tituloResumoRegistros}</p>
+                            <div className="mt-1 flex flex-wrap items-baseline gap-2">
+                                <span className="text-3xl font-bold text-slate-950">{filtrados.length}</span>
+                                <span className="text-sm font-semibold text-slate-600">{textoQuantidadeRegistros}</span>
+                            </div>
+                            <p className="mt-1 text-xs text-slate-500">{textoApoioRegistros}</p>
                         </div>
                     </div>
                 </Card>
