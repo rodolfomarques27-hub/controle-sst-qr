@@ -1149,16 +1149,29 @@ export async function baixarRelatorioColaboradoresTreinamentosPDF({
     }
 
     .tabela-resumo-colaboradores tbody .badge {
-        margin-left: auto;
-        margin-right: auto;
-        display: inline-flex;
-        min-width: 86px;
-        justify-content: center;
+        display: inline;
+        min-width: 0;
+        margin-left: 0;
+        margin-right: 0;
+        padding: 0;
+        background: transparent !important;
+        border: 0 !important;
+        border-radius: 0 !important;
+        box-shadow: none !important;
         text-align: center;
+        font-size: 10px;
+        font-weight: 900;
+        line-height: inherit;
+        white-space: nowrap;
     }
 
+    .tabela-resumo-colaboradores tbody td:nth-child(4) .badge,
     .tabela-resumo-colaboradores tbody td:nth-child(5) .badge {
-        min-width: 104px;
+        min-width: 0;
+        padding: 0;
+        background: transparent !important;
+        border: 0 !important;
+        border-radius: 0 !important;
     }
 
     tbody tr:nth-child(even) { background: #fbfdff; }
