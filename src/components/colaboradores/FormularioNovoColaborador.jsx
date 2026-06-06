@@ -208,7 +208,7 @@ export function FormularioNovoColaborador({
                 </CampoSelect>
             </div>
 
-            <div className="grid gap-3 lg:grid-cols-[1fr_1.05fr_1fr]">
+            <div className="grid gap-3 lg:grid-cols-[0.76fr_1.48fr_0.96fr]">
                 <CampoSelect
                     label="Situação na obra"
                     value={novo.statusMobilizacao}
