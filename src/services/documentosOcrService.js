@@ -1052,6 +1052,124 @@ async function lerTextoPaginaPdfJs(pdf, numeroPagina) {
     );
 }
 
+
+async function carregarTesseractDocumental() {
+    try {
+        return await import("tesseract.js");
+    } catch (error) {
+        throw new Error(`OCR local indisponível: ${error?.message || "não foi possível carregar tesseract.js"}.`);
+    }
+}
+
+async function reconhecerTextoCanvasComOcr(canvas) {
+    const moduloTesseract = await carregarTesseractDocumental();
+    const reconhecer = moduloTesseract?.recognize || moduloTesseract?.default?.recognize;
+
+    if (typeof reconhecer !== "function") {
+        throw new Error("OCR local indisponível: função recognize não encontrada.");
+    }
+
+    const resultado = await reconhecer(canvas, "por", {
+        logger: () => {},
+    });
+
+    return limparTextoPossivelDocumento(resultado?.data?.text || "");
+}
+
+async function extrairTextoPrimeiraPaginaPdfComOcr(buffer) {
+    if (!buffer || !buffer.byteLength) {
+        return {
+            texto: "",
+            paginasLidas: 0,
+            totalPaginas: 0,
+            avisos: [],
+        };
+    }
+
+    if (typeof document === "undefined") {
+        return {
+            texto: "",
+            paginasLidas: 0,
+            totalPaginas: 0,
+            avisos: ["OCR de imagem não executado fora do navegador."],
+        };
+    }
+
+    try {
+        const pdfjsLib = await carregarPdfJsDocumental();
+        const tarefa = pdfjsLib.getDocument({
+            data: new Uint8Array(buffer.slice(0)),
+            disableFontFace: true,
+            useSystemFonts: true,
+            verbosity: 0,
+        });
+
+        const pdf = await tarefa.promise;
+        const totalPaginas = Number(pdf?.numPages || 0);
+
+        if (!totalPaginas) {
+            return {
+                texto: "",
+                paginasLidas: 0,
+                totalPaginas: 0,
+                avisos: ["OCR local não encontrou páginas no PDF."],
+            };
+        }
+
+        const pagina = await pdf.getPage(1);
+        const viewport = pagina.getViewport({ scale: 2.2 });
+        const canvas = document.createElement("canvas");
+        const contexto = canvas.getContext("2d", { willReadFrequently: true });
+
+        if (!contexto) {
+            return {
+                texto: "",
+                paginasLidas: 0,
+                totalPaginas,
+                avisos: ["OCR local não conseguiu preparar o canvas da página."],
+            };
+        }
+
+        canvas.width = Math.ceil(viewport.width);
+        canvas.height = Math.ceil(viewport.height);
+
+        await pagina.render({ canvasContext: contexto, viewport }).promise;
+
+        const textoOcr = await reconhecerTextoCanvasComOcr(canvas);
+
+        try {
+            canvas.width = 1;
+            canvas.height = 1;
+            await pdf.destroy();
+        } catch {
+            // Liberação de memória sem bloquear o fluxo.
+        }
+
+        if (textoPossuiConteudoDocumentoConfiavel(textoOcr)) {
+            return {
+                texto: textoOcr,
+                paginasLidas: 1,
+                totalPaginas,
+                avisos: ["OCR local executado na primeira página do PDF escaneado/imagem."],
+            };
+        }
+
+        return {
+            texto: "",
+            paginasLidas: 1,
+            totalPaginas,
+            avisos: ["OCR local executado, mas não encontrou texto documental confiável na primeira página."],
+        };
+    } catch (error) {
+        return {
+            texto: "",
+            paginasLidas: 0,
+            totalPaginas: 0,
+            avisos: [`OCR local de imagem indisponível: ${error?.message || "erro desconhecido"}.`],
+        };
+    }
+}
+
 function contextoIndicaDataDocumentalPrincipal(contexto = "") {
     const texto = normalizarTextoVerificacao(contexto);
 
@@ -1460,8 +1578,10 @@ export async function executarLeituraDocumentalLocal({ arquivo = null, arquivoNo
         const textoLimitado = tamanhoOriginal > LIMITE_BYTES_LEITURA_LOCAL;
         const bytes = new Uint8Array(buffer.slice(0, LIMITE_BYTES_LEITURA_LOCAL));
         const leituraPdfJs = await extrairTextoPdfComPdfJs(buffer);
-        const textoExtraido = leituraPdfJs.texto || extrairTextoLegivelPdf(bytes);
-        const avisos = [...(leituraPdfJs.avisos || [])];
+        const leituraOcrImagem = leituraPdfJs.texto ? null : await extrairTextoPrimeiraPaginaPdfComOcr(buffer);
+        const textoExtraido = leituraPdfJs.texto || leituraOcrImagem?.texto || extrairTextoLegivelPdf(bytes);
+        const textoVeioDoOcrImagem = Boolean(!leituraPdfJs.texto && leituraOcrImagem?.texto);
+        const avisos = [...(leituraPdfJs.avisos || []), ...(leituraOcrImagem?.avisos || [])];
 
         if (textoLimitado) {
             avisos.push("Leitura bruta limitada aos primeiros 8 MB para preservar performance no navegador.");
@@ -1471,21 +1591,25 @@ export async function executarLeituraDocumentalLocal({ arquivo = null, arquivoNo
             avisos.push("Texto extraído pela camada textual do PDF usando PDF.js, sem API paga.");
         }
 
+        if (textoVeioDoOcrImagem) {
+            avisos.push("Texto extraído por OCR local de imagem usando tesseract.js, sem API paga.");
+        }
+
         if (!textoExtraido) {
-            avisos.push("Não foi encontrada camada de texto confiável. O PDF pode ser uma imagem escaneada, conter apenas imagens ou exigir OCR real de imagem.");
+            avisos.push("Não foi encontrada camada de texto confiável. O PDF pode ser uma imagem escaneada, conter apenas imagens ou exigir conferência manual.");
             avisos.push("Datas encontradas somente no nome do arquivo não serão usadas para acusar divergência com o cadastro.");
         }
 
         return montarRetornoLeituraBase({
             executado: true,
-            tipoLeitura: textoExtraido ? "pdf_texto_local" : "pdf_sem_texto_legivel",
+            tipoLeitura: textoExtraido ? (textoVeioDoOcrImagem ? "ocr_imagem_local" : "pdf_texto_local") : "pdf_sem_texto_legivel",
             arquivoNome: nome,
             mimeType: mime,
             extensao,
             textoExtraido,
             textoLimitado,
-            paginasLidas: leituraPdfJs.paginasLidas || 0,
-            totalPaginas: leituraPdfJs.totalPaginas || 0,
+            paginasLidas: textoVeioDoOcrImagem ? (leituraOcrImagem?.paginasLidas || 1) : (leituraPdfJs.paginasLidas || 0),
+            totalPaginas: leituraPdfJs.totalPaginas || leituraOcrImagem?.totalPaginas || 0,
             buscaAmpliada: leituraPdfJs.buscaAmpliada || null,
             avisos,
         });
