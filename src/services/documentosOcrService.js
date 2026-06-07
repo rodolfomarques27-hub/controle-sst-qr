@@ -1391,66 +1391,28 @@ function detectarLinhasHorizontaisTabelaPresenca(canvas) {
 }
 
 function detectarAssinaturasTabelaPresenca(canvas) {
-    const linhas = detectarLinhasHorizontaisTabelaPresenca(canvas);
-    const altura = canvas?.height || 1;
-
-    if (!linhas.length || linhas.length < 4) return [];
-
-    // Em listas padrão, a primeira faixa é o cabeçalho da tabela e as seguintes são linhas numeradas.
-    const resultados = [];
-    const maxLinhas = Math.min(20, linhas.length - 1);
-
-    for (let indice = 1; indice < maxLinhas; indice += 1) {
-        const superior = linhas[indice];
-        const inferior = linhas[indice + 1];
-        if (!superior || !inferior) continue;
-
-        const alturaLinhaPx = inferior.y - superior.y;
-        if (alturaLinhaPx < 12) continue;
-
-        const y0 = (superior.y + Math.max(3, alturaLinhaPx * 0.14)) / altura;
-        const y1 = (inferior.y - Math.max(3, alturaLinhaPx * 0.12)) / altura;
-        const assinatura = calcularAssinaturaVisualFaixa(canvas, {
-            x0: 0.64,
-            x1: 0.925,
-            y0,
-            y1,
-            origem: "analise_visual_linha_tabela_presenca",
-        });
-
-        resultados.push({
-            numeroLinha: indice,
-            y0: Number(y0.toFixed(4)),
-            y1: Number(y1.toFixed(4)),
-            yCentro: Number(((y0 + y1) / 2).toFixed(4)),
-            assinatura_visual: assinatura.assinaturaVisual,
-            assinatura_densidade: assinatura.densidade,
-            assinatura_densidade_azul: assinatura.densidadeAzul || 0,
-            assinatura_espalhamento_horizontal: assinatura.espalhamentoHorizontal || 0,
-            assinatura_espalhamento_vertical: assinatura.espalhamentoVertical || 0,
-            assinatura_origem: assinatura.origem,
-        });
-    }
-
-    return resultados;
+    // Modo seguro: desativado para evitar travamento do Chrome em PDFs escaneados.
+    // A análise visual automática de assinatura exigia varrer muitos pixels da tabela.
+    // Mantemos retorno vazio e exibimos assinatura como não avaliada/não confirmada.
+    return [];
 }
 
 function montarLinhasOcrComAssinatura(canvas, palavras = []) {
+    // Modo seguro: a tentativa anterior analisava visualmente a coluna de assinatura
+    // para cada linha do OCR. Em PDFs escaneados grandes isso travava o navegador.
+    // Mantemos apenas as linhas textuais para confirmar colaborador/empresa/treinamento.
+    // A assinatura visual fica para conferência manual ou etapa futura com processamento assíncrono.
     return agruparPalavrasOcrEmLinhas(palavras, canvas)
-        .map((linha) => {
-            const assinatura = calcularAssinaturaVisualLinha(canvas, linha);
-
-            return {
-                ...linha,
-                assinatura_visual: assinatura.assinaturaVisual,
-                assinatura_densidade: assinatura.densidade,
-                assinatura_densidade_azul: assinatura.densidadeAzul || 0,
-                assinatura_espalhamento_horizontal: assinatura.espalhamentoHorizontal || 0,
-                assinatura_espalhamento_vertical: assinatura.espalhamentoVertical || 0,
-                assinatura_origem: assinatura.origem || "analise_visual_coluna_assinatura",
-            };
-        })
-        .slice(0, 120);
+        .map((linha) => ({
+            ...linha,
+            assinatura_visual: null,
+            assinatura_densidade: null,
+            assinatura_densidade_azul: null,
+            assinatura_espalhamento_horizontal: null,
+            assinatura_espalhamento_vertical: null,
+            assinatura_origem: "nao_avaliada_modo_seguro",
+        }))
+        .slice(0, 80);
 }
 
 async function reconhecerTextoCanvasComOcr(canvas) {
@@ -1461,16 +1423,37 @@ async function reconhecerTextoCanvasComOcr(canvas) {
         throw new Error("OCR local indisponível: função recognize não encontrada.");
     }
 
-    const resultado = await reconhecer(canvas, "por+eng", {
-        logger: () => {},
-        tessedit_pageseg_mode: "6",
-        preserve_interword_spaces: "1",
-    });
+    const avisoOriginal = typeof console !== "undefined" ? console.warn : null;
 
-    return {
-        texto: limparTextoPossivelDocumento(resultado?.data?.text || ""),
-        palavras: Array.isArray(resultado?.data?.words) ? resultado.data.words : [],
-    };
+    try {
+        if (avisoOriginal) {
+            console.warn = (...args) => {
+                const texto = args.map((arg) => String(arg || "")).join(" ");
+                if (
+                    texto.includes("Image too small to scale") ||
+                    texto.includes("Line cannot be recognized")
+                ) {
+                    return;
+                }
+                avisoOriginal(...args);
+            };
+        }
+
+        const resultado = await reconhecer(canvas, "por+eng", {
+            logger: () => {},
+            tessedit_pageseg_mode: "6",
+            preserve_interword_spaces: "1",
+        });
+
+        return {
+            texto: limparTextoPossivelDocumento(resultado?.data?.text || ""),
+            palavras: Array.isArray(resultado?.data?.words) ? resultado.data.words : [],
+        };
+    } finally {
+        if (avisoOriginal) {
+            console.warn = avisoOriginal;
+        }
+    }
 }
 
 async function extrairTextoPrimeiraPaginaPdfComOcr(buffer) {
@@ -1520,7 +1503,7 @@ async function extrairTextoPrimeiraPaginaPdfComOcr(buffer) {
         }
 
         const pagina = await pdf.getPage(1);
-        const viewport = pagina.getViewport({ scale: 2.8 });
+        const viewport = pagina.getViewport({ scale: 1.8 });
         const canvas = document.createElement("canvas");
         const contexto = canvas.getContext("2d", { willReadFrequently: true });
 
