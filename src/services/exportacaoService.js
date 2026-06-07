@@ -2624,13 +2624,15 @@ function montarSecaoAniversariantesRelatorio({ aniversariantes = [], filtros = {
     return `
         <section class="pagina-relatorio pagina-relatorio-aniversariantes">
             <header class="cabecalho-relatorio cabecalho-relatorio--modelo-aprovado cabecalho-relatorio--aniversariantes">
-                <div class="cabecalho-aniversariantes-centralizado">
-                    <div class="cabecalho-aniversariantes-marca">
-                        <h1>CONTROLE SST QR</h1>
-                    </div>
-                    <h2><span>${escaparHTML(titulo)}</span></h2>
-                    <p><span>Data de emissão:</span> <strong>${escaparHTML(dataEmissao)}</strong></p>
-                </div>
+                <svg class="cabecalho-aniversariantes-svg" viewBox="0 0 1000 140" role="img" aria-label="Cabeçalho do relatório de aniversariantes">
+                    <text x="500" y="42" text-anchor="middle" dominant-baseline="middle" class="cabecalho-svg-titulo">CONTROLE SST QR</text>
+
+                    <line x1="0" y1="92" x2="330" y2="92" class="cabecalho-svg-linha" />
+                    <text x="500" y="92" text-anchor="middle" dominant-baseline="middle" class="cabecalho-svg-subtitulo">${escaparHTML(String(titulo || "Relatório de aniversariantes").toUpperCase())}</text>
+                    <line x1="670" y1="92" x2="1000" y2="92" class="cabecalho-svg-linha" />
+
+                    <text x="500" y="119" text-anchor="middle" dominant-baseline="middle" class="cabecalho-svg-data">Data de emissão: ${escaparHTML(dataEmissao)}</text>
+                </svg>
             </header>
 
             <section class="bloco bloco-filtros-aniversariantes">
@@ -2760,80 +2762,42 @@ export async function baixarRelatorioAniversariantesPDF({
         gap: 9px;
     }
 
-    .cabecalho-aniversariantes-centralizado {
-        position: relative;
-        display: grid;
-        justify-items: center;
-        gap: 0;
-        text-align: center;
-        padding: 0 0 14px;
-    }
-
-    .cabecalho-aniversariantes-marca {
-        position: relative;
+    .cabecalho-aniversariantes-svg {
         width: 100%;
-        min-height: 44px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        margin: 0;
-    }
-
-    .cabecalho-aniversariantes-centralizado h1 {
-        margin: 0;
-        color: #07162f;
-        font-size: 31px;
-        line-height: 1;
-        letter-spacing: 0.035em;
-        text-transform: uppercase;
-        font-weight: 900;
-        text-align: center;
-    }
-
-    .cabecalho-aniversariantes-centralizado h2 {
-        position: relative;
-        width: 100%;
-        margin: 22px 0 0;
-        min-height: 22px;
+        height: 112px;
         display: block;
-        color: var(--azul);
-        font-size: 15px;
-        line-height: 22px;
+        margin: 0 0 6px;
+        overflow: visible;
+    }
+
+    .cabecalho-svg-titulo {
+        fill: #07162f;
+        font-family: Arial, Helvetica, sans-serif;
+        font-size: 46px;
         font-weight: 900;
-        letter-spacing: 0.04em;
-        text-transform: uppercase;
-        white-space: nowrap;
-        text-align: center;
+        letter-spacing: 3px;
     }
 
-    .cabecalho-aniversariantes-centralizado h2::before {
-        content: "";
-        position: absolute;
-        left: 0;
-        right: 0;
-        top: 50%;
-        height: 2px;
-        transform: translateY(-50%);
-        border-radius: 999px;
-        background: linear-gradient(90deg, transparent, var(--azul), transparent);
-        z-index: 0;
+    .cabecalho-svg-subtitulo {
+        fill: var(--azul);
+        font-family: Arial, Helvetica, sans-serif;
+        font-size: 20px;
+        font-weight: 900;
+        letter-spacing: 1.4px;
     }
 
-    .cabecalho-aniversariantes-centralizado h2::after {
-        content: none;
+    .cabecalho-svg-linha {
+        stroke: var(--azul);
+        stroke-width: 2.4;
+        stroke-linecap: round;
     }
 
-    .cabecalho-aniversariantes-centralizado h2 span {
-        position: relative;
-        z-index: 1;
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        height: 22px;
-        line-height: 22px;
-        padding: 0 22px;
-        background: #ffffff;
-        transform: translateY(-0.5px);
+    .cabecalho-svg-data {
+        fill: #64748b;
+        font-family: Arial, Helvetica, sans-serif;
+        font-size: 11px;
+        font-weight: 700;
+        letter-spacing: 0.2px;
     }
 
     .cabecalho-aniversariantes-centralizado p {
