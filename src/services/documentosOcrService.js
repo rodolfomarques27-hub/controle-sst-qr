@@ -1342,7 +1342,7 @@ function detectarLinhasHorizontaisTabelaPresenca(canvas) {
         let escuros = 0;
         let total = 0;
 
-        for (let x = xInicio; x < xFim; x += 4) {
+        for (let x = xInicio; x < xFim; x += 8) {
             const pixel = contexto.getImageData(x, y, 1, 1).data;
             const r = pixel[0];
             const g = pixel[1];
@@ -1391,17 +1391,54 @@ function detectarLinhasHorizontaisTabelaPresenca(canvas) {
 }
 
 function detectarAssinaturasTabelaPresenca(canvas) {
-    // Modo seguro: desativado para evitar travamento do Chrome em PDFs escaneados.
-    // A análise visual automática de assinatura exigia varrer muitos pixels da tabela.
-    // Mantemos retorno vazio e exibimos assinatura como não avaliada/não confirmada.
-    return [];
+    const linhas = detectarLinhasHorizontaisTabelaPresenca(canvas);
+    const altura = canvas?.height || 1;
+
+    if (!linhas.length || linhas.length < 4) return [];
+
+    // Em listas padrão, a primeira faixa é o cabeçalho da tabela e as seguintes são linhas numeradas.
+    const resultados = [];
+    const maxLinhas = Math.min(20, linhas.length - 1);
+
+    for (let indice = 1; indice < maxLinhas; indice += 1) {
+        const superior = linhas[indice];
+        const inferior = linhas[indice + 1];
+        if (!superior || !inferior) continue;
+
+        const alturaLinhaPx = inferior.y - superior.y;
+        if (alturaLinhaPx < 12) continue;
+
+        const y0 = (superior.y + Math.max(3, alturaLinhaPx * 0.14)) / altura;
+        const y1 = (inferior.y - Math.max(3, alturaLinhaPx * 0.12)) / altura;
+        const assinatura = calcularAssinaturaVisualFaixa(canvas, {
+            x0: 0.64,
+            x1: 0.925,
+            y0,
+            y1,
+            origem: "analise_visual_linha_tabela_presenca",
+        });
+
+        resultados.push({
+            numeroLinha: indice,
+            y0: Number(y0.toFixed(4)),
+            y1: Number(y1.toFixed(4)),
+            yCentro: Number(((y0 + y1) / 2).toFixed(4)),
+            assinatura_visual: assinatura.assinaturaVisual,
+            assinatura_densidade: assinatura.densidade,
+            assinatura_densidade_azul: assinatura.densidadeAzul || 0,
+            assinatura_espalhamento_horizontal: assinatura.espalhamentoHorizontal || 0,
+            assinatura_espalhamento_vertical: assinatura.espalhamentoVertical || 0,
+            assinatura_origem: assinatura.origem,
+        });
+    }
+
+    return resultados;
 }
 
 function montarLinhasOcrComAssinatura(canvas, palavras = []) {
-    // Modo seguro: a tentativa anterior analisava visualmente a coluna de assinatura
-    // para cada linha do OCR. Em PDFs escaneados grandes isso travava o navegador.
-    // Mantemos apenas as linhas textuais para confirmar colaborador/empresa/treinamento.
-    // A assinatura visual fica para conferência manual ou etapa futura com processamento assíncrono.
+    // Mantém a posição das linhas do OCR para localizar colaborador/data/treinamento,
+    // mas não varre assinatura em todas as linhas. A assinatura é analisada só nas faixas
+    // da tabela de presença, reduzindo travamento em PDFs escaneados.
     return agruparPalavrasOcrEmLinhas(palavras, canvas)
         .map((linha) => ({
             ...linha,
@@ -1410,9 +1447,9 @@ function montarLinhasOcrComAssinatura(canvas, palavras = []) {
             assinatura_densidade_azul: null,
             assinatura_espalhamento_horizontal: null,
             assinatura_espalhamento_vertical: null,
-            assinatura_origem: "nao_avaliada_modo_seguro",
+            assinatura_origem: "assinatura_avaliada_por_tabela_quando_aplicavel",
         }))
-        .slice(0, 80);
+        .slice(0, 120);
 }
 
 async function reconhecerTextoCanvasComOcr(canvas) {
@@ -1503,7 +1540,12 @@ async function extrairTextoPrimeiraPaginaPdfComOcr(buffer) {
         }
 
         const pagina = await pdf.getPage(1);
-        const viewport = pagina.getViewport({ scale: 1.8 });
+        const viewportBase = pagina.getViewport({ scale: 1 });
+        const escalaBase = 2.05;
+        const escalaMaximaPorLargura = viewportBase.width ? 1650 / viewportBase.width : escalaBase;
+        const escalaMaximaPorAltura = viewportBase.height ? 2250 / viewportBase.height : escalaBase;
+        const escalaSegura = Math.max(1.45, Math.min(escalaBase, escalaMaximaPorLargura, escalaMaximaPorAltura));
+        const viewport = pagina.getViewport({ scale: escalaSegura });
         const canvas = document.createElement("canvas");
         const contexto = canvas.getContext("2d", { willReadFrequently: true });
 
@@ -1522,10 +1564,12 @@ async function extrairTextoPrimeiraPaginaPdfComOcr(buffer) {
         canvas.height = Math.ceil(viewport.height);
 
         await pagina.render({ canvasContext: contexto, viewport }).promise;
+        await new Promise((resolve) => setTimeout(resolve, 0));
 
         const resultadoOcr = await reconhecerTextoCanvasComOcr(canvas);
         const textoOcr = resultadoOcr?.texto || "";
         const linhasOcr = montarLinhasOcrComAssinatura(canvas, resultadoOcr?.palavras || []);
+        await new Promise((resolve) => setTimeout(resolve, 0));
         const assinaturasTabela = detectarAssinaturasTabelaPresenca(canvas);
 
         try {

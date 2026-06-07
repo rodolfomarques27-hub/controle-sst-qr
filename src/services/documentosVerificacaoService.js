@@ -422,19 +422,14 @@ function estimarNumeroLinhaColaboradorNoTexto({ texto = "", nomeColaborador = ""
     return numero || null;
 }
 
-function assinaturaProvavelPorTabela({ leitura = {}, textoDocumento = "", nomeColaborador = "" } = {}) {
-    const assinaturas = obterAssinaturasTabelaConferencia(leitura);
-    if (!assinaturas.length) return null;
-
-    const numeroLinha = estimarNumeroLinhaColaboradorNoTexto({ texto: textoDocumento, nomeColaborador });
-    if (!numeroLinha) return null;
-
-    const linhaTabela = assinaturas.find((linha) => Number(linha?.numeroLinha || linha?.numero_linha || 0) === numeroLinha);
+function montarLinhaAssinaturaTabelaConferencia(linhaTabela = {}, identificador = "") {
     if (!linhaTabela) return null;
 
+    const numeroLinha = Number(linhaTabela?.numeroLinha || linhaTabela?.numero_linha || 0) || identificador || "";
+
     return {
-        indice: `tabela-${numeroLinha}`,
-        texto: `Linha ${numeroLinha} da lista de presença`,
+        indice: `tabela-${numeroLinha || "aproximada"}`,
+        texto: numeroLinha ? `Linha ${numeroLinha} da lista de presença` : "Linha provável da lista de presença",
         y0: linhaTabela.y0,
         y1: linhaTabela.y1,
         yCentro: linhaTabela.yCentro,
@@ -444,9 +439,52 @@ function assinaturaProvavelPorTabela({ leitura = {}, textoDocumento = "", nomeCo
         assinatura_espalhamento_horizontal: linhaTabela.assinatura_espalhamento_horizontal ?? linhaTabela.assinaturaEspalhamentoHorizontal ?? null,
         assinatura_espalhamento_vertical: linhaTabela.assinatura_espalhamento_vertical ?? linhaTabela.assinaturaEspalhamentoVertical ?? null,
         assinatura_origem: linhaTabela.assinatura_origem || "fallback_tabela_presenca_linha_numerada",
-        nome_score: null,
-        nome_tokens_encontrados: tokensNomeConferencia(nomeColaborador),
     };
+}
+
+function assinaturaProvavelPorTabela({ leitura = {}, textoDocumento = "", nomeColaborador = "", linhaReferencia = null } = {}) {
+    const assinaturas = obterAssinaturasTabelaConferencia(leitura);
+    if (!assinaturas.length) return null;
+
+    const numeroLinha = estimarNumeroLinhaColaboradorNoTexto({ texto: textoDocumento, nomeColaborador });
+
+    if (numeroLinha) {
+        const linhaTabela = assinaturas.find((linha) => Number(linha?.numeroLinha || linha?.numero_linha || 0) === numeroLinha);
+        const resultado = montarLinhaAssinaturaTabelaConferencia(linhaTabela, numeroLinha);
+
+        if (resultado) {
+            return {
+                ...resultado,
+                nome_score: null,
+                nome_tokens_encontrados: tokensNomeConferencia(nomeColaborador),
+            };
+        }
+    }
+
+    const yReferencia = Number(linhaReferencia?.yCentro || 0);
+
+    if (Number.isFinite(yReferencia) && yReferencia > 0) {
+        const linhaMaisProxima = assinaturas
+            .map((linha) => ({
+                linha,
+                distancia: Math.abs(Number(linha?.yCentro || 0) - yReferencia),
+            }))
+            .filter((item) => item.distancia <= 0.055)
+            .sort((a, b) => a.distancia - b.distancia)[0];
+
+        const resultado = montarLinhaAssinaturaTabelaConferencia(linhaMaisProxima?.linha, "aproximada");
+
+        if (resultado) {
+            return {
+                ...resultado,
+                nome_score: linhaReferencia?.nome_score ?? null,
+                nome_tokens_encontrados: linhaReferencia?.nome_tokens_encontrados || tokensNomeConferencia(nomeColaborador),
+                origem_linha: "tabela_presenca_por_y_linha_ocr",
+            };
+        }
+    }
+
+    return null;
 }
 
 
@@ -733,12 +771,17 @@ function montarConferenciaDocumentalCertificado({ leitura = {}, certificado = {}
     const cnpjEmpresa = obterCnpjEmpresaAnalise(colaborador, certificado);
     const campos = obterCamposLeituraConferencia(leitura);
     const linhaColaboradorOcr = localizarLinhaColaboradorOcr({ leitura, nomeColaborador });
-    const linhaColaboradorTabela = linhaColaboradorOcr ? null : assinaturaProvavelPorTabela({
+    const linhaColaboradorTabela = assinaturaProvavelPorTabela({
         leitura,
         textoDocumento,
         nomeColaborador,
+        linhaReferencia: linhaColaboradorOcr,
     });
-    const linhaColaborador = linhaColaboradorOcr || linhaColaboradorTabela;
+    const linhaOcrTemAssinatura = Boolean(linhaColaboradorOcr?.assinatura_visual || linhaColaboradorOcr?.assinaturaVisual);
+    const linhaTabelaTemAssinatura = Boolean(linhaColaboradorTabela?.assinatura_visual || linhaColaboradorTabela?.assinaturaVisual);
+    const linhaColaborador = linhaTabelaTemAssinatura || (!linhaOcrTemAssinatura && linhaColaboradorTabela)
+        ? linhaColaboradorTabela
+        : (linhaColaboradorOcr || linhaColaboradorTabela);
     const listaPresenca = documentoPareceListaPresenca({ texto: textoDocumento, leitura });
     const nomeEncontrado = nomeColaborador ? Boolean(textoContemNomePessoa({ texto: textoDocumento, nome: nomeColaborador }) || linhaColaborador) : null;
     const cpfEncontrado = documentoContemCpf(textoDocumento, cpfColaborador);
