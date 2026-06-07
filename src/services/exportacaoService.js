@@ -2626,7 +2626,6 @@ function montarSecaoAniversariantesRelatorio({ aniversariantes = [], filtros = {
             <header class="cabecalho-relatorio cabecalho-relatorio--modelo-aprovado cabecalho-relatorio--aniversariantes">
                 <div class="cabecalho-aniversariantes-centralizado">
                     <div class="cabecalho-aniversariantes-marca">
-                        ${montarEscudoControleSstRelatorio()}
                         <h1>CONTROLE SST QR</h1>
                     </div>
                     <h2><span>${escaparHTML(titulo)}</span></h2>
@@ -2773,38 +2772,11 @@ export async function baixarRelatorioAniversariantesPDF({
     .cabecalho-aniversariantes-marca {
         position: relative;
         width: 100%;
-        min-height: 60px;
+        min-height: 44px;
         display: flex;
         align-items: center;
         justify-content: center;
         margin: 0;
-    }
-
-    .cabecalho-aniversariantes-marca .escudo-controle-sst-relatorio {
-        position: absolute;
-        left: 58px;
-        top: 50%;
-        transform: translateY(-50%);
-        width: 44px;
-        height: 44px;
-        display: grid;
-        place-items: center;
-        color: #ffffff;
-        background: #111827;
-        border: 1px solid rgba(255,255,255,0.12);
-        border-radius: 14px;
-        box-shadow: inset 0 0 0 1px rgba(255,255,255,0.04);
-    }
-
-    .cabecalho-aniversariantes-marca .escudo-controle-sst-relatorio svg {
-        width: 27px;
-        height: 27px;
-        display: block;
-        fill: none;
-        stroke: currentColor;
-        stroke-width: 1.9;
-        stroke-linecap: round;
-        stroke-linejoin: round;
     }
 
     .cabecalho-aniversariantes-centralizado h1 {
@@ -2821,12 +2793,12 @@ export async function baixarRelatorioAniversariantesPDF({
     .cabecalho-aniversariantes-centralizado h2 {
         position: relative;
         width: 100%;
-        margin: 24px 0 0;
-        min-height: 20px;
+        margin: 22px 0 0;
+        min-height: 22px;
         display: block;
         color: var(--azul);
         font-size: 15px;
-        line-height: 20px;
+        line-height: 22px;
         font-weight: 900;
         letter-spacing: 0.04em;
         text-transform: uppercase;
@@ -2857,11 +2829,11 @@ export async function baixarRelatorioAniversariantesPDF({
         display: inline-flex;
         align-items: center;
         justify-content: center;
-        height: 20px;
-        line-height: 20px;
-        padding: 0 18px;
+        height: 22px;
+        line-height: 22px;
+        padding: 0 22px;
         background: #ffffff;
-        transform: translateY(0);
+        transform: translateY(-0.5px);
     }
 
     .cabecalho-aniversariantes-centralizado p {
