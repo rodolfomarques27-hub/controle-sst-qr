@@ -2767,13 +2767,13 @@ export async function baixarRelatorioAniversariantesPDF({
         justify-items: center;
         gap: 0;
         text-align: center;
-        padding: 0 0 12px;
+        padding: 0 0 14px;
     }
 
     .cabecalho-aniversariantes-marca {
         position: relative;
         width: 100%;
-        min-height: 58px;
+        min-height: 60px;
         display: flex;
         align-items: center;
         justify-content: center;
@@ -2782,7 +2782,7 @@ export async function baixarRelatorioAniversariantesPDF({
 
     .cabecalho-aniversariantes-marca .escudo-controle-sst-relatorio {
         position: absolute;
-        left: 62px;
+        left: 58px;
         top: 50%;
         transform: translateY(-50%);
         width: 44px;
@@ -2819,15 +2819,14 @@ export async function baixarRelatorioAniversariantesPDF({
     }
 
     .cabecalho-aniversariantes-centralizado h2 {
+        position: relative;
         width: 100%;
-        margin: 22px 0 0;
-        display: grid;
-        grid-template-columns: minmax(135px, 1fr) auto minmax(135px, 1fr);
-        align-items: center;
-        column-gap: 14px;
+        margin: 24px 0 0;
+        min-height: 20px;
+        display: block;
         color: var(--azul);
         font-size: 15px;
-        line-height: 1;
+        line-height: 20px;
         font-weight: 900;
         letter-spacing: 0.04em;
         text-transform: uppercase;
@@ -2835,24 +2834,33 @@ export async function baixarRelatorioAniversariantesPDF({
         text-align: center;
     }
 
-    .cabecalho-aniversariantes-centralizado h2::before,
-    .cabecalho-aniversariantes-centralizado h2::after {
+    .cabecalho-aniversariantes-centralizado h2::before {
         content: "";
-        display: block;
+        position: absolute;
+        left: 0;
+        right: 0;
+        top: 50%;
         height: 2px;
-        width: 100%;
+        transform: translateY(-50%);
         border-radius: 999px;
         background: linear-gradient(90deg, transparent, var(--azul), transparent);
+        z-index: 0;
+    }
+
+    .cabecalho-aniversariantes-centralizado h2::after {
+        content: none;
     }
 
     .cabecalho-aniversariantes-centralizado h2 span {
+        position: relative;
+        z-index: 1;
         display: inline-flex;
         align-items: center;
         justify-content: center;
-        min-height: 16px;
-        line-height: 1;
-        padding: 0;
-        background: transparent;
+        height: 20px;
+        line-height: 20px;
+        padding: 0 18px;
+        background: #ffffff;
         transform: translateY(0);
     }
 
