@@ -2765,25 +2765,25 @@ export async function baixarRelatorioAniversariantesPDF({
         position: relative;
         display: grid;
         justify-items: center;
-        gap: 6px;
+        gap: 0;
         text-align: center;
-        padding: 0 0 8px;
+        padding: 2px 0 10px;
     }
 
     .cabecalho-aniversariantes-marca {
         position: relative;
         width: 100%;
-        min-height: 40px;
+        min-height: 42px;
         display: flex;
-        align-items: center;
+        align-items: flex-start;
         justify-content: center;
-        margin-top: 0;
+        margin: 0;
     }
 
     .cabecalho-aniversariantes-marca .escudo-controle-sst-relatorio {
         position: absolute;
-        left: 8px;
-        top: 2px;
+        left: 0;
+        top: 0;
         width: 34px;
         height: 34px;
         display: grid;
@@ -2818,9 +2818,12 @@ export async function baixarRelatorioAniversariantesPDF({
     }
 
     .cabecalho-aniversariantes-centralizado h2 {
-        position: relative;
         width: 100%;
-        margin: -1px 0 0;
+        margin: 16px 0 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 14px;
         color: var(--azul);
         font-size: 15px;
         line-height: 1;
@@ -2831,25 +2834,24 @@ export async function baixarRelatorioAniversariantesPDF({
         text-align: center;
     }
 
-    .cabecalho-aniversariantes-centralizado h2::before {
+    .cabecalho-aniversariantes-centralizado h2::before,
+    .cabecalho-aniversariantes-centralizado h2::after {
         content: "";
-        position: absolute;
-        left: 0;
-        right: 0;
-        top: 50%;
         height: 2px;
-        transform: translateY(-50%);
+        flex: 1 1 auto;
+        min-width: 90px;
         border-radius: 999px;
         background: linear-gradient(90deg, transparent, var(--azul), transparent);
-        z-index: 0;
     }
 
     .cabecalho-aniversariantes-centralizado h2 span {
-        position: relative;
-        z-index: 1;
-        display: inline-block;
-        padding: 0 14px;
-        background: #fff;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 18px;
+        padding: 0 2px;
+        background: transparent;
+        transform: translateY(-0.5px);
     }
 
     .cabecalho-aniversariantes-centralizado p {
