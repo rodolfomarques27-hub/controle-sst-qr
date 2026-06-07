@@ -2629,7 +2629,7 @@ function montarSecaoAniversariantesRelatorio({ aniversariantes = [], filtros = {
                         ${montarEscudoControleSstRelatorio()}
                         <h1>CONTROLE SST QR</h1>
                     </div>
-                    <h2>${escaparHTML(titulo)}</h2>
+                    <h2><span>${escaparHTML(titulo)}</span></h2>
                     <p><span>Data de emissão:</span> <strong>${escaparHTML(dataEmissao)}</strong></p>
                 </div>
             </header>
@@ -2762,22 +2762,28 @@ export async function baixarRelatorioAniversariantesPDF({
     }
 
     .cabecalho-aniversariantes-centralizado {
+        position: relative;
         display: grid;
         justify-items: center;
-        gap: 8px;
+        gap: 6px;
         text-align: center;
         padding: 0 0 8px;
     }
 
     .cabecalho-aniversariantes-marca {
+        position: relative;
         width: 100%;
-        display: grid;
-        justify-items: center;
-        gap: 6px;
+        min-height: 40px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
         margin-top: 0;
     }
 
     .cabecalho-aniversariantes-marca .escudo-controle-sst-relatorio {
+        position: absolute;
+        left: 8px;
+        top: 2px;
         width: 34px;
         height: 34px;
         display: grid;
@@ -2812,12 +2818,9 @@ export async function baixarRelatorioAniversariantesPDF({
     }
 
     .cabecalho-aniversariantes-centralizado h2 {
+        position: relative;
         width: 100%;
-        margin: 3px 0 0;
-        display: grid;
-        grid-template-columns: minmax(130px, 1fr) auto minmax(130px, 1fr);
-        align-items: center;
-        gap: 14px;
+        margin: -1px 0 0;
         color: var(--azul);
         font-size: 15px;
         line-height: 1;
@@ -2825,14 +2828,28 @@ export async function baixarRelatorioAniversariantesPDF({
         letter-spacing: 0.04em;
         text-transform: uppercase;
         white-space: nowrap;
+        text-align: center;
     }
 
-    .cabecalho-aniversariantes-centralizado h2::before,
-    .cabecalho-aniversariantes-centralizado h2::after {
+    .cabecalho-aniversariantes-centralizado h2::before {
         content: "";
+        position: absolute;
+        left: 0;
+        right: 0;
+        top: 50%;
         height: 2px;
+        transform: translateY(-50%);
         border-radius: 999px;
         background: linear-gradient(90deg, transparent, var(--azul), transparent);
+        z-index: 0;
+    }
+
+    .cabecalho-aniversariantes-centralizado h2 span {
+        position: relative;
+        z-index: 1;
+        display: inline-block;
+        padding: 0 14px;
+        background: #fff;
     }
 
     .cabecalho-aniversariantes-centralizado p {
