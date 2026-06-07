@@ -4,11 +4,30 @@ import {
     removerArquivoCertificadoStorage,
 } from "./certificadosStorageService";
 import {
+    inferirTreinamentoPorNomeArquivo,
     normalizarCertificado,
     obterTreinamento,
     treinamentoSemValidade,
 } from "./colaboradorDocumentosService";
 import { ehUuid } from "../utils/sstUtils";
+
+function validarCompatibilidadeArquivoTreinamento({ arquivo, treinamentoId }) {
+    const treinamentoSelecionadoId = Number(treinamentoId);
+
+    if (!arquivo?.name || !Number.isFinite(treinamentoSelecionadoId)) return;
+
+    const treinamentoInferido = inferirTreinamentoPorNomeArquivo(arquivo.name);
+    const treinamentoInferidoId = Number(treinamentoInferido?.id || 0);
+
+    if (!treinamentoInferidoId || !Number.isFinite(treinamentoInferidoId)) return;
+    if (treinamentoInferidoId === treinamentoSelecionadoId) return;
+
+    const treinamentoSelecionado = obterTreinamento(treinamentoSelecionadoId);
+
+    throw new Error(
+        `O arquivo parece ser "${treinamentoInferido.nome}", mas o tipo selecionado é "${treinamentoSelecionado?.nome || "não identificado"}". Corrija o tipo do documento antes de salvar.`
+    );
+}
 
 export async function salvarCertificadoTreinamentoCrud({
     supabase,
@@ -77,6 +96,11 @@ export async function salvarCertificadoTreinamentoCrud({
         throw new Error("Treinamento/documento não encontrado na base do sistema.");
     }
 
+    validarCompatibilidadeArquivoTreinamento({
+        arquivo: certificado.arquivo,
+        treinamentoId: treinamentoIdSeguro,
+    });
+
     const arquivo = await enviarArquivoCertificado({
         supabase,
         arquivo: certificado.arquivo,
@@ -94,7 +118,7 @@ export async function salvarCertificadoTreinamentoCrud({
         arquivo_url: arquivo.arquivoUrl,
         arquivo_nome: certificado.arquivoNome || arquivo.arquivoNome,
         observacao: certificado.observacao || null,
-        status_validacao: "Validado",
+        status_validacao: "Pendente de verificação",
     };
 
     const { data: existentes, error: buscaError } = await supabase

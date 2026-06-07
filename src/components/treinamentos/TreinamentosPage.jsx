@@ -131,7 +131,7 @@ export function Treinamentos({
                 ?.codigoFuncionario || ""
     );
     const [treinamentoId, setTreinamentoId] = useState(treinamentosBase[0].id);
-    const [dataRealizacao, setDataRealizacao] = useState(() => obterDataHojeIso());
+    const [dataRealizacao, setDataRealizacao] = useState("");
     const [arquivoSelecionado, setArquivoSelecionado] = useState(null);
     const [sugestaoDataArquivo, setSugestaoDataArquivo] = useState(null);
     const [observacao, setObservacao] = useState("");
@@ -271,7 +271,7 @@ export function Treinamentos({
 
         setColabId(String(novoColaboradorCodigo));
         setTreinamentoId(Number(primeiroTreinamento));
-        setDataRealizacao(obterDataHojeIso());
+        setDataRealizacao("");
     };
 
     const adicionarTreinamento = async () => {
@@ -304,7 +304,7 @@ export function Treinamentos({
             setArquivoSelecionado(null);
             setSugestaoDataArquivo(null);
             setObservacao("");
-            setDataRealizacao(obterDataHojeIso());
+            setDataRealizacao("");
         }
     };
 
@@ -321,9 +321,9 @@ export function Treinamentos({
             return;
         }
 
-        const dataBaseLote = normalizarDataLancamentoCertificado(dataRealizacao) || obterDataHojeIso();
+        const dataBaseLote = normalizarDataLancamentoCertificado(dataRealizacao) || "";
 
-        if (dataBaseLote !== dataRealizacao) {
+        if (dataBaseLote && dataBaseLote !== dataRealizacao) {
             setDataRealizacao(dataBaseLote);
         }
 
@@ -343,7 +343,7 @@ export function Treinamentos({
     };
 
     const alterarTreinamentoArquivoLote = (arquivoId, treinamentoId) => {
-        const dataBaseLote = normalizarDataLancamentoCertificado(dataRealizacao) || obterDataHojeIso();
+        const dataBaseLote = normalizarDataLancamentoCertificado(dataRealizacao) || "";
         setArquivosLote((atual) => atualizarTreinamentoArquivoLote(atual, arquivoId, treinamentoId, dataBaseLote));
     };
 
@@ -359,10 +359,8 @@ export function Treinamentos({
 
         if (!validarArquivoAntesUpload(arquivo, "documentoSimples")) return;
 
-        const dataPadraoUpload = obterDataHojeIso();
-
         setArquivoSelecionado(arquivo);
-        setDataRealizacao(dataPadraoUpload);
+        setDataRealizacao("");
 
         const sugestao = await detectarDataEmissaoArquivo(arquivo);
         const dataDetectada = normalizarDataLancamentoCertificado(sugestao?.data);
@@ -454,7 +452,7 @@ export function Treinamentos({
         if (falhas === 0) {
             setArquivosLote([]);
             setObservacao("");
-            setDataRealizacao(obterDataHojeIso());
+            setDataRealizacao("");
         }
     };
 
@@ -521,7 +519,7 @@ export function Treinamentos({
         setArquivoSelecionado(null);
         setSugestaoDataArquivo(null);
         setObservacao("");
-        setDataRealizacao(obterDataHojeIso());
+        setDataRealizacao("");
 
         window.scrollTo({ top: 0, behavior: "smooth" });
     };

@@ -1,6 +1,5 @@
 import {
     inferirTreinamentoPorNomeArquivo,
-    dataRealizacaoPorArquivo,
     detectarDataEmissaoArquivo,
     calcularVencimentoTreinamento,
     obterTreinamento,
@@ -54,7 +53,7 @@ export async function prepararArquivosTreinamentoLote({
         arquivos.map(async (arquivo, index) => {
             const treinamento = inferirTreinamentoPorNomeArquivo(arquivo.name);
             const sugestaoData = await detectarDataEmissaoArquivo(arquivo);
-            const dataArquivo = sugestaoData.data || dataRealizacaoPorArquivo(arquivo) || dataRealizacao;
+            const dataArquivo = sugestaoData.data || dataRealizacao || "";
             const colaboradorSugerido = identificarColaboradorPorArquivo(arquivo, colaboradores);
             const pareceOutroColaborador =
                 colaboradorSugerido?.codigoFuncionario &&
