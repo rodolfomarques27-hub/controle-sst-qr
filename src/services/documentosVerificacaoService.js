@@ -377,25 +377,85 @@ function tokensNomeConferencia(nome = "") {
         .filter((token) => token.length >= 3 && !["dos", "das", "de", "da", "do", "e"].includes(token));
 }
 
-function textoContemNomePessoa({ texto = "", nome = "" } = {}) {
+function pontuarNomePessoaNoTexto({ texto = "", nome = "" } = {}) {
     const tokens = tokensNomeConferencia(nome);
     const base = normalizarTextoConferencia(texto);
 
-    if (!tokens.length || !base) return false;
+    if (!tokens.length || !base) {
+        return {
+            encontrado: false,
+            proporcao: 0,
+            totalTokens: tokens.length,
+            tokensEncontrados: [],
+            score: 0,
+        };
+    }
 
-    const encontrados = tokens.filter((token) => base.includes(token));
+    const tokensEncontrados = tokens.filter((token) => base.includes(token));
     const primeiro = tokens[0];
     const ultimo = tokens[tokens.length - 1];
-    const contemPontas = tokens.length <= 1 || (base.includes(primeiro) && base.includes(ultimo));
-    const proporcao = encontrados.length / tokens.length;
+    const contemPrimeiro = base.includes(primeiro);
+    const contemUltimo = base.includes(ultimo);
+    const contemPontas = tokens.length <= 1 || (contemPrimeiro && contemUltimo);
+    const proporcao = tokensEncontrados.length / tokens.length;
+    const score = (proporcao * 100) + (contemPrimeiro ? 10 : 0) + (contemUltimo ? 10 : 0);
+    const encontrado = (
+        (proporcao >= 0.70 && (contemPontas || tokensEncontrados.length >= Math.min(3, tokens.length))) ||
+        (tokensEncontrados.length >= 3 && contemPrimeiro) ||
+        (tokensEncontrados.length >= 2 && contemPrimeiro && contemUltimo)
+    );
 
-    return proporcao >= 0.72 && (contemPontas || encontrados.length >= Math.min(3, tokens.length));
+    return {
+        encontrado,
+        proporcao,
+        totalTokens: tokens.length,
+        tokensEncontrados,
+        score,
+    };
+}
+
+function textoContemNomePessoa({ texto = "", nome = "" } = {}) {
+    return pontuarNomePessoaNoTexto({ texto, nome }).encontrado;
 }
 
 function localizarLinhaColaboradorOcr({ leitura = {}, nomeColaborador = "" } = {}) {
     const linhas = obterLinhasOcrConferencia(leitura);
+    const tokensNome = tokensNomeConferencia(nomeColaborador);
 
-    return linhas.find((linha) => textoContemNomePessoa({ texto: linha?.texto || "", nome: nomeColaborador })) || null;
+    if (!linhas.length || !tokensNome.length) return null;
+
+    const candidatas = linhas
+        .map((linha) => {
+            const pontuacao = pontuarNomePessoaNoTexto({ texto: linha?.texto || "", nome: nomeColaborador });
+            const yCentro = Number(linha?.yCentro || 0);
+            const bonusTabela = yCentro > 0.52 ? 12 : 0;
+            const penalidadeCabecalho = yCentro && yCentro < 0.25 ? 15 : 0;
+            return {
+                linha,
+                ...pontuacao,
+                scoreFinal: pontuacao.score + bonusTabela - penalidadeCabecalho,
+            };
+        })
+        .filter((item) => item.tokensEncontrados.length > 0)
+        .sort((a, b) => b.scoreFinal - a.scoreFinal || b.tokensEncontrados.length - a.tokensEncontrados.length);
+
+    const melhor = candidatas[0];
+
+    if (!melhor) return null;
+
+    if (
+        melhor.encontrado ||
+        melhor.tokensEncontrados.length >= Math.min(3, tokensNome.length) ||
+        (melhor.tokensEncontrados.length >= 2 && melhor.tokensEncontrados.includes(tokensNome[0]))
+    ) {
+        return {
+            ...melhor.linha,
+            nome_score: Number(melhor.scoreFinal.toFixed(2)),
+            nome_tokens_encontrados: melhor.tokensEncontrados,
+        };
+    }
+
+    return null;
 }
 
 function documentoPareceListaPresenca({ texto = "", leitura = {} } = {}) {
@@ -518,6 +578,9 @@ function montarConferenciaDocumentalCertificado({ leitura = {}, certificado = {}
     const empresaEncontrada = empresaColaborador ? textoContemNomePessoa({ texto, nome: empresaColaborador }) || normalizarTextoConferencia(texto).includes(normalizarTextoConferencia("Ribeiro Aquino")) && normalizarTextoConferencia(empresaColaborador).includes("ribeiro") : null;
     const treinamentoEncontrado = documentoContemTreinamento({ texto, treinamento, certificado });
     const assinaturaVisual = linhaColaborador ? Boolean(linhaColaborador.assinatura_visual || linhaColaborador.assinaturaVisual) : null;
+    const assinaturaDensidade = linhaColaborador?.assinatura_densidade ?? null;
+    const assinaturaDensidadeAzul = linhaColaborador?.assinatura_densidade_azul ?? null;
+    const assinaturaAplicavel = Boolean(listaPresenca && nomeEncontrado);
 
     return {
         executado: Boolean(leitura?.executado || texto || obterLinhasOcrConferencia(leitura).length),
@@ -528,6 +591,8 @@ function montarConferenciaDocumentalCertificado({ leitura = {}, certificado = {}
             encontrado: nomeEncontrado,
             linhaOcr: linhaColaborador?.texto || "",
             linhaIndice: linhaColaborador?.indice ?? null,
+            scoreLinha: linhaColaborador?.nome_score ?? null,
+            tokensEncontrados: linhaColaborador?.nome_tokens_encontrados || [],
         },
         cpf: {
             informadoCadastro: Boolean(cpfColaborador),
@@ -548,14 +613,18 @@ function montarConferenciaDocumentalCertificado({ leitura = {}, certificado = {}
             encontrado: treinamentoEncontrado,
         },
         assinatura: {
-            aplicavel: Boolean(listaPresenca && nomeEncontrado),
+            aplicavel: assinaturaAplicavel,
             visualLocalizada: assinaturaVisual,
-            densidade: linhaColaborador?.assinatura_densidade ?? null,
+            densidade: assinaturaDensidade,
+            densidadeAzul: assinaturaDensidadeAzul,
+            origem: linhaColaborador?.assinatura_origem || linhaColaborador?.assinaturaOrigem || "ocr_linha_tabela",
             observacao: assinaturaVisual === true
                 ? "Assinatura visual localizada na mesma faixa da linha do colaborador."
                 : assinaturaVisual === false
-                    ? "Colaborador localizado, mas a assinatura não foi confirmada visualmente na linha."
-                    : "Assinatura não avaliada por falta de linha OCR do colaborador.",
+                    ? "Colaborador localizado, mas a assinatura não foi confirmada visualmente na linha. Conferir a coluna de assinatura."
+                    : assinaturaAplicavel
+                        ? "Colaborador localizado, mas a posição da linha não foi suficiente para avaliar assinatura automaticamente."
+                        : "Assinatura não aplicável porque o colaborador não foi localizado na lista ou o documento não foi classificado como lista.",
         },
     };
 }

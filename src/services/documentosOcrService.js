@@ -1147,21 +1147,28 @@ function agruparPalavrasOcrEmLinhas(palavras = [], canvas = null) {
 
 function calcularAssinaturaVisualLinha(canvas, linha = {}) {
     if (!canvas || typeof canvas.getContext !== "function" || !linha) {
-        return { assinaturaVisual: false, densidade: 0 };
+        return { assinaturaVisual: false, densidade: 0, origem: "sem_canvas_ou_linha" };
     }
 
     const contexto = canvas.getContext("2d", { willReadFrequently: true });
 
     if (!contexto) {
-        return { assinaturaVisual: false, densidade: 0 };
+        return { assinaturaVisual: false, densidade: 0, origem: "sem_contexto_canvas" };
     }
 
     const largura = canvas.width || 1;
     const altura = canvas.height || 1;
-    const xInicio = Math.max(0, Math.floor(largura * 0.68));
-    const xFim = Math.min(largura, Math.floor(largura * 0.98));
-    const yInicio = Math.max(0, Math.floor((linha.y0 || 0) * altura) - Math.floor(altura * 0.006));
-    const yFim = Math.min(altura, Math.ceil((linha.y1 || linha.yCentro || 0) * altura) + Math.floor(altura * 0.016));
+    const y0Normalizado = Number(linha.y0 || linha.yCentro || 0);
+    const y1Normalizado = Number(linha.y1 || linha.yCentro || y0Normalizado);
+    const centroLinha = Number(linha.yCentro || ((y0Normalizado + y1Normalizado) / 2));
+    const alturaLinha = Math.max(0.018, Math.abs(y1Normalizado - y0Normalizado), 0.022);
+
+    // A coluna de assinatura costuma começar antes de 68% da página em listas escaneadas.
+    // Usar uma faixa um pouco mais ampla evita perder assinatura quando a tabela foi digitalizada torta.
+    const xInicio = Math.max(0, Math.floor(largura * 0.59));
+    const xFim = Math.min(largura, Math.floor(largura * 0.985));
+    const yInicio = Math.max(0, Math.floor((centroLinha - alturaLinha * 0.85) * altura));
+    const yFim = Math.min(altura, Math.ceil((centroLinha + alturaLinha * 1.05) * altura));
     const larguraRecorte = Math.max(1, xFim - xInicio);
     const alturaRecorte = Math.max(1, yFim - yInicio);
 
@@ -1170,37 +1177,56 @@ function calcularAssinaturaVisualLinha(canvas, linha = {}) {
         let pixelsRelevantes = 0;
         let pixelsTinta = 0;
         let pixelsAzuis = 0;
+        const colunasComTinta = new Set();
+        const linhasComTinta = new Set();
 
-        for (let i = 0; i < dados.length; i += 4) {
-            const r = dados[i];
-            const g = dados[i + 1];
-            const b = dados[i + 2];
-            const a = dados[i + 3];
+        for (let y = 0; y < alturaRecorte; y += 1) {
+            for (let x = 0; x < larguraRecorte; x += 1) {
+                const i = (y * larguraRecorte + x) * 4;
+                const r = dados[i];
+                const g = dados[i + 1];
+                const b = dados[i + 2];
+                const a = dados[i + 3];
 
-            if (a < 40) continue;
+                if (a < 40) continue;
 
-            pixelsRelevantes += 1;
+                pixelsRelevantes += 1;
 
-            const luma = (0.299 * r) + (0.587 * g) + (0.114 * b);
-            const azulCaneta = b > r + 18 && b > g + 8 && b < 235;
-            const tracoEscuro = luma < 118 && Math.max(r, g, b) - Math.min(r, g, b) > 10;
+                const luma = (0.299 * r) + (0.587 * g) + (0.114 * b);
+                const diferencaCanais = Math.max(r, g, b) - Math.min(r, g, b);
+                const azulCaneta = b > r + 14 && b > g + 4 && b < 245;
+                const tracoEscuro = luma < 150 && diferencaCanais > 7;
+                const tintaProvavel = azulCaneta || tracoEscuro;
 
-            if (azulCaneta || tracoEscuro) {
-                pixelsTinta += 1;
-                if (azulCaneta) pixelsAzuis += 1;
+                if (tintaProvavel) {
+                    pixelsTinta += 1;
+                    if (azulCaneta) pixelsAzuis += 1;
+                    colunasComTinta.add(Math.floor(x / 4));
+                    linhasComTinta.add(Math.floor(y / 3));
+                }
             }
         }
 
         const densidade = pixelsRelevantes ? pixelsTinta / pixelsRelevantes : 0;
         const densidadeAzul = pixelsRelevantes ? pixelsAzuis / pixelsRelevantes : 0;
+        const espalhamentoHorizontal = colunasComTinta.size / Math.max(1, Math.ceil(larguraRecorte / 4));
+        const espalhamentoVertical = linhasComTinta.size / Math.max(1, Math.ceil(alturaRecorte / 3));
+        const assinaturaVisual = (
+            densidadeAzul > 0.0012 ||
+            (densidade > 0.0045 && espalhamentoHorizontal > 0.045 && espalhamentoVertical > 0.08) ||
+            (densidade > 0.008 && espalhamentoHorizontal > 0.025)
+        );
 
         return {
-            assinaturaVisual: densidade > 0.012 || densidadeAzul > 0.004,
+            assinaturaVisual,
             densidade: Number(densidade.toFixed(4)),
             densidadeAzul: Number(densidadeAzul.toFixed(4)),
+            espalhamentoHorizontal: Number(espalhamentoHorizontal.toFixed(4)),
+            espalhamentoVertical: Number(espalhamentoVertical.toFixed(4)),
+            origem: "analise_visual_coluna_assinatura",
         };
     } catch {
-        return { assinaturaVisual: false, densidade: 0 };
+        return { assinaturaVisual: false, densidade: 0, origem: "erro_leitura_canvas" };
     }
 }
 
@@ -1214,6 +1240,9 @@ function montarLinhasOcrComAssinatura(canvas, palavras = []) {
                 assinatura_visual: assinatura.assinaturaVisual,
                 assinatura_densidade: assinatura.densidade,
                 assinatura_densidade_azul: assinatura.densidadeAzul || 0,
+                assinatura_espalhamento_horizontal: assinatura.espalhamentoHorizontal || 0,
+                assinatura_espalhamento_vertical: assinatura.espalhamentoVertical || 0,
+                assinatura_origem: assinatura.origem || "analise_visual_coluna_assinatura",
             };
         })
         .slice(0, 120);

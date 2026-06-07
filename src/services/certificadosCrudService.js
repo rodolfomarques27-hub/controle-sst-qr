@@ -9,7 +9,76 @@ import {
     obterTreinamento,
     treinamentoSemValidade,
 } from "./colaboradorDocumentosService";
-import { ehUuid } from "../utils/sstUtils";
+import { ehUuid, normalizarTextoBusca } from "../utils/sstUtils";
+
+
+function tokensNomeColaboradorArquivo(nome = "") {
+    return normalizarTextoBusca(nome)
+        .replace(/[^a-z0-9]+/g, " ")
+        .split(" ")
+        .map((token) => token.trim())
+        .filter((token) => token.length >= 3 && !["dos", "das", "de", "da", "do", "com", "para", "nr"].includes(token));
+}
+
+function pontuarNomeNoArquivo(nomeArquivo = "", nomeColaborador = "") {
+    const base = normalizarTextoBusca(String(nomeArquivo || "").replace(/\.[^.]+$/, ""))
+        .replace(/[^a-z0-9]+/g, " ")
+        .trim();
+    const compacto = base.replace(/\s+/g, "");
+    const tokens = tokensNomeColaboradorArquivo(nomeColaborador);
+
+    if (!base || !tokens.length) return 0;
+
+    const encontrados = tokens.filter((token) => base.includes(token));
+    const primeiro = tokens[0];
+    const ultimo = tokens[tokens.length - 1];
+    const nomeCompacto = tokens.join("");
+    let pontos = 0;
+
+    if (nomeCompacto && compacto.includes(nomeCompacto)) pontos += 140;
+    pontos += encontrados.length * 25;
+    if (primeiro && base.includes(primeiro)) pontos += 18;
+    if (ultimo && base.includes(ultimo)) pontos += 18;
+    if (encontrados.length >= Math.min(3, tokens.length)) pontos += 35;
+    if (tokens.length >= 2 && base.includes(primeiro) && base.includes(ultimo)) pontos += 35;
+
+    return pontos;
+}
+
+function identificarColaboradorProvavelNoNomeArquivo({ arquivo, colaboradores = [] } = {}) {
+    const nomeArquivo = arquivo?.name || arquivo?.nome || arquivo?.filename || "";
+
+    if (!nomeArquivo) return null;
+
+    const candidatos = (colaboradores || [])
+        .map((colaborador) => ({
+            colaborador,
+            pontos: pontuarNomeNoArquivo(nomeArquivo, colaborador?.nome || ""),
+        }))
+        .filter((item) => item.pontos >= 78)
+        .sort((a, b) => b.pontos - a.pontos);
+
+    return candidatos[0] || null;
+}
+
+function validarCompatibilidadeArquivoColaborador({ arquivo, colaboradores = [], colaboradorSelecionado = null } = {}) {
+    const provavel = identificarColaboradorProvavelNoNomeArquivo({ arquivo, colaboradores });
+
+    if (!provavel?.colaborador || !colaboradorSelecionado?.id) return;
+
+    const mesmoColaborador = String(provavel.colaborador.id) === String(colaboradorSelecionado.id) ||
+        String(provavel.colaborador.codigoFuncionario || "") === String(colaboradorSelecionado.codigoFuncionario || "");
+
+    if (mesmoColaborador) return;
+
+    const pontosSelecionado = pontuarNomeNoArquivo(arquivo?.name || "", colaboradorSelecionado?.nome || "");
+
+    if (provavel.pontos < pontosSelecionado + 25) return;
+
+    throw new Error(
+        `O arquivo parece pertencer a "${provavel.colaborador.nome}", mas o colaborador selecionado é "${colaboradorSelecionado.nome}". Corrija o colaborador ou envie o documento correto antes de salvar.`
+    );
+}
 
 function validarCompatibilidadeArquivoTreinamento({ arquivo, treinamentoId }) {
     const treinamentoSelecionadoId = Number(treinamentoId);
@@ -95,6 +164,12 @@ export async function salvarCertificadoTreinamentoCrud({
     if (!treinamento) {
         throw new Error("Treinamento/documento não encontrado na base do sistema.");
     }
+
+    validarCompatibilidadeArquivoColaborador({
+        arquivo: certificado.arquivo,
+        colaboradores,
+        colaboradorSelecionado: colaboradorSeguro,
+    });
 
     validarCompatibilidadeArquivoTreinamento({
         arquivo: certificado.arquivo,
