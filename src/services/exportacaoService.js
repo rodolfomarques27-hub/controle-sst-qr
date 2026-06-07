@@ -2773,16 +2773,17 @@ export async function baixarRelatorioAniversariantesPDF({
         width: 100%;
         max-width: 560px;
         display: grid;
-        grid-template-columns: 46px auto 46px;
+        grid-template-columns: 40px auto 40px;
         align-items: center;
         justify-content: center;
-        column-gap: 10px;
+        column-gap: 6px;
         margin-top: 0;
+        transform: translateX(3px);
     }
 
     .cabecalho-aniversariantes-marca .escudo-controle-sst-relatorio {
-        width: 36px;
-        height: 36px;
+        width: 34px;
+        height: 34px;
         display: grid;
         place-items: center;
         justify-self: end;
@@ -2821,9 +2822,9 @@ export async function baixarRelatorioAniversariantesPDF({
         width: 100%;
         margin: 2px 0 0;
         display: grid;
-        grid-template-columns: minmax(95px, 1fr) auto minmax(95px, 1fr);
+        grid-template-columns: minmax(112px, 1fr) auto minmax(112px, 1fr);
         align-items: center;
-        gap: 16px;
+        gap: 14px;
         color: var(--azul);
         font-size: 15px;
         line-height: 1;
