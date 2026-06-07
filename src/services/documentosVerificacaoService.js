@@ -262,6 +262,82 @@ function avaliarCadastroCertificado({ certificado = {}, colaborador = {}, treina
     return indicios;
 }
 
+function leituraDocumentalPossuiDataConfirmada(leitura = {}) {
+    const datasRelevantes = [
+        ...(Array.isArray(leitura?.datasRelevantesClassificadas) ? leitura.datasRelevantesClassificadas : []),
+        ...(Array.isArray(leitura?.datasDocumentoConfiaveis) ? leitura.datasDocumentoConfiaveis : []),
+    ].filter((data) => data?.iso);
+
+    const campos = leitura?.camposExtraidos || leitura?.campos_extraidos || {};
+
+    return Boolean(
+        datasRelevantes.length > 0 ||
+        campos?.assinatura_data ||
+        campos?.data_encerramento ||
+        campos?.vigencia_inicio ||
+        campos?.vigencia_fim
+    );
+}
+
+function avaliarLeituraDataCertificado({ leitura, arquivo = null, exigeVencimento = true } = {}) {
+    const indicios = [];
+
+    if (!exigeVencimento && leituraDocumentalPossuiDataConfirmada(leitura)) {
+        return indicios;
+    }
+
+    if (!arquivoPossuiArrayBufferVerificacao(arquivo)) {
+        return indicios;
+    }
+
+    if (leituraDocumentalPossuiDataConfirmada(leitura)) {
+        return indicios;
+    }
+
+    indicios.push(criarIndicioVerificacao({
+        codigo: "data_impressa_nao_confirmada_automaticamente",
+        tipo: DOCUMENTOS_VERIFICACAO_TIPOS_INDICIO.OCR,
+        titulo: "Data impressa não confirmada automaticamente",
+        detalhe: "A leitura local não conseguiu confirmar a data impressa do certificado/ASO. O arquivo pode ser imagem escaneada, não possuir camada de texto ou exigir OCR real de imagem.",
+        peso: 45,
+        bloqueia: false,
+        recomendacao: "Conferir manualmente a data no PDF/imagem antes de considerar o documento aprovado.",
+        dados: {
+            tipoLeitura: leitura?.tipoLeitura || leitura?.tipo_leitura || "não identificado",
+            confianca: leitura?.confianca || 0,
+            datasEncontradas: (leitura?.datasEncontradas || []).map((data) => data?.iso).filter(Boolean),
+        },
+    }));
+
+    return indicios;
+}
+
+function aplicarRevisaoManualQuandoDataNaoConfirmada(resultado = {}, indicios = []) {
+    const possuiDataNaoConfirmada = indicios.some(
+        (indicio) => indicio?.codigo === "data_impressa_nao_confirmada_automaticamente"
+    );
+
+    if (!possuiDataNaoConfirmada) return resultado;
+
+    const proximoResultado = { ...resultado };
+
+    if (String(proximoResultado.status_verificacao || "").toLowerCase() === "aprovado") {
+        proximoResultado.status_verificacao = "revisao_manual";
+    }
+
+    if (String(proximoResultado.nivel_risco || "").toLowerCase() === "baixo") {
+        proximoResultado.nivel_risco = "medio";
+    }
+
+    proximoResultado.score_risco = Math.max(Number(proximoResultado.score_risco || 0), 45);
+    proximoResultado.resumo = [
+        proximoResultado.resumo,
+        "A data impressa não foi confirmada pela leitura local; manter em revisão manual até conferência visual.",
+    ].filter(Boolean).join(" ").trim();
+
+    return proximoResultado;
+}
+
 export function normalizarVerificacaoDocumental(item = {}) {
     return {
         ...item,
@@ -459,6 +535,11 @@ export async function analisarCertificadoLocal({
             dataVencimento: certificado.data_vencimento || certificado.dataVencimento,
             origemTipo: DOCUMENTOS_VERIFICACAO_ORIGENS.CERTIFICADO,
         }),
+        ...avaliarLeituraDataCertificado({
+            leitura: leituraDocumental,
+            arquivo: arquivoValidoParaHash,
+            exigeVencimento,
+        }),
         ...avaliarCadastroCertificado({
             certificado,
             colaborador,
@@ -474,7 +555,8 @@ export async function analisarCertificadoLocal({
         }),
     ];
 
-    const resultado = montarResultadoVerificacaoBase({ indicios });
+    const resultadoBase = montarResultadoVerificacaoBase({ indicios });
+    const resultado = aplicarRevisaoManualQuandoDataNaoConfirmada(resultadoBase, indicios);
     const tipoCertificado = obterTipoCertificado(certificado, treinamento);
 
     return {

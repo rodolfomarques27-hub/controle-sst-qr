@@ -15,6 +15,7 @@ import {
     obterTreinamento,
     calcularVencimentoTreinamento,
     detectarDataEmissaoArquivo,
+    inferirTreinamentoPorNomeArquivo,
 } from "../../services/colaboradorDocumentosService";
 import {
     prepararArquivosTreinamentoLote,
@@ -359,18 +360,39 @@ export function Treinamentos({
 
         if (!validarArquivoAntesUpload(arquivo, "documentoSimples")) return;
 
+        const treinamentoInferido = inferirTreinamentoPorNomeArquivo(arquivo.name || "");
+        const treinamentoInferidoId = Number(treinamentoInferido?.id || 0);
+        const treinamentoAtualId = Number(treinamentoSelecionadoId || treinamentoId || 0);
+        const deveAjustarTipo =
+            Number.isFinite(treinamentoInferidoId) &&
+            treinamentoInferidoId > 0 &&
+            treinamentoInferidoId !== treinamentoAtualId;
+
+        if (deveAjustarTipo) {
+            setTreinamentoId(treinamentoInferidoId);
+        }
+
         setArquivoSelecionado(arquivo);
         setDataRealizacao("");
 
         const sugestao = await detectarDataEmissaoArquivo(arquivo);
         const dataDetectada = normalizarDataLancamentoCertificado(sugestao?.data);
+        const mensagemTipoAjustado = deveAjustarTipo
+            ? `Tipo ajustado automaticamente para ${treinamentoInferido.nome}, conforme o nome do arquivo.`
+            : "";
         const sugestaoNormalizada = sugestao?.data && !dataDetectada
             ? {
                 ...sugestao,
                 data: "",
-                mensagem: sugestao.mensagem || "Data detectada ignorada por estar fora do intervalo esperado. Confira manualmente.",
+                mensagem: [
+                    mensagemTipoAjustado,
+                    sugestao.mensagem || "Data detectada ignorada por estar fora do intervalo esperado. Confira manualmente.",
+                ].filter(Boolean).join(" "),
             }
-            : sugestao;
+            : {
+                ...sugestao,
+                mensagem: [mensagemTipoAjustado, sugestao?.mensagem].filter(Boolean).join(" "),
+            };
 
         setSugestaoDataArquivo(sugestaoNormalizada);
 
