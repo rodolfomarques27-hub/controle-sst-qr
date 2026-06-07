@@ -16,79 +16,6 @@ import {
 
 const hoje = new Date();
 
-const MESES_PT_BR_TREINAMENTOS = Object.freeze({
-    janeiro: 1,
-    jan: 1,
-    fevereiro: 2,
-    fev: 2,
-    marco: 3,
-    março: 3,
-    mar: 3,
-    abril: 4,
-    abr: 4,
-    maio: 5,
-    mai: 5,
-    junho: 6,
-    jun: 6,
-    julho: 7,
-    jul: 7,
-    agosto: 8,
-    ago: 8,
-    setembro: 9,
-    set: 9,
-    outubro: 10,
-    out: 10,
-    novembro: 11,
-    nov: 11,
-    dezembro: 12,
-    dez: 12,
-});
-
-function dataIsoValidaTreinamento(valor = "") {
-    const texto = String(valor || "").slice(0, 10);
-
-    if (!/^\d{4}-\d{2}-\d{2}$/.test(texto)) return false;
-
-    const ano = Number(texto.slice(0, 4));
-    const mes = Number(texto.slice(5, 7));
-    const dia = Number(texto.slice(8, 10));
-
-    if (!Number.isInteger(ano) || !Number.isInteger(mes) || !Number.isInteger(dia)) return false;
-    if (ano < 1990 || ano > new Date().getFullYear() + 1) return false;
-
-    const data = new Date(ano, mes - 1, dia, 12, 0, 0);
-
-    return (
-        data.getFullYear() === ano &&
-        data.getMonth() === mes - 1 &&
-        data.getDate() === dia
-    );
-}
-
-function formatarDataIsoTreinamento(diaValor, mesValor, anoValor) {
-    const dia = Number(diaValor);
-    const mes = Number(mesValor);
-    let ano = Number(anoValor);
-
-    if (String(anoValor || "").trim().length === 2) {
-        ano = ano <= 49 ? 2000 + ano : 1900 + ano;
-    }
-
-    const iso = `${ano}-${String(mes).padStart(2, "0")}-${String(dia).padStart(2, "0")}`;
-    return dataIsoValidaTreinamento(iso) ? iso : "";
-}
-
-function dataTreinamentoMuitoFutura(iso = "") {
-    if (!dataIsoValidaTreinamento(iso)) return true;
-
-    const data = new Date(`${iso}T12:00:00`);
-    const hojeBase = new Date(hoje.toISOString().slice(0, 10) + "T12:00:00");
-    const limiteFuturo = new Date(hojeBase);
-    limiteFuturo.setDate(limiteFuturo.getDate() + 30);
-
-    return data > limiteFuturo;
-}
-
 export function obterStatusInicialColaborador() {
     return "Em análise";
 }
@@ -145,29 +72,67 @@ export function gerarCodigoFuncionario(nome = "") {
     return `COL-${base || "SST"}-${aleatorio}`;
 }
 
+function obterOrdemTreinamentoParaLista(treinamento = {}) {
+    const nome = String(treinamento?.nome || "");
+    const matchNr = nome.match(/NR\s*[-–—º°]?\s*(\d+(?:[.,]\d+)?)/i);
+
+    if (matchNr?.[1]) {
+        return Number(String(matchNr[1]).replace(",", "."));
+    }
+
+    if (normalizarTextoBusca(nome).includes("ficha")) {
+        return 0;
+    }
+
+    return Number(treinamento?.id || 9999);
+}
+
+function ordenarItensTreinamentoColaborador(itens = []) {
+    return [...itens].sort((a, b) => {
+        const ordemA = obterOrdemTreinamentoParaLista(a?.treinamento);
+        const ordemB = obterOrdemTreinamentoParaLista(b?.treinamento);
+
+        if (ordemA !== ordemB) return ordemA - ordemB;
+
+        return String(a?.treinamento?.nome || "").localeCompare(String(b?.treinamento?.nome || ""), "pt-BR");
+    });
+}
+
 export function avaliarTreinamentosColaborador(colaborador) {
     const removidos = (colaborador.treinamentosRemovidos || []).map(Number);
     const adicionais = (colaborador.treinamentosAdicionais || []).map(Number);
+    const realizados = colaborador.treinamentos || [];
+    const idsRealizados = realizados
+        .map((item) => Number(item.treinamentoId))
+        .filter((id) => Number.isFinite(id) && id > 0);
     const obrigatoriosBase = treinamentosObrigatoriosFuncao(colaborador.funcao);
-    const idsObrigatorios = Array.from(new Set([
+    const idsObrigatoriosBase = Array.from(new Set([
         ...obrigatoriosBase.map((treinamento) => Number(treinamento.id)),
         ...adicionais,
+    ])).filter((id) => !removidos.includes(Number(id)));
+
+    // Além da matriz da função, mostra também todo treinamento já lançado para o colaborador.
+    // Assim, se for enviado um NR-11/NR-18/etc. que não estava na matriz, ele entra na lista
+    // do colaborador como documento enviado adicional e deixa de sumir da visão de treinamentos.
+    const idsParaExibir = Array.from(new Set([
+        ...idsObrigatoriosBase,
+        ...idsRealizados,
     ]));
 
-    const obrigatorios = idsObrigatorios
-        .filter((id) => !removidos.includes(Number(id)))
+    const obrigatorios = idsParaExibir
         .map((id) => obterTreinamento(id))
         .filter(Boolean);
 
-    const realizados = colaborador.treinamentos || [];
-
-    const itens = obrigatorios.map((treinamento) => {
+    const itens = ordenarItensTreinamentoColaborador(obrigatorios.map((treinamento) => {
         const realizado = realizados.find((item) => Number(item.treinamentoId) === Number(treinamento.id));
+        const obrigatorioMatriz = idsObrigatoriosBase.includes(Number(treinamento.id));
 
         if (!realizado) {
             return {
                 treinamento,
                 realizado: null,
+                obrigatorioMatriz,
+                adicionalEnviado: false,
                 status: {
                     chave: "pendente",
                     texto: "Pendente",
@@ -181,9 +146,11 @@ export function avaliarTreinamentosColaborador(colaborador) {
         return {
             treinamento,
             realizado,
+            obrigatorioMatriz,
+            adicionalEnviado: !obrigatorioMatriz,
             status: statusDocumento(realizado.vencimento, treinamentoSemValidade(treinamento.id)),
         };
-    });
+    }));
 
     const pendentes = itens.filter((item) => item.status.chave === "pendente");
     const vencidos = itens.filter((item) => item.status.chave === "vencido");
@@ -463,19 +430,23 @@ export function inferirTreinamentoPorNomeArquivo(nomeArquivo = "") {
     return null;
 }
 
-export function dataRealizacaoPorArquivo() {
-    // Não usar File.lastModified nem a data atual como data do documento.
-    // Esses valores indicam o arquivo no computador/upload, não a data real do certificado.
-    return "";
-}
+export function dataRealizacaoPorArquivo(arquivo) {
+    if (arquivo?.lastModified) {
+        const data = new Date(arquivo.lastModified);
 
+        if (!Number.isNaN(data.getTime())) {
+            return data.toISOString().slice(0, 10);
+        }
+    }
+
+    return hoje.toISOString().slice(0, 10);
+}
 
 export function extrairDatasComContexto(texto = "") {
     const resultado = [];
     const textoNormalizado = String(texto || "").replace(/\s+/g, " ");
     const regexDataBr = /\b(\d{1,2})[/.-](\d{1,2})[/.-](\d{2,4})\b/g;
     const regexDataIso = /\b(20\d{2}|19\d{2})[/.-](\d{1,2})[/.-](\d{1,2})\b/g;
-    const regexDataExtenso = /\b(\d{1,2})\s+de\s+([a-zA-ZÀ-ÿçÇ]+)\s+de\s+(\d{2,4})\b/gi;
 
     const palavrasEmissao = [
         "emissão",
@@ -552,11 +523,6 @@ export function extrairDatasComContexto(texto = "") {
         adicionar(match, converterDataIsoDireta(match[1], match[2], match[3]), match.index);
     }
 
-    while ((match = regexDataExtenso.exec(textoNormalizado))) {
-        const mes = MESES_PT_BR_TREINAMENTOS[normalizarTextoBusca(match[2])];
-        adicionar(match, mes ? formatarDataIsoTreinamento(match[1], mes, match[3]) : "", match.index);
-    }
-
     return resultado
         .filter((item, index, array) => array.findIndex((outro) => outro.iso === item.iso) === index)
         .sort((a, b) => b.pontuacao - a.pontuacao || b.iso.localeCompare(a.iso));
@@ -599,84 +565,6 @@ export async function lerTextoPossivelDoArquivo(arquivo) {
     }
 }
 
-function contextoDataIndicaExameRealizadoAso(contexto = "") {
-    const texto = normalizarTextoBusca(contexto);
-
-    return /exames realizados|exames rotineiros|acuidade visual|audiometria|eletrocardiograma|eletroencefalograma|espirometria|exame clinico|exame clínico|glicose|raio x|raio x torax|padrão oit|padrao oit|exames dentro da validade/.test(texto);
-}
-
-function contextoDataIndicaDataPrincipalAso(contexto = "") {
-    const texto = normalizarTextoBusca(contexto);
-
-    return /medico examinador|médico examinador|medico responsavel pelo pcmso|médico responsável pelo pcmso|crm\s*\/\s*uf|assinatura digital|assinado digitalmente|icp brasil|icp-brasil|atestado de saude ocupacional|atestado de saúde ocupacional/.test(texto);
-}
-
-function contextoDataIndicaCampoDataAso(contexto = "") {
-    const texto = normalizarTextoBusca(contexto);
-
-    return /\bdata\b/.test(texto) && !contextoDataIndicaExameRealizadoAso(texto);
-}
-
-function calcularPontuacaoDataLeituraTreinamento(data = {}, leitura = {}) {
-    const contexto = `${data?.contexto || ""} ${data?.rotulo || ""} ${data?.tipo || ""}`;
-    const contextoBusca = normalizarTextoBusca(contexto);
-    const categorias = Array.isArray(data?.categorias) ? data.categorias.map((item) => normalizarTextoBusca(item)) : [];
-    const tipo = normalizarTextoBusca(data?.tipo || "");
-    const arquivoNome = normalizarTextoBusca(leitura?.arquivoNome || leitura?.arquivo_nome || "");
-    const leituraAso = /\baso\b|atestado de saude ocupacional|atestado de saúde ocupacional/.test(`${arquivoNome} ${contextoBusca}`);
-    let pontuacao = 8;
-
-    if (categorias.includes("emissao_realizacao")) pontuacao += 35;
-    if (tipo.includes("encerramento") || tipo.includes("assinatura")) pontuacao += 25;
-    if (/emissao|realizacao|realizado|conclusao|curso|treinamento|aso|admissao|sao jose dos campos|são josé dos campos|elaborado em|emitido em/.test(contextoBusca)) pontuacao += 25;
-
-    if (leituraAso) {
-        if (contextoDataIndicaDataPrincipalAso(contextoBusca)) pontuacao += 90;
-        if (contextoDataIndicaCampoDataAso(contextoBusca)) pontuacao += 65;
-        if (contextoDataIndicaExameRealizadoAso(contextoBusca)) pontuacao -= 130;
-        if (/nascimento|nasc|data de nascimento/.test(contextoBusca)) pontuacao -= 150;
-    } else if (/exame/.test(contextoBusca)) {
-        pontuacao += 10;
-    }
-
-    if (/validade|vencimento|vence|vencera|vencerá|vigencia|vigência|ate|até|prazo/.test(contextoBusca)) pontuacao -= 30;
-    if (tipo.includes("fim_vigencia")) pontuacao -= 60;
-    if (tipo.includes("referencia") || tipo.includes("ignorada")) pontuacao -= 100;
-    if (String(data?.origem || "").includes("nome_arquivo")) pontuacao -= 5;
-
-    return pontuacao;
-}
-
-function coletarDatasLeituraDocumentalTreinamento(leitura = {}) {
-    const datas = [
-        ...(Array.isArray(leitura?.datasRelevantesClassificadas) ? leitura.datasRelevantesClassificadas : []),
-        ...(Array.isArray(leitura?.datasDocumentoConfiaveis) ? leitura.datasDocumentoConfiaveis : []),
-        ...(Array.isArray(leitura?.datasEncontradas) ? leitura.datasEncontradas : []),
-    ];
-
-    const vistos = new Set();
-
-    return datas
-        .filter((data) => {
-            const iso = String(data?.iso || "").slice(0, 10);
-            const chave = `${iso}__${data?.tipo || ""}__${data?.origem || ""}`;
-
-            if (!dataIsoValidaTreinamento(iso) || dataTreinamentoMuitoFutura(iso) || vistos.has(chave)) return false;
-
-            vistos.add(chave);
-            return true;
-        })
-        .map((data) => ({
-            iso: String(data.iso).slice(0, 10),
-            texto: data.br || formatDate(String(data.iso).slice(0, 10)),
-            contexto: data.contexto || "",
-            origem: data.origem || "leitura documental local",
-            pontuacao: calcularPontuacaoDataLeituraTreinamento(data, leitura),
-        }))
-        .filter((data) => data.pontuacao > 0)
-        .sort((a, b) => b.pontuacao - a.pontuacao || b.iso.localeCompare(a.iso));
-}
-
 export async function detectarDataEmissaoArquivo(arquivo) {
     if (!arquivo) {
         return {
@@ -690,26 +578,6 @@ export async function detectarDataEmissaoArquivo(arquivo) {
     const candidatos = [];
     const nomeArquivo = arquivo.name || "";
 
-    try {
-        const { executarLeituraDocumentalLocal } = await import("./documentosOcrService");
-        const leitura = await executarLeituraDocumentalLocal({
-            arquivo,
-            arquivoNome: nomeArquivo,
-            mimeType: arquivo.type || "",
-        });
-
-        coletarDatasLeituraDocumentalTreinamento(leitura).forEach((item) =>
-            candidatos.push({
-                ...item,
-                origem: item.origem || "leitura documental local",
-                pontuacao: item.pontuacao + Math.round(Number(leitura?.confianca || 0) / 12),
-                confiancaLeitura: leitura?.confianca || 0,
-            })
-        );
-    } catch {
-        // Mantém fallback local simples abaixo sem bloquear o lançamento.
-    }
-
     extrairDatasComContexto(nomeArquivo).forEach((item) =>
         candidatos.push({
             ...item,
@@ -718,22 +586,18 @@ export async function detectarDataEmissaoArquivo(arquivo) {
         })
     );
 
-    if (!candidatos.length) {
-        const textoArquivo = await lerTextoPossivelDoArquivo(arquivo);
+    const textoArquivo = await lerTextoPossivelDoArquivo(arquivo);
 
-        extrairDatasComContexto(textoArquivo).forEach((item) =>
-            candidatos.push({
-                ...item,
-                origem: "conteúdo do arquivo",
-                pontuacao: item.pontuacao + 3,
-            })
-        );
-    }
+    extrairDatasComContexto(textoArquivo).forEach((item) =>
+        candidatos.push({
+            ...item,
+            origem: "conteúdo do arquivo",
+            pontuacao: item.pontuacao + 3,
+        })
+    );
 
     const ordenados = candidatos
         .filter((item, index, array) =>
-            dataIsoValidaTreinamento(item.iso) &&
-            !dataTreinamentoMuitoFutura(item.iso) &&
             array.findIndex((outro) => outro.iso === item.iso && outro.origem === item.origem) === index
         )
         .sort((a, b) => b.pontuacao - a.pontuacao || b.iso.localeCompare(a.iso));
@@ -749,7 +613,7 @@ export async function detectarDataEmissaoArquivo(arquivo) {
         };
     }
 
-    const confianca = Math.max(1, Math.min(100, Math.round((melhor.confiancaLeitura || 0) || melhor.pontuacao * 12)));
+    const confianca = Math.max(1, Math.min(100, Math.round(melhor.pontuacao * 12)));
 
     return {
         data: melhor.iso,
