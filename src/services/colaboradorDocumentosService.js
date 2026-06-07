@@ -430,16 +430,11 @@ export function inferirTreinamentoPorNomeArquivo(nomeArquivo = "") {
     return null;
 }
 
-export function dataRealizacaoPorArquivo(arquivo) {
-    if (arquivo?.lastModified) {
-        const data = new Date(arquivo.lastModified);
-
-        if (!Number.isNaN(data.getTime())) {
-            return data.toISOString().slice(0, 10);
-        }
-    }
-
-    return hoje.toISOString().slice(0, 10);
+export function dataRealizacaoPorArquivo() {
+    // Não usar lastModified nem a data atual como fallback automático.
+    // Esses valores podem representar apenas a data do arquivo no computador,
+    // e não a data real impressa no certificado/lista/ASO.
+    return "";
 }
 
 export function extrairDatasComContexto(texto = "") {
@@ -457,14 +452,26 @@ export function extrairDatasComContexto(texto = "") {
         "realizado",
         "realizada",
         "data do treinamento",
-        "treinamento",
+        "data treinamento",
         "data do aso",
-        "aso",
+        "data aso",
+        "data",
+        "treinamento",
+        "curso",
+        "nome da empresa",
+        "horario",
+        "horário",
+        "responsavel pelo treinamento",
+        "responsável pelo treinamento",
+        "medico examinador",
+        "médico examinador",
+        "assinatura do responsavel",
+        "assinatura do responsável",
+        "instrutor",
         "admissão",
         "admissao",
         "data de admissão",
         "data de admissao",
-        "data",
     ];
 
     const palavrasVencimento = [
@@ -476,6 +483,28 @@ export function extrairDatasComContexto(texto = "") {
         "valido ate",
         "apto até",
         "apto ate",
+    ];
+
+    const palavrasIgnorar = [
+        "nascimento",
+        "data de nascimento",
+        "exames realizados",
+        "exame realizado",
+        "acuidade visual",
+        "eletrocardiograma",
+        "audiometria",
+        "eletroencefalograma",
+        "espirometria",
+        "glicose",
+        "raio x",
+        "raio-x",
+        "codigo",
+        "código",
+        "cod atendimento",
+        "cpf",
+        "cnpj",
+        "crm",
+        "portaria",
     ];
 
     const adicionar = (match, iso, indice) => {
@@ -490,8 +519,8 @@ export function extrairDatasComContexto(texto = "") {
         // Data de realização/emissão não deve ser muito futura.
         if (data > limiteFuturo) return;
 
-        const inicio = Math.max(0, indice - 100);
-        const fim = Math.min(textoNormalizado.length, indice + match[0].length + 100);
+        const inicio = Math.max(0, indice - 120);
+        const fim = Math.min(textoNormalizado.length, indice + match[0].length + 120);
         const contexto = textoNormalizado.slice(inicio, fim).trim();
         const contextoBusca = normalizarTextoBusca(contexto);
 
@@ -504,6 +533,15 @@ export function extrairDatasComContexto(texto = "") {
         palavrasVencimento.forEach((palavra) => {
             if (contextoBusca.includes(normalizarTextoBusca(palavra))) pontuacao -= 7;
         });
+
+        palavrasIgnorar.forEach((palavra) => {
+            if (contextoBusca.includes(normalizarTextoBusca(palavra))) pontuacao -= 10;
+        });
+
+        if (/data\s*[:\-]/i.test(contexto)) pontuacao += 14;
+        if (/nome\s+da\s+empresa|hor[aá]rio|respons[aá]vel\s+pelo\s+treinamento|assinatura\s+do\s+respons[aá]vel|instrutor/i.test(contexto)) pontuacao += 10;
+        if (/treinamento\s+de|certificado\s+de|atestado\s+de\s+sa[uú]de\s+ocupacional/i.test(contexto)) pontuacao += 8;
+        if (/exames?\s+realizados|data\s+de\s+nascimento|nascimento|acuidade|audiometria|eletrocardiograma|eletroencefalograma|espirometria|glicose|raio\s*x/i.test(contexto)) pontuacao -= 28;
 
         resultado.push({
             iso,
@@ -526,6 +564,85 @@ export function extrairDatasComContexto(texto = "") {
     return resultado
         .filter((item, index, array) => array.findIndex((outro) => outro.iso === item.iso) === index)
         .sort((a, b) => b.pontuacao - a.pontuacao || b.iso.localeCompare(a.iso));
+}
+
+async function executarLeituraDocumentalParaData(arquivo) {
+    try {
+        const modulo = await import("./documentosOcrService");
+        if (typeof modulo.executarLeituraDocumentalLocal !== "function") return null;
+
+        return await modulo.executarLeituraDocumentalLocal({
+            arquivo,
+            arquivoNome: arquivo?.name || "",
+            mimeType: arquivo?.type || "",
+        });
+    } catch {
+        return null;
+    }
+}
+
+function obterTextoLeituraDocumentalParaData(leitura = {}) {
+    if (!leitura) return "";
+
+    const campos = leitura.camposExtraidos || leitura.campos_extraidos || {};
+    const linhasOcr = Array.isArray(leitura.linhasOcr)
+        ? leitura.linhasOcr
+        : Array.isArray(leitura.linhas_ocr)
+            ? leitura.linhas_ocr
+            : Array.isArray(campos.linhas_ocr)
+                ? campos.linhas_ocr
+                : [];
+
+    const resumoTextual = Array.isArray(leitura.resumoTextual)
+        ? leitura.resumoTextual.join(" ")
+        : Array.isArray(leitura.resumo_textual)
+            ? leitura.resumo_textual.join(" ")
+            : "";
+
+    return [
+        leitura.textoExtraido,
+        leitura.texto_extraido,
+        leitura.textoPrevia,
+        leitura.texto_previa,
+        resumoTextual,
+        campos.tipo_documento,
+        campos.empresa_nome,
+        campos.assinatura_data_br,
+        campos.data_encerramento_br,
+        ...linhasOcr.map((linha) => linha?.texto || ""),
+    ].filter(Boolean).join(" ");
+}
+
+function adicionarDatasLeituraDocumental(candidatos, leitura = {}) {
+    if (!leitura) return;
+
+    const textoOcr = obterTextoLeituraDocumentalParaData(leitura);
+
+    extrairDatasComContexto(textoOcr).forEach((item) =>
+        candidatos.push({
+            ...item,
+            origem: "OCR local",
+            pontuacao: item.pontuacao + 8,
+        })
+    );
+
+    const relevantes = [
+        ...(Array.isArray(leitura.datasRelevantesClassificadas) ? leitura.datasRelevantesClassificadas : []),
+        ...(Array.isArray(leitura.datas_relevantes_classificadas) ? leitura.datas_relevantes_classificadas : []),
+    ];
+
+    relevantes.forEach((data) => {
+        const iso = data?.iso || "";
+        if (!iso) return;
+
+        candidatos.push({
+            iso,
+            texto: data?.br || formatDate(iso),
+            contexto: [data?.rotulo, data?.motivo, data?.contexto].filter(Boolean).join(" "),
+            origem: "OCR local classificado",
+            pontuacao: 18,
+        });
+    });
 }
 
 export async function lerTextoPossivelDoArquivo(arquivo) {
@@ -596,11 +713,25 @@ export async function detectarDataEmissaoArquivo(arquivo) {
         })
     );
 
-    const ordenados = candidatos
+    let ordenados = candidatos
         .filter((item, index, array) =>
             array.findIndex((outro) => outro.iso === item.iso && outro.origem === item.origem) === index
         )
         .sort((a, b) => b.pontuacao - a.pontuacao || b.iso.localeCompare(a.iso));
+
+    // Se a leitura simples não encontrou data confiável, reaproveita a leitura documental
+    // robusta com PDF.js/OCR local. Isso corrige listas escaneadas de treinamento,
+    // como NR-11, em que a data está visível no cabeçalho, mas não existe texto bruto no PDF.
+    if (!ordenados.length || Number(ordenados[0]?.pontuacao || 0) < 8) {
+        const leituraDocumental = await executarLeituraDocumentalParaData(arquivo);
+        adicionarDatasLeituraDocumental(candidatos, leituraDocumental);
+
+        ordenados = candidatos
+            .filter((item, index, array) =>
+                array.findIndex((outro) => outro.iso === item.iso && outro.origem === item.origem) === index
+            )
+            .sort((a, b) => b.pontuacao - a.pontuacao || b.iso.localeCompare(a.iso));
+    }
 
     const melhor = ordenados[0];
 
@@ -613,7 +744,7 @@ export async function detectarDataEmissaoArquivo(arquivo) {
         };
     }
 
-    const confianca = Math.max(1, Math.min(100, Math.round(melhor.pontuacao * 12)));
+    const confianca = Math.max(1, Math.min(100, Math.round(melhor.pontuacao * 10)));
 
     return {
         data: melhor.iso,
