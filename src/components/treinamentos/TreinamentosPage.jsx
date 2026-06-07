@@ -15,6 +15,7 @@ import {
     obterTreinamento,
     calcularVencimentoTreinamento,
     detectarDataEmissaoArquivo,
+    inferirTreinamentoPorNomeArquivo,
 } from "../../services/colaboradorDocumentosService";
 import {
     prepararArquivosTreinamentoLote,
@@ -275,9 +276,16 @@ export function Treinamentos({
     const colabSelecionadoId = colabSelecionado?.id || "";
     const colabSelecionadoCodigo = colabSelecionado?.codigoFuncionario || "";
     const avaliacaoSelecionado = colabSelecionado ? avaliarTreinamentosColaborador(colabSelecionado) : null;
-    const treinamentosDisponiveis = avaliacaoSelecionado?.itens?.length
+    const treinamentoDetectadoArquivo = arquivoSelecionado ? inferirTreinamentoPorNomeArquivo(arquivoSelecionado.name) : null;
+    const treinamentosDisponiveisBase = avaliacaoSelecionado?.itens?.length
         ? avaliacaoSelecionado.itens.map((item) => item.treinamento).filter(Boolean)
         : treinamentosBase;
+    const treinamentosDisponiveis = [
+        ...treinamentosDisponiveisBase,
+        ...(treinamentoDetectadoArquivo?.id && !treinamentosDisponiveisBase.some((item) => Number(item.id) === Number(treinamentoDetectadoArquivo.id))
+            ? [treinamentoDetectadoArquivo]
+            : []),
+    ].sort((a, b) => obterOrdemTreinamentoParaBase({ treinamentoId: a.id }) - obterOrdemTreinamentoParaBase({ treinamentoId: b.id }) || String(a.nome || "").localeCompare(String(b.nome || ""), "pt-BR"));
 
     const treinamentoSelecionadoId = treinamentosDisponiveis.some((item) => Number(item.id) === Number(treinamentoId))
         ? Number(treinamentoId)
@@ -383,10 +391,17 @@ export function Treinamentos({
 
         if (!validarArquivoAntesUpload(arquivo, "documentoSimples")) return;
 
-        const dataPadraoUpload = obterDataHojeIso();
+        const treinamentoDetectado = inferirTreinamentoPorNomeArquivo(arquivo.name);
+        const mensagemTipoDetectado = treinamentoDetectado?.id
+            ? `Tipo ajustado automaticamente para ${treinamentoDetectado.nome}, conforme o nome do arquivo.`
+            : "";
 
         setArquivoSelecionado(arquivo);
-        setDataRealizacao(dataPadraoUpload);
+        setDataRealizacao("");
+
+        if (treinamentoDetectado?.id) {
+            setTreinamentoId(Number(treinamentoDetectado.id));
+        }
 
         const sugestao = await detectarDataEmissaoArquivo(arquivo);
         const dataDetectada = normalizarDataLancamentoCertificado(sugestao?.data);
@@ -394,11 +409,15 @@ export function Treinamentos({
             ? {
                 ...sugestao,
                 data: "",
-                mensagem: sugestao.mensagem || "Data detectada ignorada por estar fora do intervalo esperado. Confira manualmente.",
+                mensagem: "Data detectada ignorada por estar fora do intervalo esperado. Confira manualmente.",
             }
             : sugestao;
+        const mensagemData = sugestaoNormalizada?.mensagem || "Não foi possível identificar a data no arquivo. Informe manualmente antes de salvar.";
 
-        setSugestaoDataArquivo(sugestaoNormalizada);
+        setSugestaoDataArquivo({
+            ...(sugestaoNormalizada || {}),
+            mensagem: [mensagemTipoDetectado, mensagemData].filter(Boolean).join(" "),
+        });
 
         if (dataDetectada) {
             setDataRealizacao(dataDetectada);

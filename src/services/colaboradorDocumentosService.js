@@ -520,10 +520,39 @@ function contextoIndicaDataNaoPrincipal(item = {}) {
     return /nascimento|data de nascimento|filiacao|filiação|naturalidade|cpf|cnpj|ctps|pis|titulo eleitoral|título eleitoral|zona|secao|seção|cnh|portaria|codigo|código|crm|exames realizados|exame realizado|acuidade|audiometria|eletrocardiograma|eletroencefalograma|espirometria|glicose|raio x|raio-x|data da saida|data da saída|rescisao|rescisão|desligamento/.test(contexto);
 }
 
+function dataIsoPermitidaLancamento(item = {}, tipoDocumento = "") {
+    const iso = item?.iso || "";
+    const ano = anoIsoTreinamento(iso);
+    const tipo = normalizarTextoBusca(tipoDocumento);
+    const contexto = contextoBuscaDataTreinamento(item);
+
+    if (!ano) return false;
+
+    // Regra de segurança: datas antigas vindas do PDF bruto costumam ser metadados,
+    // datas de nascimento, código interno ou data de criação do arquivo.
+    // Para lançamento de certificados/documentos do colaborador, só aceitar data antiga
+    // se houver contexto documental extremamente forte.
+    if (ano >= 2020) return true;
+
+    const contextoForteDocumentoAntigo = /data de admissao|data de admissão|admissao|admissão|opcao em|opção em|sao jose dos campos|são josé dos campos|assinatura do empregado|assinado digitalmente|icp-brasil|m[eé]dico examinador/.test(contexto);
+
+    if (ano >= 2010 && contextoForteDocumentoAntigo && !contextoIndicaDataNaoPrincipal(item)) {
+        return true;
+    }
+
+    // Nunca sugerir data antiga para ASO/registro/treinamento quando ela veio sem contexto forte.
+    if (/aso|atestado|registro|clt|esocial|treinamento|nr/.test(tipo)) {
+        return false;
+    }
+
+    return false;
+}
+
 function selecionarMelhorDataDocumento(candidatos = [], tipoDocumento = "") {
     const tipo = normalizarTextoBusca(tipoDocumento);
     const unicos = (candidatos || [])
         .filter((item) => item?.iso)
+        .filter((item) => dataIsoPermitidaLancamento(item, tipoDocumento))
         .filter((item, index, array) =>
             array.findIndex((outro) => outro.iso === item.iso && outro.origem === item.origem) === index
         )
