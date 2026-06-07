@@ -2624,21 +2624,10 @@ function montarSecaoAniversariantesRelatorio({ aniversariantes = [], filtros = {
     return `
         <section class="pagina-relatorio pagina-relatorio-aniversariantes">
             <header class="cabecalho-relatorio cabecalho-relatorio--modelo-aprovado cabecalho-relatorio--aniversariantes">
-                <div class="marca-relatorio-controle">
-                    ${montarEscudoControleSstRelatorio()}
-                    <div class="marca-relatorio-controle__textos">
-                        <h1>CONTROLE SST QR</h1>
-                    </div>
-                    <div class="data-emissao-cabecalho">
-                        <strong>Data de emissão</strong>
-                        <em>${escaparHTML(dataEmissao)}</em>
-                    </div>
-                </div>
-
-                <div class="titulo-relatorio-cabecalho titulo-relatorio-cabecalho--aniversariantes">
-                    <span></span>
-                    <strong>${escaparHTML(titulo)}</strong>
-                    <span></span>
+                <div class="cabecalho-aniversariantes-centralizado">
+                    <h1>CONTROLE SST QR</h1>
+                    <h2>${escaparHTML(titulo)}</h2>
+                    <p><span>Data de emissão:</span> <strong>${escaparHTML(dataEmissao)}</strong></p>
                 </div>
             </header>
 
@@ -2769,50 +2758,66 @@ export async function baixarRelatorioAniversariantesPDF({
         gap: 9px;
     }
 
-    .marca-relatorio-controle {
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        gap: 14px;
-        text-align: left;
-    }
-
-    .escudo-controle-sst-relatorio {
-        width: 56px;
-        height: 56px;
+    .cabecalho-aniversariantes-centralizado {
         display: grid;
-        place-items: center;
-        border-radius: 18px;
-        background: #111827;
-        color: #ffffff;
-        flex: 0 0 auto;
-        box-shadow: none;
-        border: 0;
+        justify-items: center;
+        gap: 6px;
+        text-align: center;
+        padding: 2px 0 6px;
     }
 
-    .escudo-controle-sst-relatorio svg {
-        width: 28px;
-        height: 28px;
-        display: block;
-        fill: none;
-        stroke: currentColor;
-        stroke-width: 1.9;
-        stroke-linecap: round;
-        stroke-linejoin: round;
-    }
-
-    .marca-relatorio-controle__textos h1 {
+    .cabecalho-aniversariantes-centralizado h1 {
         margin: 0;
         color: #07162f;
         font-size: 31px;
-        line-height: 1.02;
+        line-height: 1;
         letter-spacing: 0.035em;
         text-transform: uppercase;
         font-weight: 900;
     }
 
-    .titulo-relatorio-cabecalho--aniversariantes {
-        margin-top: 0;
+    .cabecalho-aniversariantes-centralizado h2 {
+        width: 100%;
+        margin: 0;
+        display: grid;
+        grid-template-columns: minmax(70px, 1fr) auto minmax(70px, 1fr);
+        align-items: center;
+        gap: 16px;
+        color: var(--azul);
+        font-size: 15px;
+        line-height: 1;
+        font-weight: 900;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+        white-space: nowrap;
+    }
+
+    .cabecalho-aniversariantes-centralizado h2::before,
+    .cabecalho-aniversariantes-centralizado h2::after {
+        content: "";
+        height: 2px;
+        border-radius: 999px;
+        background: linear-gradient(90deg, transparent, var(--azul), transparent);
+    }
+
+    .cabecalho-aniversariantes-centralizado p {
+        margin: 0;
+        color: #94a3b8;
+        font-size: 6.8px;
+        line-height: 1;
+        font-weight: 700;
+        letter-spacing: 0.02em;
+        text-transform: uppercase;
+    }
+
+    .cabecalho-aniversariantes-centralizado p span {
+        color: #94a3b8;
+        font-weight: 700;
+    }
+
+    .cabecalho-aniversariantes-centralizado p strong {
+        color: #64748b;
+        font-weight: 800;
     }
 
     .cabecalho-relatorio--modelo-aprovado .marca-empresa {
