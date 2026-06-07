@@ -2767,38 +2767,38 @@ export async function baixarRelatorioAniversariantesPDF({
         justify-items: center;
         gap: 0;
         text-align: center;
-        padding: 2px 0 10px;
+        padding: 0 0 12px;
     }
 
     .cabecalho-aniversariantes-marca {
+        position: relative;
         width: 100%;
-        max-width: 640px;
-        min-height: 40px;
-        display: grid;
-        grid-template-columns: 56px auto 56px;
+        min-height: 58px;
+        display: flex;
         align-items: center;
         justify-content: center;
-        column-gap: 8px;
         margin: 0;
     }
 
     .cabecalho-aniversariantes-marca .escudo-controle-sst-relatorio {
-        grid-column: 1;
-        justify-self: end;
-        width: 34px;
-        height: 34px;
+        position: absolute;
+        left: 62px;
+        top: 50%;
+        transform: translateY(-50%);
+        width: 44px;
+        height: 44px;
         display: grid;
         place-items: center;
         color: #ffffff;
         background: #111827;
         border: 1px solid rgba(255,255,255,0.12);
-        border-radius: 12px;
+        border-radius: 14px;
         box-shadow: inset 0 0 0 1px rgba(255,255,255,0.04);
     }
 
     .cabecalho-aniversariantes-marca .escudo-controle-sst-relatorio svg {
-        width: 22px;
-        height: 22px;
+        width: 27px;
+        height: 27px;
         display: block;
         fill: none;
         stroke: currentColor;
@@ -2808,7 +2808,6 @@ export async function baixarRelatorioAniversariantesPDF({
     }
 
     .cabecalho-aniversariantes-centralizado h1 {
-        grid-column: 2;
         margin: 0;
         color: #07162f;
         font-size: 31px;
@@ -2821,11 +2820,11 @@ export async function baixarRelatorioAniversariantesPDF({
 
     .cabecalho-aniversariantes-centralizado h2 {
         width: 100%;
-        margin: 14px 0 0;
+        margin: 22px 0 0;
         display: grid;
-        grid-template-columns: minmax(110px, 1fr) auto minmax(110px, 1fr);
+        grid-template-columns: minmax(135px, 1fr) auto minmax(135px, 1fr);
         align-items: center;
-        column-gap: 12px;
+        column-gap: 14px;
         color: var(--azul);
         font-size: 15px;
         line-height: 1;
@@ -2847,11 +2846,14 @@ export async function baixarRelatorioAniversariantesPDF({
     }
 
     .cabecalho-aniversariantes-centralizado h2 span {
-        display: inline-block;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 16px;
         line-height: 1;
         padding: 0;
         background: transparent;
-        transform: translateY(-1px);
+        transform: translateY(0);
     }
 
     .cabecalho-aniversariantes-centralizado p {
