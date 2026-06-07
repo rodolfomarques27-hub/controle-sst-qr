@@ -1054,25 +1054,26 @@ export async function baixarRelatorioColaboradoresTreinamentosPDF({
     .data-emissao-cabecalho {
         display: inline-flex;
         align-items: baseline;
-        gap: 4px;
+        gap: 3px;
         min-height: auto;
-        margin-left: 6px;
-        padding: 0 0 0 10px;
+        margin-left: 3px;
+        padding: 0 0 0 8px;
         border: 0;
-        border-left: 1px solid #d6dee9;
+        border-left: 1px solid #e2e8f0;
         border-radius: 0;
         background: transparent;
-        color: #64748b;
+        color: #94a3b8;
         white-space: nowrap;
+        transform: translateY(1px);
     }
 
     .data-emissao-cabecalho strong {
         display: inline;
         margin: 0;
-        color: #64748b;
-        font-size: 7.6px;
+        color: #94a3b8;
+        font-size: 5.8px;
         line-height: 1;
-        font-weight: 800;
+        font-weight: 700;
         text-transform: uppercase;
         letter-spacing: 0.025em;
     }
@@ -1080,11 +1081,11 @@ export async function baixarRelatorioColaboradoresTreinamentosPDF({
     .data-emissao-cabecalho em {
         display: inline;
         margin: 0;
-        color: #475569;
+        color: #64748b;
         font-style: normal;
-        font-size: 8.4px;
+        font-size: 6.8px;
         line-height: 1;
-        font-weight: 800;
+        font-weight: 700;
     }
 
     .titulo-relatorio-cabecalho--aniversariantes {
