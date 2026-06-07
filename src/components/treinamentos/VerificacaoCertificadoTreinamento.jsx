@@ -504,7 +504,7 @@ function PainelConferenciaDocumentalRobusta({ verificacao = null }) {
                 <div>
                     <p className="text-[10px] font-black uppercase tracking-wide text-blue-700">Conferência documental avançada</p>
                     <p className="mt-1 text-xs leading-relaxed text-slate-500">
-                        Validação por OCR local para conferir colaborador, empresa, treinamento e assinatura visual em listas escaneadas.
+                        Validação por OCR local para conferir colaborador, empresa, treinamento e assinatura visual em listas ou documentos individuais escaneados.
                     </p>
                 </div>
                 {conferencia.listaPresenca && (
@@ -522,7 +522,7 @@ function PainelConferenciaDocumentalRobusta({ verificacao = null }) {
                 />
 
                 <LinhaConferenciaDocumental
-                    titulo="Assinatura na linha"
+                    titulo="Assinatura"
                     valor={assinatura.aplicavel ? assinatura.visualLocalizada === true : null}
                     textoSim="Assinatura visual localizada"
                     textoNao="Não confirmada"
@@ -539,7 +539,9 @@ function PainelConferenciaDocumentalRobusta({ verificacao = null }) {
                 <LinhaConferenciaDocumental
                     titulo="Empresa"
                     valor={empresa.encontrada}
-                    detalhe={empresa.nomeCadastro || empresa.nomeExtraido || "Empresa não informada"}
+                    detalhe={empresa.origem === "vinculo_colaborador_cpf_documento"
+                        ? `${empresa.nomeCadastro || "Empresa do colaborador"} · confirmada pelo vínculo do colaborador e CPF no documento`
+                        : (empresa.nomeCadastro || empresa.nomeExtraido || "Empresa não informada")}
                 />
 
                 <LinhaConferenciaDocumental
@@ -551,8 +553,12 @@ function PainelConferenciaDocumentalRobusta({ verificacao = null }) {
 
                 <LinhaConferenciaDocumental
                     titulo="CPF"
-                    valor={cpf.informadoCadastro ? cpf.encontrado : null}
-                    detalhe={cpf.informadoCadastro ? "CPF do cadastro procurado no documento." : "CPF não informado no cadastro ou não presente na lista."}
+                    valor={cpf.informadoCadastro ? cpf.encontrado : (cpf.encontradoNoDocumento ? true : null)}
+                    detalhe={cpf.informadoCadastro
+                        ? "CPF do cadastro procurado no documento."
+                        : (cpf.encontradoNoDocumento
+                            ? `CPF localizado no documento${Array.isArray(cpf.cpfsExtraidos) && cpf.cpfsExtraidos.length ? `: ${cpf.cpfsExtraidos[0]}` : ""}.`
+                            : "CPF não informado no cadastro ou não localizado no documento.")}
                     textoNa="Não informado"
                 />
             </div>

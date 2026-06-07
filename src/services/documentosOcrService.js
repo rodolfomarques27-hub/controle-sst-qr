@@ -1450,6 +1450,64 @@ function detectarAssinaturasTabelaPresenca(canvas) {
     return resultados;
 }
 
+
+function detectarAssinaturasDocumento(canvas, numeroPagina = 1, textoNormalizadoPagina = "") {
+    if (!canvas || typeof canvas.getContext !== "function") return [];
+
+    const texto = normalizarTextoVerificacao(textoNormalizadoPagina);
+    const documentoComAssinaturaIndividual = /ordem de servico|ordem de serviço|seguranca e saude do trabalho|segurança e saúde do trabalho|assinatura do empregado|registro de empregado|ficha de registro|empregado|data de admissao|data de admissão|controle de entrega de epi|entrega de epi|equipamento de protecao individual|equipamento de proteção individual|declaracao de recebimento|declaração de recebimento|atestado de saude ocupacional|atestado de saúde ocupacional|aso|assinado digitalmente|icp-brasil|participante/.test(texto);
+
+    if (!documentoComAssinaturaIndividual) return [];
+
+    const faixas = [
+        {
+            tipo: "assinatura_empregado",
+            rotulo: "Assinatura do empregado",
+            x0: 0.07,
+            x1: 0.43,
+            y0: 0.66,
+            y1: 0.90,
+        },
+        {
+            tipo: "assinatura_responsavel",
+            rotulo: "Assinatura do responsável/TST",
+            x0: 0.43,
+            x1: 0.88,
+            y0: 0.66,
+            y1: 0.90,
+        },
+        {
+            tipo: "assinatura_rodape",
+            rotulo: "Assinatura no rodapé do documento",
+            x0: 0.06,
+            x1: 0.92,
+            y0: 0.60,
+            y1: 0.92,
+        },
+    ];
+
+    return faixas.map((faixa) => {
+        const assinatura = calcularAssinaturaVisualFaixa(canvas, {
+            ...faixa,
+            origem: `assinatura_documento_${faixa.tipo}`,
+        });
+
+        return {
+            pagina: numeroPagina,
+            tipo: faixa.tipo,
+            rotulo: faixa.rotulo,
+            assinatura_visual: assinatura.assinaturaVisual,
+            assinatura_densidade: assinatura.densidade,
+            assinatura_densidade_azul: assinatura.densidadeAzul || 0,
+            assinatura_espalhamento_horizontal: assinatura.espalhamentoHorizontal || 0,
+            assinatura_espalhamento_vertical: assinatura.espalhamentoVertical || 0,
+            assinatura_origem: assinatura.origem,
+            largura_recorte: assinatura.larguraRecorte || null,
+            altura_recorte: assinatura.alturaRecorte || null,
+        };
+    }).filter((item) => item.assinatura_visual || item.tipo === "assinatura_empregado");
+}
+
 function montarLinhasOcrComAssinatura(canvas, palavras = []) {
     // Mantém a posição das linhas do OCR para localizar colaborador/data/treinamento,
     // mas não varre assinatura em todas as linhas. A assinatura é analisada só nas faixas
@@ -1465,6 +1523,89 @@ function montarLinhasOcrComAssinatura(canvas, palavras = []) {
             assinatura_origem: "assinatura_avaliada_por_tabela_quando_aplicavel",
         }))
         .slice(0, 120);
+}
+
+
+function calcularScoreTextoOcrOrientacao(texto = "") {
+    const limpo = limparTextoPossivelDocumento(texto);
+    const normalizado = normalizarTextoVerificacao(limpo);
+    const tokens = normalizado.match(/[a-z0-9]{3,}/g) || [];
+    const datas = extrairDatasTextoDocumental(limpo, "ocr_orientacao").length;
+    const termos = [
+        "certificado", "treinamento", "lista", "presenca", "presença", "ordem", "servico", "serviço",
+        "registro", "empregado", "aso", "atestado", "saude", "saúde", "ocupacional", "empresa", "cnpj",
+        "cpf", "colaborador", "nome", "funcao", "função", "assinatura", "ribeiro", "aquino", "data",
+        "admissao", "admissão", "epi", "ergonomia", "maquinas", "máquinas", "sinalizacao", "sinalização"
+    ].reduce((total, termo) => total + (normalizado.includes(normalizarTextoVerificacao(termo)) ? 1 : 0), 0);
+
+    return Math.min(100, tokens.length + termos * 8 + datas * 12 + Math.min(18, Math.floor(limpo.length / 80)));
+}
+
+function criarCanvasRotacionado(canvas, graus = 0) {
+    if (!canvas || typeof document === "undefined") return canvas;
+
+    const angulo = Number(graus || 0);
+    if (!angulo) return canvas;
+
+    const radianos = (angulo * Math.PI) / 180;
+    const larguraOrigem = canvas.width || 1;
+    const alturaOrigem = canvas.height || 1;
+    const rotacionado = document.createElement("canvas");
+    const trocaDimensao = Math.abs(angulo) % 180 === 90;
+
+    rotacionado.width = trocaDimensao ? alturaOrigem : larguraOrigem;
+    rotacionado.height = trocaDimensao ? larguraOrigem : alturaOrigem;
+
+    const contexto = rotacionado.getContext("2d", { willReadFrequently: true });
+    if (!contexto) return canvas;
+
+    contexto.save();
+    contexto.translate(rotacionado.width / 2, rotacionado.height / 2);
+    contexto.rotate(radianos);
+    contexto.drawImage(canvas, -larguraOrigem / 2, -alturaOrigem / 2);
+    contexto.restore();
+
+    return rotacionado;
+}
+
+async function reconhecerTextoCanvasComOcrComOrientacao(canvas) {
+    const tentativas = [];
+    const primeira = await reconhecerTextoCanvasComOcr(canvas);
+
+    tentativas.push({
+        ...primeira,
+        canvasAnalise: canvas,
+        rotacao: 0,
+        scoreOrientacao: calcularScoreTextoOcrOrientacao(primeira?.texto || ""),
+    });
+
+    if (tentativas[0].scoreOrientacao >= 34) {
+        return tentativas[0];
+    }
+
+    for (const rotacao of [90, 270]) {
+        const canvasRotacionado = criarCanvasRotacionado(canvas, rotacao);
+        if (!canvasRotacionado || canvasRotacionado === canvas) continue;
+
+        try {
+            const resultado = await reconhecerTextoCanvasComOcr(canvasRotacionado);
+            tentativas.push({
+                ...resultado,
+                canvasAnalise: canvasRotacionado,
+                rotacao,
+                scoreOrientacao: calcularScoreTextoOcrOrientacao(resultado?.texto || ""),
+            });
+        } catch {
+            try {
+                canvasRotacionado.width = 1;
+                canvasRotacionado.height = 1;
+            } catch {
+                // Não bloquear a análise se não conseguir liberar o canvas.
+            }
+        }
+    }
+
+    return tentativas.sort((a, b) => Number(b.scoreOrientacao || 0) - Number(a.scoreOrientacao || 0))[0] || tentativas[0];
 }
 
 async function reconhecerTextoCanvasComOcr(canvas) {
@@ -1517,6 +1658,7 @@ async function extrairTextoPrimeiraPaginaPdfComOcr(buffer) {
             avisos: [],
             linhasOcr: [],
             assinaturasTabela: [],
+            assinaturasDocumento: [],
         };
     }
 
@@ -1528,6 +1670,7 @@ async function extrairTextoPrimeiraPaginaPdfComOcr(buffer) {
             avisos: ["OCR de imagem não executado fora do navegador."],
             linhasOcr: [],
             assinaturasTabela: [],
+            assinaturasDocumento: [],
         };
     }
 
@@ -1551,6 +1694,7 @@ async function extrairTextoPrimeiraPaginaPdfComOcr(buffer) {
                 avisos: ["OCR local não encontrou páginas no PDF."],
                 linhasOcr: [],
                 assinaturasTabela: [],
+                assinaturasDocumento: [],
             };
         }
 
@@ -1558,6 +1702,7 @@ async function extrairTextoPrimeiraPaginaPdfComOcr(buffer) {
         const textosPaginas = [];
         const linhasOcrGerais = [];
         const assinaturasTabelaGerais = [];
+        const assinaturasDocumentoGerais = [];
         const avisos = [];
 
         async function executarOcrPagina(numeroPagina) {
@@ -1582,21 +1727,29 @@ async function extrairTextoPrimeiraPaginaPdfComOcr(buffer) {
             await pagina.render({ canvasContext: contexto, viewport }).promise;
             await new Promise((resolve) => setTimeout(resolve, 0));
 
-            const resultadoOcr = await reconhecerTextoCanvasComOcr(canvas);
+            const resultadoOcr = await reconhecerTextoCanvasComOcrComOrientacao(canvas);
+            const canvasAnalise = resultadoOcr?.canvasAnalise || canvas;
             const textoOcr = resultadoOcr?.texto || "";
-            const linhasOcr = montarLinhasOcrComAssinatura(canvas, resultadoOcr?.palavras || [])
+            const linhasOcr = montarLinhasOcrComAssinatura(canvasAnalise, resultadoOcr?.palavras || [])
                 .map((linha) => ({
                     ...linha,
                     pagina: numeroPagina,
+                    rotacao: resultadoOcr?.rotacao || 0,
                     texto: linha?.texto ? `Página ${numeroPagina}: ${linha.texto}` : linha?.texto,
                 }));
             await new Promise((resolve) => setTimeout(resolve, 0));
 
             const textoNormalizadoOcr = normalizarTextoVerificacao(textoOcr);
-            const pareceListaComAssinatura = /nome do colaborador|assinatura|declaro ter participado|lista de presenca|lista de presença|nr\s*[-º]?\s*11|manuseio de materiais|movimentacao/.test(textoNormalizadoOcr);
+            const pareceListaComAssinatura = /nome do colaborador|nome\s+cargo\s+assinatura|assinatura|declaro ter participado|lista de presenca|lista de presença|integra[cç][aã]o|nr\s*[-º]?\s*(?:11|12|17|18|21|25|26)|manuseio de materiais|movimentacao|movimentação/.test(textoNormalizadoOcr);
             const assinaturasTabela = pareceListaComAssinatura
-                ? detectarAssinaturasTabelaPresenca(canvas).map((assinatura) => ({ ...assinatura, pagina: numeroPagina }))
+                ? detectarAssinaturasTabelaPresenca(canvasAnalise).map((assinatura) => ({ ...assinatura, pagina: numeroPagina, rotacao: resultadoOcr?.rotacao || 0 }))
                 : [];
+            const assinaturasDocumento = detectarAssinaturasDocumento(canvasAnalise, numeroPagina, textoNormalizadoOcr)
+                .map((assinatura) => ({ ...assinatura, rotacao: resultadoOcr?.rotacao || 0 }));
+
+            if (resultadoOcr?.rotacao) {
+                avisos.push(`OCR local corrigiu orientação da página ${numeroPagina} em ${resultadoOcr.rotacao}° para ler certificado digitalizado de lado.`);
+            }
 
             if (textoOcr) {
                 textosPaginas.push(`Página ${numeroPagina}: ${textoOcr}`);
@@ -1604,8 +1757,13 @@ async function extrairTextoPrimeiraPaginaPdfComOcr(buffer) {
 
             linhasOcrGerais.push(...linhasOcr);
             assinaturasTabelaGerais.push(...assinaturasTabela);
+            assinaturasDocumentoGerais.push(...assinaturasDocumento);
 
             try {
+                if (resultadoOcr?.canvasAnalise && resultadoOcr.canvasAnalise !== canvas) {
+                    resultadoOcr.canvasAnalise.width = 1;
+                    resultadoOcr.canvasAnalise.height = 1;
+                }
                 canvas.width = 1;
                 canvas.height = 1;
             } catch {
@@ -1641,6 +1799,7 @@ async function extrairTextoPrimeiraPaginaPdfComOcr(buffer) {
                 totalPaginas,
                 linhasOcr: linhasOcrGerais,
                 assinaturasTabela: assinaturasTabelaGerais,
+                assinaturasDocumento: assinaturasDocumentoGerais,
                 avisos,
             };
         }
@@ -1651,6 +1810,7 @@ async function extrairTextoPrimeiraPaginaPdfComOcr(buffer) {
             totalPaginas,
             linhasOcr: linhasOcrGerais,
             assinaturasTabela: assinaturasTabelaGerais,
+            assinaturasDocumento: assinaturasDocumentoGerais,
             avisos: [
                 ...avisos,
                 "OCR local executado, mas não encontrou texto documental confiável nas páginas analisadas.",
@@ -1664,6 +1824,7 @@ async function extrairTextoPrimeiraPaginaPdfComOcr(buffer) {
             avisos: [`OCR local de imagem indisponível: ${error?.message || "erro desconhecido"}.`],
             linhasOcr: [],
             assinaturasTabela: [],
+            assinaturasDocumento: [],
         };
     }
 }
@@ -1933,6 +2094,7 @@ function montarRetornoLeituraBase({
     buscaAmpliada = null,
     linhasOcr = [],
     assinaturasTabela = [],
+    assinaturasDocumento = [],
     avisos = [],
     erro = "",
 } = {}) {
@@ -2013,6 +2175,7 @@ function montarRetornoLeituraBase({
         camposExtraidos,
         linhasOcr: Array.isArray(linhasOcr) ? linhasOcr.slice(0, 120) : [],
         assinaturasTabela: Array.isArray(assinaturasTabela) ? assinaturasTabela.slice(0, 30) : [],
+        assinaturasDocumento: Array.isArray(assinaturasDocumento) ? assinaturasDocumento.slice(0, 20) : [],
         textoLimitado,
         paginasLidas,
         totalPaginas,
@@ -2113,6 +2276,7 @@ export async function executarLeituraDocumentalLocal({ arquivo = null, arquivoNo
             textoLimitado,
             linhasOcr: textoVeioDoOcrImagem ? (leituraOcrImagem?.linhasOcr || []) : [],
             assinaturasTabela: textoVeioDoOcrImagem ? (leituraOcrImagem?.assinaturasTabela || []) : [],
+            assinaturasDocumento: textoVeioDoOcrImagem ? (leituraOcrImagem?.assinaturasDocumento || []) : [],
             paginasLidas: textoVeioDoOcrImagem ? (leituraOcrImagem?.paginasLidas || 1) : (leituraPdfJs.paginasLidas || 0),
             totalPaginas: leituraPdfJs.totalPaginas || leituraOcrImagem?.totalPaginas || 0,
             buscaAmpliada: leituraPdfJs.buscaAmpliada || null,
@@ -2371,6 +2535,7 @@ export function montarRetornoLeituraParaPersistencia(leitura = null) {
         campos_extraidos: leitura.camposExtraidos || null,
         linhas_ocr: (leitura.linhasOcr || []).slice(0, 120),
         assinaturas_tabela: (leitura.assinaturasTabela || leitura.assinaturas_tabela || []).slice(0, 30),
+        assinaturas_documento: (leitura.assinaturasDocumento || leitura.assinaturas_documento || []).slice(0, 20),
         texto_previa: leitura.textoPrevia || "",
         paginas_lidas: leitura.paginasLidas || 0,
         total_paginas: leitura.totalPaginas || 0,

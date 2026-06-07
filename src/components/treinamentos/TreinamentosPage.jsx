@@ -15,7 +15,6 @@ import {
     obterTreinamento,
     calcularVencimentoTreinamento,
     detectarDataEmissaoArquivo,
-    inferirTreinamentoPorNomeArquivo,
 } from "../../services/colaboradorDocumentosService";
 import {
     prepararArquivosTreinamentoLote,
@@ -34,6 +33,30 @@ import {
 
 const obterDataHojeIso = () => new Date().toISOString().slice(0, 10);
 
+function obterOrdemTreinamentoParaBase(documento = {}) {
+    const treinamento = obterTreinamento(Number(documento?.treinamentoId || documento?.treinamento_id || 0));
+    const nome = String(treinamento?.nome || documento?.nomeTreinamento || documento?.tipoTreinamento || "");
+    const matchNr = nome.match(/NR\s*[-–—º°]?\s*(\d+(?:[.,]\d+)?)/i);
+
+    if (matchNr?.[1]) {
+        return Number(String(matchNr[1]).replace(",", "."));
+    }
+
+    if (normalizarTextoBusca(nome).includes("ficha")) return 0;
+    return Number(documento?.treinamentoId || treinamento?.id || 9999);
+}
+
+function ordenarCertificadosPorTreinamento(a = {}, b = {}) {
+    const ordemA = obterOrdemTreinamentoParaBase(a);
+    const ordemB = obterOrdemTreinamentoParaBase(b);
+
+    if (ordemA !== ordemB) return ordemA - ordemB;
+
+    const nomeA = obterTreinamento(Number(a?.treinamentoId || 0))?.nome || a?.nomeTreinamento || a?.tipoTreinamento || "";
+    const nomeB = obterTreinamento(Number(b?.treinamentoId || 0))?.nome || b?.nomeTreinamento || b?.tipoTreinamento || "";
+    return String(nomeA).localeCompare(String(nomeB), "pt-BR");
+}
+
 function normalizarDataLancamentoCertificado(data) {
     const texto = String(data || "").trim();
 
@@ -49,43 +72,6 @@ function normalizarDataLancamentoCertificado(data) {
     if (ano < 2000 || ano > anoMaximo) return "";
 
     return texto;
-}
-
-function tokensNomeArquivoTreinamento(nomeArquivo = "") {
-    return normalizarTextoBusca(String(nomeArquivo || "").replace(/\.[^.]+$/, ""))
-        .replace(/[_-]+/g, " ")
-        .replace(/\b(nr\s*[-º]?\s*\d+|nr\d+|aso|atestado|saude|saúde|ocupacional|ficha|registro|clt|esocial|certificado|treinamento|integracao|integração|mobilizacao|mobilização|ordem|servico|serviço|pdf|documento|assinatura|lista|presenca|presença|transporte|movimentacao|movimentação|armazenagem|manuseio|materiais)\b/g, " ")
-        .replace(/[^a-z0-9]+/g, " ")
-        .split(" ")
-        .map((token) => token.trim())
-        .filter((token) => token.length >= 3 && !["dos", "das", "de", "da", "do", "para", "com", "sem", "por", "aos", "ltda", "eireli", "empresa"].includes(token));
-}
-
-function validarNomeArquivoContraColaboradorSelecionadoTela({ arquivo, colaborador } = {}) {
-    const nomeArquivo = arquivo?.name || arquivo?.nome || arquivo?.filename || "";
-    const nomeColaborador = colaborador?.nome || "";
-
-    if (!nomeArquivo || !nomeColaborador) return true;
-
-    const tokensArquivo = Array.from(new Set(tokensNomeArquivoTreinamento(nomeArquivo)));
-    const tokensColaborador = Array.from(new Set(tokensNomeArquivoTreinamento(nomeColaborador)));
-
-    if (tokensArquivo.length < 2 || tokensColaborador.length < 2) return true;
-
-    const encontrados = tokensArquivo.filter((token) => tokensColaborador.includes(token));
-    const proporcao = encontrados.length / tokensArquivo.length;
-    const primeiroColaborador = tokensColaborador[0] || "";
-    const ultimoColaborador = tokensColaborador[tokensColaborador.length - 1] || "";
-    const contemPrimeiroOuUltimo = tokensArquivo.includes(primeiroColaborador) || tokensArquivo.includes(ultimoColaborador);
-
-    if (proporcao < 0.7 || !contemPrimeiroOuUltimo) {
-        const nomeIndicado = tokensArquivo.slice(0, 7).join(" ").toUpperCase();
-        throw new Error(
-            `O nome do arquivo indica "${nomeIndicado}", mas o colaborador selecionado é "${nomeColaborador}". Corrija o colaborador ou envie o documento correto antes de salvar.`
-        );
-    }
-
-    return true;
 }
 
 const cardsTreinamentosPadrao = {
@@ -169,15 +155,13 @@ export function Treinamentos({
                 ?.codigoFuncionario || ""
     );
     const [treinamentoId, setTreinamentoId] = useState(treinamentosBase[0].id);
-    const [dataRealizacao, setDataRealizacao] = useState("");
+    const [dataRealizacao, setDataRealizacao] = useState(() => obterDataHojeIso());
     const [arquivoSelecionado, setArquivoSelecionado] = useState(null);
     const [sugestaoDataArquivo, setSugestaoDataArquivo] = useState(null);
     const [observacao, setObservacao] = useState("");
     const [salvandoCertificado, setSalvandoCertificado] = useState(false);
-    const [analisandoArquivoCertificado, setAnalisandoArquivoCertificado] = useState(false);
     const [arquivosLote, setArquivosLote] = useState([]);
     const [salvandoLote, setSalvandoLote] = useState(false);
-    const [preparandoLoteCertificados, setPreparandoLoteCertificados] = useState(false);
     const [sincronizandoStorage, setSincronizandoStorage] = useState(false);
     const [resultadoLote, setResultadoLote] = useState("");
     const [datasRevisao, setDatasRevisao] = useState({});
@@ -311,7 +295,7 @@ export function Treinamentos({
 
         setColabId(String(novoColaboradorCodigo));
         setTreinamentoId(Number(primeiroTreinamento));
-        setDataRealizacao("");
+        setDataRealizacao(obterDataHojeIso());
     };
 
     const adicionarTreinamento = async () => {
@@ -322,16 +306,6 @@ export function Treinamentos({
 
         if (!arquivoSelecionado) {
             alert("Selecione o arquivo do certificado antes de salvar.");
-            return;
-        }
-
-        try {
-            validarNomeArquivoContraColaboradorSelecionadoTela({
-                arquivo: arquivoSelecionado,
-                colaborador: colabSelecionado,
-            });
-        } catch (error) {
-            alert(error?.message || "O arquivo parece pertencer a outro colaborador.");
             return;
         }
 
@@ -354,7 +328,7 @@ export function Treinamentos({
             setArquivoSelecionado(null);
             setSugestaoDataArquivo(null);
             setObservacao("");
-            setDataRealizacao("");
+            setDataRealizacao(obterDataHojeIso());
         }
     };
 
@@ -371,28 +345,21 @@ export function Treinamentos({
             return;
         }
 
-        const dataBaseLote = normalizarDataLancamentoCertificado(dataRealizacao) || "";
+        const dataBaseLote = normalizarDataLancamentoCertificado(dataRealizacao) || obterDataHojeIso();
 
-        if (dataBaseLote && dataBaseLote !== dataRealizacao) {
+        if (dataBaseLote !== dataRealizacao) {
             setDataRealizacao(dataBaseLote);
         }
 
-        setPreparandoLoteCertificados(true);
-        setResultadoLote("Analisando documentos do lote. Aguarde...");
+        const preparados = await prepararArquivosTreinamentoLote({
+            listaArquivos: arquivos,
+            colaboradores,
+            colabSelecionado,
+            dataRealizacao: dataBaseLote,
+        });
 
-        try {
-            const preparados = await prepararArquivosTreinamentoLote({
-                listaArquivos: arquivos,
-                colaboradores,
-                colabSelecionado,
-                dataRealizacao: dataBaseLote,
-            });
-
-            setArquivosLote(preparados);
-            setResultadoLote("");
-        } finally {
-            setPreparandoLoteCertificados(false);
-        }
+        setArquivosLote(preparados);
+        setResultadoLote("");
     };
 
     const alterarColaboradorArquivoLote = (arquivoId, colaboradorCodigo) => {
@@ -400,7 +367,7 @@ export function Treinamentos({
     };
 
     const alterarTreinamentoArquivoLote = (arquivoId, treinamentoId) => {
-        const dataBaseLote = normalizarDataLancamentoCertificado(dataRealizacao) || "";
+        const dataBaseLote = normalizarDataLancamentoCertificado(dataRealizacao) || obterDataHojeIso();
         setArquivosLote((atual) => atualizarTreinamentoArquivoLote(atual, arquivoId, treinamentoId, dataBaseLote));
     };
 
@@ -411,65 +378,30 @@ export function Treinamentos({
     const selecionarArquivoCertificado = async (arquivo) => {
         setArquivoSelecionado(null);
         setSugestaoDataArquivo(null);
-        setAnalisandoArquivoCertificado(false);
 
         if (!arquivo) return;
 
         if (!validarArquivoAntesUpload(arquivo, "documentoSimples")) return;
 
-        try {
-            validarNomeArquivoContraColaboradorSelecionadoTela({
-                arquivo,
-                colaborador: colabSelecionado,
-            });
-        } catch (error) {
-            alert(error?.message || "O arquivo parece pertencer a outro colaborador.");
-            return;
-        }
-
-        const treinamentoInferido = inferirTreinamentoPorNomeArquivo(arquivo.name || "");
-        const treinamentoInferidoId = Number(treinamentoInferido?.id || 0);
-        const treinamentoAtualId = Number(treinamentoSelecionadoId || treinamentoId || 0);
-        const deveAjustarTipo =
-            Number.isFinite(treinamentoInferidoId) &&
-            treinamentoInferidoId > 0 &&
-            treinamentoInferidoId !== treinamentoAtualId;
-
-        if (deveAjustarTipo) {
-            setTreinamentoId(treinamentoInferidoId);
-        }
+        const dataPadraoUpload = obterDataHojeIso();
 
         setArquivoSelecionado(arquivo);
-        setDataRealizacao("");
-        setAnalisandoArquivoCertificado(true);
+        setDataRealizacao(dataPadraoUpload);
 
-        try {
-            const sugestao = await detectarDataEmissaoArquivo(arquivo);
-            const dataDetectada = normalizarDataLancamentoCertificado(sugestao?.data);
-            const mensagemTipoAjustado = deveAjustarTipo
-                ? `Tipo ajustado automaticamente para ${treinamentoInferido.nome}, conforme o nome do arquivo.`
-                : "";
-            const sugestaoNormalizada = sugestao?.data && !dataDetectada
-                ? {
-                    ...sugestao,
-                    data: "",
-                    mensagem: [
-                        mensagemTipoAjustado,
-                        sugestao.mensagem || "Data detectada ignorada por estar fora do intervalo esperado. Confira manualmente.",
-                    ].filter(Boolean).join(" "),
-                }
-                : {
-                    ...sugestao,
-                    mensagem: [mensagemTipoAjustado, sugestao?.mensagem].filter(Boolean).join(" "),
-                };
-
-            setSugestaoDataArquivo(sugestaoNormalizada);
-
-            if (dataDetectada) {
-                setDataRealizacao(dataDetectada);
+        const sugestao = await detectarDataEmissaoArquivo(arquivo);
+        const dataDetectada = normalizarDataLancamentoCertificado(sugestao?.data);
+        const sugestaoNormalizada = sugestao?.data && !dataDetectada
+            ? {
+                ...sugestao,
+                data: "",
+                mensagem: sugestao.mensagem || "Data detectada ignorada por estar fora do intervalo esperado. Confira manualmente.",
             }
-        } finally {
-            setAnalisandoArquivoCertificado(false);
+            : sugestao;
+
+        setSugestaoDataArquivo(sugestaoNormalizada);
+
+        if (dataDetectada) {
+            setDataRealizacao(dataDetectada);
         }
     };
 
@@ -506,20 +438,6 @@ export function Treinamentos({
         if (incompletos.length > 0) {
             alert("Antes de salvar, confira colaborador, treinamento e datas de todos os arquivos do lote.");
             return;
-        }
-
-        for (const item of arquivosLote) {
-            const colaboradorDoArquivo = colaboradores.find((c) => String(c.codigoFuncionario) === String(item.colaboradorCodigo));
-
-            try {
-                validarNomeArquivoContraColaboradorSelecionadoTela({
-                    arquivo: item.arquivo,
-                    colaborador: colaboradorDoArquivo,
-                });
-            } catch (error) {
-                alert(error?.message || `O arquivo ${item.arquivo?.name || "selecionado"} parece pertencer a outro colaborador.`);
-                return;
-            }
         }
 
         setSalvandoLote(true);
@@ -560,7 +478,7 @@ export function Treinamentos({
         if (falhas === 0) {
             setArquivosLote([]);
             setObservacao("");
-            setDataRealizacao("");
+            setDataRealizacao(obterDataHojeIso());
         }
     };
 
@@ -591,9 +509,9 @@ export function Treinamentos({
         .map((colaborador) => {
             const avaliacao = avaliarTreinamentosColaborador(colaborador);
             const termo = normalizarTextoBusca(buscaCertificados);
-            const certificadosDoColaborador = documentosFiltrados.filter(
-                (documento) => String(documento.colaborador?.id) === String(colaborador.id)
-            );
+            const certificadosDoColaborador = documentosFiltrados
+                .filter((documento) => String(documento.colaborador?.id) === String(colaborador.id))
+                .sort(ordenarCertificadosPorTreinamento);
 
             const pendentesDoColaborador = avaliacao.itens
                 .filter((item) => item.status.chave === "pendente")
@@ -627,7 +545,7 @@ export function Treinamentos({
         setArquivoSelecionado(null);
         setSugestaoDataArquivo(null);
         setObservacao("");
-        setDataRealizacao("");
+        setDataRealizacao(obterDataHojeIso());
 
         window.scrollTo({ top: 0, behavior: "smooth" });
     };
@@ -1128,6 +1046,11 @@ export function Treinamentos({
                                         </div>
                                     )}
 
+                                    {cardsTreinamentosRecolhidos.filtros && (
+                                        <p className="mt-4 rounded-2xl bg-slate-50 px-4 py-3 text-sm text-slate-500">
+                                            Card recolhido. Clique em Abrir filtros para pesquisar ou alterar o status exibido.
+                                        </p>
+                                    )}
                                 </Card>
                             </div>
                         );
@@ -1155,7 +1078,6 @@ export function Treinamentos({
                                     selecionarArquivoCertificado={selecionarArquivoCertificado}
                                     sugestaoDataArquivo={sugestaoDataArquivo}
                                     salvandoCertificado={salvandoCertificado}
-                                    analisandoArquivoCertificado={analisandoArquivoCertificado}
                                     adicionarTreinamento={adicionarTreinamento}
                                     arquivosLote={arquivosLote}
                                     prepararArquivosLote={prepararArquivosLote}
@@ -1170,7 +1092,6 @@ export function Treinamentos({
                                     treinamentosBase={treinamentosBase}
                                     salvarCertificadosEmLote={salvarCertificadosEmLote}
                                     salvandoLote={salvandoLote}
-                                    preparandoLoteCertificados={preparandoLoteCertificados}
                                     recolhido={cardsTreinamentosRecolhidos.lancamento}
                                     onAlternarRecolhido={() => alternarCardTreinamento("lancamento")}
                                 />

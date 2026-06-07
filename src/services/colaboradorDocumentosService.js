@@ -410,8 +410,9 @@ export function inferirTreinamentoPorNomeArquivo(nomeArquivo = "") {
         return obterTreinamento(3);
     }
     if (contem("nr 17", "nr17", "nr-17", "ergonomia", "postural")) return obterTreinamento(18);
+    if (contem("nr 18.06", "nr18.06", "nr-18.06", "nr 1806", "nr1806")) return obterTreinamento(9);
     if (contem("nr 18", "nr18", "nr-18")) {
-        if (contem("escavacao", "escavação", "vala", "valas")) return obterTreinamento(12);
+        if (contem("escavacao", "escavação", "vala", "valas", "fundacao", "fundação", "fundacoes", "fundações")) return obterTreinamento(9);
         if (contem("solda", "quente")) return obterTreinamento(6);
         if (contem("pemt", "pta", "plataforma")) return obterTreinamento(5);
         if (contem("lixadeira", "esmerilhadeira")) return obterTreinamento(7);
@@ -465,6 +466,109 @@ function converterDataExtensoParaISO(diaValor, mesValor, anoValor) {
     return converterDataParaISO(diaValor, mes, anoValor);
 }
 
+
+function normalizarDigitosOcrData(valor = "") {
+    return String(valor || "")
+        .replace(/[Oo]/g, "0")
+        .replace(/[Il|]/g, "1")
+        .replace(/S/g, "5")
+        .replace(/B/g, "8");
+}
+
+function normalizarDatasComErrosOcr(texto = "") {
+    let conteudo = String(texto || "");
+
+    conteudo = conteudo.replace(
+        /\b([0-3]?[0-9OoIl|])\s*[\/.-]\s*([0-1]?[0-9OoIl|])\s*[\/.-]\s*((?:[12][0-9OoIl|]{3})|[0-9OoIl|]{2})\b/g,
+        (_, dia, mes, ano) => `${normalizarDigitosOcrData(dia)}/${normalizarDigitosOcrData(mes)}/${normalizarDigitosOcrData(ano)}`
+    );
+
+    conteudo = conteudo.replace(
+        /\b([0-3]?[0-9OoIl|])\s+de\s+([a-zA-ZÀ-ÿçÇ]+)\s+de\s+((?:[12][0-9OoIl|]{3})|[0-9OoIl|]{2})\b/gi,
+        (_, dia, mes, ano) => `${normalizarDigitosOcrData(dia)} de ${mes} de ${normalizarDigitosOcrData(ano)}`
+    );
+
+    return conteudo;
+}
+
+function anoIsoTreinamento(iso = "") {
+    const ano = Number(String(iso || "").slice(0, 4));
+    return Number.isFinite(ano) ? ano : 0;
+}
+
+function contextoBuscaDataTreinamento(item = {}) {
+    return normalizarTextoBusca(`${item?.contexto || ""} ${item?.texto || ""} ${item?.origem || ""}`);
+}
+
+function contextoIndicaNascimentoRegistro(item = {}) {
+    const contexto = contextoBuscaDataTreinamento(item);
+    return /nascimento|data de nascimento|naturalidade|filiacao|filiação|pai|mae|mãe/.test(contexto);
+}
+
+function contextoIndicaAdmissaoRegistro(item = {}) {
+    const contexto = contextoBuscaDataTreinamento(item);
+    return /data de admissao|data de admissão|admissao|admissão|opcao em|opção em|fgts|registro de empregado/.test(contexto);
+}
+
+function contextoIndicaFechamentoOs(item = {}) {
+    const contexto = contextoBuscaDataTreinamento(item);
+    return /pagina 2|página 2|sao jose dos campos|são josé dos campos|assinatura do empregado|tecnico em seg|técnico em seg|reg\s*:\s*sp|ordem de servico|ordem de serviço|recebi treinamento/.test(contexto);
+}
+
+function contextoIndicaDataNaoPrincipal(item = {}) {
+    const contexto = contextoBuscaDataTreinamento(item);
+    return /nascimento|data de nascimento|filiacao|filiação|naturalidade|cpf|cnpj|ctps|pis|titulo eleitoral|título eleitoral|zona|secao|seção|cnh|portaria|codigo|código|crm|exames realizados|exame realizado|acuidade|audiometria|eletrocardiograma|eletroencefalograma|espirometria|glicose|raio x|raio-x|data da saida|data da saída|rescisao|rescisão|desligamento/.test(contexto);
+}
+
+function selecionarMelhorDataDocumento(candidatos = [], tipoDocumento = "") {
+    const tipo = normalizarTextoBusca(tipoDocumento);
+    const unicos = (candidatos || [])
+        .filter((item) => item?.iso)
+        .filter((item, index, array) =>
+            array.findIndex((outro) => outro.iso === item.iso && outro.origem === item.origem) === index
+        )
+        .sort((a, b) => Number(b.pontuacao || 0) - Number(a.pontuacao || 0) || String(b.iso || "").localeCompare(String(a.iso || "")));
+
+    if (!unicos.length) return [];
+
+    if (/ficha|registro|clt|esocial/.test(tipo)) {
+        const admissao = unicos
+            .filter((item) => contextoIndicaAdmissaoRegistro(item))
+            .map((item) => ({ ...item, pontuacao: Number(item.pontuacao || 0) + 120 }))
+            .sort((a, b) => Number(b.pontuacao || 0) - Number(a.pontuacao || 0));
+
+        if (admissao.length) return admissao;
+
+        const recentesSemNascimento = unicos
+            .filter((item) => anoIsoTreinamento(item.iso) >= 2020 && !contextoIndicaNascimentoRegistro(item) && !contextoIndicaDataNaoPrincipal(item))
+            .map((item) => ({ ...item, pontuacao: Number(item.pontuacao || 0) + 60 }))
+            .sort((a, b) => Number(b.pontuacao || 0) - Number(a.pontuacao || 0) || String(b.iso || "").localeCompare(String(a.iso || "")));
+
+        if (recentesSemNascimento.length) return recentesSemNascimento;
+
+        // Se só sobrou nascimento ou dado cadastral antigo, melhor pedir data manual do que sugerir errado.
+        return [];
+    }
+
+    if (/ordem|servico|serviço|\bos\b/.test(tipo)) {
+        const fechamento = unicos
+            .filter((item) => contextoIndicaFechamentoOs(item) && !contextoIndicaDataNaoPrincipal(item))
+            .map((item) => ({ ...item, pontuacao: Number(item.pontuacao || 0) + 100 }))
+            .sort((a, b) => Number(b.pontuacao || 0) - Number(a.pontuacao || 0));
+
+        if (fechamento.length) return fechamento;
+
+        const recentes = unicos
+            .filter((item) => anoIsoTreinamento(item.iso) >= 2020 && !contextoIndicaDataNaoPrincipal(item))
+            .map((item) => ({ ...item, pontuacao: Number(item.pontuacao || 0) + 35 }))
+            .sort((a, b) => Number(b.pontuacao || 0) - Number(a.pontuacao || 0));
+
+        if (recentes.length) return recentes;
+    }
+
+    return unicos.filter((item) => !contextoIndicaDataNaoPrincipal(item) || Number(item.pontuacao || 0) >= 20);
+}
+
 function tipoDocumentoPorArquivoParaData(nomeArquivo = "") {
     const treinamento = inferirTreinamentoPorNomeArquivo(nomeArquivo);
     return normalizarTextoBusca(`${treinamento?.nome || ""} ${nomeArquivo || ""}`);
@@ -479,7 +583,7 @@ export function dataRealizacaoPorArquivo() {
 
 export function extrairDatasComContexto(texto = "", opcoes = {}) {
     const resultado = [];
-    const textoNormalizado = String(texto || "").replace(/\s+/g, " ");
+    const textoNormalizado = normalizarDatasComErrosOcr(String(texto || "")).replace(/\s+/g, " ");
     const tipoDocumento = normalizarTextoBusca(opcoes?.tipoDocumento || opcoes?.tipo || "");
     const regexDataBr = /\b(\d{1,2})[/.-](\d{1,2})[/.-](\d{2,4})\b/g;
     const regexDataIso = /\b(20\d{2}|19\d{2})[/.-](\d{1,2})[/.-](\d{1,2})\b/g;
@@ -523,6 +627,11 @@ export function extrairDatasComContexto(texto = "", opcoes = {}) {
         "tecnico em seg",
         "ordem de serviço",
         "ordem de servico",
+        "entrega de epi",
+        "controle de entrega",
+        "declaração de recebimento",
+        "declaracao de recebimento",
+        "assinatura do empregado",
     ];
 
     const palavrasVencimento = [
@@ -631,6 +740,20 @@ export function extrairDatasComContexto(texto = "", opcoes = {}) {
 
         if (/ordem|servico|serviço|os/.test(tipoDocumento) && /s[aã]o\s+jos[eé]\s+dos\s+campos|assinatura\s+do\s+empregado|t[eé]cnico\s+em\s+seg/i.test(contexto)) {
             pontuacao += 24;
+        }
+
+        if (/epi|equipamento\s+de\s+prote[cç][aã]o\s+individual/.test(tipoDocumento)) {
+            if (/admiss[aã]o|data\s+de\s+admiss[aã]o/i.test(contexto)) pontuacao -= 48;
+            if (/entrega\s+de\s+epi|controle\s+de\s+entrega|declara[cç][aã]o\s+de\s+recebimento|assinatura\s+do\s+empregado|s[aã]o\s+jos[eé]\s+dos\s+campos/i.test(contexto)) pontuacao += 32;
+        }
+
+        if (/aso|atestado\s+de\s+sa[uú]de\s+ocupacional/.test(tipoDocumento)) {
+            if (/exames?\s+realizados|acuidade|audiometria|eletrocardiograma|eletroencefalograma|espirometria|glicose|raio\s*x|nascimento/i.test(contexto)) pontuacao -= 60;
+            if (/m[eé]dico\s+examinador|crm|data\s*$|assinado\s+digitalmente|icp-brasil|c[oó]digo\s+de\s+autenticidade/i.test(contexto)) pontuacao += 36;
+        }
+
+        if (/lista|nr\s*[-º]?\s*(?:11|12|17|18|21|25|26)|integra/.test(tipoDocumento)) {
+            if (/data\s*[:\-]|nome\s+da\s+empresa|hor[aá]rio|respons[aá]vel\s+pelo\s+treinamento|instrutor/i.test(contexto)) pontuacao += 24;
         }
 
         if (/exames?\s+realizados|data\s+de\s+nascimento|nascimento|acuidade|audiometria|eletrocardiograma|eletroencefalograma|espirometria|glicose|raio\s*x/i.test(contexto)) pontuacao -= 35;
@@ -812,11 +935,7 @@ export async function detectarDataEmissaoArquivo(arquivo) {
         })
     );
 
-    let ordenados = candidatos
-        .filter((item, index, array) =>
-            array.findIndex((outro) => outro.iso === item.iso && outro.origem === item.origem) === index
-        )
-        .sort((a, b) => b.pontuacao - a.pontuacao || b.iso.localeCompare(a.iso));
+    let ordenados = selecionarMelhorDataDocumento(candidatos, tipoDocumento);
 
     // Se a leitura simples não encontrou data confiável, reaproveita a leitura documental
     // robusta com PDF.js/OCR local. Isso corrige listas escaneadas de treinamento,
@@ -825,11 +944,7 @@ export async function detectarDataEmissaoArquivo(arquivo) {
         const leituraDocumental = await executarLeituraDocumentalParaData(arquivo);
         adicionarDatasLeituraDocumental(candidatos, leituraDocumental, { tipoDocumento });
 
-        ordenados = candidatos
-            .filter((item, index, array) =>
-                array.findIndex((outro) => outro.iso === item.iso && outro.origem === item.origem) === index
-            )
-            .sort((a, b) => b.pontuacao - a.pontuacao || b.iso.localeCompare(a.iso));
+        ordenados = selecionarMelhorDataDocumento(candidatos, tipoDocumento);
     }
 
     const melhor = ordenados[0];
