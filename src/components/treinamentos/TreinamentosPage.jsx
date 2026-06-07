@@ -1065,11 +1065,6 @@ export function Treinamentos({
                                         </div>
                                     )}
 
-                                    {cardsTreinamentosRecolhidos.filtros && (
-                                        <p className="mt-4 rounded-2xl bg-slate-50 px-4 py-3 text-sm text-slate-500">
-                                            Card recolhido. Clique em Abrir filtros para pesquisar ou alterar o status exibido.
-                                        </p>
-                                    )}
                                 </Card>
                             </div>
                         );
