@@ -349,12 +349,26 @@ function apenasDigitosConferencia(valor = "") {
     return String(valor || "").replace(/\D/g, "");
 }
 
-function obterTextoLeituraConferencia(leitura = {}, metadadosArquivo = {}) {
+function obterTextoLeituraConferencia(leitura = {}) {
+    const campos = obterCamposLeituraConferencia(leitura);
+    const linhas = obterLinhasOcrConferencia(leitura)
+        .map((linha) => linha?.texto || "")
+        .filter(Boolean)
+        .join(" ");
+
     return limparTextoVerificacao([
         leitura?.textoExtraido,
         leitura?.texto_extraido,
         leitura?.textoPrevia,
         leitura?.texto_previa,
+        campos?.texto_ocr || "",
+        linhas,
+    ].filter(Boolean).join(" "));
+}
+
+function obterTextoLeituraConferenciaComArquivo(leitura = {}, metadadosArquivo = {}) {
+    return limparTextoVerificacao([
+        obterTextoLeituraConferencia(leitura),
         metadadosArquivo?.arquivoNome,
     ].filter(Boolean).join(" "));
 }
@@ -418,8 +432,81 @@ function textoContemNomePessoa({ texto = "", nome = "" } = {}) {
     return pontuarNomePessoaNoTexto({ texto, nome }).encontrado;
 }
 
+function combinarLinhasOcrParaBusca(linhas = []) {
+    const registros = Array.isArray(linhas) ? linhas : [];
+    const combinadas = [];
+
+    registros.forEach((linha, indice) => {
+        if (!linha?.texto) return;
+
+        combinadas.push({ ...linha, origem_linha: "ocr_linha" });
+
+        for (let tamanho = 2; tamanho <= 3; tamanho += 1) {
+            const grupo = registros.slice(indice, indice + tamanho).filter((item) => item?.texto);
+
+            if (grupo.length !== tamanho) continue;
+
+            const distancia = Math.abs(Number(grupo[grupo.length - 1]?.yCentro || 0) - Number(grupo[0]?.yCentro || 0));
+
+            if (distancia > 0.085) continue;
+
+            const assinaturaLinha = grupo.find((item) => item?.assinatura_visual || item?.assinaturaVisual) || grupo[grupo.length - 1] || grupo[0];
+
+            combinadas.push({
+                indice: grupo.map((item) => item.indice).join("+"),
+                texto: limparTextoVerificacao(grupo.map((item) => item.texto).join(" ")),
+                texto_normalizado: normalizarTextoConferencia(grupo.map((item) => item.texto).join(" ")),
+                x0: Math.min(...grupo.map((item) => Number(item.x0 || 0))),
+                x1: Math.max(...grupo.map((item) => Number(item.x1 || 0))),
+                y0: Math.min(...grupo.map((item) => Number(item.y0 || item.yCentro || 0))),
+                y1: Math.max(...grupo.map((item) => Number(item.y1 || item.yCentro || 0))),
+                yCentro: grupo.reduce((total, item) => total + Number(item.yCentro || 0), 0) / grupo.length,
+                assinatura_visual: Boolean(assinaturaLinha?.assinatura_visual || assinaturaLinha?.assinaturaVisual),
+                assinatura_densidade: Math.max(...grupo.map((item) => Number(item.assinatura_densidade || 0))),
+                assinatura_densidade_azul: Math.max(...grupo.map((item) => Number(item.assinatura_densidade_azul || 0))),
+                assinatura_espalhamento_horizontal: Math.max(...grupo.map((item) => Number(item.assinatura_espalhamento_horizontal || 0))),
+                assinatura_espalhamento_vertical: Math.max(...grupo.map((item) => Number(item.assinatura_espalhamento_vertical || 0))),
+                assinatura_origem: assinaturaLinha?.assinatura_origem || "ocr_linhas_combinadas",
+                origem_linha: "ocr_linhas_combinadas",
+            });
+        }
+    });
+
+    return combinadas;
+}
+
+function assinaturaProvavelPorLinhaVizinha({ linhas = [], linhaReferencia = null } = {}) {
+    if (!linhaReferencia || !Array.isArray(linhas) || !linhas.length) return null;
+
+    const yReferencia = Number(linhaReferencia.yCentro || 0);
+
+    if (!Number.isFinite(yReferencia) || yReferencia <= 0) return null;
+
+    const vizinhas = linhas
+        .map((linha) => ({
+            linha,
+            distancia: Math.abs(Number(linha?.yCentro || 0) - yReferencia),
+        }))
+        .filter((item) => item.distancia <= 0.042)
+        .sort((a, b) => a.distancia - b.distancia);
+
+    const comAssinatura = vizinhas.find((item) => Boolean(item.linha?.assinatura_visual || item.linha?.assinaturaVisual));
+
+    if (!comAssinatura) return null;
+
+    return {
+        assinatura_visual: true,
+        assinatura_densidade: comAssinatura.linha.assinatura_densidade ?? null,
+        assinatura_densidade_azul: comAssinatura.linha.assinatura_densidade_azul ?? null,
+        assinatura_espalhamento_horizontal: comAssinatura.linha.assinatura_espalhamento_horizontal ?? null,
+        assinatura_espalhamento_vertical: comAssinatura.linha.assinatura_espalhamento_vertical ?? null,
+        assinatura_origem: "linha_vizinha_mesma_faixa_tabela",
+    };
+}
+
 function localizarLinhaColaboradorOcr({ leitura = {}, nomeColaborador = "" } = {}) {
-    const linhas = obterLinhasOcrConferencia(leitura);
+    const linhasOriginais = obterLinhasOcrConferencia(leitura);
+    const linhas = combinarLinhasOcrParaBusca(linhasOriginais);
     const tokensNome = tokensNomeConferencia(nomeColaborador);
 
     if (!linhas.length || !tokensNome.length) return null;
@@ -428,12 +515,13 @@ function localizarLinhaColaboradorOcr({ leitura = {}, nomeColaborador = "" } = {
         .map((linha) => {
             const pontuacao = pontuarNomePessoaNoTexto({ texto: linha?.texto || "", nome: nomeColaborador });
             const yCentro = Number(linha?.yCentro || 0);
-            const bonusTabela = yCentro > 0.52 ? 12 : 0;
-            const penalidadeCabecalho = yCentro && yCentro < 0.25 ? 15 : 0;
+            const bonusTabela = yCentro > 0.52 ? 18 : 0;
+            const penalidadeCabecalho = yCentro && yCentro < 0.25 ? 20 : 0;
+            const bonusAssinatura = linha?.assinatura_visual || linha?.assinaturaVisual ? 8 : 0;
             return {
                 linha,
                 ...pontuacao,
-                scoreFinal: pontuacao.score + bonusTabela - penalidadeCabecalho,
+                scoreFinal: pontuacao.score + bonusTabela + bonusAssinatura - penalidadeCabecalho,
             };
         })
         .filter((item) => item.tokensEncontrados.length > 0)
@@ -443,19 +531,26 @@ function localizarLinhaColaboradorOcr({ leitura = {}, nomeColaborador = "" } = {
 
     if (!melhor) return null;
 
-    if (
+    const aceito = (
         melhor.encontrado ||
         melhor.tokensEncontrados.length >= Math.min(3, tokensNome.length) ||
-        (melhor.tokensEncontrados.length >= 2 && melhor.tokensEncontrados.includes(tokensNome[0]))
-    ) {
-        return {
-            ...melhor.linha,
-            nome_score: Number(melhor.scoreFinal.toFixed(2)),
-            nome_tokens_encontrados: melhor.tokensEncontrados,
-        };
-    }
+        (melhor.tokensEncontrados.length >= 2 && melhor.tokensEncontrados.includes(tokensNome[0])) ||
+        (melhor.scoreFinal >= 78 && melhor.tokensEncontrados.length >= 2)
+    );
 
-    return null;
+    if (!aceito) return null;
+
+    const assinaturaVizinha = assinaturaProvavelPorLinhaVizinha({
+        linhas: linhasOriginais,
+        linhaReferencia: melhor.linha,
+    });
+
+    return {
+        ...melhor.linha,
+        ...(assinaturaVizinha || {}),
+        nome_score: Number(melhor.scoreFinal.toFixed(2)),
+        nome_tokens_encontrados: melhor.tokensEncontrados,
+    };
 }
 
 function documentoPareceListaPresenca({ texto = "", leitura = {} } = {}) {
@@ -564,22 +659,32 @@ function documentoContemTreinamento({ texto = "", treinamento = {}, certificado 
 }
 
 function montarConferenciaDocumentalCertificado({ leitura = {}, certificado = {}, colaborador = {}, treinamento = {}, metadadosArquivo = {} } = {}) {
-    const texto = obterTextoLeituraConferencia(leitura, metadadosArquivo);
+    const textoDocumento = obterTextoLeituraConferencia(leitura);
+    const textoComArquivo = obterTextoLeituraConferenciaComArquivo(leitura, metadadosArquivo);
     const nomeColaborador = obterNomeColaboradorAnalise(colaborador, certificado);
     const cpfColaborador = obterCpfColaboradorAnalise(colaborador, certificado);
     const empresaColaborador = obterEmpresaColaboradorAnalise(colaborador, certificado);
     const cnpjEmpresa = obterCnpjEmpresaAnalise(colaborador, certificado);
     const campos = obterCamposLeituraConferencia(leitura);
     const linhaColaborador = localizarLinhaColaboradorOcr({ leitura, nomeColaborador });
-    const listaPresenca = documentoPareceListaPresenca({ texto, leitura });
-    const nomeEncontrado = nomeColaborador ? Boolean(textoContemNomePessoa({ texto, nome: nomeColaborador }) || linhaColaborador) : null;
-    const cpfEncontrado = documentoContemCpf(texto, cpfColaborador);
-    const cnpjEncontrado = documentoContemCnpj(texto, cnpjEmpresa);
-    const empresaEncontrada = empresaColaborador ? textoContemNomePessoa({ texto, nome: empresaColaborador }) || normalizarTextoConferencia(texto).includes(normalizarTextoConferencia("Ribeiro Aquino")) && normalizarTextoConferencia(empresaColaborador).includes("ribeiro") : null;
-    const treinamentoEncontrado = documentoContemTreinamento({ texto, treinamento, certificado });
-    const assinaturaVisual = linhaColaborador ? Boolean(linhaColaborador.assinatura_visual || linhaColaborador.assinaturaVisual) : null;
+    const listaPresenca = documentoPareceListaPresenca({ texto: textoDocumento, leitura });
+    const nomeEncontrado = nomeColaborador ? Boolean(textoContemNomePessoa({ texto: textoDocumento, nome: nomeColaborador }) || linhaColaborador) : null;
+    const cpfEncontrado = documentoContemCpf(textoDocumento, cpfColaborador);
+    const cnpjEncontrado = documentoContemCnpj(textoDocumento, cnpjEmpresa);
+    const empresaEncontrada = empresaColaborador ? textoContemNomePessoa({ texto: textoDocumento, nome: empresaColaborador }) || normalizarTextoConferencia(textoDocumento).includes(normalizarTextoConferencia("Ribeiro Aquino")) && normalizarTextoConferencia(empresaColaborador).includes("ribeiro") : null;
+    const treinamentoEncontrado = documentoContemTreinamento({ texto: textoComArquivo, treinamento, certificado });
     const assinaturaDensidade = linhaColaborador?.assinatura_densidade ?? null;
     const assinaturaDensidadeAzul = linhaColaborador?.assinatura_densidade_azul ?? null;
+    const assinaturaEspalhamentoHorizontal = linhaColaborador?.assinatura_espalhamento_horizontal ?? null;
+    const assinaturaEspalhamentoVertical = linhaColaborador?.assinatura_espalhamento_vertical ?? null;
+    const assinaturaVisual = linhaColaborador
+        ? Boolean(
+            linhaColaborador.assinatura_visual ||
+            linhaColaborador.assinaturaVisual ||
+            Number(assinaturaDensidadeAzul || 0) > 0.0007 ||
+            (Number(assinaturaDensidade || 0) > 0.0032 && Number(assinaturaEspalhamentoHorizontal || 0) > 0.025)
+        )
+        : null;
     const assinaturaAplicavel = Boolean(listaPresenca && nomeEncontrado);
 
     return {
@@ -617,6 +722,8 @@ function montarConferenciaDocumentalCertificado({ leitura = {}, certificado = {}
             visualLocalizada: assinaturaVisual,
             densidade: assinaturaDensidade,
             densidadeAzul: assinaturaDensidadeAzul,
+            espalhamentoHorizontal: assinaturaEspalhamentoHorizontal,
+            espalhamentoVertical: assinaturaEspalhamentoVertical,
             origem: linhaColaborador?.assinatura_origem || linhaColaborador?.assinaturaOrigem || "ocr_linha_tabela",
             observacao: assinaturaVisual === true
                 ? "Assinatura visual localizada na mesma faixa da linha do colaborador."

@@ -45,6 +45,52 @@ function pontuarNomeNoArquivo(nomeArquivo = "", nomeColaborador = "") {
     return pontos;
 }
 
+
+function extrairNomePessoaDoNomeArquivo(nomeArquivo = "") {
+    const base = normalizarTextoBusca(String(nomeArquivo || "").replace(/\.[^.]+$/, ""))
+        .replace(/[_-]+/g, " ")
+        .replace(/\b(nr\s*[-º]?\s*\d+|nr\d+|aso|atestado|saude|saúde|ocupacional|ficha|registro|clt|esocial|certificado|treinamento|integracao|integração|mobilizacao|mobilização|ordem|servico|serviço|pdf|documento|assinatura|lista)\b/g, " ")
+        .replace(/[^a-z0-9]+/g, " ")
+        .replace(/\s+/g, " ")
+        .trim();
+
+    const tokens = base
+        .split(" ")
+        .map((token) => token.trim())
+        .filter((token) => token.length >= 3 && !["dos", "das", "de", "da", "do", "para", "com", "sem", "por", "das", "aos"].includes(token));
+
+    if (tokens.length < 2) return "";
+
+    // Se o nome do arquivo veio no padrão "NOME DO COLABORADOR NR-11.pdf",
+    // estes tokens representam um forte indício de pessoa.
+    return tokens.slice(0, 7).join(" ").toUpperCase();
+}
+
+function validarNomeArquivoContraColaboradorSelecionado({ arquivo, colaboradorSelecionado = null } = {}) {
+    const nomeArquivo = arquivo?.name || arquivo?.nome || arquivo?.filename || "";
+    const nomeExtraido = extrairNomePessoaDoNomeArquivo(nomeArquivo);
+
+    if (!nomeArquivo || !nomeExtraido || !colaboradorSelecionado?.nome) return;
+
+    const tokensArquivo = tokensNomeColaboradorArquivo(nomeExtraido);
+    const tokensSelecionado = tokensNomeColaboradorArquivo(colaboradorSelecionado.nome);
+
+    if (tokensArquivo.length < 2 || tokensSelecionado.length < 2) return;
+
+    const baseSelecionado = normalizarTextoBusca(colaboradorSelecionado.nome).replace(/[^a-z0-9]+/g, " ");
+    const tokensArquivoNoSelecionado = tokensArquivo.filter((token) => baseSelecionado.includes(token));
+    const proporcaoArquivoNoSelecionado = tokensArquivoNoSelecionado.length / tokensArquivo.length;
+    const pontosSelecionado = pontuarNomeNoArquivo(nomeArquivo, colaboradorSelecionado.nome);
+
+    // Bloqueio forte: o arquivo contém um nome de pessoa que não bate com o colaborador selecionado.
+    // Exemplo: arquivo "LUCAS RIBEIRO CRUZ NR-11.pdf" selecionado para "LUCAS VINICIUS GOMES DOS SANTOS".
+    if (proporcaoArquivoNoSelecionado < 0.62 || pontosSelecionado < 95) {
+        throw new Error(
+            `O nome do arquivo indica "${nomeExtraido}", mas o colaborador selecionado é "${colaboradorSelecionado.nome}". Corrija o colaborador ou envie o documento correto antes de salvar.`
+        );
+    }
+}
+
 function identificarColaboradorProvavelNoNomeArquivo({ arquivo, colaboradores = [] } = {}) {
     const nomeArquivo = arquivo?.name || arquivo?.nome || arquivo?.filename || "";
 
@@ -62,6 +108,11 @@ function identificarColaboradorProvavelNoNomeArquivo({ arquivo, colaboradores = 
 }
 
 function validarCompatibilidadeArquivoColaborador({ arquivo, colaboradores = [], colaboradorSelecionado = null } = {}) {
+    validarNomeArquivoContraColaboradorSelecionado({
+        arquivo,
+        colaboradorSelecionado,
+    });
+
     const provavel = identificarColaboradorProvavelNoNomeArquivo({ arquivo, colaboradores });
 
     if (!provavel?.colaborador || !colaboradorSelecionado?.id) return;
@@ -73,11 +124,11 @@ function validarCompatibilidadeArquivoColaborador({ arquivo, colaboradores = [],
 
     const pontosSelecionado = pontuarNomeNoArquivo(arquivo?.name || "", colaboradorSelecionado?.nome || "");
 
-    if (provavel.pontos < pontosSelecionado + 25) return;
-
-    throw new Error(
-        `O arquivo parece pertencer a "${provavel.colaborador.nome}", mas o colaborador selecionado é "${colaboradorSelecionado.nome}". Corrija o colaborador ou envie o documento correto antes de salvar.`
-    );
+    if (provavel.pontos >= pontosSelecionado || provavel.pontos >= 88) {
+        throw new Error(
+            `O arquivo parece pertencer a "${provavel.colaborador.nome}", mas o colaborador selecionado é "${colaboradorSelecionado.nome}". Corrija o colaborador ou envie o documento correto antes de salvar.`
+        );
+    }
 }
 
 function validarCompatibilidadeArquivoTreinamento({ arquivo, treinamentoId }) {

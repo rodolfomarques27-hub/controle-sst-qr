@@ -1212,9 +1212,9 @@ function calcularAssinaturaVisualLinha(canvas, linha = {}) {
         const espalhamentoHorizontal = colunasComTinta.size / Math.max(1, Math.ceil(larguraRecorte / 4));
         const espalhamentoVertical = linhasComTinta.size / Math.max(1, Math.ceil(alturaRecorte / 3));
         const assinaturaVisual = (
-            densidadeAzul > 0.0012 ||
-            (densidade > 0.0045 && espalhamentoHorizontal > 0.045 && espalhamentoVertical > 0.08) ||
-            (densidade > 0.008 && espalhamentoHorizontal > 0.025)
+            densidadeAzul > 0.0007 ||
+            (densidade > 0.0032 && espalhamentoHorizontal > 0.025 && espalhamentoVertical > 0.055) ||
+            (densidade > 0.0055 && espalhamentoHorizontal > 0.018)
         );
 
         return {
@@ -1256,8 +1256,10 @@ async function reconhecerTextoCanvasComOcr(canvas) {
         throw new Error("OCR local indisponível: função recognize não encontrada.");
     }
 
-    const resultado = await reconhecer(canvas, "por", {
+    const resultado = await reconhecer(canvas, "por+eng", {
         logger: () => {},
+        tessedit_pageseg_mode: "6",
+        preserve_interword_spaces: "1",
     });
 
     return {
@@ -1310,7 +1312,7 @@ async function extrairTextoPrimeiraPaginaPdfComOcr(buffer) {
         }
 
         const pagina = await pdf.getPage(1);
-        const viewport = pagina.getViewport({ scale: 2.2 });
+        const viewport = pagina.getViewport({ scale: 2.8 });
         const canvas = document.createElement("canvas");
         const contexto = canvas.getContext("2d", { willReadFrequently: true });
 

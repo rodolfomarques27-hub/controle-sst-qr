@@ -523,7 +523,7 @@ function PainelConferenciaDocumentalRobusta({ verificacao = null }) {
 
                 <LinhaConferenciaDocumental
                     titulo="Assinatura na linha"
-                    valor={assinatura.visualLocalizada}
+                    valor={assinatura.aplicavel ? assinatura.visualLocalizada === true : null}
                     textoSim="Assinatura visual localizada"
                     textoNao="Não confirmada"
                     textoNa="Não aplicável"
