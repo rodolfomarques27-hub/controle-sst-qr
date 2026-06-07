@@ -2770,29 +2770,33 @@ export async function baixarRelatorioAniversariantesPDF({
     }
 
     .cabecalho-aniversariantes-marca {
-        display: flex;
+        width: 100%;
+        max-width: 560px;
+        display: grid;
+        grid-template-columns: 46px auto 46px;
         align-items: center;
         justify-content: center;
-        gap: 10px;
-        margin-top: 2px;
+        column-gap: 10px;
+        margin-top: 0;
     }
 
     .cabecalho-aniversariantes-marca .escudo-controle-sst-relatorio {
-        width: 32px;
-        height: 32px;
+        width: 36px;
+        height: 36px;
         display: grid;
         place-items: center;
-        color: #07162f;
-        background: transparent;
-        border: 0;
-        border-radius: 0;
-        box-shadow: none;
+        justify-self: end;
+        color: #ffffff;
+        background: #111827;
+        border: 1px solid rgba(255,255,255,0.12);
+        border-radius: 12px;
+        box-shadow: inset 0 0 0 1px rgba(255,255,255,0.04);
         flex: 0 0 auto;
     }
 
     .cabecalho-aniversariantes-marca .escudo-controle-sst-relatorio svg {
-        width: 28px;
-        height: 28px;
+        width: 22px;
+        height: 22px;
         display: block;
         fill: none;
         stroke: currentColor;
@@ -2809,6 +2813,8 @@ export async function baixarRelatorioAniversariantesPDF({
         letter-spacing: 0.035em;
         text-transform: uppercase;
         font-weight: 900;
+        grid-column: 2;
+        text-align: center;
     }
 
     .cabecalho-aniversariantes-centralizado h2 {
