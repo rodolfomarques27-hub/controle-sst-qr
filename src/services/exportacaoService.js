@@ -2625,7 +2625,10 @@ function montarSecaoAniversariantesRelatorio({ aniversariantes = [], filtros = {
         <section class="pagina-relatorio pagina-relatorio-aniversariantes">
             <header class="cabecalho-relatorio cabecalho-relatorio--modelo-aprovado cabecalho-relatorio--aniversariantes">
                 <div class="cabecalho-aniversariantes-centralizado">
-                    <h1>CONTROLE SST QR</h1>
+                    <div class="cabecalho-aniversariantes-marca">
+                        ${montarEscudoControleSstRelatorio()}
+                        <h1>CONTROLE SST QR</h1>
+                    </div>
                     <h2>${escaparHTML(titulo)}</h2>
                     <p><span>Data de emissão:</span> <strong>${escaparHTML(dataEmissao)}</strong></p>
                 </div>
@@ -2761,9 +2764,41 @@ export async function baixarRelatorioAniversariantesPDF({
     .cabecalho-aniversariantes-centralizado {
         display: grid;
         justify-items: center;
-        gap: 6px;
+        gap: 10px;
         text-align: center;
-        padding: 2px 0 6px;
+        padding: 0 0 8px;
+    }
+
+    .cabecalho-aniversariantes-marca {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 10px;
+        margin-top: 2px;
+    }
+
+    .cabecalho-aniversariantes-marca .escudo-controle-sst-relatorio {
+        width: 32px;
+        height: 32px;
+        display: grid;
+        place-items: center;
+        color: #07162f;
+        background: transparent;
+        border: 0;
+        border-radius: 0;
+        box-shadow: none;
+        flex: 0 0 auto;
+    }
+
+    .cabecalho-aniversariantes-marca .escudo-controle-sst-relatorio svg {
+        width: 28px;
+        height: 28px;
+        display: block;
+        fill: none;
+        stroke: currentColor;
+        stroke-width: 1.9;
+        stroke-linecap: round;
+        stroke-linejoin: round;
     }
 
     .cabecalho-aniversariantes-centralizado h1 {
@@ -2778,9 +2813,9 @@ export async function baixarRelatorioAniversariantesPDF({
 
     .cabecalho-aniversariantes-centralizado h2 {
         width: 100%;
-        margin: 0;
+        margin: 2px 0 0;
         display: grid;
-        grid-template-columns: minmax(70px, 1fr) auto minmax(70px, 1fr);
+        grid-template-columns: minmax(95px, 1fr) auto minmax(95px, 1fr);
         align-items: center;
         gap: 16px;
         color: var(--azul);
