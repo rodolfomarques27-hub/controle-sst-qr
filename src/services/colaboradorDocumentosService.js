@@ -430,6 +430,46 @@ export function inferirTreinamentoPorNomeArquivo(nomeArquivo = "") {
     return null;
 }
 
+
+const MESES_DATA_EXTENSO_TREINAMENTOS = Object.freeze({
+    janeiro: 1,
+    jan: 1,
+    fevereiro: 2,
+    fev: 2,
+    marco: 3,
+    março: 3,
+    mar: 3,
+    abril: 4,
+    abr: 4,
+    maio: 5,
+    mai: 5,
+    junho: 6,
+    jun: 6,
+    julho: 7,
+    jul: 7,
+    agosto: 8,
+    ago: 8,
+    setembro: 9,
+    set: 9,
+    outubro: 10,
+    out: 10,
+    novembro: 11,
+    nov: 11,
+    dezembro: 12,
+    dez: 12,
+});
+
+function converterDataExtensoParaISO(diaValor, mesValor, anoValor) {
+    const mes = MESES_DATA_EXTENSO_TREINAMENTOS[normalizarTextoBusca(mesValor)];
+    if (!mes) return "";
+    return converterDataParaISO(diaValor, mes, anoValor);
+}
+
+function tipoDocumentoPorArquivoParaData(nomeArquivo = "") {
+    const treinamento = inferirTreinamentoPorNomeArquivo(nomeArquivo);
+    return normalizarTextoBusca(`${treinamento?.nome || ""} ${nomeArquivo || ""}`);
+}
+
 export function dataRealizacaoPorArquivo() {
     // Não usar lastModified nem a data atual como fallback automático.
     // Esses valores podem representar apenas a data do arquivo no computador,
@@ -437,11 +477,13 @@ export function dataRealizacaoPorArquivo() {
     return "";
 }
 
-export function extrairDatasComContexto(texto = "") {
+export function extrairDatasComContexto(texto = "", opcoes = {}) {
     const resultado = [];
     const textoNormalizado = String(texto || "").replace(/\s+/g, " ");
+    const tipoDocumento = normalizarTextoBusca(opcoes?.tipoDocumento || opcoes?.tipo || "");
     const regexDataBr = /\b(\d{1,2})[/.-](\d{1,2})[/.-](\d{2,4})\b/g;
     const regexDataIso = /\b(20\d{2}|19\d{2})[/.-](\d{1,2})[/.-](\d{1,2})\b/g;
+    const regexDataExtenso = /\b(\d{1,2})\s+de\s+([a-zA-ZÀ-ÿçÇ]+)\s+de\s+(\d{2,4})\b/gi;
 
     const palavrasEmissao = [
         "emissão",
@@ -472,6 +514,15 @@ export function extrairDatasComContexto(texto = "") {
         "admissao",
         "data de admissão",
         "data de admissao",
+        "opção em",
+        "opcao em",
+        "são josé dos campos",
+        "sao jose dos campos",
+        "assinatura do empregado",
+        "técnico em seg",
+        "tecnico em seg",
+        "ordem de serviço",
+        "ordem de servico",
     ];
 
     const palavrasVencimento = [
@@ -488,6 +539,12 @@ export function extrairDatasComContexto(texto = "") {
     const palavrasIgnorar = [
         "nascimento",
         "data de nascimento",
+        "naturalidade",
+        "filiação",
+        "filiacao",
+        "pai",
+        "mãe",
+        "mae",
         "exames realizados",
         "exame realizado",
         "acuidade visual",
@@ -504,7 +561,23 @@ export function extrairDatasComContexto(texto = "") {
         "cpf",
         "cnpj",
         "crm",
+        "ctps",
+        "pis",
+        "título eleitoral",
+        "titulo eleitoral",
+        "zona",
+        "seção",
+        "secao",
+        "cnh",
         "portaria",
+        "data da saída",
+        "data da saida",
+        "data aviso",
+        "data projeção",
+        "data projecao",
+        "rescisão",
+        "rescisao",
+        "desligamento",
     ];
 
     const adicionar = (match, iso, indice) => {
@@ -519,8 +592,8 @@ export function extrairDatasComContexto(texto = "") {
         // Data de realização/emissão não deve ser muito futura.
         if (data > limiteFuturo) return;
 
-        const inicio = Math.max(0, indice - 120);
-        const fim = Math.min(textoNormalizado.length, indice + match[0].length + 120);
+        const inicio = Math.max(0, indice - 180);
+        const fim = Math.min(textoNormalizado.length, indice + match[0].length + 180);
         const contexto = textoNormalizado.slice(inicio, fim).trim();
         const contextoBusca = normalizarTextoBusca(contexto);
 
@@ -535,13 +608,33 @@ export function extrairDatasComContexto(texto = "") {
         });
 
         palavrasIgnorar.forEach((palavra) => {
-            if (contextoBusca.includes(normalizarTextoBusca(palavra))) pontuacao -= 10;
+            if (contextoBusca.includes(normalizarTextoBusca(palavra))) pontuacao -= 12;
         });
 
         if (/data\s*[:\-]/i.test(contexto)) pontuacao += 14;
         if (/nome\s+da\s+empresa|hor[aá]rio|respons[aá]vel\s+pelo\s+treinamento|assinatura\s+do\s+respons[aá]vel|instrutor/i.test(contexto)) pontuacao += 10;
         if (/treinamento\s+de|certificado\s+de|atestado\s+de\s+sa[uú]de\s+ocupacional/i.test(contexto)) pontuacao += 8;
-        if (/exames?\s+realizados|data\s+de\s+nascimento|nascimento|acuidade|audiometria|eletrocardiograma|eletroencefalograma|espirometria|glicose|raio\s*x/i.test(contexto)) pontuacao -= 28;
+
+        // Ordem de Serviço: normalmente a data fica no fechamento, perto da cidade e das assinaturas.
+        if (/ordem\s+de\s+servi[cç]o|assinatura\s+do\s+empregado|t[eé]cnico\s+em\s+seg|s[aã]o\s+jos[eé]\s+dos\s+campos/i.test(contexto)) {
+            pontuacao += 26;
+        }
+
+        // Ficha de registro: priorizar admissão/opção do FGTS, nunca nascimento.
+        if (/data\s+de\s+admiss[aã]o|admiss[aã]o|op[cç][aã]o\s+em/i.test(contexto)) {
+            pontuacao += 36;
+        }
+
+        if (/ficha|registro|clt|esocial/.test(tipoDocumento) && /data\s+de\s+nascimento|nascimento|filia[cç][aã]o|naturalidade/i.test(contexto)) {
+            pontuacao -= 90;
+        }
+
+        if (/ordem|servico|serviço|os/.test(tipoDocumento) && /s[aã]o\s+jos[eé]\s+dos\s+campos|assinatura\s+do\s+empregado|t[eé]cnico\s+em\s+seg/i.test(contexto)) {
+            pontuacao += 24;
+        }
+
+        if (/exames?\s+realizados|data\s+de\s+nascimento|nascimento|acuidade|audiometria|eletrocardiograma|eletroencefalograma|espirometria|glicose|raio\s*x/i.test(contexto)) pontuacao -= 35;
+        if (/cpf|cnpj|ctps|pis|cnh|t[ií]tulo\s+eleitoral|zona|se[cç][aã]o|c[oó]digo|portaria/i.test(contexto)) pontuacao -= 18;
 
         resultado.push({
             iso,
@@ -559,6 +652,10 @@ export function extrairDatasComContexto(texto = "") {
 
     while ((match = regexDataIso.exec(textoNormalizado))) {
         adicionar(match, converterDataIsoDireta(match[1], match[2], match[3]), match.index);
+    }
+
+    while ((match = regexDataExtenso.exec(textoNormalizado))) {
+        adicionar(match, converterDataExtensoParaISO(match[1], match[2], match[3]), match.index);
     }
 
     return resultado
@@ -613,12 +710,13 @@ function obterTextoLeituraDocumentalParaData(leitura = {}) {
     ].filter(Boolean).join(" ");
 }
 
-function adicionarDatasLeituraDocumental(candidatos, leitura = {}) {
+function adicionarDatasLeituraDocumental(candidatos, leitura = {}, opcoes = {}) {
     if (!leitura) return;
 
     const textoOcr = obterTextoLeituraDocumentalParaData(leitura);
+    const tipoDocumento = opcoes?.tipoDocumento || "";
 
-    extrairDatasComContexto(textoOcr).forEach((item) =>
+    extrairDatasComContexto(textoOcr, { tipoDocumento }).forEach((item) =>
         candidatos.push({
             ...item,
             origem: "OCR local",
@@ -694,8 +792,9 @@ export async function detectarDataEmissaoArquivo(arquivo) {
 
     const candidatos = [];
     const nomeArquivo = arquivo.name || "";
+    const tipoDocumento = tipoDocumentoPorArquivoParaData(nomeArquivo);
 
-    extrairDatasComContexto(nomeArquivo).forEach((item) =>
+    extrairDatasComContexto(nomeArquivo, { tipoDocumento }).forEach((item) =>
         candidatos.push({
             ...item,
             origem: "nome do arquivo",
@@ -705,7 +804,7 @@ export async function detectarDataEmissaoArquivo(arquivo) {
 
     const textoArquivo = await lerTextoPossivelDoArquivo(arquivo);
 
-    extrairDatasComContexto(textoArquivo).forEach((item) =>
+    extrairDatasComContexto(textoArquivo, { tipoDocumento }).forEach((item) =>
         candidatos.push({
             ...item,
             origem: "conteúdo do arquivo",
@@ -724,7 +823,7 @@ export async function detectarDataEmissaoArquivo(arquivo) {
     // como NR-11, em que a data está visível no cabeçalho, mas não existe texto bruto no PDF.
     if (!ordenados.length || Number(ordenados[0]?.pontuacao || 0) < 8) {
         const leituraDocumental = await executarLeituraDocumentalParaData(arquivo);
-        adicionarDatasLeituraDocumental(candidatos, leituraDocumental);
+        adicionarDatasLeituraDocumental(candidatos, leituraDocumental, { tipoDocumento });
 
         ordenados = candidatos
             .filter((item, index, array) =>
@@ -735,7 +834,7 @@ export async function detectarDataEmissaoArquivo(arquivo) {
 
     const melhor = ordenados[0];
 
-    if (!melhor) {
+    if (!melhor || Number(melhor.pontuacao || 0) <= 0) {
         return {
             data: "",
             origem: "não identificada",
@@ -765,7 +864,7 @@ export function analisarArquivosTreinamentoMassa(arquivos = []) {
             nomeArquivo: arquivo.name,
             treinamento,
             dataRealizacao,
-            dataVencimento: treinamento ? calcularVencimentoTreinamento(treinamento.id, dataRealizacao) : "",
+            dataVencimento: treinamento && dataRealizacao ? calcularVencimentoTreinamento(treinamento.id, dataRealizacao) : "",
             reconhecido: Boolean(treinamento),
         };
     });

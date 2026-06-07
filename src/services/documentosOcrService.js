@@ -1554,68 +1554,107 @@ async function extrairTextoPrimeiraPaginaPdfComOcr(buffer) {
             };
         }
 
-        const pagina = await pdf.getPage(1);
-        const viewportBase = pagina.getViewport({ scale: 1 });
-        const escalaBase = 1.65;
-        const escalaMaximaPorLargura = viewportBase.width ? 1320 / viewportBase.width : escalaBase;
-        const escalaMaximaPorAltura = viewportBase.height ? 1850 / viewportBase.height : escalaBase;
-        const escalaSegura = Math.max(1.25, Math.min(escalaBase, escalaMaximaPorLargura, escalaMaximaPorAltura));
-        const viewport = pagina.getViewport({ scale: escalaSegura });
-        const canvas = document.createElement("canvas");
-        const contexto = canvas.getContext("2d", { willReadFrequently: true });
+        const paginasParaOcr = Array.from(new Set([1, totalPaginas].filter((numero) => numero >= 1 && numero <= totalPaginas))).slice(0, 2);
+        const textosPaginas = [];
+        const linhasOcrGerais = [];
+        const assinaturasTabelaGerais = [];
+        const avisos = [];
 
-        if (!contexto) {
-            return {
-                texto: "",
-                paginasLidas: 0,
-                totalPaginas,
-                avisos: ["OCR local não conseguiu preparar o canvas da página."],
-                linhasOcr: [],
-                assinaturasTabela: [],
-            };
+        async function executarOcrPagina(numeroPagina) {
+            const pagina = await pdf.getPage(numeroPagina);
+            const viewportBase = pagina.getViewport({ scale: 1 });
+            const escalaBase = numeroPagina === 1 ? 1.55 : 1.45;
+            const escalaMaximaPorLargura = viewportBase.width ? 1260 / viewportBase.width : escalaBase;
+            const escalaMaximaPorAltura = viewportBase.height ? 1780 / viewportBase.height : escalaBase;
+            const escalaSegura = Math.max(1.18, Math.min(escalaBase, escalaMaximaPorLargura, escalaMaximaPorAltura));
+            const viewport = pagina.getViewport({ scale: escalaSegura });
+            const canvas = document.createElement("canvas");
+            const contexto = canvas.getContext("2d", { willReadFrequently: true });
+
+            if (!contexto) {
+                avisos.push(`OCR local não conseguiu preparar o canvas da página ${numeroPagina}.`);
+                return;
+            }
+
+            canvas.width = Math.ceil(viewport.width);
+            canvas.height = Math.ceil(viewport.height);
+
+            await pagina.render({ canvasContext: contexto, viewport }).promise;
+            await new Promise((resolve) => setTimeout(resolve, 0));
+
+            const resultadoOcr = await reconhecerTextoCanvasComOcr(canvas);
+            const textoOcr = resultadoOcr?.texto || "";
+            const linhasOcr = montarLinhasOcrComAssinatura(canvas, resultadoOcr?.palavras || [])
+                .map((linha) => ({
+                    ...linha,
+                    pagina: numeroPagina,
+                    texto: linha?.texto ? `Página ${numeroPagina}: ${linha.texto}` : linha?.texto,
+                }));
+            await new Promise((resolve) => setTimeout(resolve, 0));
+
+            const textoNormalizadoOcr = normalizarTextoVerificacao(textoOcr);
+            const pareceListaComAssinatura = /nome do colaborador|assinatura|declaro ter participado|lista de presenca|lista de presença|nr\s*[-º]?\s*11|manuseio de materiais|movimentacao/.test(textoNormalizadoOcr);
+            const assinaturasTabela = pareceListaComAssinatura
+                ? detectarAssinaturasTabelaPresenca(canvas).map((assinatura) => ({ ...assinatura, pagina: numeroPagina }))
+                : [];
+
+            if (textoOcr) {
+                textosPaginas.push(`Página ${numeroPagina}: ${textoOcr}`);
+            }
+
+            linhasOcrGerais.push(...linhasOcr);
+            assinaturasTabelaGerais.push(...assinaturasTabela);
+
+            try {
+                canvas.width = 1;
+                canvas.height = 1;
+            } catch {
+                // Liberação de memória sem bloquear o fluxo.
+            }
+
+            await new Promise((resolve) => setTimeout(resolve, 0));
         }
 
-        canvas.width = Math.ceil(viewport.width);
-        canvas.height = Math.ceil(viewport.height);
-
-        await pagina.render({ canvasContext: contexto, viewport }).promise;
-        await new Promise((resolve) => setTimeout(resolve, 0));
-
-        const resultadoOcr = await reconhecerTextoCanvasComOcr(canvas);
-        const textoOcr = resultadoOcr?.texto || "";
-        const linhasOcr = montarLinhasOcrComAssinatura(canvas, resultadoOcr?.palavras || []);
-        await new Promise((resolve) => setTimeout(resolve, 0));
-
-        const textoNormalizadoOcr = normalizarTextoVerificacao(textoOcr);
-        const pareceListaComAssinatura = /nome do colaborador|assinatura|declaro ter participado|lista de presenca|lista de presença|nr\s*[-º]?\s*11|manuseio de materiais|movimentacao/.test(textoNormalizadoOcr);
-        const assinaturasTabela = pareceListaComAssinatura ? detectarAssinaturasTabelaPresenca(canvas) : [];
+        for (const numeroPagina of paginasParaOcr) {
+            await executarOcrPagina(numeroPagina);
+        }
 
         try {
-            canvas.width = 1;
-            canvas.height = 1;
             await pdf.destroy();
         } catch {
             // Liberação de memória sem bloquear o fluxo.
         }
 
-        if (textoPossuiConteudoDocumentoConfiavel(textoOcr)) {
+        const textoOcrFinal = limparTextoPossivelDocumento(textosPaginas.join(" "));
+        const paginasLidas = paginasParaOcr.length;
+
+        if (paginasParaOcr.length > 1) {
+            avisos.push(`OCR local executado na primeira e na última página do PDF escaneado/imagem (${paginasParaOcr.join(", ")}).`);
+        } else {
+            avisos.push("OCR local executado na primeira página do PDF escaneado/imagem.");
+        }
+
+        if (textoPossuiConteudoDocumentoConfiavel(textoOcrFinal)) {
             return {
-                texto: textoOcr,
-                paginasLidas: 1,
+                texto: textoOcrFinal,
+                paginasLidas,
                 totalPaginas,
-                linhasOcr,
-                assinaturasTabela,
-                avisos: ["OCR local executado na primeira página do PDF escaneado/imagem."],
+                linhasOcr: linhasOcrGerais,
+                assinaturasTabela: assinaturasTabelaGerais,
+                avisos,
             };
         }
 
         return {
             texto: "",
-            paginasLidas: 1,
+            paginasLidas,
             totalPaginas,
-            linhasOcr,
-            assinaturasTabela,
-            avisos: ["OCR local executado, mas não encontrou texto documental confiável na primeira página."],
+            linhasOcr: linhasOcrGerais,
+            assinaturasTabela: assinaturasTabelaGerais,
+            avisos: [
+                ...avisos,
+                "OCR local executado, mas não encontrou texto documental confiável nas páginas analisadas.",
+            ],
         };
     } catch (error) {
         return {
