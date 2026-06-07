@@ -15,7 +15,12 @@ export function AlertasTstTreinamentos({
 
     return (
         <Card className="self-start">
-            <div className="mb-4 flex flex-col justify-between gap-3 lg:flex-row lg:items-start">
+            <div
+                className={classNames(
+                    "flex flex-col justify-between gap-3 lg:flex-row lg:items-start",
+                    !recolhido && "mb-4"
+                )}
+            >
                 <div>
                     <h2 className="text-lg font-bold text-slate-950">Alertas para TST</h2>
                     <p className="mt-1 text-sm text-slate-500">
@@ -47,11 +52,7 @@ export function AlertasTstTreinamentos({
                 </div>
             </div>
 
-            {recolhido ? (
-                <p className="rounded-2xl bg-slate-50 px-4 py-3 text-sm text-slate-500">
-                    Card recolhido. {totalAlertas} item(ns) seguem monitorados para alerta ao TST.
-                </p>
-            ) : alertasTstPorEmpresa.length === 0 ? (
+            {recolhido ? null : alertasTstPorEmpresa.length === 0 ? (
                 <div className="rounded-3xl border border-dashed border-slate-300 p-6 text-center">
                     <CheckCircle2 className="mx-auto h-9 w-9 text-emerald-500" />
                     <h3 className="mt-3 font-bold text-slate-900">Nenhum documento vencido ou a vencer</h3>

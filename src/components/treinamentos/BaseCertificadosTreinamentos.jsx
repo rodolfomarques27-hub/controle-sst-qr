@@ -36,7 +36,12 @@ export function BaseCertificadosTreinamentos({
 }) {
     return (
         <Card className="self-start">
-            <div className="mb-4 flex flex-col justify-between gap-3 md:flex-row md:items-start">
+            <div
+                className={classNames(
+                    "flex flex-col justify-between gap-3 md:flex-row md:items-start",
+                    !recolhido && "mb-4"
+                )}
+            >
                 <div>
                     <h2 className="text-lg font-bold text-slate-950">Base de certificados</h2>
                     <p className="mt-1 text-sm text-slate-500">Consulta, revisão de datas e abertura dos certificados enviados.</p>
@@ -66,11 +71,7 @@ export function BaseCertificadosTreinamentos({
                 </div>
             </div>
 
-            {recolhido ? (
-                <p className="rounded-2xl bg-slate-50 px-4 py-3 text-sm text-slate-500">
-                    Card recolhido. A base possui {documentosFiltrados.length} certificado(s) filtrado(s) e {totalPorStatusCertificados.pendentes} pendência(s).
-                </p>
-            ) : (
+            {recolhido ? null : (
             <div className="space-y-3">
                 {documentos.length === 0 && totalPorStatusCertificados.pendentes === 0 && (
                     <div className="rounded-3xl border border-dashed border-slate-300 p-8 text-center">

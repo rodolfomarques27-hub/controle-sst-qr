@@ -48,7 +48,12 @@ export function FormularioLancamentoCertificado({
 }) {
     return (
         <Card className="self-start">
-            <div className="mb-4 flex flex-col justify-between gap-3 lg:flex-row lg:items-start">
+            <div
+                className={classNames(
+                    "flex flex-col justify-between gap-3 lg:flex-row lg:items-start",
+                    !recolhido && "mb-4"
+                )}
+            >
                 <div>
                     <h2 className="flex items-center gap-2 text-lg font-bold text-slate-950">
                         <Upload className="h-4 w-4" />
@@ -80,11 +85,7 @@ export function FormularioLancamentoCertificado({
                 </div>
             </div>
 
-            {recolhido ? (
-                <p className="rounded-2xl bg-slate-50 px-4 py-3 text-sm text-slate-500">
-                    Card recolhido. Clique em Abrir para lançar certificado individual ou acessar o envio em lote.
-                </p>
-            ) : (
+            {recolhido ? null : (
             <div className="mt-5 space-y-3">
                 <div>
                     <label className="mb-1 block text-xs font-bold uppercase tracking-wide text-slate-500">Colaborador</label>
