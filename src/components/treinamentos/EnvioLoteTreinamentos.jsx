@@ -1,6 +1,6 @@
 /* eslint-disable no-unused-vars */
 import React from "react";
-import { FileText, Upload } from "lucide-react";
+import { FileSearch, FileText, Loader2, Upload } from "lucide-react";
 import { FileUploadAviso } from "../FileUploadAviso";
 import { classNames } from "../../utils/sstUtils";
 
@@ -19,6 +19,7 @@ export function EnvioLoteTreinamentos({
     treinamentosBase = [],
     salvarCertificadosEmLote,
     salvandoLote = false,
+    preparandoLoteCertificados = false,
 }) {
     return (
         <div className="mt-6 border-t border-slate-200 pt-5">
@@ -33,18 +34,39 @@ export function EnvioLoteTreinamentos({
                 </p>
             </div>
 
-            <label className="mt-3 flex cursor-pointer items-center justify-center gap-2 rounded-2xl border border-dashed border-blue-300 bg-white px-4 py-4 text-sm font-semibold text-blue-700 hover:bg-blue-50">
-                <Upload className="h-4 w-4" />
-                Selecionar vários certificados
+            <label className={classNames(
+                "mt-3 flex items-center justify-center gap-2 rounded-2xl border border-dashed border-blue-300 bg-white px-4 py-4 text-sm font-semibold text-blue-700 hover:bg-blue-50",
+                preparandoLoteCertificados ? "cursor-wait opacity-80" : "cursor-pointer"
+            )}>
+                {preparandoLoteCertificados ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                    <Upload className="h-4 w-4" />
+                )}
+                {preparandoLoteCertificados ? "Analisando certificados do lote..." : "Selecionar vários certificados"}
                 <input
                     type="file"
                     accept="application/pdf,image/*"
                     multiple
+                    disabled={preparandoLoteCertificados}
                     className="hidden"
                     onChange={(e) => prepararArquivosLote(e.target.files)}
                 />
             </label>
             <FileUploadAviso arquivos={arquivosLote.map((item) => item.arquivo)} tipo="documentoSimples" />
+
+            {preparandoLoteCertificados && (
+                <div className="mt-3 flex items-start gap-3 rounded-2xl bg-blue-100 px-4 py-3 text-sm text-blue-900 ring-1 ring-blue-200">
+                    <FileSearch className="mt-0.5 h-5 w-5 shrink-0" />
+                    <div className="min-w-0">
+                        <p className="font-bold">Documentos do lote sendo analisados</p>
+                        <p className="mt-0.5 text-xs leading-relaxed text-blue-800/80">
+                            Aguarde a identificação automática de colaborador, tipo documental e datas antes de salvar o lote.
+                        </p>
+                    </div>
+                    <Loader2 className="ml-auto h-5 w-5 shrink-0 animate-spin" />
+                </div>
+            )}
 
             <button
                 type="button"
@@ -171,10 +193,14 @@ export function EnvioLoteTreinamentos({
 
                     <button
                         onClick={salvarCertificadosEmLote}
-                        disabled={salvandoLote}
+                        disabled={salvandoLote || preparandoLoteCertificados}
                         className="w-full rounded-2xl bg-blue-600 px-4 py-3 text-sm font-semibold text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
                     >
-                        {salvandoLote ? "Salvando lote..." : `Salvar ${arquivosLote.length} certificado(s) distribuído(s)`}
+                        {preparandoLoteCertificados
+                            ? "Aguardando análise do lote..."
+                            : salvandoLote
+                                ? "Salvando lote..."
+                                : `Salvar ${arquivosLote.length} certificado(s) distribuído(s)`}
                     </button>
                 </div>
             )}

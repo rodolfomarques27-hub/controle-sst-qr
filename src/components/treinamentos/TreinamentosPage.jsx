@@ -137,8 +137,10 @@ export function Treinamentos({
     const [sugestaoDataArquivo, setSugestaoDataArquivo] = useState(null);
     const [observacao, setObservacao] = useState("");
     const [salvandoCertificado, setSalvandoCertificado] = useState(false);
+    const [analisandoArquivoCertificado, setAnalisandoArquivoCertificado] = useState(false);
     const [arquivosLote, setArquivosLote] = useState([]);
     const [salvandoLote, setSalvandoLote] = useState(false);
+    const [preparandoLoteCertificados, setPreparandoLoteCertificados] = useState(false);
     const [sincronizandoStorage, setSincronizandoStorage] = useState(false);
     const [resultadoLote, setResultadoLote] = useState("");
     const [datasRevisao, setDatasRevisao] = useState({});
@@ -328,15 +330,22 @@ export function Treinamentos({
             setDataRealizacao(dataBaseLote);
         }
 
-        const preparados = await prepararArquivosTreinamentoLote({
-            listaArquivos: arquivos,
-            colaboradores,
-            colabSelecionado,
-            dataRealizacao: dataBaseLote,
-        });
+        setPreparandoLoteCertificados(true);
+        setResultadoLote("Analisando documentos do lote. Aguarde...");
 
-        setArquivosLote(preparados);
-        setResultadoLote("");
+        try {
+            const preparados = await prepararArquivosTreinamentoLote({
+                listaArquivos: arquivos,
+                colaboradores,
+                colabSelecionado,
+                dataRealizacao: dataBaseLote,
+            });
+
+            setArquivosLote(preparados);
+            setResultadoLote("");
+        } finally {
+            setPreparandoLoteCertificados(false);
+        }
     };
 
     const alterarColaboradorArquivoLote = (arquivoId, colaboradorCodigo) => {
@@ -355,6 +364,7 @@ export function Treinamentos({
     const selecionarArquivoCertificado = async (arquivo) => {
         setArquivoSelecionado(null);
         setSugestaoDataArquivo(null);
+        setAnalisandoArquivoCertificado(false);
 
         if (!arquivo) return;
 
@@ -374,30 +384,35 @@ export function Treinamentos({
 
         setArquivoSelecionado(arquivo);
         setDataRealizacao("");
+        setAnalisandoArquivoCertificado(true);
 
-        const sugestao = await detectarDataEmissaoArquivo(arquivo);
-        const dataDetectada = normalizarDataLancamentoCertificado(sugestao?.data);
-        const mensagemTipoAjustado = deveAjustarTipo
-            ? `Tipo ajustado automaticamente para ${treinamentoInferido.nome}, conforme o nome do arquivo.`
-            : "";
-        const sugestaoNormalizada = sugestao?.data && !dataDetectada
-            ? {
-                ...sugestao,
-                data: "",
-                mensagem: [
-                    mensagemTipoAjustado,
-                    sugestao.mensagem || "Data detectada ignorada por estar fora do intervalo esperado. Confira manualmente.",
-                ].filter(Boolean).join(" "),
+        try {
+            const sugestao = await detectarDataEmissaoArquivo(arquivo);
+            const dataDetectada = normalizarDataLancamentoCertificado(sugestao?.data);
+            const mensagemTipoAjustado = deveAjustarTipo
+                ? `Tipo ajustado automaticamente para ${treinamentoInferido.nome}, conforme o nome do arquivo.`
+                : "";
+            const sugestaoNormalizada = sugestao?.data && !dataDetectada
+                ? {
+                    ...sugestao,
+                    data: "",
+                    mensagem: [
+                        mensagemTipoAjustado,
+                        sugestao.mensagem || "Data detectada ignorada por estar fora do intervalo esperado. Confira manualmente.",
+                    ].filter(Boolean).join(" "),
+                }
+                : {
+                    ...sugestao,
+                    mensagem: [mensagemTipoAjustado, sugestao?.mensagem].filter(Boolean).join(" "),
+                };
+
+            setSugestaoDataArquivo(sugestaoNormalizada);
+
+            if (dataDetectada) {
+                setDataRealizacao(dataDetectada);
             }
-            : {
-                ...sugestao,
-                mensagem: [mensagemTipoAjustado, sugestao?.mensagem].filter(Boolean).join(" "),
-            };
-
-        setSugestaoDataArquivo(sugestaoNormalizada);
-
-        if (dataDetectada) {
-            setDataRealizacao(dataDetectada);
+        } finally {
+            setAnalisandoArquivoCertificado(false);
         }
     };
 
@@ -1069,6 +1084,7 @@ export function Treinamentos({
                                     selecionarArquivoCertificado={selecionarArquivoCertificado}
                                     sugestaoDataArquivo={sugestaoDataArquivo}
                                     salvandoCertificado={salvandoCertificado}
+                                    analisandoArquivoCertificado={analisandoArquivoCertificado}
                                     adicionarTreinamento={adicionarTreinamento}
                                     arquivosLote={arquivosLote}
                                     prepararArquivosLote={prepararArquivosLote}
@@ -1083,6 +1099,7 @@ export function Treinamentos({
                                     treinamentosBase={treinamentosBase}
                                     salvarCertificadosEmLote={salvarCertificadosEmLote}
                                     salvandoLote={salvandoLote}
+                                    preparandoLoteCertificados={preparandoLoteCertificados}
                                     recolhido={cardsTreinamentosRecolhidos.lancamento}
                                     onAlternarRecolhido={() => alternarCardTreinamento("lancamento")}
                                 />

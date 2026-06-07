@@ -599,6 +599,54 @@ export async function lerTextoPossivelDoArquivo(arquivo) {
     }
 }
 
+function contextoDataIndicaExameRealizadoAso(contexto = "") {
+    const texto = normalizarTextoBusca(contexto);
+
+    return /exames realizados|exames rotineiros|acuidade visual|audiometria|eletrocardiograma|eletroencefalograma|espirometria|exame clinico|exame clínico|glicose|raio x|raio x torax|padrão oit|padrao oit|exames dentro da validade/.test(texto);
+}
+
+function contextoDataIndicaDataPrincipalAso(contexto = "") {
+    const texto = normalizarTextoBusca(contexto);
+
+    return /medico examinador|médico examinador|medico responsavel pelo pcmso|médico responsável pelo pcmso|crm\s*\/\s*uf|assinatura digital|assinado digitalmente|icp brasil|icp-brasil|atestado de saude ocupacional|atestado de saúde ocupacional/.test(texto);
+}
+
+function contextoDataIndicaCampoDataAso(contexto = "") {
+    const texto = normalizarTextoBusca(contexto);
+
+    return /\bdata\b/.test(texto) && !contextoDataIndicaExameRealizadoAso(texto);
+}
+
+function calcularPontuacaoDataLeituraTreinamento(data = {}, leitura = {}) {
+    const contexto = `${data?.contexto || ""} ${data?.rotulo || ""} ${data?.tipo || ""}`;
+    const contextoBusca = normalizarTextoBusca(contexto);
+    const categorias = Array.isArray(data?.categorias) ? data.categorias.map((item) => normalizarTextoBusca(item)) : [];
+    const tipo = normalizarTextoBusca(data?.tipo || "");
+    const arquivoNome = normalizarTextoBusca(leitura?.arquivoNome || leitura?.arquivo_nome || "");
+    const leituraAso = /\baso\b|atestado de saude ocupacional|atestado de saúde ocupacional/.test(`${arquivoNome} ${contextoBusca}`);
+    let pontuacao = 8;
+
+    if (categorias.includes("emissao_realizacao")) pontuacao += 35;
+    if (tipo.includes("encerramento") || tipo.includes("assinatura")) pontuacao += 25;
+    if (/emissao|realizacao|realizado|conclusao|curso|treinamento|aso|admissao|sao jose dos campos|são josé dos campos|elaborado em|emitido em/.test(contextoBusca)) pontuacao += 25;
+
+    if (leituraAso) {
+        if (contextoDataIndicaDataPrincipalAso(contextoBusca)) pontuacao += 90;
+        if (contextoDataIndicaCampoDataAso(contextoBusca)) pontuacao += 65;
+        if (contextoDataIndicaExameRealizadoAso(contextoBusca)) pontuacao -= 130;
+        if (/nascimento|nasc|data de nascimento/.test(contextoBusca)) pontuacao -= 150;
+    } else if (/exame/.test(contextoBusca)) {
+        pontuacao += 10;
+    }
+
+    if (/validade|vencimento|vence|vencera|vencerá|vigencia|vigência|ate|até|prazo/.test(contextoBusca)) pontuacao -= 30;
+    if (tipo.includes("fim_vigencia")) pontuacao -= 60;
+    if (tipo.includes("referencia") || tipo.includes("ignorada")) pontuacao -= 100;
+    if (String(data?.origem || "").includes("nome_arquivo")) pontuacao -= 5;
+
+    return pontuacao;
+}
+
 function coletarDatasLeituraDocumentalTreinamento(leitura = {}) {
     const datas = [
         ...(Array.isArray(leitura?.datasRelevantesClassificadas) ? leitura.datasRelevantesClassificadas : []),
@@ -618,29 +666,13 @@ function coletarDatasLeituraDocumentalTreinamento(leitura = {}) {
             vistos.add(chave);
             return true;
         })
-        .map((data) => {
-            const contexto = `${data?.contexto || ""} ${data?.rotulo || ""} ${data?.tipo || ""}`;
-            const contextoBusca = normalizarTextoBusca(contexto);
-            const categorias = Array.isArray(data?.categorias) ? data.categorias.map((item) => normalizarTextoBusca(item)) : [];
-            const tipo = normalizarTextoBusca(data?.tipo || "");
-            let pontuacao = 8;
-
-            if (categorias.includes("emissao_realizacao")) pontuacao += 35;
-            if (tipo.includes("encerramento") || tipo.includes("assinatura")) pontuacao += 25;
-            if (/emissao|realizacao|realizado|conclusao|curso|treinamento|aso|exame|admissao|sao jose dos campos|são josé dos campos|elaborado em|emitido em/.test(contextoBusca)) pontuacao += 25;
-            if (/validade|vencimento|vence|vencera|vencerá|vigencia|vigência|ate|até|prazo/.test(contextoBusca)) pontuacao -= 30;
-            if (tipo.includes("fim_vigencia")) pontuacao -= 60;
-            if (tipo.includes("referencia") || tipo.includes("ignorada")) pontuacao -= 100;
-            if (String(data?.origem || "").includes("nome_arquivo")) pontuacao -= 5;
-
-            return {
-                iso: String(data.iso).slice(0, 10),
-                texto: data.br || formatDate(String(data.iso).slice(0, 10)),
-                contexto: data.contexto || "",
-                origem: data.origem || "leitura documental local",
-                pontuacao,
-            };
-        })
+        .map((data) => ({
+            iso: String(data.iso).slice(0, 10),
+            texto: data.br || formatDate(String(data.iso).slice(0, 10)),
+            contexto: data.contexto || "",
+            origem: data.origem || "leitura documental local",
+            pontuacao: calcularPontuacaoDataLeituraTreinamento(data, leitura),
+        }))
         .filter((data) => data.pontuacao > 0)
         .sort((a, b) => b.pontuacao - a.pontuacao || b.iso.localeCompare(a.iso));
 }

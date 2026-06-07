@@ -3,6 +3,8 @@ import React from "react";
 import {
     ChevronDown,
     ChevronUp,
+    FileSearch,
+    Loader2,
     Upload,
 } from "lucide-react";
 import { Card } from "../commonComponents";
@@ -29,6 +31,7 @@ export function FormularioLancamentoCertificado({
     selecionarArquivoCertificado,
     sugestaoDataArquivo,
     salvandoCertificado,
+    analisandoArquivoCertificado = false,
     adicionarTreinamento,
     arquivosLote = [],
     prepararArquivosLote,
@@ -43,6 +46,7 @@ export function FormularioLancamentoCertificado({
     treinamentosBase = [],
     salvarCertificadosEmLote,
     salvandoLote,
+    preparandoLoteCertificados = false,
     recolhido = false,
     onAlternarRecolhido,
 }) {
@@ -194,17 +198,42 @@ export function FormularioLancamentoCertificado({
                     className="w-full resize-none rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-slate-300"
                 />
         
-                <label className="flex cursor-pointer items-center justify-center gap-2 rounded-2xl border border-dashed border-slate-300 bg-slate-50 px-4 py-4 text-sm font-medium text-slate-600 hover:bg-slate-100">
-                    <Upload className="h-4 w-4" />
-                    {arquivoSelecionado ? arquivoSelecionado.name : "Selecionar PDF ou imagem do certificado"}
+                <label className={classNames(
+                    "flex items-center justify-center gap-2 rounded-2xl border border-dashed border-slate-300 bg-slate-50 px-4 py-4 text-sm font-medium text-slate-600 hover:bg-slate-100",
+                    analisandoArquivoCertificado || salvandoCertificado ? "cursor-wait opacity-80" : "cursor-pointer"
+                )}>
+                    {analisandoArquivoCertificado ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                        <Upload className="h-4 w-4" />
+                    )}
+                    {analisandoArquivoCertificado
+                        ? "Analisando documento..."
+                        : arquivoSelecionado
+                            ? arquivoSelecionado.name
+                            : "Selecionar PDF ou imagem do certificado"}
                     <input
                         type="file"
                         accept="application/pdf,image/*"
+                        disabled={analisandoArquivoCertificado || salvandoCertificado}
                         className="hidden"
                         onChange={(e) => selecionarArquivoCertificado(e.target.files?.[0] || null)}
                     />
                 </label>
                 <FileUploadAviso arquivo={arquivoSelecionado} tipo="documentoSimples" />
+
+                {analisandoArquivoCertificado && (
+                    <div className="flex items-start gap-3 rounded-2xl bg-blue-50 px-4 py-3 text-sm text-blue-800 ring-1 ring-blue-100">
+                        <FileSearch className="mt-0.5 h-5 w-5 shrink-0" />
+                        <div className="min-w-0">
+                            <p className="font-bold">Documento sendo analisado</p>
+                            <p className="mt-0.5 text-xs leading-relaxed text-blue-700/80">
+                                Aguarde a leitura do PDF/OCR antes de salvar. O sistema está tentando identificar tipo documental e data principal do arquivo.
+                            </p>
+                        </div>
+                        <Loader2 className="ml-auto h-5 w-5 shrink-0 animate-spin" />
+                    </div>
+                )}
         
                 {sugestaoDataArquivo && (
                     <div className={classNames(
@@ -219,10 +248,14 @@ export function FormularioLancamentoCertificado({
         
                 <button
                     onClick={adicionarTreinamento}
-                    disabled={salvandoCertificado}
+                    disabled={salvandoCertificado || analisandoArquivoCertificado}
                     className="w-full rounded-2xl bg-slate-950 px-4 py-3 text-sm font-semibold text-white hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
                 >
-                    {salvandoCertificado ? "Salvando no Supabase..." : "Salvar certificado no banco"}
+                    {analisandoArquivoCertificado
+                        ? "Aguardando análise do documento..."
+                        : salvandoCertificado
+                            ? "Salvando no Supabase..."
+                            : "Salvar certificado no banco"}
                 </button>
         
                 <EnvioLoteTreinamentos
@@ -240,6 +273,7 @@ export function FormularioLancamentoCertificado({
                     treinamentosBase={treinamentosBase}
                     salvarCertificadosEmLote={salvarCertificadosEmLote}
                     salvandoLote={salvandoLote}
+                    preparandoLoteCertificados={preparandoLoteCertificados}
                 />
             </div>
             )}
