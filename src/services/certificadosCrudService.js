@@ -167,6 +167,19 @@ export async function salvarCertificadoTreinamentoCrud({
         throw new Error("Selecione o treinamento/documento.");
     }
 
+    if (!certificado?.arquivo) {
+        throw new Error("Selecione o arquivo PDF ou imagem do certificado.");
+    }
+
+    const colaboradorPreValidacao = certificado?.colaborador || colaboradorSelecionado || colaboradores.find((colaborador) =>
+        String(colaborador.codigoFuncionario || "") === String(certificado?.colaboradorCodigo || "")
+    ) || null;
+
+    validarNomeArquivoContraColaboradorSelecionado({
+        arquivo: certificado.arquivo,
+        colaboradorSelecionado: colaboradorPreValidacao,
+    });
+
     if (!certificado?.dataRealizacao) {
         throw new Error("Informe a data de realização/emissão.");
     }
@@ -175,10 +188,6 @@ export async function salvarCertificadoTreinamentoCrud({
 
     if (!treinamentoSemVencimento && !certificado?.dataVencimento) {
         throw new Error("Informe a validade/revisão do certificado.");
-    }
-
-    if (!certificado?.arquivo) {
-        throw new Error("Selecione o arquivo PDF ou imagem do certificado.");
     }
 
     const codigoInformado = String(

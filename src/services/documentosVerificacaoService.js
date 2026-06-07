@@ -384,6 +384,72 @@ function obterLinhasOcrConferencia(leitura = {}) {
     return Array.isArray(linhas) ? linhas : [];
 }
 
+function obterAssinaturasTabelaConferencia(leitura = {}) {
+    const campos = obterCamposLeituraConferencia(leitura);
+    const assinaturas = leitura?.assinaturasTabela || leitura?.assinaturas_tabela || campos?.assinaturas_tabela || [];
+
+    return Array.isArray(assinaturas) ? assinaturas : [];
+}
+
+function escaparRegexConferencia(valor = "") {
+    return String(valor || "").replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+function estimarNumeroLinhaColaboradorNoTexto({ texto = "", nomeColaborador = "" } = {}) {
+    const base = normalizarTextoConferencia(texto);
+    const tokens = tokensNomeConferencia(nomeColaborador);
+
+    if (!base || tokens.length < 2) return null;
+
+    const padraoNome = tokens.map(escaparRegexConferencia).join("\\s+");
+    const regexComNumero = new RegExp(`(?:^|\\s)(\\d{1,2})\\s+${padraoNome}(?:\\s|$)`);
+    const matchNumero = base.match(regexComNumero);
+
+    if (matchNumero?.[1]) {
+        const numero = Number(matchNumero[1]);
+        if (Number.isInteger(numero) && numero >= 1 && numero <= 60) return numero;
+    }
+
+    const regexNome = new RegExp(padraoNome);
+    const matchNome = regexNome.exec(base);
+
+    if (!matchNome) return null;
+
+    const trechoAnterior = base.slice(Math.max(0, matchNome.index - 35), matchNome.index).trim();
+    const numeros = Array.from(trechoAnterior.matchAll(/\b(\d{1,2})\b/g)).map((item) => Number(item[1]));
+    const numero = numeros.reverse().find((valor) => Number.isInteger(valor) && valor >= 1 && valor <= 60);
+
+    return numero || null;
+}
+
+function assinaturaProvavelPorTabela({ leitura = {}, textoDocumento = "", nomeColaborador = "" } = {}) {
+    const assinaturas = obterAssinaturasTabelaConferencia(leitura);
+    if (!assinaturas.length) return null;
+
+    const numeroLinha = estimarNumeroLinhaColaboradorNoTexto({ texto: textoDocumento, nomeColaborador });
+    if (!numeroLinha) return null;
+
+    const linhaTabela = assinaturas.find((linha) => Number(linha?.numeroLinha || linha?.numero_linha || 0) === numeroLinha);
+    if (!linhaTabela) return null;
+
+    return {
+        indice: `tabela-${numeroLinha}`,
+        texto: `Linha ${numeroLinha} da lista de presença`,
+        y0: linhaTabela.y0,
+        y1: linhaTabela.y1,
+        yCentro: linhaTabela.yCentro,
+        assinatura_visual: Boolean(linhaTabela.assinatura_visual || linhaTabela.assinaturaVisual),
+        assinatura_densidade: linhaTabela.assinatura_densidade ?? linhaTabela.assinaturaDensidade ?? null,
+        assinatura_densidade_azul: linhaTabela.assinatura_densidade_azul ?? linhaTabela.assinaturaDensidadeAzul ?? null,
+        assinatura_espalhamento_horizontal: linhaTabela.assinatura_espalhamento_horizontal ?? linhaTabela.assinaturaEspalhamentoHorizontal ?? null,
+        assinatura_espalhamento_vertical: linhaTabela.assinatura_espalhamento_vertical ?? linhaTabela.assinaturaEspalhamentoVertical ?? null,
+        assinatura_origem: linhaTabela.assinatura_origem || "fallback_tabela_presenca_linha_numerada",
+        nome_score: null,
+        nome_tokens_encontrados: tokensNomeConferencia(nomeColaborador),
+    };
+}
+
+
 function tokensNomeConferencia(nome = "") {
     return normalizarTextoConferencia(nome)
         .split(" ")
@@ -666,7 +732,13 @@ function montarConferenciaDocumentalCertificado({ leitura = {}, certificado = {}
     const empresaColaborador = obterEmpresaColaboradorAnalise(colaborador, certificado);
     const cnpjEmpresa = obterCnpjEmpresaAnalise(colaborador, certificado);
     const campos = obterCamposLeituraConferencia(leitura);
-    const linhaColaborador = localizarLinhaColaboradorOcr({ leitura, nomeColaborador });
+    const linhaColaboradorOcr = localizarLinhaColaboradorOcr({ leitura, nomeColaborador });
+    const linhaColaboradorTabela = linhaColaboradorOcr ? null : assinaturaProvavelPorTabela({
+        leitura,
+        textoDocumento,
+        nomeColaborador,
+    });
+    const linhaColaborador = linhaColaboradorOcr || linhaColaboradorTabela;
     const listaPresenca = documentoPareceListaPresenca({ texto: textoDocumento, leitura });
     const nomeEncontrado = nomeColaborador ? Boolean(textoContemNomePessoa({ texto: textoDocumento, nome: nomeColaborador }) || linhaColaborador) : null;
     const cpfEncontrado = documentoContemCpf(textoDocumento, cpfColaborador);
@@ -681,8 +753,8 @@ function montarConferenciaDocumentalCertificado({ leitura = {}, certificado = {}
         ? Boolean(
             linhaColaborador.assinatura_visual ||
             linhaColaborador.assinaturaVisual ||
-            Number(assinaturaDensidadeAzul || 0) > 0.0007 ||
-            (Number(assinaturaDensidade || 0) > 0.0032 && Number(assinaturaEspalhamentoHorizontal || 0) > 0.025)
+            Number(assinaturaDensidadeAzul || 0) > 0.00045 ||
+            (Number(assinaturaDensidade || 0) > 0.0024 && Number(assinaturaEspalhamentoHorizontal || 0) > 0.018)
         )
         : null;
     const assinaturaAplicavel = Boolean(listaPresenca && nomeEncontrado);
@@ -696,6 +768,7 @@ function montarConferenciaDocumentalCertificado({ leitura = {}, certificado = {}
             encontrado: nomeEncontrado,
             linhaOcr: linhaColaborador?.texto || "",
             linhaIndice: linhaColaborador?.indice ?? null,
+            origemLinha: linhaColaborador?.assinatura_origem === "fallback_tabela_presenca_linha_numerada" ? "tabela_presenca_linha_numerada" : (linhaColaborador?.origem_linha || "ocr"),
             scoreLinha: linhaColaborador?.nome_score ?? null,
             tokensEncontrados: linhaColaborador?.nome_tokens_encontrados || [],
         },
@@ -730,7 +803,7 @@ function montarConferenciaDocumentalCertificado({ leitura = {}, certificado = {}
                 : assinaturaVisual === false
                     ? "Colaborador localizado, mas a assinatura não foi confirmada visualmente na linha. Conferir a coluna de assinatura."
                     : assinaturaAplicavel
-                        ? "Colaborador localizado, mas a posição da linha não foi suficiente para avaliar assinatura automaticamente."
+                        ? "Colaborador localizado, mas a posição da linha não foi suficiente para avaliar assinatura automaticamente. Conferir visualmente a coluna de assinatura."
                         : "Assinatura não aplicável porque o colaborador não foi localizado na lista ou o documento não foi classificado como lista.",
         },
     };

@@ -1230,6 +1230,211 @@ function calcularAssinaturaVisualLinha(canvas, linha = {}) {
     }
 }
 
+
+function calcularAssinaturaVisualFaixa(canvas, faixa = {}) {
+    if (!canvas || typeof canvas.getContext !== "function") {
+        return { assinaturaVisual: false, densidade: 0, origem: faixa.origem || "sem_canvas" };
+    }
+
+    const contexto = canvas.getContext("2d", { willReadFrequently: true });
+
+    if (!contexto) {
+        return { assinaturaVisual: false, densidade: 0, origem: faixa.origem || "sem_contexto_canvas" };
+    }
+
+    const largura = canvas.width || 1;
+    const altura = canvas.height || 1;
+    const xInicio = Math.max(0, Math.floor(Number(faixa.x0 || 0) * largura));
+    const xFim = Math.min(largura, Math.ceil(Number(faixa.x1 || 1) * largura));
+    const yInicio = Math.max(0, Math.floor(Number(faixa.y0 || 0) * altura));
+    const yFim = Math.min(altura, Math.ceil(Number(faixa.y1 || 1) * altura));
+    const larguraRecorte = Math.max(1, xFim - xInicio);
+    const alturaRecorte = Math.max(1, yFim - yInicio);
+
+    if (larguraRecorte < 8 || alturaRecorte < 6) {
+        return {
+            assinaturaVisual: false,
+            densidade: 0,
+            origem: faixa.origem || "recorte_insuficiente",
+            larguraRecorte,
+            alturaRecorte,
+        };
+    }
+
+    try {
+        const dados = contexto.getImageData(xInicio, yInicio, larguraRecorte, alturaRecorte).data;
+        let pixelsRelevantes = 0;
+        let pixelsTinta = 0;
+        let pixelsAzuis = 0;
+        const colunasComTinta = new Set();
+        const linhasComTinta = new Set();
+
+        for (let y = 0; y < alturaRecorte; y += 1) {
+            for (let x = 0; x < larguraRecorte; x += 1) {
+                // Ignora bordas do recorte para reduzir falso positivo por linha da tabela.
+                if (x < 3 || y < 3 || x > larguraRecorte - 4 || y > alturaRecorte - 4) continue;
+
+                const i = (y * larguraRecorte + x) * 4;
+                const r = dados[i];
+                const g = dados[i + 1];
+                const b = dados[i + 2];
+                const a = dados[i + 3];
+
+                if (a < 40) continue;
+
+                pixelsRelevantes += 1;
+
+                const luma = (0.299 * r) + (0.587 * g) + (0.114 * b);
+                const diferencaCanais = Math.max(r, g, b) - Math.min(r, g, b);
+                const azulCaneta = b > r + 10 && b > g + 2 && b < 248;
+                const tracoEscuro = luma < 165 && diferencaCanais > 4;
+                const tintaProvavel = azulCaneta || tracoEscuro;
+
+                if (tintaProvavel) {
+                    pixelsTinta += 1;
+                    if (azulCaneta) pixelsAzuis += 1;
+                    colunasComTinta.add(Math.floor(x / 4));
+                    linhasComTinta.add(Math.floor(y / 3));
+                }
+            }
+        }
+
+        const densidade = pixelsRelevantes ? pixelsTinta / pixelsRelevantes : 0;
+        const densidadeAzul = pixelsRelevantes ? pixelsAzuis / pixelsRelevantes : 0;
+        const espalhamentoHorizontal = colunasComTinta.size / Math.max(1, Math.ceil(larguraRecorte / 4));
+        const espalhamentoVertical = linhasComTinta.size / Math.max(1, Math.ceil(alturaRecorte / 3));
+        const assinaturaVisual = (
+            densidadeAzul > 0.00045 ||
+            (densidade > 0.0024 && espalhamentoHorizontal > 0.018 && espalhamentoVertical > 0.04) ||
+            (densidade > 0.0042 && espalhamentoHorizontal > 0.012)
+        );
+
+        return {
+            assinaturaVisual,
+            densidade: Number(densidade.toFixed(4)),
+            densidadeAzul: Number(densidadeAzul.toFixed(4)),
+            espalhamentoHorizontal: Number(espalhamentoHorizontal.toFixed(4)),
+            espalhamentoVertical: Number(espalhamentoVertical.toFixed(4)),
+            larguraRecorte,
+            alturaRecorte,
+            origem: faixa.origem || "analise_visual_faixa",
+        };
+    } catch {
+        return { assinaturaVisual: false, densidade: 0, origem: faixa.origem || "erro_leitura_canvas" };
+    }
+}
+
+function detectarLinhasHorizontaisTabelaPresenca(canvas) {
+    if (!canvas || typeof canvas.getContext !== "function") return [];
+
+    const contexto = canvas.getContext("2d", { willReadFrequently: true });
+    if (!contexto) return [];
+
+    const largura = canvas.width || 1;
+    const altura = canvas.height || 1;
+    const xInicio = Math.floor(largura * 0.06);
+    const xFim = Math.floor(largura * 0.94);
+    const yInicio = Math.floor(altura * 0.52);
+    const yFim = Math.floor(altura * 0.98);
+    const candidatos = [];
+
+    for (let y = yInicio; y < yFim; y += 1) {
+        let escuros = 0;
+        let total = 0;
+
+        for (let x = xInicio; x < xFim; x += 4) {
+            const pixel = contexto.getImageData(x, y, 1, 1).data;
+            const r = pixel[0];
+            const g = pixel[1];
+            const b = pixel[2];
+            const luma = (0.299 * r) + (0.587 * g) + (0.114 * b);
+            total += 1;
+            if (luma < 120) escuros += 1;
+        }
+
+        const proporcao = total ? escuros / total : 0;
+        if (proporcao >= 0.16) {
+            candidatos.push({ y, proporcao });
+        }
+    }
+
+    const grupos = [];
+    candidatos.forEach((candidato) => {
+        const ultimo = grupos[grupos.length - 1];
+        if (ultimo && candidato.y - ultimo.fim <= 3) {
+            ultimo.fim = candidato.y;
+            ultimo.pontos.push(candidato);
+            return;
+        }
+        grupos.push({ inicio: candidato.y, fim: candidato.y, pontos: [candidato] });
+    });
+
+    const linhas = grupos
+        .map((grupo) => ({
+            y: Math.round((grupo.inicio + grupo.fim) / 2),
+            proporcao: Math.max(...grupo.pontos.map((ponto) => ponto.proporcao)),
+            alturaGrupo: grupo.fim - grupo.inicio + 1,
+        }))
+        .filter((linha) => linha.proporcao >= 0.18 || linha.alturaGrupo >= 2)
+        .sort((a, b) => a.y - b.y);
+
+    // Remove duplicidades muito próximas.
+    return linhas.reduce((lista, linha) => {
+        const anterior = lista[lista.length - 1];
+        if (anterior && Math.abs(linha.y - anterior.y) < 10) {
+            if (linha.proporcao > anterior.proporcao) lista[lista.length - 1] = linha;
+            return lista;
+        }
+        lista.push(linha);
+        return lista;
+    }, []);
+}
+
+function detectarAssinaturasTabelaPresenca(canvas) {
+    const linhas = detectarLinhasHorizontaisTabelaPresenca(canvas);
+    const altura = canvas?.height || 1;
+
+    if (!linhas.length || linhas.length < 4) return [];
+
+    // Em listas padrão, a primeira faixa é o cabeçalho da tabela e as seguintes são linhas numeradas.
+    const resultados = [];
+    const maxLinhas = Math.min(20, linhas.length - 1);
+
+    for (let indice = 1; indice < maxLinhas; indice += 1) {
+        const superior = linhas[indice];
+        const inferior = linhas[indice + 1];
+        if (!superior || !inferior) continue;
+
+        const alturaLinhaPx = inferior.y - superior.y;
+        if (alturaLinhaPx < 12) continue;
+
+        const y0 = (superior.y + Math.max(3, alturaLinhaPx * 0.14)) / altura;
+        const y1 = (inferior.y - Math.max(3, alturaLinhaPx * 0.12)) / altura;
+        const assinatura = calcularAssinaturaVisualFaixa(canvas, {
+            x0: 0.64,
+            x1: 0.925,
+            y0,
+            y1,
+            origem: "analise_visual_linha_tabela_presenca",
+        });
+
+        resultados.push({
+            numeroLinha: indice,
+            y0: Number(y0.toFixed(4)),
+            y1: Number(y1.toFixed(4)),
+            yCentro: Number(((y0 + y1) / 2).toFixed(4)),
+            assinatura_visual: assinatura.assinaturaVisual,
+            assinatura_densidade: assinatura.densidade,
+            assinatura_densidade_azul: assinatura.densidadeAzul || 0,
+            assinatura_espalhamento_horizontal: assinatura.espalhamentoHorizontal || 0,
+            assinatura_espalhamento_vertical: assinatura.espalhamentoVertical || 0,
+            assinatura_origem: assinatura.origem,
+        });
+    }
+
+    return resultados;
+}
+
 function montarLinhasOcrComAssinatura(canvas, palavras = []) {
     return agruparPalavrasOcrEmLinhas(palavras, canvas)
         .map((linha) => {
@@ -1276,6 +1481,7 @@ async function extrairTextoPrimeiraPaginaPdfComOcr(buffer) {
             totalPaginas: 0,
             avisos: [],
             linhasOcr: [],
+            assinaturasTabela: [],
         };
     }
 
@@ -1286,6 +1492,7 @@ async function extrairTextoPrimeiraPaginaPdfComOcr(buffer) {
             totalPaginas: 0,
             avisos: ["OCR de imagem não executado fora do navegador."],
             linhasOcr: [],
+            assinaturasTabela: [],
         };
     }
 
@@ -1308,6 +1515,7 @@ async function extrairTextoPrimeiraPaginaPdfComOcr(buffer) {
                 totalPaginas: 0,
                 avisos: ["OCR local não encontrou páginas no PDF."],
                 linhasOcr: [],
+                assinaturasTabela: [],
             };
         }
 
@@ -1323,6 +1531,7 @@ async function extrairTextoPrimeiraPaginaPdfComOcr(buffer) {
                 totalPaginas,
                 avisos: ["OCR local não conseguiu preparar o canvas da página."],
                 linhasOcr: [],
+                assinaturasTabela: [],
             };
         }
 
@@ -1334,6 +1543,7 @@ async function extrairTextoPrimeiraPaginaPdfComOcr(buffer) {
         const resultadoOcr = await reconhecerTextoCanvasComOcr(canvas);
         const textoOcr = resultadoOcr?.texto || "";
         const linhasOcr = montarLinhasOcrComAssinatura(canvas, resultadoOcr?.palavras || []);
+        const assinaturasTabela = detectarAssinaturasTabelaPresenca(canvas);
 
         try {
             canvas.width = 1;
@@ -1349,6 +1559,7 @@ async function extrairTextoPrimeiraPaginaPdfComOcr(buffer) {
                 paginasLidas: 1,
                 totalPaginas,
                 linhasOcr,
+                assinaturasTabela,
                 avisos: ["OCR local executado na primeira página do PDF escaneado/imagem."],
             };
         }
@@ -1358,6 +1569,7 @@ async function extrairTextoPrimeiraPaginaPdfComOcr(buffer) {
             paginasLidas: 1,
             totalPaginas,
             linhasOcr,
+            assinaturasTabela,
             avisos: ["OCR local executado, mas não encontrou texto documental confiável na primeira página."],
         };
     } catch (error) {
@@ -1367,6 +1579,7 @@ async function extrairTextoPrimeiraPaginaPdfComOcr(buffer) {
             totalPaginas: 0,
             avisos: [`OCR local de imagem indisponível: ${error?.message || "erro desconhecido"}.`],
             linhasOcr: [],
+            assinaturasTabela: [],
         };
     }
 }
@@ -1635,6 +1848,7 @@ function montarRetornoLeituraBase({
     totalPaginas = 0,
     buscaAmpliada = null,
     linhasOcr = [],
+    assinaturasTabela = [],
     avisos = [],
     erro = "",
 } = {}) {
@@ -1714,6 +1928,7 @@ function montarRetornoLeituraBase({
         resumoTextual,
         camposExtraidos,
         linhasOcr: Array.isArray(linhasOcr) ? linhasOcr.slice(0, 120) : [],
+        assinaturasTabela: Array.isArray(assinaturasTabela) ? assinaturasTabela.slice(0, 30) : [],
         textoLimitado,
         paginasLidas,
         totalPaginas,
@@ -1813,6 +2028,7 @@ export async function executarLeituraDocumentalLocal({ arquivo = null, arquivoNo
             textoExtraido,
             textoLimitado,
             linhasOcr: textoVeioDoOcrImagem ? (leituraOcrImagem?.linhasOcr || []) : [],
+            assinaturasTabela: textoVeioDoOcrImagem ? (leituraOcrImagem?.assinaturasTabela || []) : [],
             paginasLidas: textoVeioDoOcrImagem ? (leituraOcrImagem?.paginasLidas || 1) : (leituraPdfJs.paginasLidas || 0),
             totalPaginas: leituraPdfJs.totalPaginas || leituraOcrImagem?.totalPaginas || 0,
             buscaAmpliada: leituraPdfJs.buscaAmpliada || null,
@@ -2070,6 +2286,7 @@ export function montarRetornoLeituraParaPersistencia(leitura = null) {
         resumo_textual: leitura.resumoTextual || [],
         campos_extraidos: leitura.camposExtraidos || null,
         linhas_ocr: (leitura.linhasOcr || []).slice(0, 120),
+        assinaturas_tabela: (leitura.assinaturasTabela || leitura.assinaturas_tabela || []).slice(0, 30),
         texto_previa: leitura.textoPrevia || "",
         paginas_lidas: leitura.paginasLidas || 0,
         total_paginas: leitura.totalPaginas || 0,
