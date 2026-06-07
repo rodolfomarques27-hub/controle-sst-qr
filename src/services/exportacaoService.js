@@ -1010,11 +1010,35 @@ export async function baixarRelatorioColaboradoresTreinamentosPDF({
 
     .marca-relatorio-controle {
         display: flex;
-        align-items: baseline;
+        align-items: center;
         justify-content: center;
-        gap: 14px;
+        gap: 10px;
         text-align: left;
         flex-wrap: nowrap;
+    }
+
+    .escudo-controle-sst-relatorio {
+        width: 34px;
+        height: 34px;
+        display: grid;
+        place-items: center;
+        flex: 0 0 auto;
+        color: #07162f;
+        background: transparent;
+        border: 0;
+        border-radius: 0;
+        box-shadow: none;
+    }
+
+    .escudo-controle-sst-relatorio svg {
+        width: 30px;
+        height: 30px;
+        display: block;
+        fill: none;
+        stroke: currentColor;
+        stroke-width: 1.9;
+        stroke-linecap: round;
+        stroke-linejoin: round;
     }
 
     .marca-relatorio-controle__textos h1 {
@@ -1030,15 +1054,15 @@ export async function baixarRelatorioColaboradoresTreinamentosPDF({
     .data-emissao-cabecalho {
         display: inline-flex;
         align-items: baseline;
-        gap: 5px;
+        gap: 4px;
         min-height: auto;
-        margin-left: 2px;
-        padding: 0 0 0 14px;
+        margin-left: 6px;
+        padding: 0 0 0 10px;
         border: 0;
-        border-left: 1px solid #cbd5e1;
+        border-left: 1px solid #d6dee9;
         border-radius: 0;
         background: transparent;
-        color: #475569;
+        color: #64748b;
         white-space: nowrap;
     }
 
@@ -1046,19 +1070,19 @@ export async function baixarRelatorioColaboradoresTreinamentosPDF({
         display: inline;
         margin: 0;
         color: #64748b;
-        font-size: 9px;
+        font-size: 7.6px;
         line-height: 1;
         font-weight: 800;
         text-transform: uppercase;
-        letter-spacing: 0.02em;
+        letter-spacing: 0.025em;
     }
 
     .data-emissao-cabecalho em {
         display: inline;
         margin: 0;
-        color: #334155;
+        color: #475569;
         font-style: normal;
-        font-size: 10px;
+        font-size: 8.4px;
         line-height: 1;
         font-weight: 800;
     }
@@ -2600,6 +2624,7 @@ function montarSecaoAniversariantesRelatorio({ aniversariantes = [], filtros = {
         <section class="pagina-relatorio pagina-relatorio-aniversariantes">
             <header class="cabecalho-relatorio cabecalho-relatorio--modelo-aprovado cabecalho-relatorio--aniversariantes">
                 <div class="marca-relatorio-controle">
+                    ${montarEscudoControleSstRelatorio()}
                     <div class="marca-relatorio-controle__textos">
                         <h1>CONTROLE SST QR</h1>
                     </div>
