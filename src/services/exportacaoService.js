@@ -2624,14 +2624,15 @@ function montarSecaoAniversariantesRelatorio({ aniversariantes = [], filtros = {
     return `
         <section class="pagina-relatorio pagina-relatorio-aniversariantes">
             <header class="cabecalho-relatorio cabecalho-relatorio--modelo-aprovado cabecalho-relatorio--aniversariantes">
-                <svg class="cabecalho-aniversariantes-svg" viewBox="0 0 1000 140" role="img" aria-label="Cabeçalho do relatório de aniversariantes">
+                <svg class="cabecalho-aniversariantes-svg" viewBox="0 0 1000 145" role="img" aria-label="Cabeçalho do relatório de aniversariantes">
                     <text x="500" y="42" text-anchor="middle" dominant-baseline="middle" class="cabecalho-svg-titulo">CONTROLE SST QR</text>
 
-                    <line x1="0" y1="92" x2="330" y2="92" class="cabecalho-svg-linha" />
-                    <text x="500" y="92" text-anchor="middle" dominant-baseline="middle" class="cabecalho-svg-subtitulo">${escaparHTML(String(titulo || "Relatório de aniversariantes").toUpperCase())}</text>
-                    <line x1="670" y1="92" x2="1000" y2="92" class="cabecalho-svg-linha" />
+                    <line x1="0" y1="93" x2="288" y2="93" class="cabecalho-svg-linha" />
+                    <rect x="288" y="78" width="424" height="30" rx="4" class="cabecalho-svg-fundo-subtitulo" />
+                    <text x="500" y="93" text-anchor="middle" dominant-baseline="middle" class="cabecalho-svg-subtitulo">${escaparHTML(String(titulo || "Relatório de aniversariantes").toUpperCase())}</text>
+                    <line x1="712" y1="93" x2="1000" y2="93" class="cabecalho-svg-linha" />
 
-                    <text x="500" y="119" text-anchor="middle" dominant-baseline="middle" class="cabecalho-svg-data">Data de emissão: ${escaparHTML(dataEmissao)}</text>
+                    <text x="500" y="124" text-anchor="middle" dominant-baseline="middle" class="cabecalho-svg-data">Data de emissão: ${escaparHTML(dataEmissao)}</text>
                 </svg>
             </header>
 
@@ -2764,7 +2765,7 @@ export async function baixarRelatorioAniversariantesPDF({
 
     .cabecalho-aniversariantes-svg {
         width: 100%;
-        height: 112px;
+        height: 118px;
         display: block;
         margin: 0 0 6px;
         overflow: visible;
@@ -2781,9 +2782,13 @@ export async function baixarRelatorioAniversariantesPDF({
     .cabecalho-svg-subtitulo {
         fill: var(--azul);
         font-family: Arial, Helvetica, sans-serif;
-        font-size: 20px;
+        font-size: 19px;
         font-weight: 900;
-        letter-spacing: 1.4px;
+        letter-spacing: 1.25px;
+    }
+
+    .cabecalho-svg-fundo-subtitulo {
+        fill: #ffffff;
     }
 
     .cabecalho-svg-linha {
