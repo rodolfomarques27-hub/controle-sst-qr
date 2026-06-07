@@ -54,7 +54,7 @@ function normalizarDataLancamentoCertificado(data) {
 function tokensNomeArquivoTreinamento(nomeArquivo = "") {
     return normalizarTextoBusca(String(nomeArquivo || "").replace(/\.[^.]+$/, ""))
         .replace(/[_-]+/g, " ")
-        .replace(/(nr\s*[-º]?\s*\d+|nr\d+|aso|atestado|saude|saúde|ocupacional|ficha|registro|clt|esocial|certificado|treinamento|integracao|integração|mobilizacao|mobilização|ordem|servico|serviço|pdf|documento|assinatura|lista|presenca|presença|transporte|movimentacao|movimentação|armazenagem|manuseio|materiais)/g, " ")
+        .replace(/\b(nr\s*[-º]?\s*\d+|nr\d+|aso|atestado|saude|saúde|ocupacional|ficha|registro|clt|esocial|certificado|treinamento|integracao|integração|mobilizacao|mobilização|ordem|servico|serviço|pdf|documento|assinatura|lista|presenca|presença|transporte|movimentacao|movimentação|armazenagem|manuseio|materiais)\b/g, " ")
         .replace(/[^a-z0-9]+/g, " ")
         .split(" ")
         .map((token) => token.trim())
@@ -416,6 +416,16 @@ export function Treinamentos({
         if (!arquivo) return;
 
         if (!validarArquivoAntesUpload(arquivo, "documentoSimples")) return;
+
+        try {
+            validarNomeArquivoContraColaboradorSelecionadoTela({
+                arquivo,
+                colaborador: colabSelecionado,
+            });
+        } catch (error) {
+            alert(error?.message || "O arquivo parece pertencer a outro colaborador.");
+            return;
+        }
 
         const treinamentoInferido = inferirTreinamentoPorNomeArquivo(arquivo.name || "");
         const treinamentoInferidoId = Number(treinamentoInferido?.id || 0);

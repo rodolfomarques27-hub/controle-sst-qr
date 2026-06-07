@@ -1336,32 +1336,48 @@ function detectarLinhasHorizontaisTabelaPresenca(canvas) {
     const xFim = Math.floor(largura * 0.94);
     const yInicio = Math.floor(altura * 0.52);
     const yFim = Math.floor(altura * 0.98);
+    const larguraRegiao = Math.max(1, xFim - xInicio);
+    const alturaRegiao = Math.max(1, yFim - yInicio);
     const candidatos = [];
 
-    for (let y = yInicio; y < yFim; y += 1) {
-        let escuros = 0;
-        let total = 0;
+    try {
+        // Importante para performance: pegar a região da tabela uma única vez.
+        // A versão anterior fazia milhares de getImageData(1x1), o que travava o Chrome.
+        const dados = contexto.getImageData(xInicio, yInicio, larguraRegiao, alturaRegiao).data;
+        const passoX = Math.max(7, Math.floor(larguraRegiao / 150));
+        const passoY = 2;
 
-        for (let x = xInicio; x < xFim; x += 8) {
-            const pixel = contexto.getImageData(x, y, 1, 1).data;
-            const r = pixel[0];
-            const g = pixel[1];
-            const b = pixel[2];
-            const luma = (0.299 * r) + (0.587 * g) + (0.114 * b);
-            total += 1;
-            if (luma < 120) escuros += 1;
-        }
+        for (let yLocal = 0; yLocal < alturaRegiao; yLocal += passoY) {
+            let escuros = 0;
+            let total = 0;
 
-        const proporcao = total ? escuros / total : 0;
-        if (proporcao >= 0.16) {
-            candidatos.push({ y, proporcao });
+            for (let xLocal = 0; xLocal < larguraRegiao; xLocal += passoX) {
+                const i = (yLocal * larguraRegiao + xLocal) * 4;
+                const r = dados[i];
+                const g = dados[i + 1];
+                const b = dados[i + 2];
+                const a = dados[i + 3];
+
+                if (a < 40) continue;
+
+                const luma = (0.299 * r) + (0.587 * g) + (0.114 * b);
+                total += 1;
+                if (luma < 125) escuros += 1;
+            }
+
+            const proporcao = total ? escuros / total : 0;
+            if (proporcao >= 0.14) {
+                candidatos.push({ y: yInicio + yLocal, proporcao });
+            }
         }
+    } catch {
+        return [];
     }
 
     const grupos = [];
     candidatos.forEach((candidato) => {
         const ultimo = grupos[grupos.length - 1];
-        if (ultimo && candidato.y - ultimo.fim <= 3) {
+        if (ultimo && candidato.y - ultimo.fim <= 5) {
             ultimo.fim = candidato.y;
             ultimo.pontos.push(candidato);
             return;
@@ -1375,10 +1391,9 @@ function detectarLinhasHorizontaisTabelaPresenca(canvas) {
             proporcao: Math.max(...grupo.pontos.map((ponto) => ponto.proporcao)),
             alturaGrupo: grupo.fim - grupo.inicio + 1,
         }))
-        .filter((linha) => linha.proporcao >= 0.18 || linha.alturaGrupo >= 2)
+        .filter((linha) => linha.proporcao >= 0.17 || linha.alturaGrupo >= 3)
         .sort((a, b) => a.y - b.y);
 
-    // Remove duplicidades muito próximas.
     return linhas.reduce((lista, linha) => {
         const anterior = lista[lista.length - 1];
         if (anterior && Math.abs(linha.y - anterior.y) < 10) {
@@ -1476,7 +1491,7 @@ async function reconhecerTextoCanvasComOcr(canvas) {
             };
         }
 
-        const resultado = await reconhecer(canvas, "por+eng", {
+        const resultado = await reconhecer(canvas, "por", {
             logger: () => {},
             tessedit_pageseg_mode: "6",
             preserve_interword_spaces: "1",
@@ -1541,10 +1556,10 @@ async function extrairTextoPrimeiraPaginaPdfComOcr(buffer) {
 
         const pagina = await pdf.getPage(1);
         const viewportBase = pagina.getViewport({ scale: 1 });
-        const escalaBase = 2.05;
-        const escalaMaximaPorLargura = viewportBase.width ? 1650 / viewportBase.width : escalaBase;
-        const escalaMaximaPorAltura = viewportBase.height ? 2250 / viewportBase.height : escalaBase;
-        const escalaSegura = Math.max(1.45, Math.min(escalaBase, escalaMaximaPorLargura, escalaMaximaPorAltura));
+        const escalaBase = 1.65;
+        const escalaMaximaPorLargura = viewportBase.width ? 1320 / viewportBase.width : escalaBase;
+        const escalaMaximaPorAltura = viewportBase.height ? 1850 / viewportBase.height : escalaBase;
+        const escalaSegura = Math.max(1.25, Math.min(escalaBase, escalaMaximaPorLargura, escalaMaximaPorAltura));
         const viewport = pagina.getViewport({ scale: escalaSegura });
         const canvas = document.createElement("canvas");
         const contexto = canvas.getContext("2d", { willReadFrequently: true });
@@ -1570,7 +1585,10 @@ async function extrairTextoPrimeiraPaginaPdfComOcr(buffer) {
         const textoOcr = resultadoOcr?.texto || "";
         const linhasOcr = montarLinhasOcrComAssinatura(canvas, resultadoOcr?.palavras || []);
         await new Promise((resolve) => setTimeout(resolve, 0));
-        const assinaturasTabela = detectarAssinaturasTabelaPresenca(canvas);
+
+        const textoNormalizadoOcr = normalizarTextoVerificacao(textoOcr);
+        const pareceListaComAssinatura = /nome do colaborador|assinatura|declaro ter participado|lista de presenca|lista de presença|nr\s*[-º]?\s*11|manuseio de materiais|movimentacao/.test(textoNormalizadoOcr);
+        const assinaturasTabela = pareceListaComAssinatura ? detectarAssinaturasTabelaPresenca(canvas) : [];
 
         try {
             canvas.width = 1;
@@ -2190,7 +2208,7 @@ function avaliarAssinaturaDigitalLeitura({ leitura, dataVencimento } = {}) {
 
 function normalizarDocumentoTextoComparacao(valor = "") {
     return normalizarTextoVerificacao(valor)
-        .replace(/(ltda|me|epp|eireli|sa|s\/a|ss|s\/s|construtora|construcoes|construções|pavimentadora|pavimentacao|pavimentação|comercio|comércio|servicos|serviços|empresa|grupo)/g, " ")
+        .replace(/\b(ltda|me|epp|eireli|sa|s\/a|ss|s\/s|construtora|construcoes|construções|pavimentadora|pavimentacao|pavimentação|comercio|comércio|servicos|serviços|empresa|grupo)\b/g, " ")
         .replace(/[^a-z0-9]+/g, " ")
         .replace(/\s+/g, " ")
         .trim();
