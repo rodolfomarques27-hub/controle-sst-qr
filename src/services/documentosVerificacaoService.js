@@ -351,7 +351,6 @@ function apenasDigitosConferencia(valor = "") {
 
 function obterTextoLeituraConferencia(leitura = {}) {
     const campos = obterCamposLeituraConferencia(leitura);
-    const perfilDocumental = obterPerfilDocumentalConferencia({ texto: textoComArquivo, treinamento, certificado, arquivoNome: metadadosArquivo?.arquivoNome || "" });
     const linhas = obterLinhasOcrConferencia(leitura)
         .map((linha) => linha?.texto || "")
         .filter(Boolean)
@@ -380,7 +379,6 @@ function obterCamposLeituraConferencia(leitura = {}) {
 
 function obterLinhasOcrConferencia(leitura = {}) {
     const campos = obterCamposLeituraConferencia(leitura);
-    const perfilDocumental = obterPerfilDocumentalConferencia({ texto: textoComArquivo, treinamento, certificado, arquivoNome: metadadosArquivo?.arquivoNome || "" });
     const linhas = leitura?.linhasOcr || leitura?.linhas_ocr || campos?.linhas_ocr || [];
 
     return Array.isArray(linhas) ? linhas : [];
@@ -388,7 +386,6 @@ function obterLinhasOcrConferencia(leitura = {}) {
 
 function obterAssinaturasTabelaConferencia(leitura = {}) {
     const campos = obterCamposLeituraConferencia(leitura);
-    const perfilDocumental = obterPerfilDocumentalConferencia({ texto: textoComArquivo, treinamento, certificado, arquivoNome: metadadosArquivo?.arquivoNome || "" });
     const assinaturas = leitura?.assinaturasTabela || leitura?.assinaturas_tabela || campos?.assinaturas_tabela || [];
 
     return Array.isArray(assinaturas) ? assinaturas : [];
@@ -396,7 +393,6 @@ function obterAssinaturasTabelaConferencia(leitura = {}) {
 
 function obterAssinaturasDocumentoConferencia(leitura = {}) {
     const campos = obterCamposLeituraConferencia(leitura);
-    const perfilDocumental = obterPerfilDocumentalConferencia({ texto: textoComArquivo, treinamento, certificado, arquivoNome: metadadosArquivo?.arquivoNome || "" });
     const retornoIa = leitura?.retornoIa || leitura?.retorno_ia || {};
     const leituraLocal = retornoIa?.leitura_documental_local || {};
     const assinaturas = leitura?.assinaturasDocumento ||
