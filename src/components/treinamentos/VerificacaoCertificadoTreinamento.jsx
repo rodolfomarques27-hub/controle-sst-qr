@@ -404,7 +404,7 @@ function PainelDatasVerificacao({ certificado = {}, verificacao = null }) {
                 <div>
                     <p className="text-[10px] font-black uppercase tracking-wide text-slate-400">Conferência de datas</p>
                     <p className="mt-1 text-xs leading-relaxed text-slate-500">
-                        A verificação local usa as datas cadastradas no sistema. A leitura automática da data impressa no PDF/imagem depende de OCR ou IA em etapa futura.
+                        A verificação local compara as datas cadastradas com as informações extraídas por leitura textual e OCR local quando o arquivo permite análise.
                     </p>
                 </div>
 
@@ -435,6 +435,126 @@ function PainelDatasVerificacao({ certificado = {}, verificacao = null }) {
                         Vencimento: {semValidade ? "Sem validade" : formatarDataPainel(verificacao?.dataVencimento || verificacao?.data_vencimento)}
                     </p>
                 </div>
+            </div>
+        </div>
+    );
+}
+
+function obterConferenciaDocumentalVerificacao(verificacao = null) {
+    return verificacao?.retornoIa?.conferencia_documental ||
+        verificacao?.retorno_ia?.conferencia_documental ||
+        verificacao?.retornoIa?.conferenciaDocumental ||
+        verificacao?.retorno_ia?.conferenciaDocumental ||
+        null;
+}
+
+function normalizarBooleanoConferencia(valor) {
+    if (valor === true) return "sim";
+    if (valor === false) return "nao";
+    return "na";
+}
+
+function obterClasseConferencia(valor) {
+    const normalizado = normalizarBooleanoConferencia(valor);
+
+    if (normalizado === "sim") return "bg-emerald-50 text-emerald-700 ring-emerald-200";
+    if (normalizado === "nao") return "bg-red-50 text-red-700 ring-red-200";
+
+    return "bg-slate-100 text-slate-600 ring-slate-200";
+}
+
+function obterTextoConferencia(valor, textoSim = "Localizado", textoNao = "Não localizado", textoNa = "Não avaliado") {
+    const normalizado = normalizarBooleanoConferencia(valor);
+
+    if (normalizado === "sim") return textoSim;
+    if (normalizado === "nao") return textoNao;
+
+    return textoNa;
+}
+
+function LinhaConferenciaDocumental({ titulo, valor, detalhe = "", textoSim = "Localizado", textoNao = "Não localizado", textoNa = "Não avaliado" }) {
+    return (
+        <div className="rounded-xl bg-slate-50 px-3 py-2 ring-1 ring-slate-100">
+            <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
+                <p className="text-[10px] font-black uppercase tracking-wide text-slate-400">{titulo}</p>
+                <span className={`w-fit rounded-full px-2.5 py-1 text-[10px] font-black uppercase tracking-wide ring-1 ${obterClasseConferencia(valor)}`}>
+                    {obterTextoConferencia(valor, textoSim, textoNao, textoNa)}
+                </span>
+            </div>
+            {detalhe && <p className="mt-1 text-xs font-semibold text-slate-700">{detalhe}</p>}
+        </div>
+    );
+}
+
+function PainelConferenciaDocumentalRobusta({ verificacao = null }) {
+    const conferencia = obterConferenciaDocumentalVerificacao(verificacao);
+
+    if (!conferencia) return null;
+
+    const colaborador = conferencia.colaborador || {};
+    const assinatura = conferencia.assinatura || {};
+    const empresa = conferencia.empresa || {};
+    const cnpj = conferencia.cnpj || {};
+    const cpf = conferencia.cpf || {};
+    const treinamento = conferencia.treinamento || {};
+
+    return (
+        <div className="mb-3 rounded-2xl border border-blue-100 bg-white p-3">
+            <div className="flex flex-col justify-between gap-2 lg:flex-row lg:items-start">
+                <div>
+                    <p className="text-[10px] font-black uppercase tracking-wide text-blue-700">Conferência documental avançada</p>
+                    <p className="mt-1 text-xs leading-relaxed text-slate-500">
+                        Validação por OCR local para conferir colaborador, empresa, treinamento e assinatura visual em listas escaneadas.
+                    </p>
+                </div>
+                {conferencia.listaPresenca && (
+                    <span className="w-fit rounded-full bg-blue-50 px-3 py-1 text-[11px] font-black uppercase tracking-wide text-blue-700 ring-1 ring-blue-200">
+                        Lista de presença detectada
+                    </span>
+                )}
+            </div>
+
+            <div className="mt-3 grid gap-2 md:grid-cols-2 xl:grid-cols-3">
+                <LinhaConferenciaDocumental
+                    titulo="Colaborador"
+                    valor={colaborador.encontrado}
+                    detalhe={colaborador.encontrado ? `${colaborador.nomeCadastro || "Nome encontrado"}${colaborador.linhaOcr ? ` · Linha OCR: ${colaborador.linhaOcr}` : ""}` : colaborador.nomeCadastro || "Nome não informado no cadastro"}
+                />
+
+                <LinhaConferenciaDocumental
+                    titulo="Assinatura na linha"
+                    valor={assinatura.visualLocalizada}
+                    textoSim="Assinatura visual localizada"
+                    textoNao="Não confirmada"
+                    textoNa="Não aplicável"
+                    detalhe={assinatura.observacao || "Conferência visual automática da área de assinatura."}
+                />
+
+                <LinhaConferenciaDocumental
+                    titulo="Treinamento"
+                    valor={treinamento.encontrado}
+                    detalhe={treinamento.nomeCadastro || "Treinamento não informado"}
+                />
+
+                <LinhaConferenciaDocumental
+                    titulo="Empresa"
+                    valor={empresa.encontrada}
+                    detalhe={empresa.nomeCadastro || empresa.nomeExtraido || "Empresa não informada"}
+                />
+
+                <LinhaConferenciaDocumental
+                    titulo="CNPJ"
+                    valor={cnpj.informadoCadastro ? cnpj.encontrado : null}
+                    detalhe={cnpj.informadoCadastro ? (cnpj.cnpjExtraido ? `CNPJ extraído: ${cnpj.cnpjExtraido}` : "CNPJ do cadastro conferido no texto quando disponível.") : "CNPJ não informado no cadastro ou não presente no documento."}
+                    textoNa="Não informado"
+                />
+
+                <LinhaConferenciaDocumental
+                    titulo="CPF"
+                    valor={cpf.informadoCadastro ? cpf.encontrado : null}
+                    detalhe={cpf.informadoCadastro ? "CPF do cadastro procurado no documento." : "CPF não informado no cadastro ou não presente na lista."}
+                    textoNa="Não informado"
+                />
             </div>
         </div>
     );
@@ -672,6 +792,8 @@ export function VerificacaoCertificadoTreinamento({ certificado = {} }) {
                                 certificado={certificado}
                                 verificacao={verificacao}
                             />
+
+                            <PainelConferenciaDocumentalRobusta verificacao={verificacao} />
 
                             {(dataDetectadaArquivo || avisoArquivoAnalise) && (
                                 <div className="mb-3 rounded-2xl border border-blue-100 bg-blue-50 px-4 py-3 text-xs text-blue-800">

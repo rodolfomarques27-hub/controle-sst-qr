@@ -338,6 +338,317 @@ function aplicarRevisaoManualQuandoDataNaoConfirmada(resultado = {}, indicios = 
     return proximoResultado;
 }
 
+function normalizarTextoConferencia(valor = "") {
+    return normalizarTextoVerificacao(valor)
+        .replace(/[^a-z0-9]+/g, " ")
+        .replace(/\s+/g, " ")
+        .trim();
+}
+
+function apenasDigitosConferencia(valor = "") {
+    return String(valor || "").replace(/\D/g, "");
+}
+
+function obterTextoLeituraConferencia(leitura = {}, metadadosArquivo = {}) {
+    return limparTextoVerificacao([
+        leitura?.textoExtraido,
+        leitura?.texto_extraido,
+        leitura?.textoPrevia,
+        leitura?.texto_previa,
+        metadadosArquivo?.arquivoNome,
+    ].filter(Boolean).join(" "));
+}
+
+function obterCamposLeituraConferencia(leitura = {}) {
+    return leitura?.camposExtraidos || leitura?.campos_extraidos || {};
+}
+
+function obterLinhasOcrConferencia(leitura = {}) {
+    const campos = obterCamposLeituraConferencia(leitura);
+    const linhas = leitura?.linhasOcr || leitura?.linhas_ocr || campos?.linhas_ocr || [];
+
+    return Array.isArray(linhas) ? linhas : [];
+}
+
+function tokensNomeConferencia(nome = "") {
+    return normalizarTextoConferencia(nome)
+        .split(" ")
+        .map((token) => token.trim())
+        .filter((token) => token.length >= 3 && !["dos", "das", "de", "da", "do", "e"].includes(token));
+}
+
+function textoContemNomePessoa({ texto = "", nome = "" } = {}) {
+    const tokens = tokensNomeConferencia(nome);
+    const base = normalizarTextoConferencia(texto);
+
+    if (!tokens.length || !base) return false;
+
+    const encontrados = tokens.filter((token) => base.includes(token));
+    const primeiro = tokens[0];
+    const ultimo = tokens[tokens.length - 1];
+    const contemPontas = tokens.length <= 1 || (base.includes(primeiro) && base.includes(ultimo));
+    const proporcao = encontrados.length / tokens.length;
+
+    return proporcao >= 0.72 && (contemPontas || encontrados.length >= Math.min(3, tokens.length));
+}
+
+function localizarLinhaColaboradorOcr({ leitura = {}, nomeColaborador = "" } = {}) {
+    const linhas = obterLinhasOcrConferencia(leitura);
+
+    return linhas.find((linha) => textoContemNomePessoa({ texto: linha?.texto || "", nome: nomeColaborador })) || null;
+}
+
+function documentoPareceListaPresenca({ texto = "", leitura = {} } = {}) {
+    const base = normalizarTextoConferencia(texto);
+    const linhas = obterLinhasOcrConferencia(leitura);
+
+    return Boolean(
+        base.includes("nome do colaborador") ||
+        base.includes("colaborador") && base.includes("assinatura") ||
+        base.includes("lista") && base.includes("assinatura") ||
+        base.includes("declaro ter participado") ||
+        linhas.some((linha) => Number(linha?.yCentro || 0) > 0.55 && normalizarTextoConferencia(linha?.texto || "").split(" ").length >= 2)
+    );
+}
+
+function obterNomeColaboradorAnalise(colaborador = {}, certificado = {}) {
+    return limparTextoVerificacao(
+        colaborador?.nome ||
+        colaborador?.nomeCompleto ||
+        colaborador?.nome_completo ||
+        certificado?.colaborador_nome ||
+        certificado?.colaboradorNome ||
+        certificado?.colaborador?.nome ||
+        ""
+    );
+}
+
+function obterCpfColaboradorAnalise(colaborador = {}, certificado = {}) {
+    return apenasDigitosConferencia(
+        colaborador?.cpf ||
+        colaborador?.documento ||
+        colaborador?.cpf_colaborador ||
+        certificado?.cpf ||
+        certificado?.colaborador_cpf ||
+        certificado?.colaborador?.cpf ||
+        ""
+    );
+}
+
+function obterEmpresaColaboradorAnalise(colaborador = {}, certificado = {}) {
+    return limparTextoVerificacao(
+        colaborador?.empresaExibicao ||
+        colaborador?.empresa_exibicao ||
+        colaborador?.empresaNome ||
+        colaborador?.empresa_nome ||
+        colaborador?.empresa ||
+        colaborador?.empresas?.nome ||
+        certificado?.empresa_nome ||
+        certificado?.empresaNome ||
+        certificado?.colaborador?.empresa ||
+        certificado?.colaborador?.empresaExibicao ||
+        ""
+    );
+}
+
+function obterCnpjEmpresaAnalise(colaborador = {}, certificado = {}) {
+    return apenasDigitosConferencia(
+        colaborador?.empresaCnpj ||
+        colaborador?.empresa_cnpj ||
+        colaborador?.cnpj ||
+        colaborador?.empresas?.cnpj ||
+        colaborador?.empresas?.documento ||
+        certificado?.empresa_cnpj ||
+        certificado?.empresaCnpj ||
+        certificado?.cnpj ||
+        ""
+    );
+}
+
+function documentoContemCnpj(texto = "", cnpj = "") {
+    const alvo = apenasDigitosConferencia(cnpj);
+    if (!alvo || alvo.length !== 14) return null;
+
+    const documento = apenasDigitosConferencia(texto);
+    if (!documento) return false;
+
+    return documento.includes(alvo);
+}
+
+function documentoContemCpf(texto = "", cpf = "") {
+    const alvo = apenasDigitosConferencia(cpf);
+    if (!alvo || alvo.length !== 11) return null;
+
+    const documento = apenasDigitosConferencia(texto);
+    if (!documento) return false;
+
+    return documento.includes(alvo);
+}
+
+function documentoContemTreinamento({ texto = "", treinamento = {}, certificado = {} } = {}) {
+    const base = normalizarTextoConferencia(`${texto} ${certificado?.arquivo_nome || certificado?.arquivoNome || ""}`);
+    const nome = normalizarTextoConferencia(treinamento?.nome || certificado?.nome_treinamento || certificado?.tipo_treinamento || "");
+    const id = Number(certificado?.treinamento_codigo || certificado?.treinamentoId || treinamento?.id || 0);
+
+    if (!base || (!nome && !id)) return null;
+
+    if (id === 11 && (/\bnr\s*11\b/.test(base) || base.includes("transporte movimentacao") || base.includes("movimentacao armazenagem") || base.includes("manuseio de materiais"))) {
+        return true;
+    }
+
+    const tokens = nome.split(" ").filter((token) => token.length >= 3 && !["documento", "treinamento", "funcao", "função"].includes(token));
+    if (!tokens.length) return null;
+
+    const encontrados = tokens.filter((token) => base.includes(token));
+    return encontrados.length / tokens.length >= 0.45;
+}
+
+function montarConferenciaDocumentalCertificado({ leitura = {}, certificado = {}, colaborador = {}, treinamento = {}, metadadosArquivo = {} } = {}) {
+    const texto = obterTextoLeituraConferencia(leitura, metadadosArquivo);
+    const nomeColaborador = obterNomeColaboradorAnalise(colaborador, certificado);
+    const cpfColaborador = obterCpfColaboradorAnalise(colaborador, certificado);
+    const empresaColaborador = obterEmpresaColaboradorAnalise(colaborador, certificado);
+    const cnpjEmpresa = obterCnpjEmpresaAnalise(colaborador, certificado);
+    const campos = obterCamposLeituraConferencia(leitura);
+    const linhaColaborador = localizarLinhaColaboradorOcr({ leitura, nomeColaborador });
+    const listaPresenca = documentoPareceListaPresenca({ texto, leitura });
+    const nomeEncontrado = nomeColaborador ? Boolean(textoContemNomePessoa({ texto, nome: nomeColaborador }) || linhaColaborador) : null;
+    const cpfEncontrado = documentoContemCpf(texto, cpfColaborador);
+    const cnpjEncontrado = documentoContemCnpj(texto, cnpjEmpresa);
+    const empresaEncontrada = empresaColaborador ? textoContemNomePessoa({ texto, nome: empresaColaborador }) || normalizarTextoConferencia(texto).includes(normalizarTextoConferencia("Ribeiro Aquino")) && normalizarTextoConferencia(empresaColaborador).includes("ribeiro") : null;
+    const treinamentoEncontrado = documentoContemTreinamento({ texto, treinamento, certificado });
+    const assinaturaVisual = linhaColaborador ? Boolean(linhaColaborador.assinatura_visual || linhaColaborador.assinaturaVisual) : null;
+
+    return {
+        executado: Boolean(leitura?.executado || texto || obterLinhasOcrConferencia(leitura).length),
+        tipoLeitura: leitura?.tipoLeitura || leitura?.tipo_leitura || "não informado",
+        listaPresenca,
+        colaborador: {
+            nomeCadastro: nomeColaborador,
+            encontrado: nomeEncontrado,
+            linhaOcr: linhaColaborador?.texto || "",
+            linhaIndice: linhaColaborador?.indice ?? null,
+        },
+        cpf: {
+            informadoCadastro: Boolean(cpfColaborador),
+            encontrado: cpfEncontrado,
+        },
+        empresa: {
+            nomeCadastro: empresaColaborador,
+            encontrada: empresaEncontrada,
+            nomeExtraido: campos?.empresa_nome || "",
+        },
+        cnpj: {
+            informadoCadastro: Boolean(cnpjEmpresa),
+            encontrado: cnpjEncontrado,
+            cnpjExtraido: campos?.cnpj || "",
+        },
+        treinamento: {
+            nomeCadastro: treinamento?.nome || certificado?.nome_treinamento || certificado?.tipo_treinamento || "",
+            encontrado: treinamentoEncontrado,
+        },
+        assinatura: {
+            aplicavel: Boolean(listaPresenca && nomeEncontrado),
+            visualLocalizada: assinaturaVisual,
+            densidade: linhaColaborador?.assinatura_densidade ?? null,
+            observacao: assinaturaVisual === true
+                ? "Assinatura visual localizada na mesma faixa da linha do colaborador."
+                : assinaturaVisual === false
+                    ? "Colaborador localizado, mas a assinatura não foi confirmada visualmente na linha."
+                    : "Assinatura não avaliada por falta de linha OCR do colaborador.",
+        },
+    };
+}
+
+function avaliarConferenciaDocumentalCertificado({ conferencia = {}, leitura = {}, arquivo = null } = {}) {
+    const indicios = [];
+    const textoDisponivel = Boolean(obterTextoLeituraConferencia(leitura).trim() || obterLinhasOcrConferencia(leitura).length);
+
+    if (!arquivoPossuiArrayBufferVerificacao(arquivo) || !textoDisponivel) {
+        return indicios;
+    }
+
+    if (conferencia?.colaborador?.nomeCadastro && conferencia?.colaborador?.encontrado === false) {
+        indicios.push(criarIndicioVerificacao({
+            codigo: "colaborador_nao_localizado_no_documento",
+            tipo: DOCUMENTOS_VERIFICACAO_TIPOS_INDICIO.OCR,
+            titulo: "Colaborador não localizado no documento",
+            detalhe: `A leitura local/OCR não encontrou o nome ${conferencia.colaborador.nomeCadastro} no certificado ou lista de presença.`,
+            peso: 75,
+            bloqueia: true,
+            recomendacao: "Conferir se o arquivo foi vinculado ao colaborador correto. Se o nome realmente não constar na lista, substituir o documento.",
+            dados: conferencia.colaborador,
+        }));
+    }
+
+    if (conferencia?.listaPresenca && conferencia?.colaborador?.encontrado && conferencia?.assinatura?.visualLocalizada === false) {
+        indicios.push(criarIndicioVerificacao({
+            codigo: "assinatura_colaborador_nao_confirmada_lista",
+            tipo: DOCUMENTOS_VERIFICACAO_TIPOS_INDICIO.OCR,
+            titulo: "Assinatura do colaborador não confirmada na lista",
+            detalhe: "O colaborador foi localizado na lista, porém a leitura visual não confirmou assinatura na mesma linha.",
+            peso: 35,
+            bloqueia: false,
+            recomendacao: "Conferir visualmente a linha do colaborador antes de aprovar o treinamento.",
+            dados: conferencia.assinatura,
+        }));
+    }
+
+    if (conferencia?.cpf?.informadoCadastro && conferencia?.cpf?.encontrado === false) {
+        indicios.push(criarIndicioVerificacao({
+            codigo: "cpf_colaborador_nao_localizado_documento",
+            tipo: DOCUMENTOS_VERIFICACAO_TIPOS_INDICIO.OCR,
+            titulo: "CPF do colaborador não localizado no documento",
+            detalhe: "O cadastro possui CPF, mas a leitura local não encontrou esse CPF no arquivo. Em listas de presença isso pode ser normal.",
+            peso: conferencia?.listaPresenca ? 10 : 30,
+            bloqueia: false,
+            recomendacao: "Quando o documento possuir campo de CPF, conferir se pertence ao colaborador correto.",
+            dados: conferencia.cpf,
+        }));
+    }
+
+    if (conferencia?.cnpj?.informadoCadastro && conferencia?.cnpj?.encontrado === false && conferencia?.cnpj?.cnpjExtraido) {
+        indicios.push(criarIndicioVerificacao({
+            codigo: "cnpj_empresa_nao_confere_documento",
+            tipo: DOCUMENTOS_VERIFICACAO_TIPOS_INDICIO.OCR,
+            titulo: "CNPJ da empresa não confere com o documento",
+            detalhe: "O documento possui CNPJ extraído, mas ele não corresponde ao CNPJ vinculado ao colaborador/empresa.",
+            peso: 70,
+            bloqueia: true,
+            recomendacao: "Conferir se o documento pertence à empresa correta antes de aprovar.",
+            dados: conferencia.cnpj,
+        }));
+    }
+
+    if (conferencia?.empresa?.nomeCadastro && conferencia?.empresa?.encontrada === false && !conferencia?.cnpj?.cnpjExtraido) {
+        indicios.push(criarIndicioVerificacao({
+            codigo: "empresa_nao_confirmada_no_documento",
+            tipo: DOCUMENTOS_VERIFICACAO_TIPOS_INDICIO.OCR,
+            titulo: "Empresa não confirmada no documento",
+            detalhe: `A leitura local não confirmou a empresa ${conferencia.empresa.nomeCadastro} no documento.`,
+            peso: 25,
+            bloqueia: false,
+            recomendacao: "Conferir visualmente se o treinamento pertence à empresa correta.",
+            dados: conferencia.empresa,
+        }));
+    }
+
+    if (conferencia?.treinamento?.nomeCadastro && conferencia?.treinamento?.encontrado === false) {
+        indicios.push(criarIndicioVerificacao({
+            codigo: "treinamento_nao_confirmado_no_documento",
+            tipo: DOCUMENTOS_VERIFICACAO_TIPOS_INDICIO.OCR,
+            titulo: "Treinamento não confirmado no texto do documento",
+            detalhe: `A leitura local não confirmou ${conferencia.treinamento.nomeCadastro} no arquivo.`,
+            peso: 35,
+            bloqueia: false,
+            recomendacao: "Conferir manualmente se o arquivo corresponde ao treinamento selecionado.",
+            dados: conferencia.treinamento,
+        }));
+    }
+
+    return indicios;
+}
+
 export function normalizarVerificacaoDocumental(item = {}) {
     return {
         ...item,
@@ -521,6 +832,13 @@ export async function analisarCertificadoLocal({
             arquivoUrl: metadadosArquivo.arquivoUrl,
         }),
     });
+    const conferenciaDocumental = montarConferenciaDocumentalCertificado({
+        leitura: leituraDocumental,
+        certificado,
+        colaborador,
+        treinamento,
+        metadadosArquivo,
+    });
 
     const indicios = [
         ...indiciosArquivo,
@@ -539,6 +857,11 @@ export async function analisarCertificadoLocal({
             leitura: leituraDocumental,
             arquivo: arquivoValidoParaHash,
             exigeVencimento,
+        }),
+        ...avaliarConferenciaDocumentalCertificado({
+            conferencia: conferenciaDocumental,
+            leitura: leituraDocumental,
+            arquivo: arquivoValidoParaHash,
         }),
         ...avaliarCadastroCertificado({
             certificado,
@@ -581,7 +904,10 @@ export async function analisarCertificadoLocal({
         origem_analise: leituraDocumental?.executado || leituraDocumental?.datasEncontradas?.length
             ? DOCUMENTOS_VERIFICACAO_ORIGEM_ANALISE.OCR_LOCAL
             : DOCUMENTOS_VERIFICACAO_ORIGEM_ANALISE.REGRAS_LOCAIS,
-        retorno_ia: retornoLeituraDocumental ? { leitura_documental_local: retornoLeituraDocumental } : null,
+        retorno_ia: retornoLeituraDocumental ? {
+            leitura_documental_local: retornoLeituraDocumental,
+            conferencia_documental: conferenciaDocumental,
+        } : null,
         ocr_texto: leituraDocumental?.textoExtraido || null,
         analisado_por_ia: false,
         ...resultado,

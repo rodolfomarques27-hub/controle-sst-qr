@@ -790,7 +790,7 @@ function obterTotalFuncionariosResumo(texto = "") {
 }
 
 
-function montarCamposExtraidosDocumento({ textoExtraido = "", arquivoNome = "", datasClassificadas = {} } = {}) {
+function montarCamposExtraidosDocumento({ textoExtraido = "", arquivoNome = "", datasClassificadas = {}, linhasOcr = [] } = {}) {
     const texto = limparTextoPossivelDocumento(textoExtraido);
     const tipoDocumento = obterTipoDocumentoResumo(texto, arquivoNome);
     const empresaNome = obterEmpresaResumo(texto);
@@ -820,6 +820,7 @@ function montarCamposExtraidosDocumento({ textoExtraido = "", arquivoNome = "", 
         data_encerramento_br: dataEncerramento?.br || "",
         codigo_verificacao: codigoVerificacao || "",
         total_funcionarios: totalFuncionarios || "",
+        linhas_ocr: Array.isArray(linhasOcr) ? linhasOcr.slice(0, 80) : [],
     };
 }
 
@@ -1061,6 +1062,163 @@ async function carregarTesseractDocumental() {
     }
 }
 
+
+function obterBboxPalavraOcr(palavra = {}) {
+    const bbox = palavra?.bbox || palavra?.box || palavra?.boundingBox || null;
+
+    if (!bbox) return null;
+
+    const x0 = Number(bbox.x0 ?? bbox.left ?? bbox.x ?? 0);
+    const y0 = Number(bbox.y0 ?? bbox.top ?? bbox.y ?? 0);
+    const x1 = Number(bbox.x1 ?? (bbox.left !== undefined && bbox.width !== undefined ? bbox.left + bbox.width : 0));
+    const y1 = Number(bbox.y1 ?? (bbox.top !== undefined && bbox.height !== undefined ? bbox.top + bbox.height : 0));
+
+    if (![x0, y0, x1, y1].every(Number.isFinite)) return null;
+    if (x1 <= x0 || y1 <= y0) return null;
+
+    return { x0, y0, x1, y1 };
+}
+
+function agruparPalavrasOcrEmLinhas(palavras = [], canvas = null) {
+    const largura = Number(canvas?.width || 0) || 1;
+    const altura = Number(canvas?.height || 0) || 1;
+    const registros = (Array.isArray(palavras) ? palavras : [])
+        .map((palavra) => {
+            const texto = limparTextoPossivelDocumento(palavra?.text || palavra?.symbol || "");
+            const bbox = obterBboxPalavraOcr(palavra);
+
+            if (!texto || !bbox) return null;
+
+            return {
+                texto,
+                x0: bbox.x0,
+                y0: bbox.y0,
+                x1: bbox.x1,
+                y1: bbox.y1,
+                yCentro: (bbox.y0 + bbox.y1) / 2,
+            };
+        })
+        .filter(Boolean)
+        .sort((a, b) => a.yCentro - b.yCentro || a.x0 - b.x0);
+
+    const linhas = [];
+    const toleranciaBase = Math.max(8, altura * 0.008);
+
+    registros.forEach((palavra) => {
+        const ultima = linhas[linhas.length - 1];
+        const tolerancia = Math.max(toleranciaBase, (palavra.y1 - palavra.y0) * 0.65);
+
+        if (ultima && Math.abs(ultima.yCentro - palavra.yCentro) <= tolerancia) {
+            ultima.palavras.push(palavra);
+            ultima.y0 = Math.min(ultima.y0, palavra.y0);
+            ultima.y1 = Math.max(ultima.y1, palavra.y1);
+            ultima.x0 = Math.min(ultima.x0, palavra.x0);
+            ultima.x1 = Math.max(ultima.x1, palavra.x1);
+            ultima.yCentro = (ultima.yCentro * (ultima.palavras.length - 1) + palavra.yCentro) / ultima.palavras.length;
+            return;
+        }
+
+        linhas.push({
+            palavras: [palavra],
+            x0: palavra.x0,
+            y0: palavra.y0,
+            x1: palavra.x1,
+            y1: palavra.y1,
+            yCentro: palavra.yCentro,
+        });
+    });
+
+    return linhas.map((linha, indice) => {
+        const palavrasLinha = linha.palavras.sort((a, b) => a.x0 - b.x0);
+        const texto = limparTextoPossivelDocumento(palavrasLinha.map((palavra) => palavra.texto).join(" "));
+
+        return {
+            indice,
+            texto,
+            texto_normalizado: normalizarTextoVerificacao(texto),
+            x0: Number((linha.x0 / largura).toFixed(4)),
+            x1: Number((linha.x1 / largura).toFixed(4)),
+            y0: Number((linha.y0 / altura).toFixed(4)),
+            y1: Number((linha.y1 / altura).toFixed(4)),
+            yCentro: Number((linha.yCentro / altura).toFixed(4)),
+        };
+    }).filter((linha) => linha.texto);
+}
+
+function calcularAssinaturaVisualLinha(canvas, linha = {}) {
+    if (!canvas || typeof canvas.getContext !== "function" || !linha) {
+        return { assinaturaVisual: false, densidade: 0 };
+    }
+
+    const contexto = canvas.getContext("2d", { willReadFrequently: true });
+
+    if (!contexto) {
+        return { assinaturaVisual: false, densidade: 0 };
+    }
+
+    const largura = canvas.width || 1;
+    const altura = canvas.height || 1;
+    const xInicio = Math.max(0, Math.floor(largura * 0.68));
+    const xFim = Math.min(largura, Math.floor(largura * 0.98));
+    const yInicio = Math.max(0, Math.floor((linha.y0 || 0) * altura) - Math.floor(altura * 0.006));
+    const yFim = Math.min(altura, Math.ceil((linha.y1 || linha.yCentro || 0) * altura) + Math.floor(altura * 0.016));
+    const larguraRecorte = Math.max(1, xFim - xInicio);
+    const alturaRecorte = Math.max(1, yFim - yInicio);
+
+    try {
+        const dados = contexto.getImageData(xInicio, yInicio, larguraRecorte, alturaRecorte).data;
+        let pixelsRelevantes = 0;
+        let pixelsTinta = 0;
+        let pixelsAzuis = 0;
+
+        for (let i = 0; i < dados.length; i += 4) {
+            const r = dados[i];
+            const g = dados[i + 1];
+            const b = dados[i + 2];
+            const a = dados[i + 3];
+
+            if (a < 40) continue;
+
+            pixelsRelevantes += 1;
+
+            const luma = (0.299 * r) + (0.587 * g) + (0.114 * b);
+            const azulCaneta = b > r + 18 && b > g + 8 && b < 235;
+            const tracoEscuro = luma < 118 && Math.max(r, g, b) - Math.min(r, g, b) > 10;
+
+            if (azulCaneta || tracoEscuro) {
+                pixelsTinta += 1;
+                if (azulCaneta) pixelsAzuis += 1;
+            }
+        }
+
+        const densidade = pixelsRelevantes ? pixelsTinta / pixelsRelevantes : 0;
+        const densidadeAzul = pixelsRelevantes ? pixelsAzuis / pixelsRelevantes : 0;
+
+        return {
+            assinaturaVisual: densidade > 0.012 || densidadeAzul > 0.004,
+            densidade: Number(densidade.toFixed(4)),
+            densidadeAzul: Number(densidadeAzul.toFixed(4)),
+        };
+    } catch {
+        return { assinaturaVisual: false, densidade: 0 };
+    }
+}
+
+function montarLinhasOcrComAssinatura(canvas, palavras = []) {
+    return agruparPalavrasOcrEmLinhas(palavras, canvas)
+        .map((linha) => {
+            const assinatura = calcularAssinaturaVisualLinha(canvas, linha);
+
+            return {
+                ...linha,
+                assinatura_visual: assinatura.assinaturaVisual,
+                assinatura_densidade: assinatura.densidade,
+                assinatura_densidade_azul: assinatura.densidadeAzul || 0,
+            };
+        })
+        .slice(0, 120);
+}
+
 async function reconhecerTextoCanvasComOcr(canvas) {
     const moduloTesseract = await carregarTesseractDocumental();
     const reconhecer = moduloTesseract?.recognize || moduloTesseract?.default?.recognize;
@@ -1073,7 +1231,10 @@ async function reconhecerTextoCanvasComOcr(canvas) {
         logger: () => {},
     });
 
-    return limparTextoPossivelDocumento(resultado?.data?.text || "");
+    return {
+        texto: limparTextoPossivelDocumento(resultado?.data?.text || ""),
+        palavras: Array.isArray(resultado?.data?.words) ? resultado.data.words : [],
+    };
 }
 
 async function extrairTextoPrimeiraPaginaPdfComOcr(buffer) {
@@ -1083,6 +1244,7 @@ async function extrairTextoPrimeiraPaginaPdfComOcr(buffer) {
             paginasLidas: 0,
             totalPaginas: 0,
             avisos: [],
+            linhasOcr: [],
         };
     }
 
@@ -1092,6 +1254,7 @@ async function extrairTextoPrimeiraPaginaPdfComOcr(buffer) {
             paginasLidas: 0,
             totalPaginas: 0,
             avisos: ["OCR de imagem não executado fora do navegador."],
+            linhasOcr: [],
         };
     }
 
@@ -1113,6 +1276,7 @@ async function extrairTextoPrimeiraPaginaPdfComOcr(buffer) {
                 paginasLidas: 0,
                 totalPaginas: 0,
                 avisos: ["OCR local não encontrou páginas no PDF."],
+                linhasOcr: [],
             };
         }
 
@@ -1127,6 +1291,7 @@ async function extrairTextoPrimeiraPaginaPdfComOcr(buffer) {
                 paginasLidas: 0,
                 totalPaginas,
                 avisos: ["OCR local não conseguiu preparar o canvas da página."],
+                linhasOcr: [],
             };
         }
 
@@ -1135,7 +1300,9 @@ async function extrairTextoPrimeiraPaginaPdfComOcr(buffer) {
 
         await pagina.render({ canvasContext: contexto, viewport }).promise;
 
-        const textoOcr = await reconhecerTextoCanvasComOcr(canvas);
+        const resultadoOcr = await reconhecerTextoCanvasComOcr(canvas);
+        const textoOcr = resultadoOcr?.texto || "";
+        const linhasOcr = montarLinhasOcrComAssinatura(canvas, resultadoOcr?.palavras || []);
 
         try {
             canvas.width = 1;
@@ -1150,6 +1317,7 @@ async function extrairTextoPrimeiraPaginaPdfComOcr(buffer) {
                 texto: textoOcr,
                 paginasLidas: 1,
                 totalPaginas,
+                linhasOcr,
                 avisos: ["OCR local executado na primeira página do PDF escaneado/imagem."],
             };
         }
@@ -1158,6 +1326,7 @@ async function extrairTextoPrimeiraPaginaPdfComOcr(buffer) {
             texto: "",
             paginasLidas: 1,
             totalPaginas,
+            linhasOcr,
             avisos: ["OCR local executado, mas não encontrou texto documental confiável na primeira página."],
         };
     } catch (error) {
@@ -1166,6 +1335,7 @@ async function extrairTextoPrimeiraPaginaPdfComOcr(buffer) {
             paginasLidas: 0,
             totalPaginas: 0,
             avisos: [`OCR local de imagem indisponível: ${error?.message || "erro desconhecido"}.`],
+            linhasOcr: [],
         };
     }
 }
@@ -1433,6 +1603,7 @@ function montarRetornoLeituraBase({
     paginasLidas = 0,
     totalPaginas = 0,
     buscaAmpliada = null,
+    linhasOcr = [],
     avisos = [],
     erro = "",
 } = {}) {
@@ -1451,6 +1622,7 @@ function montarRetornoLeituraBase({
         textoExtraido: textoSeguro,
         arquivoNome,
         datasClassificadas,
+        linhasOcr,
     });
     const resumoTextual = montarResumoTextualDocumento({
         textoExtraido: textoSeguro,
@@ -1510,6 +1682,7 @@ function montarRetornoLeituraBase({
         textoPrevia,
         resumoTextual,
         camposExtraidos,
+        linhasOcr: Array.isArray(linhasOcr) ? linhasOcr.slice(0, 120) : [],
         textoLimitado,
         paginasLidas,
         totalPaginas,
@@ -1608,6 +1781,7 @@ export async function executarLeituraDocumentalLocal({ arquivo = null, arquivoNo
             extensao,
             textoExtraido,
             textoLimitado,
+            linhasOcr: textoVeioDoOcrImagem ? (leituraOcrImagem?.linhasOcr || []) : [],
             paginasLidas: textoVeioDoOcrImagem ? (leituraOcrImagem?.paginasLidas || 1) : (leituraPdfJs.paginasLidas || 0),
             totalPaginas: leituraPdfJs.totalPaginas || leituraOcrImagem?.totalPaginas || 0,
             buscaAmpliada: leituraPdfJs.buscaAmpliada || null,
@@ -1864,6 +2038,7 @@ export function montarRetornoLeituraParaPersistencia(leitura = null) {
         resumo: leitura.resumo,
         resumo_textual: leitura.resumoTextual || [],
         campos_extraidos: leitura.camposExtraidos || null,
+        linhas_ocr: (leitura.linhasOcr || []).slice(0, 120),
         texto_previa: leitura.textoPrevia || "",
         paginas_lidas: leitura.paginasLidas || 0,
         total_paginas: leitura.totalPaginas || 0,
