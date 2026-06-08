@@ -617,6 +617,42 @@ function montarLinhaAssinaturaTabelaConferencia(linhaTabela = {}, identificador 
     };
 }
 
+function assinaturaTabelaTemTracoVisual(linhaTabela = {}) {
+    return Boolean(
+        linhaTabela?.assinatura_visual ||
+        linhaTabela?.assinaturaVisual ||
+        Number(linhaTabela?.assinatura_densidade_azul || linhaTabela?.assinaturaDensidadeAzul || 0) > 0.00045 ||
+        (
+            Number(linhaTabela?.assinatura_densidade || linhaTabela?.assinaturaDensidade || 0) > 0.0024 &&
+            Number(linhaTabela?.assinatura_espalhamento_horizontal || linhaTabela?.assinaturaEspalhamentoHorizontal || 0) > 0.018
+        )
+    );
+}
+
+function encontrarAssinaturaTabelaPorNumeroFlexivel(assinaturas = [], numeroLinha = null) {
+    const numero = Number(numeroLinha || 0);
+
+    if (!Number.isInteger(numero) || numero <= 0) return null;
+
+    const candidatos = assinaturas
+        .map((linha) => {
+            const numeroTabela = Number(linha?.numeroLinha || linha?.numero_linha || 0);
+            return {
+                linha,
+                numeroTabela,
+                distanciaNumero: Number.isInteger(numeroTabela) ? Math.abs(numeroTabela - numero) : 999,
+                possuiAssinatura: assinaturaTabelaTemTracoVisual(linha),
+            };
+        })
+        .filter((item) => Number.isInteger(item.numeroTabela) && item.distanciaNumero <= 2)
+        .sort((a, b) => {
+            if (a.possuiAssinatura !== b.possuiAssinatura) return a.possuiAssinatura ? -1 : 1;
+            return a.distanciaNumero - b.distanciaNumero;
+        });
+
+    return candidatos[0]?.linha || null;
+}
+
 function assinaturaProvavelPorTabela({ leitura = {}, textoDocumento = "", nomeColaborador = "", linhaReferencia = null } = {}) {
     const assinaturas = obterAssinaturasTabelaConferencia(leitura);
     if (!assinaturas.length) return null;
@@ -624,14 +660,18 @@ function assinaturaProvavelPorTabela({ leitura = {}, textoDocumento = "", nomeCo
     const numeroLinha = estimarNumeroLinhaColaboradorNoTexto({ texto: textoDocumento, nomeColaborador });
 
     if (numeroLinha) {
-        const linhaTabela = assinaturas.find((linha) => Number(linha?.numeroLinha || linha?.numero_linha || 0) === numeroLinha);
+        const linhaTabela = encontrarAssinaturaTabelaPorNumeroFlexivel(assinaturas, numeroLinha);
         const resultado = montarLinhaAssinaturaTabelaConferencia(linhaTabela, numeroLinha);
 
         if (resultado) {
             return {
                 ...resultado,
+                assinatura_visual: Boolean(resultado.assinatura_visual || assinaturaTabelaTemTracoVisual(linhaTabela)),
                 nome_score: null,
                 nome_tokens_encontrados: tokensNomeConferencia(nomeColaborador),
+                origem_linha: Number(linhaTabela?.numeroLinha || linhaTabela?.numero_linha || 0) === Number(numeroLinha)
+                    ? "tabela_presenca_linha_numerada"
+                    : "tabela_presenca_linha_vizinha_numerada",
             };
         }
     }
@@ -639,19 +679,24 @@ function assinaturaProvavelPorTabela({ leitura = {}, textoDocumento = "", nomeCo
     const yReferencia = Number(linhaReferencia?.yCentro || 0);
 
     if (Number.isFinite(yReferencia) && yReferencia > 0) {
-        const linhaMaisProxima = assinaturas
+        const linhasProximas = assinaturas
             .map((linha) => ({
                 linha,
                 distancia: Math.abs(Number(linha?.yCentro || 0) - yReferencia),
+                possuiAssinatura: assinaturaTabelaTemTracoVisual(linha),
             }))
-            .filter((item) => item.distancia <= 0.055)
-            .sort((a, b) => a.distancia - b.distancia)[0];
-
+            .filter((item) => item.distancia <= 0.07)
+            .sort((a, b) => {
+                if (a.possuiAssinatura !== b.possuiAssinatura) return a.possuiAssinatura ? -1 : 1;
+                return a.distancia - b.distancia;
+            });
+        const linhaMaisProxima = linhasProximas[0];
         const resultado = montarLinhaAssinaturaTabelaConferencia(linhaMaisProxima?.linha, "aproximada");
 
         if (resultado) {
             return {
                 ...resultado,
+                assinatura_visual: Boolean(resultado.assinatura_visual || assinaturaTabelaTemTracoVisual(linhaMaisProxima?.linha)),
                 nome_score: linhaReferencia?.nome_score ?? null,
                 nome_tokens_encontrados: linhaReferencia?.nome_tokens_encontrados || tokensNomeConferencia(nomeColaborador),
                 origem_linha: "tabela_presenca_por_y_linha_ocr",
