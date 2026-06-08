@@ -466,6 +466,20 @@ function converterDataExtensoParaISO(diaValor, mesValor, anoValor) {
     return converterDataParaISO(diaValor, mes, anoValor);
 }
 
+function converterDataBrTextoParaIsoTreinamento(valor = "") {
+    const match = String(valor || "").match(/\b([0-3]?\d)[/.-]([01]?\d)[/.-]((?:19|20)\d{2}|\d{2})\b/);
+
+    if (!match) return "";
+
+    return converterDataParaISO(match[1], match[2], match[3]);
+}
+
+function tipoDocumentoEhAso(valor = "") {
+    const texto = normalizarTextoBusca(valor);
+
+    return /\baso\b|atestado de saude ocupacional|atestado saúde ocupacional/.test(texto);
+}
+
 
 function normalizarDigitosOcrData(valor = "") {
     return String(valor || "")
@@ -520,6 +534,117 @@ function contextoIndicaDataNaoPrincipal(item = {}) {
     return /nascimento|data de nascimento|filiacao|filiação|naturalidade|cpf|cnpj|ctps|pis|titulo eleitoral|título eleitoral|zona|secao|seção|cnh|portaria|codigo|código|crm|exames realizados|exame realizado|acuidade|audiometria|eletrocardiograma|eletroencefalograma|espirometria|glicose|raio x|raio-x|data da saida|data da saída|rescisao|rescisão|desligamento/.test(contexto);
 }
 
+function contextoIndicaDataPrincipalAso(item = {}) {
+    const contexto = contextoBuscaDataTreinamento(item);
+
+    return /assinado digitalmente|assinatura digital|icp\s*-?\s*brasil|codigo de autenticidade|código de autenticidade|medico examinador|médico examinador|medico responsavel|médico responsável|crm\s*\/\s*uf|\bdata\b/.test(contexto);
+}
+
+function contextoIndicaDataExameOuNascimentoAso(item = {}) {
+    const contexto = contextoBuscaDataTreinamento(item);
+
+    if (/nascimento|data de nascimento/.test(contexto)) return true;
+
+    return /exames realizados|exame realizado|acuidade|audiometria|eletrocardiograma|eletroencefalograma|espirometria|glicose|raio x|raio-x|exames dentro da validade/.test(contexto) &&
+        !contextoIndicaDataPrincipalAso(item);
+}
+
+function contextoIndicaReferenciaLegalAso(item = {}) {
+    const contexto = contextoBuscaDataTreinamento(item);
+    const ano = anoIsoTreinamento(item?.iso || "");
+
+    return ano < 2022 && /portaria|nr\s*[-º]?\s*0?1|mp\s*2\.200|medida provisoria|medida provisória/.test(contexto);
+}
+
+function extrairDatasAsoPrioritariasTexto(texto = "", tipoDocumento = "") {
+    if (!tipoDocumentoEhAso(tipoDocumento)) return [];
+
+    const conteudo = normalizarDatasComErrosOcr(String(texto || "")).replace(/\s+/g, " ").trim();
+    if (!conteudo) return [];
+
+    const dataBr = "([0-3]?\\d[/.-][01]?\\d[/.-](?:19|20)\\d{2})";
+    const padroes = [
+        {
+            regex: new RegExp(`assinado\\s+digitalmente[\\s\\S]{0,420}?\\bem\\s*[:\\-]?\\s*${dataBr}`, "gi"),
+            pontuacao: 190,
+            contexto: "ASO: data de assinatura digital",
+        },
+        {
+            regex: new RegExp(`\\bem\\s*[:\\-]?\\s*${dataBr}[\\s\\S]{0,320}?(?:assinado\\s+digitalmente|assinatura\\s+digital|icp\\s*-?\\s*brasil|c[oó]digo\\s+de\\s+autenticidade)`, "gi"),
+            pontuacao: 175,
+            contexto: "ASO: data próxima da assinatura digital/autenticidade",
+        },
+        {
+            regex: new RegExp(`m[eé]dico\\s+examinador[\\s\\S]{0,620}?${dataBr}[\\s\\S]{0,160}?\\bdata\\b`, "gi"),
+            pontuacao: 165,
+            contexto: "ASO: data no bloco do médico examinador",
+        },
+        {
+            regex: new RegExp(`m[eé]dico\\s+examinador[\\s\\S]{0,620}?\\bdata\\b[\\s\\S]{0,160}?${dataBr}`, "gi"),
+            pontuacao: 165,
+            contexto: "ASO: data no bloco do médico examinador",
+        },
+        {
+            regex: new RegExp(`${dataBr}[\\s\\S]{0,160}?\\bdata\\b[\\s\\S]{0,280}?(?:m[eé]dico\\s+respons[aá]vel|pcmso|crm\\s*\\/\\s*uf)`, "gi"),
+            pontuacao: 145,
+            contexto: "ASO: data próxima do responsável pelo PCMSO",
+        },
+    ];
+
+    const resultados = [];
+
+    padroes.forEach((padrao) => {
+        for (const match of conteudo.matchAll(padrao.regex)) {
+            const valorData = match?.[1] || "";
+            const iso = converterDataBrTextoParaIsoTreinamento(valorData);
+            if (!iso) continue;
+
+            const inicio = Math.max(0, Number(match.index || 0) - 220);
+            const fim = Math.min(conteudo.length, Number(match.index || 0) + String(match[0] || "").length + 220);
+            const contexto = `${padrao.contexto}. ${conteudo.slice(inicio, fim).trim()}`;
+
+            resultados.push({
+                iso,
+                texto: valorData,
+                contexto,
+                origem: "ASO OCR local",
+                pontuacao: padrao.pontuacao,
+            });
+        }
+    });
+
+    return resultados
+        .filter((item) => !contextoIndicaDataExameOuNascimentoAso(item))
+        .filter((item) => !contextoIndicaReferenciaLegalAso(item))
+        .filter((item, index, array) => array.findIndex((outro) => outro.iso === item.iso) === index)
+        .sort((a, b) => Number(b.pontuacao || 0) - Number(a.pontuacao || 0) || String(b.iso || "").localeCompare(String(a.iso || "")));
+}
+
+function selecionarMelhorDataAsoDocumento(candidatos = []) {
+    const avaliados = (candidatos || [])
+        .filter((item) => item?.iso)
+        .filter((item) => dataIsoPermitidaLancamento(item, "ASO"))
+        .map((item) => {
+            let pontuacao = Number(item.pontuacao || 0);
+            const contexto = contextoBuscaDataTreinamento(item);
+
+            if (contextoIndicaDataPrincipalAso(item)) pontuacao += 90;
+            if (/assinado digitalmente|assinatura digital|icp\s*-?\s*brasil|codigo de autenticidade|código de autenticidade/.test(contexto)) pontuacao += 80;
+            if (/medico examinador|médico examinador|medico responsavel|médico responsável|crm\s*\/\s*uf|\bdata\b/.test(contexto)) pontuacao += 55;
+            if (contextoIndicaDataExameOuNascimentoAso(item)) pontuacao -= 180;
+            if (contextoIndicaReferenciaLegalAso(item)) pontuacao -= 150;
+
+            return { ...item, pontuacao };
+        })
+        .filter((item) => Number(item.pontuacao || 0) > 0)
+        .filter((item) => !contextoIndicaDataExameOuNascimentoAso(item))
+        .filter((item) => !contextoIndicaReferenciaLegalAso(item))
+        .filter((item, index, array) => array.findIndex((outro) => outro.iso === item.iso) === index)
+        .sort((a, b) => Number(b.pontuacao || 0) - Number(a.pontuacao || 0) || String(b.iso || "").localeCompare(String(a.iso || "")));
+
+    return avaliados;
+}
+
 function dataIsoPermitidaLancamento(item = {}, tipoDocumento = "") {
     const iso = item?.iso || "";
     const ano = anoIsoTreinamento(iso);
@@ -559,6 +684,16 @@ function selecionarMelhorDataDocumento(candidatos = [], tipoDocumento = "") {
         .sort((a, b) => Number(b.pontuacao || 0) - Number(a.pontuacao || 0) || String(b.iso || "").localeCompare(String(a.iso || "")));
 
     if (!unicos.length) return [];
+
+    if (tipoDocumentoEhAso(tipo)) {
+        const datasAso = selecionarMelhorDataAsoDocumento(unicos);
+
+        if (datasAso.length) return datasAso;
+
+        // Se só sobraram datas de exames, nascimento ou referência legal, é mais seguro
+        // pedir preenchimento manual do que cadastrar uma data errada no ASO.
+        return [];
+    }
 
     if (/ficha|registro|clt|esocial/.test(tipo)) {
         const admissao = unicos
@@ -867,6 +1002,8 @@ function adicionarDatasLeituraDocumental(candidatos, leitura = {}, opcoes = {}) 
 
     const textoOcr = obterTextoLeituraDocumentalParaData(leitura);
     const tipoDocumento = opcoes?.tipoDocumento || "";
+    const documentoAso = tipoDocumentoEhAso(tipoDocumento);
+    const campos = leitura.camposExtraidos || leitura.campos_extraidos || {};
 
     extrairDatasComContexto(textoOcr, { tipoDocumento }).forEach((item) =>
         candidatos.push({
@@ -875,6 +1012,41 @@ function adicionarDatasLeituraDocumental(candidatos, leitura = {}, opcoes = {}) 
             pontuacao: item.pontuacao + 8,
         })
     );
+
+    if (documentoAso) {
+        extrairDatasAsoPrioritariasTexto(textoOcr, tipoDocumento).forEach((item) =>
+            candidatos.push({
+                ...item,
+                origem: item.origem || "ASO OCR local",
+                pontuacao: Number(item.pontuacao || 0) + 20,
+            })
+        );
+
+        [
+            {
+                iso: campos.assinatura_data || converterDataBrTextoParaIsoTreinamento(campos.assinatura_data_br || ""),
+                br: campos.assinatura_data_br || "",
+                contexto: "ASO: data estruturada de assinatura extraída pelo OCR local.",
+                pontuacao: 210,
+            },
+            {
+                iso: campos.data_encerramento || converterDataBrTextoParaIsoTreinamento(campos.data_encerramento_br || ""),
+                br: campos.data_encerramento_br || "",
+                contexto: "ASO: data estruturada de encerramento/assinatura extraída pelo OCR local.",
+                pontuacao: 180,
+            },
+        ].forEach((data) => {
+            if (!data.iso) return;
+
+            candidatos.push({
+                iso: data.iso,
+                texto: data.br || formatDate(data.iso),
+                contexto: data.contexto,
+                origem: "ASO OCR local estruturado",
+                pontuacao: data.pontuacao,
+            });
+        });
+    }
 
     const relevantes = [
         ...(Array.isArray(leitura.datasRelevantesClassificadas) ? leitura.datasRelevantesClassificadas : []),
@@ -885,12 +1057,16 @@ function adicionarDatasLeituraDocumental(candidatos, leitura = {}, opcoes = {}) 
         const iso = data?.iso || "";
         if (!iso) return;
 
+        const contexto = [data?.rotulo, data?.motivo, data?.contexto].filter(Boolean).join(" ");
+
         candidatos.push({
             iso,
             texto: data?.br || formatDate(iso),
-            contexto: [data?.rotulo, data?.motivo, data?.contexto].filter(Boolean).join(" "),
-            origem: "OCR local classificado",
-            pontuacao: 18,
+            contexto,
+            origem: documentoAso ? "ASO OCR local classificado" : "OCR local classificado",
+            pontuacao: documentoAso && /assinatura|encerramento|digital|icp/i.test(contexto)
+                ? 150
+                : 18,
         });
     });
 }
@@ -963,6 +1139,16 @@ export async function detectarDataEmissaoArquivo(arquivo) {
             pontuacao: item.pontuacao + 3,
         })
     );
+
+    if (tipoDocumentoEhAso(tipoDocumento)) {
+        extrairDatasAsoPrioritariasTexto(textoArquivo, tipoDocumento).forEach((item) =>
+            candidatos.push({
+                ...item,
+                origem: item.origem || "ASO conteúdo do arquivo",
+                pontuacao: Number(item.pontuacao || 0) + 15,
+            })
+        );
+    }
 
     let ordenados = selecionarMelhorDataDocumento(candidatos, tipoDocumento);
 
