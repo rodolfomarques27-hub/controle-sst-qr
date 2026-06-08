@@ -425,6 +425,56 @@ function documentoPareceAssinaturaIndividual({ texto = "", treinamento = {}, cer
     return /ordem de servico|ordem de serviço|assinatura do empregado|seguranca e saude do trabalho|segurança e saúde do trabalho|registro de empregado|ficha de registro|data de admissao|data de admissão|controle de entrega de epi|entrega de epi|equipamento de protecao individual|equipamento de proteção individual|declaracao de recebimento|declaração de recebimento|atestado de saude ocupacional|atestado de saúde ocupacional|aso|assinado digitalmente|icp-brasil|participante/.test(base);
 }
 
+function obterAssinaturaDigitalAsoConferencia({ texto = "", campos = {} } = {}) {
+    const base = normalizarTextoConferencia([
+        texto,
+        campos?.tipo_documento,
+        campos?.assinatura_data_br,
+        campos?.data_encerramento_br,
+        campos?.codigo_verificacao,
+    ].filter(Boolean).join(" "));
+
+    const ehAso = /aso|atestado de saude ocupacional|atestado de saúde ocupacional/.test(base);
+
+    if (!ehAso) {
+        return {
+            localizada: false,
+            origem: "assinatura_digital_aso_nao_aplicavel",
+            evidencia: "",
+        };
+    }
+
+    const possuiAssinaturaDigital = /documento assinado digitalmente|assinado digitalmente|assinatura digital|icp brasil|icpbrasil|padrao icp|padrão icp/.test(base);
+    const possuiCodigoAutenticidade = /codigo de autenticidade|código de autenticidade|codigo de verificacao|código de verificação|codigo de validacao|código de validação|validador|validar este documento/.test(base);
+    const possuiResponsavelMedico = /medico examinador|médico examinador|medico responsavel|médico responsável|pcmso|crm\s*uf|crm/.test(base);
+    const possuiDataAssinatura = Boolean(campos?.assinatura_data || campos?.assinatura_data_br || campos?.data_encerramento || campos?.data_encerramento_br);
+
+    const localizada = Boolean(
+        (possuiAssinaturaDigital && (possuiResponsavelMedico || possuiCodigoAutenticidade || possuiDataAssinatura)) ||
+        (possuiCodigoAutenticidade && possuiResponsavelMedico && possuiDataAssinatura)
+    );
+
+    if (!localizada) {
+        return {
+            localizada: false,
+            origem: "assinatura_digital_aso_nao_confirmada",
+            evidencia: "",
+        };
+    }
+
+    const evidencias = [];
+    if (possuiAssinaturaDigital) evidencias.push("assinatura digital/ICP-Brasil");
+    if (possuiCodigoAutenticidade) evidencias.push("código de autenticidade/validação");
+    if (possuiResponsavelMedico) evidencias.push("médico/CRM/PCMSO");
+    if (possuiDataAssinatura) evidencias.push("data de assinatura extraída");
+
+    return {
+        localizada: true,
+        origem: "assinatura_digital_aso_icp_brasil",
+        evidencia: evidencias.join(" + "),
+    };
+}
+
 function extrairCpfsDocumentoConferencia(texto = "") {
     const conteudo = String(texto || "");
     const formatados = Array.from(conteudo.matchAll(/\b\d{3}\.\d{3}\.\d{3}-\d{2}\b/g)).map((match) => match[0]);
@@ -871,6 +921,9 @@ function montarConferenciaDocumentalCertificado({ leitura = {}, certificado = {}
     const cnpjEmpresa = obterCnpjEmpresaAnalise(colaborador, certificado);
     const campos = obterCamposLeituraConferencia(leitura);
     const perfilDocumental = obterPerfilDocumentalConferencia({ texto: textoComArquivo, treinamento, certificado, arquivoNome: metadadosArquivo?.arquivoNome || "" });
+    const assinaturaDigitalAso = perfilDocumental === "aso"
+        ? obterAssinaturaDigitalAsoConferencia({ texto: textoDocumento, campos })
+        : { localizada: false, origem: "assinatura_digital_aso_nao_aplicavel", evidencia: "" };
     const linhaColaboradorOcr = localizarLinhaColaboradorOcr({ leitura, nomeColaborador });
     const linhaColaboradorTabela = assinaturaProvavelPorTabela({
         leitura,
@@ -911,14 +964,16 @@ function montarConferenciaDocumentalCertificado({ leitura = {}, certificado = {}
     const assinaturaDensidadeAzul = linhaAssinaturaBase?.assinatura_densidade_azul ?? null;
     const assinaturaEspalhamentoHorizontal = linhaAssinaturaBase?.assinatura_espalhamento_horizontal ?? null;
     const assinaturaEspalhamentoVertical = linhaAssinaturaBase?.assinatura_espalhamento_vertical ?? null;
-    const assinaturaVisual = linhaAssinaturaBase
-        ? Boolean(
-            linhaAssinaturaBase.assinatura_visual ||
-            linhaAssinaturaBase.assinaturaVisual ||
-            Number(assinaturaDensidadeAzul || 0) > 0.00045 ||
-            (Number(assinaturaDensidade || 0) > 0.0024 && Number(assinaturaEspalhamentoHorizontal || 0) > 0.018)
-        )
-        : null;
+    const assinaturaVisual = assinaturaDigitalAso?.localizada
+        ? true
+        : linhaAssinaturaBase
+            ? Boolean(
+                linhaAssinaturaBase.assinatura_visual ||
+                linhaAssinaturaBase.assinaturaVisual ||
+                Number(assinaturaDensidadeAzul || 0) > 0.00045 ||
+                (Number(assinaturaDensidade || 0) > 0.0024 && Number(assinaturaEspalhamentoHorizontal || 0) > 0.018)
+            )
+            : null;
     const assinaturaAplicavel = Boolean((listaPresenca || documentoAssinaturaIndividual) && nomeEncontrado);
     const documentoConfirmadoPorConferencia = Boolean(
         nomeEncontrado === true &&
@@ -976,19 +1031,25 @@ function montarConferenciaDocumentalCertificado({ leitura = {}, certificado = {}
         assinatura: {
             aplicavel: assinaturaAplicavel,
             visualLocalizada: assinaturaVisual,
+            digitalAsoLocalizada: Boolean(assinaturaDigitalAso?.localizada),
+            evidenciaDigitalAso: assinaturaDigitalAso?.evidencia || "",
             densidade: assinaturaDensidade,
             densidadeAzul: assinaturaDensidadeAzul,
             espalhamentoHorizontal: assinaturaEspalhamentoHorizontal,
             espalhamentoVertical: assinaturaEspalhamentoVertical,
-            origem: linhaColaborador?.assinatura_origem || linhaColaborador?.assinaturaOrigem || assinaturaDocumentoIndividual?.assinatura_origem || "assinatura_documento",
+            origem: assinaturaDigitalAso?.localizada
+                ? assinaturaDigitalAso.origem
+                : (linhaColaborador?.assinatura_origem || linhaColaborador?.assinaturaOrigem || assinaturaDocumentoIndividual?.assinatura_origem || "assinatura_documento"),
             pagina: assinaturaDocumentoIndividual?.pagina || linhaColaborador?.pagina || null,
-            observacao: assinaturaVisual === true
-                ? (listaPresenca ? "Assinatura visual localizada na mesma faixa da linha do colaborador." : "Assinatura visual localizada no campo de assinatura do documento.")
-                : assinaturaVisual === false
-                    ? "Colaborador localizado, mas a assinatura não foi confirmada visualmente. Conferir o campo de assinatura."
-                    : assinaturaAplicavel
-                        ? "Colaborador localizado, mas a posição da assinatura não foi suficiente para avaliação automática. Conferir visualmente."
-                        : "Assinatura não aplicável porque o colaborador não foi localizado ou o documento não possui campo de assinatura identificado.",
+            observacao: assinaturaDigitalAso?.localizada
+                ? `Assinatura digital do ASO localizada por ${assinaturaDigitalAso.evidencia}.`
+                : assinaturaVisual === true
+                    ? (listaPresenca ? "Assinatura visual localizada na mesma faixa da linha do colaborador." : "Assinatura visual localizada no campo de assinatura do documento.")
+                    : assinaturaVisual === false
+                        ? "Colaborador localizado, mas a assinatura não foi confirmada visualmente. Conferir o campo de assinatura."
+                        : assinaturaAplicavel
+                            ? "Colaborador localizado, mas a posição da assinatura não foi suficiente para avaliação automática. Conferir visualmente."
+                            : "Assinatura não aplicável porque o colaborador não foi localizado ou o documento não possui campo de assinatura identificado.",
         },
     };
 }
