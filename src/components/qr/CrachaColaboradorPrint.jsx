@@ -22,7 +22,7 @@ body {
   display: flex;
   justify-content: center;
   align-items: flex-start;
-  gap: 30px;
+  gap: 28px;
   padding: 18px;
   background: #ffffff;
 }
@@ -40,8 +40,8 @@ body {
 }
 .cracha-face {
   position: relative;
-  width: 360px;
-  height: 575px;
+  width: 400px;
+  height: 635px;
   border-radius: 20px;
   overflow: hidden;
   background: var(--branco);
@@ -51,12 +51,12 @@ body {
 .cracha-face::before {
   content: "";
   position: absolute;
-  inset: 130px 0 92px 0;
+  inset: 135px 0 100px 0;
   background:
     linear-gradient(90deg, transparent 0 10%, #000 10% 16%, transparent 16% 24%, #000 24% 30%, transparent 30% 100%),
     linear-gradient(0deg, transparent 0 12%, #000 12% 18%, transparent 18% 28%, #000 28% 34%, transparent 34% 100%);
-  background-size: 92px 92px;
-  opacity: 0.028;
+  background-size: 96px 96px;
+  opacity: 0.026;
   z-index: 0;
   pointer-events: none;
 }
@@ -74,34 +74,34 @@ body {
 }
 .cracha-header {
   position: relative;
-  height: 130px;
+  height: 135px;
   background: linear-gradient(135deg, var(--azul-escuro), var(--azul));
   color: #ffffff;
-  padding: 28px 17px 22px;
+  padding: 28px 20px 26px;
   z-index: 2;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
+  gap: 13px;
   overflow: hidden;
 }
 .cracha-header::before {
   content: "";
   position: absolute;
-  left: -2px;
-  right: -2px;
+  left: -6px;
+  right: -6px;
   bottom: -1px;
-  height: 34px;
+  height: 28px;
   background: #ffffff;
-  clip-path: polygon(0 72%, 50% 100%, 100% 72%, 100% 100%, 0 100%);
+  clip-path: polygon(0 76%, 50% 100%, 100% 76%, 100% 100%, 0 100%);
   z-index: 1;
 }
 .cracha-header::after {
   content: "";
   position: absolute;
-  left: -12px;
-  right: -12px;
-  bottom: 24px;
+  left: -14px;
+  right: -14px;
+  bottom: 26px;
   height: 4px;
   background: var(--laranja);
   transform: rotate(-5deg);
@@ -120,8 +120,8 @@ body {
   flex: 1 1 auto;
 }
 .cracha-logo-escudo {
-  width: 54px;
-  height: 62px;
+  width: 58px;
+  height: 66px;
   flex: 0 0 auto;
 }
 .cracha-brand-text {
@@ -134,11 +134,11 @@ body {
 }
 .cracha-brand-text .controle {
   display: block;
-  font-size: 27px;
+  font-size: 28px;
 }
 .cracha-brand-text .sst,
 .cracha-brand-text .qr {
-  font-size: 38px;
+  font-size: 40px;
 }
 .cracha-brand-text .qr {
   color: var(--laranja);
@@ -150,7 +150,7 @@ body {
   flex: 0 0 auto;
 }
 .cracha-logo-empresa-area {
-  width: 98px;
+  width: 106px;
   flex: 0 0 auto;
   text-align: center;
 }
@@ -180,15 +180,15 @@ body {
 .cracha-content {
   position: relative;
   z-index: 2;
-  height: calc(100% - 130px - 92px);
-  padding: 24px 24px 8px;
+  height: calc(100% - 135px - 100px);
+  padding: 34px 28px 10px;
   display: flex;
   flex-direction: column;
   align-items: center;
 }
 .cracha-foto-frame {
-  width: 124px;
-  height: 124px;
+  width: 146px;
+  height: 146px;
   border: 4px solid var(--laranja);
   border-radius: 50%;
   overflow: hidden;
@@ -196,7 +196,7 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
-  margin-bottom: 9px;
+  margin-bottom: 11px;
 }
 .cracha-foto-imagem {
   width: 100%;
@@ -208,19 +208,19 @@ body {
 .cracha-nome {
   width: 100%;
   text-align: center;
-  font-size: 23px;
+  font-size: 25px;
   line-height: 1.05;
   font-weight: 950;
   text-transform: uppercase;
   color: var(--azul);
-  margin: 1px 0 8px;
+  margin: 1px 0 9px;
   letter-spacing: -0.35px;
 }
 .cracha-linha-decorativa {
-  width: 232px;
+  width: 252px;
   height: 2px;
   background: var(--laranja);
-  margin: 0 auto 12px;
+  margin: 0 auto 13px;
   position: relative;
 }
 .cracha-linha-decorativa::after {
@@ -236,9 +236,9 @@ body {
   transform: translateX(-50%) rotate(45deg);
 }
 .cracha-dados {
-  width: 252px;
+  width: 268px;
   display: grid;
-  gap: 7px;
+  gap: 8px;
   margin-bottom: 8px;
 }
 .cracha-linha-dado {
@@ -274,7 +274,7 @@ body {
 }
 .cracha-cta-frente {
   margin-top: auto;
-  margin-bottom: 0;
+  margin-bottom: 4px;
   text-align: center;
   color: var(--azul);
   font-size: 14px;
@@ -297,11 +297,11 @@ body {
   left: 0;
   right: 0;
   bottom: 0;
-  height: 92px;
+  height: 100px;
   background: linear-gradient(135deg, var(--azul-escuro), var(--azul));
   color: #ffffff;
   z-index: 3;
-  padding: 12px 14px 8px;
+  padding: 13px 16px 9px;
 }
 .cracha-footer::before {
   content: "";
@@ -369,32 +369,32 @@ body {
 }
 .cracha-verso .cracha-content {
   justify-content: flex-start;
-  padding-top: 45px;
+  padding-top: 54px;
 }
 .cracha-verso-titulo {
   text-align: center;
   color: var(--azul);
   font-weight: 950;
-  font-size: 18px;
+  font-size: 19px;
   line-height: 1.2;
   text-transform: uppercase;
-  margin-bottom: 9px;
+  margin-bottom: 10px;
 }
 .cracha-verso-seta {
   color: var(--laranja);
-  font-size: 30px;
+  font-size: 32px;
   font-weight: 950;
   line-height: 1;
-  margin-bottom: 9px;
+  margin-bottom: 12px;
   transform: rotate(90deg);
 }
 .cracha-qr-box {
-  width: 218px;
-  height: 218px;
+  width: 236px;
+  height: 236px;
   border: 3px solid var(--laranja);
   border-radius: 10px;
   background: #ffffff;
-  padding: 9px;
+  padding: 8px;
   display: flex;
   justify-content: center;
   align-items: center;
@@ -402,8 +402,8 @@ body {
   overflow: hidden;
 }
 .cracha-qrcode {
-  width: 200px;
-  height: 200px;
+  width: 214px;
+  height: 214px;
   display: flex;
   justify-content: center;
   align-items: center;
@@ -412,18 +412,18 @@ body {
 .cracha-qrcode svg,
 .cracha-qrcode canvas,
 .cracha-qrcode img {
-  width: 200px !important;
-  height: 200px !important;
+  width: 214px !important;
+  height: 214px !important;
   display: block !important;
   margin: 0 auto !important;
 }
 .cracha-texto-legal {
-  margin-top: 10px;
+  margin-top: 11px;
   text-align: center;
-  font-size: 10.5px;
-  line-height: 1.3;
+  font-size: 11px;
+  line-height: 1.28;
   color: #111827;
-  max-width: 270px;
+  max-width: 285px;
 }
 .cracha-texto-legal .alerta {
   color: var(--laranja);
@@ -604,7 +604,7 @@ function VersoCracha({ valorQr }) {
 
                     <div className="cracha-qr-box">
                         <div className="cracha-qrcode">
-                            <QRCodeSVG value={valorQr || ""} size={200} level="H" bgColor="#ffffff" fgColor="#000000" />
+                            <QRCodeSVG value={valorQr || ""} size={214} level="H" bgColor="#ffffff" fgColor="#000000" />
                         </div>
                     </div>
 
