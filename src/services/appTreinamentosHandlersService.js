@@ -33,6 +33,251 @@ function obterNomeArquivoEntrada(arquivo = null) {
     return arquivo.name || arquivo.nome || arquivo.filename || "";
 }
 
+function normalizarTextoBloqueioColaborador(valor = "") {
+    return String(valor || "")
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, " ")
+        .replace(/\s+/g, " ")
+        .trim();
+}
+
+function apenasDigitosBloqueio(valor = "") {
+    return String(valor || "").replace(/\D/g, "");
+}
+
+function obterNomeColaboradorBloqueio(colaborador = {}, certificado = {}) {
+    return String(
+        colaborador?.nome ||
+        colaborador?.nomeCompleto ||
+        colaborador?.nome_completo ||
+        certificado?.colaborador_nome ||
+        certificado?.colaboradorNome ||
+        certificado?.colaborador?.nome ||
+        ""
+    ).trim();
+}
+
+function obterIdentificadoresColaboradorBloqueio(colaborador = {}, certificado = {}) {
+    return {
+        id: String(colaborador?.id || certificado?.colaborador_id || certificado?.colaboradorId || certificado?.colaborador?.id || ""),
+        codigo: String(colaborador?.codigoFuncionario || colaborador?.codigo_funcionario || certificado?.colaboradorCodigo || certificado?.colaborador?.codigoFuncionario || ""),
+    };
+}
+
+function tokensNomeColaboradorBloqueio(nome = "") {
+    return normalizarTextoBloqueioColaborador(nome)
+        .split(" ")
+        .map((token) => token.trim())
+        .filter((token) =>
+            token.length >= 3 &&
+            !["dos", "das", "de", "da", "do", "e", "nr", "aso", "pdf", "jpeg", "jpg", "png", "webp"].includes(token)
+        );
+}
+
+function pontuarNomeColaboradorNoTextoBloqueio({ texto = "", nome = "" } = {}) {
+    const base = normalizarTextoBloqueioColaborador(texto);
+    const tokens = tokensNomeColaboradorBloqueio(nome);
+
+    if (!base || tokens.length < 2) {
+        return {
+            encontrado: false,
+            score: 0,
+            tokensEncontrados: [],
+            totalTokens: tokens.length,
+        };
+    }
+
+    const tokensEncontrados = tokens.filter((token) => base.includes(token));
+    const primeiro = tokens[0];
+    const ultimo = tokens[tokens.length - 1];
+    const contemPrimeiro = base.includes(primeiro);
+    const contemUltimo = base.includes(ultimo);
+    const proporcao = tokensEncontrados.length / tokens.length;
+    const score = (proporcao * 100) + (contemPrimeiro ? 10 : 0) + (contemUltimo ? 10 : 0);
+
+    const encontrado = Boolean(
+        (proporcao >= 0.75 && (contemPrimeiro || contemUltimo)) ||
+        (tokensEncontrados.length >= 3 && contemPrimeiro) ||
+        (tokensEncontrados.length >= 2 && contemPrimeiro && contemUltimo)
+    );
+
+    return {
+        encontrado,
+        score,
+        tokensEncontrados,
+        totalTokens: tokens.length,
+    };
+}
+
+function localizarColaboradorDiferenteNoNomeArquivo({ certificado = {}, colaboradores = [], colaboradorSelecionado = {} } = {}) {
+    const nomeArquivo = obterNomeArquivoEntrada(certificado?.arquivo) || certificado?.arquivoNome || certificado?.arquivo_nome || "";
+    if (!nomeArquivo) return null;
+
+    const nomeSelecionado = obterNomeColaboradorBloqueio(colaboradorSelecionado, certificado);
+    const pontuacaoSelecionado = pontuarNomeColaboradorNoTextoBloqueio({
+        texto: nomeArquivo,
+        nome: nomeSelecionado,
+    });
+
+    if (pontuacaoSelecionado.encontrado) return null;
+
+    const identificadoresSelecionado = obterIdentificadoresColaboradorBloqueio(colaboradorSelecionado, certificado);
+
+    const candidato = (colaboradores || [])
+        .filter((colaborador) => {
+            const identificadores = obterIdentificadoresColaboradorBloqueio(colaborador, {});
+            const mesmoId = identificadoresSelecionado.id && identificadores.id && identificadoresSelecionado.id === identificadores.id;
+            const mesmoCodigo = identificadoresSelecionado.codigo && identificadores.codigo && identificadoresSelecionado.codigo === identificadores.codigo;
+
+            return !mesmoId && !mesmoCodigo;
+        })
+        .map((colaborador) => {
+            const nome = obterNomeColaboradorBloqueio(colaborador, {});
+            const pontuacao = pontuarNomeColaboradorNoTextoBloqueio({
+                texto: nomeArquivo,
+                nome,
+            });
+
+            return {
+                colaborador,
+                nome,
+                ...pontuacao,
+            };
+        })
+        .filter((item) => item.encontrado)
+        .sort((a, b) => Number(b.score || 0) - Number(a.score || 0))[0];
+
+    return candidato || null;
+}
+
+function obterTreinamentoParaVerificacaoCertificado({ certificado = {}, certificadoNormalizado = {} } = {}) {
+    const treinamentoId = Number(certificadoNormalizado.treinamentoId || certificado.treinamentoId || certificado.treinamento_codigo || certificado.treinamento_id || 0);
+    const treinamento = obterTreinamento(treinamentoId) || {
+        id: treinamentoId || null,
+        nome: certificadoNormalizado.nomeTreinamento || certificado.nome_treinamento || certificado.tipo_treinamento || "",
+    };
+
+    return {
+        treinamentoId,
+        treinamento,
+    };
+}
+
+function montarCertificadoParaVerificacao({
+    certificado = {},
+    certificadoNormalizado = {},
+    colaborador = {},
+    treinamento = {},
+} = {}) {
+    const nomeArquivoEntrada = obterNomeArquivoEntrada(certificado.arquivo);
+
+    return {
+        ...certificado,
+        id: certificadoNormalizado.id || certificado.id || null,
+        colaborador_id: certificadoNormalizado.colaboradorId || certificado.colaborador_id || certificado.colaboradorId || colaborador.id || null,
+        colaboradorId: certificadoNormalizado.colaboradorId || certificado.colaboradorId || colaborador.id || null,
+        treinamento_codigo: Number(certificadoNormalizado.treinamentoId || certificado.treinamentoId || certificado.treinamento_codigo || 0) || certificado.treinamentoId || null,
+        treinamentoId: Number(certificadoNormalizado.treinamentoId || certificado.treinamentoId || certificado.treinamento_codigo || 0) || certificado.treinamentoId || null,
+        tipo_treinamento: certificadoNormalizado.nomeTreinamento || certificado.tipo_treinamento || treinamento.nome || "",
+        nome_treinamento: certificadoNormalizado.nomeTreinamento || certificado.nome_treinamento || treinamento.nome || "",
+        data_realizacao: certificadoNormalizado.realizado || certificadoNormalizado.dataRealizacao || certificado.dataRealizacao || certificado.data_realizacao || "",
+        dataRealizacao: certificadoNormalizado.realizado || certificadoNormalizado.dataRealizacao || certificado.dataRealizacao || certificado.data_realizacao || "",
+        data_vencimento: certificadoNormalizado.vencimento || certificadoNormalizado.dataVencimento || certificado.dataVencimento || certificado.data_vencimento || "",
+        dataVencimento: certificadoNormalizado.vencimento || certificadoNormalizado.dataVencimento || certificado.dataVencimento || certificado.data_vencimento || "",
+        arquivo_url: certificadoNormalizado.arquivoUrl || certificado.arquivo_url || certificado.arquivoUrl || "",
+        arquivoUrl: certificadoNormalizado.arquivoUrl || certificado.arquivoUrl || certificado.arquivo_url || "",
+        arquivo_nome: certificadoNormalizado.arquivoNome || certificado.arquivoNome || certificado.arquivo_nome || nomeArquivoEntrada || "",
+        arquivoNome: certificadoNormalizado.arquivoNome || certificado.arquivoNome || certificado.arquivo_nome || nomeArquivoEntrada || "",
+        observacao: certificado.observacao || certificadoNormalizado.observacao || null,
+    };
+}
+
+function indicioCpfDivergenteVerificacao(indicio = {}) {
+    if (indicio?.codigo !== "cpf_colaborador_nao_localizado_documento") return false;
+
+    const dados = indicio?.dados || {};
+    const cpfCadastro = apenasDigitosBloqueio(dados.cpfCadastro);
+    const cpfsExtraidos = Array.isArray(dados.cpfsExtraidos)
+        ? dados.cpfsExtraidos.map(apenasDigitosBloqueio).filter((valor) => valor.length === 11)
+        : [];
+
+    return Boolean(cpfCadastro && cpfsExtraidos.length && !cpfsExtraidos.includes(cpfCadastro));
+}
+
+function obterIndiciosBloqueantesAntesSalvar(verificacao = {}) {
+    const codigosBloqueioForte = new Set([
+        "colaborador_nao_localizado_no_documento",
+        "cnpj_empresa_nao_confere_documento",
+        "cnpj_documento_diverge_empresa_selecionada",
+    ]);
+
+    return (Array.isArray(verificacao?.indicios) ? verificacao.indicios : [])
+        .filter((indicio = {}) =>
+            Boolean(indicio?.bloqueia) ||
+            codigosBloqueioForte.has(indicio?.codigo) ||
+            indicioCpfDivergenteVerificacao(indicio)
+        );
+}
+
+function montarMensagemBloqueioAntesSalvar({ indicios = [] } = {}) {
+    const principal = indicios[0] || {};
+    const detalhe = principal.detalhe || principal.titulo || "A verificação documental encontrou divergência bloqueante.";
+
+    return [
+        "Documento bloqueado pela verificação documental antes de salvar.",
+        detalhe,
+        "O arquivo não foi salvo. Selecione o colaborador correto ou substitua o documento.",
+    ].join("\n");
+}
+
+async function validarCertificadoAntesDoSalvamento({
+    supabase,
+    certificado,
+    colaboradores,
+    colaboradorSelecionado,
+}) {
+    const colaborador = localizarColaboradorParaVerificacao({
+        certificado,
+        certificadoNormalizado: {},
+        colaboradores,
+        colaboradorSelecionado,
+    });
+
+    const arquivoValidoParaAnalise = obterArquivoValidoParaAnalise(certificado.arquivo);
+    if (!arquivoValidoParaAnalise) return null;
+
+    const { verificarCertificadoTreinamento } = await import("./documentosVerificacaoService");
+    const { treinamentoId, treinamento } = obterTreinamentoParaVerificacaoCertificado({ certificado });
+    const certificadoParaVerificacao = montarCertificadoParaVerificacao({
+        certificado,
+        certificadoNormalizado: {},
+        colaborador,
+        treinamento,
+    });
+
+    const verificacao = await verificarCertificadoTreinamento({
+        supabase,
+        certificado: certificadoParaVerificacao,
+        colaborador,
+        treinamento,
+        arquivo: arquivoValidoParaAnalise,
+        registrosExistentes: [],
+        usuario: null,
+        salvarResultado: false,
+        exigeVencimento: !treinamentoSemValidade(treinamentoId),
+    });
+
+    const indiciosBloqueantes = obterIndiciosBloqueantesAntesSalvar(verificacao);
+
+    if (indiciosBloqueantes.length) {
+        throw new Error(montarMensagemBloqueioAntesSalvar({ indicios: indiciosBloqueantes }));
+    }
+
+    return verificacao;
+}
+
 function converterStatusVerificacaoParaStatusCertificado(statusVerificacao = "") {
     const status = String(statusVerificacao || "").trim().toLowerCase();
 
@@ -95,40 +340,23 @@ async function executarVerificacaoCertificadoSemBloquearFluxo({
     try {
         const { verificarCertificadoTreinamento } = await import("./documentosVerificacaoService");
 
-        const treinamentoId = Number(certificadoNormalizado.treinamentoId || certificado.treinamentoId || certificado.treinamento_codigo || 0);
-        const treinamento = obterTreinamento(treinamentoId) || {
-            id: treinamentoId || null,
-            nome: certificadoNormalizado.nomeTreinamento || certificado.nome_treinamento || certificado.tipo_treinamento || "",
-        };
+        const { treinamentoId, treinamento } = obterTreinamentoParaVerificacaoCertificado({
+            certificado,
+            certificadoNormalizado,
+        });
         const colaborador = localizarColaboradorParaVerificacao({
             certificado,
             certificadoNormalizado,
             colaboradores,
             colaboradorSelecionado,
         });
-
         const arquivoValidoParaAnalise = obterArquivoValidoParaAnalise(certificado.arquivo);
-        const nomeArquivoEntrada = obterNomeArquivoEntrada(certificado.arquivo);
-
-        const certificadoParaVerificacao = {
-            ...certificado,
-            id: certificadoNormalizado.id,
-            colaborador_id: certificadoNormalizado.colaboradorId || certificado.colaborador_id || certificado.colaboradorId || colaborador.id || null,
-            colaboradorId: certificadoNormalizado.colaboradorId || certificado.colaboradorId || colaborador.id || null,
-            treinamento_codigo: treinamentoId || certificado.treinamentoId || null,
-            treinamentoId: treinamentoId || certificado.treinamentoId || null,
-            tipo_treinamento: certificadoNormalizado.nomeTreinamento || certificado.tipo_treinamento || treinamento.nome || "",
-            nome_treinamento: certificadoNormalizado.nomeTreinamento || certificado.nome_treinamento || treinamento.nome || "",
-            data_realizacao: certificadoNormalizado.realizado || certificadoNormalizado.dataRealizacao || certificado.dataRealizacao || certificado.data_realizacao || "",
-            dataRealizacao: certificadoNormalizado.realizado || certificadoNormalizado.dataRealizacao || certificado.dataRealizacao || certificado.data_realizacao || "",
-            data_vencimento: certificadoNormalizado.vencimento || certificadoNormalizado.dataVencimento || certificado.dataVencimento || certificado.data_vencimento || "",
-            dataVencimento: certificadoNormalizado.vencimento || certificadoNormalizado.dataVencimento || certificado.dataVencimento || certificado.data_vencimento || "",
-            arquivo_url: certificadoNormalizado.arquivoUrl || certificado.arquivo_url || certificado.arquivoUrl || "",
-            arquivoUrl: certificadoNormalizado.arquivoUrl || certificado.arquivoUrl || certificado.arquivo_url || "",
-            arquivo_nome: certificadoNormalizado.arquivoNome || certificado.arquivoNome || certificado.arquivo_nome || nomeArquivoEntrada || "",
-            arquivoNome: certificadoNormalizado.arquivoNome || certificado.arquivoNome || certificado.arquivo_nome || nomeArquivoEntrada || "",
-            observacao: certificado.observacao || certificadoNormalizado.observacao || null,
-        };
+        const certificadoParaVerificacao = montarCertificadoParaVerificacao({
+            certificado,
+            certificadoNormalizado,
+            colaborador,
+            treinamento,
+        });
 
         const verificacao = await verificarCertificadoTreinamento({
             supabase,
@@ -307,6 +535,13 @@ export async function salvarCertificadoTreinamentoAppService({
     setErroBanco("");
 
     try {
+        await validarCertificadoAntesDoSalvamento({
+            supabase,
+            certificado,
+            colaboradores,
+            colaboradorSelecionado,
+        });
+
         const certificadoNormalizado = await salvarCertificadoTreinamentoCrud({
             supabase,
             certificado,
