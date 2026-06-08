@@ -422,7 +422,7 @@ function obterAssinaturaDocumentoIndividual(leitura = {}) {
 function documentoPareceAssinaturaIndividual({ texto = "", treinamento = {}, certificado = {} } = {}) {
     const base = normalizarTextoConferencia(`${texto} ${treinamento?.nome || ""} ${certificado?.nome_treinamento || ""} ${certificado?.tipo_treinamento || ""}`);
 
-    return /ordem de servico|ordem de serviço|assinatura do empregado|seguranca e saude do trabalho|segurança e saúde do trabalho|registro de empregado|ficha de registro|data de admissao|data de admissão|controle de entrega de epi|entrega de epi|equipamento de protecao individual|equipamento de proteção individual|declaracao de recebimento|declaração de recebimento|atestado de saude ocupacional|atestado de saúde ocupacional|aso|assinado digitalmente|icp-brasil|participante/.test(base);
+    return /ordem de servico|ordem de serviço|assinatura do empregado|seguranca e saude do trabalho|segurança e saúde do trabalho|registro de empregado|ficha de registro|data de admissao|data de admissão|controle de entrega de epi|entrega de epi|equipamento de protecao individual|equipamento de proteção individual|declaracao de recebimento|declaração de recebimento|atestado de saude ocupacional|atestado de saúde ocupacional|aso|assinado digitalmente|icp-brasil|participante|certificado de treinamento|certificamos que|tecnico em seguranca do trabalho|técnico em segurança do trabalho|reg mte/.test(base);
 }
 
 function obterAssinaturaDigitalAsoConferencia({ texto = "", campos = {} } = {}) {
@@ -434,7 +434,7 @@ function obterAssinaturaDigitalAsoConferencia({ texto = "", campos = {} } = {}) 
         campos?.codigo_verificacao,
     ].filter(Boolean).join(" "));
 
-    const ehAso = /aso|atestado de saude ocupacional|atestado de saúde ocupacional/.test(base);
+    const ehAso = /\baso\b|atestado de saude ocupacional|atestado de saúde ocupacional/.test(base);
 
     if (!ehAso) {
         return {
@@ -446,7 +446,7 @@ function obterAssinaturaDigitalAsoConferencia({ texto = "", campos = {} } = {}) 
 
     const possuiAssinaturaDigital = /documento assinado digitalmente|assinado digitalmente|assinatura digital|icp brasil|icpbrasil|padrao icp|padrão icp/.test(base);
     const possuiCodigoAutenticidade = /codigo de autenticidade|código de autenticidade|codigo de verificacao|código de verificação|codigo de validacao|código de validação|validador|validar este documento/.test(base);
-    const possuiResponsavelMedico = /medico examinador|médico examinador|medico responsavel|médico responsável|pcmso|crm\s*uf|crm/.test(base);
+    const possuiResponsavelMedico = /medico examinador|médico examinador|medico responsavel|médico responsável|pcmso|crm\s*uf|\bcrm\b/.test(base);
     const possuiDataAssinatura = Boolean(campos?.assinatura_data || campos?.assinatura_data_br || campos?.data_encerramento || campos?.data_encerramento_br);
 
     const localizada = Boolean(
@@ -473,6 +473,55 @@ function obterAssinaturaDigitalAsoConferencia({ texto = "", campos = {} } = {}) 
         origem: "assinatura_digital_aso_icp_brasil",
         evidencia: evidencias.join(" + "),
     };
+}
+
+
+function textoIndicaCertificadoTreinamentoEscaneado(texto = "") {
+    const base = normalizarTextoConferencia(texto);
+
+    return /certificado de treinamento|certificamos que|conteudo programatico|conteúdo programático|carga horaria|carga horária|tecnico em seguranca do trabalho|técnico em segurança do trabalho|reg mte|sao jose dos campos|são josé dos campos/.test(base);
+}
+
+function empresaRibeiroAquinoConfirmadaPorModeloCertificado({
+    nomeEmpresaNormalizado = "",
+    perfilDocumental = "",
+    nomeEncontrado = null,
+    treinamentoEncontrado = null,
+    textoDocumento = "",
+    cnpjEmpresa = "",
+    cnpjDocumentoEncontrado = false,
+    cnpjEncontrado = null,
+} = {}) {
+    if (!nomeEmpresaNormalizado.includes("ribeiro")) return false;
+    if (perfilDocumental !== "certificado") return false;
+    if (nomeEncontrado !== true) return false;
+    if (treinamentoEncontrado !== true) return false;
+    if (!textoIndicaCertificadoTreinamentoEscaneado(textoDocumento)) return false;
+
+    const cnpjDivergenteConfirmado = Boolean(cnpjEmpresa && cnpjDocumentoEncontrado && cnpjEncontrado === false);
+    if (cnpjDivergenteConfirmado) return false;
+
+    return true;
+}
+
+function assinaturaCertificadoEscaneadoProvavel({
+    perfilDocumental = "",
+    nomeEncontrado = null,
+    treinamentoEncontrado = null,
+    documentoAssinaturaIndividual = false,
+    assinaturaDocumentoIndividual = null,
+    textoDocumento = "",
+} = {}) {
+    if (perfilDocumental !== "certificado") return false;
+    if (nomeEncontrado !== true) return false;
+    if (treinamentoEncontrado !== true) return false;
+
+    if (assinaturaDocumentoIndividual) return true;
+
+    return Boolean(
+        documentoAssinaturaIndividual &&
+        textoIndicaCertificadoTreinamentoEscaneado(textoDocumento)
+    );
 }
 
 function extrairCpfsDocumentoConferencia(texto = "") {
@@ -946,6 +995,7 @@ function montarConferenciaDocumentalCertificado({ leitura = {}, certificado = {}
     const cnpjEncontrado = documentoContemCnpj(textoDocumento, cnpjEmpresa);
     const textoNormalizadoDocumento = normalizarTextoConferencia(textoDocumento);
     const nomeEmpresaNormalizado = normalizarTextoConferencia(empresaColaborador);
+    const treinamentoEncontrado = documentoContemTreinamento({ texto: textoComArquivo, treinamento, certificado });
     const empresaEncontradaNoTexto = empresaColaborador
         ? textoContemNomePessoa({ texto: textoDocumento, nome: empresaColaborador }) ||
         (textoNormalizadoDocumento.includes(normalizarTextoConferencia("Ribeiro Aquino")) && nomeEmpresaNormalizado.includes("ribeiro")) ||
@@ -957,14 +1007,31 @@ function montarConferenciaDocumentalCertificado({ leitura = {}, certificado = {}
         (cpfEncontrado === true || cpfDocumentoEncontrado === true || cnpjEncontrado === true || cnpjDocumentoEncontrado === true) &&
         (documentoAssinaturaIndividual || listaPresenca || perfilDocumental !== "generico")
     );
-    const empresaEncontrada = empresaEncontradaNoTexto === true || empresaEncontradaPorVinculo ? true : empresaEncontradaNoTexto;
-    const treinamentoEncontrado = documentoContemTreinamento({ texto: textoComArquivo, treinamento, certificado });
+    const empresaEncontradaPorLogoRibeiro = empresaRibeiroAquinoConfirmadaPorModeloCertificado({
+        nomeEmpresaNormalizado,
+        perfilDocumental,
+        nomeEncontrado,
+        treinamentoEncontrado,
+        textoDocumento,
+        cnpjEmpresa,
+        cnpjDocumentoEncontrado,
+        cnpjEncontrado,
+    });
+    const empresaEncontrada = empresaEncontradaNoTexto === true || empresaEncontradaPorVinculo || empresaEncontradaPorLogoRibeiro ? true : empresaEncontradaNoTexto;
     const linhaAssinaturaBase = linhaColaborador || assinaturaDocumentoIndividual;
     const assinaturaDensidade = linhaAssinaturaBase?.assinatura_densidade ?? null;
     const assinaturaDensidadeAzul = linhaAssinaturaBase?.assinatura_densidade_azul ?? null;
     const assinaturaEspalhamentoHorizontal = linhaAssinaturaBase?.assinatura_espalhamento_horizontal ?? null;
     const assinaturaEspalhamentoVertical = linhaAssinaturaBase?.assinatura_espalhamento_vertical ?? null;
-    const assinaturaVisual = assinaturaDigitalAso?.localizada
+    const assinaturaCertificadoEscaneado = assinaturaCertificadoEscaneadoProvavel({
+        perfilDocumental,
+        nomeEncontrado,
+        treinamentoEncontrado,
+        documentoAssinaturaIndividual,
+        assinaturaDocumentoIndividual,
+        textoDocumento,
+    });
+    const assinaturaVisual = assinaturaDigitalAso?.localizada || assinaturaCertificadoEscaneado
         ? true
         : linhaAssinaturaBase
             ? Boolean(
@@ -974,7 +1041,7 @@ function montarConferenciaDocumentalCertificado({ leitura = {}, certificado = {}
                 (Number(assinaturaDensidade || 0) > 0.0024 && Number(assinaturaEspalhamentoHorizontal || 0) > 0.018)
             )
             : null;
-    const assinaturaAplicavel = Boolean((listaPresenca || documentoAssinaturaIndividual) && nomeEncontrado);
+    const assinaturaAplicavel = Boolean((listaPresenca || documentoAssinaturaIndividual || perfilDocumental === "certificado") && nomeEncontrado);
     const documentoConfirmadoPorConferencia = Boolean(
         nomeEncontrado === true &&
         assinaturaVisual === true &&
@@ -1010,7 +1077,11 @@ function montarConferenciaDocumentalCertificado({ leitura = {}, certificado = {}
             nomeCadastro: empresaColaborador,
             encontrada: empresaEncontrada,
             nomeExtraido: campos?.empresa_nome || "",
-            origem: empresaEncontradaNoTexto === true ? "ocr_texto_logo_ou_nome" : (empresaEncontradaPorVinculo ? "vinculo_colaborador_cpf_documento" : ""),
+            origem: empresaEncontradaNoTexto === true
+                ? "ocr_texto_logo_ou_nome"
+                : (empresaEncontradaPorVinculo
+                    ? "vinculo_colaborador_cpf_documento"
+                    : (empresaEncontradaPorLogoRibeiro ? "logo_ribeiro_aquino_modelo_certificado" : "")),
         },
         cnpj: {
             informadoCadastro: Boolean(cnpjEmpresa || cnpjDocumentoEncontrado),
@@ -1039,17 +1110,21 @@ function montarConferenciaDocumentalCertificado({ leitura = {}, certificado = {}
             espalhamentoVertical: assinaturaEspalhamentoVertical,
             origem: assinaturaDigitalAso?.localizada
                 ? assinaturaDigitalAso.origem
-                : (linhaColaborador?.assinatura_origem || linhaColaborador?.assinaturaOrigem || assinaturaDocumentoIndividual?.assinatura_origem || "assinatura_documento"),
+                : (assinaturaCertificadoEscaneado
+                    ? "assinatura_certificado_escaneado"
+                    : (linhaColaborador?.assinatura_origem || linhaColaborador?.assinaturaOrigem || assinaturaDocumentoIndividual?.assinatura_origem || "assinatura_documento")),
             pagina: assinaturaDocumentoIndividual?.pagina || linhaColaborador?.pagina || null,
             observacao: assinaturaDigitalAso?.localizada
                 ? `Assinatura digital do ASO localizada por ${assinaturaDigitalAso.evidencia}.`
-                : assinaturaVisual === true
-                    ? (listaPresenca ? "Assinatura visual localizada na mesma faixa da linha do colaborador." : "Assinatura visual localizada no campo de assinatura do documento.")
-                    : assinaturaVisual === false
-                        ? "Colaborador localizado, mas a assinatura não foi confirmada visualmente. Conferir o campo de assinatura."
-                        : assinaturaAplicavel
-                            ? "Colaborador localizado, mas a posição da assinatura não foi suficiente para avaliação automática. Conferir visualmente."
-                            : "Assinatura não aplicável porque o colaborador não foi localizado ou o documento não possui campo de assinatura identificado.",
+                : assinaturaCertificadoEscaneado
+                    ? "Assinatura visual provável localizada no certificado escaneado do colaborador/responsável."
+                    : assinaturaVisual === true
+                        ? (listaPresenca ? "Assinatura visual localizada na mesma faixa da linha do colaborador." : "Assinatura visual localizada no campo de assinatura do documento.")
+                        : assinaturaVisual === false
+                            ? "Colaborador localizado, mas a assinatura não foi confirmada visualmente. Conferir o campo de assinatura."
+                            : assinaturaAplicavel
+                                ? "Colaborador localizado, mas a posição da assinatura não foi suficiente para avaliação automática. Conferir visualmente."
+                                : "Assinatura não aplicável porque o colaborador não foi localizado ou o documento não possui campo de assinatura identificado.",
         },
     };
 }
