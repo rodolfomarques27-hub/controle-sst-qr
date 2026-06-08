@@ -351,7 +351,7 @@ export function ConsultaQR({ colaborador, colaboradores = [], onSelecionarColabo
                                         <StatusPill status={st} small />
                                     </div>
 
-                                    <div className="grid grid-cols-1 gap-3 text-sm sm:grid-cols-2">
+                                    <div className="grid grid-cols-2 gap-2 text-sm">
                                         <div className="rounded-2xl bg-slate-50 p-3">
                                             <p className="text-xs text-slate-400">Realizado</p>
                                             <p className="font-semibold text-slate-700">{formatDate(t.realizado)}</p>
