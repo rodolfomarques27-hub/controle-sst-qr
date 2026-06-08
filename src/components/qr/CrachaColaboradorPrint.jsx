@@ -4,6 +4,7 @@ import { FotoColaborador } from "../commonComponents";
 
 export const CRACHA_COLABORADOR_PRINT_STYLES = `
 * { box-sizing: border-box; }
+html, body { min-height: 100%; }
 body {
   margin: 0;
   background: #ffffff;
@@ -12,92 +13,111 @@ body {
 }
 .cracha-print-root {
   --azul: #1a2744;
-  --azul-escuro: #09172d;
+  --azul-escuro: #07162d;
   --laranja: #e8650a;
   --branco: #ffffff;
   --cinza: #f5f5f5;
   width: 100%;
+  min-height: 100vh;
   display: flex;
   justify-content: center;
   align-items: flex-start;
-  gap: 26px;
+  gap: 30px;
   padding: 18px;
   background: #ffffff;
 }
 .cracha-print-side {
   text-align: center;
+  flex: 0 0 auto;
 }
 .cracha-print-label {
   margin: 0 0 10px;
   color: var(--laranja);
   font-size: 18px;
   font-weight: 900;
-  letter-spacing: 1px;
+  letter-spacing: 1.5px;
   text-transform: uppercase;
 }
 .cracha-face {
   position: relative;
-  width: 300px;
-  height: 480px;
+  width: 360px;
+  height: 575px;
   border-radius: 20px;
   overflow: hidden;
   background: var(--branco);
-  box-shadow: none;
   border: 1px solid #cfd4dd;
+  box-shadow: none;
 }
 .cracha-face::before {
   content: "";
   position: absolute;
-  inset: 118px 0 84px 0;
+  inset: 130px 0 92px 0;
   background:
     linear-gradient(90deg, transparent 0 10%, #000 10% 16%, transparent 16% 24%, #000 24% 30%, transparent 30% 100%),
     linear-gradient(0deg, transparent 0 12%, #000 12% 18%, transparent 18% 28%, #000 28% 34%, transparent 34% 100%);
-  background-size: 90px 90px;
-  opacity: 0.035;
+  background-size: 92px 92px;
+  opacity: 0.028;
   z-index: 0;
+  pointer-events: none;
 }
 .cracha-furo {
   position: absolute;
-  top: 10px;
+  top: 12px;
   left: 50%;
   transform: translateX(-50%);
-  width: 70px;
+  width: 74px;
   height: 18px;
   border-radius: 999px;
   background: #ffffff;
-  box-shadow: inset 0 2px 6px rgba(0,0,0,0.35), 0 1px 2px rgba(255,255,255,0.25);
-  z-index: 5;
+  box-shadow: inset 0 2px 6px rgba(0,0,0,0.36), 0 1px 2px rgba(255,255,255,0.25);
+  z-index: 7;
 }
 .cracha-header {
   position: relative;
-  height: 118px;
+  height: 130px;
   background: linear-gradient(135deg, var(--azul-escuro), var(--azul));
   color: #ffffff;
-  padding: 24px 14px 12px;
+  padding: 28px 17px 22px;
   z-index: 2;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 10px;
+  gap: 12px;
+  overflow: hidden;
+}
+.cracha-header::before {
+  content: "";
+  position: absolute;
+  left: -2px;
+  right: -2px;
+  bottom: -1px;
+  height: 34px;
+  background: #ffffff;
+  clip-path: polygon(0 72%, 50% 100%, 100% 72%, 100% 100%, 0 100%);
+  z-index: 1;
 }
 .cracha-header::after {
   content: "";
   position: absolute;
-  left: -10px;
-  right: -10px;
-  bottom: -16px;
-  height: 38px;
-  background: #ffffff;
-  border-top: 5px solid var(--laranja);
-  transform: skewY(-5deg);
-  transform-origin: left top;
-  z-index: -1;
+  left: -12px;
+  right: -12px;
+  bottom: 24px;
+  height: 4px;
+  background: var(--laranja);
+  transform: rotate(-5deg);
+  transform-origin: center;
+  z-index: 1;
+}
+.cracha-header > * {
+  position: relative;
+  z-index: 3;
 }
 .cracha-brand {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 9px;
   min-width: 0;
+  flex: 1 1 auto;
 }
 .cracha-logo-escudo {
   width: 54px;
@@ -108,16 +128,17 @@ body {
   line-height: 0.9;
   text-align: left;
   font-weight: 900;
-  letter-spacing: -1px;
+  letter-spacing: -0.8px;
   color: #ffffff;
+  white-space: nowrap;
 }
 .cracha-brand-text .controle {
   display: block;
-  font-size: 25px;
+  font-size: 27px;
 }
 .cracha-brand-text .sst,
 .cracha-brand-text .qr {
-  font-size: 37px;
+  font-size: 38px;
 }
 .cracha-brand-text .qr {
   color: var(--laranja);
@@ -129,7 +150,7 @@ body {
   flex: 0 0 auto;
 }
 .cracha-logo-empresa-area {
-  width: 92px;
+  width: 98px;
   flex: 0 0 auto;
   text-align: center;
 }
@@ -141,7 +162,7 @@ body {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  color: rgba(255,255,255,0.85);
+  color: rgba(255,255,255,0.88);
   font-size: 10px;
   font-weight: 900;
   line-height: 1.05;
@@ -159,15 +180,15 @@ body {
 .cracha-content {
   position: relative;
   z-index: 2;
-  height: calc(100% - 118px - 84px);
-  padding: 26px 18px 10px;
+  height: calc(100% - 130px - 92px);
+  padding: 24px 24px 8px;
   display: flex;
   flex-direction: column;
   align-items: center;
 }
 .cracha-foto-frame {
-  width: 130px;
-  height: 130px;
+  width: 124px;
+  height: 124px;
   border: 4px solid var(--laranja);
   border-radius: 50%;
   overflow: hidden;
@@ -175,29 +196,31 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
-  margin-bottom: 12px;
+  margin-bottom: 9px;
 }
 .cracha-foto-imagem {
   width: 100%;
   height: 100%;
   border-radius: 50%;
   object-fit: cover;
+  display: block;
 }
 .cracha-nome {
   width: 100%;
   text-align: center;
-  font-size: 24px;
+  font-size: 23px;
   line-height: 1.05;
   font-weight: 950;
   text-transform: uppercase;
   color: var(--azul);
-  margin: 2px 0 10px;
+  margin: 1px 0 8px;
+  letter-spacing: -0.35px;
 }
 .cracha-linha-decorativa {
-  width: 210px;
+  width: 232px;
   height: 2px;
   background: var(--laranja);
-  margin: 0 auto 14px;
+  margin: 0 auto 12px;
   position: relative;
 }
 .cracha-linha-decorativa::after {
@@ -213,10 +236,10 @@ body {
   transform: translateX(-50%) rotate(45deg);
 }
 .cracha-dados {
-  width: 220px;
+  width: 252px;
   display: grid;
-  gap: 8px;
-  margin-bottom: 20px;
+  gap: 7px;
+  margin-bottom: 8px;
 }
 .cracha-linha-dado {
   display: grid;
@@ -241,6 +264,7 @@ body {
   font-size: 14px;
   text-align: left;
   color: var(--azul);
+  white-space: nowrap;
 }
 .cracha-linha-dado strong {
   font-weight: 900;
@@ -250,11 +274,11 @@ body {
 }
 .cracha-cta-frente {
   margin-top: auto;
-  margin-bottom: 6px;
+  margin-bottom: 0;
   text-align: center;
   color: var(--azul);
   font-size: 14px;
-  line-height: 1.15;
+  line-height: 1.12;
   font-weight: 950;
   text-transform: uppercase;
   display: flex;
@@ -264,7 +288,7 @@ body {
 }
 .cracha-chevrons {
   color: var(--laranja);
-  font-size: 25px;
+  font-size: 26px;
   font-weight: 950;
   line-height: 1;
 }
@@ -273,79 +297,79 @@ body {
   left: 0;
   right: 0;
   bottom: 0;
-  height: 84px;
+  height: 92px;
   background: linear-gradient(135deg, var(--azul-escuro), var(--azul));
   color: #ffffff;
   z-index: 3;
-  padding: 10px 10px 8px;
+  padding: 12px 14px 8px;
 }
 .cracha-footer::before {
   content: "";
   position: absolute;
   left: -8px;
   right: -8px;
-  top: -18px;
+  top: -19px;
   height: 34px;
   background: inherit;
-  border-top: 5px solid var(--laranja);
+  border-top: 4px solid var(--laranja);
   transform: skewY(5deg);
   transform-origin: left bottom;
   z-index: -1;
 }
 .cracha-footer-items {
   display: grid;
-  grid-template-columns: 1.25fr 1fr 1fr 1fr;
+  grid-template-columns: 1.3fr 1fr 1fr 1fr;
   align-items: center;
-  gap: 4px;
+  gap: 5px;
   margin-bottom: 7px;
 }
 .cracha-footer-item {
   min-width: 0;
   color: #ffffff;
   text-align: center;
-  font-size: 9px;
-  line-height: 1.1;
+  font-size: 10px;
+  line-height: 1.08;
   text-transform: uppercase;
-  font-weight: 700;
+  font-weight: 800;
   position: relative;
 }
 .cracha-footer-item:not(:last-child)::after {
   content: "";
   position: absolute;
-  right: -3px;
-  top: 9px;
+  right: -4px;
+  top: 8px;
   width: 2px;
-  height: 26px;
+  height: 30px;
   background: var(--laranja);
   border-radius: 999px;
 }
 .cracha-footer-item svg {
   display: block;
   margin: 0 auto 3px;
-  width: 25px;
-  height: 25px;
+  width: 28px;
+  height: 28px;
 }
 .cracha-footer-item.primeiro {
   display: grid;
-  grid-template-columns: 30px 1fr;
+  grid-template-columns: 34px 1fr;
   align-items: center;
   text-align: left;
-  gap: 4px;
-  font-size: 8.5px;
+  gap: 5px;
+  font-size: 9px;
 }
 .cracha-final {
   border-top: 1px solid rgba(232,101,10,0.85);
   padding-top: 6px;
   text-align: center;
   color: #ffffff;
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 800;
-  letter-spacing: 0.3px;
+  letter-spacing: 0.25px;
   text-transform: uppercase;
 }
 .cracha-verso .cracha-content {
   justify-content: flex-start;
-  padding-top: 74px;
+  padding-top: 45px;
 }
 .cracha-verso-titulo {
   text-align: center;
@@ -354,26 +378,28 @@ body {
   font-size: 18px;
   line-height: 1.2;
   text-transform: uppercase;
-  margin-bottom: 10px;
+  margin-bottom: 9px;
 }
 .cracha-verso-seta {
   color: var(--laranja);
-  font-size: 34px;
+  font-size: 30px;
   font-weight: 950;
   line-height: 1;
-  margin-bottom: 12px;
+  margin-bottom: 9px;
+  transform: rotate(90deg);
 }
 .cracha-qr-box {
-  width: 224px;
-  height: 224px;
+  width: 218px;
+  height: 218px;
   border: 3px solid var(--laranja);
   border-radius: 10px;
   background: #ffffff;
-  padding: 10px;
+  padding: 9px;
   display: flex;
   justify-content: center;
   align-items: center;
   margin: 0 auto;
+  overflow: hidden;
 }
 .cracha-qrcode {
   width: 200px;
@@ -386,25 +412,27 @@ body {
 .cracha-qrcode svg,
 .cracha-qrcode canvas,
 .cracha-qrcode img {
+  width: 200px !important;
+  height: 200px !important;
   display: block !important;
   margin: 0 auto !important;
 }
 .cracha-texto-legal {
-  margin-top: 12px;
+  margin-top: 10px;
   text-align: center;
   font-size: 10.5px;
-  line-height: 1.35;
+  line-height: 1.3;
   color: #111827;
-  max-width: 250px;
+  max-width: 270px;
 }
 .cracha-texto-legal .alerta {
   color: var(--laranja);
   font-weight: 800;
 }
-@page { size: A4 landscape; margin: 10mm; }
+@page { size: A4 landscape; margin: 8mm; }
 @media print {
   body { background: #ffffff; }
-  .cracha-print-root { padding: 0; gap: 16px; }
+  .cracha-print-root { min-height: auto; padding: 0; gap: 16px; }
   .cracha-print-label { display: none; }
   .cracha-face { box-shadow: none; break-inside: avoid; }
 }
@@ -576,7 +604,7 @@ function VersoCracha({ valorQr }) {
 
                     <div className="cracha-qr-box">
                         <div className="cracha-qrcode">
-                            <QRCodeSVG value={valorQr || ""} size={200} level="H" includeMargin bgColor="#ffffff" fgColor="#000000" />
+                            <QRCodeSVG value={valorQr || ""} size={200} level="H" bgColor="#ffffff" fgColor="#000000" />
                         </div>
                     </div>
 
