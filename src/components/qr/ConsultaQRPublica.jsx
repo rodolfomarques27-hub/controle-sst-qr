@@ -22,42 +22,9 @@ import {
     formatarDataHora,
 } from "../../utils/sstUtils";
 
-function obterNomeTreinamentoOrdenacao(treinamento) {
-    const treinamentoInfo = obterTreinamento(treinamento?.treinamentoId);
-    return String(treinamento?.nomeTreinamento || treinamentoInfo?.nome || "");
-}
-
-function obterOrdemNumericaTreinamento(treinamento) {
-    const nome = obterNomeTreinamentoOrdenacao(treinamento);
-    const resultadoNr = nome.match(/\bNR\s*-?\s*(\d{1,2})(?:[.,](\d{1,2}))?/i);
-
-    if (!resultadoNr) {
-        return { grupo: 1, numero: 999, subnumero: 999, nome };
-    }
-
-    return {
-        grupo: 0,
-        numero: Number(resultadoNr[1] || 0),
-        subnumero: Number(resultadoNr[2] || 0),
-        nome,
-    };
-}
-
-function compararTreinamentosPorOrdemNumerica(a, b) {
-    const ordemA = obterOrdemNumericaTreinamento(a);
-    const ordemB = obterOrdemNumericaTreinamento(b);
-
-    if (ordemA.grupo !== ordemB.grupo) return ordemA.grupo - ordemB.grupo;
-    if (ordemA.numero !== ordemB.numero) return ordemA.numero - ordemB.numero;
-    if (ordemA.subnumero !== ordemB.subnumero) return ordemA.subnumero - ordemB.subnumero;
-
-    return ordemA.nome.localeCompare(ordemB.nome, "pt-BR", { numeric: true, sensitivity: "base" });
-}
-
 export function ConsultaQRPublica({ dados }) {
     const colaborador = dados?.colaborador || {};
     const treinamentos = dados?.treinamentos || [];
-    const treinamentosOrdenados = [...treinamentos].sort(compararTreinamentosPorOrdemNumerica);
     const geral = statusGeralConsultaPublica(colaborador, treinamentos);
     const tokenAuditoriaPublicaUrl = obterTokenAuditoriaPublicaUrl();
     const [tokenAuditoriaPublicaEfetivo, setTokenAuditoriaPublicaEfetivo] = useState(tokenAuditoriaPublicaUrl);
@@ -149,7 +116,7 @@ export function ConsultaQRPublica({ dados }) {
                             colaborador={colaborador}
                             colaboradorId={colaborador.id || colaborador.colaboradorId || colaborador.colaborador_id}
                             nome={colaborador.nome}
-                            className="h-28 w-28 rounded-3xl"
+                            className="h-28 w-28 rounded-full"
                             iconClassName="h-11 w-11"
                         />
 
@@ -208,7 +175,7 @@ export function ConsultaQRPublica({ dados }) {
                     )}
 
                     <div className="mt-6 grid gap-4 md:grid-cols-2">
-                        {treinamentosOrdenados.map((t) => {
+                        {treinamentos.map((t) => {
                             const semValidade = treinamentoSemValidade(t.treinamentoId);
                             const st = statusDocumento(t.vencimento, semValidade);
                             const dias = semValidade ? null : diasParaVencer(t.vencimento);

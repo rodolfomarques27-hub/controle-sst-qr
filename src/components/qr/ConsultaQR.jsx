@@ -9,38 +9,6 @@ import { classNames, diasParaVencer, formatDate, normalizarTextoBusca } from "..
 import { montarUrlConsultaQrColaboradorPublica } from "../../constants/auditoriaPublicaConstants";
 import { carregarTokenAuditoriaPublicaAtivoPadrao } from "../../services/auditoriaPublicaTokenService";
 
-function obterNomeTreinamentoOrdenacao(treinamento) {
-    const treinamentoInfo = obterTreinamento(treinamento?.treinamentoId);
-    return String(treinamento?.nomeTreinamento || treinamentoInfo?.nome || "");
-}
-
-function obterOrdemNumericaTreinamento(treinamento) {
-    const nome = obterNomeTreinamentoOrdenacao(treinamento);
-    const resultadoNr = nome.match(/\bNR\s*-?\s*(\d{1,2})(?:[.,](\d{1,2}))?/i);
-
-    if (!resultadoNr) {
-        return { grupo: 1, numero: 999, subnumero: 999, nome };
-    }
-
-    return {
-        grupo: 0,
-        numero: Number(resultadoNr[1] || 0),
-        subnumero: Number(resultadoNr[2] || 0),
-        nome,
-    };
-}
-
-function compararTreinamentosPorOrdemNumerica(a, b) {
-    const ordemA = obterOrdemNumericaTreinamento(a);
-    const ordemB = obterOrdemNumericaTreinamento(b);
-
-    if (ordemA.grupo !== ordemB.grupo) return ordemA.grupo - ordemB.grupo;
-    if (ordemA.numero !== ordemB.numero) return ordemA.numero - ordemB.numero;
-    if (ordemA.subnumero !== ordemB.subnumero) return ordemA.subnumero - ordemB.subnumero;
-
-    return ordemA.nome.localeCompare(ordemB.nome, "pt-BR", { numeric: true, sensitivity: "base" });
-}
-
 export function ConsultaQR({ colaborador, colaboradores = [], onSelecionarColaborador }) {
     const [busca, setBusca] = useState("");
     const [filtroEmpresaQR, setFiltroEmpresaQR] = useState("Todas");
@@ -134,7 +102,6 @@ export function ConsultaQR({ colaborador, colaboradores = [], onSelecionarColabo
 
     const geral = statusGeral(colaboradorAtual);
     const treinamentos = colaboradorAtual.treinamentos || [];
-    const treinamentosOrdenados = [...treinamentos].sort(compararTreinamentosPorOrdemNumerica);
     const urlConsultaColaborador = typeof window !== "undefined"
         ? montarUrlConsultaQrColaboradorPublica({
             tokenQrColaborador: colaboradorAtual.token,
@@ -161,7 +128,7 @@ export function ConsultaQR({ colaborador, colaboradores = [], onSelecionarColabo
             />
 
             <Card className="mb-5">
-                <div className="grid gap-3 xl:grid-cols-[1fr_280px] xl:items-start">
+                <div className="grid gap-3 xl:grid-cols-[1fr_280px] xl:items-end">
                     <div>
                         <label className="mb-1 block text-xs font-bold uppercase tracking-wide text-slate-500">
                             Pesquisar funcionário
@@ -201,7 +168,7 @@ export function ConsultaQR({ colaborador, colaboradores = [], onSelecionarColabo
                                             colaborador={item}
                                             colaboradorId={item.id}
                                             nome={item.nome}
-                                            className="h-9 w-9 rounded-xl"
+                                            className="h-9 w-9 rounded-full"
                                             iconClassName="h-4 w-4"
                                         />
                                         <div className="min-w-0">
@@ -248,7 +215,7 @@ export function ConsultaQR({ colaborador, colaboradores = [], onSelecionarColabo
                             colaborador={colaboradorAtual}
                             colaboradorId={colaboradorAtual.id}
                             nome={colaboradorAtual.nome}
-                            className="h-28 w-28 rounded-3xl lg:h-24 lg:w-24"
+                            className="h-28 w-28 rounded-full lg:h-24 lg:w-24"
                             iconClassName="h-10 w-10"
                         />
 
@@ -325,7 +292,7 @@ export function ConsultaQR({ colaborador, colaboradores = [], onSelecionarColabo
                     )}
 
                     <div className="mt-6 grid gap-4 md:grid-cols-2">
-                        {treinamentosOrdenados.map((t) => {
+                        {treinamentos.map((t) => {
                             const semValidade = treinamentoSemValidade(t.treinamentoId);
                             const st = statusDocumento(t.vencimento, semValidade);
                             const dias = semValidade ? null : diasParaVencer(t.vencimento);
