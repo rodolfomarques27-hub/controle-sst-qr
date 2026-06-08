@@ -207,31 +207,31 @@ export function ConsultaQR({ colaborador, colaboradores = [], onSelecionarColabo
                 </div>
             </Card>
 
-            <div className="consulta-qr-card mx-auto max-w-5xl rounded-[2rem] bg-slate-950 p-3 shadow-2xl">
-                <div className="rounded-[1.5rem] bg-white p-5 md:p-8">
-                    <div className="consulta-qr-perfil-grid grid gap-5 lg:grid-cols-[104px_1fr_178px] lg:items-start">
+            <div className="consulta-qr-card mx-auto w-full max-w-5xl rounded-[2rem] bg-slate-950 p-2 shadow-2xl sm:p-3">
+                <div className="rounded-[1.5rem] bg-white p-4 sm:p-5 md:p-8">
+                    <div className="consulta-qr-perfil-grid grid justify-items-center gap-5 text-center lg:grid-cols-[104px_1fr_178px] lg:items-start lg:justify-items-stretch lg:text-left">
                         <FotoColaborador
                             src={colaboradorAtual}
                             colaborador={colaboradorAtual}
                             colaboradorId={colaboradorAtual.id}
                             nome={colaboradorAtual.nome}
-                            className="h-24 w-24 rounded-3xl"
+                            className="h-28 w-28 rounded-3xl lg:h-24 lg:w-24"
                             iconClassName="h-10 w-10"
                         />
 
-                        <div className="consulta-qr-info min-w-0">
+                        <div className="consulta-qr-info w-full min-w-0">
                             <div className="mb-2 inline-flex items-center gap-2 rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-700">
                                 <ShieldCheck className="h-3.5 w-3.5" />
                                 Verificação SST
                             </div>
-                            <div className="flex flex-wrap items-center gap-2">
-                                <h2 className="break-words text-2xl font-bold leading-tight text-slate-950">{colaboradorAtual.nome}</h2>
-                                <span className={classNames("inline-flex items-center justify-center rounded-full px-3 py-1 text-xs font-black uppercase tracking-wide", geral.classe)}>
+                            <div className="flex flex-col items-center gap-2 sm:flex-row sm:flex-wrap sm:justify-center lg:justify-start">
+                                <h2 className="max-w-full break-words text-xl font-bold leading-tight text-slate-950 sm:text-2xl">{colaboradorAtual.nome}</h2>
+                                <span className={classNames("inline-flex max-w-full items-center justify-center rounded-full px-3 py-1 text-[11px] font-black uppercase tracking-wide sm:text-xs", geral.classe)}>
                                     Status SST: {geral.texto}
                                 </span>
                             </div>
-                            <p className="mt-2 text-sm font-semibold text-slate-500">{colaboradorAtual.funcao}</p>
-                            <p className="mt-1 text-sm text-slate-500">{colaboradorAtual.empresaExibicao || colaboradorAtual.empresa}</p>
+                            <p className="mt-3 text-sm font-semibold text-slate-500 sm:mt-2">{colaboradorAtual.funcao}</p>
+                            <p className="mt-1 break-words text-sm text-slate-500">{colaboradorAtual.empresaExibicao || colaboradorAtual.empresa}</p>
                             <p className="mt-1 text-sm font-semibold text-slate-500">
                                 Código: {colaboradorAtual.codigoFuncionario}
                             </p>
@@ -257,25 +257,25 @@ export function ConsultaQR({ colaborador, colaboradores = [], onSelecionarColabo
                             <button
                                 type="button"
                                 onClick={imprimirQrColaborador}
-                                className="mt-3 inline-flex items-center gap-2 rounded-2xl bg-white px-4 py-2 text-xs font-bold text-slate-700 ring-1 ring-slate-200 hover:bg-slate-50"
+                                className="mt-3 inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-white px-4 py-2 text-xs font-bold text-slate-700 ring-1 ring-slate-200 hover:bg-slate-50 sm:w-auto"
                             >
                                 <Download className="h-4 w-4" />
                                 Imprimir QR Code do funcionário
                             </button>
                         </div>
 
-                        <div className="consulta-qr-code-area flex justify-center lg:justify-end">
+                        <div className="consulta-qr-code-area mt-2 flex w-full justify-center lg:mt-0 lg:justify-end">
                             <QRCodeReal token={colaboradorAtual.token} />
                         </div>
                     </div>
 
-                    <div className="mt-5 rounded-3xl border border-slate-200 p-5">
-                        <div className="flex flex-col justify-between gap-3 md:flex-row md:items-center">
+                    <div className="mt-5 rounded-3xl border border-slate-200 p-4 sm:p-5">
+                        <div className="flex flex-col justify-between gap-3 text-center md:flex-row md:items-center md:text-left">
                             <div>
                                 <p className="text-sm font-medium text-slate-500">Status geral do colaborador</p>
                                 <h3 className="mt-1 text-base font-bold leading-relaxed text-slate-950">{geral.detalhe}</h3>
                             </div>
-                            <span className={classNames("inline-flex items-center justify-center rounded-2xl px-5 py-3 text-base font-bold", geral.classe)}>
+                            <span className={classNames("inline-flex w-full items-center justify-center rounded-2xl px-5 py-3 text-base font-bold md:w-auto", geral.classe)}>
                                 {geral.texto}
                             </span>
                         </div>
@@ -310,15 +310,15 @@ export function ConsultaQR({ colaborador, colaboradores = [], onSelecionarColabo
 
                             return (
                                 <div key={`${t.id || t.treinamentoId}-${t.vencimento}`} className="rounded-3xl border border-slate-200 p-4">
-                                    <div className="mb-4 flex items-start justify-between gap-3">
+                                    <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                                         <div>
-                                            <h4 className="font-bold text-slate-950">{treinamentoInfo.nome}</h4>
+                                            <h4 className="font-bold leading-snug text-slate-950">{treinamentoInfo.nome}</h4>
                                             <p className="mt-1 text-sm text-slate-500">{treinamentoInfo.categoria}</p>
                                         </div>
                                         <StatusPill status={st} small />
                                     </div>
 
-                                    <div className="grid grid-cols-2 gap-3 text-sm">
+                                    <div className="grid grid-cols-1 gap-3 text-sm sm:grid-cols-2">
                                         <div className="rounded-2xl bg-slate-50 p-3">
                                             <p className="text-xs text-slate-400">Realizado</p>
                                             <p className="font-semibold text-slate-700">{formatDate(t.realizado)}</p>

@@ -102,9 +102,9 @@ export function ConsultaQRPublica({ dados }) {
         : null;
 
     return (
-        <div className="consulta-qr-publica-page min-h-screen bg-slate-100 p-4 text-slate-900">
-            <div className="consulta-qr-publica-card mx-auto max-w-5xl rounded-[2rem] bg-slate-950 p-3 shadow-2xl">
-                <div className="rounded-[1.5rem] bg-white p-5 md:p-8">
+        <div className="consulta-qr-publica-page min-h-screen bg-slate-100 px-3 py-4 text-slate-900 sm:p-4">
+            <div className="consulta-qr-publica-card mx-auto w-full max-w-5xl rounded-[2rem] bg-slate-950 p-2 shadow-2xl sm:p-3">
+                <div className="rounded-[1.5rem] bg-white p-4 sm:p-5 md:p-8">
                     <div className="consulta-qr-publica-perfil flex flex-col items-center text-center">
                         <div className="mb-3 inline-flex items-center gap-2 rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-700">
                             <ShieldCheck className="h-3.5 w-3.5" />
@@ -120,21 +120,21 @@ export function ConsultaQRPublica({ dados }) {
                             iconClassName="h-11 w-11"
                         />
 
-                        <h2 className="mt-4 break-words text-2xl font-bold leading-tight text-slate-950">{colaborador.nome}</h2>
+                        <h2 className="mt-4 max-w-full break-words text-xl font-bold leading-tight text-slate-950 sm:text-2xl">{colaborador.nome}</h2>
                         <p className="mt-2 text-sm font-semibold text-slate-500">{colaborador.funcao}</p>
-                        <p className="mt-1 text-sm text-slate-500">{colaborador.empresa}</p>
+                        <p className="mt-1 break-words text-sm text-slate-500">{colaborador.empresa}</p>
                         <p className="mt-1 text-sm font-semibold text-slate-500">
                             Código: {colaborador.codigoFuncionario}
                         </p>
                         <div className="mt-3">
-                            <span className={classNames("inline-flex items-center justify-center rounded-full px-3 py-1 text-xs font-black uppercase tracking-wide", geral.classe)}>
+                            <span className={classNames("inline-flex max-w-full items-center justify-center rounded-full px-3 py-1 text-[11px] font-black uppercase tracking-wide sm:text-xs", geral.classe)}>
                                 Status SST: {geral.texto}
                             </span>
                         </div>
                     </div>
 
                     <div className="mt-5">
-                        <div className="w-full rounded-2xl bg-slate-950 px-5 py-4 text-center shadow-sm">
+                        <div className="w-full rounded-2xl bg-slate-950 px-4 py-4 text-center shadow-sm sm:px-5">
                             <p className="text-xs font-bold uppercase tracking-wide text-slate-300">Status geral do colaborador</p>
                             <p className="mt-1 text-base font-bold text-white">{geral.texto}</p>
                         </div>
@@ -192,15 +192,15 @@ export function ConsultaQRPublica({ dados }) {
 
                             return (
                                 <div key={`${t.id || t.treinamentoId}-${t.vencimento}`} className="rounded-3xl border border-slate-200 p-4">
-                                    <div className="mb-4 flex items-start justify-between gap-3">
+                                    <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                                         <div>
-                                            <h4 className="font-bold text-slate-950">{t.nomeTreinamento || obterTreinamento(t.treinamentoId).nome}</h4>
+                                            <h4 className="font-bold leading-snug text-slate-950">{t.nomeTreinamento || obterTreinamento(t.treinamentoId).nome}</h4>
                                             <p className="mt-1 text-sm text-slate-500">{obterTreinamento(t.treinamentoId).categoria}</p>
                                         </div>
                                         <StatusPill status={st} small />
                                     </div>
 
-                                    <div className="grid grid-cols-2 gap-3 text-sm">
+                                    <div className="grid grid-cols-1 gap-3 text-sm sm:grid-cols-2">
                                         <div className="rounded-2xl bg-slate-50 p-3">
                                             <p className="text-xs text-slate-400">Realizado</p>
                                             <p className="font-semibold text-slate-700">{formatDate(t.realizado)}</p>
@@ -235,7 +235,7 @@ export function ConsultaQRPublica({ dados }) {
                     </div>
 
 
-                    <div className="mt-6 rounded-3xl bg-slate-50 p-4 text-justify text-sm leading-relaxed text-slate-600">
+                    <div className="mt-6 rounded-3xl bg-slate-50 p-4 text-left text-sm leading-relaxed text-slate-600 sm:text-justify">
                         Consulta pública limitada. Dados sensíveis como CPF, endereço, ASO detalhado e documentos médicos não são exibidos. A tela mantém a Auditoria de Campo e a listagem pública de treinamentos/certificados do colaborador.
                     </div>
                 </div>
