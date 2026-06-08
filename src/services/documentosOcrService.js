@@ -1324,7 +1324,7 @@ function calcularAssinaturaVisualFaixa(canvas, faixa = {}) {
     }
 }
 
-function detectarLinhasHorizontaisTabelaPresenca(canvas) {
+function detectarLinhasHorizontaisTabelaPresenca(canvas, opcoes = {}) {
     if (!canvas || typeof canvas.getContext !== "function") return [];
 
     const contexto = canvas.getContext("2d", { willReadFrequently: true });
@@ -1334,8 +1334,12 @@ function detectarLinhasHorizontaisTabelaPresenca(canvas) {
     const altura = canvas.height || 1;
     const xInicio = Math.floor(largura * 0.06);
     const xFim = Math.floor(largura * 0.94);
-    const yInicio = Math.floor(altura * 0.52);
-    const yFim = Math.floor(altura * 0.98);
+    const yInicioNormalizado = Number.isFinite(Number(opcoes?.yInicio)) ? Number(opcoes.yInicio) : 0.52;
+    const yFimNormalizado = Number.isFinite(Number(opcoes?.yFim)) ? Number(opcoes.yFim) : 0.98;
+    const yInicioSeguro = Math.max(0.05, Math.min(0.9, yInicioNormalizado));
+    const yFimSeguro = Math.max(yInicioSeguro + 0.05, Math.min(0.99, yFimNormalizado));
+    const yInicio = Math.floor(altura * yInicioSeguro);
+    const yFim = Math.floor(altura * yFimSeguro);
     const larguraRegiao = Math.max(1, xFim - xInicio);
     const alturaRegiao = Math.max(1, yFim - yInicio);
     const candidatos = [];
@@ -1405,17 +1409,20 @@ function detectarLinhasHorizontaisTabelaPresenca(canvas) {
     }, []);
 }
 
-function detectarAssinaturasTabelaPresenca(canvas) {
-    const linhas = detectarLinhasHorizontaisTabelaPresenca(canvas);
+function detectarAssinaturasTabelaPresenca(canvas, opcoes = {}) {
+    const linhas = detectarLinhasHorizontaisTabelaPresenca(canvas, opcoes);
     const altura = canvas?.height || 1;
 
     if (!linhas.length || linhas.length < 4) return [];
 
     // Em listas padrão, a primeira faixa é o cabeçalho da tabela e as seguintes são linhas numeradas.
     const resultados = [];
-    const maxLinhas = Math.min(20, linhas.length - 1);
+    const maxLinhas = Math.min(Number(opcoes?.maxLinhas || 20), linhas.length - 1);
+    const indiceInicial = Number.isInteger(Number(opcoes?.indiceInicial)) ? Number(opcoes.indiceInicial) : 1;
+    const x0Assinatura = Number.isFinite(Number(opcoes?.x0)) ? Number(opcoes.x0) : 0.64;
+    const x1Assinatura = Number.isFinite(Number(opcoes?.x1)) ? Number(opcoes.x1) : 0.925;
 
-    for (let indice = 1; indice < maxLinhas; indice += 1) {
+    for (let indice = indiceInicial; indice < maxLinhas; indice += 1) {
         const superior = linhas[indice];
         const inferior = linhas[indice + 1];
         if (!superior || !inferior) continue;
@@ -1426,8 +1433,8 @@ function detectarAssinaturasTabelaPresenca(canvas) {
         const y0 = (superior.y + Math.max(3, alturaLinhaPx * 0.14)) / altura;
         const y1 = (inferior.y - Math.max(3, alturaLinhaPx * 0.12)) / altura;
         const assinatura = calcularAssinaturaVisualFaixa(canvas, {
-            x0: 0.64,
-            x1: 0.925,
+            x0: x0Assinatura,
+            x1: x1Assinatura,
             y0,
             y1,
             origem: "analise_visual_linha_tabela_presenca",
@@ -1740,9 +1747,17 @@ async function extrairTextoPrimeiraPaginaPdfComOcr(buffer) {
             await new Promise((resolve) => setTimeout(resolve, 0));
 
             const textoNormalizadoOcr = normalizarTextoVerificacao(textoOcr);
-            const pareceListaComAssinatura = /nome do colaborador|nome\s+cargo\s+assinatura|assinatura|declaro ter participado|lista de presenca|lista de presença|integra[cç][aã]o|nr\s*[-º]?\s*(?:11|12|17|18|21|25|26)|manuseio de materiais|movimentacao|movimentação/.test(textoNormalizadoOcr);
+            const pareceListaComAssinatura = /nome do colaborador|nome\s+cargo\s+assinatura|nome\s+assinatura|assinatura|declaro ter participado|lista de presenca|lista de presença|dialogo de seguranca|diálogo de segurança|integra[cç][aã]o|nr\s*[-º]?\s*(?:11|12|17|18|21|25|26)|manuseio de materiais|movimentacao|movimentação/.test(textoNormalizadoOcr);
+            const pareceListaSimplesSuperior = Boolean(
+                /lista de presenca|lista de presença|dialogo de seguranca|diálogo de segurança/.test(textoNormalizadoOcr) &&
+                /nome\s+assinatura|nome[\s\S]{0,80}assinatura/.test(textoNormalizadoOcr) &&
+                !/conteudo programatico|conteúdo programático|declaro ter participado|nr\s*[-º]?\s*(?:11|12|17|18|21|25|26)/.test(textoNormalizadoOcr)
+            );
+            const opcoesAssinaturaTabela = pareceListaSimplesSuperior
+                ? { yInicio: 0.22, x0: 0.42, x1: 0.94, maxLinhas: 45 }
+                : {};
             const assinaturasTabela = pareceListaComAssinatura
-                ? detectarAssinaturasTabelaPresenca(canvasAnalise).map((assinatura) => ({ ...assinatura, pagina: numeroPagina, rotacao: resultadoOcr?.rotacao || 0 }))
+                ? detectarAssinaturasTabelaPresenca(canvasAnalise, opcoesAssinaturaTabela).map((assinatura) => ({ ...assinatura, pagina: numeroPagina, rotacao: resultadoOcr?.rotacao || 0 }))
                 : [];
             const assinaturasDocumento = detectarAssinaturasDocumento(canvasAnalise, numeroPagina, textoNormalizadoOcr)
                 .map((assinatura) => ({ ...assinatura, rotacao: resultadoOcr?.rotacao || 0 }));

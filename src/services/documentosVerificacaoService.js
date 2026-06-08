@@ -504,6 +504,37 @@ function empresaRibeiroAquinoConfirmadaPorModeloCertificado({
     return true;
 }
 
+function textoIndicaListaPresencaRibeiroAquino(texto = "") {
+    const base = normalizarTextoConferencia(texto);
+
+    return Boolean(
+        /lista de presenca|lista de presença|dialogo de seguranca|diálogo de segurança|tema\s+integracao|tema\s+integração|instrutor|carga horaria|carga horária|obra|cidade/.test(base)
+    );
+}
+
+function empresaRibeiroAquinoConfirmadaPorModeloLista({
+    nomeEmpresaNormalizado = "",
+    perfilDocumental = "",
+    listaPresenca = false,
+    nomeEncontrado = null,
+    treinamentoEncontrado = null,
+    textoDocumento = "",
+    cnpjEmpresa = "",
+    cnpjDocumentoEncontrado = false,
+    cnpjEncontrado = null,
+} = {}) {
+    if (!nomeEmpresaNormalizado.includes("ribeiro")) return false;
+    if (!(listaPresenca || perfilDocumental === "lista_presenca")) return false;
+    if (nomeEncontrado !== true) return false;
+    if (treinamentoEncontrado === false) return false;
+    if (!textoIndicaListaPresencaRibeiroAquino(textoDocumento)) return false;
+
+    const cnpjDivergenteConfirmado = Boolean(cnpjEmpresa && cnpjDocumentoEncontrado && cnpjEncontrado === false);
+    if (cnpjDivergenteConfirmado) return false;
+
+    return true;
+}
+
 function assinaturaCertificadoEscaneadoProvavel({
     perfilDocumental = "",
     nomeEncontrado = null,
@@ -1062,7 +1093,18 @@ function montarConferenciaDocumentalCertificado({ leitura = {}, certificado = {}
         cnpjDocumentoEncontrado,
         cnpjEncontrado,
     });
-    const empresaEncontrada = empresaEncontradaNoTexto === true || empresaEncontradaPorVinculo || empresaEncontradaPorLogoRibeiro ? true : empresaEncontradaNoTexto;
+    const empresaEncontradaPorListaRibeiro = empresaRibeiroAquinoConfirmadaPorModeloLista({
+        nomeEmpresaNormalizado,
+        perfilDocumental,
+        listaPresenca,
+        nomeEncontrado,
+        treinamentoEncontrado,
+        textoDocumento,
+        cnpjEmpresa,
+        cnpjDocumentoEncontrado,
+        cnpjEncontrado,
+    });
+    const empresaEncontrada = empresaEncontradaNoTexto === true || empresaEncontradaPorVinculo || empresaEncontradaPorLogoRibeiro || empresaEncontradaPorListaRibeiro ? true : empresaEncontradaNoTexto;
     const linhaAssinaturaBase = linhaColaborador || assinaturaDocumentoIndividual;
     const assinaturaDensidade = linhaAssinaturaBase?.assinatura_densidade ?? null;
     const assinaturaDensidadeAzul = linhaAssinaturaBase?.assinatura_densidade_azul ?? null;
@@ -1126,7 +1168,9 @@ function montarConferenciaDocumentalCertificado({ leitura = {}, certificado = {}
                 ? "ocr_texto_logo_ou_nome"
                 : (empresaEncontradaPorVinculo
                     ? "vinculo_colaborador_cpf_documento"
-                    : (empresaEncontradaPorLogoRibeiro ? "logo_ribeiro_aquino_modelo_certificado" : "")),
+                    : (empresaEncontradaPorLogoRibeiro
+                        ? "logo_ribeiro_aquino_modelo_certificado"
+                        : (empresaEncontradaPorListaRibeiro ? "logo_ribeiro_aquino_lista_presenca" : ""))),
         },
         cnpj: {
             informadoCadastro: Boolean(cnpjEmpresa || cnpjDocumentoEncontrado),
