@@ -226,9 +226,9 @@ function montarMensagemBloqueioAntesSalvar({ indicios = [] } = {}) {
     const detalhe = principal.detalhe || principal.titulo || "A verificação documental encontrou divergência bloqueante.";
 
     return [
-        "Documento bloqueado pela verificação documental antes de salvar.",
-        detalhe,
-        "O arquivo não foi salvo. Selecione o colaborador correto ou substitua o documento.",
+        "Não foi possível salvar este documento.",
+        `Motivo: ${detalhe}`,
+        "Corrija a informação indicada acima ou substitua o arquivo antes de tentar salvar novamente.",
     ].join("\n");
 }
 
