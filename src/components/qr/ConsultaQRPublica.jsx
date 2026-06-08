@@ -224,8 +224,8 @@ export function ConsultaQRPublica({ dados }) {
                             const alerta30Dias = dias !== null && dias >= 0 && dias <= 30;
 
                             return (
-                                <div key={`${t.id || t.treinamentoId}-${t.vencimento}`} className="rounded-3xl border border-slate-200 p-4">
-                                    <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                                <div key={`${t.id || t.treinamentoId}-${t.vencimento}`} className="rounded-3xl border border-slate-200 p-3 sm:p-4">
+                                    <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
                                         <div>
                                             <h4 className="font-bold leading-snug text-slate-950">{t.nomeTreinamento || obterTreinamento(t.treinamentoId).nome}</h4>
                                             <p className="mt-1 text-sm text-slate-500">{obterTreinamento(t.treinamentoId).categoria}</p>
@@ -233,12 +233,12 @@ export function ConsultaQRPublica({ dados }) {
                                         <StatusPill status={st} small />
                                     </div>
 
-                                    <div className="grid grid-cols-2 gap-2 text-sm">
-                                        <div className="rounded-2xl bg-slate-50 p-3">
+                                    <div className="flex gap-2 text-sm">
+                                        <div className="min-w-0 flex-1 rounded-2xl bg-slate-50 px-2 py-3 text-center">
                                             <p className="text-xs text-slate-400">Realizado</p>
                                             <p className="font-semibold text-slate-700">{formatDate(t.realizado)}</p>
                                         </div>
-                                        <div className="rounded-2xl bg-slate-50 p-3">
+                                        <div className="min-w-0 flex-1 rounded-2xl bg-slate-50 px-2 py-3 text-center">
                                             <p className="text-xs text-slate-400">Vencimento</p>
                                             <p className="font-semibold text-slate-700">{semValidade ? "Sem validade" : formatDate(t.vencimento)}</p>
                                         </div>
