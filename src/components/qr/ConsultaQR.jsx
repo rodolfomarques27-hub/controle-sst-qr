@@ -3,7 +3,6 @@ import React, { useEffect, useMemo, useState } from "react";
 import { QRCodeSVG } from "qrcode.react";
 import { ClipboardCheck, Download, QrCode, Search, ShieldCheck } from "lucide-react";
 import { Card, FotoColaborador, Header, QRCodeReal, StatusPill, obterFotoColaboradorSrc } from "../commonComponents";
-import { MobilizacaoBadge } from "../MobilizacaoBadge";
 import { DAY } from "../../constants/sstConstants";
 import { obterTreinamento, statusDocumento, statusGeral, treinamentoSemValidade } from "../../services/colaboradorDocumentosService";
 import { classNames, diasParaVencer, formatDate, normalizarTextoBusca } from "../../utils/sstUtils";
@@ -227,7 +226,9 @@ export function ConsultaQR({ colaborador, colaboradores = [], onSelecionarColabo
                             </div>
                             <div className="flex flex-wrap items-center gap-2">
                                 <h2 className="break-words text-2xl font-bold leading-tight text-slate-950">{colaboradorAtual.nome}</h2>
-                                <MobilizacaoBadge status={colaboradorAtual.statusMobilizacao} />
+                                <span className={classNames("inline-flex items-center justify-center rounded-full px-3 py-1 text-xs font-black uppercase tracking-wide", geral.classe)}>
+                                    Status SST: {geral.texto}
+                                </span>
                             </div>
                             <p className="mt-2 text-sm font-semibold text-slate-500">{colaboradorAtual.funcao}</p>
                             <p className="mt-1 text-sm text-slate-500">{colaboradorAtual.empresaExibicao || colaboradorAtual.empresa}</p>

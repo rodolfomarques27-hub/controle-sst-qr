@@ -2,7 +2,6 @@ import React, { useCallback, useEffect, useState } from "react";
 import { ClipboardCheck, ShieldCheck } from "lucide-react";
 import { supabase } from "../../lib/supabaseClient";
 import { FotoColaborador, StatusPill, obterFotoColaboradorSrc } from "../commonComponents";
-import { MobilizacaoBadge } from "../MobilizacaoBadge";
 import { AuditoriaCampoQRCode, statusGeralConsultaPublica } from "./AuditoriaCampoQRCode";
 import {
     classeClassificacaoAuditoriaCampo,
@@ -128,7 +127,9 @@ export function ConsultaQRPublica({ dados }) {
                             Código: {colaborador.codigoFuncionario}
                         </p>
                         <div className="mt-3">
-                            <MobilizacaoBadge status={colaborador.statusMobilizacao} />
+                            <span className={classNames("inline-flex items-center justify-center rounded-full px-3 py-1 text-xs font-black uppercase tracking-wide", geral.classe)}>
+                                Status SST: {geral.texto}
+                            </span>
                         </div>
                     </div>
 
