@@ -161,6 +161,7 @@ export function Treinamentos({
     const [sugestaoDataArquivo, setSugestaoDataArquivo] = useState(null);
     const [observacao, setObservacao] = useState("");
     const [salvandoCertificado, setSalvandoCertificado] = useState(false);
+    const [analisandoArquivoCertificado, setAnalisandoArquivoCertificado] = useState(false);
     const [arquivosLote, setArquivosLote] = useState([]);
     const [salvandoLote, setSalvandoLote] = useState(false);
     const [sincronizandoStorage, setSincronizandoStorage] = useState(false);
@@ -386,6 +387,7 @@ export function Treinamentos({
     const selecionarArquivoCertificado = async (arquivo) => {
         setArquivoSelecionado(null);
         setSugestaoDataArquivo(null);
+        setAnalisandoArquivoCertificado(false);
 
         if (!arquivo) return;
 
@@ -403,24 +405,38 @@ export function Treinamentos({
             setTreinamentoId(Number(treinamentoDetectado.id));
         }
 
-        const sugestao = await detectarDataEmissaoArquivo(arquivo);
-        const dataDetectada = normalizarDataLancamentoCertificado(sugestao?.data);
-        const sugestaoNormalizada = sugestao?.data && !dataDetectada
-            ? {
-                ...sugestao,
-                data: "",
-                mensagem: "Data detectada ignorada por estar fora do intervalo esperado. Confira manualmente.",
+        setAnalisandoArquivoCertificado(true);
+
+        try {
+            const sugestao = await detectarDataEmissaoArquivo(arquivo);
+            const dataDetectada = normalizarDataLancamentoCertificado(sugestao?.data);
+            const sugestaoNormalizada = sugestao?.data && !dataDetectada
+                ? {
+                    ...sugestao,
+                    data: "",
+                    mensagem: "Data detectada ignorada por estar fora do intervalo esperado. Confira manualmente.",
+                }
+                : sugestao;
+            const mensagemData = sugestaoNormalizada?.mensagem || "Não foi possível identificar a data no arquivo. Informe manualmente antes de salvar.";
+
+            setSugestaoDataArquivo({
+                ...(sugestaoNormalizada || {}),
+                mensagem: [mensagemTipoDetectado, mensagemData].filter(Boolean).join(" "),
+            });
+
+            if (dataDetectada) {
+                setDataRealizacao(dataDetectada);
             }
-            : sugestao;
-        const mensagemData = sugestaoNormalizada?.mensagem || "Não foi possível identificar a data no arquivo. Informe manualmente antes de salvar.";
-
-        setSugestaoDataArquivo({
-            ...(sugestaoNormalizada || {}),
-            mensagem: [mensagemTipoDetectado, mensagemData].filter(Boolean).join(" "),
-        });
-
-        if (dataDetectada) {
-            setDataRealizacao(dataDetectada);
+        } catch (erro) {
+            console.error("Erro ao analisar documento de treinamento:", erro);
+            setSugestaoDataArquivo({
+                mensagem: [
+                    mensagemTipoDetectado,
+                    "Não foi possível analisar o documento automaticamente. Confira tipo e data manualmente antes de salvar.",
+                ].filter(Boolean).join(" "),
+            });
+        } finally {
+            setAnalisandoArquivoCertificado(false);
         }
     };
 
@@ -1092,6 +1108,7 @@ export function Treinamentos({
                                     selecionarArquivoCertificado={selecionarArquivoCertificado}
                                     sugestaoDataArquivo={sugestaoDataArquivo}
                                     salvandoCertificado={salvandoCertificado}
+                                    analisandoArquivoCertificado={analisandoArquivoCertificado}
                                     adicionarTreinamento={adicionarTreinamento}
                                     arquivosLote={arquivosLote}
                                     prepararArquivosLote={prepararArquivosLote}
