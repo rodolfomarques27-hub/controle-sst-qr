@@ -8,6 +8,7 @@ import { obterTreinamento, statusDocumento, statusGeral, treinamentoSemValidade 
 import { classNames, diasParaVencer, formatDate, normalizarTextoBusca } from "../../utils/sstUtils";
 import { montarUrlConsultaQrColaboradorPublica } from "../../constants/auditoriaPublicaConstants";
 import { carregarTokenAuditoriaPublicaAtivoPadrao } from "../../services/auditoriaPublicaTokenService";
+import { CrachaColaboradorPrint, CRACHA_COLABORADOR_PRINT_STYLES } from "./CrachaColaboradorPrint";
 
 function obterNomeTreinamentoOrdenacao(treinamento) {
     const treinamentoInfo = obterTreinamento(treinamento?.treinamentoId);
@@ -142,6 +143,7 @@ export function ConsultaQR({ colaborador, colaboradores = [], onSelecionarColabo
         })
         : "";
     const idImpressaoQrColaborador = `qr-colaborador-impressao-${colaboradorAtual.id || colaboradorAtual.token}`;
+    const idImpressaoCrachaColaborador = `cracha-colaborador-impressao-${colaboradorAtual.id || colaboradorAtual.token}`;
     const imprimirQrColaborador = () => {
         const elemento = document.getElementById(idImpressaoQrColaborador);
         if (!elemento) return;
@@ -151,6 +153,19 @@ export function ConsultaQR({ colaborador, colaboradores = [], onSelecionarColabo
         janela.document.close();
         janela.focus();
         janela.print();
+    };
+
+    const imprimirCrachaColaborador = () => {
+        const elemento = document.getElementById(idImpressaoCrachaColaborador);
+        if (!elemento) return;
+
+        const janela = window.open("", "_blank", "width=980,height=720");
+        if (!janela) return;
+
+        janela.document.write(`<!doctype html><html><head><title>Crachá ${colaboradorAtual.nome || "Colaborador"}</title><style>${CRACHA_COLABORADOR_PRINT_STYLES}</style></head><body>${elemento.innerHTML}</body></html>`);
+        janela.document.close();
+        janela.focus();
+        setTimeout(() => janela.print(), 250);
     };
 
     return (
@@ -287,14 +302,30 @@ export function ConsultaQR({ colaborador, colaboradores = [], onSelecionarColabo
                                     <h1>{colaboradorAtual.nome}</h1>
                                 </div>
                             </div>
-                            <button
-                                type="button"
-                                onClick={imprimirQrColaborador}
-                                className="mt-3 inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-white px-4 py-2 text-xs font-bold text-slate-700 ring-1 ring-slate-200 hover:bg-slate-50 sm:w-auto"
-                            >
-                                <Download className="h-4 w-4" />
-                                Imprimir QR Code do funcionário
-                            </button>
+                            <div id={idImpressaoCrachaColaborador} className="pointer-events-none fixed -left-[9999px] top-0 opacity-0">
+                                <CrachaColaboradorPrint
+                                    colaborador={colaboradorAtual}
+                                    urlConsultaColaborador={urlConsultaColaborador}
+                                />
+                            </div>
+                            <div className="mt-3 flex flex-col gap-2 sm:flex-row sm:flex-wrap">
+                                <button
+                                    type="button"
+                                    onClick={imprimirQrColaborador}
+                                    className="inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-white px-4 py-2 text-xs font-bold text-slate-700 ring-1 ring-slate-200 hover:bg-slate-50 sm:w-auto"
+                                >
+                                    <Download className="h-4 w-4" />
+                                    Imprimir QR Code do funcionário
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={imprimirCrachaColaborador}
+                                    className="inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-slate-950 px-4 py-2 text-xs font-bold text-white ring-1 ring-slate-950 hover:bg-slate-800 sm:w-auto"
+                                >
+                                    <Download className="h-4 w-4" />
+                                    Imprimir crachá
+                                </button>
+                            </div>
                         </div>
 
                         <div className="consulta-qr-code-area mt-2 flex w-full justify-center lg:mt-0 lg:justify-end">
