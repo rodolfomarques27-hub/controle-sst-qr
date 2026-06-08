@@ -14,6 +14,7 @@ import {
 } from "../../services/colaboradorDocumentosService";
 import { formatDate, classNames } from "../../utils/sstUtils";
 import { VerificacaoCertificadoTreinamento } from "./VerificacaoCertificadoTreinamento";
+import { supabase } from "../../lib/supabaseClient";
 
 function obterFotoColaboradorBase(colaborador = {}) {
     return String(
@@ -23,9 +24,68 @@ function obterFotoColaboradorBase(colaborador = {}) {
         colaborador?.foto_perfil_url ||
         colaborador?.avatarUrl ||
         colaborador?.avatar_url ||
+        colaborador?.fotoPublicaUrl ||
+        colaborador?.foto_publica_url ||
+        colaborador?.fotoAssinadaUrl ||
+        colaborador?.foto_assinada_url ||
+        colaborador?.fotoPath ||
+        colaborador?.foto_path ||
+        colaborador?.fotoCaminho ||
+        colaborador?.foto_caminho ||
+        colaborador?.fotoNome ||
+        colaborador?.foto_nome ||
         colaborador?.foto ||
         ""
     ).trim();
+}
+
+function fotoColaboradorEhUrlDireta(valor = "") {
+    return /^(https?:|data:|blob:)/i.test(String(valor || "").trim());
+}
+
+function normalizarCaminhoFotoColaboradorBase(valor = "") {
+    const texto = String(valor || "").trim();
+
+    if (!texto || fotoColaboradorEhUrlDireta(texto)) return "";
+
+    try {
+        const semQuery = texto.split("?")[0];
+        const partesBucket = [
+            "/storage/v1/object/public/fotos-colaboradores/",
+            "/storage/v1/object/sign/fotos-colaboradores/",
+            "fotos-colaboradores/",
+        ];
+
+        const encontrado = partesBucket.find((parte) => semQuery.includes(parte));
+        const caminho = encontrado ? semQuery.slice(semQuery.indexOf(encontrado) + encontrado.length) : semQuery;
+
+        return decodeURIComponent(caminho).replace(/^\/+/, "");
+    } catch {
+        return texto.replace(/^\/+/, "");
+    }
+}
+
+async function gerarUrlFotoColaboradorBase(valor = "") {
+    const foto = String(valor || "").trim();
+
+    if (!foto) return "";
+    if (fotoColaboradorEhUrlDireta(foto)) return foto;
+
+    const caminhoStorage = normalizarCaminhoFotoColaboradorBase(foto);
+
+    if (!caminhoStorage) return "";
+
+    try {
+        const { data, error } = await supabase.storage
+            .from("fotos-colaboradores")
+            .createSignedUrl(caminhoStorage, 60 * 60);
+
+        if (error) return "";
+
+        return data?.signedUrl || "";
+    } catch {
+        return "";
+    }
 }
 
 function obterIniciaisColaboradorBase(nome = "") {
@@ -44,17 +104,33 @@ function obterIniciaisColaboradorBase(nome = "") {
 
 function FotoColaboradorBase({ colaborador = {} }) {
     const [fotoComErro, setFotoComErro] = React.useState(false);
-    const fotoUrl = obterFotoColaboradorBase(colaborador);
+    const [fotoUrlResolvida, setFotoUrlResolvida] = React.useState("");
+    const fotoOrigem = obterFotoColaboradorBase(colaborador);
     const nome = colaborador?.nome || "Colaborador";
     const iniciais = obterIniciaisColaboradorBase(nome);
 
+    React.useEffect(() => {
+        let ativo = true;
+
+        setFotoComErro(false);
+        setFotoUrlResolvida("");
+
+        gerarUrlFotoColaboradorBase(fotoOrigem).then((url) => {
+            if (ativo) setFotoUrlResolvida(url || "");
+        });
+
+        return () => {
+            ativo = false;
+        };
+    }, [fotoOrigem]);
+
     return (
-        <div className="flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-slate-100 text-sm font-black uppercase text-slate-500 ring-1 ring-slate-200 sm:h-16 sm:w-16">
-            {fotoUrl && !fotoComErro ? (
+        <div className="flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-full bg-slate-100 text-sm font-black uppercase text-slate-500 ring-1 ring-slate-200 sm:h-16 sm:w-16">
+            {fotoUrlResolvida && !fotoComErro ? (
                 <img
-                    src={fotoUrl}
+                    src={fotoUrlResolvida}
                     alt={`Foto de ${nome}`}
-                    className="h-full w-full object-cover"
+                    className="h-full w-full rounded-full object-cover"
                     loading="lazy"
                     onError={() => setFotoComErro(true)}
                 />
