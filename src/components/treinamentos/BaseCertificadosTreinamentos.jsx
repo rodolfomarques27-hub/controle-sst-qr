@@ -15,6 +15,56 @@ import {
 import { formatDate, classNames } from "../../utils/sstUtils";
 import { VerificacaoCertificadoTreinamento } from "./VerificacaoCertificadoTreinamento";
 
+function obterFotoColaboradorBase(colaborador = {}) {
+    return String(
+        colaborador?.fotoUrl ||
+        colaborador?.foto_url ||
+        colaborador?.fotoPerfilUrl ||
+        colaborador?.foto_perfil_url ||
+        colaborador?.avatarUrl ||
+        colaborador?.avatar_url ||
+        colaborador?.foto ||
+        ""
+    ).trim();
+}
+
+function obterIniciaisColaboradorBase(nome = "") {
+    const partes = String(nome || "")
+        .trim()
+        .split(/\s+/)
+        .filter((parte) => parte.length > 0);
+
+    if (!partes.length) return "ST";
+
+    const primeira = partes[0]?.[0] || "";
+    const ultima = partes.length > 1 ? partes[partes.length - 1]?.[0] || "" : "";
+
+    return `${primeira}${ultima || ""}`.toUpperCase() || "ST";
+}
+
+function FotoColaboradorBase({ colaborador = {} }) {
+    const [fotoComErro, setFotoComErro] = React.useState(false);
+    const fotoUrl = obterFotoColaboradorBase(colaborador);
+    const nome = colaborador?.nome || "Colaborador";
+    const iniciais = obterIniciaisColaboradorBase(nome);
+
+    return (
+        <div className="flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-slate-100 text-sm font-black uppercase text-slate-500 ring-1 ring-slate-200 sm:h-16 sm:w-16">
+            {fotoUrl && !fotoComErro ? (
+                <img
+                    src={fotoUrl}
+                    alt={`Foto de ${nome}`}
+                    className="h-full w-full object-cover"
+                    loading="lazy"
+                    onError={() => setFotoComErro(true)}
+                />
+            ) : (
+                <span>{iniciais}</span>
+            )}
+        </div>
+    );
+}
+
 export function BaseCertificadosTreinamentos({
     documentos = [],
     documentosFiltrados = [],
@@ -123,17 +173,21 @@ export function BaseCertificadosTreinamentos({
                             className="rounded-3xl border border-slate-200 bg-white p-4 shadow-sm transition hover:border-slate-300 hover:shadow-md"
                         >
                             <div className="flex flex-col justify-between gap-4 lg:flex-row lg:items-start">
-                                <div className="min-w-0">
-                                    <p className="text-[10px] font-bold uppercase tracking-wide text-slate-400">Colaborador</p>
-                                    <p className="mt-1 break-words text-lg font-bold leading-snug text-slate-950">
-                                        {colaborador.nome}
-                                    </p>
-                                    <p className="mt-1 break-words text-sm text-slate-500">
-                                        {colaborador.empresaExibicao || colaborador.empresa}
-                                    </p>
-                                    <p className="mt-1 text-xs font-semibold text-slate-500">
-                                        Código: {colaborador.codigoFuncionario}
-                                    </p>
+                                <div className="flex min-w-0 items-start gap-3">
+                                    <FotoColaboradorBase colaborador={colaborador} />
+
+                                    <div className="min-w-0">
+                                        <p className="text-[10px] font-bold uppercase tracking-wide text-slate-400">Colaborador</p>
+                                        <p className="mt-1 break-words text-lg font-bold leading-snug text-slate-950">
+                                            {colaborador.nome}
+                                        </p>
+                                        <p className="mt-1 break-words text-sm text-slate-500">
+                                            {colaborador.empresaExibicao || colaborador.empresa}
+                                        </p>
+                                        <p className="mt-1 text-xs font-semibold text-slate-500">
+                                            Código: {colaborador.codigoFuncionario}
+                                        </p>
+                                    </div>
                                 </div>
 
                                 <div className="flex flex-col gap-2 lg:items-end">
