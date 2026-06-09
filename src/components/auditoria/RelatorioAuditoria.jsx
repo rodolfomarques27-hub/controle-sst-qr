@@ -142,7 +142,6 @@ export function RelatorioAuditoria({
     const [limpandoStorageAuditoria, setLimpandoStorageAuditoria] = useState(false);
     const [progressoLimpezaStorage, setProgressoLimpezaStorage] = useState({ atual: 0, total: 0 });
     const storageMontadoRef = useRef(false);
-    const storageCarregadoAutomaticamenteRef = useRef(false);
     const [usuariosAuditoria, setUsuariosAuditoria] = useState([]);
     const [carregandoUsuariosAuditoria, setCarregandoUsuariosAuditoria] = useState(false);
     const [salvandoUsuarioAuditoria, setSalvandoUsuarioAuditoria] = useState(false);
@@ -559,12 +558,6 @@ export function RelatorioAuditoria({
         }
     };
 
-    useEffect(() => {
-        if (!onListarArquivosStorage || storageCarregadoAutomaticamenteRef.current) return;
-
-        storageCarregadoAutomaticamenteRef.current = true;
-        carregarStorageAuditoria();
-    }, [onListarArquivosStorage]);
 
     const excluirStorageAuditoria = async (arquivo) => {
         if (!onExcluirArquivoStorage) return;
@@ -1237,7 +1230,7 @@ Essa ação remove arquivos do Storage e não altera registros do banco.`;
                             {carregandoStorageAuditoria
                                 ? "Carregando..."
                                 : arquivosStorageAuditoria.length > 0
-                                    ? "Recarregar arquivos"
+                                    ? "Atualizar arquivos"
                                     : "Carregar arquivos"}
                         </button>
 
@@ -1498,7 +1491,7 @@ Essa ação remove arquivos do Storage e não altera registros do banco.`;
 
                 {arquivosStorageAuditoria.length === 0 && !carregandoStorageAuditoria && (
                     <div className="rounded-3xl border border-dashed border-slate-300 p-6 text-center text-sm text-slate-500">
-                        Clique em <strong>Carregar arquivos</strong> para consultar o Storage.
+                        Clique em <strong>Carregar arquivos</strong> para consultar o Storage. A consulta não será atualizada automaticamente ao sair e voltar para a aba.
                     </div>
                 )}
 
