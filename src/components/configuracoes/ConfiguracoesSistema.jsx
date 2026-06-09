@@ -163,6 +163,10 @@ export function ConfiguracoesSistema({
     }));
     const [ordemBlocosConfiguracoes, setOrdemBlocosConfiguracoes] = useState(() => carregarOrdemLocalConfiguracoes());
 
+    const [perfilPermissoesAberto, setPerfilPermissoesAberto] = useState(
+        () => PERMISSOES_PADRAO_USUARIOS_POR_PERFIL[0]?.chave || ""
+    );
+
     const eventosAuditoria = useMemo(() => {
         const normalizada = normalizarConfiguracaoEventosAuditoriaSistema(configEventos);
         return EVENTOS_AUDITORIA_SISTEMA_PADRAO.map((evento) => ({
@@ -172,6 +176,11 @@ export function ConfiguracoesSistema({
     }, [configEventos]);
 
     const totalEventosHabilitados = eventosAuditoria.filter((evento) => evento.habilitado).length;
+
+    const perfilPermissoesSelecionado = useMemo(
+        () => PERMISSOES_PADRAO_USUARIOS_POR_PERFIL.find((perfil) => perfil.chave === perfilPermissoesAberto) || null,
+        [perfilPermissoesAberto]
+    );
 
 
     useEffect(() => {
@@ -1055,69 +1064,131 @@ export function ConfiguracoesSistema({
                                 <div>
                                     <p className="text-xs font-black uppercase tracking-wide text-slate-400">Permissões padrão por perfil</p>
                                     <p className="mt-1 text-xs font-semibold leading-relaxed text-slate-500">
-                                        Matriz técnica inicial para orientar os bloqueios futuros. Ainda não aplica restrição real no sistema.
+                                        Matriz técnica compacta para orientar os bloqueios futuros. Ainda não aplica restrição real no sistema.
                                     </p>
                                 </div>
                                 <span className="rounded-full bg-white px-3 py-1.5 text-[11px] font-black uppercase tracking-wide text-slate-500 ring-1 ring-slate-200">
-                                    Base técnica
+                                    {PERMISSOES_PADRAO_USUARIOS_POR_PERFIL.length} perfis · {ACOES_USUARIOS_PERMISSOES_PLANEJADAS.length} ações
                                 </span>
                             </div>
 
-                            <div className="mt-4 grid gap-3 lg:grid-cols-2">
-                                {PERMISSOES_PADRAO_USUARIOS_POR_PERFIL.map((perfil) => (
-                                    <div key={perfil.chave} className="rounded-2xl bg-white p-3 ring-1 ring-slate-100">
-                                        <div className="flex flex-wrap items-center justify-between gap-2">
-                                            <div>
-                                                <p className="text-sm font-black text-slate-950">{perfil.perfil}</p>
-                                                <p className="mt-0.5 text-[11px] font-black uppercase tracking-wide text-blue-700">{perfil.nivel}</p>
-                                            </div>
-                                            <span className="rounded-full bg-slate-50 px-3 py-1 text-[10px] font-black uppercase tracking-wide text-slate-500 ring-1 ring-slate-200">
-                                                Planejado
-                                            </span>
-                                        </div>
-                                        <p className="mt-2 text-xs font-semibold leading-relaxed text-slate-500">{perfil.resumo}</p>
+                            <div className="mt-4 grid gap-2 md:grid-cols-2 xl:grid-cols-3">
+                                {PERMISSOES_PADRAO_USUARIOS_POR_PERFIL.map((perfil) => {
+                                    const ativo = perfilPermissoesAberto === perfil.chave;
 
-                                        <div className="mt-3 grid gap-2 sm:grid-cols-2">
-                                            <div>
-                                                <p className="text-[10px] font-black uppercase tracking-wide text-emerald-700">Ações liberadas</p>
-                                                <div className="mt-1 flex flex-wrap gap-1.5">
-                                                    {perfil.acoesLiberadas.length > 0 ? perfil.acoesLiberadas.map((acao) => (
-                                                        <span key={acao} className="rounded-full bg-emerald-50 px-2 py-1 text-[10px] font-bold text-emerald-700 ring-1 ring-emerald-100">
-                                                            {acao}
-                                                        </span>
-                                                    )) : (
-                                                        <span className="rounded-full bg-slate-50 px-2 py-1 text-[10px] font-bold text-slate-400 ring-1 ring-slate-100">
-                                                            Nenhuma
-                                                        </span>
-                                                    )}
+                                    return (
+                                        <button
+                                            key={perfil.chave}
+                                            type="button"
+                                            onClick={() => setPerfilPermissoesAberto((atual) => atual === perfil.chave ? "" : perfil.chave)}
+                                            className={classNames(
+                                                "rounded-2xl bg-white p-3 text-left ring-1 transition hover:-translate-y-0.5 hover:shadow-sm",
+                                                ativo ? "ring-blue-300 shadow-sm" : "ring-slate-100 hover:ring-slate-200"
+                                            )}
+                                        >
+                                            <div className="flex items-start justify-between gap-2">
+                                                <div className="min-w-0">
+                                                    <p className="text-sm font-black text-slate-950">{perfil.perfil}</p>
+                                                    <p className="mt-0.5 text-[10px] font-black uppercase tracking-wide text-blue-700">{perfil.nivel}</p>
+                                                </div>
+                                                <span className={classNames(
+                                                    "inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full ring-1",
+                                                    ativo ? "bg-blue-50 text-blue-700 ring-blue-200" : "bg-slate-50 text-slate-500 ring-slate-200"
+                                                )}>
+                                                    {ativo ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+                                                </span>
+                                            </div>
+
+                                            <div className="mt-3 grid grid-cols-3 gap-1.5 text-center">
+                                                <div className="rounded-xl bg-emerald-50 px-2 py-2 ring-1 ring-emerald-100">
+                                                    <p className="text-sm font-black text-emerald-700">{perfil.acoesLiberadas.length}</p>
+                                                    <p className="text-[9px] font-black uppercase tracking-wide text-emerald-700">liberadas</p>
+                                                </div>
+                                                <div className="rounded-xl bg-red-50 px-2 py-2 ring-1 ring-red-100">
+                                                    <p className="text-sm font-black text-red-700">{perfil.acoesRestritas.length}</p>
+                                                    <p className="text-[9px] font-black uppercase tracking-wide text-red-700">restritas</p>
+                                                </div>
+                                                <div className="rounded-xl bg-slate-50 px-2 py-2 ring-1 ring-slate-100">
+                                                    <p className="text-sm font-black text-slate-700">{perfil.modulosLiberados.length}</p>
+                                                    <p className="text-[9px] font-black uppercase tracking-wide text-slate-500">módulos</p>
                                                 </div>
                                             </div>
-
-                                            <div>
-                                                <p className="text-[10px] font-black uppercase tracking-wide text-red-700">Restrições planejadas</p>
-                                                <div className="mt-1 flex flex-wrap gap-1.5">
-                                                    {perfil.acoesRestritas.length > 0 ? perfil.acoesRestritas.slice(0, 5).map((acao) => (
-                                                        <span key={acao} className="rounded-full bg-red-50 px-2 py-1 text-[10px] font-bold text-red-700 ring-1 ring-red-100">
-                                                            {acao}
-                                                        </span>
-                                                    )) : (
-                                                        <span className="rounded-full bg-slate-50 px-2 py-1 text-[10px] font-bold text-slate-400 ring-1 ring-slate-100">
-                                                            Sem restrição planejada
-                                                        </span>
-                                                    )}
-                                                    {perfil.acoesRestritas.length > 5 && (
-                                                        <span className="rounded-full bg-slate-50 px-2 py-1 text-[10px] font-bold text-slate-500 ring-1 ring-slate-100">
-                                                            +{perfil.acoesRestritas.length - 5}
-                                                        </span>
-                                                    )}
-                                                </div>
-                                            </div>
-                                        </div>
-
-                                        <p className="mt-3 text-[11px] font-semibold leading-relaxed text-slate-400">{perfil.observacao}</p>
-                                    </div>
-                                ))}
+                                        </button>
+                                    );
+                                })}
                             </div>
+
+                            {perfilPermissoesSelecionado ? (
+                                <div className="mt-4 rounded-2xl bg-white p-4 ring-1 ring-blue-100">
+                                    <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+                                        <div>
+                                            <p className="text-base font-black text-slate-950">{perfilPermissoesSelecionado.perfil}</p>
+                                            <p className="mt-0.5 text-[11px] font-black uppercase tracking-wide text-blue-700">{perfilPermissoesSelecionado.nivel}</p>
+                                            <p className="mt-2 text-xs font-semibold leading-relaxed text-slate-500">{perfilPermissoesSelecionado.resumo}</p>
+                                        </div>
+                                        <span className="inline-flex items-center justify-center rounded-full bg-blue-50 px-3 py-1.5 text-[10px] font-black uppercase tracking-wide text-blue-700 ring-1 ring-blue-100">
+                                            Detalhes abertos
+                                        </span>
+                                    </div>
+
+                                    <div className="mt-4 grid gap-3 lg:grid-cols-3">
+                                        <div className="rounded-2xl bg-slate-50 p-3 ring-1 ring-slate-100 lg:col-span-3">
+                                            <p className="text-[10px] font-black uppercase tracking-wide text-slate-400">Módulos liberados</p>
+                                            <div className="mt-2 flex flex-wrap gap-1.5">
+                                                {perfilPermissoesSelecionado.modulosLiberados.length > 0 ? perfilPermissoesSelecionado.modulosLiberados.map((modulo) => (
+                                                    <span key={modulo} className="rounded-full bg-white px-2.5 py-1 text-[10px] font-bold text-slate-700 ring-1 ring-slate-200">
+                                                        {modulo}
+                                                    </span>
+                                                )) : (
+                                                    <span className="rounded-full bg-white px-2.5 py-1 text-[10px] font-bold text-slate-400 ring-1 ring-slate-200">
+                                                        Nenhum módulo operacional planejado
+                                                    </span>
+                                                )}
+                                            </div>
+                                        </div>
+
+                                        <div className="rounded-2xl bg-emerald-50 p-3 ring-1 ring-emerald-100">
+                                            <p className="text-[10px] font-black uppercase tracking-wide text-emerald-700">Ações liberadas</p>
+                                            <div className="mt-2 flex flex-wrap gap-1.5">
+                                                {perfilPermissoesSelecionado.acoesLiberadas.length > 0 ? perfilPermissoesSelecionado.acoesLiberadas.map((acao) => (
+                                                    <span key={acao} className="rounded-full bg-white px-2.5 py-1 text-[10px] font-bold text-emerald-700 ring-1 ring-emerald-100">
+                                                        {acao}
+                                                    </span>
+                                                )) : (
+                                                    <span className="rounded-full bg-white px-2.5 py-1 text-[10px] font-bold text-slate-400 ring-1 ring-slate-100">
+                                                        Nenhuma ação liberada
+                                                    </span>
+                                                )}
+                                            </div>
+                                        </div>
+
+                                        <div className="rounded-2xl bg-red-50 p-3 ring-1 ring-red-100">
+                                            <p className="text-[10px] font-black uppercase tracking-wide text-red-700">Restrições planejadas</p>
+                                            <div className="mt-2 flex flex-wrap gap-1.5">
+                                                {perfilPermissoesSelecionado.acoesRestritas.length > 0 ? perfilPermissoesSelecionado.acoesRestritas.map((acao) => (
+                                                    <span key={acao} className="rounded-full bg-white px-2.5 py-1 text-[10px] font-bold text-red-700 ring-1 ring-red-100">
+                                                        {acao}
+                                                    </span>
+                                                )) : (
+                                                    <span className="rounded-full bg-white px-2.5 py-1 text-[10px] font-bold text-slate-400 ring-1 ring-slate-100">
+                                                        Sem restrição planejada
+                                                    </span>
+                                                )}
+                                            </div>
+                                        </div>
+
+                                        <div className="rounded-2xl bg-slate-50 p-3 ring-1 ring-slate-100">
+                                            <p className="text-[10px] font-black uppercase tracking-wide text-slate-400">Observação</p>
+                                            <p className="mt-2 text-xs font-semibold leading-relaxed text-slate-500">{perfilPermissoesSelecionado.observacao}</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            ) : (
+                                <div className="mt-4 rounded-2xl bg-white p-4 text-center ring-1 ring-slate-100">
+                                    <p className="text-sm font-black text-slate-900">Selecione um perfil para ver os detalhes.</p>
+                                    <p className="mt-1 text-xs font-semibold text-slate-500">A matriz segue planejada e ainda não bloqueia ações reais no sistema.</p>
+                                </div>
+                            )}
                         </div>
 
                         <div className="mt-4 rounded-3xl border border-dashed border-slate-300 bg-white p-4">
