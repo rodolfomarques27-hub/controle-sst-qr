@@ -1,5 +1,5 @@
 /* eslint-disable no-unused-vars */
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
     ChevronDown,
     ChevronUp,
@@ -140,6 +140,9 @@ export function RelatorioAuditoria({
     const [carregandoStorageAuditoria, setCarregandoStorageAuditoria] = useState(false);
     const [excluindoStorageAuditoria, setExcluindoStorageAuditoria] = useState("");
     const [limpandoStorageAuditoria, setLimpandoStorageAuditoria] = useState(false);
+    const [progressoLimpezaStorage, setProgressoLimpezaStorage] = useState({ atual: 0, total: 0 });
+    const storageMontadoRef = useRef(false);
+    const storageCarregadoAutomaticamenteRef = useRef(false);
     const [usuariosAuditoria, setUsuariosAuditoria] = useState([]);
     const [carregandoUsuariosAuditoria, setCarregandoUsuariosAuditoria] = useState(false);
     const [salvandoUsuarioAuditoria, setSalvandoUsuarioAuditoria] = useState(false);
@@ -191,6 +194,14 @@ export function RelatorioAuditoria({
     const [ordemBlocosAuditoria, setOrdemBlocosAuditoria] = useState(() =>
         carregarOrdemAuditoriaSistema("auditoriaSistemaOrdemBlocos", BLOCOS_AUDITORIA_SISTEMA_PADRAO)
     );
+
+    useEffect(() => {
+        storageMontadoRef.current = true;
+
+        return () => {
+            storageMontadoRef.current = false;
+        };
+    }, []);
 
     useEffect(() => {
         if (typeof window === "undefined") return undefined;
@@ -535,11 +546,25 @@ export function RelatorioAuditoria({
 
         setCarregandoStorageAuditoria(true);
 
-        const lista = await onListarArquivosStorage();
+        try {
+            const lista = await onListarArquivosStorage();
 
-        setArquivosStorageAuditoria(lista || []);
-        setCarregandoStorageAuditoria(false);
+            if (storageMontadoRef.current) {
+                setArquivosStorageAuditoria(lista || []);
+            }
+        } finally {
+            if (storageMontadoRef.current) {
+                setCarregandoStorageAuditoria(false);
+            }
+        }
     };
+
+    useEffect(() => {
+        if (!onListarArquivosStorage || storageCarregadoAutomaticamenteRef.current) return;
+
+        storageCarregadoAutomaticamenteRef.current = true;
+        carregarStorageAuditoria();
+    }, [onListarArquivosStorage]);
 
     const excluirStorageAuditoria = async (arquivo) => {
         if (!onExcluirArquivoStorage) return;
@@ -551,8 +576,7 @@ export function RelatorioAuditoria({
         setExcluindoStorageAuditoria("");
 
         if (ok) {
-            const lista = await onListarArquivosStorage();
-            setArquivosStorageAuditoria(lista || []);
+            await carregarStorageAuditoria();
             onAtualizar?.();
         }
     };
@@ -560,38 +584,66 @@ export function RelatorioAuditoria({
     const limparArquivosStorageSemVinculoFiltrados = async () => {
         if (!onExcluirArquivoStorage || arquivosStorageFiltradosSemVinculo.length === 0) return;
 
-        const mensagemConfirmacao = `Confirma excluir ${arquivosStorageFiltradosSemVinculo.length} arquivo(s) sem vínculo exibido(s) no filtro atual?\n\nTamanho total: ${formatarBytes(storageFiltradoSemVinculoBytes)}.\n\nEssa ação remove arquivos do Storage e não altera registros do banco.`;
+        const totalArquivos = arquivosStorageFiltradosSemVinculo.length;
+        const mensagemConfirmacao = `Confirma excluir ${totalArquivos} arquivo(s) sem vínculo exibido(s) no filtro atual?
+
+Tamanho total: ${formatarBytes(storageFiltradoSemVinculoBytes)}.
+
+Essa ação remove arquivos do Storage e não altera registros do banco.`;
 
         if (typeof window !== "undefined" && !window.confirm(mensagemConfirmacao)) return;
 
         setLimpandoStorageAuditoria(true);
+        setExcluindoStorageAuditoria("__limpeza_em_lote__");
+        setProgressoLimpezaStorage({ atual: 0, total: totalArquivos });
+
         let excluidos = 0;
         let falhas = 0;
+        const confirmarOriginal = typeof window !== "undefined" ? window.confirm : null;
 
         try {
-            for (const arquivo of arquivosStorageFiltradosSemVinculo) {
+            if (typeof window !== "undefined") {
+                window.confirm = () => true;
+            }
+
+            for (const [indice, arquivo] of arquivosStorageFiltradosSemVinculo.entries()) {
+                if (!storageMontadoRef.current) break;
+
                 try {
-                    const ok = await onExcluirArquivoStorage(arquivo);
+                    const ok = await onExcluirArquivoStorage({
+                        ...arquivo,
+                        ignorarConfirmacaoIndividual: true,
+                        ignorarConfirmacao: true,
+                        limpezaEmLote: true,
+                    });
+
                     if (ok) excluidos += 1;
                     else falhas += 1;
                 } catch (erro) {
                     falhas += 1;
                     console.warn("Erro ao excluir arquivo sem vínculo:", erro);
+                } finally {
+                    if (storageMontadoRef.current) {
+                        setProgressoLimpezaStorage({ atual: indice + 1, total: totalArquivos });
+                    }
                 }
             }
-
-            if (onListarArquivosStorage) {
-                const lista = await onListarArquivosStorage();
-                setArquivosStorageAuditoria(lista || []);
-            }
-
-            onAtualizar?.();
-
-            if (typeof window !== "undefined") {
-                window.alert(`Limpeza concluída. Excluído(s): ${excluidos}. Falha(s): ${falhas}.`);
-            }
         } finally {
-            setLimpandoStorageAuditoria(false);
+            if (typeof window !== "undefined" && confirmarOriginal) {
+                window.confirm = confirmarOriginal;
+            }
+
+            if (storageMontadoRef.current) {
+                await carregarStorageAuditoria();
+                onAtualizar?.();
+                setLimpandoStorageAuditoria(false);
+                setExcluindoStorageAuditoria("");
+                setProgressoLimpezaStorage({ atual: 0, total: 0 });
+
+                if (typeof window !== "undefined") {
+                    window.alert(`Limpeza concluída. Excluído(s): ${excluidos}. Falha(s): ${falhas}.`);
+                }
+            }
         }
     };
 
@@ -1182,7 +1234,11 @@ export function RelatorioAuditoria({
                             className="inline-flex items-center justify-center gap-2 rounded-2xl bg-slate-950 px-4 py-3 text-sm font-semibold text-white hover:bg-slate-800 disabled:opacity-60"
                         >
                             <Database className="h-4 w-4" />
-                            {carregandoStorageAuditoria ? "Carregando..." : "Carregar arquivos"}
+                            {carregandoStorageAuditoria
+                                ? "Carregando..."
+                                : arquivosStorageAuditoria.length > 0
+                                    ? "Recarregar arquivos"
+                                    : "Carregar arquivos"}
                         </button>
 
                         <button
@@ -1198,7 +1254,7 @@ export function RelatorioAuditoria({
                             className="inline-flex items-center justify-center rounded-2xl bg-red-600 px-4 py-3 text-sm font-semibold text-white hover:bg-red-700 disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-500"
                         >
                             {limpandoStorageAuditoria
-                                ? "Limpando..."
+                                ? `Limpando ${progressoLimpezaStorage.atual}/${progressoLimpezaStorage.total}`
                                 : `Limpar sem vínculo (${arquivosStorageFiltradosSemVinculo.length})`}
                         </button>
                     </div>
