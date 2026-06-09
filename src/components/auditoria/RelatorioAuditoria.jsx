@@ -30,6 +30,7 @@ import {
 } from "../../services/auditoriaSistemaConfigService";
 
 const hoje = new Date();
+const LIMITE_REGISTROS_DETALHADOS_INICIAL = 30;
 
 
 const CARTAS_AUDITORIA_SISTEMA_PADRAO = [
@@ -138,6 +139,7 @@ export function RelatorioAuditoria({
     const [arquivosStorageAuditoria, setArquivosStorageAuditoria] = useState([]);
     const [carregandoStorageAuditoria, setCarregandoStorageAuditoria] = useState(false);
     const [excluindoStorageAuditoria, setExcluindoStorageAuditoria] = useState("");
+    const [limpandoStorageAuditoria, setLimpandoStorageAuditoria] = useState(false);
     const [usuariosAuditoria, setUsuariosAuditoria] = useState([]);
     const [carregandoUsuariosAuditoria, setCarregandoUsuariosAuditoria] = useState(false);
     const [salvandoUsuarioAuditoria, setSalvandoUsuarioAuditoria] = useState(false);
@@ -148,6 +150,7 @@ export function RelatorioAuditoria({
         funcao: "",
     });
     const [detalhesAuditoriaAbertos, setDetalhesAuditoriaAbertos] = useState({});
+    const [limiteRegistrosDetalhados, setLimiteRegistrosDetalhados] = useState(LIMITE_REGISTROS_DETALHADOS_INICIAL);
     const [configEventosAuditoria, setConfigEventosAuditoria] = useState(() =>
         obterConfiguracaoEventosAuditoriaSistema()
     );
@@ -372,6 +375,13 @@ export function RelatorioAuditoria({
         });
     }, [auditoriaVerificada, busca, filtroAcao]);
 
+    useEffect(() => {
+        setLimiteRegistrosDetalhados(LIMITE_REGISTROS_DETALHADOS_INICIAL);
+    }, [busca, filtroAcao, auditoriaVerificada.length]);
+
+    const registrosDetalhadosVisiveis = registrosFiltrados.slice(0, limiteRegistrosDetalhados);
+    const existemMaisRegistrosDetalhados = registrosFiltrados.length > registrosDetalhadosVisiveis.length;
+
     const ultimosAcessosAuditoria = auditoriaVerificada
         .filter((item) => normalizarTextoBusca(`${item.acao || ""} ${item.descricao || ""}`).includes("acesso"))
         .sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0))
@@ -473,6 +483,12 @@ export function RelatorioAuditoria({
             return dataB - dataA || Number(b.tamanho || 0) - Number(a.tamanho || 0);
         });
 
+    const arquivosStorageFiltradosSemVinculo = arquivosStorageFiltrados.filter((arquivo) => !arquivo.emUso);
+    const storageFiltradoSemVinculoBytes = arquivosStorageFiltradosSemVinculo.reduce(
+        (total, arquivo) => total + Number(arquivo.tamanho || 0),
+        0
+    );
+
     const opcoesEmpresasStorage = Array.from(new Set(arquivosStorageAuditoria.map(obterEmpresaArquivoStorage))).sort();
     const opcoesColaboradoresStorage = Array.from(new Set(arquivosStorageAuditoria.map(obterColaboradorArquivoStorage))).sort();
     const opcoesTiposStorage = Array.from(new Set(arquivosStorageAuditoria.map(obterTipoArquivoStorage))).sort();
@@ -538,6 +554,44 @@ export function RelatorioAuditoria({
             const lista = await onListarArquivosStorage();
             setArquivosStorageAuditoria(lista || []);
             onAtualizar?.();
+        }
+    };
+
+    const limparArquivosStorageSemVinculoFiltrados = async () => {
+        if (!onExcluirArquivoStorage || arquivosStorageFiltradosSemVinculo.length === 0) return;
+
+        const mensagemConfirmacao = `Confirma excluir ${arquivosStorageFiltradosSemVinculo.length} arquivo(s) sem vínculo exibido(s) no filtro atual?\n\nTamanho total: ${formatarBytes(storageFiltradoSemVinculoBytes)}.\n\nEssa ação remove arquivos do Storage e não altera registros do banco.`;
+
+        if (typeof window !== "undefined" && !window.confirm(mensagemConfirmacao)) return;
+
+        setLimpandoStorageAuditoria(true);
+        let excluidos = 0;
+        let falhas = 0;
+
+        try {
+            for (const arquivo of arquivosStorageFiltradosSemVinculo) {
+                try {
+                    const ok = await onExcluirArquivoStorage(arquivo);
+                    if (ok) excluidos += 1;
+                    else falhas += 1;
+                } catch (erro) {
+                    falhas += 1;
+                    console.warn("Erro ao excluir arquivo sem vínculo:", erro);
+                }
+            }
+
+            if (onListarArquivosStorage) {
+                const lista = await onListarArquivosStorage();
+                setArquivosStorageAuditoria(lista || []);
+            }
+
+            onAtualizar?.();
+
+            if (typeof window !== "undefined") {
+                window.alert(`Limpeza concluída. Excluído(s): ${excluidos}. Falha(s): ${falhas}.`);
+            }
+        } finally {
+            setLimpandoStorageAuditoria(false);
         }
     };
 
@@ -1120,15 +1174,34 @@ export function RelatorioAuditoria({
                 contador={arquivosStorageAuditoria.length}
                 defaultOpen={false}
                 acao={(
-                    <button
-                        type="button"
-                        onClick={carregarStorageAuditoria}
-                        disabled={carregandoStorageAuditoria}
-                        className="inline-flex items-center justify-center gap-2 rounded-2xl bg-slate-950 px-4 py-3 text-sm font-semibold text-white hover:bg-slate-800 disabled:opacity-60"
-                    >
-                        <Database className="h-4 w-4" />
-                        {carregandoStorageAuditoria ? "Carregando..." : "Carregar arquivos"}
-                    </button>
+                    <div className="flex flex-wrap items-center gap-2">
+                        <button
+                            type="button"
+                            onClick={carregarStorageAuditoria}
+                            disabled={carregandoStorageAuditoria || limpandoStorageAuditoria}
+                            className="inline-flex items-center justify-center gap-2 rounded-2xl bg-slate-950 px-4 py-3 text-sm font-semibold text-white hover:bg-slate-800 disabled:opacity-60"
+                        >
+                            <Database className="h-4 w-4" />
+                            {carregandoStorageAuditoria ? "Carregando..." : "Carregar arquivos"}
+                        </button>
+
+                        <button
+                            type="button"
+                            onClick={limparArquivosStorageSemVinculoFiltrados}
+                            disabled={
+                                carregandoStorageAuditoria ||
+                                limpandoStorageAuditoria ||
+                                arquivosStorageFiltradosSemVinculo.length === 0 ||
+                                !onExcluirArquivoStorage
+                            }
+                            title="Exclui somente arquivos sem vínculo exibidos pelo filtro atual"
+                            className="inline-flex items-center justify-center rounded-2xl bg-red-600 px-4 py-3 text-sm font-semibold text-white hover:bg-red-700 disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-500"
+                        >
+                            {limpandoStorageAuditoria
+                                ? "Limpando..."
+                                : `Limpar sem vínculo (${arquivosStorageFiltradosSemVinculo.length})`}
+                        </button>
+                    </div>
                 )}
             >
                 <div className={classNames("mb-4 rounded-3xl p-4 ring-1", storageStatus.classe)}>
@@ -1380,7 +1453,7 @@ export function RelatorioAuditoria({
                                 Arquivos encontrados: {arquivosStorageFiltrados.length} de {arquivosStorageAuditoria.length}
                             </p>
                             <p className="text-xs text-slate-500">
-                                Exibindo primeiro os uploads mais recentes.
+                                Sem vínculo no filtro: {arquivosStorageFiltradosSemVinculo.length} arquivo(s) · {formatarBytes(storageFiltradoSemVinculoBytes)}.
                             </p>
                         </div>
 
@@ -1474,11 +1547,11 @@ export function RelatorioAuditoria({
                     <CardRecolhivel
                 className="mt-5"
                 titulo="Registros detalhados da auditoria"
-                subtitulo="Consulta completa com filtros, origem de acesso e dados extras de cada evento."
+                subtitulo="Consulta controlada por limite visual para evitar excesso de cartões na tela."
                 contador={registrosFiltrados.length}
                 defaultOpen={false}
             >
-                <div className="grid gap-3 xl:grid-cols-[1fr_220px]">
+                <div className="grid gap-3 xl:grid-cols-[1fr_220px_150px]">
                     <div className="relative">
                         <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
                         <input
@@ -1501,9 +1574,55 @@ export function RelatorioAuditoria({
                             </option>
                         ))}
                     </select>
+
+                    <button
+                        type="button"
+                        onClick={() => {
+                            setBusca("");
+                            setFiltroAcao("Todas");
+                        }}
+                        className="rounded-2xl bg-white px-4 py-3 text-sm font-bold text-slate-700 ring-1 ring-slate-200 hover:bg-slate-50"
+                    >
+                        Limpar filtros
+                    </button>
                 </div>
 
-                <div className="mt-5 space-y-3">
+                <div className="mt-4 rounded-2xl bg-slate-50 p-3 ring-1 ring-slate-200">
+                    <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+                        <div>
+                            <p className="text-sm font-bold text-slate-800">
+                                Exibindo {registrosDetalhadosVisiveis.length} de {registrosFiltrados.length} registro(s) filtrado(s).
+                            </p>
+                            <p className="mt-1 text-xs text-slate-500">
+                                A lista mostra inicialmente {LIMITE_REGISTROS_DETALHADOS_INICIAL} registros para evitar uma tela muito longa. Use o botão abaixo somente quando precisar investigar mais eventos.
+                            </p>
+                        </div>
+
+                        <div className="flex flex-wrap gap-2">
+                            {existemMaisRegistrosDetalhados && (
+                                <button
+                                    type="button"
+                                    onClick={() => setLimiteRegistrosDetalhados((atual) => Math.min(atual + 50, registrosFiltrados.length))}
+                                    className="rounded-2xl bg-slate-950 px-4 py-2 text-xs font-bold text-white hover:bg-slate-800"
+                                >
+                                    Mostrar mais 50
+                                </button>
+                            )}
+
+                            {registrosDetalhadosVisiveis.length > LIMITE_REGISTROS_DETALHADOS_INICIAL && (
+                                <button
+                                    type="button"
+                                    onClick={() => setLimiteRegistrosDetalhados(LIMITE_REGISTROS_DETALHADOS_INICIAL)}
+                                    className="rounded-2xl bg-white px-4 py-2 text-xs font-bold text-slate-700 ring-1 ring-slate-200 hover:bg-slate-50"
+                                >
+                                    Recolher lista
+                                </button>
+                            )}
+                        </div>
+                    </div>
+                </div>
+
+                <div className="mt-5 max-h-[42rem] space-y-3 overflow-y-auto pr-1 scrollbar-discreta">
                     {carregando && (
                         <div className="rounded-3xl bg-slate-50 p-6 text-center text-sm text-slate-500">
                             Carregando auditoria...
@@ -1520,7 +1639,7 @@ export function RelatorioAuditoria({
                         </div>
                     )}
 
-                    {registrosFiltrados.map((item) => {
+                    {registrosDetalhadosVisiveis.map((item) => {
                         const origemAcesso = item.dados?.origemAcesso || {};
                         const temOrigemAcesso = Boolean(origemAcesso.url || origemAcesso.pagina || origemAcesso.navegador || origemAcesso.plataforma);
                         const dadosExtras = item.dados && typeof item.dados === "object"
