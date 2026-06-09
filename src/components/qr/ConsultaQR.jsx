@@ -10,6 +10,8 @@ import { montarUrlConsultaQrColaboradorPublica } from "../../constants/auditoria
 import { carregarTokenAuditoriaPublicaAtivoPadrao } from "../../services/auditoriaPublicaTokenService";
 import { CrachaColaboradorPrint, CRACHA_COLABORADOR_PRINT_STYLES } from "./CrachaColaboradorPrint";
 
+const CRACHA_COLABORADOR_HABILITADO = false;
+
 function obterNomeTreinamentoOrdenacao(treinamento) {
     const treinamentoInfo = obterTreinamento(treinamento?.treinamentoId);
     return String(treinamento?.nomeTreinamento || treinamentoInfo?.nome || "");
@@ -302,12 +304,14 @@ export function ConsultaQR({ colaborador, colaboradores = [], onSelecionarColabo
                                     <h1>{colaboradorAtual.nome}</h1>
                                 </div>
                             </div>
-                            <div id={idImpressaoCrachaColaborador} className="pointer-events-none fixed -left-[9999px] top-0 opacity-0">
-                                <CrachaColaboradorPrint
-                                    colaborador={colaboradorAtual}
-                                    urlConsultaColaborador={urlConsultaColaborador}
-                                />
-                            </div>
+                            {CRACHA_COLABORADOR_HABILITADO && (
+                                <div id={idImpressaoCrachaColaborador} className="pointer-events-none fixed -left-[9999px] top-0 opacity-0">
+                                    <CrachaColaboradorPrint
+                                        colaborador={colaboradorAtual}
+                                        urlConsultaColaborador={urlConsultaColaborador}
+                                    />
+                                </div>
+                            )}
                             <div className="mt-3 flex flex-col gap-2 sm:flex-row sm:flex-wrap">
                                 <button
                                     type="button"
@@ -317,14 +321,16 @@ export function ConsultaQR({ colaborador, colaboradores = [], onSelecionarColabo
                                     <Download className="h-4 w-4" />
                                     Imprimir QR Code do funcionário
                                 </button>
-                                <button
-                                    type="button"
-                                    onClick={imprimirCrachaColaborador}
-                                    className="inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-slate-950 px-4 py-2 text-xs font-bold text-white ring-1 ring-slate-950 hover:bg-slate-800 sm:w-auto"
-                                >
-                                    <Download className="h-4 w-4" />
-                                    Imprimir crachá
-                                </button>
+                                {CRACHA_COLABORADOR_HABILITADO && (
+                                    <button
+                                        type="button"
+                                        onClick={imprimirCrachaColaborador}
+                                        className="inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-slate-950 px-4 py-2 text-xs font-bold text-white ring-1 ring-slate-950 hover:bg-slate-800 sm:w-auto"
+                                    >
+                                        <Download className="h-4 w-4" />
+                                        Imprimir crachá
+                                    </button>
+                                )}
                             </div>
                         </div>
 
