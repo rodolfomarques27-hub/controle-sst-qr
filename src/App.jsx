@@ -109,13 +109,7 @@ export default function App() {
     const [limitesCarregamentoSistema, setLimitesCarregamentoSistema] = useState(() => carregarLimitesCarregamentoSistema());
     const [podeAcessarAuditoria, setPodeAcessarAuditoria] = useState(false);
     const [verificandoAcessoAuditoria, setVerificandoAcessoAuditoria] = useState(false);
-    const [, setAuditoriaLiberada] = useState(() => {
-        try {
-            return window.sessionStorage.getItem("auditoriaLiberada") === "true";
-        } catch {
-            return false;
-        }
-    });
+    const [auditoriaLiberada, setAuditoriaLiberada] = useState(false);
 
     useEffect(() => {
         try {
@@ -352,6 +346,17 @@ export default function App() {
             setVerificandoAcessoAuditoria,
         });
     }, [usuario]);
+
+    const liberarAuditoria = async () => {
+        const { liberarAuditoriaAppService } = await carregarAuditoriaHandlers();
+
+        return liberarAuditoriaAppService({
+            verificarAcessoAuditoria,
+            setAuditoriaLiberada,
+            carregarAuditoria,
+            registrarAuditoria,
+        });
+    };
 
     const bloquearAuditoria = async () => {
         const { bloquearAuditoriaAppService } = await carregarAuditoriaHandlers();
@@ -759,7 +764,7 @@ export default function App() {
 
         const timer = window.setTimeout(() => {
             const telaAuditoriaCampoAberta = tela === "auditoriaCampo";
-            const telaAuditoriaSistemaAberta = tela === "auditoria" && podeAcessarAuditoria;
+            const telaAuditoriaSistemaAberta = tela === "auditoria" && podeAcessarAuditoria && auditoriaLiberada;
 
             if (telaAuditoriaCampoAberta && !auditoriasCampoCarregadas && !carregandoAuditoriasCampo) {
                 carregarAuditoriasCampo();
@@ -785,6 +790,7 @@ export default function App() {
         usuario,
         tela,
         podeAcessarAuditoria,
+        auditoriaLiberada,
         auditoriaCarregada,
         carregandoAuditoria,
         emailsEnviadosCarregados,
@@ -850,7 +856,11 @@ export default function App() {
         });
     };
 
-    const selecionarTelaSistema = (id, label = id) => {
+    const selecionarTelaSistema = async (id, label = id) => {
+        if (tela === "auditoria" && id !== "auditoria" && auditoriaLiberada) {
+            await bloquearAuditoria();
+        }
+
         setTela(id);
         registrarAuditoria("ACESSO_TELA", "navegacao", `Acessou a tela: ${label}`);
     };
@@ -998,6 +1008,7 @@ export default function App() {
                         limitesCarregamentoSistema={limitesCarregamentoSistema}
                         verificandoAcessoAuditoria={verificandoAcessoAuditoria}
                         podeAcessarAuditoria={podeAcessarAuditoria}
+                        auditoriaLiberada={auditoriaLiberada}
                         carregandoAuditoria={carregandoAuditoria}
                         carregandoMaisAuditoria={carregandoMaisAuditoria}
                         existeMaisAuditoria={existeMaisAuditoria}
@@ -1052,6 +1063,7 @@ export default function App() {
                             await carregarAuditoriasCampo();
                         }}
                         onCarregarMaisAuditoria={carregarMaisAuditoria}
+                        onLiberarAuditoria={liberarAuditoria}
                         onListarArquivosStorage={listarArquivosCertificadosStorage}
                         onExcluirArquivoStorage={excluirArquivoCertificadoStorage}
                         onListarUsuariosAuditoria={carregarUsuariosAutorizadosAuditoria}

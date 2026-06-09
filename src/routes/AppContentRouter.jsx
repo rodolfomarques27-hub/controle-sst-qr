@@ -17,6 +17,7 @@ const NovaAuditoriaCampoDireta = React.lazy(() => import("../components/auditori
 const ConfiguracoesSistema = React.lazy(() => import("../components/configuracoes/ConfiguracoesSistema").then((modulo) => ({ default: modulo.ConfiguracoesSistema })));
 const ConfiguracoesBloqueio = React.lazy(() => import("../components/configuracoes/ConfiguracoesBloqueio").then((modulo) => ({ default: modulo.ConfiguracoesBloqueio })));
 const AuditoriaAcessoNegado = React.lazy(() => import("../components/auditoria/AuditoriaPermissao").then((modulo) => ({ default: modulo.AuditoriaAcessoNegado })));
+const AuditoriaBloqueada = React.lazy(() => import("../components/auditoria/AuditoriaPermissao").then((modulo) => ({ default: modulo.AuditoriaBloqueada })));
 
 
 export function AppContentRouter({
@@ -38,6 +39,7 @@ export function AppContentRouter({
     limitesCarregamentoSistema,
     verificandoAcessoAuditoria,
     podeAcessarAuditoria,
+    auditoriaLiberada,
     carregandoAuditoria,
     carregandoMaisAuditoria,
     existeMaisAuditoria,
@@ -79,6 +81,7 @@ export function AppContentRouter({
     onSelecionarColaboradorQr,
     onAtualizarAuditoria,
     onCarregarMaisAuditoria,
+    onLiberarAuditoria,
     onListarArquivosStorage,
     onExcluirArquivoStorage,
     onListarUsuariosAuditoria,
@@ -198,6 +201,8 @@ export function AppContentRouter({
                     </Card>
                 ) : !podeAcessarAuditoria ? (
                     <AuditoriaAcessoNegado />
+                ) : !auditoriaLiberada ? (
+                    <AuditoriaBloqueada onLiberar={onLiberarAuditoria} />
                 ) : (
                     <RelatorioAuditoria
                         auditoria={auditoria}

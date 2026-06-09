@@ -352,12 +352,6 @@ export async function liberarAuditoriaAppService({
         return;
     }
 
-    try {
-        window.sessionStorage.setItem("auditoriaLiberada", "true");
-    } catch {
-        // Sessão indisponível; mantém apenas em memória.
-    }
-
     setAuditoriaLiberada(true);
     carregarAuditoria();
     registrarAuditoria("ACESSO_AUDITORIA", "auditoria_sistema", "Liberou acesso à tela de Auditoria pela regra do Supabase");
@@ -367,12 +361,6 @@ export function bloquearAuditoriaAppService({
     setAuditoriaLiberada,
     registrarAuditoria,
 }) {
-    try {
-        window.sessionStorage.removeItem("auditoriaLiberada");
-    } catch {
-        // Sessão indisponível; mantém apenas em memória.
-    }
-
     setAuditoriaLiberada(false);
     registrarAuditoria("BLOQUEIO_AUDITORIA", "auditoria_sistema", "Bloqueou novamente o acesso à tela de Auditoria");
 }

@@ -7,7 +7,7 @@ export function AuditoriaAcessoNegado() {
         <div>
             <Header
                 titulo="Acesso não autorizado"
-                subtitulo="Seu usuário não possui permissão cadastrada no Supabase para acessar a Auditoria de sistema."
+                subtitulo="Seu usuário não possui permissão cadastrada no Supabase para acessar a Auditoria do Sistema."
             />
 
             <div className="mx-auto max-w-xl">
@@ -18,9 +18,9 @@ export function AuditoriaAcessoNegado() {
                         </div>
 
                         <div>
-                            <h2 className="text-lg font-bold text-slate-950">Auditoria de sistema restrita</h2>
+                            <h2 className="text-lg font-bold text-slate-950">Auditoria do Sistema restrita</h2>
                             <p className="mt-1 text-sm leading-relaxed text-slate-500">
-                                Para liberar o acesso, o administrador deve habilitar este usuário em <strong>Permissões da Auditoria de sistema</strong>.
+                                Para liberar o acesso, o administrador deve habilitar este usuário em <strong>Permissões da Auditoria do Sistema</strong>.
                             </p>
                         </div>
                     </div>
@@ -34,8 +34,8 @@ export function AuditoriaBloqueada({ onLiberar }) {
     return (
         <div>
             <Header
-                titulo="Auditoria de sistema protegida"
-                subtitulo="Acesso restrito apenas aos registros internos da Auditoria de sistema."
+                titulo="Auditoria do Sistema protegida"
+                subtitulo="Área restrita para rastreabilidade, exclusões, uploads, alterações e eventos administrativos."
             />
 
             <div className="mx-auto max-w-xl">
@@ -46,9 +46,9 @@ export function AuditoriaBloqueada({ onLiberar }) {
                         </div>
 
                         <div>
-                            <h2 className="text-lg font-bold text-slate-950">Validação pelo Supabase</h2>
+                            <h2 className="text-lg font-bold text-slate-950">Liberação obrigatória</h2>
                             <p className="mt-1 text-sm leading-relaxed text-slate-500">
-                                A senha local foi removida. O acesso agora depende somente do usuário autenticado e da autorização cadastrada no Supabase.
+                                Mesmo com usuário autorizado, confirme a liberação antes de visualizar os registros internos da Auditoria do Sistema.
                             </p>
                         </div>
                     </div>
@@ -59,7 +59,7 @@ export function AuditoriaBloqueada({ onLiberar }) {
                         className="flex w-full items-center justify-center gap-2 rounded-2xl bg-slate-950 px-4 py-3 text-sm font-bold text-white hover:bg-slate-800"
                     >
                         <ShieldCheck className="h-4 w-4" />
-                        Validar acesso no Supabase
+                        Liberar Auditoria do Sistema
                     </button>
                 </Card>
             </div>
