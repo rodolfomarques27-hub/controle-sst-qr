@@ -66,6 +66,11 @@ import {
     calcularResumoRevisaoSupabaseSistema,
     montarChecklistRevisaoSupabaseSistemaTexto,
 } from "../../services/supabaseRevisaoService";
+import {
+    carregarPermissaoSistemaAtualService,
+    obterResumoPermissaoSistema,
+} from "../../services/usuariosPermissoesSistemaService";
+import { supabase } from "../../lib/supabaseClient";
 
 const classNames = (...classes) => classes.filter(Boolean).join(" ");
 
@@ -166,6 +171,11 @@ export function ConfiguracoesSistema({
     const [perfilPermissoesAberto, setPerfilPermissoesAberto] = useState(
         () => PERMISSOES_PADRAO_USUARIOS_POR_PERFIL[0]?.chave || ""
     );
+    const [permissaoSistemaAtual, setPermissaoSistemaAtual] = useState(null);
+    const [carregandoPermissaoSistema, setCarregandoPermissaoSistema] = useState(false);
+    const [mensagemPermissaoSistema, setMensagemPermissaoSistema] = useState(
+        "Permissão geral ainda não carregada do Supabase."
+    );
 
     const eventosAuditoria = useMemo(() => {
         const normalizada = normalizarConfiguracaoEventosAuditoriaSistema(configEventos);
@@ -181,6 +191,25 @@ export function ConfiguracoesSistema({
         () => PERMISSOES_PADRAO_USUARIOS_POR_PERFIL.find((perfil) => perfil.chave === perfilPermissoesAberto) || null,
         [perfilPermissoesAberto]
     );
+
+    const resumoPermissaoSistemaAtual = useMemo(
+        () => obterResumoPermissaoSistema(permissaoSistemaAtual),
+        [permissaoSistemaAtual]
+    );
+
+    const modulosPermissaoSistemaAtual = useMemo(() => {
+        const modulos = permissaoSistemaAtual?.permissoes?.modulos;
+        return modulos && typeof modulos === "object" ? Object.keys(modulos) : [];
+    }, [permissaoSistemaAtual]);
+
+    const acoesCriticasPermissaoSistemaAtual = useMemo(() => {
+        const acoesCriticas = permissaoSistemaAtual?.permissoes?.acoesCriticas;
+        if (!acoesCriticas || typeof acoesCriticas !== "object") return [];
+
+        return Object.entries(acoesCriticas)
+            .filter(([, valor]) => valor === true || valor === "true")
+            .map(([acao]) => acao);
+    }, [permissaoSistemaAtual]);
 
 
     useEffect(() => {
@@ -505,6 +534,27 @@ export function ConfiguracoesSistema({
         }
     };
 
+    const carregarPermissaoSistemaAtual = async () => {
+        setCarregandoPermissaoSistema(true);
+        setMensagemPermissaoSistema("Carregando permissão geral do usuário no Supabase...");
+
+        try {
+            const permissao = await carregarPermissaoSistemaAtualService({ supabase });
+            setPermissaoSistemaAtual(permissao);
+
+            if (permissao) {
+                setMensagemPermissaoSistema("Permissão geral carregada do Supabase. Esta leitura ainda não bloqueia telas, botões ou rotas.");
+            } else {
+                setMensagemPermissaoSistema("Nenhuma permissão geral encontrada para o usuário autenticado. O sistema continua sem bloqueio real nesta etapa.");
+            }
+        } catch (erro) {
+            setPermissaoSistemaAtual(null);
+            setMensagemPermissaoSistema(`Não foi possível carregar a permissão geral. Supabase: ${erro?.message || "erro não identificado"}`);
+        } finally {
+            setCarregandoPermissaoSistema(false);
+        }
+    };
+
 
     const carregarConfiguracaoAuditoriaPublicaSupabase = async () => {
         setCarregandoAuditoriaPublica(true);
@@ -568,6 +618,14 @@ export function ConfiguracoesSistema({
     useEffect(() => {
         const timer = window.setTimeout(() => {
             carregarConfiguracaoAuditoriaPublicaSupabase();
+        }, 0);
+
+        return () => window.clearTimeout(timer);
+    }, []);
+
+    useEffect(() => {
+        const timer = window.setTimeout(() => {
+            carregarPermissaoSistemaAtual();
         }, 0);
 
         return () => window.clearTimeout(timer);
@@ -653,8 +711,10 @@ export function ConfiguracoesSistema({
         },
         {
             label: "Usuários e permissões",
-            valor: "Planejado",
-            detalhe: "painel visual sem bloqueio real",
+            valor: permissaoSistemaAtual ? resumoPermissaoSistemaAtual.perfil : "Planejado",
+            detalhe: permissaoSistemaAtual
+                ? `${resumoPermissaoSistemaAtual.status} · ${resumoPermissaoSistemaAtual.acessoGlobal ? "acesso global" : "sem acesso global"}`
+                : "painel visual sem bloqueio real",
             icon: ShieldCheck,
         },
         {
@@ -1016,6 +1076,87 @@ export function ConfiguracoesSistema({
                             Esta etapa ainda não bloqueia botões, rotas, uploads, exclusões ou relatórios. Os bloqueios reais devem ser ativados em microetapas futuras, começando pelas ações críticas.
                         </div>
 
+                        <div className="mt-4 rounded-3xl bg-blue-50 p-4 ring-1 ring-blue-100">
+                            <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+                                <div>
+                                    <p className="text-xs font-black uppercase tracking-wide text-blue-700">Permissão carregada do Supabase</p>
+                                    <p className="mt-1 text-sm font-black text-slate-950">
+                                        {permissaoSistemaAtual?.email || usuario?.email || "usuário não informado"}
+                                    </p>
+                                    <p className="mt-1 text-xs font-semibold leading-relaxed text-blue-800">
+                                        {mensagemPermissaoSistema}
+                                    </p>
+                                </div>
+                                <button
+                                    type="button"
+                                    onClick={carregarPermissaoSistemaAtual}
+                                    disabled={carregandoPermissaoSistema}
+                                    className="inline-flex items-center justify-center gap-2 rounded-2xl bg-white px-3 py-2 text-xs font-black text-blue-700 ring-1 ring-blue-200 hover:bg-blue-50 disabled:opacity-60"
+                                >
+                                    <RefreshCw className={classNames("h-3.5 w-3.5", carregandoPermissaoSistema && "animate-spin")} />
+                                    {carregandoPermissaoSistema ? "Carregando" : "Atualizar permissão"}
+                                </button>
+                            </div>
+
+                            <div className="mt-4 grid gap-2 sm:grid-cols-2 xl:grid-cols-5">
+                                <div className="rounded-2xl bg-white px-3 py-3 ring-1 ring-blue-100">
+                                    <p className="text-[10px] font-black uppercase tracking-wide text-slate-400">Perfil Supabase</p>
+                                    <p className="mt-1 text-sm font-black text-slate-950">{resumoPermissaoSistemaAtual.perfil}</p>
+                                </div>
+                                <div className="rounded-2xl bg-white px-3 py-3 ring-1 ring-blue-100">
+                                    <p className="text-[10px] font-black uppercase tracking-wide text-slate-400">Status</p>
+                                    <p className="mt-1 text-sm font-black text-slate-950">{resumoPermissaoSistemaAtual.status}</p>
+                                </div>
+                                <div className="rounded-2xl bg-white px-3 py-3 ring-1 ring-blue-100">
+                                    <p className="text-[10px] font-black uppercase tracking-wide text-slate-400">Acesso global</p>
+                                    <p className={classNames("mt-1 text-sm font-black", resumoPermissaoSistemaAtual.acessoGlobal ? "text-emerald-700" : "text-slate-700")}>
+                                        {resumoPermissaoSistemaAtual.acessoGlobal ? "Sim" : "Não"}
+                                    </p>
+                                </div>
+                                <div className="rounded-2xl bg-white px-3 py-3 ring-1 ring-blue-100">
+                                    <p className="text-[10px] font-black uppercase tracking-wide text-slate-400">Módulos lidos</p>
+                                    <p className="mt-1 text-sm font-black text-slate-950">{modulosPermissaoSistemaAtual.length}</p>
+                                </div>
+                                <div className="rounded-2xl bg-white px-3 py-3 ring-1 ring-blue-100">
+                                    <p className="text-[10px] font-black uppercase tracking-wide text-slate-400">Ações críticas</p>
+                                    <p className="mt-1 text-sm font-black text-slate-950">{acoesCriticasPermissaoSistemaAtual.length}</p>
+                                </div>
+                            </div>
+
+                            {permissaoSistemaAtual ? (
+                                <div className="mt-3 grid gap-2 lg:grid-cols-2">
+                                    <div className="rounded-2xl bg-white px-3 py-3 ring-1 ring-blue-100">
+                                        <p className="text-[10px] font-black uppercase tracking-wide text-slate-400">Módulos retornados pela RPC</p>
+                                        <div className="mt-2 flex flex-wrap gap-1.5">
+                                            {modulosPermissaoSistemaAtual.length > 0 ? modulosPermissaoSistemaAtual.map((modulo) => (
+                                                <span key={modulo} className="rounded-full bg-slate-50 px-2.5 py-1 text-[10px] font-bold text-slate-700 ring-1 ring-slate-200">
+                                                    {modulo}
+                                                </span>
+                                            )) : (
+                                                <span className="rounded-full bg-slate-50 px-2.5 py-1 text-[10px] font-bold text-slate-400 ring-1 ring-slate-200">
+                                                    Nenhum módulo retornado
+                                                </span>
+                                            )}
+                                        </div>
+                                    </div>
+                                    <div className="rounded-2xl bg-white px-3 py-3 ring-1 ring-blue-100">
+                                        <p className="text-[10px] font-black uppercase tracking-wide text-slate-400">Ações críticas liberadas na leitura</p>
+                                        <div className="mt-2 flex flex-wrap gap-1.5">
+                                            {acoesCriticasPermissaoSistemaAtual.length > 0 ? acoesCriticasPermissaoSistemaAtual.map((acao) => (
+                                                <span key={acao} className="rounded-full bg-emerald-50 px-2.5 py-1 text-[10px] font-bold text-emerald-700 ring-1 ring-emerald-100">
+                                                    {acao}
+                                                </span>
+                                            )) : (
+                                                <span className="rounded-full bg-slate-50 px-2.5 py-1 text-[10px] font-bold text-slate-400 ring-1 ring-slate-200">
+                                                    Nenhuma ação crítica retornada
+                                                </span>
+                                            )}
+                                        </div>
+                                    </div>
+                                </div>
+                            ) : null}
+                        </div>
+
                         <div className="mt-4 grid gap-3 xl:grid-cols-[1.1fr_1fr]">
                             <div className="rounded-3xl bg-slate-50 p-4 ring-1 ring-slate-100">
                                 <p className="text-xs font-black uppercase tracking-wide text-slate-400">Perfis planejados</p>
@@ -1197,8 +1338,8 @@ export function ConfiguracoesSistema({
                                 <div>
                                     <p className="text-sm font-black text-slate-950">Próximas microetapas recomendadas</p>
                                     <div className="mt-2 grid gap-2 text-xs font-semibold leading-relaxed text-slate-600 md:grid-cols-2">
-                                        <p>1. Criar serviço próprio de usuários e permissões sem remover a tabela atual.</p>
-                                        <p>2. Salvar permissões padrão no Supabase somente após aprovação da matriz.</p>
+                                        <p>1. Exibir a permissão carregada do Supabase no painel. Concluído nesta etapa.</p>
+                                        <p>2. Criar leitura administrativa da lista de usuários autorizados, sem edição ainda.</p>
                                         <p>3. Aplicar bloqueio real apenas em ações críticas: excluir, limpar arquivos e configurações.</p>
                                         <p>4. Registrar toda alteração de permissão na Auditoria do Sistema.</p>
                                     </div>
