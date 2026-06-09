@@ -49,6 +49,7 @@ import {
     ACOES_USUARIOS_PERMISSOES_PLANEJADAS,
     MODULOS_USUARIOS_PERMISSOES_PLANEJADOS,
     PERFIS_USUARIOS_PERMISSOES_PLANEJADOS,
+    PERMISSOES_PADRAO_USUARIOS_POR_PERFIL,
 } from "../../constants/usuariosPermissoesConstants";
 import {
     avaliarSegurancaAuditoriaPublica,
@@ -1049,6 +1050,76 @@ export function ConfiguracoesSistema({
                             </div>
                         </div>
 
+                        <div className="mt-4 rounded-3xl bg-slate-50 p-4 ring-1 ring-slate-100">
+                            <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+                                <div>
+                                    <p className="text-xs font-black uppercase tracking-wide text-slate-400">Permissões padrão por perfil</p>
+                                    <p className="mt-1 text-xs font-semibold leading-relaxed text-slate-500">
+                                        Matriz técnica inicial para orientar os bloqueios futuros. Ainda não aplica restrição real no sistema.
+                                    </p>
+                                </div>
+                                <span className="rounded-full bg-white px-3 py-1.5 text-[11px] font-black uppercase tracking-wide text-slate-500 ring-1 ring-slate-200">
+                                    Base técnica
+                                </span>
+                            </div>
+
+                            <div className="mt-4 grid gap-3 lg:grid-cols-2">
+                                {PERMISSOES_PADRAO_USUARIOS_POR_PERFIL.map((perfil) => (
+                                    <div key={perfil.chave} className="rounded-2xl bg-white p-3 ring-1 ring-slate-100">
+                                        <div className="flex flex-wrap items-center justify-between gap-2">
+                                            <div>
+                                                <p className="text-sm font-black text-slate-950">{perfil.perfil}</p>
+                                                <p className="mt-0.5 text-[11px] font-black uppercase tracking-wide text-blue-700">{perfil.nivel}</p>
+                                            </div>
+                                            <span className="rounded-full bg-slate-50 px-3 py-1 text-[10px] font-black uppercase tracking-wide text-slate-500 ring-1 ring-slate-200">
+                                                Planejado
+                                            </span>
+                                        </div>
+                                        <p className="mt-2 text-xs font-semibold leading-relaxed text-slate-500">{perfil.resumo}</p>
+
+                                        <div className="mt-3 grid gap-2 sm:grid-cols-2">
+                                            <div>
+                                                <p className="text-[10px] font-black uppercase tracking-wide text-emerald-700">Ações liberadas</p>
+                                                <div className="mt-1 flex flex-wrap gap-1.5">
+                                                    {perfil.acoesLiberadas.length > 0 ? perfil.acoesLiberadas.map((acao) => (
+                                                        <span key={acao} className="rounded-full bg-emerald-50 px-2 py-1 text-[10px] font-bold text-emerald-700 ring-1 ring-emerald-100">
+                                                            {acao}
+                                                        </span>
+                                                    )) : (
+                                                        <span className="rounded-full bg-slate-50 px-2 py-1 text-[10px] font-bold text-slate-400 ring-1 ring-slate-100">
+                                                            Nenhuma
+                                                        </span>
+                                                    )}
+                                                </div>
+                                            </div>
+
+                                            <div>
+                                                <p className="text-[10px] font-black uppercase tracking-wide text-red-700">Restrições planejadas</p>
+                                                <div className="mt-1 flex flex-wrap gap-1.5">
+                                                    {perfil.acoesRestritas.length > 0 ? perfil.acoesRestritas.slice(0, 5).map((acao) => (
+                                                        <span key={acao} className="rounded-full bg-red-50 px-2 py-1 text-[10px] font-bold text-red-700 ring-1 ring-red-100">
+                                                            {acao}
+                                                        </span>
+                                                    )) : (
+                                                        <span className="rounded-full bg-slate-50 px-2 py-1 text-[10px] font-bold text-slate-400 ring-1 ring-slate-100">
+                                                            Sem restrição planejada
+                                                        </span>
+                                                    )}
+                                                    {perfil.acoesRestritas.length > 5 && (
+                                                        <span className="rounded-full bg-slate-50 px-2 py-1 text-[10px] font-bold text-slate-500 ring-1 ring-slate-100">
+                                                            +{perfil.acoesRestritas.length - 5}
+                                                        </span>
+                                                    )}
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <p className="mt-3 text-[11px] font-semibold leading-relaxed text-slate-400">{perfil.observacao}</p>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+
                         <div className="mt-4 rounded-3xl border border-dashed border-slate-300 bg-white p-4">
                             <div className="flex items-start gap-3">
                                 <AlertTriangle className="mt-1 h-5 w-5 shrink-0 text-orange-600" />
@@ -1056,7 +1127,7 @@ export function ConfiguracoesSistema({
                                     <p className="text-sm font-black text-slate-950">Próximas microetapas recomendadas</p>
                                     <div className="mt-2 grid gap-2 text-xs font-semibold leading-relaxed text-slate-600 md:grid-cols-2">
                                         <p>1. Criar serviço próprio de usuários e permissões sem remover a tabela atual.</p>
-                                        <p>2. Definir permissões padrão por perfil e salvar no Supabase.</p>
+                                        <p>2. Salvar permissões padrão no Supabase somente após aprovação da matriz.</p>
                                         <p>3. Aplicar bloqueio real apenas em ações críticas: excluir, limpar arquivos e configurações.</p>
                                         <p>4. Registrar toda alteração de permissão na Auditoria do Sistema.</p>
                                     </div>
