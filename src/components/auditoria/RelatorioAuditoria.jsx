@@ -731,8 +731,8 @@ export function RelatorioAuditoria({
     return (
         <div>
             <Header
-                titulo="Auditoria do sistema"
-                subtitulo="Relatório de acessos, consultas QR e alterações feitas no banco de dados."
+                titulo="Auditoria do Sistema"
+                subtitulo="Histórico de rastreabilidade das ações realizadas no sistema, incluindo acessos, alterações, exclusões, uploads, QR Code e eventos administrativos."
                 acao={
                     <div className="flex flex-wrap gap-2">
                         <button
@@ -753,7 +753,7 @@ export function RelatorioAuditoria({
                             className="inline-flex items-center gap-2 rounded-2xl bg-white px-4 py-3 text-sm font-semibold text-slate-700 ring-1 ring-slate-200 hover:bg-slate-50"
                         >
                             <RefreshCw className="h-4 w-4" />
-                            Atualizar
+                            Atualizar registros
                         </button>
 
                         <button
