@@ -63,11 +63,63 @@ import {
 
 const classNames = (...classes) => classes.filter(Boolean).join(" ");
 
+const PERFIS_USUARIOS_PERMISSOES_PLANEJADOS = [
+    {
+        perfil: "Administrador",
+        descricao: "Acesso amplo ao sistema, configurações, auditoria, limpeza de arquivos e gestão de permissões.",
+    },
+    {
+        perfil: "Técnico SST",
+        descricao: "Rotina operacional de empresas, colaboradores, treinamentos, documentos e QR Code.",
+    },
+    {
+        perfil: "Auditor",
+        descricao: "Foco em auditorias de campo, evidências, registros, relatórios e consulta de conformidade.",
+    },
+    {
+        perfil: "Gestor",
+        descricao: "Acompanhamento de indicadores, relatórios, pendências e status das empresas/colaboradores.",
+    },
+    {
+        perfil: "Consulta",
+        descricao: "Visualização controlada, sem permissão para editar, excluir, limpar arquivos ou alterar configurações.",
+    },
+    {
+        perfil: "Bloqueado",
+        descricao: "Usuário mantido no cadastro para rastreabilidade, mas sem acesso operacional ao sistema.",
+    },
+];
+
+const MODULOS_USUARIOS_PERMISSOES_PLANEJADOS = [
+    "Dashboard SST",
+    "Empresas",
+    "Colaboradores",
+    "Treinamentos",
+    "QR Code",
+    "Dashboard Auditoria",
+    "Nova Auditoria",
+    "Auditoria do Sistema",
+    "Configurações",
+    "Storage",
+    "Relatórios",
+];
+
+const ACOES_USUARIOS_PERMISSOES_PLANEJADAS = [
+    "Visualizar",
+    "Cadastrar",
+    "Editar",
+    "Excluir",
+    "Upload",
+    "Exportar",
+    "Limpar arquivos",
+    "Gerenciar permissões",
+];
 
 const CHAVES_BLOCOS_CONFIGURACOES_PADRAO = [
     "config-eventos-auditoria",
     "config-limites-carregamento",
     "config-senha-configuracoes",
+    "config-usuarios-permissoes",
     "config-auditoria-publica",
     "config-seguranca-publica",
     "config-storage-privado",
@@ -637,6 +689,12 @@ export function ConfiguracoesSistema({
             icon: Lock,
         },
         {
+            label: "Usuários e permissões",
+            valor: "Planejado",
+            detalhe: "painel visual sem bloqueio real",
+            icon: ShieldCheck,
+        },
+        {
             label: "Token Auditoria pública",
             valor: configAuditoriaPublica.tokenPublico || "Não configurado",
             detalhe: configAuditoriaPublica.tokenPublico ? "carregado do Supabase" : "token ativo não encontrado no Supabase",
@@ -666,6 +724,7 @@ export function ConfiguracoesSistema({
         { chave: "config-eventos-auditoria", titulo: "Auditoria de sistema", descricao: "Eventos registrados e exibidos na auditoria.", icon: Settings },
         { chave: "config-limites-carregamento", titulo: "Limites", descricao: "Quantidade de registros por tela/carga.", icon: SlidersHorizontal },
         { chave: "config-senha-configuracoes", titulo: "Senha das Configurações", descricao: "Senha local usada para abrir esta tela.", icon: Lock },
+        { chave: "config-usuarios-permissoes", titulo: "Usuários e Permissões", descricao: "Perfis e permissões planejadas por módulo.", icon: ShieldCheck },
         { chave: "config-auditoria-publica", titulo: "Auditoria pública", descricao: "Token, senha de referência e link público.", icon: KeyRound },
         { chave: "config-seguranca-publica", titulo: "Segurança pública", descricao: "Checklist operacional do QR Code público.", icon: ShieldAlert },
         { chave: "config-storage-privado", titulo: "Storage privado", descricao: "Buckets, URLs assinadas e arquivos sensíveis.", icon: HardDrive },
@@ -962,6 +1021,96 @@ export function ConfiguracoesSistema({
                         Esta senha é local do navegador. Ela não substitui permissões, RLS ou autenticação do Supabase.
                     </p>
                 </Card>
+                )
+            );
+
+        case "config-usuarios-permissoes":
+            return renderBlocoConfiguracaoComControle(
+                "config-usuarios-permissoes",
+                "Usuários e Permissões",
+                "Perfis e permissões planejadas por módulo.",
+                (
+                    <Card>
+                        <div className="flex flex-col gap-3 border-b border-slate-100 pb-4 md:flex-row md:items-start md:justify-between">
+                            <div>
+                                <div className="flex items-center gap-2">
+                                    <ShieldCheck className="h-5 w-5 text-slate-500" />
+                                    <h2 id="config-usuarios-permissoes" className="scroll-mt-24 text-lg font-black text-slate-950">Usuários e Permissões</h2>
+                                </div>
+                                <p className="mt-1 text-sm text-slate-500">
+                                    Painel inicial para organizar perfis, módulos e ações antes de aplicar bloqueios reais no sistema.
+                                </p>
+                                <p className="mt-2 text-xs font-semibold text-slate-500">
+                                    Usuário atual: <span className="font-black text-slate-900">{usuario?.email || "não informado"}</span> · Perfil atual: <span className="font-black text-slate-900">{usuario?.perfil || "não informado"}</span>
+                                </p>
+                            </div>
+                            <span className="inline-flex items-center justify-center rounded-2xl bg-blue-50 px-3 py-2 text-xs font-black text-blue-700 ring-1 ring-blue-200">
+                                Etapa visual
+                            </span>
+                        </div>
+
+                        <div className="mt-4 rounded-2xl bg-amber-50 px-4 py-3 text-xs font-semibold leading-relaxed text-amber-700 ring-1 ring-amber-200">
+                            Esta etapa ainda não bloqueia botões, rotas, uploads, exclusões ou relatórios. Os bloqueios reais devem ser ativados em microetapas futuras, começando pelas ações críticas.
+                        </div>
+
+                        <div className="mt-4 grid gap-3 xl:grid-cols-[1.1fr_1fr]">
+                            <div className="rounded-3xl bg-slate-50 p-4 ring-1 ring-slate-100">
+                                <p className="text-xs font-black uppercase tracking-wide text-slate-400">Perfis planejados</p>
+                                <div className="mt-3 space-y-2">
+                                    {PERFIS_USUARIOS_PERMISSOES_PLANEJADOS.map((item) => (
+                                        <div key={item.perfil} className="rounded-2xl bg-white px-3 py-3 ring-1 ring-slate-100">
+                                            <div className="flex items-start gap-2">
+                                                <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-slate-500" />
+                                                <div>
+                                                    <p className="text-sm font-black text-slate-900">{item.perfil}</p>
+                                                    <p className="mt-1 text-xs leading-relaxed text-slate-500">{item.descricao}</p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+
+                            <div className="space-y-3">
+                                <div className="rounded-3xl bg-slate-50 p-4 ring-1 ring-slate-100">
+                                    <p className="text-xs font-black uppercase tracking-wide text-slate-400">Módulos do sistema</p>
+                                    <div className="mt-3 flex flex-wrap gap-2">
+                                        {MODULOS_USUARIOS_PERMISSOES_PLANEJADOS.map((modulo) => (
+                                            <span key={modulo} className="rounded-full bg-white px-3 py-1.5 text-xs font-bold text-slate-700 ring-1 ring-slate-200">
+                                                {modulo}
+                                            </span>
+                                        ))}
+                                    </div>
+                                </div>
+
+                                <div className="rounded-3xl bg-slate-50 p-4 ring-1 ring-slate-100">
+                                    <p className="text-xs font-black uppercase tracking-wide text-slate-400">Ações futuras</p>
+                                    <div className="mt-3 flex flex-wrap gap-2">
+                                        {ACOES_USUARIOS_PERMISSOES_PLANEJADAS.map((acao) => (
+                                            <span key={acao} className="rounded-full bg-white px-3 py-1.5 text-xs font-bold text-slate-700 ring-1 ring-slate-200">
+                                                {acao}
+                                            </span>
+                                        ))}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="mt-4 rounded-3xl border border-dashed border-slate-300 bg-white p-4">
+                            <div className="flex items-start gap-3">
+                                <AlertTriangle className="mt-1 h-5 w-5 shrink-0 text-orange-600" />
+                                <div>
+                                    <p className="text-sm font-black text-slate-950">Próximas microetapas recomendadas</p>
+                                    <div className="mt-2 grid gap-2 text-xs font-semibold leading-relaxed text-slate-600 md:grid-cols-2">
+                                        <p>1. Criar serviço próprio de usuários e permissões sem remover a tabela atual.</p>
+                                        <p>2. Definir permissões padrão por perfil e salvar no Supabase.</p>
+                                        <p>3. Aplicar bloqueio real apenas em ações críticas: excluir, limpar arquivos e configurações.</p>
+                                        <p>4. Registrar toda alteração de permissão na Auditoria do Sistema.</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </Card>
                 )
             );
 
