@@ -175,6 +175,168 @@ export function permissaoSistemaTemAcessoGlobal(permissao = null) {
     return Boolean(permissao?.ativo && !permissao?.bloqueado && permissao?.acesso_global);
 }
 
+export const MODULOS_PERMISSAO_SISTEMA = Object.freeze({
+    DASHBOARD_SST: "dashboard_sst",
+    EMPRESAS: "empresas",
+    COLABORADORES: "colaboradores",
+    TREINAMENTOS: "treinamentos",
+    QR_CODE: "qr_code",
+    DASHBOARD_AUDITORIA: "dashboard_auditoria",
+    NOVA_AUDITORIA: "nova_auditoria",
+    AUDITORIA_SISTEMA: "auditoria_sistema",
+    CONFIGURACOES: "configuracoes",
+    STORAGE: "storage",
+    RELATORIOS: "relatorios",
+});
+
+export const ACOES_PERMISSAO_SISTEMA = Object.freeze({
+    VISUALIZAR: "visualizar",
+    CADASTRAR: "cadastrar",
+    EDITAR: "editar",
+    EXCLUIR: "excluir",
+    UPLOAD: "upload",
+    EXPORTAR: "exportar",
+    LIMPAR_ARQUIVOS: "limpar_arquivos",
+    GERENCIAR_PERMISSOES: "gerenciar_permissoes",
+});
+
+export const ACOES_CRITICAS_PERMISSAO_SISTEMA = Object.freeze({
+    EXCLUIR: "excluir",
+    LIMPAR_ARQUIVOS: "limpar_arquivos",
+    GERENCIAR_PERMISSOES: "gerenciar_permissoes",
+    CONFIGURACOES_CRITICAS: "configuracoes_criticas",
+});
+
+const METADADOS_ACOES_CRITICAS_PERMISSAO_SISTEMA = Object.freeze({
+    [ACOES_CRITICAS_PERMISSAO_SISTEMA.EXCLUIR]: {
+        moduloPadrao: MODULOS_PERMISSAO_SISTEMA.EMPRESAS,
+        acaoPadrao: ACOES_PERMISSAO_SISTEMA.EXCLUIR,
+        rotulo: "Excluir registros",
+        mensagem: "Sem permissão para excluir registros.",
+    },
+    [ACOES_CRITICAS_PERMISSAO_SISTEMA.LIMPAR_ARQUIVOS]: {
+        moduloPadrao: MODULOS_PERMISSAO_SISTEMA.STORAGE,
+        acaoPadrao: ACOES_PERMISSAO_SISTEMA.LIMPAR_ARQUIVOS,
+        rotulo: "Limpar arquivos",
+        mensagem: "Sem permissão para limpar arquivos do Storage.",
+    },
+    [ACOES_CRITICAS_PERMISSAO_SISTEMA.GERENCIAR_PERMISSOES]: {
+        moduloPadrao: MODULOS_PERMISSAO_SISTEMA.CONFIGURACOES,
+        acaoPadrao: ACOES_PERMISSAO_SISTEMA.GERENCIAR_PERMISSOES,
+        rotulo: "Gerenciar permissões",
+        mensagem: "Sem permissão para gerenciar usuários e permissões.",
+    },
+    [ACOES_CRITICAS_PERMISSAO_SISTEMA.CONFIGURACOES_CRITICAS]: {
+        moduloPadrao: MODULOS_PERMISSAO_SISTEMA.CONFIGURACOES,
+        acaoPadrao: ACOES_PERMISSAO_SISTEMA.EDITAR,
+        rotulo: "Alterar configurações críticas",
+        mensagem: "Sem permissão para alterar configurações críticas do sistema.",
+    },
+});
+
+function obterPermissoesSistema(permissao = null) {
+    const permissaoNormalizada = normalizarPermissaoSistema(permissao);
+    return permissaoNormalizada?.permissoes && typeof permissaoNormalizada.permissoes === "object"
+        ? permissaoNormalizada.permissoes
+        : {};
+}
+
+function permissaoSistemaEstaOperacional(permissao = null) {
+    const permissaoNormalizada = normalizarPermissaoSistema(permissao);
+    return Boolean(permissaoNormalizada?.ativo && !permissaoNormalizada?.bloqueado);
+}
+
+function obterValorPermissaoJson(valor) {
+    return valor === true || valor === "true";
+}
+
+function usuarioTemAcaoCriticaNoJson(permissao = null, acaoCritica = "") {
+    const chaveAcaoCritica = normalizarTexto(acaoCritica);
+    if (!chaveAcaoCritica) return false;
+
+    const permissoes = obterPermissoesSistema(permissao);
+    const acoesCriticas = permissoes.acoesCriticas && typeof permissoes.acoesCriticas === "object"
+        ? permissoes.acoesCriticas
+        : {};
+
+    return obterValorPermissaoJson(acoesCriticas[chaveAcaoCritica]);
+}
+
+export function usuarioPodeExecutarAcaoSistema(permissao = null, modulo = "", acao = "") {
+    const permissaoNormalizada = normalizarPermissaoSistema(permissao);
+    const moduloTratado = normalizarTexto(modulo);
+    const acaoTratada = normalizarTexto(acao);
+
+    if (!permissaoNormalizada || !moduloTratado || !acaoTratada) return false;
+    if (!permissaoSistemaEstaOperacional(permissaoNormalizada)) return false;
+    if (permissaoSistemaTemAcessoGlobal(permissaoNormalizada)) return true;
+
+    const permissoes = obterPermissoesSistema(permissaoNormalizada);
+
+    if (obterValorPermissaoJson(permissoes.acessoTotal)) return true;
+
+    const permissoesModulo = permissoes.modulos?.[moduloTratado];
+
+    if (!permissoesModulo || typeof permissoesModulo !== "object") return false;
+
+    return obterValorPermissaoJson(permissoesModulo[acaoTratada]);
+}
+
+export function usuarioPodeExecutarAcaoCriticaSistema(permissao = null, acaoCritica = "") {
+    const chaveAcaoCritica = normalizarTexto(acaoCritica);
+    const metadados = METADADOS_ACOES_CRITICAS_PERMISSAO_SISTEMA[chaveAcaoCritica];
+
+    if (!metadados) return false;
+    if (!permissaoSistemaEstaOperacional(permissao)) return false;
+    if (permissaoSistemaTemAcessoGlobal(permissao)) return true;
+    if (usuarioTemAcaoCriticaNoJson(permissao, chaveAcaoCritica)) return true;
+
+    return usuarioPodeExecutarAcaoSistema(permissao, metadados.moduloPadrao, metadados.acaoPadrao);
+}
+
+export function usuarioPodeExcluirSistema(permissao = null, modulo = MODULOS_PERMISSAO_SISTEMA.EMPRESAS) {
+    return usuarioPodeExecutarAcaoCriticaSistema(permissao, ACOES_CRITICAS_PERMISSAO_SISTEMA.EXCLUIR)
+        || usuarioPodeExecutarAcaoSistema(permissao, modulo, ACOES_PERMISSAO_SISTEMA.EXCLUIR);
+}
+
+export function usuarioPodeLimparArquivosSistema(permissao = null) {
+    return usuarioPodeExecutarAcaoCriticaSistema(permissao, ACOES_CRITICAS_PERMISSAO_SISTEMA.LIMPAR_ARQUIVOS);
+}
+
+export function usuarioPodeGerenciarPermissoesSistema(permissao = null) {
+    return usuarioPodeExecutarAcaoCriticaSistema(permissao, ACOES_CRITICAS_PERMISSAO_SISTEMA.GERENCIAR_PERMISSOES);
+}
+
+export function usuarioPodeAlterarConfiguracoesCriticasSistema(permissao = null) {
+    return usuarioPodeExecutarAcaoCriticaSistema(permissao, ACOES_CRITICAS_PERMISSAO_SISTEMA.CONFIGURACOES_CRITICAS);
+}
+
+export function obterBloqueioVisualAcaoCriticaSistema(permissao = null, acaoCritica = "") {
+    const chaveAcaoCritica = normalizarTexto(acaoCritica);
+    const metadados = METADADOS_ACOES_CRITICAS_PERMISSAO_SISTEMA[chaveAcaoCritica] || {
+        rotulo: "Ação crítica",
+        mensagem: "Sem permissão para executar esta ação crítica.",
+    };
+    const permitido = usuarioPodeExecutarAcaoCriticaSistema(permissao, chaveAcaoCritica);
+
+    return {
+        permitido,
+        bloqueado: !permitido,
+        disabled: !permitido,
+        rotulo: metadados.rotulo,
+        mensagem: permitido ? "Permissão liberada." : metadados.mensagem,
+    };
+}
+
+export function obterResumoAcoesCriticasSistema(permissao = null) {
+    return {
+        podeExcluir: usuarioPodeExcluirSistema(permissao),
+        podeLimparArquivos: usuarioPodeLimparArquivosSistema(permissao),
+        podeGerenciarPermissoes: usuarioPodeGerenciarPermissoesSistema(permissao),
+        podeAlterarConfiguracoesCriticas: usuarioPodeAlterarConfiguracoesCriticasSistema(permissao),
+    };
+}
+
 export function obterResumoPermissaoSistema(permissao = null) {
     const permissaoNormalizada = normalizarPermissaoSistema(permissao);
 
