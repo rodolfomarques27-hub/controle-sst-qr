@@ -63,23 +63,23 @@ export function AppSidebar({
             onMouseEnter={abrirTemporariamente}
             onMouseLeave={fecharTemporariamente}
             className={classNames(
-                "app-sidebar hidden border-r border-slate-200 bg-white transition-all duration-300 lg:flex lg:flex-col",
-                menuExpandido ? "w-72 p-5" : "w-20 p-3"
+                "app-sidebar hidden h-screen max-h-screen overflow-hidden border-r border-slate-200 bg-white transition-all duration-300 lg:flex lg:flex-col",
+                menuExpandido ? "w-72 p-4" : "w-20 p-3"
             )}
         >
             <div
                 className={classNames(
                     "app-sidebar-brand flex items-center bg-slate-950 text-white shadow-sm",
-                    menuExpandido ? "gap-3 rounded-3xl p-4" : "mx-auto h-12 w-12 justify-center rounded-2xl p-0"
+                    menuExpandido ? "gap-3 rounded-3xl p-3" : "mx-auto h-12 w-12 justify-center rounded-2xl p-0"
                 )}
             >
                 <div
                     className={classNames(
                         "app-sidebar-brand-icon flex shrink-0 items-center justify-center rounded-2xl",
-                        menuExpandido ? "h-12 w-12 bg-white/10" : "h-12 w-12 bg-transparent"
+                        menuExpandido ? "h-10 w-10 bg-white/10" : "h-12 w-12 bg-transparent"
                     )}
                 >
-                    <ShieldCheck className={classNames("shrink-0", menuExpandido ? "h-6 w-6" : "h-5 w-5")} />
+                    <ShieldCheck className={classNames("shrink-0", menuExpandido ? "h-5 w-5" : "h-5 w-5")} />
                 </div>
                 {menuExpandido && (
                     <div className="min-w-0 flex-1">
@@ -93,7 +93,7 @@ export function AppSidebar({
                 type="button"
                 onClick={alternarMenuFixo}
                 className={classNames(
-                    "app-sidebar-toggle mt-3 flex items-center justify-center gap-2 rounded-2xl bg-slate-50 px-3 py-2 text-xs font-semibold text-slate-600 ring-1 ring-slate-200 hover:bg-slate-100",
+                    "app-sidebar-toggle mt-2 flex items-center justify-center gap-2 rounded-2xl bg-slate-50 px-3 py-1.5 text-xs font-semibold text-slate-600 ring-1 ring-slate-200 hover:bg-slate-100",
                     menuExpandido ? "w-full" : "mx-auto h-10 w-10 px-0"
                 )}
                 title={menuLateralAberto ? "Fixar menu recolhido" : "Fixar menu aberto"}
@@ -104,8 +104,8 @@ export function AppSidebar({
 
             <nav
                 className={classNames(
-                    "app-sidebar-nav scrollbar-discreta mt-6",
-                    menuExpandido ? "space-y-2" : "grid justify-items-center gap-2"
+                    "app-sidebar-nav mt-4 min-h-0 flex-1 overflow-hidden",
+                    menuExpandido ? "space-y-1" : "grid justify-items-center gap-2"
                 )}
             >
                 {nav.map((item) => {
@@ -117,7 +117,7 @@ export function AppSidebar({
                             onClick={() => onSelecionarTela(item.id, item.label)}
                             className={classNames(
                                 "app-sidebar-nav-button flex items-center rounded-2xl text-left text-sm font-medium transition",
-                                menuExpandido ? "w-full gap-3 px-4 py-3" : "h-10 w-10 justify-center p-0",
+                                menuExpandido ? "w-full gap-3 px-3 py-2" : "h-10 w-10 justify-center p-0",
                                 tela === item.id
                                     ? "bg-slate-950 text-white shadow-sm"
                                     : "text-slate-600 hover:bg-slate-100 hover:text-slate-950"
@@ -132,10 +132,10 @@ export function AppSidebar({
             </nav>
 
             {menuExpandido ? (
-                <div className="app-sidebar-user mt-4 rounded-3xl bg-slate-50 p-4 ring-1 ring-slate-100">
+                <div className="app-sidebar-user mt-3 rounded-3xl bg-slate-50 p-3 ring-1 ring-slate-100">
                     <p className="text-[0.65rem] font-bold uppercase tracking-[0.18em] text-slate-400">Usuário logado</p>
 
-                    <div className="mt-3 min-w-0 space-y-2">
+                    <div className="mt-2 min-w-0 space-y-1.5">
                         <div>
                             <p className="text-[0.65rem] font-semibold uppercase tracking-wide text-slate-400">Nome</p>
                             <p className="truncate text-sm font-bold leading-5 text-slate-950" title={nomeUsuario}>
@@ -150,9 +150,9 @@ export function AppSidebar({
                             </p>
                         </div>
 
-                        <div className="rounded-2xl bg-white px-3 py-2 ring-1 ring-slate-200">
+                        <div>
                             <p className="text-[0.65rem] font-semibold uppercase tracking-wide text-slate-400">Perfil</p>
-                            <p className="truncate text-xs font-bold text-slate-950" title={perfilUsuario}>
+                            <p className="truncate text-xs font-bold leading-5 text-slate-950" title={perfilUsuario}>
                                 {perfilUsuario}
                             </p>
                         </div>
@@ -167,7 +167,7 @@ export function AppSidebar({
 
                     <button
                         onClick={sair}
-                        className="mt-4 rounded-xl bg-white px-3 py-2 text-xs font-semibold text-slate-600 ring-1 ring-slate-200 hover:bg-slate-100"
+                        className="mt-3 rounded-xl bg-white px-3 py-1.5 text-xs font-semibold text-slate-600 ring-1 ring-slate-200 hover:bg-slate-100"
                     >
                         Sair
                     </button>
