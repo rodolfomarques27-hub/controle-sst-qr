@@ -218,13 +218,24 @@ const CHAVES_BLOCOS_CONFIGURACOES_PADRAO = [
     "config-status-etapa",
 ];
 
+const VERSAO_LAYOUT_CONFIGURACOES_SISTEMA = "roteiro13-pacote4-compacto";
+const CHAVE_LAYOUT_CONFIGURACOES_SISTEMA = "configuracoesSistemaVersaoLayout";
+const CHAVE_BLOCOS_RECOLHIDOS_CONFIGURACOES = "configuracoesSistemaBlocosRecolhidos";
+
+const BLOCOS_CONFIGURACOES_ABERTOS_PADRAO = new Set([
+    "config-usuarios-permissoes",
+    "config-limites-carregamento",
+    "config-auditoria-publica",
+    "config-arquivos-storage",
+]);
+
 const BLOCOS_CONFIGURACOES_VISIVEIS_PADRAO = CHAVES_BLOCOS_CONFIGURACOES_PADRAO.reduce((acc, chave) => {
     acc[chave] = true;
     return acc;
 }, {});
 
 const BLOCOS_CONFIGURACOES_RECOLHIDOS_PADRAO = CHAVES_BLOCOS_CONFIGURACOES_PADRAO.reduce((acc, chave) => {
-    acc[chave] = false;
+    acc[chave] = !BLOCOS_CONFIGURACOES_ABERTOS_PADRAO.has(chave);
     return acc;
 }, {});
 
@@ -236,6 +247,30 @@ const carregarJsonLocalConfiguracoes = (chave, padrao) => {
         return salvo && typeof salvo === "object" ? salvo : padrao;
     } catch {
         return padrao;
+    }
+};
+
+const carregarBlocosRecolhidosLocalConfiguracoes = () => {
+    if (typeof window === "undefined") return BLOCOS_CONFIGURACOES_RECOLHIDOS_PADRAO;
+
+    try {
+        const versaoAtual = window.localStorage.getItem(CHAVE_LAYOUT_CONFIGURACOES_SISTEMA);
+
+        if (versaoAtual !== VERSAO_LAYOUT_CONFIGURACOES_SISTEMA) {
+            window.localStorage.setItem(
+                CHAVE_BLOCOS_RECOLHIDOS_CONFIGURACOES,
+                JSON.stringify(BLOCOS_CONFIGURACOES_RECOLHIDOS_PADRAO)
+            );
+            window.localStorage.setItem(CHAVE_LAYOUT_CONFIGURACOES_SISTEMA, VERSAO_LAYOUT_CONFIGURACOES_SISTEMA);
+            return BLOCOS_CONFIGURACOES_RECOLHIDOS_PADRAO;
+        }
+
+        return {
+            ...BLOCOS_CONFIGURACOES_RECOLHIDOS_PADRAO,
+            ...carregarJsonLocalConfiguracoes(CHAVE_BLOCOS_RECOLHIDOS_CONFIGURACOES, BLOCOS_CONFIGURACOES_RECOLHIDOS_PADRAO),
+        };
+    } catch {
+        return BLOCOS_CONFIGURACOES_RECOLHIDOS_PADRAO;
     }
 };
 
@@ -297,10 +332,9 @@ export function ConfiguracoesSistema({
         ...BLOCOS_CONFIGURACOES_VISIVEIS_PADRAO,
         ...carregarJsonLocalConfiguracoes("configuracoesSistemaBlocosVisiveis", BLOCOS_CONFIGURACOES_VISIVEIS_PADRAO),
     }));
-    const [blocosRecolhidosConfiguracoes, setBlocosRecolhidosConfiguracoes] = useState(() => ({
-        ...BLOCOS_CONFIGURACOES_RECOLHIDOS_PADRAO,
-        ...carregarJsonLocalConfiguracoes("configuracoesSistemaBlocosRecolhidos", BLOCOS_CONFIGURACOES_RECOLHIDOS_PADRAO),
-    }));
+    const [blocosRecolhidosConfiguracoes, setBlocosRecolhidosConfiguracoes] = useState(() =>
+        carregarBlocosRecolhidosLocalConfiguracoes()
+    );
     const [ordemBlocosConfiguracoes, setOrdemBlocosConfiguracoes] = useState(() => carregarOrdemLocalConfiguracoes());
 
     const [perfilPermissoesAberto, setPerfilPermissoesAberto] = useState(
@@ -447,7 +481,7 @@ export function ConfiguracoesSistema({
 
     useEffect(() => {
         if (typeof window === "undefined") return;
-        window.localStorage.setItem("configuracoesSistemaBlocosRecolhidos", JSON.stringify(blocosRecolhidosConfiguracoes));
+        window.localStorage.setItem(CHAVE_BLOCOS_RECOLHIDOS_CONFIGURACOES, JSON.stringify(blocosRecolhidosConfiguracoes));
     }, [blocosRecolhidosConfiguracoes]);
 
     useEffect(() => {
@@ -483,7 +517,10 @@ export function ConfiguracoesSistema({
     };
 
     const abrirTodosBlocosConfiguracao = () => {
-        setBlocosRecolhidosConfiguracoes(BLOCOS_CONFIGURACOES_RECOLHIDOS_PADRAO);
+        setBlocosRecolhidosConfiguracoes(CHAVES_BLOCOS_CONFIGURACOES_PADRAO.reduce((acc, chave) => {
+            acc[chave] = false;
+            return acc;
+        }, {}));
     };
 
     const recolherTodosBlocosConfiguracao = () => {
@@ -2870,7 +2907,7 @@ export function ConfiguracoesSistema({
                     <div>
                         <p className="text-xs font-black uppercase tracking-wide text-slate-500">Mapa administrativo</p>
                         <h2 className="mt-1 text-lg font-black text-slate-950">Atalhos da aba Configurações</h2>
-                        <p className="mt-1 text-sm text-slate-600">Acesse rapidamente os blocos críticos e mantenha a tela organizada por rotina de administração.</p>
+                        <p className="mt-1 text-sm text-slate-600">Acesse rapidamente os blocos críticos. O modo padrão agora abre só os blocos de operação e mantém checklists técnicos recolhidos para reduzir rolagem.</p>
                         <div className="mt-3 flex flex-wrap gap-2">
                             <button
                                 type="button"

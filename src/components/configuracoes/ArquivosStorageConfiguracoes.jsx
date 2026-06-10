@@ -19,6 +19,9 @@ const FILTROS_STORAGE_PADRAO = Object.freeze({
     vinculo: "Todos",
 });
 
+const QUANTIDADE_INICIAL_ARQUIVOS_STORAGE = 40;
+const QUANTIDADE_INCREMENTO_ARQUIVOS_STORAGE = 40;
+
 const obterEmpresaArquivoStorage = (arquivo) =>
     arquivo?.empresaNome || arquivo?.colaboradorEmpresa || "Sem empresa vinculada";
 
@@ -85,6 +88,7 @@ export function ArquivosStorageConfiguracoes({
     const [excluindoStorage, setExcluindoStorage] = useState("");
     const [limpandoStorage, setLimpandoStorage] = useState(false);
     const [progressoLimpezaStorage, setProgressoLimpezaStorage] = useState({ atual: 0, total: 0 });
+    const [quantidadeArquivosVisiveis, setQuantidadeArquivosVisiveis] = useState(QUANTIDADE_INICIAL_ARQUIVOS_STORAGE);
     const [permissaoSistemaAtual, setPermissaoSistemaAtual] = useState(null);
     const [mensagemPermissao, setMensagemPermissao] = useState("Carregando permissões para limpeza do Storage...");
     const storageMontadoRef = useRef(false);
@@ -96,6 +100,19 @@ export function ArquivosStorageConfiguracoes({
             storageMontadoRef.current = false;
         };
     }, []);
+
+    useEffect(() => {
+        setQuantidadeArquivosVisiveis(QUANTIDADE_INICIAL_ARQUIVOS_STORAGE);
+    }, [
+        arquivosStorage.length,
+        filtrosStorage.empresa,
+        filtrosStorage.colaborador,
+        filtrosStorage.tipo,
+        filtrosStorage.dataInicio,
+        filtrosStorage.dataFim,
+        filtrosStorage.tamanho,
+        filtrosStorage.vinculo,
+    ]);
 
     useEffect(() => {
         let montado = true;
@@ -189,6 +206,8 @@ export function ArquivosStorageConfiguracoes({
             return dataB - dataA || Number(b?.tamanho || 0) - Number(a?.tamanho || 0);
         });
 
+    const arquivosFiltradosVisiveis = arquivosFiltrados.slice(0, quantidadeArquivosVisiveis);
+    const existemMaisArquivosFiltrados = arquivosFiltradosVisiveis.length < arquivosFiltrados.length;
     const arquivosFiltradosSemVinculo = arquivosFiltrados.filter((arquivo) => !arquivo.emUso);
     const storageFiltradoSemVinculoBytes = arquivosFiltradosSemVinculo.reduce(
         (total, arquivo) => total + Number(arquivo?.tamanho || 0),
@@ -504,7 +523,7 @@ export function ArquivosStorageConfiguracoes({
                 <div className="mt-4">
                     <div className="mb-3 flex flex-col justify-between gap-2 md:flex-row md:items-center">
                         <p className="text-sm font-bold text-slate-950">Arquivos encontrados: {arquivosFiltrados.length} de {arquivosStorage.length}</p>
-                        <p className="text-xs text-slate-500">Sem vínculo no filtro: {arquivosFiltradosSemVinculo.length} arquivo(s) · {formatarBytes(storageFiltradoSemVinculoBytes)}.</p>
+                        <p className="text-xs text-slate-500">Exibindo {arquivosFiltradosVisiveis.length} por vez · Sem vínculo no filtro: {arquivosFiltradosSemVinculo.length} arquivo(s) · {formatarBytes(storageFiltradoSemVinculoBytes)}.</p>
                     </div>
 
                     {arquivosFiltrados.length === 0 && (
@@ -515,7 +534,7 @@ export function ArquivosStorageConfiguracoes({
 
                     {arquivosFiltrados.length > 0 && (
                         <div className="max-h-[32rem] space-y-2 overflow-y-auto pr-1 scrollbar-discreta">
-                            {arquivosFiltrados.map((arquivo) => (
+                            {arquivosFiltradosVisiveis.map((arquivo) => (
                                 <div key={`${arquivo.bucket}-${arquivo.caminho}`} className={classNames("rounded-2xl px-3 py-2 text-sm ring-1", arquivo.emUso ? "bg-emerald-50 text-emerald-900 ring-emerald-100" : "bg-red-50 text-red-900 ring-red-100")}>
                                     <div className="flex flex-col justify-between gap-3 lg:flex-row lg:items-center">
                                         <div className="min-w-0">
@@ -547,6 +566,43 @@ export function ArquivosStorageConfiguracoes({
                                     </div>
                                 </div>
                             ))}
+                        </div>
+                    )}
+
+                    {arquivosFiltrados.length > QUANTIDADE_INICIAL_ARQUIVOS_STORAGE && (
+                        <div className="mt-3 flex flex-col gap-2 rounded-3xl bg-slate-50 p-3 ring-1 ring-slate-200 sm:flex-row sm:items-center sm:justify-between">
+                            <p className="text-xs font-semibold text-slate-500">
+                                Renderização limitada para manter a aba Configurações leve. Use os filtros para localizar arquivos específicos.
+                            </p>
+                            <div className="flex flex-wrap gap-2">
+                                {existemMaisArquivosFiltrados && (
+                                    <button
+                                        type="button"
+                                        onClick={() => setQuantidadeArquivosVisiveis((atual) => atual + QUANTIDADE_INCREMENTO_ARQUIVOS_STORAGE)}
+                                        className="rounded-2xl bg-white px-3 py-2 text-xs font-black text-slate-700 ring-1 ring-slate-200 hover:bg-slate-100"
+                                    >
+                                        Mostrar mais {Math.min(QUANTIDADE_INCREMENTO_ARQUIVOS_STORAGE, arquivosFiltrados.length - arquivosFiltradosVisiveis.length)}
+                                    </button>
+                                )}
+                                {existemMaisArquivosFiltrados && (
+                                    <button
+                                        type="button"
+                                        onClick={() => setQuantidadeArquivosVisiveis(arquivosFiltrados.length)}
+                                        className="rounded-2xl bg-slate-950 px-3 py-2 text-xs font-black text-white hover:bg-slate-800"
+                                    >
+                                        Mostrar todos
+                                    </button>
+                                )}
+                                {!existemMaisArquivosFiltrados && arquivosFiltrados.length > QUANTIDADE_INICIAL_ARQUIVOS_STORAGE && (
+                                    <button
+                                        type="button"
+                                        onClick={() => setQuantidadeArquivosVisiveis(QUANTIDADE_INICIAL_ARQUIVOS_STORAGE)}
+                                        className="rounded-2xl bg-white px-3 py-2 text-xs font-black text-slate-700 ring-1 ring-slate-200 hover:bg-slate-100"
+                                    >
+                                        Reduzir lista
+                                    </button>
+                                )}
+                            </div>
                         </div>
                     )}
                 </div>
