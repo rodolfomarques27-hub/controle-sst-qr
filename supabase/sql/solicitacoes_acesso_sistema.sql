@@ -239,3 +239,61 @@ grant usage on schema public to authenticated;
 grant select, insert, update on public.solicitacoes_acesso_sistema to authenticated;
 grant execute on function public.registrar_solicitacao_acesso_sistema(text, text, text, text, text, text) to authenticated;
 grant execute on function public.admin_listar_solicitacoes_acesso_sistema() to authenticated;
+
+-- Roteiro 11 - Etapa 2.21C
+-- Responder solicitações de acesso sem alterar automaticamente o perfil do usuário.
+
+create or replace function public.admin_responder_solicitacao_acesso_sistema(
+    p_solicitacao_id uuid,
+    p_status text,
+    p_resposta_admin text default null
+)
+returns public.solicitacoes_acesso_sistema
+language plpgsql
+security definer
+set search_path = public, auth
+as $$
+declare
+    v_status text := lower(trim(coalesce(p_status, '')));
+    v_resultado public.solicitacoes_acesso_sistema%rowtype;
+begin
+    if p_solicitacao_id is null then
+        raise exception 'Solicitação de acesso não informada.';
+    end if;
+
+    if v_status not in ('aprovada', 'recusada') then
+        raise exception 'Status inválido. Use aprovada ou recusada.';
+    end if;
+
+    if not exists (
+        select 1
+        from public.usuarios_permissoes_sistema ups
+        where
+            (ups.user_id = auth.uid() or lower(ups.email) = lower(coalesce(auth.jwt() ->> 'email', '')))
+            and ups.ativo is true
+            and ups.bloqueado is false
+            and (
+                ups.perfil = 'administrador'
+                or ups.acesso_global is true
+                or coalesce((ups.permissoes -> 'acoesCriticas' ->> 'gerenciar_permissoes')::boolean, false) is true
+            )
+    ) then
+        raise exception 'Usuário sem permissão para responder solicitações de acesso.' using errcode = '42501';
+    end if;
+
+    update public.solicitacoes_acesso_sistema
+       set status = v_status,
+           resposta_admin = nullif(trim(coalesce(p_resposta_admin, '')), ''),
+           atualizado_em = now()
+     where id = p_solicitacao_id
+     returning * into v_resultado;
+
+    if v_resultado.id is null then
+        raise exception 'Solicitação de acesso não encontrada.';
+    end if;
+
+    return v_resultado;
+end;
+$$;
+
+grant execute on function public.admin_responder_solicitacao_acesso_sistema(uuid, text, text) to authenticated;

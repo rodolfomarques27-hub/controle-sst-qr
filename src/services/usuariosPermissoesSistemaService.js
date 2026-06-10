@@ -553,6 +553,38 @@ export async function listarSolicitacoesAcessoSistemaService({ supabase }) {
     return solicitacoes.map((solicitacao) => normalizarSolicitacaoAcessoSistema(solicitacao)).filter(Boolean);
 }
 
+export async function responderSolicitacaoAcessoSistemaService({ supabase, solicitacaoId, status, respostaAdmin = "" }) {
+    if (!supabase) {
+        throw new Error("Cliente Supabase não informado para responder solicitação de acesso.");
+    }
+
+    const id = normalizarTexto(solicitacaoId);
+    const statusTratado = normalizarStatusSolicitacaoAcessoSistema(status);
+    const resposta = normalizarTexto(respostaAdmin);
+
+    if (!id) {
+        throw new Error("Solicitação não informada para aprovação ou recusa.");
+    }
+
+    if (!["aprovada", "recusada"].includes(statusTratado)) {
+        throw new Error("Status inválido. Use aprovada ou recusada.");
+    }
+
+    const { data, error } = await supabase.rpc("admin_responder_solicitacao_acesso_sistema", {
+        p_solicitacao_id: id,
+        p_status: statusTratado,
+        p_resposta_admin: resposta,
+    });
+
+    if (error) {
+        throw new Error(error.message || "Erro ao responder solicitação de acesso do sistema.");
+    }
+
+    const solicitacaoAtualizada = Array.isArray(data) ? data[0] : data;
+
+    return normalizarSolicitacaoAcessoSistema(solicitacaoAtualizada || null);
+}
+
 export function obterResumoPermissaoSistema(permissao = null) {
     const permissaoNormalizada = normalizarPermissaoSistema(permissao);
 

@@ -74,6 +74,7 @@ import {
     obterBloqueioVisualAcaoCriticaSistema,
     obterResumoAcoesCriticasSistema,
     obterResumoPermissaoSistema,
+    responderSolicitacaoAcessoSistemaService,
     salvarUsuarioPermissaoSistemaService,
     usuarioPodeGerenciarPermissoesSistema,
 } from "../../services/usuariosPermissoesSistemaService";
@@ -226,6 +227,11 @@ export function ConfiguracoesSistema({
     const [carregandoSolicitacoesAcessoSistema, setCarregandoSolicitacoesAcessoSistema] = useState(false);
     const [mensagemSolicitacoesAcessoSistema, setMensagemSolicitacoesAcessoSistema] = useState(
         "Solicitações de acesso ainda não carregadas."
+    );
+    const [respostaAdminSolicitacaoAcessoSistema, setRespostaAdminSolicitacaoAcessoSistema] = useState("");
+    const [processandoRespostaSolicitacaoAcessoSistema, setProcessandoRespostaSolicitacaoAcessoSistema] = useState("");
+    const [mensagemRespostaSolicitacaoAcessoSistema, setMensagemRespostaSolicitacaoAcessoSistema] = useState(
+        "Selecione uma solicitação pendente para aprovar ou recusar."
     );
     const [mostrarFormularioNovoUsuarioPermissao, setMostrarFormularioNovoUsuarioPermissao] = useState(false);
     const [novoUsuarioPermissaoSistema, setNovoUsuarioPermissaoSistema] = useState({
@@ -759,6 +765,51 @@ export function ConfiguracoesSistema({
             );
         } finally {
             setCarregandoSolicitacoesAcessoSistema(false);
+        }
+    };
+
+    const responderSolicitacaoAcessoSistema = async (solicitacao, statusResposta) => {
+        if (!podeGerenciarPermissoesSistema) {
+            setMensagemRespostaSolicitacaoAcessoSistema(bloqueioGerenciarPermissoesSistema.mensagem);
+            return;
+        }
+
+        if (!solicitacao?.id) {
+            setMensagemRespostaSolicitacaoAcessoSistema("Solicitação sem identificação para aprovar ou recusar.");
+            return;
+        }
+
+        const statusTratado = statusResposta === "aprovada" ? "aprovada" : "recusada";
+        const textoAcao = statusTratado === "aprovada" ? "Aprovando" : "Recusando";
+        const textoResultado = statusTratado === "aprovada" ? "aprovada" : "recusada";
+
+        setProcessandoRespostaSolicitacaoAcessoSistema(solicitacao.id);
+        setMensagemRespostaSolicitacaoAcessoSistema(`${textoAcao} solicitação de ${solicitacao.email || "usuário sem e-mail"}...`);
+
+        try {
+            const solicitacaoAtualizada = await responderSolicitacaoAcessoSistemaService({
+                supabase,
+                solicitacaoId: solicitacao.id,
+                status: statusTratado,
+                respostaAdmin: respostaAdminSolicitacaoAcessoSistema,
+            });
+
+            if (solicitacaoAtualizada?.id) {
+                setSolicitacoesAcessoSistema((listaAtual) =>
+                    listaAtual.map((item) => item.id === solicitacaoAtualizada.id ? solicitacaoAtualizada : item)
+                );
+            }
+
+            setMensagemRespostaSolicitacaoAcessoSistema(
+                `Solicitação ${textoResultado} com sucesso. Esta etapa ainda não altera o perfil do usuário automaticamente.`
+            );
+            setRespostaAdminSolicitacaoAcessoSistema("");
+        } catch (erro) {
+            setMensagemRespostaSolicitacaoAcessoSistema(
+                `Não foi possível responder a solicitação. Supabase: ${erro?.message || "erro não identificado"}`
+            );
+        } finally {
+            setProcessandoRespostaSolicitacaoAcessoSistema("");
         }
     };
 
@@ -1669,6 +1720,23 @@ export function ConfiguracoesSistema({
                                     </div>
                                 </div>
 
+                                <div className="mt-4 rounded-2xl bg-slate-50 px-4 py-3 ring-1 ring-slate-100">
+                                    <label className="block text-xs font-black uppercase tracking-wide text-slate-400">
+                                        Observação do administrador
+                                    </label>
+                                    <textarea
+                                        value={respostaAdminSolicitacaoAcessoSistema}
+                                        onChange={(evento) => setRespostaAdminSolicitacaoAcessoSistema(evento.target.value)}
+                                        disabled={!podeGerenciarPermissoesSistema || Boolean(processandoRespostaSolicitacaoAcessoSistema)}
+                                        rows={2}
+                                        placeholder="Exemplo: aprovado para teste operacional, recusado por falta de vínculo, aguardar validação..."
+                                        className="mt-2 w-full resize-none rounded-2xl border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700 outline-none focus:border-blue-400 focus:ring-4 focus:ring-blue-100 disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-400"
+                                    />
+                                    <p className="mt-2 text-xs font-semibold leading-relaxed text-slate-500">
+                                        {mensagemRespostaSolicitacaoAcessoSistema}
+                                    </p>
+                                </div>
+
                                 <div className="mt-4 space-y-2">
                                     {solicitacoesAcessoSistema.length > 0 ? solicitacoesAcessoSistema.slice(0, 6).map((item) => (
                                         <div key={item.id || `${item.email}-${item.criado_em}`} className="rounded-2xl bg-slate-50 px-4 py-3 ring-1 ring-slate-100">
@@ -1693,6 +1761,26 @@ export function ConfiguracoesSistema({
                                                     )}>
                                                         {formatarStatusSolicitacaoAcesso(item.status)}
                                                     </span>
+                                                    {item.status === "pendente" && podeGerenciarPermissoesSistema ? (
+                                                        <div className="flex w-full flex-wrap gap-2 lg:w-auto">
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => responderSolicitacaoAcessoSistema(item, "aprovada")}
+                                                                disabled={processandoRespostaSolicitacaoAcessoSistema === item.id}
+                                                                className="rounded-full bg-emerald-600 px-3 py-1.5 text-[11px] font-black text-white shadow-sm hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-60"
+                                                            >
+                                                                {processandoRespostaSolicitacaoAcessoSistema === item.id ? "Processando" : "Aprovar"}
+                                                            </button>
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => responderSolicitacaoAcessoSistema(item, "recusada")}
+                                                                disabled={processandoRespostaSolicitacaoAcessoSistema === item.id}
+                                                                className="rounded-full bg-rose-50 px-3 py-1.5 text-[11px] font-black text-rose-700 ring-1 ring-rose-100 hover:bg-rose-100 disabled:cursor-not-allowed disabled:opacity-60"
+                                                            >
+                                                                Recusar
+                                                            </button>
+                                                        </div>
+                                                    ) : null}
                                                 </div>
                                             </div>
                                         </div>
@@ -1705,7 +1793,7 @@ export function ConfiguracoesSistema({
 
                                 {solicitacoesAcessoPendentesSistema.length > 0 ? (
                                     <div className="mt-3 rounded-2xl bg-amber-50 px-4 py-3 text-xs font-semibold leading-relaxed text-amber-800 ring-1 ring-amber-100">
-                                        Existem {solicitacoesAcessoPendentesSistema.length} solicitação(ões) pendente(s). Nesta etapa elas são apenas listadas; aprovação automática fica para a próxima microetapa.
+                                        Existem {solicitacoesAcessoPendentesSistema.length} solicitação(ões) pendente(s). Aprovar ou recusar nesta etapa altera somente o status da solicitação; o perfil do usuário será ajustado na próxima microetapa.
                                     </div>
                                 ) : null}
                             </div>
