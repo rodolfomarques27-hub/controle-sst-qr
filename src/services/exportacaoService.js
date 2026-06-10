@@ -985,9 +985,9 @@ export async function baixarRelatorioColaboradoresTreinamentosPDF({
 
     .pagina-relatorio {
         width: 210mm;
-        min-height: 297mm;
-        margin: 16px auto;
-        padding: 10mm;
+        min-height: 286mm;
+        margin: 0 auto;
+        padding: 7mm;
         background: #fff;
         border: 1px solid #d8e2ef;
         border-radius: 18px;
@@ -1222,7 +1222,7 @@ export async function baixarRelatorioColaboradoresTreinamentosPDF({
     .dados-empresa strong {
         display: block;
         min-width: 0;
-        font-size: 8.6px;
+        font-size: 7.9px;
         line-height: 1.05;
         color: #334155;
         white-space: nowrap;
@@ -1232,7 +1232,7 @@ export async function baixarRelatorioColaboradoresTreinamentosPDF({
         display: block;
         min-width: 0;
         font-style: normal;
-        font-size: 8.6px;
+        font-size: 7.9px;
         line-height: 1.08;
         font-weight: 800;
         color: #0f172a;
@@ -1246,7 +1246,7 @@ export async function baixarRelatorioColaboradoresTreinamentosPDF({
     }
 
     .dados-empresa__item--cnpj em {
-        font-size: 8.6px;
+        font-size: 7.9px;
         letter-spacing: -0.025em;
     }
 
@@ -1264,20 +1264,20 @@ export async function baixarRelatorioColaboradoresTreinamentosPDF({
     .bloco {
         border: 1px solid var(--linha);
         border-radius: 14px;
-        margin-top: 12px;
+        margin-top: 8px;
         overflow: hidden;
         background: #fff;
     }
 
     .bloco h2 {
-        min-height: 42px;
+        min-height: 34px;
         margin: 0;
         padding: 0 12px;
         display: flex;
         align-items: center;
         justify-content: center;
         color: var(--azul);
-        font-size: 15px;
+        font-size: 13px;
         text-align: center;
         text-transform: uppercase;
         letter-spacing: 0.02em;
@@ -1289,45 +1289,45 @@ export async function baixarRelatorioColaboradoresTreinamentosPDF({
     .kpis {
         display: grid;
         grid-template-columns: repeat(7, 1fr);
-        gap: 10px;
-        padding: 12px;
+        gap: 8px;
+        padding: 10px;
     }
 
     .kpi {
-        min-height: 100px;
+        min-height: 82px;
         display: grid;
         place-items: center;
         text-align: center;
         border: 1px solid var(--linha);
         border-radius: 10px;
-        padding: 10px 6px;
+        padding: 7px 5px;
         background: #fff;
     }
 
     .kpi-icone {
         display: grid;
         place-items: center;
-        width: 34px;
-        height: 34px;
-        margin-bottom: 5px;
+        width: 24px;
+        height: 24px;
+        margin-bottom: 3px;
         color: var(--azul);
     }
 
     .kpi-icone svg {
-        width: 34px;
-        height: 34px;
+        width: 24px;
+        height: 24px;
         fill: currentColor;
         display: block;
     }
 
     .kpi-titulo {
-        min-height: 26px;
-        font-size: 10px;
+        min-height: 20px;
+        font-size: 8.7px;
         font-weight: 800;
     }
 
     .kpi-valor {
-        font-size: 27px;
+        font-size: 22px;
         font-weight: 900;
         color: #0f172a;
     }
@@ -1961,7 +1961,7 @@ export async function baixarRelatorioPendenciasTreinamentosPDF({
     .dados-empresa strong {
         display: block;
         min-width: 0;
-        font-size: 8.6px;
+        font-size: 7.9px;
         line-height: 1.05;
         color: #334155;
         white-space: nowrap;
@@ -1971,7 +1971,7 @@ export async function baixarRelatorioPendenciasTreinamentosPDF({
         display: block;
         min-width: 0;
         font-style: normal;
-        font-size: 8.6px;
+        font-size: 7.9px;
         line-height: 1.08;
         font-weight: 800;
         color: #0f172a;
@@ -1985,7 +1985,7 @@ export async function baixarRelatorioPendenciasTreinamentosPDF({
     }
 
     .dados-empresa__item--cnpj em {
-        font-size: 8.6px;
+        font-size: 7.9px;
         letter-spacing: -0.025em;
     }
 
@@ -2003,20 +2003,20 @@ export async function baixarRelatorioPendenciasTreinamentosPDF({
     .bloco {
         border: 1px solid var(--linha);
         border-radius: 14px;
-        margin-top: 12px;
+        margin-top: 8px;
         overflow: hidden;
         background: #fff;
     }
 
     .bloco h2 {
-        min-height: 42px;
+        min-height: 34px;
         margin: 0;
         padding: 0 12px;
         display: flex;
         align-items: center;
         justify-content: center;
         color: var(--azul);
-        font-size: 15px;
+        font-size: 13px;
         text-align: center;
         text-transform: uppercase;
         letter-spacing: 0.02em;
@@ -2028,45 +2028,45 @@ export async function baixarRelatorioPendenciasTreinamentosPDF({
     .kpis {
         display: grid;
         grid-template-columns: repeat(7, 1fr);
-        gap: 10px;
-        padding: 12px;
+        gap: 8px;
+        padding: 10px;
     }
 
     .kpi {
-        min-height: 100px;
+        min-height: 82px;
         display: grid;
         place-items: center;
         text-align: center;
         border: 1px solid var(--linha);
         border-radius: 10px;
-        padding: 10px 6px;
+        padding: 7px 5px;
         background: #fff;
     }
 
     .kpi-icone {
         display: grid;
         place-items: center;
-        width: 34px;
-        height: 34px;
-        margin-bottom: 5px;
+        width: 24px;
+        height: 24px;
+        margin-bottom: 3px;
         color: var(--azul);
     }
 
     .kpi-icone svg {
-        width: 34px;
-        height: 34px;
+        width: 24px;
+        height: 24px;
         fill: currentColor;
         display: block;
     }
 
     .kpi-titulo {
-        min-height: 26px;
-        font-size: 10px;
+        min-height: 20px;
+        font-size: 8.7px;
         font-weight: 800;
     }
 
     .kpi-valor {
-        font-size: 27px;
+        font-size: 22px;
         font-weight: 900;
         color: #0f172a;
     }
@@ -2949,7 +2949,7 @@ export async function baixarRelatorioAniversariantesPDF({
     .dados-empresa strong {
         display: block;
         min-width: 0;
-        font-size: 8.6px;
+        font-size: 7.9px;
         line-height: 1.05;
         color: #334155;
         white-space: nowrap;
@@ -2959,7 +2959,7 @@ export async function baixarRelatorioAniversariantesPDF({
         display: block;
         min-width: 0;
         font-style: normal;
-        font-size: 8.6px;
+        font-size: 7.9px;
         line-height: 1.08;
         font-weight: 800;
         color: #0f172a;
@@ -2979,20 +2979,20 @@ export async function baixarRelatorioAniversariantesPDF({
     .bloco {
         border: 1px solid var(--linha);
         border-radius: 14px;
-        margin-top: 12px;
+        margin-top: 8px;
         overflow: hidden;
         background: #fff;
     }
 
     .bloco h2 {
-        min-height: 42px;
+        min-height: 34px;
         margin: 0;
         padding: 0 12px;
         display: flex;
         align-items: center;
         justify-content: center;
         color: var(--azul);
-        font-size: 15px;
+        font-size: 13px;
         text-align: center;
         text-transform: uppercase;
         letter-spacing: 0.02em;
@@ -3426,7 +3426,7 @@ function montarCabecalhoAuditoriaSistemaRelatorio(titulo = "Relatório da Audito
     `;
 }
 
-function dividirRegistrosAuditoriaSistemaRelatorio(registros = [], limitePrimeiraPagina = 12, limiteDemaisPaginas = 26) {
+function dividirRegistrosAuditoriaSistemaRelatorio(registros = [], limitePrimeiraPagina = 10, limiteDemaisPaginas = 18) {
     const lista = Array.isArray(registros) ? registros : [];
 
     if (!lista.length) {
@@ -3554,9 +3554,12 @@ export async function baixarRelatorioAuditoriaSistemaPDF({
     }
 
     .pagina-relatorio-auditoria-sistema {
-        min-height: 297mm;
+        height: 286mm;
+        min-height: 286mm;
+        max-height: 286mm;
         display: flex;
         flex-direction: column;
+        overflow: hidden;
     }
 
     .pagina-relatorio-auditoria-sistema--continua .cabecalho-relatorio {
@@ -3565,9 +3568,9 @@ export async function baixarRelatorioAuditoriaSistemaPDF({
 
     .cabecalho-relatorio {
         display: grid;
-        gap: 8px;
-        margin-bottom: 12px;
-        padding-top: 2px;
+        gap: 6px;
+        margin-bottom: 8px;
+        padding-top: 0;
     }
 
     .marca-relatorio-controle {
@@ -3687,7 +3690,7 @@ export async function baixarRelatorioAuditoriaSistemaPDF({
     .dados-empresa strong {
         display: block;
         min-width: 0;
-        font-size: 8.6px;
+        font-size: 7.9px;
         line-height: 1.05;
         color: #334155;
         white-space: nowrap;
@@ -3697,7 +3700,7 @@ export async function baixarRelatorioAuditoriaSistemaPDF({
         display: block;
         min-width: 0;
         font-style: normal;
-        font-size: 8.6px;
+        font-size: 7.9px;
         line-height: 1.08;
         font-weight: 800;
         color: #0f172a;
@@ -3707,20 +3710,20 @@ export async function baixarRelatorioAuditoriaSistemaPDF({
     .bloco {
         border: 1px solid var(--linha);
         border-radius: 14px;
-        margin-top: 12px;
+        margin-top: 8px;
         overflow: hidden;
         background: #fff;
     }
 
     .bloco h2 {
-        min-height: 42px;
+        min-height: 34px;
         margin: 0;
         padding: 0 12px;
         display: flex;
         align-items: center;
         justify-content: center;
         color: var(--azul);
-        font-size: 15px;
+        font-size: 13px;
         text-align: center;
         text-transform: uppercase;
         letter-spacing: 0.02em;
@@ -3732,45 +3735,45 @@ export async function baixarRelatorioAuditoriaSistemaPDF({
     .kpis {
         display: grid;
         grid-template-columns: repeat(7, 1fr);
-        gap: 10px;
-        padding: 12px;
+        gap: 8px;
+        padding: 10px;
     }
 
     .kpi {
-        min-height: 100px;
+        min-height: 82px;
         display: grid;
         place-items: center;
         text-align: center;
         border: 1px solid var(--linha);
         border-radius: 10px;
-        padding: 10px 6px;
+        padding: 7px 5px;
         background: #fff;
     }
 
     .kpi-icone {
         display: grid;
         place-items: center;
-        width: 34px;
-        height: 34px;
-        margin-bottom: 5px;
+        width: 24px;
+        height: 24px;
+        margin-bottom: 3px;
         color: var(--azul);
     }
 
     .kpi-icone svg {
-        width: 34px;
-        height: 34px;
+        width: 24px;
+        height: 24px;
         fill: currentColor;
         display: block;
     }
 
     .kpi-titulo {
-        min-height: 26px;
-        font-size: 10px;
+        min-height: 20px;
+        font-size: 8.7px;
         font-weight: 800;
     }
 
     .kpi-valor {
-        font-size: 27px;
+        font-size: 22px;
         font-weight: 900;
         color: #0f172a;
     }
@@ -3787,25 +3790,25 @@ export async function baixarRelatorioAuditoriaSistemaPDF({
     .filtros-relatorio-auditoria {
         display: grid;
         grid-template-columns: repeat(7, 1fr);
-        gap: 8px;
-        padding: 12px;
+        gap: 7px;
+        padding: 9px;
     }
 
     .filtros-relatorio-auditoria div {
-        min-height: 54px;
+        min-height: 44px;
         display: grid;
         align-content: center;
-        gap: 4px;
+        gap: 3px;
         border: 1px solid var(--linha);
         border-radius: 10px;
         background: #fbfdff;
-        padding: 8px;
+        padding: 6px;
         text-align: center;
     }
 
     .filtros-relatorio-auditoria strong {
         color: #334155;
-        font-size: 8.6px;
+        font-size: 7.9px;
         text-transform: uppercase;
     }
 
@@ -3817,14 +3820,14 @@ export async function baixarRelatorioAuditoriaSistemaPDF({
     }
 
     .observacao-auditoria {
-        margin: 10px 0 12px;
-        padding: 10px 12px;
-        border-radius: 12px;
+        margin: 7px 0 8px;
+        padding: 7px 10px;
+        border-radius: 10px;
         background: #f8fbff;
         border: 1px solid var(--linha);
         color: #334155;
-        font-size: 10px;
-        line-height: 1.45;
+        font-size: 8.8px;
+        line-height: 1.35;
     }
 
     .observacao-auditoria--externa {
@@ -3832,8 +3835,8 @@ export async function baixarRelatorioAuditoriaSistemaPDF({
     }
 
     .observacao-auditoria--continua {
-        margin-top: 4px;
-        margin-bottom: 10px;
+        margin-top: 2px;
+        margin-bottom: 7px;
     }
 
     .bloco-registros-auditoria {
@@ -3845,7 +3848,7 @@ export async function baixarRelatorioAuditoriaSistemaPDF({
         width: 100%;
         border-collapse: collapse;
         table-layout: fixed;
-        font-size: 9.4px;
+        font-size: 8.5px;
     }
 
     .tabela-auditoria-sistema-relatorio .col-numero { width: 4%; }
@@ -3856,12 +3859,12 @@ export async function baixarRelatorioAuditoriaSistemaPDF({
     .tabela-auditoria-sistema-relatorio .col-nivel { width: 10%; }
     .tabela-auditoria-sistema-relatorio .col-descricao { width: 24%; }
 
-    thead tr { height: 50px; }
+    thead tr { height: 42px; }
 
     thead th {
         background: linear-gradient(180deg, #075bbd, #033f88);
         color: #fff;
-        height: 50px;
+        height: 42px;
         padding: 0;
         border-right: 1px solid rgba(255,255,255,0.25);
         text-align: center;
@@ -3873,8 +3876,8 @@ export async function baixarRelatorioAuditoriaSistemaPDF({
 
     .th-conteudo {
         width: 100%;
-        height: 50px;
-        min-height: 50px;
+        height: 42px;
+        min-height: 42px;
         display: flex;
         align-items: center;
         justify-content: center;
@@ -3882,15 +3885,15 @@ export async function baixarRelatorioAuditoriaSistemaPDF({
         box-sizing: border-box;
         text-align: center;
         line-height: 1.1;
-        font-size: 8.6px;
+        font-size: 7.9px;
         font-weight: 900;
         white-space: normal;
         overflow: hidden;
     }
 
     tbody td {
-        height: 34px;
-        padding: 6px 7px;
+        height: 30px;
+        padding: 5px 6px;
         border-bottom: 1px solid var(--linha);
         border-right: 1px solid var(--linha);
         text-align: center;
@@ -3934,11 +3937,11 @@ export async function baixarRelatorioAuditoriaSistemaPDF({
         display: flex;
         justify-content: space-between;
         margin-top: auto;
-        padding: 10px 14px;
+        padding: 8px 12px;
         color: #fff;
         background: linear-gradient(90deg, #032b63, #075bbd);
         border-radius: 0 0 12px 12px;
-        font-size: 11px;
+        font-size: 9.8px;
         font-weight: 800;
     }
 
