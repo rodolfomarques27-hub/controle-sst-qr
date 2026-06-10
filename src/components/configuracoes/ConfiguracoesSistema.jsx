@@ -69,6 +69,7 @@ import {
 import {
     ACOES_CRITICAS_PERMISSAO_SISTEMA,
     carregarPermissaoSistemaAtualService,
+    concluirSolicitacaoAcessoSistemaService,
     listarSolicitacoesAcessoSistemaService,
     listarUsuariosPermissoesSistemaService,
     obterBloqueioVisualAcaoCriticaSistema,
@@ -100,6 +101,7 @@ function formatarDataHoraConfiguracoes(valor) {
 
 function obterClasseStatusSolicitacaoAcesso(status = "pendente") {
     if (status === "aprovada") return "bg-emerald-50 text-emerald-700 ring-emerald-100";
+    if (status === "concluida") return "bg-blue-50 text-blue-700 ring-blue-100";
     if (status === "recusada") return "bg-rose-50 text-rose-700 ring-rose-100";
     if (status === "cancelada") return "bg-slate-100 text-slate-500 ring-slate-200";
     return "bg-amber-50 text-amber-700 ring-amber-100";
@@ -109,6 +111,7 @@ function formatarStatusSolicitacaoAcesso(status = "pendente") {
     const mapa = {
         pendente: "Pendente",
         aprovada: "Aprovada",
+        concluida: "Concluída",
         recusada: "Recusada",
         cancelada: "Cancelada",
     };
@@ -264,6 +267,7 @@ export function ConfiguracoesSistema({
     const [mensagemRespostaSolicitacaoAcessoSistema, setMensagemRespostaSolicitacaoAcessoSistema] = useState(
         "Selecione uma solicitação pendente para aprovar ou recusar."
     );
+    const [solicitacaoAcessoPreparadaSistema, setSolicitacaoAcessoPreparadaSistema] = useState(null);
     const [mostrarFormularioNovoUsuarioPermissao, setMostrarFormularioNovoUsuarioPermissao] = useState(false);
     const [novoUsuarioPermissaoSistema, setNovoUsuarioPermissaoSistema] = useState({
         nome: "",
@@ -329,9 +333,10 @@ export function ConfiguracoesSistema({
         const total = solicitacoesAcessoSistema.length;
         const pendentes = solicitacoesAcessoSistema.filter((item) => item.status === "pendente").length;
         const aprovadas = solicitacoesAcessoSistema.filter((item) => item.status === "aprovada").length;
+        const concluidas = solicitacoesAcessoSistema.filter((item) => item.status === "concluida").length;
         const recusadas = solicitacoesAcessoSistema.filter((item) => item.status === "recusada").length;
 
-        return { total, pendentes, aprovadas, recusadas };
+        return { total, pendentes, aprovadas, concluidas, recusadas };
     }, [solicitacoesAcessoSistema]);
 
     const solicitacoesAcessoPendentesSistema = useMemo(
@@ -814,6 +819,7 @@ export function ConfiguracoesSistema({
         const nomeSugerido = solicitacao.nome || solicitacao.email.split("@")[0] || "";
 
         setUsuarioPermissaoSistemaEmEdicao(null);
+        setSolicitacaoAcessoPreparadaSistema(solicitacao);
         setNovoUsuarioPermissaoSistema({
             nome: nomeSugerido,
             email: solicitacao.email || "",
@@ -906,6 +912,7 @@ export function ConfiguracoesSistema({
 
     const limparFormularioNovoUsuarioPermissao = () => {
         setUsuarioPermissaoSistemaEmEdicao(null);
+        setSolicitacaoAcessoPreparadaSistema(null);
         setNovoUsuarioPermissaoSistema({
             nome: "",
             email: "",
@@ -932,6 +939,7 @@ export function ConfiguracoesSistema({
         }
 
         setUsuarioPermissaoSistemaEmEdicao(usuarioSelecionado);
+        setSolicitacaoAcessoPreparadaSistema(null);
         setNovoUsuarioPermissaoSistema({
             nome: usuarioSelecionado.nome || "",
             email: usuarioSelecionado.email || "",
@@ -986,6 +994,32 @@ export function ConfiguracoesSistema({
                 await carregarPermissaoSistemaAtual();
             }
 
+            let mensagemConclusaoSolicitacao = "";
+
+            if (
+                solicitacaoAcessoPreparadaSistema?.id
+                && (solicitacaoAcessoPreparadaSistema.email || "").toLowerCase() === emailTratado
+            ) {
+                try {
+                    const solicitacaoConcluida = await concluirSolicitacaoAcessoSistemaService({
+                        supabase,
+                        solicitacaoId: solicitacaoAcessoPreparadaSistema.id,
+                        respostaAdmin: `Permissão salva no Supabase para ${usuarioSalvo?.email || emailTratado}.`,
+                    });
+
+                    if (solicitacaoConcluida?.id) {
+                        setSolicitacoesAcessoSistema((listaAtual) =>
+                            listaAtual.map((item) => item.id === solicitacaoConcluida.id ? solicitacaoConcluida : item)
+                        );
+                    }
+
+                    setSolicitacaoAcessoPreparadaSistema(null);
+                    mensagemConclusaoSolicitacao = " Solicitação vinculada e marcada como concluída.";
+                } catch (erroConclusao) {
+                    mensagemConclusaoSolicitacao = ` Permissão salva, mas não foi possível concluir a solicitação: ${erroConclusao?.message || "erro não identificado"}.`;
+                }
+            }
+
             const operacao = modoEdicaoUsuarioPermissaoSistema ? "atualizada" : "salva";
 
             setUsuarioPermissaoSistemaEmEdicao(null);
@@ -1000,7 +1034,7 @@ export function ConfiguracoesSistema({
             });
 
             setMensagemFormularioNovoUsuarioPermissao(
-                `Permissão ${operacao} no Supabase para ${usuarioSalvo?.email || emailTratado}. A lista administrativa foi atualizada.`
+                `Permissão ${operacao} no Supabase para ${usuarioSalvo?.email || emailTratado}. A lista administrativa foi atualizada.${mensagemConclusaoSolicitacao}`
             );
         } catch (erro) {
             setMensagemFormularioNovoUsuarioPermissao(
@@ -1775,7 +1809,7 @@ export function ConfiguracoesSistema({
                                     </button>
                                 </div>
 
-                                <div className="mt-4 grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
+                                <div className="mt-4 grid gap-2 sm:grid-cols-2 xl:grid-cols-5">
                                     <div className="rounded-2xl bg-slate-50 px-3 py-3 ring-1 ring-slate-100">
                                         <p className="text-[10px] font-black uppercase tracking-wide text-slate-400">Total</p>
                                         <p className="mt-1 text-sm font-black text-slate-950">{resumoSolicitacoesAcessoSistema.total}</p>
@@ -1787,6 +1821,10 @@ export function ConfiguracoesSistema({
                                     <div className="rounded-2xl bg-emerald-50 px-3 py-3 ring-1 ring-emerald-100">
                                         <p className="text-[10px] font-black uppercase tracking-wide text-emerald-700">Aprovadas</p>
                                         <p className="mt-1 text-sm font-black text-emerald-800">{resumoSolicitacoesAcessoSistema.aprovadas}</p>
+                                    </div>
+                                    <div className="rounded-2xl bg-blue-50 px-3 py-3 ring-1 ring-blue-100">
+                                        <p className="text-[10px] font-black uppercase tracking-wide text-blue-700">Concluídas</p>
+                                        <p className="mt-1 text-sm font-black text-blue-800">{resumoSolicitacoesAcessoSistema.concluidas}</p>
                                     </div>
                                     <div className="rounded-2xl bg-rose-50 px-3 py-3 ring-1 ring-rose-100">
                                         <p className="text-[10px] font-black uppercase tracking-wide text-rose-700">Recusadas</p>
@@ -1895,6 +1933,11 @@ export function ConfiguracoesSistema({
                                         <p className="mt-1 text-xs font-semibold leading-relaxed text-slate-500">
                                             {mensagemFormularioNovoUsuarioPermissao}
                                         </p>
+                                        {solicitacaoAcessoPreparadaSistema?.id ? (
+                                            <p className="mt-2 rounded-2xl bg-blue-50 px-3 py-2 text-xs font-bold leading-relaxed text-blue-700 ring-1 ring-blue-100">
+                                                Esta permissão será vinculada à solicitação aprovada de {solicitacaoAcessoPreparadaSistema.email}. Ao salvar, a solicitação será marcada como concluída.
+                                            </p>
+                                        ) : null}
                                     </div>
                                     <button
                                         type="button"

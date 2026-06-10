@@ -475,6 +475,7 @@ const STATUS_SOLICITACAO_ACESSO_SISTEMA_VALIDOS = new Set([
     "aprovada",
     "recusada",
     "cancelada",
+    "concluida",
 ]);
 
 function normalizarStatusSolicitacaoAcessoSistema(valor) {
@@ -566,8 +567,8 @@ export async function responderSolicitacaoAcessoSistemaService({ supabase, solic
         throw new Error("Solicitação não informada para aprovação ou recusa.");
     }
 
-    if (!["aprovada", "recusada"].includes(statusTratado)) {
-        throw new Error("Status inválido. Use aprovada ou recusada.");
+    if (!["aprovada", "recusada", "concluida"].includes(statusTratado)) {
+        throw new Error("Status inválido. Use aprovada, recusada ou concluida.");
     }
 
     const { data, error } = await supabase.rpc("admin_responder_solicitacao_acesso_sistema", {
@@ -583,6 +584,16 @@ export async function responderSolicitacaoAcessoSistemaService({ supabase, solic
     const solicitacaoAtualizada = Array.isArray(data) ? data[0] : data;
 
     return normalizarSolicitacaoAcessoSistema(solicitacaoAtualizada || null);
+}
+
+
+export async function concluirSolicitacaoAcessoSistemaService({ supabase, solicitacaoId, respostaAdmin = "" }) {
+    return responderSolicitacaoAcessoSistemaService({
+        supabase,
+        solicitacaoId,
+        status: "concluida",
+        respostaAdmin,
+    });
 }
 
 export function obterResumoPermissaoSistema(permissao = null) {

@@ -12,12 +12,20 @@ create table if not exists public.solicitacoes_acesso_sistema (
     area_solicitada text not null,
     tela text,
     perfil_atual text,
-    status text not null default 'pendente' check (status in ('pendente', 'aprovada', 'recusada', 'cancelada')),
+    status text not null default 'pendente' check (status in ('pendente', 'aprovada', 'recusada', 'cancelada', 'concluida')),
     observacao text,
     resposta_admin text,
     criado_em timestamptz not null default now(),
     atualizado_em timestamptz not null default now()
 );
+
+-- Etapa 2.21E: permitir concluir solicitação depois que a permissão for salva.
+alter table public.solicitacoes_acesso_sistema
+    drop constraint if exists solicitacoes_acesso_sistema_status_check;
+
+alter table public.solicitacoes_acesso_sistema
+    add constraint solicitacoes_acesso_sistema_status_check
+    check (status in ('pendente', 'aprovada', 'recusada', 'cancelada', 'concluida'));
 
 create index if not exists idx_solicitacoes_acesso_sistema_status
     on public.solicitacoes_acesso_sistema (status, criado_em desc);
@@ -230,7 +238,7 @@ begin
     select *
       from public.solicitacoes_acesso_sistema
      order by
-        case status when 'pendente' then 0 when 'aprovada' then 1 when 'recusada' then 2 else 3 end,
+        case status when 'pendente' then 0 when 'aprovada' then 1 when 'concluida' then 2 when 'recusada' then 3 else 4 end,
         criado_em desc;
 end;
 $$;
@@ -261,8 +269,8 @@ begin
         raise exception 'Solicitação de acesso não informada.';
     end if;
 
-    if v_status not in ('aprovada', 'recusada') then
-        raise exception 'Status inválido. Use aprovada ou recusada.';
+    if v_status not in ('aprovada', 'recusada', 'concluida') then
+        raise exception 'Status inválido. Use aprovada, recusada ou concluida.';
     end if;
 
     if not exists (
@@ -297,3 +305,7 @@ end;
 $$;
 
 grant execute on function public.admin_responder_solicitacao_acesso_sistema(uuid, text, text) to authenticated;
+
+
+-- Recarrega o cache do PostgREST para reconhecer a RPC atualizada.
+select pg_notify('pgrst', 'reload schema');
