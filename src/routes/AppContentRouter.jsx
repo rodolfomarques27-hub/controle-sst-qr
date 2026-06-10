@@ -83,10 +83,11 @@ function AcessoModuloSistemaBloqueado({ tela, bloqueio, permissao, erro, usuario
     const telaExibicao = formatarRotuloAcessoBloqueado(tela, ROTULOS_TELAS_ACESSO_BLOQUEADO, "Tela não informada");
     const perfilExibicao = formatarRotuloAcessoBloqueado(resumo.perfil, ROTULOS_PERFIS_ACESSO_BLOQUEADO, "Usuário sem perfil liberado");
     const mensagemPrincipal = erro || "Sem permissão para acessar esta área do sistema.";
-    const nomeUsuario = usuario?.nome || permissao?.nome || "Não informado";
     const emailUsuario = usuario?.email || permissao?.email || "Não informado";
+    const nomeUsuario = usuario?.nome || permissao?.nome || (emailUsuario.includes("@") ? emailUsuario.split("@")[0] : "Não informado");
+    const [solicitacaoPreparada, setSolicitacaoPreparada] = useState(false);
 
-    function handleSolicitarAcesso() {
+    async function handleSolicitarAcesso() {
         const assunto = `Solicitação de acesso - ${telaExibicao}`;
         const corpo = [
             "Olá, preciso de liberação de acesso no Controle SST QR.",
@@ -99,7 +100,20 @@ function AcessoModuloSistemaBloqueado({ tela, bloqueio, permissao, erro, usuario
             "Por favor, verificar em Configurações > Usuários e Permissões.",
         ].join("\n");
 
-        window.location.href = `mailto:${EMAIL_ADMINISTRADOR_PERMISSOES}?subject=${encodeURIComponent(assunto)}&body=${encodeURIComponent(corpo)}`;
+        try {
+            await navigator.clipboard?.writeText(corpo);
+        } catch (erroClipboard) {
+            console.warn("Não foi possível copiar a solicitação automaticamente.", erroClipboard);
+        }
+
+        const urlGmail = `https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(EMAIL_ADMINISTRADOR_PERMISSOES)}&su=${encodeURIComponent(assunto)}&body=${encodeURIComponent(corpo)}`;
+        const janelaEmail = window.open(urlGmail, "_blank", "noopener,noreferrer");
+
+        if (!janelaEmail) {
+            window.location.href = `mailto:${EMAIL_ADMINISTRADOR_PERMISSOES}?subject=${encodeURIComponent(assunto)}&body=${encodeURIComponent(corpo)}`;
+        }
+
+        setSolicitacaoPreparada(true);
     }
 
     return (
@@ -158,7 +172,7 @@ function AcessoModuloSistemaBloqueado({ tela, bloqueio, permissao, erro, usuario
                                 </div>
                             </div>
 
-                            <div className="mt-8 flex justify-center">
+                            <div className="mt-8 flex flex-col items-center gap-3">
                                 <button
                                     type="button"
                                     onClick={handleSolicitarAcesso}
@@ -167,6 +181,11 @@ function AcessoModuloSistemaBloqueado({ tela, bloqueio, permissao, erro, usuario
                                     <Send className="h-4 w-4" />
                                     Solicitar acesso
                                 </button>
+                                {solicitacaoPreparada ? (
+                                    <p className="max-w-md text-center text-xs font-bold leading-5 text-emerald-700">
+                                        Solicitação preparada. Uma janela do Gmail foi aberta e o texto também foi copiado.
+                                    </p>
+                                ) : null}
                             </div>
                         </div>
                     </section>
