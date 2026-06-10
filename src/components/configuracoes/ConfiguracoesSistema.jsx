@@ -220,7 +220,7 @@ const CHAVES_BLOCOS_CONFIGURACOES_PADRAO = [
     "config-status-etapa",
 ];
 
-const VERSAO_LAYOUT_CONFIGURACOES_SISTEMA = "roteiro13-pacote7-evidencias";
+const VERSAO_LAYOUT_CONFIGURACOES_SISTEMA = "roteiro13-ajuste-painel-configuracoes";
 const CHAVE_LAYOUT_CONFIGURACOES_SISTEMA = "configuracoesSistemaVersaoLayout";
 const CHAVE_BLOCOS_RECOLHIDOS_CONFIGURACOES = "configuracoesSistemaBlocosRecolhidos";
 
@@ -231,6 +231,25 @@ const BLOCOS_CONFIGURACOES_ABERTOS_PADRAO = new Set([
     "config-arquivos-storage",
     "config-relatorios-evidencias",
 ]);
+
+const CHAVES_BLOCOS_CONFIGURACOES_CRITICOS = new Set([
+    "config-usuarios-permissoes",
+    "config-auditoria-publica",
+    "config-arquivos-storage",
+    "config-senha-configuracoes",
+    "config-eventos-auditoria",
+    "config-storage-privado",
+    "config-supabase-geral",
+]);
+
+const FILTROS_PAINEL_CONFIGURACOES = [
+    { chave: "todos", label: "Todos" },
+    { chave: "visiveis", label: "Visíveis" },
+    { chave: "ocultos", label: "Ocultos" },
+    { chave: "abertos", label: "Abertos" },
+    { chave: "recolhidos", label: "Recolhidos" },
+    { chave: "criticos", label: "Críticos" },
+];
 
 const BLOCOS_CONFIGURACOES_VISIVEIS_PADRAO = CHAVES_BLOCOS_CONFIGURACOES_PADRAO.reduce((acc, chave) => {
     acc[chave] = true;
@@ -334,6 +353,7 @@ export function ConfiguracoesSistema({
     const [mostrarCamposSenhaConfiguracoes, setMostrarCamposSenhaConfiguracoes] = useState(false);
 
     const [mostrarOrganizacaoCards, setMostrarOrganizacaoCards] = useState(false);
+    const [filtroPainelConfiguracoes, setFiltroPainelConfiguracoes] = useState("todos");
     const [blocosVisiveisConfiguracoes, setBlocosVisiveisConfiguracoes] = useState(() => ({
         ...BLOCOS_CONFIGURACOES_VISIVEIS_PADRAO,
         ...carregarJsonLocalConfiguracoes("configuracoesSistemaBlocosVisiveis", BLOCOS_CONFIGURACOES_VISIVEIS_PADRAO),
@@ -645,7 +665,7 @@ export function ConfiguracoesSistema({
                 type="button"
                 onClick={() => alternarRecolhidoBlocoConfiguracao(chave)}
                 className={classNames(
-                    "inline-flex items-center justify-center gap-2 rounded-2xl bg-slate-950 px-4 py-2 text-xs font-black text-white shadow-sm ring-1 ring-slate-950 hover:bg-slate-800",
+                    "inline-flex min-h-[38px] items-center justify-center gap-2 rounded-2xl bg-slate-950 px-4 py-2 text-xs font-black text-white shadow-sm ring-1 ring-slate-950 transition hover:-translate-y-0.5 hover:bg-slate-800",
                     extraClassName
                 )}
             >
@@ -655,19 +675,28 @@ export function ConfiguracoesSistema({
         );
     };
 
-    const rodapeControleBlocoConfiguracao = (chave) => (
-        <div className="mt-5 rounded-2xl border border-slate-100 bg-slate-50/80 px-4 py-3">
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                <div>
-                    <p className="text-[11px] font-black uppercase tracking-wide text-slate-400">Controle do card</p>
-                    <p className="mt-0.5 text-xs font-semibold text-slate-500">
-                        Use este botão para abrir ou recolher somente esta seção.
-                    </p>
+    const topoControleBlocoConfiguracao = (chave, titulo = "") => {
+        const recolhido = blocoConfiguracaoRecolhido(chave);
+
+        return (
+            <div className={classNames(
+                "mb-4 rounded-2xl border px-3 py-3",
+                recolhido ? "border-slate-100 bg-slate-50" : "border-blue-100 bg-blue-50/70"
+            )}>
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                    <div className="min-w-0">
+                        <p className="text-[11px] font-black uppercase tracking-wide text-slate-400">
+                            Controle do card
+                        </p>
+                        <p className="mt-0.5 text-xs font-semibold text-slate-600">
+                            {titulo ? `${titulo} · ` : ""}{recolhido ? "recolhido" : "aberto"}
+                        </p>
+                    </div>
+                    {botaoRecolherBlocoConfiguracao(chave, "w-full sm:w-auto")}
                 </div>
-                {botaoRecolherBlocoConfiguracao(chave, "w-full sm:w-auto")}
             </div>
-        </div>
-    );
+        );
+    };
 
     const renderBlocoConfiguracaoComControle = (chave, titulo, descricao, conteudo) => {
         if (!blocoConfiguracaoVisivel(chave)) return null;
@@ -675,13 +704,11 @@ export function ConfiguracoesSistema({
         if (blocoConfiguracaoRecolhido(chave)) {
             return (
                 <Card>
-                    <div className="flex flex-col gap-4">
-                        <div>
-                            <p className="text-xs font-black uppercase tracking-wide text-slate-400">Card recolhido</p>
-                            <h2 className="mt-1 text-lg font-black text-slate-950">{titulo}</h2>
-                            <p className="mt-1 text-sm text-slate-500">{descricao}</p>
-                        </div>
-                        {rodapeControleBlocoConfiguracao(chave)}
+                    {topoControleBlocoConfiguracao(chave, titulo)}
+                    <div>
+                        <p className="text-xs font-black uppercase tracking-wide text-slate-400">Card recolhido</p>
+                        <h2 className="mt-1 text-lg font-black text-slate-950">{titulo}</h2>
+                        <p className="mt-1 text-sm text-slate-500">{descricao}</p>
                     </div>
                 </Card>
             );
@@ -692,8 +719,8 @@ export function ConfiguracoesSistema({
                 className: classNames(conteudo.props.className || "", "h-full"),
                 children: (
                     <>
+                        {topoControleBlocoConfiguracao(chave, titulo)}
                         {conteudo.props.children}
-                        {rodapeControleBlocoConfiguracao(chave)}
                     </>
                 ),
             });
@@ -701,8 +728,8 @@ export function ConfiguracoesSistema({
 
         return (
             <Card>
+                {topoControleBlocoConfiguracao(chave, titulo)}
                 {conteudo}
-                {rodapeControleBlocoConfiguracao(chave)}
             </Card>
         );
     };
@@ -1600,6 +1627,29 @@ export function ConfiguracoesSistema({
 
     const secoesConfiguracoesVisiveisOrdenadas = secoesConfiguracoesOrdenadas.filter((secao) => blocoConfiguracaoVisivel(secao.chave));
 
+    const resumoPainelConfiguracoes = {
+        total: secoesConfiguracoesOrdenadas.length,
+        visiveis: secoesConfiguracoesOrdenadas.filter((secao) => blocoConfiguracaoVisivel(secao.chave)).length,
+        abertos: secoesConfiguracoesOrdenadas.filter((secao) => blocoConfiguracaoVisivel(secao.chave) && !blocoConfiguracaoRecolhido(secao.chave)).length,
+        recolhidos: secoesConfiguracoesOrdenadas.filter((secao) => blocoConfiguracaoVisivel(secao.chave) && blocoConfiguracaoRecolhido(secao.chave)).length,
+        ocultos: secoesConfiguracoesOrdenadas.filter((secao) => !blocoConfiguracaoVisivel(secao.chave)).length,
+        criticos: secoesConfiguracoesOrdenadas.filter((secao) => CHAVES_BLOCOS_CONFIGURACOES_CRITICOS.has(secao.chave)).length,
+    };
+
+    const secoesPersonalizacaoConfiguracoes = secoesConfiguracoesOrdenadas.filter((secao) => {
+        const visivel = blocoConfiguracaoVisivel(secao.chave);
+        const recolhido = blocoConfiguracaoRecolhido(secao.chave);
+        const critico = CHAVES_BLOCOS_CONFIGURACOES_CRITICOS.has(secao.chave);
+
+        if (filtroPainelConfiguracoes === "visiveis") return visivel;
+        if (filtroPainelConfiguracoes === "ocultos") return !visivel;
+        if (filtroPainelConfiguracoes === "abertos") return visivel && !recolhido;
+        if (filtroPainelConfiguracoes === "recolhidos") return visivel && recolhido;
+        if (filtroPainelConfiguracoes === "criticos") return critico;
+
+        return true;
+    });
+
     const renderBlocoConfiguracao = (chave) => {
         switch (chave) {
         case "config-eventos-auditoria":
@@ -1876,8 +1926,8 @@ export function ConfiguracoesSistema({
         case "config-senha-configuracoes":
             return renderBlocoConfiguracaoComControle(
                 "config-senha-configuracoes",
-                "Senha das Configurações",
-                "Senha local usada para abrir a tela Configurações.",
+                "Configurações críticas",
+                "Senha, restauração padrão e ações sensíveis da área administrativa.",
                 (
                 <Card>
                     <div className="flex flex-col gap-3 border-b border-slate-100 pb-4 md:flex-row md:items-start md:justify-between">
@@ -1887,7 +1937,7 @@ export function ConfiguracoesSistema({
                                 <h2 id="config-senha-configuracoes" className="scroll-mt-24 text-lg font-black text-slate-950">Configurações críticas</h2>
                             </div>
                             <p className="mt-1 text-sm text-slate-500">
-                                Altere a senha local exigida para abrir a aba Configurações neste navegador.
+                                Área separada para senha, restauração padrão e ações administrativas sensíveis. Use somente com permissão crítica liberada.
                             </p>
                             <p className="mt-2 text-xs font-semibold text-slate-500">
                                 Status atual: <span className="font-black text-slate-900">{senhaConfiguracoesSistema === SENHA_CONFIGURACOES_PADRAO ? "Senha padrão 2026" : "Senha personalizada"}</span> · Origem: <span className="font-black text-slate-900">{origemSenhaConfiguracoesSistema === "supabase" ? "Supabase" : "Local"}</span>
@@ -1903,6 +1953,28 @@ export function ConfiguracoesSistema({
                             <RotateCcw className="h-3.5 w-3.5" />
                             Restaurar senha padrão
                         </button>
+                    </div>
+
+                    <div className="mt-4 grid gap-3 lg:grid-cols-4">
+                        {[
+                            ["Alterar senha", podeAlterarConfiguracoesCriticasSistema],
+                            ["Restaurar padrão", podeAlterarConfiguracoesCriticasSistema],
+                            ["Gerenciar permissões", resumoAcoesCriticasSistemaAtual.podeGerenciarPermissoes],
+                            ["Limpar Storage", resumoAcoesCriticasSistemaAtual.podeLimparArquivos],
+                        ].map(([rotulo, permitido]) => (
+                            <div
+                                key={rotulo}
+                                className={classNames(
+                                    "rounded-2xl px-3 py-3 ring-1",
+                                    permitido
+                                        ? "bg-emerald-50 text-emerald-700 ring-emerald-100"
+                                        : "bg-slate-50 text-slate-500 ring-slate-100"
+                                )}
+                            >
+                                <p className="text-[10px] font-black uppercase tracking-wide">{rotulo}</p>
+                                <p className="mt-1 text-xs font-black">{permitido ? "Liberado" : "Bloqueado"}</p>
+                            </div>
+                        ))}
                     </div>
 
                     <div className={classNames(
@@ -3138,81 +3210,107 @@ export function ConfiguracoesSistema({
             </div>
 
             <Card className="mt-6 border-slate-200 bg-white/90">
-                <div className="flex min-w-0 flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-                    <div>
-                        <p className="text-xs font-black uppercase tracking-wide text-slate-500">Mapa administrativo</p>
+                <div className="flex min-w-0 flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
+                    <div className="min-w-0 flex-1">
+                        <p className="text-xs font-black uppercase tracking-wide text-slate-500">Personalizar painel</p>
                         <h2 className="mt-1 text-lg font-black text-slate-950">Atalhos da aba Configurações</h2>
-                        <p className="mt-1 text-sm text-slate-600">Acesse rapidamente os blocos críticos. O modo padrão agora abre só os blocos de operação e mantém checklists técnicos recolhidos para reduzir rolagem.</p>
+                        <p className="mt-1 max-w-3xl text-sm leading-relaxed text-slate-600">
+                            Organize esta tela no mesmo padrão do painel do Dashboard SST: filtre os cards, escolha o que fica visível, altere a ordem e deixe os blocos abertos ou recolhidos.
+                        </p>
                         <div className="mt-3 flex flex-wrap gap-2">
                             <button
                                 type="button"
                                 onClick={() => setMostrarOrganizacaoCards((valor) => !valor)}
-                                className="rounded-2xl bg-slate-950 px-3 py-2 text-xs font-black text-white hover:bg-slate-800"
+                                className="inline-flex min-h-[38px] items-center justify-center rounded-2xl bg-slate-950 px-4 py-2 text-xs font-black text-white shadow-sm transition hover:-translate-y-0.5 hover:bg-slate-800"
                             >
-                                {mostrarOrganizacaoCards ? "Ocultar personalização" : "Personalizar atalhos"}
+                                {mostrarOrganizacaoCards ? "Ocultar personalização" : "Personalizar painel"}
                             </button>
-                            <button type="button" onClick={abrirTodosBlocosConfiguracao} className="rounded-2xl bg-white px-3 py-2 text-xs font-bold text-slate-700 ring-1 ring-blue-100 hover:bg-blue-50">Abrir todos</button>
-                            <button type="button" onClick={recolherTodosBlocosConfiguracao} className="rounded-2xl bg-white px-3 py-2 text-xs font-bold text-slate-700 ring-1 ring-blue-100 hover:bg-blue-50">Recolher todos</button>
-                            <button type="button" onClick={restaurarOrganizacaoCardsConfiguracoes} className="rounded-2xl bg-white px-3 py-2 text-xs font-bold text-slate-700 ring-1 ring-blue-100 hover:bg-blue-50">Restaurar organização</button>
+                            <button type="button" onClick={abrirTodosBlocosConfiguracao} className="inline-flex min-h-[38px] items-center justify-center rounded-2xl bg-white px-4 py-2 text-xs font-black text-slate-700 ring-1 ring-blue-100 transition hover:-translate-y-0.5 hover:bg-blue-50">Abrir todos</button>
+                            <button type="button" onClick={recolherTodosBlocosConfiguracao} className="inline-flex min-h-[38px] items-center justify-center rounded-2xl bg-white px-4 py-2 text-xs font-black text-slate-700 ring-1 ring-blue-100 transition hover:-translate-y-0.5 hover:bg-blue-50">Recolher todos</button>
+                            <button type="button" onClick={restaurarOrganizacaoCardsConfiguracoes} className="inline-flex min-h-[38px] items-center justify-center rounded-2xl bg-white px-4 py-2 text-xs font-black text-slate-700 ring-1 ring-blue-100 transition hover:-translate-y-0.5 hover:bg-blue-50">Restaurar organização</button>
                         </div>
                     </div>
-                    <div className="cards-grid cards-grid--compact lg:min-w-[420px]">
-                        {secoesConfiguracoesVisiveisOrdenadas.map((secao) => {
-                            const Icon = secao.icon;
-
-                            return (
-                                <a
-                                    key={secao.chave}
-                                    href={`#${secao.chave}`}
-                                    className="group rounded-2xl bg-white px-3 py-3 text-left ring-1 ring-blue-100 transition hover:-translate-y-0.5 hover:ring-blue-200"
-                                >
-                                    <div className="flex items-start gap-2">
-                                        <span className="rounded-xl bg-blue-50 p-2 text-blue-700 ring-1 ring-blue-100">
-                                            <Icon className="h-4 w-4" />
-                                        </span>
-                                        <span className="min-w-0">
-                                            <span className="texto-quebra-segura block text-xs font-black text-slate-950 group-hover:text-blue-700">{secao.titulo}</span>
-                                            <span className="texto-quebra-segura mt-0.5 block text-[11px] leading-snug text-slate-500">{secao.descricao}</span>
-                                        </span>
-                                    </div>
-                                </a>
-                            );
-                        })}
+                    <div className="grid gap-2 rounded-3xl bg-slate-50 p-3 ring-1 ring-slate-100 sm:grid-cols-3 xl:min-w-[390px]">
+                        <div className="rounded-2xl bg-white px-3 py-2 ring-1 ring-slate-100">
+                            <p className="text-[10px] font-black uppercase tracking-wide text-slate-400">Visíveis</p>
+                            <p className="mt-1 text-sm font-black text-slate-950">{resumoPainelConfiguracoes.visiveis}</p>
+                        </div>
+                        <div className="rounded-2xl bg-white px-3 py-2 ring-1 ring-slate-100">
+                            <p className="text-[10px] font-black uppercase tracking-wide text-slate-400">Abertos</p>
+                            <p className="mt-1 text-sm font-black text-slate-950">{resumoPainelConfiguracoes.abertos}</p>
+                        </div>
+                        <div className="rounded-2xl bg-white px-3 py-2 ring-1 ring-slate-100">
+                            <p className="text-[10px] font-black uppercase tracking-wide text-slate-400">Críticos</p>
+                            <p className="mt-1 text-sm font-black text-slate-950">{resumoPainelConfiguracoes.criticos}</p>
+                        </div>
                     </div>
                 </div>
 
                 {mostrarOrganizacaoCards && (
-                    <div className="mt-4 config-inner-grid">
-                        {secoesConfiguracoesOrdenadas.map((secao, index) => {
-                            const Icon = secao.icon;
-                            const visivel = blocoConfiguracaoVisivel(secao.chave);
-                            const recolhido = blocoConfiguracaoRecolhido(secao.chave);
+                    <div className="mt-5 rounded-3xl bg-blue-50/70 p-3 ring-1 ring-blue-100">
+                        <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+                            <div>
+                                <p className="text-[11px] font-black uppercase tracking-wide text-blue-700">Filtros do painel</p>
+                                <p className="mt-1 text-xs font-semibold text-blue-800">
+                                    Mostrando {secoesPersonalizacaoConfiguracoes.length} de {secoesConfiguracoesOrdenadas.length} card(s).
+                                </p>
+                            </div>
+                            <div className="flex flex-wrap gap-2">
+                                {FILTROS_PAINEL_CONFIGURACOES.map((filtro) => (
+                                    <button
+                                        key={filtro.chave}
+                                        type="button"
+                                        onClick={() => setFiltroPainelConfiguracoes(filtro.chave)}
+                                        className={classNames(
+                                            "rounded-2xl px-3 py-2 text-xs font-black ring-1 transition hover:-translate-y-0.5",
+                                            filtroPainelConfiguracoes === filtro.chave
+                                                ? "bg-slate-950 text-white ring-slate-950"
+                                                : "bg-white text-slate-700 ring-blue-100 hover:bg-blue-50"
+                                        )}
+                                    >
+                                        {filtro.label}
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
 
-                            return (
-                                <div key={secao.chave} className="rounded-3xl bg-white p-3 ring-1 ring-blue-100">
-                                    <div className="flex items-start justify-between gap-3">
-                                        <div className="flex min-w-0 items-start gap-2">
-                                            <span className="rounded-xl bg-blue-50 p-2 text-blue-700 ring-1 ring-blue-100">
-                                                <Icon className="h-4 w-4" />
-                                            </span>
-                                            <div className="min-w-0">
-                                                <p className="text-sm font-black text-slate-950">#{index + 1}. {secao.titulo}</p>
-                                                <p className="mt-1 text-xs leading-relaxed text-slate-500">{secao.descricao}</p>
-                                                <p className="mt-1 text-[11px] font-semibold text-slate-400">
-                                                    {visivel ? "Visível" : "Oculto"} · {recolhido ? "Recolhido" : "Aberto"}
-                                                </p>
-                                            </div>
-                                        </div>
-                                        <div className="flex shrink-0 flex-wrap justify-end gap-1">
-                                            <button type="button" onClick={() => moverBlocoConfiguracao(secao.chave, -1)} disabled={index === 0} className="rounded-xl bg-slate-50 px-2 py-1 text-xs font-black text-slate-600 ring-1 ring-slate-200 disabled:cursor-not-allowed disabled:opacity-40">↑</button>
-                                            <button type="button" onClick={() => moverBlocoConfiguracao(secao.chave, 1)} disabled={index === secoesConfiguracoesOrdenadas.length - 1} className="rounded-xl bg-slate-50 px-2 py-1 text-xs font-black text-slate-600 ring-1 ring-slate-200 disabled:cursor-not-allowed disabled:opacity-40">↓</button>
+                        <div className="mt-4 config-inner-grid">
+                            {secoesPersonalizacaoConfiguracoes.map((secao, index) => {
+                                const Icon = secao.icon;
+                                const indiceReal = secoesConfiguracoesOrdenadas.findIndex((item) => item.chave === secao.chave);
+                                const visivel = blocoConfiguracaoVisivel(secao.chave);
+                                const recolhido = blocoConfiguracaoRecolhido(secao.chave);
+                                const critico = CHAVES_BLOCOS_CONFIGURACOES_CRITICOS.has(secao.chave);
+
+                                return (
+                                    <div key={secao.chave} className="rounded-3xl bg-white p-3 ring-1 ring-blue-100">
+                                        <div className="mb-3 flex flex-wrap justify-end gap-1 border-b border-slate-100 pb-3">
+                                            <button type="button" onClick={() => moverBlocoConfiguracao(secao.chave, -1)} disabled={indiceReal === 0} className="rounded-xl bg-slate-50 px-2 py-1 text-xs font-black text-slate-600 ring-1 ring-slate-200 disabled:cursor-not-allowed disabled:opacity-40">↑</button>
+                                            <button type="button" onClick={() => moverBlocoConfiguracao(secao.chave, 1)} disabled={indiceReal === secoesConfiguracoesOrdenadas.length - 1} className="rounded-xl bg-slate-50 px-2 py-1 text-xs font-black text-slate-600 ring-1 ring-slate-200 disabled:cursor-not-allowed disabled:opacity-40">↓</button>
                                             <button type="button" onClick={() => alternarRecolhidoBlocoConfiguracao(secao.chave)} className="rounded-xl bg-blue-50 px-2 py-1 text-xs font-black text-blue-700 ring-1 ring-blue-100">{recolhido ? "Abrir" : "Recolher"}</button>
                                             <button type="button" onClick={() => alternarVisibilidadeBlocoConfiguracao(secao.chave)} className={classNames("rounded-xl px-2 py-1 text-xs font-black ring-1", visivel ? "bg-emerald-50 text-emerald-700 ring-emerald-200" : "bg-slate-100 text-slate-500 ring-slate-200")}>{visivel ? "Visível" : "Oculto"}</button>
                                         </div>
+                                        <div className="flex min-w-0 items-start gap-2">
+                                            <span className={classNames(
+                                                "rounded-xl p-2 ring-1",
+                                                critico ? "bg-orange-50 text-orange-700 ring-orange-100" : "bg-blue-50 text-blue-700 ring-blue-100"
+                                            )}>
+                                                <Icon className="h-4 w-4" />
+                                            </span>
+                                            <div className="min-w-0">
+                                                <p className="text-sm font-black text-slate-950">#{indiceReal + 1}. {secao.titulo}</p>
+                                                <p className="mt-1 text-xs leading-relaxed text-slate-500">{secao.descricao}</p>
+                                                <p className="mt-2 flex flex-wrap gap-1.5 text-[11px] font-semibold text-slate-400">
+                                                    <span className={classNames("rounded-full px-2 py-1 ring-1", visivel ? "bg-emerald-50 text-emerald-700 ring-emerald-100" : "bg-slate-100 text-slate-500 ring-slate-200")}>{visivel ? "Visível" : "Oculto"}</span>
+                                                    <span className="rounded-full bg-slate-50 px-2 py-1 text-slate-600 ring-1 ring-slate-200">{recolhido ? "Recolhido" : "Aberto"}</span>
+                                                    {critico ? <span className="rounded-full bg-orange-50 px-2 py-1 text-orange-700 ring-1 ring-orange-100">Crítico</span> : null}
+                                                </p>
+                                            </div>
+                                        </div>
                                     </div>
-                                </div>
-                            );
-                        })}
+                                );
+                            })}
+                        </div>
                     </div>
                 )}
             </Card>
