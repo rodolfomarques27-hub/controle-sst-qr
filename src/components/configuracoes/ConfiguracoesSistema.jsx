@@ -152,14 +152,14 @@ function sugerirPerfilPorSolicitacaoAcesso(solicitacao = {}) {
 }
 
 const CHAVES_BLOCOS_CONFIGURACOES_PADRAO = [
-    "config-eventos-auditoria",
-    "config-limites-carregamento",
-    "config-senha-configuracoes",
     "config-usuarios-permissoes",
+    "config-limites-carregamento",
     "config-auditoria-publica",
+    "config-arquivos-storage",
+    "config-senha-configuracoes",
+    "config-eventos-auditoria",
     "config-seguranca-publica",
     "config-storage-privado",
-    "config-arquivos-storage",
     "config-supabase-geral",
     "config-status-etapa",
 ];
@@ -1286,16 +1286,16 @@ export function ConfiguracoesSistema({
     ];
 
     const secoesConfiguracoes = [
-        { chave: "config-eventos-auditoria", titulo: "Auditoria de sistema", descricao: "Eventos registrados e exibidos na auditoria.", icon: Settings },
-        { chave: "config-limites-carregamento", titulo: "Limites", descricao: "Quantidade de registros por tela/carga.", icon: SlidersHorizontal },
-        { chave: "config-senha-configuracoes", titulo: "Senha das Configurações", descricao: "Senha local usada para abrir esta tela.", icon: Lock },
-        { chave: "config-usuarios-permissoes", titulo: "Usuários e Permissões", descricao: "Perfis e permissões planejadas por módulo.", icon: ShieldCheck },
-        { chave: "config-auditoria-publica", titulo: "Auditoria pública", descricao: "Token, senha de referência e link público.", icon: KeyRound },
-        { chave: "config-seguranca-publica", titulo: "Segurança pública", descricao: "Checklist operacional do QR Code público.", icon: ShieldAlert },
-        { chave: "config-storage-privado", titulo: "Storage privado", descricao: "Buckets, URLs assinadas e arquivos sensíveis.", icon: HardDrive },
-        { chave: "config-arquivos-storage", titulo: "Arquivos Storage", descricao: "Capacidade, vínculos, limpeza e arquivos salvos.", icon: Database },
-        { chave: "config-supabase-geral", titulo: "Supabase/RLS/RPC", descricao: "Tabelas, policies, funções e performance.", icon: Database },
-        { chave: "config-status-etapa", titulo: "Status", descricao: "Resumo da configuração e usuário atual.", icon: CheckCircle2 },
+        { chave: "config-usuarios-permissoes", titulo: "Permissões e usuários", descricao: "Perfis, solicitações de acesso e gestão administrativa.", icon: ShieldCheck },
+        { chave: "config-limites-carregamento", titulo: "Limites de carregamento", descricao: "Quantidade de registros por tela para manter desempenho.", icon: SlidersHorizontal },
+        { chave: "config-auditoria-publica", titulo: "Auditoria pública / token", descricao: "Token ativo, senha de referência e link público.", icon: KeyRound },
+        { chave: "config-arquivos-storage", titulo: "Arquivos salvos no Storage", descricao: "Capacidade, vínculos, filtros e limpeza protegida.", icon: Database },
+        { chave: "config-senha-configuracoes", titulo: "Configurações críticas", descricao: "Senha local e ações sensíveis da área administrativa.", icon: Lock },
+        { chave: "config-eventos-auditoria", titulo: "Eventos da Auditoria do Sistema", descricao: "Eventos registrados e exibidos no histórico administrativo.", icon: Settings },
+        { chave: "config-seguranca-publica", titulo: "Checklist da auditoria pública", descricao: "Conferência operacional do QR Code público.", icon: ShieldAlert },
+        { chave: "config-storage-privado", titulo: "Checklist do Storage privado", descricao: "Buckets, URLs assinadas e arquivos sensíveis.", icon: HardDrive },
+        { chave: "config-supabase-geral", titulo: "Informações técnicas Supabase", descricao: "Tabelas, policies, RPCs e pontos de performance.", icon: Database },
+        { chave: "config-status-etapa", titulo: "Resumo técnico da tela", descricao: "Estado atual das configurações e do usuário autenticado.", icon: CheckCircle2 },
     ];
 
 
@@ -1313,7 +1313,7 @@ export function ConfiguracoesSistema({
         case "config-eventos-auditoria":
             return renderBlocoConfiguracaoComControle(
                 "config-eventos-auditoria",
-                "Eventos da Auditoria de sistema",
+                "Eventos da Auditoria do Sistema",
                 "Eventos registrados e exibidos na auditoria.",
                 (
                 <Card>
@@ -1321,10 +1321,10 @@ export function ConfiguracoesSistema({
                         <div>
                             <div className="flex items-center gap-2">
                                 <Settings className="h-5 w-5 text-slate-500" />
-                                <h2 id="config-eventos-auditoria" className="scroll-mt-24 text-lg font-black text-slate-950">Eventos da Auditoria de sistema</h2>
+                                <h2 id="config-eventos-auditoria" className="scroll-mt-24 text-lg font-black text-slate-950">Eventos da Auditoria do Sistema</h2>
                             </div>
                             <p className="mt-1 text-sm text-slate-500">
-                                Escolha quais eventos o sistema deve registrar e exibir na Auditoria de sistema.
+                                Escolha quais eventos o sistema deve registrar e exibir na Auditoria do Sistema.
                             </p>
                             <p className="mt-2 text-xs font-semibold text-slate-500">
                                 Origem atual: <span className="font-black text-slate-900">{origemConfig === "supabase" ? "Supabase" : "Local"}</span>
@@ -1508,7 +1508,7 @@ export function ConfiguracoesSistema({
                         <div>
                             <div className="flex items-center gap-2">
                                 <Lock className="h-5 w-5 text-slate-500" />
-                                <h2 id="config-senha-configuracoes" className="scroll-mt-24 text-lg font-black text-slate-950">Senha das Configurações</h2>
+                                <h2 id="config-senha-configuracoes" className="scroll-mt-24 text-lg font-black text-slate-950">Configurações críticas</h2>
                             </div>
                             <p className="mt-1 text-sm text-slate-500">
                                 Altere a senha local exigida para abrir a aba Configurações neste navegador.
@@ -1598,30 +1598,30 @@ export function ConfiguracoesSistema({
         case "config-usuarios-permissoes":
             return renderBlocoConfiguracaoComControle(
                 "config-usuarios-permissoes",
-                "Usuários e Permissões",
-                "Perfis e permissões planejadas por módulo.",
+                "Permissões e usuários",
+                "Perfis, solicitações de acesso e permissões por módulo.",
                 (
                     <Card>
                         <div className="flex flex-col gap-3 border-b border-slate-100 pb-4 md:flex-row md:items-start md:justify-between">
                             <div>
                                 <div className="flex items-center gap-2">
                                     <ShieldCheck className="h-5 w-5 text-slate-500" />
-                                    <h2 id="config-usuarios-permissoes" className="scroll-mt-24 text-lg font-black text-slate-950">Usuários e Permissões</h2>
+                                    <h2 id="config-usuarios-permissoes" className="scroll-mt-24 text-lg font-black text-slate-950">Permissões e usuários</h2>
                                 </div>
                                 <p className="mt-1 text-sm text-slate-500">
-                                    Painel inicial para organizar perfis, módulos e ações antes de aplicar bloqueios reais no sistema.
+                                    Painel administrativo para consultar o usuário atual, analisar solicitações de acesso e manter perfis por módulo.
                                 </p>
                                 <p className="mt-2 text-xs font-semibold text-slate-500">
                                     Usuário atual: <span className="font-black text-slate-900">{usuario?.email || "não informado"}</span> · Perfil atual: <span className="font-black text-slate-900">{usuario?.perfil || "não informado"}</span>
                                 </p>
                             </div>
                             <span className="inline-flex items-center justify-center rounded-2xl bg-blue-50 px-3 py-2 text-xs font-black text-blue-700 ring-1 ring-blue-200">
-                                Etapa visual
+                                Controle ativo
                             </span>
                         </div>
 
                         <div className="mt-4 rounded-2xl bg-amber-50 px-4 py-3 text-xs font-semibold leading-relaxed text-amber-700 ring-1 ring-amber-200">
-                            Esta etapa ainda não bloqueia botões, rotas, uploads, exclusões ou relatórios. Os bloqueios reais devem ser ativados em microetapas futuras, começando pelas ações críticas.
+                            A rota de Configurações, a gestão de permissões e as ações críticas usam a permissão atual carregada do Supabase.
                         </div>
 
                         <div className="mt-4 rounded-3xl bg-blue-50 p-4 ring-1 ring-blue-100">
@@ -2343,21 +2343,21 @@ export function ConfiguracoesSistema({
                             ) : (
                                 <div className="mt-4 rounded-2xl bg-white p-4 text-center ring-1 ring-slate-100">
                                     <p className="text-sm font-black text-slate-900">Selecione um perfil para ver os detalhes.</p>
-                                    <p className="mt-1 text-xs font-semibold text-slate-500">A matriz segue planejada e ainda não bloqueia ações reais no sistema.</p>
+                                    <p className="mt-1 text-xs font-semibold text-slate-500">A matriz ajuda a validar o perfil antes de salvar novas permissões no Supabase.</p>
                                 </div>
                             )}
                         </div>
 
-                        <div className="mt-4 rounded-3xl border border-dashed border-slate-300 bg-white p-4">
+                        <div className="mt-4 rounded-3xl bg-slate-50 p-4 ring-1 ring-slate-200">
                             <div className="flex items-start gap-3">
-                                <AlertTriangle className="mt-1 h-5 w-5 shrink-0 text-orange-600" />
+                                <ShieldCheck className="mt-1 h-5 w-5 shrink-0 text-slate-500" />
                                 <div>
-                                    <p className="text-sm font-black text-slate-950">Próximas microetapas recomendadas</p>
+                                    <p className="text-sm font-black text-slate-950">Regras de uso administrativo</p>
                                     <div className="mt-2 grid gap-2 text-xs font-semibold leading-relaxed text-slate-600 md:grid-cols-2">
-                                        <p>1. Estrutura visual para adicionar usuário criada nesta etapa, ainda sem gravação.</p>
-                                        <p>2. Criar RPC segura para cadastrar ou atualizar permissões no Supabase.</p>
-                                        <p>3. Validar cadastro administrativo antes de ativar qualquer bloqueio real.</p>
-                                        <p>4. Registrar toda alteração de permissão na Auditoria do Sistema.</p>
+                                        <p>1. Mantenha pelo menos um administrador ativo antes de alterar perfis.</p>
+                                        <p>2. Use solicitações aprovadas para preparar permissões quando possível.</p>
+                                        <p>3. Bloqueie perfis somente quando houver outro administrador com acesso validado.</p>
+                                        <p>4. Revise a Auditoria do Sistema após alterações administrativas sensíveis.</p>
                                     </div>
                                 </div>
                             </div>
@@ -2705,7 +2705,7 @@ export function ConfiguracoesSistema({
         <div className="page-shell">
             <Header
                 titulo="Configurações do sistema"
-                subtitulo="Centralize parâmetros operacionais, auditoria e limites usados pelo sistema SST."
+                subtitulo="Painel administrativo para permissões, limites, Storage, token público e configurações críticas do sistema SST."
                 acao={(
                     <div className="top-actions-nowrap">
                         {acaoTopo}
@@ -2742,19 +2742,19 @@ export function ConfiguracoesSistema({
                 })}
             </div>
 
-            <Card className="mt-6 border-blue-100 bg-blue-50/40">
+            <Card className="mt-6 border-slate-200 bg-white/90">
                 <div className="flex min-w-0 flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
                     <div>
-                        <p className="text-xs font-black uppercase tracking-wide text-blue-700">Organização das configurações</p>
-                        <h2 className="mt-1 text-lg font-black text-slate-950">Seções rápidas do sistema</h2>
-                        <p className="mt-1 text-sm text-slate-600">Abra, recolha, oculte e organize os cards de configuração conforme a rotina de uso.</p>
+                        <p className="text-xs font-black uppercase tracking-wide text-slate-500">Mapa administrativo</p>
+                        <h2 className="mt-1 text-lg font-black text-slate-950">Atalhos da aba Configurações</h2>
+                        <p className="mt-1 text-sm text-slate-600">Acesse rapidamente os blocos críticos e mantenha a tela organizada por rotina de administração.</p>
                         <div className="mt-3 flex flex-wrap gap-2">
                             <button
                                 type="button"
                                 onClick={() => setMostrarOrganizacaoCards((valor) => !valor)}
                                 className="rounded-2xl bg-slate-950 px-3 py-2 text-xs font-black text-white hover:bg-slate-800"
                             >
-                                {mostrarOrganizacaoCards ? "Ocultar organização" : "Organizar cards"}
+                                {mostrarOrganizacaoCards ? "Ocultar personalização" : "Personalizar atalhos"}
                             </button>
                             <button type="button" onClick={abrirTodosBlocosConfiguracao} className="rounded-2xl bg-white px-3 py-2 text-xs font-bold text-slate-700 ring-1 ring-blue-100 hover:bg-blue-50">Abrir todos</button>
                             <button type="button" onClick={recolherTodosBlocosConfiguracao} className="rounded-2xl bg-white px-3 py-2 text-xs font-bold text-slate-700 ring-1 ring-blue-100 hover:bg-blue-50">Recolher todos</button>
