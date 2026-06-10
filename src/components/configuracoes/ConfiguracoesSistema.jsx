@@ -67,10 +67,14 @@ import {
     montarChecklistRevisaoSupabaseSistemaTexto,
 } from "../../services/supabaseRevisaoService";
 import {
+    ACOES_CRITICAS_PERMISSAO_SISTEMA,
     carregarPermissaoSistemaAtualService,
     listarUsuariosPermissoesSistemaService,
+    obterBloqueioVisualAcaoCriticaSistema,
+    obterResumoAcoesCriticasSistema,
     obterResumoPermissaoSistema,
     salvarUsuarioPermissaoSistemaService,
+    usuarioPodeGerenciarPermissoesSistema,
 } from "../../services/usuariosPermissoesSistemaService";
 import { supabase } from "../../lib/supabaseClient";
 
@@ -245,6 +249,24 @@ export function ConfiguracoesSistema({
     }, [usuariosPermissoesSistema]);
 
     const modoEdicaoUsuarioPermissaoSistema = Boolean(usuarioPermissaoSistemaEmEdicao?.email);
+
+    const podeGerenciarPermissoesSistema = useMemo(
+        () => usuarioPodeGerenciarPermissoesSistema(permissaoSistemaAtual),
+        [permissaoSistemaAtual]
+    );
+
+    const bloqueioGerenciarPermissoesSistema = useMemo(
+        () => obterBloqueioVisualAcaoCriticaSistema(
+            permissaoSistemaAtual,
+            ACOES_CRITICAS_PERMISSAO_SISTEMA.GERENCIAR_PERMISSOES
+        ),
+        [permissaoSistemaAtual]
+    );
+
+    const resumoAcoesCriticasSistemaAtual = useMemo(
+        () => obterResumoAcoesCriticasSistema(permissaoSistemaAtual),
+        [permissaoSistemaAtual]
+    );
 
 
     useEffect(() => {
@@ -617,6 +639,11 @@ export function ConfiguracoesSistema({
     };
 
     const alterarCampoNovoUsuarioPermissao = (campo, valor) => {
+        if (!podeGerenciarPermissoesSistema) {
+            setMensagemFormularioNovoUsuarioPermissao(bloqueioGerenciarPermissoesSistema.mensagem);
+            return;
+        }
+
         setNovoUsuarioPermissaoSistema((atual) => ({
             ...atual,
             [campo]: valor,
@@ -645,6 +672,11 @@ export function ConfiguracoesSistema({
     };
 
     const selecionarUsuarioPermissaoParaEdicao = (usuarioSelecionado = null) => {
+        if (!podeGerenciarPermissoesSistema) {
+            setMensagemFormularioNovoUsuarioPermissao(bloqueioGerenciarPermissoesSistema.mensagem);
+            return;
+        }
+
         if (!usuarioSelecionado?.email) {
             setMensagemFormularioNovoUsuarioPermissao("Não foi possível carregar este usuário para edição: e-mail não informado.");
             return;
@@ -670,6 +702,11 @@ export function ConfiguracoesSistema({
         evento.preventDefault();
 
         if (salvandoNovoUsuarioPermissaoSistema) return;
+
+        if (!podeGerenciarPermissoesSistema) {
+            setMensagemFormularioNovoUsuarioPermissao(bloqueioGerenciarPermissoesSistema.mensagem);
+            return;
+        }
 
         const emailTratado = novoUsuarioPermissaoSistema.email.trim().toLowerCase();
         const nomeTratado = novoUsuarioPermissaoSistema.nome.trim();
@@ -1339,6 +1376,48 @@ export function ConfiguracoesSistema({
                         <div className="mt-4 rounded-3xl bg-white p-4 ring-1 ring-slate-100">
                             <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
                                 <div>
+                                    <p className="text-xs font-black uppercase tracking-wide text-slate-400">Bloqueio visual das ações críticas</p>
+                                    <p className="mt-1 text-xs font-semibold leading-relaxed text-slate-500">
+                                        Validação inicial no front-end. Esta etapa desabilita apenas a gestão de permissões quando o usuário não possui autorização.
+                                    </p>
+                                </div>
+                                <span className={classNames(
+                                    "rounded-full px-3 py-1.5 text-[11px] font-black ring-1",
+                                    podeGerenciarPermissoesSistema
+                                        ? "bg-emerald-50 text-emerald-700 ring-emerald-100"
+                                        : "bg-rose-50 text-rose-700 ring-rose-100"
+                                )}>
+                                    {podeGerenciarPermissoesSistema ? "Gerenciar permissões liberado" : "Gerenciar permissões bloqueado"}
+                                </span>
+                            </div>
+                            <div className="mt-3 grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
+                                {[
+                                    ["Excluir", resumoAcoesCriticasSistemaAtual.podeExcluir],
+                                    ["Limpar arquivos", resumoAcoesCriticasSistemaAtual.podeLimparArquivos],
+                                    ["Gerenciar permissões", resumoAcoesCriticasSistemaAtual.podeGerenciarPermissoes],
+                                    ["Configurações críticas", resumoAcoesCriticasSistemaAtual.podeAlterarConfiguracoesCriticas],
+                                ].map(([rotulo, permitido]) => (
+                                    <div key={rotulo} className={classNames(
+                                        "rounded-2xl px-3 py-3 ring-1",
+                                        permitido
+                                            ? "bg-emerald-50 text-emerald-700 ring-emerald-100"
+                                            : "bg-slate-50 text-slate-500 ring-slate-100"
+                                    )}>
+                                        <p className="text-[10px] font-black uppercase tracking-wide">{rotulo}</p>
+                                        <p className="mt-1 text-xs font-black">{permitido ? "Liberado" : "Bloqueado"}</p>
+                                    </div>
+                                ))}
+                            </div>
+                            {!podeGerenciarPermissoesSistema ? (
+                                <div className="mt-3 rounded-2xl bg-amber-50 px-4 py-3 text-xs font-semibold leading-relaxed text-amber-800 ring-1 ring-amber-100">
+                                    {bloqueioGerenciarPermissoesSistema.mensagem} A lista continua visível para conferência, mas cadastro e edição ficam bloqueados.
+                                </div>
+                            ) : null}
+                        </div>
+
+                        <div className="mt-4 rounded-3xl bg-white p-4 ring-1 ring-slate-100">
+                            <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+                                <div>
                                     <p className="text-xs font-black uppercase tracking-wide text-slate-400">Lista administrativa de usuários</p>
                                     <p className="mt-1 text-xs font-semibold leading-relaxed text-slate-500">
                                         Usuários cadastrados em usuarios_permissoes_sistema. Leitura administrativa sem aplicar bloqueio real no sistema.
@@ -1394,8 +1473,20 @@ export function ConfiguracoesSistema({
                                     </div>
                                     <button
                                         type="button"
-                                        onClick={() => setMostrarFormularioNovoUsuarioPermissao((atual) => !atual)}
-                                        className="inline-flex items-center justify-center gap-2 rounded-2xl bg-white px-3 py-2 text-xs font-black text-slate-700 ring-1 ring-slate-200 hover:bg-slate-100"
+                                        onClick={() => {
+                                            if (!podeGerenciarPermissoesSistema) {
+                                                setMensagemFormularioNovoUsuarioPermissao(bloqueioGerenciarPermissoesSistema.mensagem);
+                                                return;
+                                            }
+                                            setMostrarFormularioNovoUsuarioPermissao((atual) => !atual);
+                                        }}
+                                        disabled={!podeGerenciarPermissoesSistema}
+                                        className={classNames(
+                                            "inline-flex items-center justify-center gap-2 rounded-2xl px-3 py-2 text-xs font-black ring-1",
+                                            podeGerenciarPermissoesSistema
+                                                ? "bg-white text-slate-700 ring-slate-200 hover:bg-slate-100"
+                                                : "cursor-not-allowed bg-slate-100 text-slate-400 ring-slate-200"
+                                        )}
                                     >
                                         {mostrarFormularioNovoUsuarioPermissao ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
                                         {mostrarFormularioNovoUsuarioPermissao
@@ -1406,7 +1497,13 @@ export function ConfiguracoesSistema({
                                     </button>
                                 </div>
 
-                                {mostrarFormularioNovoUsuarioPermissao && (
+                                {!podeGerenciarPermissoesSistema ? (
+                                    <div className="mt-4 rounded-2xl bg-amber-50 px-4 py-3 text-xs font-semibold leading-relaxed text-amber-800 ring-1 ring-amber-100">
+                                        {bloqueioGerenciarPermissoesSistema.mensagem} O formulário de cadastro e edição permanece travado para este perfil.
+                                    </div>
+                                ) : null}
+
+                                {mostrarFormularioNovoUsuarioPermissao && podeGerenciarPermissoesSistema && (
                                     <form onSubmit={salvarNovoUsuarioPermissaoSistema} className="mt-4 space-y-4">
                                         <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
                                             <label className="space-y-1 text-xs font-black uppercase tracking-wide text-slate-400">
@@ -1510,10 +1607,10 @@ export function ConfiguracoesSistema({
                                         <div className="flex flex-wrap gap-2">
                                             <button
                                                 type="submit"
-                                                disabled={salvandoNovoUsuarioPermissaoSistema}
+                                                disabled={salvandoNovoUsuarioPermissaoSistema || !podeGerenciarPermissoesSistema}
                                                 className={classNames(
                                                     "rounded-2xl px-4 py-2 text-xs font-black text-white shadow-sm",
-                                                    salvandoNovoUsuarioPermissaoSistema
+                                                    salvandoNovoUsuarioPermissaoSistema || !podeGerenciarPermissoesSistema
                                                         ? "cursor-not-allowed bg-slate-400"
                                                         : "bg-slate-950 hover:bg-slate-800"
                                                 )}
@@ -1579,8 +1676,14 @@ export function ConfiguracoesSistema({
                                                 <button
                                                     type="button"
                                                     onClick={() => selecionarUsuarioPermissaoParaEdicao(item)}
-                                                    disabled={salvandoNovoUsuarioPermissaoSistema}
-                                                    className="rounded-full bg-slate-950 px-3 py-1.5 text-[11px] font-black text-white ring-1 ring-slate-950 hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
+                                                    disabled={salvandoNovoUsuarioPermissaoSistema || !podeGerenciarPermissoesSistema}
+                                                    title={podeGerenciarPermissoesSistema ? "Editar permissão" : bloqueioGerenciarPermissoesSistema.mensagem}
+                                                    className={classNames(
+                                                        "rounded-full px-3 py-1.5 text-[11px] font-black ring-1 disabled:cursor-not-allowed",
+                                                        podeGerenciarPermissoesSistema
+                                                            ? "bg-slate-950 text-white ring-slate-950 hover:bg-slate-800 disabled:opacity-60"
+                                                            : "bg-slate-100 text-slate-400 ring-slate-200"
+                                                    )}
                                                 >
                                                     Editar
                                                 </button>
