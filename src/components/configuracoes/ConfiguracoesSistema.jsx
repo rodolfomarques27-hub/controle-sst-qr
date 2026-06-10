@@ -3102,15 +3102,11 @@ export function ConfiguracoesSistema({
             if (!blocoConfiguracaoVisivel("config-arquivos-storage")) return null;
 
             if (blocoConfiguracaoRecolhido("config-arquivos-storage")) {
-                return (
-                    <Card>
-                        {topoControleBlocoConfiguracao("config-arquivos-storage", "Arquivos salvos no Storage")}
-                        <div>
-                            <p className="text-xs font-black uppercase tracking-wide text-slate-400">Card recolhido</p>
-                            <h2 className="mt-1 text-lg font-black text-slate-950">Arquivos salvos no Storage</h2>
-                            <p className="mt-1 text-sm text-slate-500">Capacidade, vínculos, limpeza e arquivos salvos.</p>
-                        </div>
-                    </Card>
+                return renderBlocoConfiguracaoComControle(
+                    "config-arquivos-storage",
+                    "Arquivos salvos no Storage",
+                    "Capacidade, vínculos, limpeza e arquivos salvos.",
+                    null
                 );
             }
 
@@ -3305,36 +3301,15 @@ export function ConfiguracoesSistema({
                         </div>
                     </div>
 
-                    <div className="mt-5 grid gap-3 lg:grid-cols-2">
-                        <button
-                            type="button"
-                            onClick={() => setFiltroPainelConfiguracoes("todos")}
-                            className={classNames(
-                                "rounded-3xl p-4 text-left ring-1 transition hover:-translate-y-0.5",
-                                filtroPainelConfiguracoes === "todos"
-                                    ? "bg-blue-600 text-white ring-blue-600"
-                                    : "bg-blue-50 text-blue-900 ring-blue-100 hover:bg-blue-100"
-                            )}
-                        >
-                            <p className={classNames("text-xs font-black uppercase tracking-wide", filtroPainelConfiguracoes === "todos" ? "text-blue-100" : "text-blue-700")}>Filtro 1</p>
-                            <h3 className="mt-1 text-sm font-black">Cards principais da aba Configurações</h3>
-                            <p className={classNames("mt-1 text-xs font-semibold", filtroPainelConfiguracoes === "todos" ? "text-blue-50" : "text-blue-700")}>Edite os cards e quadros administrativos que aparecem no painel.</p>
-                        </button>
-                        <button
-                            type="button"
-                            onClick={() => setFiltroPainelConfiguracoes("visiveis")}
-                            className={classNames(
-                                "rounded-3xl p-4 text-left ring-1 transition hover:-translate-y-0.5",
-                                filtroPainelConfiguracoes === "visiveis"
-                                    ? "bg-emerald-600 text-white ring-emerald-600"
-                                    : "bg-emerald-50 text-emerald-900 ring-emerald-100 hover:bg-emerald-100"
-                            )}
-                        >
-                            <p className={classNames("text-xs font-black uppercase tracking-wide", filtroPainelConfiguracoes === "visiveis" ? "text-emerald-100" : "text-emerald-700")}>Filtro 2</p>
-                            <h3 className="mt-1 text-sm font-black">Organização dos quadros da aba Configurações</h3>
-                            <p className={classNames("mt-1 text-xs font-semibold", filtroPainelConfiguracoes === "visiveis" ? "text-emerald-50" : "text-emerald-700")}>Mova, abra, recolha e ajuste o tamanho dos quadros grandes.</p>
-                        </button>
-                    </div>
+                    <button
+                        type="button"
+                        onClick={() => setFiltroPainelConfiguracoes("todos")}
+                        className="mt-5 w-full rounded-3xl bg-blue-600 p-4 text-left text-white ring-1 ring-blue-600 transition hover:-translate-y-0.5 hover:bg-blue-700"
+                    >
+                        <p className="text-xs font-black uppercase tracking-wide text-blue-100">Filtro 1</p>
+                        <h3 className="mt-1 text-sm font-black">Cards e quadros da aba Configurações</h3>
+                        <p className="mt-1 text-xs font-semibold text-blue-50">Edite visibilidade, ordem, abertura e tamanho dos cards administrativos em um único painel.</p>
+                    </button>
 
                     <div className="mt-5 rounded-3xl bg-blue-50/60 p-3 ring-1 ring-blue-100">
                         <div className="flex flex-col gap-3 border-b border-blue-100 pb-3 lg:flex-row lg:items-center lg:justify-between">
