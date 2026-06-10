@@ -453,8 +453,6 @@ export function AppContentRouter({
                     existeMaisAuditoria={existeMaisAuditoria}
                     onAtualizar={onAtualizarAuditoria}
                     onCarregarMaisAuditoria={onCarregarMaisAuditoria}
-                    onListarArquivosStorage={onListarArquivosStorage}
-                    onExcluirArquivoStorage={onExcluirArquivoStorage}
                     onListarUsuariosAuditoria={onListarUsuariosAuditoria}
                     onSalvarUsuarioAuditoria={onSalvarUsuarioAuditoria}
                     onAlternarUsuarioAuditoria={onAlternarUsuarioAuditoria}
@@ -483,6 +481,9 @@ export function AppContentRouter({
                                 storageMb: LIMITE_STORAGE_MB,
                             }}
                             onSalvarLimites={onSalvarLimites}
+                            onListarArquivosStorage={onListarArquivosStorage}
+                            onExcluirArquivoStorage={onExcluirArquivoStorage}
+                            onAtualizarAuditoria={onAtualizarAuditoria}
                             senhaConfiguracoesSistema={senhaConfiguracoesSistema}
                             origemSenhaConfiguracoesSistema={origemSenhaConfiguracoesSistema}
                             mensagemSenhaConfiguracoesSistema={mensagemSenhaConfiguracoesSistema}

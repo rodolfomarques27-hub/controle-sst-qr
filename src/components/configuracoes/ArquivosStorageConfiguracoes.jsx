@@ -1,0 +1,556 @@
+import React, { useEffect, useMemo, useRef, useState } from "react";
+import { AlertTriangle, Database, HardDrive, RefreshCw, Trash2 } from "lucide-react";
+import { Card } from "../commonComponents";
+import {
+    ACOES_CRITICAS_PERMISSAO_SISTEMA,
+    carregarPermissaoSistemaAtualService,
+    obterBloqueioVisualAcaoCriticaSistema,
+} from "../../services/usuariosPermissoesSistemaService";
+import { supabase } from "../../lib/supabaseClient";
+import { calcularPercentualUsoStorage, classNames, formatarBytes } from "../../utils/sstUtils";
+
+const FILTROS_STORAGE_PADRAO = Object.freeze({
+    empresa: "Todas",
+    colaborador: "Todos",
+    tipo: "Todos",
+    dataInicio: "",
+    dataFim: "",
+    tamanho: "Todos",
+    vinculo: "Todos",
+});
+
+const obterEmpresaArquivoStorage = (arquivo) =>
+    arquivo?.empresaNome || arquivo?.colaboradorEmpresa || "Sem empresa vinculada";
+
+const obterColaboradorArquivoStorage = (arquivo) =>
+    arquivo?.colaboradorNome || "Sem colaborador vinculado";
+
+const obterTipoArquivoStorage = (arquivo) =>
+    arquivo?.tipoDocumentoEmpresa || arquivo?.treinamentoNome || arquivo?.origemTipo || arquivo?.bucket || "Tipo não identificado";
+
+const obterDataArquivoStorage = (arquivo) => {
+    if (!arquivo?.atualizadoEm) return "";
+
+    const data = new Date(arquivo.atualizadoEm);
+    return Number.isNaN(data.getTime()) ? "" : data.toISOString().slice(0, 10);
+};
+
+function tamanhoArquivoDentroDoFiltro(arquivo, filtroTamanho) {
+    const tamanho = Number(arquivo?.tamanho || 0);
+
+    if (filtroTamanho === "Todos") return true;
+    if (filtroTamanho === "ate-1mb") return tamanho <= 1024 ** 2;
+    if (filtroTamanho === "1mb-10mb") return tamanho > 1024 ** 2 && tamanho <= 10 * 1024 ** 2;
+    if (filtroTamanho === "10mb-50mb") return tamanho > 10 * 1024 ** 2 && tamanho <= 50 * 1024 ** 2;
+    if (filtroTamanho === "acima-50mb") return tamanho > 50 * 1024 ** 2;
+
+    return true;
+}
+
+function agruparArquivosStorage(lista, obterChave) {
+    return Object.values(
+        lista.reduce((acc, arquivo) => {
+            const chave = obterChave(arquivo) || "Não informado";
+
+            if (!acc[chave]) {
+                acc[chave] = {
+                    nome: chave,
+                    arquivos: 0,
+                    bytes: 0,
+                    emUso: 0,
+                    semRegistro: 0,
+                };
+            }
+
+            acc[chave].arquivos += 1;
+            acc[chave].bytes += Number(arquivo?.tamanho || 0);
+
+            if (arquivo?.emUso) acc[chave].emUso += 1;
+            else acc[chave].semRegistro += 1;
+
+            return acc;
+        }, {})
+    ).sort((a, b) => b.arquivos - a.arquivos || b.bytes - a.bytes || a.nome.localeCompare(b.nome));
+}
+
+export function ArquivosStorageConfiguracoes({
+    limiteStorageMb = 1024,
+    onListarArquivosStorage,
+    onExcluirArquivoStorage,
+    onAtualizarAuditoria,
+}) {
+    const [filtrosStorage, setFiltrosStorage] = useState(FILTROS_STORAGE_PADRAO);
+    const [arquivosStorage, setArquivosStorage] = useState([]);
+    const [carregandoStorage, setCarregandoStorage] = useState(false);
+    const [excluindoStorage, setExcluindoStorage] = useState("");
+    const [limpandoStorage, setLimpandoStorage] = useState(false);
+    const [progressoLimpezaStorage, setProgressoLimpezaStorage] = useState({ atual: 0, total: 0 });
+    const [permissaoSistemaAtual, setPermissaoSistemaAtual] = useState(null);
+    const [mensagemPermissao, setMensagemPermissao] = useState("Carregando permissões para limpeza do Storage...");
+    const storageMontadoRef = useRef(false);
+
+    useEffect(() => {
+        storageMontadoRef.current = true;
+
+        return () => {
+            storageMontadoRef.current = false;
+        };
+    }, []);
+
+    useEffect(() => {
+        let montado = true;
+
+        async function carregarPermissaoSistema() {
+            try {
+                const permissao = await carregarPermissaoSistemaAtualService({ supabase });
+
+                if (!montado) return;
+
+                setPermissaoSistemaAtual(permissao);
+                setMensagemPermissao(
+                    permissao
+                        ? "Permissões carregadas. A limpeza só fica disponível para perfil autorizado."
+                        : "Nenhuma permissão do sistema cadastrada para o usuário atual."
+                );
+            } catch (erro) {
+                if (!montado) return;
+                setPermissaoSistemaAtual(null);
+                setMensagemPermissao(`Não foi possível carregar permissões: ${erro?.message || "erro não identificado"}`);
+            }
+        }
+
+        carregarPermissaoSistema();
+
+        return () => {
+            montado = false;
+        };
+    }, []);
+
+    const bloqueioLimparArquivosStorageSistema = useMemo(
+        () => obterBloqueioVisualAcaoCriticaSistema(
+            permissaoSistemaAtual,
+            ACOES_CRITICAS_PERMISSAO_SISTEMA.LIMPAR_ARQUIVOS
+        ),
+        [permissaoSistemaAtual]
+    );
+
+    const arquivosSemRegistro = arquivosStorage.filter((arquivo) => !arquivo.emUso);
+    const arquivosEmUso = arquivosStorage.filter((arquivo) => arquivo.emUso);
+    const storageTotalBytes = arquivosStorage.reduce((total, arquivo) => total + Number(arquivo?.tamanho || 0), 0);
+    const storageEmUsoBytes = arquivosEmUso.reduce((total, arquivo) => total + Number(arquivo?.tamanho || 0), 0);
+    const storageSemRegistroBytes = arquivosSemRegistro.reduce((total, arquivo) => total + Number(arquivo?.tamanho || 0), 0);
+    const storageLimiteBytes = Math.max(1, Number(limiteStorageMb || 1024) * 1024 * 1024);
+    const storagePercentual = calcularPercentualUsoStorage(storageTotalBytes);
+
+    const storageStatus = storagePercentual >= 90
+        ? {
+            texto: "Crítico",
+            detalhe: "Acima de 90% do limite configurado. Avalie limpar arquivos sem vínculo ou aumentar o limite/plano.",
+            classe: "bg-red-50 text-red-700 ring-red-200",
+            barra: "bg-red-500",
+        }
+        : storagePercentual >= 70
+            ? {
+                texto: "Atenção",
+                detalhe: "Entre 70% e 89% do limite configurado. Acompanhe o crescimento dos uploads.",
+                classe: "bg-orange-50 text-orange-700 ring-orange-200",
+                barra: "bg-orange-500",
+            }
+            : {
+                texto: "Normal",
+                detalhe: "Até 70% do limite configurado. Capacidade dentro do controle esperado.",
+                classe: "bg-emerald-50 text-emerald-700 ring-emerald-200",
+                barra: "bg-emerald-500",
+            };
+
+    const arquivosFiltrados = arquivosStorage
+        .filter((arquivo) => {
+            const empresa = obterEmpresaArquivoStorage(arquivo);
+            const colaborador = obterColaboradorArquivoStorage(arquivo);
+            const tipo = obterTipoArquivoStorage(arquivo);
+            const dataArquivo = obterDataArquivoStorage(arquivo);
+
+            const bateEmpresa = filtrosStorage.empresa === "Todas" || empresa === filtrosStorage.empresa;
+            const bateColaborador = filtrosStorage.colaborador === "Todos" || colaborador === filtrosStorage.colaborador;
+            const bateTipo = filtrosStorage.tipo === "Todos" || tipo === filtrosStorage.tipo;
+            const bateInicio = !filtrosStorage.dataInicio || (dataArquivo && dataArquivo >= filtrosStorage.dataInicio);
+            const bateFim = !filtrosStorage.dataFim || (dataArquivo && dataArquivo <= filtrosStorage.dataFim);
+            const bateTamanho = tamanhoArquivoDentroDoFiltro(arquivo, filtrosStorage.tamanho);
+            const bateVinculo = filtrosStorage.vinculo === "Todos"
+                || (filtrosStorage.vinculo === "Com vínculo" && arquivo.emUso)
+                || (filtrosStorage.vinculo === "Sem vínculo" && !arquivo.emUso);
+
+            return bateEmpresa && bateColaborador && bateTipo && bateInicio && bateFim && bateTamanho && bateVinculo;
+        })
+        .sort((a, b) => {
+            const dataA = a?.atualizadoEm ? new Date(a.atualizadoEm).getTime() : 0;
+            const dataB = b?.atualizadoEm ? new Date(b.atualizadoEm).getTime() : 0;
+
+            return dataB - dataA || Number(b?.tamanho || 0) - Number(a?.tamanho || 0);
+        });
+
+    const arquivosFiltradosSemVinculo = arquivosFiltrados.filter((arquivo) => !arquivo.emUso);
+    const storageFiltradoSemVinculoBytes = arquivosFiltradosSemVinculo.reduce(
+        (total, arquivo) => total + Number(arquivo?.tamanho || 0),
+        0
+    );
+
+    const opcoesEmpresasStorage = Array.from(new Set(arquivosStorage.map(obterEmpresaArquivoStorage))).sort();
+    const opcoesColaboradoresStorage = Array.from(new Set(arquivosStorage.map(obterColaboradorArquivoStorage))).sort();
+    const opcoesTiposStorage = Array.from(new Set(arquivosStorage.map(obterTipoArquivoStorage))).sort();
+    const storagePorBucket = agruparArquivosStorage(arquivosStorage, (arquivo) => arquivo?.bucket || "storage")
+        .map((item) => ({ ...item, bucket: item.nome }))
+        .sort((a, b) => b.bytes - a.bytes);
+    const maioresArquivosStorage = [...arquivosStorage]
+        .sort((a, b) => Number(b?.tamanho || 0) - Number(a?.tamanho || 0))
+        .slice(0, 6);
+    const ultimoUploadStorage = [...arquivosStorage]
+        .filter((arquivo) => arquivo?.atualizadoEm)
+        .sort((a, b) => new Date(b.atualizadoEm).getTime() - new Date(a.atualizadoEm).getTime())[0];
+
+    const carregarStorage = async () => {
+        if (!onListarArquivosStorage) return;
+
+        setCarregandoStorage(true);
+
+        try {
+            const lista = await onListarArquivosStorage();
+
+            if (storageMontadoRef.current) {
+                setArquivosStorage(lista || []);
+            }
+        } finally {
+            if (storageMontadoRef.current) {
+                setCarregandoStorage(false);
+            }
+        }
+    };
+
+    const excluirArquivoStorage = async (arquivo) => {
+        if (!onExcluirArquivoStorage) return;
+
+        if (bloqueioLimparArquivosStorageSistema.bloqueado) {
+            if (typeof window !== "undefined") {
+                window.alert(bloqueioLimparArquivosStorageSistema.mensagem);
+            }
+            return;
+        }
+
+        setExcluindoStorage(arquivo.caminho);
+
+        const ok = await onExcluirArquivoStorage(arquivo);
+
+        setExcluindoStorage("");
+
+        if (ok) {
+            await carregarStorage();
+            onAtualizarAuditoria?.();
+        }
+    };
+
+    const limparArquivosStorageSemVinculoFiltrados = async () => {
+        if (!onExcluirArquivoStorage || arquivosFiltradosSemVinculo.length === 0) return;
+
+        if (bloqueioLimparArquivosStorageSistema.bloqueado) {
+            if (typeof window !== "undefined") {
+                window.alert(bloqueioLimparArquivosStorageSistema.mensagem);
+            }
+            return;
+        }
+
+        const totalArquivos = arquivosFiltradosSemVinculo.length;
+        const mensagemConfirmacao = `Confirma excluir ${totalArquivos} arquivo(s) sem vínculo exibido(s) no filtro atual?\n\nTamanho total: ${formatarBytes(storageFiltradoSemVinculoBytes)}.\n\nEssa ação remove arquivos do Storage e não altera registros do banco.`;
+
+        if (typeof window !== "undefined" && !window.confirm(mensagemConfirmacao)) return;
+
+        setLimpandoStorage(true);
+        setExcluindoStorage("__limpeza_em_lote__");
+        setProgressoLimpezaStorage({ atual: 0, total: totalArquivos });
+
+        let excluidos = 0;
+        let falhas = 0;
+        const confirmarOriginal = typeof window !== "undefined" ? window.confirm : null;
+
+        try {
+            if (typeof window !== "undefined") {
+                window.confirm = () => true;
+            }
+
+            for (const [indice, arquivo] of arquivosFiltradosSemVinculo.entries()) {
+                if (!storageMontadoRef.current) break;
+
+                try {
+                    const ok = await onExcluirArquivoStorage({
+                        ...arquivo,
+                        ignorarConfirmacaoIndividual: true,
+                        ignorarConfirmacao: true,
+                        limpezaEmLote: true,
+                    });
+
+                    if (ok) excluidos += 1;
+                    else falhas += 1;
+                } catch (erro) {
+                    falhas += 1;
+                    console.warn("Erro ao excluir arquivo sem vínculo:", erro);
+                } finally {
+                    if (storageMontadoRef.current) {
+                        setProgressoLimpezaStorage({ atual: indice + 1, total: totalArquivos });
+                    }
+                }
+            }
+        } finally {
+            if (typeof window !== "undefined" && confirmarOriginal) {
+                window.confirm = confirmarOriginal;
+            }
+
+            if (storageMontadoRef.current) {
+                await carregarStorage();
+                onAtualizarAuditoria?.();
+                setLimpandoStorage(false);
+                setExcluindoStorage("");
+                setProgressoLimpezaStorage({ atual: 0, total: 0 });
+
+                if (typeof window !== "undefined") {
+                    window.alert(`Limpeza concluída. Excluído(s): ${excluidos}. Falha(s): ${falhas}.`);
+                }
+            }
+        }
+    };
+
+    return (
+        <Card>
+            <div className="flex flex-col gap-4 border-b border-slate-100 pb-4 lg:flex-row lg:items-start lg:justify-between">
+                <div>
+                    <div className="flex items-center gap-2">
+                        <HardDrive className="h-5 w-5 text-slate-500" />
+                        <h2 id="config-arquivos-storage" className="scroll-mt-24 text-lg font-black text-slate-950">Arquivos salvos no Storage</h2>
+                    </div>
+                    <p className="mt-1 text-sm text-slate-500">
+                        Consulte capacidade, vínculos, tipos de documentos, maiores arquivos, uploads recentes e arquivos sem vínculo.
+                    </p>
+                    <p className="mt-2 text-xs font-bold text-slate-400">{mensagemPermissao}</p>
+                </div>
+
+                <div className="flex flex-wrap items-center gap-2">
+                    <button
+                        type="button"
+                        onClick={carregarStorage}
+                        disabled={carregandoStorage || limpandoStorage || !onListarArquivosStorage}
+                        className="inline-flex items-center justify-center gap-2 rounded-2xl bg-slate-950 px-4 py-3 text-sm font-semibold text-white hover:bg-slate-800 disabled:opacity-60"
+                    >
+                        <Database className="h-4 w-4" />
+                        {carregandoStorage ? "Carregando..." : arquivosStorage.length > 0 ? "Atualizar arquivos" : "Carregar arquivos"}
+                    </button>
+
+                    <button
+                        type="button"
+                        onClick={limparArquivosStorageSemVinculoFiltrados}
+                        disabled={
+                            carregandoStorage
+                            || limpandoStorage
+                            || arquivosFiltradosSemVinculo.length === 0
+                            || !onExcluirArquivoStorage
+                            || bloqueioLimparArquivosStorageSistema.bloqueado
+                        }
+                        className="inline-flex items-center justify-center gap-2 rounded-2xl bg-red-50 px-4 py-3 text-sm font-semibold text-red-700 ring-1 ring-red-200 hover:bg-red-100 disabled:opacity-50"
+                        title={bloqueioLimparArquivosStorageSistema.bloqueado ? bloqueioLimparArquivosStorageSistema.mensagem : "Limpar arquivos sem vínculo do filtro atual"}
+                    >
+                        <Trash2 className="h-4 w-4" />
+                        {limpandoStorage
+                            ? `Limpando ${progressoLimpezaStorage.atual}/${progressoLimpezaStorage.total}`
+                            : `Limpar sem vínculo (${arquivosFiltradosSemVinculo.length})`}
+                    </button>
+                </div>
+            </div>
+
+            {!onListarArquivosStorage && (
+                <div className="mt-4 rounded-2xl bg-orange-50 px-4 py-3 text-xs font-bold text-orange-700 ring-1 ring-orange-200">
+                    A rotina de listagem do Storage não foi conectada a esta tela.
+                </div>
+            )}
+
+            <div className={classNames("mt-4 rounded-3xl p-4 ring-1", storageStatus.classe)}>
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                    <div className="flex items-start gap-3">
+                        <AlertTriangle className="mt-0.5 h-5 w-5" />
+                        <div>
+                            <p className="text-sm font-bold">Status de armazenamento: {storageStatus.texto}</p>
+                            <p className="mt-1 text-xs leading-relaxed">{storageStatus.detalhe}</p>
+                        </div>
+                    </div>
+                    <div className="text-left sm:text-right">
+                        <p className="text-3xl font-black">{storagePercentual}%</p>
+                        <p className="text-xs font-semibold">{formatarBytes(storageTotalBytes)} de {formatarBytes(storageLimiteBytes)}</p>
+                    </div>
+                </div>
+                <div className="mt-3 h-2 overflow-hidden rounded-full bg-white/70">
+                    <div className={classNames("h-full rounded-full", storageStatus.barra)} style={{ width: `${Math.max(2, Math.min(100, storagePercentual))}%` }} />
+                </div>
+            </div>
+
+            <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+                <div className="rounded-3xl bg-slate-50 p-4 ring-1 ring-slate-200">
+                    <p className="text-xs font-black uppercase tracking-wide text-slate-500">Total no Storage</p>
+                    <p className="mt-2 text-2xl font-black text-slate-950">{formatarBytes(storageTotalBytes)}</p>
+                    <p className="mt-1 text-xs text-slate-500">Limite visual: {formatarBytes(storageLimiteBytes)}</p>
+                </div>
+                <div className="rounded-3xl bg-emerald-50 p-4 ring-1 ring-emerald-100">
+                    <p className="text-xs font-black uppercase tracking-wide text-emerald-700">Com vínculo</p>
+                    <p className="mt-2 text-2xl font-black text-emerald-900">{arquivosEmUso.length}</p>
+                    <p className="mt-1 text-xs text-emerald-700">{formatarBytes(storageEmUsoBytes)} em registros ativos</p>
+                </div>
+                <div className="rounded-3xl bg-red-50 p-4 ring-1 ring-red-100">
+                    <p className="text-xs font-black uppercase tracking-wide text-red-700">Sem vínculo</p>
+                    <p className="mt-2 text-2xl font-black text-red-900">{arquivosSemRegistro.length}</p>
+                    <p className="mt-1 text-xs text-red-700">{formatarBytes(storageSemRegistroBytes)} sem registro</p>
+                </div>
+                <div className="rounded-3xl bg-blue-50 p-4 ring-1 ring-blue-100">
+                    <p className="text-xs font-black uppercase tracking-wide text-blue-700">Último upload</p>
+                    <p className="mt-2 break-words text-sm font-black text-blue-900">{ultimoUploadStorage?.nome || "Não carregado"}</p>
+                    <p className="mt-1 text-xs text-blue-700">
+                        {ultimoUploadStorage?.atualizadoEm ? new Date(ultimoUploadStorage.atualizadoEm).toLocaleString("pt-BR") : "Clique em carregar arquivos"}
+                    </p>
+                </div>
+            </div>
+
+            <div className="mt-4 rounded-3xl bg-slate-50 p-4 ring-1 ring-slate-200">
+                <div className="mb-3 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+                    <div>
+                        <p className="text-sm font-black text-slate-950">Filtros do Storage</p>
+                        <p className="mt-1 text-xs text-slate-500">Filtre antes de executar limpeza para evitar exclusões indevidas.</p>
+                    </div>
+                    <button
+                        type="button"
+                        onClick={() => setFiltrosStorage(FILTROS_STORAGE_PADRAO)}
+                        className="w-fit rounded-2xl bg-white px-4 py-2 text-xs font-bold text-slate-700 ring-1 ring-slate-200 hover:bg-slate-100"
+                    >
+                        Limpar filtros
+                    </button>
+                </div>
+
+                <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-6">
+                    <select value={filtrosStorage.empresa} onChange={(e) => setFiltrosStorage((atual) => ({ ...atual, empresa: e.target.value }))} className="rounded-2xl border border-slate-200 bg-white px-3 py-3 text-sm outline-none focus:border-slate-400 focus:ring-4 focus:ring-slate-100">
+                        <option value="Todas">Todas as empresas</option>
+                        {opcoesEmpresasStorage.map((empresa) => <option key={empresa} value={empresa}>{empresa}</option>)}
+                    </select>
+
+                    <select value={filtrosStorage.colaborador} onChange={(e) => setFiltrosStorage((atual) => ({ ...atual, colaborador: e.target.value }))} className="rounded-2xl border border-slate-200 bg-white px-3 py-3 text-sm outline-none focus:border-slate-400 focus:ring-4 focus:ring-slate-100">
+                        <option value="Todos">Todos os colaboradores</option>
+                        {opcoesColaboradoresStorage.map((colaborador) => <option key={colaborador} value={colaborador}>{colaborador}</option>)}
+                    </select>
+
+                    <select value={filtrosStorage.tipo} onChange={(e) => setFiltrosStorage((atual) => ({ ...atual, tipo: e.target.value }))} className="rounded-2xl border border-slate-200 bg-white px-3 py-3 text-sm outline-none focus:border-slate-400 focus:ring-4 focus:ring-slate-100">
+                        <option value="Todos">Todos os tipos</option>
+                        {opcoesTiposStorage.map((tipo) => <option key={tipo} value={tipo}>{tipo}</option>)}
+                    </select>
+
+                    <select value={filtrosStorage.tamanho} onChange={(e) => setFiltrosStorage((atual) => ({ ...atual, tamanho: e.target.value }))} className="rounded-2xl border border-slate-200 bg-white px-3 py-3 text-sm outline-none focus:border-slate-400 focus:ring-4 focus:ring-slate-100">
+                        <option value="Todos">Todos os tamanhos</option>
+                        <option value="ate-1mb">Até 1 MB</option>
+                        <option value="1mb-10mb">1 MB a 10 MB</option>
+                        <option value="10mb-50mb">10 MB a 50 MB</option>
+                        <option value="acima-50mb">Acima de 50 MB</option>
+                    </select>
+
+                    <select value={filtrosStorage.vinculo} onChange={(e) => setFiltrosStorage((atual) => ({ ...atual, vinculo: e.target.value }))} className="rounded-2xl border border-slate-200 bg-white px-3 py-3 text-sm outline-none focus:border-slate-400 focus:ring-4 focus:ring-slate-100">
+                        <option value="Todos">Com e sem vínculo</option>
+                        <option value="Com vínculo">Somente vinculados</option>
+                        <option value="Sem vínculo">Somente sem vínculo</option>
+                    </select>
+
+                    <div className="grid grid-cols-2 gap-2">
+                        <input type="date" value={filtrosStorage.dataInicio} onChange={(e) => setFiltrosStorage((atual) => ({ ...atual, dataInicio: e.target.value }))} className="min-w-0 rounded-2xl border border-slate-200 bg-white px-3 py-3 text-sm outline-none focus:border-slate-400 focus:ring-4 focus:ring-slate-100" title="Data inicial de envio" />
+                        <input type="date" value={filtrosStorage.dataFim} onChange={(e) => setFiltrosStorage((atual) => ({ ...atual, dataFim: e.target.value }))} className="min-w-0 rounded-2xl border border-slate-200 bg-white px-3 py-3 text-sm outline-none focus:border-slate-400 focus:ring-4 focus:ring-slate-100" title="Data final de envio" />
+                    </div>
+                </div>
+            </div>
+
+            {storagePorBucket.length > 0 && (
+                <div className="mt-4 rounded-3xl border border-slate-200 bg-white p-4">
+                    <h3 className="font-bold text-slate-950">Uso por bucket</h3>
+                    <div className="mt-3 grid gap-2 md:grid-cols-2 xl:grid-cols-5">
+                        {storagePorBucket.map((bucketInfo) => (
+                            <div key={bucketInfo.bucket} className="rounded-2xl bg-slate-50 p-3 text-xs ring-1 ring-slate-200">
+                                <p className="break-words font-bold text-slate-700">{bucketInfo.bucket}</p>
+                                <p className="mt-1 text-slate-500">{bucketInfo.arquivos} arquivo(s) · {formatarBytes(bucketInfo.bytes)}</p>
+                                <p className="mt-1 text-slate-400">{bucketInfo.emUso} em uso · {bucketInfo.semRegistro} sem vínculo</p>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            )}
+
+            {maioresArquivosStorage.length > 0 && (
+                <div className="mt-4 rounded-3xl border border-slate-200 bg-white p-4">
+                    <h3 className="font-bold text-slate-950">Maiores arquivos</h3>
+                    <div className="mt-3 grid gap-2 md:grid-cols-2 xl:grid-cols-3">
+                        {maioresArquivosStorage.map((arquivo) => (
+                            <div key={`${arquivo.bucket}-${arquivo.caminho}-maior`} className="rounded-2xl bg-slate-50 p-3 text-xs ring-1 ring-slate-200">
+                                <p className="break-words font-bold text-slate-700">{arquivo.nome}</p>
+                                <p className="mt-1 text-slate-500">{formatarBytes(arquivo.tamanho || 0)} · {arquivo.bucket || "storage"}</p>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            )}
+
+            {arquivosStorage.length === 0 && !carregandoStorage && (
+                <div className="mt-4 rounded-3xl border border-dashed border-slate-300 p-6 text-center text-sm text-slate-500">
+                    Clique em <strong>Carregar arquivos</strong> para consultar o Storage. A consulta não carrega automaticamente para manter a tela leve.
+                </div>
+            )}
+
+            {arquivosStorage.length > 0 && (
+                <div className="mt-4">
+                    <div className="mb-3 flex flex-col justify-between gap-2 md:flex-row md:items-center">
+                        <p className="text-sm font-bold text-slate-950">Arquivos encontrados: {arquivosFiltrados.length} de {arquivosStorage.length}</p>
+                        <p className="text-xs text-slate-500">Sem vínculo no filtro: {arquivosFiltradosSemVinculo.length} arquivo(s) · {formatarBytes(storageFiltradoSemVinculoBytes)}.</p>
+                    </div>
+
+                    {arquivosFiltrados.length === 0 && (
+                        <div className="rounded-3xl border border-dashed border-slate-300 p-6 text-center text-sm text-slate-500">
+                            Nenhum arquivo encontrado com os filtros selecionados.
+                        </div>
+                    )}
+
+                    {arquivosFiltrados.length > 0 && (
+                        <div className="max-h-[32rem] space-y-2 overflow-y-auto pr-1 scrollbar-discreta">
+                            {arquivosFiltrados.map((arquivo) => (
+                                <div key={`${arquivo.bucket}-${arquivo.caminho}`} className={classNames("rounded-2xl px-3 py-2 text-sm ring-1", arquivo.emUso ? "bg-emerald-50 text-emerald-900 ring-emerald-100" : "bg-red-50 text-red-900 ring-red-100")}>
+                                    <div className="flex flex-col justify-between gap-3 lg:flex-row lg:items-center">
+                                        <div className="min-w-0">
+                                            <div className="flex flex-wrap items-center gap-2">
+                                                <p className="break-words font-bold">{arquivo.nome}</p>
+                                                <span className="rounded-full bg-white/70 px-3 py-1 text-xs font-bold">{arquivo.emUso ? "Em uso" : "Sem vínculo"}</span>
+                                                <span className="rounded-full bg-white/70 px-3 py-1 text-xs font-bold">{formatarBytes(arquivo.tamanho || 0)}</span>
+                                            </div>
+                                            <p className="mt-1 break-words text-xs opacity-80">{arquivo.bucket}/{arquivo.caminho}</p>
+                                            <p className="mt-1 text-xs opacity-70">
+                                                {obterEmpresaArquivoStorage(arquivo)} · {obterColaboradorArquivoStorage(arquivo)} · {obterTipoArquivoStorage(arquivo)}
+                                            </p>
+                                            {arquivo.atualizadoEm && (
+                                                <p className="mt-1 text-xs opacity-70">Atualizado em {new Date(arquivo.atualizadoEm).toLocaleString("pt-BR")}</p>
+                                            )}
+                                        </div>
+
+                                        {!arquivo.emUso && (
+                                            <button
+                                                type="button"
+                                                onClick={() => excluirArquivoStorage(arquivo)}
+                                                disabled={excluindoStorage === arquivo.caminho || limpandoStorage || bloqueioLimparArquivosStorageSistema.bloqueado}
+                                                className="shrink-0 rounded-2xl bg-white/80 px-4 py-2 text-xs font-bold text-red-700 ring-1 ring-red-200 hover:bg-white disabled:opacity-50"
+                                                title={bloqueioLimparArquivosStorageSistema.bloqueado ? bloqueioLimparArquivosStorageSistema.mensagem : "Excluir arquivo sem vínculo"}
+                                            >
+                                                {excluindoStorage === arquivo.caminho ? "Excluindo..." : "Excluir arquivo"}
+                                            </button>
+                                        )}
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    )}
+                </div>
+            )}
+        </Card>
+    );
+}

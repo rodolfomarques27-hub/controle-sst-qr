@@ -54,7 +54,6 @@ const BLOCOS_AUDITORIA_SISTEMA_PADRAO = [
     "registros",
     "eventos",
     "permissoes",
-    "storage",
 ];
 
 const VISIBILIDADE_PADRAO_AUDITORIA = (chaves) =>
@@ -73,7 +72,6 @@ const VISIBILIDADE_PADRAO_CARTAS_AUDITORIA_SISTEMA = {
 const VISIBILIDADE_PADRAO_BLOCOS_AUDITORIA_SISTEMA = {
     ...VISIBILIDADE_PADRAO_AUDITORIA(BLOCOS_AUDITORIA_SISTEMA_PADRAO),
     permissoes: false,
-    storage: false,
 };
 
 const CHAVES_STORAGE_AUDITORIA_SISTEMA = Object.freeze({
@@ -869,7 +867,6 @@ Essa ação remove arquivos do Storage e não altera registros do banco.`;
         { chave: "atividades", titulo: "Últimas atividades" },
         { chave: "eventos", titulo: "Eventos verificados" },
         { chave: "permissoes", titulo: "Permissões antigas da Auditoria" },
-        { chave: "storage", titulo: "Arquivos salvos no Storage" },
         { chave: "registros", titulo: "Registros detalhados" },
     ];
 
@@ -1375,7 +1372,7 @@ Essa ação remove arquivos do Storage e não altera registros do banco.`;
                     </CardRecolhivel>
                 ))}
 
-                {renderBlocoAuditoriaPersonalizado("storage", (
+                {false && renderBlocoAuditoriaPersonalizado("storage", (
                     <CardRecolhivel
                 className="mt-5"
                 titulo="Arquivos salvos no Storage"

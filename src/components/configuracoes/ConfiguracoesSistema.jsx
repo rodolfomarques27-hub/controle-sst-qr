@@ -19,6 +19,7 @@ import {
     SlidersHorizontal,
 } from "lucide-react";
 import { Header, Card } from "../commonComponents";
+import { ArquivosStorageConfiguracoes } from "./ArquivosStorageConfiguracoes";
 import {
     carregarConfiguracaoEventosAuditoriaSistemaSupabase,
     carregarTokenAuditoriaPublicaAtivoSupabase,
@@ -158,6 +159,7 @@ const CHAVES_BLOCOS_CONFIGURACOES_PADRAO = [
     "config-auditoria-publica",
     "config-seguranca-publica",
     "config-storage-privado",
+    "config-arquivos-storage",
     "config-supabase-geral",
     "config-status-etapa",
 ];
@@ -208,6 +210,9 @@ export function ConfiguracoesSistema({
     origemSenhaConfiguracoesSistema = "local",
     mensagemSenhaConfiguracoesSistema: mensagemSenhaConfiguracoesSistemaApp = "",
     onSalvarSenhaConfiguracoes,
+    onListarArquivosStorage,
+    onExcluirArquivoStorage,
+    onAtualizarAuditoria,
     acaoTopo = null,
 }) {
     const [configEventos, setConfigEventos] = useState(() => configuracaoPadraoEventosAuditoriaSistema());
@@ -1287,6 +1292,7 @@ export function ConfiguracoesSistema({
         { chave: "config-auditoria-publica", titulo: "Auditoria pública", descricao: "Token, senha de referência e link público.", icon: KeyRound },
         { chave: "config-seguranca-publica", titulo: "Segurança pública", descricao: "Checklist operacional do QR Code público.", icon: ShieldAlert },
         { chave: "config-storage-privado", titulo: "Storage privado", descricao: "Buckets, URLs assinadas e arquivos sensíveis.", icon: HardDrive },
+        { chave: "config-arquivos-storage", titulo: "Arquivos Storage", descricao: "Capacidade, vínculos, limpeza e arquivos salvos.", icon: Database },
         { chave: "config-supabase-geral", titulo: "Supabase/RLS/RPC", descricao: "Tabelas, policies, funções e performance.", icon: Database },
         { chave: "config-status-etapa", titulo: "Status", descricao: "Resumo da configuração e usuário atual.", icon: CheckCircle2 },
     ];
@@ -2580,6 +2586,21 @@ export function ConfiguracoesSistema({
                 )
             );
 
+
+        case "config-arquivos-storage":
+            return renderBlocoConfiguracaoComControle(
+                "config-arquivos-storage",
+                "Arquivos salvos no Storage",
+                "Capacidade, vínculos, limpeza e arquivos salvos.",
+                (
+                    <ArquivosStorageConfiguracoes
+                        limiteStorageMb={limitesEditaveis.storageMb || limites.storageMb || 1024}
+                        onListarArquivosStorage={onListarArquivosStorage}
+                        onExcluirArquivoStorage={onExcluirArquivoStorage}
+                        onAtualizarAuditoria={onAtualizarAuditoria}
+                    />
+                )
+            );
 
         case "config-supabase-geral":
             return renderBlocoConfiguracaoComControle(
