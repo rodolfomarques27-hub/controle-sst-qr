@@ -5,11 +5,92 @@ import { supabase } from "../../lib/supabaseClient";
 import {
     carregarPermissaoSistemaAtualService,
     obterModuloPermissaoSistemaPorTela,
+    obterResumoPermissaoSistema,
     usuarioPodeAcessarTelaSistema,
 } from "../../services/usuariosPermissoesSistemaService";
 
 function obterTelaItemNavegacao(item = {}) {
     return item.id || item.tela || item.chave || item.key || "";
+}
+
+function formatarPerfilSistema(perfil = "") {
+    const perfilNormalizado = String(perfil || "").trim().toLowerCase();
+
+    const rotulos = {
+        administrador: "Administrador",
+        tecnico_sst: "Técnico SST",
+        auditor: "Auditor",
+        gestor: "Gestor",
+        consulta: "Consulta",
+        bloqueado: "Bloqueado",
+    };
+
+    return rotulos[perfilNormalizado] || perfil || "Sem permissão cadastrada";
+}
+
+function obterEmailUsuarioSistema(usuario = null, permissao = null) {
+    return String(permissao?.email || usuario?.email || "").trim().toLowerCase();
+}
+
+function obterNomeUsuarioSistema(usuario = null, permissao = null) {
+    const emailSistema = obterEmailUsuarioSistema(usuario, permissao);
+    const nome = String(
+        permissao?.nome
+        || usuario?.nome
+        || usuario?.name
+        || usuario?.displayName
+        || usuario?.user_metadata?.nome
+        || usuario?.user_metadata?.name
+        || ""
+    ).trim();
+
+    if (nome) return nome;
+    if (emailSistema.includes("@")) return emailSistema.split("@")[0];
+
+    return "Usuário logado";
+}
+
+function obterFuncaoUsuarioSistema(usuario = null, permissao = null) {
+    return String(
+        permissao?.funcao
+        || usuario?.funcao
+        || usuario?.cargo
+        || usuario?.user_metadata?.funcao
+        || usuario?.user_metadata?.cargo
+        || ""
+    ).trim();
+}
+
+function montarUsuarioComPerfilSistema(usuario = null, permissao = null, carregando = false, erro = "") {
+    if (!usuario) return usuario;
+
+    const resumo = obterResumoPermissaoSistema(permissao);
+    const perfilSistemaRotulo = carregando
+        ? "Carregando perfil..."
+        : erro
+          ? "Perfil não carregado"
+          : formatarPerfilSistema(resumo.perfil);
+    const emailSistema = obterEmailUsuarioSistema(usuario, permissao);
+    const nomeSistema = obterNomeUsuarioSistema(usuario, permissao);
+    const funcaoSistema = obterFuncaoUsuarioSistema(usuario, permissao);
+
+    return {
+        ...usuario,
+        email: emailSistema || usuario?.email || "",
+        nome: nomeSistema,
+        name: nomeSistema,
+        displayName: nomeSistema,
+        funcao: funcaoSistema,
+        cargo: funcaoSistema,
+        funcaoSistema,
+        funcaoOriginal: usuario?.funcao || usuario?.cargo || "",
+        perfil: perfilSistemaRotulo,
+        perfilSistema: perfilSistemaRotulo,
+        perfilSistemaChave: permissao?.perfil || "",
+        perfilOriginal: usuario?.perfil || "",
+        statusSistema: resumo.status,
+        acessoGlobalSistema: resumo.acessoGlobal,
+    };
 }
 
 export function AppLayout({
@@ -88,6 +169,13 @@ export function AppLayout({
 
         onSelecionarTela(id, label);
     };
+
+    const usuarioComPerfilSistema = useMemo(() => montarUsuarioComPerfilSistema(
+        usuario,
+        permissaoSistemaMenu,
+        carregandoPermissaoSistemaMenu,
+        erroPermissaoSistemaMenu
+    ), [usuario, permissaoSistemaMenu, carregandoPermissaoSistemaMenu, erroPermissaoSistemaMenu]);
 
     useEffect(() => {
         if (typeof window === "undefined" || typeof document === "undefined") return undefined;
@@ -175,7 +263,7 @@ export function AppLayout({
                     tela={tela}
                     menuLateralAberto={menuLateralAberto}
                     setMenuLateralAberto={setMenuLateralAberto}
-                    usuario={usuario}
+                    usuario={usuarioComPerfilSistema}
                     sair={sair}
                     onSelecionarTela={selecionarTelaComPermissao}
                 />
@@ -185,7 +273,7 @@ export function AppLayout({
                         <AppMobileHeader
                             nav={navPermitida}
                             tela={tela}
-                            usuario={usuario}
+                            usuario={usuarioComPerfilSistema}
                             sair={sair}
                             onSelecionarTela={selecionarTelaComPermissao}
                         />
