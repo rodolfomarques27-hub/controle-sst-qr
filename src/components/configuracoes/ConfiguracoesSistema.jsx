@@ -641,6 +641,15 @@ export function ConfiguracoesSistema({
 
 
     const carregarUsuariosPermissoesSistema = async () => {
+        if (!podeGerenciarPermissoesSistema) {
+            setUsuariosPermissoesSistema([]);
+            setMensagemUsuariosPermissoesSistema(
+                "Lista administrativa não consultada. O usuário atual não possui permissão para gerenciar permissões."
+            );
+            setCarregandoUsuariosPermissoesSistema(false);
+            return;
+        }
+
         setCarregandoUsuariosPermissoesSistema(true);
         setMensagemUsuariosPermissoesSistema("Carregando lista administrativa de usuários no Supabase...");
 
@@ -867,12 +876,38 @@ export function ConfiguracoesSistema({
 
 
     useEffect(() => {
+        if (carregandoPermissaoSistema) return undefined;
+
+        if (!permissaoSistemaAtual) {
+            setUsuariosPermissoesSistema([]);
+            setMensagemUsuariosPermissoesSistema(
+                "Lista administrativa aguardando uma permissão válida do usuário atual."
+            );
+            return undefined;
+        }
+
+        if (!podeGerenciarPermissoesSistema) {
+            setUsuariosPermissoesSistema([]);
+            setMensagemUsuariosPermissoesSistema(
+                "Lista administrativa não consultada. O usuário atual não possui permissão para gerenciar permissões."
+            );
+            return undefined;
+        }
+
         const timer = window.setTimeout(() => {
             carregarUsuariosPermissoesSistema();
         }, 0);
 
         return () => window.clearTimeout(timer);
-    }, []);
+    }, [
+        carregandoPermissaoSistema,
+        podeGerenciarPermissoesSistema,
+        permissaoSistemaAtual?.email,
+        permissaoSistemaAtual?.perfil,
+        permissaoSistemaAtual?.ativo,
+        permissaoSistemaAtual?.bloqueado,
+        permissaoSistemaAtual?.acesso_global,
+    ]);
 
 
     const persistirConfiguracao = async (proximaConfiguracao, mensagemSucesso = "Configuração salva.") => {
@@ -1463,11 +1498,16 @@ export function ConfiguracoesSistema({
                                 <button
                                     type="button"
                                     onClick={carregarUsuariosPermissoesSistema}
-                                    disabled={carregandoUsuariosPermissoesSistema}
+                                    disabled={carregandoUsuariosPermissoesSistema || !podeGerenciarPermissoesSistema}
+                                    title={podeGerenciarPermissoesSistema ? "Atualizar lista administrativa" : bloqueioGerenciarPermissoesSistema.mensagem}
                                     className="inline-flex items-center justify-center gap-2 rounded-2xl bg-slate-950 px-3 py-2 text-xs font-black text-white ring-1 ring-slate-950 hover:bg-slate-800 disabled:opacity-60"
                                 >
                                     <RefreshCw className={classNames("h-3.5 w-3.5", carregandoUsuariosPermissoesSistema && "animate-spin")} />
-                                    {carregandoUsuariosPermissoesSistema ? "Carregando" : "Atualizar lista"}
+                                    {carregandoUsuariosPermissoesSistema
+                                        ? "Carregando"
+                                        : podeGerenciarPermissoesSistema
+                                          ? "Atualizar lista"
+                                          : "Lista bloqueada"}
                                 </button>
                             </div>
 
