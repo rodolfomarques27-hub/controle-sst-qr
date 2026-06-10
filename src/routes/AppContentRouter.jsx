@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { ArrowLeft, Info, Lock, LockKeyhole, RefreshCw, Send, ShieldCheck } from "lucide-react";
+import { ArrowLeft, LayoutGrid, Lock, LockKeyhole, RefreshCw, Send, ShieldCheck, UserRound } from "lucide-react";
 import { Card } from "../components/commonComponents";
 import { CarregandoTela } from "../components/CarregandoTela";
 import { LIMITE_STORAGE_MB } from "../constants/sistemaConstants";
@@ -78,11 +78,9 @@ function formatarRotuloAcessoBloqueado(valor, mapa, fallback = "Não informado")
 
 function AcessoModuloSistemaBloqueado({ tela, bloqueio, permissao, erro }) {
     const resumo = obterResumoPermissaoSistema(permissao);
-    const modulo = bloqueio?.modulo || obterModuloPermissaoSistemaPorTela(tela) || "módulo não mapeado";
     const telaExibicao = formatarRotuloAcessoBloqueado(tela, ROTULOS_TELAS_ACESSO_BLOQUEADO, "Tela não informada");
-    const moduloExibicao = formatarRotuloAcessoBloqueado(modulo, ROTULOS_MODULOS_ACESSO_BLOQUEADO, "Módulo não mapeado");
     const perfilExibicao = formatarRotuloAcessoBloqueado(resumo.perfil, ROTULOS_PERFIS_ACESSO_BLOQUEADO, "Usuário sem perfil liberado");
-    const mensagemPrincipal = erro || bloqueio?.mensagem || "Seu usuário ainda não possui permissão para acessar este conteúdo.";
+    const mensagemPrincipal = erro || "Sem permissão para acessar esta área do sistema.";
 
     return (
         <div className="flex min-h-[58vh] items-center justify-center px-4 py-10">
@@ -116,37 +114,35 @@ function AcessoModuloSistemaBloqueado({ tela, bloqueio, permissao, erro }) {
 
                     <section className="flex flex-col justify-center px-6 py-8 sm:px-8 md:px-12">
                         <div className="max-w-2xl">
-                            <h3 className="text-2xl font-black leading-tight tracking-tight text-slate-950 sm:text-3xl">
+                            <h3 className="max-w-xl text-justify text-2xl font-black leading-tight tracking-tight text-slate-950 sm:text-3xl">
                                 Seu usuário ainda não possui permissão para acessar este conteúdo.
                             </h3>
                             <p className="mt-4 text-sm font-semibold leading-7 text-slate-500">
                                 {mensagemPrincipal}
                             </p>
 
-                            <div className="mt-7 rounded-3xl border border-slate-200 bg-slate-50/80 p-5 shadow-inner shadow-slate-100/60">
-                                <div className="grid gap-5 md:grid-cols-3 md:divide-x md:divide-slate-200">
-                                    <div className="md:pr-5">
-                                        <p className="text-[11px] font-black uppercase tracking-[0.22em] text-slate-400">Tela</p>
-                                        <p className="mt-2 text-sm font-black text-slate-950">{telaExibicao}</p>
+                            <div className="mt-7 rounded-3xl border border-slate-200 bg-slate-50/80 px-5 py-4 shadow-inner shadow-slate-100/60">
+                                <div className="flex items-center gap-4">
+                                    <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-slate-100 text-slate-500 ring-1 ring-slate-200">
+                                        <LayoutGrid className="h-5 w-5" strokeWidth={2.2} />
                                     </div>
-                                    <div className="md:px-5">
-                                        <p className="text-[11px] font-black uppercase tracking-[0.22em] text-slate-400">Módulo</p>
-                                        <p className="mt-2 text-sm font-black text-slate-950">{moduloExibicao}</p>
-                                    </div>
-                                    <div className="md:pl-5">
-                                        <p className="text-[11px] font-black uppercase tracking-[0.22em] text-slate-400">Perfil</p>
-                                        <p className="mt-2 text-sm font-black text-slate-950">{perfilExibicao}</p>
+                                    <div>
+                                        <p className="text-sm font-black text-slate-500">Área:</p>
+                                        <p className="mt-1 text-base font-black text-slate-950">{telaExibicao}</p>
                                     </div>
                                 </div>
-                            </div>
 
-                            <div className="mt-6 flex items-start gap-3 rounded-3xl bg-amber-50/70 px-5 py-4 text-sm font-semibold leading-6 text-slate-500 ring-1 ring-amber-100">
-                                <div className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-amber-100 text-amber-700 ring-1 ring-amber-200">
-                                    <Info className="h-4 w-4" />
+                                <div className="my-4 h-px bg-slate-200" />
+
+                                <div className="flex items-center gap-4">
+                                    <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-slate-100 text-slate-500 ring-1 ring-slate-200">
+                                        <UserRound className="h-5 w-5" strokeWidth={2.2} />
+                                    </div>
+                                    <div>
+                                        <p className="text-sm font-black text-slate-500">Perfil atual:</p>
+                                        <p className="mt-1 text-base font-black text-slate-950">{perfilExibicao}</p>
+                                    </div>
                                 </div>
-                                <p>
-                                    Se necessário, peça ao administrador a liberação em Configurações &gt; Usuários e Permissões.
-                                </p>
                             </div>
 
                             <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:justify-end">
