@@ -52,6 +52,22 @@ export async function carregarPermissaoSistemaAtualService({ supabase }) {
     return normalizarPermissaoSistema(permissao || null);
 }
 
+export async function listarUsuariosPermissoesSistemaService({ supabase }) {
+    if (!supabase) {
+        throw new Error("Cliente Supabase não informado para listar usuários e permissões do sistema.");
+    }
+
+    const { data, error } = await supabase.rpc("admin_listar_usuarios_permissoes_sistema");
+
+    if (error) {
+        throw new Error(error.message || "Erro ao listar usuários e permissões do sistema.");
+    }
+
+    const usuarios = Array.isArray(data) ? data : [];
+
+    return usuarios.map((usuario) => normalizarPermissaoSistema(usuario)).filter(Boolean);
+}
+
 export async function usuarioTemPermissaoSistemaService({ supabase, modulo, acao }) {
     if (!supabase) {
         throw new Error("Cliente Supabase não informado para validar permissão do sistema.");

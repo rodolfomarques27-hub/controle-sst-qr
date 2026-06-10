@@ -68,6 +68,7 @@ import {
 } from "../../services/supabaseRevisaoService";
 import {
     carregarPermissaoSistemaAtualService,
+    listarUsuariosPermissoesSistemaService,
     obterResumoPermissaoSistema,
 } from "../../services/usuariosPermissoesSistemaService";
 import { supabase } from "../../lib/supabaseClient";
@@ -176,6 +177,11 @@ export function ConfiguracoesSistema({
     const [mensagemPermissaoSistema, setMensagemPermissaoSistema] = useState(
         "Permissão geral ainda não carregada do Supabase."
     );
+    const [usuariosPermissoesSistema, setUsuariosPermissoesSistema] = useState([]);
+    const [carregandoUsuariosPermissoesSistema, setCarregandoUsuariosPermissoesSistema] = useState(false);
+    const [mensagemUsuariosPermissoesSistema, setMensagemUsuariosPermissoesSistema] = useState(
+        "Lista administrativa ainda não carregada do Supabase."
+    );
 
     const eventosAuditoria = useMemo(() => {
         const normalizada = normalizarConfiguracaoEventosAuditoriaSistema(configEventos);
@@ -210,6 +216,17 @@ export function ConfiguracoesSistema({
             .filter(([, valor]) => valor === true || valor === "true")
             .map(([acao]) => acao);
     }, [permissaoSistemaAtual]);
+
+    const resumoUsuariosPermissoesSistema = useMemo(() => {
+        const total = usuariosPermissoesSistema.length;
+        const ativos = usuariosPermissoesSistema.filter((item) => item.ativo && !item.bloqueado).length;
+        const bloqueados = usuariosPermissoesSistema.filter((item) => item.bloqueado).length;
+        const administradores = usuariosPermissoesSistema.filter(
+            (item) => item.acesso_global || item.perfil === "administrador"
+        ).length;
+
+        return { total, ativos, bloqueados, administradores };
+    }, [usuariosPermissoesSistema]);
 
 
     useEffect(() => {
@@ -556,6 +573,32 @@ export function ConfiguracoesSistema({
     };
 
 
+    const carregarUsuariosPermissoesSistema = async () => {
+        setCarregandoUsuariosPermissoesSistema(true);
+        setMensagemUsuariosPermissoesSistema("Carregando lista administrativa de usuários no Supabase...");
+
+        try {
+            const usuariosListados = await listarUsuariosPermissoesSistemaService({ supabase });
+            setUsuariosPermissoesSistema(usuariosListados);
+
+            if (usuariosListados.length > 0) {
+                setMensagemUsuariosPermissoesSistema(
+                    `${usuariosListados.length} usuário(s) carregado(s) da lista administrativa. Esta leitura ainda não aplica bloqueios reais.`
+                );
+            } else {
+                setMensagemUsuariosPermissoesSistema("Nenhum usuário foi retornado pela RPC administrativa de permissões.");
+            }
+        } catch (erro) {
+            setUsuariosPermissoesSistema([]);
+            setMensagemUsuariosPermissoesSistema(
+                `Não foi possível carregar a lista administrativa. Supabase: ${erro?.message || "erro não identificado"}`
+            );
+        } finally {
+            setCarregandoUsuariosPermissoesSistema(false);
+        }
+    };
+
+
     const carregarConfiguracaoAuditoriaPublicaSupabase = async () => {
         setCarregandoAuditoriaPublica(true);
         setMensagemAuditoriaPublica("Carregando token público ativo no Supabase...");
@@ -626,6 +669,15 @@ export function ConfiguracoesSistema({
     useEffect(() => {
         const timer = window.setTimeout(() => {
             carregarPermissaoSistemaAtual();
+        }, 0);
+
+        return () => window.clearTimeout(timer);
+    }, []);
+
+
+    useEffect(() => {
+        const timer = window.setTimeout(() => {
+            carregarUsuariosPermissoesSistema();
         }, 0);
 
         return () => window.clearTimeout(timer);
@@ -1155,6 +1207,97 @@ export function ConfiguracoesSistema({
                                     </div>
                                 </div>
                             ) : null}
+                        </div>
+
+                        <div className="mt-4 rounded-3xl bg-white p-4 ring-1 ring-slate-100">
+                            <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+                                <div>
+                                    <p className="text-xs font-black uppercase tracking-wide text-slate-400">Lista administrativa de usuários</p>
+                                    <p className="mt-1 text-xs font-semibold leading-relaxed text-slate-500">
+                                        Usuários cadastrados em usuarios_permissoes_sistema. Leitura administrativa sem aplicar bloqueio real no sistema.
+                                    </p>
+                                    <p className="mt-1 text-xs font-semibold leading-relaxed text-slate-500">
+                                        {mensagemUsuariosPermissoesSistema}
+                                    </p>
+                                </div>
+                                <button
+                                    type="button"
+                                    onClick={carregarUsuariosPermissoesSistema}
+                                    disabled={carregandoUsuariosPermissoesSistema}
+                                    className="inline-flex items-center justify-center gap-2 rounded-2xl bg-slate-950 px-3 py-2 text-xs font-black text-white ring-1 ring-slate-950 hover:bg-slate-800 disabled:opacity-60"
+                                >
+                                    <RefreshCw className={classNames("h-3.5 w-3.5", carregandoUsuariosPermissoesSistema && "animate-spin")} />
+                                    {carregandoUsuariosPermissoesSistema ? "Carregando" : "Atualizar lista"}
+                                </button>
+                            </div>
+
+                            <div className="mt-4 grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
+                                <div className="rounded-2xl bg-slate-50 px-3 py-3 ring-1 ring-slate-100">
+                                    <p className="text-[10px] font-black uppercase tracking-wide text-slate-400">Total</p>
+                                    <p className="mt-1 text-sm font-black text-slate-950">{resumoUsuariosPermissoesSistema.total}</p>
+                                </div>
+                                <div className="rounded-2xl bg-emerald-50 px-3 py-3 ring-1 ring-emerald-100">
+                                    <p className="text-[10px] font-black uppercase tracking-wide text-emerald-700">Ativos</p>
+                                    <p className="mt-1 text-sm font-black text-emerald-800">{resumoUsuariosPermissoesSistema.ativos}</p>
+                                </div>
+                                <div className="rounded-2xl bg-blue-50 px-3 py-3 ring-1 ring-blue-100">
+                                    <p className="text-[10px] font-black uppercase tracking-wide text-blue-700">Administradores</p>
+                                    <p className="mt-1 text-sm font-black text-blue-800">{resumoUsuariosPermissoesSistema.administradores}</p>
+                                </div>
+                                <div className="rounded-2xl bg-rose-50 px-3 py-3 ring-1 ring-rose-100">
+                                    <p className="text-[10px] font-black uppercase tracking-wide text-rose-700">Bloqueados</p>
+                                    <p className="mt-1 text-sm font-black text-rose-800">{resumoUsuariosPermissoesSistema.bloqueados}</p>
+                                </div>
+                            </div>
+
+                            <div className="mt-4 space-y-2">
+                                {usuariosPermissoesSistema.length > 0 ? usuariosPermissoesSistema.map((item) => (
+                                    <div key={item.id || item.email} className="rounded-2xl bg-slate-50 px-4 py-3 ring-1 ring-slate-100">
+                                        <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+                                            <div className="min-w-0">
+                                                <p className="truncate text-sm font-black text-slate-950">{item.nome || "Usuário sem nome"}</p>
+                                                <p className="mt-0.5 truncate text-xs font-semibold text-slate-500">{item.email || "email não informado"}</p>
+                                                <p className="mt-1 text-[11px] font-semibold text-slate-400">
+                                                    {item.funcao || "função não informada"}
+                                                </p>
+                                            </div>
+                                            <div className="flex flex-wrap gap-2">
+                                                <span className="rounded-full bg-white px-3 py-1.5 text-[11px] font-black text-slate-700 ring-1 ring-slate-200">
+                                                    Perfil: {item.perfil || "não informado"}
+                                                </span>
+                                                <span className={classNames(
+                                                    "rounded-full px-3 py-1.5 text-[11px] font-black ring-1",
+                                                    item.ativo && !item.bloqueado
+                                                        ? "bg-emerald-50 text-emerald-700 ring-emerald-100"
+                                                        : "bg-slate-100 text-slate-500 ring-slate-200"
+                                                )}>
+                                                    {item.ativo && !item.bloqueado ? "Ativo" : "Inativo"}
+                                                </span>
+                                                <span className={classNames(
+                                                    "rounded-full px-3 py-1.5 text-[11px] font-black ring-1",
+                                                    item.bloqueado
+                                                        ? "bg-rose-50 text-rose-700 ring-rose-100"
+                                                        : "bg-slate-100 text-slate-500 ring-slate-200"
+                                                )}>
+                                                    Bloqueado: {item.bloqueado ? "Sim" : "Não"}
+                                                </span>
+                                                <span className={classNames(
+                                                    "rounded-full px-3 py-1.5 text-[11px] font-black ring-1",
+                                                    item.acesso_global
+                                                        ? "bg-blue-50 text-blue-700 ring-blue-100"
+                                                        : "bg-slate-100 text-slate-500 ring-slate-200"
+                                                )}>
+                                                    Acesso global: {item.acesso_global ? "Sim" : "Não"}
+                                                </span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                )) : (
+                                    <div className="rounded-2xl bg-slate-50 px-4 py-4 text-xs font-semibold text-slate-500 ring-1 ring-slate-100">
+                                        Nenhum usuário carregado na lista administrativa. Clique em Atualizar lista para consultar a RPC administrativa.
+                                    </div>
+                                )}
+                            </div>
                         </div>
 
                         <div className="mt-4 grid gap-3 xl:grid-cols-[1.1fr_1fr]">
