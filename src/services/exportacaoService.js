@@ -3300,3 +3300,593 @@ ${conteudo}
         nomeArquivo,
     });
 }
+
+
+function classeNivelAuditoriaRelatorio(nivel = "") {
+    const texto = String(nivel || "").toLowerCase();
+
+    if (texto.includes("segurança") || texto.includes("seguranca")) return "status-seguranca";
+    if (texto.includes("crítico") || texto.includes("critico")) return "status-critico";
+    if (texto.includes("alerta")) return "status-alerta";
+
+    return "status-info";
+}
+
+function calcularResumoAuditoriaSistemaRelatorio(registros = [], resumo = {}) {
+    return {
+        totalEventos: Number(resumo.totalEventos ?? registros.length) || 0,
+        eventosFiltrados: Number(resumo.eventosFiltrados ?? registros.length) || 0,
+        acessos: Number(resumo.acessos ?? 0) || 0,
+        alteracoes: Number(resumo.alteracoes ?? 0) || 0,
+        seguranca: Number(resumo.seguranca ?? registros.filter((item) => classeNivelAuditoriaRelatorio(item.nivel) === "status-seguranca").length) || 0,
+        criticos: Number(resumo.criticos ?? registros.filter((item) => classeNivelAuditoriaRelatorio(item.nivel) === "status-critico").length) || 0,
+        alertas: Number(resumo.alertas ?? registros.filter((item) => classeNivelAuditoriaRelatorio(item.nivel) === "status-alerta").length) || 0,
+    };
+}
+
+function montarLinhaAuditoriaSistemaRelatorio(registro = {}, indice = 0) {
+    return `
+        <tr>
+            <td>${indice + 1}</td>
+            <td>${escaparHTML(registro.dataHora || "-")}</td>
+            <td class="texto-forte">${escaparHTML(registro.usuario || "-")}</td>
+            <td class="texto-forte">${escaparHTML(registro.evento || registro.acaoTecnica || "-")}</td>
+            <td>${escaparHTML(registro.modulo || "-")}</td>
+            <td><span class="status-texto ${classeNivelAuditoriaRelatorio(registro.nivel || registro.nivelChave)}">${escaparHTML(registro.nivel || "Informação")}</span></td>
+            <td>${escaparHTML(registro.tabela || "-")}</td>
+            <td>${escaparHTML(registro.registro || "-")}</td>
+            <td class="descricao-auditoria">${escaparHTML(registro.descricao || "-")}</td>
+        </tr>
+    `;
+}
+
+function montarFiltrosAuditoriaSistemaRelatorio(filtros = {}) {
+    const itens = [
+        ["Busca", filtros.busca || "-"],
+        ["Ação", filtros.acao || "Todas"],
+        ["Usuário", filtros.usuario || "Todos"],
+        ["Módulo", filtros.modulo || "Todos"],
+        ["Nível", filtros.nivel || "Todos"],
+        ["Período", filtros.periodo || "Todo o período"],
+        ["Limite", filtros.limite || "Conforme configuração"],
+    ];
+
+    return `
+        <section class="bloco bloco-filtros-auditoria">
+            <h2>Filtros aplicados</h2>
+            <div class="filtros-relatorio-auditoria">
+                ${itens.map(([titulo, valor]) => `
+                    <div>
+                        <strong>${escaparHTML(titulo)}</strong>
+                        <span>${escaparHTML(valor)}</span>
+                    </div>
+                `).join("")}
+            </div>
+        </section>
+    `;
+}
+
+function montarSecaoAuditoriaSistemaRelatorio({ registros = [], resumo = {}, filtros = {}, dataEmissao = "", titulo = "Relatório da Auditoria do Sistema" } = {}) {
+    const resumoCalculado = calcularResumoAuditoriaSistemaRelatorio(registros, resumo);
+    const linhasTabela = registros.map((registro, indice) => montarLinhaAuditoriaSistemaRelatorio(registro, indice)).join("");
+
+    return `
+        <section class="pagina-relatorio pagina-relatorio-auditoria-sistema">
+            <header class="cabecalho-relatorio cabecalho-relatorio--modelo-aprovado cabecalho-relatorio--auditoria-sistema">
+                <div class="marca-relatorio-controle">
+                    ${montarEscudoControleSstRelatorio()}
+                    <div class="marca-relatorio-controle__textos">
+                        <h1>CONTROLE SST QR</h1>
+                    </div>
+                </div>
+
+                <div class="titulo-relatorio-cabecalho">
+                    <span></span>
+                    <strong>${escaparHTML(String(titulo || "Relatório da Auditoria do Sistema").toUpperCase())}</strong>
+                    <span></span>
+                </div>
+
+                <div class="dados-empresa dados-auditoria-sistema">
+                    <div class="dados-empresa__item"><span>${ICONES_CABECALHO_RELATORIO_COLABORADORES.sistema}</span><strong>Sistema:</strong><em>Controle SST QR</em></div>
+                    <div class="dados-empresa__item"><span>${ICONES_CABECALHO_RELATORIO_COLABORADORES.data}</span><strong>Data de emissão:</strong><em>${escaparHTML(dataEmissao)}</em></div>
+                    <div class="dados-empresa__item"><span>${ICONES_CABECALHO_RELATORIO_COLABORADORES.responsavel}</span><strong>Origem:</strong><em>Auditoria do Sistema</em></div>
+                    <div class="dados-empresa__item"><span>${ICONES_CABECALHO_RELATORIO_COLABORADORES.empresa}</span><strong>Registros:</strong><em>${escaparHTML(resumoCalculado.eventosFiltrados)}</em></div>
+                    <div class="dados-empresa__item"><span>${ICONES_CABECALHO_RELATORIO_COLABORADORES.cnpj}</span><strong>Tipo:</strong><em>Histórico interno</em></div>
+                </div>
+            </header>
+
+            <section class="bloco">
+                <h2>Resumo geral</h2>
+                <div class="kpis">
+                    ${montarCartaoResumoRelatorio({ icone: ICONES_RELATORIO_COLABORADORES.total, titulo: "Total", valor: resumoCalculado.totalEventos, classe: "kpi-total" })}
+                    ${montarCartaoResumoRelatorio({ icone: ICONES_RELATORIO_COLABORADORES.analise, titulo: "Filtrados", valor: resumoCalculado.eventosFiltrados, classe: "kpi-info" })}
+                    ${montarCartaoResumoRelatorio({ icone: ICONES_RELATORIO_COLABORADORES.liberados, titulo: "Acessos", valor: resumoCalculado.acessos, classe: "kpi-ok" })}
+                    ${montarCartaoResumoRelatorio({ icone: ICONES_RELATORIO_COLABORADORES.pendencia, titulo: "Alterações", valor: resumoCalculado.alteracoes, classe: "kpi-alerta" })}
+                    ${montarCartaoResumoRelatorio({ icone: ICONES_RELATORIO_COLABORADORES.bloqueados, titulo: "Segurança", valor: resumoCalculado.seguranca, classe: "kpi-seguranca" })}
+                    ${montarCartaoResumoRelatorio({ icone: ICONES_RELATORIO_COLABORADORES.vencidos, titulo: "Críticos", valor: resumoCalculado.criticos, classe: "kpi-critico" })}
+                    ${montarCartaoResumoRelatorio({ icone: ICONES_RELATORIO_COLABORADORES.vencer, titulo: "Alertas", valor: resumoCalculado.alertas, classe: "kpi-vencendo" })}
+                </div>
+            </section>
+
+            ${montarFiltrosAuditoriaSistemaRelatorio(filtros)}
+
+            <section class="bloco">
+                <h2>Registros detalhados</h2>
+                <div class="observacao-auditoria">
+                    Relatório gerado com base nos eventos carregados e nos filtros aplicados na tela Auditoria do Sistema.
+                </div>
+                <table class="tabela-auditoria-sistema-relatorio">
+                    <colgroup>
+                        <col class="col-numero" />
+                        <col class="col-data" />
+                        <col class="col-usuario" />
+                        <col class="col-evento" />
+                        <col class="col-modulo" />
+                        <col class="col-nivel" />
+                        <col class="col-tabela" />
+                        <col class="col-registro" />
+                        <col class="col-descricao" />
+                    </colgroup>
+                    <thead>
+                        <tr>
+                            <th><div class="th-conteudo">#</div></th>
+                            <th><div class="th-conteudo">Data/Hora</div></th>
+                            <th><div class="th-conteudo">Usuário</div></th>
+                            <th><div class="th-conteudo">Evento</div></th>
+                            <th><div class="th-conteudo">Módulo</div></th>
+                            <th><div class="th-conteudo">Nível</div></th>
+                            <th><div class="th-conteudo">Tabela</div></th>
+                            <th><div class="th-conteudo">Registro</div></th>
+                            <th><div class="th-conteudo">Descrição</div></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${linhasTabela || `<tr><td colspan="9">Nenhum registro encontrado para os filtros selecionados.</td></tr>`}
+                    </tbody>
+                </table>
+            </section>
+
+            <footer class="rodape-relatorio">
+                <span>🛡 Controle SST QR</span>
+                <span>Relatório visual da Auditoria do Sistema</span>
+            </footer>
+        </section>
+    `;
+}
+
+export async function baixarRelatorioAuditoriaSistemaPDF({
+    nomeArquivo = "relatorio-auditoria-sistema.pdf",
+    registros = [],
+    resumo = {},
+    filtros = {},
+    titulo = "Relatório da Auditoria do Sistema",
+} = {}) {
+    const dataEmissao = new Date().toLocaleDateString("pt-BR");
+    const conteudo = montarSecaoAuditoriaSistemaRelatorio({ registros, resumo, filtros, dataEmissao, titulo });
+
+    const html = `<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8" />
+<title>${escaparHTML(titulo)}</title>
+<style>
+    :root {
+        --azul: #064fae;
+        --azul-escuro: #032b63;
+        --linha: #d9e3f2;
+        --texto: #0f172a;
+        --suave: #f8fbff;
+        --verde: #078a42;
+        --laranja: #f28c00;
+        --vermelho: #e01414;
+        --roxo: #6d28d9;
+        --indigo: #4f46e5;
+    }
+
+    * { box-sizing: border-box; }
+    body {
+        margin: 0;
+        background: #eef4fb;
+        color: var(--texto);
+        font-family: Arial, Helvetica, sans-serif;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+    }
+
+    .pagina-relatorio {
+        width: 210mm;
+        min-height: 297mm;
+        margin: 16px auto;
+        padding: 10mm;
+        background: #fff;
+        border: 1px solid #d8e2ef;
+        border-radius: 18px;
+        box-shadow: 0 12px 36px rgba(15, 23, 42, 0.12);
+        position: relative;
+    }
+
+    .cabecalho-relatorio {
+        display: grid;
+        gap: 10px;
+        margin-bottom: 14px;
+        padding-top: 2px;
+    }
+
+    .marca-relatorio-controle {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 10px;
+        text-align: left;
+        flex-wrap: nowrap;
+    }
+
+    .escudo-controle-sst-relatorio {
+        width: 34px;
+        height: 34px;
+        display: grid;
+        place-items: center;
+        flex: 0 0 auto;
+        color: #07162f;
+        background: transparent;
+        border: 0;
+        border-radius: 0;
+        box-shadow: none;
+    }
+
+    .escudo-controle-sst-relatorio svg {
+        width: 30px;
+        height: 30px;
+        display: block;
+        fill: none;
+        stroke: currentColor;
+        stroke-width: 1.9;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+    }
+
+    .marca-relatorio-controle__textos h1 {
+        margin: 0;
+        color: #07162f;
+        font-size: 31px;
+        line-height: 1.02;
+        letter-spacing: 0.035em;
+        text-transform: uppercase;
+        font-weight: 900;
+    }
+
+    .titulo-relatorio-cabecalho {
+        display: grid;
+        grid-template-columns: minmax(70px, 1fr) auto minmax(70px, 1fr);
+        align-items: center;
+        gap: 16px;
+        margin-top: 2px;
+    }
+
+    .titulo-relatorio-cabecalho span {
+        height: 2px;
+        border-radius: 999px;
+        background: linear-gradient(90deg, transparent, var(--azul), transparent);
+    }
+
+    .titulo-relatorio-cabecalho strong {
+        color: #07162f;
+        font-size: 15px;
+        font-weight: 900;
+        letter-spacing: 0.02em;
+        text-transform: uppercase;
+        white-space: nowrap;
+    }
+
+    .dados-empresa {
+        display: grid;
+        grid-template-columns: 1.1fr 1.1fr 1.2fr 0.9fr 1fr;
+        gap: 0;
+        align-items: center;
+        border-bottom: 1px solid var(--linha);
+        padding: 8px 0 10px;
+    }
+
+    .dados-empresa__item {
+        display: grid;
+        grid-template-columns: 20px minmax(0, 1fr);
+        gap: 1px 7px;
+        align-items: center;
+        border-right: 1px solid var(--linha);
+        min-height: 36px;
+        padding: 0 9px;
+        overflow: visible;
+    }
+
+    .dados-empresa__item:first-child { padding-left: 0; }
+    .dados-empresa__item:last-child { border-right: 0; padding-right: 0; }
+
+    .dados-empresa span {
+        grid-row: span 2;
+        display: grid;
+        place-items: center;
+        color: var(--azul);
+    }
+
+    .dados-empresa span svg,
+    .dados-empresa span svg * {
+        width: 20px;
+        height: 20px;
+        fill: none;
+        stroke: currentColor;
+        stroke-width: 1.85;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+    }
+
+    .dados-empresa strong {
+        display: block;
+        min-width: 0;
+        font-size: 8.6px;
+        line-height: 1.05;
+        color: #334155;
+        white-space: nowrap;
+    }
+
+    .dados-empresa em {
+        display: block;
+        min-width: 0;
+        font-style: normal;
+        font-size: 8.6px;
+        line-height: 1.08;
+        font-weight: 800;
+        color: #0f172a;
+        white-space: nowrap;
+    }
+
+    .bloco {
+        border: 1px solid var(--linha);
+        border-radius: 14px;
+        margin-top: 12px;
+        overflow: hidden;
+        background: #fff;
+    }
+
+    .bloco h2 {
+        min-height: 42px;
+        margin: 0;
+        padding: 0 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: var(--azul);
+        font-size: 15px;
+        text-align: center;
+        text-transform: uppercase;
+        letter-spacing: 0.02em;
+        line-height: 1.1;
+        background: #f8fbff;
+        border-bottom: 1px solid var(--linha);
+    }
+
+    .kpis {
+        display: grid;
+        grid-template-columns: repeat(7, 1fr);
+        gap: 10px;
+        padding: 12px;
+    }
+
+    .kpi {
+        min-height: 100px;
+        display: grid;
+        place-items: center;
+        text-align: center;
+        border: 1px solid var(--linha);
+        border-radius: 10px;
+        padding: 10px 6px;
+        background: #fff;
+    }
+
+    .kpi-icone {
+        display: grid;
+        place-items: center;
+        width: 34px;
+        height: 34px;
+        margin-bottom: 5px;
+        color: var(--azul);
+    }
+
+    .kpi-icone svg {
+        width: 34px;
+        height: 34px;
+        fill: currentColor;
+        display: block;
+    }
+
+    .kpi-titulo {
+        min-height: 26px;
+        font-size: 10px;
+        font-weight: 800;
+    }
+
+    .kpi-valor {
+        font-size: 27px;
+        font-weight: 900;
+        color: #0f172a;
+    }
+
+    .kpi-total .kpi-icone,
+    .kpi-info .kpi-icone { color: var(--azul); }
+    .kpi-ok .kpi-icone { color: var(--verde); }
+    .kpi-alerta .kpi-icone { color: var(--laranja); }
+    .kpi-critico .kpi-icone,
+    .kpi-vencido .kpi-icone { color: var(--vermelho); }
+    .kpi-vencendo .kpi-icone { color: var(--roxo); }
+    .kpi-seguranca .kpi-icone { color: var(--indigo); }
+
+    .filtros-relatorio-auditoria {
+        display: grid;
+        grid-template-columns: repeat(7, 1fr);
+        gap: 8px;
+        padding: 12px;
+    }
+
+    .filtros-relatorio-auditoria div {
+        min-height: 54px;
+        display: grid;
+        align-content: center;
+        gap: 4px;
+        border: 1px solid var(--linha);
+        border-radius: 10px;
+        background: #fbfdff;
+        padding: 8px;
+        text-align: center;
+    }
+
+    .filtros-relatorio-auditoria strong {
+        color: #334155;
+        font-size: 8.6px;
+        text-transform: uppercase;
+    }
+
+    .filtros-relatorio-auditoria span {
+        color: #0f172a;
+        font-size: 9.2px;
+        font-weight: 900;
+        overflow-wrap: anywhere;
+    }
+
+    .observacao-auditoria {
+        margin: 10px 12px 12px;
+        padding: 10px 12px;
+        border-radius: 12px;
+        background: #f8fbff;
+        border: 1px solid var(--linha);
+        color: #334155;
+        font-size: 10px;
+        line-height: 1.45;
+    }
+
+    table {
+        width: 100%;
+        border-collapse: collapse;
+        table-layout: fixed;
+        font-size: 9px;
+    }
+
+    .tabela-auditoria-sistema-relatorio .col-numero { width: 4%; }
+    .tabela-auditoria-sistema-relatorio .col-data { width: 12%; }
+    .tabela-auditoria-sistema-relatorio .col-usuario { width: 16%; }
+    .tabela-auditoria-sistema-relatorio .col-evento { width: 15%; }
+    .tabela-auditoria-sistema-relatorio .col-modulo { width: 12%; }
+    .tabela-auditoria-sistema-relatorio .col-nivel { width: 9%; }
+    .tabela-auditoria-sistema-relatorio .col-tabela { width: 10%; }
+    .tabela-auditoria-sistema-relatorio .col-registro { width: 8%; }
+    .tabela-auditoria-sistema-relatorio .col-descricao { width: 14%; }
+
+    thead tr { height: 50px; }
+
+    thead th {
+        background: linear-gradient(180deg, #075bbd, #033f88);
+        color: #fff;
+        height: 50px;
+        padding: 0;
+        border-right: 1px solid rgba(255,255,255,0.25);
+        text-align: center;
+        vertical-align: middle;
+        line-height: 1;
+        white-space: normal;
+        overflow: hidden;
+    }
+
+    .th-conteudo {
+        width: 100%;
+        height: 50px;
+        min-height: 50px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 0 6px;
+        box-sizing: border-box;
+        text-align: center;
+        line-height: 1.1;
+        font-size: 8.6px;
+        font-weight: 900;
+        white-space: normal;
+        overflow: hidden;
+    }
+
+    tbody td {
+        height: 36px;
+        padding: 6px 6px;
+        border-bottom: 1px solid var(--linha);
+        border-right: 1px solid var(--linha);
+        text-align: center;
+        vertical-align: middle;
+        overflow: hidden;
+        overflow-wrap: anywhere;
+    }
+
+    tbody tr:nth-child(even) { background: #fbfdff; }
+
+    .texto-forte {
+        font-weight: 800;
+        text-align: left;
+        line-height: 1.15;
+        overflow-wrap: anywhere;
+    }
+
+    .descricao-auditoria {
+        text-align: left;
+        line-height: 1.25;
+    }
+
+    .status-texto {
+        display: inline;
+        background: transparent !important;
+        border: 0 !important;
+        border-radius: 0 !important;
+        padding: 0 !important;
+        box-shadow: none !important;
+        font-weight: 900;
+        white-space: nowrap;
+    }
+
+    .status-texto.status-alerta { color: var(--laranja) !important; }
+    .status-texto.status-critico { color: var(--vermelho) !important; }
+    .status-texto.status-info { color: var(--azul) !important; }
+    .status-texto.status-seguranca { color: var(--indigo) !important; }
+    .status-texto.status-neutro { color: #475569 !important; }
+
+    .rodape-relatorio {
+        display: flex;
+        justify-content: space-between;
+        margin-top: 14px;
+        padding: 10px 14px;
+        color: #fff;
+        background: linear-gradient(90deg, #032b63, #075bbd);
+        border-radius: 0 0 12px 12px;
+        font-size: 11px;
+        font-weight: 800;
+    }
+
+    @media print {
+        @page { size: A4; margin: 8mm; }
+        body { background: #fff; }
+        .pagina-relatorio {
+            width: auto;
+            min-height: auto;
+            margin: 0;
+            padding: 0;
+            border: 0;
+            border-radius: 0;
+            box-shadow: none;
+        }
+    }
+</style>
+</head>
+<body>
+${conteudo}
+</body>
+</html>`;
+
+    await baixarRelatorioHtmlComoPdf({
+        html,
+        nomeArquivo,
+    });
+}

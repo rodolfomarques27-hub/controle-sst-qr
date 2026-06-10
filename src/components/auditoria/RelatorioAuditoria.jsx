@@ -36,6 +36,7 @@ import {
     obterBloqueioVisualAcaoCriticaSistema,
 } from "../../services/usuariosPermissoesSistemaService";
 import { supabase } from "../../lib/supabaseClient";
+import { baixarCSV, baixarRelatorioAuditoriaSistemaPDF } from "../../services/exportacaoService";
 
 const hoje = new Date();
 const LIMITE_REGISTROS_DETALHADOS_INICIAL = 30;
@@ -958,44 +959,81 @@ Essa ação remove arquivos do Storage e não altera registros do banco.`;
         );
     };
 
+    const montarLinhasRelatorioAuditoriaSistema = () => registrosFiltrados.map((item) => {
+        const origemAcesso = item.dados?.origemAcesso || {};
+        const modulo = obterModuloAuditoriaSistema(item);
+        const nivel = obterNivelAuditoriaSistema(item);
+
+        return {
+            id: item.id,
+            dataHora: formatarDataHoraAuditoriaSistema(item.created_at),
+            usuario: item.usuario_email || "Sistema / consulta pública",
+            acaoTecnica: item.acao || "-",
+            evento: obterRotuloAcaoAuditoriaSistema(item.acao),
+            modulo: modulo || "-",
+            nivel: ROTULOS_NIVEIS_AUDITORIA_SISTEMA[nivel] || "Informação",
+            nivelChave: nivel || "informacao",
+            tabela: item.tabela || "-",
+            registro: item.registro_id || "-",
+            descricao: item.descricao || "Evento registrado",
+            origem: origemAcesso.url || "-",
+            pagina: origemAcesso.pagina || "-",
+            navegador: origemAcesso.navegador || "-",
+            plataforma: origemAcesso.plataforma || "-",
+        };
+    });
+
+    const montarResumoRelatorioAuditoriaSistema = () => ({
+        totalEventos: auditoria.length,
+        eventosFiltrados: registrosFiltrados.length,
+        acessos: auditoriaVerificada.filter((item) => String(item.acao || "").includes("ACESSO")).length,
+        alteracoes: auditoriaVerificada.filter((item) => ["INSERT", "UPDATE", "DELETE"].includes(item.acao)).length,
+        seguranca: registrosFiltrados.filter((item) => obterNivelAuditoriaSistema(item) === "seguranca").length,
+        criticos: registrosFiltrados.filter((item) => obterNivelAuditoriaSistema(item) === "critico").length,
+        alertas: registrosFiltrados.filter((item) => obterNivelAuditoriaSistema(item) === "alerta").length,
+    });
+
+    const montarFiltrosRelatorioAuditoriaSistema = () => ({
+        busca: busca || "-",
+        acao: filtroAcao === "Todas" ? "Todas as ações" : filtroAcao,
+        usuario: filtroUsuario === "Todos" ? "Todos os usuários" : filtroUsuario,
+        modulo: filtroModulo === "Todos" ? "Todos os módulos" : filtroModulo,
+        nivel: filtroNivel === "Todos" ? "Todos os níveis" : ROTULOS_NIVEIS_AUDITORIA_SISTEMA[filtroNivel] || filtroNivel,
+        periodo: filtroPeriodoInicio || filtroPeriodoFim
+            ? `${filtroPeriodoInicio || "início"} até ${filtroPeriodoFim || "hoje"}`
+            : "Todo o período carregado",
+        limite: `${auditoria.length} registro(s) carregado(s)`,
+    });
+
     const baixarCsvAuditoria = () => {
         const cabecalho = ["Data/Hora", "Usuário", "Ação", "Evento", "Módulo", "Nível", "Tabela", "Registro", "Descrição", "Origem do acesso", "Página", "Navegador", "Plataforma"];
-        const linhas = registrosFiltrados.map((item) => {
-            const origemAcesso = item.dados?.origemAcesso || {};
+        const linhas = montarLinhasRelatorioAuditoriaSistema().map((item) => [
+            item.dataHora,
+            item.usuario,
+            item.acaoTecnica,
+            item.evento,
+            item.modulo,
+            item.nivel,
+            item.tabela,
+            item.registro,
+            item.descricao,
+            item.origem,
+            item.pagina,
+            item.navegador,
+            item.plataforma,
+        ]);
 
-            const modulo = obterModuloAuditoriaSistema(item);
-            const nivel = obterNivelAuditoriaSistema(item);
+        baixarCSV(`relatorio-auditoria-${new Date().toISOString().slice(0, 10)}.csv`, [cabecalho, ...linhas]);
+    };
 
-            return [
-                formatarDataHoraAuditoriaSistema(item.created_at),
-                item.usuario_email || "-",
-                item.acao || "-",
-                obterRotuloAcaoAuditoriaSistema(item.acao),
-                modulo || "-",
-                ROTULOS_NIVEIS_AUDITORIA_SISTEMA[nivel] || "Informação",
-                item.tabela || "-",
-                item.registro_id || "-",
-                item.descricao || "-",
-                origemAcesso.url || "-",
-                origemAcesso.pagina || "-",
-                origemAcesso.navegador || "-",
-                origemAcesso.plataforma || "-",
-            ];
+    const baixarPdfAuditoria = async () => {
+        await baixarRelatorioAuditoriaSistemaPDF({
+            nomeArquivo: `relatorio-auditoria-sistema-${new Date().toISOString().slice(0, 10)}.pdf`,
+            titulo: "Relatório da Auditoria do Sistema",
+            registros: montarLinhasRelatorioAuditoriaSistema(),
+            resumo: montarResumoRelatorioAuditoriaSistema(),
+            filtros: montarFiltrosRelatorioAuditoriaSistema(),
         });
-
-        const csv = [cabecalho, ...linhas]
-            .map((linha) => linha.map((campo) => `"${String(campo).replace(/"/g, '""')}"`).join(";"))
-            .join("\n");
-
-        const blob = new Blob(["﻿" + csv], { type: "text/csv;charset=utf-8;" });
-        const url = URL.createObjectURL(blob);
-        const link = document.createElement("a");
-
-        link.href = url;
-        link.download = `relatorio-auditoria-${new Date().toISOString().slice(0, 10)}.csv`;
-        link.click();
-
-        URL.revokeObjectURL(url);
     };
 
     const copiarResumoAuditoria = async () => {
@@ -1133,7 +1171,7 @@ Essa ação remove arquivos do Storage e não altera registros do banco.`;
                             className="inline-flex items-center gap-2 rounded-2xl bg-white px-4 py-3 text-sm font-semibold text-slate-700 ring-1 ring-slate-200 hover:bg-slate-50"
                         >
                             <Lock className="h-4 w-4" />
-                            Bloquear auditoria
+                            Sair da área restrita
                         </button>
 
                         <button
@@ -1147,10 +1185,18 @@ Essa ação remove arquivos do Storage e não altera registros do banco.`;
                         <button
                             type="button"
                             onClick={baixarCsvAuditoria}
+                            className="inline-flex items-center gap-2 rounded-2xl bg-white px-4 py-3 text-sm font-semibold text-slate-700 ring-1 ring-slate-200 hover:bg-slate-50"
+                        >
+                            Baixar CSV
+                        </button>
+
+                        <button
+                            type="button"
+                            onClick={baixarPdfAuditoria}
                             className="inline-flex items-center gap-2 rounded-2xl bg-slate-950 px-4 py-3 text-sm font-semibold text-white hover:bg-slate-800"
                         >
                             <Download className="h-4 w-4" />
-                            Baixar CSV
+                            Baixar PDF auditoria
                         </button>
                     </div>
                 }
