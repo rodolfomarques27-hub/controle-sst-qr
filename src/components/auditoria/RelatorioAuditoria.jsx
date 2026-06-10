@@ -28,6 +28,12 @@ import {
     salvarConfiguracaoEventosAuditoriaSistema,
     salvarConfiguracaoEventosAuditoriaSistemaSupabase,
 } from "../../services/auditoriaSistemaConfigService";
+import {
+    ACOES_CRITICAS_PERMISSAO_SISTEMA,
+    carregarPermissaoSistemaAtualService,
+    obterBloqueioVisualAcaoCriticaSistema,
+} from "../../services/usuariosPermissoesSistemaService";
+import { supabase } from "../../lib/supabaseClient";
 
 const hoje = new Date();
 const LIMITE_REGISTROS_DETALHADOS_INICIAL = 30;
@@ -160,6 +166,8 @@ export function RelatorioAuditoria({
     const [mensagemConfigEventosAuditoria, setMensagemConfigEventosAuditoria] = useState("");
     const [carregandoConfigEventosAuditoria, setCarregandoConfigEventosAuditoria] = useState(false);
     const [salvandoConfigEventosAuditoria, setSalvandoConfigEventosAuditoria] = useState(false);
+    const [permissaoSistemaAtual, setPermissaoSistemaAtual] = useState(null);
+    const [mensagemPermissaoSistemaAuditoria, setMensagemPermissaoSistemaAuditoria] = useState("Carregando permissões do sistema...");
 
     const [mostrarPersonalizacaoAuditoria, setMostrarPersonalizacaoAuditoria] = useState(false);
     const [abaPersonalizacaoAuditoria, setAbaPersonalizacaoAuditoria] = useState("cartas");
@@ -540,6 +548,45 @@ export function RelatorioAuditoria({
         .filter((arquivo) => arquivo.atualizadoEm)
         .sort((a, b) => new Date(b.atualizadoEm).getTime() - new Date(a.atualizadoEm).getTime())[0];
 
+    const bloqueioLimparArquivosStorageSistema = useMemo(
+        () => obterBloqueioVisualAcaoCriticaSistema(
+            permissaoSistemaAtual,
+            ACOES_CRITICAS_PERMISSAO_SISTEMA.LIMPAR_ARQUIVOS
+        ),
+        [permissaoSistemaAtual]
+    );
+
+    useEffect(() => {
+        let montado = true;
+
+        async function carregarPermissaoSistemaAuditoria() {
+            try {
+                const permissao = await carregarPermissaoSistemaAtualService({ supabase });
+
+                if (!montado) return;
+
+                setPermissaoSistemaAtual(permissao);
+                setMensagemPermissaoSistemaAuditoria(
+                    permissao
+                        ? "Permissões do sistema carregadas para ações críticas."
+                        : "Nenhuma permissão do sistema cadastrada para o usuário atual."
+                );
+            } catch (erro) {
+                if (!montado) return;
+                setPermissaoSistemaAtual(null);
+                setMensagemPermissaoSistemaAuditoria(
+                    `Não foi possível carregar permissões do sistema: ${erro?.message || "erro não identificado"}`
+                );
+            }
+        }
+
+        carregarPermissaoSistemaAuditoria();
+
+        return () => {
+            montado = false;
+        };
+    }, []);
+
     const carregarStorageAuditoria = async () => {
         if (!onListarArquivosStorage) return;
 
@@ -562,6 +609,13 @@ export function RelatorioAuditoria({
     const excluirStorageAuditoria = async (arquivo) => {
         if (!onExcluirArquivoStorage) return;
 
+        if (bloqueioLimparArquivosStorageSistema.bloqueado) {
+            if (typeof window !== "undefined") {
+                window.alert(bloqueioLimparArquivosStorageSistema.mensagem);
+            }
+            return;
+        }
+
         setExcluindoStorageAuditoria(arquivo.caminho);
 
         const ok = await onExcluirArquivoStorage(arquivo);
@@ -576,6 +630,13 @@ export function RelatorioAuditoria({
 
     const limparArquivosStorageSemVinculoFiltrados = async () => {
         if (!onExcluirArquivoStorage || arquivosStorageFiltradosSemVinculo.length === 0) return;
+
+        if (bloqueioLimparArquivosStorageSistema.bloqueado) {
+            if (typeof window !== "undefined") {
+                window.alert(bloqueioLimparArquivosStorageSistema.mensagem);
+            }
+            return;
+        }
 
         const totalArquivos = arquivosStorageFiltradosSemVinculo.length;
         const mensagemConfirmacao = `Confirma excluir ${totalArquivos} arquivo(s) sem vínculo exibido(s) no filtro atual?
@@ -1241,9 +1302,10 @@ Essa ação remove arquivos do Storage e não altera registros do banco.`;
                                 carregandoStorageAuditoria ||
                                 limpandoStorageAuditoria ||
                                 arquivosStorageFiltradosSemVinculo.length === 0 ||
-                                !onExcluirArquivoStorage
+                                !onExcluirArquivoStorage ||
+                                bloqueioLimparArquivosStorageSistema.bloqueado
                             }
-                            title="Exclui somente arquivos sem vínculo exibidos pelo filtro atual"
+                            title={bloqueioLimparArquivosStorageSistema.bloqueado ? bloqueioLimparArquivosStorageSistema.mensagem : "Exclui somente arquivos sem vínculo exibidos pelo filtro atual"}
                             className="inline-flex items-center justify-center rounded-2xl bg-red-600 px-4 py-3 text-sm font-semibold text-white hover:bg-red-700 disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-500"
                         >
                             {limpandoStorageAuditoria
@@ -1253,6 +1315,12 @@ Essa ação remove arquivos do Storage e não altera registros do banco.`;
                     </div>
                 )}
             >
+                {bloqueioLimparArquivosStorageSistema.bloqueado && (
+                    <div className="mb-4 rounded-3xl border border-amber-200 bg-amber-50 p-4 text-sm font-semibold text-amber-800">
+                        {bloqueioLimparArquivosStorageSistema.mensagem} A consulta dos arquivos continua disponível, mas exclusão e limpeza do Storage ficam desabilitadas para este usuário.
+                    </div>
+                )}
+
                 <div className={classNames("mb-4 rounded-3xl p-4 ring-1", storageStatus.classe)}>
                     <div className="flex flex-col justify-between gap-3 lg:flex-row lg:items-center">
                         <div>
@@ -1569,8 +1637,14 @@ Essa ação remove arquivos do Storage e não altera registros do banco.`;
                                                 <button
                                                     type="button"
                                                     onClick={() => excluirStorageAuditoria(arquivo)}
-                                                    disabled={arquivo.emUso || excluindoStorageAuditoria === arquivo.caminho}
-                                                    title={arquivo.emUso ? "Arquivo em uso não pode ser excluído por aqui" : "Excluir arquivo sem vínculo do Storage"}
+                                                    disabled={arquivo.emUso || excluindoStorageAuditoria === arquivo.caminho || bloqueioLimparArquivosStorageSistema.bloqueado}
+                                                    title={
+                                                        bloqueioLimparArquivosStorageSistema.bloqueado
+                                                            ? bloqueioLimparArquivosStorageSistema.mensagem
+                                                            : arquivo.emUso
+                                                                ? "Arquivo em uso não pode ser excluído por aqui"
+                                                                : "Excluir arquivo sem vínculo do Storage"
+                                                    }
                                                     className="rounded-full bg-red-600 px-3 py-1 text-xs font-bold text-white hover:bg-red-700 disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-500"
                                                 >
                                                     {excluindoStorageAuditoria === arquivo.caminho ? "Excluindo..." : "Excluir"}

@@ -37,6 +37,11 @@ import {
     formatarTelefone,
     sanitizarNomeArquivo,
 } from "../../utils/sstUtils";
+import {
+    carregarPermissaoSistemaAtualService,
+    MODULOS_PERMISSAO_SISTEMA,
+    usuarioPodeExcluirSistema,
+} from "../../services/usuariosPermissoesSistemaService";
 
 const hoje = new Date();
 
@@ -279,6 +284,8 @@ export function Empresas({
     const [salvandoDocumento, setSalvandoDocumento] = useState(false);
     const [empresaRevisao, setEmpresaRevisao] = useState(null);
     const [empresaEdicao, setEmpresaEdicao] = useState(null);
+    const [permissaoSistemaAtual, setPermissaoSistemaAtual] = useState(null);
+    const [mensagemPermissaoSistema, setMensagemPermissaoSistema] = useState("Carregando permissões do sistema...");
     const [salvandoEdicaoEmpresa, setSalvandoEdicaoEmpresa] = useState(false);
     const [buscaEmpresa, setBuscaEmpresa] = useState("");
     const [filtroStatusEmpresa, setFiltroStatusEmpresa] = useState("Todos");
@@ -644,8 +651,60 @@ export function Empresas({
         }
     };
 
+    useEffect(() => {
+        let montado = true;
+
+        async function carregarPermissaoSistemaEmpresas() {
+            try {
+                const permissao = await carregarPermissaoSistemaAtualService({ supabase });
+                if (!montado) return;
+                setPermissaoSistemaAtual(permissao);
+                setMensagemPermissaoSistema(
+                    permissao
+                        ? "Permissões do sistema carregadas para ações críticas."
+                        : "Nenhuma permissão do sistema cadastrada para o usuário atual."
+                );
+            } catch (erro) {
+                if (!montado) return;
+                setPermissaoSistemaAtual(null);
+                setMensagemPermissaoSistema(
+                    `Não foi possível carregar permissões do sistema: ${erro?.message || "erro não identificado"}`
+                );
+            }
+        }
+
+        carregarPermissaoSistemaEmpresas();
+
+        return () => {
+            montado = false;
+        };
+    }, []);
+
+    const podeExcluirEmpresasSistema = useMemo(
+        () => usuarioPodeExcluirSistema(permissaoSistemaAtual, MODULOS_PERMISSAO_SISTEMA.EMPRESAS),
+        [permissaoSistemaAtual]
+    );
+
+    const mensagemBloqueioExclusaoEmpresas = "Sem permissão para excluir empresas ou documentos empresariais.";
+
+    const excluirDocumentoEmpresaSeguro = (doc) => {
+        if (!onExcluirDocumentoEmpresa) return;
+
+        if (!podeExcluirEmpresasSistema) {
+            if (typeof window !== "undefined") window.alert(mensagemBloqueioExclusaoEmpresas);
+            return;
+        }
+
+        onExcluirDocumentoEmpresa(doc);
+    };
+
     const excluirEmpresaEdicao = async () => {
         if (!empresaEdicao?.id || !onExcluirEmpresa) return;
+
+        if (!podeExcluirEmpresasSistema) {
+            if (typeof window !== "undefined") window.alert(mensagemBloqueioExclusaoEmpresas);
+            return;
+        }
 
         const documentosVinculados = documentosPorEmpresa[empresaEdicao.id] || [];
         const colaboradoresVinculados = colaboradoresPorEmpresa[empresaEdicao.id] || [];
@@ -964,9 +1023,10 @@ export function Empresas({
                                                     </button>
 
                                                     <button
-                                                        onClick={() => onExcluirDocumentoEmpresa(doc)}
-                                                        title="Excluir este documento do cadastro da empresa"
-                                                        className="inline-flex w-full items-center justify-center gap-1 rounded-xl bg-red-50 px-3 py-2 text-xs font-semibold text-red-700 ring-1 ring-red-200 hover:bg-red-100"
+                                                        onClick={() => excluirDocumentoEmpresaSeguro(doc)}
+                                                        disabled={!podeExcluirEmpresasSistema || !onExcluirDocumentoEmpresa}
+                                                        title={podeExcluirEmpresasSistema ? "Excluir este documento do cadastro da empresa" : mensagemBloqueioExclusaoEmpresas}
+                                                        className="inline-flex w-full items-center justify-center gap-1 rounded-xl bg-red-50 px-3 py-2 text-xs font-semibold text-red-700 ring-1 ring-red-200 hover:bg-red-100 disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-400 disabled:ring-slate-200"
                                                     >
                                                         <Trash2 className="h-3.5 w-3.5" />
                                                         Excluir documento
@@ -2044,10 +2104,11 @@ export function Empresas({
                             <button
                                 type="button"
                                 onClick={excluirEmpresaEdicao}
-                                disabled={salvandoEdicaoEmpresa || !onExcluirEmpresa}
-                                className="rounded-2xl bg-red-50 px-4 py-3 text-sm font-semibold text-red-700 ring-1 ring-red-200 hover:bg-red-100 disabled:opacity-60"
+                                disabled={salvandoEdicaoEmpresa || !onExcluirEmpresa || !podeExcluirEmpresasSistema}
+                                title={podeExcluirEmpresasSistema ? "Excluir empresa" : mensagemBloqueioExclusaoEmpresas}
+                                className="rounded-2xl bg-red-50 px-4 py-3 text-sm font-semibold text-red-700 ring-1 ring-red-200 hover:bg-red-100 disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-400 disabled:ring-slate-200"
                             >
-                                Excluir empresa
+                                {podeExcluirEmpresasSistema ? "Excluir empresa" : "Exclusão bloqueada"}
                             </button>
 
                             <button

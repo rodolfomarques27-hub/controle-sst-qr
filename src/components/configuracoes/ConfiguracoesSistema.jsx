@@ -268,6 +268,13 @@ export function ConfiguracoesSistema({
         [permissaoSistemaAtual]
     );
 
+    const podeAlterarConfiguracoesCriticasSistema = Boolean(
+        resumoAcoesCriticasSistemaAtual.podeAlterarConfiguracoesCriticas
+    );
+
+    const mensagemBloqueioConfiguracoesCriticasSistema =
+        "Sem permissão para alterar configurações críticas do sistema.";
+
 
     useEffect(() => {
         if (typeof window === "undefined") return;
@@ -328,6 +335,16 @@ export function ConfiguracoesSistema({
         setOrdemBlocosConfiguracoes(CHAVES_BLOCOS_CONFIGURACOES_PADRAO);
     };
 
+    const bloquearConfiguracaoCriticaSeNecessario = (setMensagemDestino = null) => {
+        if (podeAlterarConfiguracoesCriticasSistema) return false;
+
+        if (typeof setMensagemDestino === "function") {
+            setMensagemDestino(mensagemBloqueioConfiguracoesCriticasSistema);
+        }
+
+        return true;
+    };
+
     const alterarCampoSenhaConfiguracoes = (campo, valor) => {
         setSenhaConfiguracoesFormulario((atual) => ({
             ...atual,
@@ -338,6 +355,8 @@ export function ConfiguracoesSistema({
 
     const salvarSenhaConfiguracoes = async (evento) => {
         evento.preventDefault();
+
+        if (bloquearConfiguracaoCriticaSeNecessario(setMensagemSenhaConfiguracoes)) return;
 
         const senhaAtual = senhaConfiguracoesFormulario.atual.trim();
         const novaSenha = senhaConfiguracoesFormulario.nova.trim();
@@ -371,6 +390,8 @@ export function ConfiguracoesSistema({
     };
 
     const restaurarSenhaConfiguracoesPadrao = async () => {
+        if (bloquearConfiguracaoCriticaSeNecessario(setMensagemSenhaConfiguracoes)) return;
+
         const senhaPadrao = restaurarSenhaConfiguracoesSistema();
         setMensagemSenhaConfiguracoes("Restaurando senha padrão das Configurações...");
 
@@ -479,6 +500,8 @@ export function ConfiguracoesSistema({
     };
 
     const salvarLimites = () => {
+        if (bloquearConfiguracaoCriticaSeNecessario(setMensagemLimites)) return;
+
         const normalizados = normalizarLimitesCarregamentoSistema(limitesEditaveis);
 
         if (typeof onSalvarLimites === "function") {
@@ -492,6 +515,8 @@ export function ConfiguracoesSistema({
     };
 
     const restaurarLimites = () => {
+        if (bloquearConfiguracaoCriticaSeNecessario(setMensagemLimites)) return;
+
         const padrao = normalizarLimitesCarregamentoSistema(LIMITES_CARREGAMENTO_SISTEMA);
 
         if (typeof onSalvarLimites === "function") {
@@ -538,6 +563,8 @@ export function ConfiguracoesSistema({
     };
 
     const salvarConfigAuditoriaPublica = () => {
+        if (bloquearConfiguracaoCriticaSeNecessario(setMensagemAuditoriaPublica)) return;
+
         const normalizada = salvarConfiguracaoAuditoriaPublicaSistema({
             senhaReferencia: configAuditoriaPublica.senhaReferencia,
             exigirSenha: configAuditoriaPublica.exigirSenha,
@@ -849,6 +876,8 @@ export function ConfiguracoesSistema({
 
 
     const persistirConfiguracao = async (proximaConfiguracao, mensagemSucesso = "Configuração salva.") => {
+        if (bloquearConfiguracaoCriticaSeNecessario(setMensagemConfig)) return;
+
         const normalizada = normalizarConfiguracaoEventosAuditoriaSistema(proximaConfiguracao);
         setConfigEventos(normalizada);
         salvarConfiguracaoEventosAuditoriaSistema(normalizada);
@@ -1069,7 +1098,8 @@ export function ConfiguracoesSistema({
                                     <button
                                         type="button"
                                         onClick={() => alternarEvento(evento.chave)}
-                                        disabled={salvandoConfig}
+                                        disabled={salvandoConfig || !podeAlterarConfiguracoesCriticasSistema}
+                                        title={podeAlterarConfiguracoesCriticasSistema ? "Alterar evento de auditoria" : mensagemBloqueioConfiguracoesCriticasSistema}
                                         className={classNames(
                                             "shrink-0 rounded-2xl px-3 py-2 text-xs font-black ring-1 disabled:cursor-not-allowed disabled:opacity-60",
                                             evento.habilitado
@@ -1159,9 +1189,11 @@ export function ConfiguracoesSistema({
                         <button
                             type="button"
                             onClick={salvarLimites}
-                            className="mt-4 w-full rounded-2xl bg-slate-950 px-4 py-3 text-sm font-black text-white hover:bg-slate-800"
+                            disabled={!podeAlterarConfiguracoesCriticasSistema}
+                            title={podeAlterarConfiguracoesCriticasSistema ? "Salvar limites de carregamento" : mensagemBloqueioConfiguracoesCriticasSistema}
+                            className="mt-4 w-full rounded-2xl bg-slate-950 px-4 py-3 text-sm font-black text-white hover:bg-slate-800 disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-500"
                         >
-                            Salvar limites de carregamento
+                            {podeAlterarConfiguracoesCriticasSistema ? "Salvar limites de carregamento" : "Limites bloqueados"}
                         </button>
                     </Card>
                 )
@@ -1249,9 +1281,11 @@ export function ConfiguracoesSistema({
                             </button>
                             <button
                                 type="submit"
-                                className="rounded-2xl bg-slate-950 px-4 py-2 text-xs font-black text-white shadow-sm hover:bg-slate-800"
+                                disabled={!podeAlterarConfiguracoesCriticasSistema}
+                                title={podeAlterarConfiguracoesCriticasSistema ? "Salvar senha das Configurações" : mensagemBloqueioConfiguracoesCriticasSistema}
+                                className="rounded-2xl bg-slate-950 px-4 py-2 text-xs font-black text-white shadow-sm hover:bg-slate-800 disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-500"
                             >
-                                Salvar senha das Configurações
+                                {podeAlterarConfiguracoesCriticasSistema ? "Salvar senha das Configurações" : "Senha bloqueada"}
                             </button>
                         </div>
                     </form>
@@ -1977,9 +2011,11 @@ export function ConfiguracoesSistema({
                         <button
                             type="button"
                             onClick={salvarConfigAuditoriaPublica}
-                            className="mt-4 w-full rounded-2xl bg-slate-950 px-4 py-3 text-sm font-black text-white hover:bg-slate-800"
+                            disabled={!podeAlterarConfiguracoesCriticasSistema}
+                            title={podeAlterarConfiguracoesCriticasSistema ? "Salvar referência da Auditoria pública" : mensagemBloqueioConfiguracoesCriticasSistema}
+                            className="mt-4 w-full rounded-2xl bg-slate-950 px-4 py-3 text-sm font-black text-white hover:bg-slate-800 disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-500"
                         >
-                            Salvar referência da Auditoria pública
+                            {podeAlterarConfiguracoesCriticasSistema ? "Salvar referência da Auditoria pública" : "Auditoria pública bloqueada"}
                         </button>
                     </Card>
                 )

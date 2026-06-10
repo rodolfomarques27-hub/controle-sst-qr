@@ -43,6 +43,12 @@ import {
 import { baixarRelatorioColaboradoresTreinamentosPDF, baixarRelatorioPendenciasTreinamentosPDF } from "../../services/exportacaoService";
 import { obterUrlLogoEmpresa } from "../../services/supabaseServices";
 import { normalizarTextoBusca, formatDate, classNames } from "../../utils/sstUtils";
+import { supabase } from "../../lib/supabaseClient";
+import {
+    carregarPermissaoSistemaAtualService,
+    MODULOS_PERMISSAO_SISTEMA,
+    usuarioPodeExcluirSistema,
+} from "../../services/usuariosPermissoesSistemaService";
 
 const CHAVE_NOVO_COLABORADOR_RECOLHIDO = "controleSstColaboradoresNovoColaboradorRecolhido";
 const CHAVE_INFO_COLABORADORES_RECOLHIDA = "controleSstColaboradoresInformacoesRecolhidas";
@@ -86,6 +92,8 @@ export function Colaboradores({
     const [salvando, setSalvando] = useState(false);
     const [colaboradorEdicao, setColaboradorEdicao] = useState(null);
     const [colaboradorExclusao, setColaboradorExclusao] = useState(null);
+    const [permissaoSistemaAtual, setPermissaoSistemaAtual] = useState(null);
+    const [mensagemPermissaoSistema, setMensagemPermissaoSistema] = useState("Carregando permissões do sistema...");
     const [pendenciasAbertas, setPendenciasAbertas] = useState(null);
     const [novoColaboradorRecolhido, setNovoColaboradorRecolhido] = useState(() => carregarPreferenciaPainelBoolean(CHAVE_NOVO_COLABORADOR_RECOLHIDO, false));
     const [informacoesColaboradoresRecolhidas, setInformacoesColaboradoresRecolhidas] = useState(() => carregarPreferenciaPainelBoolean(CHAVE_INFO_COLABORADORES_RECOLHIDA, false));
@@ -394,7 +402,48 @@ export function Colaboradores({
         });
     };
 
+    useEffect(() => {
+        let montado = true;
+
+        async function carregarPermissaoSistemaColaboradores() {
+            try {
+                const permissao = await carregarPermissaoSistemaAtualService({ supabase });
+                if (!montado) return;
+                setPermissaoSistemaAtual(permissao);
+                setMensagemPermissaoSistema(
+                    permissao
+                        ? "Permissões do sistema carregadas para ações críticas."
+                        : "Nenhuma permissão do sistema cadastrada para o usuário atual."
+                );
+            } catch (erro) {
+                if (!montado) return;
+                setPermissaoSistemaAtual(null);
+                setMensagemPermissaoSistema(
+                    `Não foi possível carregar permissões do sistema: ${erro?.message || "erro não identificado"}`
+                );
+            }
+        }
+
+        carregarPermissaoSistemaColaboradores();
+
+        return () => {
+            montado = false;
+        };
+    }, []);
+
+    const podeExcluirColaboradoresSistema = useMemo(
+        () => usuarioPodeExcluirSistema(permissaoSistemaAtual, MODULOS_PERMISSAO_SISTEMA.COLABORADORES),
+        [permissaoSistemaAtual]
+    );
+
+    const mensagemBloqueioExclusaoColaboradores = "Sem permissão para excluir colaboradores.";
+
     const solicitarExclusaoColaborador = (colaborador) => {
+        if (!podeExcluirColaboradoresSistema) {
+            if (typeof window !== "undefined") window.alert(mensagemBloqueioExclusaoColaboradores);
+            return;
+        }
+
         setColaboradorExclusao(colaborador);
     };
 
@@ -404,6 +453,12 @@ export function Colaboradores({
 
     const confirmarExclusaoColaborador = async () => {
         if (!colaboradorExclusao) return;
+
+        if (!podeExcluirColaboradoresSistema) {
+            if (typeof window !== "undefined") window.alert(mensagemBloqueioExclusaoColaboradores);
+            setColaboradorExclusao(null);
+            return;
+        }
 
         const alvo = colaboradorExclusao;
         setColaboradorExclusao(null);
@@ -819,10 +874,12 @@ export function Colaboradores({
 
                                                 <button
                                                     onClick={() => solicitarExclusaoColaborador(c)}
-                                                    className="inline-flex items-center justify-center gap-2 rounded-xl bg-red-50 px-3 py-2 text-xs font-semibold text-red-700 ring-1 ring-red-200 hover:bg-red-100"
+                                                    disabled={!podeExcluirColaboradoresSistema}
+                                                    title={podeExcluirColaboradoresSistema ? "Excluir colaborador" : mensagemBloqueioExclusaoColaboradores}
+                                                    className="inline-flex items-center justify-center gap-2 rounded-xl bg-red-50 px-3 py-2 text-xs font-semibold text-red-700 ring-1 ring-red-200 hover:bg-red-100 disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-400 disabled:ring-slate-200"
                                                 >
                                                     <Trash2 className="h-3.5 w-3.5" />
-                                                    Excluir
+                                                    {podeExcluirColaboradoresSistema ? "Excluir" : "Bloqueado"}
                                                 </button>
                                             </div>
                                         </div>
@@ -870,9 +927,11 @@ export function Colaboradores({
                             <button
                                 type="button"
                                 onClick={confirmarExclusaoColaborador}
-                                className="inline-flex items-center justify-center rounded-2xl bg-red-600 px-4 py-3 text-sm font-black text-white shadow-sm hover:bg-red-700"
+                                disabled={!podeExcluirColaboradoresSistema}
+                                title={podeExcluirColaboradoresSistema ? "Confirmar exclusão" : mensagemBloqueioExclusaoColaboradores}
+                                className="inline-flex items-center justify-center rounded-2xl bg-red-600 px-4 py-3 text-sm font-black text-white shadow-sm hover:bg-red-700 disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-500"
                             >
-                                Sim, excluir funcionário
+                                {podeExcluirColaboradoresSistema ? "Sim, excluir funcionário" : "Exclusão bloqueada"}
                             </button>
                         </div>
                     </div>
