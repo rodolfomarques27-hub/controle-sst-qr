@@ -51,10 +51,10 @@ const CARTAS_AUDITORIA_SISTEMA_PADRAO = [
 
 const BLOCOS_AUDITORIA_SISTEMA_PADRAO = [
     "atividades",
+    "registros",
     "eventos",
     "permissoes",
     "storage",
-    "registros",
 ];
 
 const VISIBILIDADE_PADRAO_AUDITORIA = (chaves) =>
@@ -62,6 +62,28 @@ const VISIBILIDADE_PADRAO_AUDITORIA = (chaves) =>
 
 const TAMANHOS_PADRAO_AUDITORIA = (chaves, tamanho = "padrao") =>
     chaves.reduce((acc, chave) => ({ ...acc, [chave]: tamanho }), {});
+
+const VISIBILIDADE_PADRAO_CARTAS_AUDITORIA_SISTEMA = {
+    ...VISIBILIDADE_PADRAO_AUDITORIA(CARTAS_AUDITORIA_SISTEMA_PADRAO),
+    emailsMes: false,
+    emailsSucesso: false,
+    emailsErro: false,
+};
+
+const VISIBILIDADE_PADRAO_BLOCOS_AUDITORIA_SISTEMA = {
+    ...VISIBILIDADE_PADRAO_AUDITORIA(BLOCOS_AUDITORIA_SISTEMA_PADRAO),
+    permissoes: false,
+    storage: false,
+};
+
+const CHAVES_STORAGE_AUDITORIA_SISTEMA = Object.freeze({
+    CARTAS_VISIVEIS: "auditoriaSistemaCartasVisiveisV2",
+    TAMANHOS_CARTAS: "auditoriaSistemaTamanhosCartasV2",
+    ORDEM_CARTAS: "auditoriaSistemaOrdemCartasV2",
+    BLOCOS_VISIVEIS: "auditoriaSistemaBlocosVisiveisV2",
+    TAMANHOS_BLOCOS: "auditoriaSistemaTamanhosBlocosV2",
+    ORDEM_BLOCOS: "auditoriaSistemaOrdemBlocosV2",
+});
 
 const carregarPreferenciaAuditoriaSistema = (chave, padrao) => {
     if (typeof window === "undefined") return padrao;
@@ -116,6 +138,58 @@ const classeTamanhoBlocoAuditoriaSistema = (tamanho) => {
     return "xl:col-span-1";
 };
 
+const normalizarValorAuditoriaSistema = (valor) => String(valor || "").trim();
+
+const obterDataFiltroAuditoriaSistema = (valor) => {
+    if (!valor) return "";
+
+    const data = new Date(valor);
+    return Number.isNaN(data.getTime()) ? "" : data.toISOString().slice(0, 10);
+};
+
+const obterModuloAuditoriaSistema = (item = {}) => {
+    const tabela = normalizarValorAuditoriaSistema(item.tabela);
+    const acao = normalizarValorAuditoriaSistema(item.acao).toUpperCase();
+    const texto = normalizarTextoBusca(`${item.tabela || ""} ${item.acao || ""} ${item.descricao || ""}`);
+
+    if (texto.includes("permiss") || texto.includes("solicitacao_acesso") || texto.includes("usuario_permissao")) return "Permissões";
+    if (texto.includes("config") || texto.includes("token")) return "Configurações";
+    if (texto.includes("storage") || acao.includes("STORAGE")) return "Storage";
+    if (texto.includes("treinamento") || texto.includes("certificado")) return "Treinamentos";
+    if (texto.includes("colaborador")) return "Colaboradores";
+    if (texto.includes("empresa")) return "Empresas";
+    if (texto.includes("auditoria") && !texto.includes("auditoria_sistema")) return "Auditoria";
+    if (texto.includes("qr")) return "QR Code";
+    if (acao.includes("ACESSO") || texto.includes("login")) return "Login/Acesso";
+
+    return tabela || "Sistema";
+};
+
+const obterNivelAuditoriaSistema = (item = {}) => {
+    const texto = normalizarTextoBusca(`${item.acao || ""} ${item.tabela || ""} ${item.descricao || ""}`);
+
+    if (texto.includes("bloque") || texto.includes("negad") || texto.includes("sem permiss") || texto.includes("token")) return "seguranca";
+    if (texto.includes("erro") || texto.includes("rpc") || texto.includes("supabase") || texto.includes("delete") || texto.includes("exclus")) return "critico";
+    if (texto.includes("update") || texto.includes("alter") || texto.includes("desabilit") || texto.includes("recus")) return "alerta";
+
+    return "informacao";
+};
+
+const ROTULOS_NIVEIS_AUDITORIA_SISTEMA = Object.freeze({
+    Todos: "Todos os níveis",
+    informacao: "Informação",
+    alerta: "Alerta",
+    critico: "Crítico",
+    seguranca: "Segurança",
+});
+
+const classeNivelAuditoriaSistema = (nivel) => {
+    if (nivel === "seguranca") return "bg-indigo-50 text-indigo-700 ring-indigo-200";
+    if (nivel === "critico") return "bg-red-50 text-red-700 ring-red-200";
+    if (nivel === "alerta") return "bg-amber-50 text-amber-700 ring-amber-200";
+    return "bg-slate-100 text-slate-600 ring-slate-200";
+};
+
 export function RelatorioAuditoria({
     auditoria = [],
     emailsEnviados = [],
@@ -133,6 +207,11 @@ export function RelatorioAuditoria({
 }) {
     const [busca, setBusca] = useState("");
     const [filtroAcao, setFiltroAcao] = useState("Todas");
+    const [filtroUsuario, setFiltroUsuario] = useState("Todos");
+    const [filtroModulo, setFiltroModulo] = useState("Todos");
+    const [filtroNivel, setFiltroNivel] = useState("Todos");
+    const [filtroPeriodoInicio, setFiltroPeriodoInicio] = useState("");
+    const [filtroPeriodoFim, setFiltroPeriodoFim] = useState("");
     const [filtrosStorage, setFiltrosStorage] = useState({
         empresa: "Todas",
         colaborador: "Todos",
@@ -173,33 +252,33 @@ export function RelatorioAuditoria({
     const [abaPersonalizacaoAuditoria, setAbaPersonalizacaoAuditoria] = useState("cartas");
     const [cartasVisiveisAuditoria, setCartasVisiveisAuditoria] = useState(() =>
         carregarPreferenciaAuditoriaSistema(
-            "auditoriaSistemaCartasVisiveis",
-            VISIBILIDADE_PADRAO_AUDITORIA(CARTAS_AUDITORIA_SISTEMA_PADRAO)
+            CHAVES_STORAGE_AUDITORIA_SISTEMA.CARTAS_VISIVEIS,
+            VISIBILIDADE_PADRAO_CARTAS_AUDITORIA_SISTEMA
         )
     );
     const [tamanhosCartasAuditoria, setTamanhosCartasAuditoria] = useState(() =>
         carregarPreferenciaAuditoriaSistema(
-            "auditoriaSistemaTamanhosCartas",
+            CHAVES_STORAGE_AUDITORIA_SISTEMA.TAMANHOS_CARTAS,
             TAMANHOS_PADRAO_AUDITORIA(CARTAS_AUDITORIA_SISTEMA_PADRAO, "padrao")
         )
     );
     const [ordemCartasAuditoria, setOrdemCartasAuditoria] = useState(() =>
-        carregarOrdemAuditoriaSistema("auditoriaSistemaOrdemCartas", CARTAS_AUDITORIA_SISTEMA_PADRAO)
+        carregarOrdemAuditoriaSistema(CHAVES_STORAGE_AUDITORIA_SISTEMA.ORDEM_CARTAS, CARTAS_AUDITORIA_SISTEMA_PADRAO)
     );
     const [blocosVisiveisAuditoria, setBlocosVisiveisAuditoria] = useState(() =>
         carregarPreferenciaAuditoriaSistema(
-            "auditoriaSistemaBlocosVisiveis",
-            VISIBILIDADE_PADRAO_AUDITORIA(BLOCOS_AUDITORIA_SISTEMA_PADRAO)
+            CHAVES_STORAGE_AUDITORIA_SISTEMA.BLOCOS_VISIVEIS,
+            VISIBILIDADE_PADRAO_BLOCOS_AUDITORIA_SISTEMA
         )
     );
     const [tamanhosBlocosAuditoria, setTamanhosBlocosAuditoria] = useState(() =>
         carregarPreferenciaAuditoriaSistema(
-            "auditoriaSistemaTamanhosBlocos",
+            CHAVES_STORAGE_AUDITORIA_SISTEMA.TAMANHOS_BLOCOS,
             TAMANHOS_PADRAO_AUDITORIA(BLOCOS_AUDITORIA_SISTEMA_PADRAO, "destaque")
         )
     );
     const [ordemBlocosAuditoria, setOrdemBlocosAuditoria] = useState(() =>
-        carregarOrdemAuditoriaSistema("auditoriaSistemaOrdemBlocos", BLOCOS_AUDITORIA_SISTEMA_PADRAO)
+        carregarOrdemAuditoriaSistema(CHAVES_STORAGE_AUDITORIA_SISTEMA.ORDEM_BLOCOS, BLOCOS_AUDITORIA_SISTEMA_PADRAO)
     );
 
     useEffect(() => {
@@ -239,32 +318,32 @@ export function RelatorioAuditoria({
 
     useEffect(() => {
         if (typeof window === "undefined") return;
-        window.localStorage.setItem("auditoriaSistemaCartasVisiveis", JSON.stringify(cartasVisiveisAuditoria));
+        window.localStorage.setItem(CHAVES_STORAGE_AUDITORIA_SISTEMA.CARTAS_VISIVEIS, JSON.stringify(cartasVisiveisAuditoria));
     }, [cartasVisiveisAuditoria]);
 
     useEffect(() => {
         if (typeof window === "undefined") return;
-        window.localStorage.setItem("auditoriaSistemaTamanhosCartas", JSON.stringify(tamanhosCartasAuditoria));
+        window.localStorage.setItem(CHAVES_STORAGE_AUDITORIA_SISTEMA.TAMANHOS_CARTAS, JSON.stringify(tamanhosCartasAuditoria));
     }, [tamanhosCartasAuditoria]);
 
     useEffect(() => {
         if (typeof window === "undefined") return;
-        window.localStorage.setItem("auditoriaSistemaOrdemCartas", JSON.stringify(ordemCartasAuditoria));
+        window.localStorage.setItem(CHAVES_STORAGE_AUDITORIA_SISTEMA.ORDEM_CARTAS, JSON.stringify(ordemCartasAuditoria));
     }, [ordemCartasAuditoria]);
 
     useEffect(() => {
         if (typeof window === "undefined") return;
-        window.localStorage.setItem("auditoriaSistemaBlocosVisiveis", JSON.stringify(blocosVisiveisAuditoria));
+        window.localStorage.setItem(CHAVES_STORAGE_AUDITORIA_SISTEMA.BLOCOS_VISIVEIS, JSON.stringify(blocosVisiveisAuditoria));
     }, [blocosVisiveisAuditoria]);
 
     useEffect(() => {
         if (typeof window === "undefined") return;
-        window.localStorage.setItem("auditoriaSistemaTamanhosBlocos", JSON.stringify(tamanhosBlocosAuditoria));
+        window.localStorage.setItem(CHAVES_STORAGE_AUDITORIA_SISTEMA.TAMANHOS_BLOCOS, JSON.stringify(tamanhosBlocosAuditoria));
     }, [tamanhosBlocosAuditoria]);
 
     useEffect(() => {
         if (typeof window === "undefined") return;
-        window.localStorage.setItem("auditoriaSistemaOrdemBlocos", JSON.stringify(ordemBlocosAuditoria));
+        window.localStorage.setItem(CHAVES_STORAGE_AUDITORIA_SISTEMA.ORDEM_BLOCOS, JSON.stringify(ordemBlocosAuditoria));
     }, [ordemBlocosAuditoria]);
 
     const persistirConfiguracaoEventosAuditoria = async (configuracao, mensagemSucesso = "Configuração salva.") => {
@@ -351,10 +430,10 @@ export function RelatorioAuditoria({
     };
 
     const restaurarPersonalizacaoAuditoriaSistema = () => {
-        setCartasVisiveisAuditoria(VISIBILIDADE_PADRAO_AUDITORIA(CARTAS_AUDITORIA_SISTEMA_PADRAO));
+        setCartasVisiveisAuditoria(VISIBILIDADE_PADRAO_CARTAS_AUDITORIA_SISTEMA);
         setTamanhosCartasAuditoria(TAMANHOS_PADRAO_AUDITORIA(CARTAS_AUDITORIA_SISTEMA_PADRAO, "padrao"));
         setOrdemCartasAuditoria(CARTAS_AUDITORIA_SISTEMA_PADRAO);
-        setBlocosVisiveisAuditoria(VISIBILIDADE_PADRAO_AUDITORIA(BLOCOS_AUDITORIA_SISTEMA_PADRAO));
+        setBlocosVisiveisAuditoria(VISIBILIDADE_PADRAO_BLOCOS_AUDITORIA_SISTEMA);
         setTamanhosBlocosAuditoria(TAMANHOS_PADRAO_AUDITORIA(BLOCOS_AUDITORIA_SISTEMA_PADRAO, "destaque"));
         setOrdemBlocosAuditoria(BLOCOS_AUDITORIA_SISTEMA_PADRAO);
     };
@@ -377,25 +456,44 @@ export function RelatorioAuditoria({
         [auditoriaVerificada]
     );
 
+    const usuariosAuditoriaFiltro = useMemo(
+        () => Array.from(new Set(auditoriaVerificada.map((item) => item.usuario_email || "Sistema / consulta pública").filter(Boolean))).sort(),
+        [auditoriaVerificada]
+    );
+
+    const modulosAuditoriaFiltro = useMemo(
+        () => Array.from(new Set(auditoriaVerificada.map((item) => obterModuloAuditoriaSistema(item)).filter(Boolean))).sort(),
+        [auditoriaVerificada]
+    );
+
     const registrosFiltrados = useMemo(() => {
         const termo = normalizarTextoBusca(busca);
 
         return auditoriaVerificada.filter((item) => {
             const origemAcesso = item.dados?.origemAcesso || {};
+            const modulo = obterModuloAuditoriaSistema(item);
+            const nivel = obterNivelAuditoriaSistema(item);
+            const dataRegistro = obterDataFiltroAuditoriaSistema(item.created_at);
+            const usuarioRegistro = item.usuario_email || "Sistema / consulta pública";
             const texto = normalizarTextoBusca(
-                `${item.usuario_email || ""} ${item.acao || ""} ${item.tabela || ""} ${item.descricao || ""} ${item.registro_id || ""} ${origemAcesso.url || ""} ${origemAcesso.pagina || ""} ${origemAcesso.navegador || ""} ${origemAcesso.plataforma || ""}`
+                `${usuarioRegistro} ${item.acao || ""} ${modulo} ${nivel} ${item.tabela || ""} ${item.descricao || ""} ${item.registro_id || ""} ${origemAcesso.url || ""} ${origemAcesso.pagina || ""} ${origemAcesso.navegador || ""} ${origemAcesso.plataforma || ""}`
             );
 
             const bateBusca = !termo || texto.includes(termo);
             const bateAcao = filtroAcao === "Todas" || item.acao === filtroAcao;
+            const bateUsuario = filtroUsuario === "Todos" || usuarioRegistro === filtroUsuario;
+            const bateModulo = filtroModulo === "Todos" || modulo === filtroModulo;
+            const bateNivel = filtroNivel === "Todos" || nivel === filtroNivel;
+            const bateInicio = !filtroPeriodoInicio || (dataRegistro && dataRegistro >= filtroPeriodoInicio);
+            const bateFim = !filtroPeriodoFim || (dataRegistro && dataRegistro <= filtroPeriodoFim);
 
-            return bateBusca && bateAcao;
+            return bateBusca && bateAcao && bateUsuario && bateModulo && bateNivel && bateInicio && bateFim;
         });
-    }, [auditoriaVerificada, busca, filtroAcao]);
+    }, [auditoriaVerificada, busca, filtroAcao, filtroUsuario, filtroModulo, filtroNivel, filtroPeriodoInicio, filtroPeriodoFim]);
 
     useEffect(() => {
         setLimiteRegistrosDetalhados(LIMITE_REGISTROS_DETALHADOS_INICIAL);
-    }, [busca, filtroAcao, auditoriaVerificada.length]);
+    }, [busca, filtroAcao, filtroUsuario, filtroModulo, filtroNivel, filtroPeriodoInicio, filtroPeriodoFim, auditoriaVerificada.length]);
 
     const registrosDetalhadosVisiveis = registrosFiltrados.slice(0, limiteRegistrosDetalhados);
     const existemMaisRegistrosDetalhados = registrosFiltrados.length > registrosDetalhadosVisiveis.length;
@@ -770,7 +868,7 @@ Essa ação remove arquivos do Storage e não altera registros do banco.`;
     const opcoesBlocosAuditoriaSistema = [
         { chave: "atividades", titulo: "Últimas atividades" },
         { chave: "eventos", titulo: "Eventos verificados" },
-        { chave: "permissoes", titulo: "Permissões da Auditoria" },
+        { chave: "permissoes", titulo: "Permissões antigas da Auditoria" },
         { chave: "storage", titulo: "Arquivos salvos no Storage" },
         { chave: "registros", titulo: "Registros detalhados" },
     ];
@@ -855,14 +953,19 @@ Essa ação remove arquivos do Storage e não altera registros do banco.`;
     };
 
     const baixarCsvAuditoria = () => {
-        const cabecalho = ["Data/Hora", "Usuário", "Ação", "Tabela", "Registro", "Descrição", "Origem do acesso", "Página", "Navegador", "Plataforma"];
+        const cabecalho = ["Data/Hora", "Usuário", "Ação", "Módulo", "Nível", "Tabela", "Registro", "Descrição", "Origem do acesso", "Página", "Navegador", "Plataforma"];
         const linhas = registrosFiltrados.map((item) => {
             const origemAcesso = item.dados?.origemAcesso || {};
+
+            const modulo = obterModuloAuditoriaSistema(item);
+            const nivel = obterNivelAuditoriaSistema(item);
 
             return [
                 new Date(item.created_at).toLocaleString("pt-BR"),
                 item.usuario_email || "-",
                 item.acao || "-",
+                modulo || "-",
+                ROTULOS_NIVEIS_AUDITORIA_SISTEMA[nivel] || "Informação",
                 item.tabela || "-",
                 item.registro_id || "-",
                 item.descricao || "-",
@@ -1004,7 +1107,7 @@ Essa ação remove arquivos do Storage e não altera registros do banco.`;
                 </div>
             )}
 
-            <div className="grid gap-3 md:grid-cols-4">
+            <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
                 {cartasResumoAuditoriaOrdenadas
                     .filter((carta) => cartasVisiveisAuditoria[carta.chave] !== false)
                     .map((carta) => (
@@ -1670,44 +1773,103 @@ Essa ação remove arquivos do Storage e não altera registros do banco.`;
                     <CardRecolhivel
                 className="mt-5"
                 titulo="Registros detalhados da auditoria"
-                subtitulo="Consulta controlada por limite visual para evitar excesso de cartões na tela."
+                subtitulo="Filtros por texto, ação, usuário, módulo, nível e período. Carregamento limitado para manter a tela leve."
                 contador={registrosFiltrados.length}
-                defaultOpen={false}
+                defaultOpen
             >
-                <div className="grid gap-3 xl:grid-cols-[1fr_220px_150px]">
-                    <div className="relative">
-                        <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                <div className="rounded-3xl bg-slate-50 p-4 ring-1 ring-slate-200">
+                    <div className="grid gap-3 xl:grid-cols-[minmax(260px,1.4fr)_repeat(3,minmax(160px,1fr))]">
+                        <div className="relative xl:col-span-2">
+                            <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                            <input
+                                value={busca}
+                                onChange={(e) => setBusca(e.target.value)}
+                                placeholder="Buscar por usuário, evento, módulo, registro ou descrição"
+                                className="w-full rounded-2xl border border-slate-200 bg-white py-3 pl-11 pr-4 text-sm outline-none focus:border-slate-400 focus:ring-4 focus:ring-slate-100"
+                            />
+                        </div>
+
+                        <select
+                            value={filtroAcao}
+                            onChange={(e) => setFiltroAcao(e.target.value)}
+                            className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 outline-none focus:border-slate-400 focus:ring-4 focus:ring-slate-100"
+                        >
+                            <option value="Todas">Todas as ações</option>
+                            {acoes.map((acao) => (
+                                <option key={acao} value={acao}>
+                                    {acao}
+                                </option>
+                            ))}
+                        </select>
+
+                        <select
+                            value={filtroUsuario}
+                            onChange={(e) => setFiltroUsuario(e.target.value)}
+                            className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 outline-none focus:border-slate-400 focus:ring-4 focus:ring-slate-100"
+                        >
+                            <option value="Todos">Todos os usuários</option>
+                            {usuariosAuditoriaFiltro.map((usuarioFiltro) => (
+                                <option key={usuarioFiltro} value={usuarioFiltro}>
+                                    {usuarioFiltro}
+                                </option>
+                            ))}
+                        </select>
+
+                        <select
+                            value={filtroModulo}
+                            onChange={(e) => setFiltroModulo(e.target.value)}
+                            className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 outline-none focus:border-slate-400 focus:ring-4 focus:ring-slate-100"
+                        >
+                            <option value="Todos">Todos os módulos</option>
+                            {modulosAuditoriaFiltro.map((moduloFiltro) => (
+                                <option key={moduloFiltro} value={moduloFiltro}>
+                                    {moduloFiltro}
+                                </option>
+                            ))}
+                        </select>
+
+                        <select
+                            value={filtroNivel}
+                            onChange={(e) => setFiltroNivel(e.target.value)}
+                            className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 outline-none focus:border-slate-400 focus:ring-4 focus:ring-slate-100"
+                        >
+                            {Object.entries(ROTULOS_NIVEIS_AUDITORIA_SISTEMA).map(([valor, rotulo]) => (
+                                <option key={valor} value={valor}>
+                                    {rotulo}
+                                </option>
+                            ))}
+                        </select>
+
                         <input
-                            value={busca}
-                            onChange={(e) => setBusca(e.target.value)}
-                            placeholder="Buscar por usuário, ação, tabela, registro ou descrição"
-                            className="w-full rounded-2xl border border-slate-200 bg-white py-3 pl-11 pr-4 text-sm outline-none focus:border-slate-400 focus:ring-4 focus:ring-slate-100"
+                            type="date"
+                            value={filtroPeriodoInicio}
+                            onChange={(e) => setFiltroPeriodoInicio(e.target.value)}
+                            className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 outline-none focus:border-slate-400 focus:ring-4 focus:ring-slate-100"
                         />
+
+                        <input
+                            type="date"
+                            value={filtroPeriodoFim}
+                            onChange={(e) => setFiltroPeriodoFim(e.target.value)}
+                            className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 outline-none focus:border-slate-400 focus:ring-4 focus:ring-slate-100"
+                        />
+
+                        <button
+                            type="button"
+                            onClick={() => {
+                                setBusca("");
+                                setFiltroAcao("Todas");
+                                setFiltroUsuario("Todos");
+                                setFiltroModulo("Todos");
+                                setFiltroNivel("Todos");
+                                setFiltroPeriodoInicio("");
+                                setFiltroPeriodoFim("");
+                            }}
+                            className="rounded-2xl bg-white px-4 py-3 text-sm font-bold text-slate-700 ring-1 ring-slate-200 hover:bg-slate-50"
+                        >
+                            Limpar filtros
+                        </button>
                     </div>
-
-                    <select
-                        value={filtroAcao}
-                        onChange={(e) => setFiltroAcao(e.target.value)}
-                        className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 outline-none focus:border-slate-400 focus:ring-4 focus:ring-slate-100"
-                    >
-                        <option value="Todas">Todas as ações</option>
-                        {acoes.map((acao) => (
-                            <option key={acao} value={acao}>
-                                {acao}
-                            </option>
-                        ))}
-                    </select>
-
-                    <button
-                        type="button"
-                        onClick={() => {
-                            setBusca("");
-                            setFiltroAcao("Todas");
-                        }}
-                        className="rounded-2xl bg-white px-4 py-3 text-sm font-bold text-slate-700 ring-1 ring-slate-200 hover:bg-slate-50"
-                    >
-                        Limpar filtros
-                    </button>
                 </div>
 
                 <div className="mt-4 rounded-2xl bg-slate-50 p-3 ring-1 ring-slate-200">
@@ -1771,9 +1933,11 @@ Essa ação remove arquivos do Storage e não altera registros do banco.`;
                         const temDadosExtras = Object.keys(dadosExtras).length > 0;
                         const detalhesAberto = Boolean(detalhesAuditoriaAbertos[item.id]);
                         const podeAbrirDetalhes = temOrigemAcesso || temDadosExtras || item.registro_id;
+                        const modulo = obterModuloAuditoriaSistema(item);
+                        const nivel = obterNivelAuditoriaSistema(item);
 
                         return (
-                            <div key={item.id} className="rounded-3xl border border-slate-200 bg-white p-4">
+                            <div key={item.id} className="rounded-3xl border border-slate-200 bg-white p-4 shadow-sm">
                                 <div className="flex flex-col justify-between gap-3 lg:flex-row lg:items-start">
                                     <div className="min-w-0">
                                         <div className="flex flex-wrap items-center gap-2">
@@ -1781,8 +1945,16 @@ Essa ação remove arquivos do Storage e não altera registros do banco.`;
                                                 {item.acao || "-"}
                                             </span>
                                             <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-600">
-                                                {item.tabela || "-"}
+                                                {modulo}
                                             </span>
+                                            <span className={classNames("rounded-full px-3 py-1 text-xs font-semibold ring-1", classeNivelAuditoriaSistema(nivel))}>
+                                                {ROTULOS_NIVEIS_AUDITORIA_SISTEMA[nivel] || "Informação"}
+                                            </span>
+                                            {item.tabela && (
+                                                <span className="rounded-full bg-white px-3 py-1 text-xs font-semibold text-slate-500 ring-1 ring-slate-200">
+                                                    {item.tabela}
+                                                </span>
+                                            )}
                                         </div>
 
                                         <p className="mt-3 font-bold text-slate-950">{item.descricao || "Evento registrado"}</p>
@@ -1821,6 +1993,12 @@ Essa ação remove arquivos do Storage e não altera registros do banco.`;
                                             </p>
                                             <p className="break-words">
                                                 <strong>Ação:</strong> {item.acao || "-"}
+                                            </p>
+                                            <p className="break-words">
+                                                <strong>Módulo:</strong> {modulo}
+                                            </p>
+                                            <p className="break-words">
+                                                <strong>Nível:</strong> {ROTULOS_NIVEIS_AUDITORIA_SISTEMA[nivel] || "Informação"}
                                             </p>
                                         </div>
 

@@ -3,40 +3,47 @@ import { normalizarRegistrosAuditoriasCampo } from "./appHelpersService";
 import { obterOrigemAcesso } from "../utils/sstUtils";
 
 export async function carregarAuditoriaSistemaService({ supabase, limite }) {
+    const limiteSeguro = Math.max(1, Number(limite) || 300);
+
     const { data, error } = await supabase
         .from("auditoria_sistema")
         .select("id, created_at, usuario_email, acao, tabela, registro_id, descricao, dados")
         .order("created_at", { ascending: false })
-        .limit(limite);
+        .limit(limiteSeguro + 1);
 
     if (error) {
         throw error;
     }
 
-    const registros = data || [];
+    const registrosBrutos = data || [];
+    const registros = registrosBrutos.slice(0, limiteSeguro);
 
     return {
         registros,
-        existeMais: registros.length === limite,
+        existeMais: registrosBrutos.length > limiteSeguro,
     };
 }
 
 export async function carregarMaisAuditoriaSistemaService({ supabase, offsetAtual = 0, limite }) {
+    const limiteSeguro = Math.max(1, Number(limite) || 300);
+    const offsetSeguro = Math.max(0, Number(offsetAtual) || 0);
+
     const { data, error } = await supabase
         .from("auditoria_sistema")
         .select("id, created_at, usuario_email, acao, tabela, registro_id, descricao, dados")
         .order("created_at", { ascending: false })
-        .range(offsetAtual, offsetAtual + limite - 1);
+        .range(offsetSeguro, offsetSeguro + limiteSeguro);
 
     if (error) {
         throw error;
     }
 
-    const registros = data || [];
+    const registrosBrutos = data || [];
+    const registros = registrosBrutos.slice(0, limiteSeguro);
 
     return {
         registros,
-        existeMais: registros.length === limite,
+        existeMais: registrosBrutos.length > limiteSeguro,
     };
 }
 
