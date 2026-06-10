@@ -70,6 +70,7 @@ import {
     carregarPermissaoSistemaAtualService,
     listarUsuariosPermissoesSistemaService,
     obterResumoPermissaoSistema,
+    salvarUsuarioPermissaoSistemaService,
 } from "../../services/usuariosPermissoesSistemaService";
 import { supabase } from "../../lib/supabaseClient";
 
@@ -193,8 +194,9 @@ export function ConfiguracoesSistema({
         acesso_global: false,
     });
     const [mensagemFormularioNovoUsuarioPermissao, setMensagemFormularioNovoUsuarioPermissao] = useState(
-        "Estrutura visual pronta. O cadastro real será habilitado somente após criação da RPC de gravação."
+        "Cadastro real habilitado. Preencha os dados e salve a permissão no Supabase."
     );
+    const [salvandoNovoUsuarioPermissaoSistema, setSalvandoNovoUsuarioPermissaoSistema] = useState(false);
 
     const eventosAuditoria = useMemo(() => {
         const normalizada = normalizarConfiguracaoEventosAuditoriaSistema(configEventos);
@@ -617,7 +619,7 @@ export function ConfiguracoesSistema({
             [campo]: valor,
         }));
         setMensagemFormularioNovoUsuarioPermissao(
-            "Campos atualizados apenas na tela. A gravação no Supabase será criada em uma próxima microetapa."
+            "Campos atualizados. Ao salvar, a permissão será gravada no Supabase pela RPC administrativa."
         );
     };
 
@@ -632,25 +634,60 @@ export function ConfiguracoesSistema({
             acesso_global: false,
         });
         setMensagemFormularioNovoUsuarioPermissao(
-            "Formulário visual limpo. Nenhuma informação foi enviada ao Supabase."
+            "Formulário limpo. Nenhuma nova gravação foi enviada ao Supabase."
         );
     };
 
-    const confirmarEstruturaVisualNovoUsuarioPermissao = (evento) => {
+    const salvarNovoUsuarioPermissaoSistema = async (evento) => {
         evento.preventDefault();
+
+        if (salvandoNovoUsuarioPermissaoSistema) return;
+
         const emailTratado = novoUsuarioPermissaoSistema.email.trim().toLowerCase();
         const nomeTratado = novoUsuarioPermissaoSistema.nome.trim();
 
         if (!nomeTratado || !emailTratado) {
             setMensagemFormularioNovoUsuarioPermissao(
-                "Preencha nome e e-mail para validar a estrutura visual. Ainda não existe gravação no Supabase nesta etapa."
+                "Preencha nome e e-mail antes de salvar a permissão do usuário no Supabase."
             );
             return;
         }
 
-        setMensagemFormularioNovoUsuarioPermissao(
-            `Estrutura visual conferida para ${emailTratado}. Próxima microetapa: criar RPC segura para cadastrar ou atualizar este usuário.`
-        );
+        setSalvandoNovoUsuarioPermissaoSistema(true);
+        setMensagemFormularioNovoUsuarioPermissao(`Salvando permissão de ${emailTratado} no Supabase...`);
+
+        try {
+            const usuarioSalvo = await salvarUsuarioPermissaoSistemaService({
+                supabase,
+                usuario: novoUsuarioPermissaoSistema,
+            });
+
+            await carregarUsuariosPermissoesSistema();
+
+            if (usuarioSalvo?.email === permissaoSistemaAtual?.email) {
+                await carregarPermissaoSistemaAtual();
+            }
+
+            setNovoUsuarioPermissaoSistema({
+                nome: "",
+                email: "",
+                funcao: "",
+                perfil: "tecnico_sst",
+                ativo: true,
+                bloqueado: false,
+                acesso_global: false,
+            });
+
+            setMensagemFormularioNovoUsuarioPermissao(
+                `Permissão salva no Supabase para ${usuarioSalvo?.email || emailTratado}. A lista administrativa foi atualizada.`
+            );
+        } catch (erro) {
+            setMensagemFormularioNovoUsuarioPermissao(
+                `Não foi possível salvar a permissão. Supabase: ${erro?.message || "erro não identificado"}`
+            );
+        } finally {
+            setSalvandoNovoUsuarioPermissaoSistema(false);
+        }
     };
 
 
@@ -1310,7 +1347,7 @@ export function ConfiguracoesSistema({
                                     <div>
                                         <p className="text-xs font-black uppercase tracking-wide text-slate-400">Novo usuário / permissão</p>
                                         <p className="mt-1 text-xs font-semibold leading-relaxed text-slate-500">
-                                            Estrutura visual para cadastrar usuários no painel. Esta etapa ainda não salva no Supabase.
+                                            Cadastro administrativo de usuários no painel. Esta etapa salva a permissão no Supabase, mas ainda não aplica bloqueios reais no app.
                                         </p>
                                         <p className="mt-1 text-xs font-semibold leading-relaxed text-slate-500">
                                             {mensagemFormularioNovoUsuarioPermissao}
@@ -1327,7 +1364,7 @@ export function ConfiguracoesSistema({
                                 </div>
 
                                 {mostrarFormularioNovoUsuarioPermissao && (
-                                    <form onSubmit={confirmarEstruturaVisualNovoUsuarioPermissao} className="mt-4 space-y-4">
+                                    <form onSubmit={salvarNovoUsuarioPermissaoSistema} className="mt-4 space-y-4">
                                         <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
                                             <label className="space-y-1 text-xs font-black uppercase tracking-wide text-slate-400">
                                                 <span>Nome</span>
@@ -1410,21 +1447,28 @@ export function ConfiguracoesSistema({
                                             </label>
                                         </div>
 
-                                        <div className="rounded-2xl bg-amber-50 px-4 py-3 text-xs font-semibold leading-relaxed text-amber-700 ring-1 ring-amber-100">
-                                            Etapa visual: clicar nos botões abaixo não cadastra, não edita e não altera permissões no Supabase.
+                                        <div className="rounded-2xl bg-emerald-50 px-4 py-3 text-xs font-semibold leading-relaxed text-emerald-700 ring-1 ring-emerald-100">
+                                            Cadastro real habilitado: ao salvar, o usuário será criado ou atualizado em usuarios_permissoes_sistema. Os bloqueios reais do app ainda não foram ativados.
                                         </div>
 
                                         <div className="flex flex-wrap gap-2">
                                             <button
                                                 type="submit"
-                                                className="rounded-2xl bg-slate-950 px-4 py-2 text-xs font-black text-white shadow-sm hover:bg-slate-800"
+                                                disabled={salvandoNovoUsuarioPermissaoSistema}
+                                                className={classNames(
+                                                    "rounded-2xl px-4 py-2 text-xs font-black text-white shadow-sm",
+                                                    salvandoNovoUsuarioPermissaoSistema
+                                                        ? "cursor-not-allowed bg-slate-400"
+                                                        : "bg-slate-950 hover:bg-slate-800"
+                                                )}
                                             >
-                                                Validar estrutura visual
+                                                {salvandoNovoUsuarioPermissaoSistema ? "Salvando..." : "Salvar no Supabase"}
                                             </button>
                                             <button
                                                 type="button"
                                                 onClick={limparFormularioNovoUsuarioPermissao}
-                                                className="rounded-2xl bg-white px-4 py-2 text-xs font-black text-slate-700 ring-1 ring-slate-200 hover:bg-slate-50"
+                                                disabled={salvandoNovoUsuarioPermissaoSistema}
+                                                className="rounded-2xl bg-white px-4 py-2 text-xs font-black text-slate-700 ring-1 ring-slate-200 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
                                             >
                                                 Limpar formulário
                                             </button>
