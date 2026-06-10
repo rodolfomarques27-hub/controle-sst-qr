@@ -69,6 +69,7 @@ import {
 import {
     ACOES_CRITICAS_PERMISSAO_SISTEMA,
     carregarPermissaoSistemaAtualService,
+    listarSolicitacoesAcessoSistemaService,
     listarUsuariosPermissoesSistemaService,
     obterBloqueioVisualAcaoCriticaSistema,
     obterResumoAcoesCriticasSistema,
@@ -79,6 +80,40 @@ import {
 import { supabase } from "../../lib/supabaseClient";
 
 const classNames = (...classes) => classes.filter(Boolean).join(" ");
+
+function formatarDataHoraConfiguracoes(valor) {
+    if (!valor) return "Sem data";
+
+    try {
+        return new Date(valor).toLocaleString("pt-BR", {
+            day: "2-digit",
+            month: "2-digit",
+            year: "2-digit",
+            hour: "2-digit",
+            minute: "2-digit",
+        });
+    } catch {
+        return "Sem data";
+    }
+}
+
+function obterClasseStatusSolicitacaoAcesso(status = "pendente") {
+    if (status === "aprovada") return "bg-emerald-50 text-emerald-700 ring-emerald-100";
+    if (status === "recusada") return "bg-rose-50 text-rose-700 ring-rose-100";
+    if (status === "cancelada") return "bg-slate-100 text-slate-500 ring-slate-200";
+    return "bg-amber-50 text-amber-700 ring-amber-100";
+}
+
+function formatarStatusSolicitacaoAcesso(status = "pendente") {
+    const mapa = {
+        pendente: "Pendente",
+        aprovada: "Aprovada",
+        recusada: "Recusada",
+        cancelada: "Cancelada",
+    };
+
+    return mapa[status] || "Pendente";
+}
 
 const CHAVES_BLOCOS_CONFIGURACOES_PADRAO = [
     "config-eventos-auditoria",
@@ -187,6 +222,11 @@ export function ConfiguracoesSistema({
     const [mensagemUsuariosPermissoesSistema, setMensagemUsuariosPermissoesSistema] = useState(
         "Lista administrativa ainda não carregada do Supabase."
     );
+    const [solicitacoesAcessoSistema, setSolicitacoesAcessoSistema] = useState([]);
+    const [carregandoSolicitacoesAcessoSistema, setCarregandoSolicitacoesAcessoSistema] = useState(false);
+    const [mensagemSolicitacoesAcessoSistema, setMensagemSolicitacoesAcessoSistema] = useState(
+        "Solicitações de acesso ainda não carregadas."
+    );
     const [mostrarFormularioNovoUsuarioPermissao, setMostrarFormularioNovoUsuarioPermissao] = useState(false);
     const [novoUsuarioPermissaoSistema, setNovoUsuarioPermissaoSistema] = useState({
         nome: "",
@@ -247,6 +287,20 @@ export function ConfiguracoesSistema({
 
         return { total, ativos, bloqueados, administradores };
     }, [usuariosPermissoesSistema]);
+
+    const resumoSolicitacoesAcessoSistema = useMemo(() => {
+        const total = solicitacoesAcessoSistema.length;
+        const pendentes = solicitacoesAcessoSistema.filter((item) => item.status === "pendente").length;
+        const aprovadas = solicitacoesAcessoSistema.filter((item) => item.status === "aprovada").length;
+        const recusadas = solicitacoesAcessoSistema.filter((item) => item.status === "recusada").length;
+
+        return { total, pendentes, aprovadas, recusadas };
+    }, [solicitacoesAcessoSistema]);
+
+    const solicitacoesAcessoPendentesSistema = useMemo(
+        () => solicitacoesAcessoSistema.filter((item) => item.status === "pendente"),
+        [solicitacoesAcessoSistema]
+    );
 
     const modoEdicaoUsuarioPermissaoSistema = Boolean(usuarioPermissaoSistemaEmEdicao?.email);
 
@@ -674,6 +728,40 @@ export function ConfiguracoesSistema({
         }
     };
 
+    const carregarSolicitacoesAcessoSistema = async () => {
+        if (!podeGerenciarPermissoesSistema) {
+            setSolicitacoesAcessoSistema([]);
+            setMensagemSolicitacoesAcessoSistema(
+                "Solicitações não consultadas. O usuário atual não possui permissão para gerenciar permissões."
+            );
+            setCarregandoSolicitacoesAcessoSistema(false);
+            return;
+        }
+
+        setCarregandoSolicitacoesAcessoSistema(true);
+        setMensagemSolicitacoesAcessoSistema("Carregando solicitações de acesso no Supabase...");
+
+        try {
+            const solicitacoesListadas = await listarSolicitacoesAcessoSistemaService({ supabase });
+            setSolicitacoesAcessoSistema(solicitacoesListadas);
+
+            if (solicitacoesListadas.length > 0) {
+                setMensagemSolicitacoesAcessoSistema(
+                    `${solicitacoesListadas.length} solicitação(ões) carregada(s). ${solicitacoesListadas.filter((item) => item.status === "pendente").length} pendente(s).`
+                );
+            } else {
+                setMensagemSolicitacoesAcessoSistema("Nenhuma solicitação de acesso foi encontrada.");
+            }
+        } catch (erro) {
+            setSolicitacoesAcessoSistema([]);
+            setMensagemSolicitacoesAcessoSistema(
+                `Não foi possível carregar as solicitações de acesso. Supabase: ${erro?.message || "erro não identificado"}`
+            );
+        } finally {
+            setCarregandoSolicitacoesAcessoSistema(false);
+        }
+    };
+
     const alterarCampoNovoUsuarioPermissao = (campo, valor) => {
         if (!podeGerenciarPermissoesSistema) {
             setMensagemFormularioNovoUsuarioPermissao(bloqueioGerenciarPermissoesSistema.mensagem);
@@ -880,22 +968,31 @@ export function ConfiguracoesSistema({
 
         if (!permissaoSistemaAtual) {
             setUsuariosPermissoesSistema([]);
+            setSolicitacoesAcessoSistema([]);
             setMensagemUsuariosPermissoesSistema(
                 "Lista administrativa aguardando uma permissão válida do usuário atual."
+            );
+            setMensagemSolicitacoesAcessoSistema(
+                "Solicitações aguardando uma permissão válida do usuário atual."
             );
             return undefined;
         }
 
         if (!podeGerenciarPermissoesSistema) {
             setUsuariosPermissoesSistema([]);
+            setSolicitacoesAcessoSistema([]);
             setMensagemUsuariosPermissoesSistema(
                 "Lista administrativa não consultada. O usuário atual não possui permissão para gerenciar permissões."
+            );
+            setMensagemSolicitacoesAcessoSistema(
+                "Solicitações não consultadas. O usuário atual não possui permissão para gerenciar permissões."
             );
             return undefined;
         }
 
         const timer = window.setTimeout(() => {
             carregarUsuariosPermissoesSistema();
+            carregarSolicitacoesAcessoSistema();
         }, 0);
 
         return () => window.clearTimeout(timer);
@@ -1528,6 +1625,89 @@ export function ConfiguracoesSistema({
                                     <p className="text-[10px] font-black uppercase tracking-wide text-rose-700">Bloqueados</p>
                                     <p className="mt-1 text-sm font-black text-rose-800">{resumoUsuariosPermissoesSistema.bloqueados}</p>
                                 </div>
+                            </div>
+
+                            <div className="mt-4 rounded-3xl bg-white p-4 ring-1 ring-slate-100">
+                                <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+                                    <div>
+                                        <p className="text-xs font-black uppercase tracking-wide text-slate-400">Solicitações de acesso</p>
+                                        <p className="mt-1 text-xs font-semibold leading-relaxed text-slate-500">
+                                            Pedidos registrados pelo botão Solicitar acesso nas telas bloqueadas.
+                                        </p>
+                                        <p className="mt-1 text-xs font-semibold leading-relaxed text-slate-500">
+                                            {mensagemSolicitacoesAcessoSistema}
+                                        </p>
+                                    </div>
+                                    <button
+                                        type="button"
+                                        onClick={carregarSolicitacoesAcessoSistema}
+                                        disabled={carregandoSolicitacoesAcessoSistema || !podeGerenciarPermissoesSistema}
+                                        title={podeGerenciarPermissoesSistema ? "Atualizar solicitações" : bloqueioGerenciarPermissoesSistema.mensagem}
+                                        className="inline-flex items-center justify-center gap-2 rounded-2xl bg-white px-3 py-2 text-xs font-black text-slate-700 ring-1 ring-slate-200 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
+                                    >
+                                        <RefreshCw className={classNames("h-3.5 w-3.5", carregandoSolicitacoesAcessoSistema && "animate-spin")} />
+                                        {carregandoSolicitacoesAcessoSistema ? "Carregando" : "Atualizar solicitações"}
+                                    </button>
+                                </div>
+
+                                <div className="mt-4 grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
+                                    <div className="rounded-2xl bg-slate-50 px-3 py-3 ring-1 ring-slate-100">
+                                        <p className="text-[10px] font-black uppercase tracking-wide text-slate-400">Total</p>
+                                        <p className="mt-1 text-sm font-black text-slate-950">{resumoSolicitacoesAcessoSistema.total}</p>
+                                    </div>
+                                    <div className="rounded-2xl bg-amber-50 px-3 py-3 ring-1 ring-amber-100">
+                                        <p className="text-[10px] font-black uppercase tracking-wide text-amber-700">Pendentes</p>
+                                        <p className="mt-1 text-sm font-black text-amber-800">{resumoSolicitacoesAcessoSistema.pendentes}</p>
+                                    </div>
+                                    <div className="rounded-2xl bg-emerald-50 px-3 py-3 ring-1 ring-emerald-100">
+                                        <p className="text-[10px] font-black uppercase tracking-wide text-emerald-700">Aprovadas</p>
+                                        <p className="mt-1 text-sm font-black text-emerald-800">{resumoSolicitacoesAcessoSistema.aprovadas}</p>
+                                    </div>
+                                    <div className="rounded-2xl bg-rose-50 px-3 py-3 ring-1 ring-rose-100">
+                                        <p className="text-[10px] font-black uppercase tracking-wide text-rose-700">Recusadas</p>
+                                        <p className="mt-1 text-sm font-black text-rose-800">{resumoSolicitacoesAcessoSistema.recusadas}</p>
+                                    </div>
+                                </div>
+
+                                <div className="mt-4 space-y-2">
+                                    {solicitacoesAcessoSistema.length > 0 ? solicitacoesAcessoSistema.slice(0, 6).map((item) => (
+                                        <div key={item.id || `${item.email}-${item.criado_em}`} className="rounded-2xl bg-slate-50 px-4 py-3 ring-1 ring-slate-100">
+                                            <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+                                                <div className="min-w-0">
+                                                    <p className="truncate text-sm font-black text-slate-950">{item.nome || "Usuário sem nome"}</p>
+                                                    <p className="mt-0.5 truncate text-xs font-semibold text-slate-500">{item.email || "email não informado"}</p>
+                                                    <p className="mt-1 text-[11px] font-semibold text-slate-400">
+                                                        {formatarDataHoraConfiguracoes(item.criado_em)}
+                                                    </p>
+                                                </div>
+                                                <div className="flex flex-wrap gap-2">
+                                                    <span className="rounded-full bg-white px-3 py-1.5 text-[11px] font-black text-slate-700 ring-1 ring-slate-200">
+                                                        Área: {item.area_solicitada || item.tela || "não informada"}
+                                                    </span>
+                                                    <span className="rounded-full bg-white px-3 py-1.5 text-[11px] font-black text-slate-700 ring-1 ring-slate-200">
+                                                        Perfil: {item.perfil_atual || "não informado"}
+                                                    </span>
+                                                    <span className={classNames(
+                                                        "rounded-full px-3 py-1.5 text-[11px] font-black ring-1",
+                                                        obterClasseStatusSolicitacaoAcesso(item.status)
+                                                    )}>
+                                                        {formatarStatusSolicitacaoAcesso(item.status)}
+                                                    </span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    )) : (
+                                        <div className="rounded-2xl bg-slate-50 px-4 py-4 text-xs font-semibold text-slate-500 ring-1 ring-slate-100">
+                                            Nenhuma solicitação carregada. Clique em Atualizar solicitações para consultar a RPC administrativa.
+                                        </div>
+                                    )}
+                                </div>
+
+                                {solicitacoesAcessoPendentesSistema.length > 0 ? (
+                                    <div className="mt-3 rounded-2xl bg-amber-50 px-4 py-3 text-xs font-semibold leading-relaxed text-amber-800 ring-1 ring-amber-100">
+                                        Existem {solicitacoesAcessoPendentesSistema.length} solicitação(ões) pendente(s). Nesta etapa elas são apenas listadas; aprovação automática fica para a próxima microetapa.
+                                    </div>
+                                ) : null}
                             </div>
 
                             <div className="mt-4 rounded-3xl bg-slate-50 p-4 ring-1 ring-slate-100">
