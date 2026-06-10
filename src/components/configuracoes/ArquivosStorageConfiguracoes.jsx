@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
-import { AlertTriangle, Database, HardDrive, RefreshCw, Trash2 } from "lucide-react";
+import { AlertTriangle, Database, HardDrive, RefreshCw, Search, Trash2 } from "lucide-react";
 import { Card } from "../commonComponents";
 import {
     ACOES_CRITICAS_PERMISSAO_SISTEMA,
@@ -10,6 +10,8 @@ import { supabase } from "../../lib/supabaseClient";
 import { classNames, formatarBytes } from "../../utils/sstUtils";
 
 const FILTROS_STORAGE_PADRAO = Object.freeze({
+    busca: "",
+    bucket: "Todos",
     empresa: "Todas",
     colaborador: "Todos",
     tipo: "Todos",
@@ -30,6 +32,25 @@ const obterColaboradorArquivoStorage = (arquivo) =>
 
 const obterTipoArquivoStorage = (arquivo) =>
     arquivo?.tipoDocumentoEmpresa || arquivo?.treinamentoNome || arquivo?.origemTipo || arquivo?.bucket || "Tipo não identificado";
+
+const normalizarBuscaStorage = (valor) =>
+    String(valor || "")
+        .trim()
+        .toLowerCase()
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "");
+
+const obterTextoBuscaArquivoStorage = (arquivo) => normalizarBuscaStorage([
+    arquivo?.nome,
+    arquivo?.bucket,
+    arquivo?.caminho,
+    arquivo?.origemTipo,
+    arquivo?.tabelaOrigem,
+    arquivo?.registroId,
+    obterEmpresaArquivoStorage(arquivo),
+    obterColaboradorArquivoStorage(arquivo),
+    obterTipoArquivoStorage(arquivo),
+].filter(Boolean).join(" "));
 
 const obterDataArquivoStorage = (arquivo) => {
     if (!arquivo?.atualizadoEm) return "";
@@ -88,6 +109,7 @@ export function ArquivosStorageConfiguracoes({
     const [excluindoStorage, setExcluindoStorage] = useState("");
     const [limpandoStorage, setLimpandoStorage] = useState(false);
     const [progressoLimpezaStorage, setProgressoLimpezaStorage] = useState({ atual: 0, total: 0 });
+    const [confirmacaoLimpezaStorage, setConfirmacaoLimpezaStorage] = useState("");
     const [quantidadeArquivosVisiveis, setQuantidadeArquivosVisiveis] = useState(QUANTIDADE_INICIAL_ARQUIVOS_STORAGE);
     const [permissaoSistemaAtual, setPermissaoSistemaAtual] = useState(null);
     const [mensagemPermissao, setMensagemPermissao] = useState("Carregando permissões para limpeza do Storage...");
@@ -105,6 +127,23 @@ export function ArquivosStorageConfiguracoes({
         setQuantidadeArquivosVisiveis(QUANTIDADE_INICIAL_ARQUIVOS_STORAGE);
     }, [
         arquivosStorage.length,
+        filtrosStorage.busca,
+        filtrosStorage.bucket,
+        filtrosStorage.empresa,
+        filtrosStorage.colaborador,
+        filtrosStorage.tipo,
+        filtrosStorage.dataInicio,
+        filtrosStorage.dataFim,
+        filtrosStorage.tamanho,
+        filtrosStorage.vinculo,
+    ]);
+
+    useEffect(() => {
+        setConfirmacaoLimpezaStorage("");
+    }, [
+        arquivosStorage.length,
+        filtrosStorage.busca,
+        filtrosStorage.bucket,
         filtrosStorage.empresa,
         filtrosStorage.colaborador,
         filtrosStorage.tipo,
@@ -186,7 +225,11 @@ export function ArquivosStorageConfiguracoes({
             const colaborador = obterColaboradorArquivoStorage(arquivo);
             const tipo = obterTipoArquivoStorage(arquivo);
             const dataArquivo = obterDataArquivoStorage(arquivo);
+            const buscaTratada = normalizarBuscaStorage(filtrosStorage.busca);
+            const textoBuscaArquivo = obterTextoBuscaArquivoStorage(arquivo);
 
+            const bateBusca = !buscaTratada || textoBuscaArquivo.includes(buscaTratada);
+            const bateBucket = filtrosStorage.bucket === "Todos" || arquivo?.bucket === filtrosStorage.bucket;
             const bateEmpresa = filtrosStorage.empresa === "Todas" || empresa === filtrosStorage.empresa;
             const bateColaborador = filtrosStorage.colaborador === "Todos" || colaborador === filtrosStorage.colaborador;
             const bateTipo = filtrosStorage.tipo === "Todos" || tipo === filtrosStorage.tipo;
@@ -197,7 +240,7 @@ export function ArquivosStorageConfiguracoes({
                 || (filtrosStorage.vinculo === "Com vínculo" && arquivo.emUso)
                 || (filtrosStorage.vinculo === "Sem vínculo" && !arquivo.emUso);
 
-            return bateEmpresa && bateColaborador && bateTipo && bateInicio && bateFim && bateTamanho && bateVinculo;
+            return bateBusca && bateBucket && bateEmpresa && bateColaborador && bateTipo && bateInicio && bateFim && bateTamanho && bateVinculo;
         })
         .sort((a, b) => {
             const dataA = a?.atualizadoEm ? new Date(a.atualizadoEm).getTime() : 0;
@@ -214,6 +257,24 @@ export function ArquivosStorageConfiguracoes({
         0
     );
 
+    const filtroLimpezaSemVinculoAtivo = filtrosStorage.vinculo === "Sem vínculo";
+    const confirmacaoLimpezaValida = confirmacaoLimpezaStorage.trim().toUpperCase() === "LIMPAR";
+    const mensagemBloqueioLimpezaStorage = bloqueioLimparArquivosStorageSistema.bloqueado
+        ? bloqueioLimparArquivosStorageSistema.mensagem
+        : !filtroLimpezaSemVinculoAtivo
+            ? "Antes selecione o filtro Somente sem vínculo."
+            : !confirmacaoLimpezaValida
+                ? "Digite LIMPAR para liberar a limpeza em lote."
+                : "Limpar arquivos sem vínculo do filtro atual.";
+    const limpezaStorageBloqueada = carregandoStorage
+        || limpandoStorage
+        || arquivosFiltradosSemVinculo.length === 0
+        || !onExcluirArquivoStorage
+        || bloqueioLimparArquivosStorageSistema.bloqueado
+        || !filtroLimpezaSemVinculoAtivo
+        || !confirmacaoLimpezaValida;
+
+    const opcoesBucketsStorage = Array.from(new Set(arquivosStorage.map((arquivo) => arquivo?.bucket || "storage"))).sort();
     const opcoesEmpresasStorage = Array.from(new Set(arquivosStorage.map(obterEmpresaArquivoStorage))).sort();
     const opcoesColaboradoresStorage = Array.from(new Set(arquivosStorage.map(obterColaboradorArquivoStorage))).sort();
     const opcoesTiposStorage = Array.from(new Set(arquivosStorage.map(obterTipoArquivoStorage))).sort();
@@ -255,6 +316,10 @@ export function ArquivosStorageConfiguracoes({
             return;
         }
 
+        const mensagemConfirmacao = `Confirma excluir este arquivo sem vínculo do Storage?\n\nBucket: ${arquivo?.bucket || "storage"}\nArquivo: ${arquivo?.caminho || arquivo?.nome || "não identificado"}\n\nEssa ação remove o arquivo físico e não pode ser desfeita.`;
+
+        if (typeof window !== "undefined" && !window.confirm(mensagemConfirmacao)) return;
+
         setExcluindoStorage(arquivo.caminho);
 
         try {
@@ -286,8 +351,22 @@ export function ArquivosStorageConfiguracoes({
             return;
         }
 
+        if (!filtroLimpezaSemVinculoAtivo) {
+            if (typeof window !== "undefined") {
+                window.alert("Antes de executar limpeza em lote, selecione o filtro Somente sem vínculo.");
+            }
+            return;
+        }
+
+        if (!confirmacaoLimpezaValida) {
+            if (typeof window !== "undefined") {
+                window.alert("Digite LIMPAR no campo de confirmação para liberar a limpeza em lote.");
+            }
+            return;
+        }
+
         const totalArquivos = arquivosFiltradosSemVinculo.length;
-        const mensagemConfirmacao = `Confirma excluir ${totalArquivos} arquivo(s) sem vínculo exibido(s) no filtro atual?\n\nTamanho total: ${formatarBytes(storageFiltradoSemVinculoBytes)}.\n\nEssa ação remove arquivos do Storage e não altera registros do banco.`;
+        const mensagemConfirmacao = `Confirma excluir ${totalArquivos} arquivo(s) sem vínculo exibido(s) no filtro atual?\n\nTamanho total: ${formatarBytes(storageFiltradoSemVinculoBytes)}.\nBucket: ${filtrosStorage.bucket}.\nBusca: ${filtrosStorage.busca || "sem busca"}.\n\nEssa ação remove arquivos do Storage e não altera registros do banco.`;
 
         if (typeof window !== "undefined" && !window.confirm(mensagemConfirmacao)) return;
 
@@ -327,6 +406,7 @@ export function ArquivosStorageConfiguracoes({
                 onAtualizarAuditoria?.();
                 setLimpandoStorage(false);
                 setExcluindoStorage("");
+                setConfirmacaoLimpezaStorage("");
                 setProgressoLimpezaStorage({ atual: 0, total: 0 });
 
                 if (typeof window !== "undefined") {
@@ -357,27 +437,23 @@ export function ArquivosStorageConfiguracoes({
                         disabled={carregandoStorage || limpandoStorage || !onListarArquivosStorage}
                         className="inline-flex items-center justify-center gap-2 rounded-2xl bg-slate-950 px-4 py-3 text-sm font-semibold text-white hover:bg-slate-800 disabled:opacity-60"
                     >
-                        <Database className="h-4 w-4" />
+                        {arquivosStorage.length > 0 ? <RefreshCw className="h-4 w-4" /> : <Database className="h-4 w-4" />}
                         {carregandoStorage ? "Carregando..." : arquivosStorage.length > 0 ? "Atualizar arquivos" : "Carregar arquivos"}
                     </button>
 
                     <button
                         type="button"
                         onClick={limparArquivosStorageSemVinculoFiltrados}
-                        disabled={
-                            carregandoStorage
-                            || limpandoStorage
-                            || arquivosFiltradosSemVinculo.length === 0
-                            || !onExcluirArquivoStorage
-                            || bloqueioLimparArquivosStorageSistema.bloqueado
-                        }
+                        disabled={limpezaStorageBloqueada}
                         className="inline-flex items-center justify-center gap-2 rounded-2xl bg-red-50 px-4 py-3 text-sm font-semibold text-red-700 ring-1 ring-red-200 hover:bg-red-100 disabled:opacity-50"
-                        title={bloqueioLimparArquivosStorageSistema.bloqueado ? bloqueioLimparArquivosStorageSistema.mensagem : "Limpar arquivos sem vínculo do filtro atual"}
+                        title={mensagemBloqueioLimpezaStorage}
                     >
                         <Trash2 className="h-4 w-4" />
                         {limpandoStorage
                             ? `Limpando ${progressoLimpezaStorage.atual}/${progressoLimpezaStorage.total}`
-                            : `Limpar sem vínculo (${arquivosFiltradosSemVinculo.length})`}
+                            : filtroLimpezaSemVinculoAtivo
+                                ? `Limpar sem vínculo (${arquivosFiltradosSemVinculo.length})`
+                                : "Filtre sem vínculo"}
                     </button>
                 </div>
             </div>
@@ -385,6 +461,28 @@ export function ArquivosStorageConfiguracoes({
             {!onListarArquivosStorage && (
                 <div className="mt-4 rounded-2xl bg-orange-50 px-4 py-3 text-xs font-bold text-orange-700 ring-1 ring-orange-200">
                     A rotina de listagem do Storage não foi conectada a esta tela.
+                </div>
+            )}
+
+            {arquivosStorage.length > 0 && (
+                <div className="mt-4 rounded-3xl border border-red-100 bg-red-50/70 p-4">
+                    <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+                        <div>
+                            <p className="text-sm font-black text-red-900">Proteção para limpeza em lote</p>
+                            <p className="mt-1 text-xs leading-relaxed text-red-700">
+                                A limpeza só libera quando o filtro estiver em <strong>Somente sem vínculo</strong> e o campo abaixo estiver preenchido com LIMPAR. Isso evita remover arquivos por engano.
+                            </p>
+                        </div>
+                        <input
+                            type="text"
+                            value={confirmacaoLimpezaStorage}
+                            onChange={(e) => setConfirmacaoLimpezaStorage(e.target.value)}
+                            placeholder="Digite LIMPAR"
+                            disabled={!filtroLimpezaSemVinculoAtivo || limpandoStorage || bloqueioLimparArquivosStorageSistema.bloqueado}
+                            className="w-full rounded-2xl border border-red-200 bg-white px-4 py-3 text-sm font-black uppercase tracking-wide text-red-900 outline-none focus:border-red-400 focus:ring-4 focus:ring-red-100 disabled:opacity-60 lg:w-56"
+                        />
+                    </div>
+                    <p className="mt-2 text-xs font-bold text-red-700">{mensagemBloqueioLimpezaStorage}</p>
                 </div>
             )}
 
@@ -448,6 +546,22 @@ export function ArquivosStorageConfiguracoes({
                 </div>
 
                 <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-6">
+                    <label className="relative md:col-span-2 xl:col-span-2">
+                        <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                        <input
+                            type="search"
+                            value={filtrosStorage.busca}
+                            onChange={(e) => setFiltrosStorage((atual) => ({ ...atual, busca: e.target.value }))}
+                            placeholder="Buscar por arquivo, bucket, caminho, empresa, colaborador ou tipo"
+                            className="w-full rounded-2xl border border-slate-200 bg-white py-3 pl-10 pr-3 text-sm outline-none focus:border-slate-400 focus:ring-4 focus:ring-slate-100"
+                        />
+                    </label>
+
+                    <select value={filtrosStorage.bucket} onChange={(e) => setFiltrosStorage((atual) => ({ ...atual, bucket: e.target.value }))} className="rounded-2xl border border-slate-200 bg-white px-3 py-3 text-sm outline-none focus:border-slate-400 focus:ring-4 focus:ring-slate-100">
+                        <option value="Todos">Todos os buckets</option>
+                        {opcoesBucketsStorage.map((bucket) => <option key={bucket} value={bucket}>{bucket}</option>)}
+                    </select>
+
                     <select value={filtrosStorage.empresa} onChange={(e) => setFiltrosStorage((atual) => ({ ...atual, empresa: e.target.value }))} className="rounded-2xl border border-slate-200 bg-white px-3 py-3 text-sm outline-none focus:border-slate-400 focus:ring-4 focus:ring-slate-100">
                         <option value="Todas">Todas as empresas</option>
                         {opcoesEmpresasStorage.map((empresa) => <option key={empresa} value={empresa}>{empresa}</option>)}
@@ -481,6 +595,18 @@ export function ArquivosStorageConfiguracoes({
                         <input type="date" value={filtrosStorage.dataInicio} onChange={(e) => setFiltrosStorage((atual) => ({ ...atual, dataInicio: e.target.value }))} className="min-w-0 rounded-2xl border border-slate-200 bg-white px-3 py-3 text-sm outline-none focus:border-slate-400 focus:ring-4 focus:ring-slate-100" title="Data inicial de envio" />
                         <input type="date" value={filtrosStorage.dataFim} onChange={(e) => setFiltrosStorage((atual) => ({ ...atual, dataFim: e.target.value }))} className="min-w-0 rounded-2xl border border-slate-200 bg-white px-3 py-3 text-sm outline-none focus:border-slate-400 focus:ring-4 focus:ring-slate-100" title="Data final de envio" />
                     </div>
+                </div>
+
+                <div className="mt-3 flex flex-wrap gap-2">
+                    <button type="button" onClick={() => setFiltrosStorage((atual) => ({ ...atual, vinculo: "Sem vínculo" }))} className={classNames("rounded-full px-3 py-2 text-xs font-black ring-1", filtroLimpezaSemVinculoAtivo ? "bg-red-100 text-red-700 ring-red-200" : "bg-white text-slate-600 ring-slate-200 hover:bg-slate-100")}>
+                        Ver somente sem vínculo
+                    </button>
+                    <button type="button" onClick={() => setFiltrosStorage((atual) => ({ ...atual, vinculo: "Com vínculo" }))} className={classNames("rounded-full px-3 py-2 text-xs font-black ring-1", filtrosStorage.vinculo === "Com vínculo" ? "bg-emerald-100 text-emerald-700 ring-emerald-200" : "bg-white text-slate-600 ring-slate-200 hover:bg-slate-100")}>
+                        Ver somente vinculados
+                    </button>
+                    <button type="button" onClick={() => setFiltrosStorage((atual) => ({ ...atual, tamanho: "acima-50mb" }))} className={classNames("rounded-full px-3 py-2 text-xs font-black ring-1", filtrosStorage.tamanho === "acima-50mb" ? "bg-orange-100 text-orange-700 ring-orange-200" : "bg-white text-slate-600 ring-slate-200 hover:bg-slate-100")}>
+                        Arquivos acima de 50 MB
+                    </button>
                 </div>
             </div>
 
