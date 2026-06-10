@@ -24,9 +24,6 @@ const DashboardAuditoriaCampo = React.lazy(() => import("../components/auditoria
 const NovaAuditoriaCampoDireta = React.lazy(() => import("../components/auditoria/NovaAuditoriaCampoDireta").then((modulo) => ({ default: modulo.NovaAuditoriaCampoDireta })));
 const ConfiguracoesSistema = React.lazy(() => import("../components/configuracoes/ConfiguracoesSistema").then((modulo) => ({ default: modulo.ConfiguracoesSistema })));
 const ConfiguracoesBloqueio = React.lazy(() => import("../components/configuracoes/ConfiguracoesBloqueio").then((modulo) => ({ default: modulo.ConfiguracoesBloqueio })));
-const AuditoriaAcessoNegado = React.lazy(() => import("../components/auditoria/AuditoriaPermissao").then((modulo) => ({ default: modulo.AuditoriaAcessoNegado })));
-
-
 const ROTULOS_TELAS_ACESSO_BLOQUEADO = Object.freeze({
     dashboard: "Dashboard SST",
     novaAuditoriaCampo: "Nova Auditoria",
@@ -448,32 +445,21 @@ export function AppContentRouter({
             )}
 
             {tela === "auditoria" && (
-                verificandoAcessoAuditoria ? (
-                    <Card>
-                        <div className="flex items-center gap-3 text-sm font-semibold text-slate-600">
-                            <RefreshCw className="h-4 w-4 animate-spin" />
-                            Verificando permissão da Auditoria de sistema...
-                        </div>
-                    </Card>
-                ) : !podeAcessarAuditoria ? (
-                    <AuditoriaAcessoNegado />
-                ) : (
-                    <RelatorioAuditoria
-                        auditoria={auditoria}
-                        emailsEnviados={emailsEnviados}
-                        carregando={carregandoAuditoria}
-                        carregandoMaisAuditoria={carregandoMaisAuditoria}
-                        existeMaisAuditoria={existeMaisAuditoria}
-                        onAtualizar={onAtualizarAuditoria}
-                        onCarregarMaisAuditoria={onCarregarMaisAuditoria}
-                        onListarArquivosStorage={onListarArquivosStorage}
-                        onExcluirArquivoStorage={onExcluirArquivoStorage}
-                        onListarUsuariosAuditoria={onListarUsuariosAuditoria}
-                        onSalvarUsuarioAuditoria={onSalvarUsuarioAuditoria}
-                        onAlternarUsuarioAuditoria={onAlternarUsuarioAuditoria}
-                        onBloquear={onBloquearAuditoria}
-                    />
-                )
+                <RelatorioAuditoria
+                    auditoria={auditoria}
+                    emailsEnviados={emailsEnviados}
+                    carregando={carregandoAuditoria}
+                    carregandoMaisAuditoria={carregandoMaisAuditoria}
+                    existeMaisAuditoria={existeMaisAuditoria}
+                    onAtualizar={onAtualizarAuditoria}
+                    onCarregarMaisAuditoria={onCarregarMaisAuditoria}
+                    onListarArquivosStorage={onListarArquivosStorage}
+                    onExcluirArquivoStorage={onExcluirArquivoStorage}
+                    onListarUsuariosAuditoria={onListarUsuariosAuditoria}
+                    onSalvarUsuarioAuditoria={onSalvarUsuarioAuditoria}
+                    onAlternarUsuarioAuditoria={onAlternarUsuarioAuditoria}
+                    onBloquear={onBloquearAuditoria}
+                />
             )}
 
             {tela === "configuracoes" && (
