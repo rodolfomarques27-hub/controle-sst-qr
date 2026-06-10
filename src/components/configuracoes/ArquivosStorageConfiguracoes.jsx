@@ -7,7 +7,7 @@ import {
     obterBloqueioVisualAcaoCriticaSistema,
 } from "../../services/usuariosPermissoesSistemaService";
 import { supabase } from "../../lib/supabaseClient";
-import { calcularPercentualUsoStorage, classNames, formatarBytes } from "../../utils/sstUtils";
+import { classNames, formatarBytes } from "../../utils/sstUtils";
 
 const FILTROS_STORAGE_PADRAO = Object.freeze({
     empresa: "Todas",
@@ -140,7 +140,7 @@ export function ArquivosStorageConfiguracoes({
     const storageEmUsoBytes = arquivosEmUso.reduce((total, arquivo) => total + Number(arquivo?.tamanho || 0), 0);
     const storageSemRegistroBytes = arquivosSemRegistro.reduce((total, arquivo) => total + Number(arquivo?.tamanho || 0), 0);
     const storageLimiteBytes = Math.max(1, Number(limiteStorageMb || 1024) * 1024 * 1024);
-    const storagePercentual = calcularPercentualUsoStorage(storageTotalBytes);
+    const storagePercentual = Math.round((storageTotalBytes / storageLimiteBytes) * 100);
 
     const storageStatus = storagePercentual >= 90
         ? {
@@ -238,13 +238,22 @@ export function ArquivosStorageConfiguracoes({
 
         setExcluindoStorage(arquivo.caminho);
 
-        const ok = await onExcluirArquivoStorage(arquivo);
+        try {
+            const ok = await onExcluirArquivoStorage(arquivo);
 
-        setExcluindoStorage("");
-
-        if (ok) {
-            await carregarStorage();
-            onAtualizarAuditoria?.();
+            if (ok) {
+                await carregarStorage();
+                onAtualizarAuditoria?.();
+            }
+        } catch (erro) {
+            console.warn("Erro ao excluir arquivo do Storage:", erro);
+            if (typeof window !== "undefined") {
+                window.alert(erro?.message || "Não foi possível excluir o arquivo do Storage.");
+            }
+        } finally {
+            if (storageMontadoRef.current) {
+                setExcluindoStorage("");
+            }
         }
     };
 
@@ -269,13 +278,8 @@ export function ArquivosStorageConfiguracoes({
 
         let excluidos = 0;
         let falhas = 0;
-        const confirmarOriginal = typeof window !== "undefined" ? window.confirm : null;
 
         try {
-            if (typeof window !== "undefined") {
-                window.confirm = () => true;
-            }
-
             for (const [indice, arquivo] of arquivosFiltradosSemVinculo.entries()) {
                 if (!storageMontadoRef.current) break;
 
@@ -299,10 +303,6 @@ export function ArquivosStorageConfiguracoes({
                 }
             }
         } finally {
-            if (typeof window !== "undefined" && confirmarOriginal) {
-                window.confirm = confirmarOriginal;
-            }
-
             if (storageMontadoRef.current) {
                 await carregarStorage();
                 onAtualizarAuditoria?.();

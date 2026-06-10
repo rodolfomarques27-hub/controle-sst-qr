@@ -90,6 +90,36 @@ function validarDadosUsuarioPermissaoSistema(usuario = {}) {
     };
 }
 
+
+function validarAlteracaoSeguraPermissaoPropria({ usuarioAlvo = {}, usuarioAtual = null, dadosValidados = null } = {}) {
+    const emailAlvo = normalizarEmail(dadosValidados?.email || usuarioAlvo?.email);
+    const emailAtual = normalizarEmail(usuarioAtual?.email);
+
+    if (!emailAlvo || !emailAtual || emailAlvo !== emailAtual) return;
+
+    const permissaoAtual = normalizarPermissaoSistema(usuarioAtual);
+    const usuarioAtualGerenciaPermissoes = usuarioPodeGerenciarPermissoesSistema(permissaoAtual);
+
+    if (!usuarioAtualGerenciaPermissoes) return;
+
+    const permissaoProjetada = normalizarPermissaoSistema({
+        ...permissaoAtual,
+        ...usuarioAlvo,
+        email: emailAlvo,
+        perfil: dadosValidados?.perfil ?? usuarioAlvo?.perfil,
+        ativo: dadosValidados?.ativo ?? usuarioAlvo?.ativo,
+        bloqueado: dadosValidados?.bloqueado ?? usuarioAlvo?.bloqueado,
+        acesso_global: dadosValidados?.acessoGlobal ?? usuarioAlvo?.acesso_global,
+        permissoes: usuarioAlvo?.permissoes || permissaoAtual?.permissoes || {},
+    });
+
+    const usuarioContinuariaGerenciandoPermissoes = usuarioPodeGerenciarPermissoesSistema(permissaoProjetada);
+
+    if (!usuarioContinuariaGerenciandoPermissoes) {
+        throw new Error("Você não pode remover o próprio acesso administrativo às Configurações. Peça para outro administrador fazer essa alteração.");
+    }
+}
+
 export async function carregarPermissaoSistemaAtualService({ supabase }) {
     if (!supabase) {
         throw new Error("Cliente Supabase não informado para carregar permissões do sistema.");
@@ -122,12 +152,17 @@ export async function listarUsuariosPermissoesSistemaService({ supabase }) {
     return usuarios.map((usuario) => normalizarPermissaoSistema(usuario)).filter(Boolean);
 }
 
-export async function salvarUsuarioPermissaoSistemaService({ supabase, usuario }) {
+export async function salvarUsuarioPermissaoSistemaService({ supabase, usuario, usuarioAtual = null }) {
     if (!supabase) {
         throw new Error("Cliente Supabase não informado para salvar usuário e permissão do sistema.");
     }
 
     const dados = validarDadosUsuarioPermissaoSistema(usuario);
+    validarAlteracaoSeguraPermissaoPropria({
+        usuarioAlvo: usuario,
+        usuarioAtual,
+        dadosValidados: dados,
+    });
 
     const { data, error } = await supabase.rpc("admin_salvar_usuario_permissao_sistema", {
         p_email: dados.email,

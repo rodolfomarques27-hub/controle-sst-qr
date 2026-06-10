@@ -728,9 +728,9 @@ export function ConfiguracoesSistema({
             setPermissaoSistemaAtual(permissao);
 
             if (permissao) {
-                setMensagemPermissaoSistema("Permissão geral carregada do Supabase. Esta leitura ainda não bloqueia telas, botões ou rotas.");
+                setMensagemPermissaoSistema("Permissão geral carregada do Supabase. Esta permissão protege a rota de Configurações, botões críticos e gestão de usuários.");
             } else {
-                setMensagemPermissaoSistema("Nenhuma permissão geral encontrada para o usuário autenticado. O sistema continua sem bloqueio real nesta etapa.");
+                setMensagemPermissaoSistema("Nenhuma permissão geral encontrada para o usuário autenticado. As ações administrativas permanecem bloqueadas.");
             }
         } catch (erro) {
             setPermissaoSistemaAtual(null);
@@ -760,7 +760,7 @@ export function ConfiguracoesSistema({
 
             if (usuariosListados.length > 0) {
                 setMensagemUsuariosPermissoesSistema(
-                    `${usuariosListados.length} usuário(s) carregado(s) da lista administrativa. Esta leitura ainda não aplica bloqueios reais.`
+                    `${usuariosListados.length} usuário(s) carregado(s) da lista administrativa de permissões.`
                 );
             } else {
                 setMensagemUsuariosPermissoesSistema("Nenhum usuário foi retornado pela RPC administrativa de permissões.");
@@ -991,6 +991,7 @@ export function ConfiguracoesSistema({
             const usuarioSalvo = await salvarUsuarioPermissaoSistemaService({
                 supabase,
                 usuario: novoUsuarioPermissaoSistema,
+                usuarioAtual: permissaoSistemaAtual || usuario,
             });
 
             await carregarUsuariosPermissoesSistema();
@@ -1255,7 +1256,7 @@ export function ConfiguracoesSistema({
             valor: permissaoSistemaAtual ? resumoPermissaoSistemaAtual.perfil : "Planejado",
             detalhe: permissaoSistemaAtual
                 ? `${resumoPermissaoSistemaAtual.status} · ${resumoPermissaoSistemaAtual.acessoGlobal ? "acesso global" : "sem acesso global"}`
-                : "painel visual sem bloqueio real",
+                : "ações administrativas bloqueadas",
             icon: ShieldCheck,
         },
         {
