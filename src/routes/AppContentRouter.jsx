@@ -31,30 +31,46 @@ function AcessoModuloSistemaBloqueado({ tela, bloqueio, permissao, erro }) {
     const modulo = bloqueio?.modulo || obterModuloPermissaoSistemaPorTela(tela) || "módulo não mapeado";
 
     return (
-        <Card className="border border-red-100 bg-red-50/80 shadow-sm">
-            <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
-                <div className="flex items-start gap-3">
-                    <div className="rounded-2xl bg-red-100 p-3 text-red-700">
-                        <ShieldAlert className="h-6 w-6" />
-                    </div>
-                    <div className="space-y-2">
-                        <p className="text-xs font-black uppercase tracking-[0.24em] text-red-600">Acesso bloqueado</p>
-                        <h2 className="text-xl font-black text-slate-900">Sem permissão para acessar esta área</h2>
-                        <p className="max-w-2xl text-sm font-semibold leading-relaxed text-slate-600">
-                            {erro || bloqueio?.mensagem || "Seu perfil atual não possui permissão para visualizar este módulo."}
-                        </p>
-                        <div className="grid gap-2 text-xs font-bold text-slate-600 md:grid-cols-3">
-                            <span className="rounded-2xl bg-white px-3 py-2 ring-1 ring-red-100">Tela: {tela || "não informada"}</span>
-                            <span className="rounded-2xl bg-white px-3 py-2 ring-1 ring-red-100">Módulo: {modulo}</span>
-                            <span className="rounded-2xl bg-white px-3 py-2 ring-1 ring-red-100">Perfil: {resumo.perfil}</span>
+        <div className="flex min-h-[46vh] items-center justify-center px-4 py-10">
+            <Card className="w-full max-w-2xl border border-slate-200 bg-white shadow-sm">
+                <div className="space-y-5">
+                    <div className="flex items-start gap-4">
+                        <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-slate-100 text-slate-700 ring-1 ring-slate-200">
+                            <ShieldAlert className="h-6 w-6" />
+                        </div>
+
+                        <div className="min-w-0 flex-1 space-y-2">
+                            <p className="text-xs font-black uppercase tracking-[0.18em] text-slate-500">Área restrita</p>
+                            <h2 className="text-xl font-black text-slate-900">Acesso não liberado para este perfil</h2>
+                            <p className="max-w-xl text-sm font-semibold leading-relaxed text-slate-600">
+                                {erro || bloqueio?.mensagem || "Seu usuário não possui permissão para visualizar este módulo no momento."}
+                            </p>
                         </div>
                     </div>
+
+                    <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                        <div className="grid gap-3 text-xs font-bold text-slate-600 md:grid-cols-3">
+                            <div>
+                                <p className="mb-1 text-[10px] font-black uppercase tracking-[0.16em] text-slate-400">Tela</p>
+                                <p className="truncate text-slate-800">{tela || "não informada"}</p>
+                            </div>
+                            <div>
+                                <p className="mb-1 text-[10px] font-black uppercase tracking-[0.16em] text-slate-400">Módulo</p>
+                                <p className="truncate text-slate-800">{modulo}</p>
+                            </div>
+                            <div>
+                                <p className="mb-1 text-[10px] font-black uppercase tracking-[0.16em] text-slate-400">Perfil</p>
+                                <p className="truncate text-slate-800">{resumo.perfil}</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-xs font-bold leading-relaxed text-amber-800">
+                        Para liberar esta área, ajuste o perfil do usuário em Configurações &gt; Usuários e Permissões.
+                    </div>
                 </div>
-                <div className="rounded-2xl bg-white px-4 py-3 text-xs font-bold text-red-700 ring-1 ring-red-100">
-                    Solicite liberação ao administrador do sistema.
-                </div>
-            </div>
-        </Card>
+            </Card>
+        </div>
     );
 }
 
