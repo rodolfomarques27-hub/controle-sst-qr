@@ -193,6 +193,7 @@ export function ConfiguracoesSistema({
         bloqueado: false,
         acesso_global: false,
     });
+    const [usuarioPermissaoSistemaEmEdicao, setUsuarioPermissaoSistemaEmEdicao] = useState(null);
     const [mensagemFormularioNovoUsuarioPermissao, setMensagemFormularioNovoUsuarioPermissao] = useState(
         "Cadastro real habilitado. Preencha os dados e salve a permissão no Supabase."
     );
@@ -242,6 +243,8 @@ export function ConfiguracoesSistema({
 
         return { total, ativos, bloqueados, administradores };
     }, [usuariosPermissoesSistema]);
+
+    const modoEdicaoUsuarioPermissaoSistema = Boolean(usuarioPermissaoSistemaEmEdicao?.email);
 
 
     useEffect(() => {
@@ -619,11 +622,14 @@ export function ConfiguracoesSistema({
             [campo]: valor,
         }));
         setMensagemFormularioNovoUsuarioPermissao(
-            "Campos atualizados. Ao salvar, a permissão será gravada no Supabase pela RPC administrativa."
+            modoEdicaoUsuarioPermissaoSistema
+                ? "Campos atualizados. Ao salvar, a permissão existente será atualizada no Supabase pela RPC administrativa."
+                : "Campos atualizados. Ao salvar, a permissão será gravada no Supabase pela RPC administrativa."
         );
     };
 
     const limparFormularioNovoUsuarioPermissao = () => {
+        setUsuarioPermissaoSistemaEmEdicao(null);
         setNovoUsuarioPermissaoSistema({
             nome: "",
             email: "",
@@ -635,6 +641,28 @@ export function ConfiguracoesSistema({
         });
         setMensagemFormularioNovoUsuarioPermissao(
             "Formulário limpo. Nenhuma nova gravação foi enviada ao Supabase."
+        );
+    };
+
+    const selecionarUsuarioPermissaoParaEdicao = (usuarioSelecionado = null) => {
+        if (!usuarioSelecionado?.email) {
+            setMensagemFormularioNovoUsuarioPermissao("Não foi possível carregar este usuário para edição: e-mail não informado.");
+            return;
+        }
+
+        setUsuarioPermissaoSistemaEmEdicao(usuarioSelecionado);
+        setNovoUsuarioPermissaoSistema({
+            nome: usuarioSelecionado.nome || "",
+            email: usuarioSelecionado.email || "",
+            funcao: usuarioSelecionado.funcao || "",
+            perfil: usuarioSelecionado.perfil || "consulta",
+            ativo: Boolean(usuarioSelecionado.ativo),
+            bloqueado: Boolean(usuarioSelecionado.bloqueado),
+            acesso_global: Boolean(usuarioSelecionado.acesso_global),
+        });
+        setMostrarFormularioNovoUsuarioPermissao(true);
+        setMensagemFormularioNovoUsuarioPermissao(
+            `Editando permissão de ${usuarioSelecionado.email}. O e-mail fica travado para evitar criar cadastro duplicado.`
         );
     };
 
@@ -654,7 +682,11 @@ export function ConfiguracoesSistema({
         }
 
         setSalvandoNovoUsuarioPermissaoSistema(true);
-        setMensagemFormularioNovoUsuarioPermissao(`Salvando permissão de ${emailTratado} no Supabase...`);
+        setMensagemFormularioNovoUsuarioPermissao(
+            modoEdicaoUsuarioPermissaoSistema
+                ? `Atualizando permissão de ${emailTratado} no Supabase...`
+                : `Salvando permissão de ${emailTratado} no Supabase...`
+        );
 
         try {
             const usuarioSalvo = await salvarUsuarioPermissaoSistemaService({
@@ -668,6 +700,9 @@ export function ConfiguracoesSistema({
                 await carregarPermissaoSistemaAtual();
             }
 
+            const operacao = modoEdicaoUsuarioPermissaoSistema ? "atualizada" : "salva";
+
+            setUsuarioPermissaoSistemaEmEdicao(null);
             setNovoUsuarioPermissaoSistema({
                 nome: "",
                 email: "",
@@ -679,7 +714,7 @@ export function ConfiguracoesSistema({
             });
 
             setMensagemFormularioNovoUsuarioPermissao(
-                `Permissão salva no Supabase para ${usuarioSalvo?.email || emailTratado}. A lista administrativa foi atualizada.`
+                `Permissão ${operacao} no Supabase para ${usuarioSalvo?.email || emailTratado}. A lista administrativa foi atualizada.`
             );
         } catch (erro) {
             setMensagemFormularioNovoUsuarioPermissao(
@@ -1345,9 +1380,13 @@ export function ConfiguracoesSistema({
                             <div className="mt-4 rounded-3xl bg-slate-50 p-4 ring-1 ring-slate-100">
                                 <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
                                     <div>
-                                        <p className="text-xs font-black uppercase tracking-wide text-slate-400">Novo usuário / permissão</p>
+                                        <p className="text-xs font-black uppercase tracking-wide text-slate-400">
+                                            {modoEdicaoUsuarioPermissaoSistema ? "Editar usuário / permissão" : "Novo usuário / permissão"}
+                                        </p>
                                         <p className="mt-1 text-xs font-semibold leading-relaxed text-slate-500">
-                                            Cadastro administrativo de usuários no painel. Esta etapa salva a permissão no Supabase, mas ainda não aplica bloqueios reais no app.
+                                            {modoEdicaoUsuarioPermissaoSistema
+                                                ? "Edição administrativa de usuário já cadastrado. As alterações atualizam o Supabase, mas ainda não aplicam bloqueios reais no app."
+                                                : "Cadastro administrativo de usuários no painel. Esta etapa salva a permissão no Supabase, mas ainda não aplica bloqueios reais no app."}
                                         </p>
                                         <p className="mt-1 text-xs font-semibold leading-relaxed text-slate-500">
                                             {mensagemFormularioNovoUsuarioPermissao}
@@ -1359,7 +1398,11 @@ export function ConfiguracoesSistema({
                                         className="inline-flex items-center justify-center gap-2 rounded-2xl bg-white px-3 py-2 text-xs font-black text-slate-700 ring-1 ring-slate-200 hover:bg-slate-100"
                                     >
                                         {mostrarFormularioNovoUsuarioPermissao ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
-                                        {mostrarFormularioNovoUsuarioPermissao ? "Ocultar formulário" : "Adicionar usuário"}
+                                        {mostrarFormularioNovoUsuarioPermissao
+                                            ? "Ocultar formulário"
+                                            : modoEdicaoUsuarioPermissaoSistema
+                                              ? "Editar usuário"
+                                              : "Adicionar usuário"}
                                     </button>
                                 </div>
 
@@ -1381,9 +1424,20 @@ export function ConfiguracoesSistema({
                                                     type="email"
                                                     value={novoUsuarioPermissaoSistema.email}
                                                     onChange={(evento) => alterarCampoNovoUsuarioPermissao("email", evento.target.value)}
+                                                    disabled={modoEdicaoUsuarioPermissaoSistema}
                                                     placeholder="usuario@empresa.com"
-                                                    className="w-full rounded-2xl border border-slate-200 bg-white px-3 py-2.5 text-sm font-semibold normal-case tracking-normal text-slate-800 outline-none focus:border-blue-400 focus:ring-4 focus:ring-blue-100"
+                                                    className={classNames(
+                                                        "w-full rounded-2xl border border-slate-200 px-3 py-2.5 text-sm font-semibold normal-case tracking-normal outline-none focus:border-blue-400 focus:ring-4 focus:ring-blue-100",
+                                                        modoEdicaoUsuarioPermissaoSistema
+                                                            ? "cursor-not-allowed bg-slate-100 text-slate-500"
+                                                            : "bg-white text-slate-800"
+                                                    )}
                                                 />
+                                                {modoEdicaoUsuarioPermissaoSistema ? (
+                                                    <span className="block text-[10px] font-semibold normal-case tracking-normal text-slate-400">
+                                                        E-mail travado na edição para evitar cadastro duplicado.
+                                                    </span>
+                                                ) : null}
                                             </label>
                                             <label className="space-y-1 text-xs font-black uppercase tracking-wide text-slate-400">
                                                 <span>Função</span>
@@ -1448,7 +1502,9 @@ export function ConfiguracoesSistema({
                                         </div>
 
                                         <div className="rounded-2xl bg-emerald-50 px-4 py-3 text-xs font-semibold leading-relaxed text-emerald-700 ring-1 ring-emerald-100">
-                                            Cadastro real habilitado: ao salvar, o usuário será criado ou atualizado em usuarios_permissoes_sistema. Os bloqueios reais do app ainda não foram ativados.
+                                            {modoEdicaoUsuarioPermissaoSistema
+                                                ? "Edição real habilitada: ao salvar, o cadastro existente será atualizado em usuarios_permissoes_sistema. Os bloqueios reais do app ainda não foram ativados."
+                                                : "Cadastro real habilitado: ao salvar, o usuário será criado ou atualizado em usuarios_permissoes_sistema. Os bloqueios reais do app ainda não foram ativados."}
                                         </div>
 
                                         <div className="flex flex-wrap gap-2">
@@ -1462,7 +1518,11 @@ export function ConfiguracoesSistema({
                                                         : "bg-slate-950 hover:bg-slate-800"
                                                 )}
                                             >
-                                                {salvandoNovoUsuarioPermissaoSistema ? "Salvando..." : "Salvar no Supabase"}
+                                                {salvandoNovoUsuarioPermissaoSistema
+                                                    ? "Salvando..."
+                                                    : modoEdicaoUsuarioPermissaoSistema
+                                                      ? "Salvar alterações"
+                                                      : "Salvar no Supabase"}
                                             </button>
                                             <button
                                                 type="button"
@@ -1470,7 +1530,7 @@ export function ConfiguracoesSistema({
                                                 disabled={salvandoNovoUsuarioPermissaoSistema}
                                                 className="rounded-2xl bg-white px-4 py-2 text-xs font-black text-slate-700 ring-1 ring-slate-200 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
                                             >
-                                                Limpar formulário
+                                                {modoEdicaoUsuarioPermissaoSistema ? "Cancelar edição" : "Limpar formulário"}
                                             </button>
                                         </div>
                                     </form>
@@ -1516,6 +1576,14 @@ export function ConfiguracoesSistema({
                                                 )}>
                                                     Acesso global: {item.acesso_global ? "Sim" : "Não"}
                                                 </span>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => selecionarUsuarioPermissaoParaEdicao(item)}
+                                                    disabled={salvandoNovoUsuarioPermissaoSistema}
+                                                    className="rounded-full bg-slate-950 px-3 py-1.5 text-[11px] font-black text-white ring-1 ring-slate-950 hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
+                                                >
+                                                    Editar
+                                                </button>
                                             </div>
                                         </div>
                                     </div>
