@@ -419,6 +419,56 @@ export function obterResumoAcoesCriticasSistema(permissao = null) {
     };
 }
 
+export const TELAS_MODULOS_PERMISSAO_SISTEMA = Object.freeze({
+    dashboard: MODULOS_PERMISSAO_SISTEMA.DASHBOARD_SST,
+    dashboardSst: MODULOS_PERMISSAO_SISTEMA.DASHBOARD_SST,
+    aniversariantes: MODULOS_PERMISSAO_SISTEMA.DASHBOARD_SST,
+    empresas: MODULOS_PERMISSAO_SISTEMA.EMPRESAS,
+    colaboradores: MODULOS_PERMISSAO_SISTEMA.COLABORADORES,
+    treinamentos: MODULOS_PERMISSAO_SISTEMA.TREINAMENTOS,
+    qr: MODULOS_PERMISSAO_SISTEMA.QR_CODE,
+    consultaQr: MODULOS_PERMISSAO_SISTEMA.QR_CODE,
+    auditoriaCampo: MODULOS_PERMISSAO_SISTEMA.DASHBOARD_AUDITORIA,
+    dashboardAuditoria: MODULOS_PERMISSAO_SISTEMA.DASHBOARD_AUDITORIA,
+    dashboardAuditoriaCampo: MODULOS_PERMISSAO_SISTEMA.DASHBOARD_AUDITORIA,
+    novaAuditoriaCampo: MODULOS_PERMISSAO_SISTEMA.NOVA_AUDITORIA,
+    novaAuditoria: MODULOS_PERMISSAO_SISTEMA.NOVA_AUDITORIA,
+    auditoria: MODULOS_PERMISSAO_SISTEMA.AUDITORIA_SISTEMA,
+    auditoriaSistema: MODULOS_PERMISSAO_SISTEMA.AUDITORIA_SISTEMA,
+    configuracoes: MODULOS_PERMISSAO_SISTEMA.CONFIGURACOES,
+    configurações: MODULOS_PERMISSAO_SISTEMA.CONFIGURACOES,
+    roteiro: MODULOS_PERMISSAO_SISTEMA.CONFIGURACOES,
+    requisitos: MODULOS_PERMISSAO_SISTEMA.CONFIGURACOES,
+});
+
+export function obterModuloPermissaoSistemaPorTela(tela = "") {
+    const telaTratada = normalizarTexto(tela);
+    return TELAS_MODULOS_PERMISSAO_SISTEMA[telaTratada] || "";
+}
+
+export function usuarioPodeAcessarTelaSistema(permissao = null, tela = "") {
+    const modulo = obterModuloPermissaoSistemaPorTela(tela);
+
+    if (!modulo) return true;
+
+    return usuarioPodeExecutarAcaoSistema(permissao, modulo, ACOES_PERMISSAO_SISTEMA.VISUALIZAR);
+}
+
+export function obterBloqueioVisualTelaSistema(permissao = null, tela = "") {
+    const modulo = obterModuloPermissaoSistemaPorTela(tela);
+    const permitido = !modulo || usuarioPodeAcessarTelaSistema(permissao, tela);
+
+    return {
+        permitido,
+        bloqueado: !permitido,
+        disabled: !permitido,
+        modulo,
+        mensagem: permitido
+            ? "Permissão liberada para acessar este módulo."
+            : "Sem permissão para acessar esta área do sistema.",
+    };
+}
+
 export function obterResumoPermissaoSistema(permissao = null) {
     const permissaoNormalizada = normalizarPermissaoSistema(permissao);
 

@@ -1,6 +1,16 @@
-import React, { useEffect } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { AppMobileHeader } from "./AppMobileHeader";
 import { AppSidebar } from "./AppSidebar";
+import { supabase } from "../../lib/supabaseClient";
+import {
+    carregarPermissaoSistemaAtualService,
+    obterModuloPermissaoSistemaPorTela,
+    usuarioPodeAcessarTelaSistema,
+} from "../../services/usuariosPermissoesSistemaService";
+
+function obterTelaItemNavegacao(item = {}) {
+    return item.id || item.tela || item.chave || item.key || "";
+}
 
 export function AppLayout({
     nav = [],
@@ -12,6 +22,73 @@ export function AppLayout({
     onSelecionarTela,
     children,
 }) {
+    const [permissaoSistemaMenu, setPermissaoSistemaMenu] = useState(null);
+    const [carregandoPermissaoSistemaMenu, setCarregandoPermissaoSistemaMenu] = useState(() => Boolean(usuario?.email));
+    const [erroPermissaoSistemaMenu, setErroPermissaoSistemaMenu] = useState("");
+
+    useEffect(() => {
+        let componenteAtivo = true;
+
+        async function carregarPermissaoMenu() {
+            if (!usuario?.email) {
+                setPermissaoSistemaMenu(null);
+                setErroPermissaoSistemaMenu("");
+                setCarregandoPermissaoSistemaMenu(false);
+                return;
+            }
+
+            try {
+                setCarregandoPermissaoSistemaMenu(true);
+                setErroPermissaoSistemaMenu("");
+                const permissao = await carregarPermissaoSistemaAtualService({ supabase });
+
+                if (componenteAtivo) {
+                    setPermissaoSistemaMenu(permissao);
+                }
+            } catch (error) {
+                if (componenteAtivo) {
+                    setPermissaoSistemaMenu(null);
+                    setErroPermissaoSistemaMenu(error?.message || "Não foi possível carregar permissões do menu.");
+                }
+            } finally {
+                if (componenteAtivo) {
+                    setCarregandoPermissaoSistemaMenu(false);
+                }
+            }
+        }
+
+        carregarPermissaoMenu();
+
+        return () => {
+            componenteAtivo = false;
+        };
+    }, [usuario?.email]);
+
+    const navPermitida = useMemo(() => {
+        if (!usuario?.email || carregandoPermissaoSistemaMenu || erroPermissaoSistemaMenu || !permissaoSistemaMenu) {
+            return nav;
+        }
+
+        return nav.filter((item) => {
+            const telaItem = obterTelaItemNavegacao(item);
+            const moduloItem = obterModuloPermissaoSistemaPorTela(telaItem);
+
+            if (!moduloItem) return true;
+
+            return usuarioPodeAcessarTelaSistema(permissaoSistemaMenu, telaItem);
+        });
+    }, [nav, usuario?.email, carregandoPermissaoSistemaMenu, erroPermissaoSistemaMenu, permissaoSistemaMenu]);
+
+    const selecionarTelaComPermissao = (id, label = id) => {
+        const modulo = obterModuloPermissaoSistemaPorTela(id);
+
+        if (modulo && permissaoSistemaMenu && !usuarioPodeAcessarTelaSistema(permissaoSistemaMenu, id)) {
+            return;
+        }
+
+        onSelecionarTela(id, label);
+    };
+
     useEffect(() => {
         if (typeof window === "undefined" || typeof document === "undefined") return undefined;
 
@@ -94,23 +171,23 @@ export function AppLayout({
                 data-sidebar-open={menuLateralAberto ? "true" : "false"}
             >
                 <AppSidebar
-                    nav={nav}
+                    nav={navPermitida}
                     tela={tela}
                     menuLateralAberto={menuLateralAberto}
                     setMenuLateralAberto={setMenuLateralAberto}
                     usuario={usuario}
                     sair={sair}
-                    onSelecionarTela={onSelecionarTela}
+                    onSelecionarTela={selecionarTelaComPermissao}
                 />
 
                 <main className="app-main">
                     <div className="app-content">
                         <AppMobileHeader
-                            nav={nav}
+                            nav={navPermitida}
                             tela={tela}
                             usuario={usuario}
                             sair={sair}
-                            onSelecionarTela={onSelecionarTela}
+                            onSelecionarTela={selecionarTelaComPermissao}
                         />
 
                         {children}
