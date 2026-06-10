@@ -10,7 +10,6 @@ import {
     Search,
 } from "lucide-react";
 import { CardRecolhivel, Header } from "../commonComponents";
-import { AuditoriaAtividades } from "./AuditoriaAtividades";
 import { LIMITE_STORAGE_MB } from "../../constants/sstConstants";
 import {
     normalizarTextoBusca,
@@ -167,6 +166,36 @@ const classeNivelAuditoriaSistema = (nivel) => {
     return "bg-slate-100 text-slate-600 ring-slate-200";
 };
 
+const formatarDataHoraAuditoriaSistema = (valor) => {
+    if (!valor) return "-";
+
+    const data = new Date(valor);
+    return Number.isNaN(data.getTime()) ? "-" : data.toLocaleString("pt-BR");
+};
+
+const copiarTextoAuditoriaSistema = async (texto) => {
+    if (typeof navigator !== "undefined" && navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(texto);
+        return true;
+    }
+
+    if (typeof document === "undefined") return false;
+
+    const area = document.createElement("textarea");
+    area.value = texto;
+    area.setAttribute("readonly", "");
+    area.style.position = "fixed";
+    area.style.opacity = "0";
+    document.body.appendChild(area);
+    area.select();
+
+    try {
+        return document.execCommand("copy");
+    } finally {
+        document.body.removeChild(area);
+    }
+};
+
 export function RelatorioAuditoria({
     auditoria = [],
     emailsEnviados = [],
@@ -224,6 +253,7 @@ export function RelatorioAuditoria({
     const [salvandoConfigEventosAuditoria, setSalvandoConfigEventosAuditoria] = useState(false);
     const [permissaoSistemaAtual, setPermissaoSistemaAtual] = useState(null);
     const [mensagemPermissaoSistemaAuditoria, setMensagemPermissaoSistemaAuditoria] = useState("Carregando permissões do sistema...");
+    const [mensagemResumoAuditoria, setMensagemResumoAuditoria] = useState("");
 
     const [mostrarPersonalizacaoAuditoria, setMostrarPersonalizacaoAuditoria] = useState(false);
     const [abaPersonalizacaoAuditoria, setAbaPersonalizacaoAuditoria] = useState("cartas");
@@ -937,7 +967,7 @@ Essa ação remove arquivos do Storage e não altera registros do banco.`;
             const nivel = obterNivelAuditoriaSistema(item);
 
             return [
-                new Date(item.created_at).toLocaleString("pt-BR"),
+                formatarDataHoraAuditoriaSistema(item.created_at),
                 item.usuario_email || "-",
                 item.acao || "-",
                 obterRotuloAcaoAuditoriaSistema(item.acao),
@@ -957,7 +987,7 @@ Essa ação remove arquivos do Storage e não altera registros do banco.`;
             .map((linha) => linha.map((campo) => `"${String(campo).replace(/"/g, '""')}"`).join(";"))
             .join("\n");
 
-        const blob = new Blob(["\ufeff" + csv], { type: "text/csv;charset=utf-8;" });
+        const blob = new Blob(["﻿" + csv], { type: "text/csv;charset=utf-8;" });
         const url = URL.createObjectURL(blob);
         const link = document.createElement("a");
 
@@ -967,6 +997,108 @@ Essa ação remove arquivos do Storage e não altera registros do banco.`;
 
         URL.revokeObjectURL(url);
     };
+
+    const copiarResumoAuditoria = async () => {
+        const totalPorNivel = registrosFiltrados.reduce((acc, item) => {
+            const nivel = obterNivelAuditoriaSistema(item);
+            acc[nivel] = (acc[nivel] || 0) + 1;
+            return acc;
+        }, {});
+
+        const totalPorModulo = registrosFiltrados.reduce((acc, item) => {
+            const modulo = obterModuloAuditoriaSistema(item) || "Não classificado";
+            acc[modulo] = (acc[modulo] || 0) + 1;
+            return acc;
+        }, {});
+
+        const resumo = [
+            "Resumo da Auditoria do Sistema",
+            `Gerado em: ${formatarDataHoraAuditoriaSistema(new Date().toISOString())}`,
+            `Eventos carregados: ${auditoriaVerificada.length}`,
+            `Eventos filtrados: ${registrosFiltrados.length}`,
+            `Acessos: ${auditoriaVerificada.filter((item) => String(item.acao || "").includes("ACESSO")).length}`,
+            `Alterações: ${auditoriaVerificada.filter((item) => ["INSERT", "UPDATE", "DELETE"].includes(item.acao)).length}`,
+            "",
+            "Eventos por nível:",
+            ...Object.entries(totalPorNivel).map(([nivel, total]) => `- ${ROTULOS_NIVEIS_AUDITORIA_SISTEMA[nivel] || nivel}: ${total}`),
+            "",
+            "Eventos por módulo:",
+            ...Object.entries(totalPorModulo).map(([modulo, total]) => `- ${modulo}: ${total}`),
+        ].join("\n");
+
+        try {
+            const copiado = await copiarTextoAuditoriaSistema(resumo);
+            setMensagemResumoAuditoria(copiado ? "Resumo copiado para a área de transferência." : "Não foi possível copiar automaticamente.");
+        } catch (error) {
+            setMensagemResumoAuditoria(error?.message || "Não foi possível copiar o resumo.");
+        } finally {
+            if (typeof window !== "undefined") {
+                window.setTimeout(() => setMensagemResumoAuditoria(""), 4000);
+            }
+        }
+    };
+
+    const renderLinhaAtividadeAuditoria = ({ chave, titulo, subtitulo, data }) => (
+        <div key={chave} className="rounded-2xl bg-white p-3 ring-1 ring-slate-200">
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+                <div className="min-w-0">
+                    <p className="break-words text-sm font-black text-slate-950">{titulo}</p>
+                    <p className="mt-1 break-words text-xs leading-relaxed text-slate-500">{subtitulo}</p>
+                </div>
+                <span className="shrink-0 rounded-full bg-slate-100 px-3 py-1 text-[11px] font-bold text-slate-500 ring-1 ring-slate-200">
+                    {formatarDataHoraAuditoriaSistema(data)}
+                </span>
+            </div>
+        </div>
+    );
+
+    const renderAtividadesAuditoriaSistema = () => (
+        <div className={classNames("grid gap-5", ultimosEmailsAuditoria.length > 0 ? "lg:grid-cols-2" : "lg:grid-cols-1")}>
+            <CardRecolhivel
+                titulo="Últimos acessos"
+                subtitulo="Entradas recentes, consultas públicas e abertura da Auditoria."
+                contador={ultimosAcessosAuditoria.length}
+                defaultOpen={false}
+            >
+                <div className="space-y-3">
+                    {ultimosAcessosAuditoria.length === 0 ? (
+                        <p className="rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-4 text-sm text-slate-500">
+                            Nenhum acesso recente encontrado no limite carregado.
+                        </p>
+                    ) : (
+                        ultimosAcessosAuditoria.map((item) =>
+                            renderLinhaAtividadeAuditoria({
+                                chave: item.id,
+                                titulo: obterRotuloAcaoAuditoriaSistema(item.acao),
+                                subtitulo: `${item.usuario_email || "Sistema / consulta pública"} · ${item.descricao || "Acesso registrado"}`,
+                                data: item.created_at,
+                            })
+                        )
+                    )}
+                </div>
+            </CardRecolhivel>
+
+            {ultimosEmailsAuditoria.length > 0 && (
+                <CardRecolhivel
+                    titulo="Últimos e-mails enviados"
+                    subtitulo="Eventos de envio registrados pela auditoria do sistema."
+                    contador={ultimosEmailsAuditoria.length}
+                    defaultOpen={false}
+                >
+                    <div className="space-y-3">
+                        {ultimosEmailsAuditoria.map((email) =>
+                            renderLinhaAtividadeAuditoria({
+                                chave: email.id,
+                                titulo: email.assunto || email.tipo_alerta || "E-mail registrado",
+                                subtitulo: `${email.destinatario || "Destinatário não informado"} · ${email.status_envio || "Status não informado"}`,
+                                data: email.data_envio,
+                            })
+                        )}
+                    </div>
+                </CardRecolhivel>
+            )}
+        </div>
+    );
 
     return (
         <div>
@@ -1005,6 +1137,15 @@ Essa ação remove arquivos do Storage e não altera registros do banco.`;
                         </button>
 
                         <button
+                            type="button"
+                            onClick={copiarResumoAuditoria}
+                            className="inline-flex items-center gap-2 rounded-2xl bg-white px-4 py-3 text-sm font-semibold text-slate-700 ring-1 ring-slate-200 hover:bg-slate-50"
+                        >
+                            Copiar resumo
+                        </button>
+
+                        <button
+                            type="button"
                             onClick={baixarCsvAuditoria}
                             className="inline-flex items-center gap-2 rounded-2xl bg-slate-950 px-4 py-3 text-sm font-semibold text-white hover:bg-slate-800"
                         >
@@ -1014,6 +1155,12 @@ Essa ação remove arquivos do Storage e não altera registros do banco.`;
                     </div>
                 }
             />
+
+            {mensagemResumoAuditoria && (
+                <div className="mb-5 rounded-3xl bg-emerald-50 px-5 py-4 text-sm font-bold text-emerald-700 ring-1 ring-emerald-200">
+                    {mensagemResumoAuditoria}
+                </div>
+            )}
 
             {mostrarPersonalizacaoAuditoria && (
                 <div className="mb-5 rounded-[2rem] bg-blue-50 p-5 ring-1 ring-blue-100">
@@ -1097,14 +1244,313 @@ Essa ação remove arquivos do Storage e não altera registros do banco.`;
             </div>
 
             <div className="mt-5 grid gap-5 xl:grid-cols-4">
-                {renderBlocoAuditoriaPersonalizado("atividades", (
-                    <AuditoriaAtividades
-                        ultimosAcessosAuditoria={ultimosAcessosAuditoria}
-                        ultimosEmailsAuditoria={ultimosEmailsAuditoria}
-                    />
+                {renderBlocoAuditoriaPersonalizado("atividades", renderAtividadesAuditoriaSistema())}
+
+                {renderBlocoAuditoriaPersonalizado("registros", (
+                    <CardRecolhivel
+                className="mt-5"
+                titulo="Registros detalhados da auditoria"
+                subtitulo="Filtros por texto, ação, usuário, módulo, nível e período. Carregamento limitado para manter a tela leve."
+                contador={registrosFiltrados.length}
+                defaultOpen
+            >
+                <div className="rounded-3xl bg-slate-50 p-4 ring-1 ring-slate-200">
+                    <div className="grid gap-3 xl:grid-cols-[minmax(260px,1.4fr)_repeat(3,minmax(160px,1fr))]">
+                        <div className="relative xl:col-span-2">
+                            <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                            <input
+                                value={busca}
+                                onChange={(e) => setBusca(e.target.value)}
+                                placeholder="Buscar por usuário, evento, módulo, registro ou descrição"
+                                className="w-full rounded-2xl border border-slate-200 bg-white py-3 pl-11 pr-4 text-sm outline-none focus:border-slate-400 focus:ring-4 focus:ring-slate-100"
+                            />
+                        </div>
+
+                        <select
+                            value={filtroAcao}
+                            onChange={(e) => setFiltroAcao(e.target.value)}
+                            className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 outline-none focus:border-slate-400 focus:ring-4 focus:ring-slate-100"
+                        >
+                            <option value="Todas">Todas as ações</option>
+                            {acoes.map((acao) => (
+                                <option key={acao} value={acao}>
+                                    {acao}
+                                </option>
+                            ))}
+                        </select>
+
+                        <select
+                            value={filtroUsuario}
+                            onChange={(e) => setFiltroUsuario(e.target.value)}
+                            className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 outline-none focus:border-slate-400 focus:ring-4 focus:ring-slate-100"
+                        >
+                            <option value="Todos">Todos os usuários</option>
+                            {usuariosAuditoriaFiltro.map((usuarioFiltro) => (
+                                <option key={usuarioFiltro} value={usuarioFiltro}>
+                                    {usuarioFiltro}
+                                </option>
+                            ))}
+                        </select>
+
+                        <select
+                            value={filtroModulo}
+                            onChange={(e) => setFiltroModulo(e.target.value)}
+                            className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 outline-none focus:border-slate-400 focus:ring-4 focus:ring-slate-100"
+                        >
+                            <option value="Todos">Todos os módulos</option>
+                            {modulosAuditoriaFiltro.map((moduloFiltro) => (
+                                <option key={moduloFiltro} value={moduloFiltro}>
+                                    {moduloFiltro}
+                                </option>
+                            ))}
+                        </select>
+
+                        <select
+                            value={filtroNivel}
+                            onChange={(e) => setFiltroNivel(e.target.value)}
+                            className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 outline-none focus:border-slate-400 focus:ring-4 focus:ring-slate-100"
+                        >
+                            {Object.entries(ROTULOS_NIVEIS_AUDITORIA_SISTEMA).map(([valor, rotulo]) => (
+                                <option key={valor} value={valor}>
+                                    {rotulo}
+                                </option>
+                            ))}
+                        </select>
+
+                        <input
+                            type="date"
+                            value={filtroPeriodoInicio}
+                            onChange={(e) => setFiltroPeriodoInicio(e.target.value)}
+                            className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 outline-none focus:border-slate-400 focus:ring-4 focus:ring-slate-100"
+                        />
+
+                        <input
+                            type="date"
+                            value={filtroPeriodoFim}
+                            onChange={(e) => setFiltroPeriodoFim(e.target.value)}
+                            className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 outline-none focus:border-slate-400 focus:ring-4 focus:ring-slate-100"
+                        />
+
+                        <button
+                            type="button"
+                            onClick={() => {
+                                setBusca("");
+                                setFiltroAcao("Todas");
+                                setFiltroUsuario("Todos");
+                                setFiltroModulo("Todos");
+                                setFiltroNivel("Todos");
+                                setFiltroPeriodoInicio("");
+                                setFiltroPeriodoFim("");
+                            }}
+                            className="rounded-2xl bg-white px-4 py-3 text-sm font-bold text-slate-700 ring-1 ring-slate-200 hover:bg-slate-50"
+                        >
+                            Limpar filtros
+                        </button>
+                    </div>
+                </div>
+
+                <div className="mt-4 rounded-2xl bg-slate-50 p-3 ring-1 ring-slate-200">
+                    <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+                        <div>
+                            <p className="text-sm font-bold text-slate-800">
+                                Exibindo {registrosDetalhadosVisiveis.length} de {registrosFiltrados.length} registro(s) filtrado(s).
+                            </p>
+                            <p className="mt-1 text-xs text-slate-500">
+                                A lista mostra inicialmente {LIMITE_REGISTROS_DETALHADOS_INICIAL} registros para evitar uma tela muito longa. Use o botão abaixo somente quando precisar investigar mais eventos.
+                            </p>
+                        </div>
+
+                        <div className="flex flex-wrap gap-2">
+                            {existemMaisRegistrosDetalhados && (
+                                <button
+                                    type="button"
+                                    onClick={() => setLimiteRegistrosDetalhados((atual) => Math.min(atual + 50, registrosFiltrados.length))}
+                                    className="rounded-2xl bg-slate-950 px-4 py-2 text-xs font-bold text-white hover:bg-slate-800"
+                                >
+                                    Mostrar mais 50
+                                </button>
+                            )}
+
+                            {registrosDetalhadosVisiveis.length > LIMITE_REGISTROS_DETALHADOS_INICIAL && (
+                                <button
+                                    type="button"
+                                    onClick={() => setLimiteRegistrosDetalhados(LIMITE_REGISTROS_DETALHADOS_INICIAL)}
+                                    className="rounded-2xl bg-white px-4 py-2 text-xs font-bold text-slate-700 ring-1 ring-slate-200 hover:bg-slate-50"
+                                >
+                                    Recolher lista
+                                </button>
+                            )}
+                        </div>
+                    </div>
+                </div>
+
+                <div className="mt-5 max-h-[42rem] space-y-3 overflow-y-auto pr-1 scrollbar-discreta">
+                    {carregando && (
+                        <div className="rounded-3xl bg-slate-50 p-6 text-center text-sm text-slate-500">
+                            Carregando auditoria...
+                        </div>
+                    )}
+
+                    {!carregando && registrosFiltrados.length === 0 && (
+                        <div className="rounded-3xl border border-dashed border-slate-300 p-8 text-center">
+                            <Database className="mx-auto h-10 w-10 text-slate-300" />
+                            <h3 className="mt-3 font-bold text-slate-900">Nenhum evento encontrado</h3>
+                            <p className="mt-1 text-sm text-slate-500">
+                                Quando houver acesso ou alteração no sistema, os eventos aparecerão aqui.
+                            </p>
+                        </div>
+                    )}
+
+                    {registrosDetalhadosVisiveis.map((item) => {
+                        const origemAcesso = item.dados?.origemAcesso || {};
+                        const temOrigemAcesso = Boolean(origemAcesso.url || origemAcesso.pagina || origemAcesso.navegador || origemAcesso.plataforma);
+                        const dadosExtras = item.dados && typeof item.dados === "object"
+                            ? Object.fromEntries(Object.entries(item.dados).filter(([chave]) => chave !== "origemAcesso"))
+                            : {};
+                        const temDadosExtras = Object.keys(dadosExtras).length > 0;
+                        const detalhesAberto = Boolean(detalhesAuditoriaAbertos[item.id]);
+                        const podeAbrirDetalhes = temOrigemAcesso || temDadosExtras || item.registro_id;
+                        const modulo = obterModuloAuditoriaSistema(item);
+                        const nivel = obterNivelAuditoriaSistema(item);
+                        const rotuloAcao = obterRotuloAcaoAuditoriaSistema(item.acao);
+
+                        return (
+                            <div key={item.id} className="rounded-3xl border border-slate-200 bg-white p-4 shadow-sm">
+                                <div className="flex flex-col justify-between gap-3 lg:flex-row lg:items-start">
+                                    <div className="min-w-0">
+                                        <div className="flex flex-wrap items-center gap-2">
+                                            <span className="rounded-full bg-slate-950 px-3 py-1 text-xs font-bold text-white" title={item.acao || "Evento"}>
+                                                {rotuloAcao}
+                                            </span>
+                                            <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-600">
+                                                {modulo}
+                                            </span>
+                                            <span className={classNames("rounded-full px-3 py-1 text-xs font-semibold ring-1", classeNivelAuditoriaSistema(nivel))}>
+                                                {ROTULOS_NIVEIS_AUDITORIA_SISTEMA[nivel] || "Informação"}
+                                            </span>
+                                            {item.tabela && (
+                                                <span className="rounded-full bg-white px-3 py-1 text-xs font-semibold text-slate-500 ring-1 ring-slate-200">
+                                                    {item.tabela}
+                                                </span>
+                                            )}
+                                        </div>
+
+                                        <p className="mt-3 font-bold text-slate-950">{item.descricao || "Evento registrado"}</p>
+                                        <p className="mt-1 text-sm text-slate-500">
+                                            Usuário: <strong>{item.usuario_email || "Sistema / consulta pública"}</strong>
+                                        </p>
+                                    </div>
+
+                                    <div className="flex shrink-0 flex-col gap-2 lg:items-end">
+                                        <p className="text-sm font-semibold text-slate-500">
+                                            {item.created_at ? new Date(item.created_at).toLocaleString("pt-BR") : "-"}
+                                        </p>
+
+                                        {podeAbrirDetalhes && (
+                                            <button
+                                                type="button"
+                                                onClick={() => alternarDetalhesAuditoria(item.id)}
+                                                className="inline-flex items-center justify-center gap-1 rounded-xl bg-slate-100 px-3 py-1.5 text-xs font-bold text-slate-700 ring-1 ring-slate-200 hover:bg-slate-200"
+                                            >
+                                                {detalhesAberto ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
+                                                {detalhesAberto ? "Fechar detalhes" : "Abrir detalhes"}
+                                            </button>
+                                        )}
+                                    </div>
+                                </div>
+
+                                {detalhesAberto && (
+                                    <div className="mt-3 grid gap-3 lg:grid-cols-2">
+                                        <div className="rounded-2xl bg-slate-50 p-3 text-xs leading-relaxed text-slate-500 ring-1 ring-slate-100">
+                                            <p className="font-bold text-slate-700">Informações do registro</p>
+                                            <p className="mt-1 break-words">
+                                                <strong>Registro:</strong> {item.registro_id || "-"}
+                                            </p>
+                                            <p className="mt-1 break-words">
+                                                <strong>Ação técnica:</strong> {item.acao || "-"}
+                                            </p>
+                                            <p className="break-words">
+                                                <strong>Tabela:</strong> {item.tabela || "-"}
+                                            </p>
+                                            <p className="break-words">
+                                                <strong>Ação:</strong> {item.acao || "-"}
+                                            </p>
+                                            <p className="break-words">
+                                                <strong>Módulo:</strong> {modulo}
+                                            </p>
+                                            <p className="break-words">
+                                                <strong>Nível:</strong> {ROTULOS_NIVEIS_AUDITORIA_SISTEMA[nivel] || "Informação"}
+                                            </p>
+                                        </div>
+
+                                        {temOrigemAcesso && (
+                                            <div className="rounded-2xl bg-slate-50 p-3 text-xs leading-relaxed text-slate-500 ring-1 ring-slate-100">
+                                                <p className="font-bold text-slate-700">Origem do acesso</p>
+                                                <p className="mt-1 break-words">
+                                                    <strong>URL:</strong> {origemAcesso.url || "-"}
+                                                </p>
+                                                <p className="break-words">
+                                                    <strong>Página:</strong> {origemAcesso.pagina || "-"}
+                                                </p>
+                                                <p>
+                                                    <strong>Navegador:</strong> {origemAcesso.navegador || "-"}
+                                                    {origemAcesso.plataforma ? ` · Plataforma: ${origemAcesso.plataforma}` : ""}
+                                                    {origemAcesso.idioma ? ` · Idioma: ${origemAcesso.idioma}` : ""}
+                                                </p>
+                                            </div>
+                                        )}
+
+                                        {temDadosExtras && (
+                                            <div className="rounded-2xl bg-slate-50 p-3 text-xs leading-relaxed text-slate-500 ring-1 ring-slate-100 lg:col-span-2">
+                                                <p className="font-bold text-slate-700">Outras informações</p>
+                                                <pre className="mt-2 max-h-56 overflow-auto whitespace-pre-wrap break-words rounded-xl bg-white p-3 text-[11px] text-slate-600 ring-1 ring-slate-100 scrollbar-discreta">
+                                                    {JSON.stringify(dadosExtras, null, 2)}
+                                                </pre>
+                                            </div>
+                                        )}
+                                    </div>
+                                )}
+                            </div>
+                        );
+                    })}
+
+                    {!carregando && auditoriaVerificada.length > 0 && (
+                        <div className="rounded-3xl border border-dashed border-slate-300 bg-slate-50 p-4">
+                            <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+                                <div>
+                                    <p className="text-sm font-bold text-slate-800">
+                                        Registros carregados: {auditoriaVerificada.length}
+                                    </p>
+                                    <p className="mt-1 text-xs text-slate-500">
+                                        {existeMaisAuditoria
+                                            ? "Existem registros antigos disponíveis. Carregue mais somente quando precisar consultar histórico anterior."
+                                            : "Todos os registros disponíveis para esta consulta já foram carregados."}
+                                    </p>
+                                </div>
+
+                                {existeMaisAuditoria ? (
+                                    <button
+                                        type="button"
+                                        onClick={onCarregarMaisAuditoria}
+                                        disabled={carregandoMaisAuditoria || !onCarregarMaisAuditoria}
+                                        className="inline-flex items-center justify-center gap-2 rounded-2xl bg-slate-950 px-4 py-3 text-sm font-bold text-white hover:bg-slate-800 disabled:cursor-not-allowed disabled:bg-slate-300"
+                                    >
+                                        <RefreshCw className={classNames("h-4 w-4", carregandoMaisAuditoria && "animate-spin")} />
+                                        {carregandoMaisAuditoria ? "Carregando..." : "Carregar mais registros"}
+                                    </button>
+                                ) : (
+                                    <span className="inline-flex items-center justify-center rounded-2xl bg-emerald-50 px-4 py-2 text-xs font-bold text-emerald-700 ring-1 ring-emerald-200">
+                                        Histórico carregado
+                                    </span>
+                                )}
+                            </div>
+                        </div>
+                    )}
+                </div>
+                    </CardRecolhivel>
                 ))}
 
-                {renderBlocoAuditoriaPersonalizado("eventos", (
+{renderBlocoAuditoriaPersonalizado("eventos", (
                     <CardRecolhivel
                 className="mt-5"
                 titulo="Eventos verificados pela Auditoria de sistema"
@@ -1231,7 +1677,9 @@ Essa ação remove arquivos do Storage e não altera registros do banco.`;
                     </CardRecolhivel>
                 ))}
 
-                {renderBlocoAuditoriaPersonalizado("permissoes", (
+                
+
+{renderBlocoAuditoriaPersonalizado("permissoes", (
                     <CardRecolhivel
                 className="mt-5"
                 titulo="Permissões da Auditoria de sistema"
@@ -1746,309 +2194,7 @@ Essa ação remove arquivos do Storage e não altera registros do banco.`;
                     </CardRecolhivel>
                 ))}
 
-                {renderBlocoAuditoriaPersonalizado("registros", (
-                    <CardRecolhivel
-                className="mt-5"
-                titulo="Registros detalhados da auditoria"
-                subtitulo="Filtros por texto, ação, usuário, módulo, nível e período. Carregamento limitado para manter a tela leve."
-                contador={registrosFiltrados.length}
-                defaultOpen
-            >
-                <div className="rounded-3xl bg-slate-50 p-4 ring-1 ring-slate-200">
-                    <div className="grid gap-3 xl:grid-cols-[minmax(260px,1.4fr)_repeat(3,minmax(160px,1fr))]">
-                        <div className="relative xl:col-span-2">
-                            <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-                            <input
-                                value={busca}
-                                onChange={(e) => setBusca(e.target.value)}
-                                placeholder="Buscar por usuário, evento, módulo, registro ou descrição"
-                                className="w-full rounded-2xl border border-slate-200 bg-white py-3 pl-11 pr-4 text-sm outline-none focus:border-slate-400 focus:ring-4 focus:ring-slate-100"
-                            />
-                        </div>
-
-                        <select
-                            value={filtroAcao}
-                            onChange={(e) => setFiltroAcao(e.target.value)}
-                            className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 outline-none focus:border-slate-400 focus:ring-4 focus:ring-slate-100"
-                        >
-                            <option value="Todas">Todas as ações</option>
-                            {acoes.map((acao) => (
-                                <option key={acao} value={acao}>
-                                    {acao}
-                                </option>
-                            ))}
-                        </select>
-
-                        <select
-                            value={filtroUsuario}
-                            onChange={(e) => setFiltroUsuario(e.target.value)}
-                            className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 outline-none focus:border-slate-400 focus:ring-4 focus:ring-slate-100"
-                        >
-                            <option value="Todos">Todos os usuários</option>
-                            {usuariosAuditoriaFiltro.map((usuarioFiltro) => (
-                                <option key={usuarioFiltro} value={usuarioFiltro}>
-                                    {usuarioFiltro}
-                                </option>
-                            ))}
-                        </select>
-
-                        <select
-                            value={filtroModulo}
-                            onChange={(e) => setFiltroModulo(e.target.value)}
-                            className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 outline-none focus:border-slate-400 focus:ring-4 focus:ring-slate-100"
-                        >
-                            <option value="Todos">Todos os módulos</option>
-                            {modulosAuditoriaFiltro.map((moduloFiltro) => (
-                                <option key={moduloFiltro} value={moduloFiltro}>
-                                    {moduloFiltro}
-                                </option>
-                            ))}
-                        </select>
-
-                        <select
-                            value={filtroNivel}
-                            onChange={(e) => setFiltroNivel(e.target.value)}
-                            className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 outline-none focus:border-slate-400 focus:ring-4 focus:ring-slate-100"
-                        >
-                            {Object.entries(ROTULOS_NIVEIS_AUDITORIA_SISTEMA).map(([valor, rotulo]) => (
-                                <option key={valor} value={valor}>
-                                    {rotulo}
-                                </option>
-                            ))}
-                        </select>
-
-                        <input
-                            type="date"
-                            value={filtroPeriodoInicio}
-                            onChange={(e) => setFiltroPeriodoInicio(e.target.value)}
-                            className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 outline-none focus:border-slate-400 focus:ring-4 focus:ring-slate-100"
-                        />
-
-                        <input
-                            type="date"
-                            value={filtroPeriodoFim}
-                            onChange={(e) => setFiltroPeriodoFim(e.target.value)}
-                            className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 outline-none focus:border-slate-400 focus:ring-4 focus:ring-slate-100"
-                        />
-
-                        <button
-                            type="button"
-                            onClick={() => {
-                                setBusca("");
-                                setFiltroAcao("Todas");
-                                setFiltroUsuario("Todos");
-                                setFiltroModulo("Todos");
-                                setFiltroNivel("Todos");
-                                setFiltroPeriodoInicio("");
-                                setFiltroPeriodoFim("");
-                            }}
-                            className="rounded-2xl bg-white px-4 py-3 text-sm font-bold text-slate-700 ring-1 ring-slate-200 hover:bg-slate-50"
-                        >
-                            Limpar filtros
-                        </button>
-                    </div>
-                </div>
-
-                <div className="mt-4 rounded-2xl bg-slate-50 p-3 ring-1 ring-slate-200">
-                    <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-                        <div>
-                            <p className="text-sm font-bold text-slate-800">
-                                Exibindo {registrosDetalhadosVisiveis.length} de {registrosFiltrados.length} registro(s) filtrado(s).
-                            </p>
-                            <p className="mt-1 text-xs text-slate-500">
-                                A lista mostra inicialmente {LIMITE_REGISTROS_DETALHADOS_INICIAL} registros para evitar uma tela muito longa. Use o botão abaixo somente quando precisar investigar mais eventos.
-                            </p>
-                        </div>
-
-                        <div className="flex flex-wrap gap-2">
-                            {existemMaisRegistrosDetalhados && (
-                                <button
-                                    type="button"
-                                    onClick={() => setLimiteRegistrosDetalhados((atual) => Math.min(atual + 50, registrosFiltrados.length))}
-                                    className="rounded-2xl bg-slate-950 px-4 py-2 text-xs font-bold text-white hover:bg-slate-800"
-                                >
-                                    Mostrar mais 50
-                                </button>
-                            )}
-
-                            {registrosDetalhadosVisiveis.length > LIMITE_REGISTROS_DETALHADOS_INICIAL && (
-                                <button
-                                    type="button"
-                                    onClick={() => setLimiteRegistrosDetalhados(LIMITE_REGISTROS_DETALHADOS_INICIAL)}
-                                    className="rounded-2xl bg-white px-4 py-2 text-xs font-bold text-slate-700 ring-1 ring-slate-200 hover:bg-slate-50"
-                                >
-                                    Recolher lista
-                                </button>
-                            )}
-                        </div>
-                    </div>
-                </div>
-
-                <div className="mt-5 max-h-[42rem] space-y-3 overflow-y-auto pr-1 scrollbar-discreta">
-                    {carregando && (
-                        <div className="rounded-3xl bg-slate-50 p-6 text-center text-sm text-slate-500">
-                            Carregando auditoria...
-                        </div>
-                    )}
-
-                    {!carregando && registrosFiltrados.length === 0 && (
-                        <div className="rounded-3xl border border-dashed border-slate-300 p-8 text-center">
-                            <Database className="mx-auto h-10 w-10 text-slate-300" />
-                            <h3 className="mt-3 font-bold text-slate-900">Nenhum evento encontrado</h3>
-                            <p className="mt-1 text-sm text-slate-500">
-                                Quando houver acesso ou alteração no sistema, os eventos aparecerão aqui.
-                            </p>
-                        </div>
-                    )}
-
-                    {registrosDetalhadosVisiveis.map((item) => {
-                        const origemAcesso = item.dados?.origemAcesso || {};
-                        const temOrigemAcesso = Boolean(origemAcesso.url || origemAcesso.pagina || origemAcesso.navegador || origemAcesso.plataforma);
-                        const dadosExtras = item.dados && typeof item.dados === "object"
-                            ? Object.fromEntries(Object.entries(item.dados).filter(([chave]) => chave !== "origemAcesso"))
-                            : {};
-                        const temDadosExtras = Object.keys(dadosExtras).length > 0;
-                        const detalhesAberto = Boolean(detalhesAuditoriaAbertos[item.id]);
-                        const podeAbrirDetalhes = temOrigemAcesso || temDadosExtras || item.registro_id;
-                        const modulo = obterModuloAuditoriaSistema(item);
-                        const nivel = obterNivelAuditoriaSistema(item);
-                        const rotuloAcao = obterRotuloAcaoAuditoriaSistema(item.acao);
-
-                        return (
-                            <div key={item.id} className="rounded-3xl border border-slate-200 bg-white p-4 shadow-sm">
-                                <div className="flex flex-col justify-between gap-3 lg:flex-row lg:items-start">
-                                    <div className="min-w-0">
-                                        <div className="flex flex-wrap items-center gap-2">
-                                            <span className="rounded-full bg-slate-950 px-3 py-1 text-xs font-bold text-white" title={item.acao || "Evento"}>
-                                                {rotuloAcao}
-                                            </span>
-                                            <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-600">
-                                                {modulo}
-                                            </span>
-                                            <span className={classNames("rounded-full px-3 py-1 text-xs font-semibold ring-1", classeNivelAuditoriaSistema(nivel))}>
-                                                {ROTULOS_NIVEIS_AUDITORIA_SISTEMA[nivel] || "Informação"}
-                                            </span>
-                                            {item.tabela && (
-                                                <span className="rounded-full bg-white px-3 py-1 text-xs font-semibold text-slate-500 ring-1 ring-slate-200">
-                                                    {item.tabela}
-                                                </span>
-                                            )}
-                                        </div>
-
-                                        <p className="mt-3 font-bold text-slate-950">{item.descricao || "Evento registrado"}</p>
-                                        <p className="mt-1 text-sm text-slate-500">
-                                            Usuário: <strong>{item.usuario_email || "Sistema / consulta pública"}</strong>
-                                        </p>
-                                    </div>
-
-                                    <div className="flex shrink-0 flex-col gap-2 lg:items-end">
-                                        <p className="text-sm font-semibold text-slate-500">
-                                            {item.created_at ? new Date(item.created_at).toLocaleString("pt-BR") : "-"}
-                                        </p>
-
-                                        {podeAbrirDetalhes && (
-                                            <button
-                                                type="button"
-                                                onClick={() => alternarDetalhesAuditoria(item.id)}
-                                                className="inline-flex items-center justify-center gap-1 rounded-xl bg-slate-100 px-3 py-1.5 text-xs font-bold text-slate-700 ring-1 ring-slate-200 hover:bg-slate-200"
-                                            >
-                                                {detalhesAberto ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
-                                                {detalhesAberto ? "Fechar detalhes" : "Abrir detalhes"}
-                                            </button>
-                                        )}
-                                    </div>
-                                </div>
-
-                                {detalhesAberto && (
-                                    <div className="mt-3 grid gap-3 lg:grid-cols-2">
-                                        <div className="rounded-2xl bg-slate-50 p-3 text-xs leading-relaxed text-slate-500 ring-1 ring-slate-100">
-                                            <p className="font-bold text-slate-700">Informações do registro</p>
-                                            <p className="mt-1 break-words">
-                                                <strong>Registro:</strong> {item.registro_id || "-"}
-                                            </p>
-                                            <p className="mt-1 break-words">
-                                                <strong>Ação técnica:</strong> {item.acao || "-"}
-                                            </p>
-                                            <p className="break-words">
-                                                <strong>Tabela:</strong> {item.tabela || "-"}
-                                            </p>
-                                            <p className="break-words">
-                                                <strong>Ação:</strong> {item.acao || "-"}
-                                            </p>
-                                            <p className="break-words">
-                                                <strong>Módulo:</strong> {modulo}
-                                            </p>
-                                            <p className="break-words">
-                                                <strong>Nível:</strong> {ROTULOS_NIVEIS_AUDITORIA_SISTEMA[nivel] || "Informação"}
-                                            </p>
-                                        </div>
-
-                                        {temOrigemAcesso && (
-                                            <div className="rounded-2xl bg-slate-50 p-3 text-xs leading-relaxed text-slate-500 ring-1 ring-slate-100">
-                                                <p className="font-bold text-slate-700">Origem do acesso</p>
-                                                <p className="mt-1 break-words">
-                                                    <strong>URL:</strong> {origemAcesso.url || "-"}
-                                                </p>
-                                                <p className="break-words">
-                                                    <strong>Página:</strong> {origemAcesso.pagina || "-"}
-                                                </p>
-                                                <p>
-                                                    <strong>Navegador:</strong> {origemAcesso.navegador || "-"}
-                                                    {origemAcesso.plataforma ? ` · Plataforma: ${origemAcesso.plataforma}` : ""}
-                                                    {origemAcesso.idioma ? ` · Idioma: ${origemAcesso.idioma}` : ""}
-                                                </p>
-                                            </div>
-                                        )}
-
-                                        {temDadosExtras && (
-                                            <div className="rounded-2xl bg-slate-50 p-3 text-xs leading-relaxed text-slate-500 ring-1 ring-slate-100 lg:col-span-2">
-                                                <p className="font-bold text-slate-700">Outras informações</p>
-                                                <pre className="mt-2 max-h-56 overflow-auto whitespace-pre-wrap break-words rounded-xl bg-white p-3 text-[11px] text-slate-600 ring-1 ring-slate-100 scrollbar-discreta">
-                                                    {JSON.stringify(dadosExtras, null, 2)}
-                                                </pre>
-                                            </div>
-                                        )}
-                                    </div>
-                                )}
-                            </div>
-                        );
-                    })}
-
-                    {!carregando && auditoriaVerificada.length > 0 && (
-                        <div className="rounded-3xl border border-dashed border-slate-300 bg-slate-50 p-4">
-                            <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-                                <div>
-                                    <p className="text-sm font-bold text-slate-800">
-                                        Registros carregados: {auditoriaVerificada.length}
-                                    </p>
-                                    <p className="mt-1 text-xs text-slate-500">
-                                        {existeMaisAuditoria
-                                            ? "Existem registros antigos disponíveis. Carregue mais somente quando precisar consultar histórico anterior."
-                                            : "Todos os registros disponíveis para esta consulta já foram carregados."}
-                                    </p>
-                                </div>
-
-                                {existeMaisAuditoria ? (
-                                    <button
-                                        type="button"
-                                        onClick={onCarregarMaisAuditoria}
-                                        disabled={carregandoMaisAuditoria || !onCarregarMaisAuditoria}
-                                        className="inline-flex items-center justify-center gap-2 rounded-2xl bg-slate-950 px-4 py-3 text-sm font-bold text-white hover:bg-slate-800 disabled:cursor-not-allowed disabled:bg-slate-300"
-                                    >
-                                        <RefreshCw className={classNames("h-4 w-4", carregandoMaisAuditoria && "animate-spin")} />
-                                        {carregandoMaisAuditoria ? "Carregando..." : "Carregar mais registros"}
-                                    </button>
-                                ) : (
-                                    <span className="inline-flex items-center justify-center rounded-2xl bg-emerald-50 px-4 py-2 text-xs font-bold text-emerald-700 ring-1 ring-emerald-200">
-                                        Histórico carregado
-                                    </span>
-                                )}
-                            </div>
-                        </div>
-                    )}
-                </div>
-                    </CardRecolhivel>
-                ))}
+                
             </div>
         </div>
     );
