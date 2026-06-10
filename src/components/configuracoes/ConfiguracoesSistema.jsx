@@ -220,9 +220,11 @@ const CHAVES_BLOCOS_CONFIGURACOES_PADRAO = [
     "config-status-etapa",
 ];
 
-const VERSAO_LAYOUT_CONFIGURACOES_SISTEMA = "roteiro13-ajuste-painel-configuracoes";
+const VERSAO_LAYOUT_CONFIGURACOES_SISTEMA = "roteiro13-ajuste-painel-dashboard-configuracoes";
 const CHAVE_LAYOUT_CONFIGURACOES_SISTEMA = "configuracoesSistemaVersaoLayout";
 const CHAVE_BLOCOS_RECOLHIDOS_CONFIGURACOES = "configuracoesSistemaBlocosRecolhidos";
+const CHAVE_TAMANHOS_BLOCOS_CONFIGURACOES = "configuracoesSistemaTamanhosBlocos";
+
 
 const BLOCOS_CONFIGURACOES_ABERTOS_PADRAO = new Set([
     "config-usuarios-permissoes",
@@ -253,6 +255,13 @@ const FILTROS_PAINEL_CONFIGURACOES = [
 
 const BLOCOS_CONFIGURACOES_VISIVEIS_PADRAO = CHAVES_BLOCOS_CONFIGURACOES_PADRAO.reduce((acc, chave) => {
     acc[chave] = true;
+    return acc;
+}, {});
+
+const ORDEM_TAMANHOS_BLOCOS_CONFIGURACOES = ["compacto", "medio", "grande"];
+
+const BLOCOS_CONFIGURACOES_TAMANHOS_PADRAO = CHAVES_BLOCOS_CONFIGURACOES_PADRAO.reduce((acc, chave) => {
+    acc[chave] = chave === "config-arquivos-storage" || chave === "config-usuarios-permissoes" ? "grande" : "medio";
     return acc;
 }, {});
 
@@ -362,6 +371,11 @@ export function ConfiguracoesSistema({
         carregarBlocosRecolhidosLocalConfiguracoes()
     );
     const [ordemBlocosConfiguracoes, setOrdemBlocosConfiguracoes] = useState(() => carregarOrdemLocalConfiguracoes());
+    const [tamanhosBlocosConfiguracoes, setTamanhosBlocosConfiguracoes] = useState(() => ({
+        ...BLOCOS_CONFIGURACOES_TAMANHOS_PADRAO,
+        ...carregarJsonLocalConfiguracoes(CHAVE_TAMANHOS_BLOCOS_CONFIGURACOES, BLOCOS_CONFIGURACOES_TAMANHOS_PADRAO),
+    }));
+    const [blocoArrastandoConfiguracoes, setBlocoArrastandoConfiguracoes] = useState("");
 
     const [perfilPermissoesAberto, setPerfilPermissoesAberto] = useState(
         () => PERMISSOES_PADRAO_USUARIOS_POR_PERFIL[0]?.chave || ""
@@ -515,6 +529,11 @@ export function ConfiguracoesSistema({
         window.localStorage.setItem("configuracoesSistemaOrdemBlocos", JSON.stringify(ordemBlocosConfiguracoes));
     }, [ordemBlocosConfiguracoes]);
 
+    useEffect(() => {
+        if (typeof window === "undefined") return;
+        window.localStorage.setItem(CHAVE_TAMANHOS_BLOCOS_CONFIGURACOES, JSON.stringify(tamanhosBlocosConfiguracoes));
+    }, [tamanhosBlocosConfiguracoes]);
+
     const moverBlocoConfiguracao = (chave, direcao) => {
         setOrdemBlocosConfiguracoes((atual) => {
             const base = [...atual];
@@ -526,6 +545,61 @@ export function ConfiguracoesSistema({
             [base[indice], base[novoIndice]] = [base[novoIndice], base[indice]];
             return base;
         });
+    };
+
+    const moverBlocoParaConfiguracao = (chaveOrigem, chaveDestino) => {
+        if (!chaveOrigem || !chaveDestino || chaveOrigem === chaveDestino) return;
+
+        setOrdemBlocosConfiguracoes((atual) => {
+            const base = [
+                ...atual.filter((chave) => CHAVES_BLOCOS_CONFIGURACOES_PADRAO.includes(chave)),
+                ...CHAVES_BLOCOS_CONFIGURACOES_PADRAO.filter((chave) => !atual.includes(chave)),
+            ];
+            const origem = base.indexOf(chaveOrigem);
+            const destino = base.indexOf(chaveDestino);
+
+            if (origem < 0 || destino < 0) return atual;
+
+            const [item] = base.splice(origem, 1);
+            base.splice(destino, 0, item);
+            return base;
+        });
+    };
+
+    const obterTamanhoBlocoConfiguracao = (chave) => {
+        const tamanho = tamanhosBlocosConfiguracoes[chave] || BLOCOS_CONFIGURACOES_TAMANHOS_PADRAO[chave] || "medio";
+        return ORDEM_TAMANHOS_BLOCOS_CONFIGURACOES.includes(tamanho) ? tamanho : "medio";
+    };
+
+    const alterarTamanhoBlocoConfiguracao = (chave, direcao) => {
+        setTamanhosBlocosConfiguracoes((atual) => {
+            const tamanhoAtual = obterTamanhoBlocoConfiguracao(chave);
+            const indiceAtual = ORDEM_TAMANHOS_BLOCOS_CONFIGURACOES.indexOf(tamanhoAtual);
+            const proximoIndice = Math.min(
+                ORDEM_TAMANHOS_BLOCOS_CONFIGURACOES.length - 1,
+                Math.max(0, indiceAtual + direcao)
+            );
+
+            return {
+                ...atual,
+                [chave]: ORDEM_TAMANHOS_BLOCOS_CONFIGURACOES[proximoIndice],
+            };
+        });
+    };
+
+    const obterClasseTamanhoBlocoConfiguracao = (chave) => {
+        const tamanho = obterTamanhoBlocoConfiguracao(chave);
+
+        if (tamanho === "grande") return "lg:col-span-2";
+        if (tamanho === "compacto") return "lg:col-span-1";
+        return "lg:col-span-1";
+    };
+
+    const formatarTamanhoBlocoConfiguracao = (chave) => {
+        const tamanho = obterTamanhoBlocoConfiguracao(chave);
+        if (tamanho === "grande") return "Grande";
+        if (tamanho === "compacto") return "Compacto";
+        return "Médio";
     };
 
     const alternarVisibilidadeBlocoConfiguracao = (chave) => {
@@ -560,6 +634,7 @@ export function ConfiguracoesSistema({
         setBlocosVisiveisConfiguracoes(BLOCOS_CONFIGURACOES_VISIVEIS_PADRAO);
         setBlocosRecolhidosConfiguracoes(BLOCOS_CONFIGURACOES_RECOLHIDOS_PADRAO);
         setOrdemBlocosConfiguracoes(CHAVES_BLOCOS_CONFIGURACOES_PADRAO);
+        setTamanhosBlocosConfiguracoes(BLOCOS_CONFIGURACOES_TAMANHOS_PADRAO);
     };
 
     const bloquearConfiguracaoCriticaSeNecessario = (setMensagemDestino = null) => {
@@ -675,28 +750,11 @@ export function ConfiguracoesSistema({
         );
     };
 
-    const topoControleBlocoConfiguracao = (chave, titulo = "") => {
-        const recolhido = blocoConfiguracaoRecolhido(chave);
-
-        return (
-            <div className={classNames(
-                "mb-4 rounded-2xl border px-3 py-3",
-                recolhido ? "border-slate-100 bg-slate-50" : "border-blue-100 bg-blue-50/70"
-            )}>
-                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                    <div className="min-w-0">
-                        <p className="text-[11px] font-black uppercase tracking-wide text-slate-400">
-                            Controle do card
-                        </p>
-                        <p className="mt-0.5 text-xs font-semibold text-slate-600">
-                            {titulo ? `${titulo} · ` : ""}{recolhido ? "recolhido" : "aberto"}
-                        </p>
-                    </div>
-                    {botaoRecolherBlocoConfiguracao(chave, "w-full sm:w-auto")}
-                </div>
-            </div>
-        );
-    };
+    const topoControleBlocoConfiguracao = (chave, titulo = "") => (
+        <div className="mb-3 flex items-center justify-end gap-2">
+            {botaoRecolherBlocoConfiguracao(chave, "w-full sm:w-auto")}
+        </div>
+    );
 
     const renderBlocoConfiguracaoComControle = (chave, titulo, descricao, conteudo) => {
         if (!blocoConfiguracaoVisivel(chave)) return null;
@@ -1546,60 +1604,30 @@ export function ConfiguracoesSistema({
             icon: ShieldCheck,
         },
         {
-            label: "Origem da configuração",
+            label: "Origem",
             valor: origemConfig === "supabase" ? "Supabase" : "Local",
-            detalhe: origemConfig === "supabase" ? "Sincronizada no banco" : "Fallback do navegador",
+            detalhe: origemConfig === "supabase" ? "Sincronizada no banco" : "Configuração local",
             icon: Database,
         },
         {
-            label: "Limite Auditoria sistema",
-            valor: limitesEditaveis.auditoriaSistema || 300,
-            detalhe: "registros iniciais",
+            label: "Limites",
+            valor: `${limitesEditaveis.auditoriaSistema || 300} / ${limitesEditaveis.auditoriasCampo || 500}`,
+            detalhe: "auditoria sistema / campo",
             icon: SlidersHorizontal,
         },
         {
-            label: "Limite Auditorias campo",
-            valor: limitesEditaveis.auditoriasCampo || 500,
-            detalhe: "registros iniciais",
-            icon: SlidersHorizontal,
-        },
-        {
-            label: "Senha Configurações",
-            valor: senhaConfiguracoesSistema === SENHA_CONFIGURACOES_PADRAO ? "Padrão" : "Personalizada",
-            detalhe: senhaConfiguracoesSistema === SENHA_CONFIGURACOES_PADRAO ? "senha 2026" : "salva localmente",
-            icon: Lock,
-        },
-        {
-            label: "Usuários e permissões",
-            valor: permissaoSistemaAtual ? resumoPermissaoSistemaAtual.perfil : "Planejado",
+            label: "Permissão atual",
+            valor: permissaoSistemaAtual ? formatarPerfilPermissaoSistema(resumoPermissaoSistemaAtual.perfil) : "Não carregada",
             detalhe: permissaoSistemaAtual
                 ? `${resumoPermissaoSistemaAtual.status} · ${resumoPermissaoSistemaAtual.acessoGlobal ? "acesso global" : "sem acesso global"}`
-                : "ações administrativas bloqueadas",
+                : "carregar permissões",
             icon: ShieldCheck,
         },
         {
-            label: "Token Auditoria pública",
-            valor: configAuditoriaPublica.tokenPublico || "Não configurado",
-            detalhe: configAuditoriaPublica.tokenPublico ? "carregado do Supabase" : "token ativo não encontrado no Supabase",
-            icon: KeyRound,
-        },
-        {
-            label: "Segurança Auditoria pública",
-            valor: resumoSegurancaAuditoriaPublica.texto,
-            detalhe: resumoSegurancaAuditoriaPublica.detalhe,
-            icon: ShieldAlert,
-        },
-        {
-            label: "Segurança Storage",
-            valor: resumoSegurancaStorage.texto,
-            detalhe: resumoSegurancaStorage.detalhe,
-            icon: HardDrive,
-        },
-        {
-            label: "Revisão Supabase",
+            label: "Alertas técnicos",
             valor: resumoRevisaoSupabase.texto,
-            detalhe: resumoRevisaoSupabase.detalhe,
-            icon: Database,
+            detalhe: `${resumoSegurancaAuditoriaPublica.detalhe} · ${resumoSegurancaStorage.detalhe}`,
+            icon: ShieldAlert,
         },
     ];
 
@@ -3056,18 +3084,29 @@ export function ConfiguracoesSistema({
 
 
         case "config-arquivos-storage":
-            return renderBlocoConfiguracaoComControle(
-                "config-arquivos-storage",
-                "Arquivos salvos no Storage",
-                "Capacidade, vínculos, limpeza e arquivos salvos.",
-                (
-                    <ArquivosStorageConfiguracoes
-                        limiteStorageMb={limitesEditaveis.storageMb || limites.storageMb || 1024}
-                        onListarArquivosStorage={onListarArquivosStorage}
-                        onExcluirArquivoStorage={onExcluirArquivoStorage}
-                        onAtualizarAuditoria={onAtualizarAuditoria}
-                    />
-                )
+            if (!blocoConfiguracaoVisivel("config-arquivos-storage")) return null;
+
+            if (blocoConfiguracaoRecolhido("config-arquivos-storage")) {
+                return (
+                    <Card>
+                        {topoControleBlocoConfiguracao("config-arquivos-storage", "Arquivos salvos no Storage")}
+                        <div>
+                            <p className="text-xs font-black uppercase tracking-wide text-slate-400">Card recolhido</p>
+                            <h2 className="mt-1 text-lg font-black text-slate-950">Arquivos salvos no Storage</h2>
+                            <p className="mt-1 text-sm text-slate-500">Capacidade, vínculos, limpeza e arquivos salvos.</p>
+                        </div>
+                    </Card>
+                );
+            }
+
+            return (
+                <ArquivosStorageConfiguracoes
+                    limiteStorageMb={limitesEditaveis.storageMb || limites.storageMb || 1024}
+                    onListarArquivosStorage={onListarArquivosStorage}
+                    onExcluirArquivoStorage={onExcluirArquivoStorage}
+                    onAtualizarAuditoria={onAtualizarAuditoria}
+                    controleCard={botaoRecolherBlocoConfiguracao("config-arquivos-storage", "w-full sm:w-auto")}
+                />
             );
 
         case "config-supabase-geral":
@@ -3174,8 +3213,23 @@ export function ConfiguracoesSistema({
                 titulo="Configurações do sistema"
                 subtitulo="Painel administrativo para permissões, limites, Storage, token público e configurações críticas do sistema SST."
                 acao={(
-                    <div className="top-actions-nowrap">
+                    <div className="top-actions-nowrap flex-wrap justify-end">
                         {acaoTopo}
+                        <button
+                            type="button"
+                            onClick={() => setMostrarOrganizacaoCards((valor) => !valor)}
+                            className={classNames(
+                                "inline-flex items-center gap-2 rounded-2xl px-4 py-2.5 text-sm font-bold shadow-sm ring-1 transition hover:-translate-y-0.5",
+                                mostrarOrganizacaoCards
+                                    ? "bg-blue-50 text-blue-700 ring-blue-100 hover:bg-blue-100"
+                                    : "bg-white text-slate-700 ring-slate-200 hover:bg-slate-50"
+                            )}
+                        >
+                            <SlidersHorizontal className="h-4 w-4" />
+                            Personalizar painel
+                        </button>
+                        <button type="button" onClick={abrirTodosBlocosConfiguracao} className="inline-flex items-center rounded-2xl bg-white px-4 py-2.5 text-sm font-bold text-slate-700 shadow-sm ring-1 ring-slate-200 hover:bg-slate-50">Abrir todos</button>
+                        <button type="button" onClick={recolherTodosBlocosConfiguracao} className="inline-flex items-center rounded-2xl bg-white px-4 py-2.5 text-sm font-bold text-slate-700 shadow-sm ring-1 ring-slate-200 hover:bg-slate-50">Recolher todos</button>
                         <button
                             type="button"
                             onClick={carregarConfiguracao}
@@ -3209,13 +3263,14 @@ export function ConfiguracoesSistema({
                 })}
             </div>
 
-            <Card className="mt-6 border-slate-200 bg-white/90">
+            {mostrarOrganizacaoCards && (
+                <Card className="mt-4 border-slate-200 bg-white/90">
                 <div className="flex min-w-0 flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
                     <div className="min-w-0 flex-1">
                         <p className="text-xs font-black uppercase tracking-wide text-slate-500">Personalizar painel</p>
-                        <h2 className="mt-1 text-lg font-black text-slate-950">Atalhos da aba Configurações</h2>
+                        <h2 className="mt-1 text-lg font-black text-slate-950">Personalização da aba Configurações</h2>
                         <p className="mt-1 max-w-3xl text-sm leading-relaxed text-slate-600">
-                            Organize esta tela no mesmo padrão do painel do Dashboard SST: filtre os cards, escolha o que fica visível, altere a ordem e deixe os blocos abertos ou recolhidos.
+                            Organize no padrão do Dashboard SST: filtre, arraste para mudar a ordem, aumente ou reduza cards e escolha o que fica aberto.
                         </p>
                         <div className="mt-3 flex flex-wrap gap-2">
                             <button
@@ -3223,7 +3278,7 @@ export function ConfiguracoesSistema({
                                 onClick={() => setMostrarOrganizacaoCards((valor) => !valor)}
                                 className="inline-flex min-h-[38px] items-center justify-center rounded-2xl bg-slate-950 px-4 py-2 text-xs font-black text-white shadow-sm transition hover:-translate-y-0.5 hover:bg-slate-800"
                             >
-                                {mostrarOrganizacaoCards ? "Ocultar personalização" : "Personalizar painel"}
+                                Ocultar painel
                             </button>
                             <button type="button" onClick={abrirTodosBlocosConfiguracao} className="inline-flex min-h-[38px] items-center justify-center rounded-2xl bg-white px-4 py-2 text-xs font-black text-slate-700 ring-1 ring-blue-100 transition hover:-translate-y-0.5 hover:bg-blue-50">Abrir todos</button>
                             <button type="button" onClick={recolherTodosBlocosConfiguracao} className="inline-flex min-h-[38px] items-center justify-center rounded-2xl bg-white px-4 py-2 text-xs font-black text-slate-700 ring-1 ring-blue-100 transition hover:-translate-y-0.5 hover:bg-blue-50">Recolher todos</button>
@@ -3283,12 +3338,37 @@ export function ConfiguracoesSistema({
                                 const critico = CHAVES_BLOCOS_CONFIGURACOES_CRITICOS.has(secao.chave);
 
                                 return (
-                                    <div key={secao.chave} className="rounded-3xl bg-white p-3 ring-1 ring-blue-100">
-                                        <div className="mb-3 flex flex-wrap justify-end gap-1 border-b border-slate-100 pb-3">
-                                            <button type="button" onClick={() => moverBlocoConfiguracao(secao.chave, -1)} disabled={indiceReal === 0} className="rounded-xl bg-slate-50 px-2 py-1 text-xs font-black text-slate-600 ring-1 ring-slate-200 disabled:cursor-not-allowed disabled:opacity-40">↑</button>
-                                            <button type="button" onClick={() => moverBlocoConfiguracao(secao.chave, 1)} disabled={indiceReal === secoesConfiguracoesOrdenadas.length - 1} className="rounded-xl bg-slate-50 px-2 py-1 text-xs font-black text-slate-600 ring-1 ring-slate-200 disabled:cursor-not-allowed disabled:opacity-40">↓</button>
-                                            <button type="button" onClick={() => alternarRecolhidoBlocoConfiguracao(secao.chave)} className="rounded-xl bg-blue-50 px-2 py-1 text-xs font-black text-blue-700 ring-1 ring-blue-100">{recolhido ? "Abrir" : "Recolher"}</button>
-                                            <button type="button" onClick={() => alternarVisibilidadeBlocoConfiguracao(secao.chave)} className={classNames("rounded-xl px-2 py-1 text-xs font-black ring-1", visivel ? "bg-emerald-50 text-emerald-700 ring-emerald-200" : "bg-slate-100 text-slate-500 ring-slate-200")}>{visivel ? "Visível" : "Oculto"}</button>
+                                    <div
+                                        key={secao.chave}
+                                        draggable
+                                        onDragStart={(evento) => {
+                                            setBlocoArrastandoConfiguracoes(secao.chave);
+                                            evento.dataTransfer.setData("text/plain", secao.chave);
+                                            evento.dataTransfer.effectAllowed = "move";
+                                        }}
+                                        onDragOver={(evento) => evento.preventDefault()}
+                                        onDrop={(evento) => {
+                                            evento.preventDefault();
+                                            const origem = evento.dataTransfer.getData("text/plain") || blocoArrastandoConfiguracoes;
+                                            moverBlocoParaConfiguracao(origem, secao.chave);
+                                            setBlocoArrastandoConfiguracoes("");
+                                        }}
+                                        onDragEnd={() => setBlocoArrastandoConfiguracoes("")}
+                                        className={classNames(
+                                            "cursor-grab rounded-3xl bg-white p-3 ring-1 ring-blue-100 transition active:cursor-grabbing",
+                                            blocoArrastandoConfiguracoes === secao.chave && "opacity-60 ring-2 ring-blue-300"
+                                        )}
+                                    >
+                                        <div className="mb-3 flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 pb-3">
+                                            <span className="rounded-xl bg-slate-50 px-2 py-1 text-[10px] font-black uppercase tracking-wide text-slate-500 ring-1 ring-slate-200">Segure e arraste</span>
+                                            <div className="flex flex-wrap justify-end gap-1">
+                                                <button type="button" onClick={() => moverBlocoConfiguracao(secao.chave, -1)} disabled={indiceReal === 0} className="rounded-xl bg-slate-50 px-2 py-1 text-xs font-black text-slate-600 ring-1 ring-slate-200 disabled:cursor-not-allowed disabled:opacity-40">↑</button>
+                                                <button type="button" onClick={() => moverBlocoConfiguracao(secao.chave, 1)} disabled={indiceReal === secoesConfiguracoesOrdenadas.length - 1} className="rounded-xl bg-slate-50 px-2 py-1 text-xs font-black text-slate-600 ring-1 ring-slate-200 disabled:cursor-not-allowed disabled:opacity-40">↓</button>
+                                                <button type="button" onClick={() => alterarTamanhoBlocoConfiguracao(secao.chave, -1)} disabled={obterTamanhoBlocoConfiguracao(secao.chave) === "compacto"} className="rounded-xl bg-white px-2 py-1 text-xs font-black text-slate-600 ring-1 ring-slate-200 disabled:cursor-not-allowed disabled:opacity-40">Diminuir</button>
+                                                <button type="button" onClick={() => alterarTamanhoBlocoConfiguracao(secao.chave, 1)} disabled={obterTamanhoBlocoConfiguracao(secao.chave) === "grande"} className="rounded-xl bg-white px-2 py-1 text-xs font-black text-slate-600 ring-1 ring-slate-200 disabled:cursor-not-allowed disabled:opacity-40">Aumentar</button>
+                                                <button type="button" onClick={() => alternarRecolhidoBlocoConfiguracao(secao.chave)} className="rounded-xl bg-blue-50 px-2 py-1 text-xs font-black text-blue-700 ring-1 ring-blue-100">{recolhido ? "Abrir" : "Recolher"}</button>
+                                                <button type="button" onClick={() => alternarVisibilidadeBlocoConfiguracao(secao.chave)} className={classNames("rounded-xl px-2 py-1 text-xs font-black ring-1", visivel ? "bg-emerald-50 text-emerald-700 ring-emerald-200" : "bg-slate-100 text-slate-500 ring-slate-200")}>{visivel ? "Visível" : "Oculto"}</button>
+                                            </div>
                                         </div>
                                         <div className="flex min-w-0 items-start gap-2">
                                             <span className={classNames(
@@ -3303,6 +3383,7 @@ export function ConfiguracoesSistema({
                                                 <p className="mt-2 flex flex-wrap gap-1.5 text-[11px] font-semibold text-slate-400">
                                                     <span className={classNames("rounded-full px-2 py-1 ring-1", visivel ? "bg-emerald-50 text-emerald-700 ring-emerald-100" : "bg-slate-100 text-slate-500 ring-slate-200")}>{visivel ? "Visível" : "Oculto"}</span>
                                                     <span className="rounded-full bg-slate-50 px-2 py-1 text-slate-600 ring-1 ring-slate-200">{recolhido ? "Recolhido" : "Aberto"}</span>
+                                                    <span className="rounded-full bg-blue-50 px-2 py-1 text-blue-700 ring-1 ring-blue-100">{formatarTamanhoBlocoConfiguracao(secao.chave)}</span>
                                                     {critico ? <span className="rounded-full bg-orange-50 px-2 py-1 text-orange-700 ring-1 ring-orange-100">Crítico</span> : null}
                                                 </p>
                                             </div>
@@ -3314,11 +3395,44 @@ export function ConfiguracoesSistema({
                     </div>
                 )}
             </Card>
+            )}
 
             <div className="config-sections-grid mt-6">
-                {secoesConfiguracoesOrdenadas.map((secao) => (
-                    <React.Fragment key={secao.chave}>{renderBlocoConfiguracao(secao.chave)}</React.Fragment>
-                ))}
+                {secoesConfiguracoesOrdenadas.map((secao) => {
+                    if (!blocoConfiguracaoVisivel(secao.chave)) return null;
+
+                    return (
+                        <div
+                            key={secao.chave}
+                            draggable={mostrarOrganizacaoCards}
+                            onDragStart={(evento) => {
+                                if (!mostrarOrganizacaoCards) return;
+                                setBlocoArrastandoConfiguracoes(secao.chave);
+                                evento.dataTransfer.setData("text/plain", secao.chave);
+                                evento.dataTransfer.effectAllowed = "move";
+                            }}
+                            onDragOver={(evento) => {
+                                if (mostrarOrganizacaoCards) evento.preventDefault();
+                            }}
+                            onDrop={(evento) => {
+                                if (!mostrarOrganizacaoCards) return;
+                                evento.preventDefault();
+                                const origem = evento.dataTransfer.getData("text/plain") || blocoArrastandoConfiguracoes;
+                                moverBlocoParaConfiguracao(origem, secao.chave);
+                                setBlocoArrastandoConfiguracoes("");
+                            }}
+                            onDragEnd={() => setBlocoArrastandoConfiguracoes("")}
+                            className={classNames(
+                                "min-w-0 transition",
+                                obterClasseTamanhoBlocoConfiguracao(secao.chave),
+                                mostrarOrganizacaoCards && "cursor-grab active:cursor-grabbing",
+                                blocoArrastandoConfiguracoes === secao.chave && "opacity-60"
+                            )}
+                        >
+                            {renderBlocoConfiguracao(secao.chave)}
+                        </div>
+                    );
+                })}
             </div>
 
             {secoesConfiguracoesVisiveisOrdenadas.length === 0 && (

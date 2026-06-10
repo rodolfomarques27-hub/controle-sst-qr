@@ -102,6 +102,7 @@ export function ArquivosStorageConfiguracoes({
     onListarArquivosStorage,
     onExcluirArquivoStorage,
     onAtualizarAuditoria,
+    controleCard = null,
 }) {
     const [filtrosStorage, setFiltrosStorage] = useState(FILTROS_STORAGE_PADRAO);
     const [arquivosStorage, setArquivosStorage] = useState([]);
@@ -110,6 +111,7 @@ export function ArquivosStorageConfiguracoes({
     const [limpandoStorage, setLimpandoStorage] = useState(false);
     const [progressoLimpezaStorage, setProgressoLimpezaStorage] = useState({ atual: 0, total: 0 });
     const [confirmacaoLimpezaStorage, setConfirmacaoLimpezaStorage] = useState("");
+    const [mostrarPainelLimpezaStorage, setMostrarPainelLimpezaStorage] = useState(false);
     const [quantidadeArquivosVisiveis, setQuantidadeArquivosVisiveis] = useState(QUANTIDADE_INICIAL_ARQUIVOS_STORAGE);
     const [permissaoSistemaAtual, setPermissaoSistemaAtual] = useState(null);
     const [mensagemPermissao, setMensagemPermissao] = useState("Carregando permissões para limpeza do Storage...");
@@ -266,14 +268,6 @@ export function ArquivosStorageConfiguracoes({
             : !confirmacaoLimpezaValida
                 ? "Digite LIMPAR para liberar a limpeza em lote."
                 : "Limpar arquivos sem vínculo do filtro atual.";
-    const limpezaStorageBloqueada = carregandoStorage
-        || limpandoStorage
-        || arquivosFiltradosSemVinculo.length === 0
-        || !onExcluirArquivoStorage
-        || bloqueioLimparArquivosStorageSistema.bloqueado
-        || !filtroLimpezaSemVinculoAtivo
-        || !confirmacaoLimpezaValida;
-
     const opcoesBucketsStorage = Array.from(new Set(arquivosStorage.map((arquivo) => arquivo?.bucket || "storage"))).sort();
     const opcoesEmpresasStorage = Array.from(new Set(arquivosStorage.map(obterEmpresaArquivoStorage))).sort();
     const opcoesColaboradoresStorage = Array.from(new Set(arquivosStorage.map(obterColaboradorArquivoStorage))).sort();
@@ -416,6 +410,45 @@ export function ArquivosStorageConfiguracoes({
         }
     };
 
+
+    const acionarBotaoLimpezaStorage = () => {
+        if (!onExcluirArquivoStorage) return;
+
+        if (bloqueioLimparArquivosStorageSistema.bloqueado) {
+            if (typeof window !== "undefined") {
+                window.alert(bloqueioLimparArquivosStorageSistema.mensagem);
+            }
+            return;
+        }
+
+        if (!mostrarPainelLimpezaStorage) {
+            setMostrarPainelLimpezaStorage(true);
+            setConfirmacaoLimpezaStorage("");
+            setFiltrosStorage((atual) => ({ ...atual, vinculo: "Sem vínculo" }));
+            return;
+        }
+
+        limparArquivosStorageSemVinculoFiltrados();
+    };
+
+    const cancelarPainelLimpezaStorage = () => {
+        setMostrarPainelLimpezaStorage(false);
+        setConfirmacaoLimpezaStorage("");
+    };
+
+    const botaoLimpezaStorageBloqueado = carregandoStorage
+        || limpandoStorage
+        || arquivosSemRegistro.length === 0
+        || !onExcluirArquivoStorage
+        || bloqueioLimparArquivosStorageSistema.bloqueado;
+
+    const textoBotaoLimpezaStorage = limpandoStorage
+        ? `Limpando ${progressoLimpezaStorage.atual}/${progressoLimpezaStorage.total}`
+        : !mostrarPainelLimpezaStorage
+            ? "Excluir sem vínculo"
+            : confirmacaoLimpezaValida
+                ? `Confirmar limpeza (${arquivosFiltradosSemVinculo.length})`
+                : "Digite LIMPAR";
     return (
         <Card>
             <div className="flex flex-col gap-4 border-b border-slate-100 pb-4 lg:flex-row lg:items-start lg:justify-between">
@@ -431,11 +464,13 @@ export function ArquivosStorageConfiguracoes({
                 </div>
 
                 <div className="flex flex-wrap items-center gap-2">
+                    {controleCard}
+
                     <button
                         type="button"
                         onClick={carregarStorage}
                         disabled={carregandoStorage || limpandoStorage || !onListarArquivosStorage}
-                        className="inline-flex items-center justify-center gap-2 rounded-2xl bg-slate-950 px-4 py-3 text-sm font-semibold text-white hover:bg-slate-800 disabled:opacity-60"
+                        className="inline-flex min-h-[46px] items-center justify-center gap-2 rounded-2xl bg-slate-950 px-4 py-3 text-sm font-semibold text-white hover:bg-slate-800 disabled:opacity-60"
                     >
                         {arquivosStorage.length > 0 ? <RefreshCw className="h-4 w-4" /> : <Database className="h-4 w-4" />}
                         {carregandoStorage ? "Carregando..." : arquivosStorage.length > 0 ? "Atualizar arquivos" : "Carregar arquivos"}
@@ -443,17 +478,18 @@ export function ArquivosStorageConfiguracoes({
 
                     <button
                         type="button"
-                        onClick={limparArquivosStorageSemVinculoFiltrados}
-                        disabled={limpezaStorageBloqueada}
-                        className="inline-flex items-center justify-center gap-2 rounded-2xl bg-red-50 px-4 py-3 text-sm font-semibold text-red-700 ring-1 ring-red-200 hover:bg-red-100 disabled:opacity-50"
-                        title={mensagemBloqueioLimpezaStorage}
+                        onClick={acionarBotaoLimpezaStorage}
+                        disabled={botaoLimpezaStorageBloqueado}
+                        className={classNames(
+                            "inline-flex min-h-[46px] items-center justify-center gap-2 rounded-2xl px-4 py-3 text-sm font-semibold ring-1 transition disabled:opacity-50",
+                            mostrarPainelLimpezaStorage
+                                ? "bg-red-600 text-white ring-red-600 hover:bg-red-700"
+                                : "bg-red-50 text-red-700 ring-red-200 hover:bg-red-100"
+                        )}
+                        title={botaoLimpezaStorageBloqueado ? mensagemBloqueioLimpezaStorage : "Abrir proteção de limpeza em lote"}
                     >
                         <Trash2 className="h-4 w-4" />
-                        {limpandoStorage
-                            ? `Limpando ${progressoLimpezaStorage.atual}/${progressoLimpezaStorage.total}`
-                            : filtroLimpezaSemVinculoAtivo
-                                ? `Limpar sem vínculo (${arquivosFiltradosSemVinculo.length})`
-                                : "Filtre sem vínculo"}
+                        {textoBotaoLimpezaStorage}
                     </button>
                 </div>
             </div>
@@ -464,23 +500,33 @@ export function ArquivosStorageConfiguracoes({
                 </div>
             )}
 
-            {arquivosStorage.length > 0 && (
+            {mostrarPainelLimpezaStorage && arquivosStorage.length > 0 && (
                 <div className="mt-4 rounded-3xl border border-red-100 bg-red-50/70 p-4">
                     <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
                         <div>
                             <p className="text-sm font-black text-red-900">Proteção para limpeza em lote</p>
                             <p className="mt-1 text-xs leading-relaxed text-red-700">
-                                A limpeza só libera quando o filtro estiver em <strong>Somente sem vínculo</strong> e o campo abaixo estiver preenchido com LIMPAR. Isso evita remover arquivos por engano.
+                                Esta confirmação aparece somente após selecionar o botão de exclusão. O sistema muda para <strong>Somente sem vínculo</strong> e só executa a limpeza depois de digitar LIMPAR e confirmar novamente.
                             </p>
                         </div>
-                        <input
-                            type="text"
-                            value={confirmacaoLimpezaStorage}
-                            onChange={(e) => setConfirmacaoLimpezaStorage(e.target.value)}
-                            placeholder="Digite LIMPAR"
-                            disabled={!filtroLimpezaSemVinculoAtivo || limpandoStorage || bloqueioLimparArquivosStorageSistema.bloqueado}
-                            className="w-full rounded-2xl border border-red-200 bg-white px-4 py-3 text-sm font-black uppercase tracking-wide text-red-900 outline-none focus:border-red-400 focus:ring-4 focus:ring-red-100 disabled:opacity-60 lg:w-56"
-                        />
+                        <div className="flex w-full flex-col gap-2 lg:w-auto lg:min-w-[260px]">
+                            <input
+                                type="text"
+                                value={confirmacaoLimpezaStorage}
+                                onChange={(e) => setConfirmacaoLimpezaStorage(e.target.value)}
+                                placeholder="Digite LIMPAR"
+                                disabled={!filtroLimpezaSemVinculoAtivo || limpandoStorage || bloqueioLimparArquivosStorageSistema.bloqueado}
+                                className="w-full rounded-2xl border border-red-200 bg-white px-4 py-3 text-sm font-black uppercase tracking-wide text-red-900 outline-none focus:border-red-400 focus:ring-4 focus:ring-red-100 disabled:opacity-60"
+                            />
+                            <button
+                                type="button"
+                                onClick={cancelarPainelLimpezaStorage}
+                                disabled={limpandoStorage}
+                                className="rounded-2xl bg-white px-4 py-2 text-xs font-black text-slate-600 ring-1 ring-slate-200 hover:bg-slate-50 disabled:opacity-60"
+                            >
+                                Cancelar limpeza
+                            </button>
+                        </div>
                     </div>
                     <p className="mt-2 text-xs font-bold text-red-700">{mensagemBloqueioLimpezaStorage}</p>
                 </div>
