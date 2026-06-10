@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { ArrowLeft, LayoutGrid, Lock, LockKeyhole, RefreshCw, Send, ShieldCheck, UserRound } from "lucide-react";
+import { LayoutGrid, Lock, LockKeyhole, RefreshCw, Send, UserRound } from "lucide-react";
 import { Card } from "../components/commonComponents";
 import { CarregandoTela } from "../components/CarregandoTela";
 import { LIMITE_STORAGE_MB } from "../constants/sistemaConstants";
@@ -87,18 +87,11 @@ function AcessoModuloSistemaBloqueado({ tela, bloqueio, permissao, erro }) {
             <Card className="w-full max-w-5xl overflow-hidden border border-slate-200 bg-white p-0 shadow-[0_18px_55px_rgba(15,23,42,0.10)]">
                 <div className="grid min-h-[390px] md:grid-cols-[0.42fr_0.58fr]">
                     <aside className="relative flex flex-col items-center justify-center overflow-hidden border-b border-slate-200 bg-gradient-to-br from-slate-50 via-white to-slate-100 px-8 py-10 text-center md:border-b-0 md:border-r">
-                        <div className="pointer-events-none absolute left-10 top-16 grid grid-cols-3 gap-2 opacity-30">
-                            {Array.from({ length: 9 }).map((_, indice) => (
-                                <span key={indice} className="h-1.5 w-1.5 rounded-full bg-slate-300" />
-                            ))}
-                        </div>
-                        <span className="pointer-events-none absolute right-16 top-14 text-2xl font-black text-slate-300">×</span>
-                        <span className="pointer-events-none absolute bottom-20 left-14 h-2 w-2 rounded-full bg-slate-300" />
-
                         <div className="relative mb-8 flex h-36 w-36 items-center justify-center rounded-[2.5rem] bg-white/70 shadow-inner ring-1 ring-slate-200">
                             <div className="absolute inset-3 rounded-[2rem] bg-gradient-to-br from-slate-100 to-white" />
-                            <ShieldCheck className="relative h-24 w-24 text-slate-400 drop-shadow-sm" strokeWidth={1.35} />
-                            <LockKeyhole className="absolute h-11 w-11 text-slate-500" strokeWidth={1.7} />
+                            <div className="relative flex h-20 w-20 items-center justify-center rounded-[1.75rem] bg-white shadow-sm ring-1 ring-slate-100">
+                                <LockKeyhole className="h-12 w-12 text-slate-500" strokeWidth={1.8} />
+                            </div>
                             <div className="absolute -right-3 bottom-3 flex h-12 w-12 items-center justify-center rounded-2xl bg-white text-orange-600 shadow-md ring-1 ring-orange-100">
                                 <LockKeyhole className="h-6 w-6" />
                             </div>
