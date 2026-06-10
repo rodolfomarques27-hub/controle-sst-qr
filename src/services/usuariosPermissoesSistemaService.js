@@ -54,7 +54,7 @@ export function normalizarPermissaoSistema(permissao = null) {
         email: normalizarEmail(permissao.email),
         nome: permissao.nome || "",
         funcao: permissao.funcao || "",
-        perfil: permissao.perfil || "consulta",
+        perfil: normalizarPerfilSistema(permissao.perfil),
         ativo: normalizarBooleano(permissao.ativo),
         bloqueado: normalizarBooleano(permissao.bloqueado),
         acesso_global: normalizarBooleano(permissao.acesso_global),
