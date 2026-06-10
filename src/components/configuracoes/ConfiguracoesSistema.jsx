@@ -116,6 +116,37 @@ function formatarStatusSolicitacaoAcesso(status = "pendente") {
     return mapa[status] || "Pendente";
 }
 
+function sugerirPerfilPorSolicitacaoAcesso(solicitacao = {}) {
+    const textoBase = `${solicitacao.area_solicitada || ""} ${solicitacao.tela || ""}`
+        .toLowerCase()
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "");
+
+    if (
+        textoBase.includes("configur")
+        || textoBase.includes("auditoria do sistema")
+        || textoBase.includes("storage")
+        || textoBase.includes("supabase")
+    ) {
+        return "administrador";
+    }
+
+    if (textoBase.includes("nova auditoria") || textoBase.includes("dashboard auditoria") || textoBase.includes("auditoria")) {
+        return "auditor";
+    }
+
+    if (
+        textoBase.includes("empresa")
+        || textoBase.includes("colaborador")
+        || textoBase.includes("treinamento")
+        || textoBase.includes("qr")
+    ) {
+        return "tecnico_sst";
+    }
+
+    return "consulta";
+}
+
 const CHAVES_BLOCOS_CONFIGURACOES_PADRAO = [
     "config-eventos-auditoria",
     "config-limites-carregamento",
@@ -768,6 +799,43 @@ export function ConfiguracoesSistema({
         }
     };
 
+    const prepararUsuarioPermissaoPorSolicitacaoAcesso = (solicitacao = {}) => {
+        if (!podeGerenciarPermissoesSistema) {
+            setMensagemFormularioNovoUsuarioPermissao(bloqueioGerenciarPermissoesSistema.mensagem);
+            return;
+        }
+
+        if (!solicitacao?.email) {
+            setMensagemFormularioNovoUsuarioPermissao("Não foi possível preparar a permissão: solicitação sem e-mail.");
+            return;
+        }
+
+        const perfilSugerido = sugerirPerfilPorSolicitacaoAcesso(solicitacao);
+        const nomeSugerido = solicitacao.nome || solicitacao.email.split("@")[0] || "";
+
+        setUsuarioPermissaoSistemaEmEdicao(null);
+        setNovoUsuarioPermissaoSistema({
+            nome: nomeSugerido,
+            email: solicitacao.email || "",
+            funcao: "",
+            perfil: perfilSugerido,
+            ativo: true,
+            bloqueado: false,
+            acesso_global: perfilSugerido === "administrador",
+        });
+        setMostrarFormularioNovoUsuarioPermissao(true);
+        setMensagemFormularioNovoUsuarioPermissao(
+            `Solicitação de ${solicitacao.email} preparada no formulário. Confira o perfil sugerido, ajuste se necessário e clique em Salvar no Supabase.`
+        );
+
+        window.requestAnimationFrame(() => {
+            document.getElementById("formulario-usuario-permissao-sistema")?.scrollIntoView({
+                behavior: "smooth",
+                block: "start",
+            });
+        });
+    };
+
     const responderSolicitacaoAcessoSistema = async (solicitacao, statusResposta) => {
         if (!podeGerenciarPermissoesSistema) {
             setMensagemRespostaSolicitacaoAcessoSistema(bloqueioGerenciarPermissoesSistema.mensagem);
@@ -800,8 +868,14 @@ export function ConfiguracoesSistema({
                 );
             }
 
+            if (statusTratado === "aprovada") {
+                prepararUsuarioPermissaoPorSolicitacaoAcesso(solicitacaoAtualizada || solicitacao);
+            }
+
             setMensagemRespostaSolicitacaoAcessoSistema(
-                `Solicitação ${textoResultado} com sucesso. Esta etapa ainda não altera o perfil do usuário automaticamente.`
+                statusTratado === "aprovada"
+                    ? `Solicitação ${textoResultado} com sucesso. O formulário de usuário/permissão foi preparado para conferência antes de salvar.`
+                    : `Solicitação ${textoResultado} com sucesso. Nenhuma permissão de usuário foi alterada.`
             );
             setRespostaAdminSolicitacaoAcessoSistema("");
         } catch (erro) {
@@ -1761,6 +1835,15 @@ export function ConfiguracoesSistema({
                                                     )}>
                                                         {formatarStatusSolicitacaoAcesso(item.status)}
                                                     </span>
+                                                    {item.status === "aprovada" && podeGerenciarPermissoesSistema ? (
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => prepararUsuarioPermissaoPorSolicitacaoAcesso(item)}
+                                                            className="rounded-full bg-blue-50 px-3 py-1.5 text-[11px] font-black text-blue-700 ring-1 ring-blue-100 hover:bg-blue-100"
+                                                        >
+                                                            Preparar permissão
+                                                        </button>
+                                                    ) : null}
                                                     {item.status === "pendente" && podeGerenciarPermissoesSistema ? (
                                                         <div className="flex w-full flex-wrap gap-2 lg:w-auto">
                                                             <button
@@ -1793,12 +1876,12 @@ export function ConfiguracoesSistema({
 
                                 {solicitacoesAcessoPendentesSistema.length > 0 ? (
                                     <div className="mt-3 rounded-2xl bg-amber-50 px-4 py-3 text-xs font-semibold leading-relaxed text-amber-800 ring-1 ring-amber-100">
-                                        Existem {solicitacoesAcessoPendentesSistema.length} solicitação(ões) pendente(s). Aprovar ou recusar nesta etapa altera somente o status da solicitação; o perfil do usuário será ajustado na próxima microetapa.
+                                        Existem {solicitacoesAcessoPendentesSistema.length} solicitação(ões) pendente(s). Ao aprovar, o formulário de usuário/permissão será preenchido para conferência antes de salvar no Supabase.
                                     </div>
                                 ) : null}
                             </div>
 
-                            <div className="mt-4 rounded-3xl bg-slate-50 p-4 ring-1 ring-slate-100">
+                            <div id="formulario-usuario-permissao-sistema" className="mt-4 rounded-3xl bg-slate-50 p-4 ring-1 ring-slate-100">
                                 <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
                                     <div>
                                         <p className="text-xs font-black uppercase tracking-wide text-slate-400">
@@ -1806,8 +1889,8 @@ export function ConfiguracoesSistema({
                                         </p>
                                         <p className="mt-1 text-xs font-semibold leading-relaxed text-slate-500">
                                             {modoEdicaoUsuarioPermissaoSistema
-                                                ? "Edição administrativa de usuário já cadastrado. As alterações atualizam o Supabase, mas ainda não aplicam bloqueios reais no app."
-                                                : "Cadastro administrativo de usuários no painel. Esta etapa salva a permissão no Supabase, mas ainda não aplica bloqueios reais no app."}
+                                                ? "Edição administrativa de usuário já cadastrado. As alterações atualizam o Supabase e passam a valer no próximo carregamento da permissão."
+                                                : "Cadastro administrativo de usuários no painel. Solicitações aprovadas podem preencher este formulário para conferência antes de salvar."}
                                         </p>
                                         <p className="mt-1 text-xs font-semibold leading-relaxed text-slate-500">
                                             {mensagemFormularioNovoUsuarioPermissao}
