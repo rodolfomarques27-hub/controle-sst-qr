@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { ShieldCheck } from "lucide-react";
+import { ChevronDown, ShieldCheck } from "lucide-react";
 import { classNames } from "../../utils/sstUtils";
 
 const PERFIS_USUARIO_LABEL = {
@@ -36,6 +36,7 @@ export function AppSidebar({
     onSelecionarTela,
 }) {
     const [expandidoPorHover, setExpandidoPorHover] = useState(false);
+    const [usuarioLogadoAberto, setUsuarioLogadoAberto] = useState(false);
     const menuExpandido = menuLateralAberto || expandidoPorHover;
     const emailUsuario = usuario?.email || "e-mail não informado";
     const nomeUsuario = obterNomeUsuario(usuario, emailUsuario);
@@ -133,44 +134,63 @@ export function AppSidebar({
 
             {menuExpandido ? (
                 <div className="app-sidebar-user mt-3 rounded-3xl bg-slate-50 p-3 ring-1 ring-slate-100">
-                    <p className="text-[0.65rem] font-bold uppercase tracking-[0.18em] text-slate-400">Usuário logado</p>
-
-                    <div className="mt-2 min-w-0 space-y-1.5">
-                        <div>
-                            <p className="text-[0.65rem] font-semibold uppercase tracking-wide text-slate-400">Nome</p>
-                            <p className="truncate text-sm font-bold leading-5 text-slate-950" title={nomeUsuario}>
+                    <button
+                        type="button"
+                        onClick={() => setUsuarioLogadoAberto((valor) => !valor)}
+                        className="flex w-full items-center justify-between gap-3 text-left"
+                        aria-expanded={usuarioLogadoAberto}
+                    >
+                        <div className="min-w-0 flex-1">
+                            <p className="text-[0.65rem] font-bold uppercase tracking-[0.18em] text-slate-400">Usuário logado</p>
+                            <p className="mt-1 truncate text-sm font-bold leading-5 text-slate-950" title={nomeUsuario}>
                                 {nomeUsuario}
                             </p>
-                        </div>
-
-                        <div>
-                            <p className="text-[0.65rem] font-semibold uppercase tracking-wide text-slate-400">Função</p>
-                            <p className="truncate text-xs font-semibold leading-5 text-slate-600" title={funcaoUsuario}>
-                                {funcaoUsuario}
-                            </p>
-                        </div>
-
-                        <div>
-                            <p className="text-[0.65rem] font-semibold uppercase tracking-wide text-slate-400">Perfil</p>
-                            <p className="truncate text-xs font-bold leading-5 text-slate-950" title={perfilUsuario}>
+                            <p className="truncate text-[0.7rem] font-semibold leading-4 text-slate-500" title={perfilUsuario}>
                                 {perfilUsuario}
                             </p>
                         </div>
 
-                        <div>
-                            <p className="text-[0.65rem] font-semibold uppercase tracking-wide text-slate-400">E-mail</p>
-                            <p className="truncate text-[0.72rem] font-semibold leading-4 text-slate-700" title={emailUsuario}>
-                                {emailUsuario}
-                            </p>
-                        </div>
-                    </div>
-
-                    <button
-                        onClick={sair}
-                        className="mt-3 rounded-xl bg-white px-3 py-1.5 text-xs font-semibold text-slate-600 ring-1 ring-slate-200 hover:bg-slate-100"
-                    >
-                        Sair
+                        <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-2xl bg-white text-slate-500 ring-1 ring-slate-200 transition hover:bg-slate-100">
+                            <ChevronDown
+                                className={classNames(
+                                    "h-4 w-4 transition-transform duration-200",
+                                    usuarioLogadoAberto ? "rotate-180" : "rotate-0"
+                                )}
+                            />
+                        </span>
                     </button>
+
+                    {usuarioLogadoAberto && (
+                        <div className="mt-3 min-w-0 space-y-1.5 border-t border-slate-200 pt-3">
+                            <div>
+                                <p className="text-[0.65rem] font-semibold uppercase tracking-wide text-slate-400">Função</p>
+                                <p className="truncate text-xs font-semibold leading-5 text-slate-600" title={funcaoUsuario}>
+                                    {funcaoUsuario}
+                                </p>
+                            </div>
+
+                            <div>
+                                <p className="text-[0.65rem] font-semibold uppercase tracking-wide text-slate-400">Perfil</p>
+                                <p className="truncate text-xs font-bold leading-5 text-slate-950" title={perfilUsuario}>
+                                    {perfilUsuario}
+                                </p>
+                            </div>
+
+                            <div>
+                                <p className="text-[0.65rem] font-semibold uppercase tracking-wide text-slate-400">E-mail</p>
+                                <p className="truncate text-[0.72rem] font-semibold leading-4 text-slate-700" title={emailUsuario}>
+                                    {emailUsuario}
+                                </p>
+                            </div>
+
+                            <button
+                                onClick={sair}
+                                className="mt-2 rounded-xl bg-white px-3 py-1.5 text-xs font-semibold text-slate-600 ring-1 ring-slate-200 hover:bg-slate-100"
+                            >
+                                Sair
+                            </button>
+                        </div>
+                    )}
                 </div>
             ) : (
                 <div className="app-sidebar-user-compact mt-4 flex justify-center">
