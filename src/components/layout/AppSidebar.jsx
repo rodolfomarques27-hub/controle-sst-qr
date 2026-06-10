@@ -182,27 +182,30 @@ export function AppSidebar({
                                     {emailUsuario}
                                 </p>
                             </div>
-
-                            <button
-                                onClick={sair}
-                                className="mt-2 rounded-xl bg-white px-3 py-1.5 text-xs font-semibold text-slate-600 ring-1 ring-slate-200 hover:bg-slate-100"
-                            >
-                                Sair
-                            </button>
                         </div>
                     )}
                 </div>
             ) : (
                 <div className="app-sidebar-user-compact mt-4 flex justify-center">
-                    <button
-                        onClick={sair}
-                        className="inline-flex h-10 w-10 items-center justify-center rounded-2xl bg-slate-50 text-xs font-bold text-slate-600 ring-1 ring-slate-200 hover:bg-slate-100"
-                        title={`Sair de ${nomeUsuario} · ${perfilUsuario} · ${emailUsuario}`}
+                    <span
+                        className="inline-flex h-10 w-10 items-center justify-center rounded-2xl bg-slate-50 text-[0.6rem] font-bold uppercase tracking-wide text-slate-500 ring-1 ring-slate-200"
+                        title={`${nomeUsuario} · ${perfilUsuario} · ${emailUsuario}`}
                     >
-                        Sair
-                    </button>
+                        User
+                    </span>
                 </div>
             )}
+
+            <button
+                onClick={sair}
+                className={classNames(
+                    "app-sidebar-logout shrink-0 rounded-2xl bg-white text-xs font-semibold text-slate-600 ring-1 ring-slate-200 transition hover:bg-slate-100 hover:text-slate-950",
+                    menuExpandido ? "mt-3 w-full px-3 py-2" : "mx-auto mt-3 h-10 w-10 px-0"
+                )}
+                title={`Sair de ${nomeUsuario}`}
+            >
+                Sair
+            </button>
         </aside>
     );
 }
