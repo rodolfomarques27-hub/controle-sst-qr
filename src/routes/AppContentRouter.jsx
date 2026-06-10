@@ -64,6 +64,8 @@ const ROTULOS_PERFIS_ACESSO_BLOQUEADO = Object.freeze({
     "Sem permissão cadastrada": "Usuário sem perfil liberado",
 });
 
+const EMAIL_ADMINISTRADOR_PERMISSOES = "rodolfomarques27@gmail.com";
+
 function formatarRotuloAcessoBloqueado(valor, mapa, fallback = "Não informado") {
     const texto = String(valor || "").trim();
 
@@ -76,11 +78,29 @@ function formatarRotuloAcessoBloqueado(valor, mapa, fallback = "Não informado")
         .replace(/\b\w/g, (letra) => letra.toUpperCase());
 }
 
-function AcessoModuloSistemaBloqueado({ tela, bloqueio, permissao, erro }) {
+function AcessoModuloSistemaBloqueado({ tela, bloqueio, permissao, erro, usuario }) {
     const resumo = obterResumoPermissaoSistema(permissao);
     const telaExibicao = formatarRotuloAcessoBloqueado(tela, ROTULOS_TELAS_ACESSO_BLOQUEADO, "Tela não informada");
     const perfilExibicao = formatarRotuloAcessoBloqueado(resumo.perfil, ROTULOS_PERFIS_ACESSO_BLOQUEADO, "Usuário sem perfil liberado");
     const mensagemPrincipal = erro || "Sem permissão para acessar esta área do sistema.";
+    const nomeUsuario = usuario?.nome || permissao?.nome || "Não informado";
+    const emailUsuario = usuario?.email || permissao?.email || "Não informado";
+
+    function handleSolicitarAcesso() {
+        const assunto = `Solicitação de acesso - ${telaExibicao}`;
+        const corpo = [
+            "Olá, preciso de liberação de acesso no Controle SST QR.",
+            "",
+            `Nome: ${nomeUsuario}`,
+            `E-mail: ${emailUsuario}`,
+            `Área solicitada: ${telaExibicao}`,
+            `Perfil atual: ${perfilExibicao}`,
+            "",
+            "Por favor, verificar em Configurações > Usuários e Permissões.",
+        ].join("\n");
+
+        window.location.href = `mailto:${EMAIL_ADMINISTRADOR_PERMISSOES}?subject=${encodeURIComponent(assunto)}&body=${encodeURIComponent(corpo)}`;
+    }
 
     return (
         <div className="flex min-h-[58vh] items-center justify-center px-4 py-10">
@@ -141,7 +161,7 @@ function AcessoModuloSistemaBloqueado({ tela, bloqueio, permissao, erro }) {
                             <div className="mt-8 flex justify-center">
                                 <button
                                     type="button"
-                                    onClick={() => window.alert("Solicite ao administrador a liberação em Configurações > Usuários e Permissões.")}
+                                    onClick={handleSolicitarAcesso}
                                     className="inline-flex items-center justify-center gap-3 rounded-2xl bg-slate-950 px-8 py-3 text-sm font-black text-white shadow-sm transition hover:-translate-y-0.5 hover:bg-slate-800"
                                 >
                                     <Send className="h-4 w-4" />
@@ -296,6 +316,7 @@ export function AppContentRouter({
                 bloqueio={bloqueioTelaSistema}
                 permissao={permissaoSistemaTela}
                 erro={erroPermissaoSistemaTela}
+                usuario={usuario}
             />
         );
     }
