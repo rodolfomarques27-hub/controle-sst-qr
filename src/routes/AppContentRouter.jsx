@@ -145,22 +145,14 @@ function AcessoModuloSistemaBloqueado({ tela, bloqueio, permissao, erro }) {
                                 </div>
                             </div>
 
-                            <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:justify-end">
+                            <div className="mt-8 flex justify-center">
                                 <button
                                     type="button"
                                     onClick={() => window.alert("Solicite ao administrador a liberação em Configurações > Usuários e Permissões.")}
-                                    className="inline-flex items-center justify-center gap-3 rounded-2xl bg-slate-950 px-6 py-3 text-sm font-black text-white shadow-sm transition hover:-translate-y-0.5 hover:bg-slate-800"
+                                    className="inline-flex items-center justify-center gap-3 rounded-2xl bg-slate-950 px-8 py-3 text-sm font-black text-white shadow-sm transition hover:-translate-y-0.5 hover:bg-slate-800"
                                 >
                                     <Send className="h-4 w-4" />
                                     Solicitar acesso
-                                </button>
-                                <button
-                                    type="button"
-                                    onClick={() => window.history.back()}
-                                    className="inline-flex items-center justify-center gap-3 rounded-2xl bg-white px-6 py-3 text-sm font-black text-slate-700 shadow-sm ring-1 ring-slate-200 transition hover:-translate-y-0.5 hover:bg-slate-50"
-                                >
-                                    <ArrowLeft className="h-4 w-4" />
-                                    Voltar
                                 </button>
                             </div>
                         </div>
