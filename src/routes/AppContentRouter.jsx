@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { Lock, RefreshCw, ShieldAlert } from "lucide-react";
+import { ArrowLeft, Info, Lock, LockKeyhole, RefreshCw, Send, ShieldCheck } from "lucide-react";
 import { Card } from "../components/commonComponents";
 import { CarregandoTela } from "../components/CarregandoTela";
 import { LIMITE_STORAGE_MB } from "../constants/sistemaConstants";
@@ -26,54 +26,154 @@ const ConfiguracoesBloqueio = React.lazy(() => import("../components/configuraco
 const AuditoriaAcessoNegado = React.lazy(() => import("../components/auditoria/AuditoriaPermissao").then((modulo) => ({ default: modulo.AuditoriaAcessoNegado })));
 
 
+const ROTULOS_TELAS_ACESSO_BLOQUEADO = Object.freeze({
+    dashboard: "Dashboard SST",
+    novaAuditoriaCampo: "Nova Auditoria",
+    auditoriaCampo: "Dashboard Auditoria",
+    empresas: "Empresas",
+    colaboradores: "Colaboradores",
+    aniversariantes: "Aniversariantes",
+    treinamentos: "Treinamentos",
+    qr: "QR Code",
+    auditoria: "Auditoria do Sistema",
+    configuracoes: "Configurações",
+    roteiro: "Roteiro",
+});
+
+const ROTULOS_MODULOS_ACESSO_BLOQUEADO = Object.freeze({
+    dashboard_sst: "Dashboard SST",
+    empresas: "Empresas",
+    colaboradores: "Colaboradores",
+    treinamentos: "Treinamentos",
+    qr_code: "QR Code",
+    dashboard_auditoria: "Auditoria",
+    nova_auditoria: "Nova Auditoria",
+    auditoria_sistema: "Auditoria do Sistema",
+    configuracoes: "Configurações",
+    storage: "Storage",
+    relatorios: "Relatórios",
+});
+
+const ROTULOS_PERFIS_ACESSO_BLOQUEADO = Object.freeze({
+    administrador: "Administrador",
+    tecnico_sst: "Técnico SST",
+    auditor: "Auditor",
+    gestor: "Gestor",
+    consulta: "Consulta",
+    bloqueado: "Bloqueado",
+    "Sem permissão cadastrada": "Usuário sem perfil liberado",
+});
+
+function formatarRotuloAcessoBloqueado(valor, mapa, fallback = "Não informado") {
+    const texto = String(valor || "").trim();
+
+    if (!texto) return fallback;
+    if (mapa[texto]) return mapa[texto];
+
+    return texto
+        .replace(/_/g, " ")
+        .replace(/([a-z])([A-Z])/g, "$1 $2")
+        .replace(/\b\w/g, (letra) => letra.toUpperCase());
+}
+
 function AcessoModuloSistemaBloqueado({ tela, bloqueio, permissao, erro }) {
     const resumo = obterResumoPermissaoSistema(permissao);
     const modulo = bloqueio?.modulo || obterModuloPermissaoSistemaPorTela(tela) || "módulo não mapeado";
+    const telaExibicao = formatarRotuloAcessoBloqueado(tela, ROTULOS_TELAS_ACESSO_BLOQUEADO, "Tela não informada");
+    const moduloExibicao = formatarRotuloAcessoBloqueado(modulo, ROTULOS_MODULOS_ACESSO_BLOQUEADO, "Módulo não mapeado");
+    const perfilExibicao = formatarRotuloAcessoBloqueado(resumo.perfil, ROTULOS_PERFIS_ACESSO_BLOQUEADO, "Usuário sem perfil liberado");
+    const mensagemPrincipal = erro || bloqueio?.mensagem || "Seu usuário ainda não possui permissão para acessar este conteúdo.";
 
     return (
-        <div className="flex min-h-[46vh] items-center justify-center px-4 py-10">
-            <Card className="w-full max-w-2xl border border-slate-200 bg-white shadow-sm">
-                <div className="space-y-5">
-                    <div className="flex items-start gap-4">
-                        <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-slate-100 text-slate-700 ring-1 ring-slate-200">
-                            <ShieldAlert className="h-6 w-6" />
+        <div className="flex min-h-[58vh] items-center justify-center px-4 py-10">
+            <Card className="w-full max-w-5xl overflow-hidden border border-slate-200 bg-white p-0 shadow-[0_18px_55px_rgba(15,23,42,0.10)]">
+                <div className="grid min-h-[390px] md:grid-cols-[0.42fr_0.58fr]">
+                    <aside className="relative flex flex-col items-center justify-center overflow-hidden border-b border-slate-200 bg-gradient-to-br from-slate-50 via-white to-slate-100 px-8 py-10 text-center md:border-b-0 md:border-r">
+                        <div className="pointer-events-none absolute left-10 top-16 grid grid-cols-3 gap-2 opacity-30">
+                            {Array.from({ length: 9 }).map((_, indice) => (
+                                <span key={indice} className="h-1.5 w-1.5 rounded-full bg-slate-300" />
+                            ))}
+                        </div>
+                        <span className="pointer-events-none absolute right-16 top-14 text-2xl font-black text-slate-300">×</span>
+                        <span className="pointer-events-none absolute bottom-20 left-14 h-2 w-2 rounded-full bg-slate-300" />
+
+                        <div className="relative mb-8 flex h-36 w-36 items-center justify-center rounded-[2.5rem] bg-white/70 shadow-inner ring-1 ring-slate-200">
+                            <div className="absolute inset-3 rounded-[2rem] bg-gradient-to-br from-slate-100 to-white" />
+                            <ShieldCheck className="relative h-24 w-24 text-slate-400 drop-shadow-sm" strokeWidth={1.35} />
+                            <LockKeyhole className="absolute h-11 w-11 text-slate-500" strokeWidth={1.7} />
+                            <div className="absolute -right-3 bottom-3 flex h-12 w-12 items-center justify-center rounded-2xl bg-white text-orange-600 shadow-md ring-1 ring-orange-100">
+                                <LockKeyhole className="h-6 w-6" />
+                            </div>
                         </div>
 
-                        <div className="min-w-0 flex-1 space-y-2">
-                            <p className="text-xs font-black uppercase tracking-[0.18em] text-slate-500">Área restrita</p>
-                            <h2 className="text-xl font-black text-slate-900">Acesso não liberado para este perfil</h2>
-                            <p className="max-w-xl text-sm font-semibold leading-relaxed text-slate-600">
-                                {erro || bloqueio?.mensagem || "Seu usuário não possui permissão para visualizar este módulo no momento."}
+                        <p className="text-xs font-black uppercase tracking-[0.28em] text-slate-500">Permissão necessária</p>
+                        <h2 className="mt-4 text-3xl font-black tracking-tight text-slate-950">Acesso restrito</h2>
+                        <div className="mt-4 h-1 w-14 rounded-full bg-orange-600" />
+                        <p className="mt-6 max-w-[240px] text-sm font-semibold leading-7 text-slate-500">
+                            Você não tem permissão para visualizar este conteúdo.
+                        </p>
+                    </aside>
+
+                    <section className="flex flex-col justify-center px-6 py-8 sm:px-8 md:px-12">
+                        <div className="max-w-2xl">
+                            <h3 className="text-2xl font-black leading-tight tracking-tight text-slate-950 sm:text-3xl">
+                                Seu usuário ainda não possui permissão para acessar este conteúdo.
+                            </h3>
+                            <p className="mt-4 text-sm font-semibold leading-7 text-slate-500">
+                                {mensagemPrincipal}
                             </p>
-                        </div>
-                    </div>
 
-                    <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-                        <div className="grid gap-3 text-xs font-bold text-slate-600 md:grid-cols-3">
-                            <div>
-                                <p className="mb-1 text-[10px] font-black uppercase tracking-[0.16em] text-slate-400">Tela</p>
-                                <p className="truncate text-slate-800">{tela || "não informada"}</p>
+                            <div className="mt-7 rounded-3xl border border-slate-200 bg-slate-50/80 p-5 shadow-inner shadow-slate-100/60">
+                                <div className="grid gap-5 md:grid-cols-3 md:divide-x md:divide-slate-200">
+                                    <div className="md:pr-5">
+                                        <p className="text-[11px] font-black uppercase tracking-[0.22em] text-slate-400">Tela</p>
+                                        <p className="mt-2 text-sm font-black text-slate-950">{telaExibicao}</p>
+                                    </div>
+                                    <div className="md:px-5">
+                                        <p className="text-[11px] font-black uppercase tracking-[0.22em] text-slate-400">Módulo</p>
+                                        <p className="mt-2 text-sm font-black text-slate-950">{moduloExibicao}</p>
+                                    </div>
+                                    <div className="md:pl-5">
+                                        <p className="text-[11px] font-black uppercase tracking-[0.22em] text-slate-400">Perfil</p>
+                                        <p className="mt-2 text-sm font-black text-slate-950">{perfilExibicao}</p>
+                                    </div>
+                                </div>
                             </div>
-                            <div>
-                                <p className="mb-1 text-[10px] font-black uppercase tracking-[0.16em] text-slate-400">Módulo</p>
-                                <p className="truncate text-slate-800">{modulo}</p>
+
+                            <div className="mt-6 flex items-start gap-3 rounded-3xl bg-amber-50/70 px-5 py-4 text-sm font-semibold leading-6 text-slate-500 ring-1 ring-amber-100">
+                                <div className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-amber-100 text-amber-700 ring-1 ring-amber-200">
+                                    <Info className="h-4 w-4" />
+                                </div>
+                                <p>
+                                    Se necessário, peça ao administrador a liberação em Configurações &gt; Usuários e Permissões.
+                                </p>
                             </div>
-                            <div>
-                                <p className="mb-1 text-[10px] font-black uppercase tracking-[0.16em] text-slate-400">Perfil</p>
-                                <p className="truncate text-slate-800">{resumo.perfil}</p>
+
+                            <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:justify-end">
+                                <button
+                                    type="button"
+                                    onClick={() => window.alert("Solicite ao administrador a liberação em Configurações > Usuários e Permissões.")}
+                                    className="inline-flex items-center justify-center gap-3 rounded-2xl bg-slate-950 px-6 py-3 text-sm font-black text-white shadow-sm transition hover:-translate-y-0.5 hover:bg-slate-800"
+                                >
+                                    <Send className="h-4 w-4" />
+                                    Solicitar acesso
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={() => window.history.back()}
+                                    className="inline-flex items-center justify-center gap-3 rounded-2xl bg-white px-6 py-3 text-sm font-black text-slate-700 shadow-sm ring-1 ring-slate-200 transition hover:-translate-y-0.5 hover:bg-slate-50"
+                                >
+                                    <ArrowLeft className="h-4 w-4" />
+                                    Voltar
+                                </button>
                             </div>
                         </div>
-                    </div>
-
-                    <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-xs font-bold leading-relaxed text-amber-800">
-                        Para liberar esta área, ajuste o perfil do usuário em Configurações &gt; Usuários e Permissões.
-                    </div>
+                    </section>
                 </div>
             </Card>
         </div>
     );
 }
-
 
 export function AppContentRouter({
     tela,
