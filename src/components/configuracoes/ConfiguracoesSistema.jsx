@@ -740,18 +740,18 @@ export function ConfiguracoesSistema({
                 type="button"
                 onClick={() => alternarRecolhidoBlocoConfiguracao(chave)}
                 className={classNames(
-                    "inline-flex min-h-[38px] items-center justify-center gap-2 rounded-2xl bg-slate-950 px-4 py-2 text-xs font-black text-white shadow-sm ring-1 ring-slate-950 transition hover:-translate-y-0.5 hover:bg-slate-800",
+                    "inline-flex min-h-[34px] items-center justify-center gap-2 rounded-2xl bg-slate-950 px-3.5 py-2 text-xs font-black text-white shadow-sm ring-1 ring-slate-950 transition hover:-translate-y-0.5 hover:bg-slate-800",
                     extraClassName
                 )}
             >
                 {recolhido ? <ChevronDown className="h-3.5 w-3.5" /> : <ChevronUp className="h-3.5 w-3.5" />}
-                {recolhido ? "Abrir card" : "Recolher card"}
+                {recolhido ? "Abrir card" : "Recolher"}
             </button>
         );
     };
 
     const topoControleBlocoConfiguracao = (chave, titulo = "") => (
-        <div className="mb-3 flex items-center justify-end gap-2">
+        <div className="mb-2 flex items-center justify-end gap-2">
             {botaoRecolherBlocoConfiguracao(chave, "w-full sm:w-auto")}
         </div>
     );
@@ -761,12 +761,16 @@ export function ConfiguracoesSistema({
 
         if (blocoConfiguracaoRecolhido(chave)) {
             return (
-                <Card>
-                    {topoControleBlocoConfiguracao(chave, titulo)}
-                    <div>
-                        <p className="text-xs font-black uppercase tracking-wide text-slate-400">Card recolhido</p>
-                        <h2 className="mt-1 text-lg font-black text-slate-950">{titulo}</h2>
-                        <p className="mt-1 text-sm text-slate-500">{descricao}</p>
+                <Card className="py-4">
+                    <div className="flex min-w-0 flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                        <div className="min-w-0">
+                            <p className="text-[10px] font-black uppercase tracking-wide text-slate-400">Card recolhido</p>
+                            <h2 className="mt-1 text-base font-black leading-tight text-slate-950">{titulo}</h2>
+                            <p className="mt-1 text-xs leading-relaxed text-slate-500">{descricao}</p>
+                        </div>
+                        <div className="shrink-0">
+                            {botaoRecolherBlocoConfiguracao(chave, "w-full sm:w-auto")}
+                        </div>
                     </div>
                 </Card>
             );
@@ -3397,7 +3401,7 @@ export function ConfiguracoesSistema({
             </Card>
             )}
 
-            <div className="config-sections-grid mt-6">
+            <div className="config-sections-grid mt-4">
                 {secoesConfiguracoesOrdenadas.map((secao) => {
                     if (!blocoConfiguracaoVisivel(secao.chave)) return null;
 
@@ -3424,7 +3428,7 @@ export function ConfiguracoesSistema({
                             onDragEnd={() => setBlocoArrastandoConfiguracoes("")}
                             className={classNames(
                                 "min-w-0 transition",
-                                obterClasseTamanhoBlocoConfiguracao(secao.chave),
+                                blocoConfiguracaoRecolhido(secao.chave) ? "lg:col-span-1" : obterClasseTamanhoBlocoConfiguracao(secao.chave),
                                 mostrarOrganizacaoCards && "cursor-grab active:cursor-grabbing",
                                 blocoArrastandoConfiguracoes === secao.chave && "opacity-60"
                             )}
