@@ -1619,7 +1619,7 @@ export function ConfiguracoesSistema({
             icon: ShieldCheck,
         },
         {
-            label: "Origem",
+            label: "Origem da configuração",
             valor: origemConfig === "supabase" ? "Supabase" : "Local",
             detalhe: origemConfig === "supabase" ? "Sincronizada no banco" : "Configuração local",
             icon: Database,
@@ -1627,7 +1627,7 @@ export function ConfiguracoesSistema({
         {
             label: "Limites",
             valor: `${limitesEditaveis.auditoriaSistema || 300} / ${limitesEditaveis.auditoriasCampo || 500}`,
-            detalhe: "auditoria sistema / campo",
+            detalhe: "sistema / campo",
             icon: SlidersHorizontal,
         },
         {
@@ -1641,14 +1641,14 @@ export function ConfiguracoesSistema({
         {
             label: "Alertas técnicos",
             valor: resumoRevisaoSupabase.texto,
-            detalhe: `${resumoSegurancaAuditoriaPublica.detalhe} · ${resumoSegurancaStorage.detalhe}`,
+            detalhe: "Conferências pendentes de segurança",
             icon: ShieldAlert,
         },
     ];
 
     const secoesConfiguracoes = [
         { chave: "config-usuarios-permissoes", titulo: "Permissões e usuários", descricao: "Perfis, solicitações de acesso e gestão administrativa.", icon: ShieldCheck },
-        { chave: "config-limites-carregamento", titulo: "Limites de carregamento", descricao: "Quantidade de registros por tela para manter desempenho.", icon: SlidersHorizontal },
+        { chave: "config-limites-carregamento", titulo: "Limites de carregamento", descricao: "Limites de registros por carregamento.", icon: SlidersHorizontal },
         { chave: "config-auditoria-publica", titulo: "Auditoria pública / token", descricao: "Token ativo, senha de referência e link público.", icon: KeyRound },
         { chave: "config-arquivos-storage", titulo: "Arquivos salvos no Storage", descricao: "Capacidade, vínculos, filtros e limpeza protegida.", icon: Database },
         { chave: "config-relatorios-evidencias", titulo: "Relatórios e evidências", descricao: "Resumo copiável e TXT das configurações atuais.", icon: FileText },
@@ -1656,7 +1656,7 @@ export function ConfiguracoesSistema({
         { chave: "config-eventos-auditoria", titulo: "Eventos da Auditoria do Sistema", descricao: "Eventos registrados e exibidos no histórico administrativo.", icon: Settings },
         { chave: "config-seguranca-publica", titulo: "Checklist da auditoria pública", descricao: "Conferência operacional do QR Code público.", icon: ShieldAlert },
         { chave: "config-storage-privado", titulo: "Checklist do Storage privado", descricao: "Buckets, URLs assinadas e arquivos sensíveis.", icon: HardDrive },
-        { chave: "config-supabase-geral", titulo: "Informações técnicas Supabase", descricao: "Tabelas, policies, RPCs e pontos de performance.", icon: Database },
+        { chave: "config-supabase-geral", titulo: "Revisão Supabase / RLS / RPC", descricao: "Conferência técnica de tabelas, RLS, RPCs e buckets.", icon: Database },
         { chave: "config-status-etapa", titulo: "Resumo técnico da tela", descricao: "Estado atual das configurações e do usuário autenticado.", icon: CheckCircle2 },
     ];
 
@@ -1699,7 +1699,7 @@ export function ConfiguracoesSistema({
             return renderBlocoConfiguracaoComControle(
                 "config-eventos-auditoria",
                 "Eventos da Auditoria do Sistema",
-                "Eventos registrados e exibidos na auditoria.",
+                "Controle dos eventos registrados no histórico.",
                 (
                 <Card>
                     <div className="flex flex-col gap-3 border-b border-slate-100 pb-4 md:flex-row md:items-start md:justify-between">
@@ -1804,7 +1804,7 @@ export function ConfiguracoesSistema({
             return renderBlocoConfiguracaoComControle(
                 "config-limites-carregamento",
                 "Limites de carregamento",
-                "Quantidade de registros por tela/carga.",
+                "Limites de registros por carregamento.",
                 (
                     <Card>
                         <div className="flex flex-col gap-3 border-b border-slate-100 pb-4 sm:flex-row sm:items-start sm:justify-between">
@@ -1889,7 +1889,7 @@ export function ConfiguracoesSistema({
             return renderBlocoConfiguracaoComControle(
                 "config-relatorios-evidencias",
                 "Relatórios e evidências das Configurações",
-                "Resumo administrativo copiável e arquivo TXT para conferência interna.",
+                "Resumo administrativo para conferência interna.",
                 (
                     <Card>
                         <div className="flex flex-col gap-3 border-b border-slate-100 pb-4 sm:flex-row sm:items-start sm:justify-between">
@@ -1970,7 +1970,7 @@ export function ConfiguracoesSistema({
             return renderBlocoConfiguracaoComControle(
                 "config-senha-configuracoes",
                 "Configurações críticas",
-                "Senha, restauração padrão e ações sensíveis da área administrativa.",
+                "Senha local, restauração padrão e ações sensíveis.",
                 (
                 <Card>
                     <div className="flex flex-col gap-3 border-b border-slate-100 pb-4 md:flex-row md:items-start md:justify-between">
@@ -3105,7 +3105,7 @@ export function ConfiguracoesSistema({
                 return renderBlocoConfiguracaoComControle(
                     "config-arquivos-storage",
                     "Arquivos salvos no Storage",
-                    "Capacidade, vínculos, limpeza e arquivos salvos.",
+                    "Capacidade, vínculos, filtros e limpeza protegida.",
                     null
                 );
             }
@@ -3124,7 +3124,7 @@ export function ConfiguracoesSistema({
             return renderBlocoConfiguracaoComControle(
                 "config-supabase-geral",
                 "Revisão geral Supabase / RLS / RPC",
-                "Tabelas, policies, funções, buckets e pontos de performance.",
+                "Conferência técnica de tabelas, RLS, RPCs e buckets.",
                 (
                     <Card>
                         <div className="flex flex-col gap-3 border-b border-slate-100 pb-4 sm:flex-row sm:items-start sm:justify-between">
@@ -3192,7 +3192,7 @@ export function ConfiguracoesSistema({
             return renderBlocoConfiguracaoComControle(
                 "config-status-etapa",
                 "Status da etapa",
-                "Resumo da configuração e usuário atual.",
+                "Resumo do usuário atual e do estado da tela.",
                 (
                     <Card>
                         <div className="flex items-start gap-3">
@@ -3278,9 +3278,9 @@ export function ConfiguracoesSistema({
                 <Card className="mt-4 border-blue-100 bg-white">
                     <div className="flex min-w-0 flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
                         <div className="min-w-0">
-                            <h2 className="text-lg font-black text-slate-950">Personalizar painel Configurações</h2>
+                            <h2 className="text-lg font-black text-slate-950">Personalizar painel de Configurações</h2>
                             <p className="mt-1 text-sm leading-relaxed text-slate-500">
-                                Marque apenas os cards que devem aparecer na aba Configurações. Ajuste tamanho, ordem e abertura igual ao Dashboard SST.
+                                Marque apenas os cards que devem aparecer na aba Configurações. Ajuste tamanho, ordem e estado dos cards.
                             </p>
                         </div>
                         <div className="flex flex-wrap gap-2">
@@ -3306,17 +3306,17 @@ export function ConfiguracoesSistema({
                         onClick={() => setFiltroPainelConfiguracoes("todos")}
                         className="mt-5 w-full rounded-3xl bg-blue-600 p-4 text-left text-white ring-1 ring-blue-600 transition hover:-translate-y-0.5 hover:bg-blue-700"
                     >
-                        <p className="text-xs font-black uppercase tracking-wide text-blue-100">Filtro 1</p>
+                        <p className="text-xs font-black uppercase tracking-wide text-blue-100">Filtro</p>
                         <h3 className="mt-1 text-sm font-black">Cards e quadros da aba Configurações</h3>
-                        <p className="mt-1 text-xs font-semibold text-blue-50">Edite visibilidade, ordem, abertura e tamanho dos cards administrativos em um único painel.</p>
+                        <p className="mt-1 text-xs font-semibold text-blue-50">Organize visibilidade, ordem, abertura e tamanho dos cards administrativos.</p>
                     </button>
 
                     <div className="mt-5 rounded-3xl bg-blue-50/60 p-3 ring-1 ring-blue-100">
                         <div className="flex flex-col gap-3 border-b border-blue-100 pb-3 lg:flex-row lg:items-center lg:justify-between">
                             <div>
-                                <p className="text-[11px] font-black uppercase tracking-wide text-blue-700">Seção 1</p>
+                                <p className="text-[11px] font-black uppercase tracking-wide text-blue-700">Organização</p>
                                 <h3 className="text-sm font-black text-slate-950">Cards da aba Configurações</h3>
-                                <p className="text-xs font-semibold text-slate-500">Mostrando {secoesPersonalizacaoConfiguracoes.length} de {secoesConfiguracoesOrdenadas.length} card(s).</p>
+                                <p className="text-xs font-semibold text-slate-500">Mostrando {secoesPersonalizacaoConfiguracoes.length} de {secoesConfiguracoesOrdenadas.length} cards.</p>
                             </div>
                             <div className="flex flex-wrap gap-2">
                                 {FILTROS_PAINEL_CONFIGURACOES.map((filtro) => (
