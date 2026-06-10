@@ -546,6 +546,24 @@ export function ConfiguracoesSistema({
         return true;
     };
 
+    const confirmarAcaoCriticaConfiguracoes = (
+        mensagemConfirmacao,
+        setMensagemDestino = null,
+        mensagemCancelamento = "Ação crítica cancelada. Nenhuma configuração foi alterada."
+    ) => {
+        if (bloquearConfiguracaoCriticaSeNecessario(setMensagemDestino)) return false;
+
+        if (typeof window !== "undefined" && !window.confirm(mensagemConfirmacao)) {
+            if (typeof setMensagemDestino === "function") {
+                setMensagemDestino(mensagemCancelamento);
+            }
+
+            return false;
+        }
+
+        return true;
+    };
+
     const alterarCampoSenhaConfiguracoes = (campo, valor) => {
         setSenhaConfiguracoesFormulario((atual) => ({
             ...atual,
@@ -591,7 +609,11 @@ export function ConfiguracoesSistema({
     };
 
     const restaurarSenhaConfiguracoesPadrao = async () => {
-        if (bloquearConfiguracaoCriticaSeNecessario(setMensagemSenhaConfiguracoes)) return;
+        if (!confirmarAcaoCriticaConfiguracoes(
+            "Restaurar a senha padrão 2026 das Configurações? Essa ação altera a proteção local desta área administrativa.",
+            setMensagemSenhaConfiguracoes,
+            "Restauração da senha padrão cancelada."
+        )) return;
 
         const senhaPadrao = restaurarSenhaConfiguracoesSistema();
         setMensagemSenhaConfiguracoes("Restaurando senha padrão das Configurações...");
@@ -716,7 +738,11 @@ export function ConfiguracoesSistema({
     };
 
     const restaurarLimites = () => {
-        if (bloquearConfiguracaoCriticaSeNecessario(setMensagemLimites)) return;
+        if (!confirmarAcaoCriticaConfiguracoes(
+            "Restaurar os limites padrão de carregamento? Isso pode alterar a quantidade de registros carregados nas telas.",
+            setMensagemLimites,
+            "Restauração dos limites cancelada."
+        )) return;
 
         const padrao = normalizarLimitesCarregamentoSistema(LIMITES_CARREGAMENTO_SISTEMA);
 
@@ -766,6 +792,11 @@ export function ConfiguracoesSistema({
     const salvarConfigAuditoriaPublica = () => {
         if (bloquearConfiguracaoCriticaSeNecessario(setMensagemAuditoriaPublica)) return;
 
+        if (!String(configAuditoriaPublica.senhaReferencia || "").trim()) {
+            setMensagemAuditoriaPublica("Informe uma senha de referência antes de salvar a configuração da Auditoria pública.");
+            return;
+        }
+
         const normalizada = salvarConfiguracaoAuditoriaPublicaSistema({
             senhaReferencia: configAuditoriaPublica.senhaReferencia,
             exigirSenha: configAuditoriaPublica.exigirSenha,
@@ -779,6 +810,12 @@ export function ConfiguracoesSistema({
     };
 
     const restaurarConfigAuditoriaPublica = async () => {
+        if (!confirmarAcaoCriticaConfiguracoes(
+            "Restaurar a configuração padrão da Auditoria pública? O token será recarregado do Supabase e a referência local será redefinida.",
+            setMensagemAuditoriaPublica,
+            "Restauração da Auditoria pública cancelada."
+        )) return;
+
         restaurarConfiguracaoAuditoriaPublicaPadrao();
         await carregarConfiguracaoAuditoriaPublicaSupabase();
     };
@@ -1353,6 +1390,12 @@ export function ConfiguracoesSistema({
     };
 
     const definirTodosEventos = (habilitado) => {
+        if (!habilitado && !confirmarAcaoCriticaConfiguracoes(
+            "Desabilitar todos os eventos da Auditoria do Sistema? Essa ação reduz a rastreabilidade administrativa.",
+            setMensagemConfig,
+            "Desabilitação em massa dos eventos cancelada."
+        )) return;
+
         const proxima = EVENTOS_AUDITORIA_SISTEMA_PADRAO.reduce((acc, evento) => {
             acc[evento.chave] = habilitado;
             return acc;
@@ -1365,6 +1408,12 @@ export function ConfiguracoesSistema({
     };
 
     const restaurarPadrao = () => {
+        if (!confirmarAcaoCriticaConfiguracoes(
+            "Restaurar o padrão de eventos da Auditoria do Sistema? As opções locais serão substituídas pelo padrão seguro.",
+            setMensagemConfig,
+            "Restauração dos eventos padrão cancelada."
+        )) return;
+
         persistirConfiguracao(configuracaoPadraoEventosAuditoriaSistema(), "Configuração padrão restaurada.");
     };
 
@@ -1583,7 +1632,9 @@ export function ConfiguracoesSistema({
                             <button
                                 type="button"
                                 onClick={restaurarLimites}
-                                className="inline-flex items-center justify-center gap-2 rounded-2xl bg-white px-3 py-2 text-xs font-bold text-slate-700 ring-1 ring-slate-200 hover:bg-slate-50"
+                                disabled={!podeAlterarConfiguracoesCriticasSistema}
+                                title={podeAlterarConfiguracoesCriticasSistema ? "Restaurar limites padrão" : mensagemBloqueioConfiguracoesCriticasSistema}
+                                className="inline-flex items-center justify-center gap-2 rounded-2xl bg-white px-3 py-2 text-xs font-bold text-slate-700 ring-1 ring-slate-200 hover:bg-slate-50 disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-400"
                             >
                                 <RotateCcw className="h-3.5 w-3.5" />
                                 Restaurar limites
@@ -1668,7 +1719,9 @@ export function ConfiguracoesSistema({
                         <button
                             type="button"
                             onClick={restaurarSenhaConfiguracoesPadrao}
-                            className="inline-flex items-center gap-2 rounded-2xl bg-white px-3 py-2 text-xs font-bold text-slate-700 ring-1 ring-slate-200 hover:bg-slate-50"
+                            disabled={!podeAlterarConfiguracoesCriticasSistema}
+                            title={podeAlterarConfiguracoesCriticasSistema ? "Restaurar senha padrão das Configurações" : mensagemBloqueioConfiguracoesCriticasSistema}
+                            className="inline-flex items-center gap-2 rounded-2xl bg-white px-3 py-2 text-xs font-bold text-slate-700 ring-1 ring-slate-200 hover:bg-slate-50 disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-400"
                         >
                             <RotateCcw className="h-3.5 w-3.5" />
                             Restaurar senha padrão
@@ -1737,7 +1790,7 @@ export function ConfiguracoesSistema({
                     </form>
 
                     <p className="mt-4 rounded-2xl bg-amber-50 px-4 py-3 text-xs font-semibold leading-5 text-amber-700 ring-1 ring-amber-100">
-                        Esta senha é local do navegador. Ela não substitui permissões, RLS ou autenticação do Supabase.
+                        Esta senha é apenas uma barreira operacional da aba. As ações críticas continuam dependentes da permissão carregada do Supabase, das RPCs administrativas e das policies/RLS.
                     </p>
                 </Card>
                 )
@@ -2546,7 +2599,9 @@ export function ConfiguracoesSistema({
                             <button
                                 type="button"
                                 onClick={restaurarConfigAuditoriaPublica}
-                                className="inline-flex items-center justify-center gap-2 rounded-2xl bg-white px-3 py-2 text-xs font-bold text-slate-700 ring-1 ring-slate-200 hover:bg-slate-50"
+                                disabled={!podeAlterarConfiguracoesCriticasSistema}
+                                title={podeAlterarConfiguracoesCriticasSistema ? "Restaurar configuração padrão da Auditoria pública" : mensagemBloqueioConfiguracoesCriticasSistema}
+                                className="inline-flex items-center justify-center gap-2 rounded-2xl bg-white px-3 py-2 text-xs font-bold text-slate-700 ring-1 ring-slate-200 hover:bg-slate-50 disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-400"
                             >
                                 <RotateCcw className="h-3.5 w-3.5" />
                                 Restaurar
@@ -2606,6 +2661,9 @@ export function ConfiguracoesSistema({
 
                             <div className="rounded-2xl bg-orange-50 px-3 py-3 text-xs font-semibold leading-relaxed text-orange-700 ring-1 ring-orange-200">
                                 Segurança: o token público é carregado do Supabase. Alterar a senha de referência aqui não altera a senha validada pela RPC validar_acesso_auditoria_publica.
+                            </div>
+                            <div className="rounded-2xl bg-slate-50 px-3 py-3 text-xs font-semibold leading-relaxed text-slate-600 ring-1 ring-slate-100">
+                                Ações de salvar/restaurar só ficam disponíveis para usuários com permissão crítica de Configurações.
                             </div>
                         </div>
 
