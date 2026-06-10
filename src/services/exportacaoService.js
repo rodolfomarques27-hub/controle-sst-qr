@@ -3333,8 +3333,6 @@ function montarLinhaAuditoriaSistemaRelatorio(registro = {}, indice = 0) {
             <td class="texto-forte">${escaparHTML(registro.evento || registro.acaoTecnica || "-")}</td>
             <td>${escaparHTML(registro.modulo || "-")}</td>
             <td><span class="status-texto ${classeNivelAuditoriaRelatorio(registro.nivel || registro.nivelChave)}">${escaparHTML(registro.nivel || "Informação")}</span></td>
-            <td>${escaparHTML(registro.tabela || "-")}</td>
-            <td>${escaparHTML(registro.registro || "-")}</td>
             <td class="descricao-auditoria">${escaparHTML(registro.descricao || "-")}</td>
         </tr>
     `;
@@ -3373,8 +3371,7 @@ function montarSecaoAuditoriaSistemaRelatorio({ registros = [], resumo = {}, fil
     return `
         <section class="pagina-relatorio pagina-relatorio-auditoria-sistema">
             <header class="cabecalho-relatorio cabecalho-relatorio--modelo-aprovado cabecalho-relatorio--auditoria-sistema">
-                <div class="marca-relatorio-controle">
-                    ${montarEscudoControleSstRelatorio()}
+                <div class="marca-relatorio-controle marca-relatorio-controle--somente-texto">
                     <div class="marca-relatorio-controle__textos">
                         <h1>CONTROLE SST QR</h1>
                     </div>
@@ -3386,13 +3383,6 @@ function montarSecaoAuditoriaSistemaRelatorio({ registros = [], resumo = {}, fil
                     <span></span>
                 </div>
 
-                <div class="dados-empresa dados-auditoria-sistema">
-                    <div class="dados-empresa__item"><span>${ICONES_CABECALHO_RELATORIO_COLABORADORES.sistema}</span><strong>Sistema:</strong><em>Controle SST QR</em></div>
-                    <div class="dados-empresa__item"><span>${ICONES_CABECALHO_RELATORIO_COLABORADORES.data}</span><strong>Data de emissão:</strong><em>${escaparHTML(dataEmissao)}</em></div>
-                    <div class="dados-empresa__item"><span>${ICONES_CABECALHO_RELATORIO_COLABORADORES.responsavel}</span><strong>Origem:</strong><em>Auditoria do Sistema</em></div>
-                    <div class="dados-empresa__item"><span>${ICONES_CABECALHO_RELATORIO_COLABORADORES.empresa}</span><strong>Registros:</strong><em>${escaparHTML(resumoCalculado.eventosFiltrados)}</em></div>
-                    <div class="dados-empresa__item"><span>${ICONES_CABECALHO_RELATORIO_COLABORADORES.cnpj}</span><strong>Tipo:</strong><em>Histórico interno</em></div>
-                </div>
             </header>
 
             <section class="bloco">
@@ -3423,8 +3413,6 @@ function montarSecaoAuditoriaSistemaRelatorio({ registros = [], resumo = {}, fil
                         <col class="col-evento" />
                         <col class="col-modulo" />
                         <col class="col-nivel" />
-                        <col class="col-tabela" />
-                        <col class="col-registro" />
                         <col class="col-descricao" />
                     </colgroup>
                     <thead>
@@ -3435,13 +3423,11 @@ function montarSecaoAuditoriaSistemaRelatorio({ registros = [], resumo = {}, fil
                             <th><div class="th-conteudo">Evento</div></th>
                             <th><div class="th-conteudo">Módulo</div></th>
                             <th><div class="th-conteudo">Nível</div></th>
-                            <th><div class="th-conteudo">Tabela</div></th>
-                            <th><div class="th-conteudo">Registro</div></th>
                             <th><div class="th-conteudo">Descrição</div></th>
                         </tr>
                     </thead>
                     <tbody>
-                        ${linhasTabela || `<tr><td colspan="9">Nenhum registro encontrado para os filtros selecionados.</td></tr>`}
+                        ${linhasTabela || `<tr><td colspan="7">Nenhum registro encontrado para os filtros selecionados.</td></tr>`}
                     </tbody>
                 </table>
             </section>
@@ -3507,8 +3493,8 @@ export async function baixarRelatorioAuditoriaSistemaPDF({
 
     .cabecalho-relatorio {
         display: grid;
-        gap: 10px;
-        margin-bottom: 14px;
+        gap: 8px;
+        margin-bottom: 12px;
         padding-top: 2px;
     }
 
@@ -3517,8 +3503,13 @@ export async function baixarRelatorioAuditoriaSistemaPDF({
         align-items: center;
         justify-content: center;
         gap: 10px;
-        text-align: left;
+        text-align: center;
         flex-wrap: nowrap;
+    }
+
+    .marca-relatorio-controle--somente-texto {
+        justify-content: center;
+        width: 100%;
     }
 
     .escudo-controle-sst-relatorio {
@@ -3560,7 +3551,9 @@ export async function baixarRelatorioAuditoriaSistemaPDF({
         grid-template-columns: minmax(70px, 1fr) auto minmax(70px, 1fr);
         align-items: center;
         gap: 16px;
-        margin-top: 2px;
+        margin-top: 0;
+        padding-bottom: 8px;
+        border-bottom: 1px solid var(--linha);
     }
 
     .titulo-relatorio-cabecalho span {
@@ -3766,18 +3759,16 @@ export async function baixarRelatorioAuditoriaSistemaPDF({
         width: 100%;
         border-collapse: collapse;
         table-layout: fixed;
-        font-size: 9px;
+        font-size: 9.4px;
     }
 
     .tabela-auditoria-sistema-relatorio .col-numero { width: 4%; }
-    .tabela-auditoria-sistema-relatorio .col-data { width: 12%; }
-    .tabela-auditoria-sistema-relatorio .col-usuario { width: 16%; }
-    .tabela-auditoria-sistema-relatorio .col-evento { width: 15%; }
-    .tabela-auditoria-sistema-relatorio .col-modulo { width: 12%; }
-    .tabela-auditoria-sistema-relatorio .col-nivel { width: 9%; }
-    .tabela-auditoria-sistema-relatorio .col-tabela { width: 10%; }
-    .tabela-auditoria-sistema-relatorio .col-registro { width: 8%; }
-    .tabela-auditoria-sistema-relatorio .col-descricao { width: 14%; }
+    .tabela-auditoria-sistema-relatorio .col-data { width: 13%; }
+    .tabela-auditoria-sistema-relatorio .col-usuario { width: 20%; }
+    .tabela-auditoria-sistema-relatorio .col-evento { width: 16%; }
+    .tabela-auditoria-sistema-relatorio .col-modulo { width: 13%; }
+    .tabela-auditoria-sistema-relatorio .col-nivel { width: 10%; }
+    .tabela-auditoria-sistema-relatorio .col-descricao { width: 24%; }
 
     thead tr { height: 50px; }
 
@@ -3812,8 +3803,8 @@ export async function baixarRelatorioAuditoriaSistemaPDF({
     }
 
     tbody td {
-        height: 36px;
-        padding: 6px 6px;
+        height: 34px;
+        padding: 6px 7px;
         border-bottom: 1px solid var(--linha);
         border-right: 1px solid var(--linha);
         text-align: center;
