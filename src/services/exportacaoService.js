@@ -3364,80 +3364,142 @@ function montarFiltrosAuditoriaSistemaRelatorio(filtros = {}) {
     `;
 }
 
-function montarSecaoAuditoriaSistemaRelatorio({ registros = [], resumo = {}, filtros = {}, dataEmissao = "", titulo = "Relatório da Auditoria do Sistema" } = {}) {
-    const resumoCalculado = calcularResumoAuditoriaSistemaRelatorio(registros, resumo);
-    const linhasTabela = registros.map((registro, indice) => montarLinhaAuditoriaSistemaRelatorio(registro, indice)).join("");
+function montarTabelaAuditoriaSistemaRelatorio({ registros = [], indiceInicial = 0, vazio = "Nenhum registro encontrado para os filtros selecionados." } = {}) {
+    const linhasTabela = registros.map((registro, indice) => montarLinhaAuditoriaSistemaRelatorio(registro, indiceInicial + indice)).join("");
 
     return `
-        <section class="pagina-relatorio pagina-relatorio-auditoria-sistema">
-            <header class="cabecalho-relatorio cabecalho-relatorio--modelo-aprovado cabecalho-relatorio--auditoria-sistema">
-                <div class="marca-relatorio-controle marca-relatorio-controle--somente-texto">
-                    <div class="marca-relatorio-controle__textos">
-                        <h1>CONTROLE SST QR</h1>
-                    </div>
-                </div>
-
-                <div class="titulo-relatorio-cabecalho">
-                    <span></span>
-                    <strong>${escaparHTML(String(titulo || "Relatório da Auditoria do Sistema").toUpperCase())}</strong>
-                    <span></span>
-                </div>
-
-            </header>
-
-            <section class="bloco">
-                <h2>Resumo geral</h2>
-                <div class="kpis">
-                    ${montarCartaoResumoRelatorio({ icone: ICONES_RELATORIO_COLABORADORES.total, titulo: "Total", valor: resumoCalculado.totalEventos, classe: "kpi-total" })}
-                    ${montarCartaoResumoRelatorio({ icone: ICONES_RELATORIO_COLABORADORES.analise, titulo: "Filtrados", valor: resumoCalculado.eventosFiltrados, classe: "kpi-info" })}
-                    ${montarCartaoResumoRelatorio({ icone: ICONES_RELATORIO_COLABORADORES.liberados, titulo: "Acessos", valor: resumoCalculado.acessos, classe: "kpi-ok" })}
-                    ${montarCartaoResumoRelatorio({ icone: ICONES_RELATORIO_COLABORADORES.pendencia, titulo: "Alterações", valor: resumoCalculado.alteracoes, classe: "kpi-alerta" })}
-                    ${montarCartaoResumoRelatorio({ icone: ICONES_RELATORIO_COLABORADORES.bloqueados, titulo: "Segurança", valor: resumoCalculado.seguranca, classe: "kpi-seguranca" })}
-                    ${montarCartaoResumoRelatorio({ icone: ICONES_RELATORIO_COLABORADORES.vencidos, titulo: "Críticos", valor: resumoCalculado.criticos, classe: "kpi-critico" })}
-                    ${montarCartaoResumoRelatorio({ icone: ICONES_RELATORIO_COLABORADORES.vencer, titulo: "Alertas", valor: resumoCalculado.alertas, classe: "kpi-vencendo" })}
-                </div>
-            </section>
-
-            ${montarFiltrosAuditoriaSistemaRelatorio(filtros)}
-
-            <section class="bloco">
-                <h2>Registros detalhados</h2>
-                <div class="observacao-auditoria">
-                    Relatório gerado com base nos eventos carregados e nos filtros aplicados na tela Auditoria do Sistema.
-                </div>
-                <table class="tabela-auditoria-sistema-relatorio">
-                    <colgroup>
-                        <col class="col-numero" />
-                        <col class="col-data" />
-                        <col class="col-usuario" />
-                        <col class="col-evento" />
-                        <col class="col-modulo" />
-                        <col class="col-nivel" />
-                        <col class="col-descricao" />
-                    </colgroup>
-                    <thead>
-                        <tr>
-                            <th><div class="th-conteudo">#</div></th>
-                            <th><div class="th-conteudo">Data/Hora</div></th>
-                            <th><div class="th-conteudo">Usuário</div></th>
-                            <th><div class="th-conteudo">Evento</div></th>
-                            <th><div class="th-conteudo">Módulo</div></th>
-                            <th><div class="th-conteudo">Nível</div></th>
-                            <th><div class="th-conteudo">Descrição</div></th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        ${linhasTabela || `<tr><td colspan="7">Nenhum registro encontrado para os filtros selecionados.</td></tr>`}
-                    </tbody>
-                </table>
-            </section>
-
-            <footer class="rodape-relatorio">
-                <span>🛡 Controle SST QR</span>
-                <span>Relatório visual da Auditoria do Sistema</span>
-            </footer>
+        <section class="bloco bloco-registros-auditoria">
+            <h2>Registros detalhados</h2>
+            <table class="tabela-auditoria-sistema-relatorio">
+                <colgroup>
+                    <col class="col-numero" />
+                    <col class="col-data" />
+                    <col class="col-usuario" />
+                    <col class="col-evento" />
+                    <col class="col-modulo" />
+                    <col class="col-nivel" />
+                    <col class="col-descricao" />
+                </colgroup>
+                <thead>
+                    <tr>
+                        <th><div class="th-conteudo">#</div></th>
+                        <th><div class="th-conteudo">Data/Hora</div></th>
+                        <th><div class="th-conteudo">Usuário</div></th>
+                        <th><div class="th-conteudo">Evento</div></th>
+                        <th><div class="th-conteudo">Módulo</div></th>
+                        <th><div class="th-conteudo">Nível</div></th>
+                        <th><div class="th-conteudo">Descrição</div></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${linhasTabela || `<tr><td colspan="7">${escaparHTML(vazio)}</td></tr>`}
+                </tbody>
+            </table>
         </section>
     `;
+}
+
+function montarRodapeAuditoriaSistemaRelatorio(pagina = 1, totalPaginas = 1) {
+    return `
+        <footer class="rodape-relatorio rodape-relatorio-auditoria">
+            <span>🛡 Controle SST QR</span>
+            <span>Relatório visual da Auditoria do Sistema · Página ${escaparHTML(pagina)} de ${escaparHTML(totalPaginas)}</span>
+        </footer>
+    `;
+}
+
+function montarCabecalhoAuditoriaSistemaRelatorio(titulo = "Relatório da Auditoria do Sistema") {
+    return `
+        <header class="cabecalho-relatorio cabecalho-relatorio--modelo-aprovado cabecalho-relatorio--auditoria-sistema">
+            <div class="marca-relatorio-controle marca-relatorio-controle--somente-texto">
+                <div class="marca-relatorio-controle__textos">
+                    <h1>CONTROLE SST QR</h1>
+                </div>
+            </div>
+
+            <div class="titulo-relatorio-cabecalho">
+                <span></span>
+                <strong>${escaparHTML(String(titulo || "Relatório da Auditoria do Sistema").toUpperCase())}</strong>
+                <span></span>
+            </div>
+        </header>
+    `;
+}
+
+function dividirRegistrosAuditoriaSistemaRelatorio(registros = [], limitePrimeiraPagina = 12, limiteDemaisPaginas = 26) {
+    const lista = Array.isArray(registros) ? registros : [];
+
+    if (!lista.length) {
+        return [{ registros: [], indiceInicial: 0 }];
+    }
+
+    const paginas = [];
+    let cursor = 0;
+
+    paginas.push({
+        registros: lista.slice(0, limitePrimeiraPagina),
+        indiceInicial: 0,
+    });
+    cursor = limitePrimeiraPagina;
+
+    while (cursor < lista.length) {
+        paginas.push({
+            registros: lista.slice(cursor, cursor + limiteDemaisPaginas),
+            indiceInicial: cursor,
+        });
+        cursor += limiteDemaisPaginas;
+    }
+
+    return paginas;
+}
+
+function montarSecaoAuditoriaSistemaRelatorio({ registros = [], resumo = {}, filtros = {}, dataEmissao = "", titulo = "Relatório da Auditoria do Sistema" } = {}) {
+    const resumoCalculado = calcularResumoAuditoriaSistemaRelatorio(registros, resumo);
+    const paginasRegistros = dividirRegistrosAuditoriaSistemaRelatorio(registros);
+    const totalPaginas = paginasRegistros.length;
+
+    return paginasRegistros.map((paginaRegistros, indicePagina) => {
+        const paginaAtual = indicePagina + 1;
+        const primeiraPagina = indicePagina === 0;
+
+        return `
+            <section class="pagina-relatorio pagina-relatorio-auditoria-sistema ${primeiraPagina ? "" : "quebra-pagina pagina-relatorio-auditoria-sistema--continua"}">
+                ${montarCabecalhoAuditoriaSistemaRelatorio(titulo)}
+
+                ${primeiraPagina ? `
+                    <section class="bloco">
+                        <h2>Resumo geral</h2>
+                        <div class="kpis">
+                            ${montarCartaoResumoRelatorio({ icone: ICONES_RELATORIO_COLABORADORES.total, titulo: "Total", valor: resumoCalculado.totalEventos, classe: "kpi-total" })}
+                            ${montarCartaoResumoRelatorio({ icone: ICONES_RELATORIO_COLABORADORES.analise, titulo: "Filtrados", valor: resumoCalculado.eventosFiltrados, classe: "kpi-info" })}
+                            ${montarCartaoResumoRelatorio({ icone: ICONES_RELATORIO_COLABORADORES.liberados, titulo: "Acessos", valor: resumoCalculado.acessos, classe: "kpi-ok" })}
+                            ${montarCartaoResumoRelatorio({ icone: ICONES_RELATORIO_COLABORADORES.pendencia, titulo: "Alterações", valor: resumoCalculado.alteracoes, classe: "kpi-alerta" })}
+                            ${montarCartaoResumoRelatorio({ icone: ICONES_RELATORIO_COLABORADORES.bloqueados, titulo: "Segurança", valor: resumoCalculado.seguranca, classe: "kpi-seguranca" })}
+                            ${montarCartaoResumoRelatorio({ icone: ICONES_RELATORIO_COLABORADORES.vencidos, titulo: "Críticos", valor: resumoCalculado.criticos, classe: "kpi-critico" })}
+                            ${montarCartaoResumoRelatorio({ icone: ICONES_RELATORIO_COLABORADORES.vencer, titulo: "Alertas", valor: resumoCalculado.alertas, classe: "kpi-vencendo" })}
+                        </div>
+                    </section>
+
+                    ${montarFiltrosAuditoriaSistemaRelatorio(filtros)}
+
+                    <div class="observacao-auditoria observacao-auditoria--externa">
+                        Relatório gerado com base nos eventos carregados e nos filtros aplicados na tela Auditoria do Sistema.
+                    </div>
+                ` : `
+                    <div class="observacao-auditoria observacao-auditoria--continua">
+                        Continuação dos registros detalhados da Auditoria do Sistema.
+                    </div>
+                `}
+
+                ${montarTabelaAuditoriaSistemaRelatorio({
+                    registros: paginaRegistros.registros,
+                    indiceInicial: paginaRegistros.indiceInicial,
+                })}
+
+                ${montarRodapeAuditoriaSistemaRelatorio(paginaAtual, totalPaginas)}
+            </section>
+        `;
+    }).join("");
 }
 
 export async function baixarRelatorioAuditoriaSistemaPDF({
@@ -3489,6 +3551,16 @@ export async function baixarRelatorioAuditoriaSistemaPDF({
         border-radius: 18px;
         box-shadow: 0 12px 36px rgba(15, 23, 42, 0.12);
         position: relative;
+    }
+
+    .pagina-relatorio-auditoria-sistema {
+        min-height: 297mm;
+        display: flex;
+        flex-direction: column;
+    }
+
+    .pagina-relatorio-auditoria-sistema--continua .cabecalho-relatorio {
+        margin-bottom: 8px;
     }
 
     .cabecalho-relatorio {
@@ -3745,7 +3817,7 @@ export async function baixarRelatorioAuditoriaSistemaPDF({
     }
 
     .observacao-auditoria {
-        margin: 10px 12px 12px;
+        margin: 10px 0 12px;
         padding: 10px 12px;
         border-radius: 12px;
         background: #f8fbff;
@@ -3753,6 +3825,20 @@ export async function baixarRelatorioAuditoriaSistemaPDF({
         color: #334155;
         font-size: 10px;
         line-height: 1.45;
+    }
+
+    .observacao-auditoria--externa {
+        margin-top: 12px;
+    }
+
+    .observacao-auditoria--continua {
+        margin-top: 4px;
+        margin-bottom: 10px;
+    }
+
+    .bloco-registros-auditoria {
+        margin-top: 0;
+        flex: 0 0 auto;
     }
 
     table {
@@ -3847,13 +3933,18 @@ export async function baixarRelatorioAuditoriaSistemaPDF({
     .rodape-relatorio {
         display: flex;
         justify-content: space-between;
-        margin-top: 14px;
+        margin-top: auto;
         padding: 10px 14px;
         color: #fff;
         background: linear-gradient(90deg, #032b63, #075bbd);
         border-radius: 0 0 12px 12px;
         font-size: 11px;
         font-weight: 800;
+    }
+
+    .rodape-relatorio-auditoria {
+        break-inside: avoid;
+        page-break-inside: avoid;
     }
 
     @media print {
@@ -3867,6 +3958,10 @@ export async function baixarRelatorioAuditoriaSistemaPDF({
             border: 0;
             border-radius: 0;
             box-shadow: none;
+        }
+
+        .pagina-relatorio-auditoria-sistema {
+            min-height: auto;
         }
     }
 </style>
