@@ -6,6 +6,7 @@ import { LIMITE_STORAGE_MB } from "../constants/sistemaConstants";
 import { supabase } from "../lib/supabaseClient";
 import {
     carregarPermissaoSistemaAtualService,
+    registrarSolicitacaoAcessoSistemaService,
     obterBloqueioVisualTelaSistema,
     obterModuloPermissaoSistemaPorTela,
     obterResumoPermissaoSistema,
@@ -64,7 +65,6 @@ const ROTULOS_PERFIS_ACESSO_BLOQUEADO = Object.freeze({
     "Sem permissão cadastrada": "Usuário sem perfil liberado",
 });
 
-const EMAIL_ADMINISTRADOR_PERMISSOES = "rodolfomarques27@gmail.com";
 
 function formatarRotuloAcessoBloqueado(valor, mapa, fallback = "Não informado") {
     const texto = String(valor || "").trim();
@@ -85,35 +85,37 @@ function AcessoModuloSistemaBloqueado({ tela, bloqueio, permissao, erro, usuario
     const mensagemPrincipal = erro || "Sem permissão para acessar esta área do sistema.";
     const emailUsuario = usuario?.email || permissao?.email || "Não informado";
     const nomeUsuario = usuario?.nome || permissao?.nome || (emailUsuario.includes("@") ? emailUsuario.split("@")[0] : "Não informado");
-    const [solicitacaoPreparada, setSolicitacaoPreparada] = useState(false);
+    const [enviandoSolicitacaoAcesso, setEnviandoSolicitacaoAcesso] = useState(false);
+    const [mensagemSolicitacaoAcesso, setMensagemSolicitacaoAcesso] = useState("");
+    const [erroSolicitacaoAcesso, setErroSolicitacaoAcesso] = useState("");
 
     async function handleSolicitarAcesso() {
-        const assunto = `Solicitação de acesso - ${telaExibicao}`;
-        const corpo = [
-            "Olá, preciso de liberação de acesso no Controle SST QR.",
-            "",
-            `Nome: ${nomeUsuario}`,
-            `E-mail: ${emailUsuario}`,
-            `Área solicitada: ${telaExibicao}`,
-            `Perfil atual: ${perfilExibicao}`,
-            "",
-            "Por favor, verificar em Configurações > Usuários e Permissões.",
-        ].join("\n");
+        if (enviandoSolicitacaoAcesso) return;
+
+        setEnviandoSolicitacaoAcesso(true);
+        setMensagemSolicitacaoAcesso("");
+        setErroSolicitacaoAcesso("");
 
         try {
-            await navigator.clipboard?.writeText(corpo);
-        } catch (erroClipboard) {
-            console.warn("Não foi possível copiar a solicitação automaticamente.", erroClipboard);
+            const solicitacaoSalva = await registrarSolicitacaoAcessoSistemaService({
+                supabase,
+                solicitacao: {
+                    nome: nomeUsuario,
+                    email: emailUsuario,
+                    areaSolicitada: telaExibicao,
+                    tela,
+                    perfilAtual: perfilExibicao,
+                    observacao: `Solicitação criada pela tela de acesso restrito. Módulo técnico: ${bloqueio?.modulo || obterModuloPermissaoSistemaPorTela(tela) || "não informado"}.`,
+                },
+            });
+
+            const protocolo = solicitacaoSalva?.id ? ` Protocolo: ${solicitacaoSalva.id}.` : "";
+            setMensagemSolicitacaoAcesso(`Solicitação registrada no sistema.${protocolo}`);
+        } catch (erroSolicitacao) {
+            setErroSolicitacaoAcesso(erroSolicitacao?.message || "Não foi possível registrar a solicitação de acesso.");
+        } finally {
+            setEnviandoSolicitacaoAcesso(false);
         }
-
-        const urlGmail = `https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(EMAIL_ADMINISTRADOR_PERMISSOES)}&su=${encodeURIComponent(assunto)}&body=${encodeURIComponent(corpo)}`;
-        const janelaEmail = window.open(urlGmail, "_blank", "noopener,noreferrer");
-
-        if (!janelaEmail) {
-            window.location.href = `mailto:${EMAIL_ADMINISTRADOR_PERMISSOES}?subject=${encodeURIComponent(assunto)}&body=${encodeURIComponent(corpo)}`;
-        }
-
-        setSolicitacaoPreparada(true);
     }
 
     return (
@@ -176,14 +178,20 @@ function AcessoModuloSistemaBloqueado({ tela, bloqueio, permissao, erro, usuario
                                 <button
                                     type="button"
                                     onClick={handleSolicitarAcesso}
-                                    className="inline-flex items-center justify-center gap-3 rounded-2xl bg-slate-950 px-8 py-3 text-sm font-black text-white shadow-sm transition hover:-translate-y-0.5 hover:bg-slate-800"
+                                    disabled={enviandoSolicitacaoAcesso}
+                                    className="inline-flex items-center justify-center gap-3 rounded-2xl bg-slate-950 px-8 py-3 text-sm font-black text-white shadow-sm transition hover:-translate-y-0.5 hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
                                 >
                                     <Send className="h-4 w-4" />
-                                    Solicitar acesso
+                                    {enviandoSolicitacaoAcesso ? "Enviando solicitação..." : "Solicitar acesso"}
                                 </button>
-                                {solicitacaoPreparada ? (
-                                    <p className="max-w-md text-center text-xs font-bold leading-5 text-emerald-700">
-                                        Solicitação preparada. Uma janela do Gmail foi aberta e o texto também foi copiado.
+                                {mensagemSolicitacaoAcesso ? (
+                                    <p className="max-w-md rounded-2xl bg-emerald-50 px-4 py-3 text-center text-xs font-bold leading-5 text-emerald-700 ring-1 ring-emerald-100">
+                                        {mensagemSolicitacaoAcesso}
+                                    </p>
+                                ) : null}
+                                {erroSolicitacaoAcesso ? (
+                                    <p className="max-w-md rounded-2xl bg-red-50 px-4 py-3 text-center text-xs font-bold leading-5 text-red-700 ring-1 ring-red-100">
+                                        {erroSolicitacaoAcesso}
                                     </p>
                                 ) : null}
                             </div>

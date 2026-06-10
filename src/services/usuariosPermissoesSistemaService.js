@@ -469,6 +469,90 @@ export function obterBloqueioVisualTelaSistema(permissao = null, tela = "") {
     };
 }
 
+
+const STATUS_SOLICITACAO_ACESSO_SISTEMA_VALIDOS = new Set([
+    "pendente",
+    "aprovada",
+    "recusada",
+    "cancelada",
+]);
+
+function normalizarStatusSolicitacaoAcessoSistema(valor) {
+    const status = normalizarTexto(valor || "pendente").toLowerCase();
+    return STATUS_SOLICITACAO_ACESSO_SISTEMA_VALIDOS.has(status) ? status : "pendente";
+}
+
+export function normalizarSolicitacaoAcessoSistema(solicitacao = null) {
+    if (!solicitacao) return null;
+
+    return {
+        id: solicitacao.id || null,
+        user_id: solicitacao.user_id || null,
+        nome: solicitacao.nome || "",
+        email: normalizarEmail(solicitacao.email),
+        area_solicitada: solicitacao.area_solicitada || "",
+        tela: solicitacao.tela || "",
+        perfil_atual: solicitacao.perfil_atual || "",
+        status: normalizarStatusSolicitacaoAcessoSistema(solicitacao.status),
+        observacao: solicitacao.observacao || "",
+        resposta_admin: solicitacao.resposta_admin || "",
+        criado_em: solicitacao.criado_em || null,
+        atualizado_em: solicitacao.atualizado_em || null,
+    };
+}
+
+export async function registrarSolicitacaoAcessoSistemaService({ supabase, solicitacao }) {
+    if (!supabase) {
+        throw new Error("Cliente Supabase não informado para registrar solicitação de acesso.");
+    }
+
+    const dados = {
+        nome: normalizarTexto(solicitacao?.nome),
+        email: normalizarEmail(solicitacao?.email),
+        areaSolicitada: normalizarTexto(solicitacao?.areaSolicitada || solicitacao?.area_solicitada),
+        tela: normalizarTexto(solicitacao?.tela),
+        perfilAtual: normalizarTexto(solicitacao?.perfilAtual || solicitacao?.perfil_atual),
+        observacao: normalizarTexto(solicitacao?.observacao),
+    };
+
+    if (!dados.areaSolicitada) {
+        throw new Error("Área solicitada não informada para registrar a solicitação de acesso.");
+    }
+
+    const { data, error } = await supabase.rpc("registrar_solicitacao_acesso_sistema", {
+        p_nome: dados.nome,
+        p_email: dados.email,
+        p_area_solicitada: dados.areaSolicitada,
+        p_tela: dados.tela,
+        p_perfil_atual: dados.perfilAtual,
+        p_observacao: dados.observacao,
+    });
+
+    if (error) {
+        throw new Error(error.message || "Erro ao registrar solicitação de acesso no sistema.");
+    }
+
+    const solicitacaoSalva = Array.isArray(data) ? data[0] : data;
+
+    return normalizarSolicitacaoAcessoSistema(solicitacaoSalva || null);
+}
+
+export async function listarSolicitacoesAcessoSistemaService({ supabase }) {
+    if (!supabase) {
+        throw new Error("Cliente Supabase não informado para listar solicitações de acesso.");
+    }
+
+    const { data, error } = await supabase.rpc("admin_listar_solicitacoes_acesso_sistema");
+
+    if (error) {
+        throw new Error(error.message || "Erro ao listar solicitações de acesso do sistema.");
+    }
+
+    const solicitacoes = Array.isArray(data) ? data : [];
+
+    return solicitacoes.map((solicitacao) => normalizarSolicitacaoAcessoSistema(solicitacao)).filter(Boolean);
+}
+
 export function obterResumoPermissaoSistema(permissao = null) {
     const permissaoNormalizada = normalizarPermissaoSistema(permissao);
 
