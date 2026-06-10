@@ -23,6 +23,9 @@ import {
     carregarConfiguracaoEventosAuditoriaSistemaSupabase,
     configuracaoPadraoEventosAuditoriaSistema,
     montarEventosAuditoriaSistema,
+    obterModuloAuditoriaSistemaPorRegistro,
+    obterNivelAuditoriaSistemaPorRegistro,
+    obterRotuloAcaoAuditoriaSistema,
     normalizarConfiguracaoEventosAuditoriaSistema,
     obterConfiguracaoEventosAuditoriaSistema,
     salvarConfiguracaoEventosAuditoriaSistema,
@@ -145,33 +148,9 @@ const obterDataFiltroAuditoriaSistema = (valor) => {
     return Number.isNaN(data.getTime()) ? "" : data.toISOString().slice(0, 10);
 };
 
-const obterModuloAuditoriaSistema = (item = {}) => {
-    const tabela = normalizarValorAuditoriaSistema(item.tabela);
-    const acao = normalizarValorAuditoriaSistema(item.acao).toUpperCase();
-    const texto = normalizarTextoBusca(`${item.tabela || ""} ${item.acao || ""} ${item.descricao || ""}`);
+const obterModuloAuditoriaSistema = (item = {}) => obterModuloAuditoriaSistemaPorRegistro(item);
 
-    if (texto.includes("permiss") || texto.includes("solicitacao_acesso") || texto.includes("usuario_permissao")) return "Permissões";
-    if (texto.includes("config") || texto.includes("token")) return "Configurações";
-    if (texto.includes("storage") || acao.includes("STORAGE")) return "Storage";
-    if (texto.includes("treinamento") || texto.includes("certificado")) return "Treinamentos";
-    if (texto.includes("colaborador")) return "Colaboradores";
-    if (texto.includes("empresa")) return "Empresas";
-    if (texto.includes("auditoria") && !texto.includes("auditoria_sistema")) return "Auditoria";
-    if (texto.includes("qr")) return "QR Code";
-    if (acao.includes("ACESSO") || texto.includes("login")) return "Login/Acesso";
-
-    return tabela || "Sistema";
-};
-
-const obterNivelAuditoriaSistema = (item = {}) => {
-    const texto = normalizarTextoBusca(`${item.acao || ""} ${item.tabela || ""} ${item.descricao || ""}`);
-
-    if (texto.includes("bloque") || texto.includes("negad") || texto.includes("sem permiss") || texto.includes("token")) return "seguranca";
-    if (texto.includes("erro") || texto.includes("rpc") || texto.includes("supabase") || texto.includes("delete") || texto.includes("exclus")) return "critico";
-    if (texto.includes("update") || texto.includes("alter") || texto.includes("desabilit") || texto.includes("recus")) return "alerta";
-
-    return "informacao";
-};
+const obterNivelAuditoriaSistema = (item = {}) => obterNivelAuditoriaSistemaPorRegistro(item);
 
 const ROTULOS_NIVEIS_AUDITORIA_SISTEMA = Object.freeze({
     Todos: "Todos os níveis",
@@ -950,7 +929,7 @@ Essa ação remove arquivos do Storage e não altera registros do banco.`;
     };
 
     const baixarCsvAuditoria = () => {
-        const cabecalho = ["Data/Hora", "Usuário", "Ação", "Módulo", "Nível", "Tabela", "Registro", "Descrição", "Origem do acesso", "Página", "Navegador", "Plataforma"];
+        const cabecalho = ["Data/Hora", "Usuário", "Ação", "Evento", "Módulo", "Nível", "Tabela", "Registro", "Descrição", "Origem do acesso", "Página", "Navegador", "Plataforma"];
         const linhas = registrosFiltrados.map((item) => {
             const origemAcesso = item.dados?.origemAcesso || {};
 
@@ -961,6 +940,7 @@ Essa ação remove arquivos do Storage e não altera registros do banco.`;
                 new Date(item.created_at).toLocaleString("pt-BR"),
                 item.usuario_email || "-",
                 item.acao || "-",
+                obterRotuloAcaoAuditoriaSistema(item.acao),
                 modulo || "-",
                 ROTULOS_NIVEIS_AUDITORIA_SISTEMA[nivel] || "Informação",
                 item.tabela || "-",
@@ -1932,14 +1912,15 @@ Essa ação remove arquivos do Storage e não altera registros do banco.`;
                         const podeAbrirDetalhes = temOrigemAcesso || temDadosExtras || item.registro_id;
                         const modulo = obterModuloAuditoriaSistema(item);
                         const nivel = obterNivelAuditoriaSistema(item);
+                        const rotuloAcao = obterRotuloAcaoAuditoriaSistema(item.acao);
 
                         return (
                             <div key={item.id} className="rounded-3xl border border-slate-200 bg-white p-4 shadow-sm">
                                 <div className="flex flex-col justify-between gap-3 lg:flex-row lg:items-start">
                                     <div className="min-w-0">
                                         <div className="flex flex-wrap items-center gap-2">
-                                            <span className="rounded-full bg-slate-950 px-3 py-1 text-xs font-bold text-white">
-                                                {item.acao || "-"}
+                                            <span className="rounded-full bg-slate-950 px-3 py-1 text-xs font-bold text-white" title={item.acao || "Evento"}>
+                                                {rotuloAcao}
                                             </span>
                                             <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-600">
                                                 {modulo}
@@ -1984,6 +1965,9 @@ Essa ação remove arquivos do Storage e não altera registros do banco.`;
                                             <p className="font-bold text-slate-700">Informações do registro</p>
                                             <p className="mt-1 break-words">
                                                 <strong>Registro:</strong> {item.registro_id || "-"}
+                                            </p>
+                                            <p className="mt-1 break-words">
+                                                <strong>Ação técnica:</strong> {item.acao || "-"}
                                             </p>
                                             <p className="break-words">
                                                 <strong>Tabela:</strong> {item.tabela || "-"}
