@@ -39,7 +39,9 @@ import {
 } from "../../utils/sstUtils";
 import {
     carregarPermissaoSistemaAtualService,
+    ACOES_PERMISSAO_SISTEMA,
     MODULOS_PERMISSAO_SISTEMA,
+    usuarioPodeExecutarAcaoSistema,
     usuarioPodeExcluirSistema,
 } from "../../services/usuariosPermissoesSistemaService";
 
@@ -494,6 +496,11 @@ export function Empresas({
     };
 
     const adicionarEmpresa = async () => {
+        if (!podeCadastrarEmpresasSistema) {
+            if (typeof window !== "undefined") window.alert(mensagemBloqueioCadastroEmpresas);
+            return;
+        }
+
         if (!novaEmpresa.nome.trim()) {
             alert("Informe o nome da empresa.");
             return;
@@ -606,6 +613,11 @@ export function Empresas({
     };
 
     const salvarEdicaoEmpresa = async () => {
+        if (!podeEditarEmpresasSistema) {
+            if (typeof window !== "undefined") window.alert(mensagemBloqueioEdicaoEmpresas);
+            return;
+        }
+
         if (!empresaEdicao?.nome?.trim()) {
             alert("Informe o nome da empresa.");
             return;
@@ -685,6 +697,30 @@ export function Empresas({
         [permissaoSistemaAtual]
     );
 
+    const podeCadastrarEmpresasSistema = useMemo(
+        () => usuarioPodeExecutarAcaoSistema(permissaoSistemaAtual, MODULOS_PERMISSAO_SISTEMA.EMPRESAS, ACOES_PERMISSAO_SISTEMA.CADASTRAR),
+        [permissaoSistemaAtual]
+    );
+
+    const podeEditarEmpresasSistema = useMemo(
+        () => usuarioPodeExecutarAcaoSistema(permissaoSistemaAtual, MODULOS_PERMISSAO_SISTEMA.EMPRESAS, ACOES_PERMISSAO_SISTEMA.EDITAR),
+        [permissaoSistemaAtual]
+    );
+
+    const podeUploadEmpresasSistema = useMemo(
+        () => usuarioPodeExecutarAcaoSistema(permissaoSistemaAtual, MODULOS_PERMISSAO_SISTEMA.EMPRESAS, ACOES_PERMISSAO_SISTEMA.UPLOAD),
+        [permissaoSistemaAtual]
+    );
+
+    const podeExportarEmpresasSistema = useMemo(
+        () => usuarioPodeExecutarAcaoSistema(permissaoSistemaAtual, MODULOS_PERMISSAO_SISTEMA.EMPRESAS, ACOES_PERMISSAO_SISTEMA.EXPORTAR),
+        [permissaoSistemaAtual]
+    );
+
+    const mensagemBloqueioCadastroEmpresas = "Sem permissão para cadastrar empresas.";
+    const mensagemBloqueioEdicaoEmpresas = "Sem permissão para editar empresas.";
+    const mensagemBloqueioUploadEmpresas = "Sem permissão para enviar ou substituir documentos empresariais.";
+    const mensagemBloqueioExportacaoEmpresas = "Sem permissão para exportar relatórios de empresas.";
     const mensagemBloqueioExclusaoEmpresas = "Sem permissão para excluir empresas ou documentos empresariais.";
 
     const excluirDocumentoEmpresaSeguro = (doc) => {
@@ -772,6 +808,11 @@ export function Empresas({
     const enviarDocumentoPelaRevisao = async (empresa, tipo, arquivo) => {
         if (!arquivo) return;
 
+        if (!podeUploadEmpresasSistema) {
+            if (typeof window !== "undefined") window.alert(mensagemBloqueioUploadEmpresas);
+            return;
+        }
+
         if (!validarArquivoAntesUpload(arquivo, "documentoExtenso")) return;
 
         const dados = obterUploadRevisao(tipo);
@@ -803,6 +844,11 @@ export function Empresas({
     };
 
     const adicionarDocumento = async () => {
+        if (!podeUploadEmpresasSistema) {
+            if (typeof window !== "undefined") window.alert(mensagemBloqueioUploadEmpresas);
+            return;
+        }
+
         if (!novoDoc.empresaId) {
             alert("Selecione a empresa.");
             return;
@@ -1029,7 +1075,7 @@ export function Empresas({
                                                         className="inline-flex w-full items-center justify-center gap-1 rounded-xl bg-red-50 px-3 py-2 text-xs font-semibold text-red-700 ring-1 ring-red-200 hover:bg-red-100 disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-400 disabled:ring-slate-200"
                                                     >
                                                         <Trash2 className="h-3.5 w-3.5" />
-                                                        Excluir documento
+                                                        {podeExcluirEmpresasSistema ? "Excluir documento" : "Bloqueado"}
                                                     </button>
                                                 </div>
                                             </div>
@@ -1052,7 +1098,9 @@ export function Empresas({
                         <div className="mt-4 flex justify-center border-t border-slate-200 pt-4">
                             <button
                                 onClick={() => baixarRelatorioDocumentos(empresa, docs)}
-                                className="inline-flex items-center gap-2 whitespace-nowrap rounded-2xl bg-white px-4 py-2.5 text-xs font-semibold text-slate-700 ring-1 ring-slate-200 hover:bg-slate-50"
+                                disabled={!podeExportarEmpresasSistema}
+                                title={podeExportarEmpresasSistema ? "Baixar documentos desta empresa" : mensagemBloqueioExportacaoEmpresas}
+                                className="inline-flex items-center gap-2 whitespace-nowrap rounded-2xl bg-white px-4 py-2.5 text-xs font-semibold text-slate-700 ring-1 ring-slate-200 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
                             >
                                 <FileText className="h-4 w-4" />
                                 Baixar PDF documentos desta empresa
@@ -1144,6 +1192,11 @@ export function Empresas({
     );
 
     const baixarRelatorioEmpresas = () => {
+        if (!podeExportarEmpresasSistema) {
+            if (typeof window !== "undefined") window.alert(mensagemBloqueioExportacaoEmpresas);
+            return;
+        }
+
         const linhas = [
             ["Empresa", "Tipo", "Contratada por", "Status da empresa", "Situação documental", "Nº funcionários", "CNPJ", "Responsável", "E-mail", "Telefone", "Nº contrato", "Início contrato", "Fim contrato", "Escopo do serviço", "Observação status", "LTCAT", "PCMSO", "PGR"],
         ];
@@ -1187,6 +1240,11 @@ export function Empresas({
     };
 
     const baixarRelatorioPendencias = () => {
+        if (!podeExportarEmpresasSistema) {
+            if (typeof window !== "undefined") window.alert(mensagemBloqueioExportacaoEmpresas);
+            return;
+        }
+
         const linhas = [
             ["Empresa", "Tipo da empresa", "Contratada por", "Status da empresa", "Situação documental", "Nº funcionários", "Documento", "Situação", "Emissão", "Próxima revisão", "Arquivo"],
         ];
@@ -1244,6 +1302,11 @@ export function Empresas({
     };
 
     const baixarRelatorioDocumentos = (empresa, docsEmpresa = []) => {
+        if (!podeExportarEmpresasSistema) {
+            if (typeof window !== "undefined") window.alert(mensagemBloqueioExportacaoEmpresas);
+            return;
+        }
+
         const linhas = [
             ["Empresa", "Tipo da empresa", "Contratada por", "Nº funcionários", "Documento", "Status", "Emissão", "Próxima revisão", "Arquivo", "Observação"],
         ];
@@ -1312,6 +1375,12 @@ export function Empresas({
             {erroVerificacoes && (
                 <div className="mb-5 rounded-2xl bg-amber-50 p-4 text-sm font-medium text-amber-700 ring-1 ring-amber-200">
                     {erroVerificacoes}
+                </div>
+            )}
+
+            {permissaoSistemaAtual && (!podeCadastrarEmpresasSistema || !podeEditarEmpresasSistema || !podeUploadEmpresasSistema || !podeExportarEmpresasSistema) && (
+                <div className="mb-5 rounded-2xl bg-amber-50 p-4 text-sm font-semibold text-amber-800 ring-1 ring-amber-200">
+                    Perfil atual: {permissaoSistemaAtual.perfil}. Algumas ações de Empresas estão bloqueadas visualmente conforme o perfil cadastrado.
                 </div>
             )}
 
@@ -1568,8 +1637,9 @@ export function Empresas({
 
                             <button
                                 onClick={adicionarEmpresa}
-                                disabled={salvandoEmpresa}
-                                className="empresa-botao-cadastrar-final"
+                                disabled={salvandoEmpresa || !podeCadastrarEmpresasSistema}
+                                title={podeCadastrarEmpresasSistema ? "Cadastrar empresa" : mensagemBloqueioCadastroEmpresas}
+                                className="empresa-botao-cadastrar-final disabled:cursor-not-allowed disabled:opacity-50"
                             >
                                 <Plus className="h-4 w-4" />
                                 {salvandoEmpresa ? "Salvando empresa..." : "Cadastrar empresa"}
@@ -1676,8 +1746,9 @@ export function Empresas({
 
                             <button
                                 onClick={adicionarDocumento}
-                                disabled={salvandoDocumento}
-                                className="flex w-full items-center justify-center gap-2 rounded-2xl bg-slate-950 px-4 py-3 text-sm font-semibold text-white hover:bg-slate-800 disabled:opacity-60"
+                                disabled={salvandoDocumento || !podeUploadEmpresasSistema}
+                                title={podeUploadEmpresasSistema ? "Salvar documento da empresa" : mensagemBloqueioUploadEmpresas}
+                                className="flex w-full items-center justify-center gap-2 rounded-2xl bg-slate-950 px-4 py-3 text-sm font-semibold text-white hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
                             >
                                 <FileText className="h-4 w-4" />
                                 <span className="empresa-doc-botao-salvar__texto">{salvandoDocumento ? "Salvando documento..." : "Salvar documento da empresa"}</span>
@@ -1794,7 +1865,9 @@ export function Empresas({
                             <div className="flex flex-wrap justify-center gap-3">
                                 <button
                                     onClick={baixarRelatorioEmpresas}
-                                    className="inline-flex items-center gap-2 rounded-2xl bg-slate-950 px-5 py-3 text-xs font-semibold text-white hover:bg-slate-800"
+                                    disabled={!podeExportarEmpresasSistema}
+                                    title={podeExportarEmpresasSistema ? "Baixar relatório geral" : mensagemBloqueioExportacaoEmpresas}
+                                    className="inline-flex items-center gap-2 rounded-2xl bg-slate-950 px-5 py-3 text-xs font-semibold text-white hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50"
                                 >
                                     <Download className="h-4 w-4" />
                                     Baixar PDF geral
@@ -1802,7 +1875,9 @@ export function Empresas({
 
                                 <button
                                     onClick={baixarRelatorioPendencias}
-                                    className="inline-flex items-center gap-2 rounded-2xl bg-orange-50 px-5 py-3 text-xs font-semibold text-orange-700 ring-1 ring-orange-200 hover:bg-orange-100"
+                                    disabled={!podeExportarEmpresasSistema}
+                                    title={podeExportarEmpresasSistema ? "Baixar relatório de pendências" : mensagemBloqueioExportacaoEmpresas}
+                                    className="inline-flex items-center gap-2 rounded-2xl bg-orange-50 px-5 py-3 text-xs font-semibold text-orange-700 ring-1 ring-orange-200 hover:bg-orange-100 disabled:cursor-not-allowed disabled:opacity-50"
                                 >
                                     <AlertTriangle className="h-4 w-4" />
                                     Baixar PDF pendências
@@ -2122,8 +2197,9 @@ export function Empresas({
                             <button
                                 type="button"
                                 onClick={salvarEdicaoEmpresa}
-                                disabled={salvandoEdicaoEmpresa}
-                                className="rounded-2xl bg-slate-950 px-4 py-3 text-sm font-semibold text-white hover:bg-slate-800 disabled:opacity-60"
+                                disabled={salvandoEdicaoEmpresa || !podeEditarEmpresasSistema}
+                                title={podeEditarEmpresasSistema ? "Salvar alterações" : mensagemBloqueioEdicaoEmpresas}
+                                className="rounded-2xl bg-slate-950 px-4 py-3 text-sm font-semibold text-white hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
                             >
                                 {salvandoEdicaoEmpresa ? "Salvando alterações..." : "Salvar alterações"}
                             </button>
@@ -2251,7 +2327,7 @@ export function Empresas({
                                                             type="file"
                                                             accept="application/pdf,image/*"
                                                             className="hidden"
-                                                            disabled={salvandoUploadRevisao === chaveUpload}
+                                                            disabled={salvandoUploadRevisao === chaveUpload || !podeUploadEmpresasSistema}
                                                             onChange={(e) => enviarDocumentoPelaRevisao(empresaRevisao.empresa, tipoDoc.tipo, e.target.files?.[0])}
                                                         />
                                                     </label>
@@ -2270,11 +2346,13 @@ export function Empresas({
                                                     </button>
 
                                                     <button
-                                                        onClick={() => onExcluirDocumentoEmpresa(doc)}
-                                                        className="inline-flex w-full items-center justify-center gap-1 rounded-xl bg-red-50 px-3 py-2 text-xs font-semibold text-red-700 ring-1 ring-red-200 hover:bg-red-100"
+                                                        onClick={() => excluirDocumentoEmpresaSeguro(doc)}
+                                                        disabled={!podeExcluirEmpresasSistema}
+                                                        title={podeExcluirEmpresasSistema ? "Excluir documento" : mensagemBloqueioExclusaoEmpresas}
+                                                        className="inline-flex w-full items-center justify-center gap-1 rounded-xl bg-red-50 px-3 py-2 text-xs font-semibold text-red-700 ring-1 ring-red-200 hover:bg-red-100 disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-400 disabled:ring-slate-200"
                                                     >
                                                         <Trash2 className="h-3.5 w-3.5" />
-                                                        Excluir documento
+                                                        {podeExcluirEmpresasSistema ? "Excluir documento" : "Bloqueado"}
                                                     </button>
                                                 </div>
                                             )}

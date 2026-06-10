@@ -46,7 +46,9 @@ import { normalizarTextoBusca, formatDate, classNames } from "../../utils/sstUti
 import { supabase } from "../../lib/supabaseClient";
 import {
     carregarPermissaoSistemaAtualService,
+    ACOES_PERMISSAO_SISTEMA,
     MODULOS_PERMISSAO_SISTEMA,
+    usuarioPodeExecutarAcaoSistema,
     usuarioPodeExcluirSistema,
 } from "../../services/usuariosPermissoesSistemaService";
 
@@ -160,6 +162,11 @@ export function Colaboradores({
     };
 
     const baixarRelatorioColaboradores = async () => {
+        if (!podeExportarColaboradoresSistema) {
+            if (typeof window !== "undefined") window.alert(mensagemBloqueioExportacaoColaboradores);
+            return;
+        }
+
         const colaboradoresRelatorio = filtrados.map((c) => {
             const avaliacao = avaliarTreinamentosColaborador(c);
             const geral = statusGeral(c);
@@ -201,6 +208,11 @@ export function Colaboradores({
     };
 
     const baixarRelatorioPendencias = async () => {
+        if (!podeExportarColaboradoresSistema) {
+            if (typeof window !== "undefined") window.alert(mensagemBloqueioExportacaoColaboradores);
+            return;
+        }
+
         const pendencias = [];
 
         filtrados.forEach((c) => {
@@ -240,6 +252,11 @@ export function Colaboradores({
     };
 
     const adicionar = async () => {
+        if (!podeCadastrarColaboradoresSistema) {
+            if (typeof window !== "undefined") window.alert(mensagemBloqueioCadastroColaboradores);
+            return;
+        }
+
         if (!novo.nome.trim() || !novo.empresaNome.trim() || !novo.funcao.trim()) {
             alert("Preencha nome, empresa terceirizada e função.");
             return;
@@ -352,6 +369,11 @@ export function Colaboradores({
     };
 
     const salvarNovaFuncao = () => {
+        if (!podeEditarColaboradoresSistema) {
+            if (typeof window !== "undefined") window.alert(mensagemBloqueioEdicaoColaboradores);
+            return;
+        }
+
         if (!novaFuncao.rotulo.trim()) {
             alert("Informe o nome da função.");
             return;
@@ -383,6 +405,11 @@ export function Colaboradores({
     };
 
     const abrirRevisaoColaborador = (colaborador) => {
+        if (!podeEditarColaboradoresSistema) {
+            if (typeof window !== "undefined") window.alert(mensagemBloqueioEdicaoColaboradores);
+            return;
+        }
+
         setColaboradorEdicao({
             id: colaborador.id,
             nome: colaborador.nome || "",
@@ -436,7 +463,49 @@ export function Colaboradores({
         [permissaoSistemaAtual]
     );
 
+    const podeCadastrarColaboradoresSistema = useMemo(
+        () => usuarioPodeExecutarAcaoSistema(permissaoSistemaAtual, MODULOS_PERMISSAO_SISTEMA.COLABORADORES, ACOES_PERMISSAO_SISTEMA.CADASTRAR),
+        [permissaoSistemaAtual]
+    );
+
+    const podeEditarColaboradoresSistema = useMemo(
+        () => usuarioPodeExecutarAcaoSistema(permissaoSistemaAtual, MODULOS_PERMISSAO_SISTEMA.COLABORADORES, ACOES_PERMISSAO_SISTEMA.EDITAR),
+        [permissaoSistemaAtual]
+    );
+
+    const podeUploadColaboradoresSistema = useMemo(
+        () => usuarioPodeExecutarAcaoSistema(permissaoSistemaAtual, MODULOS_PERMISSAO_SISTEMA.COLABORADORES, ACOES_PERMISSAO_SISTEMA.UPLOAD),
+        [permissaoSistemaAtual]
+    );
+
+    const podeExportarColaboradoresSistema = useMemo(
+        () => usuarioPodeExecutarAcaoSistema(permissaoSistemaAtual, MODULOS_PERMISSAO_SISTEMA.COLABORADORES, ACOES_PERMISSAO_SISTEMA.EXPORTAR),
+        [permissaoSistemaAtual]
+    );
+
+    const mensagemBloqueioCadastroColaboradores = "Sem permissão para cadastrar colaboradores.";
+    const mensagemBloqueioEdicaoColaboradores = "Sem permissão para editar dados de colaboradores.";
+    const mensagemBloqueioUploadColaboradores = "Sem permissão para enviar treinamentos de colaboradores.";
+    const mensagemBloqueioExportacaoColaboradores = "Sem permissão para exportar relatórios de colaboradores.";
     const mensagemBloqueioExclusaoColaboradores = "Sem permissão para excluir colaboradores.";
+
+    const enviarTreinamentoColaboradorSeguro = (colaborador) => {
+        if (!podeUploadColaboradoresSistema) {
+            if (typeof window !== "undefined") window.alert(mensagemBloqueioUploadColaboradores);
+            return;
+        }
+
+        onEnviarTreinamento(colaborador);
+    };
+
+    const atualizarColaboradorSeguro = async (...args) => {
+        if (!podeEditarColaboradoresSistema) {
+            if (typeof window !== "undefined") window.alert(mensagemBloqueioEdicaoColaboradores);
+            return false;
+        }
+
+        return onAtualizarColaborador?.(...args);
+    };
 
     const solicitarExclusaoColaborador = (colaborador) => {
         if (!podeExcluirColaboradoresSistema) {
@@ -474,8 +543,16 @@ export function Colaboradores({
                 acao={
                     <div className="flex flex-wrap gap-2">
                         <button
-                            onClick={() => setModalFuncaoAberto(true)}
-                            className="inline-flex items-center gap-2 rounded-2xl bg-slate-950 px-4 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-slate-800"
+                            onClick={() => {
+                                if (!podeEditarColaboradoresSistema) {
+                                    if (typeof window !== "undefined") window.alert(mensagemBloqueioEdicaoColaboradores);
+                                    return;
+                                }
+                                setModalFuncaoAberto(true);
+                            }}
+                            disabled={!podeEditarColaboradoresSistema}
+                            title={podeEditarColaboradoresSistema ? "Nova função" : mensagemBloqueioEdicaoColaboradores}
+                            className="inline-flex items-center gap-2 rounded-2xl bg-slate-950 px-4 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50"
                         >
                             <Plus className="h-4 w-4" />
                             Nova função
@@ -495,6 +572,12 @@ export function Colaboradores({
             {erroBanco && (
                 <div className="mb-5 rounded-2xl bg-red-50 p-4 text-sm font-medium text-red-700 ring-1 ring-red-200">
                     {erroBanco}
+                </div>
+            )}
+
+            {permissaoSistemaAtual && (!podeCadastrarColaboradoresSistema || !podeEditarColaboradoresSistema || !podeUploadColaboradoresSistema || !podeExportarColaboradoresSistema) && (
+                <div className="mb-5 rounded-2xl bg-amber-50 p-4 text-sm font-semibold text-amber-800 ring-1 ring-amber-200">
+                    Perfil atual: {permissaoSistemaAtual.perfil}. Algumas ações de Colaboradores estão bloqueadas visualmente conforme o perfil cadastrado.
                 </div>
             )}
 
@@ -670,14 +753,18 @@ export function Colaboradores({
                     <div className="mb-4 flex flex-wrap justify-center gap-2 border-b border-slate-200 pb-4">
                         <button
                             onClick={baixarRelatorioColaboradores}
-                            className="inline-flex items-center gap-2 rounded-2xl bg-slate-950 px-4 py-2.5 text-xs font-semibold text-white hover:bg-slate-800"
+                            disabled={!podeExportarColaboradoresSistema}
+                            title={podeExportarColaboradoresSistema ? "Baixar PDF colaboradores" : mensagemBloqueioExportacaoColaboradores}
+                            className="inline-flex items-center gap-2 rounded-2xl bg-slate-950 px-4 py-2.5 text-xs font-semibold text-white hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50"
                         >
                             <Download className="h-4 w-4" />
                             Baixar PDF colaboradores
                         </button>
                         <button
                             onClick={baixarRelatorioPendencias}
-                            className="inline-flex items-center gap-2 rounded-2xl bg-orange-50 px-4 py-2.5 text-xs font-semibold text-orange-700 ring-1 ring-orange-200 hover:bg-orange-100"
+                            disabled={!podeExportarColaboradoresSistema}
+                            title={podeExportarColaboradoresSistema ? "Baixar PDF pendências" : mensagemBloqueioExportacaoColaboradores}
+                            className="inline-flex items-center gap-2 rounded-2xl bg-orange-50 px-4 py-2.5 text-xs font-semibold text-orange-700 ring-1 ring-orange-200 hover:bg-orange-100 disabled:cursor-not-allowed disabled:opacity-50"
                         >
                             <AlertTriangle className="h-4 w-4" />
                             Baixar PDF pendências
@@ -858,18 +945,22 @@ export function Colaboradores({
 
                                                 <button
                                                     onClick={() => abrirRevisaoColaborador(c)}
-                                                    className="inline-flex items-center justify-center gap-2 rounded-xl bg-white px-3 py-2 text-xs font-semibold text-slate-700 ring-1 ring-slate-200 hover:bg-slate-50"
+                                                    disabled={!podeEditarColaboradoresSistema}
+                                                    title={podeEditarColaboradoresSistema ? "Revisar dados" : mensagemBloqueioEdicaoColaboradores}
+                                                    className="inline-flex items-center justify-center gap-2 rounded-xl bg-white px-3 py-2 text-xs font-semibold text-slate-700 ring-1 ring-slate-200 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
                                                 >
                                                     <FileText className="h-3.5 w-3.5" />
                                                     Revisar dados
                                                 </button>
 
                                                 <button
-                                                    onClick={() => onEnviarTreinamento(c)}
-                                                    className="inline-flex items-center justify-center gap-2 rounded-xl bg-blue-50 px-3 py-2 text-xs font-semibold text-blue-700 ring-1 ring-blue-200 hover:bg-blue-100"
+                                                    onClick={() => enviarTreinamentoColaboradorSeguro(c)}
+                                                    disabled={!podeUploadColaboradoresSistema}
+                                                    title={podeUploadColaboradoresSistema ? "Enviar treinamento" : mensagemBloqueioUploadColaboradores}
+                                                    className="inline-flex items-center justify-center gap-2 rounded-xl bg-blue-50 px-3 py-2 text-xs font-semibold text-blue-700 ring-1 ring-blue-200 hover:bg-blue-100 disabled:cursor-not-allowed disabled:opacity-50"
                                                 >
                                                     <Upload className="h-3.5 w-3.5" />
-                                                    Enviar treinamento
+                                                    {podeUploadColaboradoresSistema ? "Enviar treinamento" : "Bloqueado"}
                                                 </button>
 
                                                 <button
@@ -952,7 +1043,7 @@ export function Colaboradores({
                 setColaboradorEdicao={setColaboradorEdicao}
                 empresasBanco={empresasBanco}
                 funcoesSugeridas={funcoesSugeridas}
-                onAtualizarColaborador={onAtualizarColaborador}
+                onAtualizarColaborador={atualizarColaboradorSeguro}
             />
         </div>
     );

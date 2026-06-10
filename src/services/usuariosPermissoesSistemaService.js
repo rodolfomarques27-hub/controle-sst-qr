@@ -262,6 +262,73 @@ function usuarioTemAcaoCriticaNoJson(permissao = null, acaoCritica = "") {
     return obterValorPermissaoJson(acoesCriticas[chaveAcaoCritica]);
 }
 
+const PERMISSOES_PADRAO_OPERACIONAIS_POR_PERFIL = Object.freeze({
+    administrador: {
+        todos: true,
+    },
+    tecnico_sst: {
+        modulos: {
+            [MODULOS_PERMISSAO_SISTEMA.DASHBOARD_SST]: [ACOES_PERMISSAO_SISTEMA.VISUALIZAR, ACOES_PERMISSAO_SISTEMA.EXPORTAR],
+            [MODULOS_PERMISSAO_SISTEMA.EMPRESAS]: [ACOES_PERMISSAO_SISTEMA.VISUALIZAR, ACOES_PERMISSAO_SISTEMA.CADASTRAR, ACOES_PERMISSAO_SISTEMA.EDITAR, ACOES_PERMISSAO_SISTEMA.UPLOAD, ACOES_PERMISSAO_SISTEMA.EXPORTAR],
+            [MODULOS_PERMISSAO_SISTEMA.COLABORADORES]: [ACOES_PERMISSAO_SISTEMA.VISUALIZAR, ACOES_PERMISSAO_SISTEMA.CADASTRAR, ACOES_PERMISSAO_SISTEMA.EDITAR, ACOES_PERMISSAO_SISTEMA.UPLOAD, ACOES_PERMISSAO_SISTEMA.EXPORTAR],
+            [MODULOS_PERMISSAO_SISTEMA.TREINAMENTOS]: [ACOES_PERMISSAO_SISTEMA.VISUALIZAR, ACOES_PERMISSAO_SISTEMA.CADASTRAR, ACOES_PERMISSAO_SISTEMA.EDITAR, ACOES_PERMISSAO_SISTEMA.UPLOAD, ACOES_PERMISSAO_SISTEMA.EXPORTAR],
+            [MODULOS_PERMISSAO_SISTEMA.QR_CODE]: [ACOES_PERMISSAO_SISTEMA.VISUALIZAR, ACOES_PERMISSAO_SISTEMA.EXPORTAR],
+            [MODULOS_PERMISSAO_SISTEMA.DASHBOARD_AUDITORIA]: [ACOES_PERMISSAO_SISTEMA.VISUALIZAR, ACOES_PERMISSAO_SISTEMA.EXPORTAR],
+            [MODULOS_PERMISSAO_SISTEMA.NOVA_AUDITORIA]: [ACOES_PERMISSAO_SISTEMA.VISUALIZAR, ACOES_PERMISSAO_SISTEMA.CADASTRAR, ACOES_PERMISSAO_SISTEMA.EDITAR, ACOES_PERMISSAO_SISTEMA.UPLOAD, ACOES_PERMISSAO_SISTEMA.EXPORTAR],
+            [MODULOS_PERMISSAO_SISTEMA.RELATORIOS]: [ACOES_PERMISSAO_SISTEMA.VISUALIZAR, ACOES_PERMISSAO_SISTEMA.EXPORTAR],
+        },
+    },
+    auditor: {
+        modulos: {
+            [MODULOS_PERMISSAO_SISTEMA.DASHBOARD_AUDITORIA]: [ACOES_PERMISSAO_SISTEMA.VISUALIZAR, ACOES_PERMISSAO_SISTEMA.EXPORTAR],
+            [MODULOS_PERMISSAO_SISTEMA.NOVA_AUDITORIA]: [ACOES_PERMISSAO_SISTEMA.VISUALIZAR, ACOES_PERMISSAO_SISTEMA.CADASTRAR, ACOES_PERMISSAO_SISTEMA.UPLOAD, ACOES_PERMISSAO_SISTEMA.EXPORTAR],
+            [MODULOS_PERMISSAO_SISTEMA.QR_CODE]: [ACOES_PERMISSAO_SISTEMA.VISUALIZAR, ACOES_PERMISSAO_SISTEMA.EXPORTAR],
+            [MODULOS_PERMISSAO_SISTEMA.RELATORIOS]: [ACOES_PERMISSAO_SISTEMA.VISUALIZAR, ACOES_PERMISSAO_SISTEMA.EXPORTAR],
+        },
+    },
+    gestor: {
+        modulos: {
+            [MODULOS_PERMISSAO_SISTEMA.DASHBOARD_SST]: [ACOES_PERMISSAO_SISTEMA.VISUALIZAR, ACOES_PERMISSAO_SISTEMA.EXPORTAR],
+            [MODULOS_PERMISSAO_SISTEMA.DASHBOARD_AUDITORIA]: [ACOES_PERMISSAO_SISTEMA.VISUALIZAR, ACOES_PERMISSAO_SISTEMA.EXPORTAR],
+            [MODULOS_PERMISSAO_SISTEMA.EMPRESAS]: [ACOES_PERMISSAO_SISTEMA.VISUALIZAR, ACOES_PERMISSAO_SISTEMA.EXPORTAR],
+            [MODULOS_PERMISSAO_SISTEMA.COLABORADORES]: [ACOES_PERMISSAO_SISTEMA.VISUALIZAR, ACOES_PERMISSAO_SISTEMA.EXPORTAR],
+            [MODULOS_PERMISSAO_SISTEMA.TREINAMENTOS]: [ACOES_PERMISSAO_SISTEMA.VISUALIZAR, ACOES_PERMISSAO_SISTEMA.EXPORTAR],
+            [MODULOS_PERMISSAO_SISTEMA.QR_CODE]: [ACOES_PERMISSAO_SISTEMA.VISUALIZAR],
+            [MODULOS_PERMISSAO_SISTEMA.RELATORIOS]: [ACOES_PERMISSAO_SISTEMA.VISUALIZAR, ACOES_PERMISSAO_SISTEMA.EXPORTAR],
+        },
+    },
+    consulta: {
+        modulos: {
+            [MODULOS_PERMISSAO_SISTEMA.DASHBOARD_SST]: [ACOES_PERMISSAO_SISTEMA.VISUALIZAR],
+            [MODULOS_PERMISSAO_SISTEMA.EMPRESAS]: [ACOES_PERMISSAO_SISTEMA.VISUALIZAR],
+            [MODULOS_PERMISSAO_SISTEMA.COLABORADORES]: [ACOES_PERMISSAO_SISTEMA.VISUALIZAR],
+            [MODULOS_PERMISSAO_SISTEMA.TREINAMENTOS]: [ACOES_PERMISSAO_SISTEMA.VISUALIZAR],
+            [MODULOS_PERMISSAO_SISTEMA.QR_CODE]: [ACOES_PERMISSAO_SISTEMA.VISUALIZAR],
+            [MODULOS_PERMISSAO_SISTEMA.RELATORIOS]: [ACOES_PERMISSAO_SISTEMA.VISUALIZAR],
+        },
+    },
+    bloqueado: {
+        modulos: {},
+    },
+});
+
+function usuarioTemPermissaoPadraoPorPerfil(permissao = null, modulo = "", acao = "") {
+    const permissaoNormalizada = normalizarPermissaoSistema(permissao);
+    const moduloTratado = normalizarTexto(modulo);
+    const acaoTratada = normalizarTexto(acao);
+
+    if (!permissaoNormalizada || !moduloTratado || !acaoTratada) return false;
+
+    const perfil = normalizarPerfilSistema(permissaoNormalizada.perfil);
+    const regraPerfil = PERMISSOES_PADRAO_OPERACIONAIS_POR_PERFIL[perfil];
+
+    if (!regraPerfil) return false;
+    if (regraPerfil.todos) return true;
+
+    const acoesModulo = regraPerfil.modulos?.[moduloTratado];
+    return Array.isArray(acoesModulo) && acoesModulo.includes(acaoTratada);
+}
+
 export function usuarioPodeExecutarAcaoSistema(permissao = null, modulo = "", acao = "") {
     const permissaoNormalizada = normalizarPermissaoSistema(permissao);
     const moduloTratado = normalizarTexto(modulo);
@@ -270,6 +337,7 @@ export function usuarioPodeExecutarAcaoSistema(permissao = null, modulo = "", ac
     if (!permissaoNormalizada || !moduloTratado || !acaoTratada) return false;
     if (!permissaoSistemaEstaOperacional(permissaoNormalizada)) return false;
     if (permissaoSistemaTemAcessoGlobal(permissaoNormalizada)) return true;
+    if (normalizarPerfilSistema(permissaoNormalizada.perfil) === "administrador") return true;
 
     const permissoes = obterPermissoesSistema(permissaoNormalizada);
 
@@ -277,9 +345,23 @@ export function usuarioPodeExecutarAcaoSistema(permissao = null, modulo = "", ac
 
     const permissoesModulo = permissoes.modulos?.[moduloTratado];
 
-    if (!permissoesModulo || typeof permissoesModulo !== "object") return false;
+    if (permissoesModulo && typeof permissoesModulo === "object" && obterValorPermissaoJson(permissoesModulo[acaoTratada])) {
+        return true;
+    }
 
-    return obterValorPermissaoJson(permissoesModulo[acaoTratada]);
+    return usuarioTemPermissaoPadraoPorPerfil(permissaoNormalizada, moduloTratado, acaoTratada);
+}
+
+export function obterBloqueioVisualAcaoSistema(permissao = null, modulo = "", acao = "", mensagem = "") {
+    const permitido = usuarioPodeExecutarAcaoSistema(permissao, modulo, acao);
+    const acaoTratada = normalizarTexto(acao) || "ação";
+
+    return {
+        permitido,
+        bloqueado: !permitido,
+        disabled: !permitido,
+        mensagem: permitido ? "Permissão liberada." : mensagem || `Sem permissão para ${acaoTratada.replace(/_/g, " ")} neste módulo.`,
+    };
 }
 
 export function usuarioPodeExecutarAcaoCriticaSistema(permissao = null, acaoCritica = "") {

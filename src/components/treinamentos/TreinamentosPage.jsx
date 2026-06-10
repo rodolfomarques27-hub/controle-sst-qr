@@ -2,6 +2,13 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { Eye, EyeOff, GripVertical, RotateCcw, Search, SlidersHorizontal, Upload } from "lucide-react";
 import { supabase } from "../../lib/supabaseClient";
+import {
+    carregarPermissaoSistemaAtualService,
+    ACOES_PERMISSAO_SISTEMA,
+    MODULOS_PERMISSAO_SISTEMA,
+    usuarioPodeExecutarAcaoSistema,
+    usuarioPodeExcluirSistema,
+} from "../../services/usuariosPermissoesSistemaService";
 import { Card, Header } from "../commonComponents";
 import { validarArquivoAntesUpload, validarListaArquivosAntesUpload } from "../FileUploadAviso";
 import { AlertasTstTreinamentos } from "./AlertasTstTreinamentos";
@@ -179,6 +186,68 @@ export function Treinamentos({
     const [mostrarPersonalizarTreinamentos, setMostrarPersonalizarTreinamentos] = useState(false);
     const [cardArrastandoTreinamento, setCardArrastandoTreinamento] = useState("");
     const [cardDestinoTreinamento, setCardDestinoTreinamento] = useState("");
+    const [permissaoSistemaAtual, setPermissaoSistemaAtual] = useState(null);
+    const [mensagemPermissaoSistema, setMensagemPermissaoSistema] = useState("Carregando permissões do sistema...");
+
+    useEffect(() => {
+        let montado = true;
+
+        async function carregarPermissaoSistemaTreinamentos() {
+            try {
+                const permissao = await carregarPermissaoSistemaAtualService({ supabase });
+                if (!montado) return;
+                setPermissaoSistemaAtual(permissao);
+                setMensagemPermissaoSistema(
+                    permissao
+                        ? "Permissões do sistema carregadas para Treinamentos."
+                        : "Nenhuma permissão do sistema cadastrada para o usuário atual."
+                );
+            } catch (erro) {
+                if (!montado) return;
+                setPermissaoSistemaAtual(null);
+                setMensagemPermissaoSistema(
+                    `Não foi possível carregar permissões do sistema: ${erro?.message || "erro não identificado"}`
+                );
+            }
+        }
+
+        carregarPermissaoSistemaTreinamentos();
+
+        return () => {
+            montado = false;
+        };
+    }, []);
+
+    const podeCadastrarTreinamentosSistema = useMemo(
+        () => usuarioPodeExecutarAcaoSistema(permissaoSistemaAtual, MODULOS_PERMISSAO_SISTEMA.TREINAMENTOS, ACOES_PERMISSAO_SISTEMA.CADASTRAR),
+        [permissaoSistemaAtual]
+    );
+
+    const podeEditarTreinamentosSistema = useMemo(
+        () => usuarioPodeExecutarAcaoSistema(permissaoSistemaAtual, MODULOS_PERMISSAO_SISTEMA.TREINAMENTOS, ACOES_PERMISSAO_SISTEMA.EDITAR),
+        [permissaoSistemaAtual]
+    );
+
+    const podeUploadTreinamentosSistema = useMemo(
+        () => usuarioPodeExecutarAcaoSistema(permissaoSistemaAtual, MODULOS_PERMISSAO_SISTEMA.TREINAMENTOS, ACOES_PERMISSAO_SISTEMA.UPLOAD),
+        [permissaoSistemaAtual]
+    );
+
+    const podeExportarTreinamentosSistema = useMemo(
+        () => usuarioPodeExecutarAcaoSistema(permissaoSistemaAtual, MODULOS_PERMISSAO_SISTEMA.TREINAMENTOS, ACOES_PERMISSAO_SISTEMA.EXPORTAR),
+        [permissaoSistemaAtual]
+    );
+
+    const podeExcluirTreinamentosSistema = useMemo(
+        () => usuarioPodeExcluirSistema(permissaoSistemaAtual, MODULOS_PERMISSAO_SISTEMA.TREINAMENTOS),
+        [permissaoSistemaAtual]
+    );
+
+    const mensagemBloqueioCadastroTreinamentos = "Sem permissão para cadastrar certificados de treinamento.";
+    const mensagemBloqueioEdicaoTreinamentos = "Sem permissão para editar datas de certificados.";
+    const mensagemBloqueioUploadTreinamentos = "Sem permissão para enviar certificados de treinamento.";
+    const mensagemBloqueioExportacaoTreinamentos = "Sem permissão para exportar informações de treinamentos.";
+    const mensagemBloqueioExclusaoTreinamentos = "Sem permissão para excluir certificados de treinamento.";
 
     useEffect(() => {
         if (typeof window === "undefined") return;
@@ -308,6 +377,11 @@ export function Treinamentos({
     };
 
     const adicionarTreinamento = async () => {
+        if (!podeCadastrarTreinamentosSistema || !podeUploadTreinamentosSistema) {
+            if (typeof window !== "undefined") window.alert(!podeUploadTreinamentosSistema ? mensagemBloqueioUploadTreinamentos : mensagemBloqueioCadastroTreinamentos);
+            return;
+        }
+
         if (!colabSelecionadoId) {
             alert("Cadastre um colaborador primeiro.");
             return;
@@ -342,6 +416,11 @@ export function Treinamentos({
     };
 
     const prepararArquivosLote = async (listaArquivos) => {
+        if (!podeUploadTreinamentosSistema) {
+            if (typeof window !== "undefined") window.alert(mensagemBloqueioUploadTreinamentos);
+            return;
+        }
+
         const arquivos = Array.from(listaArquivos || []);
 
         if (!validarListaArquivosAntesUpload(arquivos, "documentoSimples")) {
@@ -385,6 +464,11 @@ export function Treinamentos({
     };
 
     const selecionarArquivoCertificado = async (arquivo) => {
+        if (!podeUploadTreinamentosSistema) {
+            if (typeof window !== "undefined") window.alert(mensagemBloqueioUploadTreinamentos);
+            return;
+        }
+
         setArquivoSelecionado(null);
         setSugestaoDataArquivo(null);
         setAnalisandoArquivoCertificado(false);
@@ -447,6 +531,11 @@ export function Treinamentos({
     const sincronizarArquivosDoStorage = async () => {
         if (!onSincronizarStorage) return;
 
+        if (!podeUploadTreinamentosSistema) {
+            if (typeof window !== "undefined") window.alert(mensagemBloqueioUploadTreinamentos);
+            return;
+        }
+
         setSincronizandoStorage(true);
         setResultadoLote("");
 
@@ -457,6 +546,11 @@ export function Treinamentos({
     };
 
     const salvarCertificadosEmLote = async () => {
+        if (!podeCadastrarTreinamentosSistema || !podeUploadTreinamentosSistema) {
+            if (typeof window !== "undefined") window.alert(!podeUploadTreinamentosSistema ? mensagemBloqueioUploadTreinamentos : mensagemBloqueioCadastroTreinamentos);
+            return;
+        }
+
         if (!arquivosLote.length) {
             alert("Selecione os arquivos do lote.");
             return;
@@ -575,6 +669,11 @@ export function Treinamentos({
         });
 
     const enviarDocumentoPendente = (colaborador, treinamento) => {
+        if (!podeUploadTreinamentosSistema) {
+            if (typeof window !== "undefined") window.alert(mensagemBloqueioUploadTreinamentos);
+            return;
+        }
+
         setColabId(colaborador.codigoFuncionario);
         setTreinamentoId(Number(treinamento.id));
         setArquivoSelecionado(null);
@@ -826,6 +925,15 @@ export function Treinamentos({
         }
     };
 
+    const excluirCertificadoSeguro = async (...args) => {
+        if (!podeExcluirTreinamentosSistema) {
+            if (typeof window !== "undefined") window.alert(mensagemBloqueioExclusaoTreinamentos);
+            return false;
+        }
+
+        return onExcluirCertificado?.(...args);
+    };
+
     const valoresRevisao = (doc) => ({
         realizado: datasRevisao[doc.id]?.realizado ?? doc.realizado ?? "",
         vencimento: datasRevisao[doc.id]?.vencimento ?? doc.vencimento ?? "",
@@ -860,6 +968,11 @@ export function Treinamentos({
 
     const salvarDatasCertificado = async (doc) => {
         if (!onAtualizarDatasCertificado) return;
+
+        if (!podeEditarTreinamentosSistema) {
+            if (typeof window !== "undefined") window.alert(mensagemBloqueioEdicaoTreinamentos);
+            return;
+        }
 
         const valores = valoresRevisao(doc);
 
@@ -913,6 +1026,18 @@ export function Treinamentos({
                     </div>
                 }
             />
+
+            {permissaoSistemaAtual && (!podeCadastrarTreinamentosSistema || !podeEditarTreinamentosSistema || !podeUploadTreinamentosSistema || !podeExportarTreinamentosSistema) && (
+                <div className="mb-5 rounded-2xl bg-amber-50 p-4 text-sm font-semibold text-amber-800 ring-1 ring-amber-200">
+                    Perfil atual: {permissaoSistemaAtual.perfil}. Algumas ações de Treinamentos estão bloqueadas visualmente conforme o perfil cadastrado.
+                </div>
+            )}
+
+            {!permissaoSistemaAtual && mensagemPermissaoSistema && (
+                <div className="mb-5 rounded-2xl bg-slate-50 p-4 text-sm font-semibold text-slate-600 ring-1 ring-slate-200">
+                    {mensagemPermissaoSistema}
+                </div>
+            )}
 
             {mostrarPersonalizarTreinamentos && (
                 <Card className="mb-5 border-blue-100 bg-blue-50/40">
@@ -1163,7 +1288,7 @@ export function Treinamentos({
                                     salvandoDatasId={salvandoDatasId}
                                     enviarDocumentoPendente={enviarDocumentoPendente}
                                     onVisualizarCertificado={onVisualizarCertificado}
-                                    onExcluirCertificado={onExcluirCertificado}
+                                    onExcluirCertificado={excluirCertificadoSeguro}
                                     recolhido={cardsTreinamentosRecolhidos.base}
                                     onAlternarRecolhido={() => alternarCardTreinamento("base")}
                                 />
