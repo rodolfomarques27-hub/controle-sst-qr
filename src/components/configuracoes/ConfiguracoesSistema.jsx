@@ -182,6 +182,19 @@ export function ConfiguracoesSistema({
     const [mensagemUsuariosPermissoesSistema, setMensagemUsuariosPermissoesSistema] = useState(
         "Lista administrativa ainda não carregada do Supabase."
     );
+    const [mostrarFormularioNovoUsuarioPermissao, setMostrarFormularioNovoUsuarioPermissao] = useState(false);
+    const [novoUsuarioPermissaoSistema, setNovoUsuarioPermissaoSistema] = useState({
+        nome: "",
+        email: "",
+        funcao: "",
+        perfil: "tecnico_sst",
+        ativo: true,
+        bloqueado: false,
+        acesso_global: false,
+    });
+    const [mensagemFormularioNovoUsuarioPermissao, setMensagemFormularioNovoUsuarioPermissao] = useState(
+        "Estrutura visual pronta. O cadastro real será habilitado somente após criação da RPC de gravação."
+    );
 
     const eventosAuditoria = useMemo(() => {
         const normalizada = normalizarConfiguracaoEventosAuditoriaSistema(configEventos);
@@ -596,6 +609,48 @@ export function ConfiguracoesSistema({
         } finally {
             setCarregandoUsuariosPermissoesSistema(false);
         }
+    };
+
+    const alterarCampoNovoUsuarioPermissao = (campo, valor) => {
+        setNovoUsuarioPermissaoSistema((atual) => ({
+            ...atual,
+            [campo]: valor,
+        }));
+        setMensagemFormularioNovoUsuarioPermissao(
+            "Campos atualizados apenas na tela. A gravação no Supabase será criada em uma próxima microetapa."
+        );
+    };
+
+    const limparFormularioNovoUsuarioPermissao = () => {
+        setNovoUsuarioPermissaoSistema({
+            nome: "",
+            email: "",
+            funcao: "",
+            perfil: "tecnico_sst",
+            ativo: true,
+            bloqueado: false,
+            acesso_global: false,
+        });
+        setMensagemFormularioNovoUsuarioPermissao(
+            "Formulário visual limpo. Nenhuma informação foi enviada ao Supabase."
+        );
+    };
+
+    const confirmarEstruturaVisualNovoUsuarioPermissao = (evento) => {
+        evento.preventDefault();
+        const emailTratado = novoUsuarioPermissaoSistema.email.trim().toLowerCase();
+        const nomeTratado = novoUsuarioPermissaoSistema.nome.trim();
+
+        if (!nomeTratado || !emailTratado) {
+            setMensagemFormularioNovoUsuarioPermissao(
+                "Preencha nome e e-mail para validar a estrutura visual. Ainda não existe gravação no Supabase nesta etapa."
+            );
+            return;
+        }
+
+        setMensagemFormularioNovoUsuarioPermissao(
+            `Estrutura visual conferida para ${emailTratado}. Próxima microetapa: criar RPC segura para cadastrar ou atualizar este usuário.`
+        );
     };
 
 
@@ -1250,6 +1305,134 @@ export function ConfiguracoesSistema({
                                 </div>
                             </div>
 
+                            <div className="mt-4 rounded-3xl bg-slate-50 p-4 ring-1 ring-slate-100">
+                                <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+                                    <div>
+                                        <p className="text-xs font-black uppercase tracking-wide text-slate-400">Novo usuário / permissão</p>
+                                        <p className="mt-1 text-xs font-semibold leading-relaxed text-slate-500">
+                                            Estrutura visual para cadastrar usuários no painel. Esta etapa ainda não salva no Supabase.
+                                        </p>
+                                        <p className="mt-1 text-xs font-semibold leading-relaxed text-slate-500">
+                                            {mensagemFormularioNovoUsuarioPermissao}
+                                        </p>
+                                    </div>
+                                    <button
+                                        type="button"
+                                        onClick={() => setMostrarFormularioNovoUsuarioPermissao((atual) => !atual)}
+                                        className="inline-flex items-center justify-center gap-2 rounded-2xl bg-white px-3 py-2 text-xs font-black text-slate-700 ring-1 ring-slate-200 hover:bg-slate-100"
+                                    >
+                                        {mostrarFormularioNovoUsuarioPermissao ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
+                                        {mostrarFormularioNovoUsuarioPermissao ? "Ocultar formulário" : "Adicionar usuário"}
+                                    </button>
+                                </div>
+
+                                {mostrarFormularioNovoUsuarioPermissao && (
+                                    <form onSubmit={confirmarEstruturaVisualNovoUsuarioPermissao} className="mt-4 space-y-4">
+                                        <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+                                            <label className="space-y-1 text-xs font-black uppercase tracking-wide text-slate-400">
+                                                <span>Nome</span>
+                                                <input
+                                                    value={novoUsuarioPermissaoSistema.nome}
+                                                    onChange={(evento) => alterarCampoNovoUsuarioPermissao("nome", evento.target.value)}
+                                                    placeholder="Nome do usuário"
+                                                    className="w-full rounded-2xl border border-slate-200 bg-white px-3 py-2.5 text-sm font-semibold normal-case tracking-normal text-slate-800 outline-none focus:border-blue-400 focus:ring-4 focus:ring-blue-100"
+                                                />
+                                            </label>
+                                            <label className="space-y-1 text-xs font-black uppercase tracking-wide text-slate-400">
+                                                <span>E-mail</span>
+                                                <input
+                                                    type="email"
+                                                    value={novoUsuarioPermissaoSistema.email}
+                                                    onChange={(evento) => alterarCampoNovoUsuarioPermissao("email", evento.target.value)}
+                                                    placeholder="usuario@empresa.com"
+                                                    className="w-full rounded-2xl border border-slate-200 bg-white px-3 py-2.5 text-sm font-semibold normal-case tracking-normal text-slate-800 outline-none focus:border-blue-400 focus:ring-4 focus:ring-blue-100"
+                                                />
+                                            </label>
+                                            <label className="space-y-1 text-xs font-black uppercase tracking-wide text-slate-400">
+                                                <span>Função</span>
+                                                <input
+                                                    value={novoUsuarioPermissaoSistema.funcao}
+                                                    onChange={(evento) => alterarCampoNovoUsuarioPermissao("funcao", evento.target.value)}
+                                                    placeholder="Técnico, gestor, auditor..."
+                                                    className="w-full rounded-2xl border border-slate-200 bg-white px-3 py-2.5 text-sm font-semibold normal-case tracking-normal text-slate-800 outline-none focus:border-blue-400 focus:ring-4 focus:ring-blue-100"
+                                                />
+                                            </label>
+                                            <label className="space-y-1 text-xs font-black uppercase tracking-wide text-slate-400">
+                                                <span>Perfil</span>
+                                                <select
+                                                    value={novoUsuarioPermissaoSistema.perfil}
+                                                    onChange={(evento) => alterarCampoNovoUsuarioPermissao("perfil", evento.target.value)}
+                                                    className="w-full rounded-2xl border border-slate-200 bg-white px-3 py-2.5 text-sm font-semibold normal-case tracking-normal text-slate-800 outline-none focus:border-blue-400 focus:ring-4 focus:ring-blue-100"
+                                                >
+                                                    {PERFIS_USUARIOS_PERMISSOES_PLANEJADOS.map((perfil) => (
+                                                        <option key={perfil.chave} value={perfil.chave}>{perfil.perfil}</option>
+                                                    ))}
+                                                </select>
+                                            </label>
+                                        </div>
+
+                                        <div className="grid gap-3 md:grid-cols-3">
+                                            <label className="flex items-start gap-3 rounded-2xl bg-white px-3 py-3 ring-1 ring-slate-100">
+                                                <input
+                                                    type="checkbox"
+                                                    checked={novoUsuarioPermissaoSistema.ativo}
+                                                    onChange={(evento) => alterarCampoNovoUsuarioPermissao("ativo", evento.target.checked)}
+                                                    className="mt-1 h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                                                />
+                                                <span>
+                                                    <span className="block text-sm font-black text-slate-900">Usuário ativo</span>
+                                                    <span className="mt-0.5 block text-xs font-semibold leading-relaxed text-slate-500">Planejado para liberar uso operacional quando os bloqueios forem ativados.</span>
+                                                </span>
+                                            </label>
+                                            <label className="flex items-start gap-3 rounded-2xl bg-white px-3 py-3 ring-1 ring-slate-100">
+                                                <input
+                                                    type="checkbox"
+                                                    checked={novoUsuarioPermissaoSistema.bloqueado}
+                                                    onChange={(evento) => alterarCampoNovoUsuarioPermissao("bloqueado", evento.target.checked)}
+                                                    className="mt-1 h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                                                />
+                                                <span>
+                                                    <span className="block text-sm font-black text-slate-900">Bloqueado</span>
+                                                    <span className="mt-0.5 block text-xs font-semibold leading-relaxed text-slate-500">Planejado para manter rastreabilidade sem permitir operação futura.</span>
+                                                </span>
+                                            </label>
+                                            <label className="flex items-start gap-3 rounded-2xl bg-white px-3 py-3 ring-1 ring-slate-100">
+                                                <input
+                                                    type="checkbox"
+                                                    checked={novoUsuarioPermissaoSistema.acesso_global}
+                                                    onChange={(evento) => alterarCampoNovoUsuarioPermissao("acesso_global", evento.target.checked)}
+                                                    className="mt-1 h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                                                />
+                                                <span>
+                                                    <span className="block text-sm font-black text-slate-900">Acesso global</span>
+                                                    <span className="mt-0.5 block text-xs font-semibold leading-relaxed text-slate-500">Deve ser usado só para administradores depois da RPC de gravação.</span>
+                                                </span>
+                                            </label>
+                                        </div>
+
+                                        <div className="rounded-2xl bg-amber-50 px-4 py-3 text-xs font-semibold leading-relaxed text-amber-700 ring-1 ring-amber-100">
+                                            Etapa visual: clicar nos botões abaixo não cadastra, não edita e não altera permissões no Supabase.
+                                        </div>
+
+                                        <div className="flex flex-wrap gap-2">
+                                            <button
+                                                type="submit"
+                                                className="rounded-2xl bg-slate-950 px-4 py-2 text-xs font-black text-white shadow-sm hover:bg-slate-800"
+                                            >
+                                                Validar estrutura visual
+                                            </button>
+                                            <button
+                                                type="button"
+                                                onClick={limparFormularioNovoUsuarioPermissao}
+                                                className="rounded-2xl bg-white px-4 py-2 text-xs font-black text-slate-700 ring-1 ring-slate-200 hover:bg-slate-50"
+                                            >
+                                                Limpar formulário
+                                            </button>
+                                        </div>
+                                    </form>
+                                )}
+                            </div>
+
                             <div className="mt-4 space-y-2">
                                 {usuariosPermissoesSistema.length > 0 ? usuariosPermissoesSistema.map((item) => (
                                     <div key={item.id || item.email} className="rounded-2xl bg-slate-50 px-4 py-3 ring-1 ring-slate-100">
@@ -1481,9 +1664,9 @@ export function ConfiguracoesSistema({
                                 <div>
                                     <p className="text-sm font-black text-slate-950">Próximas microetapas recomendadas</p>
                                     <div className="mt-2 grid gap-2 text-xs font-semibold leading-relaxed text-slate-600 md:grid-cols-2">
-                                        <p>1. Exibir a permissão carregada do Supabase no painel. Concluído nesta etapa.</p>
-                                        <p>2. Criar leitura administrativa da lista de usuários autorizados, sem edição ainda.</p>
-                                        <p>3. Aplicar bloqueio real apenas em ações críticas: excluir, limpar arquivos e configurações.</p>
+                                        <p>1. Estrutura visual para adicionar usuário criada nesta etapa, ainda sem gravação.</p>
+                                        <p>2. Criar RPC segura para cadastrar ou atualizar permissões no Supabase.</p>
+                                        <p>3. Validar cadastro administrativo antes de ativar qualquer bloqueio real.</p>
                                         <p>4. Registrar toda alteração de permissão na Auditoria do Sistema.</p>
                                     </div>
                                 </div>
