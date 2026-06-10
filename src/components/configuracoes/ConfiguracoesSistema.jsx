@@ -7,6 +7,7 @@ import {
     ChevronUp,
     Copy,
     Database,
+    FileText,
     HardDrive,
     KeyRound,
     Link2,
@@ -210,6 +211,7 @@ const CHAVES_BLOCOS_CONFIGURACOES_PADRAO = [
     "config-limites-carregamento",
     "config-auditoria-publica",
     "config-arquivos-storage",
+    "config-relatorios-evidencias",
     "config-senha-configuracoes",
     "config-eventos-auditoria",
     "config-seguranca-publica",
@@ -218,7 +220,7 @@ const CHAVES_BLOCOS_CONFIGURACOES_PADRAO = [
     "config-status-etapa",
 ];
 
-const VERSAO_LAYOUT_CONFIGURACOES_SISTEMA = "roteiro13-pacote4-compacto";
+const VERSAO_LAYOUT_CONFIGURACOES_SISTEMA = "roteiro13-pacote7-evidencias";
 const CHAVE_LAYOUT_CONFIGURACOES_SISTEMA = "configuracoesSistemaVersaoLayout";
 const CHAVE_BLOCOS_RECOLHIDOS_CONFIGURACOES = "configuracoesSistemaBlocosRecolhidos";
 
@@ -227,6 +229,7 @@ const BLOCOS_CONFIGURACOES_ABERTOS_PADRAO = new Set([
     "config-limites-carregamento",
     "config-auditoria-publica",
     "config-arquivos-storage",
+    "config-relatorios-evidencias",
 ]);
 
 const BLOCOS_CONFIGURACOES_VISIVEIS_PADRAO = CHAVES_BLOCOS_CONFIGURACOES_PADRAO.reduce((acc, chave) => {
@@ -317,6 +320,9 @@ export function ConfiguracoesSistema({
     const [origemAuditoriaPublica, setOrigemAuditoriaPublica] = useState("supabase");
     const [mensagemStorage, setMensagemStorage] = useState("Checklist de Storage pronto para conferência operacional.");
     const [mensagemSupabase, setMensagemSupabase] = useState("Checklist Supabase/RLS/RPC pronto para conferência técnica.");
+    const [mensagemEvidenciasConfiguracoes, setMensagemEvidenciasConfiguracoes] = useState(
+        "Gere uma evidência administrativa simples das Configurações atuais para auditoria interna."
+    );
     const [senhaConfiguracoesFormulario, setSenhaConfiguracoesFormulario] = useState({
         atual: "",
         nova: "",
@@ -818,6 +824,94 @@ export function ConfiguracoesSistema({
 
         restaurarConfiguracaoAuditoriaPublicaPadrao();
         await carregarConfiguracaoAuditoriaPublicaSupabase();
+    };
+
+
+    const montarRelatorioConfiguracoesSistemaTexto = () => {
+        const dataGeracao = new Date().toLocaleString("pt-BR");
+        const limitesTexto = DESCRICOES_LIMITES_CARREGAMENTO_SISTEMA.map((limite) => (
+            `- ${limite.label}: ${limitesEditaveis[limite.chave] ?? limite.valor} (${limite.detalhe})`
+        ));
+
+        return [
+            "RELATÓRIO ADMINISTRATIVO - CONFIGURAÇÕES DO SISTEMA SST",
+            "",
+            `Gerado em: ${dataGeracao}`,
+            `Usuário autenticado: ${usuario?.email || "não informado"}`,
+            `Perfil atual: ${resumoPermissaoSistemaAtual.perfil}`,
+            `Status do usuário: ${resumoPermissaoSistemaAtual.status}`,
+            `Acesso global: ${resumoPermissaoSistemaAtual.acessoGlobal ? "sim" : "não"}`,
+            "",
+            "1. PERMISSÕES E USUÁRIOS",
+            `- Usuários cadastrados: ${resumoUsuariosPermissoesSistema.total}`,
+            `- Usuários ativos: ${resumoUsuariosPermissoesSistema.ativos}`,
+            `- Administradores: ${resumoUsuariosPermissoesSistema.administradores}`,
+            `- Bloqueados: ${resumoUsuariosPermissoesSistema.bloqueados}`,
+            `- Solicitações pendentes: ${resumoSolicitacoesAcessoSistema.pendentes}`,
+            `- Solicitações aprovadas: ${resumoSolicitacoesAcessoSistema.aprovadas}`,
+            `- Solicitações concluídas: ${resumoSolicitacoesAcessoSistema.concluidas}`,
+            `- Solicitações recusadas: ${resumoSolicitacoesAcessoSistema.recusadas}`,
+            "",
+            "2. LIMITES DE CARREGAMENTO",
+            ...limitesTexto,
+            `- Limite visual do Storage: ${limitesEditaveis.storageMb || limites.storageMb || 1024} MB`,
+            "",
+            "3. AUDITORIA DO SISTEMA",
+            `- Eventos habilitados: ${totalEventosHabilitados}/${eventosAuditoria.length}`,
+            `- Origem da configuração: ${origemConfig === "supabase" ? "Supabase" : "Local"}`,
+            `- Eventos em modo de salvamento: ${salvandoConfig ? "sim" : "não"}`,
+            "",
+            "4. AUDITORIA PÚBLICA / TOKEN",
+            `- Origem do token/configuração: ${origemAuditoriaPublica || "não informada"}`,
+            `- Token público: ${configAuditoriaPublica.tokenPublico ? "configurado" : "não configurado"}`,
+            `- Exigir senha: ${configAuditoriaPublica.exigirSenha ? "sim" : "não"}`,
+            `- Permitir nova auditoria: ${configAuditoriaPublica.permitirNovaAuditoria ? "sim" : "não"}`,
+            `- Link público: ${linkAuditoriaPublica || "não disponível"}`,
+            "",
+            "5. SEGURANÇA E CHECKLISTS",
+            `- Auditoria pública: ${resumoSegurancaAuditoriaPublica.texto} (${resumoSegurancaAuditoriaPublica.detalhe})`,
+            `- Storage privado: ${resumoSegurancaStorage.texto} (${resumoSegurancaStorage.detalhe})`,
+            `- Supabase/RLS/RPC: ${resumoRevisaoSupabase.texto} (${resumoRevisaoSupabase.detalhe})`,
+            "",
+            "6. AÇÕES CRÍTICAS DO USUÁRIO ATUAL",
+            `- Pode excluir registros: ${resumoAcoesCriticasSistemaAtual.podeExcluir ? "sim" : "não"}`,
+            `- Pode limpar arquivos: ${resumoAcoesCriticasSistemaAtual.podeLimparArquivos ? "sim" : "não"}`,
+            `- Pode gerenciar permissões: ${resumoAcoesCriticasSistemaAtual.podeGerenciarPermissoes ? "sim" : "não"}`,
+            `- Pode alterar configurações críticas: ${resumoAcoesCriticasSistemaAtual.podeAlterarConfiguracoesCriticas ? "sim" : "não"}`,
+            "",
+            "7. SENHA DAS CONFIGURAÇÕES",
+            `- Tipo: ${senhaConfiguracoesSistema === SENHA_CONFIGURACOES_PADRAO ? "padrão 2026" : "personalizada"}`,
+            `- Origem: ${origemSenhaConfiguracoesSistema || "local"}`,
+            "",
+            "Observação: esta evidência é um resumo administrativo da tela Configurações. Não substitui conferência direta das policies, RLS, RPCs e buckets no Supabase.",
+        ].join("\n");
+    };
+
+    const copiarRelatorioConfiguracoesSistema = async () => {
+        try {
+            await navigator.clipboard?.writeText(montarRelatorioConfiguracoesSistemaTexto());
+            setMensagemEvidenciasConfiguracoes("Relatório administrativo copiado para a área de transferência.");
+        } catch {
+            setMensagemEvidenciasConfiguracoes("Não foi possível copiar o relatório automaticamente. Use o botão de baixar arquivo TXT.");
+        }
+    };
+
+    const baixarRelatorioConfiguracoesSistema = () => {
+        if (typeof window === "undefined") return;
+
+        const conteudo = montarRelatorioConfiguracoesSistemaTexto();
+        const blob = new Blob([conteudo], { type: "text/plain;charset=utf-8" });
+        const url = window.URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        const dataArquivo = new Date().toISOString().slice(0, 10);
+
+        link.href = url;
+        link.download = `relatorio-configuracoes-sst-${dataArquivo}.txt`;
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        window.URL.revokeObjectURL(url);
+        setMensagemEvidenciasConfiguracoes("Relatório administrativo TXT gerado para download.");
     };
 
     const copiarLinkAuditoriaPublica = async () => {
@@ -1487,6 +1581,7 @@ export function ConfiguracoesSistema({
         { chave: "config-limites-carregamento", titulo: "Limites de carregamento", descricao: "Quantidade de registros por tela para manter desempenho.", icon: SlidersHorizontal },
         { chave: "config-auditoria-publica", titulo: "Auditoria pública / token", descricao: "Token ativo, senha de referência e link público.", icon: KeyRound },
         { chave: "config-arquivos-storage", titulo: "Arquivos salvos no Storage", descricao: "Capacidade, vínculos, filtros e limpeza protegida.", icon: Database },
+        { chave: "config-relatorios-evidencias", titulo: "Relatórios e evidências", descricao: "Resumo copiável e TXT das configurações atuais.", icon: FileText },
         { chave: "config-senha-configuracoes", titulo: "Configurações críticas", descricao: "Senha local e ações sensíveis da área administrativa.", icon: Lock },
         { chave: "config-eventos-auditoria", titulo: "Eventos da Auditoria do Sistema", descricao: "Eventos registrados e exibidos no histórico administrativo.", icon: Settings },
         { chave: "config-seguranca-publica", titulo: "Checklist da auditoria pública", descricao: "Conferência operacional do QR Code público.", icon: ShieldAlert },
@@ -1692,6 +1787,88 @@ export function ConfiguracoesSistema({
                         >
                             {podeAlterarConfiguracoesCriticasSistema ? "Salvar limites de carregamento" : "Limites bloqueados"}
                         </button>
+                    </Card>
+                )
+            );
+
+
+        case "config-relatorios-evidencias":
+            return renderBlocoConfiguracaoComControle(
+                "config-relatorios-evidencias",
+                "Relatórios e evidências das Configurações",
+                "Resumo administrativo copiável e arquivo TXT para conferência interna.",
+                (
+                    <Card>
+                        <div className="flex flex-col gap-3 border-b border-slate-100 pb-4 sm:flex-row sm:items-start sm:justify-between">
+                            <div>
+                                <div className="flex items-center gap-2">
+                                    <FileText className="h-5 w-5 text-slate-500" />
+                                    <h2 id="config-relatorios-evidencias" className="scroll-mt-24 text-lg font-black text-slate-950">Relatórios e evidências das Configurações</h2>
+                                </div>
+                                <p className="mt-1 text-sm text-slate-500">
+                                    Gere uma evidência simples do estado atual das permissões, limites, token público, checklists e ações críticas.
+                                </p>
+                            </div>
+                            <div className="flex flex-wrap gap-2">
+                                <button
+                                    type="button"
+                                    onClick={copiarRelatorioConfiguracoesSistema}
+                                    className="inline-flex items-center justify-center gap-2 rounded-2xl bg-white px-3 py-2 text-xs font-bold text-slate-700 ring-1 ring-slate-200 hover:bg-slate-50"
+                                >
+                                    <Copy className="h-3.5 w-3.5" />
+                                    Copiar resumo
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={baixarRelatorioConfiguracoesSistema}
+                                    className="inline-flex items-center justify-center gap-2 rounded-2xl bg-slate-950 px-3 py-2 text-xs font-black text-white hover:bg-slate-800"
+                                >
+                                    <FileText className="h-3.5 w-3.5" />
+                                    Baixar TXT
+                                </button>
+                            </div>
+                        </div>
+
+                        {mensagemEvidenciasConfiguracoes && (
+                            <div className="mt-4 rounded-2xl bg-blue-50 px-4 py-3 text-xs font-bold text-blue-700 ring-1 ring-blue-200">
+                                {mensagemEvidenciasConfiguracoes}
+                            </div>
+                        )}
+
+                        <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+                            <div className="rounded-2xl bg-slate-50 px-3 py-3 ring-1 ring-slate-100">
+                                <p className="text-[11px] font-black uppercase tracking-wide text-slate-400">Permissões</p>
+                                <p className="mt-1 text-lg font-black text-slate-950">{resumoUsuariosPermissoesSistema.total}</p>
+                                <p className="mt-1 text-xs font-semibold text-slate-500">
+                                    {resumoUsuariosPermissoesSistema.ativos} ativos · {resumoUsuariosPermissoesSistema.bloqueados} bloqueados · {resumoUsuariosPermissoesSistema.administradores} administradores
+                                </p>
+                            </div>
+                            <div className="rounded-2xl bg-slate-50 px-3 py-3 ring-1 ring-slate-100">
+                                <p className="text-[11px] font-black uppercase tracking-wide text-slate-400">Solicitações</p>
+                                <p className="mt-1 text-lg font-black text-slate-950">{resumoSolicitacoesAcessoSistema.total}</p>
+                                <p className="mt-1 text-xs font-semibold text-slate-500">
+                                    {resumoSolicitacoesAcessoSistema.pendentes} pendentes · {resumoSolicitacoesAcessoSistema.aprovadas} aprovadas · {resumoSolicitacoesAcessoSistema.concluidas} concluídas
+                                </p>
+                            </div>
+                            <div className="rounded-2xl bg-slate-50 px-3 py-3 ring-1 ring-slate-100">
+                                <p className="text-[11px] font-black uppercase tracking-wide text-slate-400">Auditoria</p>
+                                <p className="mt-1 text-lg font-black text-slate-950">{totalEventosHabilitados}/{eventosAuditoria.length}</p>
+                                <p className="mt-1 text-xs font-semibold text-slate-500">
+                                    eventos habilitados · origem {origemConfig === "supabase" ? "Supabase" : "Local"}
+                                </p>
+                            </div>
+                            <div className="rounded-2xl bg-slate-50 px-3 py-3 ring-1 ring-slate-100">
+                                <p className="text-[11px] font-black uppercase tracking-wide text-slate-400">Segurança</p>
+                                <p className="mt-1 text-lg font-black text-slate-950">{resumoRevisaoSupabase.texto}</p>
+                                <p className="mt-1 text-xs font-semibold text-slate-500">
+                                    Supabase · Storage {resumoSegurancaStorage.texto} · QR {resumoSegurancaAuditoriaPublica.texto}
+                                </p>
+                            </div>
+                        </div>
+
+                        <div className="mt-4 rounded-2xl bg-orange-50 px-4 py-3 text-xs font-semibold leading-relaxed text-orange-800 ring-1 ring-orange-200">
+                            Esta etapa gera evidência simples em texto. O PDF das Configurações deve ficar para depois da tela estar totalmente estável, para evitar adicionar peso e complexidade agora.
+                        </div>
                     </Card>
                 )
             );
