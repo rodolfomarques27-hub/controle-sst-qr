@@ -1,42 +1,56 @@
 import React, { useState } from "react";
-import { LogIn, ShieldCheck } from "lucide-react";
+import { Loader2, LogIn, Mail, ShieldCheck } from "lucide-react";
 import { supabase } from "../lib/supabaseClient";
 import { PasswordInput } from "./commonComponents";
 
 export function LoginScreen({ onLogin }) {
-    const [email, setEmail] = useState("sst@empresa.com");
+    const [email, setEmail] = useState("");
     const [senha, setSenha] = useState("");
     const [carregando, setCarregando] = useState(false);
     const [erro, setErro] = useState("");
 
-    const fazerLogin = async () => {
+    const fazerLogin = async (event) => {
+        event?.preventDefault?.();
         setErro("");
 
-        if (!email || !senha) {
-            setErro("Preencha o e-mail e a senha.");
+        const emailTratado = String(email || "").trim().toLowerCase();
+
+        if (!emailTratado || !senha) {
+            setErro("Informe o e-mail e a senha para acessar o sistema.");
             return;
         }
 
         setCarregando(true);
 
-        const { data, error } = await supabase.auth.signInWithPassword({
-            email,
-            password: senha,
-        });
+        try {
+            const { data, error } = await supabase.auth.signInWithPassword({
+                email: emailTratado,
+                password: senha,
+            });
 
-        setCarregando(false);
+            if (error) {
+                setErro("Não foi possível entrar. Confira o e-mail, a senha ou solicite liberação ao administrador.");
+                return;
+            }
 
-        if (error) {
-            setErro("E-mail ou senha incorretos.");
-            return;
+            if (!data?.user?.id) {
+                setErro("Login autenticado sem identificação do usuário. Tente novamente.");
+                return;
+            }
+
+            onLogin({
+                id: data.user.id,
+                email: data.user.email || emailTratado,
+                perfil: "",
+            });
+        } catch (error) {
+            setErro(error?.message || "Não foi possível entrar no sistema. Tente novamente.");
+        } finally {
+            setCarregando(false);
         }
-
-        onLogin({
-            id: data.user.id,
-            email: data.user.email,
-            perfil: "",
-        });
     };
+
+    const loginBloqueado = carregando || !String(email || "").trim() || !senha;
 
     return (
         <div className="flex min-h-screen items-center justify-center bg-slate-950 p-4">
@@ -51,48 +65,52 @@ export function LoginScreen({ onLogin }) {
                     </div>
                 </div>
 
-                <div className="space-y-3">
-                    <label className="block text-sm font-medium text-slate-700">E-mail</label>
-                    <input
-                        type="email"
-                        value={email}
-                        onChange={(e) => setEmail(e.target.value)}
-                        placeholder="Digite seu e-mail"
-                        className="w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-slate-300"
-                    />
+                <form className="space-y-4" onSubmit={fazerLogin}>
+                    <div className="space-y-2">
+                        <label className="block text-sm font-medium text-slate-700">E-mail</label>
+                        <div className="flex items-center gap-2 rounded-2xl border border-slate-200 px-4 py-3 focus-within:ring-2 focus-within:ring-slate-300">
+                            <Mail className="h-4 w-4 text-slate-400" />
+                            <input
+                                type="email"
+                                value={email}
+                                onChange={(e) => setEmail(e.target.value)}
+                                placeholder="Digite seu e-mail"
+                                autoComplete="email"
+                                className="w-full bg-transparent text-sm outline-none"
+                            />
+                        </div>
+                    </div>
 
-                    <label className="block text-sm font-medium text-slate-700">Senha</label>
-                    <PasswordInput
-                        value={senha}
-                        onChange={(e) => setSenha(e.target.value)}
-                        onKeyDown={(e) => {
-                            if (e.key === "Enter") fazerLogin();
-                        }}
-                        placeholder="Digite sua senha"
-                        autoComplete="current-password"
-                        inputClassName="focus:ring-2 focus:ring-slate-300"
-                    />
+                    <div className="space-y-2">
+                        <label className="block text-sm font-medium text-slate-700">Senha</label>
+                        <PasswordInput
+                            value={senha}
+                            onChange={(e) => setSenha(e.target.value)}
+                            placeholder="Digite sua senha"
+                            autoComplete="current-password"
+                            inputClassName="focus:ring-2 focus:ring-slate-300"
+                        />
+                    </div>
 
                     {erro && (
                         <div className="rounded-2xl bg-red-50 p-3 text-sm font-medium text-red-700 ring-1 ring-red-200">
                             {erro}
                         </div>
                     )}
+
+                    <button
+                        type="submit"
+                        disabled={loginBloqueado}
+                        className="flex w-full items-center justify-center gap-2 rounded-2xl bg-slate-950 px-4 py-3 text-sm font-semibold text-white hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
+                    >
+                        {carregando ? <Loader2 className="h-4 w-4 animate-spin" /> : <LogIn className="h-4 w-4" />}
+                        {carregando ? "Validando acesso..." : "Entrar no sistema"}
+                    </button>
+                </form>
+
+                <div className="mt-4 rounded-2xl bg-slate-50 p-3 text-xs leading-relaxed text-slate-500">
+                    O acesso é validado pelo Supabase. O perfil e as permissões são carregados automaticamente após o login.
                 </div>
-
-                <button
-                    type="button"
-                    onClick={fazerLogin}
-                    disabled={carregando}
-                    className="mt-6 flex w-full items-center justify-center gap-2 rounded-2xl bg-slate-950 px-4 py-3 text-sm font-semibold text-white hover:bg-slate-800 disabled:opacity-60"
-                >
-                    <LogIn className="h-4 w-4" />
-                    {carregando ? "Entrando..." : "Entrar no sistema"}
-                </button>
-
-                <p className="mt-4 rounded-2xl bg-slate-50 p-3 text-xs text-slate-500">
-                    O acesso é validado pelo Supabase. O perfil e as permissões são carregados automaticamente pelo sistema.
-                </p>
             </div>
         </div>
     );
