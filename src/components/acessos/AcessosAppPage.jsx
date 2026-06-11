@@ -810,7 +810,7 @@ function UsuariosCadastradosApp({ usuario = null, usuarioParaEditar = null, onEd
                 });
             }
 
-            setMensagem(resultado?.mensagem || "Login criado/atualizado com sucesso. O usuário deve trocar a senha temporária no primeiro acesso.");
+            setMensagem(resultado?.mensagem || "Login criado/atualizado com sucesso. O perfil editável foi aplicado e o usuário deve trocar a senha temporária no primeiro acesso.");
         } catch (error) {
             setErro(error?.message || "Não foi possível criar o login do app.");
             setMensagem("O login não foi criado.");
@@ -864,7 +864,7 @@ function UsuariosCadastradosApp({ usuario = null, usuarioParaEditar = null, onEd
                 setFormulario(montarFormularioUsuarioAcesso(salvo));
             }
 
-            setMensagem("Permissão salva com sucesso. Para criar ou redefinir login real, use o botão Criar login do app com senha temporária.");
+            setMensagem("Permissão salva com o padrão editável do perfil selecionado. Para criar ou redefinir login real, use o botão Criar login do app com senha temporária.");
         } catch (error) {
             setErro(error?.message || "Não foi possível salvar a permissão do usuário.");
             setMensagem("A permissão não foi salva.");
@@ -1125,7 +1125,7 @@ function UsuariosCadastradosApp({ usuario = null, usuarioParaEditar = null, onEd
                             <p className="text-xs font-black uppercase tracking-[0.18em] text-slate-400">Edição de permissão</p>
                             <h4 className="mt-1 text-lg font-black text-slate-950">{formulario.id ? "Editar pessoa com acesso ao app" : "Cadastrar login de acesso"}</h4>
                             <p className="mt-1 text-xs font-semibold leading-5 text-slate-500">
-                                Use Criar login do app para criar o usuário real no Supabase Auth com senha temporária. Use Salvar permissão quando precisar apenas ajustar perfil, bloqueio ou observação.
+                                Use Criar login do app para criar o usuário real no Supabase Auth. Ao escolher um perfil, o padrão editável salvo em Perfis padrão será aplicado às permissões do usuário.
                             </p>
                         </div>
                         <button
@@ -1185,6 +1185,9 @@ function UsuariosCadastradosApp({ usuario = null, usuarioParaEditar = null, onEd
                                     <option key={perfil.chave} value={perfil.chave}>{perfil.perfil}</option>
                                 ))}
                             </select>
+                            <p className="mt-2 rounded-2xl bg-blue-50 px-3 py-2 text-[11px] font-bold leading-5 text-blue-700 ring-1 ring-blue-100">
+                                Ao salvar, o sistema aplica automaticamente o padrão editável deste perfil nas permissões do usuário.
+                            </p>
                         </label>
                     </div>
 
