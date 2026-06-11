@@ -640,9 +640,7 @@ function UsuariosCadastradosApp({ usuario = null, usuarioParaEditar = null, onEd
     function alternarListaUsuarios() {
         setListaUsuariosAberta((valorAtual) => {
             const proximoValor = !valorAtual;
-            if (!proximoValor) {
-                setFiltrosUsuariosAbertos(false);
-            }
+            setFiltrosUsuariosAbertos(proximoValor);
             return proximoValor;
         });
     }
@@ -964,19 +962,10 @@ function UsuariosCadastradosApp({ usuario = null, usuarioParaEditar = null, onEd
                     <button
                         type="button"
                         onClick={alternarListaUsuarios}
-                        className="inline-flex items-center justify-center rounded-2xl bg-white px-4 py-2 text-xs font-black text-slate-700 ring-1 ring-slate-200 hover:bg-slate-50"
+                        className={`inline-flex items-center justify-center rounded-2xl px-4 py-2 text-xs font-black shadow-sm ring-1 ${listaUsuariosAberta ? "bg-white text-slate-700 ring-slate-200 hover:bg-slate-50" : "bg-slate-950 text-white ring-slate-950 hover:bg-slate-800"}`}
                     >
-                        {listaUsuariosAberta ? "Recolher lista" : "Mostrar lista"}
+                        {listaUsuariosAberta ? "Recolher lista" : "Abrir lista e filtros"}
                     </button>
-                    {listaUsuariosAberta ? (
-                        <button
-                            type="button"
-                            onClick={() => setFiltrosUsuariosAbertos((valorAtual) => !valorAtual)}
-                            className="inline-flex items-center justify-center rounded-2xl bg-white px-4 py-2 text-xs font-black text-slate-700 ring-1 ring-slate-200 hover:bg-slate-50"
-                        >
-                            {filtrosUsuariosAbertos ? "Ocultar filtros" : "Filtrar lista"}
-                        </button>
-                    ) : null}
                     <button
                         type="button"
                         onClick={abrirCadastroVazio}
@@ -997,20 +986,20 @@ function UsuariosCadastradosApp({ usuario = null, usuarioParaEditar = null, onEd
                 </div>
             </div>
 
-            <div className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
-                <div className="rounded-2xl bg-slate-50 px-4 py-3 ring-1 ring-slate-100">
+            <div className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+                <div className="flex min-h-[82px] flex-col items-center justify-center rounded-2xl bg-slate-50 px-4 py-3 text-center ring-1 ring-slate-100">
                     <p className="text-[10px] font-black uppercase tracking-wide text-slate-400">Total</p>
                     <p className="mt-1 text-xl font-black text-slate-950">{resumo.total}</p>
                 </div>
-                <div className="rounded-2xl bg-emerald-50 px-4 py-3 ring-1 ring-emerald-100">
+                <div className="flex min-h-[82px] flex-col items-center justify-center rounded-2xl bg-emerald-50 px-4 py-3 text-center ring-1 ring-emerald-100">
                     <p className="text-[10px] font-black uppercase tracking-wide text-emerald-700">Ativos</p>
                     <p className="mt-1 text-xl font-black text-emerald-800">{resumo.ativos}</p>
                 </div>
-                <div className="rounded-2xl bg-blue-50 px-4 py-3 ring-1 ring-blue-100">
+                <div className="flex min-h-[82px] flex-col items-center justify-center rounded-2xl bg-blue-50 px-4 py-3 text-center ring-1 ring-blue-100">
                     <p className="text-[10px] font-black uppercase tracking-wide text-blue-700">Administradores</p>
                     <p className="mt-1 text-xl font-black text-blue-800">{resumo.administradores}</p>
                 </div>
-                <div className="rounded-2xl bg-rose-50 px-4 py-3 ring-1 ring-rose-100">
+                <div className="flex min-h-[82px] flex-col items-center justify-center rounded-2xl bg-rose-50 px-4 py-3 text-center ring-1 ring-rose-100">
                     <p className="text-[10px] font-black uppercase tracking-wide text-rose-700">Bloqueados</p>
                     <p className="mt-1 text-xl font-black text-rose-800">{resumo.bloqueados}</p>
                 </div>
