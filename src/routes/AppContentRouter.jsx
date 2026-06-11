@@ -1,7 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { KeyRound, LayoutGrid, Lock, LockKeyhole, Send, UserRound } from "lucide-react";
 import { Card, PasswordInput } from "../components/commonComponents";
-import { CarregandoTela } from "../components/CarregandoTela";
 import { LIMITE_STORAGE_MB } from "../constants/sistemaConstants";
 import { supabase } from "../lib/supabaseClient";
 import {
@@ -27,6 +26,41 @@ const NovaAuditoriaCampoDireta = React.lazy(() => import("../components/auditori
 const ConfiguracoesSistema = React.lazy(() => import("../components/configuracoes/ConfiguracoesSistema").then((modulo) => ({ default: modulo.ConfiguracoesSistema })));
 const ConfiguracoesBloqueio = React.lazy(() => import("../components/configuracoes/ConfiguracoesBloqueio").then((modulo) => ({ default: modulo.ConfiguracoesBloqueio })));
 const AcessosAppPage = React.lazy(() => import("../components/acessos/AcessosAppPage").then((modulo) => ({ default: modulo.AcessosAppPage })));
+
+
+function precarregarModuloTelaSistema(tela = "") {
+    switch (tela) {
+        case "dashboard":
+            return import("../components/dashboard/Dashboard");
+        case "auditoriaCampo":
+            return import("../components/auditoria/DashboardAuditoriaCampo");
+        case "novaAuditoriaCampo":
+            return import("../components/auditoria/NovaAuditoriaCampoDireta");
+        case "empresas":
+            return import("../components/empresas/EmpresasPage");
+        case "colaboradores":
+            return import("../components/colaboradores/ColaboradoresPage");
+        case "aniversariantes":
+            return import("../components/aniversariantes/AniversariantesPage");
+        case "treinamentos":
+            return import("../components/treinamentos/TreinamentosPage");
+        case "qr":
+            return import("../components/qr/ConsultaQR");
+        case "auditoria":
+            return import("../components/auditoria/RelatorioAuditoria");
+        case "acessosApp":
+            return import("../components/acessos/AcessosAppPage");
+        case "configuracoes":
+            return Promise.all([
+                import("../components/configuracoes/ConfiguracoesSistema"),
+                import("../components/configuracoes/ConfiguracoesBloqueio"),
+            ]);
+        case "roteiro":
+            return import("../components/Requisitos");
+        default:
+            return Promise.resolve();
+    }
+}
 
 const ORDEM_REDIRECIONAMENTO_TELAS_PERMITIDAS = [
     "dashboard",
@@ -441,6 +475,8 @@ export function AppContentRouter({
     const [permissaoSistemaTela, setPermissaoSistemaTela] = useState(null);
     const [carregandoPermissaoSistemaTela, setCarregandoPermissaoSistemaTela] = useState(() => Boolean(usuario?.email));
     const [erroPermissaoSistemaTela, setErroPermissaoSistemaTela] = useState("");
+    const [telaComModuloPronto, setTelaComModuloPronto] = useState("");
+    const [preparandoTelaPermitida, setPreparandoTelaPermitida] = useState(() => Boolean(usuario?.email));
     const ultimoRedirecionamentoAutomaticoRef = useRef("");
 
     useEffect(() => {
@@ -526,26 +562,103 @@ export function AppContentRouter({
     );
 
     useEffect(() => {
-        if (!deveRedirecionarParaTelaPermitida) return;
+        if (!usuario?.email) {
+            setTelaComModuloPronto("");
+            setPreparandoTelaPermitida(false);
+            return undefined;
+        }
 
-        const chaveRedirecionamento = `${usuario?.email || "sem-usuario"}:${tela}:${primeiraTelaPermitidaSistema}`;
-        if (ultimoRedirecionamentoAutomaticoRef.current === chaveRedirecionamento) return;
+        if (trocaSenhaTemporariaObrigatoria) {
+            setTelaComModuloPronto("");
+            setPreparandoTelaPermitida(false);
+            return undefined;
+        }
 
-        ultimoRedirecionamentoAutomaticoRef.current = chaveRedirecionamento;
-        onRedirecionarTelaPermitida(primeiraTelaPermitidaSistema);
+        if (erroPermissaoSistemaTela) {
+            setPreparandoTelaPermitida(false);
+            setTelaComModuloPronto(tela);
+            return undefined;
+        }
+
+        if (!permissaoProntaParaDecisao) {
+            setPreparandoTelaPermitida(true);
+            return undefined;
+        }
+
+        const telaDestino = deveRedirecionarParaTelaPermitida ? primeiraTelaPermitidaSistema : tela;
+
+        if (!telaDestino) {
+            setPreparandoTelaPermitida(false);
+            setTelaComModuloPronto("");
+            return undefined;
+        }
+
+        if (telaComModuloPronto === telaDestino) {
+            setPreparandoTelaPermitida(false);
+
+            if (deveRedirecionarParaTelaPermitida) {
+                const chaveRedirecionamento = `${usuario?.email || "sem-usuario"}:${tela}:${telaDestino}`;
+                if (ultimoRedirecionamentoAutomaticoRef.current !== chaveRedirecionamento) {
+                    ultimoRedirecionamentoAutomaticoRef.current = chaveRedirecionamento;
+                    onRedirecionarTelaPermitida?.(telaDestino);
+                }
+            }
+
+            return undefined;
+        }
+
+        let ativo = true;
+        setPreparandoTelaPermitida(true);
+
+        Promise.resolve(precarregarModuloTelaSistema(telaDestino))
+            .catch(() => {
+                // Se o preload falhar, o React.lazy ainda tentará carregar o módulo na renderização.
+            })
+            .finally(() => {
+                if (!ativo) return;
+
+                setTelaComModuloPronto(telaDestino);
+                setPreparandoTelaPermitida(false);
+
+                if (deveRedirecionarParaTelaPermitida) {
+                    const chaveRedirecionamento = `${usuario?.email || "sem-usuario"}:${tela}:${telaDestino}`;
+                    if (ultimoRedirecionamentoAutomaticoRef.current !== chaveRedirecionamento) {
+                        ultimoRedirecionamentoAutomaticoRef.current = chaveRedirecionamento;
+                        onRedirecionarTelaPermitida?.(telaDestino);
+                    }
+                }
+            });
+
+        return () => {
+            ativo = false;
+        };
     }, [
         deveRedirecionarParaTelaPermitida,
         onRedirecionarTelaPermitida,
+        erroPermissaoSistemaTela,
+        permissaoProntaParaDecisao,
         primeiraTelaPermitidaSistema,
         tela,
+        telaComModuloPronto,
+        trocaSenhaTemporariaObrigatoria,
         usuario?.email,
     ]);
 
-    // Regra geral para todos os perfis: enquanto o sistema valida permissão ou decide a
-    // primeira tela permitida, não renderiza conteúdo intermediário. Isso evita o efeito
-    // de carregamento duplo/triplo e impede o flash da tela "Acesso restrito" antes do
-    // redirecionamento automático. A troca de senha temporária continua tendo prioridade.
-    if (telaControladaPorPermissao && (carregandoPermissaoSistemaTela || deveRedirecionarParaTelaPermitida)) {
+    const aguardandoTelaPermitida = Boolean(
+        telaControladaPorPermissao
+        && !trocaSenhaTemporariaObrigatoria
+        && (
+            carregandoPermissaoSistemaTela
+            || preparandoTelaPermitida
+            || deveRedirecionarParaTelaPermitida
+            || telaComModuloPronto !== tela
+        )
+    );
+
+    // Regra geral para todos os perfis: a tela só é montada depois que a permissão,
+    // o redirecionamento automático e o preload do módulo final terminam. Assim a
+    // atualização não mostra conteúdo parcial, loading duplicado ou flash de bloqueio.
+    if (aguardandoTelaPermitida) {
         return null;
     }
 
@@ -572,7 +685,7 @@ export function AppContentRouter({
     }
 
     return (
-        <React.Suspense fallback={<CarregandoTela mensagem="Carregando módulo..." subtitulo="Preparando as informações desta área do sistema." />}>
+        <React.Suspense fallback={null}>
             {tela === "dashboard" && (
                 <Dashboard
                     colaboradores={colaboradores}

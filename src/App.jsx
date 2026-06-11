@@ -996,7 +996,7 @@ export default function App() {
                 sair={sair}
                 onSelecionarTela={selecionarTelaSistema}
             >
-                <React.Suspense fallback={<AppTransicaoInterna />}>
+                <React.Suspense fallback={null}>
                     <AppContentRouter
                         tela={tela}
                         colaboradores={colaboradores}
