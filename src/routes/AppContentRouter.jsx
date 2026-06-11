@@ -512,14 +512,14 @@ export function AppContentRouter({
         if (!onRedirecionarTelaPermitida) return;
         if (carregandoPermissaoSistemaTela || erroPermissaoSistemaTela) return;
         if (!permissaoSistemaTela || permissaoSistemaTela?.precisa_trocar_senha === true) return;
-
-        // Quando o usuário faz login ou atualiza a página, o sistema pode iniciar no Dashboard SST.
-        // Perfis como Auditor não têm acesso ao Dashboard SST por padrão, então redirecionamos
-        // somente essa tela inicial para a primeira área permitida, evitando cair em acesso restrito.
-        if (tela !== "dashboard" || !telaBloqueadaPorPermissao) return;
+        if (!telaControladaPorPermissao || !telaBloqueadaPorPermissao) return;
 
         const primeiraTelaPermitida = obterPrimeiraTelaPermitidaParaUsuario(permissaoSistemaTela);
 
+        // Regra geral para todos os perfis: se a tela atual não for permitida, mas existir
+        // outra tela liberada para o usuário, o sistema redireciona automaticamente para ela.
+        // Isso evita que perfis como Auditor, Consulta customizada ou permissões manuais caiam
+        // em Acesso restrito ao atualizar a página ou após login.
         if (primeiraTelaPermitida && primeiraTelaPermitida !== tela) {
             onRedirecionarTelaPermitida(primeiraTelaPermitida);
         }
@@ -530,6 +530,7 @@ export function AppContentRouter({
         permissaoSistemaTela,
         tela,
         telaBloqueadaPorPermissao,
+        telaControladaPorPermissao,
     ]);
 
     if (telaControladaPorPermissao && carregandoPermissaoSistemaTela) {
