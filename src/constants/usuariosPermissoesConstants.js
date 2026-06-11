@@ -40,6 +40,7 @@ export const MODULOS_USUARIOS_PERMISSOES = [
     { chave: "dashboard_auditoria", modulo: "Dashboard Auditoria" },
     { chave: "nova_auditoria", modulo: "Nova Auditoria" },
     { chave: "auditoria_sistema", modulo: "Auditoria do Sistema" },
+    { chave: "acessos_app", modulo: "Acessos do App" },
     { chave: "configuracoes", modulo: "Configurações" },
     { chave: "storage", modulo: "Storage" },
     { chave: "relatorios", modulo: "Relatórios" },
@@ -65,7 +66,7 @@ export const PERMISSOES_PADRAO_USUARIOS_POR_PERFIL = [
         chave: "administrador",
         perfil: "Administrador",
         nivel: "Acesso total planejado",
-        resumo: "Perfil para gestão completa do sistema, permissões, configurações, Auditoria do Sistema e limpeza de Storage.",
+        resumo: "Perfil para gestão completa do sistema, acessos do app, permissões, configurações, Auditoria do Sistema e limpeza de Storage.",
         modulosLiberados: MODULOS_USUARIOS_PERMISSOES_PLANEJADOS,
         acoesLiberadas: ACOES_USUARIOS_PERMISSOES_PLANEJADAS,
         acoesRestritas: [],
@@ -87,7 +88,7 @@ export const PERMISSOES_PADRAO_USUARIOS_POR_PERFIL = [
             "Relatórios",
         ],
         acoesLiberadas: ["Visualizar", "Cadastrar", "Editar", "Upload", "Exportar"],
-        acoesRestritas: ["Excluir", "Limpar arquivos", "Gerenciar permissões", "Configurações críticas", "Auditoria do Sistema"],
+        acoesRestritas: ["Excluir", "Limpar arquivos", "Gerenciar permissões", "Acessos do App", "Configurações críticas", "Auditoria do Sistema"],
         observacao: "Exclusões e limpeza de arquivos devem ficar protegidas para evitar perda de dados.",
     },
     {
@@ -97,7 +98,7 @@ export const PERMISSOES_PADRAO_USUARIOS_POR_PERFIL = [
         resumo: "Perfil focado em auditorias, evidências, consulta de conformidade e relatórios, sem administração do sistema.",
         modulosLiberados: ["Dashboard Auditoria", "Nova Auditoria", "QR Code", "Relatórios"],
         acoesLiberadas: ["Visualizar", "Cadastrar", "Upload", "Exportar"],
-        acoesRestritas: ["Editar cadastros base", "Excluir", "Limpar arquivos", "Gerenciar permissões", "Configurações"],
+        acoesRestritas: ["Editar cadastros base", "Excluir", "Limpar arquivos", "Gerenciar permissões", "Acessos do App", "Configurações"],
         observacao: "Pode registrar auditorias e evidências, mas não deve alterar cadastros estruturais.",
     },
     {
@@ -107,7 +108,7 @@ export const PERMISSOES_PADRAO_USUARIOS_POR_PERFIL = [
         resumo: "Perfil para acompanhamento gerencial de indicadores, status, pendências e relatórios consolidados.",
         modulosLiberados: ["Dashboard SST", "Dashboard Auditoria", "Empresas", "Colaboradores", "Treinamentos", "QR Code", "Relatórios"],
         acoesLiberadas: ["Visualizar", "Exportar"],
-        acoesRestritas: ["Cadastrar", "Editar", "Excluir", "Upload", "Limpar arquivos", "Gerenciar permissões", "Configurações"],
+        acoesRestritas: ["Cadastrar", "Editar", "Excluir", "Upload", "Limpar arquivos", "Gerenciar permissões", "Acessos do App", "Configurações"],
         observacao: "Indicado para consulta estratégica sem alteração de dados operacionais.",
     },
     {
@@ -117,7 +118,7 @@ export const PERMISSOES_PADRAO_USUARIOS_POR_PERFIL = [
         resumo: "Perfil para consulta controlada de informações sem permissão para modificar dados.",
         modulosLiberados: ["Dashboard SST", "Empresas", "Colaboradores", "Treinamentos", "QR Code", "Relatórios"],
         acoesLiberadas: ["Visualizar"],
-        acoesRestritas: ["Cadastrar", "Editar", "Excluir", "Upload", "Exportar", "Limpar arquivos", "Gerenciar permissões", "Configurações"],
+        acoesRestritas: ["Cadastrar", "Editar", "Excluir", "Upload", "Exportar", "Limpar arquivos", "Gerenciar permissões", "Acessos do App", "Configurações"],
         observacao: "Uso recomendado para visualização simples e acompanhamento sem risco operacional.",
     },
     {

@@ -24,6 +24,7 @@ const DashboardAuditoriaCampo = React.lazy(() => import("../components/auditoria
 const NovaAuditoriaCampoDireta = React.lazy(() => import("../components/auditoria/NovaAuditoriaCampoDireta").then((modulo) => ({ default: modulo.NovaAuditoriaCampoDireta })));
 const ConfiguracoesSistema = React.lazy(() => import("../components/configuracoes/ConfiguracoesSistema").then((modulo) => ({ default: modulo.ConfiguracoesSistema })));
 const ConfiguracoesBloqueio = React.lazy(() => import("../components/configuracoes/ConfiguracoesBloqueio").then((modulo) => ({ default: modulo.ConfiguracoesBloqueio })));
+const AcessosAppPage = React.lazy(() => import("../components/acessos/AcessosAppPage").then((modulo) => ({ default: modulo.AcessosAppPage })));
 const ROTULOS_TELAS_ACESSO_BLOQUEADO = Object.freeze({
     dashboard: "Dashboard SST",
     novaAuditoriaCampo: "Nova Auditoria",
@@ -34,6 +35,7 @@ const ROTULOS_TELAS_ACESSO_BLOQUEADO = Object.freeze({
     treinamentos: "Treinamentos",
     qr: "QR Code",
     auditoria: "Auditoria do Sistema",
+    acessosApp: "Acessos do App",
     configuracoes: "Configurações",
     roteiro: "Roteiro",
 });
@@ -47,6 +49,7 @@ const ROTULOS_MODULOS_ACESSO_BLOQUEADO = Object.freeze({
     dashboard_auditoria: "Auditoria",
     nova_auditoria: "Nova Auditoria",
     auditoria_sistema: "Auditoria do Sistema",
+    acessos_app: "Acessos do App",
     configuracoes: "Configurações",
     storage: "Storage",
     relatorios: "Relatórios",
@@ -457,6 +460,12 @@ export function AppContentRouter({
                     onSalvarUsuarioAuditoria={onSalvarUsuarioAuditoria}
                     onAlternarUsuarioAuditoria={onAlternarUsuarioAuditoria}
                     onBloquear={onBloquearAuditoria}
+                />
+            )}
+
+            {tela === "acessosApp" && (
+                <AcessosAppPage
+                    usuario={usuario}
                 />
             )}
 

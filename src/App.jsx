@@ -33,6 +33,7 @@ import {
     Plus,
     QrCode,
     Settings,
+    ShieldCheck,
     Users,
 } from "lucide-react";
 
@@ -831,6 +832,7 @@ export default function App() {
         { id: "treinamentos", label: "Treinamentos", icon: ClipboardCheck },
         { id: "qr", label: "Consulta QR", icon: QrCode },
         ...(podeAcessarAuditoria ? [{ id: "auditoria", label: "Auditoria de sistema", icon: Database }] : []),
+        { id: "acessosApp", label: "Acessos do App", icon: ShieldCheck },
         { id: "configuracoes", label: "Configurações", icon: Settings },
         { id: "roteiro", label: "Roteiro", icon: CalendarClock },
     ];
