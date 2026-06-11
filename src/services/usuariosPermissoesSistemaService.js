@@ -82,6 +82,192 @@ export function normalizarPermissaoSistema(permissao = null) {
     };
 }
 
+
+const PERFIL_PERMISSAO_EDITAVEL_PADRAO = {
+    id: null,
+    chave: "",
+    nome: "",
+    perfil: "",
+    descricao: "",
+    nivel: "",
+    resumo: "",
+    modulosLiberados: [],
+    acoesLiberadas: [],
+    acoesRestritas: [],
+    permissoesJson: {},
+    observacao: "",
+    ativo: true,
+    editavel: true,
+    padraoSistema: {},
+    atualizado_por: null,
+    created_at: null,
+    updated_at: null,
+};
+
+function normalizarArrayJson(valor) {
+    if (Array.isArray(valor)) return valor.filter((item) => normalizarTexto(item));
+    if (typeof valor === "string") {
+        try {
+            const convertido = JSON.parse(valor);
+            return Array.isArray(convertido) ? convertido.filter((item) => normalizarTexto(item)) : [];
+        } catch {
+            return [];
+        }
+    }
+
+    return [];
+}
+
+function normalizarObjetoJson(valor) {
+    if (valor && typeof valor === "object" && !Array.isArray(valor)) return valor;
+    if (typeof valor === "string") {
+        try {
+            const convertido = JSON.parse(valor);
+            return convertido && typeof convertido === "object" && !Array.isArray(convertido) ? convertido : {};
+        } catch {
+            return {};
+        }
+    }
+
+    return {};
+}
+
+export function normalizarPerfilPermissaoSistema(perfil = null) {
+    if (!perfil) return null;
+
+    const chave = normalizarPerfilSistema(perfil.chave || perfil.perfil || "consulta");
+    const nome = normalizarTexto(perfil.nome || perfil.perfil || chave.replace(/_/g, " "));
+
+    return {
+        ...PERFIL_PERMISSAO_EDITAVEL_PADRAO,
+        ...perfil,
+        chave,
+        nome,
+        perfil: nome,
+        descricao: normalizarTexto(perfil.descricao),
+        nivel: normalizarTexto(perfil.nivel),
+        resumo: normalizarTexto(perfil.resumo),
+        modulosLiberados: normalizarArrayJson(perfil.modulos_liberados ?? perfil.modulosLiberados),
+        acoesLiberadas: normalizarArrayJson(perfil.acoes_liberadas ?? perfil.acoesLiberadas),
+        acoesRestritas: normalizarArrayJson(perfil.acoes_restritas ?? perfil.acoesRestritas),
+        permissoesJson: normalizarObjetoJson(perfil.permissoes_json ?? perfil.permissoesJson),
+        observacao: normalizarTexto(perfil.observacao),
+        ativo: normalizarBooleano(perfil.ativo ?? true),
+        editavel: normalizarBooleano(perfil.editavel ?? true),
+        padraoSistema: normalizarObjetoJson(perfil.padrao_sistema ?? perfil.padraoSistema),
+        atualizado_por: perfil.atualizado_por || null,
+        created_at: perfil.created_at || null,
+        updated_at: perfil.updated_at || null,
+    };
+}
+
+function validarPerfilPermissaoSistema(perfil = {}) {
+    const chave = normalizarPerfilSistema(perfil.chave || perfil.perfil);
+    const nome = normalizarTexto(perfil.nome || perfil.perfil);
+    const descricao = normalizarTexto(perfil.descricao);
+    const nivel = normalizarTexto(perfil.nivel);
+    const resumo = normalizarTexto(perfil.resumo);
+    const observacao = normalizarTexto(perfil.observacao);
+    const modulosLiberados = normalizarArrayJson(perfil.modulosLiberados ?? perfil.modulos_liberados);
+    const acoesLiberadas = normalizarArrayJson(perfil.acoesLiberadas ?? perfil.acoes_liberadas);
+    const acoesRestritas = normalizarArrayJson(perfil.acoesRestritas ?? perfil.acoes_restritas);
+    const permissoesJson = normalizarObjetoJson(perfil.permissoesJson ?? perfil.permissoes_json);
+
+    if (!chave) {
+        throw new Error("Perfil não informado para salvar o padrão de permissões.");
+    }
+
+    if (!nome) {
+        throw new Error("Informe o nome do perfil padrão.");
+    }
+
+    return {
+        chave,
+        nome,
+        descricao,
+        nivel,
+        resumo,
+        modulosLiberados,
+        acoesLiberadas,
+        acoesRestritas,
+        permissoesJson,
+        observacao,
+        ativo: normalizarBooleano(perfil.ativo ?? true),
+        editavel: normalizarBooleano(perfil.editavel ?? true),
+    };
+}
+
+export async function listarPerfisPermissoesSistemaService({ supabase }) {
+    if (!supabase) {
+        throw new Error("Cliente Supabase não informado para listar perfis padrão.");
+    }
+
+    const { data, error } = await supabase.rpc("admin_listar_perfis_permissoes_sistema");
+
+    if (error) {
+        throw new Error(error.message || "Erro ao listar perfis padrão editáveis.");
+    }
+
+    const perfis = Array.isArray(data) ? data : [];
+
+    return perfis.map((perfil) => normalizarPerfilPermissaoSistema(perfil)).filter(Boolean);
+}
+
+export async function salvarPerfilPermissaoSistemaService({ supabase, perfil }) {
+    if (!supabase) {
+        throw new Error("Cliente Supabase não informado para salvar perfil padrão.");
+    }
+
+    const dados = validarPerfilPermissaoSistema(perfil);
+
+    const { data, error } = await supabase.rpc("admin_salvar_perfil_permissao_sistema", {
+        p_chave: dados.chave,
+        p_nome: dados.nome,
+        p_descricao: dados.descricao,
+        p_nivel: dados.nivel,
+        p_resumo: dados.resumo,
+        p_modulos_liberados: dados.modulosLiberados,
+        p_acoes_liberadas: dados.acoesLiberadas,
+        p_acoes_restritas: dados.acoesRestritas,
+        p_permissoes_json: dados.permissoesJson,
+        p_observacao: dados.observacao,
+        p_ativo: dados.ativo,
+        p_editavel: dados.editavel,
+    });
+
+    if (error) {
+        throw new Error(error.message || "Erro ao salvar perfil padrão editável.");
+    }
+
+    const perfilSalvo = Array.isArray(data) ? data[0] : data;
+
+    return normalizarPerfilPermissaoSistema(perfilSalvo || null);
+}
+
+export async function restaurarPerfilPermissaoSistemaService({ supabase, chave }) {
+    if (!supabase) {
+        throw new Error("Cliente Supabase não informado para restaurar perfil padrão.");
+    }
+
+    const chaveTratada = normalizarPerfilSistema(chave);
+
+    if (!chaveTratada) {
+        throw new Error("Perfil não informado para restaurar o padrão original.");
+    }
+
+    const { data, error } = await supabase.rpc("admin_restaurar_perfil_permissao_sistema", {
+        p_chave: chaveTratada,
+    });
+
+    if (error) {
+        throw new Error(error.message || "Erro ao restaurar perfil padrão.");
+    }
+
+    const perfilRestaurado = Array.isArray(data) ? data[0] : data;
+
+    return normalizarPerfilPermissaoSistema(perfilRestaurado || null);
+}
+
 function validarDadosUsuarioPermissaoSistema(usuario = {}) {
     const email = normalizarEmail(usuario.email);
     const nome = normalizarTexto(usuario.nome);

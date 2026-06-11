@@ -14,7 +14,9 @@ import {
 } from "lucide-react";
 import { Card } from "../commonComponents";
 import {
+    ACOES_USUARIOS_PERMISSOES,
     ACOES_USUARIOS_PERMISSOES_PLANEJADAS,
+    MODULOS_USUARIOS_PERMISSOES,
     PERFIS_USUARIOS_PERMISSOES_PLANEJADOS,
     PERMISSOES_PADRAO_USUARIOS_POR_PERFIL,
 } from "../../constants/usuariosPermissoesConstants";
@@ -27,6 +29,9 @@ import {
     responderSolicitacaoAcessoSistemaService,
     salvarUsuarioPermissaoSistemaService,
     excluirUsuarioPermissaoSistemaService,
+    listarPerfisPermissoesSistemaService,
+    restaurarPerfilPermissaoSistemaService,
+    salvarPerfilPermissaoSistemaService,
 } from "../../services/usuariosPermissoesSistemaService";
 
 const CARDS_ACESSOS_APP = [
@@ -1375,10 +1380,238 @@ function UsuariosCadastradosApp({ usuario = null, usuarioParaEditar = null, onEd
     );
 }
 
+function montarPermissoesJsonPerfilAcesso({ modulosLiberados = [], acoesLiberadas = [], chavePerfil = "" } = {}) {
+    const modulosSelecionados = new Set(modulosLiberados);
+    const acoesSelecionadas = new Set(acoesLiberadas);
+    const todosModulosSelecionados = MODULOS_USUARIOS_PERMISSOES.every((modulo) => modulosSelecionados.has(modulo.modulo));
+    const todasAcoesSelecionadas = ACOES_USUARIOS_PERMISSOES.every((acao) => acoesSelecionadas.has(acao.acao));
+    const modulos = {};
+
+    MODULOS_USUARIOS_PERMISSOES.forEach((modulo) => {
+        if (!modulosSelecionados.has(modulo.modulo)) return;
+
+        modulos[modulo.chave] = {};
+        ACOES_USUARIOS_PERMISSOES.forEach((acao) => {
+            if (acoesSelecionadas.has(acao.acao)) {
+                modulos[modulo.chave][acao.chave] = true;
+            }
+        });
+    });
+
+    return {
+        acessoTotal: chavePerfil === "administrador" && todosModulosSelecionados && todasAcoesSelecionadas,
+        modulos,
+        acoesCriticas: {
+            excluir: acoesSelecionadas.has("Excluir"),
+            limpar_arquivos: acoesSelecionadas.has("Limpar arquivos"),
+            gerenciar_permissoes: acoesSelecionadas.has("Gerenciar permissões"),
+            configuracoes_criticas: acoesSelecionadas.has("Gerenciar permissões") && modulosSelecionados.has("Configurações"),
+        },
+    };
+}
+
+function normalizarPerfilEditavelParaTela(perfil = null) {
+    if (!perfil) return null;
+
+    const fallback = PERMISSOES_PADRAO_USUARIOS_POR_PERFIL.find((item) => item.chave === perfil.chave) || {};
+    const modulosLiberados = Array.isArray(perfil.modulosLiberados) ? perfil.modulosLiberados : fallback.modulosLiberados || [];
+    const acoesLiberadas = Array.isArray(perfil.acoesLiberadas) ? perfil.acoesLiberadas : fallback.acoesLiberadas || [];
+    const acoesRestritas = Array.isArray(perfil.acoesRestritas) && perfil.acoesRestritas.length > 0
+        ? perfil.acoesRestritas
+        : ACOES_USUARIOS_PERMISSOES_PLANEJADAS.filter((acao) => !acoesLiberadas.includes(acao));
+
+    return {
+        ...fallback,
+        ...perfil,
+        chave: perfil.chave || fallback.chave,
+        perfil: perfil.perfil || perfil.nome || fallback.perfil,
+        nome: perfil.nome || perfil.perfil || fallback.perfil,
+        descricao: perfil.descricao || fallback.descricao || "",
+        nivel: perfil.nivel || fallback.nivel || "",
+        resumo: perfil.resumo || fallback.resumo || "",
+        modulosLiberados,
+        acoesLiberadas,
+        acoesRestritas,
+        observacao: perfil.observacao || fallback.observacao || "",
+        permissoesJson: perfil.permissoesJson || fallback.permissoesJson || {},
+        ativo: perfil.ativo !== false,
+        editavel: perfil.editavel !== false,
+    };
+}
+
+function montarFormularioPerfilAcesso(perfil = null) {
+    const perfilNormalizado = normalizarPerfilEditavelParaTela(perfil) || normalizarPerfilEditavelParaTela(PERMISSOES_PADRAO_USUARIOS_POR_PERFIL[0]);
+
+    return {
+        chave: perfilNormalizado?.chave || "consulta",
+        nome: perfilNormalizado?.nome || perfilNormalizado?.perfil || "Consulta",
+        descricao: perfilNormalizado?.descricao || "",
+        nivel: perfilNormalizado?.nivel || "",
+        resumo: perfilNormalizado?.resumo || "",
+        modulosLiberados: [...(perfilNormalizado?.modulosLiberados || [])],
+        acoesLiberadas: [...(perfilNormalizado?.acoesLiberadas || [])],
+        observacao: perfilNormalizado?.observacao || "",
+        ativo: perfilNormalizado?.ativo !== false,
+        editavel: perfilNormalizado?.editavel !== false,
+    };
+}
+
+function alternarItemListaAcesso(lista = [], item = "") {
+    const valor = normalizarTextoAcesso(item);
+    if (!valor) return lista;
+
+    return lista.includes(valor) ? lista.filter((entrada) => entrada !== valor) : [...lista, valor];
+}
+
 function RevisaoPerfisPadrao() {
-    const [perfilAtivo, setPerfilAtivo] = useState(() => PERMISSOES_PADRAO_USUARIOS_POR_PERFIL[0]?.chave || "");
-    const perfilSelecionado = PERMISSOES_PADRAO_USUARIOS_POR_PERFIL.find((perfil) => perfil.chave === perfilAtivo) ||
-        PERMISSOES_PADRAO_USUARIOS_POR_PERFIL[0] || null;
+    const perfisFallback = useMemo(
+        () => PERMISSOES_PADRAO_USUARIOS_POR_PERFIL.map((perfil) => normalizarPerfilEditavelParaTela(perfil)).filter(Boolean),
+        []
+    );
+    const [perfis, setPerfis] = useState(perfisFallback);
+    const [perfilAtivo, setPerfilAtivo] = useState(() => perfisFallback[0]?.chave || "");
+    const [formularioPerfil, setFormularioPerfil] = useState(() => montarFormularioPerfilAcesso(perfisFallback[0]));
+    const [modoEdicao, setModoEdicao] = useState(false);
+    const [carregandoPerfis, setCarregandoPerfis] = useState(false);
+    const [salvandoPerfil, setSalvandoPerfil] = useState(false);
+    const [mensagemPerfil, setMensagemPerfil] = useState("");
+    const [erroPerfil, setErroPerfil] = useState("");
+
+    const perfilSelecionado = useMemo(
+        () => perfis.find((perfil) => perfil.chave === perfilAtivo) || perfis[0] || null,
+        [perfilAtivo, perfis]
+    );
+
+    useEffect(() => {
+        let ativo = true;
+
+        async function carregarPerfisEditaveis() {
+            setCarregandoPerfis(true);
+            setErroPerfil("");
+
+            try {
+                const lista = await listarPerfisPermissoesSistemaService({ supabase });
+                if (!ativo) return;
+
+                const listaNormalizada = lista.map((perfil) => normalizarPerfilEditavelParaTela(perfil)).filter(Boolean);
+
+                if (listaNormalizada.length > 0) {
+                    setPerfis(listaNormalizada);
+                    setPerfilAtivo((atual) => listaNormalizada.some((perfil) => perfil.chave === atual) ? atual : listaNormalizada[0].chave);
+                }
+            } catch (error) {
+                if (ativo) {
+                    setErroPerfil(error?.message || "Não foi possível carregar os perfis editáveis. Usando padrão local como referência.");
+                }
+            } finally {
+                if (ativo) setCarregandoPerfis(false);
+            }
+        }
+
+        carregarPerfisEditaveis();
+
+        return () => {
+            ativo = false;
+        };
+    }, []);
+
+    useEffect(() => {
+        if (!modoEdicao && perfilSelecionado) {
+            setFormularioPerfil(montarFormularioPerfilAcesso(perfilSelecionado));
+        }
+    }, [modoEdicao, perfilSelecionado]);
+
+    function selecionarPerfil(chave) {
+        setPerfilAtivo(chave);
+        setModoEdicao(false);
+        setMensagemPerfil("");
+        setErroPerfil("");
+    }
+
+    function atualizarCampoPerfil(campo, valor) {
+        setFormularioPerfil((atual) => ({
+            ...atual,
+            [campo]: valor,
+        }));
+    }
+
+    function alternarModuloPerfil(modulo) {
+        setFormularioPerfil((atual) => ({
+            ...atual,
+            modulosLiberados: alternarItemListaAcesso(atual.modulosLiberados, modulo),
+        }));
+    }
+
+    function alternarAcaoPerfil(acao) {
+        setFormularioPerfil((atual) => ({
+            ...atual,
+            acoesLiberadas: alternarItemListaAcesso(atual.acoesLiberadas, acao),
+        }));
+    }
+
+    async function salvarPerfil() {
+        setSalvandoPerfil(true);
+        setErroPerfil("");
+        setMensagemPerfil("");
+
+        try {
+            const acoesRestritas = ACOES_USUARIOS_PERMISSOES_PLANEJADAS.filter((acao) => !formularioPerfil.acoesLiberadas.includes(acao));
+            const permissoesJson = montarPermissoesJsonPerfilAcesso({
+                modulosLiberados: formularioPerfil.modulosLiberados,
+                acoesLiberadas: formularioPerfil.acoesLiberadas,
+                chavePerfil: formularioPerfil.chave,
+            });
+            const perfilSalvo = await salvarPerfilPermissaoSistemaService({
+                supabase,
+                perfil: {
+                    ...formularioPerfil,
+                    acoesRestritas,
+                    permissoesJson,
+                },
+            });
+            const perfilTela = normalizarPerfilEditavelParaTela(perfilSalvo);
+
+            setPerfis((atuais) => atuais.map((perfil) => perfil.chave === perfilTela.chave ? perfilTela : perfil));
+            setPerfilAtivo(perfilTela.chave);
+            setModoEdicao(false);
+            setMensagemPerfil("Perfil padrão salvo. Novos usuários poderão usar esta regra como referência nas próximas etapas.");
+        } catch (error) {
+            setErroPerfil(error?.message || "Não foi possível salvar o perfil padrão.");
+        } finally {
+            setSalvandoPerfil(false);
+        }
+    }
+
+    async function restaurarPerfil() {
+        if (!perfilSelecionado?.chave) return;
+
+        const confirmar = window.confirm(`Restaurar o padrão original do perfil ${perfilSelecionado.perfil || perfilSelecionado.nome}?`);
+        if (!confirmar) return;
+
+        setSalvandoPerfil(true);
+        setErroPerfil("");
+        setMensagemPerfil("");
+
+        try {
+            const perfilRestaurado = await restaurarPerfilPermissaoSistemaService({ supabase, chave: perfilSelecionado.chave });
+            const perfilTela = normalizarPerfilEditavelParaTela(perfilRestaurado);
+
+            setPerfis((atuais) => atuais.map((perfil) => perfil.chave === perfilTela.chave ? perfilTela : perfil));
+            setFormularioPerfil(montarFormularioPerfilAcesso(perfilTela));
+            setModoEdicao(false);
+            setMensagemPerfil("Perfil restaurado para o padrão original do sistema.");
+        } catch (error) {
+            setErroPerfil(error?.message || "Não foi possível restaurar o perfil padrão.");
+        } finally {
+            setSalvandoPerfil(false);
+        }
+    }
+
+    const perfilParaExibir = modoEdicao ? {
+        ...formularioPerfil,
+        perfil: formularioPerfil.nome,
+        acoesRestritas: ACOES_USUARIOS_PERMISSOES_PLANEJADAS.filter((acao) => !formularioPerfil.acoesLiberadas.includes(acao)),
+    } : perfilSelecionado;
 
     return (
         <Card className="border border-slate-200 bg-white p-6 shadow-sm">
@@ -1391,119 +1624,242 @@ function RevisaoPerfisPadrao() {
                         <p className="text-xs font-black uppercase tracking-[0.2em] text-slate-400">Revisão dos perfis padrão</p>
                         <h3 className="mt-1 text-xl font-black text-slate-950">O que cada perfil pode fazer</h3>
                         <p className="mt-2 max-w-4xl text-sm font-semibold leading-6 text-slate-500">
-                            Consulte a regra base antes de criar login, aprovar solicitações ou alterar perfis. A permissão real continua validada pelo Supabase/RPC.
+                            Edite a regra base de cada perfil. Esta etapa grava o padrão no Supabase; aplicar automaticamente aos usuários existentes será feito em etapa separada.
                         </p>
                     </div>
                 </div>
-                <BadgeEtapa variante="sucesso">{PERMISSOES_PADRAO_USUARIOS_POR_PERFIL.length} perfis padrão</BadgeEtapa>
+                <div className="flex flex-wrap items-center gap-2">
+                    <BadgeEtapa variante="sucesso">{perfis.length} perfis editáveis</BadgeEtapa>
+                    <button
+                        type="button"
+                        onClick={() => setModoEdicao((atual) => !atual)}
+                        disabled={!perfilSelecionado || carregandoPerfis || salvandoPerfil}
+                        className="rounded-full bg-slate-950 px-4 py-2 text-xs font-black text-white shadow-sm hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
+                    >
+                        {modoEdicao ? "Cancelar edição" : "Editar perfil"}
+                    </button>
+                </div>
             </div>
 
+            {erroPerfil ? (
+                <div className="mt-4 rounded-2xl bg-rose-50 px-4 py-3 text-xs font-bold text-rose-700 ring-1 ring-rose-100">
+                    {erroPerfil}
+                </div>
+            ) : null}
+            {mensagemPerfil ? (
+                <div className="mt-4 rounded-2xl bg-emerald-50 px-4 py-3 text-xs font-bold text-emerald-700 ring-1 ring-emerald-100">
+                    {mensagemPerfil}
+                </div>
+            ) : null}
+
             <div className="mt-5 flex flex-wrap gap-2">
-                {PERMISSOES_PADRAO_USUARIOS_POR_PERFIL.map((perfil) => {
+                {perfis.map((perfil) => {
                     const ativo = perfilAtivo === perfil.chave;
 
                     return (
                         <button
                             key={perfil.chave}
                             type="button"
-                            onClick={() => setPerfilAtivo(perfil.chave)}
+                            onClick={() => selecionarPerfil(perfil.chave)}
                             className={`inline-flex items-center justify-center rounded-2xl px-4 py-2 text-xs font-black ring-1 transition ${
                                 ativo
                                     ? "bg-slate-950 text-white ring-slate-950 shadow-sm"
                                     : "bg-white text-slate-600 ring-slate-200 hover:bg-slate-50"
                             }`}
                         >
-                            {perfil.perfil}
+                            {perfil.perfil || perfil.nome}
                         </button>
                     );
                 })}
             </div>
 
-            {perfilSelecionado ? (
+            {perfilParaExibir ? (
                 <div className="mt-5 rounded-3xl bg-slate-50 p-4 ring-1 ring-slate-100">
                     <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
-                        <div>
+                        <div className="min-w-0 flex-1">
                             <p className="text-xs font-black uppercase tracking-wide text-blue-700">Perfil selecionado</p>
-                            <h4 className="mt-1 text-2xl font-black text-slate-950">{perfilSelecionado.perfil}</h4>
-                            <p className="mt-1 text-[11px] font-black uppercase tracking-wide text-slate-500">{perfilSelecionado.nivel}</p>
-                            <p className="mt-2 max-w-4xl text-sm font-semibold leading-6 text-slate-600">{perfilSelecionado.resumo}</p>
+                            {modoEdicao ? (
+                                <div className="mt-3 grid gap-3 lg:grid-cols-2">
+                                    <label className="block">
+                                        <span className="text-[11px] font-black uppercase tracking-wide text-slate-400">Nome do perfil</span>
+                                        <input
+                                            value={formularioPerfil.nome}
+                                            onChange={(evento) => atualizarCampoPerfil("nome", evento.target.value)}
+                                            className="mt-1 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-bold text-slate-700 outline-none focus:border-blue-300 focus:ring-4 focus:ring-blue-50"
+                                        />
+                                    </label>
+                                    <label className="block">
+                                        <span className="text-[11px] font-black uppercase tracking-wide text-slate-400">Nível</span>
+                                        <input
+                                            value={formularioPerfil.nivel}
+                                            onChange={(evento) => atualizarCampoPerfil("nivel", evento.target.value)}
+                                            className="mt-1 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-bold text-slate-700 outline-none focus:border-blue-300 focus:ring-4 focus:ring-blue-50"
+                                        />
+                                    </label>
+                                    <label className="block lg:col-span-2">
+                                        <span className="text-[11px] font-black uppercase tracking-wide text-slate-400">Resumo</span>
+                                        <textarea
+                                            value={formularioPerfil.resumo}
+                                            onChange={(evento) => atualizarCampoPerfil("resumo", evento.target.value)}
+                                            rows={2}
+                                            className="mt-1 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-bold text-slate-700 outline-none focus:border-blue-300 focus:ring-4 focus:ring-blue-50"
+                                        />
+                                    </label>
+                                </div>
+                            ) : (
+                                <>
+                                    <h4 className="mt-1 text-2xl font-black text-slate-950">{perfilParaExibir.perfil || perfilParaExibir.nome}</h4>
+                                    <p className="mt-1 text-[11px] font-black uppercase tracking-wide text-slate-500">{perfilParaExibir.nivel}</p>
+                                    <p className="mt-2 max-w-4xl text-sm font-semibold leading-6 text-slate-600">{perfilParaExibir.resumo}</p>
+                                </>
+                            )}
                         </div>
                         <div className="grid grid-cols-3 gap-2 text-center sm:min-w-[330px]">
                             <div className="rounded-2xl bg-white px-3 py-3 ring-1 ring-slate-100">
-                                <p className="text-xl font-black text-slate-950">{perfilSelecionado.modulosLiberados.length}</p>
+                                <p className="text-xl font-black text-slate-950">{perfilParaExibir.modulosLiberados.length}</p>
                                 <p className="text-[10px] font-black uppercase tracking-wide text-slate-400">módulos</p>
                             </div>
                             <div className="rounded-2xl bg-emerald-50 px-3 py-3 ring-1 ring-emerald-100">
-                                <p className="text-xl font-black text-emerald-700">{perfilSelecionado.acoesLiberadas.length}</p>
+                                <p className="text-xl font-black text-emerald-700">{perfilParaExibir.acoesLiberadas.length}</p>
                                 <p className="text-[10px] font-black uppercase tracking-wide text-emerald-700">liberadas</p>
                             </div>
                             <div className="rounded-2xl bg-red-50 px-3 py-3 ring-1 ring-red-100">
-                                <p className="text-xl font-black text-red-700">{perfilSelecionado.acoesRestritas.length}</p>
+                                <p className="text-xl font-black text-red-700">{perfilParaExibir.acoesRestritas.length}</p>
                                 <p className="text-[10px] font-black uppercase tracking-wide text-red-700">restritas</p>
                             </div>
                         </div>
                     </div>
 
-                    <div className="mt-5 grid gap-3 xl:grid-cols-3">
-                        <div className="rounded-3xl bg-white p-4 ring-1 ring-slate-100 xl:col-span-3">
-                            <div className="flex items-center gap-2">
-                                <CheckCircle2 className="h-4 w-4 text-emerald-600" />
-                                <p className="text-xs font-black uppercase tracking-wide text-slate-500">Pode acessar estes módulos</p>
+                    {modoEdicao ? (
+                        <div className="mt-5 grid gap-4 xl:grid-cols-[0.58fr_0.42fr]">
+                            <div className="rounded-3xl bg-white p-4 ring-1 ring-slate-100">
+                                <p className="text-xs font-black uppercase tracking-wide text-slate-500">Módulos liberados</p>
+                                <div className="mt-3 grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
+                                    {MODULOS_USUARIOS_PERMISSOES.map((modulo) => {
+                                        const marcado = formularioPerfil.modulosLiberados.includes(modulo.modulo);
+                                        return (
+                                            <label key={modulo.chave} className={`flex cursor-pointer items-center gap-2 rounded-2xl px-3 py-2 text-xs font-black ring-1 ${marcado ? "bg-blue-50 text-blue-700 ring-blue-100" : "bg-white text-slate-500 ring-slate-200"}`}>
+                                                <input
+                                                    type="checkbox"
+                                                    checked={marcado}
+                                                    onChange={() => alternarModuloPerfil(modulo.modulo)}
+                                                    className="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                                                />
+                                                {modulo.modulo}
+                                            </label>
+                                        );
+                                    })}
+                                </div>
                             </div>
-                            <div className="mt-3 flex flex-wrap gap-2">
-                                {perfilSelecionado.modulosLiberados.length > 0 ? perfilSelecionado.modulosLiberados.map((modulo) => (
-                                    <span key={modulo} className="rounded-full bg-slate-50 px-3 py-1.5 text-[11px] font-black text-slate-700 ring-1 ring-slate-200">
-                                        {modulo}
-                                    </span>
-                                )) : (
-                                    <span className="rounded-full bg-slate-50 px-3 py-1.5 text-[11px] font-black text-slate-400 ring-1 ring-slate-200">
-                                        Nenhum módulo operacional liberado
-                                    </span>
-                                )}
+                            <div className="rounded-3xl bg-white p-4 ring-1 ring-slate-100">
+                                <p className="text-xs font-black uppercase tracking-wide text-slate-500">Ações permitidas</p>
+                                <div className="mt-3 grid gap-2 sm:grid-cols-2">
+                                    {ACOES_USUARIOS_PERMISSOES.map((acao) => {
+                                        const marcado = formularioPerfil.acoesLiberadas.includes(acao.acao);
+                                        return (
+                                            <label key={acao.chave} className={`flex cursor-pointer items-center gap-2 rounded-2xl px-3 py-2 text-xs font-black ring-1 ${marcado ? "bg-emerald-50 text-emerald-700 ring-emerald-100" : "bg-white text-slate-500 ring-slate-200"}`}>
+                                                <input
+                                                    type="checkbox"
+                                                    checked={marcado}
+                                                    onChange={() => alternarAcaoPerfil(acao.acao)}
+                                                    className="h-4 w-4 rounded border-slate-300 text-emerald-600 focus:ring-emerald-500"
+                                                />
+                                                {acao.acao}
+                                            </label>
+                                        );
+                                    })}
+                                </div>
+                            </div>
+                            <label className="block xl:col-span-2">
+                                <span className="text-[11px] font-black uppercase tracking-wide text-slate-400">Observação de uso</span>
+                                <textarea
+                                    value={formularioPerfil.observacao}
+                                    onChange={(evento) => atualizarCampoPerfil("observacao", evento.target.value)}
+                                    rows={3}
+                                    className="mt-1 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-bold text-slate-700 outline-none focus:border-blue-300 focus:ring-4 focus:ring-blue-50"
+                                />
+                            </label>
+                            <div className="flex flex-wrap gap-2 xl:col-span-2">
+                                <button
+                                    type="button"
+                                    onClick={salvarPerfil}
+                                    disabled={salvandoPerfil}
+                                    className="rounded-full bg-slate-950 px-5 py-3 text-xs font-black text-white shadow-sm hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
+                                >
+                                    {salvandoPerfil ? "Salvando perfil" : "Salvar perfil padrão"}
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={restaurarPerfil}
+                                    disabled={salvandoPerfil}
+                                    className="rounded-full bg-white px-5 py-3 text-xs font-black text-slate-700 ring-1 ring-slate-200 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
+                                >
+                                    Restaurar padrão original
+                                </button>
                             </div>
                         </div>
+                    ) : (
+                        <div className="mt-5 grid gap-3 xl:grid-cols-3">
+                            <div className="rounded-3xl bg-white p-4 ring-1 ring-slate-100 xl:col-span-3">
+                                <div className="flex items-center gap-2">
+                                    <CheckCircle2 className="h-4 w-4 text-emerald-600" />
+                                    <p className="text-xs font-black uppercase tracking-wide text-slate-500">Pode acessar estes módulos</p>
+                                </div>
+                                <div className="mt-3 flex flex-wrap gap-2">
+                                    {perfilParaExibir.modulosLiberados.length > 0 ? perfilParaExibir.modulosLiberados.map((modulo) => (
+                                        <span key={modulo} className="rounded-full bg-slate-50 px-3 py-1.5 text-[11px] font-black text-slate-700 ring-1 ring-slate-200">
+                                            {modulo}
+                                        </span>
+                                    )) : (
+                                        <span className="rounded-full bg-slate-50 px-3 py-1.5 text-[11px] font-black text-slate-400 ring-1 ring-slate-200">
+                                            Nenhum módulo operacional liberado
+                                        </span>
+                                    )}
+                                </div>
+                            </div>
 
-                        <div className="rounded-3xl bg-emerald-50 p-4 ring-1 ring-emerald-100">
-                            <div className="flex items-center gap-2">
-                                <CheckCircle2 className="h-4 w-4 text-emerald-700" />
-                                <p className="text-xs font-black uppercase tracking-wide text-emerald-700">Pode fazer</p>
+                            <div className="rounded-3xl bg-emerald-50 p-4 ring-1 ring-emerald-100">
+                                <div className="flex items-center gap-2">
+                                    <CheckCircle2 className="h-4 w-4 text-emerald-700" />
+                                    <p className="text-xs font-black uppercase tracking-wide text-emerald-700">Pode fazer</p>
+                                </div>
+                                <div className="mt-3 flex flex-wrap gap-2">
+                                    {perfilParaExibir.acoesLiberadas.length > 0 ? perfilParaExibir.acoesLiberadas.map((acao) => (
+                                        <span key={acao} className="rounded-full bg-white px-3 py-1.5 text-[11px] font-black text-emerald-700 ring-1 ring-emerald-100">
+                                            {acao}
+                                        </span>
+                                    )) : (
+                                        <span className="rounded-full bg-white px-3 py-1.5 text-[11px] font-black text-slate-400 ring-1 ring-slate-100">
+                                            Nenhuma ação liberada
+                                        </span>
+                                    )}
+                                </div>
                             </div>
-                            <div className="mt-3 flex flex-wrap gap-2">
-                                {perfilSelecionado.acoesLiberadas.length > 0 ? perfilSelecionado.acoesLiberadas.map((acao) => (
-                                    <span key={acao} className="rounded-full bg-white px-3 py-1.5 text-[11px] font-black text-emerald-700 ring-1 ring-emerald-100">
-                                        {acao}
-                                    </span>
-                                )) : (
-                                    <span className="rounded-full bg-white px-3 py-1.5 text-[11px] font-black text-slate-400 ring-1 ring-slate-100">
-                                        Nenhuma ação liberada
-                                    </span>
-                                )}
-                            </div>
-                        </div>
 
-                        <div className="rounded-3xl bg-red-50 p-4 ring-1 ring-red-100">
-                            <div className="flex items-center gap-2">
-                                <AlertTriangle className="h-4 w-4 text-red-700" />
-                                <p className="text-xs font-black uppercase tracking-wide text-red-700">Não deve fazer</p>
+                            <div className="rounded-3xl bg-red-50 p-4 ring-1 ring-red-100">
+                                <div className="flex items-center gap-2">
+                                    <AlertTriangle className="h-4 w-4 text-red-700" />
+                                    <p className="text-xs font-black uppercase tracking-wide text-red-700">Não deve fazer</p>
+                                </div>
+                                <div className="mt-3 flex flex-wrap gap-2">
+                                    {perfilParaExibir.acoesRestritas.length > 0 ? perfilParaExibir.acoesRestritas.map((acao) => (
+                                        <span key={acao} className="rounded-full bg-white px-3 py-1.5 text-[11px] font-black text-red-700 ring-1 ring-red-100">
+                                            {acao}
+                                        </span>
+                                    )) : (
+                                        <span className="rounded-full bg-white px-3 py-1.5 text-[11px] font-black text-slate-400 ring-1 ring-slate-100">
+                                            Sem restrição padrão
+                                        </span>
+                                    )}
+                                </div>
                             </div>
-                            <div className="mt-3 flex flex-wrap gap-2">
-                                {perfilSelecionado.acoesRestritas.length > 0 ? perfilSelecionado.acoesRestritas.map((acao) => (
-                                    <span key={acao} className="rounded-full bg-white px-3 py-1.5 text-[11px] font-black text-red-700 ring-1 ring-red-100">
-                                        {acao}
-                                    </span>
-                                )) : (
-                                    <span className="rounded-full bg-white px-3 py-1.5 text-[11px] font-black text-slate-400 ring-1 ring-slate-100">
-                                        Sem restrição padrão
-                                    </span>
-                                )}
-                            </div>
-                        </div>
 
-                        <div className="rounded-3xl bg-white p-4 ring-1 ring-slate-100">
-                            <p className="text-xs font-black uppercase tracking-wide text-slate-400">Observação de uso</p>
-                            <p className="mt-2 text-xs font-semibold leading-relaxed text-slate-600">{perfilSelecionado.observacao}</p>
+                            <div className="rounded-3xl bg-white p-4 ring-1 ring-slate-100">
+                                <p className="text-xs font-black uppercase tracking-wide text-slate-400">Observação de uso</p>
+                                <p className="mt-2 text-xs font-semibold leading-relaxed text-slate-600">{perfilParaExibir.observacao}</p>
+                            </div>
                         </div>
-                    </div>
+                    )}
                 </div>
             ) : null}
 
@@ -1518,11 +1874,11 @@ function RevisaoPerfisPadrao() {
                     </span>
                 </div>
                 <div className="mt-3 grid gap-2 md:grid-cols-2 xl:grid-cols-3">
-                    {PERMISSOES_PADRAO_USUARIOS_POR_PERFIL.map((perfil) => (
+                    {perfis.map((perfil) => (
                         <button
                             key={`resumo-${perfil.chave}`}
                             type="button"
-                            onClick={() => setPerfilAtivo(perfil.chave)}
+                            onClick={() => selecionarPerfil(perfil.chave)}
                             className={`rounded-2xl p-3 text-left ring-1 transition hover:-translate-y-0.5 hover:shadow-sm ${
                                 perfilAtivo === perfil.chave
                                     ? "bg-blue-50 ring-blue-200"
@@ -1531,7 +1887,7 @@ function RevisaoPerfisPadrao() {
                         >
                             <div className="flex items-start justify-between gap-2">
                                 <div>
-                                    <p className="text-sm font-black text-slate-950">{perfil.perfil}</p>
+                                    <p className="text-sm font-black text-slate-950">{perfil.perfil || perfil.nome}</p>
                                     <p className="mt-0.5 text-[10px] font-black uppercase tracking-wide text-slate-400">{perfil.nivel}</p>
                                 </div>
                                 <span className="rounded-full bg-white px-2.5 py-1 text-[10px] font-black text-slate-500 ring-1 ring-slate-200">
