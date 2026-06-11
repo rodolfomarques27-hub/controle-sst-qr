@@ -18,6 +18,7 @@ import {
     PERMISSOES_PADRAO_USUARIOS_POR_PERFIL,
 } from "../../constants/usuariosPermissoesConstants";
 import { supabase } from "../../lib/supabaseClient";
+import { criarLoginAppComSenhaTemporariaService } from "../../services/acessosAppService";
 import {
     concluirSolicitacaoAcessoSistemaService,
     listarSolicitacoesAcessoSistemaService,
@@ -30,7 +31,7 @@ const CARDS_ACESSOS_APP = [
     {
         titulo: "Cadastro de login",
         descricao: "Criar pessoa, definir e-mail, função, perfil e senha temporária.",
-        status: "Em preparação",
+        status: "Login integrado",
         icone: UserPlus,
     },
     {
@@ -86,7 +87,7 @@ function BadgeEtapa({ children, variante = "info" }) {
 function CardFuncionalidade({ item, indice }) {
     const Icone = item.icone;
     const statusSucesso = item.status === "Concluído";
-    const statusAlerta = indice === 0;
+    const statusAlerta = indice === 0 && !statusSucesso;
 
     return (
         <article className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md">
@@ -166,6 +167,9 @@ const FORM_USUARIO_ACESSO_INICIAL = {
     bloqueado: false,
     acesso_global: false,
     observacao: "",
+    senhaTemporaria: "",
+    confirmarSenhaTemporaria: "",
+    resetarSenhaTemporaria: false,
 };
 
 function montarFormularioUsuarioAcesso(usuario = null) {
@@ -185,6 +189,9 @@ function montarFormularioUsuarioAcesso(usuario = null) {
         bloqueado,
         acesso_global: perfil === "administrador" ? Boolean(usuario.acesso_global) : false,
         observacao: usuario.observacao || "",
+        senhaTemporaria: "",
+        confirmarSenhaTemporaria: "",
+        resetarSenhaTemporaria: false,
     };
 }
 
@@ -447,6 +454,7 @@ function UsuariosCadastradosApp({ usuario = null, usuarioParaEditar = null, onEd
     const [formulario, setFormulario] = useState(() => montarFormularioUsuarioAcesso());
     const [formAberto, setFormAberto] = useState(false);
     const [salvando, setSalvando] = useState(false);
+    const [criandoLogin, setCriandoLogin] = useState(false);
 
     const resumo = useMemo(() => ({
         total: usuarios.length,
@@ -479,7 +487,7 @@ function UsuariosCadastradosApp({ usuario = null, usuarioParaEditar = null, onEd
         setFormulario(montarFormularioUsuarioAcesso());
         setFormAberto(true);
         setErro("");
-        setMensagem("Preencha os dados para salvar permissão. A criação real de login no Auth virá pela Edge Function em etapa separada.");
+        setMensagem("Preencha os dados, informe uma senha temporária e use Criar login do app para criar o acesso real no Supabase Auth.");
     }
 
     function iniciarEdicao(item) {
@@ -522,6 +530,102 @@ function UsuariosCadastradosApp({ usuario = null, usuarioParaEditar = null, onEd
 
             return proximo;
         });
+    }
+
+    async function criarLoginDoApp() {
+        if (criandoLogin || salvando) return;
+
+        const emailTratado = normalizarTextoAcesso(formulario.email).toLowerCase();
+        const senhaTemporaria = String(formulario.senhaTemporaria || "");
+        const confirmarSenhaTemporaria = String(formulario.confirmarSenhaTemporaria || "");
+
+        if (!formulario.nome?.trim()) {
+            setErro("Informe o nome da pessoa para criar o login.");
+            return;
+        }
+
+        if (!emailTratado || !emailTratado.includes("@")) {
+            setErro("Informe um e-mail válido para criar o login.");
+            return;
+        }
+
+        if (senhaTemporaria.length < 6) {
+            setErro("A senha temporária deve ter pelo menos 6 caracteres.");
+            return;
+        }
+
+        if (senhaTemporaria !== confirmarSenhaTemporaria) {
+            setErro("A confirmação da senha temporária não confere.");
+            return;
+        }
+
+        if (formulario.acesso_global && formulario.perfil !== "administrador") {
+            setErro("Acesso global só pode ser liberado para perfil Administrador.");
+            return;
+        }
+
+        const confirmar = window.confirm(
+            `Criar login real no app para ${emailTratado}? A pessoa acessará com a senha temporária e deverá trocá-la no primeiro acesso.`
+        );
+
+        if (!confirmar) return;
+
+        setCriandoLogin(true);
+        setErro("");
+        setMensagem(`Criando login real de ${emailTratado} no Supabase Auth...`);
+
+        try {
+            const resultado = await criarLoginAppComSenhaTemporariaService({
+                supabase,
+                dados: {
+                    ...formulario,
+                    email: emailTratado,
+                },
+            });
+
+            const permissaoSalva = resultado?.permissao || resultado?.usuario || null;
+
+            if (permissaoSalva?.email || emailTratado) {
+                const registro = {
+                    ...formulario,
+                    ...(permissaoSalva || {}),
+                    email: permissaoSalva?.email || emailTratado,
+                    nome: permissaoSalva?.nome || formulario.nome,
+                    funcao: permissaoSalva?.funcao || formulario.funcao,
+                    perfil: permissaoSalva?.perfil || formulario.perfil,
+                    ativo: permissaoSalva?.ativo ?? formulario.ativo,
+                    bloqueado: permissaoSalva?.bloqueado ?? formulario.bloqueado,
+                    acesso_global: permissaoSalva?.acesso_global ?? permissaoSalva?.acessoGlobal ?? formulario.acesso_global,
+                    precisa_trocar_senha: true,
+                };
+
+                setUsuarios((listaAtual) => {
+                    const existe = listaAtual.some((item) => item.email === registro.email || item.id === registro.id);
+
+                    if (existe) {
+                        return listaAtual.map((item) => (
+                            item.email === registro.email || item.id === registro.id ? { ...item, ...registro } : item
+                        ));
+                    }
+
+                    return [registro, ...listaAtual];
+                });
+
+                setFormulario({
+                    ...montarFormularioUsuarioAcesso(registro),
+                    senhaTemporaria: "",
+                    confirmarSenhaTemporaria: "",
+                    resetarSenhaTemporaria: false,
+                });
+            }
+
+            setMensagem(resultado?.mensagem || "Login criado/atualizado com sucesso. O usuário deve trocar a senha temporária no primeiro acesso.");
+        } catch (error) {
+            setErro(error?.message || "Não foi possível criar o login do app.");
+            setMensagem("O login não foi criado.");
+        } finally {
+            setCriandoLogin(false);
+        }
     }
 
     async function salvarPermissaoEditada(evento) {
@@ -569,7 +673,7 @@ function UsuariosCadastradosApp({ usuario = null, usuarioParaEditar = null, onEd
                 setFormulario(montarFormularioUsuarioAcesso(salvo));
             }
 
-            setMensagem("Permissão salva com sucesso. Esta etapa ainda não cria login real no Supabase Auth.");
+            setMensagem("Permissão salva com sucesso. Para criar ou redefinir login real, use o botão Criar login do app com senha temporária.");
         } catch (error) {
             setErro(error?.message || "Não foi possível salvar a permissão do usuário.");
             setMensagem("A permissão não foi salva.");
@@ -595,6 +699,9 @@ function UsuariosCadastradosApp({ usuario = null, usuarioParaEditar = null, onEd
             bloqueado: false,
             acesso_global: false,
             observacao: usuarioParaEditar.observacao || usuarioParaEditar.resposta_admin || "Permissão preparada a partir de solicitação de acesso aprovada.",
+            senhaTemporaria: "",
+            confirmarSenhaTemporaria: "",
+            resetarSenhaTemporaria: false,
         }));
         setFormAberto(true);
         setMensagem(`Preparando permissão para ${usuarioParaEditar.email || "solicitação aprovada"}. Revise o perfil antes de salvar.`);
@@ -612,7 +719,7 @@ function UsuariosCadastradosApp({ usuario = null, usuarioParaEditar = null, onEd
                         <p className="text-xs font-black uppercase tracking-[0.2em] text-slate-400">Usuários cadastrados</p>
                         <h3 className="mt-1 text-xl font-black text-slate-950">Lista de pessoas com acesso ao app</h3>
                         <p className="mt-2 max-w-4xl text-sm font-semibold leading-6 text-slate-500">
-                            Edite perfil, status, função e acesso global usando a permissão já existente no Supabase/RPC. A criação real de login no Auth virá depois por Edge Function segura.
+                            Crie login real com senha temporária pela Edge Function segura e mantenha perfil, status, função e permissões pelo Supabase/RPC.
                         </p>
                         <p className="mt-2 text-xs font-bold text-slate-500">{mensagem}</p>
                         {erro ? <p className="mt-2 rounded-2xl bg-rose-50 px-4 py-2 text-xs font-bold text-rose-700 ring-1 ring-rose-100">{erro}</p> : null}
@@ -625,7 +732,7 @@ function UsuariosCadastradosApp({ usuario = null, usuarioParaEditar = null, onEd
                         className="inline-flex items-center justify-center gap-2 rounded-2xl bg-blue-50 px-4 py-2 text-xs font-black text-blue-700 shadow-sm ring-1 ring-blue-100 hover:bg-blue-100"
                     >
                         <UserPlus className="h-3.5 w-3.5" />
-                        Cadastrar permissão
+                        Cadastrar login
                     </button>
                     <button
                         type="button"
@@ -663,9 +770,9 @@ function UsuariosCadastradosApp({ usuario = null, usuarioParaEditar = null, onEd
                     <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
                         <div>
                             <p className="text-xs font-black uppercase tracking-[0.18em] text-slate-400">Edição de permissão</p>
-                            <h4 className="mt-1 text-lg font-black text-slate-950">{formulario.id ? "Editar pessoa com acesso ao app" : "Cadastrar permissão de acesso"}</h4>
+                            <h4 className="mt-1 text-lg font-black text-slate-950">{formulario.id ? "Editar pessoa com acesso ao app" : "Cadastrar login de acesso"}</h4>
                             <p className="mt-1 text-xs font-semibold leading-5 text-slate-500">
-                                Esta etapa salva perfil e bloqueios. Login real e senha temporária serão integrados no próximo bloco com Edge Function.
+                                Use Criar login do app para criar o usuário real no Supabase Auth com senha temporária. Use Salvar permissão quando precisar apenas ajustar perfil, bloqueio ou observação.
                             </p>
                         </div>
                         <button
@@ -716,6 +823,43 @@ function UsuariosCadastradosApp({ usuario = null, usuarioParaEditar = null, onEd
                                     <option key={perfil.chave} value={perfil.chave}>{perfil.perfil}</option>
                                 ))}
                             </select>
+                        </label>
+                    </div>
+
+                    <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+                        <label className="block">
+                            <span className="text-[10px] font-black uppercase tracking-wide text-slate-400">Senha temporária</span>
+                            <input
+                                type="password"
+                                value={formulario.senhaTemporaria}
+                                onChange={(evento) => atualizarCampoFormulario("senhaTemporaria", evento.target.value)}
+                                className="mt-1 w-full rounded-2xl border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700 outline-none focus:border-blue-400 focus:ring-4 focus:ring-blue-100"
+                                placeholder="Mínimo 6 caracteres"
+                                autoComplete="new-password"
+                            />
+                        </label>
+                        <label className="block">
+                            <span className="text-[10px] font-black uppercase tracking-wide text-slate-400">Confirmar senha temporária</span>
+                            <input
+                                type="password"
+                                value={formulario.confirmarSenhaTemporaria}
+                                onChange={(evento) => atualizarCampoFormulario("confirmarSenhaTemporaria", evento.target.value)}
+                                className="mt-1 w-full rounded-2xl border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700 outline-none focus:border-blue-400 focus:ring-4 focus:ring-blue-100"
+                                placeholder="Repita a senha"
+                                autoComplete="new-password"
+                            />
+                        </label>
+                        <label className="flex items-start gap-3 rounded-2xl bg-white p-3 ring-1 ring-slate-200">
+                            <input
+                                type="checkbox"
+                                checked={Boolean(formulario.resetarSenhaTemporaria)}
+                                onChange={(evento) => atualizarCampoFormulario("resetarSenhaTemporaria", evento.target.checked)}
+                                className="mt-1 h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                            />
+                            <span>
+                                <span className="block text-xs font-black text-slate-700">Redefinir senha temporária</span>
+                                <span className="mt-1 block text-[11px] font-semibold leading-5 text-slate-500">Use para login já existente. O usuário deverá trocar a senha no próximo acesso.</span>
+                            </span>
                         </label>
                     </div>
 
@@ -779,8 +923,16 @@ function UsuariosCadastradosApp({ usuario = null, usuarioParaEditar = null, onEd
 
                     <div className="mt-4 flex flex-wrap gap-2">
                         <button
+                            type="button"
+                            onClick={criarLoginDoApp}
+                            disabled={criandoLogin || salvando}
+                            className="rounded-2xl bg-blue-600 px-5 py-2.5 text-xs font-black text-white shadow-sm hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
+                        >
+                            {criandoLogin ? "Criando login..." : "Criar login do app"}
+                        </button>
+                        <button
                             type="submit"
-                            disabled={salvando}
+                            disabled={salvando || criandoLogin}
                             className="rounded-2xl bg-slate-950 px-5 py-2.5 text-xs font-black text-white shadow-sm hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
                         >
                             {salvando ? "Salvando..." : "Salvar permissão"}
@@ -816,6 +968,11 @@ function UsuariosCadastradosApp({ usuario = null, usuarioParaEditar = null, onEd
                                 <span className={`rounded-full px-3 py-1.5 text-[11px] font-black ring-1 ${item.acesso_global ? "bg-blue-50 text-blue-700 ring-blue-100" : "bg-slate-100 text-slate-500 ring-slate-200"}`}>
                                     Acesso global: {item.acesso_global ? "Sim" : "Não"}
                                 </span>
+                                {item.precisa_trocar_senha ? (
+                                    <span className="rounded-full bg-orange-50 px-3 py-1.5 text-[11px] font-black text-orange-800 ring-1 ring-orange-100">
+                                        Trocar senha
+                                    </span>
+                                ) : null}
                                 {emailEhUsuarioAtualAcessoApp(item.email, usuario) ? (
                                     <span className="rounded-full bg-amber-50 px-3 py-1.5 text-[11px] font-black text-amber-800 ring-1 ring-amber-100">
                                         Usuário atual
@@ -1105,7 +1262,7 @@ export function AcessosAppPage({ usuario = null }) {
                         <div>
                             <h3 className="text-lg font-black text-slate-950">Fluxo aprovado</h3>
                             <p className="mt-2 text-sm font-semibold leading-6 text-slate-500">
-                                O administrador criará o login com senha temporária. No primeiro acesso, o usuário deverá trocar a senha antes de usar o sistema normalmente.
+                                O administrador já pode criar o login com senha temporária pela Edge Function. No primeiro acesso, o usuário deverá trocar a senha antes de usar o sistema normalmente.
                             </p>
                         </div>
                     </div>
@@ -1132,7 +1289,7 @@ export function AcessosAppPage({ usuario = null }) {
                         <div>
                             <h3 className="text-lg font-black text-slate-950">Separação da Configurações</h3>
                             <p className="mt-2 text-sm font-semibold leading-6 text-slate-500">
-                                A revisão completa dos perfis padrão, a lista de usuários cadastrados e as solicitações de acesso já ficam em Acessos do App. Nas próximas microetapas, edição e login real serão integrados aqui.
+                                A revisão completa dos perfis padrão, a lista de usuários cadastrados e as solicitações de acesso já ficam em Acessos do App. A criação de login real já foi integrada aqui. A próxima microetapa revisará a página de login e a troca obrigatória de senha.
                             </p>
                         </div>
                     </div>
