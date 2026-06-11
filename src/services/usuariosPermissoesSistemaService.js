@@ -10,6 +10,11 @@ const PERMISSAO_SISTEMA_PADRAO_SEGURA = {
     acesso_global: false,
     permissoes: {},
     observacao: "",
+    precisa_trocar_senha: false,
+    ultimo_login_em: null,
+    login_criado_em: null,
+    criado_por: null,
+    atualizado_por: null,
     created_at: null,
     updated_at: null,
 };
@@ -60,6 +65,11 @@ export function normalizarPermissaoSistema(permissao = null) {
         acesso_global: normalizarBooleano(permissao.acesso_global),
         permissoes: permissao.permissoes && typeof permissao.permissoes === "object" ? permissao.permissoes : {},
         observacao: permissao.observacao || "",
+        precisa_trocar_senha: normalizarBooleano(permissao.precisa_trocar_senha),
+        ultimo_login_em: permissao.ultimo_login_em || null,
+        login_criado_em: permissao.login_criado_em || null,
+        criado_por: permissao.criado_por || null,
+        atualizado_por: permissao.atualizado_por || null,
     };
 }
 
@@ -257,7 +267,7 @@ const METADADOS_ACOES_CRITICAS_PERMISSAO_SISTEMA = Object.freeze({
         mensagem: "Sem permissão para limpar arquivos do Storage.",
     },
     [ACOES_CRITICAS_PERMISSAO_SISTEMA.GERENCIAR_PERMISSOES]: {
-        moduloPadrao: MODULOS_PERMISSAO_SISTEMA.CONFIGURACOES,
+        moduloPadrao: MODULOS_PERMISSAO_SISTEMA.ACESSOS_APP,
         acaoPadrao: ACOES_PERMISSAO_SISTEMA.GERENCIAR_PERMISSOES,
         rotulo: "Gerenciar permissões",
         mensagem: "Sem permissão para gerenciar usuários e permissões.",

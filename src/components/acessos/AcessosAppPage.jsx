@@ -31,31 +31,31 @@ const CARDS_ACESSOS_APP = [
     {
         titulo: "Cadastro de login",
         descricao: "Criar pessoa, definir e-mail, função, perfil e senha temporária.",
-        status: "Login integrado",
+        status: "Operacional",
         icone: UserPlus,
     },
     {
         titulo: "Usuários cadastrados",
         descricao: "Listar pessoas com acesso, editar perfil e acompanhar status ativo ou bloqueado.",
-        status: "Concluído",
+        status: "Operacional",
         icone: UsersRound,
     },
     {
         titulo: "Solicitações de acesso",
         descricao: "Aprovar, recusar ou concluir pedidos feitos pelas telas restritas.",
-        status: "Concluído",
+        status: "Operacional",
         icone: ClipboardList,
     },
     {
         titulo: "Perfis padrão",
         descricao: "Revisar o que Administrador, Técnico SST, Auditor, Gestor, Consulta e Bloqueado podem fazer.",
-        status: "Concluído",
+        status: "Operacional",
         icone: ShieldCheck,
     },
     {
         titulo: "Segurança e logs",
         descricao: "Registrar criação, alteração, bloqueio, desbloqueio e uso de senha temporária.",
-        status: "Preparação",
+        status: "Em revisão",
         icone: LockKeyhole,
     },
 ];
@@ -86,8 +86,8 @@ function BadgeEtapa({ children, variante = "info" }) {
 
 function CardFuncionalidade({ item, indice }) {
     const Icone = item.icone;
-    const statusSucesso = item.status === "Concluído";
-    const statusAlerta = indice === 0 && !statusSucesso;
+    const statusSucesso = item.status === "Operacional";
+    const statusAlerta = item.status === "Em revisão";
 
     return (
         <article className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md">
@@ -97,7 +97,7 @@ function CardFuncionalidade({ item, indice }) {
                         <Icone className="h-5 w-5" strokeWidth={2.2} />
                     </div>
                     <div>
-                        <p className="text-xs font-black uppercase tracking-[0.18em] text-slate-400">Etapa {indice + 1}</p>
+                        <p className="text-xs font-black uppercase tracking-[0.18em] text-slate-400">Módulo {indice + 1}</p>
                         <h3 className="mt-1 text-base font-black text-slate-950">{item.titulo}</h3>
                     </div>
                 </div>
@@ -320,7 +320,7 @@ function SolicitacoesAcessoApp({ onPrepararPermissao = null }) {
                         <p className="text-xs font-black uppercase tracking-[0.2em] text-slate-400">Solicitações de acesso</p>
                         <h3 className="mt-1 text-xl font-black text-slate-950">Pedidos feitos nas telas restritas</h3>
                         <p className="mt-2 max-w-4xl text-sm font-semibold leading-6 text-slate-500">
-                            Esta seção foi movida de Configurações para Acessos do App. Aprove, recuse ou conclua solicitações antes da etapa de edição completa de permissões.
+                            Aprove, recuse ou conclua solicitações feitas em telas restritas. Solicitações aprovadas podem virar cadastro de login e permissão nesta mesma tela.
                         </p>
                         <p className="mt-2 text-xs font-bold text-slate-500">{mensagem}</p>
                         {erro ? <p className="mt-2 rounded-2xl bg-rose-50 px-4 py-2 text-xs font-bold text-rose-700 ring-1 ring-rose-100">{erro}</p> : null}
@@ -1198,8 +1198,8 @@ export function AcessosAppPage({ usuario = null }) {
                 <div className="grid gap-0 lg:grid-cols-[0.58fr_0.42fr]">
                     <section className="px-6 py-7 sm:px-8">
                         <div className="flex flex-wrap items-center gap-3">
-                            <BadgeEtapa variante="sucesso">Nova aba administrativa</BadgeEtapa>
-                            <BadgeEtapa>Roteiro 14 · Pacote 6</BadgeEtapa>
+                            <BadgeEtapa variante="sucesso">Área administrativa</BadgeEtapa>
+                            <BadgeEtapa>Login e permissões</BadgeEtapa>
                         </div>
                         <h2 className="mt-5 text-3xl font-black tracking-tight text-slate-950 sm:text-4xl">
                             Acessos do App
@@ -1207,11 +1207,11 @@ export function AcessosAppPage({ usuario = null }) {
                         <p className="mt-3 max-w-3xl text-sm font-semibold leading-7 text-slate-500">
                             Central para cadastrar pessoas, criar login real, revisar perfis, bloquear usuários e controlar permissões de acesso ao sistema SST.
                         </p>
-                        <div className="mt-6 rounded-3xl border border-orange-100 bg-orange-50/70 p-4 text-sm font-bold leading-6 text-orange-800">
+                        <div className="mt-6 rounded-3xl border border-emerald-100 bg-emerald-50/70 p-4 text-sm font-bold leading-6 text-emerald-800">
                             <div className="flex items-start gap-3">
-                                <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0" strokeWidth={2.2} />
+                                <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0" strokeWidth={2.2} />
                                 <p>
-                                    Esta etapa integra o cadastro de login real do app com senha temporária por Edge Function segura, sem expor credenciais administrativas no front-end.
+                                    Login real, senha temporária, troca obrigatória de senha e permissões por perfil estão centralizados nesta área.
                                 </p>
                             </div>
                         </div>
@@ -1290,9 +1290,9 @@ export function AcessosAppPage({ usuario = null }) {
                             <UserCog className="h-5 w-5" strokeWidth={2.2} />
                         </div>
                         <div>
-                            <h3 className="text-lg font-black text-slate-950">Separação da Configurações</h3>
+                            <h3 className="text-lg font-black text-slate-950">Organização das responsabilidades</h3>
                             <p className="mt-2 text-sm font-semibold leading-6 text-slate-500">
-                                A revisão completa dos perfis padrão, a lista de usuários cadastrados e as solicitações de acesso já ficam em Acessos do App. A criação de login real já foi integrada aqui. A próxima microetapa revisará a página de login e a troca obrigatória de senha.
+                                Acessos do App concentra usuários, login, senha temporária, perfis, bloqueios e solicitações. Configurações permanece dedicada aos ajustes técnicos do sistema.
                             </p>
                         </div>
                     </div>
@@ -1304,7 +1304,7 @@ export function AcessosAppPage({ usuario = null }) {
                             </p>
                         </div>
                         <div className="rounded-3xl bg-emerald-50 p-4 ring-1 ring-emerald-100">
-                            <p className="text-xs font-black uppercase tracking-[0.18em] text-emerald-700">Vem para Acessos</p>
+                            <p className="text-xs font-black uppercase tracking-[0.18em] text-emerald-700">Fica em Acessos do App</p>
                             <p className="mt-2 text-sm font-bold leading-6 text-emerald-700">
                                 Usuários cadastrados, login, senha temporária, perfis, solicitações, bloqueios e permissões por módulo.
                             </p>
