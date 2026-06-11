@@ -560,6 +560,7 @@ function UsuariosCadastradosApp({ usuario = null, usuarioParaEditar = null, onEd
     const [filtroPerfil, setFiltroPerfil] = useState("todos");
     const [filtroStatus, setFiltroStatus] = useState("todos");
     const [filtroEmpresa, setFiltroEmpresa] = useState("todos");
+    const [listaUsuariosAberta, setListaUsuariosAberta] = useState(false);
     const [filtrosUsuariosAbertos, setFiltrosUsuariosAbertos] = useState(false);
     const [excluindoId, setExcluindoId] = useState("");
 
@@ -634,6 +635,16 @@ function UsuariosCadastradosApp({ usuario = null, usuarioParaEditar = null, onEd
         setFiltroPerfil("todos");
         setFiltroStatus("todos");
         setFiltroEmpresa("todos");
+    }
+
+    function alternarListaUsuarios() {
+        setListaUsuariosAberta((valorAtual) => {
+            const proximoValor = !valorAtual;
+            if (!proximoValor) {
+                setFiltrosUsuariosAbertos(false);
+            }
+            return proximoValor;
+        });
     }
 
     async function carregarUsuarios() {
@@ -952,11 +963,20 @@ function UsuariosCadastradosApp({ usuario = null, usuarioParaEditar = null, onEd
                 <div className="flex flex-wrap gap-2 lg:justify-end">
                     <button
                         type="button"
-                        onClick={() => setFiltrosUsuariosAbertos((valorAtual) => !valorAtual)}
+                        onClick={alternarListaUsuarios}
                         className="inline-flex items-center justify-center rounded-2xl bg-white px-4 py-2 text-xs font-black text-slate-700 ring-1 ring-slate-200 hover:bg-slate-50"
                     >
-                        {filtrosUsuariosAbertos ? "Ocultar filtros" : "Filtrar lista"}
+                        {listaUsuariosAberta ? "Recolher lista" : "Mostrar lista"}
                     </button>
+                    {listaUsuariosAberta ? (
+                        <button
+                            type="button"
+                            onClick={() => setFiltrosUsuariosAbertos((valorAtual) => !valorAtual)}
+                            className="inline-flex items-center justify-center rounded-2xl bg-white px-4 py-2 text-xs font-black text-slate-700 ring-1 ring-slate-200 hover:bg-slate-50"
+                        >
+                            {filtrosUsuariosAbertos ? "Ocultar filtros" : "Filtrar lista"}
+                        </button>
+                    ) : null}
                     <button
                         type="button"
                         onClick={abrirCadastroVazio}
@@ -996,7 +1016,7 @@ function UsuariosCadastradosApp({ usuario = null, usuarioParaEditar = null, onEd
                 </div>
             </div>
 
-            {!filtrosUsuariosAbertos && filtrosAtivos ? (
+            {listaUsuariosAberta && !filtrosUsuariosAbertos && filtrosAtivos ? (
                 <div className="mt-5 flex flex-col gap-3 rounded-3xl bg-blue-50 px-4 py-3 ring-1 ring-blue-100 sm:flex-row sm:items-center sm:justify-between">
                     <p className="text-xs font-bold text-blue-800">
                         Filtros aplicados. Mostrando {usuariosFiltrados.length} de {usuarios.length} pessoa(s).
@@ -1020,7 +1040,7 @@ function UsuariosCadastradosApp({ usuario = null, usuarioParaEditar = null, onEd
                 </div>
             ) : null}
 
-            {filtrosUsuariosAbertos ? (
+            {listaUsuariosAberta && filtrosUsuariosAbertos ? (
                 <div className="mt-5 rounded-3xl bg-slate-50 p-4 ring-1 ring-slate-100">
                     <div className="flex flex-col gap-3 xl:flex-row xl:items-end xl:justify-between">
                     <div className="grid flex-1 gap-3 md:grid-cols-2 xl:grid-cols-4">
@@ -1098,7 +1118,7 @@ function UsuariosCadastradosApp({ usuario = null, usuarioParaEditar = null, onEd
                 </div>
             ) : null}
 
-            {!filtrosUsuariosAbertos && (emailsDuplicados.length > 0 || emailsParecidos.length > 0) ? (
+            {listaUsuariosAberta && !filtrosUsuariosAbertos && (emailsDuplicados.length > 0 || emailsParecidos.length > 0) ? (
                 <div className="mt-5 rounded-2xl bg-amber-50 px-4 py-3 text-xs font-bold leading-5 text-amber-800 ring-1 ring-amber-100">
                     Conferência recomendada: {emailsDuplicados.length ? `${emailsDuplicados.length} e-mail(s) duplicado(s). ` : "Nenhum e-mail duplicado encontrado. "}{emailsParecidos.length ? `Há ${emailsParecidos.length} grupo(s) de e-mails parecidos para conferência.` : "Não há e-mails parecidos."}
                 </div>
@@ -1297,7 +1317,8 @@ function UsuariosCadastradosApp({ usuario = null, usuarioParaEditar = null, onEd
                 </form>
             ) : null}
 
-            <div className="mt-5 space-y-2">
+            {listaUsuariosAberta ? (
+                <div className="mt-5 space-y-2">
                 {usuariosFiltrados.length > 0 ? usuariosFiltrados.map((item) => (
                     <article key={item.id || item.email} className="rounded-2xl bg-slate-50 px-4 py-3 ring-1 ring-slate-100">
                         <div className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
@@ -1359,7 +1380,8 @@ function UsuariosCadastradosApp({ usuario = null, usuarioParaEditar = null, onEd
                         Nenhum usuário encontrado para os filtros selecionados. Ajuste os filtros ou clique em Atualizar usuários.
                     </div>
                 )}
-            </div>
+                </div>
+            ) : null}
         </Card>
     );
 }
