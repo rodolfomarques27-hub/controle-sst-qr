@@ -189,6 +189,7 @@ Deno.serve(async (req) => {
   const nome = normalizarTexto(body?.nome);
   const email = normalizarEmail(body?.email);
   const funcao = normalizarTexto(body?.funcao);
+  const empresa = normalizarTexto(body?.empresa);
   const perfil = normalizarPerfil(body?.perfil);
   const senhaTemporaria = String(body?.senhaTemporaria ?? body?.senha_temporaria ?? "");
   const ativo = perfil === "bloqueado" ? false : normalizarBooleano(body?.ativo ?? true);
@@ -247,6 +248,7 @@ Deno.serve(async (req) => {
         user_metadata: {
           nome,
           funcao,
+          empresa,
           perfil,
           origem: "controle-sst-qr",
           criado_por: authAtual.user.id,
@@ -268,6 +270,7 @@ Deno.serve(async (req) => {
           ...(usuarioAuth.user_metadata || {}),
           nome,
           funcao,
+          empresa,
           perfil,
           atualizado_por: authAtual.user.id,
         },
@@ -296,6 +299,7 @@ Deno.serve(async (req) => {
       p_email: email,
       p_nome: nome,
       p_funcao: funcao,
+      p_empresa: empresa,
       p_perfil: perfil,
       p_ativo: ativo,
       p_bloqueado: bloqueado,
@@ -349,6 +353,7 @@ Deno.serve(async (req) => {
         email,
         nome,
         funcao,
+        empresa,
         perfil,
         ativo,
         bloqueado,

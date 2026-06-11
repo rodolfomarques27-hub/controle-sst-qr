@@ -4,6 +4,7 @@ const PERMISSAO_SISTEMA_PADRAO_SEGURA = {
     email: "",
     nome: "",
     funcao: "",
+    empresa: "",
     perfil: "consulta",
     ativo: false,
     bloqueado: true,
@@ -15,6 +16,10 @@ const PERMISSAO_SISTEMA_PADRAO_SEGURA = {
     login_criado_em: null,
     criado_por: null,
     atualizado_por: null,
+    empresa: "",
+    excluido: false,
+    excluido_em: null,
+    excluido_por: null,
     created_at: null,
     updated_at: null,
 };
@@ -59,6 +64,7 @@ export function normalizarPermissaoSistema(permissao = null) {
         email: normalizarEmail(permissao.email),
         nome: permissao.nome || "",
         funcao: permissao.funcao || "",
+        empresa: permissao.empresa || "",
         perfil: normalizarPerfilSistema(permissao.perfil),
         ativo: normalizarBooleano(permissao.ativo),
         bloqueado: normalizarBooleano(permissao.bloqueado),
@@ -70,6 +76,9 @@ export function normalizarPermissaoSistema(permissao = null) {
         login_criado_em: permissao.login_criado_em || null,
         criado_por: permissao.criado_por || null,
         atualizado_por: permissao.atualizado_por || null,
+        excluido: normalizarBooleano(permissao.excluido),
+        excluido_em: permissao.excluido_em || null,
+        excluido_por: permissao.excluido_por || null,
     };
 }
 
@@ -77,6 +86,7 @@ function validarDadosUsuarioPermissaoSistema(usuario = {}) {
     const email = normalizarEmail(usuario.email);
     const nome = normalizarTexto(usuario.nome);
     const funcao = normalizarTexto(usuario.funcao);
+    const empresa = normalizarTexto(usuario.empresa);
     const perfil = normalizarPerfilSistema(usuario.perfil);
     const observacao = normalizarTexto(usuario.observacao);
 
@@ -92,6 +102,7 @@ function validarDadosUsuarioPermissaoSistema(usuario = {}) {
         email,
         nome,
         funcao,
+        empresa,
         perfil,
         ativo,
         bloqueado,
@@ -178,6 +189,7 @@ export async function salvarUsuarioPermissaoSistemaService({ supabase, usuario, 
         p_email: dados.email,
         p_nome: dados.nome,
         p_funcao: dados.funcao,
+        p_empresa: dados.empresa,
         p_perfil: dados.perfil,
         p_ativo: dados.ativo,
         p_bloqueado: dados.bloqueado,
@@ -192,6 +204,38 @@ export async function salvarUsuarioPermissaoSistemaService({ supabase, usuario, 
     const permissaoSalva = Array.isArray(data) ? data[0] : data;
 
     return normalizarPermissaoSistema(permissaoSalva || null);
+}
+
+export async function excluirUsuarioPermissaoSistemaService({ supabase, usuario, usuarioAtual = null, observacao = "" }) {
+    if (!supabase) {
+        throw new Error("Cliente Supabase não informado para excluir acesso do app.");
+    }
+
+    const email = normalizarEmail(usuario?.email);
+    const id = usuario?.id || null;
+    const emailAtual = normalizarEmail(usuarioAtual?.email);
+
+    if (!email && !id) {
+        throw new Error("Informe o usuário que terá o acesso excluído.");
+    }
+
+    if (email && emailAtual && email === emailAtual) {
+        throw new Error("Você não pode excluir o próprio acesso. Use outro administrador para essa ação.");
+    }
+
+    const { data, error } = await supabase.rpc("admin_excluir_usuario_permissao_sistema", {
+        p_id: id,
+        p_email: email,
+        p_observacao: normalizarTexto(observacao),
+    });
+
+    if (error) {
+        throw new Error(error.message || "Erro ao excluir acesso do app.");
+    }
+
+    const permissaoExcluida = Array.isArray(data) ? data[0] : data;
+
+    return normalizarPermissaoSistema(permissaoExcluida || null);
 }
 
 export async function usuarioTemPermissaoSistemaService({ supabase, modulo, acao }) {

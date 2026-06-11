@@ -7,6 +7,7 @@ import {
     LockKeyhole,
     RefreshCw,
     ShieldCheck,
+    Trash2,
     UserCog,
     UserPlus,
     UsersRound,
@@ -25,6 +26,7 @@ import {
     listarUsuariosPermissoesSistemaService,
     responderSolicitacaoAcessoSistemaService,
     salvarUsuarioPermissaoSistemaService,
+    excluirUsuarioPermissaoSistemaService,
 } from "../../services/usuariosPermissoesSistemaService";
 
 const CARDS_ACESSOS_APP = [
@@ -173,11 +175,13 @@ const FORM_USUARIO_ACESSO_INICIAL = {
     nome: "",
     email: "",
     funcao: "",
+    empresa: "",
     perfil: "consulta",
     ativo: true,
     bloqueado: false,
     acesso_global: false,
     observacao: "",
+    excluido: false,
     senhaTemporaria: "",
     confirmarSenhaTemporaria: "",
     resetarSenhaTemporaria: false,
@@ -195,11 +199,13 @@ function montarFormularioUsuarioAcesso(usuario = null) {
         nome: usuario.nome || "",
         email: normalizarTextoAcesso(usuario.email).toLowerCase(),
         funcao: usuario.funcao || "",
+        empresa: usuario.empresa || "",
         perfil,
         ativo,
         bloqueado,
         acesso_global: perfil === "administrador" ? Boolean(usuario.acesso_global) : false,
         observacao: usuario.observacao || "",
+        excluido: Boolean(usuario.excluido),
         senhaTemporaria: "",
         confirmarSenhaTemporaria: "",
         resetarSenhaTemporaria: false,
@@ -469,18 +475,21 @@ function UsuariosCadastradosApp({ usuario = null, usuarioParaEditar = null, onEd
     const [filtroTexto, setFiltroTexto] = useState("");
     const [filtroPerfil, setFiltroPerfil] = useState("todos");
     const [filtroStatus, setFiltroStatus] = useState("todos");
+    const [filtroEmpresa, setFiltroEmpresa] = useState("todos");
+    const [excluindoId, setExcluindoId] = useState("");
 
     const resumo = useMemo(() => ({
-        total: usuarios.length,
-        ativos: usuarios.filter((item) => item.ativo && !item.bloqueado).length,
-        administradores: usuarios.filter((item) => item.perfil === "administrador").length,
-        bloqueados: usuarios.filter((item) => item.bloqueado).length,
+        total: usuarios.filter((item) => !item.excluido).length,
+        ativos: usuarios.filter((item) => item.ativo && !item.bloqueado && !item.excluido).length,
+        administradores: usuarios.filter((item) => item.perfil === "administrador" && !item.excluido).length,
+        bloqueados: usuarios.filter((item) => item.bloqueado && !item.excluido).length,
+        excluidos: usuarios.filter((item) => item.excluido).length,
     }), [usuarios]);
 
     const emailsDuplicados = useMemo(() => {
         const mapa = new Map();
 
-        usuarios.forEach((item) => {
+        usuarios.filter((item) => !item.excluido).forEach((item) => {
             const email = normalizarTextoAcesso(item.email).toLowerCase();
             if (!email) return;
             mapa.set(email, [...(mapa.get(email) || []), item]);
@@ -492,7 +501,7 @@ function UsuariosCadastradosApp({ usuario = null, usuarioParaEditar = null, onEd
     const emailsParecidos = useMemo(() => {
         const mapa = new Map();
 
-        usuarios.forEach((item) => {
+        usuarios.filter((item) => !item.excluido).forEach((item) => {
             const email = normalizarTextoAcesso(item.email).toLowerCase();
             const chave = obterChaveEmailSimilarAcessoApp(email);
             if (!email || !chave) return;
@@ -504,26 +513,38 @@ function UsuariosCadastradosApp({ usuario = null, usuarioParaEditar = null, onEd
             .filter(([, emails]) => emails.length > 1);
     }, [usuarios]);
 
+
+
+    const empresasDisponiveis = useMemo(() => {
+        return Array.from(new Set(
+            usuarios
+                .map((item) => normalizarTextoAcesso(item.empresa))
+                .filter(Boolean)
+        )).sort((a, b) => a.localeCompare(b, "pt-BR"));
+    }, [usuarios]);
+
     const usuariosFiltrados = useMemo(() => {
         const busca = normalizarTextoAcesso(filtroTexto).toLowerCase();
 
         return usuarios.filter((item) => {
-            const textoBase = [item.nome, item.email, item.funcao, item.perfil]
+            const usuarioExcluido = Boolean(item.excluido);
+            const textoBase = [item.nome, item.email, item.funcao, item.empresa, item.perfil]
                 .map((valor) => normalizarTextoAcesso(valor).toLowerCase())
                 .join(" ");
 
-            const status = item.bloqueado ? "bloqueado" : item.ativo ? "ativo" : "inativo";
+            const status = usuarioExcluido ? "excluido" : item.bloqueado ? "bloqueado" : item.ativo ? "ativo" : "inativo";
             const loginAuth = usuarioTemLoginAuthAcessoApp(item) ? "com_login" : "sem_login";
 
             const passaTexto = !busca || textoBase.includes(busca);
             const passaPerfil = filtroPerfil === "todos" || normalizarTextoAcesso(item.perfil).toLowerCase() === filtroPerfil;
-            const passaStatus = filtroStatus === "todos" || status === filtroStatus || loginAuth === filtroStatus;
+            const passaEmpresa = filtroEmpresa === "todos" || normalizarTextoAcesso(item.empresa) === filtroEmpresa;
+            const passaStatus = filtroStatus === "todos" ? !usuarioExcluido : status === filtroStatus || loginAuth === filtroStatus;
 
-            return passaTexto && passaPerfil && passaStatus;
+            return passaTexto && passaPerfil && passaEmpresa && passaStatus;
         });
-    }, [usuarios, filtroTexto, filtroPerfil, filtroStatus]);
+    }, [usuarios, filtroTexto, filtroPerfil, filtroStatus, filtroEmpresa]);
 
-    const filtrosAtivos = Boolean(filtroTexto || filtroPerfil !== "todos" || filtroStatus !== "todos");
+    const filtrosAtivos = Boolean(filtroTexto || filtroPerfil !== "todos" || filtroStatus !== "todos" || filtroEmpresa !== "todos");
 
     async function carregarUsuarios() {
         if (carregando) return;
@@ -657,6 +678,7 @@ function UsuariosCadastradosApp({ usuario = null, usuarioParaEditar = null, onEd
                     email: permissaoSalva?.email || emailTratado,
                     nome: permissaoSalva?.nome || formulario.nome,
                     funcao: permissaoSalva?.funcao || formulario.funcao,
+                    empresa: permissaoSalva?.empresa || formulario.empresa,
                     perfil: permissaoSalva?.perfil || formulario.perfil,
                     ativo: permissaoSalva?.ativo ?? formulario.ativo,
                     bloqueado: permissaoSalva?.bloqueado ?? formulario.bloqueado,
@@ -747,6 +769,56 @@ function UsuariosCadastradosApp({ usuario = null, usuarioParaEditar = null, onEd
         }
     }
 
+
+
+    async function excluirAcessoUsuario(item) {
+        if (!item?.email || excluindoId) return;
+
+        if (emailEhUsuarioAtualAcessoApp(item.email, usuario)) {
+            setErro("Você não pode excluir o próprio acesso. Use outro administrador para essa ação.");
+            return;
+        }
+
+        const confirmar = window.confirm(
+            `Excluir o acesso de ${item.email}? A ação bloqueia o usuário, remove acesso global e mantém o histórico para rastreabilidade.`
+        );
+
+        if (!confirmar) return;
+
+        const idProcesso = item.id || item.email;
+        setExcluindoId(idProcesso);
+        setErro("");
+        setMensagem(`Excluindo acesso de ${item.email}...`);
+
+        try {
+            const excluido = await excluirUsuarioPermissaoSistemaService({
+                supabase,
+                usuario: item,
+                usuarioAtual: usuario,
+                observacao: "Acesso excluído administrativamente pela aba Acessos do App.",
+            });
+
+            const registro = excluido || {
+                ...item,
+                ativo: false,
+                bloqueado: true,
+                acesso_global: false,
+                excluido: true,
+                excluido_em: new Date().toISOString(),
+            };
+
+            setUsuarios((listaAtual) => listaAtual.map((usuarioLista) => (
+                usuarioLista.id === item.id || usuarioLista.email === item.email ? { ...usuarioLista, ...registro } : usuarioLista
+            )));
+            setMensagem("Acesso excluído com segurança. O histórico foi mantido para rastreabilidade.");
+        } catch (error) {
+            setErro(error?.message || "Não foi possível excluir o acesso.");
+            setMensagem("O acesso não foi excluído.");
+        } finally {
+            setExcluindoId("");
+        }
+    }
+
     useEffect(() => {
         carregarUsuarios();
         // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -759,6 +831,7 @@ function UsuariosCadastradosApp({ usuario = null, usuarioParaEditar = null, onEd
             nome: usuarioParaEditar.nome || "",
             email: usuarioParaEditar.email || "",
             funcao: usuarioParaEditar.area_solicitada || usuarioParaEditar.tela || "",
+            empresa: usuarioParaEditar.empresa || "",
             perfil: usuarioParaEditar.perfil_atual === "Usuário sem perfil liberado" ? "consulta" : usuarioParaEditar.perfil_atual || "consulta",
             ativo: true,
             bloqueado: false,
@@ -811,7 +884,7 @@ function UsuariosCadastradosApp({ usuario = null, usuarioParaEditar = null, onEd
                 </div>
             </div>
 
-            <div className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+            <div className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
                 <div className="rounded-2xl bg-slate-50 px-4 py-3 ring-1 ring-slate-100">
                     <p className="text-[10px] font-black uppercase tracking-wide text-slate-400">Total</p>
                     <p className="mt-1 text-xl font-black text-slate-950">{resumo.total}</p>
@@ -828,18 +901,22 @@ function UsuariosCadastradosApp({ usuario = null, usuarioParaEditar = null, onEd
                     <p className="text-[10px] font-black uppercase tracking-wide text-rose-700">Bloqueados</p>
                     <p className="mt-1 text-xl font-black text-rose-800">{resumo.bloqueados}</p>
                 </div>
+                <div className="rounded-2xl bg-orange-50 px-4 py-3 ring-1 ring-orange-100">
+                    <p className="text-[10px] font-black uppercase tracking-wide text-orange-700">Excluídos</p>
+                    <p className="mt-1 text-xl font-black text-orange-800">{resumo.excluidos}</p>
+                </div>
             </div>
 
             <div className="mt-5 rounded-3xl bg-slate-50 p-4 ring-1 ring-slate-100">
                 <div className="flex flex-col gap-3 xl:flex-row xl:items-end xl:justify-between">
-                    <div className="grid flex-1 gap-3 md:grid-cols-3">
+                    <div className="grid flex-1 gap-3 md:grid-cols-2 xl:grid-cols-4">
                         <label className="block">
                             <span className="text-[10px] font-black uppercase tracking-wide text-slate-400">Buscar usuário</span>
                             <input
                                 value={filtroTexto}
                                 onChange={(evento) => setFiltroTexto(evento.target.value)}
                                 className="mt-1 w-full rounded-2xl border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700 outline-none focus:border-blue-400 focus:ring-4 focus:ring-blue-100"
-                                placeholder="Nome, e-mail, função ou perfil"
+                                placeholder="Nome, e-mail, empresa, função ou perfil"
                             />
                         </label>
                         <label className="block">
@@ -856,6 +933,19 @@ function UsuariosCadastradosApp({ usuario = null, usuarioParaEditar = null, onEd
                             </select>
                         </label>
                         <label className="block">
+                            <span className="text-[10px] font-black uppercase tracking-wide text-slate-400">Empresa</span>
+                            <select
+                                value={filtroEmpresa}
+                                onChange={(evento) => setFiltroEmpresa(evento.target.value)}
+                                className="mt-1 w-full rounded-2xl border border-slate-200 bg-white px-3 py-2 text-xs font-black text-slate-700 outline-none focus:border-blue-400 focus:ring-4 focus:ring-blue-100"
+                            >
+                                <option value="todos">Todas as empresas</option>
+                                {empresasDisponiveis.map((empresa) => (
+                                    <option key={empresa} value={empresa}>{empresa}</option>
+                                ))}
+                            </select>
+                        </label>
+                        <label className="block">
                             <span className="text-[10px] font-black uppercase tracking-wide text-slate-400">Status</span>
                             <select
                                 value={filtroStatus}
@@ -866,6 +956,7 @@ function UsuariosCadastradosApp({ usuario = null, usuarioParaEditar = null, onEd
                                 <option value="ativo">Ativos</option>
                                 <option value="bloqueado">Bloqueados</option>
                                 <option value="inativo">Inativos</option>
+                                <option value="excluido">Excluídos</option>
                                 <option value="com_login">Com login Auth</option>
                                 <option value="sem_login">Sem vínculo Auth</option>
                             </select>
@@ -882,6 +973,7 @@ function UsuariosCadastradosApp({ usuario = null, usuarioParaEditar = null, onEd
                                     setFiltroTexto("");
                                     setFiltroPerfil("todos");
                                     setFiltroStatus("todos");
+                                    setFiltroEmpresa("todos");
                                 }}
                                 className="rounded-2xl bg-white px-4 py-2 text-xs font-black text-slate-600 ring-1 ring-slate-200 hover:bg-slate-100"
                             >
@@ -892,7 +984,7 @@ function UsuariosCadastradosApp({ usuario = null, usuarioParaEditar = null, onEd
                 </div>
                 {(emailsDuplicados.length > 0 || emailsParecidos.length > 0) ? (
                     <div className="mt-4 rounded-2xl bg-amber-50 px-4 py-3 text-xs font-bold leading-5 text-amber-800 ring-1 ring-amber-100">
-                        Conferência recomendada: existem {emailsDuplicados.length} e-mail(s) duplicado(s) e {emailsParecidos.length} grupo(s) de e-mails parecidos. Revise antes de criar novos logins para evitar cadastro duplicado.
+                        Conferência recomendada: {emailsDuplicados.length ? `${emailsDuplicados.length} e-mail(s) duplicado(s). ` : "Nenhum e-mail duplicado encontrado. "}{emailsParecidos.length ? `Há ${emailsParecidos.length} grupo(s) de e-mails parecidos para conferência.` : "Não há e-mails parecidos."}
                     </div>
                 ) : null}
             </div>
@@ -916,7 +1008,7 @@ function UsuariosCadastradosApp({ usuario = null, usuarioParaEditar = null, onEd
                         </button>
                     </div>
 
-                    <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+                    <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-5">
                         <label className="block">
                             <span className="text-[10px] font-black uppercase tracking-wide text-slate-400">Nome</span>
                             <input
@@ -933,6 +1025,15 @@ function UsuariosCadastradosApp({ usuario = null, usuarioParaEditar = null, onEd
                                 onChange={(evento) => atualizarCampoFormulario("email", evento.target.value)}
                                 className="mt-1 w-full rounded-2xl border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700 outline-none focus:border-blue-400 focus:ring-4 focus:ring-blue-100"
                                 placeholder="usuario@empresa.com"
+                            />
+                        </label>
+                        <label className="block">
+                            <span className="text-[10px] font-black uppercase tracking-wide text-slate-400">Empresa</span>
+                            <input
+                                value={formulario.empresa}
+                                onChange={(evento) => atualizarCampoFormulario("empresa", evento.target.value)}
+                                className="mt-1 w-full rounded-2xl border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700 outline-none focus:border-blue-400 focus:ring-4 focus:ring-blue-100"
+                                placeholder="Empresa / contrato"
                             />
                         </label>
                         <label className="block">
@@ -1083,11 +1184,12 @@ function UsuariosCadastradosApp({ usuario = null, usuarioParaEditar = null, onEd
 
             <div className="mt-5 space-y-2">
                 {usuariosFiltrados.length > 0 ? usuariosFiltrados.map((item) => (
-                    <article key={item.id || item.email} className="rounded-2xl bg-slate-50 px-4 py-3 ring-1 ring-slate-100">
+                    <article key={item.id || item.email} className={`rounded-2xl px-4 py-3 ring-1 ${item.excluido ? "bg-orange-50 ring-orange-100" : "bg-slate-50 ring-slate-100"}`}>
                         <div className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
                             <div className="min-w-0">
                                 <p className="truncate text-sm font-black text-slate-950">{item.nome || "Usuário sem nome"}</p>
                                 <p className="mt-0.5 truncate text-xs font-semibold text-slate-500">{item.email || "email não informado"}</p>
+                                <p className="mt-1 text-[11px] font-semibold text-slate-400">{item.empresa || "empresa não informada"}</p>
                                 <p className="mt-1 text-[11px] font-semibold text-slate-400">{item.funcao || "função não informada"}</p>
                             </div>
                             <div className="flex flex-wrap gap-2 xl:justify-end">
@@ -1113,6 +1215,11 @@ function UsuariosCadastradosApp({ usuario = null, usuarioParaEditar = null, onEd
                                         Trocar senha
                                     </span>
                                 ) : null}
+                                {item.excluido ? (
+                                    <span className="rounded-full bg-orange-50 px-3 py-1.5 text-[11px] font-black text-orange-800 ring-1 ring-orange-100">
+                                        Acesso excluído
+                                    </span>
+                                ) : null}
                                 {emailEhUsuarioAtualAcessoApp(item.email, usuario) ? (
                                     <span className="rounded-full bg-amber-50 px-3 py-1.5 text-[11px] font-black text-amber-800 ring-1 ring-amber-100">
                                         Usuário atual
@@ -1124,6 +1231,15 @@ function UsuariosCadastradosApp({ usuario = null, usuarioParaEditar = null, onEd
                                     className="rounded-full bg-slate-950 px-3 py-1.5 text-[11px] font-black text-white shadow-sm hover:bg-slate-800"
                                 >
                                     Editar
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={() => excluirAcessoUsuario(item)}
+                                    disabled={Boolean(item.excluido) || emailEhUsuarioAtualAcessoApp(item.email, usuario) || excluindoId === (item.id || item.email)}
+                                    className="inline-flex items-center gap-1 rounded-full bg-rose-50 px-3 py-1.5 text-[11px] font-black text-rose-700 ring-1 ring-rose-100 hover:bg-rose-100 disabled:cursor-not-allowed disabled:opacity-50"
+                                >
+                                    <Trash2 className="h-3 w-3" />
+                                    {excluindoId === (item.id || item.email) ? "Excluindo" : "Excluir acesso"}
                                 </button>
                             </div>
                         </div>

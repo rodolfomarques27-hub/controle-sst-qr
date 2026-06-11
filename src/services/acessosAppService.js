@@ -41,6 +41,7 @@ export async function criarLoginAppComSenhaTemporariaService({ supabase, dados }
     const nome = normalizarTextoAcessosApp(dados?.nome);
     const email = normalizarEmailAcessosApp(dados?.email);
     const funcao = normalizarTextoAcessosApp(dados?.funcao);
+    const empresa = normalizarTextoAcessosApp(dados?.empresa);
     const perfil = normalizarPerfilAcessosApp(dados?.perfil);
     const senhaTemporaria = String(dados?.senhaTemporaria || dados?.senha_temporaria || "");
     const ativo = perfil === "bloqueado" ? false : normalizarBooleanoAcessosApp(dados?.ativo ?? true);
@@ -70,6 +71,7 @@ export async function criarLoginAppComSenhaTemporariaService({ supabase, dados }
             nome,
             email,
             funcao,
+            empresa,
             perfil,
             senhaTemporaria,
             ativo,
