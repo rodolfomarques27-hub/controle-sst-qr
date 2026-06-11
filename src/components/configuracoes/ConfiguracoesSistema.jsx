@@ -2086,7 +2086,7 @@ export function ConfiguracoesSistema({
             return renderBlocoConfiguracaoComControle(
                 "config-usuarios-permissoes",
                 "Permissões e usuários",
-                "Perfis, solicitações de acesso e permissões por módulo.",
+                "Resumo técnico dos acessos e atalho para a nova aba.",
                 (
                     <Card>
                         <div className="flex flex-col gap-3 border-b border-slate-100 pb-4 md:flex-row md:items-start md:justify-between">
@@ -2096,7 +2096,7 @@ export function ConfiguracoesSistema({
                                     <h2 id="config-usuarios-permissoes" className="scroll-mt-24 text-lg font-black text-slate-950">Permissões e usuários</h2>
                                 </div>
                                 <p className="mt-1 text-sm text-slate-500">
-                                    Painel administrativo para consultar o usuário atual, analisar solicitações de acesso e manter perfis por módulo.
+                                    Painel técnico para consultar a permissão atual e direcionar a gestão de usuários para Acessos do App.
                                 </p>
                                 <p className="mt-2 text-xs font-semibold text-slate-500">
                                     Usuário atual: <span className="font-black text-slate-900">{usuario?.email || "não informado"}</span> · Perfil atual: <span className="font-black text-slate-900">{formatarPerfilPermissaoSistema(permissaoSistemaAtual?.perfil || usuario?.perfil)}</span>
@@ -2108,7 +2108,7 @@ export function ConfiguracoesSistema({
                         </div>
 
                         <div className="mt-4 rounded-2xl bg-amber-50 px-4 py-3 text-xs font-semibold leading-relaxed text-amber-700 ring-1 ring-amber-200">
-                            A rota de Configurações, a gestão de permissões e as ações críticas usam a permissão atual carregada do Supabase. Perfis sensíveis não são sugeridos automaticamente em solicitações de acesso.
+                            A rota de Configurações e as ações críticas usam a permissão atual carregada do Supabase. A gestão de usuários, perfis e solicitações foi separada na aba Acessos do App.
                         </div>
 
                         <div className="mt-4 rounded-3xl bg-blue-50 p-4 ring-1 ring-blue-100">
@@ -2357,137 +2357,27 @@ export function ConfiguracoesSistema({
                                 </div>
                             </div>
 
-                            <div className="mt-4 rounded-3xl bg-white p-4 ring-1 ring-slate-100">
+                            <div className="mt-4 rounded-3xl bg-amber-50 p-4 ring-1 ring-amber-100">
                                 <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
                                     <div>
-                                        <p className="text-xs font-black uppercase tracking-wide text-slate-400">Solicitações de acesso</p>
-                                        <p className="mt-1 text-xs font-semibold leading-relaxed text-slate-500">
-                                            Pedidos registrados pelo botão Solicitar acesso nas telas bloqueadas.
-                                        </p>
-                                        <p className="mt-1 text-xs font-semibold leading-relaxed text-slate-500">
-                                            {mensagemSolicitacoesAcessoSistema}
+                                        <p className="text-xs font-black uppercase tracking-wide text-amber-700">Solicitações movidas</p>
+                                        <h3 className="mt-1 text-sm font-black text-slate-950">Solicitações de acesso agora ficam em Acessos do App</h3>
+                                        <p className="mt-2 text-xs font-semibold leading-relaxed text-amber-800">
+                                            Aprovação, recusa, conclusão e acompanhamento dos pedidos foram transferidos para a aba Acessos do App. Configurações mantém apenas os controles técnicos do sistema.
                                         </p>
                                     </div>
                                     <button
                                         type="button"
-                                        onClick={carregarSolicitacoesAcessoSistema}
-                                        disabled={carregandoSolicitacoesAcessoSistema || !podeGerenciarPermissoesSistema}
-                                        title={podeGerenciarPermissoesSistema ? "Atualizar solicitações" : bloqueioGerenciarPermissoesSistema.mensagem}
-                                        className="inline-flex items-center justify-center gap-2 rounded-2xl bg-white px-3 py-2 text-xs font-black text-slate-700 ring-1 ring-slate-200 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
+                                        onClick={() => {
+                                            if (typeof window !== "undefined") {
+                                                window.location.hash = "#/acessos-app";
+                                            }
+                                        }}
+                                        className="inline-flex items-center justify-center gap-2 rounded-2xl bg-slate-950 px-4 py-2 text-xs font-black text-white shadow-sm ring-1 ring-slate-950 hover:bg-slate-800"
                                     >
-                                        <RefreshCw className={classNames("h-3.5 w-3.5", carregandoSolicitacoesAcessoSistema && "animate-spin")} />
-                                        {carregandoSolicitacoesAcessoSistema ? "Carregando" : "Atualizar solicitações"}
+                                        Abrir Acessos do App
                                     </button>
                                 </div>
-
-                                <div className="mt-4 grid gap-2 sm:grid-cols-2 xl:grid-cols-5">
-                                    <div className="rounded-2xl bg-slate-50 px-3 py-3 ring-1 ring-slate-100">
-                                        <p className="text-[10px] font-black uppercase tracking-wide text-slate-400">Total</p>
-                                        <p className="mt-1 text-sm font-black text-slate-950">{resumoSolicitacoesAcessoSistema.total}</p>
-                                    </div>
-                                    <div className="rounded-2xl bg-amber-50 px-3 py-3 ring-1 ring-amber-100">
-                                        <p className="text-[10px] font-black uppercase tracking-wide text-amber-700">Pendentes</p>
-                                        <p className="mt-1 text-sm font-black text-amber-800">{resumoSolicitacoesAcessoSistema.pendentes}</p>
-                                    </div>
-                                    <div className="rounded-2xl bg-emerald-50 px-3 py-3 ring-1 ring-emerald-100">
-                                        <p className="text-[10px] font-black uppercase tracking-wide text-emerald-700">Aprovadas</p>
-                                        <p className="mt-1 text-sm font-black text-emerald-800">{resumoSolicitacoesAcessoSistema.aprovadas}</p>
-                                    </div>
-                                    <div className="rounded-2xl bg-blue-50 px-3 py-3 ring-1 ring-blue-100">
-                                        <p className="text-[10px] font-black uppercase tracking-wide text-blue-700">Concluídas</p>
-                                        <p className="mt-1 text-sm font-black text-blue-800">{resumoSolicitacoesAcessoSistema.concluidas}</p>
-                                    </div>
-                                    <div className="rounded-2xl bg-rose-50 px-3 py-3 ring-1 ring-rose-100">
-                                        <p className="text-[10px] font-black uppercase tracking-wide text-rose-700">Recusadas</p>
-                                        <p className="mt-1 text-sm font-black text-rose-800">{resumoSolicitacoesAcessoSistema.recusadas}</p>
-                                    </div>
-                                </div>
-
-                                <div className="mt-4 rounded-2xl bg-slate-50 px-4 py-3 ring-1 ring-slate-100">
-                                    <label className="block text-xs font-black uppercase tracking-wide text-slate-400">
-                                        Observação do administrador
-                                    </label>
-                                    <textarea
-                                        value={respostaAdminSolicitacaoAcessoSistema}
-                                        onChange={(evento) => setRespostaAdminSolicitacaoAcessoSistema(evento.target.value)}
-                                        disabled={!podeGerenciarPermissoesSistema || Boolean(processandoRespostaSolicitacaoAcessoSistema)}
-                                        rows={2}
-                                        placeholder="Exemplo: aprovado para teste operacional, recusado por falta de vínculo, aguardar validação..."
-                                        className="mt-2 w-full resize-none rounded-2xl border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700 outline-none focus:border-blue-400 focus:ring-4 focus:ring-blue-100 disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-400"
-                                    />
-                                    <p className="mt-2 text-xs font-semibold leading-relaxed text-slate-500">
-                                        {mensagemRespostaSolicitacaoAcessoSistema}
-                                    </p>
-                                </div>
-
-                                <div className="mt-4 space-y-2">
-                                    {solicitacoesAcessoSistema.length > 0 ? solicitacoesAcessoSistema.slice(0, 6).map((item) => (
-                                        <div key={item.id || `${item.email}-${item.criado_em}`} className="rounded-2xl bg-slate-50 px-4 py-3 ring-1 ring-slate-100">
-                                            <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-                                                <div className="min-w-0">
-                                                    <p className="truncate text-sm font-black text-slate-950">{item.nome || "Usuário sem nome"}</p>
-                                                    <p className="mt-0.5 truncate text-xs font-semibold text-slate-500">{item.email || "email não informado"}</p>
-                                                    <p className="mt-1 text-[11px] font-semibold text-slate-400">
-                                                        {formatarDataHoraConfiguracoes(item.criado_em)}
-                                                    </p>
-                                                </div>
-                                                <div className="flex flex-wrap gap-2">
-                                                    <span className="rounded-full bg-white px-3 py-1.5 text-[11px] font-black text-slate-700 ring-1 ring-slate-200">
-                                                        Área: {item.area_solicitada || item.tela || "não informada"}
-                                                    </span>
-                                                    <span className="rounded-full bg-white px-3 py-1.5 text-[11px] font-black text-slate-700 ring-1 ring-slate-200">
-                                                        Perfil: {item.perfil_atual || "não informado"}
-                                                    </span>
-                                                    <span className={classNames(
-                                                        "rounded-full px-3 py-1.5 text-[11px] font-black ring-1",
-                                                        obterClasseStatusSolicitacaoAcesso(item.status)
-                                                    )}>
-                                                        {formatarStatusSolicitacaoAcesso(item.status)}
-                                                    </span>
-                                                    {item.status === "aprovada" && podeGerenciarPermissoesSistema ? (
-                                                        <button
-                                                            type="button"
-                                                            onClick={() => prepararUsuarioPermissaoPorSolicitacaoAcesso(item)}
-                                                            className="rounded-full bg-blue-50 px-3 py-1.5 text-[11px] font-black text-blue-700 ring-1 ring-blue-100 hover:bg-blue-100"
-                                                        >
-                                                            Preparar permissão
-                                                        </button>
-                                                    ) : null}
-                                                    {item.status === "pendente" && podeGerenciarPermissoesSistema ? (
-                                                        <div className="flex w-full flex-wrap gap-2 lg:w-auto">
-                                                            <button
-                                                                type="button"
-                                                                onClick={() => responderSolicitacaoAcessoSistema(item, "aprovada")}
-                                                                disabled={processandoRespostaSolicitacaoAcessoSistema === item.id}
-                                                                className="rounded-full bg-emerald-600 px-3 py-1.5 text-[11px] font-black text-white shadow-sm hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-60"
-                                                            >
-                                                                {processandoRespostaSolicitacaoAcessoSistema === item.id ? "Processando" : "Aprovar"}
-                                                            </button>
-                                                            <button
-                                                                type="button"
-                                                                onClick={() => responderSolicitacaoAcessoSistema(item, "recusada")}
-                                                                disabled={processandoRespostaSolicitacaoAcessoSistema === item.id}
-                                                                className="rounded-full bg-rose-50 px-3 py-1.5 text-[11px] font-black text-rose-700 ring-1 ring-rose-100 hover:bg-rose-100 disabled:cursor-not-allowed disabled:opacity-60"
-                                                            >
-                                                                Recusar
-                                                            </button>
-                                                        </div>
-                                                    ) : null}
-                                                </div>
-                                            </div>
-                                        </div>
-                                    )) : (
-                                        <div className="rounded-2xl bg-slate-50 px-4 py-4 text-xs font-semibold text-slate-500 ring-1 ring-slate-100">
-                                            Nenhuma solicitação carregada. Clique em Atualizar solicitações para consultar a RPC administrativa.
-                                        </div>
-                                    )}
-                                </div>
-
-                                {solicitacoesAcessoPendentesSistema.length > 0 ? (
-                                    <div className="mt-3 rounded-2xl bg-amber-50 px-4 py-3 text-xs font-semibold leading-relaxed text-amber-800 ring-1 ring-amber-100">
-                                        Existem {solicitacoesAcessoPendentesSistema.length} solicitação(ões) pendente(s). Ao aprovar, o formulário de usuário/permissão será preenchido para conferência antes de salvar no Supabase.
-                                    </div>
-                                ) : null}
                             </div>
 
                             <div id="formulario-usuario-permissao-sistema" className="mt-4 rounded-3xl bg-slate-50 p-4 ring-1 ring-slate-100">
