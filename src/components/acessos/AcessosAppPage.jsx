@@ -157,6 +157,17 @@ function emailEhUsuarioAtualAcessoApp(email = "", usuario = null) {
     return Boolean(emailLista && emailAtual && emailLista === emailAtual);
 }
 
+function obterChaveEmailSimilarAcessoApp(email = "") {
+    return normalizarTextoAcesso(email)
+        .toLowerCase()
+        .replace(/\s+/g, "")
+        .replace(/\.br$/, "");
+}
+
+function usuarioTemLoginAuthAcessoApp(usuarioPermissao = {}) {
+    return Boolean(usuarioPermissao?.user_id || usuarioPermissao?.login_criado_em);
+}
+
 const FORM_USUARIO_ACESSO_INICIAL = {
     id: null,
     nome: "",
@@ -455,6 +466,9 @@ function UsuariosCadastradosApp({ usuario = null, usuarioParaEditar = null, onEd
     const [formAberto, setFormAberto] = useState(false);
     const [salvando, setSalvando] = useState(false);
     const [criandoLogin, setCriandoLogin] = useState(false);
+    const [filtroTexto, setFiltroTexto] = useState("");
+    const [filtroPerfil, setFiltroPerfil] = useState("todos");
+    const [filtroStatus, setFiltroStatus] = useState("todos");
 
     const resumo = useMemo(() => ({
         total: usuarios.length,
@@ -462,6 +476,54 @@ function UsuariosCadastradosApp({ usuario = null, usuarioParaEditar = null, onEd
         administradores: usuarios.filter((item) => item.perfil === "administrador").length,
         bloqueados: usuarios.filter((item) => item.bloqueado).length,
     }), [usuarios]);
+
+    const emailsDuplicados = useMemo(() => {
+        const mapa = new Map();
+
+        usuarios.forEach((item) => {
+            const email = normalizarTextoAcesso(item.email).toLowerCase();
+            if (!email) return;
+            mapa.set(email, [...(mapa.get(email) || []), item]);
+        });
+
+        return Array.from(mapa.entries()).filter(([, lista]) => lista.length > 1);
+    }, [usuarios]);
+
+    const emailsParecidos = useMemo(() => {
+        const mapa = new Map();
+
+        usuarios.forEach((item) => {
+            const email = normalizarTextoAcesso(item.email).toLowerCase();
+            const chave = obterChaveEmailSimilarAcessoApp(email);
+            if (!email || !chave) return;
+            mapa.set(chave, [...(mapa.get(chave) || []), email]);
+        });
+
+        return Array.from(mapa.entries())
+            .map(([chave, emails]) => [chave, Array.from(new Set(emails))])
+            .filter(([, emails]) => emails.length > 1);
+    }, [usuarios]);
+
+    const usuariosFiltrados = useMemo(() => {
+        const busca = normalizarTextoAcesso(filtroTexto).toLowerCase();
+
+        return usuarios.filter((item) => {
+            const textoBase = [item.nome, item.email, item.funcao, item.perfil]
+                .map((valor) => normalizarTextoAcesso(valor).toLowerCase())
+                .join(" ");
+
+            const status = item.bloqueado ? "bloqueado" : item.ativo ? "ativo" : "inativo";
+            const loginAuth = usuarioTemLoginAuthAcessoApp(item) ? "com_login" : "sem_login";
+
+            const passaTexto = !busca || textoBase.includes(busca);
+            const passaPerfil = filtroPerfil === "todos" || normalizarTextoAcesso(item.perfil).toLowerCase() === filtroPerfil;
+            const passaStatus = filtroStatus === "todos" || status === filtroStatus || loginAuth === filtroStatus;
+
+            return passaTexto && passaPerfil && passaStatus;
+        });
+    }, [usuarios, filtroTexto, filtroPerfil, filtroStatus]);
+
+    const filtrosAtivos = Boolean(filtroTexto || filtroPerfil !== "todos" || filtroStatus !== "todos");
 
     async function carregarUsuarios() {
         if (carregando) return;
@@ -732,7 +794,7 @@ function UsuariosCadastradosApp({ usuario = null, usuarioParaEditar = null, onEd
                     <button
                         type="button"
                         onClick={abrirCadastroVazio}
-                        className="inline-flex items-center justify-center gap-2 rounded-2xl bg-blue-50 px-4 py-2 text-xs font-black text-blue-700 shadow-sm ring-1 ring-blue-100 hover:bg-blue-100"
+                        className="inline-flex items-center justify-center gap-2 rounded-2xl bg-blue-600 px-4 py-2 text-xs font-black text-white shadow-sm ring-1 ring-blue-600 hover:bg-blue-700"
                     >
                         <UserPlus className="h-3.5 w-3.5" />
                         Cadastrar login
@@ -766,6 +828,73 @@ function UsuariosCadastradosApp({ usuario = null, usuarioParaEditar = null, onEd
                     <p className="text-[10px] font-black uppercase tracking-wide text-rose-700">Bloqueados</p>
                     <p className="mt-1 text-xl font-black text-rose-800">{resumo.bloqueados}</p>
                 </div>
+            </div>
+
+            <div className="mt-5 rounded-3xl bg-slate-50 p-4 ring-1 ring-slate-100">
+                <div className="flex flex-col gap-3 xl:flex-row xl:items-end xl:justify-between">
+                    <div className="grid flex-1 gap-3 md:grid-cols-3">
+                        <label className="block">
+                            <span className="text-[10px] font-black uppercase tracking-wide text-slate-400">Buscar usuário</span>
+                            <input
+                                value={filtroTexto}
+                                onChange={(evento) => setFiltroTexto(evento.target.value)}
+                                className="mt-1 w-full rounded-2xl border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700 outline-none focus:border-blue-400 focus:ring-4 focus:ring-blue-100"
+                                placeholder="Nome, e-mail, função ou perfil"
+                            />
+                        </label>
+                        <label className="block">
+                            <span className="text-[10px] font-black uppercase tracking-wide text-slate-400">Perfil</span>
+                            <select
+                                value={filtroPerfil}
+                                onChange={(evento) => setFiltroPerfil(evento.target.value)}
+                                className="mt-1 w-full rounded-2xl border border-slate-200 bg-white px-3 py-2 text-xs font-black text-slate-700 outline-none focus:border-blue-400 focus:ring-4 focus:ring-blue-100"
+                            >
+                                <option value="todos">Todos os perfis</option>
+                                {PERFIS_USUARIOS_PERMISSOES_PLANEJADOS.map((perfil) => (
+                                    <option key={perfil.chave} value={perfil.chave}>{perfil.perfil}</option>
+                                ))}
+                            </select>
+                        </label>
+                        <label className="block">
+                            <span className="text-[10px] font-black uppercase tracking-wide text-slate-400">Status</span>
+                            <select
+                                value={filtroStatus}
+                                onChange={(evento) => setFiltroStatus(evento.target.value)}
+                                className="mt-1 w-full rounded-2xl border border-slate-200 bg-white px-3 py-2 text-xs font-black text-slate-700 outline-none focus:border-blue-400 focus:ring-4 focus:ring-blue-100"
+                            >
+                                <option value="todos">Todos os status</option>
+                                <option value="ativo">Ativos</option>
+                                <option value="bloqueado">Bloqueados</option>
+                                <option value="inativo">Inativos</option>
+                                <option value="com_login">Com login Auth</option>
+                                <option value="sem_login">Sem vínculo Auth</option>
+                            </select>
+                        </label>
+                    </div>
+                    <div className="flex flex-wrap items-center gap-2 xl:justify-end">
+                        <span className="rounded-full bg-white px-3 py-2 text-[11px] font-black text-slate-500 ring-1 ring-slate-200">
+                            Mostrando {usuariosFiltrados.length} de {usuarios.length}
+                        </span>
+                        {filtrosAtivos ? (
+                            <button
+                                type="button"
+                                onClick={() => {
+                                    setFiltroTexto("");
+                                    setFiltroPerfil("todos");
+                                    setFiltroStatus("todos");
+                                }}
+                                className="rounded-2xl bg-white px-4 py-2 text-xs font-black text-slate-600 ring-1 ring-slate-200 hover:bg-slate-100"
+                            >
+                                Limpar filtros
+                            </button>
+                        ) : null}
+                    </div>
+                </div>
+                {(emailsDuplicados.length > 0 || emailsParecidos.length > 0) ? (
+                    <div className="mt-4 rounded-2xl bg-amber-50 px-4 py-3 text-xs font-bold leading-5 text-amber-800 ring-1 ring-amber-100">
+                        Conferência recomendada: existem {emailsDuplicados.length} e-mail(s) duplicado(s) e {emailsParecidos.length} grupo(s) de e-mails parecidos. Revise antes de criar novos logins para evitar cadastro duplicado.
+                    </div>
+                ) : null}
             </div>
 
             {formAberto ? (
@@ -953,7 +1082,7 @@ function UsuariosCadastradosApp({ usuario = null, usuarioParaEditar = null, onEd
             ) : null}
 
             <div className="mt-5 space-y-2">
-                {usuarios.length > 0 ? usuarios.map((item) => (
+                {usuariosFiltrados.length > 0 ? usuariosFiltrados.map((item) => (
                     <article key={item.id || item.email} className="rounded-2xl bg-slate-50 px-4 py-3 ring-1 ring-slate-100">
                         <div className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
                             <div className="min-w-0">
@@ -971,6 +1100,14 @@ function UsuariosCadastradosApp({ usuario = null, usuarioParaEditar = null, onEd
                                 <span className={`rounded-full px-3 py-1.5 text-[11px] font-black ring-1 ${item.acesso_global ? "bg-blue-50 text-blue-700 ring-blue-100" : "bg-slate-100 text-slate-500 ring-slate-200"}`}>
                                     Acesso global: {item.acesso_global ? "Sim" : "Não"}
                                 </span>
+                                <span className={`rounded-full px-3 py-1.5 text-[11px] font-black ring-1 ${usuarioTemLoginAuthAcessoApp(item) ? "bg-emerald-50 text-emerald-700 ring-emerald-100" : "bg-amber-50 text-amber-800 ring-amber-100"}`}>
+                                    Login Auth: {usuarioTemLoginAuthAcessoApp(item) ? "Vinculado" : "Pendente"}
+                                </span>
+                                {item.ultimo_login_em ? (
+                                    <span className="rounded-full bg-slate-100 px-3 py-1.5 text-[11px] font-black text-slate-500 ring-1 ring-slate-200">
+                                        Último login: {formatarDataHoraAcessoApp(item.ultimo_login_em)}
+                                    </span>
+                                ) : null}
                                 {item.precisa_trocar_senha ? (
                                     <span className="rounded-full bg-orange-50 px-3 py-1.5 text-[11px] font-black text-orange-800 ring-1 ring-orange-100">
                                         Trocar senha
@@ -993,7 +1130,7 @@ function UsuariosCadastradosApp({ usuario = null, usuarioParaEditar = null, onEd
                     </article>
                 )) : (
                     <div className="rounded-2xl bg-slate-50 px-4 py-4 text-xs font-semibold text-slate-500 ring-1 ring-slate-100">
-                        Nenhum usuário carregado. Clique em Atualizar usuários para consultar a lista administrativa.
+                        Nenhum usuário encontrado para os filtros selecionados. Ajuste os filtros ou clique em Atualizar usuários.
                     </div>
                 )}
             </div>
