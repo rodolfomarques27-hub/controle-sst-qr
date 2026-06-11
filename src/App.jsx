@@ -679,7 +679,7 @@ export default function App() {
                 setUsuario({
                     id: data.session.user.id,
                     email: data.session.user.email,
-                    perfil: "Técnico de Segurança",
+                    perfil: "",
                 });
             }
 
@@ -693,7 +693,7 @@ export default function App() {
                 setUsuario({
                     id: session.user.id,
                     email: session.user.email,
-                    perfil: "Técnico de Segurança",
+                    perfil: "",
                 });
             } else {
                 setUsuario(null);
@@ -869,6 +869,7 @@ export default function App() {
 
     const sair = async () => {
         await supabase.auth.signOut();
+        setTela("dashboard");
         setUsuario(null);
         setColaboradores([]);
         setEmpresasBanco([]);
@@ -943,7 +944,12 @@ export default function App() {
                     />
                 }
             >
-                <LoginScreen onLogin={setUsuario} />
+                <LoginScreen
+                    onLogin={(usuarioLogado) => {
+                        setTela("dashboard");
+                        setUsuario(usuarioLogado);
+                    }}
+                />
             </React.Suspense>
         );
     }

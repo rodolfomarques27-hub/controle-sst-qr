@@ -6,7 +6,6 @@ import { PasswordInput } from "./commonComponents";
 export function LoginScreen({ onLogin }) {
     const [email, setEmail] = useState("sst@empresa.com");
     const [senha, setSenha] = useState("");
-    const [perfil, setPerfil] = useState("Técnico de Segurança");
     const [carregando, setCarregando] = useState(false);
     const [erro, setErro] = useState("");
 
@@ -35,7 +34,7 @@ export function LoginScreen({ onLogin }) {
         onLogin({
             id: data.user.id,
             email: data.user.email,
-            perfil,
+            perfil: "",
         });
     };
 
@@ -74,19 +73,6 @@ export function LoginScreen({ onLogin }) {
                         inputClassName="focus:ring-2 focus:ring-slate-300"
                     />
 
-                    <label className="block text-sm font-medium text-slate-700">Perfil de acesso</label>
-                    <select
-                        value={perfil}
-                        onChange={(e) => setPerfil(e.target.value)}
-                        className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-slate-300"
-                    >
-                        <option>Administrador</option>
-                        <option>Técnico de Segurança</option>
-                        <option>Empresa Terceirizada</option>
-                        <option>Portaria / Fiscalização</option>
-                        <option>Auditor</option>
-                    </select>
-
                     {erro && (
                         <div className="rounded-2xl bg-red-50 p-3 text-sm font-medium text-red-700 ring-1 ring-red-200">
                             {erro}
@@ -105,7 +91,7 @@ export function LoginScreen({ onLogin }) {
                 </button>
 
                 <p className="mt-4 rounded-2xl bg-slate-50 p-3 text-xs text-slate-500">
-                    O acesso é validado pelo Supabase. Só entra quem tiver e-mail e senha cadastrados.
+                    O acesso é validado pelo Supabase. O perfil e as permissões são carregados automaticamente pelo sistema.
                 </p>
             </div>
         </div>

@@ -580,6 +580,9 @@ function UsuariosCadastradosApp({ usuario = null, usuarioParaEditar = null, onEd
                 dados: {
                     ...formulario,
                     email: emailTratado,
+                    // Criar login do app sempre usa a senha informada como senha temporária.
+                    // Se o e-mail já existir no Supabase Auth, a senha será redefinida e a troca obrigatória será marcada.
+                    resetarSenhaTemporaria: true,
                 },
             });
 
@@ -615,7 +618,7 @@ function UsuariosCadastradosApp({ usuario = null, usuarioParaEditar = null, onEd
                     ...montarFormularioUsuarioAcesso(registro),
                     senhaTemporaria: "",
                     confirmarSenhaTemporaria: "",
-                    resetarSenhaTemporaria: false,
+                    resetarSenhaTemporaria: true,
                 });
             }
 

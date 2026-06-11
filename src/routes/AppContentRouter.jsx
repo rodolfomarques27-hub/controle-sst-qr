@@ -6,6 +6,7 @@ import { LIMITE_STORAGE_MB } from "../constants/sistemaConstants";
 import { supabase } from "../lib/supabaseClient";
 import {
     carregarPermissaoSistemaAtualService,
+    normalizarPermissaoSistema,
     registrarSolicitacaoAcessoSistemaService,
     obterBloqueioVisualTelaSistema,
     obterModuloPermissaoSistemaPorTela,
@@ -431,7 +432,25 @@ export function AppContentRouter({
             try {
                 setCarregandoPermissaoSistemaTela(true);
                 setErroPermissaoSistemaTela("");
-                const permissao = await carregarPermissaoSistemaAtualService({ supabase });
+
+                let permissao = null;
+
+                // Primeiro registra/vincula o login atual. Esta RPC também retorna os campos de primeiro acesso,
+                // incluindo precisa_trocar_senha, quando o SQL do Roteiro 14 já foi aplicado no Supabase.
+                try {
+                    const { data: permissaoRegistrada, error: registrarLoginError } = await supabase.rpc("registrar_login_usuario_sistema");
+
+                    if (!registrarLoginError) {
+                        const registro = Array.isArray(permissaoRegistrada) ? permissaoRegistrada[0] : permissaoRegistrada;
+                        permissao = normalizarPermissaoSistema(registro || null);
+                    }
+                } catch {
+                    // Mantém fallback abaixo para ambientes que ainda não receberam a RPC nova.
+                }
+
+                if (!permissao) {
+                    permissao = await carregarPermissaoSistemaAtualService({ supabase });
+                }
 
                 if (componenteAtivo) {
                     setPermissaoSistemaTela(permissao);
