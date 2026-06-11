@@ -295,7 +295,7 @@ function SolicitacoesAcessoApp({ onPrepararPermissao = null }) {
             setSolicitacoes((listaAtual) => listaAtual.map((item) => (
                 item.id === solicitacao.id ? { ...item, ...(atualizada || {}), status: atualizada?.status || statusResposta } : item
             )));
-            setMensagem(`Solicitação ${formatarStatusSolicitacaoAcessoApp(statusResposta).toLowerCase()} com sucesso. A criação/edição de permissão será tratada no próximo pacote.`);
+            setMensagem(`Solicitação ${formatarStatusSolicitacaoAcessoApp(statusResposta).toLowerCase()} com sucesso. Para solicitação aprovada, use Preparar permissão e depois Criar login do app.`);
         } catch (error) {
             setErro(error?.message || "Não foi possível atualizar a solicitação de acesso.");
             setMensagem("A solicitação não foi atualizada.");
@@ -1196,7 +1196,7 @@ export function AcessosAppPage({ usuario = null }) {
                     <section className="px-6 py-7 sm:px-8">
                         <div className="flex flex-wrap items-center gap-3">
                             <BadgeEtapa variante="sucesso">Nova aba administrativa</BadgeEtapa>
-                            <BadgeEtapa>Roteiro 14 · Pacote 3D</BadgeEtapa>
+                            <BadgeEtapa>Roteiro 14 · Pacote 6</BadgeEtapa>
                         </div>
                         <h2 className="mt-5 text-3xl font-black tracking-tight text-slate-950 sm:text-4xl">
                             Acessos do App
@@ -1208,7 +1208,7 @@ export function AcessosAppPage({ usuario = null }) {
                             <div className="flex items-start gap-3">
                                 <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0" strokeWidth={2.2} />
                                 <p>
-                                    Esta etapa integra a edição de permissões em Acessos do App. A criação real de login no Supabase Auth continuará para etapa separada por Edge Function segura.
+                                    Esta etapa integra o cadastro de login real do app com senha temporária por Edge Function segura, sem expor credenciais administrativas no front-end.
                                 </p>
                             </div>
                         </div>

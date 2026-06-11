@@ -314,6 +314,25 @@ Deno.serve(async (req) => {
       });
     }
 
+    let permissaoAtualizada = Array.isArray(permissaoSalva) ? permissaoSalva[0] : permissaoSalva;
+
+    if ((loginCriado || senhaAtualizada) && usuarioAuth?.id) {
+      const { data: permissaoLogin, error: marcarLoginError } = await userClient.rpc("admin_marcar_login_app_criado_sistema", {
+        p_email: email,
+        p_user_id: usuarioAuth.id,
+        p_precisa_trocar_senha: true,
+      });
+
+      if (marcarLoginError) {
+        return respostaJson(500, {
+          ok: false,
+          erro: marcarLoginError.message || "Login criado, mas não foi possível marcar a troca obrigatória de senha no sistema.",
+        });
+      }
+
+      permissaoAtualizada = Array.isArray(permissaoLogin) ? permissaoLogin[0] : permissaoLogin;
+    }
+
     return respostaJson(200, {
       ok: true,
       mensagem: loginCriado
@@ -324,7 +343,7 @@ Deno.serve(async (req) => {
       loginCriado,
       loginJaExistia: !loginCriado,
       senhaTemporariaDefinida: loginCriado || senhaAtualizada,
-      precisaTrocarSenha: true,
+      precisaTrocarSenha: Boolean(permissaoAtualizada?.precisa_trocar_senha ?? (loginCriado || senhaAtualizada)),
       usuario: {
         id: usuarioAuth?.id || null,
         email,
@@ -335,7 +354,7 @@ Deno.serve(async (req) => {
         bloqueado,
         acessoGlobal,
       },
-      permissao: Array.isArray(permissaoSalva) ? permissaoSalva[0] : permissaoSalva,
+      permissao: permissaoAtualizada,
     });
   } catch (error) {
     return respostaJson(500, {

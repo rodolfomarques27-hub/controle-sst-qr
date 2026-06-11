@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { LayoutGrid, Lock, LockKeyhole, RefreshCw, Send, UserRound } from "lucide-react";
-import { Card } from "../components/commonComponents";
+import { KeyRound, LayoutGrid, Lock, LockKeyhole, RefreshCw, Send, UserRound } from "lucide-react";
+import { Card, PasswordInput } from "../components/commonComponents";
 import { CarregandoTela } from "../components/CarregandoTela";
 import { LIMITE_STORAGE_MB } from "../constants/sistemaConstants";
 import { supabase } from "../lib/supabaseClient";
@@ -203,6 +203,146 @@ function AcessoModuloSistemaBloqueado({ tela, bloqueio, permissao, erro, usuario
     );
 }
 
+
+function TrocaSenhaTemporariaObrigatoria({ usuario, permissao, onSenhaAtualizada }) {
+    const [novaSenha, setNovaSenha] = useState("");
+    const [confirmarSenha, setConfirmarSenha] = useState("");
+    const [salvando, setSalvando] = useState(false);
+    const [erro, setErro] = useState("");
+    const [mensagem, setMensagem] = useState("");
+
+    async function handleSalvarSenhaTemporaria() {
+        setErro("");
+        setMensagem("");
+
+        if (!novaSenha || !confirmarSenha) {
+            setErro("Informe e confirme a nova senha.");
+            return;
+        }
+
+        if (novaSenha.length < 6) {
+            setErro("A nova senha deve ter pelo menos 6 caracteres.");
+            return;
+        }
+
+        if (novaSenha !== confirmarSenha) {
+            setErro("A confirmação da senha não confere.");
+            return;
+        }
+
+        try {
+            setSalvando(true);
+
+            const { error: senhaError } = await supabase.auth.updateUser({
+                password: novaSenha,
+            });
+
+            if (senhaError) {
+                throw new Error(senhaError.message || "Não foi possível atualizar a senha no Supabase Auth.");
+            }
+
+            const { data, error: rpcError } = await supabase.rpc("finalizar_troca_senha_temporaria_sistema");
+
+            if (rpcError) {
+                throw new Error(rpcError.message || "Senha alterada, mas não foi possível finalizar a pendência no sistema.");
+            }
+
+            const permissaoAtualizada = Array.isArray(data) ? data[0] : data;
+            setMensagem("Senha atualizada com sucesso. Seu acesso foi liberado.");
+            setNovaSenha("");
+            setConfirmarSenha("");
+            onSenhaAtualizada?.(permissaoAtualizada || { ...permissao, precisa_trocar_senha: false });
+        } catch (error) {
+            setErro(error?.message || "Não foi possível alterar a senha temporária.");
+        } finally {
+            setSalvando(false);
+        }
+    }
+
+    return (
+        <div className="flex min-h-[58vh] items-center justify-center px-4 py-10">
+            <Card className="w-full max-w-4xl overflow-hidden border border-slate-200 bg-white p-0 shadow-[0_18px_55px_rgba(15,23,42,0.10)]">
+                <div className="grid min-h-[390px] md:grid-cols-[0.42fr_0.58fr]">
+                    <aside className="relative flex flex-col items-center justify-center overflow-hidden border-b border-slate-200 bg-gradient-to-br from-orange-50 via-white to-slate-50 px-8 py-10 text-center md:border-b-0 md:border-r">
+                        <div className="relative mb-8 flex h-36 w-36 items-center justify-center rounded-[2.5rem] bg-white/70 shadow-inner ring-1 ring-orange-100">
+                            <div className="absolute inset-3 rounded-[2rem] bg-gradient-to-br from-orange-50 to-white" />
+                            <div className="relative flex h-20 w-20 items-center justify-center rounded-[1.75rem] bg-white shadow-sm ring-1 ring-orange-100">
+                                <KeyRound className="h-12 w-12 text-orange-600" strokeWidth={1.8} />
+                            </div>
+                        </div>
+
+                        <p className="text-xs font-black uppercase tracking-[0.28em] text-orange-700">Primeiro acesso</p>
+                        <h2 className="mt-4 text-3xl font-black tracking-tight text-slate-950">Troque sua senha</h2>
+                        <div className="mt-4 h-1 w-14 rounded-full bg-orange-600" />
+                        <p className="mt-6 max-w-[260px] text-sm font-semibold leading-7 text-slate-500">
+                            Seu login foi criado com senha temporária. Altere a senha para continuar usando o sistema.
+                        </p>
+                    </aside>
+
+                    <section className="flex flex-col justify-center px-6 py-8 sm:px-8 md:px-12">
+                        <div className="max-w-2xl">
+                            <h3 className="text-2xl font-black leading-tight tracking-tight text-slate-950 sm:text-3xl">
+                                Atualização obrigatória de senha
+                            </h3>
+                            <p className="mt-4 text-sm font-semibold leading-7 text-slate-500">
+                                Usuário: <span className="text-slate-800">{permissao?.email || usuario?.email || "não informado"}</span>. A nova senha ficará salva somente no Supabase Auth.
+                            </p>
+
+                            <div className="mt-7 space-y-4 rounded-3xl border border-slate-200 bg-slate-50/80 p-5 shadow-inner shadow-slate-100/60">
+                                <div>
+                                    <label className="mb-2 block text-xs font-black uppercase tracking-[0.16em] text-slate-500">Nova senha</label>
+                                    <PasswordInput
+                                        value={novaSenha}
+                                        onChange={(event) => setNovaSenha(event.target.value)}
+                                        placeholder="Digite a nova senha"
+                                        autoComplete="new-password"
+                                        inputClassName="focus:ring-2 focus:ring-orange-200"
+                                    />
+                                </div>
+
+                                <div>
+                                    <label className="mb-2 block text-xs font-black uppercase tracking-[0.16em] text-slate-500">Confirmar nova senha</label>
+                                    <PasswordInput
+                                        value={confirmarSenha}
+                                        onChange={(event) => setConfirmarSenha(event.target.value)}
+                                        onKeyDown={(event) => {
+                                            if (event.key === "Enter") handleSalvarSenhaTemporaria();
+                                        }}
+                                        placeholder="Confirme a nova senha"
+                                        autoComplete="new-password"
+                                        inputClassName="focus:ring-2 focus:ring-orange-200"
+                                    />
+                                </div>
+
+                                {erro ? (
+                                    <div className="rounded-2xl bg-red-50 p-3 text-sm font-bold text-red-700 ring-1 ring-red-200">
+                                        {erro}
+                                    </div>
+                                ) : null}
+                                {mensagem ? (
+                                    <div className="rounded-2xl bg-emerald-50 p-3 text-sm font-bold text-emerald-700 ring-1 ring-emerald-200">
+                                        {mensagem}
+                                    </div>
+                                ) : null}
+                            </div>
+
+                            <button
+                                type="button"
+                                onClick={handleSalvarSenhaTemporaria}
+                                disabled={salvando}
+                                className="mt-6 inline-flex w-full items-center justify-center gap-3 rounded-2xl bg-slate-950 px-8 py-3 text-sm font-black text-white shadow-sm transition hover:-translate-y-0.5 hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
+                            >
+                                <KeyRound className="h-4 w-4" />
+                                {salvando ? "Salvando nova senha..." : "Salvar nova senha"}
+                            </button>
+                        </div>
+                    </section>
+                </div>
+            </Card>
+        </div>
+    );
+}
+
 export function AppContentRouter({
     tela,
     colaboradores,
@@ -333,6 +473,16 @@ export function AppContentRouter({
                     Verificando permissão de acesso ao módulo...
                 </div>
             </Card>
+        );
+    }
+
+    if (permissaoSistemaTela?.precisa_trocar_senha === true && !carregandoPermissaoSistemaTela && !erroPermissaoSistemaTela) {
+        return (
+            <TrocaSenhaTemporariaObrigatoria
+                usuario={usuario}
+                permissao={permissaoSistemaTela}
+                onSenhaAtualizada={(permissaoAtualizada) => setPermissaoSistemaTela(permissaoAtualizada)}
+            />
         );
     }
 
