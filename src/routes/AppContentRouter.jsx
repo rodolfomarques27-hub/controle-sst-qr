@@ -470,11 +470,15 @@ export function AppContentRouter({
     onBloquearConfiguracoes,
     onSalvarLimites,
     onSalvarSenhaConfiguracoes,
+    permissaoSistemaUsuario = null,
+    carregandoPermissaoSistemaUsuario = false,
+    erroPermissaoSistemaUsuario = "",
+    onPermissaoSistemaAtualizada,
     onRedirecionarTelaPermitida,
 }) {
-    const [permissaoSistemaTela, setPermissaoSistemaTela] = useState(null);
-    const [carregandoPermissaoSistemaTela, setCarregandoPermissaoSistemaTela] = useState(() => Boolean(usuario?.email));
-    const [erroPermissaoSistemaTela, setErroPermissaoSistemaTela] = useState("");
+    const [permissaoSistemaTela, setPermissaoSistemaTela] = useState(() => normalizarPermissaoSistema(permissaoSistemaUsuario || null));
+    const [carregandoPermissaoSistemaTela, setCarregandoPermissaoSistemaTela] = useState(() => Boolean(carregandoPermissaoSistemaUsuario || (usuario?.email && !permissaoSistemaUsuario)));
+    const [erroPermissaoSistemaTela, setErroPermissaoSistemaTela] = useState(() => erroPermissaoSistemaUsuario || "");
     const [telaComModuloPronto, setTelaComModuloPronto] = useState("");
     const [preparandoTelaPermitida, setPreparandoTelaPermitida] = useState(() => Boolean(usuario?.email));
     const ultimoRedirecionamentoAutomaticoRef = useRef("");
@@ -491,6 +495,27 @@ export function AppContentRouter({
             }
 
             try {
+                if (carregandoPermissaoSistemaUsuario) {
+                    setCarregandoPermissaoSistemaTela(true);
+                    setErroPermissaoSistemaTela("");
+                    return;
+                }
+
+                if (erroPermissaoSistemaUsuario) {
+                    setPermissaoSistemaTela(null);
+                    setErroPermissaoSistemaTela(erroPermissaoSistemaUsuario);
+                    setCarregandoPermissaoSistemaTela(false);
+                    return;
+                }
+
+                if (permissaoSistemaUsuario) {
+                    const permissaoInicial = normalizarPermissaoSistema(permissaoSistemaUsuario);
+                    setPermissaoSistemaTela(permissaoInicial);
+                    setErroPermissaoSistemaTela("");
+                    setCarregandoPermissaoSistemaTela(false);
+                    return;
+                }
+
                 setCarregandoPermissaoSistemaTela(true);
                 setErroPermissaoSistemaTela("");
 
@@ -515,6 +540,7 @@ export function AppContentRouter({
 
                 if (componenteAtivo) {
                     setPermissaoSistemaTela(permissao);
+                    onPermissaoSistemaAtualizada?.(permissao);
                 }
             } catch (error) {
                 if (componenteAtivo) {
@@ -533,7 +559,13 @@ export function AppContentRouter({
         return () => {
             componenteAtivo = false;
         };
-    }, [usuario?.email]);
+    }, [
+        carregandoPermissaoSistemaUsuario,
+        erroPermissaoSistemaUsuario,
+        onPermissaoSistemaAtualizada,
+        permissaoSistemaUsuario,
+        usuario?.email,
+    ]);
 
     const bloqueioTelaSistema = useMemo(
         () => obterBloqueioVisualTelaSistema(permissaoSistemaTela, tela),
@@ -667,7 +699,10 @@ export function AppContentRouter({
             <TrocaSenhaTemporariaObrigatoria
                 usuario={usuario}
                 permissao={permissaoSistemaTela}
-                onSenhaAtualizada={(permissaoAtualizada) => setPermissaoSistemaTela(permissaoAtualizada)}
+                onSenhaAtualizada={(permissaoAtualizada) => {
+                    setPermissaoSistemaTela(permissaoAtualizada);
+                    onPermissaoSistemaAtualizada?.(permissaoAtualizada);
+                }}
             />
         );
     }

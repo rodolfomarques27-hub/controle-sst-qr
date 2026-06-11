@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { supabase, SUPABASE_CONFIGURADO } from "./lib/supabaseClient";
 import { SupabaseConfiguracaoPendente } from "./components/commonComponents";
 import {
@@ -24,6 +24,11 @@ import {
     verificarRotaNovaAuditoriaCampoApp,
 } from "./routes/appRoutesService";
 import { sanitizarNomeArquivo } from "./utils/sstUtils";
+import {
+    carregarPermissaoSistemaAtualService,
+    normalizarPermissaoSistema,
+    usuarioPodeAcessarTelaSistema,
+} from "./services/usuariosPermissoesSistemaService";
 import {
     Building2,
     CalendarClock,
@@ -54,6 +59,27 @@ const carregarConsultaPublicaQrHandlers = () => import("./services/consultaPubli
 const carregarEmpresaDocumentosHandlers = () => import("./services/empresaDocumentosService");
 
 const hoje = new Date();
+
+const ORDEM_TELAS_INICIAIS_PERMITIDAS_APP = [
+    "dashboard",
+    "auditoriaCampo",
+    "novaAuditoriaCampo",
+    "qr",
+    "empresas",
+    "colaboradores",
+    "treinamentos",
+    "aniversariantes",
+    "auditoria",
+    "acessosApp",
+    "configuracoes",
+    "roteiro",
+];
+
+function obterPrimeiraTelaPermitidaApp(permissao = null) {
+    return ORDEM_TELAS_INICIAIS_PERMITIDAS_APP.find((telaCandidata) =>
+        usuarioPodeAcessarTelaSistema(permissao, telaCandidata)
+    ) || "";
+}
 
 function AppTransicaoInterna() {
     return (
@@ -111,6 +137,9 @@ export default function App() {
     const [podeAcessarAuditoria, setPodeAcessarAuditoria] = useState(false);
     const [verificandoAcessoAuditoria, setVerificandoAcessoAuditoria] = useState(false);
     const [auditoriaLiberada, setAuditoriaLiberada] = useState(false);
+    const [permissaoSistemaUsuario, setPermissaoSistemaUsuario] = useState(null);
+    const [carregandoPermissaoSistemaUsuario, setCarregandoPermissaoSistemaUsuario] = useState(false);
+    const [erroPermissaoSistemaUsuario, setErroPermissaoSistemaUsuario] = useState("");
 
     useEffect(() => {
         try {
@@ -706,6 +735,78 @@ export default function App() {
     }, []);
 
     useEffect(() => {
+        if (!SUPABASE_CONFIGURADO) return undefined;
+
+        let componenteAtivo = true;
+
+        async function carregarPermissaoUsuarioAtual() {
+            if (!usuario?.email) {
+                setPermissaoSistemaUsuario(null);
+                setErroPermissaoSistemaUsuario("");
+                setCarregandoPermissaoSistemaUsuario(false);
+                return;
+            }
+
+            setCarregandoPermissaoSistemaUsuario(true);
+            setErroPermissaoSistemaUsuario("");
+
+            try {
+                let permissao = null;
+
+                try {
+                    const { data: permissaoRegistrada, error: registrarLoginError } = await supabase.rpc("registrar_login_usuario_sistema");
+
+                    if (!registrarLoginError) {
+                        const registro = Array.isArray(permissaoRegistrada) ? permissaoRegistrada[0] : permissaoRegistrada;
+                        permissao = normalizarPermissaoSistema(registro || null);
+                    }
+                } catch {
+                    // Mantém fallback abaixo para ambientes em atualização.
+                }
+
+                if (!permissao) {
+                    permissao = await carregarPermissaoSistemaAtualService({ supabase });
+                }
+
+                if (!componenteAtivo) return;
+
+                setPermissaoSistemaUsuario(permissao);
+
+                if (permissao) {
+                    setUsuario((atual) => {
+                        if (!atual || atual.email !== usuario.email) return atual;
+
+                        return {
+                            ...atual,
+                            nome: permissao.nome || atual.nome || (atual.email?.includes("@") ? atual.email.split("@")[0] : atual.nome),
+                            funcao: permissao.funcao || atual.funcao || "",
+                            perfil: permissao.perfil || atual.perfil || "",
+                            bloqueado: permissao.bloqueado,
+                            ativo: permissao.ativo,
+                            acesso_global: permissao.acesso_global,
+                        };
+                    });
+                }
+            } catch (error) {
+                if (!componenteAtivo) return;
+
+                setPermissaoSistemaUsuario(null);
+                setErroPermissaoSistemaUsuario(error?.message || "Não foi possível validar a permissão do usuário.");
+            } finally {
+                if (componenteAtivo) {
+                    setCarregandoPermissaoSistemaUsuario(false);
+                }
+            }
+        }
+
+        carregarPermissaoUsuarioAtual();
+
+        return () => {
+            componenteAtivo = false;
+        };
+    }, [usuario?.email]);
+
+    useEffect(() => {
         if (!SUPABASE_CONFIGURADO) return;
 
         const parametros = new URLSearchParams(window.location.search);
@@ -822,7 +923,7 @@ export default function App() {
         return () => window.clearTimeout(timer);
     }, [usuario, colaboradores]);
 
-    const nav = [
+    const navCompleta = useMemo(() => [
         { id: "dashboard", label: "Dashboard SST", icon: LayoutDashboard },
         { id: "auditoriaCampo", label: "Dashboard Auditoria", icon: ClipboardCheck },
         { id: "novaAuditoriaCampo", label: "Nova Auditoria", icon: Plus },
@@ -835,7 +936,50 @@ export default function App() {
         { id: "acessosApp", label: "Acessos do App", icon: ShieldCheck },
         { id: "configuracoes", label: "Configurações", icon: Settings },
         { id: "roteiro", label: "Roteiro", icon: CalendarClock },
-    ];
+    ], [podeAcessarAuditoria]);
+
+    const nav = useMemo(() => {
+        if (!usuario?.email || carregandoPermissaoSistemaUsuario || !permissaoSistemaUsuario || erroPermissaoSistemaUsuario) {
+            return [];
+        }
+
+        return navCompleta.filter((item) => {
+            if (item.id === "auditoria" && !podeAcessarAuditoria) return false;
+            return usuarioPodeAcessarTelaSistema(permissaoSistemaUsuario, item.id);
+        });
+    }, [
+        carregandoPermissaoSistemaUsuario,
+        erroPermissaoSistemaUsuario,
+        navCompleta,
+        permissaoSistemaUsuario,
+        podeAcessarAuditoria,
+        usuario?.email,
+    ]);
+
+    const primeiraTelaPermitidaApp = useMemo(() => {
+        if (!usuario?.email || carregandoPermissaoSistemaUsuario || !permissaoSistemaUsuario || erroPermissaoSistemaUsuario) {
+            return "";
+        }
+
+        return obterPrimeiraTelaPermitidaApp(permissaoSistemaUsuario);
+    }, [carregandoPermissaoSistemaUsuario, erroPermissaoSistemaUsuario, permissaoSistemaUsuario, usuario?.email]);
+
+    const trocaSenhaTemporariaPendenteApp = Boolean(permissaoSistemaUsuario?.precisa_trocar_senha === true);
+    const telaAtualPermitidaApp = Boolean(!usuario?.email || !permissaoSistemaUsuario || usuarioPodeAcessarTelaSistema(permissaoSistemaUsuario, tela));
+    const aguardandoTelaPermitidaApp = Boolean(
+        usuario?.email
+        && !carregandoPermissaoSistemaUsuario
+        && permissaoSistemaUsuario
+        && !erroPermissaoSistemaUsuario
+        && !trocaSenhaTemporariaPendenteApp
+        && primeiraTelaPermitidaApp
+        && !telaAtualPermitidaApp
+    );
+
+    useEffect(() => {
+        if (!aguardandoTelaPermitidaApp || !primeiraTelaPermitidaApp || primeiraTelaPermitidaApp === tela) return;
+        setTela(primeiraTelaPermitidaApp);
+    }, [aguardandoTelaPermitidaApp, primeiraTelaPermitidaApp, tela]);
 
     const selecionarColaborador = async (c) => {
         const { selecionarColaboradorAppService } = await carregarColaboradoresHandlers();
@@ -871,6 +1015,9 @@ export default function App() {
         await supabase.auth.signOut();
         setTela("dashboard");
         setUsuario(null);
+        setPermissaoSistemaUsuario(null);
+        setErroPermissaoSistemaUsuario("");
+        setCarregandoPermissaoSistemaUsuario(false);
         setColaboradores([]);
         setEmpresasBanco([]);
         setDocumentosEmpresas([]);
@@ -952,6 +1099,14 @@ export default function App() {
                 />
             </React.Suspense>
         );
+    }
+
+    if (usuario && carregandoPermissaoSistemaUsuario) {
+        return <AppTransicaoInterna />;
+    }
+
+    if (aguardandoTelaPermitidaApp) {
+        return <AppTransicaoInterna />;
     }
 
     const validarSenhaConfiguracoes = (evento) => {
@@ -1081,6 +1236,10 @@ export default function App() {
                         onBloquearConfiguracoes={bloquearConfiguracoesSistema}
                         onSalvarLimites={atualizarLimitesCarregamentoSistema}
                         onSalvarSenhaConfiguracoes={atualizarSenhaConfiguracoesSistema}
+                        permissaoSistemaUsuario={permissaoSistemaUsuario}
+                        carregandoPermissaoSistemaUsuario={carregandoPermissaoSistemaUsuario}
+                        erroPermissaoSistemaUsuario={erroPermissaoSistemaUsuario}
+                        onPermissaoSistemaAtualizada={setPermissaoSistemaUsuario}
                         onRedirecionarTelaPermitida={setTela}
                     />
                 </React.Suspense>
