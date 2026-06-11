@@ -1081,6 +1081,7 @@ export default function App() {
                         onBloquearConfiguracoes={bloquearConfiguracoesSistema}
                         onSalvarLimites={atualizarLimitesCarregamentoSistema}
                         onSalvarSenhaConfiguracoes={atualizarSenhaConfiguracoesSistema}
+                        onRedirecionarTelaPermitida={setTela}
                     />
                 </React.Suspense>
             </AppLayout>

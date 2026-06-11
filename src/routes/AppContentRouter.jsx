@@ -11,6 +11,7 @@ import {
     obterBloqueioVisualTelaSistema,
     obterModuloPermissaoSistemaPorTela,
     obterResumoPermissaoSistema,
+    usuarioPodeAcessarTelaSistema,
 } from "../services/usuariosPermissoesSistemaService";
 
 const ConsultaQR = React.lazy(() => import("../components/qr/ConsultaQR").then((modulo) => ({ default: modulo.ConsultaQR })));
@@ -26,6 +27,28 @@ const NovaAuditoriaCampoDireta = React.lazy(() => import("../components/auditori
 const ConfiguracoesSistema = React.lazy(() => import("../components/configuracoes/ConfiguracoesSistema").then((modulo) => ({ default: modulo.ConfiguracoesSistema })));
 const ConfiguracoesBloqueio = React.lazy(() => import("../components/configuracoes/ConfiguracoesBloqueio").then((modulo) => ({ default: modulo.ConfiguracoesBloqueio })));
 const AcessosAppPage = React.lazy(() => import("../components/acessos/AcessosAppPage").then((modulo) => ({ default: modulo.AcessosAppPage })));
+
+const ORDEM_REDIRECIONAMENTO_TELAS_PERMITIDAS = [
+    "dashboard",
+    "auditoriaCampo",
+    "novaAuditoriaCampo",
+    "qr",
+    "empresas",
+    "colaboradores",
+    "treinamentos",
+    "aniversariantes",
+    "auditoria",
+    "acessosApp",
+    "configuracoes",
+    "roteiro",
+];
+
+function obterPrimeiraTelaPermitidaParaUsuario(permissao = null) {
+    return ORDEM_REDIRECIONAMENTO_TELAS_PERMITIDAS.find((telaCandidata) =>
+        usuarioPodeAcessarTelaSistema(permissao, telaCandidata)
+    ) || "";
+}
+
 const ROTULOS_TELAS_ACESSO_BLOQUEADO = Object.freeze({
     dashboard: "Dashboard SST",
     novaAuditoriaCampo: "Nova Auditoria",
@@ -413,6 +436,7 @@ export function AppContentRouter({
     onBloquearConfiguracoes,
     onSalvarLimites,
     onSalvarSenhaConfiguracoes,
+    onRedirecionarTelaPermitida,
 }) {
     const [permissaoSistemaTela, setPermissaoSistemaTela] = useState(null);
     const [carregandoPermissaoSistemaTela, setCarregandoPermissaoSistemaTela] = useState(() => Boolean(usuario?.email));
@@ -483,6 +507,30 @@ export function AppContentRouter({
     const telaBloqueadaPorPermissao = telaControladaPorPermissao
         && !carregandoPermissaoSistemaTela
         && (Boolean(erroPermissaoSistemaTela) || bloqueioTelaSistema.bloqueado);
+
+    useEffect(() => {
+        if (!onRedirecionarTelaPermitida) return;
+        if (carregandoPermissaoSistemaTela || erroPermissaoSistemaTela) return;
+        if (!permissaoSistemaTela || permissaoSistemaTela?.precisa_trocar_senha === true) return;
+
+        // Quando o usuário faz login ou atualiza a página, o sistema pode iniciar no Dashboard SST.
+        // Perfis como Auditor não têm acesso ao Dashboard SST por padrão, então redirecionamos
+        // somente essa tela inicial para a primeira área permitida, evitando cair em acesso restrito.
+        if (tela !== "dashboard" || !telaBloqueadaPorPermissao) return;
+
+        const primeiraTelaPermitida = obterPrimeiraTelaPermitidaParaUsuario(permissaoSistemaTela);
+
+        if (primeiraTelaPermitida && primeiraTelaPermitida !== tela) {
+            onRedirecionarTelaPermitida(primeiraTelaPermitida);
+        }
+    }, [
+        carregandoPermissaoSistemaTela,
+        erroPermissaoSistemaTela,
+        onRedirecionarTelaPermitida,
+        permissaoSistemaTela,
+        tela,
+        telaBloqueadaPorPermissao,
+    ]);
 
     if (telaControladaPorPermissao && carregandoPermissaoSistemaTela) {
         return (
