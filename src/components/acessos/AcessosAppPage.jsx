@@ -581,17 +581,16 @@ function UsuariosCadastradosApp({ usuario = null, usuarioParaEditar = null, onEd
     const [excluindoId, setExcluindoId] = useState("");
 
     const resumo = useMemo(() => ({
-        total: usuarios.filter((item) => !item.excluido).length,
-        ativos: usuarios.filter((item) => item.ativo && !item.bloqueado && !item.excluido).length,
-        administradores: usuarios.filter((item) => item.perfil === "administrador" && !item.excluido).length,
-        bloqueados: usuarios.filter((item) => item.bloqueado && !item.excluido).length,
-        excluidos: usuarios.filter((item) => item.excluido).length,
+        total: usuarios.length,
+        ativos: usuarios.filter((item) => item.ativo && !item.bloqueado).length,
+        administradores: usuarios.filter((item) => item.perfil === "administrador").length,
+        bloqueados: usuarios.filter((item) => item.bloqueado).length,
     }), [usuarios]);
 
     const emailsDuplicados = useMemo(() => {
         const mapa = new Map();
 
-        usuarios.filter((item) => !item.excluido).forEach((item) => {
+        usuarios.forEach((item) => {
             const email = normalizarTextoAcesso(item.email).toLowerCase();
             if (!email) return;
             mapa.set(email, [...(mapa.get(email) || []), item]);
@@ -603,7 +602,7 @@ function UsuariosCadastradosApp({ usuario = null, usuarioParaEditar = null, onEd
     const emailsParecidos = useMemo(() => {
         const mapa = new Map();
 
-        usuarios.filter((item) => !item.excluido).forEach((item) => {
+        usuarios.forEach((item) => {
             const email = normalizarTextoAcesso(item.email).toLowerCase();
             const chave = obterChaveEmailSimilarAcessoApp(email);
             if (!email || !chave) return;
@@ -629,18 +628,17 @@ function UsuariosCadastradosApp({ usuario = null, usuarioParaEditar = null, onEd
         const busca = normalizarTextoAcesso(filtroTexto).toLowerCase();
 
         return usuarios.filter((item) => {
-            const usuarioExcluido = Boolean(item.excluido);
             const textoBase = [item.nome, item.email, item.funcao, item.empresa, item.perfil]
                 .map((valor) => normalizarTextoAcesso(valor).toLowerCase())
                 .join(" ");
 
-            const status = usuarioExcluido ? "excluido" : item.bloqueado ? "bloqueado" : item.ativo ? "ativo" : "inativo";
+            const status = item.bloqueado ? "bloqueado" : item.ativo ? "ativo" : "inativo";
             const loginAuth = usuarioTemLoginAuthAcessoApp(item) ? "com_login" : "sem_login";
 
             const passaTexto = !busca || textoBase.includes(busca);
             const passaPerfil = filtroPerfil === "todos" || normalizarTextoAcesso(item.perfil).toLowerCase() === filtroPerfil;
             const passaEmpresa = filtroEmpresa === "todos" || normalizarTextoAcesso(item.empresa) === filtroEmpresa;
-            const passaStatus = filtroStatus === "todos" ? !usuarioExcluido : status === filtroStatus || loginAuth === filtroStatus;
+            const passaStatus = filtroStatus === "todos" || status === filtroStatus || loginAuth === filtroStatus;
 
             return passaTexto && passaPerfil && passaEmpresa && passaStatus;
         });
@@ -658,7 +656,7 @@ function UsuariosCadastradosApp({ usuario = null, usuarioParaEditar = null, onEd
         try {
             const lista = await listarUsuariosPermissoesSistemaService({ supabase });
             setUsuarios(lista);
-            setMensagem(lista.length ? `${lista.length} pessoa(s) carregada(s) da lista administrativa de acessos.` : "Nenhum usuário cadastrado encontrado.");
+            setMensagem(lista.length ? `${lista.length} pessoa(s) carregada(s). A lista principal mostra apenas acessos ativos por padrão.` : "Nenhum usuário cadastrado encontrado.");
         } catch (error) {
             setUsuarios([]);
             setErro(error?.message || "Não foi possível carregar usuários cadastrados.");
@@ -882,7 +880,7 @@ function UsuariosCadastradosApp({ usuario = null, usuarioParaEditar = null, onEd
         }
 
         const confirmar = window.confirm(
-            `Excluir o acesso de ${item.email}? A ação bloqueia o usuário, remove acesso global e mantém o histórico para rastreabilidade.`
+            `Excluir definitivamente o acesso de ${item.email}? A ação remove o cadastro de acesso da lista do app. Colaboradores, empresas e documentos não serão apagados.`
         );
 
         if (!confirmar) return;
@@ -897,22 +895,18 @@ function UsuariosCadastradosApp({ usuario = null, usuarioParaEditar = null, onEd
                 supabase,
                 usuario: item,
                 usuarioAtual: usuario,
-                observacao: "Acesso excluído administrativamente pela aba Acessos do App.",
+                observacao: "Acesso removido definitivamente pela aba Acessos do App.",
             });
 
-            const registro = excluido || {
-                ...item,
-                ativo: false,
-                bloqueado: true,
-                acesso_global: false,
-                excluido: true,
-                excluido_em: new Date().toISOString(),
-            };
+            const emailRemovido = normalizarTextoAcesso(excluido?.email || item.email).toLowerCase();
+            const idRemovido = excluido?.id || item.id;
 
-            setUsuarios((listaAtual) => listaAtual.map((usuarioLista) => (
-                usuarioLista.id === item.id || usuarioLista.email === item.email ? { ...usuarioLista, ...registro } : usuarioLista
-            )));
-            setMensagem("Acesso excluído com segurança. O histórico foi mantido para rastreabilidade.");
+            setUsuarios((listaAtual) => listaAtual.filter((usuarioLista) => {
+                const mesmoId = idRemovido && usuarioLista.id === idRemovido;
+                const mesmoEmail = emailRemovido && normalizarTextoAcesso(usuarioLista.email).toLowerCase() === emailRemovido;
+                return !(mesmoId || mesmoEmail);
+            }));
+            setMensagem("Acesso excluído definitivamente da lista do app. Colaboradores, empresas e documentos não foram apagados.");
         } catch (error) {
             setErro(error?.message || "Não foi possível excluir o acesso.");
             setMensagem("O acesso não foi excluído.");
@@ -1003,10 +997,6 @@ function UsuariosCadastradosApp({ usuario = null, usuarioParaEditar = null, onEd
                     <p className="text-[10px] font-black uppercase tracking-wide text-rose-700">Bloqueados</p>
                     <p className="mt-1 text-xl font-black text-rose-800">{resumo.bloqueados}</p>
                 </div>
-                <div className="rounded-2xl bg-orange-50 px-4 py-3 ring-1 ring-orange-100">
-                    <p className="text-[10px] font-black uppercase tracking-wide text-orange-700">Excluídos</p>
-                    <p className="mt-1 text-xl font-black text-orange-800">{resumo.excluidos}</p>
-                </div>
             </div>
 
             <div className="mt-5 rounded-3xl bg-slate-50 p-4 ring-1 ring-slate-100">
@@ -1058,7 +1048,6 @@ function UsuariosCadastradosApp({ usuario = null, usuarioParaEditar = null, onEd
                                 <option value="ativo">Ativos</option>
                                 <option value="bloqueado">Bloqueados</option>
                                 <option value="inativo">Inativos</option>
-                                <option value="excluido">Excluídos</option>
                                 <option value="com_login">Com login Auth</option>
                                 <option value="sem_login">Sem vínculo Auth</option>
                             </select>
@@ -1286,7 +1275,7 @@ function UsuariosCadastradosApp({ usuario = null, usuarioParaEditar = null, onEd
 
             <div className="mt-5 space-y-2">
                 {usuariosFiltrados.length > 0 ? usuariosFiltrados.map((item) => (
-                    <article key={item.id || item.email} className={`rounded-2xl px-4 py-3 ring-1 ${item.excluido ? "bg-orange-50 ring-orange-100" : "bg-slate-50 ring-slate-100"}`}>
+                    <article key={item.id || item.email} className="rounded-2xl bg-slate-50 px-4 py-3 ring-1 ring-slate-100">
                         <div className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
                             <div className="min-w-0">
                                 <p className="truncate text-sm font-black text-slate-950">{item.nome || "Usuário sem nome"}</p>
@@ -1317,11 +1306,6 @@ function UsuariosCadastradosApp({ usuario = null, usuarioParaEditar = null, onEd
                                         Trocar senha
                                     </span>
                                 ) : null}
-                                {item.excluido ? (
-                                    <span className="rounded-full bg-orange-50 px-3 py-1.5 text-[11px] font-black text-orange-800 ring-1 ring-orange-100">
-                                        Acesso excluído
-                                    </span>
-                                ) : null}
                                 {emailEhUsuarioAtualAcessoApp(item.email, usuario) ? (
                                     <span className="rounded-full bg-amber-50 px-3 py-1.5 text-[11px] font-black text-amber-800 ring-1 ring-amber-100">
                                         Usuário atual
@@ -1337,7 +1321,7 @@ function UsuariosCadastradosApp({ usuario = null, usuarioParaEditar = null, onEd
                                 <button
                                     type="button"
                                     onClick={() => excluirAcessoUsuario(item)}
-                                    disabled={Boolean(item.excluido) || emailEhUsuarioAtualAcessoApp(item.email, usuario) || excluindoId === (item.id || item.email)}
+                                    disabled={emailEhUsuarioAtualAcessoApp(item.email, usuario) || excluindoId === (item.id || item.email)}
                                     className="inline-flex items-center gap-1 rounded-full bg-rose-50 px-3 py-1.5 text-[11px] font-black text-rose-700 ring-1 ring-rose-100 hover:bg-rose-100 disabled:cursor-not-allowed disabled:opacity-50"
                                 >
                                     <Trash2 className="h-3 w-3" />
