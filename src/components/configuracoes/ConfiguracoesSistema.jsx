@@ -18,6 +18,8 @@ import {
     ShieldAlert,
     ShieldCheck,
     SlidersHorizontal,
+    UserPlus,
+    Users,
 } from "lucide-react";
 import { Header, Card } from "../commonComponents";
 import { ArquivosStorageConfiguracoes } from "./ArquivosStorageConfiguracoes";
@@ -1170,7 +1172,7 @@ export function ConfiguracoesSistema({
         setMensagemFormularioNovoUsuarioPermissao(
             areaSensivel
                 ? `Solicitação de ${solicitacao.email} preparada com perfil Consulta por segurança. Configurações, Storage e Auditoria do Sistema exigem ajuste manual por administrador antes de salvar.`
-                : `Solicitação de ${solicitacao.email} preparada no formulário. Confira o perfil sugerido, ajuste se necessário e clique em Salvar no Supabase.`
+                : `Solicitação de ${solicitacao.email} preparada no formulário. Confira o perfil sugerido, ajuste se necessário e clique em Salvar acesso.`
         );
 
         window.requestAnimationFrame(() => {
@@ -2287,6 +2289,83 @@ export function ConfiguracoesSistema({
                             </div>
 
                             <div className="mt-4 rounded-3xl bg-white p-4 ring-1 ring-slate-100">
+                                <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
+                                    <div className="max-w-3xl">
+                                        <div className="flex items-center gap-2">
+                                            <UserPlus className="h-5 w-5 text-blue-600" />
+                                            <div>
+                                                <p className="text-xs font-black uppercase tracking-wide text-blue-700">Cadastro de acesso ao app</p>
+                                                <h3 className="mt-0.5 text-base font-black text-slate-950">Cadastro de pessoas para acesso ao app</h3>
+                                            </div>
+                                        </div>
+                                        <p className="mt-2 text-xs font-semibold leading-relaxed text-slate-500">
+                                            Cadastre a pessoa, defina o perfil padrão, mantenha o status ativo ou bloqueado e revise antes de salvar no Supabase.
+                                        </p>
+                                    </div>
+                                    <div className="flex flex-wrap gap-2">
+                                        <button
+                                            type="button"
+                                            onClick={() => {
+                                                if (!podeGerenciarPermissoesSistema) {
+                                                    setMensagemFormularioNovoUsuarioPermissao(bloqueioGerenciarPermissoesSistema.mensagem);
+                                                    return;
+                                                }
+                                                limparFormularioNovoUsuarioPermissao();
+                                                setMostrarFormularioNovoUsuarioPermissao(true);
+                                                setTimeout(() => document.getElementById("formulario-usuario-permissao-sistema")?.scrollIntoView({ behavior: "smooth", block: "start" }), 60);
+                                            }}
+                                            disabled={!podeGerenciarPermissoesSistema}
+                                            className={classNames(
+                                                "inline-flex items-center justify-center gap-2 rounded-2xl px-4 py-2 text-xs font-black shadow-sm ring-1",
+                                                podeGerenciarPermissoesSistema
+                                                    ? "bg-slate-950 text-white ring-slate-950 hover:bg-slate-800"
+                                                    : "cursor-not-allowed bg-slate-100 text-slate-400 ring-slate-200"
+                                            )}
+                                        >
+                                            <UserPlus className="h-3.5 w-3.5" />
+                                            Cadastrar pessoa
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={carregarUsuariosPermissoesSistema}
+                                            disabled={carregandoUsuariosPermissoesSistema || !podeGerenciarPermissoesSistema}
+                                            className="inline-flex items-center justify-center gap-2 rounded-2xl bg-white px-4 py-2 text-xs font-black text-slate-700 ring-1 ring-slate-200 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
+                                        >
+                                            <RefreshCw className={classNames("h-3.5 w-3.5", carregandoUsuariosPermissoesSistema && "animate-spin")} />
+                                            Atualizar pessoas
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <div className="mt-4 grid gap-3 md:grid-cols-3">
+                                    <div className="rounded-2xl bg-slate-50 px-4 py-3 ring-1 ring-slate-100">
+                                        <div className="flex items-center gap-2">
+                                            <Users className="h-4 w-4 text-slate-500" />
+                                            <p className="text-xs font-black uppercase tracking-wide text-slate-400">Pessoas cadastradas</p>
+                                        </div>
+                                        <p className="mt-2 text-xl font-black text-slate-950">{resumoUsuariosPermissoesSistema.total}</p>
+                                        <p className="text-xs font-semibold text-slate-500">{resumoUsuariosPermissoesSistema.ativos} ativa(s) no sistema</p>
+                                    </div>
+                                    <div className="rounded-2xl bg-emerald-50 px-4 py-3 ring-1 ring-emerald-100">
+                                        <p className="text-xs font-black uppercase tracking-wide text-emerald-700">Perfis operacionais</p>
+                                        <p className="mt-2 text-xl font-black text-emerald-800">{PERFIS_USUARIOS_PERMISSOES_PLANEJADOS.length}</p>
+                                        <p className="text-xs font-semibold text-emerald-700">Administrador, Técnico SST, Auditor, Gestor, Consulta e Bloqueado</p>
+                                    </div>
+                                    <div className="rounded-2xl bg-blue-50 px-4 py-3 ring-1 ring-blue-100">
+                                        <p className="text-xs font-black uppercase tracking-wide text-blue-700">Fluxo recomendado</p>
+                                        <p className="mt-2 text-sm font-black text-blue-950">Cadastrar → revisar perfil → salvar acesso</p>
+                                        <button
+                                            type="button"
+                                            onClick={() => document.getElementById("revisao-perfis-padrao")?.scrollIntoView({ behavior: "smooth", block: "start" })}
+                                            className="mt-2 rounded-full bg-white px-3 py-1.5 text-[11px] font-black text-blue-700 ring-1 ring-blue-100 hover:bg-blue-50"
+                                        >
+                                            Rever perfis padrão
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className="mt-4 rounded-3xl bg-white p-4 ring-1 ring-slate-100">
                                 <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
                                     <div>
                                         <p className="text-xs font-black uppercase tracking-wide text-slate-400">Solicitações de acesso</p>
@@ -2423,12 +2502,12 @@ export function ConfiguracoesSistema({
                                 <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
                                     <div>
                                         <p className="text-xs font-black uppercase tracking-wide text-slate-400">
-                                            {modoEdicaoUsuarioPermissaoSistema ? "Editar usuário / permissão" : "Novo usuário / permissão"}
+                                            {modoEdicaoUsuarioPermissaoSistema ? "Editar pessoa com acesso ao app" : "Cadastrar pessoa para acesso ao app"}
                                         </p>
                                         <p className="mt-1 text-xs font-semibold leading-relaxed text-slate-500">
                                             {modoEdicaoUsuarioPermissaoSistema
-                                                ? "Edição administrativa de usuário já cadastrado. As alterações atualizam o Supabase e passam a valer no próximo carregamento da permissão."
-                                                : "Cadastro administrativo de usuários no painel. Solicitações aprovadas podem preencher este formulário para conferência antes de salvar."}
+                                                ? "Atualize os dados da pessoa, perfil, status e acesso global quando aplicável. As alterações passam a valer no próximo carregamento da permissão."
+                                                : "Informe nome, e-mail, função e perfil para liberar o acesso ao aplicativo. Solicitações aprovadas também podem preencher este cadastro."}
                                         </p>
                                         <p className="mt-1 text-xs font-semibold leading-relaxed text-slate-500">
                                             {mensagemFormularioNovoUsuarioPermissao}
@@ -2466,7 +2545,7 @@ export function ConfiguracoesSistema({
                                             ? "Ocultar formulário"
                                             : modoEdicaoUsuarioPermissaoSistema
                                               ? "Editar usuário"
-                                              : "Adicionar usuário"}
+                                              : "Cadastrar pessoa"}
                                     </button>
                                 </div>
 
@@ -2574,8 +2653,8 @@ export function ConfiguracoesSistema({
 
                                         <div className="rounded-2xl bg-emerald-50 px-4 py-3 text-xs font-semibold leading-relaxed text-emerald-700 ring-1 ring-emerald-100">
                                             {modoEdicaoUsuarioPermissaoSistema
-                                                ? "Edição real habilitada: ao salvar, o cadastro existente será atualizado em usuarios_permissoes_sistema. As regras carregadas protegem rotas, ações críticas e botões sensíveis do sistema."
-                                                : "Cadastro real habilitado: ao salvar, o usuário será criado ou atualizado em usuarios_permissoes_sistema. As regras carregadas protegem rotas, ações críticas e botões sensíveis do sistema."}
+                                                ? "Edição real habilitada: ao salvar, o acesso existente será atualizado em usuarios_permissoes_sistema e validado pelas permissões carregadas do Supabase."
+                                                : "Cadastro real habilitado: ao salvar, a pessoa será criada ou atualizada em usuarios_permissoes_sistema e passará a seguir o perfil definido."}
                                         </div>
 
                                         <div className="flex flex-wrap gap-2">
@@ -2593,7 +2672,7 @@ export function ConfiguracoesSistema({
                                                     ? "Salvando..."
                                                     : modoEdicaoUsuarioPermissaoSistema
                                                       ? "Salvar alterações"
-                                                      : "Salvar no Supabase"}
+                                                      : "Salvar acesso"}
                                             </button>
                                             <button
                                                 type="button"
@@ -2608,8 +2687,20 @@ export function ConfiguracoesSistema({
                                 )}
                             </div>
 
-                            <div className="mt-4 space-y-2">
-                                {usuariosPermissoesSistema.length > 0 ? usuariosPermissoesSistema.map((item) => (
+                            <div className="mt-4 rounded-3xl bg-white p-4 ring-1 ring-slate-100">
+                                <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                                    <div>
+                                        <p className="text-xs font-black uppercase tracking-wide text-slate-400">Pessoas cadastradas no app</p>
+                                        <h3 className="mt-1 text-base font-black text-slate-950">Lista de acessos cadastrados</h3>
+                                        <p className="mt-1 text-xs font-semibold text-slate-500">Edite perfil, status ou bloqueio sem misturar com solicitações pendentes.</p>
+                                    </div>
+                                    <span className="rounded-full bg-slate-50 px-3 py-1.5 text-[11px] font-black text-slate-500 ring-1 ring-slate-200">
+                                        {resumoUsuariosPermissoesSistema.total} pessoa(s)
+                                    </span>
+                                </div>
+
+                                <div className="mt-4 space-y-2">
+                                    {usuariosPermissoesSistema.length > 0 ? usuariosPermissoesSistema.map((item) => (
                                     <div key={item.id || item.email} className="rounded-2xl bg-slate-50 px-4 py-3 ring-1 ring-slate-100">
                                         <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
                                             <div className="min-w-0">
@@ -2674,11 +2765,12 @@ export function ConfiguracoesSistema({
                                     <div className="rounded-2xl bg-slate-50 px-4 py-4 text-xs font-semibold text-slate-500 ring-1 ring-slate-100">
                                         Nenhum usuário carregado na lista administrativa. Clique em Atualizar lista para consultar a RPC administrativa.
                                     </div>
-                                )}
+                                    )}
+                                </div>
                             </div>
                         </div>
 
-                        <div className="mt-4 rounded-3xl bg-white p-4 ring-1 ring-slate-100">
+                        <div id="revisao-perfis-padrao" className="mt-4 rounded-3xl bg-white p-4 ring-1 ring-slate-100">
                             <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
                                 <div>
                                     <p className="text-xs font-black uppercase tracking-wide text-slate-400">Revisão dos perfis padrão</p>
