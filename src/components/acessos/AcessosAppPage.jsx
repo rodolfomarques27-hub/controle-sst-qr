@@ -542,25 +542,7 @@ function SolicitacoesAcessoApp({ onPrepararPermissao = null }) {
                         )}
                     </div>
                 </>
-            ) : (
-                <div className="mt-5 rounded-2xl bg-slate-50 px-4 py-4 ring-1 ring-slate-100">
-                    <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-                        <div>
-                            <p className="text-sm font-black text-slate-800">Histórico recolhido para reduzir a poluição da tela.</p>
-                            <p className="mt-1 text-xs font-semibold text-slate-500">
-                                Use os contadores acima para acompanhar o volume. Abra o histórico somente quando precisar aprovar, recusar, concluir ou preparar permissão.
-                            </p>
-                        </div>
-                        <button
-                            type="button"
-                            onClick={() => setHistoricoAberto(true)}
-                            className="inline-flex items-center justify-center rounded-2xl bg-slate-950 px-4 py-2 text-xs font-black text-white shadow-sm hover:bg-slate-800"
-                        >
-                            Abrir histórico
-                        </button>
-                    </div>
-                </div>
-            )}
+            ) : null}
         </Card>
     );
 }
@@ -578,6 +560,7 @@ function UsuariosCadastradosApp({ usuario = null, usuarioParaEditar = null, onEd
     const [filtroPerfil, setFiltroPerfil] = useState("todos");
     const [filtroStatus, setFiltroStatus] = useState("todos");
     const [filtroEmpresa, setFiltroEmpresa] = useState("todos");
+    const [filtrosUsuariosAbertos, setFiltrosUsuariosAbertos] = useState(false);
     const [excluindoId, setExcluindoId] = useState("");
 
     const resumo = useMemo(() => ({
@@ -645,6 +628,13 @@ function UsuariosCadastradosApp({ usuario = null, usuarioParaEditar = null, onEd
     }, [usuarios, filtroTexto, filtroPerfil, filtroStatus, filtroEmpresa]);
 
     const filtrosAtivos = Boolean(filtroTexto || filtroPerfil !== "todos" || filtroStatus !== "todos" || filtroEmpresa !== "todos");
+
+    function limparFiltrosUsuarios() {
+        setFiltroTexto("");
+        setFiltroPerfil("todos");
+        setFiltroStatus("todos");
+        setFiltroEmpresa("todos");
+    }
 
     async function carregarUsuarios() {
         if (carregando) return;
@@ -962,6 +952,13 @@ function UsuariosCadastradosApp({ usuario = null, usuarioParaEditar = null, onEd
                 <div className="flex flex-wrap gap-2 lg:justify-end">
                     <button
                         type="button"
+                        onClick={() => setFiltrosUsuariosAbertos((valorAtual) => !valorAtual)}
+                        className="inline-flex items-center justify-center rounded-2xl bg-white px-4 py-2 text-xs font-black text-slate-700 ring-1 ring-slate-200 hover:bg-slate-50"
+                    >
+                        {filtrosUsuariosAbertos ? "Ocultar filtros" : "Filtrar lista"}
+                    </button>
+                    <button
+                        type="button"
                         onClick={abrirCadastroVazio}
                         className="inline-flex items-center justify-center gap-2 rounded-2xl bg-blue-600 px-4 py-2 text-xs font-black text-white shadow-sm ring-1 ring-blue-600 hover:bg-blue-700"
                     >
@@ -999,8 +996,33 @@ function UsuariosCadastradosApp({ usuario = null, usuarioParaEditar = null, onEd
                 </div>
             </div>
 
-            <div className="mt-5 rounded-3xl bg-slate-50 p-4 ring-1 ring-slate-100">
-                <div className="flex flex-col gap-3 xl:flex-row xl:items-end xl:justify-between">
+            {!filtrosUsuariosAbertos && filtrosAtivos ? (
+                <div className="mt-5 flex flex-col gap-3 rounded-3xl bg-blue-50 px-4 py-3 ring-1 ring-blue-100 sm:flex-row sm:items-center sm:justify-between">
+                    <p className="text-xs font-bold text-blue-800">
+                        Filtros aplicados. Mostrando {usuariosFiltrados.length} de {usuarios.length} pessoa(s).
+                    </p>
+                    <div className="flex flex-wrap gap-2">
+                        <button
+                            type="button"
+                            onClick={() => setFiltrosUsuariosAbertos(true)}
+                            className="rounded-2xl bg-white px-4 py-2 text-xs font-black text-blue-700 ring-1 ring-blue-100 hover:bg-blue-100"
+                        >
+                            Abrir filtros
+                        </button>
+                        <button
+                            type="button"
+                            onClick={limparFiltrosUsuarios}
+                            className="rounded-2xl bg-white px-4 py-2 text-xs font-black text-slate-600 ring-1 ring-slate-200 hover:bg-slate-100"
+                        >
+                            Limpar filtros
+                        </button>
+                    </div>
+                </div>
+            ) : null}
+
+            {filtrosUsuariosAbertos ? (
+                <div className="mt-5 rounded-3xl bg-slate-50 p-4 ring-1 ring-slate-100">
+                    <div className="flex flex-col gap-3 xl:flex-row xl:items-end xl:justify-between">
                     <div className="grid flex-1 gap-3 md:grid-cols-2 xl:grid-cols-4">
                         <label className="block">
                             <span className="text-[10px] font-black uppercase tracking-wide text-slate-400">Buscar usuário</span>
@@ -1060,12 +1082,7 @@ function UsuariosCadastradosApp({ usuario = null, usuarioParaEditar = null, onEd
                         {filtrosAtivos ? (
                             <button
                                 type="button"
-                                onClick={() => {
-                                    setFiltroTexto("");
-                                    setFiltroPerfil("todos");
-                                    setFiltroStatus("todos");
-                                    setFiltroEmpresa("todos");
-                                }}
+                                onClick={limparFiltrosUsuarios}
                                 className="rounded-2xl bg-white px-4 py-2 text-xs font-black text-slate-600 ring-1 ring-slate-200 hover:bg-slate-100"
                             >
                                 Limpar filtros
@@ -1078,7 +1095,14 @@ function UsuariosCadastradosApp({ usuario = null, usuarioParaEditar = null, onEd
                         Conferência recomendada: {emailsDuplicados.length ? `${emailsDuplicados.length} e-mail(s) duplicado(s). ` : "Nenhum e-mail duplicado encontrado. "}{emailsParecidos.length ? `Há ${emailsParecidos.length} grupo(s) de e-mails parecidos para conferência.` : "Não há e-mails parecidos."}
                     </div>
                 ) : null}
-            </div>
+                </div>
+            ) : null}
+
+            {!filtrosUsuariosAbertos && (emailsDuplicados.length > 0 || emailsParecidos.length > 0) ? (
+                <div className="mt-5 rounded-2xl bg-amber-50 px-4 py-3 text-xs font-bold leading-5 text-amber-800 ring-1 ring-amber-100">
+                    Conferência recomendada: {emailsDuplicados.length ? `${emailsDuplicados.length} e-mail(s) duplicado(s). ` : "Nenhum e-mail duplicado encontrado. "}{emailsParecidos.length ? `Há ${emailsParecidos.length} grupo(s) de e-mails parecidos para conferência.` : "Não há e-mails parecidos."}
+                </div>
+            ) : null}
 
             {formAberto ? (
                 <form onSubmit={salvarPermissaoEditada} className="mt-5 rounded-3xl bg-slate-50 p-4 ring-1 ring-slate-100">
