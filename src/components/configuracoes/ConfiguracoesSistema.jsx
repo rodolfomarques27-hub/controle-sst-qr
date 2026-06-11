@@ -208,7 +208,6 @@ function sugerirPerfilPorSolicitacaoAcesso(solicitacao = {}) {
 }
 
 const CHAVES_BLOCOS_CONFIGURACOES_PADRAO = [
-    "config-usuarios-permissoes",
     "config-limites-carregamento",
     "config-auditoria-publica",
     "config-arquivos-storage",
@@ -221,14 +220,13 @@ const CHAVES_BLOCOS_CONFIGURACOES_PADRAO = [
     "config-status-etapa",
 ];
 
-const VERSAO_LAYOUT_CONFIGURACOES_SISTEMA = "roteiro13-painel-configuracoes-padrao-dashboard-sst";
+const VERSAO_LAYOUT_CONFIGURACOES_SISTEMA = "roteiro14-configuracoes-sem-permissoes-usuarios";
 const CHAVE_LAYOUT_CONFIGURACOES_SISTEMA = "configuracoesSistemaVersaoLayout";
 const CHAVE_BLOCOS_RECOLHIDOS_CONFIGURACOES = "configuracoesSistemaBlocosRecolhidos";
 const CHAVE_TAMANHOS_BLOCOS_CONFIGURACOES = "configuracoesSistemaTamanhosBlocos";
 
 
 const BLOCOS_CONFIGURACOES_ABERTOS_PADRAO = new Set([
-    "config-usuarios-permissoes",
     "config-limites-carregamento",
     "config-auditoria-publica",
     "config-arquivos-storage",
@@ -236,7 +234,6 @@ const BLOCOS_CONFIGURACOES_ABERTOS_PADRAO = new Set([
 ]);
 
 const CHAVES_BLOCOS_CONFIGURACOES_CRITICOS = new Set([
-    "config-usuarios-permissoes",
     "config-auditoria-publica",
     "config-arquivos-storage",
     "config-senha-configuracoes",
@@ -1641,7 +1638,6 @@ export function ConfiguracoesSistema({
     ];
 
     const secoesConfiguracoes = [
-        { chave: "config-usuarios-permissoes", titulo: "Permissões e usuários", descricao: "Perfis, solicitações de acesso e gestão administrativa.", icon: ShieldCheck },
         { chave: "config-limites-carregamento", titulo: "Limites de carregamento", descricao: "Limites de registros por carregamento.", icon: SlidersHorizontal },
         { chave: "config-auditoria-publica", titulo: "Auditoria pública / token", descricao: "Token ativo, senha de referência e link público.", icon: KeyRound },
         { chave: "config-arquivos-storage", titulo: "Arquivos salvos no Storage", descricao: "Capacidade, vínculos, filtros e limpeza protegida.", icon: Database },
