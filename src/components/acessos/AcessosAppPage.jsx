@@ -356,21 +356,21 @@ function SolicitacoesAcessoApp({ onPrepararPermissao = null }) {
     return (
         <Card className="border border-slate-200 bg-white p-6 shadow-sm">
             <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-                <div className="flex items-start gap-4">
+                <div className="flex min-w-0 flex-1 items-start gap-4">
                     <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-amber-50 text-amber-700 ring-1 ring-amber-100">
                         <ClipboardList className="h-5 w-5" strokeWidth={2.2} />
                     </div>
-                    <div>
+                    <div className="min-w-0 flex-1">
                         <p className="text-xs font-black uppercase tracking-[0.2em] text-slate-400">Solicitações de acesso</p>
                         <h3 className="mt-1 text-xl font-black text-slate-950">Pedidos feitos nas telas restritas</h3>
-                        <p className="mt-2 max-w-4xl text-sm font-semibold leading-6 text-slate-500">
+                        <p className="mt-2 max-w-none text-[13px] font-semibold leading-5 text-slate-500 xl:whitespace-nowrap">
                             Aprove, recuse ou conclua solicitações feitas em telas restritas. Solicitações aprovadas podem virar cadastro de login e permissão nesta mesma tela.
                         </p>
                         <p className="mt-2 text-xs font-bold text-slate-500">{mensagem}</p>
                         {erro ? <p className="mt-2 rounded-2xl bg-rose-50 px-4 py-2 text-xs font-bold text-rose-700 ring-1 ring-rose-100">{erro}</p> : null}
                     </div>
                 </div>
-                <div className="flex flex-wrap gap-2 lg:justify-end">
+                <div className="flex shrink-0 flex-wrap gap-2 lg:justify-end">
                     <button
                         type="button"
                         onClick={() => setHistoricoAberto((valorAtual) => !valorAtual)}
@@ -391,23 +391,23 @@ function SolicitacoesAcessoApp({ onPrepararPermissao = null }) {
             </div>
 
             <div className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
-                <div className="rounded-2xl bg-slate-50 px-4 py-3 ring-1 ring-slate-100">
+                <div className="flex h-[78px] flex-col items-center justify-center rounded-2xl bg-slate-50 px-4 py-3 text-center ring-1 ring-slate-100">
                     <p className="text-[10px] font-black uppercase tracking-wide text-slate-400">Total</p>
                     <p className="mt-1 text-xl font-black text-slate-950">{resumo.total}</p>
                 </div>
-                <div className="rounded-2xl bg-amber-50 px-4 py-3 ring-1 ring-amber-100">
+                <div className="flex h-[78px] flex-col items-center justify-center rounded-2xl bg-amber-50 px-4 py-3 text-center ring-1 ring-amber-100">
                     <p className="text-[10px] font-black uppercase tracking-wide text-amber-700">Pendentes</p>
                     <p className="mt-1 text-xl font-black text-amber-800">{resumo.pendentes}</p>
                 </div>
-                <div className="rounded-2xl bg-emerald-50 px-4 py-3 ring-1 ring-emerald-100">
+                <div className="flex h-[78px] flex-col items-center justify-center rounded-2xl bg-emerald-50 px-4 py-3 text-center ring-1 ring-emerald-100">
                     <p className="text-[10px] font-black uppercase tracking-wide text-emerald-700">Aprovadas</p>
                     <p className="mt-1 text-xl font-black text-emerald-800">{resumo.aprovadas}</p>
                 </div>
-                <div className="rounded-2xl bg-blue-50 px-4 py-3 ring-1 ring-blue-100">
+                <div className="flex h-[78px] flex-col items-center justify-center rounded-2xl bg-blue-50 px-4 py-3 text-center ring-1 ring-blue-100">
                     <p className="text-[10px] font-black uppercase tracking-wide text-blue-700">Concluídas</p>
                     <p className="mt-1 text-xl font-black text-blue-800">{resumo.concluidas}</p>
                 </div>
-                <div className="rounded-2xl bg-rose-50 px-4 py-3 ring-1 ring-rose-100">
+                <div className="flex h-[78px] flex-col items-center justify-center rounded-2xl bg-rose-50 px-4 py-3 text-center ring-1 ring-rose-100">
                     <p className="text-[10px] font-black uppercase tracking-wide text-rose-700">Recusadas</p>
                     <p className="mt-1 text-xl font-black text-rose-800">{resumo.recusadas}</p>
                 </div>
@@ -475,7 +475,7 @@ function SolicitacoesAcessoApp({ onPrepararPermissao = null }) {
 
                     <div className="mt-5 space-y-2">
                         {solicitacoesFiltradas.length > 0 ? solicitacoesFiltradas.map((item) => (
-                            <article key={item.id || `${item.email}-${item.criado_em}`} className="rounded-2xl bg-slate-50 px-4 py-3 ring-1 ring-slate-100">
+                            <article key={item.id || `${item.email}-${item.criado_em}`} className="flex min-h-[74px] flex-col items-center justify-center rounded-2xl bg-slate-50 px-4 py-3 text-center ring-1 ring-slate-100">
                                 <div className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
                                     <div className="min-w-0">
                                         <p className="truncate text-sm font-black text-slate-950">{item.nome || "Usuário sem nome"}</p>
@@ -987,19 +987,19 @@ function UsuariosCadastradosApp({ usuario = null, usuarioParaEditar = null, onEd
             </div>
 
             <div className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-                <div className="flex min-h-[82px] flex-col items-center justify-center rounded-2xl bg-slate-50 px-4 py-3 text-center ring-1 ring-slate-100">
+                <div className="flex h-[78px] flex-col items-center justify-center rounded-2xl bg-slate-50 px-4 py-3 text-center ring-1 ring-slate-100">
                     <p className="text-[10px] font-black uppercase tracking-wide text-slate-400">Total</p>
                     <p className="mt-1 text-xl font-black text-slate-950">{resumo.total}</p>
                 </div>
-                <div className="flex min-h-[82px] flex-col items-center justify-center rounded-2xl bg-emerald-50 px-4 py-3 text-center ring-1 ring-emerald-100">
+                <div className="flex h-[78px] flex-col items-center justify-center rounded-2xl bg-emerald-50 px-4 py-3 text-center ring-1 ring-emerald-100">
                     <p className="text-[10px] font-black uppercase tracking-wide text-emerald-700">Ativos</p>
                     <p className="mt-1 text-xl font-black text-emerald-800">{resumo.ativos}</p>
                 </div>
-                <div className="flex min-h-[82px] flex-col items-center justify-center rounded-2xl bg-blue-50 px-4 py-3 text-center ring-1 ring-blue-100">
+                <div className="flex h-[78px] flex-col items-center justify-center rounded-2xl bg-blue-50 px-4 py-3 text-center ring-1 ring-blue-100">
                     <p className="text-[10px] font-black uppercase tracking-wide text-blue-700">Administradores</p>
                     <p className="mt-1 text-xl font-black text-blue-800">{resumo.administradores}</p>
                 </div>
-                <div className="flex min-h-[82px] flex-col items-center justify-center rounded-2xl bg-rose-50 px-4 py-3 text-center ring-1 ring-rose-100">
+                <div className="flex h-[78px] flex-col items-center justify-center rounded-2xl bg-rose-50 px-4 py-3 text-center ring-1 ring-rose-100">
                     <p className="text-[10px] font-black uppercase tracking-wide text-rose-700">Bloqueados</p>
                     <p className="mt-1 text-xl font-black text-rose-800">{resumo.bloqueados}</p>
                 </div>
@@ -1309,7 +1309,7 @@ function UsuariosCadastradosApp({ usuario = null, usuarioParaEditar = null, onEd
             {listaUsuariosAberta ? (
                 <div className="mt-5 space-y-2">
                 {usuariosFiltrados.length > 0 ? usuariosFiltrados.map((item) => (
-                    <article key={item.id || item.email} className="rounded-2xl bg-slate-50 px-4 py-3 ring-1 ring-slate-100">
+                    <article key={item.id || item.email} className="flex min-h-[74px] flex-col items-center justify-center rounded-2xl bg-slate-50 px-4 py-3 text-center ring-1 ring-slate-100">
                         <div className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
                             <div className="min-w-0">
                                 <p className="truncate text-sm font-black text-slate-950">{item.nome || "Usuário sem nome"}</p>
