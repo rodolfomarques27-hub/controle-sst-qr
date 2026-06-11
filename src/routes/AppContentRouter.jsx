@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { KeyRound, LayoutGrid, Lock, LockKeyhole, RefreshCw, Send, UserRound } from "lucide-react";
+import { KeyRound, LayoutGrid, Lock, LockKeyhole, Send, UserRound } from "lucide-react";
 import { Card, PasswordInput } from "../components/commonComponents";
 import { CarregandoTela } from "../components/CarregandoTela";
 import { LIMITE_STORAGE_MB } from "../constants/sistemaConstants";
@@ -535,12 +535,9 @@ export function AppContentRouter({
 
     if (telaControladaPorPermissao && carregandoPermissaoSistemaTela) {
         return (
-            <Card>
-                <div className="flex items-center gap-3 text-sm font-semibold text-slate-600">
-                    <RefreshCw className="h-4 w-4 animate-spin" />
-                    Verificando permissão de acesso ao módulo...
-                </div>
-            </Card>
+            <div className="sr-only" aria-live="polite">
+                Validando permissão e abrindo a primeira tela permitida.
+            </div>
         );
     }
 
