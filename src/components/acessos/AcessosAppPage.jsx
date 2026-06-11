@@ -23,31 +23,32 @@ import {
     listarSolicitacoesAcessoSistemaService,
     listarUsuariosPermissoesSistemaService,
     responderSolicitacaoAcessoSistemaService,
+    salvarUsuarioPermissaoSistemaService,
 } from "../../services/usuariosPermissoesSistemaService";
 
 const CARDS_ACESSOS_APP = [
     {
         titulo: "Cadastro de login",
         descricao: "Criar pessoa, definir e-mail, função, perfil e senha temporária.",
-        status: "Próxima etapa",
+        status: "Em preparação",
         icone: UserPlus,
     },
     {
         titulo: "Usuários cadastrados",
         descricao: "Listar pessoas com acesso, editar perfil e acompanhar status ativo ou bloqueado.",
-        status: "Movido para cá",
+        status: "Concluído",
         icone: UsersRound,
     },
     {
         titulo: "Solicitações de acesso",
         descricao: "Aprovar, recusar ou concluir pedidos feitos pelas telas restritas.",
-        status: "Movido para cá",
+        status: "Concluído",
         icone: ClipboardList,
     },
     {
         titulo: "Perfis padrão",
         descricao: "Revisar o que Administrador, Técnico SST, Auditor, Gestor, Consulta e Bloqueado podem fazer.",
-        status: "Movido para cá",
+        status: "Concluído",
         icone: ShieldCheck,
     },
     {
@@ -84,7 +85,7 @@ function BadgeEtapa({ children, variante = "info" }) {
 
 function CardFuncionalidade({ item, indice }) {
     const Icone = item.icone;
-    const statusSucesso = item.status === "Movido para cá";
+    const statusSucesso = item.status === "Concluído";
     const statusAlerta = indice === 0;
 
     return (
@@ -155,6 +156,38 @@ function emailEhUsuarioAtualAcessoApp(email = "", usuario = null) {
     return Boolean(emailLista && emailAtual && emailLista === emailAtual);
 }
 
+const FORM_USUARIO_ACESSO_INICIAL = {
+    id: null,
+    nome: "",
+    email: "",
+    funcao: "",
+    perfil: "consulta",
+    ativo: true,
+    bloqueado: false,
+    acesso_global: false,
+    observacao: "",
+};
+
+function montarFormularioUsuarioAcesso(usuario = null) {
+    if (!usuario) return { ...FORM_USUARIO_ACESSO_INICIAL };
+
+    const perfil = normalizarTextoAcesso(usuario.perfil || "consulta").toLowerCase() || "consulta";
+    const bloqueado = perfil === "bloqueado" ? true : Boolean(usuario.bloqueado);
+    const ativo = perfil === "bloqueado" ? false : Boolean(usuario.ativo);
+
+    return {
+        id: usuario.id || null,
+        nome: usuario.nome || "",
+        email: normalizarTextoAcesso(usuario.email).toLowerCase(),
+        funcao: usuario.funcao || "",
+        perfil,
+        ativo,
+        bloqueado,
+        acesso_global: perfil === "administrador" ? Boolean(usuario.acesso_global) : false,
+        observacao: usuario.observacao || "",
+    };
+}
+
 
 function obterClasseStatusSolicitacaoAcessoApp(status = "pendente") {
     const statusTratado = normalizarTextoAcesso(status).toLowerCase();
@@ -194,7 +227,7 @@ function formatarDataHoraAcessoApp(valor) {
     }
 }
 
-function SolicitacoesAcessoApp() {
+function SolicitacoesAcessoApp({ onPrepararPermissao = null }) {
     const [solicitacoes, setSolicitacoes] = useState([]);
     const [carregando, setCarregando] = useState(false);
     const [mensagem, setMensagem] = useState("Solicitações ainda não carregadas.");
@@ -376,9 +409,13 @@ function SolicitacoesAcessoApp() {
                                 ) : null}
                                 {item.status === "aprovada" ? (
                                     <>
-                                        <span className="rounded-full bg-blue-50 px-3 py-1.5 text-[11px] font-black text-blue-700 ring-1 ring-blue-100">
-                                            Preparar permissão no próximo pacote
-                                        </span>
+                                        <button
+                                            type="button"
+                                            onClick={() => onPrepararPermissao?.(item)}
+                                            className="rounded-full bg-blue-50 px-3 py-1.5 text-[11px] font-black text-blue-700 ring-1 ring-blue-100 hover:bg-blue-100"
+                                        >
+                                            Preparar permissão
+                                        </button>
                                         <button
                                             type="button"
                                             onClick={() => responderSolicitacao(item, "concluida")}
@@ -402,16 +439,19 @@ function SolicitacoesAcessoApp() {
     );
 }
 
-function UsuariosCadastradosApp({ usuario = null }) {
+function UsuariosCadastradosApp({ usuario = null, usuarioParaEditar = null, onEdicaoConsumida = null }) {
     const [usuarios, setUsuarios] = useState([]);
     const [carregando, setCarregando] = useState(false);
-    const [mensagem, setMensagem] = useState("Lista ainda não carregada.");
+    const [mensagem, setMensagem] = useState("Usuários ainda não carregados.");
     const [erro, setErro] = useState("");
+    const [formulario, setFormulario] = useState(() => montarFormularioUsuarioAcesso());
+    const [formAberto, setFormAberto] = useState(false);
+    const [salvando, setSalvando] = useState(false);
 
     const resumo = useMemo(() => ({
         total: usuarios.length,
         ativos: usuarios.filter((item) => item.ativo && !item.bloqueado).length,
-        administradores: usuarios.filter((item) => item.perfil === "administrador" && item.ativo && !item.bloqueado).length,
+        administradores: usuarios.filter((item) => item.perfil === "administrador").length,
         bloqueados: usuarios.filter((item) => item.bloqueado).length,
     }), [usuarios]);
 
@@ -420,13 +460,14 @@ function UsuariosCadastradosApp({ usuario = null }) {
 
         setCarregando(true);
         setErro("");
-        setMensagem("Consultando usuários cadastrados no Supabase...");
+        setMensagem("Consultando usuários e permissões no Supabase...");
 
         try {
             const lista = await listarUsuariosPermissoesSistemaService({ supabase });
             setUsuarios(lista);
-            setMensagem(`${lista.length} pessoa(s) carregada(s) da lista administrativa de acessos.`);
+            setMensagem(lista.length ? `${lista.length} pessoa(s) carregada(s) da lista administrativa de acessos.` : "Nenhum usuário cadastrado encontrado.");
         } catch (error) {
+            setUsuarios([]);
             setErro(error?.message || "Não foi possível carregar usuários cadastrados.");
             setMensagem("A lista não foi carregada. Confirme se o usuário atual possui permissão administrativa.");
         } finally {
@@ -434,10 +475,131 @@ function UsuariosCadastradosApp({ usuario = null }) {
         }
     }
 
+    function abrirCadastroVazio() {
+        setFormulario(montarFormularioUsuarioAcesso());
+        setFormAberto(true);
+        setErro("");
+        setMensagem("Preencha os dados para salvar permissão. A criação real de login no Auth virá pela Edge Function em etapa separada.");
+    }
+
+    function iniciarEdicao(item) {
+        setFormulario(montarFormularioUsuarioAcesso(item));
+        setFormAberto(true);
+        setErro("");
+        setMensagem(`Editando permissão de ${item?.email || "usuário selecionado"}.`);
+    }
+
+    function atualizarCampoFormulario(campo, valor) {
+        setFormulario((atual) => {
+            const proximo = { ...atual, [campo]: valor };
+
+            if (campo === "perfil") {
+                proximo.perfil = valor;
+
+                if (valor === "bloqueado") {
+                    proximo.ativo = false;
+                    proximo.bloqueado = true;
+                    proximo.acesso_global = false;
+                }
+
+                if (valor !== "administrador") {
+                    proximo.acesso_global = false;
+                }
+            }
+
+            if (campo === "bloqueado" && valor === true) {
+                proximo.ativo = false;
+                proximo.acesso_global = false;
+            }
+
+            if (campo === "ativo" && valor === true && proximo.perfil !== "bloqueado") {
+                proximo.bloqueado = false;
+            }
+
+            if (campo === "acesso_global" && proximo.perfil !== "administrador") {
+                proximo.acesso_global = false;
+            }
+
+            return proximo;
+        });
+    }
+
+    async function salvarPermissaoEditada(evento) {
+        evento?.preventDefault?.();
+        if (salvando) return;
+
+        const emailTratado = normalizarTextoAcesso(formulario.email).toLowerCase();
+
+        if (!emailTratado || !emailTratado.includes("@")) {
+            setErro("Informe um e-mail válido para salvar a permissão.");
+            return;
+        }
+
+        if (formulario.acesso_global && formulario.perfil !== "administrador") {
+            setErro("Acesso global só pode ser liberado para perfil Administrador.");
+            return;
+        }
+
+        setSalvando(true);
+        setErro("");
+        setMensagem(`Salvando permissão de ${emailTratado}...`);
+
+        try {
+            const salvo = await salvarUsuarioPermissaoSistemaService({
+                supabase,
+                usuario: {
+                    ...formulario,
+                    email: emailTratado,
+                },
+                usuarioAtual: usuario,
+            });
+
+            if (salvo?.email) {
+                setUsuarios((listaAtual) => {
+                    const existe = listaAtual.some((item) => item.email === salvo.email || item.id === salvo.id);
+
+                    if (existe) {
+                        return listaAtual.map((item) => (
+                            item.email === salvo.email || item.id === salvo.id ? { ...item, ...salvo } : item
+                        ));
+                    }
+
+                    return [salvo, ...listaAtual];
+                });
+                setFormulario(montarFormularioUsuarioAcesso(salvo));
+            }
+
+            setMensagem("Permissão salva com sucesso. Esta etapa ainda não cria login real no Supabase Auth.");
+        } catch (error) {
+            setErro(error?.message || "Não foi possível salvar a permissão do usuário.");
+            setMensagem("A permissão não foi salva.");
+        } finally {
+            setSalvando(false);
+        }
+    }
+
     useEffect(() => {
         carregarUsuarios();
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
+
+    useEffect(() => {
+        if (!usuarioParaEditar) return;
+
+        setFormulario(montarFormularioUsuarioAcesso({
+            nome: usuarioParaEditar.nome || "",
+            email: usuarioParaEditar.email || "",
+            funcao: usuarioParaEditar.area_solicitada || usuarioParaEditar.tela || "",
+            perfil: usuarioParaEditar.perfil_atual === "Usuário sem perfil liberado" ? "consulta" : usuarioParaEditar.perfil_atual || "consulta",
+            ativo: true,
+            bloqueado: false,
+            acesso_global: false,
+            observacao: usuarioParaEditar.observacao || usuarioParaEditar.resposta_admin || "Permissão preparada a partir de solicitação de acesso aprovada.",
+        }));
+        setFormAberto(true);
+        setMensagem(`Preparando permissão para ${usuarioParaEditar.email || "solicitação aprovada"}. Revise o perfil antes de salvar.`);
+        onEdicaoConsumida?.();
+    }, [usuarioParaEditar, onEdicaoConsumida]);
 
     return (
         <Card className="border border-slate-200 bg-white p-6 shadow-sm">
@@ -450,21 +612,31 @@ function UsuariosCadastradosApp({ usuario = null }) {
                         <p className="text-xs font-black uppercase tracking-[0.2em] text-slate-400">Usuários cadastrados</p>
                         <h3 className="mt-1 text-xl font-black text-slate-950">Lista de pessoas com acesso ao app</h3>
                         <p className="mt-2 max-w-4xl text-sm font-semibold leading-6 text-slate-500">
-                            Esta lista foi movida de Configurações para Acessos do App. Nesta microetapa a edição continua planejada para o próximo pacote; a criação de login real virá depois por Edge Function segura.
+                            Edite perfil, status, função e acesso global usando a permissão já existente no Supabase/RPC. A criação real de login no Auth virá depois por Edge Function segura.
                         </p>
                         <p className="mt-2 text-xs font-bold text-slate-500">{mensagem}</p>
                         {erro ? <p className="mt-2 rounded-2xl bg-rose-50 px-4 py-2 text-xs font-bold text-rose-700 ring-1 ring-rose-100">{erro}</p> : null}
                     </div>
                 </div>
-                <button
-                    type="button"
-                    onClick={carregarUsuarios}
-                    disabled={carregando}
-                    className="inline-flex items-center justify-center gap-2 rounded-2xl bg-slate-950 px-4 py-2 text-xs font-black text-white shadow-sm ring-1 ring-slate-950 hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
-                >
-                    <RefreshCw className={`h-3.5 w-3.5 ${carregando ? "animate-spin" : ""}`} />
-                    {carregando ? "Carregando" : "Atualizar usuários"}
-                </button>
+                <div className="flex flex-wrap gap-2 lg:justify-end">
+                    <button
+                        type="button"
+                        onClick={abrirCadastroVazio}
+                        className="inline-flex items-center justify-center gap-2 rounded-2xl bg-blue-50 px-4 py-2 text-xs font-black text-blue-700 shadow-sm ring-1 ring-blue-100 hover:bg-blue-100"
+                    >
+                        <UserPlus className="h-3.5 w-3.5" />
+                        Cadastrar permissão
+                    </button>
+                    <button
+                        type="button"
+                        onClick={carregarUsuarios}
+                        disabled={carregando}
+                        className="inline-flex items-center justify-center gap-2 rounded-2xl bg-slate-950 px-4 py-2 text-xs font-black text-white shadow-sm ring-1 ring-slate-950 hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
+                    >
+                        <RefreshCw className={`h-3.5 w-3.5 ${carregando ? "animate-spin" : ""}`} />
+                        {carregando ? "Carregando" : "Atualizar usuários"}
+                    </button>
+                </div>
             </div>
 
             <div className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
@@ -486,6 +658,145 @@ function UsuariosCadastradosApp({ usuario = null }) {
                 </div>
             </div>
 
+            {formAberto ? (
+                <form onSubmit={salvarPermissaoEditada} className="mt-5 rounded-3xl bg-slate-50 p-4 ring-1 ring-slate-100">
+                    <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+                        <div>
+                            <p className="text-xs font-black uppercase tracking-[0.18em] text-slate-400">Edição de permissão</p>
+                            <h4 className="mt-1 text-lg font-black text-slate-950">{formulario.id ? "Editar pessoa com acesso ao app" : "Cadastrar permissão de acesso"}</h4>
+                            <p className="mt-1 text-xs font-semibold leading-5 text-slate-500">
+                                Esta etapa salva perfil e bloqueios. Login real e senha temporária serão integrados no próximo bloco com Edge Function.
+                            </p>
+                        </div>
+                        <button
+                            type="button"
+                            onClick={() => setFormAberto(false)}
+                            className="rounded-2xl bg-white px-4 py-2 text-xs font-black text-slate-600 ring-1 ring-slate-200 hover:bg-slate-100"
+                        >
+                            Fechar edição
+                        </button>
+                    </div>
+
+                    <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+                        <label className="block">
+                            <span className="text-[10px] font-black uppercase tracking-wide text-slate-400">Nome</span>
+                            <input
+                                value={formulario.nome}
+                                onChange={(evento) => atualizarCampoFormulario("nome", evento.target.value)}
+                                className="mt-1 w-full rounded-2xl border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700 outline-none focus:border-blue-400 focus:ring-4 focus:ring-blue-100"
+                                placeholder="Nome completo"
+                            />
+                        </label>
+                        <label className="block">
+                            <span className="text-[10px] font-black uppercase tracking-wide text-slate-400">E-mail</span>
+                            <input
+                                value={formulario.email}
+                                onChange={(evento) => atualizarCampoFormulario("email", evento.target.value)}
+                                className="mt-1 w-full rounded-2xl border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700 outline-none focus:border-blue-400 focus:ring-4 focus:ring-blue-100"
+                                placeholder="usuario@empresa.com"
+                            />
+                        </label>
+                        <label className="block">
+                            <span className="text-[10px] font-black uppercase tracking-wide text-slate-400">Função</span>
+                            <input
+                                value={formulario.funcao}
+                                onChange={(evento) => atualizarCampoFormulario("funcao", evento.target.value)}
+                                className="mt-1 w-full rounded-2xl border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700 outline-none focus:border-blue-400 focus:ring-4 focus:ring-blue-100"
+                                placeholder="Função / área"
+                            />
+                        </label>
+                        <label className="block">
+                            <span className="text-[10px] font-black uppercase tracking-wide text-slate-400">Perfil</span>
+                            <select
+                                value={formulario.perfil}
+                                onChange={(evento) => atualizarCampoFormulario("perfil", evento.target.value)}
+                                className="mt-1 w-full rounded-2xl border border-slate-200 bg-white px-3 py-2 text-xs font-black text-slate-700 outline-none focus:border-blue-400 focus:ring-4 focus:ring-blue-100"
+                            >
+                                {PERFIS_USUARIOS_PERMISSOES_PLANEJADOS.map((perfil) => (
+                                    <option key={perfil.chave} value={perfil.chave}>{perfil.perfil}</option>
+                                ))}
+                            </select>
+                        </label>
+                    </div>
+
+                    <div className="mt-4 grid gap-3 md:grid-cols-3">
+                        <label className={`rounded-2xl bg-white p-4 ring-1 ${formulario.ativo ? "ring-emerald-100" : "ring-slate-200"}`}>
+                            <div className="flex items-start gap-3">
+                                <input
+                                    type="checkbox"
+                                    checked={formulario.ativo}
+                                    disabled={formulario.perfil === "bloqueado"}
+                                    onChange={(evento) => atualizarCampoFormulario("ativo", evento.target.checked)}
+                                    className="mt-1"
+                                />
+                                <div>
+                                    <p className="text-xs font-black text-slate-950">Usuário ativo</p>
+                                    <p className="mt-1 text-[11px] font-semibold leading-5 text-slate-500">Quando ativo, o usuário pode acessar conforme o perfil e permissões liberadas.</p>
+                                </div>
+                            </div>
+                        </label>
+                        <label className={`rounded-2xl bg-white p-4 ring-1 ${formulario.bloqueado ? "ring-rose-100" : "ring-slate-200"}`}>
+                            <div className="flex items-start gap-3">
+                                <input
+                                    type="checkbox"
+                                    checked={formulario.bloqueado}
+                                    onChange={(evento) => atualizarCampoFormulario("bloqueado", evento.target.checked)}
+                                    className="mt-1"
+                                />
+                                <div>
+                                    <p className="text-xs font-black text-slate-950">Bloqueado</p>
+                                    <p className="mt-1 text-[11px] font-semibold leading-5 text-slate-500">Impede acesso operacional e mantém o cadastro para rastreabilidade.</p>
+                                </div>
+                            </div>
+                        </label>
+                        <label className={`rounded-2xl bg-white p-4 ring-1 ${formulario.acesso_global ? "ring-blue-100" : "ring-slate-200"}`}>
+                            <div className="flex items-start gap-3">
+                                <input
+                                    type="checkbox"
+                                    checked={formulario.acesso_global}
+                                    disabled={formulario.perfil !== "administrador" || formulario.bloqueado}
+                                    onChange={(evento) => atualizarCampoFormulario("acesso_global", evento.target.checked)}
+                                    className="mt-1"
+                                />
+                                <div>
+                                    <p className="text-xs font-black text-slate-950">Acesso global</p>
+                                    <p className="mt-1 text-[11px] font-semibold leading-5 text-slate-500">Somente Administrador pode ter acesso global. Bloqueado nunca recebe acesso global.</p>
+                                </div>
+                            </div>
+                        </label>
+                    </div>
+
+                    <label className="mt-4 block">
+                        <span className="text-[10px] font-black uppercase tracking-wide text-slate-400">Observação administrativa</span>
+                        <textarea
+                            value={formulario.observacao}
+                            onChange={(evento) => atualizarCampoFormulario("observacao", evento.target.value)}
+                            rows={2}
+                            className="mt-1 w-full resize-none rounded-2xl border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700 outline-none focus:border-blue-400 focus:ring-4 focus:ring-blue-100"
+                            placeholder="Exemplo: acesso liberado para auditoria, perfil criado por solicitação aprovada..."
+                        />
+                    </label>
+
+                    <div className="mt-4 flex flex-wrap gap-2">
+                        <button
+                            type="submit"
+                            disabled={salvando}
+                            className="rounded-2xl bg-slate-950 px-5 py-2.5 text-xs font-black text-white shadow-sm hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
+                        >
+                            {salvando ? "Salvando..." : "Salvar permissão"}
+                        </button>
+                        <button
+                            type="button"
+                            onClick={() => setFormulario(montarFormularioUsuarioAcesso())}
+                            disabled={salvando}
+                            className="rounded-2xl bg-white px-5 py-2.5 text-xs font-black text-slate-600 ring-1 ring-slate-200 hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-60"
+                        >
+                            Limpar formulário
+                        </button>
+                    </div>
+                </form>
+            ) : null}
+
             <div className="mt-5 space-y-2">
                 {usuarios.length > 0 ? usuarios.map((item) => (
                     <article key={item.id || item.email} className="rounded-2xl bg-slate-50 px-4 py-3 ring-1 ring-slate-100">
@@ -495,7 +806,7 @@ function UsuariosCadastradosApp({ usuario = null }) {
                                 <p className="mt-0.5 truncate text-xs font-semibold text-slate-500">{item.email || "email não informado"}</p>
                                 <p className="mt-1 text-[11px] font-semibold text-slate-400">{item.funcao || "função não informada"}</p>
                             </div>
-                            <div className="flex flex-wrap gap-2">
+                            <div className="flex flex-wrap gap-2 xl:justify-end">
                                 <span className={`rounded-full px-3 py-1.5 text-[11px] font-black ring-1 ${obterClassePerfilAcessoApp(item.perfil)}`}>
                                     Perfil: {formatarPerfilAcessoApp(item.perfil)}
                                 </span>
@@ -510,9 +821,13 @@ function UsuariosCadastradosApp({ usuario = null }) {
                                         Usuário atual
                                     </span>
                                 ) : null}
-                                <span className="rounded-full bg-white px-3 py-1.5 text-[11px] font-black text-slate-500 ring-1 ring-slate-200">
-                                    Edição no próximo pacote
-                                </span>
+                                <button
+                                    type="button"
+                                    onClick={() => iniciarEdicao(item)}
+                                    className="rounded-full bg-slate-950 px-3 py-1.5 text-[11px] font-black text-white shadow-sm hover:bg-slate-800"
+                                >
+                                    Editar
+                                </button>
                             </div>
                         </div>
                     </article>
@@ -712,6 +1027,7 @@ function RevisaoPerfisPadrao() {
 }
 
 export function AcessosAppPage({ usuario = null }) {
+    const [solicitacaoParaPermissao, setSolicitacaoParaPermissao] = useState(null);
     const nomeUsuario = obterNomeUsuario(usuario);
     const totalPerfis = PERFIS_USUARIOS_PERMISSOES_PLANEJADOS.length;
     const totalPerfisPadrao = PERMISSOES_PADRAO_USUARIOS_POR_PERFIL.length;
@@ -723,7 +1039,7 @@ export function AcessosAppPage({ usuario = null }) {
                     <section className="px-6 py-7 sm:px-8">
                         <div className="flex flex-wrap items-center gap-3">
                             <BadgeEtapa variante="sucesso">Nova aba administrativa</BadgeEtapa>
-                            <BadgeEtapa>Roteiro 14 · Pacote 3C</BadgeEtapa>
+                            <BadgeEtapa>Roteiro 14 · Pacote 3D</BadgeEtapa>
                         </div>
                         <h2 className="mt-5 text-3xl font-black tracking-tight text-slate-950 sm:text-4xl">
                             Acessos do App
@@ -735,7 +1051,7 @@ export function AcessosAppPage({ usuario = null }) {
                             <div className="flex items-start gap-3">
                                 <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0" strokeWidth={2.2} />
                                 <p>
-                                    Esta etapa move as solicitações de acesso para Acessos do App. A edição completa de permissões e a criação real de login no Supabase Auth continuarão para etapas separadas por Edge Function segura.
+                                    Esta etapa integra a edição de permissões em Acessos do App. A criação real de login no Supabase Auth continuará para etapa separada por Edge Function segura.
                                 </p>
                             </div>
                         </div>
@@ -770,9 +1086,13 @@ export function AcessosAppPage({ usuario = null }) {
                 ))}
             </div>
 
-            <UsuariosCadastradosApp usuario={usuario} />
+            <UsuariosCadastradosApp
+                usuario={usuario}
+                usuarioParaEditar={solicitacaoParaPermissao}
+                onEdicaoConsumida={() => setSolicitacaoParaPermissao(null)}
+            />
 
-            <SolicitacoesAcessoApp />
+            <SolicitacoesAcessoApp onPrepararPermissao={setSolicitacaoParaPermissao} />
 
             <RevisaoPerfisPadrao />
 
