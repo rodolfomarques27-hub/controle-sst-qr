@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { KeyRound, LayoutGrid, Lock, LockKeyhole, Send, UserRound } from "lucide-react";
 import { Card, PasswordInput } from "../components/commonComponents";
 import { CarregandoTela } from "../components/CarregandoTela";
@@ -441,6 +441,7 @@ export function AppContentRouter({
     const [permissaoSistemaTela, setPermissaoSistemaTela] = useState(null);
     const [carregandoPermissaoSistemaTela, setCarregandoPermissaoSistemaTela] = useState(() => Boolean(usuario?.email));
     const [erroPermissaoSistemaTela, setErroPermissaoSistemaTela] = useState("");
+    const ultimoRedirecionamentoAutomaticoRef = useRef("");
 
     useEffect(() => {
         let componenteAtivo = true;
@@ -504,44 +505,51 @@ export function AppContentRouter({
     );
 
     const telaControladaPorPermissao = Boolean(obterModuloPermissaoSistemaPorTela(tela));
+    const permissaoProntaParaDecisao = !carregandoPermissaoSistemaTela && Boolean(permissaoSistemaTela) && !erroPermissaoSistemaTela;
+    const trocaSenhaTemporariaObrigatoria = permissaoProntaParaDecisao && permissaoSistemaTela?.precisa_trocar_senha === true;
     const telaBloqueadaPorPermissao = telaControladaPorPermissao
         && !carregandoPermissaoSistemaTela
         && (Boolean(erroPermissaoSistemaTela) || bloqueioTelaSistema.bloqueado);
 
+    const primeiraTelaPermitidaSistema = useMemo(() => {
+        if (!permissaoProntaParaDecisao || trocaSenhaTemporariaObrigatoria) return "";
+        return obterPrimeiraTelaPermitidaParaUsuario(permissaoSistemaTela);
+    }, [permissaoProntaParaDecisao, permissaoSistemaTela, trocaSenhaTemporariaObrigatoria]);
+
+    const deveRedirecionarParaTelaPermitida = Boolean(
+        onRedirecionarTelaPermitida
+        && telaControladaPorPermissao
+        && telaBloqueadaPorPermissao
+        && primeiraTelaPermitidaSistema
+        && primeiraTelaPermitidaSistema !== tela
+        && !trocaSenhaTemporariaObrigatoria
+    );
+
     useEffect(() => {
-        if (!onRedirecionarTelaPermitida) return;
-        if (carregandoPermissaoSistemaTela || erroPermissaoSistemaTela) return;
-        if (!permissaoSistemaTela || permissaoSistemaTela?.precisa_trocar_senha === true) return;
-        if (!telaControladaPorPermissao || !telaBloqueadaPorPermissao) return;
+        if (!deveRedirecionarParaTelaPermitida) return;
 
-        const primeiraTelaPermitida = obterPrimeiraTelaPermitidaParaUsuario(permissaoSistemaTela);
+        const chaveRedirecionamento = `${usuario?.email || "sem-usuario"}:${tela}:${primeiraTelaPermitidaSistema}`;
+        if (ultimoRedirecionamentoAutomaticoRef.current === chaveRedirecionamento) return;
 
-        // Regra geral para todos os perfis: se a tela atual não for permitida, mas existir
-        // outra tela liberada para o usuário, o sistema redireciona automaticamente para ela.
-        // Isso evita que perfis como Auditor, Consulta customizada ou permissões manuais caiam
-        // em Acesso restrito ao atualizar a página ou após login.
-        if (primeiraTelaPermitida && primeiraTelaPermitida !== tela) {
-            onRedirecionarTelaPermitida(primeiraTelaPermitida);
-        }
+        ultimoRedirecionamentoAutomaticoRef.current = chaveRedirecionamento;
+        onRedirecionarTelaPermitida(primeiraTelaPermitidaSistema);
     }, [
-        carregandoPermissaoSistemaTela,
-        erroPermissaoSistemaTela,
+        deveRedirecionarParaTelaPermitida,
         onRedirecionarTelaPermitida,
-        permissaoSistemaTela,
+        primeiraTelaPermitidaSistema,
         tela,
-        telaBloqueadaPorPermissao,
-        telaControladaPorPermissao,
+        usuario?.email,
     ]);
 
-    if (telaControladaPorPermissao && carregandoPermissaoSistemaTela) {
-        return (
-            <div className="sr-only" aria-live="polite">
-                Validando permissão e abrindo a primeira tela permitida.
-            </div>
-        );
+    // Regra geral para todos os perfis: enquanto o sistema valida permissão ou decide a
+    // primeira tela permitida, não renderiza conteúdo intermediário. Isso evita o efeito
+    // de carregamento duplo/triplo e impede o flash da tela "Acesso restrito" antes do
+    // redirecionamento automático. A troca de senha temporária continua tendo prioridade.
+    if (telaControladaPorPermissao && (carregandoPermissaoSistemaTela || deveRedirecionarParaTelaPermitida)) {
+        return null;
     }
 
-    if (permissaoSistemaTela?.precisa_trocar_senha === true && !carregandoPermissaoSistemaTela && !erroPermissaoSistemaTela) {
+    if (trocaSenhaTemporariaObrigatoria) {
         return (
             <TrocaSenhaTemporariaObrigatoria
                 usuario={usuario}
