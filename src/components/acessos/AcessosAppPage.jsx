@@ -1,10 +1,11 @@
-import React, { useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import {
     AlertTriangle,
     CheckCircle2,
     ClipboardList,
     KeyRound,
     LockKeyhole,
+    RefreshCw,
     ShieldCheck,
     UserCog,
     UserPlus,
@@ -16,6 +17,8 @@ import {
     PERFIS_USUARIOS_PERMISSOES_PLANEJADOS,
     PERMISSOES_PADRAO_USUARIOS_POR_PERFIL,
 } from "../../constants/usuariosPermissoesConstants";
+import { supabase } from "../../lib/supabaseClient";
+import { listarUsuariosPermissoesSistemaService } from "../../services/usuariosPermissoesSistemaService";
 
 const CARDS_ACESSOS_APP = [
     {
@@ -27,7 +30,7 @@ const CARDS_ACESSOS_APP = [
     {
         titulo: "Usuários cadastrados",
         descricao: "Listar pessoas com acesso, editar perfil e acompanhar status ativo ou bloqueado.",
-        status: "Será movido de Configurações",
+        status: "Movido para cá",
         icone: UsersRound,
     },
     {
@@ -76,6 +79,8 @@ function BadgeEtapa({ children, variante = "info" }) {
 
 function CardFuncionalidade({ item, indice }) {
     const Icone = item.icone;
+    const statusSucesso = item.status === "Movido para cá";
+    const statusAlerta = indice === 0;
 
     return (
         <article className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md">
@@ -89,10 +94,183 @@ function CardFuncionalidade({ item, indice }) {
                         <h3 className="mt-1 text-base font-black text-slate-950">{item.titulo}</h3>
                     </div>
                 </div>
-                <BadgeEtapa variante={indice === 0 ? "alerta" : indice === 3 ? "sucesso" : "info"}>{item.status}</BadgeEtapa>
+                <BadgeEtapa variante={statusSucesso ? "sucesso" : statusAlerta ? "alerta" : "info"}>{item.status}</BadgeEtapa>
             </div>
             <p className="mt-4 text-sm font-semibold leading-6 text-slate-500">{item.descricao}</p>
         </article>
+    );
+}
+
+
+function normalizarTextoAcesso(valor) {
+    return String(valor || "").trim();
+}
+
+function formatarPerfilAcessoApp(perfil = "") {
+    const mapa = {
+        administrador: "Administrador",
+        tecnico_sst: "Técnico SST",
+        auditor: "Auditor",
+        gestor: "Gestor",
+        consulta: "Consulta",
+        bloqueado: "Bloqueado",
+    };
+
+    const chave = normalizarTextoAcesso(perfil).toLowerCase();
+    return mapa[chave] || normalizarTextoAcesso(perfil).replace(/_/g, " ") || "Sem perfil";
+}
+
+function formatarStatusAcessoApp(usuarioPermissao = {}) {
+    if (usuarioPermissao?.bloqueado) return "Bloqueado";
+    if (usuarioPermissao?.ativo) return "Ativo";
+    return "Inativo";
+}
+
+function obterClassePerfilAcessoApp(perfil = "") {
+    const chave = normalizarTextoAcesso(perfil).toLowerCase();
+
+    if (chave === "administrador") return "bg-blue-50 text-blue-700 ring-blue-100";
+    if (chave === "tecnico_sst") return "bg-emerald-50 text-emerald-700 ring-emerald-100";
+    if (chave === "auditor") return "bg-violet-50 text-violet-700 ring-violet-100";
+    if (chave === "gestor") return "bg-cyan-50 text-cyan-700 ring-cyan-100";
+    if (chave === "bloqueado") return "bg-rose-50 text-rose-700 ring-rose-100";
+
+    return "bg-slate-50 text-slate-600 ring-slate-200";
+}
+
+function obterClasseStatusAcessoApp(usuarioPermissao = {}) {
+    if (usuarioPermissao?.bloqueado) return "bg-rose-50 text-rose-700 ring-rose-100";
+    if (usuarioPermissao?.ativo) return "bg-emerald-50 text-emerald-700 ring-emerald-100";
+    return "bg-slate-50 text-slate-600 ring-slate-200";
+}
+
+function emailEhUsuarioAtualAcessoApp(email = "", usuario = null) {
+    const emailLista = normalizarTextoAcesso(email).toLowerCase();
+    const emailAtual = normalizarTextoAcesso(usuario?.email).toLowerCase();
+    return Boolean(emailLista && emailAtual && emailLista === emailAtual);
+}
+
+function UsuariosCadastradosApp({ usuario = null }) {
+    const [usuarios, setUsuarios] = useState([]);
+    const [carregando, setCarregando] = useState(false);
+    const [mensagem, setMensagem] = useState("Lista ainda não carregada.");
+    const [erro, setErro] = useState("");
+
+    const resumo = useMemo(() => ({
+        total: usuarios.length,
+        ativos: usuarios.filter((item) => item.ativo && !item.bloqueado).length,
+        administradores: usuarios.filter((item) => item.perfil === "administrador" && item.ativo && !item.bloqueado).length,
+        bloqueados: usuarios.filter((item) => item.bloqueado).length,
+    }), [usuarios]);
+
+    async function carregarUsuarios() {
+        if (carregando) return;
+
+        setCarregando(true);
+        setErro("");
+        setMensagem("Consultando usuários cadastrados no Supabase...");
+
+        try {
+            const lista = await listarUsuariosPermissoesSistemaService({ supabase });
+            setUsuarios(lista);
+            setMensagem(`${lista.length} pessoa(s) carregada(s) da lista administrativa de acessos.`);
+        } catch (error) {
+            setErro(error?.message || "Não foi possível carregar usuários cadastrados.");
+            setMensagem("A lista não foi carregada. Confirme se o usuário atual possui permissão administrativa.");
+        } finally {
+            setCarregando(false);
+        }
+    }
+
+    useEffect(() => {
+        carregarUsuarios();
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
+
+    return (
+        <Card className="border border-slate-200 bg-white p-6 shadow-sm">
+            <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+                <div className="flex items-start gap-4">
+                    <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-blue-50 text-blue-700 ring-1 ring-blue-100">
+                        <UsersRound className="h-5 w-5" strokeWidth={2.2} />
+                    </div>
+                    <div>
+                        <p className="text-xs font-black uppercase tracking-[0.2em] text-slate-400">Usuários cadastrados</p>
+                        <h3 className="mt-1 text-xl font-black text-slate-950">Lista de pessoas com acesso ao app</h3>
+                        <p className="mt-2 max-w-4xl text-sm font-semibold leading-6 text-slate-500">
+                            Esta lista foi movida de Configurações para Acessos do App. Nesta microetapa a edição continua planejada para o próximo pacote; a criação de login real virá depois por Edge Function segura.
+                        </p>
+                        <p className="mt-2 text-xs font-bold text-slate-500">{mensagem}</p>
+                        {erro ? <p className="mt-2 rounded-2xl bg-rose-50 px-4 py-2 text-xs font-bold text-rose-700 ring-1 ring-rose-100">{erro}</p> : null}
+                    </div>
+                </div>
+                <button
+                    type="button"
+                    onClick={carregarUsuarios}
+                    disabled={carregando}
+                    className="inline-flex items-center justify-center gap-2 rounded-2xl bg-slate-950 px-4 py-2 text-xs font-black text-white shadow-sm ring-1 ring-slate-950 hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                    <RefreshCw className={`h-3.5 w-3.5 ${carregando ? "animate-spin" : ""}`} />
+                    {carregando ? "Carregando" : "Atualizar usuários"}
+                </button>
+            </div>
+
+            <div className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+                <div className="rounded-2xl bg-slate-50 px-4 py-3 ring-1 ring-slate-100">
+                    <p className="text-[10px] font-black uppercase tracking-wide text-slate-400">Total</p>
+                    <p className="mt-1 text-xl font-black text-slate-950">{resumo.total}</p>
+                </div>
+                <div className="rounded-2xl bg-emerald-50 px-4 py-3 ring-1 ring-emerald-100">
+                    <p className="text-[10px] font-black uppercase tracking-wide text-emerald-700">Ativos</p>
+                    <p className="mt-1 text-xl font-black text-emerald-800">{resumo.ativos}</p>
+                </div>
+                <div className="rounded-2xl bg-blue-50 px-4 py-3 ring-1 ring-blue-100">
+                    <p className="text-[10px] font-black uppercase tracking-wide text-blue-700">Administradores</p>
+                    <p className="mt-1 text-xl font-black text-blue-800">{resumo.administradores}</p>
+                </div>
+                <div className="rounded-2xl bg-rose-50 px-4 py-3 ring-1 ring-rose-100">
+                    <p className="text-[10px] font-black uppercase tracking-wide text-rose-700">Bloqueados</p>
+                    <p className="mt-1 text-xl font-black text-rose-800">{resumo.bloqueados}</p>
+                </div>
+            </div>
+
+            <div className="mt-5 space-y-2">
+                {usuarios.length > 0 ? usuarios.map((item) => (
+                    <article key={item.id || item.email} className="rounded-2xl bg-slate-50 px-4 py-3 ring-1 ring-slate-100">
+                        <div className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
+                            <div className="min-w-0">
+                                <p className="truncate text-sm font-black text-slate-950">{item.nome || "Usuário sem nome"}</p>
+                                <p className="mt-0.5 truncate text-xs font-semibold text-slate-500">{item.email || "email não informado"}</p>
+                                <p className="mt-1 text-[11px] font-semibold text-slate-400">{item.funcao || "função não informada"}</p>
+                            </div>
+                            <div className="flex flex-wrap gap-2">
+                                <span className={`rounded-full px-3 py-1.5 text-[11px] font-black ring-1 ${obterClassePerfilAcessoApp(item.perfil)}`}>
+                                    Perfil: {formatarPerfilAcessoApp(item.perfil)}
+                                </span>
+                                <span className={`rounded-full px-3 py-1.5 text-[11px] font-black ring-1 ${obterClasseStatusAcessoApp(item)}`}>
+                                    {formatarStatusAcessoApp(item)}
+                                </span>
+                                <span className={`rounded-full px-3 py-1.5 text-[11px] font-black ring-1 ${item.acesso_global ? "bg-blue-50 text-blue-700 ring-blue-100" : "bg-slate-100 text-slate-500 ring-slate-200"}`}>
+                                    Acesso global: {item.acesso_global ? "Sim" : "Não"}
+                                </span>
+                                {emailEhUsuarioAtualAcessoApp(item.email, usuario) ? (
+                                    <span className="rounded-full bg-amber-50 px-3 py-1.5 text-[11px] font-black text-amber-800 ring-1 ring-amber-100">
+                                        Usuário atual
+                                    </span>
+                                ) : null}
+                                <span className="rounded-full bg-white px-3 py-1.5 text-[11px] font-black text-slate-500 ring-1 ring-slate-200">
+                                    Edição no próximo pacote
+                                </span>
+                            </div>
+                        </div>
+                    </article>
+                )) : (
+                    <div className="rounded-2xl bg-slate-50 px-4 py-4 text-xs font-semibold text-slate-500 ring-1 ring-slate-100">
+                        Nenhum usuário carregado. Clique em Atualizar usuários para consultar a lista administrativa.
+                    </div>
+                )}
+            </div>
+        </Card>
     );
 }
 
@@ -293,7 +471,7 @@ export function AcessosAppPage({ usuario = null }) {
                     <section className="px-6 py-7 sm:px-8">
                         <div className="flex flex-wrap items-center gap-3">
                             <BadgeEtapa variante="sucesso">Nova aba administrativa</BadgeEtapa>
-                            <BadgeEtapa>Roteiro 14 · Pacote 3A</BadgeEtapa>
+                            <BadgeEtapa>Roteiro 14 · Pacote 3B</BadgeEtapa>
                         </div>
                         <h2 className="mt-5 text-3xl font-black tracking-tight text-slate-950 sm:text-4xl">
                             Acessos do App
@@ -305,7 +483,7 @@ export function AcessosAppPage({ usuario = null }) {
                             <div className="flex items-start gap-3">
                                 <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0" strokeWidth={2.2} />
                                 <p>
-                                    Esta etapa move a revisão dos perfis padrão para Acessos do App. A criação real de login no Supabase Auth continuará para etapa separada por Edge Function segura.
+                                    Esta etapa move a lista de usuários cadastrados para Acessos do App. A edição completa e a criação real de login no Supabase Auth continuarão para etapas separadas por Edge Function segura.
                                 </p>
                             </div>
                         </div>
@@ -339,6 +517,8 @@ export function AcessosAppPage({ usuario = null }) {
                     <CardFuncionalidade key={item.titulo} item={item} indice={indice} />
                 ))}
             </div>
+
+            <UsuariosCadastradosApp usuario={usuario} />
 
             <RevisaoPerfisPadrao />
 
@@ -378,7 +558,7 @@ export function AcessosAppPage({ usuario = null }) {
                         <div>
                             <h3 className="text-lg font-black text-slate-950">Separação da Configurações</h3>
                             <p className="mt-2 text-sm font-semibold leading-6 text-slate-500">
-                                A revisão completa dos perfis padrão já fica em Acessos do App. Nas próximas microetapas, usuários cadastrados e solicitações também serão movidos para cá.
+                                A revisão completa dos perfis padrão e a lista de usuários cadastrados já ficam em Acessos do App. Nas próximas microetapas, edição, solicitações e login real serão integrados aqui.
                             </p>
                         </div>
                     </div>
@@ -392,7 +572,7 @@ export function AcessosAppPage({ usuario = null }) {
                         <div className="rounded-3xl bg-emerald-50 p-4 ring-1 ring-emerald-100">
                             <p className="text-xs font-black uppercase tracking-[0.18em] text-emerald-700">Vem para Acessos</p>
                             <p className="mt-2 text-sm font-bold leading-6 text-emerald-700">
-                                Usuários, login, senha temporária, perfis, solicitações, bloqueios e permissões por módulo.
+                                Usuários cadastrados, login, senha temporária, perfis, solicitações, bloqueios e permissões por módulo.
                             </p>
                         </div>
                     </div>

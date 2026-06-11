@@ -2229,7 +2229,7 @@ export function ConfiguracoesSistema({
                             </div>
                             {!podeGerenciarPermissoesSistema ? (
                                 <div className="mt-3 rounded-2xl bg-amber-50 px-4 py-3 text-xs font-semibold leading-relaxed text-amber-800 ring-1 ring-amber-100">
-                                    {bloqueioGerenciarPermissoesSistema.mensagem} A lista continua visível para conferência, mas cadastro e edição ficam bloqueados.
+                                    {bloqueioGerenciarPermissoesSistema.mensagem} A lista detalhada foi movida para Acessos do App; cadastro e edição continuam bloqueados sem permissão.
                                 </div>
                             ) : null}
                         </div>
@@ -2237,9 +2237,9 @@ export function ConfiguracoesSistema({
                         <div className="mt-4 rounded-3xl bg-white p-4 ring-1 ring-slate-100">
                             <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
                                 <div>
-                                    <p className="text-xs font-black uppercase tracking-wide text-slate-400">Lista administrativa de usuários</p>
+                                    <p className="text-xs font-black uppercase tracking-wide text-slate-400">Resumo administrativo de acessos</p>
                                     <p className="mt-1 text-xs font-semibold leading-relaxed text-slate-500">
-                                        Usuários cadastrados em usuarios_permissoes_sistema. A leitura administrativa mostra a base central que protege rotas, ações críticas e botões sensíveis.
+                                        A lista detalhada de usuários cadastrados foi movida para a aba Acessos do App. Aqui fica apenas o resumo técnico usado pelas Configurações.
                                     </p>
                                     <p className="mt-1 text-xs font-semibold leading-relaxed text-slate-500">
                                         {mensagemUsuariosPermissoesSistema}
@@ -2679,85 +2679,21 @@ export function ConfiguracoesSistema({
                                 )}
                             </div>
 
-                            <div className="mt-4 rounded-3xl bg-white p-4 ring-1 ring-slate-100">
-                                <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-                                    <div>
-                                        <p className="text-xs font-black uppercase tracking-wide text-slate-400">Pessoas cadastradas no app</p>
-                                        <h3 className="mt-1 text-base font-black text-slate-950">Lista de acessos cadastrados</h3>
-                                        <p className="mt-1 text-xs font-semibold text-slate-500">Edite perfil, status ou bloqueio sem misturar com solicitações pendentes.</p>
-                                    </div>
-                                    <span className="rounded-full bg-slate-50 px-3 py-1.5 text-[11px] font-black text-slate-500 ring-1 ring-slate-200">
-                                        {resumoUsuariosPermissoesSistema.total} pessoa(s)
-                                    </span>
-                                </div>
-
-                                <div className="mt-4 space-y-2">
-                                    {usuariosPermissoesSistema.length > 0 ? usuariosPermissoesSistema.map((item) => (
-                                    <div key={item.id || item.email} className="rounded-2xl bg-slate-50 px-4 py-3 ring-1 ring-slate-100">
-                                        <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-                                            <div className="min-w-0">
-                                                <p className="truncate text-sm font-black text-slate-950">{item.nome || "Usuário sem nome"}</p>
-                                                <p className="mt-0.5 truncate text-xs font-semibold text-slate-500">{item.email || "email não informado"}</p>
-                                                <p className="mt-1 text-[11px] font-semibold text-slate-400">
-                                                    {item.funcao || "função não informada"}
-                                                </p>
-                                            </div>
-                                            <div className="flex flex-wrap gap-2">
-                                                <span className={classNames(
-                                                    "rounded-full px-3 py-1.5 text-[11px] font-black ring-1",
-                                                    obterClassePerfilPermissaoSistema(item.perfil)
-                                                )}>
-                                                    Perfil: {formatarPerfilPermissaoSistema(item.perfil)}
-                                                </span>
-                                                <span className={classNames(
-                                                    "rounded-full px-3 py-1.5 text-[11px] font-black ring-1",
-                                                    obterClasseStatusUsuarioPermissaoSistema(item)
-                                                )}>
-                                                    {formatarStatusUsuarioPermissaoSistema(item)}
-                                                </span>
-                                                <span className={classNames(
-                                                    "rounded-full px-3 py-1.5 text-[11px] font-black ring-1",
-                                                    item.bloqueado
-                                                        ? "bg-rose-50 text-rose-700 ring-rose-100"
-                                                        : "bg-slate-100 text-slate-500 ring-slate-200"
-                                                )}>
-                                                    Bloqueado: {item.bloqueado ? "Sim" : "Não"}
-                                                </span>
-                                                <span className={classNames(
-                                                    "rounded-full px-3 py-1.5 text-[11px] font-black ring-1",
-                                                    item.acesso_global
-                                                        ? "bg-blue-50 text-blue-700 ring-blue-100"
-                                                        : "bg-slate-100 text-slate-500 ring-slate-200"
-                                                )}>
-                                                    Acesso global: {item.acesso_global ? "Sim" : "Não"}
-                                                </span>
-                                                {emailEhUsuarioAtualPermissaoSistema(item.email, usuario, permissaoSistemaAtual) ? (
-                                                    <span className="rounded-full bg-amber-50 px-3 py-1.5 text-[11px] font-black text-amber-800 ring-1 ring-amber-100">
-                                                        Usuário atual
-                                                    </span>
-                                                ) : null}
-                                                <button
-                                                    type="button"
-                                                    onClick={() => selecionarUsuarioPermissaoParaEdicao(item)}
-                                                    disabled={salvandoNovoUsuarioPermissaoSistema || !podeGerenciarPermissoesSistema}
-                                                    title={podeGerenciarPermissoesSistema ? "Editar permissão" : bloqueioGerenciarPermissoesSistema.mensagem}
-                                                    className={classNames(
-                                                        "rounded-full px-3 py-1.5 text-[11px] font-black ring-1 disabled:cursor-not-allowed",
-                                                        podeGerenciarPermissoesSistema
-                                                            ? "bg-slate-950 text-white ring-slate-950 hover:bg-slate-800 disabled:opacity-60"
-                                                            : "bg-slate-100 text-slate-400 ring-slate-200"
-                                                    )}
-                                                >
-                                                    Editar
-                                                </button>
-                                            </div>
+                            <div className="mt-4 rounded-3xl bg-emerald-50/80 p-4 ring-1 ring-emerald-100">
+                                <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                                    <div className="flex items-start gap-3">
+                                        <Users className="mt-1 h-5 w-5 shrink-0 text-emerald-700" />
+                                        <div>
+                                            <p className="text-xs font-black uppercase tracking-wide text-emerald-700">Usuários cadastrados movidos</p>
+                                            <h3 className="mt-1 text-base font-black text-slate-950">Lista detalhada na aba Acessos do App</h3>
+                                            <p className="mt-1 text-xs font-semibold leading-relaxed text-slate-600">
+                                                A lista de pessoas com acesso ao app saiu da aba Configurações. Use Acessos do App para consultar usuários, perfis, status, bloqueios e acesso global.
+                                            </p>
                                         </div>
                                     </div>
-                                )) : (
-                                    <div className="rounded-2xl bg-slate-50 px-4 py-4 text-xs font-semibold text-slate-500 ring-1 ring-slate-100">
-                                        Nenhum usuário carregado na lista administrativa. Clique em Atualizar lista para consultar a RPC administrativa.
-                                    </div>
-                                    )}
+                                    <span className="inline-flex items-center justify-center rounded-full bg-white px-3 py-1.5 text-[11px] font-black uppercase tracking-wide text-emerald-700 ring-1 ring-emerald-100">
+                                        {resumoUsuariosPermissoesSistema.total} pessoa(s)
+                                    </span>
                                 </div>
                             </div>
                         </div>
