@@ -962,14 +962,14 @@ function UsuariosCadastradosApp({ usuario = null, usuarioParaEditar = null, onEd
                     <button
                         type="button"
                         onClick={alternarListaUsuarios}
-                        className={`inline-flex items-center justify-center rounded-2xl px-4 py-2 text-xs font-black shadow-sm ring-1 ${listaUsuariosAberta ? "bg-white text-slate-700 ring-slate-200 hover:bg-slate-50" : "bg-slate-950 text-white ring-slate-950 hover:bg-slate-800"}`}
+                        className="inline-flex items-center justify-center rounded-2xl bg-white px-4 py-2 text-xs font-black text-slate-700 shadow-sm ring-1 ring-slate-200 hover:bg-slate-50"
                     >
                         {listaUsuariosAberta ? "Recolher lista" : "Abrir lista e filtros"}
                     </button>
                     <button
                         type="button"
                         onClick={abrirCadastroVazio}
-                        className="inline-flex items-center justify-center gap-2 rounded-2xl bg-blue-600 px-4 py-2 text-xs font-black text-white shadow-sm ring-1 ring-blue-600 hover:bg-blue-700"
+                        className="inline-flex items-center justify-center gap-2 rounded-2xl bg-slate-950 px-4 py-2 text-xs font-black text-white shadow-sm ring-1 ring-slate-950 hover:bg-slate-800"
                     >
                         <UserPlus className="h-3.5 w-3.5" />
                         Cadastrar login
@@ -978,7 +978,7 @@ function UsuariosCadastradosApp({ usuario = null, usuarioParaEditar = null, onEd
                         type="button"
                         onClick={carregarUsuarios}
                         disabled={carregando}
-                        className="inline-flex items-center justify-center gap-2 rounded-2xl bg-slate-950 px-4 py-2 text-xs font-black text-white shadow-sm ring-1 ring-slate-950 hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
+                        className="inline-flex items-center justify-center gap-2 rounded-2xl bg-white px-4 py-2 text-xs font-black text-slate-700 shadow-sm ring-1 ring-slate-200 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
                     >
                         <RefreshCw className={`h-3.5 w-3.5 ${carregando ? "animate-spin" : ""}`} />
                         {carregando ? "Carregando" : "Atualizar usuários"}
