@@ -18,8 +18,6 @@ import {
     ShieldAlert,
     ShieldCheck,
     SlidersHorizontal,
-    UserPlus,
-    Users,
 } from "lucide-react";
 import { Header, Card } from "../commonComponents";
 import { ArquivosStorageConfiguracoes } from "./ArquivosStorageConfiguracoes";
@@ -50,11 +48,6 @@ import {
     restaurarSenhaConfiguracoesSistema,
 } from "../../constants/configuracoesSegurancaConstants";
 import {
-    MODULOS_USUARIOS_PERMISSOES_PLANEJADOS,
-    PERFIS_USUARIOS_PERMISSOES_PLANEJADOS,
-    PERMISSOES_PADRAO_USUARIOS_POR_PERFIL,
-} from "../../constants/usuariosPermissoesConstants";
-import {
     avaliarSegurancaAuditoriaPublica,
     calcularResumoSegurancaAuditoriaPublica,
     montarChecklistSegurancaAuditoriaPublicaTexto,
@@ -70,17 +63,9 @@ import {
     montarChecklistRevisaoSupabaseSistemaTexto,
 } from "../../services/supabaseRevisaoService";
 import {
-    ACOES_CRITICAS_PERMISSAO_SISTEMA,
     carregarPermissaoSistemaAtualService,
-    concluirSolicitacaoAcessoSistemaService,
-    listarSolicitacoesAcessoSistemaService,
-    listarUsuariosPermissoesSistemaService,
-    obterBloqueioVisualAcaoCriticaSistema,
     obterResumoAcoesCriticasSistema,
     obterResumoPermissaoSistema,
-    responderSolicitacaoAcessoSistemaService,
-    salvarUsuarioPermissaoSistemaService,
-    usuarioPodeGerenciarPermissoesSistema,
 } from "../../services/usuariosPermissoesSistemaService";
 import { supabase } from "../../lib/supabaseClient";
 
@@ -102,30 +87,14 @@ function formatarDataHoraConfiguracoes(valor) {
     }
 }
 
-function obterClasseStatusSolicitacaoAcesso(status = "pendente") {
-    if (status === "aprovada") return "bg-emerald-50 text-emerald-700 ring-emerald-100";
-    if (status === "concluida") return "bg-blue-50 text-blue-700 ring-blue-100";
-    if (status === "recusada") return "bg-rose-50 text-rose-700 ring-rose-100";
-    if (status === "cancelada") return "bg-slate-100 text-slate-500 ring-slate-200";
-    return "bg-amber-50 text-amber-700 ring-amber-100";
-}
-
-function formatarStatusSolicitacaoAcesso(status = "pendente") {
-    const mapa = {
-        pendente: "Pendente",
-        aprovada: "Aprovada",
-        concluida: "Concluída",
-        recusada: "Recusada",
-        cancelada: "Cancelada",
-    };
-
-    return mapa[status] || "Pendente";
-}
-
-const MAPA_ROTULOS_PERFIS_USUARIOS = PERFIS_USUARIOS_PERMISSOES_PLANEJADOS.reduce((acc, perfil) => {
-    acc[perfil.chave] = perfil.perfil;
-    return acc;
-}, {});
+const MAPA_ROTULOS_PERFIS_USUARIOS = {
+    administrador: "Administrador",
+    tecnico_sst: "Técnico SST",
+    consulta: "Consulta",
+    bloqueado: "Bloqueado",
+    auditor: "Auditor",
+    gestor: "Gestor",
+};
 
 function normalizarTextoPermissao(valor = "") {
     return String(valor || "").trim().toLowerCase();
@@ -134,77 +103,6 @@ function normalizarTextoPermissao(valor = "") {
 function formatarPerfilPermissaoSistema(perfil = "") {
     const chave = normalizarTextoPermissao(perfil || "consulta");
     return MAPA_ROTULOS_PERFIS_USUARIOS[chave] || "Consulta";
-}
-
-function obterClassePerfilPermissaoSistema(perfil = "") {
-    const chave = normalizarTextoPermissao(perfil);
-
-    if (chave === "administrador") return "bg-blue-50 text-blue-700 ring-blue-100";
-    if (chave === "tecnico_sst") return "bg-emerald-50 text-emerald-700 ring-emerald-100";
-    if (chave === "auditor") return "bg-violet-50 text-violet-700 ring-violet-100";
-    if (chave === "gestor") return "bg-cyan-50 text-cyan-700 ring-cyan-100";
-    if (chave === "bloqueado") return "bg-rose-50 text-rose-700 ring-rose-100";
-
-    return "bg-slate-100 text-slate-600 ring-slate-200";
-}
-
-function formatarStatusUsuarioPermissaoSistema(usuarioPermissao = {}) {
-    if (usuarioPermissao?.bloqueado) return "Bloqueado";
-    if (usuarioPermissao?.ativo) return "Ativo";
-    return "Inativo";
-}
-
-function obterClasseStatusUsuarioPermissaoSistema(usuarioPermissao = {}) {
-    if (usuarioPermissao?.bloqueado) return "bg-rose-50 text-rose-700 ring-rose-100";
-    if (usuarioPermissao?.ativo) return "bg-emerald-50 text-emerald-700 ring-emerald-100";
-    return "bg-slate-100 text-slate-500 ring-slate-200";
-}
-
-function emailEhUsuarioAtualPermissaoSistema(email = "", usuarioAtual = null, permissaoAtual = null) {
-    const emailTratado = normalizarTextoPermissao(email);
-    const emailAtual = normalizarTextoPermissao(permissaoAtual?.email || usuarioAtual?.email);
-
-    return Boolean(emailTratado && emailAtual && emailTratado === emailAtual);
-}
-
-function solicitacaoAcessoEhAreaSensivel(solicitacao = {}) {
-    const textoBase = `${solicitacao.area_solicitada || ""} ${solicitacao.tela || ""}`
-        .toLowerCase()
-        .normalize("NFD")
-        .replace(/[\u0300-\u036f]/g, "");
-
-    return (
-        textoBase.includes("configur")
-        || textoBase.includes("auditoria do sistema")
-        || textoBase.includes("storage")
-        || textoBase.includes("supabase")
-    );
-}
-
-function sugerirPerfilPorSolicitacaoAcesso(solicitacao = {}) {
-    const textoBase = `${solicitacao.area_solicitada || ""} ${solicitacao.tela || ""}`
-        .toLowerCase()
-        .normalize("NFD")
-        .replace(/[\u0300-\u036f]/g, "");
-
-    if (solicitacaoAcessoEhAreaSensivel(solicitacao)) {
-        return "consulta";
-    }
-
-    if (textoBase.includes("nova auditoria") || textoBase.includes("dashboard auditoria") || textoBase.includes("auditoria")) {
-        return "auditor";
-    }
-
-    if (
-        textoBase.includes("empresa")
-        || textoBase.includes("colaborador")
-        || textoBase.includes("treinamento")
-        || textoBase.includes("qr")
-    ) {
-        return "tecnico_sst";
-    }
-
-    return "consulta";
 }
 
 const CHAVES_BLOCOS_CONFIGURACOES_PADRAO = [
@@ -220,7 +118,7 @@ const CHAVES_BLOCOS_CONFIGURACOES_PADRAO = [
     "config-status-etapa",
 ];
 
-const VERSAO_LAYOUT_CONFIGURACOES_SISTEMA = "roteiro14-configuracoes-sem-permissoes-usuarios";
+const VERSAO_LAYOUT_CONFIGURACOES_SISTEMA = "roteiro15a-configuracoes-tecnicas-sem-gestao-acessos";
 const CHAVE_LAYOUT_CONFIGURACOES_SISTEMA = "configuracoesSistemaVersaoLayout";
 const CHAVE_BLOCOS_RECOLHIDOS_CONFIGURACOES = "configuracoesSistemaBlocosRecolhidos";
 const CHAVE_TAMANHOS_BLOCOS_CONFIGURACOES = "configuracoesSistemaTamanhosBlocos";
@@ -380,37 +278,6 @@ export function ConfiguracoesSistema({
     const [mensagemPermissaoSistema, setMensagemPermissaoSistema] = useState(
         "Permissão geral ainda não carregada do Supabase."
     );
-    const [usuariosPermissoesSistema, setUsuariosPermissoesSistema] = useState([]);
-    const [carregandoUsuariosPermissoesSistema, setCarregandoUsuariosPermissoesSistema] = useState(false);
-    const [mensagemUsuariosPermissoesSistema, setMensagemUsuariosPermissoesSistema] = useState(
-        "Lista administrativa ainda não carregada do Supabase."
-    );
-    const [solicitacoesAcessoSistema, setSolicitacoesAcessoSistema] = useState([]);
-    const [carregandoSolicitacoesAcessoSistema, setCarregandoSolicitacoesAcessoSistema] = useState(false);
-    const [mensagemSolicitacoesAcessoSistema, setMensagemSolicitacoesAcessoSistema] = useState(
-        "Solicitações de acesso ainda não carregadas."
-    );
-    const [respostaAdminSolicitacaoAcessoSistema, setRespostaAdminSolicitacaoAcessoSistema] = useState("");
-    const [processandoRespostaSolicitacaoAcessoSistema, setProcessandoRespostaSolicitacaoAcessoSistema] = useState("");
-    const [mensagemRespostaSolicitacaoAcessoSistema, setMensagemRespostaSolicitacaoAcessoSistema] = useState(
-        "Selecione uma solicitação pendente para aprovar ou recusar."
-    );
-    const [solicitacaoAcessoPreparadaSistema, setSolicitacaoAcessoPreparadaSistema] = useState(null);
-    const [mostrarFormularioNovoUsuarioPermissao, setMostrarFormularioNovoUsuarioPermissao] = useState(false);
-    const [novoUsuarioPermissaoSistema, setNovoUsuarioPermissaoSistema] = useState({
-        nome: "",
-        email: "",
-        funcao: "",
-        perfil: "tecnico_sst",
-        ativo: true,
-        bloqueado: false,
-        acesso_global: false,
-    });
-    const [usuarioPermissaoSistemaEmEdicao, setUsuarioPermissaoSistemaEmEdicao] = useState(null);
-    const [mensagemFormularioNovoUsuarioPermissao, setMensagemFormularioNovoUsuarioPermissao] = useState(
-        "Cadastro real habilitado. Preencha os dados e salve a permissão no Supabase."
-    );
-    const [salvandoNovoUsuarioPermissaoSistema, setSalvandoNovoUsuarioPermissaoSistema] = useState(false);
 
     const eventosAuditoria = useMemo(() => {
         const normalizada = normalizarConfiguracaoEventosAuditoriaSistema(configEventos);
@@ -425,70 +292,6 @@ export function ConfiguracoesSistema({
 
     const resumoPermissaoSistemaAtual = useMemo(
         () => obterResumoPermissaoSistema(permissaoSistemaAtual),
-        [permissaoSistemaAtual]
-    );
-
-    const modulosPermissaoSistemaAtual = useMemo(() => {
-        const modulos = permissaoSistemaAtual?.permissoes?.modulos;
-        return modulos && typeof modulos === "object" ? Object.keys(modulos) : [];
-    }, [permissaoSistemaAtual]);
-
-    const acoesCriticasPermissaoSistemaAtual = useMemo(() => {
-        const acoesCriticas = permissaoSistemaAtual?.permissoes?.acoesCriticas;
-        if (!acoesCriticas || typeof acoesCriticas !== "object") return [];
-
-        return Object.entries(acoesCriticas)
-            .filter(([, valor]) => valor === true || valor === "true")
-            .map(([acao]) => acao);
-    }, [permissaoSistemaAtual]);
-
-    const resumoUsuariosPermissoesSistema = useMemo(() => {
-        const total = usuariosPermissoesSistema.length;
-        const ativos = usuariosPermissoesSistema.filter((item) => item.ativo && !item.bloqueado).length;
-        const bloqueados = usuariosPermissoesSistema.filter((item) => item.bloqueado).length;
-        const administradores = usuariosPermissoesSistema.filter(
-            (item) => item.acesso_global || item.perfil === "administrador"
-        ).length;
-
-        return { total, ativos, bloqueados, administradores };
-    }, [usuariosPermissoesSistema]);
-
-    const resumoSolicitacoesAcessoSistema = useMemo(() => {
-        const total = solicitacoesAcessoSistema.length;
-        const pendentes = solicitacoesAcessoSistema.filter((item) => item.status === "pendente").length;
-        const aprovadas = solicitacoesAcessoSistema.filter((item) => item.status === "aprovada").length;
-        const concluidas = solicitacoesAcessoSistema.filter((item) => item.status === "concluida").length;
-        const recusadas = solicitacoesAcessoSistema.filter((item) => item.status === "recusada").length;
-
-        return { total, pendentes, aprovadas, concluidas, recusadas };
-    }, [solicitacoesAcessoSistema]);
-
-    const solicitacoesAcessoPendentesSistema = useMemo(
-        () => solicitacoesAcessoSistema.filter((item) => item.status === "pendente"),
-        [solicitacoesAcessoSistema]
-    );
-
-    const modoEdicaoUsuarioPermissaoSistema = Boolean(usuarioPermissaoSistemaEmEdicao?.email);
-
-    const formularioUsuarioPermissaoEhUsuarioAtual = useMemo(
-        () => emailEhUsuarioAtualPermissaoSistema(
-            novoUsuarioPermissaoSistema.email,
-            usuario,
-            permissaoSistemaAtual
-        ),
-        [novoUsuarioPermissaoSistema.email, permissaoSistemaAtual, usuario]
-    );
-
-    const podeGerenciarPermissoesSistema = useMemo(
-        () => usuarioPodeGerenciarPermissoesSistema(permissaoSistemaAtual),
-        [permissaoSistemaAtual]
-    );
-
-    const bloqueioGerenciarPermissoesSistema = useMemo(
-        () => obterBloqueioVisualAcaoCriticaSistema(
-            permissaoSistemaAtual,
-            ACOES_CRITICAS_PERMISSAO_SISTEMA.GERENCIAR_PERMISSOES
-        ),
         [permissaoSistemaAtual]
     );
 
@@ -933,15 +736,13 @@ export function ConfiguracoesSistema({
             `Status do usuário: ${resumoPermissaoSistemaAtual.status}`,
             `Acesso global: ${resumoPermissaoSistemaAtual.acessoGlobal ? "sim" : "não"}`,
             "",
-            "1. PERMISSÕES E USUÁRIOS",
-            `- Usuários cadastrados: ${resumoUsuariosPermissoesSistema.total}`,
-            `- Usuários ativos: ${resumoUsuariosPermissoesSistema.ativos}`,
-            `- Administradores: ${resumoUsuariosPermissoesSistema.administradores}`,
-            `- Bloqueados: ${resumoUsuariosPermissoesSistema.bloqueados}`,
-            `- Solicitações pendentes: ${resumoSolicitacoesAcessoSistema.pendentes}`,
-            `- Solicitações aprovadas: ${resumoSolicitacoesAcessoSistema.aprovadas}`,
-            `- Solicitações concluídas: ${resumoSolicitacoesAcessoSistema.concluidas}`,
-            `- Solicitações recusadas: ${resumoSolicitacoesAcessoSistema.recusadas}`,
+            "1. PERMISSÃO TÉCNICA ATUAL",
+            `- Perfil carregado: ${resumoPermissaoSistemaAtual.perfil}`,
+            `- Status: ${resumoPermissaoSistemaAtual.status}`,
+            `- Acesso global: ${resumoPermissaoSistemaAtual.acessoGlobal ? "sim" : "não"}`,
+            `- Pode excluir registros: ${resumoAcoesCriticasSistemaAtual.podeExcluir ? "sim" : "não"}`,
+            `- Pode limpar arquivos: ${resumoAcoesCriticasSistemaAtual.podeLimparArquivos ? "sim" : "não"}`,
+            `- Pode alterar configurações críticas: ${resumoAcoesCriticasSistemaAtual.podeAlterarConfiguracoesCriticas ? "sim" : "não"}`,
             "",
             "2. LIMITES DE CARREGAMENTO",
             ...limitesTexto,
@@ -967,7 +768,6 @@ export function ConfiguracoesSistema({
             "6. AÇÕES CRÍTICAS DO USUÁRIO ATUAL",
             `- Pode excluir registros: ${resumoAcoesCriticasSistemaAtual.podeExcluir ? "sim" : "não"}`,
             `- Pode limpar arquivos: ${resumoAcoesCriticasSistemaAtual.podeLimparArquivos ? "sim" : "não"}`,
-            `- Pode gerenciar permissões: ${resumoAcoesCriticasSistemaAtual.podeGerenciarPermissoes ? "sim" : "não"}`,
             `- Pode alterar configurações críticas: ${resumoAcoesCriticasSistemaAtual.podeAlterarConfiguracoesCriticas ? "sim" : "não"}`,
             "",
             "7. SENHA DAS CONFIGURAÇÕES",
@@ -1050,7 +850,7 @@ export function ConfiguracoesSistema({
             setPermissaoSistemaAtual(permissao);
 
             if (permissao) {
-                setMensagemPermissaoSistema("Permissão geral carregada do Supabase. Esta permissão protege a rota de Configurações, botões críticos e gestão de usuários.");
+                setMensagemPermissaoSistema("Permissão geral carregada do Supabase. Esta leitura protege a rota de Configurações e os botões críticos.");
             } else {
                 setMensagemPermissaoSistema("Nenhuma permissão geral encontrada para o usuário autenticado. As ações administrativas permanecem bloqueadas.");
             }
@@ -1062,364 +862,6 @@ export function ConfiguracoesSistema({
         }
     };
 
-
-    const carregarUsuariosPermissoesSistema = async () => {
-        if (!podeGerenciarPermissoesSistema) {
-            setUsuariosPermissoesSistema([]);
-            setMensagemUsuariosPermissoesSistema(
-                "Lista administrativa não consultada. O usuário atual não possui permissão para gerenciar permissões."
-            );
-            setCarregandoUsuariosPermissoesSistema(false);
-            return;
-        }
-
-        setCarregandoUsuariosPermissoesSistema(true);
-        setMensagemUsuariosPermissoesSistema("Carregando lista administrativa de usuários no Supabase...");
-
-        try {
-            const usuariosListados = await listarUsuariosPermissoesSistemaService({ supabase });
-            setUsuariosPermissoesSistema(usuariosListados);
-
-            if (usuariosListados.length > 0) {
-                setMensagemUsuariosPermissoesSistema(
-                    `${usuariosListados.length} usuário(s) carregado(s) da lista administrativa de permissões.`
-                );
-            } else {
-                setMensagemUsuariosPermissoesSistema("Nenhum usuário foi retornado pela RPC administrativa de permissões.");
-            }
-        } catch (erro) {
-            setUsuariosPermissoesSistema([]);
-            setMensagemUsuariosPermissoesSistema(
-                `Não foi possível carregar a lista administrativa. Supabase: ${erro?.message || "erro não identificado"}`
-            );
-        } finally {
-            setCarregandoUsuariosPermissoesSistema(false);
-        }
-    };
-
-    const carregarSolicitacoesAcessoSistema = async () => {
-        if (!podeGerenciarPermissoesSistema) {
-            setSolicitacoesAcessoSistema([]);
-            setMensagemSolicitacoesAcessoSistema(
-                "Solicitações não consultadas. O usuário atual não possui permissão para gerenciar permissões."
-            );
-            setCarregandoSolicitacoesAcessoSistema(false);
-            return;
-        }
-
-        setCarregandoSolicitacoesAcessoSistema(true);
-        setMensagemSolicitacoesAcessoSistema("Carregando solicitações de acesso no Supabase...");
-
-        try {
-            const solicitacoesListadas = await listarSolicitacoesAcessoSistemaService({ supabase });
-            setSolicitacoesAcessoSistema(solicitacoesListadas);
-
-            if (solicitacoesListadas.length > 0) {
-                setMensagemSolicitacoesAcessoSistema(
-                    `${solicitacoesListadas.length} solicitação(ões) carregada(s). ${solicitacoesListadas.filter((item) => item.status === "pendente").length} pendente(s).`
-                );
-            } else {
-                setMensagemSolicitacoesAcessoSistema("Nenhuma solicitação de acesso foi encontrada.");
-            }
-        } catch (erro) {
-            setSolicitacoesAcessoSistema([]);
-            setMensagemSolicitacoesAcessoSistema(
-                `Não foi possível carregar as solicitações de acesso. Supabase: ${erro?.message || "erro não identificado"}`
-            );
-        } finally {
-            setCarregandoSolicitacoesAcessoSistema(false);
-        }
-    };
-
-    const prepararUsuarioPermissaoPorSolicitacaoAcesso = (solicitacao = {}) => {
-        if (!podeGerenciarPermissoesSistema) {
-            setMensagemFormularioNovoUsuarioPermissao(bloqueioGerenciarPermissoesSistema.mensagem);
-            return;
-        }
-
-        if (!solicitacao?.email) {
-            setMensagemFormularioNovoUsuarioPermissao("Não foi possível preparar a permissão: solicitação sem e-mail.");
-            return;
-        }
-
-        const perfilSugerido = sugerirPerfilPorSolicitacaoAcesso(solicitacao);
-        const nomeSugerido = solicitacao.nome || solicitacao.email.split("@")[0] || "";
-        const areaSensivel = solicitacaoAcessoEhAreaSensivel(solicitacao);
-
-        setUsuarioPermissaoSistemaEmEdicao(null);
-        setSolicitacaoAcessoPreparadaSistema(solicitacao);
-        setNovoUsuarioPermissaoSistema({
-            nome: nomeSugerido,
-            email: solicitacao.email || "",
-            funcao: "",
-            perfil: perfilSugerido,
-            ativo: true,
-            bloqueado: false,
-            acesso_global: false,
-        });
-        setMostrarFormularioNovoUsuarioPermissao(true);
-        setMensagemFormularioNovoUsuarioPermissao(
-            areaSensivel
-                ? `Solicitação de ${solicitacao.email} preparada com perfil Consulta por segurança. Configurações, Storage e Auditoria do Sistema exigem ajuste manual por administrador antes de salvar.`
-                : `Solicitação de ${solicitacao.email} preparada no formulário. Confira o perfil sugerido, ajuste se necessário e clique em Salvar acesso.`
-        );
-
-        window.requestAnimationFrame(() => {
-            document.getElementById("formulario-usuario-permissao-sistema")?.scrollIntoView({
-                behavior: "smooth",
-                block: "start",
-            });
-        });
-    };
-
-    const responderSolicitacaoAcessoSistema = async (solicitacao, statusResposta) => {
-        if (!podeGerenciarPermissoesSistema) {
-            setMensagemRespostaSolicitacaoAcessoSistema(bloqueioGerenciarPermissoesSistema.mensagem);
-            return;
-        }
-
-        if (!solicitacao?.id) {
-            setMensagemRespostaSolicitacaoAcessoSistema("Solicitação sem identificação para aprovar ou recusar.");
-            return;
-        }
-
-        const statusTratado = statusResposta === "aprovada" ? "aprovada" : "recusada";
-        const textoAcao = statusTratado === "aprovada" ? "Aprovando" : "Recusando";
-        const textoResultado = statusTratado === "aprovada" ? "aprovada" : "recusada";
-
-        setProcessandoRespostaSolicitacaoAcessoSistema(solicitacao.id);
-        setMensagemRespostaSolicitacaoAcessoSistema(`${textoAcao} solicitação de ${solicitacao.email || "usuário sem e-mail"}...`);
-
-        try {
-            const solicitacaoAtualizada = await responderSolicitacaoAcessoSistemaService({
-                supabase,
-                solicitacaoId: solicitacao.id,
-                status: statusTratado,
-                respostaAdmin: respostaAdminSolicitacaoAcessoSistema,
-            });
-
-            if (solicitacaoAtualizada?.id) {
-                setSolicitacoesAcessoSistema((listaAtual) =>
-                    listaAtual.map((item) => item.id === solicitacaoAtualizada.id ? solicitacaoAtualizada : item)
-                );
-            }
-
-            if (statusTratado === "aprovada") {
-                prepararUsuarioPermissaoPorSolicitacaoAcesso(solicitacaoAtualizada || solicitacao);
-            }
-
-            setMensagemRespostaSolicitacaoAcessoSistema(
-                statusTratado === "aprovada"
-                    ? `Solicitação ${textoResultado} com sucesso. O formulário de usuário/permissão foi preparado para conferência antes de salvar.`
-                    : `Solicitação ${textoResultado} com sucesso. Nenhuma permissão de usuário foi alterada.`
-            );
-            setRespostaAdminSolicitacaoAcessoSistema("");
-        } catch (erro) {
-            setMensagemRespostaSolicitacaoAcessoSistema(
-                `Não foi possível responder a solicitação. Supabase: ${erro?.message || "erro não identificado"}`
-            );
-        } finally {
-            setProcessandoRespostaSolicitacaoAcessoSistema("");
-        }
-    };
-
-    const alterarCampoNovoUsuarioPermissao = (campo, valor) => {
-        if (!podeGerenciarPermissoesSistema) {
-            setMensagemFormularioNovoUsuarioPermissao(bloqueioGerenciarPermissoesSistema.mensagem);
-            return;
-        }
-
-        setNovoUsuarioPermissaoSistema((atual) => {
-            const proximo = {
-                ...atual,
-                [campo]: valor,
-            };
-
-            if (campo === "perfil") {
-                if (valor === "bloqueado") {
-                    proximo.ativo = false;
-                    proximo.bloqueado = true;
-                    proximo.acesso_global = false;
-                } else {
-                    if (atual.perfil === "bloqueado") {
-                        proximo.ativo = true;
-                        proximo.bloqueado = false;
-                    }
-
-                    if (valor !== "administrador") {
-                        proximo.acesso_global = false;
-                    }
-                }
-            }
-
-            if (campo === "bloqueado" && valor === true) {
-                proximo.ativo = false;
-                proximo.acesso_global = false;
-            }
-
-            if (campo === "ativo" && valor === true && proximo.perfil !== "bloqueado") {
-                proximo.bloqueado = false;
-            }
-
-            if (campo === "acesso_global" && valor === true && proximo.perfil !== "administrador") {
-                proximo.acesso_global = false;
-            }
-
-            return proximo;
-        });
-
-        if (campo === "perfil" && valor === "bloqueado") {
-            setMensagemFormularioNovoUsuarioPermissao("Perfil Bloqueado selecionado. O usuário será salvo como inativo, bloqueado e sem acesso global.");
-            return;
-        }
-
-        if (campo === "acesso_global" && valor === true && novoUsuarioPermissaoSistema.perfil !== "administrador") {
-            setMensagemFormularioNovoUsuarioPermissao("Acesso global é permitido apenas para perfil Administrador. O campo foi mantido desmarcado.");
-            return;
-        }
-
-        setMensagemFormularioNovoUsuarioPermissao(
-            modoEdicaoUsuarioPermissaoSistema
-                ? "Campos atualizados. Ao salvar, a permissão existente será atualizada no Supabase pela RPC administrativa."
-                : "Campos atualizados. Ao salvar, a permissão será gravada no Supabase pela RPC administrativa."
-        );
-    };
-
-    const limparFormularioNovoUsuarioPermissao = () => {
-        setUsuarioPermissaoSistemaEmEdicao(null);
-        setSolicitacaoAcessoPreparadaSistema(null);
-        setNovoUsuarioPermissaoSistema({
-            nome: "",
-            email: "",
-            funcao: "",
-            perfil: "tecnico_sst",
-            ativo: true,
-            bloqueado: false,
-            acesso_global: false,
-        });
-        setMensagemFormularioNovoUsuarioPermissao(
-            "Formulário limpo. Nenhuma nova gravação foi enviada ao Supabase."
-        );
-    };
-
-    const selecionarUsuarioPermissaoParaEdicao = (usuarioSelecionado = null) => {
-        if (!podeGerenciarPermissoesSistema) {
-            setMensagemFormularioNovoUsuarioPermissao(bloqueioGerenciarPermissoesSistema.mensagem);
-            return;
-        }
-
-        if (!usuarioSelecionado?.email) {
-            setMensagemFormularioNovoUsuarioPermissao("Não foi possível carregar este usuário para edição: e-mail não informado.");
-            return;
-        }
-
-        setUsuarioPermissaoSistemaEmEdicao(usuarioSelecionado);
-        setSolicitacaoAcessoPreparadaSistema(null);
-        setNovoUsuarioPermissaoSistema({
-            nome: usuarioSelecionado.nome || "",
-            email: usuarioSelecionado.email || "",
-            funcao: usuarioSelecionado.funcao || "",
-            perfil: usuarioSelecionado.perfil || "consulta",
-            ativo: Boolean(usuarioSelecionado.ativo),
-            bloqueado: Boolean(usuarioSelecionado.bloqueado),
-            acesso_global: Boolean(usuarioSelecionado.acesso_global),
-        });
-        setMostrarFormularioNovoUsuarioPermissao(true);
-        setMensagemFormularioNovoUsuarioPermissao(
-            `Editando permissão de ${usuarioSelecionado.email}. O e-mail fica travado para evitar criar cadastro duplicado.`
-        );
-    };
-
-    const salvarNovoUsuarioPermissaoSistema = async (evento) => {
-        evento.preventDefault();
-
-        if (salvandoNovoUsuarioPermissaoSistema) return;
-
-        if (!podeGerenciarPermissoesSistema) {
-            setMensagemFormularioNovoUsuarioPermissao(bloqueioGerenciarPermissoesSistema.mensagem);
-            return;
-        }
-
-        const emailTratado = novoUsuarioPermissaoSistema.email.trim().toLowerCase();
-        const nomeTratado = novoUsuarioPermissaoSistema.nome.trim();
-
-        if (!nomeTratado || !emailTratado) {
-            setMensagemFormularioNovoUsuarioPermissao(
-                "Preencha nome e e-mail antes de salvar a permissão do usuário no Supabase."
-            );
-            return;
-        }
-
-        setSalvandoNovoUsuarioPermissaoSistema(true);
-        setMensagemFormularioNovoUsuarioPermissao(
-            modoEdicaoUsuarioPermissaoSistema
-                ? `Atualizando permissão de ${emailTratado} no Supabase...`
-                : `Salvando permissão de ${emailTratado} no Supabase...`
-        );
-
-        try {
-            const usuarioSalvo = await salvarUsuarioPermissaoSistemaService({
-                supabase,
-                usuario: novoUsuarioPermissaoSistema,
-                usuarioAtual: permissaoSistemaAtual || usuario,
-            });
-
-            await carregarUsuariosPermissoesSistema();
-
-            if (usuarioSalvo?.email === permissaoSistemaAtual?.email) {
-                await carregarPermissaoSistemaAtual();
-            }
-
-            let mensagemConclusaoSolicitacao = "";
-
-            if (
-                solicitacaoAcessoPreparadaSistema?.id
-                && (solicitacaoAcessoPreparadaSistema.email || "").toLowerCase() === emailTratado
-            ) {
-                try {
-                    const solicitacaoConcluida = await concluirSolicitacaoAcessoSistemaService({
-                        supabase,
-                        solicitacaoId: solicitacaoAcessoPreparadaSistema.id,
-                        respostaAdmin: `Permissão salva no Supabase para ${usuarioSalvo?.email || emailTratado}.`,
-                    });
-
-                    if (solicitacaoConcluida?.id) {
-                        setSolicitacoesAcessoSistema((listaAtual) =>
-                            listaAtual.map((item) => item.id === solicitacaoConcluida.id ? solicitacaoConcluida : item)
-                        );
-                    }
-
-                    setSolicitacaoAcessoPreparadaSistema(null);
-                    mensagemConclusaoSolicitacao = " Solicitação vinculada e marcada como concluída.";
-                } catch (erroConclusao) {
-                    mensagemConclusaoSolicitacao = ` Permissão salva, mas não foi possível concluir a solicitação: ${erroConclusao?.message || "erro não identificado"}.`;
-                }
-            }
-
-            const operacao = modoEdicaoUsuarioPermissaoSistema ? "atualizada" : "salva";
-
-            setUsuarioPermissaoSistemaEmEdicao(null);
-            setNovoUsuarioPermissaoSistema({
-                nome: "",
-                email: "",
-                funcao: "",
-                perfil: "tecnico_sst",
-                ativo: true,
-                bloqueado: false,
-                acesso_global: false,
-            });
-
-            setMensagemFormularioNovoUsuarioPermissao(
-                `Permissão ${operacao} no Supabase para ${usuarioSalvo?.email || emailTratado}. A lista administrativa foi atualizada.${mensagemConclusaoSolicitacao}`
-            );
-        } catch (erro) {
-            setMensagemFormularioNovoUsuarioPermissao(
-                `Não foi possível salvar a permissão. Supabase: ${erro?.message || "erro não identificado"}`
-            );
-        } finally {
-            setSalvandoNovoUsuarioPermissaoSistema(false);
-        }
-    };
 
 
     const carregarConfiguracaoAuditoriaPublicaSupabase = async () => {
@@ -1497,49 +939,6 @@ export function ConfiguracoesSistema({
         return () => window.clearTimeout(timer);
     }, []);
 
-
-    useEffect(() => {
-        if (carregandoPermissaoSistema) return undefined;
-
-        if (!permissaoSistemaAtual) {
-            setUsuariosPermissoesSistema([]);
-            setSolicitacoesAcessoSistema([]);
-            setMensagemUsuariosPermissoesSistema(
-                "Lista administrativa aguardando uma permissão válida do usuário atual."
-            );
-            setMensagemSolicitacoesAcessoSistema(
-                "Solicitações aguardando uma permissão válida do usuário atual."
-            );
-            return undefined;
-        }
-
-        if (!podeGerenciarPermissoesSistema) {
-            setUsuariosPermissoesSistema([]);
-            setSolicitacoesAcessoSistema([]);
-            setMensagemUsuariosPermissoesSistema(
-                "Lista administrativa não consultada. O usuário atual não possui permissão para gerenciar permissões."
-            );
-            setMensagemSolicitacoesAcessoSistema(
-                "Solicitações não consultadas. O usuário atual não possui permissão para gerenciar permissões."
-            );
-            return undefined;
-        }
-
-        const timer = window.setTimeout(() => {
-            carregarUsuariosPermissoesSistema();
-            carregarSolicitacoesAcessoSistema();
-        }, 0);
-
-        return () => window.clearTimeout(timer);
-    }, [
-        carregandoPermissaoSistema,
-        podeGerenciarPermissoesSistema,
-        permissaoSistemaAtual?.email,
-        permissaoSistemaAtual?.perfil,
-        permissaoSistemaAtual?.ativo,
-        permissaoSistemaAtual?.bloqueado,
-        permissaoSistemaAtual?.acesso_global,
-    ]);
 
 
     const persistirConfiguracao = async (proximaConfiguracao, mensagemSucesso = "Configuração salva.") => {
@@ -1622,11 +1021,11 @@ export function ConfiguracoesSistema({
             icon: SlidersHorizontal,
         },
         {
-            label: "Permissão atual",
+            label: "Permissão técnica",
             valor: permissaoSistemaAtual ? formatarPerfilPermissaoSistema(resumoPermissaoSistemaAtual.perfil) : "Não carregada",
             detalhe: permissaoSistemaAtual
                 ? `${resumoPermissaoSistemaAtual.status} · ${resumoPermissaoSistemaAtual.acessoGlobal ? "acesso global" : "sem acesso global"}`
-                : "carregar permissões",
+                : "ações críticas bloqueadas",
             icon: ShieldCheck,
         },
         {
@@ -1889,7 +1288,7 @@ export function ConfiguracoesSistema({
                                     <h2 id="config-relatorios-evidencias" className="scroll-mt-24 text-lg font-black text-slate-950">Relatórios e evidências das Configurações</h2>
                                 </div>
                                 <p className="mt-1 text-sm text-slate-500">
-                                    Gere uma evidência simples do estado atual das permissões, limites, token público, checklists e ações críticas.
+                                    Gere uma evidência simples do estado técnico atual: limites, token público, checklists, senha crítica e ações protegidas.
                                 </p>
                             </div>
                             <div className="flex flex-wrap gap-2">
@@ -1920,17 +1319,17 @@ export function ConfiguracoesSistema({
 
                         <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
                             <div className="rounded-2xl bg-slate-50 px-3 py-3 ring-1 ring-slate-100">
-                                <p className="text-[11px] font-black uppercase tracking-wide text-slate-400">Permissões</p>
-                                <p className="mt-1 text-lg font-black text-slate-950">{resumoUsuariosPermissoesSistema.total}</p>
+                                <p className="text-[11px] font-black uppercase tracking-wide text-slate-400">Permissão técnica</p>
+                                <p className="mt-1 text-lg font-black text-slate-950">{formatarPerfilPermissaoSistema(resumoPermissaoSistemaAtual.perfil)}</p>
                                 <p className="mt-1 text-xs font-semibold text-slate-500">
-                                    {resumoUsuariosPermissoesSistema.ativos} ativos · {resumoUsuariosPermissoesSistema.bloqueados} bloqueados · {resumoUsuariosPermissoesSistema.administradores} administradores
+                                    {resumoPermissaoSistemaAtual.status} · {resumoPermissaoSistemaAtual.acessoGlobal ? "acesso global" : "sem acesso global"}
                                 </p>
                             </div>
                             <div className="rounded-2xl bg-slate-50 px-3 py-3 ring-1 ring-slate-100">
-                                <p className="text-[11px] font-black uppercase tracking-wide text-slate-400">Solicitações</p>
-                                <p className="mt-1 text-lg font-black text-slate-950">{resumoSolicitacoesAcessoSistema.total}</p>
+                                <p className="text-[11px] font-black uppercase tracking-wide text-slate-400">Ações críticas</p>
+                                <p className="mt-1 text-lg font-black text-slate-950">{resumoAcoesCriticasSistemaAtual.podeAlterarConfiguracoesCriticas ? "Liberadas" : "Bloqueadas"}</p>
                                 <p className="mt-1 text-xs font-semibold text-slate-500">
-                                    {resumoSolicitacoesAcessoSistema.pendentes} pendentes · {resumoSolicitacoesAcessoSistema.aprovadas} aprovadas · {resumoSolicitacoesAcessoSistema.concluidas} concluídas
+                                    Excluir {resumoAcoesCriticasSistemaAtual.podeExcluir ? "sim" : "não"} · Limpar Storage {resumoAcoesCriticasSistemaAtual.podeLimparArquivos ? "sim" : "não"}
                                 </p>
                             </div>
                             <div className="rounded-2xl bg-slate-50 px-3 py-3 ring-1 ring-slate-100">
@@ -1992,7 +1391,6 @@ export function ConfiguracoesSistema({
                         {[
                             ["Alterar senha", podeAlterarConfiguracoesCriticasSistema],
                             ["Restaurar padrão", podeAlterarConfiguracoesCriticasSistema],
-                            ["Gerenciar permissões", resumoAcoesCriticasSistemaAtual.podeGerenciarPermissoes],
                             ["Limpar Storage", resumoAcoesCriticasSistemaAtual.podeLimparArquivos],
                         ].map(([rotulo, permitido]) => (
                             <div
@@ -2075,548 +1473,6 @@ export function ConfiguracoesSistema({
                         Esta senha é apenas uma barreira operacional da aba. As ações críticas continuam dependentes da permissão carregada do Supabase, das RPCs administrativas e das policies/RLS.
                     </p>
                 </Card>
-                )
-            );
-
-        case "config-usuarios-permissoes":
-            return renderBlocoConfiguracaoComControle(
-                "config-usuarios-permissoes",
-                "Permissões e usuários",
-                "Resumo técnico dos acessos e atalho para a nova aba.",
-                (
-                    <Card>
-                        <div className="flex flex-col gap-3 border-b border-slate-100 pb-4 md:flex-row md:items-start md:justify-between">
-                            <div>
-                                <div className="flex items-center gap-2">
-                                    <ShieldCheck className="h-5 w-5 text-slate-500" />
-                                    <h2 id="config-usuarios-permissoes" className="scroll-mt-24 text-lg font-black text-slate-950">Permissões e usuários</h2>
-                                </div>
-                                <p className="mt-1 text-sm text-slate-500">
-                                    Painel técnico para consultar a permissão atual e direcionar a gestão de usuários para Acessos do App.
-                                </p>
-                                <p className="mt-2 text-xs font-semibold text-slate-500">
-                                    Usuário atual: <span className="font-black text-slate-900">{usuario?.email || "não informado"}</span> · Perfil atual: <span className="font-black text-slate-900">{formatarPerfilPermissaoSistema(permissaoSistemaAtual?.perfil || usuario?.perfil)}</span>
-                                </p>
-                            </div>
-                            <span className="inline-flex items-center justify-center rounded-2xl bg-blue-50 px-3 py-2 text-xs font-black text-blue-700 ring-1 ring-blue-200">
-                                Controle por permissão
-                            </span>
-                        </div>
-
-                        <div className="mt-4 rounded-2xl bg-amber-50 px-4 py-3 text-xs font-semibold leading-relaxed text-amber-700 ring-1 ring-amber-200">
-                            A rota de Configurações e as ações críticas usam a permissão atual carregada do Supabase. A gestão de usuários, perfis e solicitações foi separada na aba Acessos do App.
-                        </div>
-
-                        <div className="mt-4 rounded-3xl bg-blue-50 p-4 ring-1 ring-blue-100">
-                            <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
-                                <div>
-                                    <p className="text-xs font-black uppercase tracking-wide text-blue-700">Permissão carregada do Supabase</p>
-                                    <p className="mt-1 text-sm font-black text-slate-950">
-                                        {permissaoSistemaAtual?.email || usuario?.email || "usuário não informado"}
-                                    </p>
-                                    <p className="mt-1 text-xs font-semibold leading-relaxed text-blue-800">
-                                        {mensagemPermissaoSistema}
-                                    </p>
-                                </div>
-                                <button
-                                    type="button"
-                                    onClick={carregarPermissaoSistemaAtual}
-                                    disabled={carregandoPermissaoSistema}
-                                    className="inline-flex items-center justify-center gap-2 rounded-2xl bg-white px-3 py-2 text-xs font-black text-blue-700 ring-1 ring-blue-200 hover:bg-blue-50 disabled:opacity-60"
-                                >
-                                    <RefreshCw className={classNames("h-3.5 w-3.5", carregandoPermissaoSistema && "animate-spin")} />
-                                    {carregandoPermissaoSistema ? "Carregando" : "Atualizar permissão"}
-                                </button>
-                            </div>
-
-                            <div className="mt-4 grid gap-2 sm:grid-cols-2 xl:grid-cols-5">
-                                <div className="rounded-2xl bg-white px-3 py-3 ring-1 ring-blue-100">
-                                    <p className="text-[10px] font-black uppercase tracking-wide text-slate-400">Perfil Supabase</p>
-                                    <p className="mt-1 text-sm font-black text-slate-950">{formatarPerfilPermissaoSistema(resumoPermissaoSistemaAtual.perfil)}</p>
-                                </div>
-                                <div className="rounded-2xl bg-white px-3 py-3 ring-1 ring-blue-100">
-                                    <p className="text-[10px] font-black uppercase tracking-wide text-slate-400">Status</p>
-                                    <p className="mt-1 text-sm font-black text-slate-950">{resumoPermissaoSistemaAtual.status}</p>
-                                </div>
-                                <div className="rounded-2xl bg-white px-3 py-3 ring-1 ring-blue-100">
-                                    <p className="text-[10px] font-black uppercase tracking-wide text-slate-400">Acesso global</p>
-                                    <p className={classNames("mt-1 text-sm font-black", resumoPermissaoSistemaAtual.acessoGlobal ? "text-emerald-700" : "text-slate-700")}>
-                                        {resumoPermissaoSistemaAtual.acessoGlobal ? "Sim" : "Não"}
-                                    </p>
-                                </div>
-                                <div className="rounded-2xl bg-white px-3 py-3 ring-1 ring-blue-100">
-                                    <p className="text-[10px] font-black uppercase tracking-wide text-slate-400">Módulos lidos</p>
-                                    <p className="mt-1 text-sm font-black text-slate-950">{modulosPermissaoSistemaAtual.length}</p>
-                                </div>
-                                <div className="rounded-2xl bg-white px-3 py-3 ring-1 ring-blue-100">
-                                    <p className="text-[10px] font-black uppercase tracking-wide text-slate-400">Ações críticas</p>
-                                    <p className="mt-1 text-sm font-black text-slate-950">{acoesCriticasPermissaoSistemaAtual.length}</p>
-                                </div>
-                            </div>
-
-                            {permissaoSistemaAtual ? (
-                                <div className="mt-3 grid gap-2 lg:grid-cols-2">
-                                    <div className="rounded-2xl bg-white px-3 py-3 ring-1 ring-blue-100">
-                                        <p className="text-[10px] font-black uppercase tracking-wide text-slate-400">Módulos retornados pela RPC</p>
-                                        <div className="mt-2 flex flex-wrap gap-1.5">
-                                            {modulosPermissaoSistemaAtual.length > 0 ? modulosPermissaoSistemaAtual.map((modulo) => (
-                                                <span key={modulo} className="rounded-full bg-slate-50 px-2.5 py-1 text-[10px] font-bold text-slate-700 ring-1 ring-slate-200">
-                                                    {modulo}
-                                                </span>
-                                            )) : (
-                                                <span className="rounded-full bg-slate-50 px-2.5 py-1 text-[10px] font-bold text-slate-400 ring-1 ring-slate-200">
-                                                    Nenhum módulo retornado
-                                                </span>
-                                            )}
-                                        </div>
-                                    </div>
-                                    <div className="rounded-2xl bg-white px-3 py-3 ring-1 ring-blue-100">
-                                        <p className="text-[10px] font-black uppercase tracking-wide text-slate-400">Ações críticas liberadas na leitura</p>
-                                        <div className="mt-2 flex flex-wrap gap-1.5">
-                                            {acoesCriticasPermissaoSistemaAtual.length > 0 ? acoesCriticasPermissaoSistemaAtual.map((acao) => (
-                                                <span key={acao} className="rounded-full bg-emerald-50 px-2.5 py-1 text-[10px] font-bold text-emerald-700 ring-1 ring-emerald-100">
-                                                    {acao}
-                                                </span>
-                                            )) : (
-                                                <span className="rounded-full bg-slate-50 px-2.5 py-1 text-[10px] font-bold text-slate-400 ring-1 ring-slate-200">
-                                                    Nenhuma ação crítica retornada
-                                                </span>
-                                            )}
-                                        </div>
-                                    </div>
-                                </div>
-                            ) : null}
-                        </div>
-
-                        <div className="mt-4 rounded-3xl bg-white p-4 ring-1 ring-slate-100">
-                            <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
-                                <div>
-                                    <p className="text-xs font-black uppercase tracking-wide text-slate-400">Bloqueio visual das ações críticas</p>
-                                    <p className="mt-1 text-xs font-semibold leading-relaxed text-slate-500">
-                                        Validação visual da permissão carregada. Os botões sensíveis ficam bloqueados sem autorização e as RPCs/RLS devem continuar protegendo a operação no Supabase.
-                                    </p>
-                                </div>
-                                <span className={classNames(
-                                    "rounded-full px-3 py-1.5 text-[11px] font-black ring-1",
-                                    podeGerenciarPermissoesSistema
-                                        ? "bg-emerald-50 text-emerald-700 ring-emerald-100"
-                                        : "bg-rose-50 text-rose-700 ring-rose-100"
-                                )}>
-                                    {podeGerenciarPermissoesSistema ? "Gerenciar permissões liberado" : "Gerenciar permissões bloqueado"}
-                                </span>
-                            </div>
-                            <div className="mt-3 grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
-                                {[
-                                    ["Excluir", resumoAcoesCriticasSistemaAtual.podeExcluir],
-                                    ["Limpar arquivos", resumoAcoesCriticasSistemaAtual.podeLimparArquivos],
-                                    ["Gerenciar permissões", resumoAcoesCriticasSistemaAtual.podeGerenciarPermissoes],
-                                    ["Configurações críticas", resumoAcoesCriticasSistemaAtual.podeAlterarConfiguracoesCriticas],
-                                ].map(([rotulo, permitido]) => (
-                                    <div key={rotulo} className={classNames(
-                                        "rounded-2xl px-3 py-3 ring-1",
-                                        permitido
-                                            ? "bg-emerald-50 text-emerald-700 ring-emerald-100"
-                                            : "bg-slate-50 text-slate-500 ring-slate-100"
-                                    )}>
-                                        <p className="text-[10px] font-black uppercase tracking-wide">{rotulo}</p>
-                                        <p className="mt-1 text-xs font-black">{permitido ? "Liberado" : "Bloqueado"}</p>
-                                    </div>
-                                ))}
-                            </div>
-                            {!podeGerenciarPermissoesSistema ? (
-                                <div className="mt-3 rounded-2xl bg-amber-50 px-4 py-3 text-xs font-semibold leading-relaxed text-amber-800 ring-1 ring-amber-100">
-                                    {bloqueioGerenciarPermissoesSistema.mensagem} A lista detalhada foi movida para Acessos do App; cadastro e edição continuam bloqueados sem permissão.
-                                </div>
-                            ) : null}
-                        </div>
-
-                        <div className="mt-4 rounded-3xl bg-white p-4 ring-1 ring-slate-100">
-                            <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
-                                <div>
-                                    <p className="text-xs font-black uppercase tracking-wide text-slate-400">Resumo administrativo de acessos</p>
-                                    <p className="mt-1 text-xs font-semibold leading-relaxed text-slate-500">
-                                        A lista detalhada de usuários cadastrados foi movida para a aba Acessos do App. Aqui fica apenas o resumo técnico usado pelas Configurações.
-                                    </p>
-                                    <p className="mt-1 text-xs font-semibold leading-relaxed text-slate-500">
-                                        {mensagemUsuariosPermissoesSistema}
-                                    </p>
-                                </div>
-                                <button
-                                    type="button"
-                                    onClick={carregarUsuariosPermissoesSistema}
-                                    disabled={carregandoUsuariosPermissoesSistema || !podeGerenciarPermissoesSistema}
-                                    title={podeGerenciarPermissoesSistema ? "Atualizar lista administrativa" : bloqueioGerenciarPermissoesSistema.mensagem}
-                                    className="inline-flex items-center justify-center gap-2 rounded-2xl bg-slate-950 px-3 py-2 text-xs font-black text-white ring-1 ring-slate-950 hover:bg-slate-800 disabled:opacity-60"
-                                >
-                                    <RefreshCw className={classNames("h-3.5 w-3.5", carregandoUsuariosPermissoesSistema && "animate-spin")} />
-                                    {carregandoUsuariosPermissoesSistema
-                                        ? "Carregando"
-                                        : podeGerenciarPermissoesSistema
-                                          ? "Atualizar lista"
-                                          : "Lista bloqueada"}
-                                </button>
-                            </div>
-
-                            <div className="mt-4 grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
-                                <div className="rounded-2xl bg-slate-50 px-3 py-3 ring-1 ring-slate-100">
-                                    <p className="text-[10px] font-black uppercase tracking-wide text-slate-400">Total</p>
-                                    <p className="mt-1 text-sm font-black text-slate-950">{resumoUsuariosPermissoesSistema.total}</p>
-                                </div>
-                                <div className="rounded-2xl bg-emerald-50 px-3 py-3 ring-1 ring-emerald-100">
-                                    <p className="text-[10px] font-black uppercase tracking-wide text-emerald-700">Ativos</p>
-                                    <p className="mt-1 text-sm font-black text-emerald-800">{resumoUsuariosPermissoesSistema.ativos}</p>
-                                </div>
-                                <div className="rounded-2xl bg-blue-50 px-3 py-3 ring-1 ring-blue-100">
-                                    <p className="text-[10px] font-black uppercase tracking-wide text-blue-700">Administradores</p>
-                                    <p className="mt-1 text-sm font-black text-blue-800">{resumoUsuariosPermissoesSistema.administradores}</p>
-                                </div>
-                                <div className="rounded-2xl bg-rose-50 px-3 py-3 ring-1 ring-rose-100">
-                                    <p className="text-[10px] font-black uppercase tracking-wide text-rose-700">Bloqueados</p>
-                                    <p className="mt-1 text-sm font-black text-rose-800">{resumoUsuariosPermissoesSistema.bloqueados}</p>
-                                </div>
-                            </div>
-
-                            <div className="mt-4 rounded-3xl bg-white p-4 ring-1 ring-slate-100">
-                                <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
-                                    <div className="max-w-3xl">
-                                        <div className="flex items-center gap-2">
-                                            <UserPlus className="h-5 w-5 text-blue-600" />
-                                            <div>
-                                                <p className="text-xs font-black uppercase tracking-wide text-blue-700">Cadastro de acesso ao app</p>
-                                                <h3 className="mt-0.5 text-base font-black text-slate-950">Cadastro de pessoas para acesso ao app</h3>
-                                            </div>
-                                        </div>
-                                        <p className="mt-2 text-xs font-semibold leading-relaxed text-slate-500">
-                                            Cadastre a pessoa, defina o perfil padrão, mantenha o status ativo ou bloqueado e revise antes de salvar no Supabase.
-                                        </p>
-                                    </div>
-                                    <div className="flex flex-wrap gap-2">
-                                        <button
-                                            type="button"
-                                            onClick={() => {
-                                                if (!podeGerenciarPermissoesSistema) {
-                                                    setMensagemFormularioNovoUsuarioPermissao(bloqueioGerenciarPermissoesSistema.mensagem);
-                                                    return;
-                                                }
-                                                limparFormularioNovoUsuarioPermissao();
-                                                setMostrarFormularioNovoUsuarioPermissao(true);
-                                                setTimeout(() => document.getElementById("formulario-usuario-permissao-sistema")?.scrollIntoView({ behavior: "smooth", block: "start" }), 60);
-                                            }}
-                                            disabled={!podeGerenciarPermissoesSistema}
-                                            className={classNames(
-                                                "inline-flex items-center justify-center gap-2 rounded-2xl px-4 py-2 text-xs font-black shadow-sm ring-1",
-                                                podeGerenciarPermissoesSistema
-                                                    ? "bg-slate-950 text-white ring-slate-950 hover:bg-slate-800"
-                                                    : "cursor-not-allowed bg-slate-100 text-slate-400 ring-slate-200"
-                                            )}
-                                        >
-                                            <UserPlus className="h-3.5 w-3.5" />
-                                            Cadastrar pessoa
-                                        </button>
-                                        <button
-                                            type="button"
-                                            onClick={carregarUsuariosPermissoesSistema}
-                                            disabled={carregandoUsuariosPermissoesSistema || !podeGerenciarPermissoesSistema}
-                                            className="inline-flex items-center justify-center gap-2 rounded-2xl bg-white px-4 py-2 text-xs font-black text-slate-700 ring-1 ring-slate-200 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
-                                        >
-                                            <RefreshCw className={classNames("h-3.5 w-3.5", carregandoUsuariosPermissoesSistema && "animate-spin")} />
-                                            Atualizar pessoas
-                                        </button>
-                                    </div>
-                                </div>
-
-                                <div className="mt-4 grid gap-3 md:grid-cols-3">
-                                    <div className="rounded-2xl bg-slate-50 px-4 py-3 ring-1 ring-slate-100">
-                                        <div className="flex items-center gap-2">
-                                            <Users className="h-4 w-4 text-slate-500" />
-                                            <p className="text-xs font-black uppercase tracking-wide text-slate-400">Pessoas cadastradas</p>
-                                        </div>
-                                        <p className="mt-2 text-xl font-black text-slate-950">{resumoUsuariosPermissoesSistema.total}</p>
-                                        <p className="text-xs font-semibold text-slate-500">{resumoUsuariosPermissoesSistema.ativos} ativa(s) no sistema</p>
-                                    </div>
-                                    <div className="rounded-2xl bg-emerald-50 px-4 py-3 ring-1 ring-emerald-100">
-                                        <p className="text-xs font-black uppercase tracking-wide text-emerald-700">Perfis operacionais</p>
-                                        <p className="mt-2 text-xl font-black text-emerald-800">{PERFIS_USUARIOS_PERMISSOES_PLANEJADOS.length}</p>
-                                        <p className="text-xs font-semibold text-emerald-700">Administrador, Técnico SST, Auditor, Gestor, Consulta e Bloqueado</p>
-                                    </div>
-                                    <div className="rounded-2xl bg-blue-50 px-4 py-3 ring-1 ring-blue-100">
-                                        <p className="text-xs font-black uppercase tracking-wide text-blue-700">Fluxo recomendado</p>
-                                        <p className="mt-2 text-sm font-black text-blue-950">Cadastrar → revisar perfil → salvar acesso</p>
-                                        <button
-                                            type="button"
-                                            onClick={() => document.getElementById("revisao-perfis-padrao")?.scrollIntoView({ behavior: "smooth", block: "start" })}
-                                            className="mt-2 rounded-full bg-white px-3 py-1.5 text-[11px] font-black text-blue-700 ring-1 ring-blue-100 hover:bg-blue-50"
-                                        >
-                                            Rever perfis padrão
-                                        </button>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div className="mt-4 rounded-3xl bg-amber-50 p-4 ring-1 ring-amber-100">
-                                <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
-                                    <div>
-                                        <p className="text-xs font-black uppercase tracking-wide text-amber-700">Solicitações movidas</p>
-                                        <h3 className="mt-1 text-sm font-black text-slate-950">Solicitações de acesso agora ficam em Acessos do App</h3>
-                                        <p className="mt-2 text-xs font-semibold leading-relaxed text-amber-800">
-                                            Aprovação, recusa, conclusão e acompanhamento dos pedidos foram transferidos para a aba Acessos do App. Configurações mantém apenas os controles técnicos do sistema.
-                                        </p>
-                                    </div>
-                                    <button
-                                        type="button"
-                                        onClick={() => {
-                                            if (typeof window !== "undefined") {
-                                                window.location.hash = "#/acessos-app";
-                                            }
-                                        }}
-                                        className="inline-flex items-center justify-center gap-2 rounded-2xl bg-slate-950 px-4 py-2 text-xs font-black text-white shadow-sm ring-1 ring-slate-950 hover:bg-slate-800"
-                                    >
-                                        Abrir Acessos do App
-                                    </button>
-                                </div>
-                            </div>
-
-                            <div id="formulario-usuario-permissao-sistema" className="mt-4 rounded-3xl bg-slate-50 p-4 ring-1 ring-slate-100">
-                                <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
-                                    <div>
-                                        <p className="text-xs font-black uppercase tracking-wide text-slate-400">
-                                            {modoEdicaoUsuarioPermissaoSistema ? "Editar pessoa com acesso ao app" : "Cadastrar pessoa para acesso ao app"}
-                                        </p>
-                                        <p className="mt-1 text-xs font-semibold leading-relaxed text-slate-500">
-                                            {modoEdicaoUsuarioPermissaoSistema
-                                                ? "Atualize os dados da pessoa, perfil, status e acesso global quando aplicável. As alterações passam a valer no próximo carregamento da permissão."
-                                                : "Informe nome, e-mail, função e perfil para liberar o acesso ao aplicativo. Solicitações aprovadas também podem preencher este cadastro."}
-                                        </p>
-                                        <p className="mt-1 text-xs font-semibold leading-relaxed text-slate-500">
-                                            {mensagemFormularioNovoUsuarioPermissao}
-                                        </p>
-                                        {solicitacaoAcessoPreparadaSistema?.id ? (
-                                            <p className="mt-2 rounded-2xl bg-blue-50 px-3 py-2 text-xs font-bold leading-relaxed text-blue-700 ring-1 ring-blue-100">
-                                                Esta permissão será vinculada à solicitação aprovada de {solicitacaoAcessoPreparadaSistema.email}. Ao salvar, a solicitação será marcada como concluída.
-                                            </p>
-                                        ) : null}
-                                        {formularioUsuarioPermissaoEhUsuarioAtual ? (
-                                            <p className="mt-2 rounded-2xl bg-amber-50 px-3 py-2 text-xs font-bold leading-relaxed text-amber-800 ring-1 ring-amber-100">
-                                                Você está editando o próprio usuário. O sistema impede salvar alterações que removam seu acesso administrativo às Configurações.
-                                            </p>
-                                        ) : null}
-                                    </div>
-                                    <button
-                                        type="button"
-                                        onClick={() => {
-                                            if (!podeGerenciarPermissoesSistema) {
-                                                setMensagemFormularioNovoUsuarioPermissao(bloqueioGerenciarPermissoesSistema.mensagem);
-                                                return;
-                                            }
-                                            setMostrarFormularioNovoUsuarioPermissao((atual) => !atual);
-                                        }}
-                                        disabled={!podeGerenciarPermissoesSistema}
-                                        className={classNames(
-                                            "inline-flex items-center justify-center gap-2 rounded-2xl px-3 py-2 text-xs font-black ring-1",
-                                            podeGerenciarPermissoesSistema
-                                                ? "bg-white text-slate-700 ring-slate-200 hover:bg-slate-100"
-                                                : "cursor-not-allowed bg-slate-100 text-slate-400 ring-slate-200"
-                                        )}
-                                    >
-                                        {mostrarFormularioNovoUsuarioPermissao ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
-                                        {mostrarFormularioNovoUsuarioPermissao
-                                            ? "Ocultar formulário"
-                                            : modoEdicaoUsuarioPermissaoSistema
-                                              ? "Editar usuário"
-                                              : "Cadastrar pessoa"}
-                                    </button>
-                                </div>
-
-                                {!podeGerenciarPermissoesSistema ? (
-                                    <div className="mt-4 rounded-2xl bg-amber-50 px-4 py-3 text-xs font-semibold leading-relaxed text-amber-800 ring-1 ring-amber-100">
-                                        {bloqueioGerenciarPermissoesSistema.mensagem} O formulário de cadastro e edição permanece travado para este perfil.
-                                    </div>
-                                ) : null}
-
-                                {mostrarFormularioNovoUsuarioPermissao && podeGerenciarPermissoesSistema && (
-                                    <form onSubmit={salvarNovoUsuarioPermissaoSistema} className="mt-4 space-y-4">
-                                        <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-                                            <label className="space-y-1 text-xs font-black uppercase tracking-wide text-slate-400">
-                                                <span>Nome</span>
-                                                <input
-                                                    value={novoUsuarioPermissaoSistema.nome}
-                                                    onChange={(evento) => alterarCampoNovoUsuarioPermissao("nome", evento.target.value)}
-                                                    placeholder="Nome do usuário"
-                                                    className="w-full rounded-2xl border border-slate-200 bg-white px-3 py-2.5 text-sm font-semibold normal-case tracking-normal text-slate-800 outline-none focus:border-blue-400 focus:ring-4 focus:ring-blue-100"
-                                                />
-                                            </label>
-                                            <label className="space-y-1 text-xs font-black uppercase tracking-wide text-slate-400">
-                                                <span>E-mail</span>
-                                                <input
-                                                    type="email"
-                                                    value={novoUsuarioPermissaoSistema.email}
-                                                    onChange={(evento) => alterarCampoNovoUsuarioPermissao("email", evento.target.value)}
-                                                    disabled={modoEdicaoUsuarioPermissaoSistema}
-                                                    placeholder="usuario@empresa.com"
-                                                    className={classNames(
-                                                        "w-full rounded-2xl border border-slate-200 px-3 py-2.5 text-sm font-semibold normal-case tracking-normal outline-none focus:border-blue-400 focus:ring-4 focus:ring-blue-100",
-                                                        modoEdicaoUsuarioPermissaoSistema
-                                                            ? "cursor-not-allowed bg-slate-100 text-slate-500"
-                                                            : "bg-white text-slate-800"
-                                                    )}
-                                                />
-                                                {modoEdicaoUsuarioPermissaoSistema ? (
-                                                    <span className="block text-[10px] font-semibold normal-case tracking-normal text-slate-400">
-                                                        E-mail travado na edição para evitar cadastro duplicado.
-                                                    </span>
-                                                ) : null}
-                                            </label>
-                                            <label className="space-y-1 text-xs font-black uppercase tracking-wide text-slate-400">
-                                                <span>Função</span>
-                                                <input
-                                                    value={novoUsuarioPermissaoSistema.funcao}
-                                                    onChange={(evento) => alterarCampoNovoUsuarioPermissao("funcao", evento.target.value)}
-                                                    placeholder="Técnico, gestor, auditor..."
-                                                    className="w-full rounded-2xl border border-slate-200 bg-white px-3 py-2.5 text-sm font-semibold normal-case tracking-normal text-slate-800 outline-none focus:border-blue-400 focus:ring-4 focus:ring-blue-100"
-                                                />
-                                            </label>
-                                            <label className="space-y-1 text-xs font-black uppercase tracking-wide text-slate-400">
-                                                <span>Perfil</span>
-                                                <select
-                                                    value={novoUsuarioPermissaoSistema.perfil}
-                                                    onChange={(evento) => alterarCampoNovoUsuarioPermissao("perfil", evento.target.value)}
-                                                    className="w-full rounded-2xl border border-slate-200 bg-white px-3 py-2.5 text-sm font-semibold normal-case tracking-normal text-slate-800 outline-none focus:border-blue-400 focus:ring-4 focus:ring-blue-100"
-                                                >
-                                                    {PERFIS_USUARIOS_PERMISSOES_PLANEJADOS.map((perfil) => (
-                                                        <option key={perfil.chave} value={perfil.chave}>{perfil.perfil}</option>
-                                                    ))}
-                                                </select>
-                                            </label>
-                                        </div>
-
-                                        <div className="grid gap-3 md:grid-cols-3">
-                                            <label className="flex items-start gap-3 rounded-2xl bg-white px-3 py-3 ring-1 ring-slate-100">
-                                                <input
-                                                    type="checkbox"
-                                                    checked={novoUsuarioPermissaoSistema.ativo}
-                                                    onChange={(evento) => alterarCampoNovoUsuarioPermissao("ativo", evento.target.checked)}
-                                                    className="mt-1 h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
-                                                />
-                                                <span>
-                                                    <span className="block text-sm font-black text-slate-900">Usuário ativo</span>
-                                                    <span className="mt-0.5 block text-xs font-semibold leading-relaxed text-slate-500">Quando ativo e sem bloqueio, o usuário pode operar conforme o perfil e as permissões carregadas.</span>
-                                                </span>
-                                            </label>
-                                            <label className="flex items-start gap-3 rounded-2xl bg-white px-3 py-3 ring-1 ring-slate-100">
-                                                <input
-                                                    type="checkbox"
-                                                    checked={novoUsuarioPermissaoSistema.bloqueado}
-                                                    onChange={(evento) => alterarCampoNovoUsuarioPermissao("bloqueado", evento.target.checked)}
-                                                    className="mt-1 h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
-                                                />
-                                                <span>
-                                                    <span className="block text-sm font-black text-slate-900">Bloqueado</span>
-                                                    <span className="mt-0.5 block text-xs font-semibold leading-relaxed text-slate-500">Quando marcado, impede operação e mantém o cadastro para rastreabilidade.</span>
-                                                </span>
-                                            </label>
-                                            <label className="flex items-start gap-3 rounded-2xl bg-white px-3 py-3 ring-1 ring-slate-100">
-                                                <input
-                                                    type="checkbox"
-                                                    checked={novoUsuarioPermissaoSistema.acesso_global}
-                                                    onChange={(evento) => alterarCampoNovoUsuarioPermissao("acesso_global", evento.target.checked)}
-                                                    disabled={novoUsuarioPermissaoSistema.perfil !== "administrador"}
-                                                    className="mt-1 h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500 disabled:cursor-not-allowed disabled:opacity-50"
-                                                />
-                                                <span>
-                                                    <span className="block text-sm font-black text-slate-900">Acesso global</span>
-                                                    <span className="mt-0.5 block text-xs font-semibold leading-relaxed text-slate-500">Use somente para administradores responsáveis por Configurações, Storage e ações críticas.</span>
-                                                </span>
-                                            </label>
-                                        </div>
-
-                                        <div className="rounded-2xl bg-emerald-50 px-4 py-3 text-xs font-semibold leading-relaxed text-emerald-700 ring-1 ring-emerald-100">
-                                            {modoEdicaoUsuarioPermissaoSistema
-                                                ? "Edição real habilitada: ao salvar, o acesso existente será atualizado em usuarios_permissoes_sistema e validado pelas permissões carregadas do Supabase."
-                                                : "Cadastro real habilitado: ao salvar, a pessoa será criada ou atualizada em usuarios_permissoes_sistema e passará a seguir o perfil definido."}
-                                        </div>
-
-                                        <div className="flex flex-wrap gap-2">
-                                            <button
-                                                type="submit"
-                                                disabled={salvandoNovoUsuarioPermissaoSistema || !podeGerenciarPermissoesSistema}
-                                                className={classNames(
-                                                    "rounded-2xl px-4 py-2 text-xs font-black text-white shadow-sm",
-                                                    salvandoNovoUsuarioPermissaoSistema || !podeGerenciarPermissoesSistema
-                                                        ? "cursor-not-allowed bg-slate-400"
-                                                        : "bg-slate-950 hover:bg-slate-800"
-                                                )}
-                                            >
-                                                {salvandoNovoUsuarioPermissaoSistema
-                                                    ? "Salvando..."
-                                                    : modoEdicaoUsuarioPermissaoSistema
-                                                      ? "Salvar alterações"
-                                                      : "Salvar acesso"}
-                                            </button>
-                                            <button
-                                                type="button"
-                                                onClick={limparFormularioNovoUsuarioPermissao}
-                                                disabled={salvandoNovoUsuarioPermissaoSistema}
-                                                className="rounded-2xl bg-white px-4 py-2 text-xs font-black text-slate-700 ring-1 ring-slate-200 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
-                                            >
-                                                {modoEdicaoUsuarioPermissaoSistema ? "Cancelar edição" : "Limpar formulário"}
-                                            </button>
-                                        </div>
-                                    </form>
-                                )}
-                            </div>
-
-                            <div className="mt-4 rounded-3xl bg-emerald-50/80 p-4 ring-1 ring-emerald-100">
-                                <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-                                    <div className="flex items-start gap-3">
-                                        <Users className="mt-1 h-5 w-5 shrink-0 text-emerald-700" />
-                                        <div>
-                                            <p className="text-xs font-black uppercase tracking-wide text-emerald-700">Usuários cadastrados movidos</p>
-                                            <h3 className="mt-1 text-base font-black text-slate-950">Lista detalhada na aba Acessos do App</h3>
-                                            <p className="mt-1 text-xs font-semibold leading-relaxed text-slate-600">
-                                                A lista de pessoas com acesso ao app saiu da aba Configurações. Use Acessos do App para consultar usuários, perfis, status, bloqueios e acesso global.
-                                            </p>
-                                        </div>
-                                    </div>
-                                    <span className="inline-flex items-center justify-center rounded-full bg-white px-3 py-1.5 text-[11px] font-black uppercase tracking-wide text-emerald-700 ring-1 ring-emerald-100">
-                                        {resumoUsuariosPermissoesSistema.total} pessoa(s)
-                                    </span>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div id="revisao-perfis-padrao" className="mt-4 rounded-3xl bg-emerald-50/80 p-4 ring-1 ring-emerald-100">
-                            <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-                                <div className="flex items-start gap-3">
-                                    <ShieldCheck className="mt-1 h-5 w-5 shrink-0 text-emerald-700" />
-                                    <div>
-                                        <p className="text-xs font-black uppercase tracking-wide text-emerald-700">Perfis padrão movidos</p>
-                                        <h3 className="mt-1 text-base font-black text-slate-950">Revisão completa na aba Acessos do App</h3>
-                                        <p className="mt-1 text-xs font-semibold leading-relaxed text-slate-600">
-                                            A Configurações mantém apenas este resumo. A consulta detalhada do que cada perfil pode acessar foi movida para a nova aba Acessos do App.
-                                        </p>
-                                    </div>
-                                </div>
-                                <span className="inline-flex items-center justify-center rounded-full bg-white px-3 py-1.5 text-[11px] font-black uppercase tracking-wide text-emerald-700 ring-1 ring-emerald-100">
-                                    {PERMISSOES_PADRAO_USUARIOS_POR_PERFIL.length} perfis padrão
-                                </span>
-                            </div>
-                        </div>
-
-                        <div className="mt-4 rounded-3xl bg-slate-50 p-4 ring-1 ring-slate-200">
-                            <div className="flex items-start gap-3">
-                                <ShieldCheck className="mt-1 h-5 w-5 shrink-0 text-slate-500" />
-                                <div>
-                                    <p className="text-sm font-black text-slate-950">Regras de uso administrativo</p>
-                                    <div className="mt-2 grid gap-2 text-xs font-semibold leading-relaxed text-slate-600 md:grid-cols-2">
-                                        <p>1. Mantenha pelo menos um administrador ativo antes de alterar perfis.</p>
-                                        <p>2. Use solicitações aprovadas para preparar permissões quando possível.</p>
-                                        <p>3. Bloqueie perfis somente quando houver outro administrador com acesso validado.</p>
-                                        <p>4. Revise a Auditoria do Sistema após alterações administrativas sensíveis.</p>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </Card>
                 )
             );
 
@@ -2971,7 +1827,7 @@ export function ConfiguracoesSistema({
         <div className="page-shell">
             <Header
                 titulo="Configurações do sistema"
-                subtitulo="Painel administrativo para permissões, limites, Storage, token público e configurações críticas do sistema SST."
+                subtitulo="Painel técnico para limites, Storage, tokens públicos, auditoria, segurança e configurações críticas do sistema SST."
                 acao={(
                     <div className="top-actions-nowrap flex-wrap justify-end">
                         {acaoTopo}
