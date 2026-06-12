@@ -23,7 +23,6 @@ import { Header, Card } from "../commonComponents";
 import { ArquivosStorageConfiguracoes } from "./ArquivosStorageConfiguracoes";
 import {
     carregarConfiguracaoEventosAuditoriaSistemaSupabase,
-    carregarTokenAuditoriaPublicaAtivoSupabase,
     configuracaoPadraoEventosAuditoriaSistema,
     EVENTOS_AUDITORIA_SISTEMA_PADRAO,
     normalizarConfiguracaoEventosAuditoriaSistema,
@@ -43,6 +42,9 @@ import {
     restaurarConfiguracaoAuditoriaPublicaPadrao,
     salvarConfiguracaoAuditoriaPublicaSistema,
 } from "../../constants/auditoriaPublicaConstants";
+import {
+    carregarTokenAuditoriaPublicaAtivoPadrao,
+} from "../../services/auditoriaPublicaTokenService";
 import {
     SENHA_CONFIGURACOES_PADRAO,
     restaurarSenhaConfiguracoesSistema,
@@ -239,7 +241,7 @@ export function ConfiguracoesSistema({
     const [limitesEditaveis, setLimitesEditaveis] = useState(() => normalizarLimitesCarregamentoSistema(limites));
     const [mensagemLimites, setMensagemLimites] = useState("Os limites estão prontos para edição local.");
     const [configAuditoriaPublica, setConfigAuditoriaPublica] = useState(() => carregarConfiguracaoAuditoriaPublicaSistema());
-    const [mensagemAuditoriaPublica, setMensagemAuditoriaPublica] = useState("Carregando token público da auditoria no Supabase...");
+    const [mensagemAuditoriaPublica, setMensagemAuditoriaPublica] = useState("Carregando token público pelo serviço central da auditoria pública...");
     const [carregandoAuditoriaPublica, setCarregandoAuditoriaPublica] = useState(false);
     const [origemAuditoriaPublica, setOrigemAuditoriaPublica] = useState("supabase");
     const [mensagemStorage, setMensagemStorage] = useState("Checklist de Storage pronto para conferência operacional.");
@@ -706,12 +708,12 @@ export function ConfiguracoesSistema({
             ...normalizada,
             tokenPublico: atual.tokenPublico,
         }));
-        setMensagemAuditoriaPublica("Senha de referência salva localmente. O token público continua vindo do Supabase.");
+        setMensagemAuditoriaPublica("Senha de referência operacional salva localmente. O token público continua centralizado no serviço da auditoria pública.");
     };
 
     const restaurarConfigAuditoriaPublica = async () => {
         if (!confirmarAcaoCriticaConfiguracoes(
-            "Restaurar a configuração padrão da Auditoria pública? O token será recarregado do Supabase e a referência local será redefinida.",
+            "Restaurar a configuração padrão da Auditoria pública? O token será recarregado pelo serviço central e a referência operacional será redefinida.",
             setMensagemAuditoriaPublica,
             "Restauração da Auditoria pública cancelada."
         )) return;
@@ -752,11 +754,13 @@ export function ConfiguracoesSistema({
             `- Origem da configuração: ${origemConfig === "supabase" ? "Supabase" : "Local"}`,
             `- Eventos em modo de salvamento: ${salvandoConfig ? "sim" : "não"}`,
             "",
-            "4. AUDITORIA PÚBLICA / TOKEN",
-            `- Origem do token/configuração: ${origemAuditoriaPublica || "não informada"}`,
+            "4. AUDITORIA PÚBLICA / TOKENS E QR CODE",
+            `- Origem do token ativo: ${origemAuditoriaPublica || "não informada"}`,
             `- Token público: ${configAuditoriaPublica.tokenPublico ? "configurado" : "não configurado"}`,
             `- Exigir senha: ${configAuditoriaPublica.exigirSenha ? "sim" : "não"}`,
             `- Permitir nova auditoria: ${configAuditoriaPublica.permitirNovaAuditoria ? "sim" : "não"}`,
+            `- QR colaborador: usa token_qr próprio do colaborador; consulta pública não exige login`,
+            `- QR de Campo / Máquina / Equipamento: usa auditoria_campo_qrcodes e token público ativo; não existe token_maquina/token_equipamento separado`,
             `- Link público: ${linkAuditoriaPublica || "não disponível"}`,
             "",
             "5. SEGURANÇA E CHECKLISTS",
@@ -865,13 +869,13 @@ export function ConfiguracoesSistema({
 
     const carregarConfiguracaoAuditoriaPublicaSupabase = async () => {
         setCarregandoAuditoriaPublica(true);
-        setMensagemAuditoriaPublica("Carregando token público ativo no Supabase...");
+        setMensagemAuditoriaPublica("Carregando token público ativo pelo serviço central da auditoria pública...");
 
         try {
             const configuracaoLocal = carregarConfiguracaoAuditoriaPublicaSistema();
-            const resultado = await carregarTokenAuditoriaPublicaAtivoSupabase();
+            const resultado = await carregarTokenAuditoriaPublicaAtivoPadrao();
 
-            setOrigemAuditoriaPublica(resultado?.origem || "supabase");
+            setOrigemAuditoriaPublica(resultado?.origem || "servico-token");
 
             if (resultado?.tokenPublico) {
                 setConfigAuditoriaPublica({
@@ -879,7 +883,7 @@ export function ConfiguracoesSistema({
                     tokenPublico: resultado.tokenPublico,
                     exigirSenha: resultado.requerSenha !== false,
                 });
-                setMensagemAuditoriaPublica("Token público ativo carregado do Supabase. O navegador não é mais a fonte oficial do token.");
+                setMensagemAuditoriaPublica("Token público ativo carregado pelo serviço central. Prioridade: RPC obter_token_auditoria_publica_ativo, com fallback seguro na tabela auditoria_tokens_publicos.");
                 return;
             }
 
@@ -887,7 +891,7 @@ export function ConfiguracoesSistema({
                 ...configuracaoLocal,
                 tokenPublico: "",
             });
-            setMensagemAuditoriaPublica(resultado?.erro || "Nenhum token público ativo foi encontrado no Supabase.");
+            setMensagemAuditoriaPublica(resultado?.erro || "Nenhum token público ativo foi encontrado pelo serviço central da auditoria pública.");
         } finally {
             setCarregandoAuditoriaPublica(false);
         }
@@ -1037,12 +1041,12 @@ export function ConfiguracoesSistema({
 
     const secoesConfiguracoes = [
         { chave: "config-limites-carregamento", titulo: "Limites e armazenamento", descricao: "Registros por carga e limite administrativo do Storage.", icon: SlidersHorizontal },
-        { chave: "config-auditoria-publica", titulo: "Auditoria pública / token", descricao: "Token ativo, senha de referência e link público.", icon: KeyRound },
+        { chave: "config-auditoria-publica", titulo: "Auditoria pública, tokens e QR", descricao: "Token ativo, QR colaborador e QR de campo.", icon: KeyRound },
         { chave: "config-arquivos-storage", titulo: "Arquivos salvos no Storage", descricao: "Capacidade, vínculos, filtros e limpeza protegida.", icon: Database },
         { chave: "config-relatorios-evidencias", titulo: "Relatórios e evidências", descricao: "Resumo copiável e TXT das configurações atuais.", icon: FileText },
         { chave: "config-senha-configuracoes", titulo: "Configurações críticas", descricao: "Senha local e ações sensíveis da área administrativa.", icon: Lock },
         { chave: "config-eventos-auditoria", titulo: "Eventos da Auditoria do Sistema", descricao: "Eventos registrados e exibidos no histórico administrativo.", icon: Settings },
-        { chave: "config-seguranca-publica", titulo: "Checklist da auditoria pública", descricao: "Conferência operacional do QR Code público.", icon: ShieldAlert },
+        { chave: "config-seguranca-publica", titulo: "Checklist da auditoria pública", descricao: "Conferência operacional de token público e QR Code.", icon: ShieldAlert },
         { chave: "config-storage-privado", titulo: "Checklist do Storage privado", descricao: "Buckets, URLs assinadas e arquivos sensíveis.", icon: HardDrive },
         { chave: "config-supabase-geral", titulo: "Revisão Supabase / RLS / RPC", descricao: "Conferência técnica de tabelas, RLS, RPCs e buckets.", icon: Database },
         { chave: "config-status-etapa", titulo: "Resumo técnico da tela", descricao: "Estado atual das configurações e do usuário autenticado.", icon: CheckCircle2 },
@@ -1466,18 +1470,18 @@ export function ConfiguracoesSistema({
         case "config-auditoria-publica":
             return renderBlocoConfiguracaoComControle(
                 "config-auditoria-publica",
-                "Auditoria pública e QR Code",
-                "Token, senha de referência e link público.",
+                "Auditoria pública, tokens e QR Code",
+                "Token ativo centralizado, QR colaborador e QR de campo.",
                 (
                     <Card>
                         <div className="flex flex-col gap-3 border-b border-slate-100 pb-4 sm:flex-row sm:items-start sm:justify-between">
                             <div>
                                 <div className="flex items-center gap-2">
                                     <KeyRound className="h-5 w-5 text-slate-500" />
-                                    <h2 id="config-auditoria-publica" className="scroll-mt-24 text-lg font-black text-slate-950">Auditoria pública e QR Code</h2>
+                                    <h2 id="config-auditoria-publica" className="scroll-mt-24 text-lg font-black text-slate-950">Auditoria pública, tokens e QR Code</h2>
                                 </div>
                                 <p className="mt-1 text-sm text-slate-500">
-                                    Configure o token usado nos links públicos e deixe a senha de referência documentada para operação.
+                                    Centralize o token público, documente a senha operacional e diferencie Auditoria pública, QR colaborador e QR de Campo / Máquina / Equipamento.
                                 </p>
                             </div>
                             <button
@@ -1500,22 +1504,47 @@ export function ConfiguracoesSistema({
 
                         <div className="mt-4 space-y-3">
                             <label className="block rounded-2xl bg-slate-50 px-3 py-3 ring-1 ring-slate-100">
-                                <p className="text-sm font-bold text-slate-800">Token público operacional</p>
-                                <p className="mt-1 text-xs text-slate-500">Carregado diretamente da tabela auditoria_tokens_publicos. O navegador não salva mais token fixo/local.</p>
+                                <p className="text-sm font-bold text-slate-800">Token público ativo</p>
+                                <p className="mt-1 text-xs text-slate-500">
+                                    Carregado pelo serviço central da auditoria pública. Prioridade: RPC obter_token_auditoria_publica_ativo, com fallback seguro na tabela auditoria_tokens_publicos.
+                                </p>
                                 <input
                                     value={configAuditoriaPublica.tokenPublico || ""}
                                     readOnly
-                                    placeholder={carregandoAuditoriaPublica ? "Carregando token ativo do Supabase..." : "Token ativo não encontrado no Supabase"}
+                                    placeholder={carregandoAuditoriaPublica ? "Carregando token ativo pelo serviço central..." : "Token ativo não encontrado"}
                                     className="mt-3 w-full cursor-not-allowed rounded-2xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700 outline-none"
                                 />
                                 <p className="mt-2 text-[11px] font-bold uppercase tracking-wide text-slate-400">
-                                    Origem: {origemAuditoriaPublica === "supabase" ? "Supabase" : origemAuditoriaPublica}
+                                    Origem: {origemAuditoriaPublica === "rpc" ? "RPC" : origemAuditoriaPublica === "supabase" ? "Supabase" : origemAuditoriaPublica || "serviço central"}
                                 </p>
                             </label>
 
+                            <div className="grid gap-3 lg:grid-cols-3">
+                                <div className="rounded-2xl bg-emerald-50 px-3 py-3 ring-1 ring-emerald-100">
+                                    <p className="text-sm font-black text-emerald-800">Auditoria pública geral</p>
+                                    <p className="mt-2 text-xs font-semibold leading-relaxed text-emerald-700">
+                                        Link público sem login. Usa token público ativo e senha validada pela RPC validar_acesso_auditoria_publica.
+                                    </p>
+                                </div>
+                                <div className="rounded-2xl bg-blue-50 px-3 py-3 ring-1 ring-blue-100">
+                                    <p className="text-sm font-black text-blue-800">QR do colaborador</p>
+                                    <p className="mt-2 text-xs font-semibold leading-relaxed text-blue-700">
+                                        Consulta pública usa token_qr próprio do colaborador. Auditoria pelo QR usa token público + token_qr e exige senha.
+                                    </p>
+                                </div>
+                                <div className="rounded-2xl bg-violet-50 px-3 py-3 ring-1 ring-violet-100">
+                                    <p className="text-sm font-black text-violet-800">QR de Campo / Máquina / Equipamento</p>
+                                    <p className="mt-2 text-xs font-semibold leading-relaxed text-violet-700">
+                                        Máquina e equipamento entram como alvo da Auditoria de Campo. Não existe token_maquina ou token_equipamento separado nesta etapa.
+                                    </p>
+                                </div>
+                            </div>
+
                             <label className="block rounded-2xl bg-slate-50 px-3 py-3 ring-1 ring-slate-100">
-                                <p className="text-sm font-bold text-slate-800">Senha de referência</p>
-                                <p className="mt-1 text-xs text-slate-500">Campo operacional. A validação real continua na RPC/tabela do Supabase.</p>
+                                <p className="text-sm font-bold text-slate-800">Senha de referência operacional</p>
+                                <p className="mt-1 text-xs text-slate-500">
+                                    Campo apenas documental da tela. Não altera a senha real validada pela RPC validar_acesso_auditoria_publica.
+                                </p>
                                 <input
                                     value={configAuditoriaPublica.senhaReferencia || ""}
                                     onChange={(evento) => alterarConfigAuditoriaPublica("senhaReferencia", evento.target.value)}
@@ -1527,10 +1556,10 @@ export function ConfiguracoesSistema({
                             <div className="rounded-2xl bg-slate-50 px-3 py-3 ring-1 ring-slate-100">
                                 <div className="flex items-center gap-2">
                                     <Link2 className="h-4 w-4 text-slate-500" />
-                                    <p className="text-sm font-bold text-slate-800">Link público atual</p>
+                                    <p className="text-sm font-bold text-slate-800">Link público atual da Auditoria pública</p>
                                 </div>
                                 <p className="texto-quebra-segura mt-2 rounded-xl bg-white px-3 py-2 text-xs font-semibold text-slate-500 ring-1 ring-slate-200">
-                                    {configAuditoriaPublica.tokenPublico ? linkAuditoriaPublica : "Token ativo não encontrado no Supabase. Verifique a tabela auditoria_tokens_publicos."}
+                                    {configAuditoriaPublica.tokenPublico ? linkAuditoriaPublica : "Token ativo não encontrado pelo serviço central. Verifique a RPC obter_token_auditoria_publica_ativo e a tabela auditoria_tokens_publicos."}
                                 </p>
                                 <button
                                     type="button"
@@ -1544,7 +1573,7 @@ export function ConfiguracoesSistema({
                             </div>
 
                             <div className="rounded-2xl bg-orange-50 px-3 py-3 text-xs font-semibold leading-relaxed text-orange-700 ring-1 ring-orange-200">
-                                Segurança: o token público é carregado do Supabase. Alterar a senha de referência aqui não altera a senha validada pela RPC validar_acesso_auditoria_publica.
+                                Padronização: esta tela apenas exibe o token público ativo e documenta a referência operacional. A fonte oficial continua no Supabase/RPC; não criar token manual no navegador.
                             </div>
                             <div className="rounded-2xl bg-slate-50 px-3 py-3 text-xs font-semibold leading-relaxed text-slate-600 ring-1 ring-slate-100">
                                 Ações de salvar/restaurar só ficam disponíveis para usuários com permissão crítica de Configurações.
@@ -1555,10 +1584,10 @@ export function ConfiguracoesSistema({
                             type="button"
                             onClick={salvarConfigAuditoriaPublica}
                             disabled={!podeAlterarConfiguracoesCriticasSistema}
-                            title={podeAlterarConfiguracoesCriticasSistema ? "Salvar referência da Auditoria pública" : mensagemBloqueioConfiguracoesCriticasSistema}
+                            title={podeAlterarConfiguracoesCriticasSistema ? "Salvar referência operacional da Auditoria pública" : mensagemBloqueioConfiguracoesCriticasSistema}
                             className="mt-4 w-full rounded-2xl bg-slate-950 px-4 py-3 text-sm font-black text-white hover:bg-slate-800 disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-500"
                         >
-                            {podeAlterarConfiguracoesCriticasSistema ? "Salvar referência da Auditoria pública" : "Auditoria pública bloqueada"}
+                            {podeAlterarConfiguracoesCriticasSistema ? "Salvar referência operacional" : "Auditoria pública bloqueada"}
                         </button>
                     </Card>
                 )
