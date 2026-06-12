@@ -4,12 +4,14 @@ export const LIMITE_AUDITORIA_SISTEMA_INICIAL = 300;
 export const LIMITE_EMAILS_ENVIADOS_INICIAL = 200;
 export const LIMITE_AUDITORIAS_CAMPO_INICIAL = 500;
 export const LIMITE_QRCODES_CAMPO_POR_CARGA = 50;
+export const LIMITE_STORAGE_MB_INICIAL = 1024;
 
 export const LIMITES_CARREGAMENTO_SISTEMA = {
     auditoriaSistema: LIMITE_AUDITORIA_SISTEMA_INICIAL,
     emailsEnviados: LIMITE_EMAILS_ENVIADOS_INICIAL,
     auditoriasCampo: LIMITE_AUDITORIAS_CAMPO_INICIAL,
     qrcodesCampo: LIMITE_QRCODES_CAMPO_POR_CARGA,
+    storageMb: LIMITE_STORAGE_MB_INICIAL,
 };
 
 export const LIMITES_MINIMOS_CARREGAMENTO_SISTEMA = {
@@ -17,6 +19,7 @@ export const LIMITES_MINIMOS_CARREGAMENTO_SISTEMA = {
     emailsEnviados: 50,
     auditoriasCampo: 50,
     qrcodesCampo: 10,
+    storageMb: 100,
 };
 
 export const LIMITES_MAXIMOS_CARREGAMENTO_SISTEMA = {
@@ -24,6 +27,7 @@ export const LIMITES_MAXIMOS_CARREGAMENTO_SISTEMA = {
     emailsEnviados: 1000,
     auditoriasCampo: 3000,
     qrcodesCampo: 500,
+    storageMb: 10240,
 };
 
 export const DESCRICOES_LIMITES_CARREGAMENTO_SISTEMA = [
@@ -54,6 +58,13 @@ export const DESCRICOES_LIMITES_CARREGAMENTO_SISTEMA = [
         valor: LIMITE_QRCODES_CAMPO_POR_CARGA,
         detalhe: "registros por carga",
         ajuda: "Quantidade carregada por clique na lista de QR Codes de campo.",
+    },
+    {
+        chave: "storageMb",
+        label: "Storage administrativo",
+        valor: LIMITE_STORAGE_MB_INICIAL,
+        detalhe: "MB de limite visual",
+        ajuda: "Limite administrativo usado no indicador de uso do Storage. Não altera o plano do Supabase.",
     },
 ];
 
@@ -92,6 +103,12 @@ export function normalizarLimitesCarregamentoSistema(limites = {}) {
             LIMITES_MINIMOS_CARREGAMENTO_SISTEMA.qrcodesCampo,
             LIMITES_MAXIMOS_CARREGAMENTO_SISTEMA.qrcodesCampo,
             LIMITES_CARREGAMENTO_SISTEMA.qrcodesCampo
+        ),
+        storageMb: limitarNumero(
+            limites.storageMb,
+            LIMITES_MINIMOS_CARREGAMENTO_SISTEMA.storageMb,
+            LIMITES_MAXIMOS_CARREGAMENTO_SISTEMA.storageMb,
+            LIMITES_CARREGAMENTO_SISTEMA.storageMb
         ),
     };
 }

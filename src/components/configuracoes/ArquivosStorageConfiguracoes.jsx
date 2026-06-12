@@ -24,6 +24,10 @@ const FILTROS_STORAGE_PADRAO = Object.freeze({
 const QUANTIDADE_INICIAL_ARQUIVOS_STORAGE = 40;
 const QUANTIDADE_INCREMENTO_ARQUIVOS_STORAGE = 40;
 
+const arquivoStorageTemDestinoValido = (arquivo) => Boolean(arquivo?.bucket && arquivo?.caminho);
+
+const arquivoStoragePodeSerExcluido = (arquivo) => !arquivo?.emUso && arquivoStorageTemDestinoValido(arquivo);
+
 const obterEmpresaArquivoStorage = (arquivo) =>
     arquivo?.empresaNome || arquivo?.colaboradorEmpresa || "Sem empresa vinculada";
 
@@ -193,6 +197,7 @@ export function ArquivosStorageConfiguracoes({
     );
 
     const arquivosSemRegistro = arquivosStorage.filter((arquivo) => !arquivo.emUso);
+    const arquivosSemRegistroExcluiveis = arquivosStorage.filter(arquivoStoragePodeSerExcluido);
     const arquivosEmUso = arquivosStorage.filter((arquivo) => arquivo.emUso);
     const storageTotalBytes = arquivosStorage.reduce((total, arquivo) => total + Number(arquivo?.tamanho || 0), 0);
     const storageEmUsoBytes = arquivosEmUso.reduce((total, arquivo) => total + Number(arquivo?.tamanho || 0), 0);
@@ -203,20 +208,20 @@ export function ArquivosStorageConfiguracoes({
     const storageStatus = storagePercentual >= 90
         ? {
             texto: "Crítico",
-            detalhe: "Acima de 90% do limite configurado. Avalie limpar arquivos sem vínculo ou aumentar o limite/plano.",
+            detalhe: "Acima de 90% do limite administrativo configurado. Avalie limpar arquivos sem vínculo ou revisar o plano do Supabase.",
             classe: "bg-red-50 text-red-700 ring-red-200",
             barra: "bg-red-500",
         }
         : storagePercentual >= 70
             ? {
                 texto: "Atenção",
-                detalhe: "Entre 70% e 89% do limite configurado. Acompanhe o crescimento dos uploads.",
+                detalhe: "Entre 70% e 89% do limite administrativo configurado. Acompanhe o crescimento dos uploads.",
                 classe: "bg-orange-50 text-orange-700 ring-orange-200",
                 barra: "bg-orange-500",
             }
             : {
                 texto: "Normal",
-                detalhe: "Até 70% do limite configurado. Capacidade dentro do controle esperado.",
+                detalhe: "Até 70% do limite administrativo configurado. Capacidade dentro do controle esperado.",
                 classe: "bg-emerald-50 text-emerald-700 ring-emerald-200",
                 barra: "bg-emerald-500",
             };
@@ -253,7 +258,7 @@ export function ArquivosStorageConfiguracoes({
 
     const arquivosFiltradosVisiveis = arquivosFiltrados.slice(0, quantidadeArquivosVisiveis);
     const existemMaisArquivosFiltrados = arquivosFiltradosVisiveis.length < arquivosFiltrados.length;
-    const arquivosFiltradosSemVinculo = arquivosFiltrados.filter((arquivo) => !arquivo.emUso);
+    const arquivosFiltradosSemVinculo = arquivosFiltrados.filter(arquivoStoragePodeSerExcluido);
     const storageFiltradoSemVinculoBytes = arquivosFiltradosSemVinculo.reduce(
         (total, arquivo) => total + Number(arquivo?.tamanho || 0),
         0
@@ -267,7 +272,7 @@ export function ArquivosStorageConfiguracoes({
             ? "Antes selecione o filtro Somente sem vínculo."
             : !confirmacaoLimpezaValida
                 ? "Digite LIMPAR para liberar a limpeza em lote."
-                : "Limpar arquivos sem vínculo do filtro atual.";
+                : "Limpar arquivos sem vínculo e com caminho válido do filtro atual.";
     const opcoesBucketsStorage = Array.from(new Set(arquivosStorage.map((arquivo) => arquivo?.bucket || "storage"))).sort();
     const opcoesEmpresasStorage = Array.from(new Set(arquivosStorage.map(obterEmpresaArquivoStorage))).sort();
     const opcoesColaboradoresStorage = Array.from(new Set(arquivosStorage.map(obterColaboradorArquivoStorage))).sort();
@@ -310,11 +315,30 @@ export function ArquivosStorageConfiguracoes({
             return;
         }
 
-        const mensagemConfirmacao = `Confirma excluir este arquivo sem vínculo do Storage?\n\nBucket: ${arquivo?.bucket || "storage"}\nArquivo: ${arquivo?.caminho || arquivo?.nome || "não identificado"}\n\nEssa ação remove o arquivo físico e não pode ser desfeita.`;
+        if (arquivo?.emUso) {
+            if (typeof window !== "undefined") {
+                window.alert("Este arquivo ainda possui vínculo com registros do sistema e não pode ser excluído por esta tela.");
+            }
+            return;
+        }
+
+        if (!arquivoStorageTemDestinoValido(arquivo)) {
+            if (typeof window !== "undefined") {
+                window.alert("Exclusão bloqueada: o arquivo não possui bucket e caminho válidos para remoção segura.");
+            }
+            return;
+        }
+
+        const mensagemConfirmacao = `Confirma excluir este arquivo sem vínculo do Storage?
+
+Bucket: ${arquivo.bucket}
+Arquivo: ${arquivo.caminho}
+
+Essa ação remove apenas o arquivo físico sem vínculo no banco e não pode ser desfeita.`;
 
         if (typeof window !== "undefined" && !window.confirm(mensagemConfirmacao)) return;
 
-        setExcluindoStorage(arquivo.caminho);
+        setExcluindoStorage(arquivo.caminho || arquivo.nome || "__arquivo_storage__");
 
         try {
             const ok = await onExcluirArquivoStorage(arquivo);
@@ -360,7 +384,7 @@ export function ArquivosStorageConfiguracoes({
         }
 
         const totalArquivos = arquivosFiltradosSemVinculo.length;
-        const mensagemConfirmacao = `Confirma excluir ${totalArquivos} arquivo(s) sem vínculo exibido(s) no filtro atual?\n\nTamanho total: ${formatarBytes(storageFiltradoSemVinculoBytes)}.\nBucket: ${filtrosStorage.bucket}.\nBusca: ${filtrosStorage.busca || "sem busca"}.\n\nEssa ação remove arquivos do Storage e não altera registros do banco.`;
+        const mensagemConfirmacao = `Confirma excluir ${totalArquivos} arquivo(s) sem vínculo e com caminho válido no filtro atual?\n\nTamanho total: ${formatarBytes(storageFiltradoSemVinculoBytes)}.\nBucket: ${filtrosStorage.bucket}.\nBusca: ${filtrosStorage.busca || "sem busca"}.\n\nEssa ação remove apenas arquivos físicos sem vínculo e não altera registros do banco.`;
 
         if (typeof window !== "undefined" && !window.confirm(mensagemConfirmacao)) return;
 
@@ -438,7 +462,7 @@ export function ArquivosStorageConfiguracoes({
 
     const botaoLimpezaStorageBloqueado = carregandoStorage
         || limpandoStorage
-        || arquivosSemRegistro.length === 0
+        || arquivosSemRegistroExcluiveis.length === 0
         || !onExcluirArquivoStorage
         || bloqueioLimparArquivosStorageSistema.bloqueado;
 
@@ -458,7 +482,7 @@ export function ArquivosStorageConfiguracoes({
                         <h2 id="config-arquivos-storage" className="scroll-mt-24 text-lg font-black text-slate-950">Arquivos salvos no Storage</h2>
                     </div>
                     <p className="mt-1 text-sm text-slate-500">
-                        Consulte capacidade, vínculos, tipos de documentos, maiores arquivos, uploads recentes e arquivos sem vínculo.
+                        Consulte capacidade, vínculos, tipos de documentos, maiores arquivos, uploads recentes e arquivos sem vínculo. O uso é calculado somente após carregar os arquivos.
                     </p>
                     <p className="mt-2 text-xs font-bold text-slate-400">{mensagemPermissao}</p>
                 </div>
@@ -506,7 +530,7 @@ export function ArquivosStorageConfiguracoes({
                         <div>
                             <p className="text-sm font-black text-red-900">Proteção para limpeza em lote</p>
                             <p className="mt-1 text-xs leading-relaxed text-red-700">
-                                Esta confirmação aparece somente após selecionar o botão de exclusão. O sistema muda para <strong>Somente sem vínculo</strong> e só executa a limpeza depois de digitar LIMPAR e confirmar novamente.
+                                Esta confirmação aparece somente após selecionar o botão de exclusão. O sistema muda para <strong>Somente sem vínculo</strong> e só executa a limpeza de arquivos sem vínculo e com caminho válido depois de digitar LIMPAR e confirmar novamente.
                             </p>
                         </div>
                         <div className="flex w-full flex-col gap-2 lg:w-auto lg:min-w-[260px]">
@@ -555,7 +579,7 @@ export function ArquivosStorageConfiguracoes({
                 <div className="rounded-3xl bg-slate-50 p-4 ring-1 ring-slate-200">
                     <p className="text-xs font-black uppercase tracking-wide text-slate-500">Total no Storage</p>
                     <p className="mt-2 text-2xl font-black text-slate-950">{formatarBytes(storageTotalBytes)}</p>
-                    <p className="mt-1 text-xs text-slate-500">Limite visual: {formatarBytes(storageLimiteBytes)}</p>
+                    <p className="mt-1 text-xs text-slate-500">Limite administrativo: {formatarBytes(storageLimiteBytes)}</p>
                 </div>
                 <div className="rounded-3xl bg-emerald-50 p-4 ring-1 ring-emerald-100">
                     <p className="text-xs font-black uppercase tracking-wide text-emerald-700">Com vínculo</p>
@@ -695,7 +719,7 @@ export function ArquivosStorageConfiguracoes({
                 <div className="mt-4">
                     <div className="mb-3 flex flex-col justify-between gap-2 md:flex-row md:items-center">
                         <p className="text-sm font-bold text-slate-950">Arquivos encontrados: {arquivosFiltrados.length} de {arquivosStorage.length}</p>
-                        <p className="text-xs text-slate-500">Exibindo {arquivosFiltradosVisiveis.length} por vez · Sem vínculo no filtro: {arquivosFiltradosSemVinculo.length} arquivo(s) · {formatarBytes(storageFiltradoSemVinculoBytes)}.</p>
+                        <p className="text-xs text-slate-500">Exibindo {arquivosFiltradosVisiveis.length} por vez · Aptos à limpeza no filtro: {arquivosFiltradosSemVinculo.length} arquivo(s) · {formatarBytes(storageFiltradoSemVinculoBytes)}.</p>
                     </div>
 
                     {arquivosFiltrados.length === 0 && (
@@ -725,15 +749,21 @@ export function ArquivosStorageConfiguracoes({
                                         </div>
 
                                         {!arquivo.emUso && (
-                                            <button
-                                                type="button"
-                                                onClick={() => excluirArquivoStorage(arquivo)}
-                                                disabled={excluindoStorage === arquivo.caminho || limpandoStorage || bloqueioLimparArquivosStorageSistema.bloqueado}
-                                                className="shrink-0 rounded-2xl bg-white/80 px-4 py-2 text-xs font-bold text-red-700 ring-1 ring-red-200 hover:bg-white disabled:opacity-50"
-                                                title={bloqueioLimparArquivosStorageSistema.bloqueado ? bloqueioLimparArquivosStorageSistema.mensagem : "Excluir arquivo sem vínculo"}
-                                            >
-                                                {excluindoStorage === arquivo.caminho ? "Excluindo..." : "Excluir arquivo"}
-                                            </button>
+                                            arquivoStoragePodeSerExcluido(arquivo) ? (
+                                                <button
+                                                    type="button"
+                                                    onClick={() => excluirArquivoStorage(arquivo)}
+                                                    disabled={excluindoStorage === arquivo.caminho || limpandoStorage || bloqueioLimparArquivosStorageSistema.bloqueado}
+                                                    className="shrink-0 rounded-2xl bg-white/80 px-4 py-2 text-xs font-bold text-red-700 ring-1 ring-red-200 hover:bg-white disabled:opacity-50"
+                                                    title={bloqueioLimparArquivosStorageSistema.bloqueado ? bloqueioLimparArquivosStorageSistema.mensagem : "Excluir arquivo sem vínculo"}
+                                                >
+                                                    {excluindoStorage === arquivo.caminho ? "Excluindo..." : "Excluir arquivo"}
+                                                </button>
+                                            ) : (
+                                                <span className="shrink-0 rounded-2xl bg-white/70 px-4 py-2 text-xs font-bold text-slate-500 ring-1 ring-slate-200">
+                                                    Exclusão bloqueada: sem caminho
+                                                </span>
+                                            )
                                         )}
                                     </div>
                                 </div>

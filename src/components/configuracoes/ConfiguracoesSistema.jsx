@@ -634,12 +634,12 @@ export function ConfiguracoesSistema({
             setLimitesEditaveis(normalizados);
         }
 
-        setMensagemLimites("Limites salvos localmente. Use Atualizar informações ou reabra a tela para aplicar a nova carga.");
+        setMensagemLimites("Limites e armazenamento salvos localmente. Use Atualizar configurações ou reabra a tela para aplicar a nova carga.");
     };
 
     const restaurarLimites = () => {
         if (!confirmarAcaoCriticaConfiguracoes(
-            "Restaurar os limites padrão de carregamento? Isso pode alterar a quantidade de registros carregados nas telas.",
+            "Restaurar os limites padrão de carregamento e o limite administrativo de Storage? Isso pode alterar a quantidade de registros carregados nas telas e o percentual visual de armazenamento.",
             setMensagemLimites,
             "Restauração dos limites cancelada."
         )) return;
@@ -651,7 +651,7 @@ export function ConfiguracoesSistema({
         }
 
         setLimitesEditaveis(padrao);
-        setMensagemLimites("Limites padrão restaurados.");
+        setMensagemLimites("Limites e armazenamento padrão restaurados.");
     };
 
     const linkAuditoriaPublica = useMemo(() => montarLinkAuditoriaPublicaSistema({
@@ -744,9 +744,8 @@ export function ConfiguracoesSistema({
             `- Pode limpar arquivos: ${resumoAcoesCriticasSistemaAtual.podeLimparArquivos ? "sim" : "não"}`,
             `- Pode alterar configurações críticas: ${resumoAcoesCriticasSistemaAtual.podeAlterarConfiguracoesCriticas ? "sim" : "não"}`,
             "",
-            "2. LIMITES DE CARREGAMENTO",
+            "2. LIMITES E ARMAZENAMENTO",
             ...limitesTexto,
-            `- Limite visual do Storage: ${limitesEditaveis.storageMb || limites.storageMb || 1024} MB`,
             "",
             "3. AUDITORIA DO SISTEMA",
             `- Eventos habilitados: ${totalEventosHabilitados}/${eventosAuditoria.length}`,
@@ -1037,7 +1036,7 @@ export function ConfiguracoesSistema({
     ];
 
     const secoesConfiguracoes = [
-        { chave: "config-limites-carregamento", titulo: "Limites de carregamento", descricao: "Limites de registros por carregamento.", icon: SlidersHorizontal },
+        { chave: "config-limites-carregamento", titulo: "Limites e armazenamento", descricao: "Registros por carga e limite administrativo do Storage.", icon: SlidersHorizontal },
         { chave: "config-auditoria-publica", titulo: "Auditoria pública / token", descricao: "Token ativo, senha de referência e link público.", icon: KeyRound },
         { chave: "config-arquivos-storage", titulo: "Arquivos salvos no Storage", descricao: "Capacidade, vínculos, filtros e limpeza protegida.", icon: Database },
         { chave: "config-relatorios-evidencias", titulo: "Relatórios e evidências", descricao: "Resumo copiável e TXT das configurações atuais.", icon: FileText },
@@ -1192,29 +1191,29 @@ export function ConfiguracoesSistema({
         case "config-limites-carregamento":
             return renderBlocoConfiguracaoComControle(
                 "config-limites-carregamento",
-                "Limites de carregamento",
-                "Limites de registros por carregamento.",
+                "Limites e armazenamento",
+                "Registros por carga e limite administrativo do Storage.",
                 (
                     <Card>
                         <div className="flex flex-col gap-3 border-b border-slate-100 pb-4 sm:flex-row sm:items-start sm:justify-between">
                             <div>
                                 <div className="flex items-center gap-2">
                                     <SlidersHorizontal className="h-5 w-5 text-slate-500" />
-                                    <h2 id="config-limites-carregamento" className="scroll-mt-24 text-lg font-black text-slate-950">Limites de carregamento</h2>
+                                    <h2 id="config-limites-carregamento" className="scroll-mt-24 text-lg font-black text-slate-950">Limites e armazenamento</h2>
                                 </div>
                                 <p className="mt-1 text-sm text-slate-500">
-                                    Ajuste quantos registros cada tela deve buscar por carga para equilibrar velocidade e histórico disponível.
+                                    Ajuste quantos registros cada tela busca por carga e o limite administrativo usado no indicador de Storage.
                                 </p>
                             </div>
                             <button
                                 type="button"
                                 onClick={restaurarLimites}
                                 disabled={!podeAlterarConfiguracoesCriticasSistema}
-                                title={podeAlterarConfiguracoesCriticasSistema ? "Restaurar limites padrão" : mensagemBloqueioConfiguracoesCriticasSistema}
+                                title={podeAlterarConfiguracoesCriticasSistema ? "Restaurar limites e armazenamento padrão" : mensagemBloqueioConfiguracoesCriticasSistema}
                                 className="inline-flex items-center justify-center gap-2 rounded-2xl bg-white px-3 py-2 text-xs font-bold text-slate-700 ring-1 ring-slate-200 hover:bg-slate-50 disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-400"
                             >
                                 <RotateCcw className="h-3.5 w-3.5" />
-                                Restaurar limites
+                                Restaurar padrão
                             </button>
                         </div>
 
@@ -1246,28 +1245,16 @@ export function ConfiguracoesSistema({
                                     </div>
                                 </label>
                             ))}
-
-                            <div className="rounded-2xl bg-slate-50 px-3 py-3 ring-1 ring-slate-100">
-                                <div className="flex items-center justify-between gap-3">
-                                    <div>
-                                        <p className="text-sm font-bold text-slate-800">Armazenamento</p>
-                                        <p className="text-xs text-slate-500">limite visual do card Storage</p>
-                                    </div>
-                                    <span className="rounded-xl bg-white px-3 py-1.5 text-sm font-black text-slate-950 ring-1 ring-slate-200">
-                                        {limites.storageMb || 1024} MB
-                                    </span>
-                                </div>
-                            </div>
                         </div>
 
                         <button
                             type="button"
                             onClick={salvarLimites}
                             disabled={!podeAlterarConfiguracoesCriticasSistema}
-                            title={podeAlterarConfiguracoesCriticasSistema ? "Salvar limites de carregamento" : mensagemBloqueioConfiguracoesCriticasSistema}
+                            title={podeAlterarConfiguracoesCriticasSistema ? "Salvar limites e armazenamento" : mensagemBloqueioConfiguracoesCriticasSistema}
                             className="mt-4 w-full rounded-2xl bg-slate-950 px-4 py-3 text-sm font-black text-white hover:bg-slate-800 disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-500"
                         >
-                            {podeAlterarConfiguracoesCriticasSistema ? "Salvar limites de carregamento" : "Limites bloqueados"}
+                            {podeAlterarConfiguracoesCriticasSistema ? "Salvar limites e armazenamento" : "Limites bloqueados"}
                         </button>
                     </Card>
                 )
