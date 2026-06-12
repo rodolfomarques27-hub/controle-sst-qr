@@ -3,12 +3,9 @@ import {
     AlertTriangle,
     CheckCircle2,
     ClipboardList,
-    KeyRound,
-    LockKeyhole,
     RefreshCw,
     ShieldCheck,
     Trash2,
-    UserCog,
     UserPlus,
     UsersRound,
 } from "lucide-react";
@@ -34,39 +31,6 @@ import {
     salvarPerfilPermissaoSistemaService,
 } from "../../services/usuariosPermissoesSistemaService";
 
-const CARDS_ACESSOS_APP = [
-    {
-        titulo: "Cadastro de login",
-        descricao: "Criar pessoa, definir e-mail, função, perfil e senha temporária.",
-        status: "Operacional",
-        icone: UserPlus,
-    },
-    {
-        titulo: "Usuários cadastrados",
-        descricao: "Listar pessoas com acesso, editar perfil e acompanhar status ativo ou bloqueado.",
-        status: "Operacional",
-        icone: UsersRound,
-    },
-    {
-        titulo: "Solicitações de acesso",
-        descricao: "Aprovar, recusar ou concluir pedidos feitos pelas telas restritas.",
-        status: "Operacional",
-        icone: ClipboardList,
-    },
-    {
-        titulo: "Perfis padrão",
-        descricao: "Revisar o que Administrador, Técnico SST, Auditor, Gestor, Consulta e Bloqueado podem fazer.",
-        status: "Operacional",
-        icone: ShieldCheck,
-    },
-    {
-        titulo: "Segurança e logs",
-        descricao: "Registrar criação, alteração, bloqueio, desbloqueio e uso de senha temporária.",
-        status: "Em revisão",
-        icone: LockKeyhole,
-    },
-];
-
 function obterNomeUsuario(usuario) {
     const nome = String(usuario?.nome || usuario?.user_metadata?.nome || "").trim();
     const email = String(usuario?.email || "").trim();
@@ -88,30 +52,6 @@ function BadgeEtapa({ children, variante = "info" }) {
         <span className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-black ring-1 ${classes[variante] || classes.info}`}>
             {children}
         </span>
-    );
-}
-
-function CardFuncionalidade({ item, indice }) {
-    const Icone = item.icone;
-    const statusSucesso = item.status === "Operacional";
-    const statusAlerta = item.status === "Em revisão";
-
-    return (
-        <article className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md">
-            <div className="flex items-start justify-between gap-4">
-                <div className="flex items-start gap-3">
-                    <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-slate-950 text-white shadow-sm">
-                        <Icone className="h-5 w-5" strokeWidth={2.2} />
-                    </div>
-                    <div>
-                        <p className="text-xs font-black uppercase tracking-[0.18em] text-slate-400">Módulo {indice + 1}</p>
-                        <h3 className="mt-1 text-base font-black text-slate-950">{item.titulo}</h3>
-                    </div>
-                </div>
-                <BadgeEtapa variante={statusSucesso ? "sucesso" : statusAlerta ? "alerta" : "info"}>{item.status}</BadgeEtapa>
-            </div>
-            <p className="mt-4 text-sm font-semibold leading-6 text-slate-500">{item.descricao}</p>
-        </article>
     );
 }
 
@@ -1996,12 +1936,6 @@ export function AcessosAppPage({ usuario = null }) {
                 </div>
             </Card>
 
-            <div className="grid gap-4 xl:grid-cols-5">
-                {CARDS_ACESSOS_APP.map((item, indice) => (
-                    <CardFuncionalidade key={item.titulo} item={item} indice={indice} />
-                ))}
-            </div>
-
             <UsuariosCadastradosApp
                 usuario={usuario}
                 usuarioParaEditar={solicitacaoParaPermissao}
@@ -2012,62 +1946,6 @@ export function AcessosAppPage({ usuario = null }) {
 
             <RevisaoPerfisPadrao />
 
-            <div className="grid gap-4 lg:grid-cols-[0.45fr_0.55fr]">
-                <Card className="border border-slate-200 bg-white p-6 shadow-sm">
-                    <div className="flex items-start gap-4">
-                        <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-slate-950 text-white">
-                            <KeyRound className="h-5 w-5" strokeWidth={2.2} />
-                        </div>
-                        <div>
-                            <h3 className="text-lg font-black text-slate-950">Fluxo aprovado</h3>
-                            <p className="mt-2 text-sm font-semibold leading-6 text-slate-500">
-                                O administrador já pode criar o login com senha temporária pela Edge Function. No primeiro acesso, o usuário deverá trocar a senha antes de usar o sistema normalmente.
-                            </p>
-                        </div>
-                    </div>
-                    <div className="mt-5 space-y-3 text-sm font-bold text-slate-600">
-                        {[
-                            "Criar usuário no Supabase Auth somente por Edge Function.",
-                            "Salvar perfil e permissões em usuarios_permissoes_sistema.",
-                            "Nunca gravar senha temporária em tabela comum.",
-                            "Registrar alterações na Auditoria do Sistema.",
-                        ].map((item) => (
-                            <div key={item} className="flex items-start gap-3 rounded-2xl bg-slate-50 px-4 py-3 ring-1 ring-slate-100">
-                                <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-emerald-600" strokeWidth={2.4} />
-                                <span>{item}</span>
-                            </div>
-                        ))}
-                    </div>
-                </Card>
-
-                <Card className="border border-slate-200 bg-white p-6 shadow-sm">
-                    <div className="flex items-start gap-4">
-                        <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-blue-50 text-blue-700 ring-1 ring-blue-100">
-                            <UserCog className="h-5 w-5" strokeWidth={2.2} />
-                        </div>
-                        <div>
-                            <h3 className="text-lg font-black text-slate-950">Organização das responsabilidades</h3>
-                            <p className="mt-2 text-sm font-semibold leading-6 text-slate-500">
-                                Acessos do App concentra usuários, login, senha temporária, perfis, bloqueios e solicitações. Configurações permanece dedicada aos ajustes técnicos do sistema.
-                            </p>
-                        </div>
-                    </div>
-                    <div className="mt-5 grid gap-3 sm:grid-cols-2">
-                        <div className="rounded-3xl bg-slate-50 p-4 ring-1 ring-slate-100">
-                            <p className="text-xs font-black uppercase tracking-[0.18em] text-slate-400">Fica em Configurações</p>
-                            <p className="mt-2 text-sm font-bold leading-6 text-slate-600">
-                                Storage, limites, token público, eventos, senha crítica, checklists e Supabase/RLS/RPC.
-                            </p>
-                        </div>
-                        <div className="rounded-3xl bg-emerald-50 p-4 ring-1 ring-emerald-100">
-                            <p className="text-xs font-black uppercase tracking-[0.18em] text-emerald-700">Fica em Acessos do App</p>
-                            <p className="mt-2 text-sm font-bold leading-6 text-emerald-700">
-                                Usuários cadastrados, login, senha temporária, perfis, solicitações, bloqueios e permissões por módulo.
-                            </p>
-                        </div>
-                    </div>
-                </Card>
-            </div>
         </div>
     );
 }
