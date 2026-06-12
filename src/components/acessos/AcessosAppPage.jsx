@@ -24,6 +24,7 @@ import {
 } from "../../constants/usuariosPermissoesConstants";
 import { supabase } from "../../lib/supabaseClient";
 import { criarLoginAppComSenhaTemporariaService } from "../../services/acessosAppService";
+import { registrarAuditoriaSistemaService } from "../../services/auditoriaSistemaCrudService";
 import {
     concluirSolicitacaoAcessoSistemaService,
     listarSolicitacoesAcessoSistemaService,
@@ -392,6 +393,36 @@ function emailEhUsuarioAtualAcessoApp(email = "", usuario = null) {
     return Boolean(emailLista && emailAtual && emailLista === emailAtual);
 }
 
+async function registrarLogAcessoApp({
+    usuario = null,
+    acao = "",
+    tabela = "usuarios_permissoes_sistema",
+    registroId = null,
+    descricao = "",
+    dados = {},
+} = {}) {
+    if (!acao || !usuario?.email) return false;
+
+    try {
+        return await registrarAuditoriaSistemaService({
+            supabase,
+            usuario,
+            acao,
+            tabela,
+            registroId,
+            descricao,
+            dados: {
+                modulo: "acessos_app",
+                tela: "Acessos do App",
+                ...(dados || {}),
+            },
+        });
+    } catch (error) {
+        console.warn("Erro ao registrar log da aba Acessos do App:", error?.message || error);
+        return false;
+    }
+}
+
 function obterChaveEmailSimilarAcessoApp(email = "") {
     return normalizarTextoAcesso(email)
         .toLowerCase()
@@ -490,7 +521,7 @@ function formatarDataHoraAcessoApp(valor) {
     }
 }
 
-function SolicitacoesAcessoApp({ onPrepararPermissao = null }) {
+function SolicitacoesAcessoApp({ onPrepararPermissao = null, usuario = null }) {
     const [solicitacoes, setSolicitacoes] = useState([]);
     const [carregando, setCarregando] = useState(false);
     const [mensagem, setMensagem] = useState("Solicitações ainda não carregadas.");
@@ -578,6 +609,30 @@ function SolicitacoesAcessoApp({ onPrepararPermissao = null }) {
             setSolicitacoes((listaAtual) => listaAtual.map((item) => (
                 item.id === solicitacao.id ? { ...item, ...(atualizada || {}), status: atualizada?.status || statusResposta } : item
             )));
+            const acaoAuditoriaSolicitacao = {
+                aprovada: "SOLICITACAO_ACESSO_APROVADA",
+                recusada: "SOLICITACAO_ACESSO_RECUSADA",
+                concluida: "SOLICITACAO_ACESSO_CONCLUIDA",
+            }[statusResposta] || "SOLICITACAO_ACESSO_ATUALIZADA";
+
+            await registrarLogAcessoApp({
+                usuario,
+                acao: acaoAuditoriaSolicitacao,
+                tabela: "solicitacoes_acesso_sistema",
+                registroId: solicitacao.id,
+                descricao: `Solicitação de acesso ${formatarStatusSolicitacaoAcessoApp(statusResposta).toLowerCase()} para ${solicitacao.email || "usuário sem e-mail"}.`,
+                dados: {
+                    solicitacaoId: solicitacao.id,
+                    email: solicitacao.email || "",
+                    nome: solicitacao.nome || "",
+                    areaSolicitada: solicitacao.area_solicitada || solicitacao.tela || "",
+                    perfilAtual: solicitacao.perfil_atual || "",
+                    statusAnterior: solicitacao.status || "pendente",
+                    statusNovo: statusResposta,
+                    respostaAdmin,
+                },
+            });
+
             setMensagem(`Solicitação ${formatarStatusSolicitacaoAcessoApp(statusResposta).toLowerCase()} com sucesso. Para solicitação aprovada, use Preparar permissão e depois Criar login do app.`);
         } catch (error) {
             setErro(error?.message || "Não foi possível atualizar a solicitação de acesso.");
@@ -1005,7 +1060,12 @@ function UsuariosCadastradosApp({ usuario = null, usuarioParaEditar = null, onEd
             foto_url: normalizarTextoAcesso(formulario.foto_url),
         };
 
-        if (!formulario.fotoArquivo) return formularioTratado;
+        if (!formulario.fotoArquivo) {
+            return {
+                ...formularioTratado,
+                fotoAlterada: false,
+            };
+        }
 
         setMensagem("Enviando foto do usuário para o Storage...");
 
@@ -1018,6 +1078,7 @@ function UsuariosCadastradosApp({ usuario = null, usuarioParaEditar = null, onEd
         return {
             ...formularioTratado,
             foto_url: caminhoFoto,
+            fotoAlterada: true,
             fotoArquivo: null,
             fotoPreview: "",
         };
@@ -1118,6 +1179,41 @@ function UsuariosCadastradosApp({ usuario = null, usuarioParaEditar = null, onEd
                 });
             }
 
+            await registrarLogAcessoApp({
+                usuario,
+                acao: "LOGIN_APP_CRIADO",
+                tabela: "usuarios_permissoes_sistema",
+                registroId: permissaoSalva?.id || permissaoSalva?.user_id || emailTratado,
+                descricao: `Login do app criado ou atualizado para ${emailTratado}.`,
+                dados: {
+                    email: emailTratado,
+                    nome: formularioComFoto.nome,
+                    funcao: formularioComFoto.funcao,
+                    empresa: formularioComFoto.empresa,
+                    perfil: formularioComFoto.perfil,
+                    ativo: formularioComFoto.ativo,
+                    bloqueado: formularioComFoto.bloqueado,
+                    acessoGlobal: formularioComFoto.acesso_global,
+                    trocaSenhaObrigatoria: true,
+                    fotoAlterada: Boolean(formularioComFoto.fotoAlterada),
+                },
+            });
+
+            if (formularioComFoto.fotoAlterada) {
+                await registrarLogAcessoApp({
+                    usuario,
+                    acao: "FOTO_ACESSO_ALTERADA",
+                    tabela: "usuarios_permissoes_sistema",
+                    registroId: permissaoSalva?.id || permissaoSalva?.user_id || emailTratado,
+                    descricao: `Foto do acesso atualizada para ${emailTratado}.`,
+                    dados: {
+                        email: emailTratado,
+                        foto_url: formularioComFoto.foto_url,
+                        origem: "criar_login_app",
+                    },
+                });
+            }
+
             setMensagem(resultado?.mensagem || "Login criado/atualizado com sucesso. O perfil editável foi aplicado e o usuário deve trocar a senha temporária no primeiro acesso.");
         } catch (error) {
             setErro(error?.message || "Não foi possível criar o login do app.");
@@ -1148,6 +1244,10 @@ function UsuariosCadastradosApp({ usuario = null, usuarioParaEditar = null, onEd
         setMensagem(`Salvando permissão de ${emailTratado}...`);
 
         try {
+            const usuarioAnterior = usuarios.find((item) => (
+                normalizarTextoAcesso(item.email).toLowerCase() === emailTratado
+                || (formulario.id && item.id === formulario.id)
+            )) || null;
             const formularioComFoto = await prepararFormularioComFotoUpload(emailTratado);
             const salvo = await salvarUsuarioPermissaoSistemaService({
                 supabase,
@@ -1174,6 +1274,103 @@ function UsuariosCadastradosApp({ usuario = null, usuarioParaEditar = null, onEd
                     ...montarFormularioUsuarioAcesso(salvo),
                     fotoArquivo: null,
                     fotoPreview: "",
+                });
+            }
+
+            await registrarLogAcessoApp({
+                usuario,
+                acao: usuarioAnterior ? "PERMISSAO_ACESSO_SALVA" : "USUARIO_ADICIONADO",
+                tabela: "usuarios_permissoes_sistema",
+                registroId: salvo?.id || salvo?.user_id || emailTratado,
+                descricao: usuarioAnterior
+                    ? `Permissão do acesso atualizada para ${emailTratado}.`
+                    : `Usuário adicionado à gestão de acessos: ${emailTratado}.`,
+                dados: {
+                    email: emailTratado,
+                    nome: salvo?.nome || formularioComFoto.nome,
+                    perfilAnterior: usuarioAnterior?.perfil || null,
+                    perfilNovo: salvo?.perfil || formularioComFoto.perfil,
+                    ativoAnterior: usuarioAnterior?.ativo ?? null,
+                    ativoNovo: salvo?.ativo ?? formularioComFoto.ativo,
+                    bloqueadoAnterior: usuarioAnterior?.bloqueado ?? null,
+                    bloqueadoNovo: salvo?.bloqueado ?? formularioComFoto.bloqueado,
+                    acessoGlobalAnterior: usuarioAnterior?.acesso_global ?? null,
+                    acessoGlobalNovo: salvo?.acesso_global ?? formularioComFoto.acesso_global,
+                    fotoAlterada: Boolean(formularioComFoto.fotoAlterada),
+                },
+            });
+
+            if (usuarioAnterior && usuarioAnterior.perfil !== salvo?.perfil) {
+                await registrarLogAcessoApp({
+                    usuario,
+                    acao: "PERFIL_ALTERADO",
+                    tabela: "usuarios_permissoes_sistema",
+                    registroId: salvo?.id || salvo?.user_id || emailTratado,
+                    descricao: `Perfil de ${emailTratado} alterado de ${formatarPerfilAcessoApp(usuarioAnterior.perfil)} para ${formatarPerfilAcessoApp(salvo?.perfil)}.`,
+                    dados: {
+                        email: emailTratado,
+                        perfilAnterior: usuarioAnterior.perfil,
+                        perfilNovo: salvo?.perfil,
+                    },
+                });
+            }
+
+            if (usuarioAnterior && !usuarioAnterior.bloqueado && salvo?.bloqueado) {
+                await registrarLogAcessoApp({
+                    usuario,
+                    acao: "USUARIO_BLOQUEADO",
+                    tabela: "usuarios_permissoes_sistema",
+                    registroId: salvo?.id || salvo?.user_id || emailTratado,
+                    descricao: `Acesso bloqueado para ${emailTratado}.`,
+                    dados: { email: emailTratado, perfil: salvo?.perfil },
+                });
+            }
+
+            if (usuarioAnterior && usuarioAnterior.bloqueado && !salvo?.bloqueado) {
+                await registrarLogAcessoApp({
+                    usuario,
+                    acao: "USUARIO_DESBLOQUEADO",
+                    tabela: "usuarios_permissoes_sistema",
+                    registroId: salvo?.id || salvo?.user_id || emailTratado,
+                    descricao: `Acesso desbloqueado para ${emailTratado}.`,
+                    dados: { email: emailTratado, perfil: salvo?.perfil },
+                });
+            }
+
+            if (usuarioAnterior && !usuarioAnterior.acesso_global && salvo?.acesso_global) {
+                await registrarLogAcessoApp({
+                    usuario,
+                    acao: "ACESSO_GLOBAL_CONCEDIDO",
+                    tabela: "usuarios_permissoes_sistema",
+                    registroId: salvo?.id || salvo?.user_id || emailTratado,
+                    descricao: `Acesso global concedido para ${emailTratado}.`,
+                    dados: { email: emailTratado, perfil: salvo?.perfil },
+                });
+            }
+
+            if (usuarioAnterior && usuarioAnterior.acesso_global && !salvo?.acesso_global) {
+                await registrarLogAcessoApp({
+                    usuario,
+                    acao: "ACESSO_GLOBAL_REMOVIDO",
+                    tabela: "usuarios_permissoes_sistema",
+                    registroId: salvo?.id || salvo?.user_id || emailTratado,
+                    descricao: `Acesso global removido de ${emailTratado}.`,
+                    dados: { email: emailTratado, perfil: salvo?.perfil },
+                });
+            }
+
+            if (formularioComFoto.fotoAlterada) {
+                await registrarLogAcessoApp({
+                    usuario,
+                    acao: "FOTO_ACESSO_ALTERADA",
+                    tabela: "usuarios_permissoes_sistema",
+                    registroId: salvo?.id || salvo?.user_id || emailTratado,
+                    descricao: `Foto do acesso atualizada para ${emailTratado}.`,
+                    dados: {
+                        email: emailTratado,
+                        foto_url: formularioComFoto.foto_url,
+                        origem: "salvar_permissao",
+                    },
                 });
             }
 
@@ -1223,6 +1420,20 @@ function UsuariosCadastradosApp({ usuario = null, usuarioParaEditar = null, onEd
                 const mesmoEmail = emailRemovido && normalizarTextoAcesso(usuarioLista.email).toLowerCase() === emailRemovido;
                 return !(mesmoId || mesmoEmail);
             }));
+            await registrarLogAcessoApp({
+                usuario,
+                acao: "ACESSO_APP_EXCLUIDO",
+                tabela: "usuarios_permissoes_sistema",
+                registroId: idRemovido || emailRemovido || item.email,
+                descricao: `Acesso do app excluído para ${emailRemovido || item.email}.`,
+                dados: {
+                    email: emailRemovido || item.email,
+                    nome: item.nome || "",
+                    perfil: item.perfil || "",
+                    observacao: "Acesso removido definitivamente pela aba Acessos do App.",
+                },
+            });
+
             setMensagem("Acesso excluído definitivamente da lista do app. Colaboradores, empresas e documentos não foram apagados.");
         } catch (error) {
             setErro(error?.message || "Não foi possível excluir o acesso.");
@@ -1855,7 +2066,7 @@ function montarCodigoConfirmacaoAplicarPerfil(perfil = null) {
     return `APLICAR ${nomePerfil}`;
 }
 
-function RevisaoPerfisPadrao() {
+function RevisaoPerfisPadrao({ usuario = null }) {
     const perfisFallback = useMemo(
         () => PERMISSOES_PADRAO_USUARIOS_POR_PERFIL.map((perfil) => normalizarPerfilEditavelParaTela(perfil)).filter(Boolean),
         []
@@ -1968,6 +2179,21 @@ function RevisaoPerfisPadrao() {
             setPerfis((atuais) => atuais.map((perfil) => perfil.chave === perfilTela.chave ? perfilTela : perfil));
             setPerfilAtivo(perfilTela.chave);
             setModoEdicao(false);
+            await registrarLogAcessoApp({
+                usuario,
+                acao: "PERFIL_PADRAO_EDITADO",
+                tabela: "perfis_permissoes_sistema",
+                registroId: perfilTela.chave,
+                descricao: `Perfil padrão ${perfilTela.perfil || perfilTela.nome} editado na aba Acessos do App.`,
+                dados: {
+                    chave: perfilTela.chave,
+                    nome: perfilTela.nome || perfilTela.perfil,
+                    modulosLiberados: perfilTela.modulosLiberados || [],
+                    acoesLiberadas: perfilTela.acoesLiberadas || [],
+                    acoesRestritas: perfilTela.acoesRestritas || [],
+                },
+            });
+
             setMensagemPerfil("Perfil padrão salvo. Novos usuários poderão usar esta regra como referência nas próximas etapas.");
         } catch (error) {
             setErroPerfil(error?.message || "Não foi possível salvar o perfil padrão.");
@@ -1993,6 +2219,18 @@ function RevisaoPerfisPadrao() {
             setPerfis((atuais) => atuais.map((perfil) => perfil.chave === perfilTela.chave ? perfilTela : perfil));
             setFormularioPerfil(montarFormularioPerfilAcesso(perfilTela));
             setModoEdicao(false);
+            await registrarLogAcessoApp({
+                usuario,
+                acao: "PERFIL_PADRAO_RESTAURADO",
+                tabela: "perfis_permissoes_sistema",
+                registroId: perfilTela.chave,
+                descricao: `Perfil padrão ${perfilTela.perfil || perfilTela.nome} restaurado para o padrão original.`,
+                dados: {
+                    chave: perfilTela.chave,
+                    nome: perfilTela.nome || perfilTela.perfil,
+                },
+            });
+
             setMensagemPerfil("Perfil restaurado para o padrão original do sistema.");
         } catch (error) {
             setErroPerfil(error?.message || "Não foi possível restaurar o perfil padrão.");
@@ -2028,6 +2266,20 @@ Digite ${codigoConfirmacao} para confirmar.`
                 supabase,
                 chave: perfilSelecionado.chave,
                 confirmacao: codigoConfirmacao,
+            });
+
+            await registrarLogAcessoApp({
+                usuario,
+                acao: "PERFIL_PADRAO_APLICADO_USUARIOS",
+                tabela: "usuarios_permissoes_sistema",
+                registroId: perfilSelecionado.chave,
+                descricao: `Perfil ${perfilSelecionado.perfil || perfilSelecionado.nome} aplicado a ${resultado.usuariosAtualizados} usuário(s) existente(s).`,
+                dados: {
+                    chave: perfilSelecionado.chave,
+                    nome: perfilSelecionado.perfil || perfilSelecionado.nome,
+                    usuariosAtualizados: resultado.usuariosAtualizados,
+                    confirmacao: codigoConfirmacao,
+                },
             });
 
             setMensagemPerfil(`Perfil ${perfilSelecionado.perfil || perfilSelecionado.nome} aplicado a ${resultado.usuariosAtualizados} usuário(s) existente(s). Atualize a lista de usuários para conferir.`);
@@ -2594,11 +2846,11 @@ export function AcessosAppPage({ usuario = null }) {
             </div>
 
             <div id="acessos-solicitacoes" className="scroll-mt-24">
-                <SolicitacoesAcessoApp onPrepararPermissao={setSolicitacaoParaPermissao} />
+                <SolicitacoesAcessoApp usuario={usuario} onPrepararPermissao={setSolicitacaoParaPermissao} />
             </div>
 
             <div id="acessos-perfis" className="scroll-mt-24">
-                <RevisaoPerfisPadrao />
+                <RevisaoPerfisPadrao usuario={usuario} />
             </div>
 
         </div>
