@@ -1483,6 +1483,7 @@ function RevisaoPerfisPadrao() {
     const [salvandoPerfil, setSalvandoPerfil] = useState(false);
     const [mensagemPerfil, setMensagemPerfil] = useState("");
     const [erroPerfil, setErroPerfil] = useState("");
+    const [perfisAberto, setPerfisAberto] = useState(false);
 
     const perfilSelecionado = useMemo(
         () => perfis.find((perfil) => perfil.chave === perfilAtivo) || perfis[0] || null,
@@ -1639,12 +1640,26 @@ function RevisaoPerfisPadrao() {
                     <BadgeEtapa variante="sucesso">{perfis.length} perfis editáveis</BadgeEtapa>
                     <button
                         type="button"
-                        onClick={() => setModoEdicao((atual) => !atual)}
-                        disabled={!perfilSelecionado || carregandoPerfis || salvandoPerfil}
-                        className="rounded-full bg-slate-950 px-4 py-2 text-xs font-black text-white shadow-sm hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
+                        onClick={() => {
+                            setPerfisAberto((atual) => {
+                                if (atual) setModoEdicao(false);
+                                return !atual;
+                            });
+                        }}
+                        className="rounded-full bg-white px-4 py-2 text-xs font-black text-slate-700 ring-1 ring-slate-200 hover:bg-slate-50"
                     >
-                        {modoEdicao ? "Cancelar edição" : "Editar perfil"}
+                        {perfisAberto ? "Recolher perfis" : "Abrir perfis"}
                     </button>
+                    {perfisAberto ? (
+                        <button
+                            type="button"
+                            onClick={() => setModoEdicao((atual) => !atual)}
+                            disabled={!perfilSelecionado || carregandoPerfis || salvandoPerfil}
+                            className="rounded-full bg-slate-950 px-4 py-2 text-xs font-black text-white shadow-sm hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
+                        >
+                            {modoEdicao ? "Cancelar edição" : "Editar perfil"}
+                        </button>
+                    ) : null}
                 </div>
             </div>
 
@@ -1659,6 +1674,8 @@ function RevisaoPerfisPadrao() {
                 </div>
             ) : null}
 
+            {perfisAberto ? (
+                <>
             <div className="mt-5 flex flex-wrap gap-2">
                 {perfis.map((perfil) => {
                     const ativo = perfilAtivo === perfil.chave;
@@ -1919,6 +1936,8 @@ function RevisaoPerfisPadrao() {
                     ))}
                 </div>
             </div>
+                </>
+            ) : null}
         </Card>
     );
 }
