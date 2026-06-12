@@ -3332,6 +3332,7 @@ function montarLinhaAuditoriaSistemaRelatorio(registro = {}, indice = 0) {
             <td class="texto-forte">${escaparHTML(registro.usuario || "-")}</td>
             <td class="texto-forte">${escaparHTML(registro.evento || registro.acaoTecnica || "-")}</td>
             <td>${escaparHTML(registro.modulo || "-")}</td>
+            <td class="texto-categoria-auditoria">${escaparHTML(registro.categoria || "-")}</td>
             <td><span class="status-texto ${classeNivelAuditoriaRelatorio(registro.nivel || registro.nivelChave)}">${escaparHTML(registro.nivel || "Informação")}</span></td>
             <td class="descricao-auditoria">${escaparHTML(registro.descricao || "-")}</td>
         </tr>
@@ -3344,6 +3345,7 @@ function montarFiltrosAuditoriaSistemaRelatorio(filtros = {}) {
         ["Ação", filtros.acao || "Todas"],
         ["Usuário", filtros.usuario || "Todos"],
         ["Módulo", filtros.modulo || "Todos"],
+        ["Categoria", filtros.categoria || "Todas"],
         ["Nível", filtros.nivel || "Todos"],
         ["Período", filtros.periodo || "Todo o período"],
         ["Limite", filtros.limite || "Conforme configuração"],
@@ -3377,6 +3379,7 @@ function montarTabelaAuditoriaSistemaRelatorio({ registros = [], indiceInicial =
                     <col class="col-usuario" />
                     <col class="col-evento" />
                     <col class="col-modulo" />
+                    <col class="col-categoria" />
                     <col class="col-nivel" />
                     <col class="col-descricao" />
                 </colgroup>
@@ -3387,12 +3390,13 @@ function montarTabelaAuditoriaSistemaRelatorio({ registros = [], indiceInicial =
                         <th><div class="th-conteudo">Usuário</div></th>
                         <th><div class="th-conteudo">Evento</div></th>
                         <th><div class="th-conteudo">Módulo</div></th>
+                        <th><div class="th-conteudo">Categoria</div></th>
                         <th><div class="th-conteudo">Nível</div></th>
                         <th><div class="th-conteudo">Descrição</div></th>
                     </tr>
                 </thead>
                 <tbody>
-                    ${linhasTabela || `<tr><td colspan="7">${escaparHTML(vazio)}</td></tr>`}
+                    ${linhasTabela || `<tr><td colspan="8">${escaparHTML(vazio)}</td></tr>`}
                 </tbody>
             </table>
         </section>
@@ -3852,12 +3856,13 @@ export async function baixarRelatorioAuditoriaSistemaPDF({
     }
 
     .tabela-auditoria-sistema-relatorio .col-numero { width: 4%; }
-    .tabela-auditoria-sistema-relatorio .col-data { width: 13%; }
-    .tabela-auditoria-sistema-relatorio .col-usuario { width: 20%; }
-    .tabela-auditoria-sistema-relatorio .col-evento { width: 16%; }
-    .tabela-auditoria-sistema-relatorio .col-modulo { width: 13%; }
-    .tabela-auditoria-sistema-relatorio .col-nivel { width: 10%; }
-    .tabela-auditoria-sistema-relatorio .col-descricao { width: 24%; }
+    .tabela-auditoria-sistema-relatorio .col-data { width: 12%; }
+    .tabela-auditoria-sistema-relatorio .col-usuario { width: 17%; }
+    .tabela-auditoria-sistema-relatorio .col-evento { width: 14%; }
+    .tabela-auditoria-sistema-relatorio .col-modulo { width: 10%; }
+    .tabela-auditoria-sistema-relatorio .col-categoria { width: 12%; }
+    .tabela-auditoria-sistema-relatorio .col-nivel { width: 9%; }
+    .tabela-auditoria-sistema-relatorio .col-descricao { width: 22%; }
 
     thead tr { height: 42px; }
 
@@ -3909,6 +3914,12 @@ export async function baixarRelatorioAuditoriaSistemaPDF({
         text-align: left;
         line-height: 1.15;
         overflow-wrap: anywhere;
+    }
+
+    .texto-categoria-auditoria {
+        font-weight: 700;
+        line-height: 1.18;
+        color: #334155;
     }
 
     .descricao-auditoria {
