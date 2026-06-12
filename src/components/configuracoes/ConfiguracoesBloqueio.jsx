@@ -16,7 +16,7 @@ export function ConfiguracoesBloqueio({
         <div>
             <Header
                 titulo="Configurações bloqueadas"
-                subtitulo="Informe a senha de acesso para abrir as configurações operacionais do sistema."
+                subtitulo="Informe a senha de desbloqueio da aba Configurações. O login e as permissões do usuário continuam obrigatórios para ações críticas."
             />
             <Card>
                 <div className="mx-auto max-w-xl space-y-5 text-center">
@@ -24,14 +24,14 @@ export function ConfiguracoesBloqueio({
                         <Lock className="h-7 w-7" />
                     </div>
                     <div>
-                        <h2 className="text-xl font-black text-slate-950">Acesso restrito às Configurações</h2>
+                        <h2 className="text-xl font-black text-slate-950">Senha de desbloqueio da aba Configurações</h2>
                         <p className="mt-2 text-sm leading-6 text-slate-500">
-                            Essa área concentra eventos da auditoria, limites de carregamento, token público, checklists de segurança e parâmetros operacionais. Use a senha autorizada para continuar.
+                            Essa senha abre a tela de Configurações depois do login. Ela não libera ações críticas sozinha e não altera a senha da Auditoria pública.
                         </p>
                     </div>
 
                     <form onSubmit={onValidarSenha} className="space-y-3 text-left">
-                        <label className="text-xs font-black uppercase tracking-wide text-slate-500">Senha de acesso</label>
+                        <label className="text-xs font-black uppercase tracking-wide text-slate-500">Senha de desbloqueio</label>
                         <div className="flex gap-2">
                             <div className="relative flex-1">
                                 <input
@@ -41,7 +41,7 @@ export function ConfiguracoesBloqueio({
                                         setSenhaConfiguracoes(evento.target.value);
                                         setErroSenhaConfiguracoes("");
                                     }}
-                                    placeholder="Digite a senha das configurações"
+                                    placeholder="Digite a senha da aba Configurações"
                                     className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 pr-12 text-sm font-semibold text-slate-800 outline-none transition focus:border-blue-400 focus:ring-4 focus:ring-blue-100"
                                     autoComplete="off"
                                 />
@@ -66,9 +66,14 @@ export function ConfiguracoesBloqueio({
                                 {erroSenhaConfiguracoes}
                             </p>
                         )}
-                        <p className="text-xs leading-5 text-slate-500">
-                            Senha atual das Configurações: <span className="font-black text-slate-700">{senhaConfiguracoesSistema === SENHA_CONFIGURACOES_PADRAO ? "padrão 2026" : "personalizada"}</span>.
-                        </p>
+                        <div className="rounded-2xl bg-slate-50 px-4 py-3 text-xs leading-5 text-slate-600 ring-1 ring-slate-100">
+                            <p>
+                                Senha configurada para a aba: <span className="font-black text-slate-800">{senhaConfiguracoesSistema === SENHA_CONFIGURACOES_PADRAO ? "padrão 2026" : "personalizada"}</span>.
+                            </p>
+                            <p className="mt-1">
+                                Após desbloquear, cada ação sensível ainda depende da permissão do usuário logado e das regras do Supabase.
+                            </p>
+                        </div>
                     </form>
                 </div>
             </Card>

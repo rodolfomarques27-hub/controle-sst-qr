@@ -477,7 +477,7 @@ export function ConfiguracoesSistema({
             ...atual,
             [campo]: valor,
         }));
-        setMensagemSenhaConfiguracoes("Preencha os campos e salve para alterar a senha local das Configurações.");
+        setMensagemSenhaConfiguracoes("Preencha os campos e salve para alterar a senha de desbloqueio da aba Configurações.");
     };
 
     const salvarSenhaConfiguracoes = async (evento) => {
@@ -510,7 +510,7 @@ export function ConfiguracoesSistema({
             const resultado = await onSalvarSenhaConfiguracoes(novaSenha);
             setMensagemSenhaConfiguracoes(resultado?.mensagem || "Senha das Configurações atualizada.");
         } else {
-            setMensagemSenhaConfiguracoes("Senha das Configurações atualizada localmente.");
+            setMensagemSenhaConfiguracoes("Senha de desbloqueio da aba Configurações atualizada localmente.");
         }
 
         setSenhaConfiguracoesFormulario({ atual: "", nova: "", confirmar: "" });
@@ -518,7 +518,7 @@ export function ConfiguracoesSistema({
 
     const restaurarSenhaConfiguracoesPadrao = async () => {
         if (!confirmarAcaoCriticaConfiguracoes(
-            "Restaurar a senha padrão 2026 das Configurações? Essa ação altera a proteção local desta área administrativa.",
+            "Restaurar a senha padrão 2026 da aba Configurações? Essa ação altera apenas a barreira operacional da tela e não muda a senha da Auditoria pública.",
             setMensagemSenhaConfiguracoes,
             "Restauração da senha padrão cancelada."
         )) return;
@@ -530,7 +530,7 @@ export function ConfiguracoesSistema({
             const resultado = await onSalvarSenhaConfiguracoes(senhaPadrao);
             setMensagemSenhaConfiguracoes(resultado?.mensagem || "Senha padrão 2026 restaurada.");
         } else {
-            setMensagemSenhaConfiguracoes("Senha padrão 2026 restaurada localmente.");
+            setMensagemSenhaConfiguracoes("Senha padrão 2026 restaurada localmente para a aba Configurações.");
         }
 
         setSenhaConfiguracoesFormulario({ atual: "", nova: "", confirmar: "" });
@@ -1044,7 +1044,7 @@ export function ConfiguracoesSistema({
         { chave: "config-auditoria-publica", titulo: "Auditoria pública, tokens e QR", descricao: "Token ativo, QR colaborador e QR de campo.", icon: KeyRound },
         { chave: "config-arquivos-storage", titulo: "Arquivos salvos no Storage", descricao: "Capacidade, vínculos, filtros e limpeza protegida.", icon: Database },
         { chave: "config-relatorios-evidencias", titulo: "Relatórios e evidências", descricao: "Resumo copiável e TXT das configurações atuais.", icon: FileText },
-        { chave: "config-senha-configuracoes", titulo: "Configurações críticas", descricao: "Senha local e ações sensíveis da área administrativa.", icon: Lock },
+        { chave: "config-senha-configuracoes", titulo: "Senha da aba Configurações", descricao: "Desbloqueio operacional, origem da senha e permissões críticas.", icon: Lock },
         { chave: "config-eventos-auditoria", titulo: "Eventos da Auditoria do Sistema", descricao: "Eventos registrados e exibidos no histórico administrativo.", icon: Settings },
         { chave: "config-seguranca-publica", titulo: "Checklist da auditoria pública", descricao: "Conferência operacional de token público e QR Code.", icon: ShieldAlert },
         { chave: "config-storage-privado", titulo: "Checklist do Storage privado", descricao: "Buckets, URLs assinadas e arquivos sensíveis.", icon: HardDrive },
@@ -1349,22 +1349,32 @@ export function ConfiguracoesSistema({
         case "config-senha-configuracoes":
             return renderBlocoConfiguracaoComControle(
                 "config-senha-configuracoes",
-                "Configurações críticas",
-                "Senha local, restauração padrão e ações sensíveis.",
+                "Senha da aba Configurações",
+                "Desbloqueio operacional, origem da senha e permissões críticas.",
                 (
                 <Card>
                     <div className="flex flex-col gap-3 border-b border-slate-100 pb-4 md:flex-row md:items-start md:justify-between">
                         <div>
                             <div className="flex items-center gap-2">
                                 <Lock className="h-5 w-5 text-slate-500" />
-                                <h2 id="config-senha-configuracoes" className="scroll-mt-24 text-lg font-black text-slate-950">Configurações críticas</h2>
+                                <h2 id="config-senha-configuracoes" className="scroll-mt-24 text-lg font-black text-slate-950">Senha de desbloqueio da aba Configurações</h2>
                             </div>
                             <p className="mt-1 text-sm text-slate-500">
-                                Área separada para senha, restauração padrão e ações administrativas sensíveis. Use somente com permissão crítica liberada.
+                                Esta senha abre a aba Configurações depois do login. Ela não substitui as permissões do usuário, as RPCs administrativas nem a senha da Auditoria pública.
                             </p>
-                            <p className="mt-2 text-xs font-semibold text-slate-500">
-                                Status atual: <span className="font-black text-slate-900">{senhaConfiguracoesSistema === SENHA_CONFIGURACOES_PADRAO ? "Senha padrão 2026" : "Senha personalizada"}</span> · Origem: <span className="font-black text-slate-900">{origemSenhaConfiguracoesSistema === "supabase" ? "Supabase" : "Local"}</span>
-                            </p>
+                            <div className="mt-3 flex flex-wrap gap-2 text-xs font-black">
+                                <span className="rounded-full bg-slate-100 px-3 py-1 text-slate-700 ring-1 ring-slate-200">
+                                    {senhaConfiguracoesSistema === SENHA_CONFIGURACOES_PADRAO ? "Senha padrão 2026" : "Senha personalizada"}
+                                </span>
+                                <span className={classNames(
+                                    "rounded-full px-3 py-1 ring-1",
+                                    origemSenhaConfiguracoesSistema === "supabase"
+                                        ? "bg-emerald-50 text-emerald-700 ring-emerald-100"
+                                        : "bg-amber-50 text-amber-700 ring-amber-100"
+                                )}>
+                                    Origem: {origemSenhaConfiguracoesSistema === "supabase" ? "Supabase" : "Fallback local"}
+                                </span>
+                            </div>
                         </div>
                         <button
                             type="button"
@@ -1378,26 +1388,37 @@ export function ConfiguracoesSistema({
                         </button>
                     </div>
 
-                    <div className="mt-4 grid gap-3 lg:grid-cols-4">
-                        {[
-                            ["Alterar senha", podeAlterarConfiguracoesCriticasSistema],
-                            ["Restaurar padrão", podeAlterarConfiguracoesCriticasSistema],
-                            ["Limpar Storage", resumoAcoesCriticasSistemaAtual.podeLimparArquivos],
-                        ].map(([rotulo, permitido]) => (
-                            <div
-                                key={rotulo}
-                                className={classNames(
-                                    "rounded-2xl px-3 py-3 ring-1",
-                                    permitido
-                                        ? "bg-emerald-50 text-emerald-700 ring-emerald-100"
-                                        : "bg-slate-50 text-slate-500 ring-slate-100"
-                                )}
-                            >
-                                <p className="text-[10px] font-black uppercase tracking-wide">{rotulo}</p>
-                                <p className="mt-1 text-xs font-black">{permitido ? "Liberado" : "Bloqueado"}</p>
-                            </div>
-                        ))}
+                    <div className="mt-4 grid gap-3 lg:grid-cols-3">
+                        <div className="rounded-2xl bg-blue-50 px-3 py-3 ring-1 ring-blue-100">
+                            <p className="text-[10px] font-black uppercase tracking-wide text-blue-700">Barreira operacional</p>
+                            <p className="mt-1 text-xs font-semibold leading-relaxed text-blue-700">
+                                Desbloqueia a aba Configurações no navegador logado. Não deve ser tratada como senha de banco ou senha pública.
+                            </p>
+                        </div>
+                        <div className={classNames(
+                            "rounded-2xl px-3 py-3 ring-1",
+                            podeAlterarConfiguracoesCriticasSistema
+                                ? "bg-emerald-50 text-emerald-700 ring-emerald-100"
+                                : "bg-slate-50 text-slate-500 ring-slate-100"
+                        )}>
+                            <p className="text-[10px] font-black uppercase tracking-wide">Permissão crítica</p>
+                            <p className="mt-1 text-xs font-semibold leading-relaxed">
+                                {podeAlterarConfiguracoesCriticasSistema ? "Usuário liberado para alterar configurações críticas." : "Usuário sem permissão para alterar configurações críticas."}
+                            </p>
+                        </div>
+                        <div className="rounded-2xl bg-violet-50 px-3 py-3 ring-1 ring-violet-100">
+                            <p className="text-[10px] font-black uppercase tracking-wide text-violet-700">Auditoria pública</p>
+                            <p className="mt-1 text-xs font-semibold leading-relaxed text-violet-700">
+                                A senha da Auditoria pública continua validada pela RPC validar_acesso_auditoria_publica.
+                            </p>
+                        </div>
                     </div>
+
+                    {origemSenhaConfiguracoesSistema !== "supabase" && (
+                        <div className="mt-4 rounded-2xl bg-amber-50 px-4 py-3 text-xs font-semibold leading-relaxed text-amber-800 ring-1 ring-amber-200">
+                            Atenção: a senha carregada está em fallback local. Verifique a conexão com o Supabase e a chave senha_configuracoes_sistema antes de considerar esta senha como referência oficial.
+                        </div>
+                    )}
 
                     <div className={classNames(
                         "mt-4 rounded-2xl px-4 py-3 text-sm font-semibold ring-1",
@@ -1460,8 +1481,8 @@ export function ConfiguracoesSistema({
                         </div>
                     </form>
 
-                    <p className="mt-4 rounded-2xl bg-amber-50 px-4 py-3 text-xs font-semibold leading-5 text-amber-700 ring-1 ring-amber-100">
-                        Esta senha é apenas uma barreira operacional da aba. As ações críticas continuam dependentes da permissão carregada do Supabase, das RPCs administrativas e das policies/RLS.
+                    <p className="mt-4 rounded-2xl bg-slate-50 px-4 py-3 text-xs font-semibold leading-5 text-slate-600 ring-1 ring-slate-100">
+                        Esta senha é apenas uma barreira operacional da aba Configurações. As ações críticas continuam dependentes da permissão carregada do Supabase, das RPCs administrativas e das policies/RLS. A senha da Auditoria pública é outro fluxo e não é alterada aqui.
                     </p>
                 </Card>
                 )
