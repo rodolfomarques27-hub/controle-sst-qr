@@ -1,4 +1,4 @@
-import { Eye, EyeOff, Info, Lock, ShieldCheck } from "lucide-react";
+import { Eye, EyeOff, Info, Lock, Shield } from "lucide-react";
 import { SENHA_CONFIGURACOES_PADRAO } from "../../constants/configuracoesSegurancaConstants";
 
 export function ConfiguracoesBloqueio({
@@ -14,56 +14,59 @@ export function ConfiguracoesBloqueio({
     const senhaAtualTexto = senhaConfiguracoesSistema === SENHA_CONFIGURACOES_PADRAO ? "padrão 2026" : "personalizada";
 
     return (
-        <section className="flex min-h-[calc(100vh-7rem)] items-center justify-center px-2 py-5 sm:px-4 lg:py-6">
-            <div className="grid w-full max-w-7xl overflow-hidden rounded-[2rem] bg-white shadow-[0_18px_55px_rgba(15,23,42,0.12)] ring-1 ring-slate-200 lg:grid-cols-[380px_minmax(0,1fr)] xl:grid-cols-[420px_minmax(0,1fr)]">
-                <div className="relative hidden min-h-[500px] overflow-hidden bg-gradient-to-br from-slate-950 via-blue-950 to-blue-900 lg:flex lg:items-center lg:justify-center">
-                    <div className="absolute left-10 top-10 grid grid-cols-3 gap-4 opacity-30">
+        <section className="flex min-h-[calc(100vh-7rem)] items-center justify-center px-3 py-5 sm:px-4 lg:px-6 lg:py-6">
+            <div className="grid w-full max-w-[1680px] overflow-hidden rounded-[2.25rem] bg-white shadow-[0_20px_60px_rgba(15,23,42,0.14)] ring-1 ring-slate-200 lg:grid-cols-[420px_minmax(0,1fr)] xl:grid-cols-[470px_minmax(0,1fr)]">
+                <div className="relative hidden min-h-[640px] overflow-hidden bg-[radial-gradient(circle_at_top_left,_rgba(37,99,235,0.28),_transparent_36%),linear-gradient(135deg,#02133e_0%,#05286c_48%,#17398c_100%)] lg:flex lg:items-center lg:justify-center">
+                    <div className="absolute left-9 top-9 grid grid-cols-3 gap-4 opacity-35">
                         {Array.from({ length: 9 }).map((_, indice) => (
-                            <span key={indice} className="h-1.5 w-1.5 rounded-full bg-blue-300" />
+                            <span key={`left-${indice}`} className="h-2 w-2 rounded-full bg-blue-300/90" />
                         ))}
                     </div>
-                    <div className="absolute bottom-24 right-10 grid grid-cols-3 gap-4 opacity-25">
+                    <div className="absolute bottom-20 right-10 grid grid-cols-3 gap-4 opacity-30">
                         {Array.from({ length: 9 }).map((_, indice) => (
-                            <span key={indice} className="h-1.5 w-1.5 rounded-full bg-blue-300" />
+                            <span key={`right-${indice}`} className="h-2 w-2 rounded-full bg-blue-300/90" />
                         ))}
                     </div>
-                    <div className="absolute h-[430px] w-[430px] rounded-full border border-blue-300/10" />
-                    <div className="absolute h-[330px] w-[330px] rounded-full border border-blue-300/10" />
+
+                    <div className="absolute h-[470px] w-[470px] rounded-full border border-blue-300/15" />
+                    <div className="absolute h-[360px] w-[360px] rounded-full border border-blue-300/12" />
+
                     <div className="relative flex flex-col items-center">
-                        <div className="relative flex h-56 w-56 items-center justify-center rounded-[3rem] bg-blue-500/5">
-                            <ShieldCheck className="h-48 w-48 text-blue-400 drop-shadow-[0_18px_40px_rgba(59,130,246,0.35)]" strokeWidth={1.45} />
-                            <div className="absolute flex h-24 w-24 items-center justify-center rounded-3xl bg-white text-blue-950 shadow-[0_18px_35px_rgba(15,23,42,0.28)]">
-                                <Lock className="h-12 w-12" strokeWidth={2.4} />
+                        <div className="relative flex h-64 w-64 items-center justify-center rounded-[3rem] bg-blue-500/10 shadow-[0_30px_60px_rgba(2,8,23,0.28)]">
+                            <Shield className="h-52 w-52 text-sky-400 drop-shadow-[0_20px_45px_rgba(56,189,248,0.25)]" strokeWidth={1.5} />
+                            <div className="absolute flex h-28 w-28 items-center justify-center rounded-[2rem] bg-white text-blue-950 shadow-[0_18px_35px_rgba(2,8,23,0.32)]">
+                                <Lock className="h-14 w-14" strokeWidth={2.2} />
                             </div>
                         </div>
-                        <div className="mt-7 h-14 w-64 rounded-[100%] bg-blue-400/30 blur-sm" />
-                        <div className="-mt-12 h-11 w-64 rounded-[100%] bg-gradient-to-r from-blue-900 via-blue-400 to-blue-900 opacity-80" />
+
+                        <div className="mt-8 h-6 w-56 rounded-full bg-sky-300/35 blur-md" />
+                        <div className="-mt-2 h-14 w-72 rounded-[100%] bg-[radial-gradient(circle,_rgba(96,165,250,0.95)_0%,rgba(37,99,235,0.82)_45%,rgba(8,47,122,0.82)_100%)] shadow-[0_14px_32px_rgba(2,8,23,0.34)]" />
                     </div>
                 </div>
 
-                <div className="flex min-h-[500px] items-center px-5 py-8 sm:px-8 lg:px-12 xl:px-14">
-                    <div className="w-full max-w-4xl">
+                <div className="flex min-h-[640px] items-center px-6 py-8 sm:px-8 lg:px-12 xl:px-16">
+                    <div className="mx-auto w-full max-w-5xl">
                         <div className="flex items-start gap-5">
-                            <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-blue-50 text-blue-700 ring-1 ring-blue-100">
-                                <ShieldCheck className="h-8 w-8" strokeWidth={2.2} />
+                            <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl bg-blue-50 text-blue-700 ring-1 ring-blue-100">
+                                <Shield className="h-9 w-9" strokeWidth={2} />
                             </div>
-                            <div>
-                                <h1 className="text-3xl font-black leading-tight tracking-tight text-slate-950 sm:text-4xl lg:text-5xl">
+                            <div className="min-w-0 flex-1">
+                                <h1 className="text-4xl font-black leading-[1.05] tracking-tight text-slate-950 sm:text-5xl xl:text-[4rem]">
                                     Configurações bloqueadas
                                 </h1>
-                                <p className="mt-4 text-base font-extrabold leading-6 text-slate-600 sm:text-lg">
+                                <p className="mt-5 text-lg font-extrabold leading-7 text-slate-700 sm:text-xl">
                                     Informe a senha para liberar a aba Configurações.
                                 </p>
-                                <p className="mt-1 text-base leading-6 text-slate-500 sm:text-lg">
+                                <p className="mt-1 text-lg leading-7 text-slate-500 sm:text-xl">
                                     Login e permissões continuam obrigatórios para ações críticas.
                                 </p>
                             </div>
                         </div>
 
-                        <form onSubmit={onValidarSenha} className="mt-9 space-y-6">
+                        <form onSubmit={onValidarSenha} className="mt-12 space-y-8">
                             <div>
-                                <label className="text-lg font-black leading-none text-slate-950">Senha de desbloqueio</label>
-                                <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-stretch">
+                                <label className="block text-2xl font-black leading-none text-slate-950">Senha de desbloqueio</label>
+                                <div className="mt-6 flex flex-col gap-4 lg:flex-row lg:items-stretch">
                                     <div className="relative flex-1">
                                         <input
                                             type={mostrarSenhaConfiguracoes ? "text" : "password"}
@@ -73,21 +76,21 @@ export function ConfiguracoesBloqueio({
                                                 setErroSenhaConfiguracoes("");
                                             }}
                                             placeholder="Digite a senha da aba Configurações"
-                                            className="h-16 w-full rounded-2xl border border-slate-200 bg-white px-5 pr-14 text-base font-semibold text-slate-800 outline-none transition placeholder:text-slate-400 focus:border-blue-400 focus:ring-4 focus:ring-blue-100 sm:text-lg"
+                                            className="h-[92px] w-full rounded-[1.75rem] border border-slate-200 bg-white px-7 pr-20 text-2xl font-medium text-slate-700 outline-none transition placeholder:text-slate-400 focus:border-blue-400 focus:ring-4 focus:ring-blue-100"
                                             autoComplete="off"
                                         />
                                         <button
                                             type="button"
                                             onClick={() => setMostrarSenhaConfiguracoes((atual) => !atual)}
-                                            className="absolute right-4 top-1/2 -translate-y-1/2 rounded-full p-2 text-slate-400 transition hover:bg-slate-100 hover:text-slate-700"
+                                            className="absolute right-6 top-1/2 -translate-y-1/2 rounded-full p-2 text-slate-400 transition hover:bg-slate-100 hover:text-slate-700"
                                             title={mostrarSenhaConfiguracoes ? "Ocultar senha" : "Mostrar senha"}
                                         >
-                                            {mostrarSenhaConfiguracoes ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                                            {mostrarSenhaConfiguracoes ? <EyeOff className="h-8 w-8" /> : <Eye className="h-8 w-8" />}
                                         </button>
                                     </div>
                                     <button
                                         type="submit"
-                                        className="h-16 rounded-2xl bg-slate-950 px-9 text-lg font-black text-white shadow-[0_12px_28px_rgba(15,23,42,0.18)] transition hover:-translate-y-0.5 hover:bg-slate-800 sm:min-w-[150px]"
+                                        className="h-[92px] rounded-[1.75rem] bg-slate-950 px-10 text-2xl font-black text-white shadow-[0_14px_32px_rgba(15,23,42,0.22)] transition hover:-translate-y-0.5 hover:bg-slate-800 lg:min-w-[230px]"
                                     >
                                         Acessar
                                     </button>
@@ -95,20 +98,20 @@ export function ConfiguracoesBloqueio({
                             </div>
 
                             {erroSenhaConfiguracoes && (
-                                <p className="rounded-2xl bg-red-50 px-5 py-4 text-sm font-bold text-red-700 ring-1 ring-red-100">
+                                <p className="rounded-[1.5rem] bg-red-50 px-6 py-5 text-base font-bold text-red-700 ring-1 ring-red-100 sm:text-lg">
                                     {erroSenhaConfiguracoes}
                                 </p>
                             )}
 
-                            <div className="flex items-start gap-5 rounded-2xl bg-blue-50/70 px-5 py-5 text-slate-700 ring-1 ring-blue-100 sm:px-6">
-                                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-white text-blue-700 ring-2 ring-blue-100">
-                                    <Info className="h-7 w-7" strokeWidth={2.4} />
+                            <div className="flex items-start gap-5 rounded-[1.75rem] bg-slate-50 px-6 py-6 text-slate-700 ring-1 ring-slate-200 sm:px-8 sm:py-7">
+                                <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-full bg-white text-blue-700 ring-2 ring-blue-100 shadow-sm">
+                                    <Info className="h-9 w-9" strokeWidth={2.4} />
                                 </div>
                                 <div className="pt-0.5">
-                                    <p className="text-base font-black text-slate-950 sm:text-lg">
+                                    <p className="text-2xl font-black leading-tight text-slate-950">
                                         Senha atual: <span>{senhaAtualTexto}</span>.
                                     </p>
-                                    <p className="mt-1 text-sm font-medium leading-6 text-slate-600 sm:text-base">
+                                    <p className="mt-3 text-lg leading-8 text-slate-600 sm:text-xl">
                                         Ações críticas ainda dependem das permissões do usuário.
                                     </p>
                                 </div>
