@@ -36,6 +36,10 @@ import {
     salvarPerfilPermissaoSistemaService,
 } from "../../services/usuariosPermissoesSistemaService";
 
+const BUCKET_FOTOS_USUARIOS_ACESSO_APP = "fotos-colaboradores";
+const FOTO_ACESSO_URL_CACHE = new Map();
+const FOTO_ACESSO_PROMISE_CACHE = new Map();
+
 function obterNomeUsuario(usuario) {
     const nome = String(usuario?.nome || usuario?.user_metadata?.nome || "").trim();
     const email = String(usuario?.email || "").trim();
@@ -76,31 +80,17 @@ function obterIniciaisUsuarioAcessoApp(nome = "", email = "") {
 
 function AvatarUsuarioAcessoApp({ usuario = null, nome = "", email = "" }) {
     const foto = obterFotoUsuarioAcessoApp(usuario);
-    const [fotoComErro, setFotoComErro] = useState(false);
-
-    useEffect(() => {
-        setFotoComErro(false);
-    }, [foto]);
-
-    if (foto && !fotoComErro) {
-        return (
-            <img
-                src={foto}
-                alt={`Foto de ${nome || "usuário"}`}
-                onError={() => setFotoComErro(true)}
-                className="h-16 w-16 rounded-full object-cover ring-1 ring-slate-200"
-            />
-        );
-    }
 
     return (
-        <div className="flex h-16 w-16 items-center justify-center rounded-full bg-blue-50 text-lg font-black text-slate-950 ring-1 ring-blue-100">
-            {obterIniciaisUsuarioAcessoApp(nome, email)}
-        </div>
+        <FotoPessoaAcessoApp
+            foto={foto}
+            nome={nome}
+            email={email}
+            tamanhoClasse="h-16 w-16 text-lg"
+            arredondamentoClasse="rounded-full"
+        />
     );
 }
-
-const BUCKET_FOTOS_USUARIOS_ACESSO_APP = "fotos-colaboradores";
 
 function valorFotoAcessoEhUrlFinal(valor = "") {
     const texto = String(valor || "").trim();
@@ -153,15 +143,78 @@ function montarUrlPublicaFotoAcessoApp(caminho = "") {
     return data?.publicUrl || "";
 }
 
-function FotoPessoaAcessoApp({ foto = "", preview = "", nome = "", email = "", grande = false }) {
+async function resolverUrlFotoAcessoApp(caminho = "") {
+    const valor = normalizarCaminhoFotoAcessoApp(caminho);
+
+    if (!valor) return "";
+    if (valorFotoAcessoEhUrlFinal(valor) && !valor.includes(`/storage/v1/object/`)) return valor;
+
+    const chave = `${BUCKET_FOTOS_USUARIOS_ACESSO_APP}/${valor}`;
+
+    if (FOTO_ACESSO_URL_CACHE.has(chave)) {
+        return FOTO_ACESSO_URL_CACHE.get(chave) || "";
+    }
+
+    if (FOTO_ACESSO_PROMISE_CACHE.has(chave)) {
+        return FOTO_ACESSO_PROMISE_CACHE.get(chave);
+    }
+
+    const promessa = (async () => {
+        try {
+            const { data, error } = await supabase.storage
+                .from(BUCKET_FOTOS_USUARIOS_ACESSO_APP)
+                .download(valor);
+
+            if (!error && data) {
+                const objectUrl = URL.createObjectURL(data);
+                FOTO_ACESSO_URL_CACHE.set(chave, objectUrl);
+                return objectUrl;
+            }
+        } catch {
+            // Se o download autenticado falhar, tenta URL assinada.
+        }
+
+        try {
+            const { data, error } = await supabase.storage
+                .from(BUCKET_FOTOS_USUARIOS_ACESSO_APP)
+                .createSignedUrl(valor, 60 * 60 * 6);
+
+            if (!error && data?.signedUrl) {
+                FOTO_ACESSO_URL_CACHE.set(chave, data.signedUrl);
+                return data.signedUrl;
+            }
+        } catch {
+            // Evita tentar carregar URL quebrada repetidamente no navegador.
+        }
+
+        return "";
+    })();
+
+    FOTO_ACESSO_PROMISE_CACHE.set(chave, promessa);
+
+    try {
+        return await promessa;
+    } finally {
+        FOTO_ACESSO_PROMISE_CACHE.delete(chave);
+    }
+}
+
+function FotoPessoaAcessoApp({
+    foto = "",
+    preview = "",
+    nome = "",
+    email = "",
+    grande = false,
+    tamanhoClasse = "",
+    arredondamentoClasse = "rounded-3xl",
+}) {
     const valorFoto = preview || foto;
     const [urlFoto, setUrlFoto] = useState("");
     const [fotoComErro, setFotoComErro] = useState(false);
-    const tamanho = grande ? "h-28 w-28 text-3xl" : "h-12 w-12 text-sm";
+    const tamanho = tamanhoClasse || (grande ? "h-28 w-28 text-3xl" : "h-12 w-12 text-sm");
 
     useEffect(() => {
         let cancelado = false;
-        let objectUrlTemporaria = "";
         const valor = normalizarCaminhoFotoAcessoApp(valorFoto);
 
         setFotoComErro(false);
@@ -172,40 +225,9 @@ function FotoPessoaAcessoApp({ foto = "", preview = "", nome = "", email = "", g
                 return;
             }
 
-            if (valorFotoAcessoEhUrlFinal(valor) && !valor.includes(`/storage/v1/object/`)) {
-                setUrlFoto(valor);
-                return;
-            }
-
-            try {
-                const { data, error } = await supabase.storage
-                    .from(BUCKET_FOTOS_USUARIOS_ACESSO_APP)
-                    .createSignedUrl(valor, 60 * 30);
-
-                if (error) throw error;
-                const signedUrl = data?.signedUrl || "";
-
-                if (signedUrl) {
-                    if (!cancelado) setUrlFoto(signedUrl);
-                    return;
-                }
-            } catch {
-                // Se a URL assinada falhar, tenta baixar o arquivo autenticado antes do fallback público.
-            }
-
-            try {
-                const { data, error } = await supabase.storage
-                    .from(BUCKET_FOTOS_USUARIOS_ACESSO_APP)
-                    .download(valor);
-
-                if (error) throw error;
-
-                objectUrlTemporaria = URL.createObjectURL(data);
-                if (!cancelado) setUrlFoto(objectUrlTemporaria);
-                return;
-            } catch {
-                const publicUrl = montarUrlPublicaFotoAcessoApp(valor);
-                if (!cancelado) setUrlFoto(publicUrl);
+            const urlResolvida = await resolverUrlFotoAcessoApp(valor);
+            if (!cancelado) {
+                setUrlFoto(urlResolvida);
             }
         }
 
@@ -213,9 +235,6 @@ function FotoPessoaAcessoApp({ foto = "", preview = "", nome = "", email = "", g
 
         return () => {
             cancelado = true;
-            if (objectUrlTemporaria) {
-                URL.revokeObjectURL(objectUrlTemporaria);
-            }
         };
     }, [valorFoto]);
 
@@ -225,13 +244,13 @@ function FotoPessoaAcessoApp({ foto = "", preview = "", nome = "", email = "", g
                 src={urlFoto}
                 alt={`Foto de ${nome || "usuário"}`}
                 onError={() => setFotoComErro(true)}
-                className={`${tamanho} shrink-0 rounded-3xl object-cover ring-1 ring-slate-200`}
+                className={`${tamanho} shrink-0 ${arredondamentoClasse} object-cover ring-1 ring-slate-200`}
             />
         );
     }
 
     return (
-        <div className={`${tamanho} flex shrink-0 items-center justify-center rounded-3xl bg-blue-50 font-black text-slate-950 ring-1 ring-blue-100`}>
+        <div className={`${tamanho} flex shrink-0 items-center justify-center ${arredondamentoClasse} bg-blue-50 font-black text-slate-950 ring-1 ring-blue-100`}>
             {obterIniciaisUsuarioAcessoApp(nome, email)}
         </div>
     );
@@ -2310,10 +2329,20 @@ export function AcessosAppPage({ usuario = null }) {
         perfis: PERFIS_USUARIOS_PERMISSOES_PLANEJADOS.length,
         pendentes: null,
     });
-    const nomeUsuario = obterNomeUsuario(usuario);
-    const emailUsuario = usuario?.email || "E-mail não informado";
+    const [usuarioResumoAtual, setUsuarioResumoAtual] = useState(null);
+    const usuarioCabecalho = useMemo(() => ({
+        ...(usuario || {}),
+        ...(usuarioResumoAtual || {}),
+        user_metadata: {
+            ...(usuario?.user_metadata || {}),
+            ...(usuarioResumoAtual?.user_metadata || {}),
+            foto_url: obterFotoPermissaoAcessoApp(usuarioResumoAtual) || usuario?.user_metadata?.foto_url || usuario?.user_metadata?.avatar_url || usuario?.user_metadata?.picture || "",
+        },
+    }), [usuario, usuarioResumoAtual]);
+    const nomeUsuario = obterNomeUsuario(usuarioCabecalho);
+    const emailUsuario = usuarioCabecalho?.email || usuario?.email || "E-mail não informado";
     const perfilUsuarioAtual = formatarPerfilAcessoApp(
-        usuario?.perfil || usuario?.perfilAtual || usuario?.user_metadata?.perfil || "administrador"
+        usuarioResumoAtual?.perfil || usuarioCabecalho?.perfil || usuarioCabecalho?.perfilAtual || usuarioCabecalho?.user_metadata?.perfil || "administrador"
     );
 
     useEffect(() => {
@@ -2339,6 +2368,15 @@ export function AcessosAppPage({ usuario = null }) {
                     ? resultadoPerfis.value
                     : [];
 
+                const emailAtual = normalizarTextoAcesso(usuario?.email).toLowerCase();
+                const idAtual = usuario?.id || usuario?.user_id || "";
+                const permissaoAtual = usuarios.find((item) => (
+                    (emailAtual && normalizarTextoAcesso(item.email).toLowerCase() === emailAtual)
+                    || (idAtual && (item.user_id === idAtual || item.id === idAtual))
+                )) || null;
+
+                setUsuarioResumoAtual(permissaoAtual);
+
                 setResumoCabecalho({
                     ativos: usuarios.filter((item) => !item.excluido && item.ativo && !item.bloqueado).length,
                     bloqueados: usuarios.filter((item) => !item.excluido && item.bloqueado).length,
@@ -2359,7 +2397,7 @@ export function AcessosAppPage({ usuario = null }) {
         return () => {
             ativo = false;
         };
-    }, []);
+    }, [usuario?.email, usuario?.id, usuario?.user_id]);
 
     return (
         <div className="page-shell space-y-5">
@@ -2438,7 +2476,7 @@ export function AcessosAppPage({ usuario = null }) {
 
                         <div className="mt-4 rounded-3xl bg-white p-5 ring-1 ring-slate-200">
                             <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
-                                <AvatarUsuarioAcessoApp usuario={usuario} nome={nomeUsuario} email={emailUsuario} />
+                                <AvatarUsuarioAcessoApp usuario={usuarioCabecalho} nome={nomeUsuario} email={emailUsuario} />
                                 <div className="min-w-0">
                                     <p className="text-xs font-black text-slate-400">Usuário atual</p>
                                     <p className="mt-1 truncate text-base font-black text-slate-950">{nomeUsuario}</p>
