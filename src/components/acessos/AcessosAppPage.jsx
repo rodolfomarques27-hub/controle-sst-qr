@@ -3,6 +3,8 @@ import {
     AlertTriangle,
     CheckCircle2,
     ClipboardList,
+    Info,
+    LockKeyhole,
     RefreshCw,
     ShieldCheck,
     Trash2,
@@ -38,6 +40,100 @@ function obterNomeUsuario(usuario) {
     if (nome) return nome;
     if (email.includes("@")) return email.split("@")[0];
     return "Administrador";
+}
+
+function obterFotoUsuarioAcessoApp(usuario) {
+    const metadados = usuario?.user_metadata || {};
+    const candidatos = [
+        usuario?.foto_url,
+        usuario?.fotoUrl,
+        usuario?.avatar_url,
+        usuario?.avatarUrl,
+        usuario?.picture,
+        metadados?.foto_url,
+        metadados?.fotoUrl,
+        metadados?.avatar_url,
+        metadados?.avatarUrl,
+        metadados?.picture,
+    ];
+
+    return candidatos.find((valor) => String(valor || "").trim()) || "";
+}
+
+function obterIniciaisUsuarioAcessoApp(nome = "", email = "") {
+    const textoBase = normalizarTextoAcesso(nome) || normalizarTextoAcesso(email).split("@")[0] || "Usuário";
+    const partes = textoBase.split(/\s+/).filter(Boolean);
+
+    if (partes.length >= 2) {
+        return `${partes[0][0] || ""}${partes[1][0] || ""}`.toUpperCase();
+    }
+
+    return textoBase.slice(0, 2).toUpperCase() || "US";
+}
+
+function AvatarUsuarioAcessoApp({ usuario = null, nome = "", email = "" }) {
+    const foto = obterFotoUsuarioAcessoApp(usuario);
+    const [fotoComErro, setFotoComErro] = useState(false);
+
+    useEffect(() => {
+        setFotoComErro(false);
+    }, [foto]);
+
+    if (foto && !fotoComErro) {
+        return (
+            <img
+                src={foto}
+                alt={`Foto de ${nome || "usuário"}`}
+                onError={() => setFotoComErro(true)}
+                className="h-16 w-16 rounded-full object-cover ring-1 ring-slate-200"
+            />
+        );
+    }
+
+    return (
+        <div className="flex h-16 w-16 items-center justify-center rounded-full bg-blue-50 text-lg font-black text-slate-950 ring-1 ring-blue-100">
+            {obterIniciaisUsuarioAcessoApp(nome, email)}
+        </div>
+    );
+}
+
+function scrollParaSecaoAcessoApp(id) {
+    if (typeof document === "undefined") return;
+
+    const elemento = document.getElementById(id);
+    if (!elemento) return;
+
+    elemento.scrollIntoView({ behavior: "smooth", block: "start" });
+}
+
+function BotaoAcaoCabecalhoAcesso({ children, icon: Icon, principal = false, onClick }) {
+    return (
+        <button
+            type="button"
+            onClick={onClick}
+            className={`inline-flex items-center justify-center gap-2 rounded-2xl px-4 py-3 text-xs font-black shadow-sm transition hover:-translate-y-0.5 hover:shadow-md ${
+                principal
+                    ? "bg-slate-950 text-white ring-1 ring-slate-950 hover:bg-slate-800"
+                    : "bg-white text-slate-700 ring-1 ring-slate-200 hover:bg-slate-50"
+            }`}
+        >
+            {Icon ? <Icon className="h-4 w-4" strokeWidth={2.2} /> : null}
+            {children}
+        </button>
+    );
+}
+
+function MiniResumoAcesso({ icon: Icon, valor, label, classeIcone = "bg-slate-50 text-slate-600", classeLinha = "bg-slate-300" }) {
+    return (
+        <div className="flex h-full min-h-[116px] flex-col items-center justify-center rounded-3xl bg-white px-3 py-4 text-center ring-1 ring-slate-200">
+            <div className={`flex h-11 w-11 items-center justify-center rounded-2xl ${classeIcone}`}>
+                {Icon ? <Icon className="h-5 w-5" strokeWidth={2.2} /> : null}
+            </div>
+            <p className="mt-3 text-2xl font-black leading-none text-slate-950">{valor}</p>
+            <p className="mt-2 text-[11px] font-black text-slate-500">{label}</p>
+            <span className={`mt-3 h-1 w-8 rounded-full ${classeLinha}`} />
+        </div>
+    );
 }
 
 function BadgeEtapa({ children, variante = "info" }) {
@@ -1884,67 +1980,202 @@ function RevisaoPerfisPadrao() {
 
 export function AcessosAppPage({ usuario = null }) {
     const [solicitacaoParaPermissao, setSolicitacaoParaPermissao] = useState(null);
+    const [resumoCabecalho, setResumoCabecalho] = useState({
+        ativos: null,
+        bloqueados: null,
+        perfis: PERFIS_USUARIOS_PERMISSOES_PLANEJADOS.length,
+        pendentes: null,
+    });
     const nomeUsuario = obterNomeUsuario(usuario);
-    const totalPerfis = PERFIS_USUARIOS_PERMISSOES_PLANEJADOS.length;
-    const totalPerfisPadrao = PERMISSOES_PADRAO_USUARIOS_POR_PERFIL.length;
+    const emailUsuario = usuario?.email || "E-mail não informado";
+    const perfilUsuarioAtual = formatarPerfilAcessoApp(
+        usuario?.perfil || usuario?.perfilAtual || usuario?.user_metadata?.perfil || "administrador"
+    );
+
+    useEffect(() => {
+        let ativo = true;
+
+        async function carregarResumoCabecalho() {
+            try {
+                const [resultadoUsuarios, resultadoSolicitacoes, resultadoPerfis] = await Promise.allSettled([
+                    listarUsuariosPermissoesSistemaService({ supabase }),
+                    listarSolicitacoesAcessoSistemaService({ supabase }),
+                    listarPerfisPermissoesSistemaService({ supabase }),
+                ]);
+
+                if (!ativo) return;
+
+                const usuarios = resultadoUsuarios.status === "fulfilled" && Array.isArray(resultadoUsuarios.value)
+                    ? resultadoUsuarios.value
+                    : [];
+                const solicitacoes = resultadoSolicitacoes.status === "fulfilled" && Array.isArray(resultadoSolicitacoes.value)
+                    ? resultadoSolicitacoes.value
+                    : [];
+                const perfis = resultadoPerfis.status === "fulfilled" && Array.isArray(resultadoPerfis.value)
+                    ? resultadoPerfis.value
+                    : [];
+
+                setResumoCabecalho({
+                    ativos: usuarios.filter((item) => !item.excluido && item.ativo && !item.bloqueado).length,
+                    bloqueados: usuarios.filter((item) => !item.excluido && item.bloqueado).length,
+                    perfis: perfis.filter((item) => item.ativo !== false).length || PERFIS_USUARIOS_PERMISSOES_PLANEJADOS.length,
+                    pendentes: solicitacoes.filter((item) => normalizarTextoAcesso(item.status || "pendente").toLowerCase() === "pendente").length,
+                });
+            } catch {
+                if (!ativo) return;
+                setResumoCabecalho((atual) => ({
+                    ...atual,
+                    perfis: atual.perfis || PERFIS_USUARIOS_PERMISSOES_PLANEJADOS.length,
+                }));
+            }
+        }
+
+        carregarResumoCabecalho();
+
+        return () => {
+            ativo = false;
+        };
+    }, []);
 
     return (
         <div className="page-shell space-y-5">
             <Card className="overflow-hidden border border-slate-200 bg-white p-0 shadow-[0_18px_50px_rgba(15,23,42,0.08)]">
-                <div className="grid gap-0 lg:grid-cols-[0.58fr_0.42fr]">
+                <div className="grid gap-0 lg:grid-cols-[0.56fr_0.44fr]">
                     <section className="px-6 py-7 sm:px-8">
                         <div className="flex flex-wrap items-center gap-3">
                             <BadgeEtapa variante="sucesso">Área administrativa</BadgeEtapa>
                             <BadgeEtapa>Login e permissões</BadgeEtapa>
                         </div>
+
                         <h2 className="mt-5 text-3xl font-black tracking-tight text-slate-950 sm:text-4xl">
                             Acessos do App
                         </h2>
                         <p className="mt-3 max-w-3xl text-sm font-semibold leading-7 text-slate-500">
                             Central para cadastrar pessoas, criar login real, revisar perfis, bloquear usuários e controlar permissões de acesso ao sistema SST.
                         </p>
-                        <div className="mt-6 rounded-3xl border border-emerald-100 bg-emerald-50/70 p-4 text-sm font-bold leading-6 text-emerald-800">
+
+                        <div className="mt-5 space-y-2 text-sm font-semibold leading-6 text-slate-500">
+                            <div className="flex items-center gap-2">
+                                <Info className="h-4 w-4 text-blue-600" strokeWidth={2.2} />
+                                <span>Central de gestão de acessos e perfis do sistema SST.</span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                                <UsersRound className="h-4 w-4 text-blue-600" strokeWidth={2.2} />
+                                <span>Garanta segurança e controle total sobre quem acessa o sistema.</span>
+                            </div>
+                        </div>
+
+                        <div className="mt-6 flex flex-wrap gap-3">
+                            <BotaoAcaoCabecalhoAcesso
+                                principal
+                                icon={UserPlus}
+                                onClick={() => scrollParaSecaoAcessoApp("acessos-lista-usuarios")}
+                            >
+                                Cadastrar login
+                            </BotaoAcaoCabecalhoAcesso>
+                            <BotaoAcaoCabecalhoAcesso
+                                icon={RefreshCw}
+                                onClick={() => scrollParaSecaoAcessoApp("acessos-lista-usuarios")}
+                            >
+                                Atualizar usuários
+                            </BotaoAcaoCabecalhoAcesso>
+                            <BotaoAcaoCabecalhoAcesso
+                                icon={ClipboardList}
+                                onClick={() => scrollParaSecaoAcessoApp("acessos-solicitacoes")}
+                            >
+                                Solicitações
+                            </BotaoAcaoCabecalhoAcesso>
+                            <BotaoAcaoCabecalhoAcesso
+                                icon={ShieldCheck}
+                                onClick={() => scrollParaSecaoAcessoApp("acessos-perfis")}
+                            >
+                                Editar perfis
+                            </BotaoAcaoCabecalhoAcesso>
+                        </div>
+
+                        <div className="mt-6 rounded-2xl border border-emerald-100 bg-emerald-50/70 px-4 py-3 text-sm font-bold leading-6 text-emerald-800">
                             <div className="flex items-start gap-3">
                                 <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0" strokeWidth={2.2} />
                                 <p>
-                                    Login real, senha temporária, troca obrigatória de senha e permissões por perfil estão centralizados nesta área.
+                                    Login real, senha temporária e troca obrigatória de senha estão centralizados nesta área.
                                 </p>
                             </div>
                         </div>
                     </section>
 
-                    <aside className="border-t border-slate-200 bg-slate-50/80 px-6 py-7 sm:px-8 lg:border-l lg:border-t-0">
-                        <p className="text-xs font-black uppercase tracking-[0.22em] text-slate-400">Resumo do acesso</p>
-                        <div className="mt-4 space-y-3">
-                            <div className="rounded-3xl bg-white p-4 ring-1 ring-slate-200">
-                                <p className="text-xs font-black text-slate-400">Usuário atual</p>
-                                <p className="mt-1 text-base font-black text-slate-950">{nomeUsuario}</p>
-                                <p className="mt-1 text-xs font-bold text-slate-500">{usuario?.email || "E-mail não informado"}</p>
-                            </div>
-                            <div className="grid grid-cols-2 gap-3">
-                                <div className="rounded-3xl bg-white p-4 text-center ring-1 ring-slate-200">
-                                    <p className="text-2xl font-black text-slate-950">{totalPerfis}</p>
-                                    <p className="mt-1 text-xs font-black text-slate-400">Perfis</p>
+                    <aside className="border-t border-slate-200 bg-white px-6 py-7 sm:px-8 lg:border-l lg:border-t-0">
+                        <div className="flex items-center justify-between gap-3">
+                            <p className="text-sm font-black text-slate-950">Resumo do acesso</p>
+                            <span className="inline-flex items-center gap-2 text-xs font-bold text-slate-500">
+                                <RefreshCw className="h-3.5 w-3.5" strokeWidth={2.2} />
+                                Atualizado agora
+                            </span>
+                        </div>
+
+                        <div className="mt-4 rounded-3xl bg-white p-5 ring-1 ring-slate-200">
+                            <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
+                                <AvatarUsuarioAcessoApp usuario={usuario} nome={nomeUsuario} email={emailUsuario} />
+                                <div className="min-w-0">
+                                    <p className="text-xs font-black text-slate-400">Usuário atual</p>
+                                    <p className="mt-1 truncate text-base font-black text-slate-950">{nomeUsuario}</p>
+                                    <p className="mt-1 truncate text-xs font-bold text-slate-500">{emailUsuario}</p>
+                                    <span className="mt-3 inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-3 py-1.5 text-xs font-black text-emerald-700 ring-1 ring-emerald-100">
+                                        <ShieldCheck className="h-3.5 w-3.5" strokeWidth={2.2} />
+                                        {perfilUsuarioAtual}
+                                    </span>
                                 </div>
-                                <div className="rounded-3xl bg-white p-4 text-center ring-1 ring-slate-200">
-                                    <p className="text-2xl font-black text-slate-950">{totalPerfisPadrao}</p>
-                                    <p className="mt-1 text-xs font-black text-slate-400">Perfis padrão</p>
-                                </div>
                             </div>
+                        </div>
+
+                        <div className="mt-4 grid grid-cols-2 gap-3 xl:grid-cols-4">
+                            <MiniResumoAcesso
+                                icon={UsersRound}
+                                valor={resumoCabecalho.ativos ?? "--"}
+                                label="Ativos"
+                                classeIcone="bg-blue-50 text-blue-700"
+                                classeLinha="bg-blue-500"
+                            />
+                            <MiniResumoAcesso
+                                icon={LockKeyhole}
+                                valor={resumoCabecalho.bloqueados ?? "--"}
+                                label="Bloqueados"
+                                classeIcone="bg-rose-50 text-rose-700"
+                                classeLinha="bg-rose-500"
+                            />
+                            <MiniResumoAcesso
+                                icon={UsersRound}
+                                valor={resumoCabecalho.perfis ?? PERFIS_USUARIOS_PERMISSOES_PLANEJADOS.length}
+                                label="Perfis"
+                                classeIcone="bg-violet-50 text-violet-700"
+                                classeLinha="bg-violet-500"
+                            />
+                            <MiniResumoAcesso
+                                icon={ClipboardList}
+                                valor={resumoCabecalho.pendentes ?? "--"}
+                                label="Pendentes"
+                                classeIcone="bg-orange-50 text-orange-700"
+                                classeLinha="bg-orange-500"
+                            />
                         </div>
                     </aside>
                 </div>
             </Card>
 
-            <UsuariosCadastradosApp
-                usuario={usuario}
-                usuarioParaEditar={solicitacaoParaPermissao}
-                onEdicaoConsumida={() => setSolicitacaoParaPermissao(null)}
-            />
+            <div id="acessos-lista-usuarios" className="scroll-mt-24">
+                <UsuariosCadastradosApp
+                    usuario={usuario}
+                    usuarioParaEditar={solicitacaoParaPermissao}
+                    onEdicaoConsumida={() => setSolicitacaoParaPermissao(null)}
+                />
+            </div>
 
-            <SolicitacoesAcessoApp onPrepararPermissao={setSolicitacaoParaPermissao} />
+            <div id="acessos-solicitacoes" className="scroll-mt-24">
+                <SolicitacoesAcessoApp onPrepararPermissao={setSolicitacaoParaPermissao} />
+            </div>
 
-            <RevisaoPerfisPadrao />
+            <div id="acessos-perfis" className="scroll-mt-24">
+                <RevisaoPerfisPadrao />
+            </div>
 
         </div>
     );
