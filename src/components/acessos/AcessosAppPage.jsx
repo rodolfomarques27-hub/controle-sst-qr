@@ -1317,58 +1317,62 @@ function UsuariosCadastradosApp({ usuario = null, usuarioParaEditar = null, onEd
             {listaUsuariosAberta ? (
                 <div className="mt-5 space-y-2">
                 {usuariosFiltrados.length > 0 ? usuariosFiltrados.map((item) => (
-                    <article key={item.id || item.email} className="flex min-h-[74px] flex-col items-center justify-center rounded-2xl bg-slate-50 px-4 py-3 text-center ring-1 ring-slate-100">
-                        <div className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
-                            <div className="min-w-0">
+                    <article key={item.id || item.email} className="rounded-2xl bg-slate-50 px-4 py-3 ring-1 ring-slate-100">
+                        <div className="grid w-full gap-3 xl:grid-cols-[minmax(230px,1fr)_minmax(0,auto)] xl:items-center">
+                            <div className="min-w-0 text-left">
                                 <p className="truncate text-sm font-black text-slate-950">{item.nome || "Usuário sem nome"}</p>
                                 <p className="mt-0.5 truncate text-xs font-semibold text-slate-500">{item.email || "email não informado"}</p>
-                                <p className="mt-1 text-[11px] font-semibold text-slate-400">{item.empresa || "empresa não informada"}</p>
-                                <p className="mt-1 text-[11px] font-semibold text-slate-400">{item.funcao || "função não informada"}</p>
+                                <p className="mt-1 truncate text-[11px] font-semibold text-slate-400">{item.empresa || "empresa não informada"}</p>
+                                <p className="mt-1 truncate text-[11px] font-semibold text-slate-400">{item.funcao || "função não informada"}</p>
                             </div>
-                            <div className="flex flex-wrap gap-2 xl:justify-end">
-                                <span className={`rounded-full px-3 py-1.5 text-[11px] font-black ring-1 ${obterClassePerfilAcessoApp(item.perfil)}`}>
-                                    Perfil: {formatarPerfilAcessoApp(item.perfil)}
-                                </span>
-                                <span className={`rounded-full px-3 py-1.5 text-[11px] font-black ring-1 ${obterClasseStatusAcessoApp(item)}`}>
-                                    {formatarStatusAcessoApp(item)}
-                                </span>
-                                <span className={`rounded-full px-3 py-1.5 text-[11px] font-black ring-1 ${item.acesso_global ? "bg-blue-50 text-blue-700 ring-blue-100" : "bg-slate-100 text-slate-500 ring-slate-200"}`}>
-                                    Acesso global: {item.acesso_global ? "Sim" : "Não"}
-                                </span>
-                                <span className={`rounded-full px-3 py-1.5 text-[11px] font-black ring-1 ${usuarioTemLoginAuthAcessoApp(item) ? "bg-emerald-50 text-emerald-700 ring-emerald-100" : "bg-amber-50 text-amber-800 ring-amber-100"}`}>
-                                    Login Auth: {usuarioTemLoginAuthAcessoApp(item) ? "Vinculado" : "Pendente"}
-                                </span>
-                                {item.ultimo_login_em ? (
-                                    <span className="rounded-full bg-slate-100 px-3 py-1.5 text-[11px] font-black text-slate-500 ring-1 ring-slate-200">
-                                        Último login: {formatarDataHoraAcessoApp(item.ultimo_login_em)}
+                            <div className="flex min-w-0 flex-col gap-2 xl:items-end">
+                                <div className="flex flex-wrap items-center gap-2 xl:justify-end">
+                                    <span className={`rounded-full px-3 py-1.5 text-[11px] font-black ring-1 ${obterClassePerfilAcessoApp(item.perfil)}`}>
+                                        Perfil: {formatarPerfilAcessoApp(item.perfil)}
                                     </span>
-                                ) : null}
-                                {item.precisa_trocar_senha ? (
-                                    <span className="rounded-full bg-orange-50 px-3 py-1.5 text-[11px] font-black text-orange-800 ring-1 ring-orange-100">
-                                        Trocar senha
+                                    <span className={`rounded-full px-3 py-1.5 text-[11px] font-black ring-1 ${obterClasseStatusAcessoApp(item)}`}>
+                                        {formatarStatusAcessoApp(item)}
                                     </span>
-                                ) : null}
-                                {emailEhUsuarioAtualAcessoApp(item.email, usuario) ? (
-                                    <span className="rounded-full bg-amber-50 px-3 py-1.5 text-[11px] font-black text-amber-800 ring-1 ring-amber-100">
-                                        Usuário atual
+                                    <span className={`rounded-full px-3 py-1.5 text-[11px] font-black ring-1 ${item.acesso_global ? "bg-blue-50 text-blue-700 ring-blue-100" : "bg-slate-100 text-slate-500 ring-slate-200"}`}>
+                                        Acesso global: {item.acesso_global ? "Sim" : "Não"}
                                     </span>
-                                ) : null}
-                                <button
-                                    type="button"
-                                    onClick={() => iniciarEdicao(item)}
-                                    className="rounded-full bg-slate-950 px-3 py-1.5 text-[11px] font-black text-white shadow-sm hover:bg-slate-800"
-                                >
-                                    Editar
-                                </button>
-                                <button
-                                    type="button"
-                                    onClick={() => excluirAcessoUsuario(item)}
-                                    disabled={emailEhUsuarioAtualAcessoApp(item.email, usuario) || excluindoId === (item.id || item.email)}
-                                    className="inline-flex items-center gap-1 rounded-full bg-rose-50 px-3 py-1.5 text-[11px] font-black text-rose-700 ring-1 ring-rose-100 hover:bg-rose-100 disabled:cursor-not-allowed disabled:opacity-50"
-                                >
-                                    <Trash2 className="h-3 w-3" />
-                                    {excluindoId === (item.id || item.email) ? "Excluindo" : "Excluir acesso"}
-                                </button>
+                                    <span className={`rounded-full px-3 py-1.5 text-[11px] font-black ring-1 ${usuarioTemLoginAuthAcessoApp(item) ? "bg-emerald-50 text-emerald-700 ring-emerald-100" : "bg-amber-50 text-amber-800 ring-amber-100"}`}>
+                                        Login Auth: {usuarioTemLoginAuthAcessoApp(item) ? "Vinculado" : "Pendente"}
+                                    </span>
+                                    {item.ultimo_login_em ? (
+                                        <span className="rounded-full bg-slate-100 px-3 py-1.5 text-[11px] font-black text-slate-500 ring-1 ring-slate-200">
+                                            Último login: {formatarDataHoraAcessoApp(item.ultimo_login_em)}
+                                        </span>
+                                    ) : null}
+                                    {item.precisa_trocar_senha ? (
+                                        <span className="rounded-full bg-orange-50 px-3 py-1.5 text-[11px] font-black text-orange-800 ring-1 ring-orange-100">
+                                            Trocar senha
+                                        </span>
+                                    ) : null}
+                                    {emailEhUsuarioAtualAcessoApp(item.email, usuario) ? (
+                                        <span className="rounded-full bg-amber-50 px-3 py-1.5 text-[11px] font-black text-amber-800 ring-1 ring-amber-100">
+                                            Usuário atual
+                                        </span>
+                                    ) : null}
+                                </div>
+                                <div className="flex flex-wrap items-center gap-2 xl:justify-end">
+                                    <button
+                                        type="button"
+                                        onClick={() => iniciarEdicao(item)}
+                                        className="rounded-full bg-slate-950 px-3 py-1.5 text-[11px] font-black text-white shadow-sm hover:bg-slate-800"
+                                    >
+                                        Editar
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={() => excluirAcessoUsuario(item)}
+                                        disabled={emailEhUsuarioAtualAcessoApp(item.email, usuario) || excluindoId === (item.id || item.email)}
+                                        className="inline-flex items-center gap-1 rounded-full bg-rose-50 px-3 py-1.5 text-[11px] font-black text-rose-700 ring-1 ring-rose-100 hover:bg-rose-100 disabled:cursor-not-allowed disabled:opacity-50"
+                                    >
+                                        <Trash2 className="h-3 w-3" />
+                                        {excluindoId === (item.id || item.email) ? "Excluindo" : "Excluir acesso"}
+                                    </button>
+                                </div>
                             </div>
                         </div>
                     </article>
