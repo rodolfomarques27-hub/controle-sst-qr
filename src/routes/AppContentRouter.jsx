@@ -470,6 +470,7 @@ export function AppContentRouter({
     onBloquearConfiguracoes,
     onSalvarLimites,
     onSalvarSenhaConfiguracoes,
+    onRegistrarAuditoria,
     permissaoSistemaUsuario = null,
     carregandoPermissaoSistemaUsuario = false,
     erroPermissaoSistemaUsuario = "",
@@ -868,6 +869,7 @@ export function AppContentRouter({
                             origemSenhaConfiguracoesSistema={origemSenhaConfiguracoesSistema}
                             mensagemSenhaConfiguracoesSistema={mensagemSenhaConfiguracoesSistema}
                             onSalvarSenhaConfiguracoes={onSalvarSenhaConfiguracoes}
+                            onRegistrarAuditoria={onRegistrarAuditoria}
                         />
                     </div>
                 ) : (

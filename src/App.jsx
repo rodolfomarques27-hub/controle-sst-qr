@@ -14,6 +14,7 @@ import {
 } from "./services/appConfiguracoesHandlersService";
 import { carregarLimitesCarregamentoSistema } from "./constants/sistemaLimitesConstants";
 import {
+    SENHA_CONFIGURACOES_PADRAO,
     carregarSenhaConfiguracoesSistema,
     carregarSenhaConfiguracoesSistemaSupabase,
 } from "./constants/configuracoesSegurancaConstants";
@@ -1110,7 +1111,7 @@ export default function App() {
     }
 
     const validarSenhaConfiguracoes = (evento) => {
-        return validarSenhaConfiguracoesAppService({
+        const desbloqueada = validarSenhaConfiguracoesAppService({
             evento,
             senhaConfiguracoes,
             senhaConfiguracoesSistema,
@@ -1118,6 +1119,24 @@ export default function App() {
             setSenhaConfiguracoes,
             setErroSenhaConfiguracoes,
         });
+
+        registrarAuditoria(
+            desbloqueada ? "CONFIGURACOES_DESBLOQUEADAS" : "TENTATIVA_ACESSO_BLOQUEADO",
+            "configuracoes_sistema",
+            desbloqueada
+                ? "Desbloqueou a aba Configurações com senha operacional."
+                : "Tentativa de desbloqueio da aba Configurações com senha incorreta.",
+            "senha_configuracoes_sistema",
+            {
+                resultado: desbloqueada ? "desbloqueado" : "bloqueado",
+                senhaRegistrada: false,
+                tokenCompletoRegistrado: false,
+            }
+        ).catch((error) => {
+            console.warn("Erro ao registrar log de desbloqueio da aba Configurações:", error?.message || error);
+        });
+
+        return desbloqueada;
     };
 
     const bloquearConfiguracoesSistema = () => {
@@ -1127,10 +1146,24 @@ export default function App() {
             setErroSenhaConfiguracoes,
             setMostrarSenhaConfiguracoes,
         });
+
+        registrarAuditoria(
+            "CONFIGURACOES_BLOQUEADAS",
+            "configuracoes_sistema",
+            "Bloqueou manualmente a aba Configurações.",
+            "senha_configuracoes_sistema",
+            {
+                resultado: "bloqueado",
+                senhaRegistrada: false,
+                tokenCompletoRegistrado: false,
+            }
+        ).catch((error) => {
+            console.warn("Erro ao registrar log de bloqueio da aba Configurações:", error?.message || error);
+        });
     };
 
-    const atualizarSenhaConfiguracoesSistema = async (novaSenha) => {
-        return atualizarSenhaConfiguracoesSistemaAppService({
+    const atualizarSenhaConfiguracoesSistema = async (novaSenha, opcoes = {}) => {
+        const resultado = await atualizarSenhaConfiguracoesSistemaAppService({
             supabase,
             usuario,
             novaSenha,
@@ -1138,6 +1171,29 @@ export default function App() {
             setOrigemSenhaConfiguracoesSistema,
             setMensagemSenhaConfiguracoesSistema,
         });
+
+        try {
+            await registrarAuditoria(
+                "SENHA_CONFIGURACOES_ALTERADA",
+                "configuracoes_sistema",
+                opcoes?.tipo === "restauracao"
+                    ? "Restaurou a senha padrão da aba Configurações."
+                    : "Alterou a senha de desbloqueio da aba Configurações.",
+                "senha_configuracoes_sistema",
+                {
+                    tipo: opcoes?.tipo || "alteracao",
+                    origem: resultado?.origem || "local",
+                    sincronizadoSupabase: Boolean(resultado?.ok),
+                    senhaPadrao: String(novaSenha || "") === SENHA_CONFIGURACOES_PADRAO,
+                    senhaRegistrada: false,
+                    tokenCompletoRegistrado: false,
+                }
+            );
+        } catch (error) {
+            console.warn("Erro ao registrar log de senha da aba Configurações:", error?.message || error);
+        }
+
+        return resultado;
     };
 
     return (
@@ -1236,6 +1292,7 @@ export default function App() {
                         onBloquearConfiguracoes={bloquearConfiguracoesSistema}
                         onSalvarLimites={atualizarLimitesCarregamentoSistema}
                         onSalvarSenhaConfiguracoes={atualizarSenhaConfiguracoesSistema}
+                        onRegistrarAuditoria={registrarAuditoria}
                         permissaoSistemaUsuario={permissaoSistemaUsuario}
                         carregandoPermissaoSistemaUsuario={carregandoPermissaoSistemaUsuario}
                         erroPermissaoSistemaUsuario={erroPermissaoSistemaUsuario}

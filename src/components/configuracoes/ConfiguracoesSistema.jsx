@@ -228,6 +228,7 @@ export function ConfiguracoesSistema({
     origemSenhaConfiguracoesSistema = "local",
     mensagemSenhaConfiguracoesSistema: mensagemSenhaConfiguracoesSistemaApp = "",
     onSalvarSenhaConfiguracoes,
+    onRegistrarAuditoria,
     onListarArquivosStorage,
     onExcluirArquivoStorage,
     onAtualizarAuditoria,
@@ -454,6 +455,30 @@ export function ConfiguracoesSistema({
         return true;
     };
 
+    const registrarLogConfiguracoesSistema = async (acao, descricao, dados = {}, registroId = null) => {
+        if (typeof onRegistrarAuditoria !== "function") return false;
+
+        const dadosSeguros = {
+            ...(dados || {}),
+            modulo: "configuracoes",
+            senhaRegistrada: false,
+            tokenCompletoRegistrado: false,
+        };
+
+        try {
+            return await onRegistrarAuditoria(
+                acao,
+                "configuracoes_sistema",
+                descricao,
+                registroId,
+                dadosSeguros
+            );
+        } catch (error) {
+            console.warn("Erro ao registrar log da aba Configurações:", error?.message || error);
+            return false;
+        }
+    };
+
     const confirmarAcaoCriticaConfiguracoes = (
         mensagemConfirmacao,
         setMensagemDestino = null,
@@ -507,7 +532,7 @@ export function ConfiguracoesSistema({
         setMensagemSenhaConfiguracoes("Salvando senha das Configurações...");
 
         if (typeof onSalvarSenhaConfiguracoes === "function") {
-            const resultado = await onSalvarSenhaConfiguracoes(novaSenha);
+            const resultado = await onSalvarSenhaConfiguracoes(novaSenha, { tipo: "alteracao" });
             setMensagemSenhaConfiguracoes(resultado?.mensagem || "Senha das Configurações atualizada.");
         } else {
             setMensagemSenhaConfiguracoes("Senha de desbloqueio da aba Configurações atualizada localmente.");
@@ -527,7 +552,7 @@ export function ConfiguracoesSistema({
         setMensagemSenhaConfiguracoes("Restaurando senha padrão das Configurações...");
 
         if (typeof onSalvarSenhaConfiguracoes === "function") {
-            const resultado = await onSalvarSenhaConfiguracoes(senhaPadrao);
+            const resultado = await onSalvarSenhaConfiguracoes(senhaPadrao, { tipo: "restauracao" });
             setMensagemSenhaConfiguracoes(resultado?.mensagem || "Senha padrão 2026 restaurada.");
         } else {
             setMensagemSenhaConfiguracoes("Senha padrão 2026 restaurada localmente para a aba Configurações.");
@@ -624,22 +649,34 @@ export function ConfiguracoesSistema({
         }));
     };
 
-    const salvarLimites = () => {
+    const salvarLimites = async () => {
         if (bloquearConfiguracaoCriticaSeNecessario(setMensagemLimites)) return;
 
         const normalizados = normalizarLimitesCarregamentoSistema(limitesEditaveis);
 
         if (typeof onSalvarLimites === "function") {
-            const retorno = onSalvarLimites(normalizados);
+            const retorno = onSalvarLimites(normalizados, { tipo: "alteracao" });
             setLimitesEditaveis(normalizarLimitesCarregamentoSistema(retorno || normalizados));
         } else {
             setLimitesEditaveis(normalizados);
         }
 
         setMensagemLimites("Limites e armazenamento salvos localmente. Use Atualizar configurações ou reabra a tela para aplicar a nova carga.");
+
+        await registrarLogConfiguracoesSistema(
+            "LIMITE_CARREGAMENTO_ALTERADO",
+            "Alterou os limites e o armazenamento administrativo da aba Configurações.",
+            {
+                tipo: "alteracao",
+                limites: normalizados,
+                senhaRegistrada: false,
+                tokenCompletoRegistrado: false,
+            },
+            "limites_carregamento"
+        );
     };
 
-    const restaurarLimites = () => {
+    const restaurarLimites = async () => {
         if (!confirmarAcaoCriticaConfiguracoes(
             "Restaurar os limites padrão de carregamento e o limite administrativo de Storage? Isso pode alterar a quantidade de registros carregados nas telas e o percentual visual de armazenamento.",
             setMensagemLimites,
@@ -649,11 +686,23 @@ export function ConfiguracoesSistema({
         const padrao = normalizarLimitesCarregamentoSistema(LIMITES_CARREGAMENTO_SISTEMA);
 
         if (typeof onSalvarLimites === "function") {
-            onSalvarLimites(padrao);
+            onSalvarLimites(padrao, { tipo: "restauracao" });
         }
 
         setLimitesEditaveis(padrao);
         setMensagemLimites("Limites e armazenamento padrão restaurados.");
+
+        await registrarLogConfiguracoesSistema(
+            "LIMITE_CARREGAMENTO_ALTERADO",
+            "Restaurou os limites e o armazenamento administrativo padrão da aba Configurações.",
+            {
+                tipo: "restauracao",
+                limites: padrao,
+                senhaRegistrada: false,
+                tokenCompletoRegistrado: false,
+            },
+            "limites_carregamento"
+        );
     };
 
     const linkAuditoriaPublica = useMemo(() => montarLinkAuditoriaPublicaSistema({
@@ -691,7 +740,7 @@ export function ConfiguracoesSistema({
         }));
     };
 
-    const salvarConfigAuditoriaPublica = () => {
+    const salvarConfigAuditoriaPublica = async () => {
         if (bloquearConfiguracaoCriticaSeNecessario(setMensagemAuditoriaPublica)) return;
 
         if (!String(configAuditoriaPublica.senhaReferencia || "").trim()) {
@@ -709,6 +758,19 @@ export function ConfiguracoesSistema({
             tokenPublico: atual.tokenPublico,
         }));
         setMensagemAuditoriaPublica("Senha de referência operacional salva localmente. O token público continua centralizado no serviço da auditoria pública.");
+
+        await registrarLogConfiguracoesSistema(
+            "CONFIGURACAO_AUDITORIA_PUBLICA_ALTERADA",
+            "Alterou a configuração operacional da Auditoria pública na aba Configurações.",
+            {
+                exigirSenha: Boolean(normalizada.exigirSenha),
+                senhaReferenciaDocumentada: Boolean(normalizada.senhaReferencia),
+                tokenPublicoAtivo: Boolean(configAuditoriaPublica.tokenPublico),
+                senhaRegistrada: false,
+                tokenCompletoRegistrado: false,
+            },
+            "auditoria_publica"
+        );
     };
 
     const restaurarConfigAuditoriaPublica = async () => {
@@ -720,6 +782,18 @@ export function ConfiguracoesSistema({
 
         restaurarConfiguracaoAuditoriaPublicaPadrao();
         await carregarConfiguracaoAuditoriaPublicaSupabase();
+
+        await registrarLogConfiguracoesSistema(
+            "CONFIGURACAO_RESTAURADA",
+            "Restaurou a configuração operacional da Auditoria pública.",
+            {
+                tipo: "auditoria_publica",
+                tokenRecarregadoServicoCentral: true,
+                senhaRegistrada: false,
+                tokenCompletoRegistrado: false,
+            },
+            "auditoria_publica"
+        );
     };
 
 
@@ -944,10 +1018,13 @@ export function ConfiguracoesSistema({
 
 
 
-    const persistirConfiguracao = async (proximaConfiguracao, mensagemSucesso = "Configuração salva.") => {
+    const persistirConfiguracao = async (proximaConfiguracao, mensagemSucesso = "Configuração salva.", metadadosLog = {}) => {
         if (bloquearConfiguracaoCriticaSeNecessario(setMensagemConfig)) return;
 
         const normalizada = normalizarConfiguracaoEventosAuditoriaSistema(proximaConfiguracao);
+        const totalEventos = EVENTOS_AUDITORIA_SISTEMA_PADRAO.length;
+        const totalHabilitados = EVENTOS_AUDITORIA_SISTEMA_PADRAO.filter((evento) => normalizada[evento.chave] !== false).length;
+
         setConfigEventos(normalizada);
         salvarConfiguracaoEventosAuditoriaSistema(normalizada);
         setSalvandoConfig(true);
@@ -962,6 +1039,25 @@ export function ConfiguracoesSistema({
             } else {
                 setMensagemConfig(`${mensagemSucesso} Mantida localmente. Supabase: ${resultado.erro}`);
             }
+
+            await registrarLogConfiguracoesSistema(
+                "CONFIGURACAO_EVENTOS_AUDITORIA_ALTERADA",
+                metadadosLog?.tipo === "restauracao"
+                    ? "Restaurou a configuração padrão dos eventos da Auditoria do Sistema."
+                    : "Alterou a configuração dos eventos da Auditoria do Sistema.",
+                {
+                    tipo: metadadosLog?.tipo || "alteracao",
+                    eventoAlterado: metadadosLog?.eventoAlterado || null,
+                    totalEventos,
+                    totalHabilitados,
+                    origem: resultado.origem || "local",
+                    sincronizadoSupabase: Boolean(resultado.ok),
+                    erroSupabase: resultado.ok ? "" : (resultado.erro || ""),
+                    senhaRegistrada: false,
+                    tokenCompletoRegistrado: false,
+                },
+                "eventos_auditoria_sistema"
+            );
         } finally {
             setSalvandoConfig(false);
         }
@@ -973,7 +1069,10 @@ export function ConfiguracoesSistema({
             [chave]: configEventos[chave] === false,
         };
 
-        persistirConfiguracao(proxima, "Evento atualizado.");
+        persistirConfiguracao(proxima, "Evento atualizado.", {
+            tipo: "alteracao",
+            eventoAlterado: chave,
+        });
     };
 
     const definirTodosEventos = (habilitado) => {
@@ -990,7 +1089,10 @@ export function ConfiguracoesSistema({
 
         persistirConfiguracao(
             proxima,
-            habilitado ? "Todos os eventos foram habilitados." : "Todos os eventos foram desabilitados."
+            habilitado ? "Todos os eventos foram habilitados." : "Todos os eventos foram desabilitados.",
+            {
+                tipo: habilitado ? "habilitacao_em_massa" : "desabilitacao_em_massa",
+            }
         );
     };
 
@@ -1001,7 +1103,9 @@ export function ConfiguracoesSistema({
             "Restauração dos eventos padrão cancelada."
         )) return;
 
-        persistirConfiguracao(configuracaoPadraoEventosAuditoriaSistema(), "Configuração padrão restaurada.");
+        persistirConfiguracao(configuracaoPadraoEventosAuditoriaSistema(), "Configuração padrão restaurada.", {
+            tipo: "restauracao",
+        });
     };
 
     const cardsResumo = [
