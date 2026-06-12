@@ -140,6 +140,19 @@ function obterFotoPermissaoAcessoApp(usuario = {}) {
     ].find((valor) => String(valor || "").trim()) || "";
 }
 
+function montarUrlPublicaFotoAcessoApp(caminho = "") {
+    const valor = normalizarCaminhoFotoAcessoApp(caminho);
+
+    if (!valor) return "";
+    if (valorFotoAcessoEhUrlFinal(valor) && !valor.includes(`/storage/v1/object/`)) return valor;
+
+    const { data } = supabase.storage
+        .from(BUCKET_FOTOS_USUARIOS_ACESSO_APP)
+        .getPublicUrl(valor);
+
+    return data?.publicUrl || "";
+}
+
 function FotoPessoaAcessoApp({ foto = "", preview = "", nome = "", email = "", grande = false }) {
     const valorFoto = preview || foto;
     const [urlFoto, setUrlFoto] = useState("");
@@ -148,6 +161,7 @@ function FotoPessoaAcessoApp({ foto = "", preview = "", nome = "", email = "", g
 
     useEffect(() => {
         let cancelado = false;
+        let objectUrlTemporaria = "";
         const valor = normalizarCaminhoFotoAcessoApp(valorFoto);
 
         setFotoComErro(false);
@@ -166,16 +180,32 @@ function FotoPessoaAcessoApp({ foto = "", preview = "", nome = "", email = "", g
             try {
                 const { data, error } = await supabase.storage
                     .from(BUCKET_FOTOS_USUARIOS_ACESSO_APP)
-                    .createSignedUrl(valor, 60 * 10);
+                    .createSignedUrl(valor, 60 * 30);
 
                 if (error) throw error;
-                if (!cancelado) setUrlFoto(data?.signedUrl || "");
-            } catch {
-                const { data } = supabase.storage
-                    .from(BUCKET_FOTOS_USUARIOS_ACESSO_APP)
-                    .getPublicUrl(valor);
+                const signedUrl = data?.signedUrl || "";
 
-                if (!cancelado) setUrlFoto(data?.publicUrl || "");
+                if (signedUrl) {
+                    if (!cancelado) setUrlFoto(signedUrl);
+                    return;
+                }
+            } catch {
+                // Se a URL assinada falhar, tenta baixar o arquivo autenticado antes do fallback público.
+            }
+
+            try {
+                const { data, error } = await supabase.storage
+                    .from(BUCKET_FOTOS_USUARIOS_ACESSO_APP)
+                    .download(valor);
+
+                if (error) throw error;
+
+                objectUrlTemporaria = URL.createObjectURL(data);
+                if (!cancelado) setUrlFoto(objectUrlTemporaria);
+                return;
+            } catch {
+                const publicUrl = montarUrlPublicaFotoAcessoApp(valor);
+                if (!cancelado) setUrlFoto(publicUrl);
             }
         }
 
@@ -183,6 +213,9 @@ function FotoPessoaAcessoApp({ foto = "", preview = "", nome = "", email = "", g
 
         return () => {
             cancelado = true;
+            if (objectUrlTemporaria) {
+                URL.revokeObjectURL(objectUrlTemporaria);
+            }
         };
     }, [valorFoto]);
 
