@@ -270,6 +270,40 @@ export async function restaurarPerfilPermissaoSistemaService({ supabase, chave }
     return normalizarPerfilPermissaoSistema(perfilRestaurado || null);
 }
 
+export async function aplicarPerfilPermissaoUsuariosSistemaService({ supabase, chave, confirmacao }) {
+    if (!supabase) {
+        throw new Error("Cliente Supabase não informado para aplicar perfil aos usuários existentes.");
+    }
+
+    const chaveTratada = normalizarPerfilSistema(chave);
+    const confirmacaoTratada = normalizarTexto(confirmacao);
+
+    if (!chaveTratada) {
+        throw new Error("Perfil não informado para aplicar aos usuários existentes.");
+    }
+
+    if (!confirmacaoTratada) {
+        throw new Error("Confirmação obrigatória para aplicar o perfil aos usuários existentes.");
+    }
+
+    const { data, error } = await supabase.rpc("admin_aplicar_perfil_permissao_usuarios_sistema", {
+        p_chave: chaveTratada,
+        p_confirmacao: confirmacaoTratada,
+    });
+
+    if (error) {
+        throw new Error(error.message || "Erro ao aplicar perfil aos usuários existentes.");
+    }
+
+    const resultado = Array.isArray(data) ? data[0] : data;
+
+    return {
+        perfil: resultado?.perfil || chaveTratada,
+        usuariosAtualizados: Number(resultado?.usuarios_atualizados || resultado?.usuariosAtualizados || 0),
+        updatedAt: resultado?.updated_at || resultado?.updatedAt || null,
+    };
+}
+
 function validarDadosUsuarioPermissaoSistema(usuario = {}) {
     const email = normalizarEmail(usuario.email);
     const nome = normalizarTexto(usuario.nome);

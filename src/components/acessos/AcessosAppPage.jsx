@@ -34,6 +34,7 @@ import {
     listarPerfisPermissoesSistemaService,
     restaurarPerfilPermissaoSistemaService,
     salvarPerfilPermissaoSistemaService,
+    aplicarPerfilPermissaoUsuariosSistemaService,
 } from "../../services/usuariosPermissoesSistemaService";
 
 const BUCKET_FOTOS_USUARIOS_ACESSO_APP = "fotos-colaboradores";
@@ -1849,6 +1850,11 @@ function alternarItemListaAcesso(lista = [], item = "") {
     return lista.includes(valor) ? lista.filter((entrada) => entrada !== valor) : [...lista, valor];
 }
 
+function montarCodigoConfirmacaoAplicarPerfil(perfil = null) {
+    const nomePerfil = normalizarTextoAcesso(perfil?.nome || perfil?.perfil || perfil?.chave || "perfil").toUpperCase();
+    return `APLICAR ${nomePerfil}`;
+}
+
 function RevisaoPerfisPadrao() {
     const perfisFallback = useMemo(
         () => PERMISSOES_PADRAO_USUARIOS_POR_PERFIL.map((perfil) => normalizarPerfilEditavelParaTela(perfil)).filter(Boolean),
@@ -1860,6 +1866,7 @@ function RevisaoPerfisPadrao() {
     const [modoEdicao, setModoEdicao] = useState(false);
     const [carregandoPerfis, setCarregandoPerfis] = useState(false);
     const [salvandoPerfil, setSalvandoPerfil] = useState(false);
+    const [aplicandoPerfil, setAplicandoPerfil] = useState(false);
     const [mensagemPerfil, setMensagemPerfil] = useState("");
     const [erroPerfil, setErroPerfil] = useState("");
     const [perfisAberto, setPerfisAberto] = useState(false);
@@ -1994,6 +2001,44 @@ function RevisaoPerfisPadrao() {
         }
     }
 
+    async function aplicarPerfilAosUsuariosExistentes() {
+        if (!perfilSelecionado?.chave || aplicandoPerfil || salvandoPerfil || modoEdicao) return;
+
+        const codigoConfirmacao = montarCodigoConfirmacaoAplicarPerfil(perfilSelecionado);
+        const resposta = window.prompt(
+            `Esta ação vai substituir as permissões de todos os usuários existentes com perfil ${perfilSelecionado.perfil || perfilSelecionado.nome}.
+
+Digite ${codigoConfirmacao} para confirmar.`
+        );
+
+        if (resposta === null) return;
+
+        if (normalizarTextoAcesso(resposta).toUpperCase() !== codigoConfirmacao) {
+            setErroPerfil(`Confirmação inválida. Para aplicar este perfil, digite exatamente: ${codigoConfirmacao}`);
+            setMensagemPerfil("");
+            return;
+        }
+
+        setAplicandoPerfil(true);
+        setErroPerfil("");
+        setMensagemPerfil(`Aplicando o perfil ${perfilSelecionado.perfil || perfilSelecionado.nome} aos usuários existentes...`);
+
+        try {
+            const resultado = await aplicarPerfilPermissaoUsuariosSistemaService({
+                supabase,
+                chave: perfilSelecionado.chave,
+                confirmacao: codigoConfirmacao,
+            });
+
+            setMensagemPerfil(`Perfil ${perfilSelecionado.perfil || perfilSelecionado.nome} aplicado a ${resultado.usuariosAtualizados} usuário(s) existente(s). Atualize a lista de usuários para conferir.`);
+        } catch (error) {
+            setErroPerfil(error?.message || "Não foi possível aplicar o perfil aos usuários existentes.");
+            setMensagemPerfil("");
+        } finally {
+            setAplicandoPerfil(false);
+        }
+    }
+
     const perfilParaExibir = modoEdicao ? {
         ...formularioPerfil,
         perfil: formularioPerfil.nome,
@@ -2011,7 +2056,7 @@ function RevisaoPerfisPadrao() {
                         <p className="text-xs font-black uppercase tracking-[0.2em] text-slate-400">Revisão dos perfis padrão</p>
                         <h3 className="mt-1 text-xl font-black text-slate-950">O que cada perfil pode fazer</h3>
                         <p className="mt-2 max-w-4xl text-sm font-semibold leading-6 text-slate-500">
-                            Edite a regra base de cada perfil. Esta etapa grava o padrão no Supabase; aplicar automaticamente aos usuários existentes será feito em etapa separada.
+                            Edite a regra base de cada perfil. Depois de salvar, aplique o padrão aos usuários existentes do mesmo perfil quando quiser atualizar todos de uma vez.
                         </p>
                     </div>
                 </div>
@@ -2033,10 +2078,21 @@ function RevisaoPerfisPadrao() {
                         <button
                             type="button"
                             onClick={() => setModoEdicao((atual) => !atual)}
-                            disabled={!perfilSelecionado || carregandoPerfis || salvandoPerfil}
+                            disabled={!perfilSelecionado || carregandoPerfis || salvandoPerfil || aplicandoPerfil}
                             className="rounded-full bg-slate-950 px-4 py-2 text-xs font-black text-white shadow-sm hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
                         >
                             {modoEdicao ? "Cancelar edição" : "Editar perfil"}
+                        </button>
+                    ) : null}
+                    {perfisAberto ? (
+                        <button
+                            type="button"
+                            onClick={aplicarPerfilAosUsuariosExistentes}
+                            disabled={!perfilSelecionado || carregandoPerfis || salvandoPerfil || aplicandoPerfil || modoEdicao}
+                            className="rounded-full bg-amber-50 px-4 py-2 text-xs font-black text-amber-800 ring-1 ring-amber-100 hover:bg-amber-100 disabled:cursor-not-allowed disabled:opacity-60"
+                            title={modoEdicao ? "Salve ou cancele a edição antes de aplicar aos usuários." : "Aplicar este padrão aos usuários existentes com o mesmo perfil."}
+                        >
+                            {aplicandoPerfil ? "Aplicando..." : "Aplicar aos usuários"}
                         </button>
                     ) : null}
                 </div>
@@ -2133,6 +2189,12 @@ function RevisaoPerfisPadrao() {
                         </div>
                     </div>
 
+                    {!modoEdicao ? (
+                        <div className="mt-5 rounded-2xl bg-amber-50 px-4 py-3 text-xs font-bold leading-5 text-amber-800 ring-1 ring-amber-100">
+                            Para aplicar este padrão aos usuários já cadastrados com este perfil, use o botão <span className="font-black">Aplicar aos usuários</span>. A ação exige confirmação digitada.
+                        </div>
+                    ) : null}
+
                     {modoEdicao ? (
                         <div className="mt-5 grid gap-4 xl:grid-cols-[0.58fr_0.42fr]">
                             <div className="rounded-3xl bg-white p-4 ring-1 ring-slate-100">
@@ -2186,7 +2248,7 @@ function RevisaoPerfisPadrao() {
                                 <button
                                     type="button"
                                     onClick={salvarPerfil}
-                                    disabled={salvandoPerfil}
+                                    disabled={salvandoPerfil || aplicandoPerfil}
                                     className="rounded-full bg-slate-950 px-5 py-3 text-xs font-black text-white shadow-sm hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
                                 >
                                     {salvandoPerfil ? "Salvando perfil" : "Salvar perfil padrão"}
@@ -2194,7 +2256,7 @@ function RevisaoPerfisPadrao() {
                                 <button
                                     type="button"
                                     onClick={restaurarPerfil}
-                                    disabled={salvandoPerfil}
+                                    disabled={salvandoPerfil || aplicandoPerfil}
                                     className="rounded-full bg-white px-5 py-3 text-xs font-black text-slate-700 ring-1 ring-slate-200 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
                                 >
                                     Restaurar padrão original
