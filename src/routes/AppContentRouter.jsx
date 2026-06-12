@@ -832,6 +832,7 @@ export function AppContentRouter({
                     onSalvarUsuarioAuditoria={onSalvarUsuarioAuditoria}
                     onAlternarUsuarioAuditoria={onAlternarUsuarioAuditoria}
                     onBloquear={onBloquearAuditoria}
+                    onRegistrarAuditoria={onRegistrarAuditoria}
                 />
             )}
 

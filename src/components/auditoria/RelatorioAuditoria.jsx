@@ -167,6 +167,27 @@ const classeNivelAuditoriaSistema = (nivel) => {
     return "bg-slate-100 text-slate-600 ring-slate-200";
 };
 
+const ehAlteracaoAuditoriaSistema = (item = {}) => {
+    const acao = String(item?.acao || "").trim().toUpperCase();
+
+    if (["INSERT", "UPDATE", "DELETE"].includes(acao)) return true;
+
+    return [
+        "ALTERAD",
+        "ATUALIZAD",
+        "RESTAURAD",
+        "HABILITAD",
+        "DESABILITAD",
+        "CRIAD",
+        "EDITAD",
+        "EXCLUID",
+        "SALVA",
+        "APLICAD",
+        "CONCEDID",
+        "REMOVID",
+    ].some((termo) => acao.includes(termo));
+};
+
 const formatarDataHoraAuditoriaSistema = (valor) => {
     if (!valor) return "-";
 
@@ -211,11 +232,13 @@ export function RelatorioAuditoria({
     onSalvarUsuarioAuditoria,
     onAlternarUsuarioAuditoria,
     onBloquear,
+    onRegistrarAuditoria,
 }) {
     const [busca, setBusca] = useState("");
     const [filtroAcao, setFiltroAcao] = useState("Todas");
     const [filtroUsuario, setFiltroUsuario] = useState("Todos");
     const [filtroModulo, setFiltroModulo] = useState("Todos");
+    const [filtroCategoria, setFiltroCategoria] = useState("Todas");
     const [filtroNivel, setFiltroNivel] = useState("Todos");
     const [filtroPeriodoInicio, setFiltroPeriodoInicio] = useState("");
     const [filtroPeriodoFim, setFiltroPeriodoFim] = useState("");
@@ -354,7 +377,11 @@ export function RelatorioAuditoria({
         window.localStorage.setItem(CHAVES_STORAGE_AUDITORIA_SISTEMA.ORDEM_BLOCOS, JSON.stringify(ordemBlocosAuditoria));
     }, [ordemBlocosAuditoria]);
 
-    const persistirConfiguracaoEventosAuditoria = async (configuracao, mensagemSucesso = "Configuração salva.") => {
+    const persistirConfiguracaoEventosAuditoria = async (
+        configuracao,
+        mensagemSucesso = "Configuração salva.",
+        dadosLog = {}
+    ) => {
         const normalizada = normalizarConfiguracaoEventosAuditoriaSistema(configuracao);
         setConfigEventosAuditoria(normalizada);
         salvarConfiguracaoEventosAuditoriaSistema(normalizada);
@@ -363,7 +390,8 @@ export function RelatorioAuditoria({
 
         try {
             const resultado = await salvarConfiguracaoEventosAuditoriaSistemaSupabase(normalizada);
-            setOrigemConfigEventosAuditoria(resultado.origem || "local");
+            const origem = resultado.origem || "local";
+            setOrigemConfigEventosAuditoria(origem);
 
             if (resultado.ok) {
                 setMensagemConfigEventosAuditoria(`${mensagemSucesso} Configuração sincronizada no Supabase.`);
@@ -372,18 +400,52 @@ export function RelatorioAuditoria({
                     `${mensagemSucesso} Mantida localmente. Supabase: ${resultado.erro}`
                 );
             }
+
+            if (typeof onRegistrarAuditoria === "function") {
+                try {
+                    await onRegistrarAuditoria(
+                        "CONFIGURACAO_EVENTOS_AUDITORIA_ALTERADA",
+                        "auditoria_sistema_configuracoes",
+                        dadosLog?.descricao || "Alterou a configuração de eventos verificados pela Auditoria do Sistema.",
+                        "eventos_verificados",
+                        {
+                            origem,
+                            sincronizadoSupabase: Boolean(resultado.ok),
+                            totalEventosConfigurados: Object.keys(normalizada).length,
+                            senhaRegistrada: false,
+                            tokenCompletoRegistrado: false,
+                            ...(dadosLog?.dados || {}),
+                        }
+                    );
+                } catch (error) {
+                    console.warn("Erro ao registrar log de eventos da Auditoria do Sistema:", error?.message || error);
+                }
+            }
         } finally {
             setSalvandoConfigEventosAuditoria(false);
         }
     };
 
     const alternarEventoAuditoria = (chave) => {
+        const eventoAtual = eventosAuditoriaSistema.find((evento) => evento.chave === chave);
+        const habilitadoAnteriormente = configEventosAuditoria[chave] !== false;
+        const habilitadoAgora = !habilitadoAnteriormente;
         const proxima = {
             ...configEventosAuditoria,
-            [chave]: configEventosAuditoria[chave] === false,
+            [chave]: habilitadoAgora,
         };
 
-        persistirConfiguracaoEventosAuditoria(proxima, "Evento atualizado.");
+        persistirConfiguracaoEventosAuditoria(proxima, "Evento atualizado.", {
+            descricao: `${habilitadoAgora ? "Habilitou" : "Desabilitou"} evento auditável pela aba Auditoria do Sistema.`,
+            dados: {
+                tipo: "evento_individual",
+                evento: chave,
+                rotulo: eventoAtual?.label || obterRotuloAcaoAuditoriaSistema(chave),
+                categoria: eventoAtual?.categoria || "Evento identificado",
+                habilitadoAnteriormente,
+                habilitadoAgora,
+            },
+        });
     };
 
     const definirTodosEventosAuditoria = (habilitado) => {
@@ -394,14 +456,31 @@ export function RelatorioAuditoria({
 
         persistirConfiguracaoEventosAuditoria(
             proxima,
-            habilitado ? "Todos os eventos foram habilitados." : "Todos os eventos foram desabilitados."
+            habilitado ? "Todos os eventos foram habilitados." : "Todos os eventos foram desabilitados.",
+            {
+                descricao: habilitado
+                    ? "Habilitou todos os eventos verificados pela Auditoria do Sistema."
+                    : "Desabilitou todos os eventos verificados pela Auditoria do Sistema.",
+                dados: {
+                    tipo: habilitado ? "habilitar_todos" : "desabilitar_todos",
+                    habilitado,
+                    totalEventosAfetados: eventosAuditoriaSistema.length,
+                },
+            }
         );
     };
 
     const restaurarPadraoEventosAuditoria = () => {
         persistirConfiguracaoEventosAuditoria(
             configuracaoPadraoEventosAuditoriaSistema(),
-            "Configuração padrão restaurada."
+            "Configuração padrão restaurada.",
+            {
+                descricao: "Restaurou o padrão dos eventos verificados pela Auditoria do Sistema.",
+                dados: {
+                    tipo: "restaurar_padrao",
+                    totalEventosAfetados: eventosAuditoriaSistema.length,
+                },
+            }
         );
     };
 
@@ -451,6 +530,19 @@ export function RelatorioAuditoria({
         [auditoria, configEventosAuditoria]
     );
 
+    const eventosAuditoriaSistemaPorChave = useMemo(
+        () => eventosAuditoriaSistema.reduce((acc, evento) => {
+            acc[String(evento.chave || "").trim().toUpperCase()] = evento;
+            return acc;
+        }, {}),
+        [eventosAuditoriaSistema]
+    );
+
+    const obterCategoriaAuditoriaSistema = (item = {}) => {
+        const chave = String(item.acao || "").trim().toUpperCase();
+        return eventosAuditoriaSistemaPorChave[chave]?.categoria || "Evento identificado";
+    };
+
     const auditoriaVerificada = useMemo(
         () => auditoria.filter((item) => auditoriaEventoHabilitado(item.acao, configEventosAuditoria)),
         [auditoria, configEventosAuditoria]
@@ -474,34 +566,41 @@ export function RelatorioAuditoria({
         [auditoriaVerificada]
     );
 
+    const categoriasAuditoriaFiltro = useMemo(
+        () => Array.from(new Set(auditoriaVerificada.map((item) => obterCategoriaAuditoriaSistema(item)).filter(Boolean))).sort(),
+        [auditoriaVerificada, eventosAuditoriaSistemaPorChave]
+    );
+
     const registrosFiltrados = useMemo(() => {
         const termo = normalizarTextoBusca(busca);
 
         return auditoriaVerificada.filter((item) => {
             const origemAcesso = item.dados?.origemAcesso || {};
             const modulo = obterModuloAuditoriaSistema(item);
+            const categoria = obterCategoriaAuditoriaSistema(item);
             const nivel = obterNivelAuditoriaSistema(item);
             const dataRegistro = obterDataFiltroAuditoriaSistema(item.created_at);
             const usuarioRegistro = item.usuario_email || "Sistema / consulta pública";
             const texto = normalizarTextoBusca(
-                `${usuarioRegistro} ${item.acao || ""} ${modulo} ${nivel} ${item.tabela || ""} ${item.descricao || ""} ${item.registro_id || ""} ${origemAcesso.url || ""} ${origemAcesso.pagina || ""} ${origemAcesso.navegador || ""} ${origemAcesso.plataforma || ""}`
+                `${usuarioRegistro} ${item.acao || ""} ${modulo} ${categoria} ${nivel} ${item.tabela || ""} ${item.descricao || ""} ${item.registro_id || ""} ${origemAcesso.url || ""} ${origemAcesso.pagina || ""} ${origemAcesso.navegador || ""} ${origemAcesso.plataforma || ""}`
             );
 
             const bateBusca = !termo || texto.includes(termo);
             const bateAcao = filtroAcao === "Todas" || item.acao === filtroAcao;
             const bateUsuario = filtroUsuario === "Todos" || usuarioRegistro === filtroUsuario;
             const bateModulo = filtroModulo === "Todos" || modulo === filtroModulo;
+            const bateCategoria = filtroCategoria === "Todas" || categoria === filtroCategoria;
             const bateNivel = filtroNivel === "Todos" || nivel === filtroNivel;
             const bateInicio = !filtroPeriodoInicio || (dataRegistro && dataRegistro >= filtroPeriodoInicio);
             const bateFim = !filtroPeriodoFim || (dataRegistro && dataRegistro <= filtroPeriodoFim);
 
-            return bateBusca && bateAcao && bateUsuario && bateModulo && bateNivel && bateInicio && bateFim;
+            return bateBusca && bateAcao && bateUsuario && bateModulo && bateCategoria && bateNivel && bateInicio && bateFim;
         });
-    }, [auditoriaVerificada, busca, filtroAcao, filtroUsuario, filtroModulo, filtroNivel, filtroPeriodoInicio, filtroPeriodoFim]);
+    }, [auditoriaVerificada, busca, filtroAcao, filtroUsuario, filtroModulo, filtroCategoria, filtroNivel, filtroPeriodoInicio, filtroPeriodoFim, eventosAuditoriaSistemaPorChave]);
 
     useEffect(() => {
         setLimiteRegistrosDetalhados(LIMITE_REGISTROS_DETALHADOS_INICIAL);
-    }, [busca, filtroAcao, filtroUsuario, filtroModulo, filtroNivel, filtroPeriodoInicio, filtroPeriodoFim, auditoriaVerificada.length]);
+    }, [busca, filtroAcao, filtroUsuario, filtroModulo, filtroCategoria, filtroNivel, filtroPeriodoInicio, filtroPeriodoFim, auditoriaVerificada.length]);
 
     const registrosDetalhadosVisiveis = registrosFiltrados.slice(0, limiteRegistrosDetalhados);
     const existemMaisRegistrosDetalhados = registrosFiltrados.length > registrosDetalhadosVisiveis.length;
@@ -860,7 +959,7 @@ Essa ação remove arquivos do Storage e não altera registros do banco.`;
         { chave: "totalEventos", titulo: "Total de eventos", valor: auditoria.length, classe: "text-slate-950" },
         { chave: "eventosFiltrados", titulo: "Eventos filtrados", valor: registrosFiltrados.length, classe: "text-blue-700" },
         { chave: "acessos", titulo: "Acessos", valor: auditoriaVerificada.filter((item) => String(item.acao || "").includes("ACESSO")).length, classe: "text-emerald-700" },
-        { chave: "alteracoes", titulo: "Alterações", valor: auditoriaVerificada.filter((item) => ["INSERT", "UPDATE", "DELETE"].includes(item.acao)).length, classe: "text-orange-700" },
+        { chave: "alteracoes", titulo: "Alterações", valor: auditoriaVerificada.filter(ehAlteracaoAuditoriaSistema).length, classe: "text-orange-700" },
         { chave: "emailsMes", titulo: "E-mails no mês", valor: emailsMesAuditoria.length, classe: "text-blue-700" },
         { chave: "emailsSucesso", titulo: "E-mails com sucesso", valor: emailsSucessoAuditoria.length, classe: "text-emerald-700" },
         { chave: "emailsErro", titulo: "E-mails com erro", valor: emailsErroAuditoria.length, classe: "text-red-700" },
@@ -962,6 +1061,7 @@ Essa ação remove arquivos do Storage e não altera registros do banco.`;
     const montarLinhasRelatorioAuditoriaSistema = () => registrosFiltrados.map((item) => {
         const origemAcesso = item.dados?.origemAcesso || {};
         const modulo = obterModuloAuditoriaSistema(item);
+        const categoria = obterCategoriaAuditoriaSistema(item);
         const nivel = obterNivelAuditoriaSistema(item);
 
         return {
@@ -971,6 +1071,7 @@ Essa ação remove arquivos do Storage e não altera registros do banco.`;
             acaoTecnica: item.acao || "-",
             evento: obterRotuloAcaoAuditoriaSistema(item.acao),
             modulo: modulo || "-",
+            categoria: categoria || "-",
             nivel: ROTULOS_NIVEIS_AUDITORIA_SISTEMA[nivel] || "Informação",
             nivelChave: nivel || "informacao",
             tabela: item.tabela || "-",
@@ -987,7 +1088,7 @@ Essa ação remove arquivos do Storage e não altera registros do banco.`;
         totalEventos: auditoria.length,
         eventosFiltrados: registrosFiltrados.length,
         acessos: auditoriaVerificada.filter((item) => String(item.acao || "").includes("ACESSO")).length,
-        alteracoes: auditoriaVerificada.filter((item) => ["INSERT", "UPDATE", "DELETE"].includes(item.acao)).length,
+        alteracoes: auditoriaVerificada.filter(ehAlteracaoAuditoriaSistema).length,
         seguranca: registrosFiltrados.filter((item) => obterNivelAuditoriaSistema(item) === "seguranca").length,
         criticos: registrosFiltrados.filter((item) => obterNivelAuditoriaSistema(item) === "critico").length,
         alertas: registrosFiltrados.filter((item) => obterNivelAuditoriaSistema(item) === "alerta").length,
@@ -998,6 +1099,7 @@ Essa ação remove arquivos do Storage e não altera registros do banco.`;
         acao: filtroAcao === "Todas" ? "Todas as ações" : filtroAcao,
         usuario: filtroUsuario === "Todos" ? "Todos os usuários" : filtroUsuario,
         modulo: filtroModulo === "Todos" ? "Todos os módulos" : filtroModulo,
+        categoria: filtroCategoria === "Todas" ? "Todas as categorias" : filtroCategoria,
         nivel: filtroNivel === "Todos" ? "Todos os níveis" : ROTULOS_NIVEIS_AUDITORIA_SISTEMA[filtroNivel] || filtroNivel,
         periodo: filtroPeriodoInicio || filtroPeriodoFim
             ? `${filtroPeriodoInicio || "início"} até ${filtroPeriodoFim || "hoje"}`
@@ -1006,13 +1108,14 @@ Essa ação remove arquivos do Storage e não altera registros do banco.`;
     });
 
     const baixarCsvAuditoria = () => {
-        const cabecalho = ["Data/Hora", "Usuário", "Ação", "Evento", "Módulo", "Nível", "Tabela", "Registro", "Descrição", "Origem do acesso", "Página", "Navegador", "Plataforma"];
+        const cabecalho = ["Data/Hora", "Usuário", "Ação", "Evento", "Módulo", "Categoria", "Nível", "Tabela", "Registro", "Descrição", "Origem do acesso", "Página", "Navegador", "Plataforma"];
         const linhas = montarLinhasRelatorioAuditoriaSistema().map((item) => [
             item.dataHora,
             item.usuario,
             item.acaoTecnica,
             item.evento,
             item.modulo,
+            item.categoria,
             item.nivel,
             item.tabela,
             item.registro,
@@ -1049,19 +1152,28 @@ Essa ação remove arquivos do Storage e não altera registros do banco.`;
             return acc;
         }, {});
 
+        const totalPorCategoria = registrosFiltrados.reduce((acc, item) => {
+            const categoria = obterCategoriaAuditoriaSistema(item) || "Não classificada";
+            acc[categoria] = (acc[categoria] || 0) + 1;
+            return acc;
+        }, {});
+
         const resumo = [
             "Resumo da Auditoria do Sistema",
             `Gerado em: ${formatarDataHoraAuditoriaSistema(new Date().toISOString())}`,
             `Eventos carregados: ${auditoriaVerificada.length}`,
             `Eventos filtrados: ${registrosFiltrados.length}`,
             `Acessos: ${auditoriaVerificada.filter((item) => String(item.acao || "").includes("ACESSO")).length}`,
-            `Alterações: ${auditoriaVerificada.filter((item) => ["INSERT", "UPDATE", "DELETE"].includes(item.acao)).length}`,
+            `Alterações: ${auditoriaVerificada.filter(ehAlteracaoAuditoriaSistema).length}`,
             "",
             "Eventos por nível:",
             ...Object.entries(totalPorNivel).map(([nivel, total]) => `- ${ROTULOS_NIVEIS_AUDITORIA_SISTEMA[nivel] || nivel}: ${total}`),
             "",
             "Eventos por módulo:",
             ...Object.entries(totalPorModulo).map(([modulo, total]) => `- ${modulo}: ${total}`),
+            "",
+            "Eventos por categoria:",
+            ...Object.entries(totalPorCategoria).map(([categoria, total]) => `- ${categoria}: ${total}`),
         ].join("\n");
 
         try {
@@ -1296,12 +1408,12 @@ Essa ação remove arquivos do Storage e não altera registros do banco.`;
                     <CardRecolhivel
                 className="mt-5"
                 titulo="Registros detalhados da auditoria"
-                subtitulo="Filtros por texto, ação, usuário, módulo, nível e período. Carregamento limitado para manter a tela leve."
+                subtitulo="Filtros por texto, ação, usuário, módulo, categoria, nível e período. Carregamento limitado para manter a tela leve."
                 contador={registrosFiltrados.length}
                 defaultOpen
             >
                 <div className="rounded-3xl bg-slate-50 p-4 ring-1 ring-slate-200">
-                    <div className="grid gap-3 xl:grid-cols-[minmax(260px,1.4fr)_repeat(3,minmax(160px,1fr))]">
+                    <div className="grid gap-3 xl:grid-cols-[minmax(260px,1.4fr)_repeat(4,minmax(160px,1fr))]">
                         <div className="relative xl:col-span-2">
                             <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
                             <input
@@ -1352,6 +1464,19 @@ Essa ação remove arquivos do Storage e não altera registros do banco.`;
                         </select>
 
                         <select
+                            value={filtroCategoria}
+                            onChange={(e) => setFiltroCategoria(e.target.value)}
+                            className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 outline-none focus:border-slate-400 focus:ring-4 focus:ring-slate-100"
+                        >
+                            <option value="Todas">Todas as categorias</option>
+                            {categoriasAuditoriaFiltro.map((categoriaFiltro) => (
+                                <option key={categoriaFiltro} value={categoriaFiltro}>
+                                    {categoriaFiltro}
+                                </option>
+                            ))}
+                        </select>
+
+                        <select
                             value={filtroNivel}
                             onChange={(e) => setFiltroNivel(e.target.value)}
                             className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 outline-none focus:border-slate-400 focus:ring-4 focus:ring-slate-100"
@@ -1384,6 +1509,7 @@ Essa ação remove arquivos do Storage e não altera registros do banco.`;
                                 setFiltroAcao("Todas");
                                 setFiltroUsuario("Todos");
                                 setFiltroModulo("Todos");
+                                setFiltroCategoria("Todas");
                                 setFiltroNivel("Todos");
                                 setFiltroPeriodoInicio("");
                                 setFiltroPeriodoFim("");
@@ -1457,6 +1583,7 @@ Essa ação remove arquivos do Storage e não altera registros do banco.`;
                         const detalhesAberto = Boolean(detalhesAuditoriaAbertos[item.id]);
                         const podeAbrirDetalhes = temOrigemAcesso || temDadosExtras || item.registro_id;
                         const modulo = obterModuloAuditoriaSistema(item);
+                        const categoria = obterCategoriaAuditoriaSistema(item);
                         const nivel = obterNivelAuditoriaSistema(item);
                         const rotuloAcao = obterRotuloAcaoAuditoriaSistema(item.acao);
 
@@ -1470,6 +1597,9 @@ Essa ação remove arquivos do Storage e não altera registros do banco.`;
                                             </span>
                                             <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-600">
                                                 {modulo}
+                                            </span>
+                                            <span className="rounded-full bg-blue-50 px-3 py-1 text-xs font-semibold text-blue-700 ring-1 ring-blue-100">
+                                                {categoria}
                                             </span>
                                             <span className={classNames("rounded-full px-3 py-1 text-xs font-semibold ring-1", classeNivelAuditoriaSistema(nivel))}>
                                                 {ROTULOS_NIVEIS_AUDITORIA_SISTEMA[nivel] || "Informação"}
@@ -1600,7 +1730,7 @@ Essa ação remove arquivos do Storage e não altera registros do banco.`;
                     <CardRecolhivel
                 className="mt-5"
                 titulo="Eventos verificados pela Auditoria de sistema"
-                subtitulo="Habilite ou desabilite quais tipos de evento devem ser registrados e exibidos no relatório. A configuração é salva localmente e sincronizada no Supabase quando a tabela estiver criada."
+                subtitulo="Habilite ou desabilite quais tipos de evento devem ser registrados e exibidos no relatório. Alterações feitas aqui também ficam registradas na Auditoria do Sistema."
                 contador={`${eventosHabilitadosAuditoria}/${eventosAuditoriaSistema.length}`}
                 defaultOpen={false}
                 acao={(
@@ -1718,7 +1848,7 @@ Essa ação remove arquivos do Storage e não altera registros do banco.`;
                 </div>
 
                 <p className="mt-4 rounded-2xl bg-blue-50 p-3 text-xs leading-relaxed text-blue-700 ring-1 ring-blue-100">
-                    Eventos desabilitados deixam de aparecer nos filtros, cards e CSV da Auditoria de sistema. Novos eventos desabilitados também deixam de ser gravados neste navegador enquanto a configuração estiver salva.
+                    Eventos desabilitados deixam de aparecer nos filtros, cards, CSV e relatórios. Quando a configuração estiver aplicada, novos eventos desabilitados também deixam de ser gravados pela Auditoria do Sistema.
                 </p>
                     </CardRecolhivel>
                 ))}

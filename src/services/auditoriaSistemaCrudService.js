@@ -148,7 +148,11 @@ export async function registrarAuditoriaSistemaService({
     dados = {},
 } = {}) {
     if (!usuario?.email) return false;
-    if (!auditoriaEventoHabilitado(acao)) return false;
+
+    const acaoNormalizada = String(acao || "").trim().toUpperCase();
+    const deveRegistrarSempre = acaoNormalizada === "CONFIGURACAO_EVENTOS_AUDITORIA_ALTERADA";
+
+    if (!deveRegistrarSempre && !auditoriaEventoHabilitado(acao)) return false;
 
     const { error } = await supabase.from("auditoria_sistema").insert({
         usuario_id: usuario.id || null,
