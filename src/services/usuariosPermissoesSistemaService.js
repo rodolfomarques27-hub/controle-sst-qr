@@ -5,6 +5,7 @@ const PERMISSAO_SISTEMA_PADRAO_SEGURA = {
     nome: "",
     funcao: "",
     empresa: "",
+    foto_url: "",
     perfil: "consulta",
     ativo: false,
     bloqueado: true,
@@ -65,6 +66,7 @@ export function normalizarPermissaoSistema(permissao = null) {
         nome: permissao.nome || "",
         funcao: permissao.funcao || "",
         empresa: permissao.empresa || "",
+        foto_url: permissao.foto_url || permissao.fotoUrl || permissao.avatar_url || permissao.avatarUrl || "",
         perfil: normalizarPerfilSistema(permissao.perfil),
         ativo: normalizarBooleano(permissao.ativo),
         bloqueado: normalizarBooleano(permissao.bloqueado),
@@ -273,6 +275,7 @@ function validarDadosUsuarioPermissaoSistema(usuario = {}) {
     const nome = normalizarTexto(usuario.nome);
     const funcao = normalizarTexto(usuario.funcao);
     const empresa = normalizarTexto(usuario.empresa);
+    const fotoUrl = normalizarTexto(usuario.foto_url || usuario.fotoUrl);
     const perfil = normalizarPerfilSistema(usuario.perfil);
     const observacao = normalizarTexto(usuario.observacao);
 
@@ -289,6 +292,7 @@ function validarDadosUsuarioPermissaoSistema(usuario = {}) {
         nome,
         funcao,
         empresa,
+        fotoUrl,
         perfil,
         ativo,
         bloqueado,
@@ -376,6 +380,7 @@ export async function salvarUsuarioPermissaoSistemaService({ supabase, usuario, 
         p_nome: dados.nome,
         p_funcao: dados.funcao,
         p_empresa: dados.empresa,
+        p_foto_url: dados.fotoUrl,
         p_perfil: dados.perfil,
         p_ativo: dados.ativo,
         p_bloqueado: dados.bloqueado,

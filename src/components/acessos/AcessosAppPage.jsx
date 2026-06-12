@@ -1,8 +1,10 @@
 import React, { useEffect, useMemo, useState } from "react";
 import {
     AlertTriangle,
+    Camera,
     CheckCircle2,
     ClipboardList,
+    ImagePlus,
     Info,
     LockKeyhole,
     RefreshCw,
@@ -10,6 +12,7 @@ import {
     Trash2,
     UserPlus,
     UsersRound,
+    X,
 } from "lucide-react";
 import { Card } from "../commonComponents";
 import {
@@ -95,6 +98,142 @@ function AvatarUsuarioAcessoApp({ usuario = null, nome = "", email = "" }) {
             {obterIniciaisUsuarioAcessoApp(nome, email)}
         </div>
     );
+}
+
+const BUCKET_FOTOS_USUARIOS_ACESSO_APP = "fotos-colaboradores";
+
+function valorFotoAcessoEhUrlFinal(valor = "") {
+    const texto = String(valor || "").trim();
+    return /^https?:\/\//i.test(texto) || texto.startsWith("blob:") || texto.startsWith("data:");
+}
+
+function normalizarCaminhoFotoAcessoApp(valor = "") {
+    const texto = String(valor || "").trim();
+    if (!texto) return "";
+
+    if (valorFotoAcessoEhUrlFinal(texto) && !texto.includes(`/storage/v1/object/`)) return texto;
+
+    try {
+        const url = new URL(texto);
+        const partes = url.pathname.split("/").filter(Boolean);
+        const indiceBucket = partes.findIndex((parte) => parte === BUCKET_FOTOS_USUARIOS_ACESSO_APP);
+        if (indiceBucket >= 0 && partes.length > indiceBucket + 1) {
+            return decodeURIComponent(partes.slice(indiceBucket + 1).join("/"));
+        }
+    } catch {
+        // Mantém o valor original quando não for URL completa.
+    }
+
+    return texto
+        .replace(new RegExp(`^${BUCKET_FOTOS_USUARIOS_ACESSO_APP}/`, "i"), "")
+        .replace(/^\/+/, "")
+        .trim();
+}
+
+function obterFotoPermissaoAcessoApp(usuario = {}) {
+    return [
+        usuario?.foto_url,
+        usuario?.fotoUrl,
+        usuario?.avatar_url,
+        usuario?.avatarUrl,
+        usuario?.picture,
+    ].find((valor) => String(valor || "").trim()) || "";
+}
+
+function FotoPessoaAcessoApp({ foto = "", preview = "", nome = "", email = "", grande = false }) {
+    const valorFoto = preview || foto;
+    const [urlFoto, setUrlFoto] = useState("");
+    const [fotoComErro, setFotoComErro] = useState(false);
+    const tamanho = grande ? "h-28 w-28 text-3xl" : "h-12 w-12 text-sm";
+
+    useEffect(() => {
+        let cancelado = false;
+        const valor = normalizarCaminhoFotoAcessoApp(valorFoto);
+
+        setFotoComErro(false);
+
+        async function carregarUrl() {
+            if (!valor) {
+                setUrlFoto("");
+                return;
+            }
+
+            if (valorFotoAcessoEhUrlFinal(valor) && !valor.includes(`/storage/v1/object/`)) {
+                setUrlFoto(valor);
+                return;
+            }
+
+            try {
+                const { data, error } = await supabase.storage
+                    .from(BUCKET_FOTOS_USUARIOS_ACESSO_APP)
+                    .createSignedUrl(valor, 60 * 10);
+
+                if (error) throw error;
+                if (!cancelado) setUrlFoto(data?.signedUrl || "");
+            } catch {
+                const { data } = supabase.storage
+                    .from(BUCKET_FOTOS_USUARIOS_ACESSO_APP)
+                    .getPublicUrl(valor);
+
+                if (!cancelado) setUrlFoto(data?.publicUrl || "");
+            }
+        }
+
+        carregarUrl();
+
+        return () => {
+            cancelado = true;
+        };
+    }, [valorFoto]);
+
+    if (urlFoto && !fotoComErro) {
+        return (
+            <img
+                src={urlFoto}
+                alt={`Foto de ${nome || "usuário"}`}
+                onError={() => setFotoComErro(true)}
+                className={`${tamanho} shrink-0 rounded-3xl object-cover ring-1 ring-slate-200`}
+            />
+        );
+    }
+
+    return (
+        <div className={`${tamanho} flex shrink-0 items-center justify-center rounded-3xl bg-blue-50 font-black text-slate-950 ring-1 ring-blue-100`}>
+            {obterIniciaisUsuarioAcessoApp(nome, email)}
+        </div>
+    );
+}
+
+function limparNomeArquivoFotoAcessoApp(valor = "foto") {
+    return String(valor || "foto")
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .replace(/[^a-zA-Z0-9._-]+/g, "-")
+        .replace(/-+/g, "-")
+        .replace(/^-|-$/g, "")
+        .toLowerCase() || "foto";
+}
+
+async function enviarFotoUsuarioAcessoApp({ supabaseClient, arquivo, email }) {
+    if (!arquivo) return "";
+
+    const emailTratado = normalizarTextoAcesso(email).toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || "usuario";
+    const extensao = limparNomeArquivoFotoAcessoApp(arquivo.name || "foto.jpg").split(".").pop() || "jpg";
+    const caminho = `acessos-app/${emailTratado}/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${extensao}`;
+
+    const { error } = await supabaseClient.storage
+        .from(BUCKET_FOTOS_USUARIOS_ACESSO_APP)
+        .upload(caminho, arquivo, {
+            cacheControl: "3600",
+            upsert: true,
+            contentType: arquivo.type || "image/jpeg",
+        });
+
+    if (error) {
+        throw new Error(error.message || "Não foi possível subir a foto do usuário.");
+    }
+
+    return caminho;
 }
 
 function scrollParaSecaoAcessoApp(id) {
@@ -222,6 +361,9 @@ const FORM_USUARIO_ACESSO_INICIAL = {
     bloqueado: false,
     acesso_global: false,
     observacao: "",
+    foto_url: "",
+    fotoArquivo: null,
+    fotoPreview: "",
     excluido: false,
     senhaTemporaria: "",
     confirmarSenhaTemporaria: "",
@@ -246,6 +388,9 @@ function montarFormularioUsuarioAcesso(usuario = null) {
         bloqueado,
         acesso_global: perfil === "administrador" ? Boolean(usuario.acesso_global) : false,
         observacao: usuario.observacao || "",
+        foto_url: obterFotoPermissaoAcessoApp(usuario),
+        fotoArquivo: null,
+        fotoPreview: "",
         excluido: Boolean(usuario.excluido),
         senhaTemporaria: "",
         confirmarSenhaTemporaria: "",
@@ -755,6 +900,76 @@ function UsuariosCadastradosApp({ usuario = null, usuarioParaEditar = null, onEd
         });
     }
 
+    function selecionarFotoFormulario(evento) {
+        const arquivo = evento.target.files?.[0] || null;
+        if (!arquivo) return;
+
+        if (!arquivo.type?.startsWith("image/")) {
+            setErro("Selecione um arquivo de imagem válido para a foto.");
+            evento.target.value = "";
+            return;
+        }
+
+        if (arquivo.size > 3 * 1024 * 1024) {
+            setErro("A foto deve ter no máximo 3 MB.");
+            evento.target.value = "";
+            return;
+        }
+
+        setErro("");
+        setFormulario((atual) => {
+            if (atual.fotoPreview?.startsWith("blob:")) {
+                URL.revokeObjectURL(atual.fotoPreview);
+            }
+
+            return {
+                ...atual,
+                fotoArquivo: arquivo,
+                fotoPreview: URL.createObjectURL(arquivo),
+            };
+        });
+    }
+
+    function removerFotoFormulario() {
+        setFormulario((atual) => {
+            if (atual.fotoPreview?.startsWith("blob:")) {
+                URL.revokeObjectURL(atual.fotoPreview);
+            }
+
+            return {
+                ...atual,
+                foto_url: "",
+                fotoArquivo: null,
+                fotoPreview: "",
+            };
+        });
+    }
+
+    async function prepararFormularioComFotoUpload(emailTratado) {
+        const formularioTratado = {
+            ...formulario,
+            email: emailTratado,
+            foto_url: normalizarTextoAcesso(formulario.foto_url),
+        };
+
+        if (!formulario.fotoArquivo) return formularioTratado;
+
+        setMensagem("Enviando foto do usuário para o Storage...");
+
+        const caminhoFoto = await enviarFotoUsuarioAcessoApp({
+            supabaseClient: supabase,
+            arquivo: formulario.fotoArquivo,
+            email: emailTratado,
+        });
+
+        return {
+            ...formularioTratado,
+            foto_url: caminhoFoto,
+            fotoArquivo: null,
+            fotoPreview: "",
+        };
+    }
+
     async function criarLoginDoApp() {
         if (criandoLogin || salvando) return;
 
@@ -798,10 +1013,11 @@ function UsuariosCadastradosApp({ usuario = null, usuarioParaEditar = null, onEd
         setMensagem(`Criando login real de ${emailTratado} no Supabase Auth...`);
 
         try {
+            const formularioComFoto = await prepararFormularioComFotoUpload(emailTratado);
             const resultado = await criarLoginAppComSenhaTemporariaService({
                 supabase,
                 dados: {
-                    ...formulario,
+                    ...formularioComFoto,
                     email: emailTratado,
                     // Criar login do app sempre usa a senha informada como senha temporária.
                     // Se o e-mail já existir no Supabase Auth, a senha será redefinida e a troca obrigatória será marcada.
@@ -816,13 +1032,14 @@ function UsuariosCadastradosApp({ usuario = null, usuarioParaEditar = null, onEd
                     ...formulario,
                     ...(permissaoSalva || {}),
                     email: permissaoSalva?.email || emailTratado,
-                    nome: permissaoSalva?.nome || formulario.nome,
-                    funcao: permissaoSalva?.funcao || formulario.funcao,
-                    empresa: permissaoSalva?.empresa || formulario.empresa,
-                    perfil: permissaoSalva?.perfil || formulario.perfil,
-                    ativo: permissaoSalva?.ativo ?? formulario.ativo,
-                    bloqueado: permissaoSalva?.bloqueado ?? formulario.bloqueado,
-                    acesso_global: permissaoSalva?.acesso_global ?? permissaoSalva?.acessoGlobal ?? formulario.acesso_global,
+                    nome: permissaoSalva?.nome || formularioComFoto.nome,
+                    funcao: permissaoSalva?.funcao || formularioComFoto.funcao,
+                    empresa: permissaoSalva?.empresa || formularioComFoto.empresa,
+                    foto_url: obterFotoPermissaoAcessoApp(permissaoSalva) || formularioComFoto.foto_url,
+                    perfil: permissaoSalva?.perfil || formularioComFoto.perfil,
+                    ativo: permissaoSalva?.ativo ?? formularioComFoto.ativo,
+                    bloqueado: permissaoSalva?.bloqueado ?? formularioComFoto.bloqueado,
+                    acesso_global: permissaoSalva?.acesso_global ?? permissaoSalva?.acessoGlobal ?? formularioComFoto.acesso_global,
                     precisa_trocar_senha: true,
                 };
 
@@ -843,6 +1060,8 @@ function UsuariosCadastradosApp({ usuario = null, usuarioParaEditar = null, onEd
                     senhaTemporaria: "",
                     confirmarSenhaTemporaria: "",
                     resetarSenhaTemporaria: true,
+                    fotoArquivo: null,
+                    fotoPreview: "",
                 });
             }
 
@@ -876,10 +1095,11 @@ function UsuariosCadastradosApp({ usuario = null, usuarioParaEditar = null, onEd
         setMensagem(`Salvando permissão de ${emailTratado}...`);
 
         try {
+            const formularioComFoto = await prepararFormularioComFotoUpload(emailTratado);
             const salvo = await salvarUsuarioPermissaoSistemaService({
                 supabase,
                 usuario: {
-                    ...formulario,
+                    ...formularioComFoto,
                     email: emailTratado,
                 },
                 usuarioAtual: usuario,
@@ -897,7 +1117,11 @@ function UsuariosCadastradosApp({ usuario = null, usuarioParaEditar = null, onEd
 
                     return [salvo, ...listaAtual];
                 });
-                setFormulario(montarFormularioUsuarioAcesso(salvo));
+                setFormulario({
+                    ...montarFormularioUsuarioAcesso(salvo),
+                    fotoArquivo: null,
+                    fotoPreview: "",
+                });
             }
 
             setMensagem("Permissão salva com o padrão editável do perfil selecionado. Para criar ou redefinir login real, use o botão Criar login do app com senha temporária.");
@@ -1156,12 +1380,12 @@ function UsuariosCadastradosApp({ usuario = null, usuarioParaEditar = null, onEd
 
             {formAberto ? (
                 <form onSubmit={salvarPermissaoEditada} className="mt-5 rounded-3xl bg-slate-50 p-4 ring-1 ring-slate-100">
-                    <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
-                        <div>
+                    <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+                        <div className="min-w-0">
                             <p className="text-xs font-black uppercase tracking-[0.18em] text-slate-400">Edição de permissão</p>
                             <h4 className="mt-1 text-lg font-black text-slate-950">{formulario.id ? "Editar pessoa com acesso ao app" : "Cadastrar login de acesso"}</h4>
-                            <p className="mt-1 text-xs font-semibold leading-5 text-slate-500">
-                                Use Criar login do app para criar o usuário real no Supabase Auth. Ao escolher um perfil, o padrão editável salvo em Perfis padrão será aplicado às permissões do usuário.
+                            <p className="mt-1 max-w-5xl text-xs font-semibold leading-5 text-slate-500">
+                                Dados principais, foto, senha temporária e status ficam no mesmo bloco. Ao escolher um perfil, o padrão editável salvo em Perfis padrão será aplicado às permissões do usuário.
                             </p>
                         </div>
                         <button
@@ -1173,154 +1397,209 @@ function UsuariosCadastradosApp({ usuario = null, usuarioParaEditar = null, onEd
                         </button>
                     </div>
 
-                    <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-5">
-                        <label className="block">
-                            <span className="text-[10px] font-black uppercase tracking-wide text-slate-400">Nome</span>
-                            <input
-                                value={formulario.nome}
-                                onChange={(evento) => atualizarCampoFormulario("nome", evento.target.value)}
-                                className="mt-1 w-full rounded-2xl border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700 outline-none focus:border-blue-400 focus:ring-4 focus:ring-blue-100"
-                                placeholder="Nome completo"
-                            />
-                        </label>
-                        <label className="block">
-                            <span className="text-[10px] font-black uppercase tracking-wide text-slate-400">E-mail</span>
-                            <input
-                                value={formulario.email}
-                                onChange={(evento) => atualizarCampoFormulario("email", evento.target.value)}
-                                className="mt-1 w-full rounded-2xl border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700 outline-none focus:border-blue-400 focus:ring-4 focus:ring-blue-100"
-                                placeholder="usuario@empresa.com"
-                            />
-                        </label>
-                        <label className="block">
-                            <span className="text-[10px] font-black uppercase tracking-wide text-slate-400">Empresa</span>
-                            <input
-                                value={formulario.empresa}
-                                onChange={(evento) => atualizarCampoFormulario("empresa", evento.target.value)}
-                                className="mt-1 w-full rounded-2xl border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700 outline-none focus:border-blue-400 focus:ring-4 focus:ring-blue-100"
-                                placeholder="Empresa / contrato"
-                            />
-                        </label>
-                        <label className="block">
-                            <span className="text-[10px] font-black uppercase tracking-wide text-slate-400">Função</span>
-                            <input
-                                value={formulario.funcao}
-                                onChange={(evento) => atualizarCampoFormulario("funcao", evento.target.value)}
-                                className="mt-1 w-full rounded-2xl border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700 outline-none focus:border-blue-400 focus:ring-4 focus:ring-blue-100"
-                                placeholder="Função / área"
-                            />
-                        </label>
-                        <label className="block">
-                            <span className="text-[10px] font-black uppercase tracking-wide text-slate-400">Perfil</span>
-                            <select
-                                value={formulario.perfil}
-                                onChange={(evento) => atualizarCampoFormulario("perfil", evento.target.value)}
-                                className="mt-1 w-full rounded-2xl border border-slate-200 bg-white px-3 py-2 text-xs font-black text-slate-700 outline-none focus:border-blue-400 focus:ring-4 focus:ring-blue-100"
-                            >
-                                {PERFIS_USUARIOS_PERMISSOES_PLANEJADOS.map((perfil) => (
-                                    <option key={perfil.chave} value={perfil.chave}>{perfil.perfil}</option>
-                                ))}
-                            </select>
-                            <p className="mt-2 rounded-2xl bg-blue-50 px-3 py-2 text-[11px] font-bold leading-5 text-blue-700 ring-1 ring-blue-100">
-                                Ao salvar, o sistema aplica automaticamente o padrão editável deste perfil nas permissões do usuário.
-                            </p>
-                        </label>
-                    </div>
-
-                    <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-                        <label className="block">
-                            <span className="text-[10px] font-black uppercase tracking-wide text-slate-400">Senha temporária</span>
-                            <input
-                                type="password"
-                                value={formulario.senhaTemporaria}
-                                onChange={(evento) => atualizarCampoFormulario("senhaTemporaria", evento.target.value)}
-                                className="mt-1 w-full rounded-2xl border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700 outline-none focus:border-blue-400 focus:ring-4 focus:ring-blue-100"
-                                placeholder="Mínimo 6 caracteres"
-                                autoComplete="new-password"
-                            />
-                        </label>
-                        <label className="block">
-                            <span className="text-[10px] font-black uppercase tracking-wide text-slate-400">Confirmar senha temporária</span>
-                            <input
-                                type="password"
-                                value={formulario.confirmarSenhaTemporaria}
-                                onChange={(evento) => atualizarCampoFormulario("confirmarSenhaTemporaria", evento.target.value)}
-                                className="mt-1 w-full rounded-2xl border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700 outline-none focus:border-blue-400 focus:ring-4 focus:ring-blue-100"
-                                placeholder="Repita a senha"
-                                autoComplete="new-password"
-                            />
-                        </label>
-                        <label className="flex items-start gap-3 rounded-2xl bg-white p-3 ring-1 ring-slate-200">
-                            <input
-                                type="checkbox"
-                                checked={Boolean(formulario.resetarSenhaTemporaria)}
-                                onChange={(evento) => atualizarCampoFormulario("resetarSenhaTemporaria", evento.target.checked)}
-                                className="mt-1 h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
-                            />
-                            <span>
-                                <span className="block text-xs font-black text-slate-700">Redefinir senha temporária</span>
-                                <span className="mt-1 block text-[11px] font-semibold leading-5 text-slate-500">Use para login já existente. O usuário deverá trocar a senha no próximo acesso.</span>
-                            </span>
-                        </label>
-                    </div>
-
-                    <div className="mt-4 grid gap-3 md:grid-cols-3">
-                        <label className={`rounded-2xl bg-white p-4 ring-1 ${formulario.ativo ? "ring-emerald-100" : "ring-slate-200"}`}>
-                            <div className="flex items-start gap-3">
-                                <input
-                                    type="checkbox"
-                                    checked={formulario.ativo}
-                                    disabled={formulario.perfil === "bloqueado"}
-                                    onChange={(evento) => atualizarCampoFormulario("ativo", evento.target.checked)}
-                                    className="mt-1"
-                                />
+                    <div className="mt-4 grid gap-4 xl:grid-cols-[260px_minmax(0,1fr)]">
+                        <section className="rounded-3xl bg-white p-4 ring-1 ring-slate-200">
+                            <div className="flex items-start justify-between gap-3">
                                 <div>
-                                    <p className="text-xs font-black text-slate-950">Usuário ativo</p>
-                                    <p className="mt-1 text-[11px] font-semibold leading-5 text-slate-500">Quando ativo, o usuário pode acessar conforme o perfil e permissões liberadas.</p>
+                                    <p className="text-[10px] font-black uppercase tracking-wide text-slate-400">Foto do acesso</p>
+                                    <p className="mt-1 text-xs font-bold leading-5 text-slate-500">Use para identificação visual do usuário.</p>
                                 </div>
+                                <Camera className="h-5 w-5 text-slate-400" strokeWidth={2.2} />
                             </div>
-                        </label>
-                        <label className={`rounded-2xl bg-white p-4 ring-1 ${formulario.bloqueado ? "ring-rose-100" : "ring-slate-200"}`}>
-                            <div className="flex items-start gap-3">
-                                <input
-                                    type="checkbox"
-                                    checked={formulario.bloqueado}
-                                    onChange={(evento) => atualizarCampoFormulario("bloqueado", evento.target.checked)}
-                                    className="mt-1"
-                                />
-                                <div>
-                                    <p className="text-xs font-black text-slate-950">Bloqueado</p>
-                                    <p className="mt-1 text-[11px] font-semibold leading-5 text-slate-500">Impede acesso operacional e mantém o cadastro para rastreabilidade.</p>
-                                </div>
-                            </div>
-                        </label>
-                        <label className={`rounded-2xl bg-white p-4 ring-1 ${formulario.acesso_global ? "ring-blue-100" : "ring-slate-200"}`}>
-                            <div className="flex items-start gap-3">
-                                <input
-                                    type="checkbox"
-                                    checked={formulario.acesso_global}
-                                    disabled={formulario.perfil !== "administrador" || formulario.bloqueado}
-                                    onChange={(evento) => atualizarCampoFormulario("acesso_global", evento.target.checked)}
-                                    className="mt-1"
-                                />
-                                <div>
-                                    <p className="text-xs font-black text-slate-950">Acesso global</p>
-                                    <p className="mt-1 text-[11px] font-semibold leading-5 text-slate-500">Somente Administrador pode ter acesso global. Bloqueado nunca recebe acesso global.</p>
-                                </div>
-                            </div>
-                        </label>
-                    </div>
 
-                    <label className="mt-4 block">
-                        <span className="text-[10px] font-black uppercase tracking-wide text-slate-400">Observação administrativa</span>
-                        <textarea
-                            value={formulario.observacao}
-                            onChange={(evento) => atualizarCampoFormulario("observacao", evento.target.value)}
-                            rows={2}
-                            className="mt-1 w-full resize-none rounded-2xl border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700 outline-none focus:border-blue-400 focus:ring-4 focus:ring-blue-100"
-                            placeholder="Exemplo: acesso liberado para auditoria, perfil criado por solicitação aprovada..."
-                        />
-                    </label>
+                            <div className="mt-4 flex flex-col items-center text-center">
+                                <FotoPessoaAcessoApp
+                                    foto={formulario.foto_url}
+                                    preview={formulario.fotoPreview}
+                                    nome={formulario.nome}
+                                    email={formulario.email}
+                                    grande
+                                />
+                                <p className="mt-3 max-w-[190px] truncate text-sm font-black text-slate-950">{formulario.nome || "Usuário sem nome"}</p>
+                                <p className="mt-0.5 max-w-[210px] truncate text-[11px] font-semibold text-slate-500">{formulario.email || "email não informado"}</p>
+                            </div>
+
+                            <div className="mt-4 grid gap-2">
+                                <input
+                                    id="foto-acesso-app-input"
+                                    type="file"
+                                    accept="image/*"
+                                    onChange={selecionarFotoFormulario}
+                                    className="hidden"
+                                />
+                                <label
+                                    htmlFor="foto-acesso-app-input"
+                                    className="inline-flex cursor-pointer items-center justify-center gap-2 rounded-2xl bg-slate-950 px-4 py-2.5 text-xs font-black text-white shadow-sm hover:bg-slate-800"
+                                >
+                                    <ImagePlus className="h-4 w-4" strokeWidth={2.2} />
+                                    Subir foto
+                                </label>
+                                {(formulario.foto_url || formulario.fotoPreview) ? (
+                                    <button
+                                        type="button"
+                                        onClick={removerFotoFormulario}
+                                        className="inline-flex items-center justify-center gap-2 rounded-2xl bg-white px-4 py-2.5 text-xs font-black text-rose-700 ring-1 ring-rose-100 hover:bg-rose-50"
+                                    >
+                                        <X className="h-4 w-4" strokeWidth={2.2} />
+                                        Remover foto
+                                    </button>
+                                ) : null}
+                            </div>
+                            <p className="mt-3 text-center text-[10px] font-semibold leading-4 text-slate-400">JPG, PNG ou WEBP até 3 MB. A imagem será salva no Storage.</p>
+                        </section>
+
+                        <section className="grid content-start gap-3">
+                            <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-5">
+                                <label className="block xl:col-span-1">
+                                    <span className="text-[10px] font-black uppercase tracking-wide text-slate-400">Nome</span>
+                                    <input
+                                        value={formulario.nome}
+                                        onChange={(evento) => atualizarCampoFormulario("nome", evento.target.value)}
+                                        className="mt-1 w-full rounded-2xl border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700 outline-none focus:border-blue-400 focus:ring-4 focus:ring-blue-100"
+                                        placeholder="Nome completo"
+                                    />
+                                </label>
+                                <label className="block xl:col-span-1">
+                                    <span className="text-[10px] font-black uppercase tracking-wide text-slate-400">E-mail</span>
+                                    <input
+                                        value={formulario.email}
+                                        onChange={(evento) => atualizarCampoFormulario("email", evento.target.value)}
+                                        className="mt-1 w-full rounded-2xl border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700 outline-none focus:border-blue-400 focus:ring-4 focus:ring-blue-100"
+                                        placeholder="usuario@empresa.com"
+                                    />
+                                </label>
+                                <label className="block xl:col-span-1">
+                                    <span className="text-[10px] font-black uppercase tracking-wide text-slate-400">Empresa</span>
+                                    <input
+                                        value={formulario.empresa}
+                                        onChange={(evento) => atualizarCampoFormulario("empresa", evento.target.value)}
+                                        className="mt-1 w-full rounded-2xl border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700 outline-none focus:border-blue-400 focus:ring-4 focus:ring-blue-100"
+                                        placeholder="Empresa / contrato"
+                                    />
+                                </label>
+                                <label className="block xl:col-span-1">
+                                    <span className="text-[10px] font-black uppercase tracking-wide text-slate-400">Função</span>
+                                    <input
+                                        value={formulario.funcao}
+                                        onChange={(evento) => atualizarCampoFormulario("funcao", evento.target.value)}
+                                        className="mt-1 w-full rounded-2xl border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700 outline-none focus:border-blue-400 focus:ring-4 focus:ring-blue-100"
+                                        placeholder="Função / área"
+                                    />
+                                </label>
+                                <label className="block xl:col-span-1">
+                                    <span className="text-[10px] font-black uppercase tracking-wide text-slate-400">Perfil</span>
+                                    <select
+                                        value={formulario.perfil}
+                                        onChange={(evento) => atualizarCampoFormulario("perfil", evento.target.value)}
+                                        className="mt-1 w-full rounded-2xl border border-slate-200 bg-white px-3 py-2 text-xs font-black text-slate-700 outline-none focus:border-blue-400 focus:ring-4 focus:ring-blue-100"
+                                    >
+                                        {PERFIS_USUARIOS_PERMISSOES_PLANEJADOS.map((perfil) => (
+                                            <option key={perfil.chave} value={perfil.chave}>{perfil.perfil}</option>
+                                        ))}
+                                    </select>
+                                </label>
+                            </div>
+
+                            <div className="grid gap-3 md:grid-cols-3">
+                                <label className={`rounded-2xl bg-white p-3 ring-1 ${formulario.ativo ? "ring-emerald-100" : "ring-slate-200"}`}>
+                                    <div className="flex items-start gap-3">
+                                        <input
+                                            type="checkbox"
+                                            checked={formulario.ativo}
+                                            disabled={formulario.perfil === "bloqueado"}
+                                            onChange={(evento) => atualizarCampoFormulario("ativo", evento.target.checked)}
+                                            className="mt-1"
+                                        />
+                                        <div>
+                                            <p className="text-xs font-black text-slate-950">Usuário ativo</p>
+                                            <p className="mt-1 text-[11px] font-semibold leading-5 text-slate-500">Libera acesso conforme perfil.</p>
+                                        </div>
+                                    </div>
+                                </label>
+                                <label className={`rounded-2xl bg-white p-3 ring-1 ${formulario.bloqueado ? "ring-rose-100" : "ring-slate-200"}`}>
+                                    <div className="flex items-start gap-3">
+                                        <input
+                                            type="checkbox"
+                                            checked={formulario.bloqueado}
+                                            onChange={(evento) => atualizarCampoFormulario("bloqueado", evento.target.checked)}
+                                            className="mt-1"
+                                        />
+                                        <div>
+                                            <p className="text-xs font-black text-slate-950">Bloqueado</p>
+                                            <p className="mt-1 text-[11px] font-semibold leading-5 text-slate-500">Impede acesso operacional.</p>
+                                        </div>
+                                    </div>
+                                </label>
+                                <label className={`rounded-2xl bg-white p-3 ring-1 ${formulario.acesso_global ? "ring-blue-100" : "ring-slate-200"}`}>
+                                    <div className="flex items-start gap-3">
+                                        <input
+                                            type="checkbox"
+                                            checked={formulario.acesso_global}
+                                            disabled={formulario.perfil !== "administrador" || formulario.bloqueado}
+                                            onChange={(evento) => atualizarCampoFormulario("acesso_global", evento.target.checked)}
+                                            className="mt-1"
+                                        />
+                                        <div>
+                                            <p className="text-xs font-black text-slate-950">Acesso global</p>
+                                            <p className="mt-1 text-[11px] font-semibold leading-5 text-slate-500">Somente Administrador.</p>
+                                        </div>
+                                    </div>
+                                </label>
+                            </div>
+
+                            <div className="grid gap-3 md:grid-cols-3">
+                                <label className="block">
+                                    <span className="text-[10px] font-black uppercase tracking-wide text-slate-400">Senha temporária</span>
+                                    <input
+                                        type="password"
+                                        value={formulario.senhaTemporaria}
+                                        onChange={(evento) => atualizarCampoFormulario("senhaTemporaria", evento.target.value)}
+                                        className="mt-1 w-full rounded-2xl border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700 outline-none focus:border-blue-400 focus:ring-4 focus:ring-blue-100"
+                                        placeholder="Mínimo 6 caracteres"
+                                        autoComplete="new-password"
+                                    />
+                                </label>
+                                <label className="block">
+                                    <span className="text-[10px] font-black uppercase tracking-wide text-slate-400">Confirmar senha</span>
+                                    <input
+                                        type="password"
+                                        value={formulario.confirmarSenhaTemporaria}
+                                        onChange={(evento) => atualizarCampoFormulario("confirmarSenhaTemporaria", evento.target.value)}
+                                        className="mt-1 w-full rounded-2xl border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700 outline-none focus:border-blue-400 focus:ring-4 focus:ring-blue-100"
+                                        placeholder="Repita a senha"
+                                        autoComplete="new-password"
+                                    />
+                                </label>
+                                <label className="flex items-start gap-3 rounded-2xl bg-white p-3 ring-1 ring-slate-200">
+                                    <input
+                                        type="checkbox"
+                                        checked={Boolean(formulario.resetarSenhaTemporaria)}
+                                        onChange={(evento) => atualizarCampoFormulario("resetarSenhaTemporaria", evento.target.checked)}
+                                        className="mt-1 h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                                    />
+                                    <span>
+                                        <span className="block text-xs font-black text-slate-700">Redefinir senha temporária</span>
+                                        <span className="mt-1 block text-[11px] font-semibold leading-5 text-slate-500">Para login já existente.</span>
+                                    </span>
+                                </label>
+                            </div>
+
+                            <div className="rounded-2xl bg-blue-50 px-3 py-2 text-[11px] font-bold leading-5 text-blue-700 ring-1 ring-blue-100">
+                                Ao salvar, o padrão editável do perfil selecionado será aplicado às permissões do usuário.
+                            </div>
+
+                            <label className="block">
+                                <span className="text-[10px] font-black uppercase tracking-wide text-slate-400">Observação administrativa</span>
+                                <textarea
+                                    value={formulario.observacao}
+                                    onChange={(evento) => atualizarCampoFormulario("observacao", evento.target.value)}
+                                    rows={2}
+                                    className="mt-1 w-full resize-none rounded-2xl border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700 outline-none focus:border-blue-400 focus:ring-4 focus:ring-blue-100"
+                                    placeholder="Exemplo: acesso liberado para auditoria, perfil criado por solicitação aprovada..."
+                                />
+                            </label>
+                        </section>
+                    </div>
 
                     <div className="mt-4 flex flex-wrap gap-2">
                         <button
@@ -1340,7 +1619,12 @@ function UsuariosCadastradosApp({ usuario = null, usuarioParaEditar = null, onEd
                         </button>
                         <button
                             type="button"
-                            onClick={() => setFormulario(montarFormularioUsuarioAcesso())}
+                            onClick={() => {
+                                if (formulario.fotoPreview?.startsWith("blob:")) {
+                                    URL.revokeObjectURL(formulario.fotoPreview);
+                                }
+                                setFormulario(montarFormularioUsuarioAcesso());
+                            }}
                             disabled={salvando}
                             className="rounded-2xl bg-white px-5 py-2.5 text-xs font-black text-slate-600 ring-1 ring-slate-200 hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-60"
                         >
@@ -1354,12 +1638,19 @@ function UsuariosCadastradosApp({ usuario = null, usuarioParaEditar = null, onEd
                 <div className="mt-5 space-y-2">
                 {usuariosFiltrados.length > 0 ? usuariosFiltrados.map((item) => (
                     <article key={item.id || item.email} className="rounded-2xl bg-slate-50 px-4 py-3 ring-1 ring-slate-100">
-                        <div className="grid w-full gap-3 xl:grid-cols-[minmax(230px,1fr)_minmax(0,auto)] xl:items-center">
-                            <div className="min-w-0 text-left">
-                                <p className="truncate text-sm font-black text-slate-950">{item.nome || "Usuário sem nome"}</p>
-                                <p className="mt-0.5 truncate text-xs font-semibold text-slate-500">{item.email || "email não informado"}</p>
-                                <p className="mt-1 truncate text-[11px] font-semibold text-slate-400">{item.empresa || "empresa não informada"}</p>
-                                <p className="mt-1 truncate text-[11px] font-semibold text-slate-400">{item.funcao || "função não informada"}</p>
+                        <div className="grid w-full gap-3 xl:grid-cols-[minmax(260px,1fr)_minmax(0,auto)] xl:items-center">
+                            <div className="flex min-w-0 items-center gap-3 text-left">
+                                <FotoPessoaAcessoApp
+                                    foto={obterFotoPermissaoAcessoApp(item)}
+                                    nome={item.nome}
+                                    email={item.email}
+                                />
+                                <div className="min-w-0">
+                                    <p className="truncate text-sm font-black text-slate-950">{item.nome || "Usuário sem nome"}</p>
+                                    <p className="mt-0.5 truncate text-xs font-semibold text-slate-500">{item.email || "email não informado"}</p>
+                                    <p className="mt-1 truncate text-[11px] font-semibold text-slate-400">{item.empresa || "empresa não informada"}</p>
+                                    <p className="mt-1 truncate text-[11px] font-semibold text-slate-400">{item.funcao || "função não informada"}</p>
+                                </div>
                             </div>
                             <div className="flex min-w-0 flex-col gap-2 xl:items-end">
                                 <div className="flex flex-wrap items-center gap-2 xl:justify-end">
