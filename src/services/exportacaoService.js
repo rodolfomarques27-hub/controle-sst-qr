@@ -1416,23 +1416,41 @@ export async function baixarRelatorioDashboardSstPDF({
     .secao-titulo p { margin: 2px 0 0; color: #64748b; font-size: 6.8px; font-weight: 700; }
     .secao-corpo { padding: 7px 9px; }
 
-    .linha-progresso { margin-bottom: 6px; }
+    .linha-progresso { margin-bottom: 7px; padding-bottom: 1px; }
     .linha-progresso:last-child { margin-bottom: 0; }
-    .linha-progresso-topo { display: flex; justify-content: space-between; gap: 8px; color: #334155; font-size: 7.2px; font-weight: 800; margin-bottom: 3px; }
-    .barra { width: 100%; height: 6px; border-radius: 999px; background: #e2e8f0; overflow: hidden; }
-    .barra span { display: block; height: 100%; border-radius: 999px; background: var(--azul); }
+    .linha-progresso-topo { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; color: #334155; font-size: 7.1px; font-weight: 800; margin-bottom: 4px; line-height: 1.1; }
+    .linha-progresso-topo span { max-width: 58%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .linha-progresso-topo strong { white-space: nowrap; color: #0f172a; font-weight: 900; }
+    .barra { width: 100%; height: 5px; border-radius: 999px; background: #e2e8f0; overflow: hidden; }
+    .barra span { display: block; height: 100%; border-radius: 999px; background: linear-gradient(90deg, #064fae 0%, #0b66d8 100%); }
 
     .lista-alertas { margin: 0; padding-left: 15px; color: #334155; font-size: 7.4px; line-height: 1.35; font-weight: 700; }
     .lista-alertas li { margin-bottom: 3px; }
     .lista-alertas-vazia { color: #64748b; font-size: 7.5px; font-weight: 700; margin: 0; }
 
-    .tabela-relatorio-dashboard { width: 100%; border-collapse: collapse; font-size: 7.2px; table-layout: fixed; }
-    .tabela-relatorio-dashboard th { background: #07162f; color: #fff; padding: 5px 5px; text-align: left; font-size: 6.3px; letter-spacing: .035em; text-transform: uppercase; white-space: nowrap; }
-    .tabela-relatorio-dashboard td { border-bottom: 1px solid #e2e8f0; padding: 5px; vertical-align: top; color: #334155; line-height: 1.22; overflow-wrap: anywhere; }
-    .grid-resumo-operacional .tabela-relatorio-dashboard th:nth-child(2),
-    .grid-resumo-operacional .tabela-relatorio-dashboard td:nth-child(2) { width: 70px; text-align: center; }
-    .grid-resumo-operacional .tabela-relatorio-dashboard th:nth-child(3),
-    .grid-resumo-operacional .tabela-relatorio-dashboard td:nth-child(3) { width: 82px; text-align: center; }
+    .tabela-relatorio-dashboard { width: 100%; border-collapse: collapse; font-size: 7.1px; table-layout: fixed; }
+    .tabela-relatorio-dashboard th { background: #07162f; color: #fff; padding: 5px 6px; text-align: left; font-size: 6.1px; letter-spacing: .025em; text-transform: uppercase; white-space: nowrap; }
+    .tabela-relatorio-dashboard td { border-bottom: 1px solid #e2e8f0; padding: 5px 6px; vertical-align: middle; color: #334155; line-height: 1.2; overflow-wrap: anywhere; }
+    .grid-resumo-operacional .bloco-tabela-resumo:nth-child(1) .tabela-relatorio-dashboard th:nth-child(1),
+    .grid-resumo-operacional .bloco-tabela-resumo:nth-child(1) .tabela-relatorio-dashboard td:nth-child(1) { width: 56%; }
+    .grid-resumo-operacional .bloco-tabela-resumo:nth-child(1) .tabela-relatorio-dashboard th:nth-child(2),
+    .grid-resumo-operacional .bloco-tabela-resumo:nth-child(1) .tabela-relatorio-dashboard td:nth-child(2) { width: 18%; text-align: center; }
+    .grid-resumo-operacional .bloco-tabela-resumo:nth-child(1) .tabela-relatorio-dashboard th:nth-child(3),
+    .grid-resumo-operacional .bloco-tabela-resumo:nth-child(1) .tabela-relatorio-dashboard td:nth-child(3) { width: 26%; text-align: center; }
+    .grid-resumo-operacional .bloco-tabela-resumo:nth-child(2) .tabela-relatorio-dashboard th:nth-child(1),
+    .grid-resumo-operacional .bloco-tabela-resumo:nth-child(2) .tabela-relatorio-dashboard td:nth-child(1) { width: 72%; }
+    .grid-resumo-operacional .bloco-tabela-resumo:nth-child(2) .tabela-relatorio-dashboard th:nth-child(2),
+    .grid-resumo-operacional .bloco-tabela-resumo:nth-child(2) .tabela-relatorio-dashboard td:nth-child(2) { width: 28%; text-align: center; }
+    .tabela-pendencias-wrapper .tabela-relatorio-dashboard th:nth-child(1),
+    .tabela-pendencias-wrapper .tabela-relatorio-dashboard td:nth-child(1) { width: 23%; }
+    .tabela-pendencias-wrapper .tabela-relatorio-dashboard th:nth-child(2),
+    .tabela-pendencias-wrapper .tabela-relatorio-dashboard td:nth-child(2) { width: 17%; }
+    .tabela-pendencias-wrapper .tabela-relatorio-dashboard th:nth-child(3),
+    .tabela-pendencias-wrapper .tabela-relatorio-dashboard td:nth-child(3) { width: 36%; }
+    .tabela-pendencias-wrapper .tabela-relatorio-dashboard th:nth-child(4),
+    .tabela-pendencias-wrapper .tabela-relatorio-dashboard td:nth-child(4) { width: 12%; text-align: center; }
+    .tabela-pendencias-wrapper .tabela-relatorio-dashboard th:nth-child(5),
+    .tabela-pendencias-wrapper .tabela-relatorio-dashboard td:nth-child(5) { width: 12%; text-align: center; }
     .tabela-relatorio-dashboard tr:nth-child(even) td { background: #f8fbff; }
     .texto-forte { color: #0f172a !important; font-weight: 900; }
     .tabela-vazia, .mais-registros { text-align: center; color: #64748b !important; font-weight: 800; }
@@ -1545,7 +1563,7 @@ export async function baixarRelatorioDashboardSstPDF({
 
             <section class="secao-relatorio">
                 <div class="secao-titulo"><h3>Pendências críticas</h3><p>Itens que impactam liberação, mobilização ou controle documental.</p></div>
-                <div class="secao-corpo">${pendenciasHtml}</div>
+                <div class="secao-corpo tabela-pendencias-wrapper">${pendenciasHtml}</div>
             </section>
         </div>
         ${rodapeRelatorio(2)}
