@@ -67,6 +67,8 @@ function criarSupabaseDesabilitado() {
                 },
             }),
             signInWithPassword: async () => resposta,
+            resetPasswordForEmail: async () => resposta,
+            updateUser: async () => resposta,
             signOut: async () => ({ error: null }),
         },
         from: () => criarConsultaSupabaseDesabilitada(),

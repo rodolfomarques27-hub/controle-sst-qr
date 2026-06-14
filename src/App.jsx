@@ -92,8 +92,41 @@ function AppTransicaoInterna() {
     );
 }
 
+function detectarRedefinicaoSenhaUrlApp() {
+    if (typeof window === "undefined") return false;
+
+    try {
+        const parametros = new URLSearchParams(window.location.search || "");
+        const hashTexto = String(window.location.hash || "").replace(/^#/, "");
+        const parametrosHash = new URLSearchParams(hashTexto);
+
+        return (
+            parametros.get("redefinir-senha") === "1"
+            || parametros.get("type") === "recovery"
+            || parametrosHash.get("redefinir-senha") === "1"
+            || parametrosHash.get("type") === "recovery"
+        );
+    } catch {
+        return false;
+    }
+}
+
+function limparUrlRedefinicaoSenhaApp() {
+    if (typeof window === "undefined") return;
+
+    try {
+        const url = new URL(window.location.href);
+        url.searchParams.delete("redefinir-senha");
+        url.searchParams.delete("type");
+        window.history.replaceState({}, document.title, `${url.pathname}${url.search}`);
+    } catch {
+        // Mantém a URL atual se o navegador não permitir alteração.
+    }
+}
+
 export default function App() {
     const [usuario, setUsuario] = useState(null);
+    const [recuperacaoSenhaAtiva, setRecuperacaoSenhaAtiva] = useState(() => detectarRedefinicaoSenhaUrlApp());
     const [carregandoSessao, setCarregandoSessao] = useState(() => SUPABASE_CONFIGURADO);
     const [tela, setTela] = useState("dashboard");
     const [configuracoesDesbloqueadas, setConfiguracoesDesbloqueadas] = useState(false);
@@ -702,8 +735,20 @@ export default function App() {
     useEffect(() => {
         if (!SUPABASE_CONFIGURADO) return;
 
+        let componenteAtivo = true;
+
         async function carregarSessao() {
             const { data } = await supabase.auth.getSession();
+            const emRedefinicaoSenha = detectarRedefinicaoSenhaUrlApp();
+
+            if (!componenteAtivo) return;
+
+            if (emRedefinicaoSenha) {
+                setRecuperacaoSenhaAtiva(true);
+                setUsuario(null);
+                setCarregandoSessao(false);
+                return;
+            }
 
             if (data.session?.user) {
                 setUsuario({
@@ -718,7 +763,21 @@ export default function App() {
 
         carregarSessao();
 
-        const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
+        const { data: listener } = supabase.auth.onAuthStateChange((evento, session) => {
+            if (evento === "PASSWORD_RECOVERY") {
+                setRecuperacaoSenhaAtiva(true);
+                setUsuario(null);
+                setCarregandoSessao(false);
+                return;
+            }
+
+            if (detectarRedefinicaoSenhaUrlApp()) {
+                setRecuperacaoSenhaAtiva(true);
+                setUsuario(null);
+                setCarregandoSessao(false);
+                return;
+            }
+
             if (session?.user) {
                 setUsuario({
                     id: session.user.id,
@@ -731,6 +790,7 @@ export default function App() {
         });
 
         return () => {
+            componenteAtivo = false;
             listener.subscription.unsubscribe();
         };
     }, []);
@@ -1077,6 +1137,33 @@ export default function App() {
         return (
             <React.Suspense fallback={<CarregandoTela mensagem="Carregando consulta pública..." />}>
                 <ConsultaQRPublica dados={consultaPublica} />
+            </React.Suspense>
+        );
+    }
+
+    if (recuperacaoSenhaAtiva) {
+        return (
+            <React.Suspense
+                fallback={
+                    <CarregandoTela
+                        mensagem="Carregando redefinição de senha..."
+                        subtitulo="Preparando ambiente seguro."
+                        telaCheia
+                    />
+                }
+            >
+                <LoginScreen
+                    modoRedefinirSenha
+                    onLogin={(usuarioLogado) => {
+                        setTela("dashboard");
+                        setUsuario(usuarioLogado);
+                    }}
+                    onSenhaAtualizada={() => {
+                        limparUrlRedefinicaoSenhaApp();
+                        setRecuperacaoSenhaAtiva(false);
+                        setUsuario(null);
+                    }}
+                />
             </React.Suspense>
         );
     }
