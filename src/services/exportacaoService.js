@@ -1405,32 +1405,32 @@ export async function baixarRelatorioDashboardSstPDF({
     .grid-duplo { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 8px; }
     .grid-resumo-operacional { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
     .bloco-tabela-resumo { border: 1px solid var(--linha); border-radius: 11px; background: #fff; overflow: hidden; }
-    .bloco-tabela-resumo-topo { padding: 6px 8px; background: #f8fbff; border-bottom: 1px solid var(--linha); }
-    .bloco-tabela-resumo-topo h4 { margin: 0; color: #07162f; font-size: 8.2px; text-transform: uppercase; letter-spacing: .055em; }
-    .bloco-tabela-resumo-topo p { margin: 2px 0 0; color: #64748b; font-size: 6.5px; font-weight: 700; }
-    .bloco-tabela-resumo-corpo { padding: 6px 8px; }
-    .estado-vazio-tabela { margin: 0; padding: 12px 8px; border: 1px dashed #cbd5e1; border-radius: 10px; background: #f8fbff; color: #64748b; text-align: center; font-size: 7.2px; font-weight: 800; }
+    .bloco-tabela-resumo-topo { padding: 8px 9px 7px; background: #f8fbff; border-bottom: 1px solid var(--linha); }
+    .bloco-tabela-resumo-topo h4 { margin: 0; color: #07162f; font-size: 8px; line-height: 1.25; text-transform: uppercase; letter-spacing: .045em; }
+    .bloco-tabela-resumo-topo p { margin: 3px 0 0; color: #64748b; font-size: 6.4px; line-height: 1.25; font-weight: 700; }
+    .bloco-tabela-resumo-corpo { padding: 8px 9px; }
+    .estado-vazio-tabela { margin: 0; padding: 14px 10px; border: 1px dashed #cbd5e1; border-radius: 10px; background: #f8fbff; color: #64748b; text-align: center; font-size: 7.1px; line-height: 1.35; font-weight: 800; }
     .secao-relatorio { border: 1px solid var(--linha); border-radius: 13px; background: #fff; overflow: hidden; margin-bottom: 8px; break-inside: avoid; page-break-inside: avoid; }
-    .secao-titulo { padding: 7px 9px; background: #f8fbff; border-bottom: 1px solid var(--linha); }
-    .secao-titulo h3 { margin: 0; color: #07162f; font-size: 9.4px; text-transform: uppercase; letter-spacing: .06em; }
-    .secao-titulo p { margin: 2px 0 0; color: #64748b; font-size: 6.8px; font-weight: 700; }
-    .secao-corpo { padding: 7px 9px; }
+    .secao-titulo { padding: 8px 10px 7px; background: #f8fbff; border-bottom: 1px solid var(--linha); }
+    .secao-titulo h3 { margin: 0; color: #07162f; font-size: 9.2px; line-height: 1.25; text-transform: uppercase; letter-spacing: .055em; }
+    .secao-titulo p { margin: 3px 0 0; color: #64748b; font-size: 6.7px; line-height: 1.25; font-weight: 700; }
+    .secao-corpo { padding: 9px 10px; }
 
-    .linha-progresso { margin-bottom: 7px; padding-bottom: 1px; }
+    .linha-progresso { margin-bottom: 9px; padding: 2px 0 3px; }
     .linha-progresso:last-child { margin-bottom: 0; }
-    .linha-progresso-topo { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; color: #334155; font-size: 7.1px; font-weight: 800; margin-bottom: 4px; line-height: 1.1; }
-    .linha-progresso-topo span { max-width: 58%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .linha-progresso-topo strong { white-space: nowrap; color: #0f172a; font-weight: 900; }
-    .barra { width: 100%; height: 5px; border-radius: 999px; background: #e2e8f0; overflow: hidden; }
+    .linha-progresso-topo { display: flex; align-items: center; justify-content: space-between; gap: 10px; color: #334155; font-size: 7px; font-weight: 850; margin-bottom: 6px; line-height: 1.45; min-height: 11px; }
+    .linha-progresso-topo span { max-width: 58%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding-top: 1px; }
+    .linha-progresso-topo strong { white-space: nowrap; color: #0f172a; font-weight: 900; padding-top: 1px; }
+    .barra { width: 100%; height: 4.5px; border-radius: 999px; background: #e2e8f0; overflow: hidden; }
     .barra span { display: block; height: 100%; border-radius: 999px; background: linear-gradient(90deg, #064fae 0%, #0b66d8 100%); }
 
     .lista-alertas { margin: 0; padding-left: 15px; color: #334155; font-size: 7.4px; line-height: 1.35; font-weight: 700; }
     .lista-alertas li { margin-bottom: 3px; }
     .lista-alertas-vazia { color: #64748b; font-size: 7.5px; font-weight: 700; margin: 0; }
 
-    .tabela-relatorio-dashboard { width: 100%; border-collapse: collapse; font-size: 7.1px; table-layout: fixed; }
-    .tabela-relatorio-dashboard th { background: #07162f; color: #fff; padding: 5px 6px; text-align: left; font-size: 6.1px; letter-spacing: .025em; text-transform: uppercase; white-space: nowrap; }
-    .tabela-relatorio-dashboard td { border-bottom: 1px solid #e2e8f0; padding: 5px 6px; vertical-align: middle; color: #334155; line-height: 1.2; overflow-wrap: anywhere; }
+    .tabela-relatorio-dashboard { width: 100%; border-collapse: collapse; font-size: 7px; table-layout: fixed; }
+    .tabela-relatorio-dashboard th { background: #07162f; color: #fff; padding: 7px 7px 6px; text-align: left; font-size: 5.8px; line-height: 1.25; letter-spacing: .012em; text-transform: uppercase; white-space: nowrap; vertical-align: middle; }
+    .tabela-relatorio-dashboard td { border-bottom: 1px solid #e2e8f0; padding: 6px 7px; vertical-align: middle; color: #334155; line-height: 1.32; overflow-wrap: anywhere; }
     .grid-resumo-operacional .bloco-tabela-resumo:nth-child(1) .tabela-relatorio-dashboard th:nth-child(1),
     .grid-resumo-operacional .bloco-tabela-resumo:nth-child(1) .tabela-relatorio-dashboard td:nth-child(1) { width: 56%; }
     .grid-resumo-operacional .bloco-tabela-resumo:nth-child(1) .tabela-relatorio-dashboard th:nth-child(2),
@@ -1441,16 +1441,28 @@ export async function baixarRelatorioDashboardSstPDF({
     .grid-resumo-operacional .bloco-tabela-resumo:nth-child(2) .tabela-relatorio-dashboard td:nth-child(1) { width: 72%; }
     .grid-resumo-operacional .bloco-tabela-resumo:nth-child(2) .tabela-relatorio-dashboard th:nth-child(2),
     .grid-resumo-operacional .bloco-tabela-resumo:nth-child(2) .tabela-relatorio-dashboard td:nth-child(2) { width: 28%; text-align: center; }
+    .tabela-documentos-tipo-wrapper .tabela-relatorio-dashboard th:nth-child(1),
+    .tabela-documentos-tipo-wrapper .tabela-relatorio-dashboard td:nth-child(1) { width: 68%; }
+    .tabela-documentos-tipo-wrapper .tabela-relatorio-dashboard th:nth-child(2),
+    .tabela-documentos-tipo-wrapper .tabela-relatorio-dashboard td:nth-child(2) { width: 32%; text-align: center; }
+    .tabela-ultimos-documentos-wrapper .tabela-relatorio-dashboard th:nth-child(1),
+    .tabela-ultimos-documentos-wrapper .tabela-relatorio-dashboard td:nth-child(1) { width: 34%; }
+    .tabela-ultimos-documentos-wrapper .tabela-relatorio-dashboard th:nth-child(2),
+    .tabela-ultimos-documentos-wrapper .tabela-relatorio-dashboard td:nth-child(2) { width: 31%; }
+    .tabela-ultimos-documentos-wrapper .tabela-relatorio-dashboard th:nth-child(3),
+    .tabela-ultimos-documentos-wrapper .tabela-relatorio-dashboard td:nth-child(3) { width: 15%; text-align: center; }
+    .tabela-ultimos-documentos-wrapper .tabela-relatorio-dashboard th:nth-child(4),
+    .tabela-ultimos-documentos-wrapper .tabela-relatorio-dashboard td:nth-child(4) { width: 20%; text-align: center; }
     .tabela-pendencias-wrapper .tabela-relatorio-dashboard th:nth-child(1),
-    .tabela-pendencias-wrapper .tabela-relatorio-dashboard td:nth-child(1) { width: 23%; }
+    .tabela-pendencias-wrapper .tabela-relatorio-dashboard td:nth-child(1) { width: 22%; }
     .tabela-pendencias-wrapper .tabela-relatorio-dashboard th:nth-child(2),
-    .tabela-pendencias-wrapper .tabela-relatorio-dashboard td:nth-child(2) { width: 17%; }
+    .tabela-pendencias-wrapper .tabela-relatorio-dashboard td:nth-child(2) { width: 18%; }
     .tabela-pendencias-wrapper .tabela-relatorio-dashboard th:nth-child(3),
-    .tabela-pendencias-wrapper .tabela-relatorio-dashboard td:nth-child(3) { width: 36%; }
+    .tabela-pendencias-wrapper .tabela-relatorio-dashboard td:nth-child(3) { width: 34%; }
     .tabela-pendencias-wrapper .tabela-relatorio-dashboard th:nth-child(4),
-    .tabela-pendencias-wrapper .tabela-relatorio-dashboard td:nth-child(4) { width: 12%; text-align: center; }
+    .tabela-pendencias-wrapper .tabela-relatorio-dashboard td:nth-child(4) { width: 13%; text-align: center; }
     .tabela-pendencias-wrapper .tabela-relatorio-dashboard th:nth-child(5),
-    .tabela-pendencias-wrapper .tabela-relatorio-dashboard td:nth-child(5) { width: 12%; text-align: center; }
+    .tabela-pendencias-wrapper .tabela-relatorio-dashboard td:nth-child(5) { width: 13%; text-align: center; }
     .tabela-relatorio-dashboard tr:nth-child(even) td { background: #f8fbff; }
     .texto-forte { color: #0f172a !important; font-weight: 900; }
     .tabela-vazia, .mais-registros { text-align: center; color: #64748b !important; font-weight: 800; }
@@ -1553,11 +1565,11 @@ export async function baixarRelatorioDashboardSstPDF({
             <section class="grid-duplo">
                 <div class="secao-relatorio">
                     <div class="secao-titulo"><h3>Documentos por tipo</h3><p>Leitura geral dos documentos corporativos monitorados.</p></div>
-                    <div class="secao-corpo">${documentosTipoHtml}</div>
+                    <div class="secao-corpo tabela-documentos-tipo-wrapper">${documentosTipoHtml}</div>
                 </div>
                 <div class="secao-relatorio">
                     <div class="secao-titulo"><h3>Últimos documentos enviados</h3><p>Resumo dos envios mais recentes.</p></div>
-                    <div class="secao-corpo">${ultimosDocumentosHtml}</div>
+                    <div class="secao-corpo tabela-ultimos-documentos-wrapper">${ultimosDocumentosHtml}</div>
                 </div>
             </section>
 
