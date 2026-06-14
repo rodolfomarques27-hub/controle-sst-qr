@@ -1,5 +1,5 @@
 /* eslint-disable no-unused-vars */
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "../../lib/supabaseClient";
 import { Card, CardRecolhivel } from "../commonComponents";
 import { FileUploadAviso, validarArquivoAntesUpload } from "../FileUploadAviso";
@@ -65,6 +65,14 @@ import {
 } from "lucide-react";
 
 const OPCAO_EMPRESA_MANUAL_AUDITORIA = "__empresa_nao_cadastrada__";
+
+function formatarWhatsappLinkAuditoriaCampo(valor = "") {
+    const apenasDigitos = String(valor || "").replace(/\D/g, "");
+
+    if (!apenasDigitos) return "";
+
+    return apenasDigitos.startsWith("55") ? apenasDigitos : `55${apenasDigitos}`;
+}
 
 function obterTextoAuditoriaCampoValido(valor = "") {
     const texto = String(valor || "").trim();
@@ -221,6 +229,7 @@ export function NovaAuditoriaCampoDireta({ usuario = null, onAuditoriaSalva, emp
     const acessoLiberado = Boolean(usuario) || (tokenAuditoriaPublicaInformado && acessoAuditoriaValidado);
     const mensagemAcesso = "";
     const [salvando, setSalvando] = useState(false);
+    const salvandoRef = useRef(false);
     const [mensagem, setMensagem] = useState("");
     const [auditoriaSalva, setAuditoriaSalva] = useState(null);
     const [previewFotos, setPreviewFotos] = useState({ antes: "", depois: "" });
@@ -527,17 +536,29 @@ export function NovaAuditoriaCampoDireta({ usuario = null, onAuditoriaSalva, emp
         textoNotificacaoResponsavel,
     });
 
+    const tipoAuditoriaSalva = useMemo(
+        () => auditoriaSalva
+            ? obterTipoAuditoriaCampoDireta(auditoriaSalva.tipoAuditoria || auditoriaSalva.tipo_auditoria || formulario.tipoAuditoria)
+            : tipoAtual,
+        [auditoriaSalva, formulario.tipoAuditoria, tipoAtual]
+    );
     const resumoAuditoriaSalva = useMemo(
         () => auditoriaSalva
-            ? montarResumoAuditoriaCampoDiretaFinal({ auditoria: auditoriaSalva, formulario, tipoAtual })
+            ? montarResumoAuditoriaCampoDiretaFinal({ auditoria: auditoriaSalva, formulario: {}, tipoAtual: tipoAuditoriaSalva })
             : "",
-        [auditoriaSalva, formulario, tipoAtual]
+        [auditoriaSalva, tipoAuditoriaSalva]
     );
-    const linkWhatsappAuditoriaSalva = auditoriaSalva && whatsappResponsavelFormatado
-        ? `https://wa.me/${whatsappResponsavelFormatado}?text=${encodeURIComponent(resumoAuditoriaSalva)}`
+    const whatsappResponsavelAuditoriaSalva = auditoriaSalva
+        ? formatarWhatsappLinkAuditoriaCampo(auditoriaSalva.whatsappResponsavel || auditoriaSalva.whatsapp_responsavel || auditoriaSalva.notificacao?.whatsappResponsavel || auditoriaSalva.notificacao?.whatsapp_responsavel || "")
+        : whatsappResponsavelFormatado;
+    const emailResponsavelAuditoriaSalva = auditoriaSalva
+        ? String(auditoriaSalva.emailResponsavel || auditoriaSalva.email_responsavel || auditoriaSalva.notificacao?.emailResponsavel || auditoriaSalva.notificacao?.email_responsavel || "").trim()
+        : emailResponsavelAuditoria;
+    const linkWhatsappAuditoriaSalva = auditoriaSalva && whatsappResponsavelAuditoriaSalva
+        ? `https://wa.me/${whatsappResponsavelAuditoriaSalva}?text=${encodeURIComponent(resumoAuditoriaSalva)}`
         : "";
-    const linkEmailAuditoriaSalva = auditoriaSalva && emailResponsavelAuditoria
-        ? `mailto:${emailResponsavelAuditoria}?subject=${encodeURIComponent(`Auditoria de campo - ${formatarNumeroAuditoriaCampoDireta(auditoriaSalva.numeroAuditoria || auditoriaSalva.id || "")}`)}&body=${encodeURIComponent(resumoAuditoriaSalva)}`
+    const linkEmailAuditoriaSalva = auditoriaSalva && emailResponsavelAuditoriaSalva
+        ? `mailto:${emailResponsavelAuditoriaSalva}?subject=${encodeURIComponent(`Auditoria de campo - ${formatarNumeroAuditoriaCampoDireta(auditoriaSalva.numeroAuditoria || auditoriaSalva.id || "")}`)}&body=${encodeURIComponent(resumoAuditoriaSalva)}`
         : "";
 
     const aplicarContatosEmpresaAuditoria = (nomeEmpresa) => {
@@ -659,6 +680,16 @@ export function NovaAuditoriaCampoDireta({ usuario = null, onAuditoriaSalva, emp
     };
 
     const salvarAuditoriaDireta = async () => {
+        if (salvandoRef.current || salvando) {
+            setMensagem("A auditoria já está sendo salva. Aguarde a conclusão antes de tentar novamente.");
+            return;
+        }
+
+        if (auditoriaSalva) {
+            setMensagem("Esta auditoria já foi salva. Clique em Nova auditoria para limpar o resultado e iniciar outro registro.");
+            return;
+        }
+
         const erroFormulario = validarFormularioAuditoriaCampoDireta(formulario);
 
         if (erroFormulario) {
@@ -666,6 +697,7 @@ export function NovaAuditoriaCampoDireta({ usuario = null, onAuditoriaSalva, emp
             return;
         }
 
+        salvandoRef.current = true;
         setSalvando(true);
         setMensagem("");
 
@@ -792,12 +824,26 @@ export function NovaAuditoriaCampoDireta({ usuario = null, onAuditoriaSalva, emp
                 auditoria_campo_desvios: [],
                 desvios: [],
             });
+            if (previewFotos.antes) URL.revokeObjectURL(previewFotos.antes);
+            if (previewFotos.depois) URL.revokeObjectURL(previewFotos.depois);
+
+            setFormulario(criarFormularioInicialAuditoriaCampoDireta({
+                tipoInicial,
+                identificacaoParametro,
+                areaParametro,
+                subareaParametro,
+                localParametro,
+                empresaParametro,
+            }));
+            setRespostasChecklist(criarRespostasChecklistDinamico(tipoInicial.valor));
+            setPreviewFotos({ antes: "", depois: "" });
             setAuditoriaSalva(normalizada);
-            setMensagem(`Auditoria ${numeroGerado} salva com sucesso.`);
+            setMensagem(`Auditoria ${numeroGerado} salva com sucesso. O formulário foi limpo para evitar registro duplicado.`);
             if (onAuditoriaSalva) onAuditoriaSalva(normalizada);
         } catch (error) {
             setMensagem(error.message || "Erro ao salvar auditoria de campo.");
         } finally {
+            salvandoRef.current = false;
             setSalvando(false);
         }
     };
@@ -1396,8 +1442,8 @@ export function NovaAuditoriaCampoDireta({ usuario = null, onAuditoriaSalva, emp
                 )}
 
                 <div className="flex flex-col gap-3 rounded-3xl bg-white/95 p-3 shadow-xl ring-1 ring-slate-200 backdrop-blur md:sticky md:bottom-4 md:z-10 md:flex-row">
-                    <button type="button" onClick={salvarAuditoriaDireta} disabled={salvando} className="flex-1 rounded-2xl bg-slate-950 px-4 py-3 text-sm font-bold text-white hover:bg-slate-800 disabled:opacity-60">
-                        {salvando ? "Salvando auditoria..." : "+ Salvar nova auditoria de campo"}
+                    <button type="button" onClick={salvarAuditoriaDireta} disabled={salvando || Boolean(auditoriaSalva)} className="flex-1 rounded-2xl bg-slate-950 px-4 py-3 text-sm font-bold text-white hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60">
+                        {salvando ? "Salvando auditoria..." : auditoriaSalva ? "Auditoria já salva — clique em Nova auditoria" : "+ Salvar nova auditoria de campo"}
                     </button>
                     <button type="button" onClick={limparFormularioAuditoriaCampo} className="rounded-2xl bg-slate-100 px-4 py-3 text-sm font-bold text-slate-700 hover:bg-slate-200 md:w-auto">
                         Nova auditoria / limpar formulário
