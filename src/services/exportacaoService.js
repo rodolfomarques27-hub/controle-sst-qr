@@ -1095,18 +1095,21 @@ export async function baixarRelatorioDashboardSstPDF({
         `,
     });
 
-    const funcoesHtml = montarLinhasTabelaRelatorioDashboard({
-        lista: colaboradoresPorFuncao,
-        limite: 6,
-        vazio: "Nenhum colaborador por função encontrado.",
-        colunas: ["Função", "Quantidade"],
-        renderLinha: (item) => `
-            <tr>
-                <td class="texto-forte">${escaparHTML(item.funcao || item.nome || item.label || "Função não informada")}</td>
-                <td>${escaparHTML(valorSeguroRelatorioDashboard(item.total || item.valor || item.quantidade || 0, "0"))}</td>
-            </tr>
-        `,
-    });
+    const funcoesDisponiveis = Array.isArray(colaboradoresPorFuncao) ? colaboradoresPorFuncao.filter(Boolean) : [];
+    const funcoesHtml = funcoesDisponiveis.length
+        ? montarLinhasTabelaRelatorioDashboard({
+            lista: funcoesDisponiveis,
+            limite: 6,
+            vazio: "Nenhum colaborador por função encontrado.",
+            colunas: ["Função", "Quantidade"],
+            renderLinha: (item) => `
+                <tr>
+                    <td class="texto-forte">${escaparHTML(item.funcao || item.nome || item.label || "Função não informada")}</td>
+                    <td>${escaparHTML(valorSeguroRelatorioDashboard(item.total || item.valor || item.quantidade || 0, "0"))}</td>
+                </tr>
+            `,
+        })
+        : `<p class="estado-vazio-tabela">Nenhum colaborador por função encontrado.</p>`;
 
     const documentosTipoHtml = montarLinhasTabelaRelatorioDashboard({
         lista: documentosPorTipo,
@@ -1370,6 +1373,13 @@ export async function baixarRelatorioDashboardSstPDF({
     }
 
     .grid-duplo { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 8px; }
+    .grid-resumo-operacional { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+    .bloco-tabela-resumo { border: 1px solid var(--linha); border-radius: 11px; background: #fff; overflow: hidden; }
+    .bloco-tabela-resumo-topo { padding: 6px 8px; background: #f8fbff; border-bottom: 1px solid var(--linha); }
+    .bloco-tabela-resumo-topo h4 { margin: 0; color: #07162f; font-size: 8.2px; text-transform: uppercase; letter-spacing: .055em; }
+    .bloco-tabela-resumo-topo p { margin: 2px 0 0; color: #64748b; font-size: 6.5px; font-weight: 700; }
+    .bloco-tabela-resumo-corpo { padding: 6px 8px; }
+    .estado-vazio-tabela { margin: 0; padding: 12px 8px; border: 1px dashed #cbd5e1; border-radius: 10px; background: #f8fbff; color: #64748b; text-align: center; font-size: 7.2px; font-weight: 800; }
     .secao-relatorio { border: 1px solid var(--linha); border-radius: 13px; background: #fff; overflow: hidden; margin-bottom: 8px; break-inside: avoid; page-break-inside: avoid; }
     .secao-titulo { padding: 7px 9px; background: #f8fbff; border-bottom: 1px solid var(--linha); }
     .secao-titulo h3 { margin: 0; color: #07162f; font-size: 9.4px; text-transform: uppercase; letter-spacing: .06em; }
@@ -1465,14 +1475,19 @@ export async function baixarRelatorioDashboardSstPDF({
                 <div class="secao-corpo">${alertasHtml ? `<ul class="lista-alertas">${alertasHtml}</ul>` : `<p class="lista-alertas-vazia">Nenhum alerta crítico encontrado no momento.</p>`}</div>
             </section>
 
-            <section class="grid-duplo">
-                <div class="secao-relatorio">
-                    <div class="secao-titulo"><h3>Ranking de pendências por empresa</h3><p>Empresas com maior necessidade de regularização.</p></div>
-                    <div class="secao-corpo">${rankingHtml}</div>
-                </div>
-                <div class="secao-relatorio">
-                    <div class="secao-titulo"><h3>Colaboradores por função</h3><p>Distribuição operacional da mão de obra cadastrada.</p></div>
-                    <div class="secao-corpo">${funcoesHtml}</div>
+            <section class="secao-relatorio">
+                <div class="secao-titulo"><h3>Resumo operacional</h3><p>Empresas com pendência e distribuição da mão de obra cadastrada.</p></div>
+                <div class="secao-corpo">
+                    <div class="grid-resumo-operacional">
+                        <div class="bloco-tabela-resumo">
+                            <div class="bloco-tabela-resumo-topo"><h4>Ranking de pendências por empresa</h4><p>Empresas com maior necessidade de regularização.</p></div>
+                            <div class="bloco-tabela-resumo-corpo">${rankingHtml}</div>
+                        </div>
+                        <div class="bloco-tabela-resumo">
+                            <div class="bloco-tabela-resumo-topo"><h4>Colaboradores por função</h4><p>Distribuição operacional da mão de obra cadastrada.</p></div>
+                            <div class="bloco-tabela-resumo-corpo">${funcoesHtml}</div>
+                        </div>
+                    </div>
                 </div>
             </section>
         </div>
