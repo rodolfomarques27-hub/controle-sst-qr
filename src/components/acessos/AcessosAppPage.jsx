@@ -349,6 +349,22 @@ function normalizarTextoAcesso(valor) {
     return String(valor || "").trim();
 }
 
+function normalizarChaveAcessoApp(valor = "") {
+    return normalizarTextoAcesso(valor)
+        .toLowerCase()
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .replace(/\s+/g, " ")
+        .trim();
+}
+
+function ehSolicitacaoRecuperacaoSenhaAcessoApp(item = {}) {
+    const area = normalizarChaveAcessoApp(item.area_solicitada || item.tela || "");
+    const observacao = normalizarChaveAcessoApp(item.observacao || item.resposta_admin || "");
+
+    return area.includes("recuperacao de senha") || observacao.includes("recuperacao de senha");
+}
+
 function formatarPerfilAcessoApp(perfil = "") {
     const mapa = {
         administrador: "Administrador",
@@ -642,6 +658,29 @@ function SolicitacoesAcessoApp({ onPrepararPermissao = null, usuario = null }) {
         }
     }
 
+    function prepararSenhaTemporariaSolicitacao(solicitacao) {
+        if (!solicitacao?.email) {
+            setErro("A solicitação não possui e-mail para preparar a recuperação de senha.");
+            return;
+        }
+
+        onPrepararPermissao?.({
+            ...solicitacao,
+            area_solicitada: "Recuperação de senha",
+            perfil_atual: "consulta",
+            observacao: solicitacao.observacao || "Recuperação de senha solicitada pelo login. Informe uma senha temporária e clique em Criar/atualizar login do app.",
+            resposta_admin: solicitacao.resposta_admin || respostaAdmin || "",
+            forcarResetSenhaTemporaria: true,
+        });
+
+        setMensagem(`Preparando recuperação de senha para ${solicitacao.email}. Informe uma senha temporária no cadastro do usuário e clique em Criar/atualizar login do app.`);
+
+        setTimeout(() => {
+            document.getElementById("acessos-lista-usuarios")?.scrollIntoView({ behavior: "smooth", block: "start" });
+        }, 80);
+    }
+
+
     useEffect(() => {
         carregarSolicitacoes();
         // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -768,8 +807,12 @@ function SolicitacoesAcessoApp({ onPrepararPermissao = null, usuario = null }) {
                     </div>
 
                     <div className="mt-5 space-y-2">
-                        {solicitacoesFiltradas.length > 0 ? solicitacoesFiltradas.map((item) => (
-                            <article key={item.id || `${item.email}-${item.criado_em}`} className="rounded-2xl bg-slate-50 px-4 py-3 ring-1 ring-slate-100">
+                        {solicitacoesFiltradas.length > 0 ? solicitacoesFiltradas.map((item) => {
+                            const solicitacaoRecuperacaoSenha = ehSolicitacaoRecuperacaoSenhaAcessoApp(item);
+                            const podePrepararSenhaTemporaria = solicitacaoRecuperacaoSenha && !["recusada", "cancelada"].includes(normalizarTextoAcesso(item.status).toLowerCase());
+
+                            return (
+                                <article key={item.id || `${item.email}-${item.criado_em}`} className="rounded-2xl bg-slate-50 px-4 py-3 ring-1 ring-slate-100">
                                 <div className="flex w-full flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
                                     <div className="min-w-0 flex-1 text-left">
                                         <p className="truncate text-sm font-black text-slate-950">{item.nome || "Usuário sem nome"}</p>
@@ -787,6 +830,15 @@ function SolicitacoesAcessoApp({ onPrepararPermissao = null, usuario = null }) {
                                         <span className={`rounded-full px-3 py-1.5 text-[11px] font-black ring-1 ${obterClasseStatusSolicitacaoAcessoApp(item.status)}`}>
                                             {formatarStatusSolicitacaoAcessoApp(item.status)}
                                         </span>
+                                        {podePrepararSenhaTemporaria ? (
+                                            <button
+                                                type="button"
+                                                onClick={() => prepararSenhaTemporariaSolicitacao(item)}
+                                                className="rounded-full bg-blue-600 px-3 py-1.5 text-[11px] font-black text-white shadow-sm hover:bg-blue-700"
+                                            >
+                                                Preparar senha
+                                            </button>
+                                        ) : null}
                                         {item.status === "pendente" ? (
                                             <>
                                                 <button
@@ -828,8 +880,9 @@ function SolicitacoesAcessoApp({ onPrepararPermissao = null, usuario = null }) {
                                         ) : null}
                                     </div>
                                 </div>
-                            </article>
-                        )) : (
+                                </article>
+                            );
+                        }) : (
                             <div className="rounded-2xl bg-slate-50 px-4 py-4 text-xs font-semibold text-slate-500 ring-1 ring-slate-100">
                                 {filtroAplicado ? "Nenhuma solicitação encontrada para os filtros aplicados." : "Nenhuma solicitação carregada. Clique em Atualizar solicitações para consultar a lista administrativa."}
                             </div>
@@ -1451,22 +1504,29 @@ function UsuariosCadastradosApp({ usuario = null, usuarioParaEditar = null, onEd
     useEffect(() => {
         if (!usuarioParaEditar) return;
 
+        const recuperacaoSenha = ehSolicitacaoRecuperacaoSenhaAcessoApp(usuarioParaEditar);
+
         setFormulario(montarFormularioUsuarioAcesso({
             nome: usuarioParaEditar.nome || "",
             email: usuarioParaEditar.email || "",
-            funcao: usuarioParaEditar.area_solicitada || usuarioParaEditar.tela || "",
+            funcao: recuperacaoSenha ? "Usuário do app" : usuarioParaEditar.area_solicitada || usuarioParaEditar.tela || "",
             empresa: usuarioParaEditar.empresa || "",
-            perfil: usuarioParaEditar.perfil_atual === "Usuário sem perfil liberado" ? "consulta" : usuarioParaEditar.perfil_atual || "consulta",
+            perfil: recuperacaoSenha ? "consulta" : usuarioParaEditar.perfil_atual === "Usuário sem perfil liberado" ? "consulta" : usuarioParaEditar.perfil_atual || "consulta",
             ativo: true,
             bloqueado: false,
             acesso_global: false,
-            observacao: usuarioParaEditar.observacao || usuarioParaEditar.resposta_admin || "Permissão preparada a partir de solicitação de acesso aprovada.",
+            observacao: recuperacaoSenha
+                ? "Recuperação de senha: informe uma senha temporária e clique em Criar/atualizar login do app."
+                : usuarioParaEditar.observacao || usuarioParaEditar.resposta_admin || "Permissão preparada a partir de solicitação de acesso aprovada.",
             senhaTemporaria: "",
             confirmarSenhaTemporaria: "",
-            resetarSenhaTemporaria: false,
+            resetarSenhaTemporaria: recuperacaoSenha || Boolean(usuarioParaEditar.forcarResetSenhaTemporaria),
         }));
         setFormAberto(true);
-        setMensagem(`Preparando permissão para ${usuarioParaEditar.email || "solicitação aprovada"}. Revise o perfil antes de salvar.`);
+        setMensagem(recuperacaoSenha
+            ? `Preparando recuperação de senha para ${usuarioParaEditar.email || "usuário"}. Informe uma senha temporária e clique em Criar/atualizar login do app.`
+            : `Preparando permissão para ${usuarioParaEditar.email || "solicitação aprovada"}. Revise o perfil antes de salvar.`
+        );
         onEdicaoConsumida?.();
     }, [usuarioParaEditar, onEdicaoConsumida]);
 
