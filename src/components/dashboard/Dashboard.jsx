@@ -46,7 +46,7 @@ import {
     FUNCAO_EMAIL_ALERTA_TST,
     LIMITE_STORAGE_MB,
 } from "../../constants/sistemaConstants";
-import { baixarPDF } from "../../services/exportacaoService";
+import { baixarRelatorioDashboardSstPDF } from "../../services/exportacaoService";
 import {
     painelPadraoDashboard,
     cartasPadraoDashboard,
@@ -589,26 +589,35 @@ export function Dashboard({
         }
     };
 
-    const baixarRelatorioDashboard = () => {
-        const linhas = [
-            ["Colaborador", "Empresa", "Função", "Situação na obra", "Status automático", "Treinamento/Documento", "Status", "Vencimento", "Base"],
-        ];
+    const baixarRelatorioDashboard = async () => {
+        const cardsRelatorio = cardsOrdenados
+            .filter((card) => cartasVisiveisDashboard[card.chave] !== false)
+            .map(({ label, valor, detalhe }) => ({ label, valor, detalhe }));
 
-        indicadores.itens.forEach((item) => {
-            linhas.push([
-                item.colaborador.nome,
-                item.colaborador.empresaExibicao || item.colaborador.empresa,
-                item.colaborador.funcao,
-                item.colaborador.statusMobilizacao || obterStatusInicialColaborador(),
-                statusGeral(item.colaborador).texto,
-                item.treinamento.nome,
-                item.status.texto,
-                item.vencimento ? formatDate(item.vencimento) : "Sem certificado enviado",
-                item.treinamento.base || "",
-            ]);
+        await baixarRelatorioDashboardSstPDF({
+            nomeArquivo: "relatorio-dashboard-sst.pdf",
+            cards: cardsRelatorio,
+            indicadores,
+            totalItens,
+            resumoConformidade,
+            rankingPendenciasEmpresa,
+            colaboradoresPorFuncao,
+            documentosPorTipo,
+            ultimosDocumentosEnviados,
+            pendencias,
+            documentosVencidos,
+            documentosAVencer,
+            auditoriasCampoMes,
+            mediaConformidadeCampo,
+            desviosCampoAbertos,
+            desviosCampoCorrigidos,
+            aniversariantesMes,
+            proximoAniversarioDashboard,
+            alertasImportantes,
+            storagePercentual,
+            totalStorageLabel,
+            storageLimiteLabelDashboard,
         });
-
-        baixarPDF("relatorio-dashboard-sst.pdf", "Relatorio Dashboard SST", linhas);
     };
 
     const resumoConformidade = [
