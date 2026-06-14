@@ -125,7 +125,9 @@ const CHAVES_BLOCOS_CONFIGURACOES_PADRAO = [
 
 const VERSAO_LAYOUT_CONFIGURACOES_SISTEMA = "roteiro15a-configuracoes-tecnicas-sem-gestao-acessos";
 const CHAVE_LAYOUT_CONFIGURACOES_SISTEMA = "configuracoesSistemaVersaoLayout";
+const CHAVE_BLOCOS_VISIVEIS_CONFIGURACOES = "configuracoesSistemaBlocosVisiveis";
 const CHAVE_BLOCOS_RECOLHIDOS_CONFIGURACOES = "configuracoesSistemaBlocosRecolhidos";
+const CHAVE_ORDEM_BLOCOS_CONFIGURACOES = "configuracoesSistemaOrdemBlocos";
 const CHAVE_TAMANHOS_BLOCOS_CONFIGURACOES = "configuracoesSistemaTamanhosBlocos";
 const BUCKET_FUNDO_LOGIN_CONFIGURACOES = "logos-empresas";
 const CAMINHO_FUNDO_LOGIN_CONFIGURACOES = "configuracoes/login/fundo-login.jpg";
@@ -352,7 +354,7 @@ const carregarOrdemLocalConfiguracoes = () => {
     if (typeof window === "undefined") return CHAVES_BLOCOS_CONFIGURACOES_PADRAO;
 
     try {
-        const salvo = JSON.parse(window.localStorage.getItem("configuracoesSistemaOrdemBlocos") || "null");
+        const salvo = JSON.parse(window.localStorage.getItem(CHAVE_ORDEM_BLOCOS_CONFIGURACOES) || "null");
         if (!Array.isArray(salvo)) return CHAVES_BLOCOS_CONFIGURACOES_PADRAO;
 
         return [
@@ -419,7 +421,7 @@ export function ConfiguracoesSistema({
     const [filtroPainelConfiguracoes, setFiltroPainelConfiguracoes] = useState("todos");
     const [blocosVisiveisConfiguracoes, setBlocosVisiveisConfiguracoes] = useState(() => ({
         ...BLOCOS_CONFIGURACOES_VISIVEIS_PADRAO,
-        ...carregarJsonLocalConfiguracoes("configuracoesSistemaBlocosVisiveis", BLOCOS_CONFIGURACOES_VISIVEIS_PADRAO),
+        ...carregarJsonLocalConfiguracoes(CHAVE_BLOCOS_VISIVEIS_CONFIGURACOES, BLOCOS_CONFIGURACOES_VISIVEIS_PADRAO),
     }));
     const [blocosRecolhidosConfiguracoes, setBlocosRecolhidosConfiguracoes] = useState(() =>
         carregarBlocosRecolhidosLocalConfiguracoes()
@@ -468,7 +470,7 @@ export function ConfiguracoesSistema({
 
     useEffect(() => {
         if (typeof window === "undefined") return;
-        window.localStorage.setItem("configuracoesSistemaBlocosVisiveis", JSON.stringify(blocosVisiveisConfiguracoes));
+        window.localStorage.setItem(CHAVE_BLOCOS_VISIVEIS_CONFIGURACOES, JSON.stringify(blocosVisiveisConfiguracoes));
     }, [blocosVisiveisConfiguracoes]);
 
     useEffect(() => {
@@ -478,8 +480,13 @@ export function ConfiguracoesSistema({
 
     useEffect(() => {
         if (typeof window === "undefined") return;
-        window.localStorage.setItem("configuracoesSistemaOrdemBlocos", JSON.stringify(ordemBlocosConfiguracoes));
+        window.localStorage.setItem(CHAVE_ORDEM_BLOCOS_CONFIGURACOES, JSON.stringify(ordemBlocosConfiguracoes));
     }, [ordemBlocosConfiguracoes]);
+
+    useEffect(() => {
+        if (typeof window === "undefined") return;
+        window.localStorage.setItem(CHAVE_TAMANHOS_BLOCOS_CONFIGURACOES, JSON.stringify(tamanhosBlocosConfiguracoes));
+    }, [tamanhosBlocosConfiguracoes]);
 
     useEffect(() => {
         let cancelado = false;
