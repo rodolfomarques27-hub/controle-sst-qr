@@ -6,10 +6,29 @@ import { registrarSolicitacaoRecuperacaoSenhaLoginService } from "../services/ac
 
 const BUCKET_FUNDO_LOGIN = "logos-empresas";
 const CAMINHO_FUNDO_LOGIN = "configuracoes/login/fundo-login.jpg";
+const CAMINHO_CONFIG_FUNDO_LOGIN = "configuracoes/login/fundo-login-config.json";
 
-function montarUrlFundoLoginPersonalizado() {
+const AJUSTE_FUNDO_LOGIN_PADRAO = {
+    size: "cover",
+    position: "center center",
+    overlay: 0.62,
+};
+
+function normalizarAjusteFundoLogin(valor = {}) {
+    const overlayNumerico = Number(valor?.overlay);
+
+    return {
+        size: String(valor?.size || AJUSTE_FUNDO_LOGIN_PADRAO.size),
+        position: String(valor?.position || AJUSTE_FUNDO_LOGIN_PADRAO.position),
+        overlay: Number.isFinite(overlayNumerico)
+            ? Math.min(0.82, Math.max(0.28, overlayNumerico))
+            : AJUSTE_FUNDO_LOGIN_PADRAO.overlay,
+    };
+}
+
+function montarUrlPublicaFundoLogin(caminho) {
     try {
-        const { data } = supabase.storage.from(BUCKET_FUNDO_LOGIN).getPublicUrl(CAMINHO_FUNDO_LOGIN);
+        const { data } = supabase.storage.from(BUCKET_FUNDO_LOGIN).getPublicUrl(caminho);
         const url = data?.publicUrl || "";
 
         if (!url) return "";
@@ -20,6 +39,29 @@ function montarUrlFundoLoginPersonalizado() {
     }
 }
 
+function montarUrlFundoLoginPersonalizado() {
+    return montarUrlPublicaFundoLogin(CAMINHO_FUNDO_LOGIN);
+}
+
+function montarUrlConfigFundoLoginPersonalizado() {
+    return montarUrlPublicaFundoLogin(CAMINHO_CONFIG_FUNDO_LOGIN);
+}
+
+function montarEstiloFundoLogin(url, ajuste = AJUSTE_FUNDO_LOGIN_PADRAO) {
+    if (!url) return undefined;
+
+    const ajusteFinal = normalizarAjusteFundoLogin(ajuste);
+    const overlayPrincipal = ajusteFinal.overlay;
+    const overlaySecundario = Math.max(0.34, overlayPrincipal - 0.12);
+
+    return {
+        backgroundImage: `linear-gradient(135deg, rgba(2, 6, 23, ${overlayPrincipal}), rgba(15, 23, 42, ${overlaySecundario})), url("${url}")`,
+        backgroundSize: ajusteFinal.size,
+        backgroundPosition: ajusteFinal.position,
+        backgroundRepeat: "no-repeat",
+    };
+}
+
 export function LoginScreen({ onLogin }) {
     const [email, setEmail] = useState("");
     const [senha, setSenha] = useState("");
@@ -28,6 +70,7 @@ export function LoginScreen({ onLogin }) {
     const [erro, setErro] = useState("");
     const [mensagem, setMensagem] = useState("");
     const [fundoLoginUrl, setFundoLoginUrl] = useState("");
+    const [ajusteFundoLogin, setAjusteFundoLogin] = useState(() => AJUSTE_FUNDO_LOGIN_PADRAO);
 
     useEffect(() => {
         const url = montarUrlFundoLoginPersonalizado();
@@ -36,6 +79,22 @@ export function LoginScreen({ onLogin }) {
 
         let cancelado = false;
         const imagem = new Image();
+
+        async function carregarAjuste() {
+            const urlConfig = montarUrlConfigFundoLoginPersonalizado();
+
+            if (!urlConfig) return;
+
+            try {
+                const resposta = await fetch(urlConfig, { cache: "no-store" });
+                if (!resposta.ok) return;
+
+                const dados = await resposta.json();
+                if (!cancelado) setAjusteFundoLogin(normalizarAjusteFundoLogin(dados));
+            } catch {
+                if (!cancelado) setAjusteFundoLogin(AJUSTE_FUNDO_LOGIN_PADRAO);
+            }
+        }
 
         imagem.onload = () => {
             if (!cancelado) setFundoLoginUrl(url);
@@ -46,6 +105,7 @@ export function LoginScreen({ onLogin }) {
         };
 
         imagem.src = url;
+        carregarAjuste();
 
         return () => {
             cancelado = true;
@@ -127,11 +187,7 @@ export function LoginScreen({ onLogin }) {
     return (
         <div
             className="flex min-h-screen items-center justify-center bg-slate-950 bg-cover bg-center p-4"
-            style={fundoLoginUrl
-                ? {
-                    backgroundImage: `linear-gradient(135deg, rgba(2, 6, 23, 0.74), rgba(15, 23, 42, 0.62)), url("${fundoLoginUrl}")`,
-                }
-                : undefined}
+            style={montarEstiloFundoLogin(fundoLoginUrl, ajusteFundoLogin)}
         >
             <div className="w-full max-w-md rounded-[2rem] bg-white p-8 shadow-2xl">
                 <div className="mb-6 flex items-center gap-3">

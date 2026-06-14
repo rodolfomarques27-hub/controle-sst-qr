@@ -129,11 +129,75 @@ const CHAVE_BLOCOS_RECOLHIDOS_CONFIGURACOES = "configuracoesSistemaBlocosRecolhi
 const CHAVE_TAMANHOS_BLOCOS_CONFIGURACOES = "configuracoesSistemaTamanhosBlocos";
 const BUCKET_FUNDO_LOGIN_CONFIGURACOES = "logos-empresas";
 const CAMINHO_FUNDO_LOGIN_CONFIGURACOES = "configuracoes/login/fundo-login.jpg";
+const CAMINHO_CONFIG_FUNDO_LOGIN_CONFIGURACOES = "configuracoes/login/fundo-login-config.json";
 const CHAVE_VERSAO_FUNDO_LOGIN_CONFIGURACOES = "controleSstQrFundoLoginVersao";
 
-function montarUrlFundoLoginConfiguracoes(versao = "") {
+const AJUSTE_FUNDO_LOGIN_PADRAO_CONFIGURACOES = {
+    size: "cover",
+    position: "center center",
+    overlay: 0.62,
+};
+
+const PRE_AJUSTES_FUNDO_LOGIN_CONFIGURACOES = [
+    {
+        chave: "preencher",
+        label: "Preencher",
+        descricao: "Ocupa toda a tela",
+        ajuste: { size: "cover", position: "center center", overlay: 0.62 },
+    },
+    {
+        chave: "inteira",
+        label: "Imagem inteira",
+        descricao: "Mostra sem cortar",
+        ajuste: { size: "contain", position: "center center", overlay: 0.64 },
+    },
+    {
+        chave: "subir",
+        label: "Subir",
+        descricao: "Foco superior",
+        ajuste: { size: "cover", position: "center 30%", overlay: 0.62 },
+    },
+    {
+        chave: "descer",
+        label: "Descer",
+        descricao: "Foco inferior",
+        ajuste: { size: "cover", position: "center 70%", overlay: 0.62 },
+    },
+    {
+        chave: "esquerda",
+        label: "Esquerda",
+        descricao: "Foco à esquerda",
+        ajuste: { size: "cover", position: "30% center", overlay: 0.62 },
+    },
+    {
+        chave: "direita",
+        label: "Direita",
+        descricao: "Foco à direita",
+        ajuste: { size: "cover", position: "70% center", overlay: 0.62 },
+    },
+    {
+        chave: "zoom-leve",
+        label: "Zoom leve",
+        descricao: "Aproxima pouco",
+        ajuste: { size: "115% auto", position: "center center", overlay: 0.62 },
+    },
+    {
+        chave: "mais-escuro",
+        label: "Mais escuro",
+        descricao: "Aumenta contraste",
+        ajuste: { size: "cover", position: "center center", overlay: 0.76 },
+    },
+    {
+        chave: "mais-claro",
+        label: "Mais claro",
+        descricao: "Reduz escurecimento",
+        ajuste: { size: "cover", position: "center center", overlay: 0.46 },
+    },
+];
+
+function montarUrlPublicaConfiguracoesStorage(caminho, versao = "") {
     try {
-        const { data } = supabase.storage.from(BUCKET_FUNDO_LOGIN_CONFIGURACOES).getPublicUrl(CAMINHO_FUNDO_LOGIN_CONFIGURACOES);
+        const { data } = supabase.storage.from(BUCKET_FUNDO_LOGIN_CONFIGURACOES).getPublicUrl(caminho);
         const url = data?.publicUrl || "";
 
         if (!url) return "";
@@ -141,6 +205,57 @@ function montarUrlFundoLoginConfiguracoes(versao = "") {
         return versao ? `${url}?v=${encodeURIComponent(String(versao))}` : url;
     } catch {
         return "";
+    }
+}
+
+function montarUrlFundoLoginConfiguracoes(versao = "") {
+    return montarUrlPublicaConfiguracoesStorage(CAMINHO_FUNDO_LOGIN_CONFIGURACOES, versao);
+}
+
+function montarUrlConfigFundoLoginConfiguracoes(versao = "") {
+    return montarUrlPublicaConfiguracoesStorage(CAMINHO_CONFIG_FUNDO_LOGIN_CONFIGURACOES, versao);
+}
+
+function normalizarAjusteFundoLoginConfiguracoes(valor = {}) {
+    const overlayNumerico = Number(valor?.overlay);
+
+    return {
+        size: String(valor?.size || AJUSTE_FUNDO_LOGIN_PADRAO_CONFIGURACOES.size),
+        position: String(valor?.position || AJUSTE_FUNDO_LOGIN_PADRAO_CONFIGURACOES.position),
+        overlay: Number.isFinite(overlayNumerico)
+            ? Math.min(0.82, Math.max(0.28, overlayNumerico))
+            : AJUSTE_FUNDO_LOGIN_PADRAO_CONFIGURACOES.overlay,
+    };
+}
+
+function montarEstiloFundoLoginConfiguracoes(url, ajuste = AJUSTE_FUNDO_LOGIN_PADRAO_CONFIGURACOES) {
+    if (!url) return undefined;
+
+    const ajusteFinal = normalizarAjusteFundoLoginConfiguracoes(ajuste);
+    const overlayPrincipal = ajusteFinal.overlay;
+    const overlaySecundario = Math.max(0.34, overlayPrincipal - 0.12);
+
+    return {
+        backgroundImage: `linear-gradient(135deg, rgba(2, 6, 23, ${overlayPrincipal}), rgba(15, 23, 42, ${overlaySecundario})), url("${url}")`,
+        backgroundSize: ajusteFinal.size,
+        backgroundPosition: ajusteFinal.position,
+        backgroundRepeat: "no-repeat",
+    };
+}
+
+async function carregarAjusteFundoLoginConfiguracoes(versao = Date.now()) {
+    const url = montarUrlConfigFundoLoginConfiguracoes(versao);
+
+    if (!url) return AJUSTE_FUNDO_LOGIN_PADRAO_CONFIGURACOES;
+
+    try {
+        const resposta = await fetch(url, { cache: "no-store" });
+        if (!resposta.ok) return AJUSTE_FUNDO_LOGIN_PADRAO_CONFIGURACOES;
+
+        const dados = await resposta.json();
+        return normalizarAjusteFundoLoginConfiguracoes(dados);
+    } catch {
+        return AJUSTE_FUNDO_LOGIN_PADRAO_CONFIGURACOES;
     }
 }
 
@@ -297,6 +412,8 @@ export function ConfiguracoesSistema({
         "Fundo padrão ativo. Envie uma imagem para personalizar a tela de login."
     );
     const [salvandoFundoLogin, setSalvandoFundoLogin] = useState(false);
+    const [ajusteFundoLogin, setAjusteFundoLogin] = useState(() => AJUSTE_FUNDO_LOGIN_PADRAO_CONFIGURACOES);
+    const [ajusteFundoLoginAlterado, setAjusteFundoLoginAlterado] = useState(false);
 
     const [mostrarOrganizacaoCards, setMostrarOrganizacaoCards] = useState(false);
     const [filtroPainelConfiguracoes, setFiltroPainelConfiguracoes] = useState("todos");
@@ -365,9 +482,25 @@ export function ConfiguracoesSistema({
     }, [ordemBlocosConfiguracoes]);
 
     useEffect(() => {
-        if (typeof window === "undefined") return;
-        window.localStorage.setItem(CHAVE_TAMANHOS_BLOCOS_CONFIGURACOES, JSON.stringify(tamanhosBlocosConfiguracoes));
-    }, [tamanhosBlocosConfiguracoes]);
+        let cancelado = false;
+        const versao = carregarVersaoFundoLoginConfiguracoes() || Date.now();
+
+        carregarAjusteFundoLoginConfiguracoes(versao).then((ajuste) => {
+            if (!cancelado) setAjusteFundoLogin(ajuste);
+        });
+
+        return () => {
+            cancelado = true;
+        };
+    }, []);
+
+    const aplicarPreAjusteFundoLogin = (preAjuste) => {
+        if (bloquearConfiguracaoCriticaSeNecessario(setMensagemFundoLogin)) return;
+
+        setAjusteFundoLogin(normalizarAjusteFundoLoginConfiguracoes(preAjuste?.ajuste || AJUSTE_FUNDO_LOGIN_PADRAO_CONFIGURACOES));
+        setAjusteFundoLoginAlterado(true);
+        setMensagemFundoLogin(`Pré-ajuste aplicado: ${preAjuste?.label || "padrão"}. Clique em Salvar fundo do login para gravar.`);
+    };
 
     const moverBlocoConfiguracao = (chave, direcao) => {
         setOrdemBlocosConfiguracoes((atual) => {
@@ -1027,7 +1160,7 @@ export function ConfiguracoesSistema({
         setArquivoFundoLogin(arquivo || null);
 
         if (arquivo) {
-            setMensagemFundoLogin(`Imagem selecionada: ${arquivo.name}. Clique em Salvar fundo do login para aplicar.`);
+            setMensagemFundoLogin(`Imagem selecionada: ${arquivo.name}. Escolha um pré-ajuste, se necessário, e clique em Salvar fundo do login.`);
         } else {
             setMensagemFundoLogin("Nenhuma imagem selecionada.");
         }
@@ -1038,51 +1171,76 @@ export function ConfiguracoesSistema({
 
         if (bloquearConfiguracaoCriticaSeNecessario(setMensagemFundoLogin)) return;
 
-        if (!arquivoFundoLogin) {
-            setMensagemFundoLogin("Selecione uma imagem antes de salvar o fundo do login.");
+        if (!arquivoFundoLogin && !ajusteFundoLoginAlterado) {
+            setMensagemFundoLogin("Selecione uma imagem ou aplique um pré-ajuste antes de salvar.");
             return;
         }
 
-        if (!String(arquivoFundoLogin.type || "").startsWith("image/")) {
+        if (arquivoFundoLogin && !String(arquivoFundoLogin.type || "").startsWith("image/")) {
             setMensagemFundoLogin("Arquivo inválido. Selecione uma imagem JPG, PNG ou WEBP.");
             return;
         }
 
         if (!confirmarAcaoCriticaConfiguracoes(
-            "Substituir a imagem de fundo da tela de login?",
+            arquivoFundoLogin
+                ? "Substituir a imagem e salvar o pré-ajuste do fundo da tela de login?"
+                : "Salvar o pré-ajuste da imagem de fundo da tela de login?",
             setMensagemFundoLogin
         )) {
             return;
         }
 
         setSalvandoFundoLogin(true);
-        setMensagemFundoLogin("Otimizando e enviando imagem para o Storage público controlado...");
+        setMensagemFundoLogin(arquivoFundoLogin
+            ? "Otimizando imagem e salvando pré-ajuste no Storage público controlado..."
+            : "Salvando pré-ajuste da imagem de fundo do login..."
+        );
 
         try {
-            const imagemOtimizada = await reduzirFotoParaAuditoria(arquivoFundoLogin, {
-                maxLado: 2200,
-                alvoBytes: 950 * 1024,
-                qualidadeInicial: 0.86,
-                qualidadeMinima: 0.58,
-                tipoSaida: "image/jpeg",
-                forcarReducao: true,
-            });
-
-            const { error } = await supabase.storage
-                .from(BUCKET_FUNDO_LOGIN_CONFIGURACOES)
-                .upload(CAMINHO_FUNDO_LOGIN_CONFIGURACOES, imagemOtimizada, {
-                    upsert: true,
-                    cacheControl: "60",
-                    contentType: imagemOtimizada.type || "image/jpeg",
+            if (arquivoFundoLogin) {
+                const imagemOtimizada = await reduzirFotoParaAuditoria(arquivoFundoLogin, {
+                    maxLado: 2200,
+                    alvoBytes: 950 * 1024,
+                    qualidadeInicial: 0.86,
+                    qualidadeMinima: 0.58,
+                    tipoSaida: "image/jpeg",
+                    forcarReducao: true,
                 });
 
-            if (error) {
-                throw error;
+                const { error } = await supabase.storage
+                    .from(BUCKET_FUNDO_LOGIN_CONFIGURACOES)
+                    .upload(CAMINHO_FUNDO_LOGIN_CONFIGURACOES, imagemOtimizada, {
+                        upsert: true,
+                        cacheControl: "60",
+                        contentType: imagemOtimizada.type || "image/jpeg",
+                    });
+
+                if (error) {
+                    throw error;
+                }
+            }
+
+            const ajusteFinal = normalizarAjusteFundoLoginConfiguracoes(ajusteFundoLogin);
+            const configuracaoBlob = new Blob([JSON.stringify(ajusteFinal, null, 2)], {
+                type: "application/json",
+            });
+
+            const { error: erroConfig } = await supabase.storage
+                .from(BUCKET_FUNDO_LOGIN_CONFIGURACOES)
+                .upload(CAMINHO_CONFIG_FUNDO_LOGIN_CONFIGURACOES, configuracaoBlob, {
+                    upsert: true,
+                    cacheControl: "60",
+                    contentType: "application/json",
+                });
+
+            if (erroConfig) {
+                throw erroConfig;
             }
 
             atualizarPreviewFundoLoginConfiguracoes(Date.now());
             setArquivoFundoLogin(null);
-            setMensagemFundoLogin("Imagem de fundo do login atualizada. Saia do sistema para conferir a tela de login personalizada.");
+            setAjusteFundoLoginAlterado(false);
+            setMensagemFundoLogin("Fundo do login atualizado com imagem e pré-ajuste. Saia do sistema para conferir.");
 
             await registrarLogConfiguracoesSistema(
                 "CONFIGURACAO_RESTAURADA",
@@ -1091,7 +1249,9 @@ export function ConfiguracoesSistema({
                     tipo: "aparencia_login",
                     bucket: BUCKET_FUNDO_LOGIN_CONFIGURACOES,
                     caminho: CAMINHO_FUNDO_LOGIN_CONFIGURACOES,
+                    caminhoConfig: CAMINHO_CONFIG_FUNDO_LOGIN_CONFIGURACOES,
                     imagemPublica: true,
+                    ajuste: normalizarAjusteFundoLoginConfiguracoes(ajusteFundoLogin),
                 },
                 "aparencia-login"
             );
@@ -1118,7 +1278,7 @@ export function ConfiguracoesSistema({
         try {
             const { error } = await supabase.storage
                 .from(BUCKET_FUNDO_LOGIN_CONFIGURACOES)
-                .remove([CAMINHO_FUNDO_LOGIN_CONFIGURACOES]);
+                .remove([CAMINHO_FUNDO_LOGIN_CONFIGURACOES, CAMINHO_CONFIG_FUNDO_LOGIN_CONFIGURACOES]);
 
             if (error) {
                 throw error;
@@ -1134,7 +1294,9 @@ export function ConfiguracoesSistema({
 
             setArquivoFundoLogin(null);
             setPreviewFundoLoginUrl("");
-            setMensagemFundoLogin("Imagem personalizada removida. O login voltará a usar o fundo azul padrão.");
+            setAjusteFundoLogin(AJUSTE_FUNDO_LOGIN_PADRAO_CONFIGURACOES);
+            setAjusteFundoLoginAlterado(false);
+            setMensagemFundoLogin("Imagem personalizada e pré-ajustes removidos. O login voltará a usar o fundo azul padrão.");
 
             await registrarLogConfiguracoesSistema(
                 "CONFIGURACAO_RESTAURADA",
@@ -1143,6 +1305,7 @@ export function ConfiguracoesSistema({
                     tipo: "aparencia_login",
                     bucket: BUCKET_FUNDO_LOGIN_CONFIGURACOES,
                     caminho: CAMINHO_FUNDO_LOGIN_CONFIGURACOES,
+                    caminhoConfig: CAMINHO_CONFIG_FUNDO_LOGIN_CONFIGURACOES,
                     restauradoPadrao: true,
                 },
                 "aparencia-login"
@@ -1669,7 +1832,7 @@ export function ConfiguracoesSistema({
                                     Imagem de fundo
                                 </label>
                                 <p className="mt-1 text-xs font-semibold leading-relaxed text-slate-500">
-                                    Use JPG, PNG ou WEBP. A imagem será otimizada e salva no bucket público controlado <span className="font-black text-slate-700">logos-empresas</span>.
+                                    Use JPG, PNG ou WEBP. Depois escolha um pré-ajuste para enquadrar a imagem no login.
                                 </p>
 
                                 <input
@@ -1680,13 +1843,38 @@ export function ConfiguracoesSistema({
                                     className="mt-4 w-full rounded-2xl border border-dashed border-slate-300 bg-white px-4 py-3 text-xs font-semibold text-slate-600 file:mr-3 file:rounded-xl file:border-0 file:bg-slate-950 file:px-3 file:py-2 file:text-xs file:font-black file:text-white disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-400"
                                 />
 
+                                <div className="mt-4 rounded-2xl bg-white px-3 py-3 ring-1 ring-slate-200">
+                                    <p className="text-[11px] font-black uppercase tracking-wide text-slate-400">Pré-ajustes da imagem</p>
+                                    <div className="mt-3 grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
+                                        {PRE_AJUSTES_FUNDO_LOGIN_CONFIGURACOES.map((preAjuste) => (
+                                            <button
+                                                key={preAjuste.chave}
+                                                type="button"
+                                                onClick={() => aplicarPreAjusteFundoLogin(preAjuste)}
+                                                disabled={!podeAlterarConfiguracoesCriticasSistema || salvandoFundoLogin}
+                                                className={classNames(
+                                                    "rounded-2xl px-3 py-2 text-left ring-1 transition disabled:cursor-not-allowed disabled:opacity-60",
+                                                    ajusteFundoLogin.size === preAjuste.ajuste.size
+                                                        && ajusteFundoLogin.position === preAjuste.ajuste.position
+                                                        && Number(ajusteFundoLogin.overlay) === Number(preAjuste.ajuste.overlay)
+                                                        ? "bg-blue-50 text-blue-800 ring-blue-200"
+                                                        : "bg-slate-50 text-slate-700 ring-slate-200 hover:bg-slate-100"
+                                                )}
+                                            >
+                                                <span className="block text-xs font-black">{preAjuste.label}</span>
+                                                <span className="mt-0.5 block text-[10px] font-semibold text-slate-500">{preAjuste.descricao}</span>
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+
                                 <div className="mt-4 flex flex-wrap gap-2">
                                     <button
                                         type="submit"
-                                        disabled={!podeAlterarConfiguracoesCriticasSistema || salvandoFundoLogin || !arquivoFundoLogin}
+                                        disabled={!podeAlterarConfiguracoesCriticasSistema || salvandoFundoLogin || (!arquivoFundoLogin && !ajusteFundoLoginAlterado)}
                                         className="rounded-2xl bg-slate-950 px-4 py-2 text-xs font-black text-white shadow-sm hover:bg-slate-800 disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-500"
                                     >
-                                        {salvandoFundoLogin ? "Salvando..." : "Salvar fundo do login"}
+                                        {salvandoFundoLogin ? "Salvando..." : arquivoFundoLogin ? "Salvar fundo do login" : "Salvar pré-ajuste"}
                                     </button>
                                     <button
                                         type="button"
@@ -1714,11 +1902,7 @@ export function ConfiguracoesSistema({
                                 <p className="text-xs font-black uppercase tracking-wide text-blue-100">Prévia do fundo</p>
                                 <div
                                     className="mt-3 flex min-h-[190px] items-center justify-center overflow-hidden rounded-2xl bg-slate-900 bg-cover bg-center ring-1 ring-white/10"
-                                    style={previewFundoLoginUrl
-                                        ? {
-                                            backgroundImage: `linear-gradient(135deg, rgba(2, 6, 23, 0.62), rgba(15, 23, 42, 0.48)), url("${previewFundoLoginUrl}")`,
-                                        }
-                                        : undefined}
+                                    style={montarEstiloFundoLoginConfiguracoes(previewFundoLoginUrl, ajusteFundoLogin)}
                                 >
                                     <div className="rounded-2xl bg-white/95 px-5 py-4 text-center text-slate-950 shadow-xl">
                                         <p className="text-sm font-black">Controle SST QR</p>
@@ -1728,7 +1912,7 @@ export function ConfiguracoesSistema({
                                     </div>
                                 </div>
                                 <p className="mt-3 text-xs font-semibold leading-relaxed text-blue-100">
-                                    A tela de login tenta carregar esta imagem antes do usuário entrar. Se a imagem falhar, o fundo azul padrão permanece.
+                                    A prévia usa o mesmo enquadramento aplicado no login. Se a imagem falhar, o fundo azul padrão permanece.
                                 </p>
                             </div>
                         </div>
