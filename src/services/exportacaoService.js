@@ -942,12 +942,37 @@ function montarSecaoEmpresaPendenciasRelatorio(empresa = {}, indiceEmpresa = 0, 
 
 function valorSeguroRelatorioDashboard(valor, fallback = "-") {
     if (valor === null || valor === undefined || valor === "") return fallback;
+
+    if (Array.isArray(valor)) return String(valor.length);
+
+    if (typeof valor === "object") {
+        const chavesPossiveis = ["total", "quantidade", "qtd", "valor", "count", "contador", "length"];
+        const chaveEncontrada = chavesPossiveis.find((chave) => valor[chave] !== undefined && valor[chave] !== null && valor[chave] !== "");
+
+        if (chaveEncontrada) return String(valor[chaveEncontrada]);
+
+        return fallback;
+    }
+
     return String(valor);
 }
 
 function numeroSeguroRelatorioDashboard(valor) {
+    if (Array.isArray(valor)) return valor.length;
+
+    if (valor && typeof valor === "object") {
+        const chavesPossiveis = ["total", "quantidade", "qtd", "valor", "count", "contador", "length"];
+        const chaveEncontrada = chavesPossiveis.find((chave) => valor[chave] !== undefined && valor[chave] !== null && valor[chave] !== "");
+        if (chaveEncontrada) return numeroSeguroRelatorioDashboard(valor[chaveEncontrada]);
+        return 0;
+    }
+
     const numero = Number(valor || 0);
     return Number.isFinite(numero) ? numero : 0;
+}
+
+function quantidadeSeguraRelatorioDashboard(valor) {
+    return String(numeroSeguroRelatorioDashboard(valor));
 }
 
 function formatarDataRelatorioDashboard(valor) {
@@ -1086,13 +1111,18 @@ export async function baixarRelatorioDashboardSstPDF({
         limite: 6,
         vazio: "Nenhuma pendência por empresa encontrada.",
         colunas: ["Empresa", "Pendências", "Status"],
-        renderLinha: (item) => `
-            <tr>
-                <td class="texto-forte">${escaparHTML(item.empresa || item.nome || item.label || "Empresa não informada")}</td>
-                <td>${escaparHTML(valorSeguroRelatorioDashboard(item.total || item.valor || item.quantidade || 0, "0"))}</td>
-                <td><span class="badge ${classeStatusRelatorioDashboard(item.status || "Pendência")}">${escaparHTML(item.status || "Monitorar")}</span></td>
-            </tr>
-        `,
+        renderLinha: (item) => {
+            const pendenciasEmpresa = numeroSeguroRelatorioDashboard(item.total ?? item.valor ?? item.quantidade ?? item.pendencias ?? 0);
+            const statusEmpresa = item.status || (pendenciasEmpresa > 0 ? "Monitorar" : "Sem pendência");
+
+            return `
+                <tr>
+                    <td class="texto-forte">${escaparHTML(item.empresa || item.nome || item.label || "Empresa não informada")}</td>
+                    <td>${escaparHTML(pendenciasEmpresa)}</td>
+                    <td><span class="badge ${classeStatusRelatorioDashboard(statusEmpresa)}">${escaparHTML(statusEmpresa)}</span></td>
+                </tr>
+            `;
+        },
     });
 
     const funcoesDisponiveis = Array.isArray(colaboradoresPorFuncao) ? colaboradoresPorFuncao.filter(Boolean) : [];
@@ -1397,8 +1427,12 @@ export async function baixarRelatorioDashboardSstPDF({
     .lista-alertas-vazia { color: #64748b; font-size: 7.5px; font-weight: 700; margin: 0; }
 
     .tabela-relatorio-dashboard { width: 100%; border-collapse: collapse; font-size: 7.2px; table-layout: fixed; }
-    .tabela-relatorio-dashboard th { background: #07162f; color: #fff; padding: 5px 5px; text-align: left; font-size: 6.4px; letter-spacing: .04em; text-transform: uppercase; }
+    .tabela-relatorio-dashboard th { background: #07162f; color: #fff; padding: 5px 5px; text-align: left; font-size: 6.3px; letter-spacing: .035em; text-transform: uppercase; white-space: nowrap; }
     .tabela-relatorio-dashboard td { border-bottom: 1px solid #e2e8f0; padding: 5px; vertical-align: top; color: #334155; line-height: 1.22; overflow-wrap: anywhere; }
+    .grid-resumo-operacional .tabela-relatorio-dashboard th:nth-child(2),
+    .grid-resumo-operacional .tabela-relatorio-dashboard td:nth-child(2) { width: 70px; text-align: center; }
+    .grid-resumo-operacional .tabela-relatorio-dashboard th:nth-child(3),
+    .grid-resumo-operacional .tabela-relatorio-dashboard td:nth-child(3) { width: 82px; text-align: center; }
     .tabela-relatorio-dashboard tr:nth-child(even) td { background: #f8fbff; }
     .texto-forte { color: #0f172a !important; font-weight: 900; }
     .tabela-vazia, .mais-registros { text-align: center; color: #64748b !important; font-weight: 800; }
@@ -1457,7 +1491,7 @@ export async function baixarRelatorioDashboardSstPDF({
                     <div class="secao-corpo">
                         <table class="tabela-relatorio-dashboard">
                             <tbody>
-                                <tr><td class="texto-forte">Auditorias no mês</td><td>${escaparHTML(auditoriasCampoMes)}</td></tr>
+                                <tr><td class="texto-forte">Auditorias no mês</td><td>${escaparHTML(quantidadeSeguraRelatorioDashboard(auditoriasCampoMes))}</td></tr>
                                 <tr><td class="texto-forte">Média de conformidade</td><td>${escaparHTML(mediaConformidadeCampo)}%</td></tr>
                                 <tr><td class="texto-forte">Desvios abertos</td><td>${escaparHTML(desviosCampoAbertos)}</td></tr>
                                 <tr><td class="texto-forte">Desvios corrigidos</td><td>${escaparHTML(desviosCampoCorrigidos)}</td></tr>
