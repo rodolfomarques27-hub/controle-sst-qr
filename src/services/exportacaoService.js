@@ -1074,9 +1074,25 @@ export async function baixarRelatorioDashboardSstPDF({
 } = {}) {
     const dataEmissao = new Date().toLocaleDateString("pt-BR");
     const horaEmissao = new Date().toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
-    const cardsRelatorio = Array.isArray(cards) ? cards.filter(Boolean) : [];
+    const cardsRelatorio = Array.isArray(cards) ? cards.filter(Boolean).slice(0, 12) : [];
+    const totalBase = numeroSeguroRelatorioDashboard(totalItens);
+    const emDia = numeroSeguroRelatorioDashboard(indicadores.emDia);
+    const percentualConformidade = totalBase ? Math.round((emDia / totalBase) * 100) : 0;
     const totalDocumentosEmpresaCriticos = numeroSeguroRelatorioDashboard(documentosVencidos.length) + numeroSeguroRelatorioDashboard(documentosAVencer.length);
-    const percentualConformidade = totalItens ? Math.round((numeroSeguroRelatorioDashboard(indicadores.emDia) / totalItens) * 100) : 0;
+
+    const textoCurto = (valor, limite = 42) => {
+        const texto = String(valor ?? "-").replace(/\s+/g, " ").trim() || "-";
+        if (texto.length <= limite) return texto;
+        return `${texto.slice(0, Math.max(0, limite - 3)).trim()}...`;
+    };
+
+    const classeConformidade = (label = "") => {
+        const texto = String(label || "").toLowerCase();
+        if (texto.includes("dia") || texto.includes("liber")) return "card-status-ok";
+        if (texto.includes("venc")) return "card-status-critico";
+        if (texto.includes("pend") || texto.includes("vencer") || texto.includes("análise") || texto.includes("analise")) return "card-status-alerta";
+        return "card-status-neutro";
+    };
 
     const cardsHtml = cardsRelatorio.map((card) => `
         <article class="card-dashboard-relatorio">
@@ -1086,113 +1102,139 @@ export async function baixarRelatorioDashboardSstPDF({
         </article>
     `).join("");
 
-    const resumoConformidadeHtml = (Array.isArray(resumoConformidade) ? resumoConformidade : []).map((item) => {
+    const resumoConformidadeHtml = (Array.isArray(resumoConformidade) ? resumoConformidade : []).slice(0, 4).map((item) => {
         const valor = numeroSeguroRelatorioDashboard(item.valor);
-        const total = numeroSeguroRelatorioDashboard(item.total || totalItens);
+        const total = numeroSeguroRelatorioDashboard(item.total || totalBase);
         const percentual = total ? Math.round((valor / total) * 100) : 0;
+        const label = item.label || "Status";
 
         return `
-            <div class="linha-progresso">
-                <div class="linha-progresso-topo">
-                    <span>${escaparHTML(item.label || "Status")}</span>
-                    <strong>${valor} / ${total} (${percentual}%)</strong>
-                </div>
-                <div class="barra"><span style="width:${Math.max(0, Math.min(100, percentual))}%"></span></div>
-            </div>
+            <article class="card-status-treinamento ${classeConformidade(label)}">
+                <p>${escaparHTML(label)}</p>
+                <strong>${valor} / ${total}</strong>
+                <span>${percentual}%</span>
+            </article>
         `;
     }).join("");
 
     const alertasHtml = limitarItensRelatorioDashboard(alertasImportantes, 5).itens
-        .map((alerta) => `<li>${escaparHTML(alerta.titulo || alerta.texto || alerta.label || alerta)}</li>`)
+        .map((alerta) => `<li>${escaparHTML(textoCurto(alerta.titulo || alerta.texto || alerta.label || alerta, 86))}</li>`)
         .join("");
 
-    const rankingHtml = montarLinhasTabelaRelatorioDashboard({
-        lista: rankingPendenciasEmpresa,
-        limite: 6,
-        vazio: "Nenhuma pendência por empresa encontrada.",
-        colunas: ["Empresa", "Pendências", "Status"],
-        renderLinha: (item) => {
+    const montarTabelaFixa = ({ colunas = [], linhas = [], vazio = "Nenhum registro encontrado.", classe = "" }) => {
+        const colunasHtml = colunas.map((coluna) => `<th>${escaparHTML(coluna)}</th>`).join("");
+        const linhasHtml = linhas.length
+            ? linhas.join("")
+            : `<tr><td colspan="${colunas.length || 1}" class="tabela-vazia">${escaparHTML(vazio)}</td></tr>`;
+
+        return `
+            <table class="tabela-relatorio-dashboard ${classe}">
+                <thead><tr>${colunasHtml}</tr></thead>
+                <tbody>${linhasHtml}</tbody>
+            </table>
+        `;
+    };
+
+    const linhasRanking = (Array.isArray(rankingPendenciasEmpresa) ? rankingPendenciasEmpresa : [])
+        .filter(Boolean)
+        .slice(0, 5)
+        .map((item) => {
             const pendenciasEmpresa = numeroSeguroRelatorioDashboard(item.total ?? item.valor ?? item.quantidade ?? item.pendencias ?? 0);
-            const statusEmpresa = item.status || (pendenciasEmpresa > 0 ? "Monitorar" : "Sem pendência");
+            const statusEmpresa = pendenciasEmpresa > 0 ? (item.status || "Monitorar") : "Sem pendência";
 
             return `
                 <tr>
-                    <td class="texto-forte">${escaparHTML(item.empresa || item.nome || item.label || "Empresa não informada")}</td>
-                    <td>${escaparHTML(pendenciasEmpresa)}</td>
-                    <td><span class="badge ${classeStatusRelatorioDashboard(statusEmpresa)}">${escaparHTML(statusEmpresa)}</span></td>
+                    <td class="texto-forte">${escaparHTML(textoCurto(item.empresa || item.nome || item.label || "Empresa não informada", 34))}</td>
+                    <td class="centralizado">${escaparHTML(pendenciasEmpresa)}</td>
+                    <td class="centralizado"><span class="badge ${classeStatusRelatorioDashboard(statusEmpresa)}">${escaparHTML(statusEmpresa)}</span></td>
                 </tr>
             `;
-        },
+        });
+
+    const rankingHtml = montarTabelaFixa({
+        colunas: ["Empresa", "Pend.", "Status"],
+        linhas: linhasRanking,
+        vazio: "Nenhuma pendência por empresa encontrada.",
+        classe: "tabela-ranking-dashboard",
     });
 
-    const funcoesDisponiveis = Array.isArray(colaboradoresPorFuncao) ? colaboradoresPorFuncao.filter(Boolean) : [];
-    const funcoesHtml = funcoesDisponiveis.length
-        ? montarLinhasTabelaRelatorioDashboard({
-            lista: funcoesDisponiveis,
-            limite: 6,
-            vazio: "Nenhum colaborador por função encontrado.",
-            colunas: ["Função", "Quantidade"],
-            renderLinha: (item) => `
-                <tr>
-                    <td class="texto-forte">${escaparHTML(item.funcao || item.nome || item.label || "Função não informada")}</td>
-                    <td>${escaparHTML(valorSeguroRelatorioDashboard(item.total || item.valor || item.quantidade || 0, "0"))}</td>
-                </tr>
-            `,
-        })
-        : `<p class="estado-vazio-tabela">Nenhum colaborador por função encontrado.</p>`;
-
-    const documentosTipoHtml = montarLinhasTabelaRelatorioDashboard({
-        lista: documentosPorTipo,
-        limite: 8,
-        vazio: "Nenhum documento por tipo encontrado.",
-        colunas: ["Tipo", "Quantidade"],
-        renderLinha: (item) => `
+    const linhasFuncoes = (Array.isArray(colaboradoresPorFuncao) ? colaboradoresPorFuncao : [])
+        .filter(Boolean)
+        .slice(0, 5)
+        .map((item) => `
             <tr>
-                <td class="texto-forte">${escaparHTML(item.tipo || item.nome || item.label || "Tipo não informado")}</td>
-                <td>${escaparHTML(valorSeguroRelatorioDashboard(item.total || item.valor || item.quantidade || 0, "0"))}</td>
+                <td class="texto-forte">${escaparHTML(textoCurto(item.funcao || item.nome || item.label || "Função não informada", 38))}</td>
+                <td class="centralizado">${escaparHTML(valorSeguroRelatorioDashboard(item.total || item.valor || item.quantidade || 0, "0"))}</td>
             </tr>
-        `,
+        `);
+
+    const funcoesHtml = linhasFuncoes.length
+        ? montarTabelaFixa({ colunas: ["Função", "Qtd."], linhas: linhasFuncoes, vazio: "Nenhum colaborador por função encontrado.", classe: "tabela-funcoes-dashboard" })
+        : `<div class="estado-vazio-tabela">Nenhum colaborador por função encontrado.</div>`;
+
+    const linhasDocumentosTipo = (Array.isArray(documentosPorTipo) ? documentosPorTipo : [])
+        .filter(Boolean)
+        .slice(0, 8)
+        .map((item) => `
+            <tr>
+                <td class="texto-forte">${escaparHTML(textoCurto(item.tipo || item.nome || item.label || "Tipo não informado", 36))}</td>
+                <td class="centralizado">${escaparHTML(valorSeguroRelatorioDashboard(item.total || item.valor || item.quantidade || 0, "0"))}</td>
+            </tr>
+        `);
+
+    const documentosTipoHtml = montarTabelaFixa({
+        colunas: ["Tipo", "Quantidade"],
+        linhas: linhasDocumentosTipo,
+        vazio: "Nenhum documento por tipo encontrado.",
+        classe: "tabela-documentos-tipo",
     });
 
-    const pendenciasHtml = montarLinhasTabelaRelatorioDashboard({
-        lista: pendencias,
-        limite: 8,
-        vazio: "Nenhuma pendência crítica encontrada.",
-        colunas: ["Colaborador", "Empresa", "Documento", "Status", "Vencimento"],
-        renderLinha: (item) => {
+    const linhasUltimosDocumentos = (Array.isArray(ultimosDocumentosEnviados) ? ultimosDocumentosEnviados : [])
+        .filter(Boolean)
+        .slice(0, 7)
+        .map((item) => {
+            const status = textoStatusRelatorioDashboard(item.status || item.statusDocumento || item.statusGeral);
+            return `
+                <tr>
+                    <td class="texto-forte">${escaparHTML(textoCurto(item.nome || item.documento || item.tipo || "-", 38))}</td>
+                    <td>${escaparHTML(textoCurto(item.empresa || item.colaborador || item.responsavel || "-", 30))}</td>
+                    <td class="centralizado"><span class="badge ${classeStatusRelatorioDashboard(status)}">${escaparHTML(status)}</span></td>
+                    <td class="centralizado">${escaparHTML(formatarDataRelatorioDashboard(item.data || item.criadoEm || item.created_at || item.updated_at))}</td>
+                </tr>
+            `;
+        });
+
+    const ultimosDocumentosHtml = montarTabelaFixa({
+        colunas: ["Documento", "Empresa/Colab.", "Status", "Data"],
+        linhas: linhasUltimosDocumentos,
+        vazio: "Nenhum documento recente encontrado.",
+        classe: "tabela-ultimos-documentos",
+    });
+
+    const linhasPendencias = (Array.isArray(pendencias) ? pendencias : [])
+        .filter(Boolean)
+        .slice(0, 8)
+        .map((item) => {
             const colaborador = item.colaborador || item;
             const treinamento = item.treinamento || item.documento || {};
             const status = textoStatusRelatorioDashboard(item.status || treinamento.status || colaborador.statusGeral);
 
             return `
                 <tr>
-                    <td class="texto-forte">${escaparHTML(colaborador.nome || item.nome || "-")}</td>
-                    <td>${escaparHTML(colaborador.empresaExibicao || colaborador.empresa || item.empresa || "-")}</td>
-                    <td>${escaparHTML(treinamento.nome || item.documentoNome || item.tipo || "-")}</td>
-                    <td><span class="badge ${classeStatusRelatorioDashboard(status)}">${escaparHTML(status)}</span></td>
-                    <td>${escaparHTML(formatarDataRelatorioDashboard(item.vencimento || treinamento.vencimento || item.dataVencimento))}</td>
+                    <td class="texto-forte">${escaparHTML(textoCurto(colaborador.nome || item.nome || "-", 30))}</td>
+                    <td>${escaparHTML(textoCurto(colaborador.empresaExibicao || colaborador.empresa || item.empresa || "-", 26))}</td>
+                    <td>${escaparHTML(textoCurto(treinamento.nome || item.documentoNome || item.tipo || "-", 46))}</td>
+                    <td class="centralizado"><span class="badge ${classeStatusRelatorioDashboard(status)}">${escaparHTML(status)}</span></td>
+                    <td class="centralizado">${escaparHTML(formatarDataRelatorioDashboard(item.vencimento || treinamento.vencimento || item.dataVencimento))}</td>
                 </tr>
             `;
-        },
-    });
+        });
 
-    const ultimosDocumentosHtml = montarLinhasTabelaRelatorioDashboard({
-        lista: ultimosDocumentosEnviados,
-        limite: 7,
-        vazio: "Nenhum documento recente encontrado.",
-        colunas: ["Documento", "Empresa/Colaborador", "Status", "Data"],
-        renderLinha: (item) => {
-            const status = textoStatusRelatorioDashboard(item.status || item.statusDocumento || item.statusGeral);
-
-            return `
-                <tr>
-                    <td class="texto-forte">${escaparHTML(item.nome || item.documento || item.tipo || "-")}</td>
-                    <td>${escaparHTML(item.empresa || item.colaborador || item.responsavel || "-")}</td>
-                    <td><span class="badge ${classeStatusRelatorioDashboard(status)}">${escaparHTML(status)}</span></td>
-                    <td>${escaparHTML(formatarDataRelatorioDashboard(item.data || item.criadoEm || item.created_at || item.updated_at))}</td>
-                </tr>
-            `;
-        },
+    const pendenciasHtml = montarTabelaFixa({
+        colunas: ["Colaborador", "Empresa", "Documento", "Status", "Vencimento"],
+        linhas: linhasPendencias,
+        vazio: "Nenhuma pendência crítica encontrada.",
+        classe: "tabela-pendencias-dashboard",
     });
 
     const cabecalhoRelatorio = (subtitulo = "Resumo executivo com as informações dos cards e indicadores principais.") => `
@@ -1215,7 +1257,7 @@ export async function baixarRelatorioDashboardSstPDF({
 
     const rodapeRelatorio = (pagina, total = 2) => `
         <footer class="rodape-relatorio">
-            <span>Controle SST QR — Relatório gerado automaticamente pelo Dashboard SST.</span>
+            <span>Controle SST QR - Relatório gerado automaticamente pelo Dashboard SST.</span>
             <span>Página ${pagina} de ${total}</span>
         </footer>
     `;
@@ -1239,7 +1281,6 @@ export async function baixarRelatorioDashboardSstPDF({
     }
 
     * { box-sizing: border-box; }
-
     body {
         margin: 0;
         background: #eef4fb;
@@ -1264,235 +1305,92 @@ export async function baixarRelatorioDashboardSstPDF({
         break-after: page;
     }
 
-    .pagina-relatorio:last-child {
-        page-break-after: auto;
-        break-after: auto;
-    }
+    .pagina-relatorio:last-child { page-break-after: auto; break-after: auto; }
+    .conteudo-pagina { padding-bottom: 34px; }
 
-    .cabecalho-relatorio {
-        display: grid;
-        gap: 8px;
-        margin-bottom: 10px;
-    }
+    .cabecalho-relatorio { display: grid; gap: 8px; margin-bottom: 10px; }
+    .marca-relatorio-controle { display: flex; align-items: center; justify-content: center; gap: 9px; padding-top: 2px; }
+    .escudo-controle-sst-relatorio { width: 30px; height: 30px; display: grid; place-items: center; color: #07162f; }
+    .escudo-controle-sst-relatorio svg { width: 27px; height: 27px; fill: none; stroke: currentColor; stroke-width: 1.9; stroke-linecap: round; stroke-linejoin: round; }
+    .marca-relatorio-controle__textos h1 { margin: 0; color: #07162f; font-size: 24px; line-height: .92; font-weight: 900; letter-spacing: .14em; }
+    .marca-relatorio-controle__textos p { margin: 2px 0 0; color: #64748b; font-size: 6.5px; font-weight: 900; letter-spacing: .42em; text-transform: uppercase; }
+    .titulo-relatorio { border-top: 2px solid #07162f; border-bottom: 2px solid #07162f; text-align: center; padding: 6px 0 5px; }
+    .titulo-relatorio h2 { margin: 0; color: var(--azul); font-size: 15px; line-height: 1; font-weight: 900; letter-spacing: .08em; text-transform: uppercase; }
+    .titulo-relatorio p { margin: 3px 0 0; color: #64748b; font-size: 7.2px; font-weight: 700; }
 
-    .marca-relatorio-controle {
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        gap: 9px;
-        text-align: left;
-        padding-top: 2px;
-    }
-
-    .escudo-controle-sst-relatorio {
-        width: 30px;
-        height: 30px;
-        display: grid;
-        place-items: center;
-        color: #07162f;
-    }
-
-    .escudo-controle-sst-relatorio svg {
-        width: 27px;
-        height: 27px;
-        fill: none;
-        stroke: currentColor;
-        stroke-width: 1.9;
-        stroke-linecap: round;
-        stroke-linejoin: round;
-    }
-
-    .marca-relatorio-controle__textos h1 {
-        margin: 0;
-        color: #07162f;
-        font-size: 24px;
-        line-height: .92;
-        font-weight: 900;
-        letter-spacing: .14em;
-    }
-
-    .marca-relatorio-controle__textos p {
-        margin: 2px 0 0;
-        color: #64748b;
-        font-size: 6.5px;
-        font-weight: 900;
-        letter-spacing: .42em;
-        text-transform: uppercase;
-    }
-
-    .titulo-relatorio {
-        border-top: 2px solid #07162f;
-        border-bottom: 2px solid #07162f;
-        text-align: center;
-        padding: 6px 0 5px;
-    }
-
-    .titulo-relatorio h2 {
-        margin: 0;
-        color: var(--azul);
-        font-size: 15px;
-        line-height: 1;
-        font-weight: 900;
-        letter-spacing: .08em;
-        text-transform: uppercase;
-    }
-
-    .titulo-relatorio p {
-        margin: 3px 0 0;
-        color: #64748b;
-        font-size: 7.2px;
-        font-weight: 700;
-    }
-
-    .faixa-info {
-        display: grid;
-        grid-template-columns: repeat(4, 1fr);
-        border: 1px solid var(--linha);
-        border-radius: 14px;
-        overflow: hidden;
-        margin-bottom: 9px;
-        background: #f8fbff;
-    }
-
+    .faixa-info { display: grid; grid-template-columns: repeat(4, 1fr); border: 1px solid var(--linha); border-radius: 14px; overflow: hidden; margin-bottom: 8px; background: #f8fbff; }
     .faixa-info div { padding: 7px 8px; border-right: 1px solid var(--linha); }
     .faixa-info div:last-child { border-right: 0; }
     .faixa-info span { display: block; color: #64748b; font-size: 6.6px; font-weight: 900; letter-spacing: .08em; text-transform: uppercase; }
     .faixa-info strong { display: block; margin-top: 3px; color: #07162f; font-size: 8px; font-weight: 900; }
 
-    .cards-dashboard-relatorio {
-        display: grid;
-        grid-template-columns: repeat(4, 1fr);
-        gap: 6px;
-        margin-bottom: 9px;
-    }
-
-    .card-dashboard-relatorio {
-        min-height: 60px;
-        padding: 7px;
-        border: 1px solid var(--linha);
-        border-radius: 12px;
-        background: linear-gradient(180deg, #ffffff 0%, #f8fbff 100%);
-    }
-
-    .card-dashboard-relatorio p {
-        margin: 0;
-        color: #475569;
-        font-size: 6.7px;
-        line-height: 1.15;
-        font-weight: 900;
-        letter-spacing: .035em;
-        text-transform: uppercase;
-    }
-
-    .card-dashboard-relatorio strong {
-        display: block;
-        margin-top: 4px;
-        color: #07162f;
-        font-size: 17px;
-        line-height: 1;
-        font-weight: 900;
-    }
-
-    .card-dashboard-relatorio span {
-        display: block;
-        margin-top: 4px;
-        color: #64748b;
-        font-size: 6.8px;
-        line-height: 1.18;
-        font-weight: 700;
-    }
+    .cards-dashboard-relatorio { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin-bottom: 8px; }
+    .card-dashboard-relatorio { min-height: 56px; padding: 7px; border: 1px solid var(--linha); border-radius: 12px; background: linear-gradient(180deg, #fff 0%, #f8fbff 100%); }
+    .card-dashboard-relatorio p { margin: 0; color: #475569; font-size: 6.7px; line-height: 1.15; font-weight: 900; letter-spacing: .035em; text-transform: uppercase; }
+    .card-dashboard-relatorio strong { display: block; margin-top: 4px; color: #07162f; font-size: 16px; line-height: 1; font-weight: 900; }
+    .card-dashboard-relatorio span { display: block; margin-top: 4px; color: #64748b; font-size: 6.8px; line-height: 1.18; font-weight: 700; }
 
     .grid-duplo { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 8px; }
-    .grid-resumo-operacional { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
-    .bloco-tabela-resumo { border: 1px solid var(--linha); border-radius: 11px; background: #fff; overflow: hidden; }
-    .bloco-tabela-resumo-topo { padding: 8px 9px 7px; background: #f8fbff; border-bottom: 1px solid var(--linha); }
-    .bloco-tabela-resumo-topo h4 { margin: 0; color: #07162f; font-size: 8px; line-height: 1.25; text-transform: uppercase; letter-spacing: .045em; }
-    .bloco-tabela-resumo-topo p { margin: 3px 0 0; color: #64748b; font-size: 6.4px; line-height: 1.25; font-weight: 700; }
-    .bloco-tabela-resumo-corpo { padding: 8px 9px; }
-    .estado-vazio-tabela { margin: 0; padding: 14px 10px; border: 1px dashed #cbd5e1; border-radius: 10px; background: #f8fbff; color: #64748b; text-align: center; font-size: 7.1px; line-height: 1.35; font-weight: 800; }
     .secao-relatorio { border: 1px solid var(--linha); border-radius: 13px; background: #fff; overflow: hidden; margin-bottom: 8px; break-inside: avoid; page-break-inside: avoid; }
     .secao-titulo { padding: 8px 10px 7px; background: #f8fbff; border-bottom: 1px solid var(--linha); }
     .secao-titulo h3 { margin: 0; color: #07162f; font-size: 9.2px; line-height: 1.25; text-transform: uppercase; letter-spacing: .055em; }
     .secao-titulo p { margin: 3px 0 0; color: #64748b; font-size: 6.7px; line-height: 1.25; font-weight: 700; }
     .secao-corpo { padding: 9px 10px; }
 
-    .linha-progresso { margin-bottom: 9px; padding: 2px 0 3px; }
-    .linha-progresso:last-child { margin-bottom: 0; }
-    .linha-progresso-topo { display: flex; align-items: center; justify-content: space-between; gap: 10px; color: #334155; font-size: 7px; font-weight: 850; margin-bottom: 6px; line-height: 1.45; min-height: 11px; }
-    .linha-progresso-topo span { max-width: 58%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding-top: 1px; }
-    .linha-progresso-topo strong { white-space: nowrap; color: #0f172a; font-weight: 900; padding-top: 1px; }
-    .barra { width: 100%; height: 4.5px; border-radius: 999px; background: #e2e8f0; overflow: hidden; }
-    .barra span { display: block; height: 100%; border-radius: 999px; background: linear-gradient(90deg, #064fae 0%, #0b66d8 100%); }
+    .status-treinamentos-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 7px; }
+    .card-status-treinamento { min-height: 48px; border: 1px solid #d9e3f2; border-radius: 11px; padding: 8px; background: #fff; }
+    .card-status-treinamento p { margin: 0; color: #334155; font-size: 7.2px; line-height: 1.2; font-weight: 900; }
+    .card-status-treinamento strong { display: block; margin-top: 7px; color: #07162f; font-size: 12px; line-height: 1; font-weight: 900; }
+    .card-status-treinamento span { display: inline-flex; margin-top: 5px; border-radius: 999px; padding: 2px 6px; font-size: 6.7px; line-height: 1; font-weight: 900; }
+    .card-status-ok span { background: #e7f8ef; color: var(--verde); }
+    .card-status-alerta span { background: #fff4de; color: #b45309; }
+    .card-status-critico span { background: #ffe8e8; color: var(--vermelho); }
+    .card-status-neutro span { background: #edf2f7; color: #475569; }
 
     .lista-alertas { margin: 0; padding-left: 15px; color: #334155; font-size: 7.4px; line-height: 1.35; font-weight: 700; }
     .lista-alertas li { margin-bottom: 3px; }
     .lista-alertas-vazia { color: #64748b; font-size: 7.5px; font-weight: 700; margin: 0; }
 
+    .grid-resumo-operacional { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+    .bloco-tabela-resumo { border: 1px solid var(--linha); border-radius: 11px; background: #fff; overflow: hidden; }
+    .bloco-tabela-resumo-topo { padding: 8px 9px 7px; background: #f8fbff; border-bottom: 1px solid var(--linha); }
+    .bloco-tabela-resumo-topo h4 { margin: 0; color: #07162f; font-size: 8px; line-height: 1.25; text-transform: uppercase; letter-spacing: .045em; }
+    .bloco-tabela-resumo-topo p { margin: 3px 0 0; color: #64748b; font-size: 6.4px; line-height: 1.25; font-weight: 700; }
+    .bloco-tabela-resumo-corpo { padding: 8px 9px; }
+    .estado-vazio-tabela { min-height: 45px; display: grid; place-items: center; margin: 0; padding: 11px 10px; border: 1px dashed #cbd5e1; border-radius: 10px; background: #f8fbff; color: #64748b; text-align: center; font-size: 7.1px; line-height: 1.35; font-weight: 800; }
+
     .tabela-relatorio-dashboard { width: 100%; border-collapse: collapse; font-size: 7px; table-layout: fixed; }
-    .tabela-relatorio-dashboard th { background: #07162f; color: #fff; padding: 7px 7px 6px; text-align: left; font-size: 5.8px; line-height: 1.25; letter-spacing: .012em; text-transform: uppercase; white-space: nowrap; vertical-align: middle; }
-    .tabela-relatorio-dashboard td { border-bottom: 1px solid #e2e8f0; padding: 6px 7px; vertical-align: middle; color: #334155; line-height: 1.32; overflow-wrap: anywhere; }
-    .grid-resumo-operacional .bloco-tabela-resumo:nth-child(1) .tabela-relatorio-dashboard th:nth-child(1),
-    .grid-resumo-operacional .bloco-tabela-resumo:nth-child(1) .tabela-relatorio-dashboard td:nth-child(1) { width: 56%; }
-    .grid-resumo-operacional .bloco-tabela-resumo:nth-child(1) .tabela-relatorio-dashboard th:nth-child(2),
-    .grid-resumo-operacional .bloco-tabela-resumo:nth-child(1) .tabela-relatorio-dashboard td:nth-child(2) { width: 18%; text-align: center; }
-    .grid-resumo-operacional .bloco-tabela-resumo:nth-child(1) .tabela-relatorio-dashboard th:nth-child(3),
-    .grid-resumo-operacional .bloco-tabela-resumo:nth-child(1) .tabela-relatorio-dashboard td:nth-child(3) { width: 26%; text-align: center; }
-    .grid-resumo-operacional .bloco-tabela-resumo:nth-child(2) .tabela-relatorio-dashboard th:nth-child(1),
-    .grid-resumo-operacional .bloco-tabela-resumo:nth-child(2) .tabela-relatorio-dashboard td:nth-child(1) { width: 72%; }
-    .grid-resumo-operacional .bloco-tabela-resumo:nth-child(2) .tabela-relatorio-dashboard th:nth-child(2),
-    .grid-resumo-operacional .bloco-tabela-resumo:nth-child(2) .tabela-relatorio-dashboard td:nth-child(2) { width: 28%; text-align: center; }
-    .tabela-documentos-tipo-wrapper .tabela-relatorio-dashboard th:nth-child(1),
-    .tabela-documentos-tipo-wrapper .tabela-relatorio-dashboard td:nth-child(1) { width: 68%; }
-    .tabela-documentos-tipo-wrapper .tabela-relatorio-dashboard th:nth-child(2),
-    .tabela-documentos-tipo-wrapper .tabela-relatorio-dashboard td:nth-child(2) { width: 32%; text-align: center; }
-    .tabela-ultimos-documentos-wrapper .tabela-relatorio-dashboard th:nth-child(1),
-    .tabela-ultimos-documentos-wrapper .tabela-relatorio-dashboard td:nth-child(1) { width: 34%; }
-    .tabela-ultimos-documentos-wrapper .tabela-relatorio-dashboard th:nth-child(2),
-    .tabela-ultimos-documentos-wrapper .tabela-relatorio-dashboard td:nth-child(2) { width: 31%; }
-    .tabela-ultimos-documentos-wrapper .tabela-relatorio-dashboard th:nth-child(3),
-    .tabela-ultimos-documentos-wrapper .tabela-relatorio-dashboard td:nth-child(3) { width: 15%; text-align: center; }
-    .tabela-ultimos-documentos-wrapper .tabela-relatorio-dashboard th:nth-child(4),
-    .tabela-ultimos-documentos-wrapper .tabela-relatorio-dashboard td:nth-child(4) { width: 20%; text-align: center; }
-    .tabela-pendencias-wrapper .tabela-relatorio-dashboard th:nth-child(1),
-    .tabela-pendencias-wrapper .tabela-relatorio-dashboard td:nth-child(1) { width: 22%; }
-    .tabela-pendencias-wrapper .tabela-relatorio-dashboard th:nth-child(2),
-    .tabela-pendencias-wrapper .tabela-relatorio-dashboard td:nth-child(2) { width: 18%; }
-    .tabela-pendencias-wrapper .tabela-relatorio-dashboard th:nth-child(3),
-    .tabela-pendencias-wrapper .tabela-relatorio-dashboard td:nth-child(3) { width: 34%; }
-    .tabela-pendencias-wrapper .tabela-relatorio-dashboard th:nth-child(4),
-    .tabela-pendencias-wrapper .tabela-relatorio-dashboard td:nth-child(4) { width: 13%; text-align: center; }
-    .tabela-pendencias-wrapper .tabela-relatorio-dashboard th:nth-child(5),
-    .tabela-pendencias-wrapper .tabela-relatorio-dashboard td:nth-child(5) { width: 13%; text-align: center; }
+    .tabela-relatorio-dashboard th { background: #07162f; color: #fff; padding: 7px 7px 6px; text-align: left; font-size: 6.1px; line-height: 1.25; letter-spacing: .01em; text-transform: uppercase; vertical-align: middle; }
+    .tabela-relatorio-dashboard td { border-bottom: 1px solid #e2e8f0; padding: 6px 7px; vertical-align: middle; color: #334155; line-height: 1.28; overflow-wrap: anywhere; }
     .tabela-relatorio-dashboard tr:nth-child(even) td { background: #f8fbff; }
     .texto-forte { color: #0f172a !important; font-weight: 900; }
+    .centralizado { text-align: center !important; }
     .tabela-vazia, .mais-registros { text-align: center; color: #64748b !important; font-weight: 800; }
 
-    .badge { display: inline-flex; align-items: center; border-radius: 999px; padding: 2px 6px; font-size: 6.4px; font-weight: 900; white-space: nowrap; }
+    .tabela-ranking-dashboard th:nth-child(1), .tabela-ranking-dashboard td:nth-child(1) { width: 54%; }
+    .tabela-ranking-dashboard th:nth-child(2), .tabela-ranking-dashboard td:nth-child(2) { width: 16%; text-align: center; }
+    .tabela-ranking-dashboard th:nth-child(3), .tabela-ranking-dashboard td:nth-child(3) { width: 30%; text-align: center; }
+    .tabela-funcoes-dashboard th:nth-child(1), .tabela-funcoes-dashboard td:nth-child(1) { width: 72%; }
+    .tabela-funcoes-dashboard th:nth-child(2), .tabela-funcoes-dashboard td:nth-child(2) { width: 28%; text-align: center; }
+    .tabela-documentos-tipo th:nth-child(1), .tabela-documentos-tipo td:nth-child(1) { width: 70%; }
+    .tabela-documentos-tipo th:nth-child(2), .tabela-documentos-tipo td:nth-child(2) { width: 30%; text-align: center; }
+    .tabela-ultimos-documentos th:nth-child(1), .tabela-ultimos-documentos td:nth-child(1) { width: 36%; }
+    .tabela-ultimos-documentos th:nth-child(2), .tabela-ultimos-documentos td:nth-child(2) { width: 30%; }
+    .tabela-ultimos-documentos th:nth-child(3), .tabela-ultimos-documentos td:nth-child(3) { width: 16%; text-align: center; }
+    .tabela-ultimos-documentos th:nth-child(4), .tabela-ultimos-documentos td:nth-child(4) { width: 18%; text-align: center; }
+    .tabela-pendencias-dashboard th:nth-child(1), .tabela-pendencias-dashboard td:nth-child(1) { width: 22%; }
+    .tabela-pendencias-dashboard th:nth-child(2), .tabela-pendencias-dashboard td:nth-child(2) { width: 18%; }
+    .tabela-pendencias-dashboard th:nth-child(3), .tabela-pendencias-dashboard td:nth-child(3) { width: 36%; }
+    .tabela-pendencias-dashboard th:nth-child(4), .tabela-pendencias-dashboard td:nth-child(4) { width: 12%; text-align: center; }
+    .tabela-pendencias-dashboard th:nth-child(5), .tabela-pendencias-dashboard td:nth-child(5) { width: 12%; text-align: center; }
+
+    .badge { display: inline-flex; align-items: center; justify-content: center; border-radius: 999px; padding: 2px 6px; font-size: 6.3px; line-height: 1; font-weight: 900; white-space: nowrap; }
     .status-ok { background: #e7f8ef; color: var(--verde); }
     .status-alerta { background: #fff4de; color: #b45309; }
     .status-critico { background: #ffe8e8; color: var(--vermelho); }
     .status-neutro { background: #edf2f7; color: #475569; }
 
-    .rodape-relatorio {
-        position: absolute;
-        left: 7mm;
-        right: 7mm;
-        bottom: 7mm;
-        min-height: 22px;
-        padding: 7px 9px;
-        border-radius: 0 0 11px 11px;
-        display: flex;
-        justify-content: space-between;
-        gap: 8px;
-        color: #fff;
-        background: linear-gradient(90deg, #032b63 0%, #064fae 100%);
-        font-size: 7px;
-        font-weight: 900;
-    }
-
-    .conteudo-pagina {
-        padding-bottom: 35px;
-    }
+    .rodape-relatorio { position: absolute; left: 7mm; right: 7mm; bottom: 7mm; min-height: 22px; padding: 7px 9px; border-radius: 0 0 11px 11px; display: flex; justify-content: space-between; gap: 8px; color: #fff; background: linear-gradient(90deg, #032b63 0%, #064fae 100%); font-size: 7px; font-weight: 900; }
 </style>
 </head>
 <body>
@@ -1502,9 +1400,9 @@ export async function baixarRelatorioDashboardSstPDF({
 
             <section class="faixa-info">
                 <div><span>Emissão</span><strong>${escaparHTML(dataEmissao)} às ${escaparHTML(horaEmissao)}</strong></div>
-                <div><span>Base do relatório</span><strong>${escaparHTML(valorSeguroRelatorioDashboard(totalItens, "0"))} itens avaliados</strong></div>
+                <div><span>Base do relatório</span><strong>${escaparHTML(valorSeguroRelatorioDashboard(totalBase, "0"))} itens avaliados</strong></div>
                 <div><span>Conformidade</span><strong>${escaparHTML(percentualConformidade)}% em dia</strong></div>
-                <div><span>Storage</span><strong>${escaparHTML(storagePercentual)}% — ${escaparHTML(totalStorageLabel)} / ${escaparHTML(storageLimiteLabelDashboard)}</strong></div>
+                <div><span>Storage</span><strong>${escaparHTML(storagePercentual)}% - ${escaparHTML(totalStorageLabel)} / ${escaparHTML(storageLimiteLabelDashboard)}</strong></div>
             </section>
 
             <section class="cards-dashboard-relatorio">
@@ -1513,21 +1411,21 @@ export async function baixarRelatorioDashboardSstPDF({
 
             <section class="grid-duplo">
                 <div class="secao-relatorio">
-                    <div class="secao-titulo"><h3>Conformidade dos treinamentos</h3><p>Distribuição geral dos status avaliados no Dashboard SST.</p></div>
-                    <div class="secao-corpo">${resumoConformidadeHtml || `<p class="lista-alertas-vazia">Nenhum indicador de conformidade encontrado.</p>`}</div>
+                    <div class="secao-titulo"><h3>Status dos treinamentos</h3><p>Resumo consolidado por situação, sem barras para evitar corte visual.</p></div>
+                    <div class="secao-corpo"><div class="status-treinamentos-grid">${resumoConformidadeHtml || `<p class="lista-alertas-vazia">Nenhum indicador de conformidade encontrado.</p>`}</div></div>
                 </div>
                 <div class="secao-relatorio">
                     <div class="secao-titulo"><h3>Resumo da auditoria de campo</h3><p>Leitura consolidada dos desvios registrados.</p></div>
                     <div class="secao-corpo">
                         <table class="tabela-relatorio-dashboard">
                             <tbody>
-                                <tr><td class="texto-forte">Auditorias no mês</td><td>${escaparHTML(quantidadeSeguraRelatorioDashboard(auditoriasCampoMes))}</td></tr>
-                                <tr><td class="texto-forte">Média de conformidade</td><td>${escaparHTML(mediaConformidadeCampo)}%</td></tr>
-                                <tr><td class="texto-forte">Desvios abertos</td><td>${escaparHTML(desviosCampoAbertos)}</td></tr>
-                                <tr><td class="texto-forte">Desvios corrigidos</td><td>${escaparHTML(desviosCampoCorrigidos)}</td></tr>
-                                <tr><td class="texto-forte">Documentos de empresa críticos</td><td>${escaparHTML(totalDocumentosEmpresaCriticos)}</td></tr>
-                                <tr><td class="texto-forte">Aniversariantes do mês</td><td>${escaparHTML((Array.isArray(aniversariantesMes) ? aniversariantesMes.length : 0))}</td></tr>
-                                <tr><td class="texto-forte">Próximo aniversário</td><td>${escaparHTML(proximoAniversarioDashboard?.nome || proximoAniversarioDashboard?.colaborador?.nome || "Não informado")}</td></tr>
+                                <tr><td class="texto-forte">Auditorias no mês</td><td class="centralizado">${escaparHTML(quantidadeSeguraRelatorioDashboard(auditoriasCampoMes))}</td></tr>
+                                <tr><td class="texto-forte">Média de conformidade</td><td class="centralizado">${escaparHTML(mediaConformidadeCampo)}%</td></tr>
+                                <tr><td class="texto-forte">Desvios abertos</td><td class="centralizado">${escaparHTML(desviosCampoAbertos)}</td></tr>
+                                <tr><td class="texto-forte">Desvios corrigidos</td><td class="centralizado">${escaparHTML(desviosCampoCorrigidos)}</td></tr>
+                                <tr><td class="texto-forte">Documentos de empresa críticos</td><td class="centralizado">${escaparHTML(totalDocumentosEmpresaCriticos)}</td></tr>
+                                <tr><td class="texto-forte">Aniversariantes do mês</td><td class="centralizado">${escaparHTML((Array.isArray(aniversariantesMes) ? aniversariantesMes.length : 0))}</td></tr>
+                                <tr><td class="texto-forte">Próximo aniversário</td><td class="centralizado">${escaparHTML(textoCurto(proximoAniversarioDashboard?.nome || proximoAniversarioDashboard?.colaborador?.nome || "Não informado", 24))}</td></tr>
                             </tbody>
                         </table>
                     </div>
@@ -1565,17 +1463,17 @@ export async function baixarRelatorioDashboardSstPDF({
             <section class="grid-duplo">
                 <div class="secao-relatorio">
                     <div class="secao-titulo"><h3>Documentos por tipo</h3><p>Leitura geral dos documentos corporativos monitorados.</p></div>
-                    <div class="secao-corpo tabela-documentos-tipo-wrapper">${documentosTipoHtml}</div>
+                    <div class="secao-corpo">${documentosTipoHtml}</div>
                 </div>
                 <div class="secao-relatorio">
                     <div class="secao-titulo"><h3>Últimos documentos enviados</h3><p>Resumo dos envios mais recentes.</p></div>
-                    <div class="secao-corpo tabela-ultimos-documentos-wrapper">${ultimosDocumentosHtml}</div>
+                    <div class="secao-corpo">${ultimosDocumentosHtml}</div>
                 </div>
             </section>
 
             <section class="secao-relatorio">
                 <div class="secao-titulo"><h3>Pendências críticas</h3><p>Itens que impactam liberação, mobilização ou controle documental.</p></div>
-                <div class="secao-corpo tabela-pendencias-wrapper">${pendenciasHtml}</div>
+                <div class="secao-corpo">${pendenciasHtml}</div>
             </section>
         </div>
         ${rodapeRelatorio(2)}
