@@ -8,6 +8,7 @@ import {
     Copy,
     Database,
     FileText,
+    ImagePlus,
     HardDrive,
     KeyRound,
     Link2,
@@ -70,6 +71,7 @@ import {
     obterResumoPermissaoSistema,
 } from "../../services/usuariosPermissoesSistemaService";
 import { supabase } from "../../lib/supabaseClient";
+import { reduzirFotoParaAuditoria } from "../../services/imagemService";
 
 const classNames = (...classes) => classes.filter(Boolean).join(" ");
 
@@ -113,6 +115,7 @@ const CHAVES_BLOCOS_CONFIGURACOES_PADRAO = [
     "config-arquivos-storage",
     "config-relatorios-evidencias",
     "config-senha-configuracoes",
+    "config-login-visual",
     "config-eventos-auditoria",
     "config-seguranca-publica",
     "config-storage-privado",
@@ -124,6 +127,32 @@ const VERSAO_LAYOUT_CONFIGURACOES_SISTEMA = "roteiro15a-configuracoes-tecnicas-s
 const CHAVE_LAYOUT_CONFIGURACOES_SISTEMA = "configuracoesSistemaVersaoLayout";
 const CHAVE_BLOCOS_RECOLHIDOS_CONFIGURACOES = "configuracoesSistemaBlocosRecolhidos";
 const CHAVE_TAMANHOS_BLOCOS_CONFIGURACOES = "configuracoesSistemaTamanhosBlocos";
+const BUCKET_FUNDO_LOGIN_CONFIGURACOES = "logos-empresas";
+const CAMINHO_FUNDO_LOGIN_CONFIGURACOES = "configuracoes/login/fundo-login.jpg";
+const CHAVE_VERSAO_FUNDO_LOGIN_CONFIGURACOES = "controleSstQrFundoLoginVersao";
+
+function montarUrlFundoLoginConfiguracoes(versao = "") {
+    try {
+        const { data } = supabase.storage.from(BUCKET_FUNDO_LOGIN_CONFIGURACOES).getPublicUrl(CAMINHO_FUNDO_LOGIN_CONFIGURACOES);
+        const url = data?.publicUrl || "";
+
+        if (!url) return "";
+
+        return versao ? `${url}?v=${encodeURIComponent(String(versao))}` : url;
+    } catch {
+        return "";
+    }
+}
+
+function carregarVersaoFundoLoginConfiguracoes() {
+    if (typeof window === "undefined") return "";
+
+    try {
+        return window.localStorage.getItem(CHAVE_VERSAO_FUNDO_LOGIN_CONFIGURACOES) || "";
+    } catch {
+        return "";
+    }
+}
 
 
 const BLOCOS_CONFIGURACOES_ABERTOS_PADRAO = new Set([
@@ -137,6 +166,7 @@ const CHAVES_BLOCOS_CONFIGURACOES_CRITICOS = new Set([
     "config-auditoria-publica",
     "config-arquivos-storage",
     "config-senha-configuracoes",
+    "config-login-visual",
     "config-eventos-auditoria",
     "config-storage-privado",
     "config-supabase-geral",
@@ -259,6 +289,14 @@ export function ConfiguracoesSistema({
         mensagemSenhaConfiguracoesSistemaApp || "Senha das Configurações carregada localmente."
     );
     const [mostrarCamposSenhaConfiguracoes, setMostrarCamposSenhaConfiguracoes] = useState(false);
+    const [arquivoFundoLogin, setArquivoFundoLogin] = useState(null);
+    const [previewFundoLoginUrl, setPreviewFundoLoginUrl] = useState(() =>
+        montarUrlFundoLoginConfiguracoes(carregarVersaoFundoLoginConfiguracoes() || Date.now())
+    );
+    const [mensagemFundoLogin, setMensagemFundoLogin] = useState(
+        "Fundo padrão ativo. Envie uma imagem para personalizar a tela de login."
+    );
+    const [salvandoFundoLogin, setSalvandoFundoLogin] = useState(false);
 
     const [mostrarOrganizacaoCards, setMostrarOrganizacaoCards] = useState(false);
     const [filtroPainelConfiguracoes, setFiltroPainelConfiguracoes] = useState("todos");
@@ -971,6 +1009,151 @@ export function ConfiguracoesSistema({
         }
     };
 
+    const atualizarPreviewFundoLoginConfiguracoes = (versao = Date.now()) => {
+        const versaoTexto = String(versao || Date.now());
+
+        if (typeof window !== "undefined") {
+            try {
+                window.localStorage.setItem(CHAVE_VERSAO_FUNDO_LOGIN_CONFIGURACOES, versaoTexto);
+            } catch {
+                // Mantém apenas o estado em memória quando o navegador bloquear localStorage.
+            }
+        }
+
+        setPreviewFundoLoginUrl(montarUrlFundoLoginConfiguracoes(versaoTexto));
+    };
+
+    const selecionarArquivoFundoLogin = (arquivo) => {
+        setArquivoFundoLogin(arquivo || null);
+
+        if (arquivo) {
+            setMensagemFundoLogin(`Imagem selecionada: ${arquivo.name}. Clique em Salvar fundo do login para aplicar.`);
+        } else {
+            setMensagemFundoLogin("Nenhuma imagem selecionada.");
+        }
+    };
+
+    const salvarFundoLoginPersonalizado = async (evento) => {
+        evento?.preventDefault?.();
+
+        if (bloquearConfiguracaoCriticaSeNecessario(setMensagemFundoLogin)) return;
+
+        if (!arquivoFundoLogin) {
+            setMensagemFundoLogin("Selecione uma imagem antes de salvar o fundo do login.");
+            return;
+        }
+
+        if (!String(arquivoFundoLogin.type || "").startsWith("image/")) {
+            setMensagemFundoLogin("Arquivo inválido. Selecione uma imagem JPG, PNG ou WEBP.");
+            return;
+        }
+
+        if (!confirmarAcaoCriticaConfiguracoes(
+            "Substituir a imagem de fundo da tela de login?",
+            setMensagemFundoLogin
+        )) {
+            return;
+        }
+
+        setSalvandoFundoLogin(true);
+        setMensagemFundoLogin("Otimizando e enviando imagem para o Storage público controlado...");
+
+        try {
+            const imagemOtimizada = await reduzirFotoParaAuditoria(arquivoFundoLogin, {
+                maxLado: 2200,
+                alvoBytes: 950 * 1024,
+                qualidadeInicial: 0.86,
+                qualidadeMinima: 0.58,
+                tipoSaida: "image/jpeg",
+                forcarReducao: true,
+            });
+
+            const { error } = await supabase.storage
+                .from(BUCKET_FUNDO_LOGIN_CONFIGURACOES)
+                .upload(CAMINHO_FUNDO_LOGIN_CONFIGURACOES, imagemOtimizada, {
+                    upsert: true,
+                    cacheControl: "60",
+                    contentType: imagemOtimizada.type || "image/jpeg",
+                });
+
+            if (error) {
+                throw error;
+            }
+
+            atualizarPreviewFundoLoginConfiguracoes(Date.now());
+            setArquivoFundoLogin(null);
+            setMensagemFundoLogin("Imagem de fundo do login atualizada. Saia do sistema para conferir a tela de login personalizada.");
+
+            await registrarLogConfiguracoesSistema(
+                "CONFIGURACAO_RESTAURADA",
+                "Imagem de fundo da tela de login atualizada nas Configurações.",
+                {
+                    tipo: "aparencia_login",
+                    bucket: BUCKET_FUNDO_LOGIN_CONFIGURACOES,
+                    caminho: CAMINHO_FUNDO_LOGIN_CONFIGURACOES,
+                    imagemPublica: true,
+                },
+                "aparencia-login"
+            );
+        } catch (error) {
+            setMensagemFundoLogin(error?.message || "Não foi possível salvar a imagem de fundo do login.");
+        } finally {
+            setSalvandoFundoLogin(false);
+        }
+    };
+
+    const removerFundoLoginPersonalizado = async () => {
+        if (bloquearConfiguracaoCriticaSeNecessario(setMensagemFundoLogin)) return;
+
+        if (!confirmarAcaoCriticaConfiguracoes(
+            "Remover a imagem personalizada e voltar ao fundo azul padrão do login?",
+            setMensagemFundoLogin
+        )) {
+            return;
+        }
+
+        setSalvandoFundoLogin(true);
+        setMensagemFundoLogin("Removendo imagem personalizada do fundo do login...");
+
+        try {
+            const { error } = await supabase.storage
+                .from(BUCKET_FUNDO_LOGIN_CONFIGURACOES)
+                .remove([CAMINHO_FUNDO_LOGIN_CONFIGURACOES]);
+
+            if (error) {
+                throw error;
+            }
+
+            if (typeof window !== "undefined") {
+                try {
+                    window.localStorage.removeItem(CHAVE_VERSAO_FUNDO_LOGIN_CONFIGURACOES);
+                } catch {
+                    // Sem ação quando o navegador bloquear localStorage.
+                }
+            }
+
+            setArquivoFundoLogin(null);
+            setPreviewFundoLoginUrl("");
+            setMensagemFundoLogin("Imagem personalizada removida. O login voltará a usar o fundo azul padrão.");
+
+            await registrarLogConfiguracoesSistema(
+                "CONFIGURACAO_RESTAURADA",
+                "Imagem de fundo da tela de login removida nas Configurações.",
+                {
+                    tipo: "aparencia_login",
+                    bucket: BUCKET_FUNDO_LOGIN_CONFIGURACOES,
+                    caminho: CAMINHO_FUNDO_LOGIN_CONFIGURACOES,
+                    restauradoPadrao: true,
+                },
+                "aparencia-login"
+            );
+        } catch (error) {
+            setMensagemFundoLogin(error?.message || "Não foi possível remover a imagem de fundo do login.");
+        } finally {
+            setSalvandoFundoLogin(false);
+        }
+    };
+
     const carregarConfiguracao = async () => {
         setCarregandoConfig(true);
         setMensagemConfig("Carregando configuração dos eventos...");
@@ -1149,6 +1332,7 @@ export function ConfiguracoesSistema({
         { chave: "config-arquivos-storage", titulo: "Arquivos salvos no Storage", descricao: "Capacidade, vínculos, filtros e limpeza protegida.", icon: Database },
         { chave: "config-relatorios-evidencias", titulo: "Relatórios e evidências", descricao: "Resumo copiável e TXT das configurações atuais.", icon: FileText },
         { chave: "config-senha-configuracoes", titulo: "Senha da aba Configurações", descricao: "Desbloqueio operacional, origem da senha e permissões críticas.", icon: Lock },
+        { chave: "config-login-visual", titulo: "Aparência do login", descricao: "Imagem pública de fundo da tela de acesso.", icon: ImagePlus },
         { chave: "config-eventos-auditoria", titulo: "Eventos da Auditoria do Sistema", descricao: "Eventos registrados e exibidos no histórico administrativo.", icon: Settings },
         { chave: "config-seguranca-publica", titulo: "Checklist da auditoria pública", descricao: "Conferência operacional de token público e QR Code.", icon: ShieldAlert },
         { chave: "config-storage-privado", titulo: "Checklist do Storage privado", descricao: "Buckets, URLs assinadas e arquivos sensíveis.", icon: HardDrive },
@@ -1445,6 +1629,108 @@ export function ConfiguracoesSistema({
 
                         <div className="mt-4 rounded-2xl bg-orange-50 px-4 py-3 text-xs font-semibold leading-relaxed text-orange-800 ring-1 ring-orange-200">
                             Esta etapa gera evidência simples em texto. O PDF das Configurações deve ficar para depois da tela estar totalmente estável, para evitar adicionar peso e complexidade agora.
+                        </div>
+                    </Card>
+                )
+            );
+
+        case "config-login-visual":
+            return renderBlocoConfiguracaoComControle(
+                "config-login-visual",
+                "Aparência do login",
+                "Imagem pública de fundo da tela de acesso.",
+                (
+                    <Card>
+                        <div className="flex flex-col gap-3 border-b border-slate-100 pb-4 md:flex-row md:items-start md:justify-between">
+                            <div>
+                                <div className="flex items-center gap-2">
+                                    <ImagePlus className="h-5 w-5 text-slate-500" />
+                                    <h2 id="config-login-visual" className="scroll-mt-24 text-lg font-black text-slate-950">Imagem de fundo do login</h2>
+                                </div>
+                                <p className="mt-1 text-sm text-slate-500">
+                                    Personalize o fundo da tela de acesso sem alterar o fluxo de login, senha temporária ou permissões.
+                                </p>
+                            </div>
+                            <button
+                                type="button"
+                                onClick={removerFundoLoginPersonalizado}
+                                disabled={!podeAlterarConfiguracoesCriticasSistema || salvandoFundoLogin}
+                                title={podeAlterarConfiguracoesCriticasSistema ? "Remover imagem personalizada do login" : mensagemBloqueioConfiguracoesCriticasSistema}
+                                className="inline-flex items-center gap-2 rounded-2xl bg-white px-3 py-2 text-xs font-bold text-slate-700 ring-1 ring-slate-200 hover:bg-slate-50 disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-400"
+                            >
+                                <RotateCcw className="h-3.5 w-3.5" />
+                                Voltar ao padrão
+                            </button>
+                        </div>
+
+                        <div className="mt-4 grid gap-4 lg:grid-cols-[minmax(0,1.1fr)_minmax(280px,0.9fr)]">
+                            <form onSubmit={salvarFundoLoginPersonalizado} className="rounded-2xl bg-slate-50 px-4 py-4 ring-1 ring-slate-100">
+                                <label className="block text-sm font-black text-slate-800">
+                                    Imagem de fundo
+                                </label>
+                                <p className="mt-1 text-xs font-semibold leading-relaxed text-slate-500">
+                                    Use JPG, PNG ou WEBP. A imagem será otimizada e salva no bucket público controlado <span className="font-black text-slate-700">logos-empresas</span>.
+                                </p>
+
+                                <input
+                                    type="file"
+                                    accept="image/*"
+                                    disabled={!podeAlterarConfiguracoesCriticasSistema || salvandoFundoLogin}
+                                    onChange={(evento) => selecionarArquivoFundoLogin(evento.target.files?.[0] || null)}
+                                    className="mt-4 w-full rounded-2xl border border-dashed border-slate-300 bg-white px-4 py-3 text-xs font-semibold text-slate-600 file:mr-3 file:rounded-xl file:border-0 file:bg-slate-950 file:px-3 file:py-2 file:text-xs file:font-black file:text-white disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-400"
+                                />
+
+                                <div className="mt-4 flex flex-wrap gap-2">
+                                    <button
+                                        type="submit"
+                                        disabled={!podeAlterarConfiguracoesCriticasSistema || salvandoFundoLogin || !arquivoFundoLogin}
+                                        className="rounded-2xl bg-slate-950 px-4 py-2 text-xs font-black text-white shadow-sm hover:bg-slate-800 disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-500"
+                                    >
+                                        {salvandoFundoLogin ? "Salvando..." : "Salvar fundo do login"}
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={() => selecionarArquivoFundoLogin(null)}
+                                        disabled={salvandoFundoLogin}
+                                        className="rounded-2xl bg-white px-4 py-2 text-xs font-black text-slate-700 ring-1 ring-slate-200 hover:bg-slate-50 disabled:opacity-60"
+                                    >
+                                        Limpar seleção
+                                    </button>
+                                </div>
+
+                                <div className={classNames(
+                                    "mt-4 rounded-2xl px-4 py-3 text-xs font-semibold leading-relaxed ring-1",
+                                    mensagemFundoLogin.includes("atualizada") || mensagemFundoLogin.includes("removida")
+                                        ? "bg-emerald-50 text-emerald-700 ring-emerald-200"
+                                        : mensagemFundoLogin.includes("não") || mensagemFundoLogin.includes("inválido")
+                                            ? "bg-red-50 text-red-700 ring-red-200"
+                                            : "bg-blue-50 text-blue-700 ring-blue-200"
+                                )}>
+                                    {mensagemFundoLogin}
+                                </div>
+                            </form>
+
+                            <div className="rounded-2xl bg-slate-950 p-4 text-white shadow-inner">
+                                <p className="text-xs font-black uppercase tracking-wide text-blue-100">Prévia do fundo</p>
+                                <div
+                                    className="mt-3 flex min-h-[190px] items-center justify-center overflow-hidden rounded-2xl bg-slate-900 bg-cover bg-center ring-1 ring-white/10"
+                                    style={previewFundoLoginUrl
+                                        ? {
+                                            backgroundImage: `linear-gradient(135deg, rgba(2, 6, 23, 0.62), rgba(15, 23, 42, 0.48)), url("${previewFundoLoginUrl}")`,
+                                        }
+                                        : undefined}
+                                >
+                                    <div className="rounded-2xl bg-white/95 px-5 py-4 text-center text-slate-950 shadow-xl">
+                                        <p className="text-sm font-black">Controle SST QR</p>
+                                        <p className="mt-1 text-[11px] font-semibold text-slate-500">
+                                            {previewFundoLoginUrl ? "Imagem personalizada ativa" : "Fundo azul padrão"}
+                                        </p>
+                                    </div>
+                                </div>
+                                <p className="mt-3 text-xs font-semibold leading-relaxed text-blue-100">
+                                    A tela de login tenta carregar esta imagem antes do usuário entrar. Se a imagem falhar, o fundo azul padrão permanece.
+                                </p>
+                            </div>
                         </div>
                     </Card>
                 )

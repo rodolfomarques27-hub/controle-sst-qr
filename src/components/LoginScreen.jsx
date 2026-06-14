@@ -1,8 +1,24 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { ClipboardList, Loader2, LogIn, Mail, ShieldCheck } from "lucide-react";
 import { supabase } from "../lib/supabaseClient";
 import { PasswordInput } from "./commonComponents";
 import { registrarSolicitacaoRecuperacaoSenhaLoginService } from "../services/acessosAppService";
+
+const BUCKET_FUNDO_LOGIN = "logos-empresas";
+const CAMINHO_FUNDO_LOGIN = "configuracoes/login/fundo-login.jpg";
+
+function montarUrlFundoLoginPersonalizado() {
+    try {
+        const { data } = supabase.storage.from(BUCKET_FUNDO_LOGIN).getPublicUrl(CAMINHO_FUNDO_LOGIN);
+        const url = data?.publicUrl || "";
+
+        if (!url) return "";
+
+        return `${url}?v=${Date.now()}`;
+    } catch {
+        return "";
+    }
+}
 
 export function LoginScreen({ onLogin }) {
     const [email, setEmail] = useState("");
@@ -11,6 +27,30 @@ export function LoginScreen({ onLogin }) {
     const [carregandoSolicitacaoSenha, setCarregandoSolicitacaoSenha] = useState(false);
     const [erro, setErro] = useState("");
     const [mensagem, setMensagem] = useState("");
+    const [fundoLoginUrl, setFundoLoginUrl] = useState("");
+
+    useEffect(() => {
+        const url = montarUrlFundoLoginPersonalizado();
+
+        if (!url) return;
+
+        let cancelado = false;
+        const imagem = new Image();
+
+        imagem.onload = () => {
+            if (!cancelado) setFundoLoginUrl(url);
+        };
+
+        imagem.onerror = () => {
+            if (!cancelado) setFundoLoginUrl("");
+        };
+
+        imagem.src = url;
+
+        return () => {
+            cancelado = true;
+        };
+    }, []);
 
     const fazerLogin = async (event) => {
         event?.preventDefault?.();
@@ -85,7 +125,14 @@ export function LoginScreen({ onLogin }) {
     const loginBloqueado = carregando || carregandoSolicitacaoSenha || !String(email || "").trim() || !senha;
 
     return (
-        <div className="flex min-h-screen items-center justify-center bg-slate-950 p-4">
+        <div
+            className="flex min-h-screen items-center justify-center bg-slate-950 bg-cover bg-center p-4"
+            style={fundoLoginUrl
+                ? {
+                    backgroundImage: `linear-gradient(135deg, rgba(2, 6, 23, 0.74), rgba(15, 23, 42, 0.62)), url("${fundoLoginUrl}")`,
+                }
+                : undefined}
+        >
             <div className="w-full max-w-md rounded-[2rem] bg-white p-8 shadow-2xl">
                 <div className="mb-6 flex items-center gap-3">
                     <div className="rounded-3xl bg-slate-950 p-4 text-white">
