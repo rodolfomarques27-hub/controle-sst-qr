@@ -16,20 +16,21 @@ export function ConfiguracoesBloqueio({
     return (
         <section className="flex min-h-[calc(100vh-7rem)] items-center justify-center px-3 py-5 sm:px-4 lg:px-6">
             <div className="grid w-full max-w-[1380px] overflow-hidden rounded-[2rem] bg-white shadow-[0_18px_50px_rgba(15,23,42,0.12)] ring-1 ring-slate-200 lg:grid-cols-[340px_minmax(0,1fr)] xl:grid-cols-[380px_minmax(0,1fr)]">
-                <div className="relative hidden min-h-[500px] overflow-hidden bg-[radial-gradient(circle_at_center,_rgba(37,99,235,0.28),_transparent_42%),linear-gradient(145deg,#06163f_0%,#0b2a70_55%,#17398b_100%)] lg:flex lg:items-center lg:justify-center">
-                    <div className="relative flex flex-col items-center">
-                        <div className="relative flex h-44 w-44 items-center justify-center">
+                <div className="relative hidden min-h-[500px] overflow-hidden bg-[radial-gradient(circle_at_center,_rgba(59,130,246,0.16),_transparent_44%),linear-gradient(145deg,#071947_0%,#0b2a70_55%,#17398b_100%)] lg:flex lg:items-center lg:justify-center">
+                    <div className="absolute h-[320px] w-[320px] rounded-full border border-blue-300/10" />
+                    <div className="absolute h-[240px] w-[240px] rounded-full border border-blue-300/8" />
+
+                    <div className="relative flex flex-col items-center justify-center">
+                        <div className="absolute h-36 w-36 rounded-full bg-sky-400/10 blur-2xl" />
+                        <div className="relative flex h-36 w-36 items-center justify-center">
                             <ShieldCheck
-                                className="h-36 w-36 text-blue-500 drop-shadow-[0_18px_38px_rgba(37,99,235,0.24)]"
-                                strokeWidth={1.65}
+                                className="h-28 w-28 text-blue-400 drop-shadow-[0_10px_24px_rgba(37,99,235,0.20)]"
+                                strokeWidth={1.75}
                             />
-                            <div className="absolute flex h-[78px] w-[78px] items-center justify-center rounded-2xl bg-white text-blue-950 shadow-[0_14px_28px_rgba(2,8,23,0.26)]">
-                                <Lock className="h-10 w-10" strokeWidth={2.15} />
+                            <div className="absolute flex h-16 w-16 items-center justify-center rounded-[1.2rem] bg-white text-blue-950 shadow-[0_10px_24px_rgba(2,8,23,0.22)]">
+                                <Lock className="h-8 w-8" strokeWidth={2.15} />
                             </div>
                         </div>
-
-                        <div className="mt-4 h-2 w-24 rounded-full bg-sky-300/35 blur-md" />
-                        <div className="mt-1 h-2.5 w-28 rounded-full bg-blue-400/55 shadow-[0_8px_22px_rgba(59,130,246,0.35)]" />
                     </div>
                 </div>
 
