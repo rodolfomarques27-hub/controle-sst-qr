@@ -1077,13 +1077,13 @@ export async function baixarRelatorioDashboardSstPDF({
         `;
     }).join("");
 
-    const alertasHtml = limitarItensRelatorioDashboard(alertasImportantes, 6).itens
+    const alertasHtml = limitarItensRelatorioDashboard(alertasImportantes, 5).itens
         .map((alerta) => `<li>${escaparHTML(alerta.titulo || alerta.texto || alerta.label || alerta)}</li>`)
         .join("");
 
     const rankingHtml = montarLinhasTabelaRelatorioDashboard({
         lista: rankingPendenciasEmpresa,
-        limite: 8,
+        limite: 6,
         vazio: "Nenhuma pendência por empresa encontrada.",
         colunas: ["Empresa", "Pendências", "Status"],
         renderLinha: (item) => `
@@ -1097,7 +1097,7 @@ export async function baixarRelatorioDashboardSstPDF({
 
     const funcoesHtml = montarLinhasTabelaRelatorioDashboard({
         lista: colaboradoresPorFuncao,
-        limite: 8,
+        limite: 6,
         vazio: "Nenhum colaborador por função encontrado.",
         colunas: ["Função", "Quantidade"],
         renderLinha: (item) => `
@@ -1123,7 +1123,7 @@ export async function baixarRelatorioDashboardSstPDF({
 
     const pendenciasHtml = montarLinhasTabelaRelatorioDashboard({
         lista: pendencias,
-        limite: 10,
+        limite: 8,
         vazio: "Nenhuma pendência crítica encontrada.",
         colunas: ["Colaborador", "Empresa", "Documento", "Status", "Vencimento"],
         renderLinha: (item) => {
@@ -1145,7 +1145,7 @@ export async function baixarRelatorioDashboardSstPDF({
 
     const ultimosDocumentosHtml = montarLinhasTabelaRelatorioDashboard({
         lista: ultimosDocumentosEnviados,
-        limite: 10,
+        limite: 7,
         vazio: "Nenhum documento recente encontrado.",
         colunas: ["Documento", "Empresa/Colaborador", "Status", "Data"],
         renderLinha: (item) => {
@@ -1161,6 +1161,31 @@ export async function baixarRelatorioDashboardSstPDF({
             `;
         },
     });
+
+    const cabecalhoRelatorio = (subtitulo = "Resumo executivo com as informações dos cards e indicadores principais.") => `
+        <header class="cabecalho-relatorio">
+            <div class="marca-relatorio-controle">
+                <div class="escudo-controle-sst-relatorio">
+                    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3 5 6v5c0 4.6 2.9 8.8 7 10 4.1-1.2 7-5.4 7-10V6l-7-3Z"/><path d="m9.5 12 1.8 1.8 3.7-4"/></svg>
+                </div>
+                <div class="marca-relatorio-controle__textos">
+                    <h1>CONTROLE SST QR</h1>
+                    <p>Gestão de Segurança do Trabalho</p>
+                </div>
+            </div>
+            <div class="titulo-relatorio">
+                <h2>Relatório do Dashboard SST</h2>
+                <p>${escaparHTML(subtitulo)}</p>
+            </div>
+        </header>
+    `;
+
+    const rodapeRelatorio = (pagina, total = 2) => `
+        <footer class="rodape-relatorio">
+            <span>Controle SST QR — Relatório gerado automaticamente pelo Dashboard SST.</span>
+            <span>Página ${pagina} de ${total}</span>
+        </footer>
+    `;
 
     const html = `<!doctype html>
 <html lang="pt-BR">
@@ -1193,41 +1218,50 @@ export async function baixarRelatorioDashboardSstPDF({
 
     .pagina-relatorio {
         width: 210mm;
-        min-height: 286mm;
+        height: 297mm;
         margin: 0 auto;
         padding: 7mm;
         background: #fff;
         border: 1px solid #d8e2ef;
-        border-radius: 18px;
-        box-shadow: 0 12px 36px rgba(15, 23, 42, 0.12);
+        border-radius: 16px;
+        box-shadow: none;
         position: relative;
+        overflow: hidden;
+        page-break-after: always;
+        break-after: page;
+    }
+
+    .pagina-relatorio:last-child {
+        page-break-after: auto;
+        break-after: auto;
     }
 
     .cabecalho-relatorio {
         display: grid;
-        gap: 9px;
-        margin-bottom: 13px;
+        gap: 8px;
+        margin-bottom: 10px;
     }
 
     .marca-relatorio-controle {
         display: flex;
         align-items: center;
         justify-content: center;
-        gap: 10px;
+        gap: 9px;
         text-align: left;
+        padding-top: 2px;
     }
 
     .escudo-controle-sst-relatorio {
-        width: 34px;
-        height: 34px;
+        width: 30px;
+        height: 30px;
         display: grid;
         place-items: center;
         color: #07162f;
     }
 
     .escudo-controle-sst-relatorio svg {
-        width: 30px;
-        height: 30px;
+        width: 27px;
+        height: 27px;
         fill: none;
         stroke: currentColor;
         stroke-width: 1.9;
@@ -1238,229 +1272,234 @@ export async function baixarRelatorioDashboardSstPDF({
     .marca-relatorio-controle__textos h1 {
         margin: 0;
         color: #07162f;
-        font-size: 31px;
-        line-height: 1.02;
-        letter-spacing: 0.035em;
-        text-transform: uppercase;
+        font-size: 24px;
+        line-height: .92;
+        font-weight: 900;
+        letter-spacing: .14em;
     }
 
     .marca-relatorio-controle__textos p {
-        margin: 1px 0 0;
+        margin: 2px 0 0;
         color: #64748b;
-        font-size: 8px;
-        letter-spacing: 0.28em;
+        font-size: 6.5px;
+        font-weight: 900;
+        letter-spacing: .42em;
         text-transform: uppercase;
-        font-weight: 800;
     }
 
     .titulo-relatorio {
         border-top: 2px solid #07162f;
         border-bottom: 2px solid #07162f;
-        padding: 7px 0 8px;
         text-align: center;
+        padding: 6px 0 5px;
     }
 
     .titulo-relatorio h2 {
         margin: 0;
         color: var(--azul);
-        font-size: 18px;
-        letter-spacing: 0.04em;
+        font-size: 15px;
+        line-height: 1;
+        font-weight: 900;
+        letter-spacing: .08em;
         text-transform: uppercase;
     }
 
     .titulo-relatorio p {
         margin: 3px 0 0;
-        color: var(--cinza);
-        font-size: 9px;
+        color: #64748b;
+        font-size: 7.2px;
         font-weight: 700;
     }
 
     .faixa-info {
         display: grid;
         grid-template-columns: repeat(4, 1fr);
-        gap: 6px;
-        padding: 8px;
-        background: var(--suave);
         border: 1px solid var(--linha);
         border-radius: 14px;
-        margin-bottom: 10px;
+        overflow: hidden;
+        margin-bottom: 9px;
+        background: #f8fbff;
     }
 
-    .faixa-info div {
-        border-right: 1px solid #dbeafe;
-        min-height: 28px;
-        padding-right: 6px;
-    }
-
+    .faixa-info div { padding: 7px 8px; border-right: 1px solid var(--linha); }
     .faixa-info div:last-child { border-right: 0; }
-    .faixa-info span { display: block; color: var(--cinza); font-size: 7px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; }
-    .faixa-info strong { display: block; margin-top: 3px; font-size: 10px; color: var(--texto); }
+    .faixa-info span { display: block; color: #64748b; font-size: 6.6px; font-weight: 900; letter-spacing: .08em; text-transform: uppercase; }
+    .faixa-info strong { display: block; margin-top: 3px; color: #07162f; font-size: 8px; font-weight: 900; }
 
     .cards-dashboard-relatorio {
         display: grid;
         grid-template-columns: repeat(4, 1fr);
-        gap: 7px;
-        margin-bottom: 12px;
+        gap: 6px;
+        margin-bottom: 9px;
     }
 
     .card-dashboard-relatorio {
-        min-height: 78px;
-        padding: 9px;
+        min-height: 60px;
+        padding: 7px;
         border: 1px solid var(--linha);
-        border-radius: 14px;
+        border-radius: 12px;
         background: linear-gradient(180deg, #ffffff 0%, #f8fbff 100%);
-        box-shadow: 0 5px 14px rgba(15, 23, 42, 0.06);
     }
 
     .card-dashboard-relatorio p {
         margin: 0;
         color: #475569;
-        font-size: 7.5px;
+        font-size: 6.7px;
         line-height: 1.15;
         font-weight: 900;
-        letter-spacing: .04em;
+        letter-spacing: .035em;
         text-transform: uppercase;
     }
 
     .card-dashboard-relatorio strong {
         display: block;
-        margin-top: 6px;
+        margin-top: 4px;
         color: #07162f;
-        font-size: 20px;
+        font-size: 17px;
         line-height: 1;
         font-weight: 900;
     }
 
     .card-dashboard-relatorio span {
         display: block;
-        margin-top: 5px;
+        margin-top: 4px;
         color: #64748b;
-        font-size: 7.5px;
-        line-height: 1.25;
+        font-size: 6.8px;
+        line-height: 1.18;
         font-weight: 700;
     }
 
-    .grid-duplo { display: grid; grid-template-columns: 1fr 1fr; gap: 9px; margin-bottom: 10px; }
-    .secao-relatorio { border: 1px solid var(--linha); border-radius: 15px; background: #fff; overflow: hidden; margin-bottom: 10px; }
-    .secao-titulo { padding: 9px 10px; background: #f8fbff; border-bottom: 1px solid var(--linha); }
-    .secao-titulo h3 { margin: 0; color: #07162f; font-size: 11px; text-transform: uppercase; letter-spacing: .06em; }
-    .secao-titulo p { margin: 2px 0 0; color: #64748b; font-size: 8px; font-weight: 700; }
-    .secao-corpo { padding: 9px 10px; }
+    .grid-duplo { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 8px; }
+    .secao-relatorio { border: 1px solid var(--linha); border-radius: 13px; background: #fff; overflow: hidden; margin-bottom: 8px; break-inside: avoid; page-break-inside: avoid; }
+    .secao-titulo { padding: 7px 9px; background: #f8fbff; border-bottom: 1px solid var(--linha); }
+    .secao-titulo h3 { margin: 0; color: #07162f; font-size: 9.4px; text-transform: uppercase; letter-spacing: .06em; }
+    .secao-titulo p { margin: 2px 0 0; color: #64748b; font-size: 6.8px; font-weight: 700; }
+    .secao-corpo { padding: 7px 9px; }
 
-    .linha-progresso { margin-bottom: 8px; }
+    .linha-progresso { margin-bottom: 6px; }
     .linha-progresso:last-child { margin-bottom: 0; }
-    .linha-progresso-topo { display: flex; justify-content: space-between; gap: 8px; color: #334155; font-size: 8px; font-weight: 800; margin-bottom: 4px; }
-    .barra { width: 100%; height: 7px; border-radius: 999px; background: #e2e8f0; overflow: hidden; }
+    .linha-progresso-topo { display: flex; justify-content: space-between; gap: 8px; color: #334155; font-size: 7.2px; font-weight: 800; margin-bottom: 3px; }
+    .barra { width: 100%; height: 6px; border-radius: 999px; background: #e2e8f0; overflow: hidden; }
     .barra span { display: block; height: 100%; border-radius: 999px; background: var(--azul); }
 
-    .lista-alertas { margin: 0; padding-left: 16px; color: #334155; font-size: 8.5px; line-height: 1.45; font-weight: 700; }
-    .lista-alertas li { margin-bottom: 4px; }
-    .lista-alertas-vazia { color: #64748b; font-size: 8.5px; font-weight: 700; margin: 0; }
+    .lista-alertas { margin: 0; padding-left: 15px; color: #334155; font-size: 7.4px; line-height: 1.35; font-weight: 700; }
+    .lista-alertas li { margin-bottom: 3px; }
+    .lista-alertas-vazia { color: #64748b; font-size: 7.5px; font-weight: 700; margin: 0; }
 
-    .tabela-relatorio-dashboard { width: 100%; border-collapse: collapse; font-size: 8px; }
-    .tabela-relatorio-dashboard th { background: #07162f; color: #fff; padding: 6px 6px; text-align: left; font-size: 7px; letter-spacing: .06em; text-transform: uppercase; }
-    .tabela-relatorio-dashboard td { border-bottom: 1px solid #e2e8f0; padding: 6px; vertical-align: top; color: #334155; }
+    .tabela-relatorio-dashboard { width: 100%; border-collapse: collapse; font-size: 7.2px; table-layout: fixed; }
+    .tabela-relatorio-dashboard th { background: #07162f; color: #fff; padding: 5px 5px; text-align: left; font-size: 6.4px; letter-spacing: .04em; text-transform: uppercase; }
+    .tabela-relatorio-dashboard td { border-bottom: 1px solid #e2e8f0; padding: 5px; vertical-align: top; color: #334155; line-height: 1.22; overflow-wrap: anywhere; }
     .tabela-relatorio-dashboard tr:nth-child(even) td { background: #f8fbff; }
     .texto-forte { color: #0f172a !important; font-weight: 900; }
     .tabela-vazia, .mais-registros { text-align: center; color: #64748b !important; font-weight: 800; }
 
-    .badge { display: inline-flex; align-items: center; border-radius: 999px; padding: 2px 6px; font-size: 7px; font-weight: 900; white-space: nowrap; }
+    .badge { display: inline-flex; align-items: center; border-radius: 999px; padding: 2px 6px; font-size: 6.4px; font-weight: 900; white-space: nowrap; }
     .status-ok { background: #e7f8ef; color: var(--verde); }
     .status-alerta { background: #fff4de; color: #b45309; }
     .status-critico { background: #ffe8e8; color: var(--vermelho); }
     .status-neutro { background: #edf2f7; color: #475569; }
 
-    .rodape-relatorio { margin-top: 12px; padding-top: 8px; border-top: 1px solid var(--linha); display: flex; justify-content: space-between; gap: 8px; color: #64748b; font-size: 7.5px; font-weight: 800; }
+    .rodape-relatorio {
+        position: absolute;
+        left: 7mm;
+        right: 7mm;
+        bottom: 7mm;
+        min-height: 22px;
+        padding: 7px 9px;
+        border-radius: 0 0 11px 11px;
+        display: flex;
+        justify-content: space-between;
+        gap: 8px;
+        color: #fff;
+        background: linear-gradient(90deg, #032b63 0%, #064fae 100%);
+        font-size: 7px;
+        font-weight: 900;
+    }
+
+    .conteudo-pagina {
+        padding-bottom: 35px;
+    }
 </style>
 </head>
 <body>
     <main class="pagina-relatorio">
-        <header class="cabecalho-relatorio">
-            <div class="marca-relatorio-controle">
-                <div class="escudo-controle-sst-relatorio">
-                    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3 5 6v5c0 4.6 2.9 8.8 7 10 4.1-1.2 7-5.4 7-10V6l-7-3Z"/><path d="m9.5 12 1.8 1.8 3.7-4"/></svg>
+        <div class="conteudo-pagina">
+            ${cabecalhoRelatorio()}
+
+            <section class="faixa-info">
+                <div><span>Emissão</span><strong>${escaparHTML(dataEmissao)} às ${escaparHTML(horaEmissao)}</strong></div>
+                <div><span>Base do relatório</span><strong>${escaparHTML(valorSeguroRelatorioDashboard(totalItens, "0"))} itens avaliados</strong></div>
+                <div><span>Conformidade</span><strong>${escaparHTML(percentualConformidade)}% em dia</strong></div>
+                <div><span>Storage</span><strong>${escaparHTML(storagePercentual)}% — ${escaparHTML(totalStorageLabel)} / ${escaparHTML(storageLimiteLabelDashboard)}</strong></div>
+            </section>
+
+            <section class="cards-dashboard-relatorio">
+                ${cardsHtml || `<article class="card-dashboard-relatorio"><p>Indicadores</p><strong>0</strong><span>Nenhum card disponível.</span></article>`}
+            </section>
+
+            <section class="grid-duplo">
+                <div class="secao-relatorio">
+                    <div class="secao-titulo"><h3>Conformidade dos treinamentos</h3><p>Distribuição geral dos status avaliados no Dashboard SST.</p></div>
+                    <div class="secao-corpo">${resumoConformidadeHtml || `<p class="lista-alertas-vazia">Nenhum indicador de conformidade encontrado.</p>`}</div>
                 </div>
-                <div class="marca-relatorio-controle__textos">
-                    <h1>CONTROLE SST QR</h1>
-                    <p>Gestão de Segurança do Trabalho</p>
+                <div class="secao-relatorio">
+                    <div class="secao-titulo"><h3>Resumo da auditoria de campo</h3><p>Leitura consolidada dos desvios registrados.</p></div>
+                    <div class="secao-corpo">
+                        <table class="tabela-relatorio-dashboard">
+                            <tbody>
+                                <tr><td class="texto-forte">Auditorias no mês</td><td>${escaparHTML(auditoriasCampoMes)}</td></tr>
+                                <tr><td class="texto-forte">Média de conformidade</td><td>${escaparHTML(mediaConformidadeCampo)}%</td></tr>
+                                <tr><td class="texto-forte">Desvios abertos</td><td>${escaparHTML(desviosCampoAbertos)}</td></tr>
+                                <tr><td class="texto-forte">Desvios corrigidos</td><td>${escaparHTML(desviosCampoCorrigidos)}</td></tr>
+                                <tr><td class="texto-forte">Documentos de empresa críticos</td><td>${escaparHTML(totalDocumentosEmpresaCriticos)}</td></tr>
+                                <tr><td class="texto-forte">Aniversariantes do mês</td><td>${escaparHTML((Array.isArray(aniversariantesMes) ? aniversariantesMes.length : 0))}</td></tr>
+                                <tr><td class="texto-forte">Próximo aniversário</td><td>${escaparHTML(proximoAniversarioDashboard?.nome || proximoAniversarioDashboard?.colaborador?.nome || "Não informado")}</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
-            </div>
-            <div class="titulo-relatorio">
-                <h2>Relatório do Dashboard SST</h2>
-                <p>Resumo executivo com as informações dos cards e indicadores principais.</p>
-            </div>
-        </header>
+            </section>
 
-        <section class="faixa-info">
-            <div><span>Emissão</span><strong>${escaparHTML(dataEmissao)} às ${escaparHTML(horaEmissao)}</strong></div>
-            <div><span>Base do relatório</span><strong>${escaparHTML(valorSeguroRelatorioDashboard(totalItens, "0"))} itens avaliados</strong></div>
-            <div><span>Conformidade</span><strong>${escaparHTML(percentualConformidade)}% em dia</strong></div>
-            <div><span>Storage</span><strong>${escaparHTML(storagePercentual)}% — ${escaparHTML(totalStorageLabel)} / ${escaparHTML(storageLimiteLabelDashboard)}</strong></div>
-        </section>
+            <section class="secao-relatorio">
+                <div class="secao-titulo"><h3>Alertas importantes</h3><p>Pontos que exigem acompanhamento operacional.</p></div>
+                <div class="secao-corpo">${alertasHtml ? `<ul class="lista-alertas">${alertasHtml}</ul>` : `<p class="lista-alertas-vazia">Nenhum alerta crítico encontrado no momento.</p>`}</div>
+            </section>
 
-        <section class="cards-dashboard-relatorio">
-            ${cardsHtml || `<article class="card-dashboard-relatorio"><p>Indicadores</p><strong>0</strong><span>Nenhum card disponível.</span></article>`}
-        </section>
-
-        <section class="grid-duplo">
-            <div class="secao-relatorio">
-                <div class="secao-titulo"><h3>Conformidade dos treinamentos</h3><p>Distribuição geral dos status avaliados no Dashboard SST.</p></div>
-                <div class="secao-corpo">${resumoConformidadeHtml || `<p class="lista-alertas-vazia">Nenhum indicador de conformidade encontrado.</p>`}</div>
-            </div>
-            <div class="secao-relatorio">
-                <div class="secao-titulo"><h3>Resumo da auditoria de campo</h3><p>Leitura consolidada dos desvios registrados.</p></div>
-                <div class="secao-corpo">
-                    <table class="tabela-relatorio-dashboard">
-                        <tbody>
-                            <tr><td class="texto-forte">Auditorias no mês</td><td>${escaparHTML(auditoriasCampoMes)}</td></tr>
-                            <tr><td class="texto-forte">Média de conformidade</td><td>${escaparHTML(mediaConformidadeCampo)}%</td></tr>
-                            <tr><td class="texto-forte">Desvios abertos</td><td>${escaparHTML(desviosCampoAbertos)}</td></tr>
-                            <tr><td class="texto-forte">Desvios corrigidos</td><td>${escaparHTML(desviosCampoCorrigidos)}</td></tr>
-                            <tr><td class="texto-forte">Documentos de empresa críticos</td><td>${escaparHTML(totalDocumentosEmpresaCriticos)}</td></tr>
-                            <tr><td class="texto-forte">Aniversariantes do mês</td><td>${escaparHTML((Array.isArray(aniversariantesMes) ? aniversariantesMes.length : 0))}</td></tr>
-                            <tr><td class="texto-forte">Próximo aniversário</td><td>${escaparHTML(proximoAniversarioDashboard?.nome || proximoAniversarioDashboard?.colaborador?.nome || "Não informado")}</td></tr>
-                        </tbody>
-                    </table>
+            <section class="grid-duplo">
+                <div class="secao-relatorio">
+                    <div class="secao-titulo"><h3>Ranking de pendências por empresa</h3><p>Empresas com maior necessidade de regularização.</p></div>
+                    <div class="secao-corpo">${rankingHtml}</div>
                 </div>
-            </div>
-        </section>
+                <div class="secao-relatorio">
+                    <div class="secao-titulo"><h3>Colaboradores por função</h3><p>Distribuição operacional da mão de obra cadastrada.</p></div>
+                    <div class="secao-corpo">${funcoesHtml}</div>
+                </div>
+            </section>
+        </div>
+        ${rodapeRelatorio(1)}
+    </main>
 
-        <section class="secao-relatorio">
-            <div class="secao-titulo"><h3>Alertas importantes</h3><p>Pontos que exigem acompanhamento operacional.</p></div>
-            <div class="secao-corpo">${alertasHtml ? `<ul class="lista-alertas">${alertasHtml}</ul>` : `<p class="lista-alertas-vazia">Nenhum alerta crítico encontrado no momento.</p>`}</div>
-        </section>
+    <main class="pagina-relatorio">
+        <div class="conteudo-pagina">
+            ${cabecalhoRelatorio("Detalhamento documental, últimos envios e pendências críticas.")}
 
-        <section class="grid-duplo">
-            <div class="secao-relatorio">
-                <div class="secao-titulo"><h3>Ranking de pendências por empresa</h3><p>Empresas com maior necessidade de regularização.</p></div>
-                <div class="secao-corpo">${rankingHtml}</div>
-            </div>
-            <div class="secao-relatorio">
-                <div class="secao-titulo"><h3>Colaboradores por função</h3><p>Distribuição operacional da mão de obra cadastrada.</p></div>
-                <div class="secao-corpo">${funcoesHtml}</div>
-            </div>
-        </section>
+            <section class="grid-duplo">
+                <div class="secao-relatorio">
+                    <div class="secao-titulo"><h3>Documentos por tipo</h3><p>Leitura geral dos documentos corporativos monitorados.</p></div>
+                    <div class="secao-corpo">${documentosTipoHtml}</div>
+                </div>
+                <div class="secao-relatorio">
+                    <div class="secao-titulo"><h3>Últimos documentos enviados</h3><p>Resumo dos envios mais recentes.</p></div>
+                    <div class="secao-corpo">${ultimosDocumentosHtml}</div>
+                </div>
+            </section>
 
-        <section class="grid-duplo">
-            <div class="secao-relatorio">
-                <div class="secao-titulo"><h3>Documentos por tipo</h3><p>Leitura geral dos documentos corporativos monitorados.</p></div>
-                <div class="secao-corpo">${documentosTipoHtml}</div>
-            </div>
-            <div class="secao-relatorio">
-                <div class="secao-titulo"><h3>Últimos documentos enviados</h3><p>Resumo dos envios mais recentes.</p></div>
-                <div class="secao-corpo">${ultimosDocumentosHtml}</div>
-            </div>
-        </section>
-
-        <section class="secao-relatorio">
-            <div class="secao-titulo"><h3>Pendências críticas</h3><p>Itens que impactam liberação, mobilização ou controle documental.</p></div>
-            <div class="secao-corpo">${pendenciasHtml}</div>
-        </section>
-
-        <footer class="rodape-relatorio">
-            <span>Controle SST QR — Relatório gerado automaticamente pelo Dashboard SST.</span>
-            <span>Documento para conferência interna.</span>
-        </footer>
+            <section class="secao-relatorio">
+                <div class="secao-titulo"><h3>Pendências críticas</h3><p>Itens que impactam liberação, mobilização ou controle documental.</p></div>
+                <div class="secao-corpo">${pendenciasHtml}</div>
+            </section>
+        </div>
+        ${rodapeRelatorio(2)}
     </main>
 </body>
 </html>`;
