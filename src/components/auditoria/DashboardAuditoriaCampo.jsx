@@ -1443,7 +1443,7 @@ export function DashboardAuditoriaCampo({
     };
 
     const escaparTextoImpressaoQr = (valor) =>
-        String(valor || "")
+        String(valor ?? "")
             .replace(/&/g, "&amp;")
             .replace(/</g, "&lt;")
             .replace(/>/g, "&gt;")
@@ -1774,6 +1774,7 @@ export function DashboardAuditoriaCampo({
         setMensagemQrCampo("Relatório dos QR Codes exportado em CSV.");
     };
 
+
     const imprimirRelatorioQrcodesCampo = () => {
         const dados = montarDadosRelatorioQrcodesCampo();
 
@@ -1797,60 +1798,307 @@ export function DashboardAuditoriaCampo({
             </tr>
         `).join("");
 
-        const janela = window.open("", "_blank", "width=1100,height=760");
+        const html = montarHtmlRelatorioAuditoriaCampo({
+            titulo: "Relatório de QR Codes de Campo",
+            subtitulo: `Consulta dos QR Codes de campo cadastrados · ${dados.length} registro(s) · filtros atuais aplicados.`,
+            orientacao: "landscape",
+            secoes: `
+                <section class="secao">
+                    <h2>QR Codes cadastrados</h2>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Equipamento</th>
+                                <th>Tipo</th>
+                                <th>Empresa</th>
+                                <th>Área</th>
+                                <th>Local</th>
+                                <th>Status</th>
+                                <th>Última auditoria</th>
+                                <th>Pend.</th>
+                                <th>Risco</th>
+                                <th>Código QR</th>
+                            </tr>
+                        </thead>
+                        <tbody>${linhasTabela}</tbody>
+                    </table>
+                </section>
+            `,
+            rodape: "Relatório visual de QR Codes de Campo",
+        });
 
-        if (!janela) {
-            setMensagemQrCampo("O navegador bloqueou a janela de impressão. Libere pop-ups para imprimir o relatório.");
-            return;
+        const abriu = abrirRelatorioAuditoriaCampo(html, "O navegador bloqueou a janela de impressão. Libere pop-ups para imprimir o relatório.");
+        if (abriu) setMensagemQrCampo("Relatório visual dos QR Codes aberto para impressão.");
+    };
+
+    const valorRelatorioAuditoriaCampo = (valor, fallback = "Não informado") => {
+        const texto = String(valor ?? "").trim();
+        return texto || fallback;
+    };
+
+    const rotuloPeriodoRelatorioAuditoriaCampo = (valor) => {
+        if (valor === "mes") return "Auditorias do mês";
+        if (valor === "criticas") return "Críticas / ação imediata";
+        if (valor === "vencidas") return "Vencidas";
+        return "Todas";
+    };
+
+    const montarCardsRelatorioAuditoriaCampo = (cards = []) => cards.map((card) => `
+        <div class="card-indicador">
+            <div class="card-label">${escaparTextoImpressaoQr(card.label)}</div>
+            <div class="card-valor">${escaparTextoImpressaoQr(card.valor)}</div>
+            <div class="card-detalhe">${escaparTextoImpressaoQr(card.detalhe)}</div>
+        </div>
+    `).join("");
+
+    const montarLinhasTabelaRelatorioAuditoriaCampo = (linhas = [], colunas = []) => {
+        if (!linhas.length) {
+            return `<tr><td colspan="${colunas.length}" class="vazio">Nenhum registro encontrado.</td></tr>`;
         }
 
-        janela.document.write(`<!doctype html>
+        return linhas.map((linha) => `
+            <tr>
+                ${colunas.map((coluna) => `<td>${escaparTextoImpressaoQr(linha[coluna.chave])}</td>`).join("")}
+            </tr>
+        `).join("");
+    };
+
+    const montarHtmlRelatorioAuditoriaCampo = ({ titulo, subtitulo, cards = "", secoes = "", orientacao = "portrait", rodape = "Relatório visual da Auditoria de Campo" } = {}) => `<!doctype html>
 <html>
 <head>
     <meta charset="utf-8" />
-    <title>Relatório de QR Codes de campo</title>
+    <title>${escaparTextoImpressaoQr(titulo || "Relatório da Auditoria de Campo")}</title>
     <style>
-        @page { size: landscape; margin: 10mm; }
+        @page { size: A4 ${orientacao === "landscape" ? "landscape" : "portrait"}; margin: 10mm; }
         * { box-sizing: border-box; }
-        body { margin: 0; color: #0f172a; font-family: Arial, Helvetica, sans-serif; background: #fff; }
-        header { margin-bottom: 14px; border-bottom: 2px solid #0f172a; padding-bottom: 10px; }
-        h1 { margin: 0; font-size: 20px; font-weight: 900; text-transform: uppercase; }
-        p { margin: 4px 0 0; color: #475569; font-size: 11px; font-weight: 700; }
-        table { width: 100%; border-collapse: collapse; font-size: 10px; }
-        th { background: #0f172a; color: #fff; padding: 7px 6px; text-align: left; text-transform: uppercase; }
-        td { border-bottom: 1px solid #e2e8f0; padding: 6px; vertical-align: top; }
+        html, body { margin: 0; padding: 0; }
+        body { background: #ffffff; color: #020617; font-family: Arial, Helvetica, sans-serif; font-size: 10.5px; }
+        .pagina { width: 100%; min-height: 100vh; padding: 12px; }
+        .topo { text-align: center; border-bottom: 3px solid #0f172a; padding-bottom: 10px; margin-bottom: 12px; }
+        .marca { display: inline-flex; align-items: center; gap: 10px; color: #020617; font-size: 28px; font-weight: 900; letter-spacing: 6px; text-transform: uppercase; }
+        .marca-icone { width: 30px; height: 30px; border: 3px solid #0f172a; border-radius: 12px; display: inline-flex; align-items: center; justify-content: center; font-size: 15px; letter-spacing: 0; }
+        .submarca { margin-top: -2px; color: #334155; font-size: 8px; font-weight: 900; letter-spacing: 4px; text-transform: uppercase; }
+        .titulo { margin-top: 12px; border-top: 2px solid #0f172a; border-bottom: 2px solid #0f172a; padding: 7px 0; color: #075a9c; font-size: 17px; font-weight: 900; letter-spacing: 1px; text-transform: uppercase; }
+        .subtitulo { margin-top: 5px; color: #64748b; font-size: 10px; font-weight: 700; }
+        .faixa { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0; overflow: hidden; border: 1px solid #dbe4ef; border-radius: 14px; margin-bottom: 10px; }
+        .faixa-item { padding: 9px 10px; background: #f8fafc; border-right: 1px solid #dbe4ef; }
+        .faixa-item:last-child { border-right: none; }
+        .faixa-label { color: #64748b; font-size: 8px; font-weight: 900; letter-spacing: .8px; text-transform: uppercase; }
+        .faixa-valor { margin-top: 3px; color: #020617; font-size: 10px; font-weight: 900; }
+        .cards { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: 10px; }
+        .card-indicador { min-height: 72px; border: 1px solid #dbe4ef; border-radius: 14px; background: #f8fafc; padding: 10px; }
+        .card-label { color: #475569; font-size: 8px; font-weight: 900; letter-spacing: .9px; text-transform: uppercase; }
+        .card-valor { margin-top: 7px; color: #020617; font-size: 22px; line-height: 1; font-weight: 900; }
+        .card-detalhe { margin-top: 6px; color: #64748b; font-size: 8.5px; font-weight: 700; }
+        .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+        .secao { overflow: hidden; border: 1px solid #dbe4ef; border-radius: 14px; background: #ffffff; margin-bottom: 10px; break-inside: avoid; }
+        .secao h2 { margin: 0; background: #f8fafc; border-bottom: 1px solid #dbe4ef; padding: 8px 10px; color: #075a9c; font-size: 12px; font-weight: 900; letter-spacing: .6px; text-align: center; text-transform: uppercase; }
+        table { width: 100%; border-collapse: collapse; font-size: 8.8px; }
+        th { background: #005bab; color: #ffffff; padding: 7px 6px; text-align: left; font-size: 7.6px; font-weight: 900; letter-spacing: .4px; text-transform: uppercase; }
+        td { border-bottom: 1px solid #e2e8f0; padding: 6px; vertical-align: top; font-weight: 700; }
         tr:nth-child(even) td { background: #f8fafc; }
-        .rodape { margin-top: 10px; color: #64748b; font-size: 10px; }
+        .vazio { padding: 14px; text-align: center; color: #64748b; }
+        .rodape { margin-top: 12px; display: flex; align-items: center; justify-content: space-between; border-radius: 0 0 16px 16px; background: linear-gradient(90deg, #073763, #006dcc); color: #ffffff; padding: 10px 14px; font-size: 9px; font-weight: 900; }
+        @media print { .pagina { padding: 0; } }
     </style>
 </head>
 <body>
-    <header>
-        <h1>Relatório de QR Codes de campo</h1>
-        <p>Gerado em ${escaparTextoImpressaoQr(formatarDataHora(new Date().toISOString()))} · ${dados.length} registro(s) · filtros atuais aplicados.</p>
-    </header>
-    <table>
-        <thead>
-            <tr>
-                <th>Equipamento</th>
-                <th>Tipo</th>
-                <th>Empresa</th>
-                <th>Área</th>
-                <th>Local</th>
-                <th>Status</th>
-                <th>Última auditoria</th>
-                <th>Pend.</th>
-                <th>Risco</th>
-                <th>Código QR</th>
-            </tr>
-        </thead>
-        <tbody>${linhasTabela}</tbody>
-    </table>
-    <div class="rodape">Relatório gerado pelo Dashboard Auditoria de Campo.</div>
+    <main class="pagina">
+        <header class="topo">
+            <div class="marca"><span class="marca-icone">✓</span>CONTROLE SST QR</div>
+            <div class="submarca">Gestão de segurança do trabalho</div>
+            <div class="titulo">${escaparTextoImpressaoQr(titulo || "Relatório da Auditoria de Campo")}</div>
+            <div class="subtitulo">${escaparTextoImpressaoQr(subtitulo || "Relatório gerado pelo Dashboard Auditoria de Campo.")}</div>
+        </header>
+        <section class="faixa">
+            <div class="faixa-item"><div class="faixa-label">Emissão</div><div class="faixa-valor">${escaparTextoImpressaoQr(formatarDataHora(new Date().toISOString()))}</div></div>
+            <div class="faixa-item"><div class="faixa-label">Base carregada</div><div class="faixa-valor">${escaparTextoImpressaoQr(auditoriasBaseDashboard.length)} auditoria(s)</div></div>
+            <div class="faixa-item"><div class="faixa-label">Filtro aplicado</div><div class="faixa-valor">${escaparTextoImpressaoQr(rotuloPeriodoRelatorioAuditoriaCampo(filtrosAuditoriaCampo.periodo))}</div></div>
+            <div class="faixa-item"><div class="faixa-label">Resultado filtrado</div><div class="faixa-valor">${escaparTextoImpressaoQr(auditoriasFiltradas.length)} registro(s)</div></div>
+        </section>
+        ${cards ? `<section class="cards">${cards}</section>` : ""}
+        ${secoes}
+        <footer class="rodape"><span>© Controle SST QR</span><span>${escaparTextoImpressaoQr(rodape)}</span></footer>
+    </main>
 </body>
-</html>`);
+</html>`;
+
+    const abrirRelatorioAuditoriaCampo = (html, mensagemBloqueio = "O navegador bloqueou a janela de impressão. Libere pop-ups para imprimir o relatório.") => {
+        const janela = window.open("", "_blank", "width=1200,height=820");
+
+        if (!janela) {
+            window.alert(mensagemBloqueio);
+            return false;
+        }
+
+        janela.document.write(html);
         janela.document.close();
         janela.focus();
         janela.print();
+        return true;
+    };
+
+    const imprimirRelatorioDashboardAuditoriaCampo = () => {
+        const cards = montarCardsRelatorioAuditoriaCampo(
+            cartasOrdenadas
+                .filter((card) => cartasVisiveis[card.chave] !== false)
+                .map((card) => ({ label: card.label, valor: card.valor, detalhe: card.detalhe }))
+        );
+
+        const colunasResumo = [
+            { chave: "grupo", label: "Grupo" },
+            { chave: "item", label: "Item" },
+            { chave: "quantidade", label: "Qtd." },
+        ];
+        const linhasResumo = [
+            ...dadosResumoVisualAuditoria.porStatus.map((item) => ({ grupo: "Status", item: item.label, quantidade: item.total })),
+            ...dadosResumoVisualAuditoria.porTipo.map((item) => ({ grupo: "Categoria", item: item.label, quantidade: item.total })),
+            ...dadosResumoVisualAuditoria.porRisco.map((item) => ({ grupo: "Risco", item: item.label, quantidade: item.total })),
+        ].slice(0, 14);
+
+        const colunasTopDesvios = [
+            { chave: "categoria", label: "Desvio / categoria" },
+            { chave: "total", label: "Total" },
+            { chave: "abertos", label: "Abertos" },
+        ];
+        const linhasTopDesvios = topDesvios.map((item) => ({ categoria: item.categoria, total: item.total, abertos: item.abertos }));
+
+        const colunasEmpresas = [
+            { chave: "empresa", label: "Empresa" },
+            { chave: "auditorias", label: "Auditorias" },
+            { chave: "media", label: "Média" },
+            { chave: "desvios", label: "Desvios" },
+        ];
+        const linhasEmpresas = empresasAuditoria.slice(0, 8).map((item) => ({ empresa: item.empresa, auditorias: item.auditorias, media: `${item.media}%`, desvios: item.desvios }));
+
+        const colunasAreas = [
+            { chave: "area", label: "Área / local" },
+            { chave: "auditorias", label: "Auditorias" },
+            { chave: "media", label: "Média" },
+            { chave: "riscosAltos", label: "Risco alto" },
+        ];
+        const linhasAreas = areasAuditoria.slice(0, 8).map((item) => ({ area: item.area, auditorias: item.auditorias, media: `${item.media}%`, riscosAltos: item.riscosAltos }));
+
+        const colunasHistorico = [
+            { chave: "numero", label: "Nº" },
+            { chave: "data", label: "Data" },
+            { chave: "alvo", label: "Auditoria" },
+            { chave: "empresa", label: "Empresa" },
+            { chave: "auditor", label: "Auditor" },
+            { chave: "status", label: "Status" },
+            { chave: "risco", label: "Risco" },
+            { chave: "resultado", label: "Resultado" },
+        ];
+        const linhasHistorico = auditoriasFiltradas.slice(0, 12).map((item) => {
+            const alvo = identificarAlvoAuditoriaCampo(item);
+            return {
+                numero: item.numeroAuditoria || "-",
+                data: formatarDataHora(item.createdAt),
+                alvo: alvo.titulo || item.titulo || "Auditoria de campo",
+                empresa: item.empresaNome || item.empresaResponsavel || "Não informada",
+                auditor: item.auditorNome || "Não informado",
+                status: item.statusAuditoria || item.statusDesvio || "Não informado",
+                risco: item.grauRisco || "Não informado",
+                resultado: `${item.classificacao || "Sem classificação"} · ${item.pontuacao || 0}%`,
+            };
+        });
+
+        const secoes = `
+            <div class="grid-2">
+                <section class="secao"><h2>Resumo visual das auditorias</h2><table><thead><tr>${colunasResumo.map((coluna) => `<th>${escaparTextoImpressaoQr(coluna.label)}</th>`).join("")}</tr></thead><tbody>${montarLinhasTabelaRelatorioAuditoriaCampo(linhasResumo, colunasResumo)}</tbody></table></section>
+                <section class="secao"><h2>Top 5 desvios</h2><table><thead><tr>${colunasTopDesvios.map((coluna) => `<th>${escaparTextoImpressaoQr(coluna.label)}</th>`).join("")}</tr></thead><tbody>${montarLinhasTabelaRelatorioAuditoriaCampo(linhasTopDesvios, colunasTopDesvios)}</tbody></table></section>
+            </div>
+            <div class="grid-2">
+                <section class="secao"><h2>Ranking por empresa</h2><table><thead><tr>${colunasEmpresas.map((coluna) => `<th>${escaparTextoImpressaoQr(coluna.label)}</th>`).join("")}</tr></thead><tbody>${montarLinhasTabelaRelatorioAuditoriaCampo(linhasEmpresas, colunasEmpresas)}</tbody></table></section>
+                <section class="secao"><h2>Ranking por área/local</h2><table><thead><tr>${colunasAreas.map((coluna) => `<th>${escaparTextoImpressaoQr(coluna.label)}</th>`).join("")}</tr></thead><tbody>${montarLinhasTabelaRelatorioAuditoriaCampo(linhasAreas, colunasAreas)}</tbody></table></section>
+            </div>
+            <section class="secao"><h2>Histórico recente filtrado</h2><table><thead><tr>${colunasHistorico.map((coluna) => `<th>${escaparTextoImpressaoQr(coluna.label)}</th>`).join("")}</tr></thead><tbody>${montarLinhasTabelaRelatorioAuditoriaCampo(linhasHistorico, colunasHistorico)}</tbody></table></section>
+        `;
+
+        abrirRelatorioAuditoriaCampo(montarHtmlRelatorioAuditoriaCampo({
+            titulo: "Relatório do Dashboard Auditoria de Campo",
+            subtitulo: "Resumo executivo com os indicadores dos cards, histórico filtrado, ranking por empresa, ranking por área e desvios principais.",
+            cards,
+            secoes,
+            rodape: "Relatório visual do Dashboard Auditoria de Campo",
+        }));
+    };
+
+    const imprimirRelatorioHistoricoAuditoriasCampo = () => {
+        if (auditoriasFiltradas.length === 0) {
+            window.alert("Nenhuma auditoria de campo encontrada com os filtros atuais.");
+            return;
+        }
+
+        const colunas = [
+            { chave: "numero", label: "Nº" },
+            { chave: "data", label: "Data" },
+            { chave: "auditoria", label: "Auditoria" },
+            { chave: "empresa", label: "Empresa" },
+            { chave: "auditor", label: "Auditor" },
+            { chave: "status", label: "Status" },
+            { chave: "risco", label: "Risco" },
+            { chave: "resultado", label: "Resultado" },
+            { chave: "responsavel", label: "Responsável" },
+            { chave: "prazo", label: "Prazo" },
+        ];
+
+        const linhas = auditoriasFiltradas.slice(0, 80).map((item) => {
+            const alvo = identificarAlvoAuditoriaCampo(item);
+            return {
+                numero: item.numeroAuditoria || "-",
+                data: formatarDataHora(item.createdAt),
+                auditoria: alvo.titulo || item.titulo || "Auditoria de campo",
+                empresa: item.empresaNome || item.empresaResponsavel || "Não informada",
+                auditor: item.auditorNome || "Não informado",
+                status: item.statusAuditoria || item.statusDesvio || "Não informado",
+                risco: item.grauRisco || "Não informado",
+                resultado: `${item.classificacao || "Sem classificação"} · ${item.pontuacao || 0}%`,
+                responsavel: item.responsavelTratativa || "Não informado",
+                prazo: item.prazoAdequacao ? formatDate(item.prazoAdequacao) : "Não informado",
+            };
+        });
+
+        const cards = montarCardsRelatorioAuditoriaCampo([
+            { label: "Filtradas", valor: auditoriasFiltradas.length, detalhe: "Registros conforme filtros" },
+            { label: "Base carregada", valor: auditoriasNormalizadas.length, detalhe: "Auditorias disponíveis" },
+            { label: "Críticas", valor: desviosCriticos, detalhe: "Alto/crítico ou ação imediata" },
+            { label: "Vencidas", valor: auditoriasVencidas, detalhe: "Prazo vencido" },
+        ]);
+
+        const secoes = `
+            <section class="secao">
+                <h2>Filtros aplicados</h2>
+                <table>
+                    <thead><tr><th>Busca</th><th>Período</th><th>Tipo</th><th>Empresa</th><th>Auditor</th><th>Status</th><th>Risco</th></tr></thead>
+                    <tbody><tr>
+                        <td>${escaparTextoImpressaoQr(valorRelatorioAuditoriaCampo(filtrosAuditoriaCampo.busca, "-") )}</td>
+                        <td>${escaparTextoImpressaoQr(rotuloPeriodoRelatorioAuditoriaCampo(filtrosAuditoriaCampo.periodo))}</td>
+                        <td>${escaparTextoImpressaoQr(valorRelatorioAuditoriaCampo(filtrosAuditoriaCampo.tipo === "todos" ? "Todos" : filtrosAuditoriaCampo.tipo))}</td>
+                        <td>${escaparTextoImpressaoQr(valorRelatorioAuditoriaCampo(filtrosAuditoriaCampo.empresa === "todos" ? "Todas" : filtrosAuditoriaCampo.empresa))}</td>
+                        <td>${escaparTextoImpressaoQr(valorRelatorioAuditoriaCampo(filtrosAuditoriaCampo.auditor === "todos" ? "Todos" : filtrosAuditoriaCampo.auditor))}</td>
+                        <td>${escaparTextoImpressaoQr(valorRelatorioAuditoriaCampo(filtrosAuditoriaCampo.status === "todos" ? "Todos" : filtrosAuditoriaCampo.status))}</td>
+                        <td>${escaparTextoImpressaoQr(valorRelatorioAuditoriaCampo(filtrosAuditoriaCampo.risco === "todos" ? "Todos" : filtrosAuditoriaCampo.risco))}</td>
+                    </tr></tbody>
+                </table>
+            </section>
+            <section class="secao">
+                <h2>Histórico de auditorias</h2>
+                <table>
+                    <thead><tr>${colunas.map((coluna) => `<th>${escaparTextoImpressaoQr(coluna.label)}</th>`).join("")}</tr></thead>
+                    <tbody>${montarLinhasTabelaRelatorioAuditoriaCampo(linhas, colunas)}</tbody>
+                </table>
+            </section>
+        `;
+
+        abrirRelatorioAuditoriaCampo(montarHtmlRelatorioAuditoriaCampo({
+            titulo: "Relatório do Histórico de Auditorias de Campo",
+            subtitulo: `Histórico filtrado da Auditoria de Campo · exibindo até 80 registros de ${auditoriasFiltradas.length} encontrado(s).`,
+            cards,
+            secoes,
+            orientacao: "landscape",
+            rodape: "Relatório visual do Histórico de Auditorias",
+        }));
     };
 
     const limparFiltrosQrcodesCampo = () => {
@@ -1939,13 +2187,23 @@ export function DashboardAuditoriaCampo({
                                 <p className="text-xs font-black uppercase tracking-wide text-slate-500">Buscar auditoria</p>
                                 <p className="mt-1 text-xs text-slate-500">Use filtros para localizar auditorias por número, empresa, auditor, risco ou status.</p>
                             </div>
-                            <button
-                                type="button"
-                                onClick={() => setBuscarAuditoriaRecolhido((valor) => !valor)}
-                                className="inline-flex items-center gap-2 rounded-2xl bg-white px-4 py-2 text-xs font-bold text-slate-700 ring-1 ring-slate-200 hover:bg-slate-100"
-                            >
-                                {buscarAuditoriaRecolhido ? "Abrir filtros" : "Recolher filtros"}
-                            </button>
+                            <div className="flex flex-wrap items-center justify-end gap-2">
+                                <button
+                                    type="button"
+                                    onClick={imprimirRelatorioHistoricoAuditoriasCampo}
+                                    className="inline-flex items-center gap-2 rounded-2xl bg-slate-950 px-4 py-2 text-xs font-bold text-white hover:bg-slate-800"
+                                >
+                                    <Download className="h-3.5 w-3.5" />
+                                    Imprimir histórico
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={() => setBuscarAuditoriaRecolhido((valor) => !valor)}
+                                    className="inline-flex items-center gap-2 rounded-2xl bg-white px-4 py-2 text-xs font-bold text-slate-700 ring-1 ring-slate-200 hover:bg-slate-100"
+                                >
+                                    {buscarAuditoriaRecolhido ? "Abrir filtros" : "Recolher filtros"}
+                                </button>
+                            </div>
                         </div>
 
                         {!buscarAuditoriaRecolhido && (
@@ -2858,6 +3116,10 @@ export function DashboardAuditoriaCampo({
                 subtitulo="Indicadores, histórico e desvios das auditorias realizadas via QR Code."
                 acao={(
                     <div className="flex flex-wrap items-center gap-2">
+                        <button type="button" onClick={imprimirRelatorioDashboardAuditoriaCampo} className="inline-flex items-center gap-2 rounded-2xl bg-slate-950 px-4 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-slate-800">
+                            <Download className="h-4 w-4" />
+                            Imprimir relatório
+                        </button>
                         <button type="button" onClick={onRecarregar} className="inline-flex items-center gap-2 rounded-2xl bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 shadow-sm ring-1 ring-slate-200 hover:bg-slate-50">
                             <RefreshCw className={classNames("h-4 w-4", carregandoAuditoriasCampoEfetivo ? "animate-spin" : "")} />
                             Atualizar dados
