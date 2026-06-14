@@ -113,11 +113,9 @@ export async function registrarSolicitacaoRecuperacaoSenhaLoginService({ supabas
         status: "pendente",
     };
 
-    const { data, error } = await supabase
+    const { error } = await supabase
         .from("solicitacoes_acesso_sistema")
-        .insert(payload)
-        .select("*")
-        .single();
+        .insert(payload);
 
     if (error) {
         const mensagem = String(error.message || "").toLowerCase();
@@ -129,5 +127,5 @@ export async function registrarSolicitacaoRecuperacaoSenhaLoginService({ supabas
         throw new Error(error.message || "Não foi possível registrar a solicitação de recuperação de senha.");
     }
 
-    return data || payload;
+    return payload;
 }
