@@ -1147,7 +1147,7 @@ export async function baixarRelatorioDashboardSstPDF({
         renderLinha: (item) => `
             <tr>
                 <td class="texto-forte">${escaparHTML(item.tipo || item.nome || item.label || "Tipo não informado")}</td>
-                <td>${escaparHTML(valorSeguroRelatorioDashboard(item.total || item.valor || item.quantidade || 0, "0"))}</td>
+                <td class="centralizado">${escaparHTML(valorSeguroRelatorioDashboard(item.total || item.valor || item.quantidade || 0, "0"))}</td>
             </tr>
         `,
     });
@@ -1406,8 +1406,8 @@ export async function baixarRelatorioDashboardSstPDF({
     .bloco-tabela-resumo-topo { padding: 8px 9px 7px; background: #f8fbff; border-bottom: 1px solid var(--linha); }
     .bloco-tabela-resumo-topo h4 { margin: 0; color: #07162f; font-size: 8px; line-height: 1.25; text-transform: uppercase; letter-spacing: .045em; }
     .bloco-tabela-resumo-topo p { margin: 3px 0 0; color: #64748b; font-size: 6.4px; line-height: 1.25; font-weight: 700; }
-    .bloco-tabela-resumo-corpo { padding: 8px 9px; }
-    .estado-vazio-tabela { margin: 0; padding: 14px 10px; border: 1px dashed #cbd5e1; border-radius: 10px; background: #f8fbff; color: #64748b; text-align: center; font-size: 7.1px; line-height: 1.35; font-weight: 800; }
+    .bloco-tabela-resumo-corpo { padding: 10px 11px 11px; }
+    .estado-vazio-tabela { margin: 0; min-height: 40px; padding: 13px 12px; border: 1px dashed #cbd5e1; border-radius: 10px; background: #f8fbff; color: #64748b; display: flex; align-items: center; justify-content: center; text-align: center; font-size: 7.1px; line-height: 1.35; font-weight: 800; }
     .secao-relatorio { border: 1px solid var(--linha); border-radius: 13px; background: #fff; overflow: hidden; margin-bottom: 8px; break-inside: avoid; page-break-inside: avoid; }
     .secao-titulo { padding: 8px 10px 7px; background: #f8fbff; border-bottom: 1px solid var(--linha); }
     .secao-titulo h3 { margin: 0; color: #07162f; font-size: 9.2px; line-height: 1.25; text-transform: uppercase; letter-spacing: .055em; }
@@ -1425,15 +1425,20 @@ export async function baixarRelatorioDashboardSstPDF({
     .lista-alertas li { margin-bottom: 3px; }
     .lista-alertas-vazia { color: #64748b; font-size: 7.5px; font-weight: 700; margin: 0; }
 
-    .tabela-relatorio-dashboard { width: 100%; border-collapse: collapse; font-size: 6.9px; table-layout: fixed; }
-    .tabela-relatorio-dashboard th { background: #07162f; color: #fff; padding: 7px 8px; text-align: left; font-size: 6px; line-height: 1.25; letter-spacing: .012em; text-transform: uppercase; white-space: nowrap; vertical-align: middle; }
-    .tabela-relatorio-dashboard td { border-bottom: 1px solid #e2e8f0; padding: 6px 8px; vertical-align: middle; color: #334155; line-height: 1.32; overflow-wrap: anywhere; }
+    .tabela-relatorio-dashboard { width: 100%; border-collapse: separate; border-spacing: 0; font-size: 7px; table-layout: fixed; overflow: hidden; border-radius: 8px; }
+    .tabela-relatorio-dashboard thead tr { min-height: 23px; }
+    .tabela-relatorio-dashboard th { background: #07162f; color: #fff; padding: 7px 9px; text-align: left; font-size: 6.3px; line-height: 1.35; letter-spacing: .018em; text-transform: uppercase; white-space: normal; vertical-align: middle; border-right: 1px solid rgba(255,255,255,.16); }
+    .tabela-relatorio-dashboard th:last-child { border-right: 0; }
+    .tabela-relatorio-dashboard tbody tr { min-height: 24px; }
+    .tabela-relatorio-dashboard td { border-bottom: 1px solid #e2e8f0; padding: 7px 9px; vertical-align: middle; color: #334155; line-height: 1.38; overflow-wrap: anywhere; border-right: 1px solid #eef2f7; }
+    .tabela-relatorio-dashboard td:last-child { border-right: 0; }
+    .tabela-relatorio-dashboard tbody tr:last-child td { border-bottom: 0; }
     .grid-resumo-operacional .bloco-tabela-resumo:nth-child(1) .tabela-relatorio-dashboard th:nth-child(1),
-    .grid-resumo-operacional .bloco-tabela-resumo:nth-child(1) .tabela-relatorio-dashboard td:nth-child(1) { width: 56%; }
+    .grid-resumo-operacional .bloco-tabela-resumo:nth-child(1) .tabela-relatorio-dashboard td:nth-child(1) { width: 52%; }
     .grid-resumo-operacional .bloco-tabela-resumo:nth-child(1) .tabela-relatorio-dashboard th:nth-child(2),
-    .grid-resumo-operacional .bloco-tabela-resumo:nth-child(1) .tabela-relatorio-dashboard td:nth-child(2) { width: 18%; text-align: center; }
+    .grid-resumo-operacional .bloco-tabela-resumo:nth-child(1) .tabela-relatorio-dashboard td:nth-child(2) { width: 20%; text-align: center; }
     .grid-resumo-operacional .bloco-tabela-resumo:nth-child(1) .tabela-relatorio-dashboard th:nth-child(3),
-    .grid-resumo-operacional .bloco-tabela-resumo:nth-child(1) .tabela-relatorio-dashboard td:nth-child(3) { width: 26%; text-align: center; }
+    .grid-resumo-operacional .bloco-tabela-resumo:nth-child(1) .tabela-relatorio-dashboard td:nth-child(3) { width: 28%; text-align: center; }
     .grid-resumo-operacional .bloco-tabela-resumo:nth-child(2) .tabela-relatorio-dashboard th:nth-child(1),
     .grid-resumo-operacional .bloco-tabela-resumo:nth-child(2) .tabela-relatorio-dashboard td:nth-child(1) { width: 72%; }
     .grid-resumo-operacional .bloco-tabela-resumo:nth-child(2) .tabela-relatorio-dashboard th:nth-child(2),
@@ -1443,23 +1448,23 @@ export async function baixarRelatorioDashboardSstPDF({
     .tabela-documentos-tipo-wrapper .tabela-relatorio-dashboard th:nth-child(2),
     .tabela-documentos-tipo-wrapper .tabela-relatorio-dashboard td:nth-child(2) { width: 32%; text-align: center; }
     .tabela-ultimos-documentos-wrapper .tabela-relatorio-dashboard th:nth-child(1),
-    .tabela-ultimos-documentos-wrapper .tabela-relatorio-dashboard td:nth-child(1) { width: 34%; }
+    .tabela-ultimos-documentos-wrapper .tabela-relatorio-dashboard td:nth-child(1) { width: 36%; }
     .tabela-ultimos-documentos-wrapper .tabela-relatorio-dashboard th:nth-child(2),
-    .tabela-ultimos-documentos-wrapper .tabela-relatorio-dashboard td:nth-child(2) { width: 31%; }
+    .tabela-ultimos-documentos-wrapper .tabela-relatorio-dashboard td:nth-child(2) { width: 30%; }
     .tabela-ultimos-documentos-wrapper .tabela-relatorio-dashboard th:nth-child(3),
     .tabela-ultimos-documentos-wrapper .tabela-relatorio-dashboard td:nth-child(3) { width: 15%; text-align: center; }
     .tabela-ultimos-documentos-wrapper .tabela-relatorio-dashboard th:nth-child(4),
-    .tabela-ultimos-documentos-wrapper .tabela-relatorio-dashboard td:nth-child(4) { width: 20%; text-align: center; }
+    .tabela-ultimos-documentos-wrapper .tabela-relatorio-dashboard td:nth-child(4) { width: 19%; text-align: center; }
     .tabela-pendencias-wrapper .tabela-relatorio-dashboard th:nth-child(1),
-    .tabela-pendencias-wrapper .tabela-relatorio-dashboard td:nth-child(1) { width: 22%; }
+    .tabela-pendencias-wrapper .tabela-relatorio-dashboard td:nth-child(1) { width: 24%; }
     .tabela-pendencias-wrapper .tabela-relatorio-dashboard th:nth-child(2),
-    .tabela-pendencias-wrapper .tabela-relatorio-dashboard td:nth-child(2) { width: 18%; }
+    .tabela-pendencias-wrapper .tabela-relatorio-dashboard td:nth-child(2) { width: 17%; }
     .tabela-pendencias-wrapper .tabela-relatorio-dashboard th:nth-child(3),
-    .tabela-pendencias-wrapper .tabela-relatorio-dashboard td:nth-child(3) { width: 34%; }
+    .tabela-pendencias-wrapper .tabela-relatorio-dashboard td:nth-child(3) { width: 35%; }
     .tabela-pendencias-wrapper .tabela-relatorio-dashboard th:nth-child(4),
-    .tabela-pendencias-wrapper .tabela-relatorio-dashboard td:nth-child(4) { width: 13%; text-align: center; }
+    .tabela-pendencias-wrapper .tabela-relatorio-dashboard td:nth-child(4) { width: 12%; text-align: center; }
     .tabela-pendencias-wrapper .tabela-relatorio-dashboard th:nth-child(5),
-    .tabela-pendencias-wrapper .tabela-relatorio-dashboard td:nth-child(5) { width: 13%; text-align: center; }
+    .tabela-pendencias-wrapper .tabela-relatorio-dashboard td:nth-child(5) { width: 12%; text-align: center; }
     .tabela-relatorio-dashboard tr:nth-child(even) td { background: #f8fbff; }
     .texto-forte { color: #0f172a !important; font-weight: 900; }
     .centralizado { text-align: center !important; }
