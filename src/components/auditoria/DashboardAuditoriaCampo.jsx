@@ -1460,8 +1460,8 @@ export function DashboardAuditoriaCampo({
     <meta charset="utf-8" />
     <title>${tituloImpressao}</title>
     <style>
-        @page { size: auto; margin: 14mm; }
-        * { box-sizing: border-box; }
+        @page { size: auto; margin: 0; }
+        * { box-sizing: border-box; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
         html, body { margin: 0; padding: 0; }
         body {
             min-height: 100vh;
@@ -1478,7 +1478,7 @@ export function DashboardAuditoriaCampo({
             gap: 18px;
             width: 100%;
             max-width: 420px;
-            padding: 8px;
+            padding: 14mm 8mm 8mm;
         }
         .titulo {
             margin: 0;
@@ -1538,7 +1538,9 @@ export function DashboardAuditoriaCampo({
         janela.document.write(montarHtmlImpressaoQrCampo({ titulo: identificacao, qrHtml }));
         janela.document.close();
         janela.focus();
-        janela.print();
+        janela.setTimeout(() => {
+            janela.print();
+        }, 250);
     };
 
     const chaveQrCampoSalvo = (item) =>
@@ -1563,7 +1565,9 @@ export function DashboardAuditoriaCampo({
         janela.document.write(montarHtmlImpressaoQrCampo({ titulo: identificacao, qrHtml }));
         janela.document.close();
         janela.focus();
-        janela.print();
+        janela.setTimeout(() => {
+            janela.print();
+        }, 250);
     };
 
     const tiposFiltroQrcodesCampo = useMemo(() => {
@@ -1869,11 +1873,11 @@ export function DashboardAuditoriaCampo({
     <meta charset="utf-8" />
     <title>${escaparTextoImpressaoQr(titulo || "Relatório da Auditoria de Campo")}</title>
     <style>
-        @page { size: A4 ${orientacao === "landscape" ? "landscape" : "portrait"}; margin: 10mm; }
-        * { box-sizing: border-box; }
+        @page { size: A4 ${orientacao === "landscape" ? "landscape" : "portrait"}; margin: 0; }
+        * { box-sizing: border-box; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
         html, body { margin: 0; padding: 0; }
         body { background: #ffffff; color: #020617; font-family: Arial, Helvetica, sans-serif; font-size: 10.5px; }
-        .pagina { width: 100%; min-height: 100vh; padding: 12px; }
+        .pagina { width: 100%; min-height: 100vh; padding: 10mm; }
         .topo { text-align: center; border-bottom: 3px solid #0f172a; padding-bottom: 10px; margin-bottom: 12px; }
         .marca { display: inline-flex; align-items: center; gap: 10px; color: #020617; font-size: 28px; font-weight: 900; letter-spacing: 6px; text-transform: uppercase; }
         .marca-icone { width: 30px; height: 30px; border: 3px solid #0f172a; border-radius: 12px; display: inline-flex; align-items: center; justify-content: center; font-size: 15px; letter-spacing: 0; }
@@ -1899,7 +1903,11 @@ export function DashboardAuditoriaCampo({
         tr:nth-child(even) td { background: #f8fafc; }
         .vazio { padding: 14px; text-align: center; color: #64748b; }
         .rodape { margin-top: 12px; display: flex; align-items: center; justify-content: space-between; border-radius: 0 0 16px 16px; background: linear-gradient(90deg, #073763, #006dcc); color: #ffffff; padding: 10px 14px; font-size: 9px; font-weight: 900; }
-        @media print { .pagina { padding: 0; } }
+        @media print {
+            html, body { width: 100%; min-height: 100%; }
+            body { margin: 0 !important; padding: 0 !important; }
+            .pagina { padding: 10mm; min-height: 100vh; }
+        }
     </style>
 </head>
 <body>
@@ -1934,7 +1942,9 @@ export function DashboardAuditoriaCampo({
         janela.document.write(html);
         janela.document.close();
         janela.focus();
-        janela.print();
+        janela.setTimeout(() => {
+            janela.print();
+        }, 250);
         return true;
     };
 
