@@ -90,3 +90,44 @@ export async function criarLoginAppComSenhaTemporariaService({ supabase, dados }
 
     return data || { ok: true };
 }
+
+export async function registrarSolicitacaoRecuperacaoSenhaLoginService({ supabase, email }) {
+    if (!supabase) {
+        throw new Error("Cliente Supabase não informado para registrar a recuperação de senha.");
+    }
+
+    const emailTratado = normalizarEmailAcessosApp(email);
+
+    if (!emailTratado || !emailTratado.includes("@")) {
+        throw new Error("Informe um e-mail válido para solicitar a recuperação de senha.");
+    }
+
+    const nomeSugerido = emailTratado.split("@")[0] || "Usuário";
+    const payload = {
+        nome: nomeSugerido,
+        email: emailTratado,
+        tela: "login",
+        area_solicitada: "Recuperação de senha",
+        perfil_atual: "Não autenticado",
+        observacao: "Solicitação de recuperação de senha criada pela tela de login. O administrador deve validar o usuário e redefinir uma senha temporária em Acessos do App.",
+        status: "pendente",
+    };
+
+    const { data, error } = await supabase
+        .from("solicitacoes_acesso_sistema")
+        .insert(payload)
+        .select("*")
+        .single();
+
+    if (error) {
+        const mensagem = String(error.message || "").toLowerCase();
+
+        if (mensagem.includes("row-level security") || mensagem.includes("permission denied") || mensagem.includes("policy")) {
+            throw new Error("Não foi possível registrar a solicitação. Verifique a policy de INSERT público para solicitações de recuperação de senha.");
+        }
+
+        throw new Error(error.message || "Não foi possível registrar a solicitação de recuperação de senha.");
+    }
+
+    return data || payload;
+}
