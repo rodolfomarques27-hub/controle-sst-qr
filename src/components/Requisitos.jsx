@@ -533,7 +533,32 @@ export function Requisitos() {
 
                     {assuntosFiltrados.length === 0 && (
                         <Card>
-                            <p className="text-sm font-bold text-slate-600">Nenhuma ajuda encontrada para a busca informada.</p>
+                            <div className="flex flex-col gap-4">
+                                <div className="flex items-start gap-3">
+                                    <div className="flex h-11 w-11 flex-none items-center justify-center rounded-2xl bg-slate-100 text-slate-600">
+                                        <Search className="h-5 w-5" />
+                                    </div>
+                                    <div>
+                                        <h3 className="text-sm font-black text-slate-950">Nenhuma ajuda encontrada</h3>
+                                        <p className="mt-1 text-sm font-semibold leading-6 text-slate-600">
+                                            Tente buscar por uma palavra mais simples, como empresa, colaborador, treinamento, QR Code ou relat?rio.
+                                        </p>
+                                    </div>
+                                </div>
+
+                                <div className="flex flex-wrap gap-2">
+                                    {["empresa", "colaborador", "treinamento", "QR Code", "relat?rio", "acesso"].map((exemplo) => (
+                                        <button
+                                            key={exemplo}
+                                            type="button"
+                                            onClick={() => setTermoBusca(exemplo)}
+                                            className="rounded-full border border-slate-200 bg-white px-3 py-2 text-xs font-black uppercase tracking-[0.12em] text-slate-600 shadow-sm transition hover:border-slate-300 hover:bg-slate-50"
+                                        >
+                                            {exemplo}
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
                         </Card>
                     )}
                 </div>
