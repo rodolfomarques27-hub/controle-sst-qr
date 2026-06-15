@@ -810,6 +810,9 @@ function SolicitacoesAcessoApp({ onPrepararPermissao = null, usuario = null }) {
                         {solicitacoesFiltradas.length > 0 ? solicitacoesFiltradas.map((item) => {
                             const solicitacaoRecuperacaoSenha = ehSolicitacaoRecuperacaoSenhaAcessoApp(item);
                             const podePrepararSenhaTemporaria = solicitacaoRecuperacaoSenha && !["recusada", "cancelada"].includes(normalizarTextoAcesso(item.status).toLowerCase());
+                            const statusSolicitacaoTratado = normalizarTextoAcesso(item.status || "pendente").toLowerCase();
+                            const textoRespostaAdmin = normalizarTextoAcesso(item.resposta_admin);
+                            const mostrarRespostaAdministrativa = statusSolicitacaoTratado !== "pendente" || Boolean(textoRespostaAdmin);
 
                             return (
                                 <article key={item.id || `${item.email}-${item.criado_em}`} className="rounded-2xl bg-slate-50 px-4 py-3 ring-1 ring-slate-100">
@@ -819,6 +822,15 @@ function SolicitacoesAcessoApp({ onPrepararPermissao = null, usuario = null }) {
                                         <p className="mt-0.5 truncate text-xs font-semibold text-slate-500">{item.email || "email não informado"}</p>
                                         <p className="mt-1 text-[11px] font-semibold text-slate-400">{formatarDataHoraAcessoApp(item.criado_em)}</p>
                                         {item.observacao ? <p className="mt-1 max-w-3xl text-xs font-semibold leading-relaxed text-slate-500">{item.observacao}</p> : null}
+                                        {mostrarRespostaAdministrativa ? (
+                                            <div className="mt-3 max-w-3xl rounded-2xl bg-white px-3 py-2 text-xs font-semibold leading-relaxed text-slate-600 ring-1 ring-slate-200">
+                                                <p className="text-[10px] font-black uppercase tracking-wide text-slate-400">Resposta administrativa</p>
+                                                <p className="mt-1">{textoRespostaAdmin || "Sem resposta registrada pelo administrador."}</p>
+                                                <p className="mt-1 text-[11px] font-semibold text-slate-400">
+                                                    Atualizado em: {formatarDataHoraAcessoApp(item.atualizado_em || item.criado_em)}
+                                                </p>
+                                            </div>
+                                        ) : null}
                                     </div>
                                     <div className="flex shrink-0 flex-wrap gap-2 xl:justify-end">
                                         <span className="rounded-full bg-white px-3 py-1.5 text-[11px] font-black text-slate-700 ring-1 ring-slate-200">
