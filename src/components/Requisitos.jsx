@@ -541,13 +541,13 @@ export function Requisitos() {
                                     <div>
                                         <h3 className="text-sm font-black text-slate-950">Nenhuma ajuda encontrada</h3>
                                         <p className="mt-1 text-sm font-semibold leading-6 text-slate-600">
-                                            Tente buscar por uma palavra mais simples, como empresa, colaborador, treinamento, QR Code ou relat?rio.
+                                            Tente buscar por uma palavra mais simples, como empresa, colaborador, treinamento, QR Code ou relatório.
                                         </p>
                                     </div>
                                 </div>
 
                                 <div className="flex flex-wrap gap-2">
-                                    {["empresa", "colaborador", "treinamento", "QR Code", "relat?rio", "acesso"].map((exemplo) => (
+                                    {["empresa", "colaborador", "treinamento", "QR Code", "relatório", "acesso"].map((exemplo) => (
                                         <button
                                             key={exemplo}
                                             type="button"
