@@ -97,33 +97,30 @@ Commits relacionados:
 
 Observação: melhoria concluída sem alterar permissões internas, rotas, Supabase, banco ou App.jsx.
 
-\### 4.2 Revisão mensal de backup
-
-
+### 4.2 Revisão mensal de backup
 
 Prioridade: Alta
+Status: concluído no Roteiro 25
 
-Status: planejado
+Melhoria aplicada:
 
+* criado checklist mensal de backup e manutenção;
+* checklist incluído no índice da documentação;
+* rotina mensal documentada para Git, GitHub, Vercel, Supabase, Storage e variáveis;
+* registro mensal de revisão incluído;
+* regra para abertura de novo roteiro documentada.
 
+Arquivos relacionados:
 
-Melhorias possíveis:
+* docs/checklist-mensal-backup-manutencao.md
+* docs/README.md
 
+Commits relacionados:
 
+* 0daa67e docs: adicionar checklist mensal de backup e manutencao
+* b846a9f docs: adicionar checklist mensal ao indice
 
-\* criar lembrete mensal de backup;
-
-\* revisar se o backup local continua atualizado;
-
-\* validar backup do banco Supabase;
-
-\* validar backup do Storage;
-
-\* validar backup das variáveis da Vercel;
-
-\* manter cópia fora do computador principal.
-
-
+Observação: melhoria concluída apenas em documentação, sem alteração em código, Supabase, banco, permissões, rotas ou App.jsx.
 
 \### 4.3 Melhorar auditoria de permissões
 
