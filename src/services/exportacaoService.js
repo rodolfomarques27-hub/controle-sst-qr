@@ -413,22 +413,23 @@ function montarCartaoResumoRelatorio({ icone, titulo, valor, classe }) {
 
 function montarCabecalhoEmpresaTreinamentosRelatorio(empresa = {}, dataEmissao = "", titulo = "Relatório de colaboradores e treinamentos") {
     return `
-        <header class="cabecalho-relatorio cabecalho-relatorio--modelo-aprovado">
-            <div class="marca-empresa">
-                ${montarLogoEmpresaHtml(empresa)}
-                <div class="marca-empresa-textos">
-                    <h1>${escaparHTML(empresa.nome || "Empresa")}</h1>
-                    <p>Controle SST QR</p>
+        <header class="cabecalho-relatorio cabecalho-relatorio--modelo-aprovado cabecalho-relatorio--padrao-institucional">
+            <div class="marca-pdf-padrao">
+                <span class="marca-pdf-icone" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 3 5 6v5c0 4.6 2.9 8.8 7 10 4.1-1.2 7-5.4 7-10V6l-7-3Z"/><path d="m9.5 12 1.8 1.8 3.7-4"/></svg></span>
+                <div class="marca-pdf-textos">
+                    <h1>CONTROLE SST QR</h1>
+                    <p>GESTÃO DE SEGURANÇA DO TRABALHO</p>
                 </div>
             </div>
 
-            <div class="titulo-relatorio-cabecalho">
-                <span></span>
-                <strong>${escaparHTML(titulo)}</strong>
-                <span></span>
+            <div class="linha-pdf-padrao"></div>
+
+            <div class="titulo-pdf-padrao titulo-pdf-padrao--treinamentos">
+                <h2>${escaparHTML(String(titulo || "Relatório de treinamentos").toUpperCase())}</h2>
+                <p>Relatório visual por empresa, colaboradores e treinamentos.</p>
             </div>
 
-            <div class="dados-empresa">
+            <div class="dados-empresa dados-empresa--padrao-pdf">
                 <div class="dados-empresa__item dados-empresa__item--empresa"><span>${ICONES_CABECALHO_RELATORIO_COLABORADORES.empresa}</span><strong>Empresa:</strong><em>${escaparHTML(empresa.nome || "-")}</em></div>
                 <div class="dados-empresa__item dados-empresa__item--cnpj"><span>${ICONES_CABECALHO_RELATORIO_COLABORADORES.cnpj}</span><strong>CNPJ:</strong><em>${escaparHTML(empresa.cnpj || "-")}</em></div>
                 <div class="dados-empresa__item dados-empresa__item--responsavel"><span>${ICONES_CABECALHO_RELATORIO_COLABORADORES.responsavel}</span><strong>Responsável:</strong><em>${escaparHTML(empresa.responsavel || "-")}</em></div>
@@ -2161,6 +2162,112 @@ export async function baixarRelatorioColaboradoresTreinamentosPDF({
         gap: 9px;
     }
 
+
+    .cabecalho-relatorio--padrao-institucional {
+        gap: 8px;
+        margin-bottom: 12px;
+    }
+
+    .marca-pdf-padrao {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 12px;
+        text-align: left;
+        color: #07162f;
+    }
+
+    .marca-pdf-icone {
+        width: 28px;
+        height: 28px;
+        display: grid;
+        place-items: center;
+        flex: 0 0 auto;
+        color: #07162f;
+    }
+
+    .marca-pdf-icone svg {
+        width: 28px;
+        height: 28px;
+        display: block;
+        fill: none;
+        stroke: currentColor;
+        stroke-width: 1.9;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+    }
+
+    .marca-pdf-icone svg * {
+        fill: none;
+        stroke: currentColor;
+        stroke-width: 1.9;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+    }
+
+    .marca-pdf-textos h1 {
+        margin: 0;
+        color: #07162f;
+        font-size: 29px;
+        line-height: 1;
+        letter-spacing: 0.18em;
+        text-transform: uppercase;
+        font-weight: 900;
+    }
+
+    .marca-pdf-textos p {
+        margin: 3px 0 0;
+        color: #334155;
+        font-size: 7.8px;
+        line-height: 1;
+        font-weight: 900;
+        letter-spacing: 0.28em;
+        text-align: center;
+        text-transform: uppercase;
+    }
+
+    .linha-pdf-padrao {
+        height: 2px;
+        width: 100%;
+        border-radius: 999px;
+        background: #07162f;
+        box-shadow: 0 4px 0 #07162f;
+        margin: 2px 0 8px;
+    }
+
+    .titulo-pdf-padrao {
+        min-height: 30px;
+        display: grid;
+        align-content: center;
+        justify-items: center;
+        text-align: center;
+        border-bottom: 2px solid #07162f;
+        padding: 5px 18px 7px;
+    }
+
+    .titulo-pdf-padrao h2 {
+        margin: 0;
+        color: var(--azul);
+        font-size: 15px;
+        line-height: 1.15;
+        font-weight: 900;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        white-space: normal;
+    }
+
+    .titulo-pdf-padrao p {
+        margin: 2px 0 0;
+        color: #64748b;
+        font-size: 6.7px;
+        line-height: 1.2;
+        font-weight: 800;
+    }
+
+    .dados-empresa--padrao-pdf {
+        margin-top: 3px;
+    }
+
     .marca-relatorio-controle {
         display: flex;
         align-items: center;
@@ -2950,6 +3057,112 @@ export async function baixarRelatorioPendenciasTreinamentosPDF({
 
     .cabecalho-relatorio--aniversariantes {
         gap: 9px;
+    }
+
+
+    .cabecalho-relatorio--padrao-institucional {
+        gap: 8px;
+        margin-bottom: 12px;
+    }
+
+    .marca-pdf-padrao {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 12px;
+        text-align: left;
+        color: #07162f;
+    }
+
+    .marca-pdf-icone {
+        width: 28px;
+        height: 28px;
+        display: grid;
+        place-items: center;
+        flex: 0 0 auto;
+        color: #07162f;
+    }
+
+    .marca-pdf-icone svg {
+        width: 28px;
+        height: 28px;
+        display: block;
+        fill: none;
+        stroke: currentColor;
+        stroke-width: 1.9;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+    }
+
+    .marca-pdf-icone svg * {
+        fill: none;
+        stroke: currentColor;
+        stroke-width: 1.9;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+    }
+
+    .marca-pdf-textos h1 {
+        margin: 0;
+        color: #07162f;
+        font-size: 29px;
+        line-height: 1;
+        letter-spacing: 0.18em;
+        text-transform: uppercase;
+        font-weight: 900;
+    }
+
+    .marca-pdf-textos p {
+        margin: 3px 0 0;
+        color: #334155;
+        font-size: 7.8px;
+        line-height: 1;
+        font-weight: 900;
+        letter-spacing: 0.28em;
+        text-align: center;
+        text-transform: uppercase;
+    }
+
+    .linha-pdf-padrao {
+        height: 2px;
+        width: 100%;
+        border-radius: 999px;
+        background: #07162f;
+        box-shadow: 0 4px 0 #07162f;
+        margin: 2px 0 8px;
+    }
+
+    .titulo-pdf-padrao {
+        min-height: 30px;
+        display: grid;
+        align-content: center;
+        justify-items: center;
+        text-align: center;
+        border-bottom: 2px solid #07162f;
+        padding: 5px 18px 7px;
+    }
+
+    .titulo-pdf-padrao h2 {
+        margin: 0;
+        color: var(--azul);
+        font-size: 15px;
+        line-height: 1.15;
+        font-weight: 900;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        white-space: normal;
+    }
+
+    .titulo-pdf-padrao p {
+        margin: 2px 0 0;
+        color: #64748b;
+        font-size: 6.7px;
+        line-height: 1.2;
+        font-weight: 800;
+    }
+
+    .dados-empresa--padrao-pdf {
+        margin-top: 3px;
     }
 
     .marca-relatorio-controle {
@@ -3928,6 +4141,112 @@ export async function baixarRelatorioAniversariantesPDF({
 
     .cabecalho-relatorio--aniversariantes {
         gap: 9px;
+    }
+
+
+    .cabecalho-relatorio--padrao-institucional {
+        gap: 8px;
+        margin-bottom: 12px;
+    }
+
+    .marca-pdf-padrao {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 12px;
+        text-align: left;
+        color: #07162f;
+    }
+
+    .marca-pdf-icone {
+        width: 28px;
+        height: 28px;
+        display: grid;
+        place-items: center;
+        flex: 0 0 auto;
+        color: #07162f;
+    }
+
+    .marca-pdf-icone svg {
+        width: 28px;
+        height: 28px;
+        display: block;
+        fill: none;
+        stroke: currentColor;
+        stroke-width: 1.9;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+    }
+
+    .marca-pdf-icone svg * {
+        fill: none;
+        stroke: currentColor;
+        stroke-width: 1.9;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+    }
+
+    .marca-pdf-textos h1 {
+        margin: 0;
+        color: #07162f;
+        font-size: 29px;
+        line-height: 1;
+        letter-spacing: 0.18em;
+        text-transform: uppercase;
+        font-weight: 900;
+    }
+
+    .marca-pdf-textos p {
+        margin: 3px 0 0;
+        color: #334155;
+        font-size: 7.8px;
+        line-height: 1;
+        font-weight: 900;
+        letter-spacing: 0.28em;
+        text-align: center;
+        text-transform: uppercase;
+    }
+
+    .linha-pdf-padrao {
+        height: 2px;
+        width: 100%;
+        border-radius: 999px;
+        background: #07162f;
+        box-shadow: 0 4px 0 #07162f;
+        margin: 2px 0 8px;
+    }
+
+    .titulo-pdf-padrao {
+        min-height: 30px;
+        display: grid;
+        align-content: center;
+        justify-items: center;
+        text-align: center;
+        border-bottom: 2px solid #07162f;
+        padding: 5px 18px 7px;
+    }
+
+    .titulo-pdf-padrao h2 {
+        margin: 0;
+        color: var(--azul);
+        font-size: 15px;
+        line-height: 1.15;
+        font-weight: 900;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        white-space: normal;
+    }
+
+    .titulo-pdf-padrao p {
+        margin: 2px 0 0;
+        color: #64748b;
+        font-size: 6.7px;
+        line-height: 1.2;
+        font-weight: 800;
+    }
+
+    .dados-empresa--padrao-pdf {
+        margin-top: 3px;
     }
 
     .cabecalho-aniversariantes-svg {
