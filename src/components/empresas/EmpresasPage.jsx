@@ -29,7 +29,11 @@ import {
     classeStatusEmpresa,
 } from "../../services/empresaDocumentosService";
 import { documentosEmpresaBase } from "../../constants/documentosEmpresaConstants";
-import { baixarPDF } from "../../services/exportacaoService";
+import {
+    baixarRelatorioDocumentosEmpresaPDF,
+    baixarRelatorioEmpresasDocumentosPDF,
+    baixarRelatorioPendenciasDocumentaisPDF,
+} from "../../services/exportacaoService";
 import {
     classNames,
     formatDate,
@@ -1191,162 +1195,141 @@ export function Empresas({
         empresasFiltradas.some((empresa) => empresa.id === doc.empresa_id)
     );
 
-    const baixarRelatorioEmpresas = () => {
-        if (!podeExportarEmpresasSistema) {
-            if (typeof window !== "undefined") window.alert(mensagemBloqueioExportacaoEmpresas);
-            return;
-        }
+    const montarEmpresaRelatorioDocumental = (empresa) => {
+        const docs = documentosPorEmpresa[empresa.id] || [];
+        const situacaoDocumental = calcularSituacaoDocumentalEmpresa(docs);
+        const qtdFuncionarios = (colaboradoresPorEmpresa[empresa.id] || []).length;
 
-        const linhas = [
-            ["Empresa", "Tipo", "Contratada por", "Status da empresa", "Situação documental", "Nº funcionários", "CNPJ", "Responsável", "E-mail", "Telefone", "Nº contrato", "Início contrato", "Fim contrato", "Escopo do serviço", "Observação status", "LTCAT", "PCMSO", "PGR"],
-        ];
+        const documentos = documentosEmpresaBase.map((tipoDoc) => {
+            const doc = docs.find((item) => item.tipo_documento === tipoDoc.tipo);
+            const status = doc
+                ? statusEmpresaDocumento(doc.data_vencimento)
+                : { texto: "Pendente", chave: "pendente" };
 
-        empresasFiltradas.forEach((empresa) => {
-            const docs = documentosPorEmpresa[empresa.id] || [];
-
-            const statusDoc = (tipo) => {
-                const doc = docs.find((item) => item.tipo_documento === tipo);
-                if (!doc) return "Pendente";
-                const status = statusEmpresaDocumento(doc.data_vencimento);
-                return `${status.texto} - emissão ${formatDate(doc.data_emissao)} - revisão ${doc.data_vencimento ? formatDate(doc.data_vencimento) : "sem revisão definida"}`;
+            return {
+                tipo: tipoDoc.tipo,
+                status: status.texto,
+                chave: status.chave || "pendente",
+                emissao: doc?.data_emissao ? formatDate(doc.data_emissao) : "-",
+                revisao: doc?.data_vencimento ? formatDate(doc.data_vencimento) : doc ? "Sem revisão definida" : "-",
+                arquivo: doc?.arquivo_nome || "-",
+                observacao: doc?.observacao || "",
             };
-
-            const situacaoDocumental = calcularSituacaoDocumentalEmpresa(docs);
-            const qtdFuncionarios = (colaboradoresPorEmpresa[empresa.id] || []).length;
-
-            linhas.push([
-                empresa.nome,
-                empresa.tipo_empresa || "Terceirizada",
-                nomeEmpresaPai(empresa.empresa_pai_id),
-                normalizarStatusEmpresa(empresa.status),
-                situacaoDocumental.texto,
-                qtdFuncionarios,
-                empresa.cnpj || "",
-                empresa.responsavel || "",
-                empresa.email || "",
-                empresa.telefone || "",
-                empresa.numero_contrato || "",
-                empresa.data_inicio_contrato ? formatDate(empresa.data_inicio_contrato) : "",
-                empresa.data_fim_contrato ? formatDate(empresa.data_fim_contrato) : "",
-                empresa.escopo_servico || "",
-                empresa.observacao_status || "",
-                statusDoc("LTCAT"),
-                statusDoc("PCMSO"),
-                statusDoc("PGR"),
-            ]);
         });
 
-        baixarPDF("relatorio-empresas-documentos.pdf", "Relatorio geral de empresas e documentos", linhas);
+        return {
+            id: empresa.id,
+            nome: empresa.nome || "Empresa sem nome",
+            tipo: empresa.tipo_empresa || "Terceirizada",
+            contratadaPor: nomeEmpresaPai(empresa.empresa_pai_id),
+            statusEmpresa: normalizarStatusEmpresa(empresa.status),
+            situacaoDocumental: situacaoDocumental.texto,
+            situacaoChave: situacaoDocumental.chave || "pendente",
+            funcionarios: qtdFuncionarios,
+            cnpj: empresa.cnpj || "-",
+            responsavel: empresa.responsavel || "-",
+            email: empresa.email || "-",
+            telefone: empresa.telefone || "-",
+            numeroContrato: empresa.numero_contrato || "-",
+            inicioContrato: empresa.data_inicio_contrato ? formatDate(empresa.data_inicio_contrato) : "-",
+            fimContrato: empresa.data_fim_contrato ? formatDate(empresa.data_fim_contrato) : "-",
+            escopoServico: empresa.escopo_servico || "-",
+            observacaoStatus: empresa.observacao_status || "-",
+            documentos,
+        };
     };
 
-    const baixarRelatorioPendencias = () => {
-        if (!podeExportarEmpresasSistema) {
-            if (typeof window !== "undefined") window.alert(mensagemBloqueioExportacaoEmpresas);
-            return;
-        }
-
-        const linhas = [
-            ["Empresa", "Tipo da empresa", "Contratada por", "Status da empresa", "Situação documental", "Nº funcionários", "Documento", "Situação", "Emissão", "Próxima revisão", "Arquivo"],
-        ];
+    const montarPendenciasRelatorioDocumental = () => {
+        const pendencias = [];
 
         empresasFiltradas.forEach((empresa) => {
-            const docs = documentosPorEmpresa[empresa.id] || [];
+            const empresaRelatorio = montarEmpresaRelatorioDocumental(empresa);
 
-            documentosEmpresaBase.forEach((tipoDoc) => {
-                const doc = docs.find((item) => item.tipo_documento === tipoDoc.tipo);
+            empresaRelatorio.documentos.forEach((doc) => {
+                if (!["vencido", "vencendo", "pendente"].includes(doc.chave)) return;
 
-                if (!doc) {
-                    const situacaoDocumental = calcularSituacaoDocumentalEmpresa(docs);
-                    const qtdFuncionarios = (colaboradoresPorEmpresa[empresa.id] || []).length;
-
-                    linhas.push([
-                        empresa.nome,
-                        empresa.tipo_empresa || "Terceirizada",
-                        nomeEmpresaPai(empresa.empresa_pai_id),
-                        normalizarStatusEmpresa(empresa.status),
-                        situacaoDocumental.texto,
-                        qtdFuncionarios,
-                        tipoDoc.tipo,
-                        "Documento pendente",
-                        "",
-                        "",
-                        "",
-                    ]);
-                    return;
-                }
-
-                const status = statusEmpresaDocumento(doc.data_vencimento);
-
-                if (["vencido", "vencendo"].includes(status.chave)) {
-                    const situacaoDocumental = calcularSituacaoDocumentalEmpresa(docs);
-                    const qtdFuncionarios = (colaboradoresPorEmpresa[empresa.id] || []).length;
-
-                    linhas.push([
-                        empresa.nome,
-                        empresa.tipo_empresa || "Terceirizada",
-                        nomeEmpresaPai(empresa.empresa_pai_id),
-                        normalizarStatusEmpresa(empresa.status),
-                        situacaoDocumental.texto,
-                        qtdFuncionarios,
-                        tipoDoc.tipo,
-                        status.texto,
-                        formatDate(doc.data_emissao),
-                        doc.data_vencimento ? formatDate(doc.data_vencimento) : "Sem revisão definida",
-                        doc.arquivo_nome || "",
-                    ]);
-                }
+                pendencias.push({
+                    empresa: empresaRelatorio.nome,
+                    tipoEmpresa: empresaRelatorio.tipo,
+                    contratadaPor: empresaRelatorio.contratadaPor,
+                    statusEmpresa: empresaRelatorio.statusEmpresa,
+                    situacaoDocumental: empresaRelatorio.situacaoDocumental,
+                    funcionarios: empresaRelatorio.funcionarios,
+                    documento: doc.tipo,
+                    situacao: doc.status,
+                    chave: doc.chave,
+                    emissao: doc.emissao,
+                    revisao: doc.revisao,
+                    arquivo: doc.arquivo,
+                });
             });
         });
 
-        baixarPDF("relatorio-pendencias-documentais.pdf", "Relatorio de pendencias documentais", linhas);
+        return pendencias;
     };
 
-    const baixarRelatorioDocumentos = (empresa, docsEmpresa = []) => {
+    const baixarRelatorioEmpresas = async () => {
         if (!podeExportarEmpresasSistema) {
             if (typeof window !== "undefined") window.alert(mensagemBloqueioExportacaoEmpresas);
             return;
         }
 
-        const linhas = [
-            ["Empresa", "Tipo da empresa", "Contratada por", "Nº funcionários", "Documento", "Status", "Emissão", "Próxima revisão", "Arquivo", "Observação"],
-        ];
+        const empresasRelatorio = empresasFiltradas.map(montarEmpresaRelatorioDocumental);
 
-        const qtdFuncionarios = (colaboradoresPorEmpresa[empresa.id] || []).length;
-
-        docsEmpresa.forEach((doc) => {
-            const status = statusEmpresaDocumento(doc.data_vencimento);
-
-            linhas.push([
-                empresa.nome || "",
-                empresa.tipo_empresa || "Terceirizada",
-                nomeEmpresaPai(empresa.empresa_pai_id),
-                qtdFuncionarios,
-                doc.tipo_documento,
-                status.texto,
-                formatDate(doc.data_emissao),
-                doc.data_vencimento ? formatDate(doc.data_vencimento) : "Sem revisão definida",
-                doc.arquivo_nome || "",
-                doc.observacao || "",
-            ]);
+        await baixarRelatorioEmpresasDocumentosPDF({
+            empresas: empresasRelatorio,
+            nomeArquivo: "relatorio-empresas-documentos.pdf",
         });
+    };
 
-        if (docsEmpresa.length === 0) {
-            linhas.push([
-                empresa.nome || "",
-                empresa.tipo_empresa || "Terceirizada",
-                nomeEmpresaPai(empresa.empresa_pai_id),
-                qtdFuncionarios,
-                "Sem documentos enviados",
-                "Pendente",
-                "",
-                "",
-                "",
-                "Nenhum documento enviado para esta empresa.",
-            ]);
+    const baixarRelatorioPendencias = async () => {
+        if (!podeExportarEmpresasSistema) {
+            if (typeof window !== "undefined") window.alert(mensagemBloqueioExportacaoEmpresas);
+            return;
         }
 
+        await baixarRelatorioPendenciasDocumentaisPDF({
+            pendencias: montarPendenciasRelatorioDocumental(),
+            nomeArquivo: "relatorio-pendencias-documentais.pdf",
+        });
+    };
+
+    const baixarRelatorioDocumentos = async (empresa, docsEmpresa = []) => {
+        if (!podeExportarEmpresasSistema) {
+            if (typeof window !== "undefined") window.alert(mensagemBloqueioExportacaoEmpresas);
+            return;
+        }
+
+        const empresaRelatorio = montarEmpresaRelatorioDocumental(empresa);
+        const documentos = docsEmpresa.length
+            ? docsEmpresa.map((doc) => {
+                const status = statusEmpresaDocumento(doc.data_vencimento);
+                return {
+                    tipo: doc.tipo_documento,
+                    status: status.texto,
+                    chave: status.chave,
+                    emissao: doc.data_emissao ? formatDate(doc.data_emissao) : "-",
+                    revisao: doc.data_vencimento ? formatDate(doc.data_vencimento) : "Sem revisão definida",
+                    arquivo: doc.arquivo_nome || "-",
+                    observacao: doc.observacao || "-",
+                };
+            })
+            : [{
+                tipo: "Sem documentos enviados",
+                status: "Pendente",
+                chave: "pendente",
+                emissao: "-",
+                revisao: "-",
+                arquivo: "-",
+                observacao: "Nenhum documento enviado para esta empresa.",
+            }];
+
         const nomeSeguro = sanitizarNomeArquivo(empresa.nome || "empresa").replace(/\.pdf$/i, "");
-        baixarPDF(`documentos-enviados-${nomeSeguro}.pdf`, `Documentos enviados - ${empresa.nome}`, linhas);
+
+        await baixarRelatorioDocumentosEmpresaPDF({
+            empresa: { ...empresaRelatorio, documentos },
+            nomeArquivo: `documentos-enviados-${nomeSeguro}.pdf`,
+        });
     };
 
 
