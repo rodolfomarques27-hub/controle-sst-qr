@@ -95,7 +95,7 @@ const ROTULOS_TELAS_ACESSO_BLOQUEADO = Object.freeze({
     auditoria: "Auditoria do Sistema",
     acessosApp: "Acessos do App",
     configuracoes: "Configurações",
-    roteiro: "Roteiro",
+    roteiro: "Manuais",
 });
 
 const ROTULOS_MODULOS_ACESSO_BLOQUEADO = Object.freeze({

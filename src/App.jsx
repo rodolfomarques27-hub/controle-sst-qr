@@ -31,6 +31,7 @@ import {
     usuarioPodeAcessarTelaSistema,
 } from "./services/usuariosPermissoesSistemaService";
 import {
+    BookOpen,
     Building2,
     CalendarClock,
     ClipboardCheck,
@@ -940,7 +941,7 @@ export default function App() {
         ...(podeAcessarAuditoria ? [{ id: "auditoria", label: "Auditoria de sistema", icon: Database }] : []),
         { id: "acessosApp", label: "Acessos do App", icon: ShieldCheck },
         { id: "configuracoes", label: "Configurações", icon: Settings },
-        { id: "roteiro", label: "Roteiro", icon: CalendarClock },
+        { id: "roteiro", label: "Manuais", icon: BookOpen },
     ], [podeAcessarAuditoria]);
 
     const nav = useMemo(() => {
