@@ -1211,7 +1211,7 @@ export async function baixarRelatorioDashboardSstPDF({
         </header>
     `;
 
-    const rodapeRelatorio = (pagina, total = 2) => `
+    const rodapeRelatorio = (pagina, total = 3) => `
         <footer class="rodape-relatorio">
             <span>Controle SST QR — Relatório gerado automaticamente pelo Dashboard SST.</span>
             <span>Página ${pagina} de ${total}</span>
@@ -1401,18 +1401,15 @@ export async function baixarRelatorioDashboardSstPDF({
     }
 
     .grid-duplo { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 8px; }
-    .grid-resumo-operacional { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
-    .bloco-tabela-resumo { border: 1px solid var(--linha); border-radius: 11px; background: #fff; overflow: hidden; }
-    .bloco-tabela-resumo-topo { padding: 8px 9px 7px; background: #f8fbff; border-bottom: 1px solid var(--linha); }
-    .bloco-tabela-resumo-topo h4 { margin: 0; color: #07162f; font-size: 8px; line-height: 1.25; text-transform: uppercase; letter-spacing: .045em; }
-    .bloco-tabela-resumo-topo p { margin: 3px 0 0; color: #64748b; font-size: 6.4px; line-height: 1.25; font-weight: 700; }
-    .bloco-tabela-resumo-corpo { padding: 10px 11px 11px; }
-    .estado-vazio-tabela { margin: 0; min-height: 40px; padding: 13px 12px; border: 1px dashed #cbd5e1; border-radius: 10px; background: #f8fbff; color: #64748b; display: flex; align-items: center; justify-content: center; text-align: center; font-size: 7.1px; line-height: 1.35; font-weight: 800; }
-    .secao-relatorio { border: 1px solid var(--linha); border-radius: 13px; background: #fff; overflow: hidden; margin-bottom: 8px; break-inside: avoid; page-break-inside: avoid; }
+    .grid-duplo-pagina-2 { display: grid; grid-template-columns: 1fr 1.25fr; gap: 9px; margin-bottom: 9px; align-items: stretch; }
+    .pilha-tabelas { display: grid; grid-template-columns: 1fr; gap: 9px; }
+    .estado-vazio-tabela { margin: 0; min-height: 38px; padding: 12px 14px; border: 1px dashed #cbd5e1; border-radius: 10px; background: #f8fbff; color: #64748b; display: flex; align-items: center; justify-content: center; text-align: center; font-size: 7.8px; line-height: 1.35; font-weight: 800; }
+    .secao-relatorio { border: 1px solid var(--linha); border-radius: 13px; background: #fff; overflow: hidden; margin-bottom: 9px; break-inside: avoid; page-break-inside: avoid; }
     .secao-titulo { padding: 8px 10px 7px; background: #f8fbff; border-bottom: 1px solid var(--linha); }
     .secao-titulo h3 { margin: 0; color: #07162f; font-size: 9.2px; line-height: 1.25; text-transform: uppercase; letter-spacing: .055em; }
     .secao-titulo p { margin: 3px 0 0; color: #64748b; font-size: 6.7px; line-height: 1.25; font-weight: 700; }
-    .secao-corpo { padding: 10px 11px; }
+    .secao-corpo { padding: 11px 12px; }
+    .secao-tabela-ampla .secao-corpo { padding: 12px; }
 
     .linha-progresso { display: grid; grid-template-columns: 64px 1fr 74px; align-items: center; gap: 9px; min-height: 18px; margin: 0 0 9px; padding: 1px 0; }
     .linha-progresso:last-child { margin-bottom: 0; }
@@ -1425,42 +1422,40 @@ export async function baixarRelatorioDashboardSstPDF({
     .lista-alertas li { margin-bottom: 3px; }
     .lista-alertas-vazia { color: #64748b; font-size: 7.5px; font-weight: 700; margin: 0; }
 
-    .tabela-relatorio-dashboard { width: 100%; border-collapse: separate; border-spacing: 0; font-size: 7px; table-layout: fixed; overflow: hidden; border-radius: 8px; }
-    .tabela-relatorio-dashboard thead tr { min-height: 23px; }
-    .tabela-relatorio-dashboard th { background: #07162f; color: #fff; padding: 7px 9px; text-align: left; font-size: 6.3px; line-height: 1.35; letter-spacing: .018em; text-transform: uppercase; white-space: normal; vertical-align: middle; border-right: 1px solid rgba(255,255,255,.16); }
+    .tabela-relatorio-dashboard { width: 100%; border-collapse: separate; border-spacing: 0; font-size: 8px; table-layout: fixed; overflow: hidden; border-radius: 10px; border: 1px solid #dbe6f5; }
+    .tabela-relatorio-dashboard th { background: #07162f; color: #fff; padding: 9px 10px; text-align: left; font-size: 6.9px; line-height: 1.28; letter-spacing: .025em; text-transform: uppercase; white-space: normal; vertical-align: middle; border-right: 1px solid rgba(255,255,255,.18); }
     .tabela-relatorio-dashboard th:last-child { border-right: 0; }
-    .tabela-relatorio-dashboard tbody tr { min-height: 24px; }
-    .tabela-relatorio-dashboard td { border-bottom: 1px solid #e2e8f0; padding: 7px 9px; vertical-align: middle; color: #334155; line-height: 1.38; overflow-wrap: anywhere; border-right: 1px solid #eef2f7; }
+    .tabela-relatorio-dashboard td { border-bottom: 1px solid #e2e8f0; padding: 8px 10px; vertical-align: middle; color: #334155; line-height: 1.35; overflow-wrap: anywhere; border-right: 1px solid #edf2f7; }
     .tabela-relatorio-dashboard td:last-child { border-right: 0; }
     .tabela-relatorio-dashboard tbody tr:last-child td { border-bottom: 0; }
-    .grid-resumo-operacional .bloco-tabela-resumo:nth-child(1) .tabela-relatorio-dashboard th:nth-child(1),
-    .grid-resumo-operacional .bloco-tabela-resumo:nth-child(1) .tabela-relatorio-dashboard td:nth-child(1) { width: 52%; }
-    .grid-resumo-operacional .bloco-tabela-resumo:nth-child(1) .tabela-relatorio-dashboard th:nth-child(2),
-    .grid-resumo-operacional .bloco-tabela-resumo:nth-child(1) .tabela-relatorio-dashboard td:nth-child(2) { width: 20%; text-align: center; }
-    .grid-resumo-operacional .bloco-tabela-resumo:nth-child(1) .tabela-relatorio-dashboard th:nth-child(3),
-    .grid-resumo-operacional .bloco-tabela-resumo:nth-child(1) .tabela-relatorio-dashboard td:nth-child(3) { width: 28%; text-align: center; }
-    .grid-resumo-operacional .bloco-tabela-resumo:nth-child(2) .tabela-relatorio-dashboard th:nth-child(1),
-    .grid-resumo-operacional .bloco-tabela-resumo:nth-child(2) .tabela-relatorio-dashboard td:nth-child(1) { width: 72%; }
-    .grid-resumo-operacional .bloco-tabela-resumo:nth-child(2) .tabela-relatorio-dashboard th:nth-child(2),
-    .grid-resumo-operacional .bloco-tabela-resumo:nth-child(2) .tabela-relatorio-dashboard td:nth-child(2) { width: 28%; text-align: center; }
+    .tabela-ranking-wrapper .tabela-relatorio-dashboard th:nth-child(1),
+    .tabela-ranking-wrapper .tabela-relatorio-dashboard td:nth-child(1) { width: 58%; }
+    .tabela-ranking-wrapper .tabela-relatorio-dashboard th:nth-child(2),
+    .tabela-ranking-wrapper .tabela-relatorio-dashboard td:nth-child(2) { width: 18%; text-align: center; }
+    .tabela-ranking-wrapper .tabela-relatorio-dashboard th:nth-child(3),
+    .tabela-ranking-wrapper .tabela-relatorio-dashboard td:nth-child(3) { width: 24%; text-align: center; }
+    .tabela-funcoes-wrapper .tabela-relatorio-dashboard th:nth-child(1),
+    .tabela-funcoes-wrapper .tabela-relatorio-dashboard td:nth-child(1) { width: 75%; }
+    .tabela-funcoes-wrapper .tabela-relatorio-dashboard th:nth-child(2),
+    .tabela-funcoes-wrapper .tabela-relatorio-dashboard td:nth-child(2) { width: 25%; text-align: center; }
     .tabela-documentos-tipo-wrapper .tabela-relatorio-dashboard th:nth-child(1),
-    .tabela-documentos-tipo-wrapper .tabela-relatorio-dashboard td:nth-child(1) { width: 68%; }
+    .tabela-documentos-tipo-wrapper .tabela-relatorio-dashboard td:nth-child(1) { width: 72%; }
     .tabela-documentos-tipo-wrapper .tabela-relatorio-dashboard th:nth-child(2),
-    .tabela-documentos-tipo-wrapper .tabela-relatorio-dashboard td:nth-child(2) { width: 32%; text-align: center; }
+    .tabela-documentos-tipo-wrapper .tabela-relatorio-dashboard td:nth-child(2) { width: 28%; text-align: center; }
     .tabela-ultimos-documentos-wrapper .tabela-relatorio-dashboard th:nth-child(1),
-    .tabela-ultimos-documentos-wrapper .tabela-relatorio-dashboard td:nth-child(1) { width: 36%; }
+    .tabela-ultimos-documentos-wrapper .tabela-relatorio-dashboard td:nth-child(1) { width: 37%; }
     .tabela-ultimos-documentos-wrapper .tabela-relatorio-dashboard th:nth-child(2),
-    .tabela-ultimos-documentos-wrapper .tabela-relatorio-dashboard td:nth-child(2) { width: 30%; }
+    .tabela-ultimos-documentos-wrapper .tabela-relatorio-dashboard td:nth-child(2) { width: 31%; }
     .tabela-ultimos-documentos-wrapper .tabela-relatorio-dashboard th:nth-child(3),
     .tabela-ultimos-documentos-wrapper .tabela-relatorio-dashboard td:nth-child(3) { width: 15%; text-align: center; }
     .tabela-ultimos-documentos-wrapper .tabela-relatorio-dashboard th:nth-child(4),
-    .tabela-ultimos-documentos-wrapper .tabela-relatorio-dashboard td:nth-child(4) { width: 19%; text-align: center; }
+    .tabela-ultimos-documentos-wrapper .tabela-relatorio-dashboard td:nth-child(4) { width: 17%; text-align: center; }
     .tabela-pendencias-wrapper .tabela-relatorio-dashboard th:nth-child(1),
-    .tabela-pendencias-wrapper .tabela-relatorio-dashboard td:nth-child(1) { width: 24%; }
+    .tabela-pendencias-wrapper .tabela-relatorio-dashboard td:nth-child(1) { width: 25%; }
     .tabela-pendencias-wrapper .tabela-relatorio-dashboard th:nth-child(2),
     .tabela-pendencias-wrapper .tabela-relatorio-dashboard td:nth-child(2) { width: 17%; }
     .tabela-pendencias-wrapper .tabela-relatorio-dashboard th:nth-child(3),
-    .tabela-pendencias-wrapper .tabela-relatorio-dashboard td:nth-child(3) { width: 35%; }
+    .tabela-pendencias-wrapper .tabela-relatorio-dashboard td:nth-child(3) { width: 34%; }
     .tabela-pendencias-wrapper .tabela-relatorio-dashboard th:nth-child(4),
     .tabela-pendencias-wrapper .tabela-relatorio-dashboard td:nth-child(4) { width: 12%; text-align: center; }
     .tabela-pendencias-wrapper .tabela-relatorio-dashboard th:nth-child(5),
@@ -1470,7 +1465,7 @@ export async function baixarRelatorioDashboardSstPDF({
     .centralizado { text-align: center !important; }
     .tabela-vazia, .mais-registros { text-align: center; color: #64748b !important; font-weight: 800; }
 
-    .badge { display: inline-flex; align-items: center; border-radius: 999px; padding: 2px 6px; font-size: 6.4px; font-weight: 900; white-space: nowrap; }
+    .badge { display: inline-flex; align-items: center; justify-content: center; border-radius: 999px; min-width: 54px; padding: 3px 7px; font-size: 6.8px; line-height: 1.1; font-weight: 900; white-space: nowrap; }
     .status-ok { background: #e7f8ef; color: var(--verde); }
     .status-alerta { background: #fff4de; color: #b45309; }
     .status-critico { background: #ffe8e8; color: var(--vermelho); }
@@ -1542,46 +1537,47 @@ export async function baixarRelatorioDashboardSstPDF({
                 <div class="secao-corpo">${alertasHtml ? `<ul class="lista-alertas">${alertasHtml}</ul>` : `<p class="lista-alertas-vazia">Nenhum alerta crítico encontrado no momento.</p>`}</div>
             </section>
 
-            <section class="secao-relatorio">
-                <div class="secao-titulo"><h3>Resumo operacional</h3><p>Empresas com pendência e distribuição da mão de obra cadastrada.</p></div>
-                <div class="secao-corpo">
-                    <div class="grid-resumo-operacional">
-                        <div class="bloco-tabela-resumo">
-                            <div class="bloco-tabela-resumo-topo"><h4>Ranking de pendências por empresa</h4><p>Empresas com maior necessidade de regularização.</p></div>
-                            <div class="bloco-tabela-resumo-corpo">${rankingHtml}</div>
-                        </div>
-                        <div class="bloco-tabela-resumo">
-                            <div class="bloco-tabela-resumo-topo"><h4>Colaboradores por função</h4><p>Distribuição operacional da mão de obra cadastrada.</p></div>
-                            <div class="bloco-tabela-resumo-corpo">${funcoesHtml}</div>
-                        </div>
-                    </div>
-                </div>
-            </section>
         </div>
         ${rodapeRelatorio(1)}
     </main>
 
     <main class="pagina-relatorio">
         <div class="conteudo-pagina">
-            ${cabecalhoRelatorio("Detalhamento documental, últimos envios e pendências críticas.")}
+            ${cabecalhoRelatorio("Resumo operacional e documentos monitorados.")}
 
-            <section class="grid-duplo">
-                <div class="secao-relatorio">
-                    <div class="secao-titulo"><h3>Documentos por tipo</h3><p>Leitura geral dos documentos corporativos monitorados.</p></div>
-                    <div class="secao-corpo tabela-documentos-tipo-wrapper">${documentosTipoHtml}</div>
-                </div>
-                <div class="secao-relatorio">
-                    <div class="secao-titulo"><h3>Últimos documentos enviados</h3><p>Resumo dos envios mais recentes.</p></div>
-                    <div class="secao-corpo tabela-ultimos-documentos-wrapper">${ultimosDocumentosHtml}</div>
-                </div>
+            <section class="secao-relatorio secao-tabela-ampla tabela-ranking-wrapper">
+                <div class="secao-titulo"><h3>Ranking de pendências por empresa</h3><p>Empresas com maior necessidade de regularização.</p></div>
+                <div class="secao-corpo">${rankingHtml}</div>
             </section>
 
-            <section class="secao-relatorio">
-                <div class="secao-titulo"><h3>Pendências críticas</h3><p>Itens que impactam liberação, mobilização ou controle documental.</p></div>
-                <div class="secao-corpo tabela-pendencias-wrapper">${pendenciasHtml}</div>
+            <section class="secao-relatorio secao-tabela-ampla tabela-funcoes-wrapper">
+                <div class="secao-titulo"><h3>Colaboradores por função</h3><p>Distribuição operacional da mão de obra cadastrada.</p></div>
+                <div class="secao-corpo">${funcoesHtml}</div>
+            </section>
+
+            <section class="secao-relatorio secao-tabela-ampla tabela-documentos-tipo-wrapper">
+                <div class="secao-titulo"><h3>Documentos por tipo</h3><p>Leitura geral dos documentos corporativos monitorados.</p></div>
+                <div class="secao-corpo">${documentosTipoHtml}</div>
             </section>
         </div>
         ${rodapeRelatorio(2)}
+    </main>
+
+    <main class="pagina-relatorio">
+        <div class="conteudo-pagina">
+            ${cabecalhoRelatorio("Últimos envios e pendências críticas para conferência.")}
+
+            <section class="secao-relatorio secao-tabela-ampla tabela-ultimos-documentos-wrapper">
+                <div class="secao-titulo"><h3>Últimos documentos enviados</h3><p>Resumo dos envios mais recentes.</p></div>
+                <div class="secao-corpo">${ultimosDocumentosHtml}</div>
+            </section>
+
+            <section class="secao-relatorio secao-tabela-ampla tabela-pendencias-wrapper">
+                <div class="secao-titulo"><h3>Pendências críticas</h3><p>Itens que impactam liberação, mobilização ou controle documental.</p></div>
+                <div class="secao-corpo">${pendenciasHtml}</div>
+            </section>
+        </div>
+        ${rodapeRelatorio(3)}
     </main>
 </body>
 </html>`;
