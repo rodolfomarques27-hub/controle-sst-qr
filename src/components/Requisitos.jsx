@@ -471,6 +471,15 @@ export function Requisitos() {
                                 placeholder="Ex.: empresa, colaborador, QR, relatório, treinamento..."
                                 className="w-full bg-transparent text-sm font-bold text-slate-800 outline-none placeholder:text-slate-400"
                             />
+                            {termoBusca && (
+                                <button
+                                    type="button"
+                                    onClick={() => setTermoBusca("")}
+                                    className="flex-none rounded-full border border-slate-200 bg-slate-50 px-3 py-1.5 text-[11px] font-black uppercase tracking-[0.12em] text-slate-600 transition hover:border-slate-300 hover:bg-white"
+                                >
+                                    Limpar
+                                </button>
+                            )}
                         </div>
                     </Card>
 
