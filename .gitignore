@@ -27,3 +27,5 @@ dist-ssr
 /.gitignore
 /eslint.config.js
 supabase/.temp/
+.vercel
+.env*
