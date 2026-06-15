@@ -1332,35 +1332,35 @@ export async function baixarRelatorioDashboardSstPDF({
         border-top: 2px solid #07162f;
         border-bottom: 2px solid #07162f;
         text-align: center;
-        padding: 5px 8px 6px;
-        min-height: 30px;
+        padding: 7px 10px 8px;
+        min-height: 42px;
         display: flex;
         flex-direction: column;
         align-items: center;
         justify-content: center;
-        gap: 2px;
-        overflow: visible;
+        gap: 4px;
+        overflow: hidden;
     }
 
     .titulo-pdf-padrao h2 {
         margin: 0;
         color: var(--azul);
-        font-size: 15.8px;
-        line-height: 1.12;
+        font-size: 13.8px;
+        line-height: 1.16;
         font-weight: 900;
-        letter-spacing: .055em;
+        letter-spacing: .045em;
         text-transform: uppercase;
         white-space: normal;
-        max-width: 100%;
+        max-width: 98%;
     }
 
     .titulo-pdf-padrao p {
         margin: 0;
         color: #64748b;
-        font-size: 7px;
-        line-height: 1.25;
-        font-weight: 700;
-        max-width: 100%;
+        font-size: 7.2px;
+        line-height: 1.35;
+        font-weight: 800;
+        max-width: 96%;
     }
 
     .cabecalho-relatorio {
@@ -1860,9 +1860,9 @@ function montarEstilosRelatorioEmpresas() {
             .marca-pdf-textos h1 { margin: 0; color: #07162f; font-size: 28px; line-height: .94; letter-spacing: .16em; text-transform: uppercase; font-weight: 900; }
             .marca-pdf-textos p { margin: 2px 0 0; color: #334155; font-size: 7px; line-height: 1; letter-spacing: .32em; text-transform: uppercase; font-weight: 900; text-align: center; }
             .linha-pdf-padrao { height: 2px; background: #07162f; width: 100%; margin: 0; }
-            .titulo-pdf-padrao { border-top: 2px solid #07162f; border-bottom: 2px solid #07162f; text-align: center; padding: 5px 8px 6px; min-height: 30px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; overflow: visible; }
-            .titulo-pdf-padrao h2 { margin: 0; color: var(--azul); font-size: 15.8px; line-height: 1.12; text-transform: uppercase; letter-spacing: .055em; font-weight: 900; white-space: normal; max-width: 100%; }
-            .titulo-pdf-padrao p { margin: 0; color: #64748b; font-size: 7px; line-height: 1.25; font-weight: 700; max-width: 100%; }
+            .titulo-pdf-padrao { border-top: 2px solid #07162f; border-bottom: 2px solid #07162f; text-align: center; padding: 7px 10px 8px; min-height: 42px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; overflow: hidden; }
+            .titulo-pdf-padrao h2 { margin: 0; color: var(--azul); font-size: 13.8px; line-height: 1.16; text-transform: uppercase; letter-spacing: .045em; font-weight: 900; white-space: normal; max-width: 98%; }
+            .titulo-pdf-padrao p { margin: 0; color: #64748b; font-size: 7.2px; line-height: 1.35; font-weight: 800; max-width: 96%; }
             .metadados-relatorio-empresas { display: grid; grid-template-columns: repeat(4, 1fr); border: 1px solid var(--linha); border-radius: 12px; overflow: hidden; margin: 8px 0; background: #f9fbff; }
             .metadados-relatorio-empresas div { padding: 7px 9px; border-right: 1px solid var(--linha); }
             .metadados-relatorio-empresas div:last-child { border-right: 0; }
