@@ -1194,18 +1194,19 @@ export async function baixarRelatorioDashboardSstPDF({
     });
 
     const cabecalhoRelatorio = (subtitulo = "Resumo executivo com as informações dos cards e indicadores principais.") => `
-        <header class="cabecalho-relatorio">
+        <header class="cabecalho-relatorio cabecalho-relatorio--padrao-unico">
             <div class="marca-relatorio-controle">
                 <div class="escudo-controle-sst-relatorio">
                     <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3 5 6v5c0 4.6 2.9 8.8 7 10 4.1-1.2 7-5.4 7-10V6l-7-3Z"/><path d="m9.5 12 1.8 1.8 3.7-4"/></svg>
                 </div>
                 <div class="marca-relatorio-controle__textos">
                     <h1>CONTROLE SST QR</h1>
-                    <p>Gestão de Segurança do Trabalho</p>
+                    <p>GESTÃO DE SEGURANÇA DO TRABALHO</p>
                 </div>
             </div>
+            <div class="linha-cabecalho-padrao"></div>
             <div class="titulo-relatorio">
-                <h2>Relatório do Dashboard SST</h2>
+                <h2>RELATÓRIO DO DASHBOARD SST</h2>
                 <p>${escaparHTML(subtitulo)}</p>
             </div>
         </header>
@@ -1269,17 +1270,24 @@ export async function baixarRelatorioDashboardSstPDF({
 
     .cabecalho-relatorio {
         display: grid;
-        gap: 8px;
-        margin-bottom: 10px;
+        gap: 6px;
+        margin-bottom: 9px;
+    }
+
+    .linha-cabecalho-padrao {
+        height: 2px;
+        background: #07162f;
+        width: 100%;
+        margin: 0;
     }
 
     .marca-relatorio-controle {
         display: flex;
         align-items: center;
         justify-content: center;
-        gap: 9px;
+        gap: 10px;
         text-align: left;
-        padding-top: 2px;
+        padding-top: 1px;
     }
 
     .escudo-controle-sst-relatorio {
@@ -1303,18 +1311,19 @@ export async function baixarRelatorioDashboardSstPDF({
     .marca-relatorio-controle__textos h1 {
         margin: 0;
         color: #07162f;
-        font-size: 24px;
-        line-height: .92;
+        font-size: 28px;
+        line-height: .94;
         font-weight: 900;
-        letter-spacing: .14em;
+        letter-spacing: .16em;
+        text-transform: uppercase;
     }
 
     .marca-relatorio-controle__textos p {
         margin: 2px 0 0;
         color: #64748b;
-        font-size: 6.5px;
+        font-size: 7px;
         font-weight: 900;
-        letter-spacing: .42em;
+        letter-spacing: .34em;
         text-transform: uppercase;
     }
 
@@ -1322,16 +1331,16 @@ export async function baixarRelatorioDashboardSstPDF({
         border-top: 2px solid #07162f;
         border-bottom: 2px solid #07162f;
         text-align: center;
-        padding: 6px 0 5px;
+        padding: 4px 0 4px;
     }
 
     .titulo-relatorio h2 {
         margin: 0;
         color: var(--azul);
-        font-size: 15px;
+        font-size: 17px;
         line-height: 1;
         font-weight: 900;
-        letter-spacing: .08em;
+        letter-spacing: .07em;
         text-transform: uppercase;
     }
 
@@ -1642,17 +1651,17 @@ function contarDocumentosRelatorioEmpresas(empresas = []) {
 
 function montarCabecalhoRelatorioEmpresas(titulo = "Relatório de empresas e documentos", subtitulo = "") {
     return `
-        <header class="cabecalho-relatorio-empresas">
+        <header class="cabecalho-relatorio-empresas cabecalho-relatorio--padrao-unico">
             <div class="marca-relatorio-empresas">
-                <span class="escudo-relatorio-empresas">✓</span>
+                <span class="escudo-relatorio-empresas" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 3 5 6v5c0 4.6 2.9 8.8 7 10 4.1-1.2 7-5.4 7-10V6l-7-3Z"/><path d="m9.5 12 1.8 1.8 3.7-4"/></svg></span>
                 <div>
-                    <h1>Controle SST QR</h1>
-                    <p>Gestão de Segurança do Trabalho</p>
+                    <h1>CONTROLE SST QR</h1>
+                    <p>GESTÃO DE SEGURANÇA DO TRABALHO</p>
                 </div>
             </div>
             <div class="linha-cabecalho-relatorio-empresas"></div>
             <div class="titulo-relatorio-empresas">
-                <h2>${escaparHTML(titulo)}</h2>
+                <h2>${escaparHTML(String(titulo || "").toUpperCase())}</h2>
                 <p>${escaparHTML(subtitulo)}</p>
             </div>
         </header>
