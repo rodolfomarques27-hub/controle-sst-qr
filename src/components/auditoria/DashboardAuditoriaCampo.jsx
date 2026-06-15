@@ -1876,37 +1876,40 @@ export function DashboardAuditoriaCampo({
         @page { size: A4 ${orientacao === "landscape" ? "landscape" : "portrait"}; margin: 0; }
         * { box-sizing: border-box; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
         html, body { margin: 0; padding: 0; }
-        body { background: #ffffff; color: #020617; font-family: Arial, Helvetica, sans-serif; font-size: 10.5px; }
-        .pagina { width: 100%; min-height: 100vh; padding: 10mm; }
-        .topo { text-align: center; border-bottom: 3px solid #0f172a; padding-bottom: 10px; margin-bottom: 12px; }
-        .marca { display: inline-flex; align-items: center; gap: 10px; color: #020617; font-size: 28px; font-weight: 900; letter-spacing: 6px; text-transform: uppercase; }
+        body { background: #ffffff; color: #020617; font-family: Arial, Helvetica, sans-serif; font-size: 10.2px; }
+        .pagina { width: 100%; min-height: auto; padding: 9mm 10mm; }
+        .topo { text-align: center; border-bottom: 3px solid #0f172a; padding-bottom: 8px; margin-bottom: 10px; }
+        .marca { display: inline-flex; align-items: center; gap: 10px; color: #020617; font-size: 27px; font-weight: 900; letter-spacing: 6px; text-transform: uppercase; }
         .marca-icone { width: 30px; height: 30px; border: 3px solid #0f172a; border-radius: 12px; display: inline-flex; align-items: center; justify-content: center; font-size: 15px; letter-spacing: 0; }
         .submarca { margin-top: -2px; color: #334155; font-size: 8px; font-weight: 900; letter-spacing: 4px; text-transform: uppercase; }
-        .titulo { margin-top: 12px; border-top: 2px solid #0f172a; border-bottom: 2px solid #0f172a; padding: 7px 0; color: #075a9c; font-size: 17px; font-weight: 900; letter-spacing: 1px; text-transform: uppercase; }
+        .titulo { margin-top: 10px; border-top: 2px solid #0f172a; border-bottom: 2px solid #0f172a; padding: 6px 0; color: #075a9c; font-size: 16px; font-weight: 900; letter-spacing: 1px; text-transform: uppercase; }
         .subtitulo { margin-top: 5px; color: #64748b; font-size: 10px; font-weight: 700; }
-        .faixa { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0; overflow: hidden; border: 1px solid #dbe4ef; border-radius: 14px; margin-bottom: 10px; }
-        .faixa-item { padding: 9px 10px; background: #f8fafc; border-right: 1px solid #dbe4ef; }
+        .faixa { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0; overflow: hidden; border: 1px solid #dbe4ef; border-radius: 14px; margin-bottom: 8px; }
+        .faixa-item { padding: 8px 10px; background: #f8fafc; border-right: 1px solid #dbe4ef; }
         .faixa-item:last-child { border-right: none; }
         .faixa-label { color: #64748b; font-size: 8px; font-weight: 900; letter-spacing: .8px; text-transform: uppercase; }
         .faixa-valor { margin-top: 3px; color: #020617; font-size: 10px; font-weight: 900; }
-        .cards { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: 10px; }
-        .card-indicador { min-height: 72px; border: 1px solid #dbe4ef; border-radius: 14px; background: #f8fafc; padding: 10px; }
+        .cards { display: grid; grid-template-columns: repeat(4, 1fr); gap: 7px; margin-bottom: 9px; }
+        .card-indicador { min-height: 64px; border: 1px solid #dbe4ef; border-radius: 14px; background: #f8fafc; padding: 9px; }
         .card-label { color: #475569; font-size: 8px; font-weight: 900; letter-spacing: .9px; text-transform: uppercase; }
-        .card-valor { margin-top: 7px; color: #020617; font-size: 22px; line-height: 1; font-weight: 900; }
-        .card-detalhe { margin-top: 6px; color: #64748b; font-size: 8.5px; font-weight: 700; }
-        .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-        .secao { overflow: hidden; border: 1px solid #dbe4ef; border-radius: 14px; background: #ffffff; margin-bottom: 10px; break-inside: avoid; }
-        .secao h2 { margin: 0; background: #f8fafc; border-bottom: 1px solid #dbe4ef; padding: 8px 10px; color: #075a9c; font-size: 12px; font-weight: 900; letter-spacing: .6px; text-align: center; text-transform: uppercase; }
-        table { width: 100%; border-collapse: collapse; font-size: 8.8px; }
-        th { background: #005bab; color: #ffffff; padding: 7px 6px; text-align: left; font-size: 7.6px; font-weight: 900; letter-spacing: .4px; text-transform: uppercase; }
-        td { border-bottom: 1px solid #e2e8f0; padding: 6px; vertical-align: top; font-weight: 700; }
+        .card-valor { margin-top: 5px; color: #020617; font-size: 20px; line-height: 1; font-weight: 900; }
+        .card-detalhe { margin-top: 5px; color: #64748b; font-size: 8.2px; font-weight: 700; }
+        .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 9px; }
+        .secao { overflow: hidden; border: 1px solid #dbe4ef; border-radius: 14px; background: #ffffff; margin-bottom: 9px; break-inside: avoid; page-break-inside: avoid; }
+        .secao h2 { margin: 0; background: #f8fafc; border-bottom: 1px solid #dbe4ef; padding: 7px 10px; color: #075a9c; font-size: 11.5px; font-weight: 900; letter-spacing: .6px; text-align: center; text-transform: uppercase; }
+        table { width: 100%; border-collapse: collapse; font-size: 8.5px; }
+        th { background: #005bab; color: #ffffff; padding: 6px 6px; text-align: left; font-size: 7.4px; font-weight: 900; letter-spacing: .4px; text-transform: uppercase; }
+        td { border-bottom: 1px solid #e2e8f0; padding: 5px 6px; vertical-align: top; font-weight: 700; }
         tr:nth-child(even) td { background: #f8fafc; }
         .vazio { padding: 14px; text-align: center; color: #64748b; }
-        .rodape { margin-top: 12px; display: flex; align-items: center; justify-content: space-between; border-radius: 0 0 16px 16px; background: linear-gradient(90deg, #073763, #006dcc); color: #ffffff; padding: 10px 14px; font-size: 9px; font-weight: 900; }
+        .rodape { margin-top: 8px; display: flex; align-items: center; justify-content: space-between; border-radius: 0 0 16px 16px; background: linear-gradient(90deg, #073763, #006dcc); color: #ffffff; padding: 8px 14px; font-size: 8.8px; font-weight: 900; page-break-inside: avoid; }
+        .secao-historico-dashboard table { font-size: 7.8px; }
+        .secao-historico-dashboard th { font-size: 6.8px; padding: 5px 4px; }
+        .secao-historico-dashboard td { padding: 4px 4px; }
         @media print {
             html, body { width: 100%; min-height: 100%; }
             body { margin: 0 !important; padding: 0 !important; }
-            .pagina { padding: 10mm; min-height: 100vh; }
+            .pagina { padding: 9mm 10mm; min-height: auto; }
         }
     </style>
 </head>
@@ -1999,7 +2002,7 @@ export function DashboardAuditoriaCampo({
             { chave: "risco", label: "Risco" },
             { chave: "resultado", label: "Resultado" },
         ];
-        const linhasHistorico = auditoriasFiltradas.slice(0, 12).map((item) => {
+        const linhasHistorico = auditoriasFiltradas.slice(0, 8).map((item) => {
             const alvo = identificarAlvoAuditoriaCampo(item);
             return {
                 numero: item.numeroAuditoria || "-",
@@ -2022,7 +2025,7 @@ export function DashboardAuditoriaCampo({
                 <section class="secao"><h2>Ranking por empresa</h2><table><thead><tr>${colunasEmpresas.map((coluna) => `<th>${escaparTextoImpressaoQr(coluna.label)}</th>`).join("")}</tr></thead><tbody>${montarLinhasTabelaRelatorioAuditoriaCampo(linhasEmpresas, colunasEmpresas)}</tbody></table></section>
                 <section class="secao"><h2>Ranking por área/local</h2><table><thead><tr>${colunasAreas.map((coluna) => `<th>${escaparTextoImpressaoQr(coluna.label)}</th>`).join("")}</tr></thead><tbody>${montarLinhasTabelaRelatorioAuditoriaCampo(linhasAreas, colunasAreas)}</tbody></table></section>
             </div>
-            <section class="secao"><h2>Histórico recente filtrado</h2><table><thead><tr>${colunasHistorico.map((coluna) => `<th>${escaparTextoImpressaoQr(coluna.label)}</th>`).join("")}</tr></thead><tbody>${montarLinhasTabelaRelatorioAuditoriaCampo(linhasHistorico, colunasHistorico)}</tbody></table></section>
+            <section class="secao secao-historico-dashboard"><h2>Histórico recente filtrado</h2><table><thead><tr>${colunasHistorico.map((coluna) => `<th>${escaparTextoImpressaoQr(coluna.label)}</th>`).join("")}</tr></thead><tbody>${montarLinhasTabelaRelatorioAuditoriaCampo(linhasHistorico, colunasHistorico)}</tbody></table></section>
         `;
 
         abrirRelatorioAuditoriaCampo(montarHtmlRelatorioAuditoriaCampo({
