@@ -411,9 +411,47 @@ function montarCartaoResumoRelatorio({ icone, titulo, valor, classe }) {
     `;
 }
 
+function montarCabecalhoEmpresaTreinamentosRelatorio(empresa = {}, dataEmissao = "", titulo = "Relatório de colaboradores e treinamentos") {
+    return `
+        <header class="cabecalho-relatorio cabecalho-relatorio--modelo-aprovado">
+            <div class="marca-empresa">
+                ${montarLogoEmpresaHtml(empresa)}
+                <div class="marca-empresa-textos">
+                    <h1>${escaparHTML(empresa.nome || "Empresa")}</h1>
+                    <p>Controle SST QR</p>
+                </div>
+            </div>
+
+            <div class="titulo-relatorio-cabecalho">
+                <span></span>
+                <strong>${escaparHTML(titulo)}</strong>
+                <span></span>
+            </div>
+
+            <div class="dados-empresa">
+                <div class="dados-empresa__item dados-empresa__item--empresa"><span>${ICONES_CABECALHO_RELATORIO_COLABORADORES.empresa}</span><strong>Empresa:</strong><em>${escaparHTML(empresa.nome || "-")}</em></div>
+                <div class="dados-empresa__item dados-empresa__item--cnpj"><span>${ICONES_CABECALHO_RELATORIO_COLABORADORES.cnpj}</span><strong>CNPJ:</strong><em>${escaparHTML(empresa.cnpj || "-")}</em></div>
+                <div class="dados-empresa__item dados-empresa__item--responsavel"><span>${ICONES_CABECALHO_RELATORIO_COLABORADORES.responsavel}</span><strong>Responsável:</strong><em>${escaparHTML(empresa.responsavel || "-")}</em></div>
+                <div class="dados-empresa__item dados-empresa__item--data"><span>${ICONES_CABECALHO_RELATORIO_COLABORADORES.data}</span><strong>Data de emissão:</strong><em>${escaparHTML(dataEmissao)}</em></div>
+                <div class="dados-empresa__item dados-empresa__item--sistema"><span>${ICONES_CABECALHO_RELATORIO_COLABORADORES.sistema}</span><strong>Sistema:</strong><em>Controle SST QR</em></div>
+            </div>
+        </header>
+    `;
+}
+
+function montarRodapeTreinamentosRelatorio(texto = "Relatório visual por empresa") {
+    return `
+        <footer class="rodape-relatorio">
+            <span>🛡 Controle SST QR</span>
+            <span>${escaparHTML(texto)}</span>
+        </footer>
+    `;
+}
+
 function montarSecaoEmpresaRelatorio(empresa = {}, indiceEmpresa = 0, dataEmissao = "") {
-    const resumo = calcularResumoEmpresaRelatorio(empresa.colaboradores || []);
-    const linhasTabela = (empresa.colaboradores || []).map((colaborador, indice) => `
+    const colaboradoresEmpresa = Array.isArray(empresa.colaboradores) ? empresa.colaboradores : [];
+    const resumo = calcularResumoEmpresaRelatorio(colaboradoresEmpresa);
+    const linhasTabela = colaboradoresEmpresa.map((colaborador, indice) => `
         <tr>
             <td>${indice + 1}</td>
             <td class="texto-forte">${escaparHTML(colaborador.nome || "-")}</td>
@@ -426,7 +464,7 @@ function montarSecaoEmpresaRelatorio(empresa = {}, indiceEmpresa = 0, dataEmissa
         </tr>
     `).join("");
 
-    const detalhes = (empresa.colaboradores || []).map((colaborador, indice) => {
+    const detalhes = colaboradoresEmpresa.map((colaborador, indice) => {
         const validos = limparListaRelatorio(colaborador.validos);
         const pendentes = limparListaRelatorio(colaborador.pendentes);
         const vencidos = limparListaRelatorio(colaborador.vencidos);
@@ -437,83 +475,68 @@ function montarSecaoEmpresaRelatorio(empresa = {}, indiceEmpresa = 0, dataEmissa
             : escaparHTML(obterIniciaisEmpresa(colaborador.nome || "C"));
 
         return `
-            <section class="detalhe-colaborador">
-                <div class="detalhe-topo">
-                    <div class="numero-colaborador">
-                        <svg viewBox="0 0 26 26" aria-hidden="true" focusable="false">
-                            <rect x="0" y="0" width="26" height="26" rx="7"></rect>
-                            <text x="13" y="13" dominant-baseline="central" text-anchor="middle">${indice + 1}</text>
-                        </svg>
-                    </div>
-                    <div class="avatar-colaborador ${colaborador.fotoUrl ? "avatar-colaborador--foto" : ""}">${fotoColaborador}</div>
-                    <div class="detalhe-identificacao">
-                        <h3>${escaparHTML(colaborador.nome || "-")}</h3>
-                        <p><strong>Código:</strong> ${escaparHTML(colaborador.codigo || "-")}</p>
-                        <p><strong>Função:</strong> ${escaparHTML(colaborador.funcao || "-")}</p>
-                        <p><strong>Matriz aplicada:</strong> ${escaparHTML(colaborador.matriz || "-")}</p>
-                    </div>
-                    <div class="detalhe-status">
-                        <div class="detalhe-status-linha detalhe-status-linha--empresa">
-                            <strong>Empresa:</strong>
-                            <span>${escaparHTML(colaborador.empresaExibicao || colaborador.empresaNome || empresa.nome || "-")}</span>
+            <section class="pagina-relatorio quebra-pagina pagina-relatorio--detalhe-colaborador">
+                ${montarCabecalhoEmpresaTreinamentosRelatorio(empresa, dataEmissao, "Detalhamento de colaborador e treinamentos")}
+                <section class="bloco bloco-detalhamento bloco-detalhamento--pagina-unica">
+                    <h2>Detalhamento</h2>
+                    <section class="detalhe-colaborador detalhe-colaborador--pagina-unica">
+                        <div class="detalhe-topo">
+                            <div class="numero-colaborador">
+                                <svg viewBox="0 0 26 26" aria-hidden="true" focusable="false">
+                                    <rect x="0" y="0" width="26" height="26" rx="7"></rect>
+                                    <text x="13" y="13" dominant-baseline="central" text-anchor="middle">${indice + 1}</text>
+                                </svg>
+                            </div>
+                            <div class="avatar-colaborador ${colaborador.fotoUrl ? "avatar-colaborador--foto" : ""}">${fotoColaborador}</div>
+                            <div class="detalhe-identificacao">
+                                <h3>${escaparHTML(colaborador.nome || "-")}</h3>
+                                <p><strong>Código:</strong> ${escaparHTML(colaborador.codigo || "-")}</p>
+                                <p><strong>Função:</strong> ${escaparHTML(colaborador.funcao || "-")}</p>
+                                <p><strong>Matriz aplicada:</strong> ${escaparHTML(colaborador.matriz || "-")}</p>
+                            </div>
+                            <div class="detalhe-status">
+                                <div class="detalhe-status-linha detalhe-status-linha--empresa">
+                                    <strong>Empresa:</strong>
+                                    <span>${escaparHTML(colaborador.empresaExibicao || colaborador.empresaNome || empresa.nome || "-")}</span>
+                                </div>
+                                <div class="detalhe-status-linha">
+                                    <strong>Situação na obra:</strong>
+                                    <span class="detalhe-status-valor ${classeStatusRelatorio(colaborador.statusMobilizacao)}">${escaparHTML(colaborador.statusMobilizacao || "-")}</span>
+                                </div>
+                                <div class="detalhe-status-linha">
+                                    <strong>Status geral:</strong>
+                                    <span class="detalhe-status-valor ${classeStatusRelatorio(colaborador.statusGeral)}">${escaparHTML(colaborador.statusGeral || "-")}</span>
+                                </div>
+                            </div>
                         </div>
-                        <div class="detalhe-status-linha">
-                            <strong>Situação na obra:</strong>
-                            <span class="detalhe-status-valor ${classeStatusRelatorio(colaborador.statusMobilizacao)}">${escaparHTML(colaborador.statusMobilizacao || "-")}</span>
+                        <div class="detalhe-grids">
+                            <div class="lista-card lista-card-ok">
+                                <h4>✅ Válidos (${validos.length})</h4>
+                                ${montarListaHtmlRelatorio(validos, "Nenhum treinamento válido.")}
+                            </div>
+                            <div class="lista-card lista-card-pendente">
+                                <h4>⚠️ Pendentes (${pendentes.length})</h4>
+                                ${montarListaHtmlRelatorio(pendentes, "Nenhuma pendência.")}
+                            </div>
+                            <div class="lista-card lista-card-vencido">
+                                <h4>🔒 Vencidos (${vencidos.length})</h4>
+                                ${montarListaHtmlRelatorio(vencidos, "Nenhum treinamento vencido.")}
+                            </div>
+                            <div class="lista-card lista-card-vencendo">
+                                <h4>◷ A vencer (${vencendo.length})</h4>
+                                ${montarListaHtmlRelatorio(vencendo, "Nenhum treinamento a vencer.")}
+                            </div>
                         </div>
-                        <div class="detalhe-status-linha">
-                            <strong>Status geral:</strong>
-                            <span class="detalhe-status-valor ${classeStatusRelatorio(colaborador.statusGeral)}">${escaparHTML(colaborador.statusGeral || "-")}</span>
-                        </div>
-                    </div>
-                </div>
-                <div class="detalhe-grids">
-                    <div class="lista-card lista-card-ok">
-                        <h4>✅ Válidos (${validos.length})</h4>
-                        ${montarListaHtmlRelatorio(validos, "Nenhum treinamento válido.")}
-                    </div>
-                    <div class="lista-card lista-card-pendente">
-                        <h4>⚠️ Pendentes (${pendentes.length})</h4>
-                        ${montarListaHtmlRelatorio(pendentes, "Nenhuma pendência.")}
-                    </div>
-                    <div class="lista-card lista-card-vencido">
-                        <h4>🔒 Vencidos (${vencidos.length})</h4>
-                        ${montarListaHtmlRelatorio(vencidos, "Nenhum treinamento vencido.")}
-                    </div>
-                    <div class="lista-card lista-card-vencendo">
-                        <h4>◷ A vencer (${vencendo.length})</h4>
-                        ${montarListaHtmlRelatorio(vencendo, "Nenhum treinamento a vencer.")}
-                    </div>
-                </div>
+                    </section>
+                </section>
+                ${montarRodapeTreinamentosRelatorio("Relatório visual por empresa")}
             </section>
         `;
     }).join("");
 
     return `
         <section class="pagina-relatorio ${indiceEmpresa > 0 ? "quebra-pagina" : ""}">
-            <header class="cabecalho-relatorio cabecalho-relatorio--modelo-aprovado">
-                <div class="marca-empresa">
-                    ${montarLogoEmpresaHtml(empresa)}
-                    <div class="marca-empresa-textos">
-                        <h1>${escaparHTML(empresa.nome || "Empresa")}</h1>
-                        <p>Controle SST QR</p>
-                    </div>
-                </div>
-
-                <div class="titulo-relatorio-cabecalho">
-                    <span></span>
-                    <strong>Relatório de colaboradores e treinamentos</strong>
-                    <span></span>
-                </div>
-
-                <div class="dados-empresa">
-                    <div class="dados-empresa__item dados-empresa__item--empresa"><span>${ICONES_CABECALHO_RELATORIO_COLABORADORES.empresa}</span><strong>Empresa:</strong><em>${escaparHTML(empresa.nome || "-")}</em></div>
-                    <div class="dados-empresa__item dados-empresa__item--cnpj"><span>${ICONES_CABECALHO_RELATORIO_COLABORADORES.cnpj}</span><strong>CNPJ:</strong><em>${escaparHTML(empresa.cnpj || "-")}</em></div>
-                    <div class="dados-empresa__item dados-empresa__item--responsavel"><span>${ICONES_CABECALHO_RELATORIO_COLABORADORES.responsavel}</span><strong>Responsável:</strong><em>${escaparHTML(empresa.responsavel || "-")}</em></div>
-                    <div class="dados-empresa__item dados-empresa__item--data"><span>${ICONES_CABECALHO_RELATORIO_COLABORADORES.data}</span><strong>Data de emissão:</strong><em>${escaparHTML(dataEmissao)}</em></div>
-                    <div class="dados-empresa__item dados-empresa__item--sistema"><span>${ICONES_CABECALHO_RELATORIO_COLABORADORES.sistema}</span><strong>Sistema:</strong><em>Controle SST QR</em></div>
-                </div>
-            </header>
+            ${montarCabecalhoEmpresaTreinamentosRelatorio(empresa, dataEmissao, "Relatório de colaboradores e treinamentos")}
 
             <section class="bloco">
                 <h2>Resumo geral</h2>
@@ -559,16 +582,15 @@ function montarSecaoEmpresaRelatorio(empresa = {}, indiceEmpresa = 0, dataEmissa
                 </table>
             </section>
 
-            <section class="bloco bloco-detalhamento">
-                <h2>Detalhamento</h2>
-                ${detalhes || `<p class="lista-vazia">Nenhum colaborador para detalhar.</p>`}
-            </section>
-
-            <footer class="rodape-relatorio">
-                <span>🛡 Controle SST QR</span>
-                <span>Relatório visual por empresa</span>
-            </footer>
+            ${montarRodapeTreinamentosRelatorio("Relatório visual por empresa")}
         </section>
+        ${detalhes || `
+            <section class="pagina-relatorio quebra-pagina">
+                ${montarCabecalhoEmpresaTreinamentosRelatorio(empresa, dataEmissao, "Detalhamento de colaborador e treinamentos")}
+                <section class="bloco bloco-detalhamento"><h2>Detalhamento</h2><p class="lista-vazia">Nenhum colaborador para detalhar.</p></section>
+                ${montarRodapeTreinamentosRelatorio("Relatório visual por empresa")}
+            </section>
+        `}
     `;
 }
 
@@ -845,100 +867,90 @@ function calcularResumoPendenciasRelatorio(pendencias = []) {
     );
 }
 
-function montarSecaoEmpresaPendenciasRelatorio(empresa = {}, indiceEmpresa = 0, dataEmissao = "") {
-    const resumo = calcularResumoPendenciasRelatorio(empresa.pendencias || []);
-
-    const linhasTabela = (empresa.pendencias || []).map((pendencia, indice) => `
-        <tr>
-            <td>${indice + 1}</td>
-            <td class="texto-forte">${escaparHTML(pendencia.colaborador || "-")}</td>
-            <td>${escaparHTML(pendencia.funcao || "-")}</td>
-            <td class="texto-forte">${escaparHTML(pendencia.treinamento || "-")}</td>
-            <td><span class="status-texto ${classePendenciaRelatorio(pendencia.situacao)}">${escaparHTML(pendencia.situacao || "-")}</span></td>
-            <td>${escaparHTML(pendencia.vencimento || "-")}</td>
-            <td>${escaparHTML(pendencia.base || "-")}</td>
-        </tr>
-    `).join("");
-
+function montarTabelaPendenciasTreinamentosRelatorio(linhasTabela = "") {
     return `
-        <section class="pagina-relatorio ${indiceEmpresa > 0 ? "quebra-pagina" : ""}">
-            <header class="cabecalho-relatorio cabecalho-relatorio--modelo-aprovado">
-                <div class="marca-empresa">
-                    ${montarLogoEmpresaHtml(empresa)}
-                    <div class="marca-empresa-textos">
-                        <h1>${escaparHTML(empresa.nome || "Empresa")}</h1>
-                        <p>Controle SST QR</p>
-                    </div>
-                </div>
-
-                <div class="titulo-relatorio-cabecalho">
-                    <span></span>
-                    <strong>Relatório de pendências de treinamentos</strong>
-                    <span></span>
-                </div>
-
-                <div class="dados-empresa">
-                    <div class="dados-empresa__item dados-empresa__item--empresa"><span>${ICONES_CABECALHO_RELATORIO_COLABORADORES.empresa}</span><strong>Empresa:</strong><em>${escaparHTML(empresa.nome || "-")}</em></div>
-                    <div class="dados-empresa__item dados-empresa__item--cnpj"><span>${ICONES_CABECALHO_RELATORIO_COLABORADORES.cnpj}</span><strong>CNPJ:</strong><em>${escaparHTML(empresa.cnpj || "-")}</em></div>
-                    <div class="dados-empresa__item dados-empresa__item--responsavel"><span>${ICONES_CABECALHO_RELATORIO_COLABORADORES.responsavel}</span><strong>Responsável:</strong><em>${escaparHTML(empresa.responsavel || "-")}</em></div>
-                    <div class="dados-empresa__item dados-empresa__item--data"><span>${ICONES_CABECALHO_RELATORIO_COLABORADORES.data}</span><strong>Data de emissão:</strong><em>${escaparHTML(dataEmissao)}</em></div>
-                    <div class="dados-empresa__item dados-empresa__item--sistema"><span>${ICONES_CABECALHO_RELATORIO_COLABORADORES.sistema}</span><strong>Sistema:</strong><em>Controle SST QR</em></div>
-                </div>
-            </header>
-
-            <section class="bloco">
-                <h2>Resumo geral das pendências</h2>
-                <div class="kpis">
-                    ${montarCartaoResumoRelatorio({ icone: ICONES_RELATORIO_COLABORADORES.total, titulo: "Total", valor: resumo.total, classe: "kpi-total" })}
-                    ${montarCartaoResumoRelatorio({ icone: ICONES_RELATORIO_COLABORADORES.pendencia, titulo: "Pendentes", valor: resumo.pendentes, classe: "kpi-info" })}
-                    ${montarCartaoResumoRelatorio({ icone: ICONES_RELATORIO_COLABORADORES.vencidos, titulo: "Vencidos", valor: resumo.vencidos, classe: "kpi-vencido" })}
-                    ${montarCartaoResumoRelatorio({ icone: ICONES_RELATORIO_COLABORADORES.vencer, titulo: "A vencer", valor: resumo.vencendo, classe: "kpi-vencendo" })}
-                    ${montarCartaoResumoRelatorio({ icone: ICONES_RELATORIO_COLABORADORES.analise, titulo: "Colaboradores", valor: resumo.colaboradores, classe: "kpi-alerta" })}
-                    ${montarCartaoResumoRelatorio({ icone: ICONES_RELATORIO_COLABORADORES.liberados, titulo: "Funções", valor: resumo.funcoes, classe: "kpi-ok" })}
-                    ${montarCartaoResumoRelatorio({ icone: ICONES_RELATORIO_COLABORADORES.bloqueados, titulo: "Crítico", valor: resumo.vencidos, classe: "kpi-critico" })}
-                </div>
-            </section>
-
-            <section class="bloco">
-                <h2>Lista de pendências</h2>
-                <div class="observacao-pendencias">
-                    Este relatório apresenta apenas treinamentos pendentes, vencidos ou a vencer conforme a matriz aplicada por função.
-                </div>
-                <table class="tabela-pendencias-treinamentos">
-                    <colgroup>
-                        <col class="col-numero" />
-                        <col class="col-colaborador" />
-                        <col class="col-funcao" />
-                        <col class="col-treinamento" />
-                        <col class="col-situacao" />
-                        <col class="col-vencimento" />
-                        <col class="col-base" />
-                    </colgroup>
-                    <thead>
-                        <tr>
-                            <th><div class="th-conteudo">#</div></th>
-                            <th><div class="th-conteudo">Colaborador</div></th>
-                            <th><div class="th-conteudo">Função</div></th>
-                            <th><div class="th-conteudo">Treinamento</div></th>
-                            <th><div class="th-conteudo">Situação</div></th>
-                            <th><div class="th-conteudo">Vencimento</div></th>
-                            <th><div class="th-conteudo">Base</div></th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        ${linhasTabela || `<tr><td colspan="7">Nenhuma pendência encontrada.</td></tr>`}
-                    </tbody>
-                </table>
-            </section>
-
-            <footer class="rodape-relatorio">
-                <span>🛡 Controle SST QR</span>
-                <span>Relatório visual por empresa</span>
-            </footer>
+        <section class="bloco">
+            <h2>Lista de pendências</h2>
+            <div class="observacao-pendencias">
+                Este relatório apresenta apenas treinamentos pendentes, vencidos ou a vencer conforme a matriz aplicada por função.
+            </div>
+            <table class="tabela-pendencias-treinamentos">
+                <colgroup>
+                    <col class="col-numero" />
+                    <col class="col-colaborador" />
+                    <col class="col-funcao" />
+                    <col class="col-treinamento" />
+                    <col class="col-situacao" />
+                    <col class="col-vencimento" />
+                    <col class="col-base" />
+                </colgroup>
+                <thead>
+                    <tr>
+                        <th><div class="th-conteudo">#</div></th>
+                        <th><div class="th-conteudo">Colaborador</div></th>
+                        <th><div class="th-conteudo">Função</div></th>
+                        <th><div class="th-conteudo">Treinamento</div></th>
+                        <th><div class="th-conteudo">Situação</div></th>
+                        <th><div class="th-conteudo">Vencimento</div></th>
+                        <th><div class="th-conteudo">Base</div></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${linhasTabela || `<tr><td colspan="7">Nenhuma pendência encontrada.</td></tr>`}
+                </tbody>
+            </table>
         </section>
     `;
 }
 
+function montarSecaoEmpresaPendenciasRelatorio(empresa = {}, indiceEmpresa = 0, dataEmissao = "") {
+    const pendenciasEmpresa = Array.isArray(empresa.pendencias) ? empresa.pendencias : [];
+    const resumo = calcularResumoPendenciasRelatorio(pendenciasEmpresa);
+    const lotesPendencias = dividirEmLotesRelatorioEmpresas(pendenciasEmpresa, 10);
+
+    return lotesPendencias.map((lote, indicePagina) => {
+        const deslocamento = indicePagina * 10;
+        const linhasTabela = lote.map((pendencia, indice) => `
+            <tr>
+                <td>${deslocamento + indice + 1}</td>
+                <td class="texto-forte">${escaparHTML(pendencia.colaborador || "-")}</td>
+                <td>${escaparHTML(pendencia.funcao || "-")}</td>
+                <td class="texto-forte">${escaparHTML(pendencia.treinamento || "-")}</td>
+                <td><span class="status-texto ${classePendenciaRelatorio(pendencia.situacao)}">${escaparHTML(pendencia.situacao || "-")}</span></td>
+                <td>${escaparHTML(pendencia.vencimento || "-")}</td>
+                <td>${escaparHTML(pendencia.base || "-")}</td>
+            </tr>
+        `).join("");
+
+        const deveQuebrar = indiceEmpresa > 0 || indicePagina > 0;
+        const mostrarResumo = indicePagina === 0;
+
+        return `
+            <section class="pagina-relatorio ${deveQuebrar ? "quebra-pagina" : ""}">
+                ${montarCabecalhoEmpresaTreinamentosRelatorio(empresa, dataEmissao, indicePagina === 0 ? "Relatório de pendências de treinamentos" : "Continuação das pendências de treinamentos")}
+
+                ${mostrarResumo ? `
+                    <section class="bloco">
+                        <h2>Resumo geral das pendências</h2>
+                        <div class="kpis">
+                            ${montarCartaoResumoRelatorio({ icone: ICONES_RELATORIO_COLABORADORES.total, titulo: "Total", valor: resumo.total, classe: "kpi-total" })}
+                            ${montarCartaoResumoRelatorio({ icone: ICONES_RELATORIO_COLABORADORES.pendencia, titulo: "Pendentes", valor: resumo.pendentes, classe: "kpi-info" })}
+                            ${montarCartaoResumoRelatorio({ icone: ICONES_RELATORIO_COLABORADORES.vencidos, titulo: "Vencidos", valor: resumo.vencidos, classe: "kpi-vencido" })}
+                            ${montarCartaoResumoRelatorio({ icone: ICONES_RELATORIO_COLABORADORES.vencer, titulo: "A vencer", valor: resumo.vencendo, classe: "kpi-vencendo" })}
+                            ${montarCartaoResumoRelatorio({ icone: ICONES_RELATORIO_COLABORADORES.analise, titulo: "Colaboradores", valor: resumo.colaboradores, classe: "kpi-alerta" })}
+                            ${montarCartaoResumoRelatorio({ icone: ICONES_RELATORIO_COLABORADORES.liberados, titulo: "Funções", valor: resumo.funcoes, classe: "kpi-ok" })}
+                            ${montarCartaoResumoRelatorio({ icone: ICONES_RELATORIO_COLABORADORES.bloqueados, titulo: "Crítico", valor: resumo.vencidos, classe: "kpi-critico" })}
+                        </div>
+                    </section>
+                ` : ""}
+
+                ${montarTabelaPendenciasTreinamentosRelatorio(linhasTabela)}
+
+                ${montarRodapeTreinamentosRelatorio(indicePagina === 0 ? "Relatório visual por empresa" : "Continuação do relatório visual por empresa")}
+            </section>
+        `;
+    }).join("");
+}
 
 function valorSeguroRelatorioDashboard(valor, fallback = "-") {
     if (valor === null || valor === undefined || valor === "") return fallback;
@@ -2615,6 +2627,20 @@ export async function baixarRelatorioColaboradoresTreinamentosPDF({
         overflow: visible;
     }
 
+
+
+    .pagina-relatorio--detalhe-colaborador {
+        page-break-before: always;
+    }
+
+    .bloco-detalhamento--pagina-unica {
+        margin-top: 10px;
+    }
+
+    .detalhe-colaborador--pagina-unica {
+        margin-top: 0;
+        page-break-inside: avoid;
+    }
     .detalhe-colaborador {
         border: 1px solid var(--linha);
         border-radius: 14px;
