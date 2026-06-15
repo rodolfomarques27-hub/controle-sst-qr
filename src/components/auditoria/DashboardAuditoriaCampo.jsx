@@ -1878,14 +1878,16 @@ export function DashboardAuditoriaCampo({
         html, body { margin: 0; padding: 0; }
         body { background: #ffffff; color: #020617; font-family: Arial, Helvetica, sans-serif; font-size: 10.2px; }
         .pagina { width: 100%; min-height: auto; padding: 9mm 10mm; }
-        .topo { text-align: center; padding-bottom: 0; margin-bottom: 9px; }
-        .marca { display: inline-flex; align-items: center; justify-content: center; gap: 10px; color: #07162f; font-size: 28px; line-height: .94; font-weight: 900; letter-spacing: .16em; text-transform: uppercase; }
-        .marca-icone { width: 30px; height: 30px; display: inline-grid; place-items: center; color: #07162f; letter-spacing: 0; }
-        .marca-icone svg { width: 27px; height: 27px; fill: none; stroke: currentColor; stroke-width: 1.9; stroke-linecap: round; stroke-linejoin: round; }
-        .submarca { margin-top: 2px; color: #334155; font-size: 7px; font-weight: 900; letter-spacing: .34em; text-transform: uppercase; }
-        .linha-cabecalho { height: 2px; background: #07162f; margin: 6px 0 6px; }
-        .titulo { border-top: 2px solid #07162f; border-bottom: 2px solid #07162f; padding: 4px 0; color: #075a9c; font-size: 17px; line-height: 1; font-weight: 900; letter-spacing: .07em; text-transform: uppercase; }
-        .subtitulo { margin-top: 2px; color: #64748b; font-size: 7.2px; font-weight: 700; }
+        .cabecalho-pdf-padrao { display: grid; gap: 6px; margin-bottom: 9px; }
+        .marca-pdf-padrao { display: flex; align-items: center; justify-content: center; gap: 10px; text-align: left; padding-top: 1px; }
+        .marca-pdf-icone { width: 30px; height: 30px; display: grid; place-items: center; color: #07162f; flex: 0 0 auto; }
+        .marca-pdf-icone svg { width: 27px; height: 27px; fill: none; stroke: currentColor; stroke-width: 1.9; stroke-linecap: round; stroke-linejoin: round; }
+        .marca-pdf-textos h1 { margin: 0; color: #07162f; font-size: 28px; line-height: .94; letter-spacing: .16em; text-transform: uppercase; font-weight: 900; }
+        .marca-pdf-textos p { margin: 2px 0 0; color: #334155; font-size: 7px; line-height: 1; letter-spacing: .32em; text-transform: uppercase; font-weight: 900; text-align: center; }
+        .linha-pdf-padrao { height: 2px; background: #07162f; width: 100%; margin: 0; }
+        .titulo-pdf-padrao { border-top: 2px solid #07162f; border-bottom: 2px solid #07162f; text-align: center; padding: 4px 0 3px; }
+        .titulo-pdf-padrao h2 { margin: 0; color: #075a9c; font-size: 17px; line-height: 1; text-transform: uppercase; letter-spacing: .07em; font-weight: 900; }
+        .titulo-pdf-padrao p { margin: 2px 0 0; color: #64748b; font-size: 7.2px; font-weight: 700; }
         .faixa { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0; overflow: hidden; border: 1px solid #dbe4ef; border-radius: 14px; margin-bottom: 8px; }
         .faixa-item { padding: 8px 10px; background: #f8fafc; border-right: 1px solid #dbe4ef; }
         .faixa-item:last-child { border-right: none; }
@@ -1917,12 +1919,16 @@ export function DashboardAuditoriaCampo({
 </head>
 <body>
     <main class="pagina">
-        <header class="topo">
-            <div class="marca"><span class="marca-icone" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 3 5 6v5c0 4.6 2.9 8.8 7 10 4.1-1.2 7-5.4 7-10V6l-7-3Z"/><path d="m9.5 12 1.8 1.8 3.7-4"/></svg></span>CONTROLE SST QR</div>
-            <div class="submarca">GESTÃO DE SEGURANÇA DO TRABALHO</div>
-            <div class="linha-cabecalho"></div>
-            <div class="titulo">${escaparTextoImpressaoQr(titulo || "Relatório da Auditoria de Campo")}</div>
-            <div class="subtitulo">${escaparTextoImpressaoQr(subtitulo || "Relatório gerado pelo Dashboard Auditoria de Campo.")}</div>
+        <header class="cabecalho-pdf-padrao">
+            <div class="marca-pdf-padrao">
+                <span class="marca-pdf-icone" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 3 5 6v5c0 4.6 2.9 8.8 7 10 4.1-1.2 7-5.4 7-10V6l-7-3Z"/><path d="m9.5 12 1.8 1.8 3.7-4"/></svg></span>
+                <div class="marca-pdf-textos"><h1>CONTROLE SST QR</h1><p>GESTÃO DE SEGURANÇA DO TRABALHO</p></div>
+            </div>
+            <div class="linha-pdf-padrao"></div>
+            <div class="titulo-pdf-padrao">
+                <h2>${escaparTextoImpressaoQr(titulo || "Relatório da Auditoria de Campo")}</h2>
+                <p>${escaparTextoImpressaoQr(subtitulo || "Relatório gerado pelo Dashboard Auditoria de Campo.")}</p>
+            </div>
         </header>
         <section class="faixa">
             <div class="faixa-item"><div class="faixa-label">Emissão</div><div class="faixa-valor">${escaparTextoImpressaoQr(formatarDataHora(new Date().toISOString()))}</div></div>

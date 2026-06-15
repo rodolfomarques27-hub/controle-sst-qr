@@ -1194,18 +1194,16 @@ export async function baixarRelatorioDashboardSstPDF({
     });
 
     const cabecalhoRelatorio = (subtitulo = "Resumo executivo com as informações dos cards e indicadores principais.") => `
-        <header class="cabecalho-relatorio cabecalho-relatorio--padrao-unico">
-            <div class="marca-relatorio-controle">
-                <div class="escudo-controle-sst-relatorio">
-                    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3 5 6v5c0 4.6 2.9 8.8 7 10 4.1-1.2 7-5.4 7-10V6l-7-3Z"/><path d="m9.5 12 1.8 1.8 3.7-4"/></svg>
-                </div>
-                <div class="marca-relatorio-controle__textos">
+        <header class="cabecalho-pdf-padrao">
+            <div class="marca-pdf-padrao">
+                <span class="marca-pdf-icone" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 3 5 6v5c0 4.6 2.9 8.8 7 10 4.1-1.2 7-5.4 7-10V6l-7-3Z"/><path d="m9.5 12 1.8 1.8 3.7-4"/></svg></span>
+                <div class="marca-pdf-textos">
                     <h1>CONTROLE SST QR</h1>
                     <p>GESTÃO DE SEGURANÇA DO TRABALHO</p>
                 </div>
             </div>
-            <div class="linha-cabecalho-padrao"></div>
-            <div class="titulo-relatorio">
+            <div class="linha-pdf-padrao"></div>
+            <div class="titulo-pdf-padrao">
                 <h2>RELATÓRIO DO DASHBOARD SST</h2>
                 <p>${escaparHTML(subtitulo)}</p>
             </div>
@@ -1266,6 +1264,92 @@ export async function baixarRelatorioDashboardSstPDF({
     .pagina-relatorio:last-child {
         page-break-after: auto;
         break-after: auto;
+    }
+
+    .cabecalho-pdf-padrao {
+        display: grid;
+        gap: 6px;
+        margin-bottom: 9px;
+    }
+
+    .marca-pdf-padrao {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 10px;
+        text-align: left;
+        padding-top: 1px;
+    }
+
+    .marca-pdf-icone {
+        width: 30px;
+        height: 30px;
+        display: grid;
+        place-items: center;
+        color: #07162f;
+        flex: 0 0 auto;
+    }
+
+    .marca-pdf-icone svg {
+        width: 27px;
+        height: 27px;
+        fill: none;
+        stroke: currentColor;
+        stroke-width: 1.9;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+    }
+
+    .marca-pdf-textos h1 {
+        margin: 0;
+        color: #07162f;
+        font-size: 28px;
+        line-height: .94;
+        font-weight: 900;
+        letter-spacing: .16em;
+        text-transform: uppercase;
+    }
+
+    .marca-pdf-textos p {
+        margin: 2px 0 0;
+        color: #334155;
+        font-size: 7px;
+        line-height: 1;
+        font-weight: 900;
+        letter-spacing: .32em;
+        text-transform: uppercase;
+        text-align: center;
+    }
+
+    .linha-pdf-padrao {
+        height: 2px;
+        background: #07162f;
+        width: 100%;
+        margin: 0;
+    }
+
+    .titulo-pdf-padrao {
+        border-top: 2px solid #07162f;
+        border-bottom: 2px solid #07162f;
+        text-align: center;
+        padding: 4px 0 3px;
+    }
+
+    .titulo-pdf-padrao h2 {
+        margin: 0;
+        color: var(--azul);
+        font-size: 17px;
+        line-height: 1;
+        font-weight: 900;
+        letter-spacing: .07em;
+        text-transform: uppercase;
+    }
+
+    .titulo-pdf-padrao p {
+        margin: 2px 0 0;
+        color: #64748b;
+        font-size: 7.2px;
+        font-weight: 700;
     }
 
     .cabecalho-relatorio {
@@ -1651,16 +1735,16 @@ function contarDocumentosRelatorioEmpresas(empresas = []) {
 
 function montarCabecalhoRelatorioEmpresas(titulo = "Relatório de empresas e documentos", subtitulo = "") {
     return `
-        <header class="cabecalho-relatorio-empresas cabecalho-relatorio--padrao-unico">
-            <div class="marca-relatorio-empresas">
-                <span class="escudo-relatorio-empresas" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 3 5 6v5c0 4.6 2.9 8.8 7 10 4.1-1.2 7-5.4 7-10V6l-7-3Z"/><path d="m9.5 12 1.8 1.8 3.7-4"/></svg></span>
-                <div>
+        <header class="cabecalho-pdf-padrao">
+            <div class="marca-pdf-padrao">
+                <span class="marca-pdf-icone" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 3 5 6v5c0 4.6 2.9 8.8 7 10 4.1-1.2 7-5.4 7-10V6l-7-3Z"/><path d="m9.5 12 1.8 1.8 3.7-4"/></svg></span>
+                <div class="marca-pdf-textos">
                     <h1>CONTROLE SST QR</h1>
                     <p>GESTÃO DE SEGURANÇA DO TRABALHO</p>
                 </div>
             </div>
-            <div class="linha-cabecalho-relatorio-empresas"></div>
-            <div class="titulo-relatorio-empresas">
+            <div class="linha-pdf-padrao"></div>
+            <div class="titulo-pdf-padrao">
                 <h2>${escaparHTML(String(titulo || "").toUpperCase())}</h2>
                 <p>${escaparHTML(subtitulo)}</p>
             </div>
@@ -1758,15 +1842,16 @@ function montarEstilosRelatorioEmpresas() {
             .pagina-relatorio { width: 210mm; min-height: 297mm; margin: 0 auto; padding: 8mm; background: #fff; border: 1px solid #d8e2ef; border-radius: 18px; position: relative; page-break-after: always; overflow: hidden; }
             .pagina-relatorio:last-child { page-break-after: auto; }
             .conteudo-pagina-relatorio-empresas { min-height: 262mm; }
-            .cabecalho-relatorio-empresas { margin-bottom: 8px; }
-            .marca-relatorio-empresas { display: flex; align-items: center; justify-content: center; gap: 10px; text-align: left; }
-            .escudo-relatorio-empresas { width: 30px; height: 30px; border: 3px solid #07162f; border-radius: 10px; display: grid; place-items: center; font-size: 16px; font-weight: 900; color: #07162f; }
-            .marca-relatorio-empresas h1 { margin: 0; color: #07162f; font-size: 30px; line-height: .95; letter-spacing: .16em; text-transform: uppercase; font-weight: 900; }
-            .marca-relatorio-empresas p { margin: 2px 0 0; color: #334155; font-size: 8px; letter-spacing: .28em; text-transform: uppercase; font-weight: 800; text-align: center; }
-            .linha-cabecalho-relatorio-empresas { height: 3px; background: #07162f; margin: 8px 0 7px; }
-            .titulo-relatorio-empresas { border-top: 2px solid #07162f; border-bottom: 2px solid #07162f; padding: 3px 0 4px; text-align: center; }
-            .titulo-relatorio-empresas h2 { margin: 0; color: var(--azul); font-size: 17px; line-height: 1; text-transform: uppercase; letter-spacing: .06em; font-weight: 900; }
-            .titulo-relatorio-empresas p { margin: 2px 0 0; color: #64748b; font-size: 7.2px; font-weight: 700; }
+            .cabecalho-pdf-padrao { display: grid; gap: 6px; margin-bottom: 9px; }
+            .marca-pdf-padrao { display: flex; align-items: center; justify-content: center; gap: 10px; text-align: left; padding-top: 1px; }
+            .marca-pdf-icone { width: 30px; height: 30px; display: grid; place-items: center; color: #07162f; flex: 0 0 auto; }
+            .marca-pdf-icone svg { width: 27px; height: 27px; fill: none; stroke: currentColor; stroke-width: 1.9; stroke-linecap: round; stroke-linejoin: round; }
+            .marca-pdf-textos h1 { margin: 0; color: #07162f; font-size: 28px; line-height: .94; letter-spacing: .16em; text-transform: uppercase; font-weight: 900; }
+            .marca-pdf-textos p { margin: 2px 0 0; color: #334155; font-size: 7px; line-height: 1; letter-spacing: .32em; text-transform: uppercase; font-weight: 900; text-align: center; }
+            .linha-pdf-padrao { height: 2px; background: #07162f; width: 100%; margin: 0; }
+            .titulo-pdf-padrao { border-top: 2px solid #07162f; border-bottom: 2px solid #07162f; text-align: center; padding: 4px 0 3px; }
+            .titulo-pdf-padrao h2 { margin: 0; color: var(--azul); font-size: 17px; line-height: 1; text-transform: uppercase; letter-spacing: .07em; font-weight: 900; }
+            .titulo-pdf-padrao p { margin: 2px 0 0; color: #64748b; font-size: 7.2px; font-weight: 700; }
             .metadados-relatorio-empresas { display: grid; grid-template-columns: repeat(4, 1fr); border: 1px solid var(--linha); border-radius: 12px; overflow: hidden; margin: 8px 0; background: #f9fbff; }
             .metadados-relatorio-empresas div { padding: 7px 9px; border-right: 1px solid var(--linha); }
             .metadados-relatorio-empresas div:last-child { border-right: 0; }
