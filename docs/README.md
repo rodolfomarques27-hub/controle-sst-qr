@@ -148,6 +148,34 @@ Conteúdo principal:
 
 
 
+\### Checklist mensal de Backup e Manuten\u00e7\u00e3o
+
+Arquivo:
+
+`checklist-mensal-backup-manutencao.md`
+
+Conte\u00fado principal:
+
+\* confer\u00eancia mensal do projeto local;
+
+\* confer\u00eancia do GitHub;
+
+\* confer\u00eancia da Vercel;
+
+\* confer\u00eancia do Supabase;
+
+\* backup do banco;
+
+\* backup do Storage;
+
+\* backup das vari\u00e1veis da Vercel;
+
+\* teste r\u00e1pido mensal do sistema;
+
+\* registro mensal de revis\u00e3o;
+
+\* regra para abertura de novo roteiro.
+
 \## 3. Versão estável
 
 
