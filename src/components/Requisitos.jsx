@@ -7,6 +7,7 @@ import {
     Building2,
     CheckCircle2,
     ClipboardCheck,
+    Copy,
     FileText,
     GraduationCap,
     HelpCircle,
@@ -356,9 +357,23 @@ function SecaoAjuda({ titulo, descricao, children, icone: Icone = ListChecks }) 
     );
 }
 
+function copiarTextoComFallback(texto) {
+    const areaTexto = document.createElement("textarea");
+    areaTexto.value = texto;
+    areaTexto.setAttribute("readonly", "");
+    areaTexto.style.position = "fixed";
+    areaTexto.style.top = "-9999px";
+    areaTexto.style.left = "-9999px";
+    document.body.appendChild(areaTexto);
+    areaTexto.select();
+    document.execCommand("copy");
+    document.body.removeChild(areaTexto);
+}
+
 export function Requisitos() {
     const [assuntoSelecionadoId, setAssuntoSelecionadoId] = useState("inicio");
     const [termoBusca, setTermoBusca] = useState("");
+    const [copiado, setCopiado] = useState(false);
 
     const assuntosFiltrados = useMemo(() => {
         const termo = normalizar(termoBusca.trim());
@@ -385,6 +400,37 @@ export function Requisitos() {
         ASSUNTOS_AJUDA.find((assunto) => assunto.id === assuntoSelecionadoId) || ASSUNTOS_AJUDA[0];
 
     const IconeSelecionado = assuntoSelecionado.icone;
+
+    async function copiarPassoAPasso() {
+        const texto = [
+            `Controle SST QR - ${assuntoSelecionado.titulo}`,
+            `Para que serve: ${assuntoSelecionado.paraQueServe}`,
+            `Quando usar: ${assuntoSelecionado.quandoUsar}`,
+            "",
+            "Passo a passo:",
+            ...assuntoSelecionado.passos.map((passo, index) => `${index + 1}. ${passo}`),
+            "",
+            "Confira no final:",
+            ...assuntoSelecionado.conferir.map((item) => `- ${item}`),
+            "",
+            "Erros comuns:",
+            ...assuntoSelecionado.erros.map((item) => `- ${item}`),
+        ].join("\n");
+
+        try {
+            if (navigator.clipboard?.writeText) {
+                await navigator.clipboard.writeText(texto);
+            } else {
+                copiarTextoComFallback(texto);
+            }
+
+            setCopiado(true);
+            window.setTimeout(() => setCopiado(false), 2200);
+        } catch (erro) {
+            console.error("Erro ao copiar passo a passo:", erro);
+            alert("Não foi possível copiar agora. Tente novamente pelo navegador.");
+        }
+    }
 
     return (
         <div>
@@ -507,6 +553,15 @@ export function Requisitos() {
                                     <p className="mt-2 text-sm font-semibold leading-6 text-slate-600">{assuntoSelecionado.subtitulo}</p>
                                 </div>
                             </div>
+
+                            <button
+                                type="button"
+                                onClick={copiarPassoAPasso}
+                                className="inline-flex w-full items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-xs font-black uppercase tracking-[0.14em] text-slate-700 shadow-sm transition hover:border-slate-300 hover:bg-slate-50 lg:w-auto"
+                            >
+                                <Copy className="h-4 w-4" />
+                                <span>{copiado ? "Copiado" : "Copiar passo a passo"}</span>
+                            </button>
                         </div>
                     </div>
 
