@@ -74,37 +74,28 @@ Usar a classificação abaixo:
 
 
 
-\### 4.1 Refinar Central de Ajuda / Manuais
-
-
+### 4.1 Refinar Central de Ajuda / Manuais
 
 Prioridade: Alta
+Status: conclu?do no Roteiro 23
 
-Status: planejado
+Melhorias aplicadas:
 
+* bot?o para copiar passo a passo;
+* melhoria na mensagem de busca sem resultado;
+* bot?es de exemplo quando a busca n?o encontra item;
+* corre??o de acentua??o nos textos dos Manuais;
+* bot?o para limpar busca;
+* valida??o visual no desktop e mobile.
 
+Commits relacionados:
 
-Melhorias possíveis:
+* a12cd7f feat: adicionar copia de passo a passo nos manuais
+* 24e8a7c feat: melhorar busca sem resultado nos manuais
+* 72b59b7 fix: corrigir acentuacao nos manuais
+* 228dcbf feat: adicionar limpar busca nos manuais
 
-
-
-\* melhorar busca dentro da Central de Ajuda;
-
-\* criar botão para abrir passo a passo em tela cheia;
-
-\* melhorar visual no celular;
-
-\* adicionar exemplos com imagens futuramente;
-
-\* criar botão “copiar passo a passo”;
-
-\* separar ajuda por perfil de usuário.
-
-
-
-Observação: não alterar permissões internas nesta etapa.
-
-
+Observa??o: melhoria conclu?da sem alterar permiss?es internas, rotas, Supabase, banco ou App.jsx.
 
 \### 4.2 Revisão mensal de backup
 
@@ -378,7 +369,7 @@ Próximo roteiro após este backlog:
 
 
 
-Roteiro 22 — Escolher primeira melhoria futura para aplicar em microetapas
+Roteiro 25 ? Criar checklist mensal de backup e manuten??o
 
 
 
