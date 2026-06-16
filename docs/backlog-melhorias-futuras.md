@@ -308,6 +308,19 @@ Melhorias possíveis:
 * build aprovado;
 * commit relacionado: 6631394 feat: salvar filtros de pendencias de treinamentos.
 
+5. Relatório de Colaboradores e Treinamentos:
+* relatório de colaboradores e treinamentos recebeu filtros salvos;
+* filtros salvos usando `localStorage`, sem alteração no banco;
+* campos contemplados: busca, empresa e classificação/status geral do colaborador;
+* filtros salvos separados dos filtros do relatório de pendências de treinamentos;
+* adicionados botões: Salvar filtro, Aplicar filtro salvo e Limpar filtro salvo;
+* PDF passou a receber e exibir a seção Filtros aplicados;
+* `ColaboradoresPage.jsx` atualizado;
+* `exportacaoService.js` atualizado somente nas funções do relatório de colaboradores e treinamentos;
+* Supabase não foi alterado;
+* build aprovado;
+* commit relacionado: 9700ee4 feat: salvar filtros do relatorio de colaboradores e treinamentos.
+
 ## 6. Melhorias futuras — Baixa prioridade
 
 
