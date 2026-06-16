@@ -296,15 +296,15 @@ Melhorias possíveis:
 
 
 
-4. Pend?ncias de Treinamentos:
-* relat?rio de Pend?ncias de Treinamentos recebeu filtros salvos;
-* filtros salvos usando `localStorage`, sem altera??o no banco;
-* campos contemplados: busca, empresa e classifica??o/status geral do colaborador;
-* adicionados bot?es: Salvar filtro, Aplicar filtro salvo e Limpar filtro salvo;
-* PDF de pend?ncias passou a receber e exibir a se??o Filtros aplicados;
+4. Pendências de Treinamentos:
+* relatório de Pendências de Treinamentos recebeu filtros salvos;
+* filtros salvos usando `localStorage`, sem alteração no banco;
+* campos contemplados: busca, empresa e classificação/status geral do colaborador;
+* adicionados botões: Salvar filtro, Aplicar filtro salvo e Limpar filtro salvo;
+* PDF de pendências passou a receber e exibir a seção Filtros aplicados;
 * `ColaboradoresPage.jsx` atualizado;
-* `exportacaoService.js` atualizado somente na fun??o do relat?rio de pend?ncias de treinamentos;
-* Supabase n?o foi alterado;
+* `exportacaoService.js` atualizado somente na função do relatório de pendências de treinamentos;
+* Supabase não foi alterado;
 * build aprovado;
 * commit relacionado: 6631394 feat: salvar filtros de pendencias de treinamentos.
 
