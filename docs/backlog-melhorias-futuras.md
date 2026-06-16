@@ -1,4 +1,4 @@
-\# Backlog de Melhorias Futuras — Controle SST QR
+# Backlog de Melhorias Futuras — Controle SST QR
 
 
 
@@ -10,7 +10,7 @@ Status: ideias futuras, sem alteração na versão estável
 
 
 
-\## 1. Objetivo
+## 1. Objetivo
 
 
 
@@ -22,7 +22,7 @@ Nenhuma melhoria listada aqui deve ser aplicada diretamente no sistema sem antes
 
 
 
-\## 2. Regra principal
+## 2. Regra principal
 
 
 
@@ -54,7 +54,7 @@ Toda melhoria futura deve seguir este padrão:
 
 
 
-\## 3. Prioridades
+## 3. Prioridades
 
 
 
@@ -70,7 +70,7 @@ Usar a classificação abaixo:
 
 
 
-\## 4. Melhorias futuras — Alta prioridade
+## 4. Melhorias futuras — Alta prioridade
 
 
 
@@ -150,7 +150,7 @@ Commits relacionados:
 
 Observação: melhoria concluída. O sistema agora registra e exibe quem aprovou, recusou ou concluiu solicitações de acesso.
 
-\## 5. Melhorias futuras — Média prioridade
+## 5. Melhorias futuras — Média prioridade
 
 
 
@@ -192,7 +192,7 @@ Regra para continuidade:
 * não alterar `exportacaoService.js` se o PDF já receber os filtros corretamente;
 * manter build aprovado antes de commit.
 
-\### 5.2 Melhorar Dashboard SST
+### 5.2 Melhorar Dashboard SST
 
 
 
@@ -218,7 +218,7 @@ Melhorias possíveis:
 
 
 
-\### 5.3 Melhorar Dashboard Auditoria Campo
+### 5.3 Melhorar Dashboard Auditoria Campo
 
 
 
@@ -244,7 +244,7 @@ Melhorias possíveis:
 
 
 
-\### 5.4 Melhorar Treinamentos
+### 5.4 Melhorar Treinamentos
 
 
 
@@ -270,11 +270,11 @@ Melhorias possíveis:
 
 
 
-\## 6. Melhorias futuras — Baixa prioridade
+## 6. Melhorias futuras — Baixa prioridade
 
 
 
-\### 6.1 Melhorias visuais gerais
+### 6.1 Melhorias visuais gerais
 
 
 
@@ -300,7 +300,7 @@ Melhorias possíveis:
 
 
 
-\### 6.2 Melhorar experiência mobile
+### 6.2 Melhorar experiência mobile
 
 
 
@@ -326,7 +326,7 @@ Melhorias possíveis:
 
 
 
-\### 6.3 Criar tutoriais com imagens
+### 6.3 Criar tutoriais com imagens
 
 
 
@@ -350,7 +350,7 @@ Melhorias possíveis:
 
 
 
-\## 7. Ideias que devem aguardar
+## 7. Ideias que devem aguardar
 
 
 
@@ -374,7 +374,7 @@ As ideias abaixo não devem ser aplicadas agora:
 
 
 
-\## 8. Próximo roteiro sugerido
+## 8. Próximo roteiro sugerido
 
 
 
