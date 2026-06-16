@@ -154,29 +154,43 @@ Observação: melhoria concluída. O sistema agora registra e exibe quem aprovou
 
 
 
-\### 5.1 Melhorar relatórios com filtros salvos
-
-
+### 5.1 Melhorar relatórios com filtros salvos
 
 Prioridade: Média
+Status: em andamento
 
-Status: planejado
+Objetivo:
 
+* permitir que relatórios importantes reutilizem filtros aplicados anteriormente;
+* reduzir retrabalho ao gerar PDFs recorrentes;
+* manter o padrão visual e funcional já aprovado no sistema;
+* iniciar sempre por microetapas, um relatório por vez.
 
+Primeira melhoria aplicada no Roteiro 32:
 
-Melhorias possíveis:
+* relatório de Aniversariantes recebeu filtros salvos;
+* filtros salvos usando `localStorage`, sem alteração no banco;
+* campos contemplados: mês, empresa, função, status e busca;
+* adicionados botões: Salvar filtro, Aplicar filtro salvo e Limpar filtro salvo;
+* PDF de aniversariantes mantido com a seção Filtros aplicados;
+* build aprovado;
+* validação visual aprovada na aba Aniversariantes;
+* commit relacionado: f1ab6c5 feat: salvar filtros de aniversariantes.
 
+Relatórios pendentes para etapas futuras:
 
+* relatório de Treinamentos;
+* relatório de Pendências;
+* relatório de Empresas e Documentos;
+* relatório de Auditoria do Sistema;
+* relatório de Auditoria de Campo.
 
-\* salvar filtros usados com frequência;
+Regra para continuidade:
 
-\* gerar relatório com filtro pré-definido;
-
-\* criar modelo de relatório por empresa;
-
-\* criar modelo de relatório mensal.
-
-
+* aplicar filtros salvos em apenas um relatório por roteiro;
+* evitar alterações em banco enquanto `localStorage` resolver;
+* não alterar `exportacaoService.js` se o PDF já receber os filtros corretamente;
+* manter build aprovado antes de commit.
 
 \### 5.2 Melhorar Dashboard SST
 
