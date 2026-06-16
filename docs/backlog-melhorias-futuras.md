@@ -125,7 +125,7 @@ Observação: melhoria concluída apenas em documentação, sem alteração em c
 ### 4.3 Melhorar auditoria de permissões
 
 Prioridade: Alta
-Status: em andamento no Roteiro 28
+Status: concluído no Roteiro 30B
 
 Melhoria parcial aplicada:
 
@@ -375,5 +375,9 @@ Roteiro 25 — Criar checklist mensal de backup e manutenção
 
 A melhoria só deve sair do backlog depois de escolhida, planejada e aprovada.
 
-
-
+Atualização do Roteiro 30B:
+- Banco/RPC atualizado para registrar responsáveis por solicitações de acesso.
+- Campos adicionados para aprovação, recusa e conclusão com e-mail, nome e data/hora.
+- Front-end atualizado para exibir Histórico administrativo no card da solicitação.
+- Validação visual aprovada no sistema publicado.
+- Commits relacionados: e13cb66 e 162b66c.
