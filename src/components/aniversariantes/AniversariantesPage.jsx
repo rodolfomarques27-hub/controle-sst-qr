@@ -246,7 +246,7 @@ export function Aniversariantes({ colaboradores = [], empresasBanco = [] }) {
             alert("Filtros de aniversariantes salvos.");
         } catch (error) {
             console.error("Erro ao salvar filtros de aniversariantes:", error);
-            alert("N?o foi poss?vel salvar os filtros de aniversariantes.");
+            alert("N\u00e3o foi poss\u00edvel salvar os filtros de aniversariantes.");
         }
     };
 
