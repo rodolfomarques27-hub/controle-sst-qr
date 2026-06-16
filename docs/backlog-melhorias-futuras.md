@@ -439,3 +439,43 @@ Roteiro 25 — Criar checklist mensal de backup e manutenção
 
 A melhoria só deve sair do backlog depois de escolhida, planejada e aprovada.
 
+<!-- ROTEIRO-32-FILTROS-SALVOS-INICIO -->
+
+## Roteiro 32 ? Filtros salvos e filtros aplicados nos PDFs
+
+### Status geral
+
+Concluído. O ciclo de filtros salvos e identificação dos filtros aplicados nos relatórios foi finalizado nas principais telas de relatório do sistema.
+
+### Relatórios concluídos
+
+| Relatório | Filtro salvo na tela | Filtros aplicados no PDF | Commit principal |
+|---|---:|---:|---|
+| Aniversariantes | Sim | Sim | `f1ab6c5` |
+| Auditoria do Sistema | Sim | Sim | `9f46044` |
+| Auditoria de Campo | Sim | Sim | `c882a6b` |
+| Pendências de Treinamentos | Sim | Sim | `6631394` / hotfix `756fe35` |
+| Colaboradores e Treinamentos | Sim | Sim | `9700ee4` |
+| Empresas e Documentos | Sim | Sim | `5071716` / `d7c526b` |
+| Pendências Documentais | Usa filtros atuais da tela | Sim | `20642a0` |
+
+### Padronização aplicada
+
+- Filtros salvos com `localStorage`, mantendo o comportamento por tela/relatório.
+- Botões padronizados para salvar, aplicar e limpar filtros onde havia fluxo visual de filtros salvos.
+- PDFs passaram a exibir uma seção de `Filtros aplicados`, permitindo rastrear busca, tipo, status, empresas filtradas, documentos filtrados, pendências filtradas ou equivalentes de cada relatório.
+- As alterações foram feitas em microetapas, com validação, build e commit separados.
+
+### Commits recentes do fechamento
+
+- `5071716` ? `feat: salvar filtros de empresas e documentos`
+- `d7c526b` ? `feat: exibir filtros no pdf de empresas e documentos`
+- `20642a0` ? `feat: exibir filtros no pdf de pendencias documentais`
+
+### Observações
+
+- O relatório de Pendências Documentais reaproveita os filtros atuais da aba Empresas e Documentos: busca, tipo e status.
+- O relatório de Empresas e Documentos possui filtros salvos próprios na tela e exibe os filtros aplicados no PDF geral.
+- Nenhuma alteração de Supabase foi necessária neste ciclo.
+
+<!-- ROTEIRO-32-FILTROS-SALVOS-FIM -->
