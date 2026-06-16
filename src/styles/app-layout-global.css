@@ -8204,3 +8204,40 @@
         max-width: 2.1rem !important;
     }
 }
+
+
+/* =========================================================
+   ROTEIRO 42.5 - DASHBOARD SST ESPACAMENTO SEM BOM
+   Escopo: somente Dashboard SST
+   Objetivo: reduzir espacamento entre cards e blocos do Dashboard.
+   ========================================================= */
+
+.dashboard-summary-grid {
+  gap: 0.875rem !important;
+  row-gap: 0.875rem !important;
+}
+
+.dashboard-summary-grid > .dashboard-summary-card {
+  margin-bottom: 0 !important;
+}
+
+.dashboard-blocos-grid {
+  gap: 1rem !important;
+  row-gap: 1rem !important;
+}
+
+.dashboard-blocos-grid > * {
+  min-width: 0;
+}
+
+@media (max-width: 640px) {
+  .dashboard-summary-grid {
+    gap: 0.7rem !important;
+    row-gap: 0.7rem !important;
+  }
+
+  .dashboard-blocos-grid {
+    gap: 0.75rem !important;
+    row-gap: 0.75rem !important;
+  }
+}
