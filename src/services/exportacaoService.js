@@ -3020,6 +3020,7 @@ export async function baixarRelatorioPendenciasTreinamentosPDF({
     nomeArquivo = "relatorio-pendencias-treinamentos.pdf",
     pendencias = [],
     titulo = "Relatório de pendências de treinamentos",
+    filtros = {},
 } = {}) {
     const dataEmissao = new Date().toLocaleDateString("pt-BR");
     const empresas = agruparPendenciasPorEmpresaRelatorio(pendencias);
