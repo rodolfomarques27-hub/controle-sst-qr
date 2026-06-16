@@ -1363,9 +1363,18 @@ export function Empresas({
 
         const empresasRelatorio = empresasFiltradas.map(montarEmpresaRelatorioDocumental);
 
+        const relatorioEmpresasDocumentosFiltrosAplicados = {
+            busca: buscaEmpresa.trim() || "-",
+            tipo: filtroTipoEmpresa,
+            status: filtroStatusEmpresa,
+            empresasFiltradas: `${empresasFiltradas.length} empresa(s)`,
+            documentosFiltrados: `${documentosFiltrados.length} documento(s)`,
+        };
+
         await baixarRelatorioEmpresasDocumentosPDF({
             empresas: empresasRelatorio,
             nomeArquivo: "relatorio-empresas-documentos.pdf",
+            filtros: relatorioEmpresasDocumentosFiltrosAplicados,
         });
     };
 

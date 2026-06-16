@@ -1986,9 +1986,34 @@ function montarEstilosRelatorioEmpresas() {
     `;
 }
 
+function montarFiltrosEmpresasDocumentosRelatorio(filtros = {}) {
+    const itens = [
+        ["Busca", filtros.busca || "-"],
+        ["Tipo", filtros.tipo || "Todos"],
+        ["Status", filtros.status || "Todos"],
+        ["Empresas filtradas", filtros.empresasFiltradas || "-"],
+        ["Documentos filtrados", filtros.documentosFiltrados || "-"],
+    ];
+
+    return `
+        <section style="margin: 8px 0 10px; border: 1px solid #d9e3f2; border-radius: 14px; padding: 8px 10px; background: #f8fbff;">
+            <h2 style="margin: 0 0 7px; color: #0f172a; font-size: 11px; text-transform: uppercase; letter-spacing: .04em;">Filtros aplicados</h2>
+            <div style="display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 7px;">
+                ${itens.map(([label, valor]) => `
+                    <div style="border: 1px solid #d9e3f2; border-radius: 10px; padding: 6px 7px; background: #ffffff; min-height: 34px;">
+                        <strong style="display: block; color: #64748b; font-size: 6.5px; text-transform: uppercase; letter-spacing: .05em;">${escaparHTML(label)}</strong>
+                        <span style="display: block; margin-top: 3px; color: #0f172a; font-size: 7.5px; font-weight: 900; line-height: 1.2;">${escaparHTML(valor)}</span>
+                    </div>
+                `).join("")}
+            </div>
+        </section>
+    `;
+}
+
 export async function baixarRelatorioEmpresasDocumentosPDF({
     nomeArquivo = "relatorio-empresas-documentos.pdf",
     empresas = [],
+    filtros = {},
 } = {}) {
     const listaEmpresas = Array.isArray(empresas) ? empresas : [];
     const dataEmissao = new Date().toLocaleDateString("pt-BR");
@@ -2015,6 +2040,7 @@ export async function baixarRelatorioEmpresasDocumentosPDF({
         <main class="pagina-relatorio">
             <div class="conteudo-pagina-relatorio-empresas">
                 ${montarCabecalhoRelatorioEmpresas("Relatório de empresas e documentos", "Resumo visual das empresas, contratos e documentos corporativos.")}
+                ${montarFiltrosEmpresasDocumentosRelatorio(filtros)}
                 <section class="metadados-relatorio-empresas">
                     <div><span>Emissão</span><strong>${escaparHTML(dataEmissao)} às ${escaparHTML(horaEmissao)}</strong></div>
                     <div><span>Base do relatório</span><strong>${listaEmpresas.length} empresa(s)</strong></div>
