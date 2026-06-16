@@ -122,31 +122,34 @@ Commits relacionados:
 
 Observação: melhoria concluída apenas em documentação, sem alteração em código, Supabase, banco, permissões, rotas ou App.jsx.
 
-\### 4.3 Melhorar auditoria de permissões
-
-
+### 4.3 Melhorar auditoria de permissões
 
 Prioridade: Alta
+Status: em andamento no Roteiro 28
 
-Status: planejado
+Melhoria parcial aplicada:
 
+* diagnóstico dos arquivos de acessos, permissões, perfis e solicitações;
+* identificação da tela principal `src/components/acessos/AcessosAppPage.jsx`;
+* identificação do service principal `src/services/usuariosPermissoesSistemaService.js`;
+* resposta administrativa passou a aparecer nos cards de solicitação de acesso;
+* data de atualização da solicitação passou a aparecer no card;
+* validação visual aprovada no desktop;
+* sem alteração em banco, Supabase, RLS, rotas ou App.jsx.
 
+Commit relacionado:
 
-Melhorias possíveis:
+* 18d6cbf feat: mostrar resposta administrativa em solicitacoes
 
+Melhorias ainda pendentes:
 
+* confirmar no mobile se o bloco de resposta administrativa ficou bom;
+* avaliar futuramente se a RPC pode retornar quem aprovou, recusou ou concluiu a solicitação;
+* destacar melhor usuários bloqueados se necessário;
+* revisar usuários antigos ou inativos;
+* criar melhoria futura para auditoria avançada somente depois de backup e diagnóstico do banco.
 
-\* criar tela mais clara para visualizar o que cada perfil pode acessar;
-
-\* destacar usuários bloqueados;
-
-\* mostrar último acesso do usuário;
-
-\* mostrar quem aprovou solicitação de acesso;
-
-\* revisar usuários antigos ou inativos.
-
-
+Observação: o campo “quem aprovou” ainda não foi implementado porque o retorno atual da solicitação normaliza apenas `resposta_admin`, `criado_em` e `atualizado_em`. Qualquer avanço nesse ponto deve ser tratado em roteiro separado, com diagnóstico da RPC antes de mexer no banco.
 
 \## 5. Melhorias futuras — Média prioridade
 
