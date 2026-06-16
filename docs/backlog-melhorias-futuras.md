@@ -127,29 +127,28 @@ Observação: melhoria concluída apenas em documentação, sem alteração em c
 Prioridade: Alta
 Status: concluído no Roteiro 30B
 
-Melhoria parcial aplicada:
+Melhoria aplicada:
 
 * diagnóstico dos arquivos de acessos, permissões, perfis e solicitações;
 * identificação da tela principal `src/components/acessos/AcessosAppPage.jsx`;
 * identificação do service principal `src/services/usuariosPermissoesSistemaService.js`;
 * resposta administrativa passou a aparecer nos cards de solicitação de acesso;
 * data de atualização da solicitação passou a aparecer no card;
-* validação visual aprovada no desktop;
-* sem alteração em banco, Supabase, RLS, rotas ou App.jsx.
+* banco/RPC atualizado para registrar responsáveis por aprovação, recusa e conclusão;
+* campos adicionados para e-mail, nome e data/hora de cada ação administrativa;
+* front-end atualizado para exibir Histórico administrativo no card da solicitação;
+* validação visual aprovada no desktop, mobile e sistema publicado;
+* sem alteração em App.jsx ou rotas principais.
 
-Commit relacionado:
+Commits relacionados:
 
 * 18d6cbf feat: mostrar resposta administrativa em solicitacoes
+* c5f378c docs: marcar validacao mobile da auditoria de permissoes
+* e13cb66 sql: preparar auditoria de responsaveis por solicitacoes
+* 162b66c feat: exibir responsaveis nas solicitacoes de acesso
+* 4f9ded6 docs: concluir auditoria de permissoes no backlog
 
-Melhorias ainda pendentes:
-
-* valida??o mobile aprovada no Roteiro 28.4;
-* avaliar futuramente se a RPC pode retornar quem aprovou, recusou ou concluiu a solicitação;
-* destacar melhor usuários bloqueados se necessário;
-* revisar usuários antigos ou inativos;
-* criar melhoria futura para auditoria avançada somente depois de backup e diagnóstico do banco.
-
-Observação: o campo “quem aprovou” ainda não foi implementado porque o retorno atual da solicitação normaliza apenas `resposta_admin`, `criado_em` e `atualizado_em`. Qualquer avanço nesse ponto deve ser tratado em roteiro separado, com diagnóstico da RPC antes de mexer no banco.
+Observação: melhoria concluída. O sistema agora registra e exibe quem aprovou, recusou ou concluiu solicitações de acesso.
 
 \## 5. Melhorias futuras — Média prioridade
 
@@ -375,9 +374,3 @@ Roteiro 25 — Criar checklist mensal de backup e manutenção
 
 A melhoria só deve sair do backlog depois de escolhida, planejada e aprovada.
 
-Atualização do Roteiro 30B:
-- Banco/RPC atualizado para registrar responsáveis por solicitações de acesso.
-- Campos adicionados para aprovação, recusa e conclusão com e-mail, nome e data/hora.
-- Front-end atualizado para exibir Histórico administrativo no card da solicitação.
-- Validação visual aprovada no sistema publicado.
-- Commits relacionados: e13cb66 e 162b66c.
