@@ -868,6 +868,30 @@ function calcularResumoPendenciasRelatorio(pendencias = []) {
     );
 }
 
+function montarFiltrosPendenciasTreinamentosRelatorio(filtros = {}) {
+    const itens = [
+        ["Busca", filtros.busca || "-"],
+        ["Empresa", filtros.empresa || "Todas"],
+        ["Classificação", filtros.classificacao || "Todos"],
+        ["Colaboradores filtrados", filtros.colaboradoresFiltrados || "-"],
+        ["Pendências encontradas", filtros.pendenciasEncontradas || "-"],
+    ];
+
+    return `
+        <section style="margin: 10px 0 12px; border: 1px solid #e2e8f0; border-radius: 14px; padding: 10px 12px; background: #f8fafc;">
+            <h2 style="margin: 0 0 8px; color: #0f172a; font-size: 12px; text-transform: uppercase; letter-spacing: .04em;">Filtros aplicados</h2>
+            <div style="display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 8px;">
+                ${itens.map(([label, valor]) => `
+                    <div style="border: 1px solid #e2e8f0; border-radius: 10px; padding: 7px 8px; background: #ffffff;">
+                        <strong style="display: block; color: #64748b; font-size: 7px; text-transform: uppercase; letter-spacing: .05em;">${escaparHTML(label)}</strong>
+                        <span style="display: block; margin-top: 3px; color: #0f172a; font-size: 8px; font-weight: 800;">${escaparHTML(valor)}</span>
+                    </div>
+                `).join("")}
+            </div>
+        </section>
+    `;
+}
+
 function montarTabelaPendenciasTreinamentosRelatorio(linhasTabela = "") {
     return `
         <section class="bloco">
@@ -904,7 +928,7 @@ function montarTabelaPendenciasTreinamentosRelatorio(linhasTabela = "") {
     `;
 }
 
-function montarSecaoEmpresaPendenciasRelatorio(empresa = {}, indiceEmpresa = 0, dataEmissao = "") {
+function montarSecaoEmpresaPendenciasRelatorio(empresa = {}, indiceEmpresa = 0, dataEmissao = "", filtros = {}) {
     const pendenciasEmpresa = Array.isArray(empresa.pendencias) ? empresa.pendencias : [];
     const resumo = calcularResumoPendenciasRelatorio(pendenciasEmpresa);
     const lotesPendencias = dividirEmLotesRelatorioEmpresas(pendenciasEmpresa, 10);
@@ -945,6 +969,7 @@ function montarSecaoEmpresaPendenciasRelatorio(empresa = {}, indiceEmpresa = 0, 
                     </section>
                 ` : ""}
 
+                ${indicePagina === 0 ? montarFiltrosPendenciasTreinamentosRelatorio(filtros) : ""}
                 ${montarTabelaPendenciasTreinamentosRelatorio(linhasTabela)}
 
                 ${montarRodapeTreinamentosRelatorio(indicePagina === 0 ? "Relatório visual por empresa" : "Continuação do relatório visual por empresa")}
@@ -3004,7 +3029,7 @@ export async function baixarRelatorioPendenciasTreinamentosPDF({
         return;
     }
 
-    const conteudo = empresas.map((empresa, indice) => montarSecaoEmpresaPendenciasRelatorio(empresa, indice, dataEmissao)).join("");
+    const conteudo = empresas.map((empresa, indice) => montarSecaoEmpresaPendenciasRelatorio(empresa, indice, dataEmissao, filtros)).join("");
 
     const html = `<!doctype html>
 <html lang="pt-BR">
