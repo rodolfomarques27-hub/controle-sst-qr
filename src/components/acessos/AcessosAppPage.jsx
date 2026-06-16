@@ -813,6 +813,27 @@ function SolicitacoesAcessoApp({ onPrepararPermissao = null, usuario = null }) {
                             const statusSolicitacaoTratado = normalizarTextoAcesso(item.status || "pendente").toLowerCase();
                             const textoRespostaAdmin = normalizarTextoAcesso(item.resposta_admin);
                             const mostrarRespostaAdministrativa = statusSolicitacaoTratado !== "pendente" || Boolean(textoRespostaAdmin);
+                            const historicoResponsavelSolicitacao = [
+                                {
+                                    rotulo: "Aprovado por",
+                                    nome: normalizarTextoAcesso(item.aprovado_por_nome),
+                                    email: normalizarTextoAcesso(item.aprovado_por_email),
+                                    data: item.aprovado_em,
+                                },
+                                {
+                                    rotulo: "Recusado por",
+                                    nome: normalizarTextoAcesso(item.recusado_por_nome),
+                                    email: normalizarTextoAcesso(item.recusado_por_email),
+                                    data: item.recusado_em,
+                                },
+                                {
+                                    rotulo: "Concluído por",
+                                    nome: normalizarTextoAcesso(item.concluido_por_nome),
+                                    email: normalizarTextoAcesso(item.concluido_por_email),
+                                    data: item.concluido_em,
+                                },
+                            ].filter((responsavel) => responsavel.nome || responsavel.email || responsavel.data);
+                            const mostrarHistoricoResponsavelSolicitacao = historicoResponsavelSolicitacao.length > 0;
 
                             return (
                                 <article key={item.id || `${item.email}-${item.criado_em}`} className="rounded-2xl bg-slate-50 px-4 py-3 ring-1 ring-slate-100">
@@ -829,6 +850,27 @@ function SolicitacoesAcessoApp({ onPrepararPermissao = null, usuario = null }) {
                                                 <p className="mt-1 text-[11px] font-semibold text-slate-400">
                                                     Atualizado em: {formatarDataHoraAcessoApp(item.atualizado_em || item.criado_em)}
                                                 </p>
+                                            </div>
+                                        ) : null}
+                                        {mostrarHistoricoResponsavelSolicitacao ? (
+                                            <div className="mt-3 max-w-3xl rounded-2xl bg-white px-3 py-2 text-xs font-semibold leading-relaxed text-slate-600 ring-1 ring-slate-200">
+                                                <p className="text-[10px] font-black uppercase tracking-wide text-slate-400">Histórico administrativo</p>
+                                                <div className="mt-2 space-y-1">
+                                                    {historicoResponsavelSolicitacao.map((responsavel) => (
+                                                        <div key={`${responsavel.rotulo}-${responsavel.data || responsavel.email || responsavel.nome}`} className="rounded-xl bg-slate-50 px-3 py-2 ring-1 ring-slate-100">
+                                                            <p className="text-[11px] font-black text-slate-700">{responsavel.rotulo}</p>
+                                                            <p className="mt-0.5 text-[11px] font-semibold text-slate-500">
+                                                                {responsavel.nome || responsavel.email || "Responsável não identificado"}
+                                                            </p>
+                                                            {responsavel.email && responsavel.email !== responsavel.nome ? (
+                                                                <p className="mt-0.5 text-[11px] font-semibold text-slate-400">{responsavel.email}</p>
+                                                            ) : null}
+                                                            {responsavel.data ? (
+                                                                <p className="mt-0.5 text-[11px] font-semibold text-slate-400">{formatarDataHoraAcessoApp(responsavel.data)}</p>
+                                                            ) : null}
+                                                        </div>
+                                                    ))}
+                                                </div>
                                             </div>
                                         ) : null}
                                     </div>
