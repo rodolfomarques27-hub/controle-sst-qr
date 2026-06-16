@@ -55,6 +55,7 @@ import {
 const CHAVE_NOVO_COLABORADOR_RECOLHIDO = "controleSstColaboradoresNovoColaboradorRecolhido";
 const CHAVE_INFO_COLABORADORES_RECOLHIDA = "controleSstColaboradoresInformacoesRecolhidas";
 const CHAVE_FILTROS_PENDENCIAS_TREINAMENTOS = "controle-sst-qr:pendencias-treinamentos:filtros-salvos:v1";
+const CHAVE_FILTROS_COLABORADORES_TREINAMENTOS = "controle-sst-qr:colaboradores-treinamentos:filtros-salvos:v1";
 
 function carregarPreferenciaPainelBoolean(chave, padrao = false) {
     try {
@@ -113,6 +114,42 @@ function carregarFiltrosSalvosPendenciasTreinamentos() {
     }
 }
 
+function obterFiltrosPadraoColaboradoresTreinamentos() {
+    return {
+        busca: "",
+        empresa: "Todas",
+        filtroClassificacao: "Todos",
+    };
+}
+
+function normalizarFiltroSalvoColaboradoresTreinamentos(valor, fallback = "") {
+    const texto = String(valor ?? "").trim();
+    return texto || fallback;
+}
+
+function carregarFiltrosSalvosColaboradoresTreinamentos() {
+    if (typeof window === "undefined" || !window.localStorage) return null;
+
+    try {
+        const bruto = window.localStorage.getItem(CHAVE_FILTROS_COLABORADORES_TREINAMENTOS);
+        if (!bruto) return null;
+
+        const dados = JSON.parse(bruto);
+        if (!dados || typeof dados !== "object") return null;
+
+        const padrao = obterFiltrosPadraoColaboradoresTreinamentos();
+
+        return {
+            busca: normalizarFiltroSalvoColaboradoresTreinamentos(dados.busca, padrao.busca),
+            empresa: normalizarFiltroSalvoColaboradoresTreinamentos(dados.empresa, padrao.empresa),
+            filtroClassificacao: normalizarFiltroSalvoColaboradoresTreinamentos(dados.filtroClassificacao, padrao.filtroClassificacao),
+        };
+    } catch (error) {
+        console.error("Erro ao carregar filtros salvos do relat\u00f3rio de colaboradores e treinamentos:", error);
+        return null;
+    }
+}
+
 export function Colaboradores({
     colaboradores,
     empresasBanco,
@@ -133,6 +170,12 @@ export function Colaboradores({
     const filtrosSalvosPendenciasTreinamentosDisponiveis = useMemo(
         () => Boolean(carregarFiltrosSalvosPendenciasTreinamentos()),
         [versaoFiltroSalvoPendenciasTreinamentos]
+    );
+    const [versaoFiltroSalvoColaboradoresTreinamentos, setVersaoFiltroSalvoColaboradoresTreinamentos] = useState(0);
+
+    const filtrosSalvosColaboradoresTreinamentosDisponiveis = useMemo(
+        () => Boolean(carregarFiltrosSalvosColaboradoresTreinamentos()),
+        [versaoFiltroSalvoColaboradoresTreinamentos]
     );
     const [salvando, setSalvando] = useState(false);
     const [colaboradorEdicao, setColaboradorEdicao] = useState(null);
@@ -220,6 +263,50 @@ export function Colaboradores({
         alert("Filtros salvos de pendências de treinamentos removidos.");
     };
 
+
+    const filtrosAtuaisColaboradoresTreinamentos = useMemo(
+        () => ({
+            busca: busca.trim(),
+            empresa,
+            filtroClassificacao,
+        }),
+        [busca, empresa, filtroClassificacao]
+    );
+
+    const salvarFiltrosColaboradoresTreinamentos = () => {
+        if (typeof window === "undefined" || !window.localStorage) return;
+
+        try {
+            window.localStorage.setItem(CHAVE_FILTROS_COLABORADORES_TREINAMENTOS, JSON.stringify(filtrosAtuaisColaboradoresTreinamentos));
+            setVersaoFiltroSalvoColaboradoresTreinamentos((valor) => valor + 1);
+            alert("Filtros do relat\u00f3rio de colaboradores e treinamentos salvos.");
+        } catch (error) {
+            console.error("Erro ao salvar filtros do relat\u00f3rio de colaboradores e treinamentos:", error);
+            alert("N\u00e3o foi poss\u00edvel salvar os filtros do relat\u00f3rio de colaboradores e treinamentos.");
+        }
+    };
+
+    const aplicarFiltrosSalvosColaboradoresTreinamentos = () => {
+        const filtrosSalvos = carregarFiltrosSalvosColaboradoresTreinamentos();
+
+        if (!filtrosSalvos) {
+            alert("Nenhum filtro salvo encontrado para o relat\u00f3rio de colaboradores e treinamentos.");
+            return;
+        }
+
+        setBusca(filtrosSalvos.busca || "");
+        setEmpresa(filtrosSalvos.empresa || "Todas");
+        setFiltroClassificacao(filtrosSalvos.filtroClassificacao || "Todos");
+        alert("Filtros salvos aplicados no relat\u00f3rio de colaboradores e treinamentos.");
+    };
+
+    const limparFiltrosSalvosColaboradoresTreinamentos = () => {
+        if (typeof window === "undefined" || !window.localStorage) return;
+
+        window.localStorage.removeItem(CHAVE_FILTROS_COLABORADORES_TREINAMENTOS);
+        setVersaoFiltroSalvoColaboradoresTreinamentos((valor) => valor + 1);
+        alert("Filtros salvos do relat\u00f3rio de colaboradores e treinamentos removidos.");
+    };
     const resumoTreinamentos = useMemo(() => {
         const avaliacoes = colaboradores.map(avaliarTreinamentosColaborador);
         const classificacoes = colaboradores.map((c) => statusGeral(c).texto);
@@ -287,10 +374,18 @@ export function Colaboradores({
             };
         });
 
+        const relatorioColaboradoresTreinamentosFiltrosAplicados = {
+            busca: busca.trim() || "-",
+            empresa,
+            classificacao: filtroClassificacao,
+            colaboradoresFiltrados: `${filtrados.length} colaborador(es)`,
+        };
+
         await baixarRelatorioColaboradoresTreinamentosPDF({
             nomeArquivo: "relatorio-colaboradores-treinamentos.pdf",
-            titulo: "Relatório de colaboradores e treinamentos",
+            titulo: "Relat\u00f3rio de colaboradores e treinamentos",
             colaboradores: colaboradoresRelatorio,
+            filtros: relatorioColaboradoresTreinamentosFiltrosAplicados,
         });
     };
 
@@ -841,6 +936,50 @@ export function Colaboradores({
                         <div className="colaborador-status-card flex min-h-[92px] flex-col items-center justify-center rounded-2xl bg-slate-50 p-3 text-center ring-1 ring-slate-200">
                             <p className="text-xs font-medium text-slate-700">Inativos</p>
                             <p className="text-2xl font-bold text-slate-700">{resumoTreinamentos.inativos}</p>
+                        </div>
+                    </div>
+
+                    <div className="mb-4 rounded-2xl border border-slate-200 bg-white p-3">
+                        <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+                            <div>
+                                <p className="text-xs font-black uppercase tracking-wide text-slate-500">{"Filtros salvos do relat\u00f3rio de colaboradores e treinamentos"}</p>
+                                <p className="mt-1 text-xs font-semibold text-slate-500">{"Salve busca, empresa e classifica\u00e7\u00e3o para reutilizar no PDF de colaboradores e treinamentos."}</p>
+                            </div>
+                            <div className="flex flex-col gap-2 sm:flex-row">
+                                <button
+                                    type="button"
+                                    onClick={salvarFiltrosColaboradoresTreinamentos}
+                                    className="rounded-2xl border border-slate-200 bg-white px-4 py-2 text-xs font-black uppercase tracking-wide text-slate-700 shadow-sm transition hover:border-slate-300 hover:bg-slate-100"
+                                >
+                                    Salvar filtro
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={aplicarFiltrosSalvosColaboradoresTreinamentos}
+                                    disabled={!filtrosSalvosColaboradoresTreinamentosDisponiveis}
+                                    className={classNames(
+                                        "rounded-2xl border px-4 py-2 text-xs font-black uppercase tracking-wide shadow-sm transition",
+                                        filtrosSalvosColaboradoresTreinamentosDisponiveis
+                                            ? "border-slate-900 bg-slate-900 text-white hover:bg-slate-800"
+                                            : "cursor-not-allowed border-slate-200 bg-slate-100 text-slate-400"
+                                    )}
+                                >
+                                    Aplicar filtro salvo
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={limparFiltrosSalvosColaboradoresTreinamentos}
+                                    disabled={!filtrosSalvosColaboradoresTreinamentosDisponiveis}
+                                    className={classNames(
+                                        "rounded-2xl border px-4 py-2 text-xs font-black uppercase tracking-wide shadow-sm transition",
+                                        filtrosSalvosColaboradoresTreinamentosDisponiveis
+                                            ? "border-red-100 bg-white text-red-600 hover:bg-red-50"
+                                            : "cursor-not-allowed border-slate-200 bg-slate-100 text-slate-400"
+                                    )}
+                                >
+                                    Limpar filtro salvo
+                                </button>
+                            </div>
                         </div>
                     </div>
 

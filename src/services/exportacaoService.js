@@ -411,6 +411,29 @@ function montarCartaoResumoRelatorio({ icone, titulo, valor, classe }) {
     `;
 }
 
+function montarFiltrosColaboradoresTreinamentosRelatorio(filtros = {}) {
+    const itens = [
+        ["Busca", filtros.busca || "-"],
+        ["Empresa", filtros.empresa || "Todas"],
+        ["Classifica\u00e7\u00e3o", filtros.classificacao || "Todos"],
+        ["Colaboradores filtrados", filtros.colaboradoresFiltrados || "-"],
+    ];
+
+    return `
+        <section style="margin: 10px 0 12px; border: 1px solid #d9e3f2; border-radius: 14px; padding: 10px 12px; background: #f8fbff;">
+            <h2 style="margin: 0 0 8px; color: #0f172a; font-size: 12px; text-transform: uppercase; letter-spacing: .04em;">Filtros aplicados</h2>
+            <div style="display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px;">
+                ${itens.map(([label, valor]) => `
+                    <div style="border: 1px solid #d9e3f2; border-radius: 10px; padding: 7px 8px; background: #ffffff;">
+                        <strong style="display: block; color: #64748b; font-size: 7px; text-transform: uppercase; letter-spacing: .05em;">${escaparHTML(label)}</strong>
+                        <span style="display: block; margin-top: 3px; color: #0f172a; font-size: 8px; font-weight: 800;">${escaparHTML(valor)}</span>
+                    </div>
+                `).join("")}
+            </div>
+        </section>
+    `;
+}
+
 function montarCabecalhoEmpresaTreinamentosRelatorio(empresa = {}, dataEmissao = "", titulo = "Relatório de colaboradores e treinamentos") {
     return `
         <header class="cabecalho-relatorio cabecalho-relatorio--modelo-aprovado cabecalho-relatorio--padrao-institucional">
@@ -449,7 +472,7 @@ function montarRodapeTreinamentosRelatorio(texto = "Relatório visual por empres
     `;
 }
 
-function montarSecaoEmpresaRelatorio(empresa = {}, indiceEmpresa = 0, dataEmissao = "") {
+function montarSecaoEmpresaRelatorio(empresa = {}, indiceEmpresa = 0, dataEmissao = "", filtros = {}) {
     const colaboradoresEmpresa = Array.isArray(empresa.colaboradores) ? empresa.colaboradores : [];
     const resumo = calcularResumoEmpresaRelatorio(colaboradoresEmpresa);
     const linhasTabela = colaboradoresEmpresa.map((colaborador, indice) => `
@@ -538,6 +561,7 @@ function montarSecaoEmpresaRelatorio(empresa = {}, indiceEmpresa = 0, dataEmissa
     return `
         <section class="pagina-relatorio ${indiceEmpresa > 0 ? "quebra-pagina" : ""}">
             ${montarCabecalhoEmpresaTreinamentosRelatorio(empresa, dataEmissao, "Relatório de colaboradores e treinamentos")}
+            ${indiceEmpresa === 0 ? montarFiltrosColaboradoresTreinamentosRelatorio(filtros) : ""}
 
             <section class="bloco">
                 <h2>Resumo geral</h2>
@@ -2122,6 +2146,7 @@ export async function baixarRelatorioColaboradoresTreinamentosPDF({
     nomeArquivo = "relatorio-colaboradores-treinamentos.pdf",
     colaboradores = [],
     titulo = "Relatório de colaboradores e treinamentos",
+    filtros = {},
 } = {}) {
     const dataEmissao = new Date().toLocaleDateString("pt-BR");
     const colaboradoresPreparados = await prepararColaboradoresRelatorio(colaboradores);
@@ -2132,7 +2157,7 @@ export async function baixarRelatorioColaboradoresTreinamentosPDF({
         return;
     }
 
-    const conteudo = empresas.map((empresa, indice) => montarSecaoEmpresaRelatorio(empresa, indice, dataEmissao)).join("");
+    const conteudo = empresas.map((empresa, indice) => montarSecaoEmpresaRelatorio(empresa, indice, dataEmissao, filtros)).join("");
 
     const html = `<!doctype html>
 <html lang="pt-BR">
