@@ -82,6 +82,48 @@ const obterIniciais = (nome = "") => {
         .toUpperCase();
 };
 
+const CHAVE_FILTROS_ANIVERSARIANTES = "controle-sst-qr:aniversariantes:filtros-salvos:v1";
+
+function obterFiltrosPadraoAniversariantes() {
+    return {
+        mes: "Todos",
+        empresa: "Todas",
+        funcao: "Todas",
+        status: "Todos",
+        busca: "",
+    };
+}
+
+function normalizarFiltroSalvoAniversariantes(valor, fallback = "") {
+    const texto = String(valor ?? "").trim();
+    return texto || fallback;
+}
+
+function carregarFiltrosSalvosAniversariantes() {
+    if (typeof window === "undefined" || !window.localStorage) return null;
+
+    try {
+        const bruto = window.localStorage.getItem(CHAVE_FILTROS_ANIVERSARIANTES);
+        if (!bruto) return null;
+
+        const dados = JSON.parse(bruto);
+        if (!dados || typeof dados !== "object") return null;
+
+        const padrao = obterFiltrosPadraoAniversariantes();
+
+        return {
+            mes: normalizarFiltroSalvoAniversariantes(dados.mes, padrao.mes),
+            empresa: normalizarFiltroSalvoAniversariantes(dados.empresa, padrao.empresa),
+            funcao: normalizarFiltroSalvoAniversariantes(dados.funcao, padrao.funcao),
+            status: normalizarFiltroSalvoAniversariantes(dados.status, padrao.status),
+            busca: normalizarFiltroSalvoAniversariantes(dados.busca, padrao.busca),
+        };
+    } catch (error) {
+        console.error("Erro ao carregar filtros salvos de aniversariantes:", error);
+        return null;
+    }
+}
+
 export function Aniversariantes({ colaboradores = [], empresasBanco = [] }) {
     const [mes, setMes] = useState("Todos");
     const [empresa, setEmpresa] = useState("Todas");
@@ -89,6 +131,12 @@ export function Aniversariantes({ colaboradores = [], empresasBanco = [] }) {
     const [status, setStatus] = useState("Todos");
     const [busca, setBusca] = useState("");
     const [exportandoPDF, setExportandoPDF] = useState(false);
+    const [versaoFiltroSalvo, setVersaoFiltroSalvo] = useState(0);
+
+    const filtrosSalvosDisponiveis = useMemo(
+        () => Boolean(carregarFiltrosSalvosAniversariantes()),
+        [versaoFiltroSalvo]
+    );
 
     const colaboradoresElegiveis = useMemo(
         () => colaboradores.filter((colaborador) => deveMostrarAniversarioColaborador(colaborador)),
@@ -184,6 +232,47 @@ export function Aniversariantes({ colaboradores = [], empresasBanco = [] }) {
         ? "Resultado conforme os filtros aplicados."
         : "Colaboradores com data de nascimento cadastrada.";
 
+    const filtrosAtuaisAniversariantes = useMemo(
+        () => ({ mes, empresa, funcao, status, busca }),
+        [mes, empresa, funcao, status, busca]
+    );
+
+    const salvarFiltrosAniversariantes = () => {
+        if (typeof window === "undefined" || !window.localStorage) return;
+
+        try {
+            window.localStorage.setItem(CHAVE_FILTROS_ANIVERSARIANTES, JSON.stringify(filtrosAtuaisAniversariantes));
+            setVersaoFiltroSalvo((valor) => valor + 1);
+            alert("Filtros de aniversariantes salvos.");
+        } catch (error) {
+            console.error("Erro ao salvar filtros de aniversariantes:", error);
+            alert("N?o foi poss?vel salvar os filtros de aniversariantes.");
+        }
+    };
+
+    const aplicarFiltrosSalvosAniversariantes = () => {
+        const filtrosSalvos = carregarFiltrosSalvosAniversariantes();
+
+        if (!filtrosSalvos) {
+            alert("Nenhum filtro salvo encontrado para aniversariantes.");
+            return;
+        }
+
+        setMes(filtrosSalvos.mes || "Todos");
+        setEmpresa(filtrosSalvos.empresa || "Todas");
+        setFuncao(filtrosSalvos.funcao || "Todas");
+        setStatus(filtrosSalvos.status || "Todos");
+        setBusca(filtrosSalvos.busca || "");
+    };
+
+    const limparFiltrosSalvosAniversariantes = () => {
+        if (typeof window === "undefined" || !window.localStorage) return;
+
+        window.localStorage.removeItem(CHAVE_FILTROS_ANIVERSARIANTES);
+        setVersaoFiltroSalvo((valor) => valor + 1);
+        alert("Filtros salvos de aniversariantes removidos.");
+    };
+
     const obterEmpresaRelatorio = (colaborador = {}) => {
         const empresaId = String(colaborador.empresaId || colaborador.empresa_id || "").trim();
         const empresaNome = normalizarTextoBusca(colaborador.empresa || colaborador.empresaNome || colaborador.empresaExibicao || "");
@@ -236,7 +325,7 @@ export function Aniversariantes({ colaboradores = [], empresasBanco = [] }) {
             });
 
             await baixarRelatorioAniversariantesPDF({
-                nomeArquivo: "relatorio-aniversariantes.pdf",
+                nomeArquivo: "relatório-aniversariantes.pdf",
                 titulo: "Relatório de aniversariantes",
                 aniversariantes: aniversariantesRelatorio,
                 filtros: {
@@ -363,6 +452,48 @@ export function Aniversariantes({ colaboradores = [], empresasBanco = [] }) {
             </div>
 
             <Card className="mb-5">
+                <div className="mb-3 flex flex-col gap-3 rounded-2xl border border-slate-100 bg-slate-50 p-3 sm:flex-row sm:items-center sm:justify-between">
+                    <div>
+                        <p className="text-xs font-black uppercase tracking-wide text-slate-500">Filtros salvos</p>
+                        <p className="mt-1 text-xs font-semibold text-slate-500">Salve uma combinação de filtros para reutilizar neste relatório.</p>
+                    </div>
+                    <div className="flex flex-col gap-2 sm:flex-row">
+                        <button
+                            type="button"
+                            onClick={salvarFiltrosAniversariantes}
+                            className="rounded-2xl border border-slate-200 bg-white px-4 py-2 text-xs font-black uppercase tracking-wide text-slate-700 shadow-sm transition hover:border-slate-300 hover:bg-slate-100"
+                        >
+                            Salvar filtro
+                        </button>
+                        <button
+                            type="button"
+                            onClick={aplicarFiltrosSalvosAniversariantes}
+                            disabled={!filtrosSalvosDisponiveis}
+                            className={classNames(
+                                "rounded-2xl border px-4 py-2 text-xs font-black uppercase tracking-wide shadow-sm transition",
+                                filtrosSalvosDisponiveis
+                                    ? "border-slate-900 bg-slate-900 text-white hover:bg-slate-800"
+                                    : "cursor-not-allowed border-slate-200 bg-slate-100 text-slate-400"
+                            )}
+                        >
+                            Aplicar filtro salvo
+                        </button>
+                        <button
+                            type="button"
+                            onClick={limparFiltrosSalvosAniversariantes}
+                            disabled={!filtrosSalvosDisponiveis}
+                            className={classNames(
+                                "rounded-2xl border px-4 py-2 text-xs font-black uppercase tracking-wide shadow-sm transition",
+                                filtrosSalvosDisponiveis
+                                    ? "border-red-100 bg-white text-red-600 hover:bg-red-50"
+                                    : "cursor-not-allowed border-slate-200 bg-slate-100 text-slate-400"
+                            )}
+                        >
+                            Limpar filtro salvo
+                        </button>
+                    </div>
+                </div>
+
                 <div className="grid gap-3 lg:grid-cols-[1.2fr_repeat(4,minmax(0,1fr))]">
                     <label className="relative block">
                         <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
