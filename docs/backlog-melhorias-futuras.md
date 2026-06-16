@@ -143,7 +143,7 @@ Commit relacionado:
 
 Melhorias ainda pendentes:
 
-* confirmar no mobile se o bloco de resposta administrativa ficou bom;
+* valida??o mobile aprovada no Roteiro 28.4;
 * avaliar futuramente se a RPC pode retornar quem aprovou, recusou ou concluiu a solicitação;
 * destacar melhor usuários bloqueados se necessário;
 * revisar usuários antigos ou inativos;
