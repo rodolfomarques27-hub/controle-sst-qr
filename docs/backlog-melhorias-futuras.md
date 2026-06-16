@@ -166,7 +166,9 @@ Objetivo:
 * manter o padrão visual e funcional já aprovado no sistema;
 * iniciar sempre por microetapas, um relatório por vez.
 
-Primeira melhoria aplicada no Roteiro 32:
+Melhorias aplicadas no Roteiro 32:
+
+1. Aniversariantes:
 
 * relatório de Aniversariantes recebeu filtros salvos;
 * filtros salvos usando `localStorage`, sem alteração no banco;
@@ -177,12 +179,24 @@ Primeira melhoria aplicada no Roteiro 32:
 * validação visual aprovada na aba Aniversariantes;
 * commit relacionado: f1ab6c5 feat: salvar filtros de aniversariantes.
 
+2. Auditoria do Sistema:
+
+* relatório da Auditoria do Sistema recebeu filtros salvos;
+* filtros salvos usando `localStorage`, sem alteração no banco;
+* campos contemplados: busca, ação, usuário, módulo, categoria, nível, período inicial e período final;
+* adicionados botões: Salvar filtro, Aplicar filtro salvo e Limpar filtro salvo;
+* PDF da Auditoria do Sistema mantido usando `baixarRelatorioAuditoriaSistemaPDF`; 
+* `exportacaoService.js` não foi alterado;
+* Supabase não foi alterado;
+* build aprovado;
+* validação visual aprovada na aba Auditoria do Sistema;
+* commit relacionado: 9f46044 feat: salvar filtros da auditoria do sistema.
+
 Relatórios pendentes para etapas futuras:
 
 * relatório de Treinamentos;
 * relatório de Pendências;
 * relatório de Empresas e Documentos;
-* relatório de Auditoria do Sistema;
 * relatório de Auditoria de Campo.
 
 Regra para continuidade:
