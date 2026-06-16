@@ -340,6 +340,56 @@ function montarTextoObservacaoCorrecaoQrCampo({ auditoria = {}, evidencia = {}, 
     return linhas.join("\n");
 }
 
+const CHAVE_FILTROS_AUDITORIA_CAMPO = "controle-sst-qr:auditoria-campo:filtros-salvos:v1";
+
+function obterFiltrosPadraoAuditoriaCampo() {
+    return {
+        busca: "",
+        periodo: "todos",
+        tipo: "todos",
+        empresa: "todos",
+        auditor: "todos",
+        status: "todos",
+        risco: "todos",
+    };
+}
+
+function normalizarValorFiltroAuditoriaCampo(valor, fallback = "todos") {
+    const texto = String(valor ?? "").trim();
+    return texto || fallback;
+}
+
+function normalizarFiltrosSalvosAuditoriaCampo(dados = {}) {
+    const padrao = obterFiltrosPadraoAuditoriaCampo();
+
+    return {
+        busca: normalizarValorFiltroAuditoriaCampo(dados.busca, padrao.busca),
+        periodo: normalizarValorFiltroAuditoriaCampo(dados.periodo, padrao.periodo),
+        tipo: normalizarValorFiltroAuditoriaCampo(dados.tipo, padrao.tipo),
+        empresa: normalizarValorFiltroAuditoriaCampo(dados.empresa, padrao.empresa),
+        auditor: normalizarValorFiltroAuditoriaCampo(dados.auditor, padrao.auditor),
+        status: normalizarValorFiltroAuditoriaCampo(dados.status, padrao.status),
+        risco: normalizarValorFiltroAuditoriaCampo(dados.risco, padrao.risco),
+    };
+}
+
+function carregarFiltrosSalvosAuditoriaCampo() {
+    if (typeof window === "undefined" || !window.localStorage) return null;
+
+    try {
+        const bruto = window.localStorage.getItem(CHAVE_FILTROS_AUDITORIA_CAMPO);
+        if (!bruto) return null;
+
+        const dados = JSON.parse(bruto);
+        if (!dados || typeof dados !== "object") return null;
+
+        return normalizarFiltrosSalvosAuditoriaCampo(dados);
+    } catch (error) {
+        console.error("Erro ao carregar filtros salvos da Auditoria de Campo:", error);
+        return null;
+    }
+}
+
 export function DashboardAuditoriaCampo({
     auditoriasCampo = [],
     carregando = false,
@@ -555,6 +605,12 @@ export function DashboardAuditoriaCampo({
         return window.localStorage.getItem("dashboardAuditoriaCampoBuscarRecolhido") === "true";
     });
     const [quantidadeHistoricoVisivel, setQuantidadeHistoricoVisivel] = useState(30);
+    const [versaoFiltroSalvoAuditoriaCampo, setVersaoFiltroSalvoAuditoriaCampo] = useState(0);
+
+    const filtrosSalvosAuditoriaCampoDisponiveis = useMemo(
+        () => Boolean(carregarFiltrosSalvosAuditoriaCampo()),
+        [versaoFiltroSalvoAuditoriaCampo]
+    );
 
     useEffect(() => { if (typeof window !== "undefined") window.localStorage.setItem("dashboardAuditoriaCampoCartasVisiveis", JSON.stringify(cartasVisiveis)); }, [cartasVisiveis]);
     useEffect(() => { if (typeof window !== "undefined") window.localStorage.setItem("dashboardAuditoriaCampoTamanhosCartas", JSON.stringify(tamanhosCartas)); }, [tamanhosCartas]);
@@ -566,6 +622,45 @@ export function DashboardAuditoriaCampo({
     useEffect(() => { if (typeof window !== "undefined") window.localStorage.setItem("dashboardAuditoriaCampoAuditoriasAbertas", JSON.stringify(auditoriasHistoricoAbertas)); }, [auditoriasHistoricoAbertas]);
     useEffect(() => { if (typeof window !== "undefined") window.localStorage.setItem("dashboardAuditoriaCampoBuscarRecolhido", String(buscarAuditoriaRecolhido)); }, [buscarAuditoriaRecolhido]);
     useEffect(() => { setQuantidadeHistoricoVisivel(30); }, [filtrosAuditoriaCampo]);
+
+    const filtrosAtuaisAuditoriaCampo = useMemo(
+        () => normalizarFiltrosSalvosAuditoriaCampo(filtrosAuditoriaCampo),
+        [filtrosAuditoriaCampo]
+    );
+
+    const salvarFiltrosAuditoriaCampo = () => {
+        if (typeof window === "undefined" || !window.localStorage) return;
+
+        try {
+            window.localStorage.setItem(CHAVE_FILTROS_AUDITORIA_CAMPO, JSON.stringify(filtrosAtuaisAuditoriaCampo));
+            setVersaoFiltroSalvoAuditoriaCampo((valor) => valor + 1);
+            alert("Filtros da Auditoria de Campo salvos.");
+        } catch (error) {
+            console.error("Erro ao salvar filtros da Auditoria de Campo:", error);
+            alert("Não foi possível salvar os filtros da Auditoria de Campo.");
+        }
+    };
+
+    const aplicarFiltrosSalvosAuditoriaCampo = () => {
+        const filtrosSalvos = carregarFiltrosSalvosAuditoriaCampo();
+
+        if (!filtrosSalvos) {
+            alert("Nenhum filtro salvo encontrado para a Auditoria de Campo.");
+            return;
+        }
+
+        setFiltrosAuditoriaCampo(filtrosSalvos);
+        setBuscarAuditoriaRecolhido(false);
+        alert("Filtros salvos aplicados na Auditoria de Campo.");
+    };
+
+    const limparFiltrosSalvosAuditoriaCampo = () => {
+        if (typeof window === "undefined" || !window.localStorage) return;
+
+        window.localStorage.removeItem(CHAVE_FILTROS_AUDITORIA_CAMPO);
+        setVersaoFiltroSalvoAuditoriaCampo((valor) => valor + 1);
+        alert("Filtros salvos da Auditoria de Campo removidos.");
+    };
 
     useEffect(() => {
         let componenteAtivo = true;
@@ -2230,6 +2325,47 @@ export function DashboardAuditoriaCampo({
 
                         {!buscarAuditoriaRecolhido && (
                             <>
+                                <div className="mt-4 flex flex-col gap-3 rounded-2xl border border-slate-200 bg-white p-3 lg:flex-row lg:items-center lg:justify-between">
+                                    <div>
+                                        <p className="text-xs font-black uppercase tracking-wide text-slate-500">Filtros salvos do relatório</p>
+                                        <p className="mt-1 text-xs font-semibold text-slate-500">Salve uma combinação de filtros para reutilizar no histórico da Auditoria de Campo.</p>
+                                    </div>
+                                    <div className="flex flex-col gap-2 sm:flex-row">
+                                        <button
+                                            type="button"
+                                            onClick={salvarFiltrosAuditoriaCampo}
+                                            className="rounded-2xl border border-slate-200 bg-white px-4 py-2 text-xs font-black uppercase tracking-wide text-slate-700 shadow-sm transition hover:border-slate-300 hover:bg-slate-100"
+                                        >
+                                            Salvar filtro
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={aplicarFiltrosSalvosAuditoriaCampo}
+                                            disabled={!filtrosSalvosAuditoriaCampoDisponiveis}
+                                            className={classNames(
+                                                "rounded-2xl border px-4 py-2 text-xs font-black uppercase tracking-wide shadow-sm transition",
+                                                filtrosSalvosAuditoriaCampoDisponiveis
+                                                    ? "border-slate-900 bg-slate-900 text-white hover:bg-slate-800"
+                                                    : "cursor-not-allowed border-slate-200 bg-slate-100 text-slate-400"
+                                            )}
+                                        >
+                                            Aplicar filtro salvo
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={limparFiltrosSalvosAuditoriaCampo}
+                                            disabled={!filtrosSalvosAuditoriaCampoDisponiveis}
+                                            className={classNames(
+                                                "rounded-2xl border px-4 py-2 text-xs font-black uppercase tracking-wide shadow-sm transition",
+                                                filtrosSalvosAuditoriaCampoDisponiveis
+                                                    ? "border-red-100 bg-white text-red-600 hover:bg-red-50"
+                                                    : "cursor-not-allowed border-slate-200 bg-slate-100 text-slate-400"
+                                            )}
+                                        >
+                                            Limpar filtro salvo
+                                        </button>
+                                    </div>
+                                </div>
                                 <div className="mt-4 flex flex-col gap-3 lg:flex-row lg:items-end">
                                     <label className="block flex-1 text-xs font-bold uppercase tracking-wide text-slate-500">
                                         Buscar auditoria
