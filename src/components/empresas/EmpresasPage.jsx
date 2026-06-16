@@ -1384,9 +1384,21 @@ export function Empresas({
             return;
         }
 
+        const pendenciasRelatorio = montarPendenciasRelatorioDocumental();
+
+        const relatorioPendenciasDocumentaisFiltrosAplicados = {
+            busca: buscaEmpresa.trim() || "-",
+            tipo: filtroTipoEmpresa,
+            status: filtroStatusEmpresa,
+            empresasFiltradas: `${empresasFiltradas.length} empresa(s)`,
+            documentosFiltrados: `${documentosFiltrados.length} documento(s)`,
+            pendenciasFiltradas: `${pendenciasRelatorio.length} pendência(s)`,
+        };
+
         await baixarRelatorioPendenciasDocumentaisPDF({
-            pendencias: montarPendenciasRelatorioDocumental(),
+            pendencias: pendenciasRelatorio,
             nomeArquivo: "relatorio-pendencias-documentais.pdf",
+            filtros: relatorioPendenciasDocumentaisFiltrosAplicados,
         });
     };
 
