@@ -218,6 +218,54 @@ const copiarTextoAuditoriaSistema = async (texto) => {
     }
 };
 
+const CHAVE_FILTROS_RELATORIO_AUDITORIA_SISTEMA = "controle-sst-qr:auditoria-sistema:filtros-salvos:v1";
+
+function obterFiltrosPadraoRelatorioAuditoriaSistema() {
+    return {
+        busca: "",
+        filtroAcao: "Todas",
+        filtroUsuario: "Todos",
+        filtroModulo: "Todos",
+        filtroCategoria: "Todas",
+        filtroNivel: "Todos",
+        filtroPeriodoInicio: "",
+        filtroPeriodoFim: "",
+    };
+}
+
+function normalizarFiltroSalvoRelatorioAuditoriaSistema(valor, fallback = "") {
+    const texto = String(valor ?? "").trim();
+    return texto || fallback;
+}
+
+function carregarFiltrosSalvosRelatorioAuditoriaSistema() {
+    if (typeof window === "undefined" || !window.localStorage) return null;
+
+    try {
+        const bruto = window.localStorage.getItem(CHAVE_FILTROS_RELATORIO_AUDITORIA_SISTEMA);
+        if (!bruto) return null;
+
+        const dados = JSON.parse(bruto);
+        if (!dados || typeof dados !== "object") return null;
+
+        const padrao = obterFiltrosPadraoRelatorioAuditoriaSistema();
+
+        return {
+            busca: normalizarFiltroSalvoRelatorioAuditoriaSistema(dados.busca, padrao.busca),
+            filtroAcao: normalizarFiltroSalvoRelatorioAuditoriaSistema(dados.filtroAcao, padrao.filtroAcao),
+            filtroUsuario: normalizarFiltroSalvoRelatorioAuditoriaSistema(dados.filtroUsuario, padrao.filtroUsuario),
+            filtroModulo: normalizarFiltroSalvoRelatorioAuditoriaSistema(dados.filtroModulo, padrao.filtroModulo),
+            filtroCategoria: normalizarFiltroSalvoRelatorioAuditoriaSistema(dados.filtroCategoria, padrao.filtroCategoria),
+            filtroNivel: normalizarFiltroSalvoRelatorioAuditoriaSistema(dados.filtroNivel, padrao.filtroNivel),
+            filtroPeriodoInicio: normalizarFiltroSalvoRelatorioAuditoriaSistema(dados.filtroPeriodoInicio, padrao.filtroPeriodoInicio),
+            filtroPeriodoFim: normalizarFiltroSalvoRelatorioAuditoriaSistema(dados.filtroPeriodoFim, padrao.filtroPeriodoFim),
+        };
+    } catch (error) {
+        console.error("Erro ao carregar filtros salvos da Auditoria do Sistema:", error);
+        return null;
+    }
+}
+
 export function RelatorioAuditoria({
     auditoria = [],
     emailsEnviados = [],
@@ -242,6 +290,12 @@ export function RelatorioAuditoria({
     const [filtroNivel, setFiltroNivel] = useState("Todos");
     const [filtroPeriodoInicio, setFiltroPeriodoInicio] = useState("");
     const [filtroPeriodoFim, setFiltroPeriodoFim] = useState("");
+    const [versaoFiltroSalvoRelatorioAuditoriaSistema, setVersaoFiltroSalvoRelatorioAuditoriaSistema] = useState(0);
+
+    const filtrosSalvosRelatorioAuditoriaSistemaDisponiveis = useMemo(
+        () => Boolean(carregarFiltrosSalvosRelatorioAuditoriaSistema()),
+        [versaoFiltroSalvoRelatorioAuditoriaSistema]
+    );
     const [filtrosStorage, setFiltrosStorage] = useState({
         empresa: "Todas",
         colaborador: "Todos",
@@ -1058,6 +1112,60 @@ Essa ação remove arquivos do Storage e não altera registros do banco.`;
         );
     };
 
+    const filtrosAtuaisRelatorioAuditoriaSistema = useMemo(
+        () => ({
+            busca,
+            filtroAcao,
+            filtroUsuario,
+            filtroModulo,
+            filtroCategoria,
+            filtroNivel,
+            filtroPeriodoInicio,
+            filtroPeriodoFim,
+        }),
+        [busca, filtroAcao, filtroUsuario, filtroModulo, filtroCategoria, filtroNivel, filtroPeriodoInicio, filtroPeriodoFim]
+    );
+
+    const salvarFiltrosRelatorioAuditoriaSistema = () => {
+        if (typeof window === "undefined" || !window.localStorage) return;
+
+        try {
+            window.localStorage.setItem(CHAVE_FILTROS_RELATORIO_AUDITORIA_SISTEMA, JSON.stringify(filtrosAtuaisRelatorioAuditoriaSistema));
+            setVersaoFiltroSalvoRelatorioAuditoriaSistema((valor) => valor + 1);
+            alert("Filtros da Auditoria do Sistema salvos.");
+        } catch (error) {
+            console.error("Erro ao salvar filtros da Auditoria do Sistema:", error);
+            alert("Não foi possível salvar os filtros da Auditoria do Sistema.");
+        }
+    };
+
+    const aplicarFiltrosSalvosRelatorioAuditoriaSistema = () => {
+        const filtrosSalvos = carregarFiltrosSalvosRelatorioAuditoriaSistema();
+
+        if (!filtrosSalvos) {
+            alert("Nenhum filtro salvo encontrado para a Auditoria do Sistema.");
+            return;
+        }
+
+        setBusca(filtrosSalvos.busca || "");
+        setFiltroAcao(filtrosSalvos.filtroAcao || "Todas");
+        setFiltroUsuario(filtrosSalvos.filtroUsuario || "Todos");
+        setFiltroModulo(filtrosSalvos.filtroModulo || "Todos");
+        setFiltroCategoria(filtrosSalvos.filtroCategoria || "Todas");
+        setFiltroNivel(filtrosSalvos.filtroNivel || "Todos");
+        setFiltroPeriodoInicio(filtrosSalvos.filtroPeriodoInicio || "");
+        setFiltroPeriodoFim(filtrosSalvos.filtroPeriodoFim || "");
+        alert("Filtros salvos aplicados na Auditoria do Sistema.");
+    };
+
+    const limparFiltrosSalvosRelatorioAuditoriaSistema = () => {
+        if (typeof window === "undefined" || !window.localStorage) return;
+
+        window.localStorage.removeItem(CHAVE_FILTROS_RELATORIO_AUDITORIA_SISTEMA);
+        setVersaoFiltroSalvoRelatorioAuditoriaSistema((valor) => valor + 1);
+        alert("Filtros salvos da Auditoria do Sistema removidos.");
+    };
+
     const montarLinhasRelatorioAuditoriaSistema = () => registrosFiltrados.map((item) => {
         const origemAcesso = item.dados?.origemAcesso || {};
         const modulo = obterModuloAuditoriaSistema(item);
@@ -1413,6 +1521,48 @@ Essa ação remove arquivos do Storage e não altera registros do banco.`;
                 defaultOpen
             >
                 <div className="rounded-3xl bg-slate-50 p-4 ring-1 ring-slate-200">
+                    <div className="mb-3 flex flex-col gap-3 rounded-2xl border border-slate-200 bg-white p-3 lg:flex-row lg:items-center lg:justify-between">
+                        <div>
+                            <p className="text-xs font-black uppercase tracking-wide text-slate-500">Filtros salvos do relatório</p>
+                            <p className="mt-1 text-xs font-semibold text-slate-500">Salve uma combinação de filtros para reutilizar na Auditoria do Sistema.</p>
+                        </div>
+                        <div className="flex flex-col gap-2 sm:flex-row">
+                            <button
+                                type="button"
+                                onClick={salvarFiltrosRelatorioAuditoriaSistema}
+                                className="rounded-2xl border border-slate-200 bg-white px-4 py-2 text-xs font-black uppercase tracking-wide text-slate-700 shadow-sm transition hover:border-slate-300 hover:bg-slate-100"
+                            >
+                                Salvar filtro
+                            </button>
+                            <button
+                                type="button"
+                                onClick={aplicarFiltrosSalvosRelatorioAuditoriaSistema}
+                                disabled={!filtrosSalvosRelatorioAuditoriaSistemaDisponiveis}
+                                className={classNames(
+                                    "rounded-2xl border px-4 py-2 text-xs font-black uppercase tracking-wide shadow-sm transition",
+                                    filtrosSalvosRelatorioAuditoriaSistemaDisponiveis
+                                        ? "border-slate-900 bg-slate-900 text-white hover:bg-slate-800"
+                                        : "cursor-not-allowed border-slate-200 bg-slate-100 text-slate-400"
+                                )}
+                            >
+                                Aplicar filtro salvo
+                            </button>
+                            <button
+                                type="button"
+                                onClick={limparFiltrosSalvosRelatorioAuditoriaSistema}
+                                disabled={!filtrosSalvosRelatorioAuditoriaSistemaDisponiveis}
+                                className={classNames(
+                                    "rounded-2xl border px-4 py-2 text-xs font-black uppercase tracking-wide shadow-sm transition",
+                                    filtrosSalvosRelatorioAuditoriaSistemaDisponiveis
+                                        ? "border-red-100 bg-white text-red-600 hover:bg-red-50"
+                                        : "cursor-not-allowed border-slate-200 bg-slate-100 text-slate-400"
+                                )}
+                            >
+                                Limpar filtro salvo
+                            </button>
+                        </div>
+                    </div>
+
                     <div className="grid gap-3 xl:grid-cols-[minmax(260px,1.4fr)_repeat(4,minmax(160px,1fr))]">
                         <div className="relative xl:col-span-2">
                             <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
