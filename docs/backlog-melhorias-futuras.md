@@ -192,12 +192,24 @@ Melhorias aplicadas no Roteiro 32:
 * validação visual aprovada na aba Auditoria do Sistema;
 * commit relacionado: 9f46044 feat: salvar filtros da auditoria do sistema.
 
+3. Auditoria de Campo:
+
+* relatório do Histórico de Auditorias de Campo recebeu filtros salvos;
+* filtros salvos usando `localStorage`, sem alteração no banco;
+* campos contemplados: busca, período, tipo, empresa, auditor, status e risco;
+* adicionados botões: Salvar filtro, Aplicar filtro salvo e Limpar filtro salvo;
+* relatório de impressão do histórico mantido com a seção Filtros aplicados;
+* `exportacaoService.js` não foi alterado;
+* Supabase não foi alterado;
+* build aprovado;
+* validação visual aprovada no Dashboard Auditoria de Campo;
+* commit relacionado: c882a6b feat: salvar filtros da auditoria de campo.
+
 Relatórios pendentes para etapas futuras:
 
 * relatório de Treinamentos;
 * relatório de Pendências;
-* relatório de Empresas e Documentos;
-* relatório de Auditoria de Campo.
+* relatório de Empresas e Documentos.
 
 Regra para continuidade:
 
