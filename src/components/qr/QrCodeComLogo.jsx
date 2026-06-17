@@ -81,24 +81,22 @@ export function QrCodeComLogo({
     bgColor = "#ffffff",
     fgColor = "#0f172a",
     logoSrc = "",
-    logoRatio = 0.26,
+    logoRatio = 0.24,
     className = "",
 }) {
     const logoPersonalizado = useLogoQrCodePersonalizado();
     const logoFinal = logoSrc || logoPersonalizado || LOGO_PADRAO_QR_CODE;
     const tamanhoQr = Math.max(80, Number(size) || 150);
-    const proporcaoLogo = Math.min(0.3, Math.max(0.16, Number(logoRatio) || 0.26));
+    const proporcaoLogo = Math.min(0.28, Math.max(0.14, Number(logoRatio) || 0.24));
     const tamanhoLogo = Math.round(tamanhoQr * proporcaoLogo);
-
-    const imageSettings = useMemo(() => ({
-        src: logoFinal,
-        width: tamanhoLogo,
-        height: tamanhoLogo,
-        excavate: true,
-    }), [logoFinal, tamanhoLogo]);
+    const respiroLogo = Math.max(5, Math.round(tamanhoLogo * 0.14));
+    const tamanhoFundoLogo = tamanhoLogo + respiroLogo * 2;
 
     return (
-        <span className={classNames("inline-flex items-center justify-center", className)}>
+        <span
+            className={classNames("relative inline-flex items-center justify-center overflow-hidden", className)}
+            style={{ width: tamanhoQr, height: tamanhoQr }}
+        >
             <QRCodeSVG
                 value={value || ""}
                 size={tamanhoQr}
@@ -106,8 +104,29 @@ export function QrCodeComLogo({
                 includeMargin={includeMargin}
                 bgColor={bgColor}
                 fgColor={fgColor}
-                imageSettings={imageSettings}
             />
+
+            {logoFinal && (
+                <span
+                    aria-hidden="true"
+                    className="pointer-events-none absolute left-1/2 top-1/2 z-10 flex -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-xl bg-white shadow-sm ring-1 ring-white"
+                    style={{
+                        width: tamanhoFundoLogo,
+                        height: tamanhoFundoLogo,
+                    }}
+                >
+                    <img
+                        src={logoFinal}
+                        alt=""
+                        draggable={false}
+                        className="block rounded-lg object-contain"
+                        style={{
+                            width: tamanhoLogo,
+                            height: tamanhoLogo,
+                        }}
+                    />
+                </span>
+            )}
         </span>
     );
 }
@@ -203,5 +222,6 @@ export function QrCodeLogoControls({ className = "" }) {
         </div>
     );
 }
+
 
 
