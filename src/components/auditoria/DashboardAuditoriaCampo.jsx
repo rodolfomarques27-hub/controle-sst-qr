@@ -1,4 +1,4 @@
-/* eslint-disable no-unused-vars */
+﻿/* eslint-disable no-unused-vars */
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
     AlertTriangle,
@@ -28,6 +28,7 @@ import {
 import { tiposAuditoriaCampoDireta } from "../../constants/sstConstants";
 import { normalizarTextoBusca, formatDate, formatarDataHora, classNames } from "../../utils/sstUtils";
 import { LIMITE_QRCODES_CAMPO_POR_CARGA } from "../../constants/sistemaLimitesConstants";
+import { QrCodeComLogo } from "../qr/QrCodeComLogo";
 import { carregarTokenAuditoriaPublicaAtivoPadrao } from "../../services/auditoriaPublicaTokenService";
 
 
@@ -2730,7 +2731,7 @@ export function DashboardAuditoriaCampo({
                         <div id="qr-auditoria-campo-para-impressao" className="mt-4 rounded-3xl bg-white p-3 text-center ring-1 ring-slate-200">
                             <div className="card">
                                 <div className="mx-auto flex w-fit justify-center rounded-3xl bg-white p-3 ring-1 ring-slate-200 shadow-sm">
-                                    <QRCodeCampoLazy value={linkQrCampoAtual} size={160} level="M" />
+                                    <QrCodeComLogo value={linkQrCampoAtual} size={160} level="H" logoRatio={0.24} />
                                 </div>
                                 <h2 className="mt-3 truncate text-base font-black uppercase text-slate-950" title={qrFormCampo.identificacao || "Identificação pendente"}>{qrFormCampo.identificacao || "Identificação pendente"}</h2>
                             </div>
@@ -2843,7 +2844,7 @@ export function DashboardAuditoriaCampo({
                                         <div key={item.id || item.codigo} className="grid gap-3 overflow-visible rounded-2xl bg-slate-50 p-5 ring-1 ring-slate-100 sm:grid-cols-[132px_minmax(0,1fr)]">
                                             <div className="flex items-start justify-center">
                                                 <div data-qrcode-campo-id={chaveQrSalvo} className="flex aspect-square w-[116px] items-center justify-center self-start rounded-3xl border border-slate-200 bg-white p-3 shadow-sm">
-                                                    <QRCodeCampoLazy value={linkQrCampoSalvo} size={90} level="M" />
+                                                    <QrCodeComLogo value={linkQrCampoSalvo} size={90} level="H" logoRatio={0.22} />
                                                 </div>
                                             </div>
                                             <div className="min-w-0 overflow-hidden">
@@ -3463,3 +3464,5 @@ export function DashboardAuditoriaCampo({
         </div>
     );
 }
+
+

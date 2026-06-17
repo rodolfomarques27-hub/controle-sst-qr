@@ -1,5 +1,6 @@
-import React from "react";
+﻿import React from "react";
 import { QRCodeSVG } from "qrcode.react";
+import { QrCodeComLogo } from "./QrCodeComLogo";
 import { FotoColaborador } from "../commonComponents";
 
 export const CRACHA_COLABORADOR_PRINT_STYLES = `
@@ -604,7 +605,7 @@ function VersoCracha({ valorQr }) {
 
                     <div className="cracha-qr-box">
                         <div className="cracha-qrcode">
-                            <QRCodeSVG value={valorQr || ""} size={214} level="H" bgColor="#ffffff" fgColor="#000000" />
+                            <QrCodeComLogo value={valorQr || ""} size={214} level="H" bgColor="#ffffff" fgColor="#000000" logoRatio={0.20} />
                         </div>
                     </div>
 
@@ -633,3 +634,5 @@ export function CrachaColaboradorPrint({ colaborador, urlConsultaColaborador }) 
         </div>
     );
 }
+
+

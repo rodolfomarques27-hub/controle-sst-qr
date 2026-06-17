@@ -1,9 +1,9 @@
-import React, { useEffect, useState } from "react";
-import { QRCodeSVG } from "qrcode.react";
+﻿import React, { useEffect, useState } from "react";
 import { ChevronDown, ChevronUp, Eye, EyeOff, Lock, UserRound } from "lucide-react";
 import { supabase, SUPABASE_ANON_KEY, SUPABASE_URL } from "../lib/supabaseClient";
 import { useStorageUrl } from "../hooks/useStorageUrl";
 import { classNames } from "../utils/sstUtils";
+import { QrCodeComLogo } from "./qr/QrCodeComLogo";
 
 export function obterFotoColaboradorSrc(colaboradorOuSrc = {}) {
     if (!colaboradorOuSrc) return "";
@@ -269,18 +269,18 @@ export function QRCodeReal({ token, size = 150 }) {
 
     return (
         <div className="flex max-w-full items-center justify-center overflow-hidden rounded-3xl bg-white p-3 shadow-inner ring-1 ring-slate-200">
-            <QRCodeSVG
+            <QrCodeComLogo
                 value={urlConsulta}
                 size={size}
                 level="H"
                 includeMargin
                 bgColor="#ffffff"
                 fgColor="#0f172a"
+                logoRatio={0.26}
             />
         </div>
     );
 }
-
 export function LinkPublicoQR({ token }) {
     const urlConsulta = `${window.location.origin}/?qr=${encodeURIComponent(token)}`;
 
@@ -479,3 +479,5 @@ export function PasswordInput({
         </div>
     );
 }
+
+
