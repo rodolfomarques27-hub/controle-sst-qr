@@ -1,4 +1,4 @@
-/* eslint-disable no-unused-vars */
+﻿/* eslint-disable no-unused-vars */
 import React, { useEffect, useMemo, useState } from "react";
 import {
     AlertTriangle,
@@ -72,6 +72,7 @@ import {
 } from "../../services/usuariosPermissoesSistemaService";
 import { supabase } from "../../lib/supabaseClient";
 import { reduzirFotoParaAuditoria } from "../../services/imagemService";
+import { QrCodeComLogo, QrCodeLogoControls } from "../qr/QrCodeComLogo";
 
 const classNames = (...classes) => classes.filter(Boolean).join(" ");
 
@@ -2086,7 +2087,7 @@ export function ConfiguracoesSistema({
                                     Centralize o token público, documente a senha operacional e diferencie Auditoria pública, QR colaborador e QR de Campo / Máquina / Equipamento.
                                 </p>
                             </div>
-                            <button
+                          <button
                                 type="button"
                                 onClick={restaurarConfigAuditoriaPublica}
                                 disabled={!podeAlterarConfiguracoesCriticasSistema}
@@ -2097,6 +2098,41 @@ export function ConfiguracoesSistema({
                                 Restaurar
                             </button>
                         </div>
+                          <div data-qr-logo-configuracoes="true" className="mt-4 w-full rounded-2xl bg-slate-50 px-4 py-3 ring-1 ring-slate-200">
+                              <div className="flex w-full flex-col gap-4 xl:flex-row xl:items-start xl:justify-between xl:gap-6">
+                                  <div className="min-w-0 max-w-[520px]">
+                                      <p className="text-sm font-black text-slate-950">Personalização dos QR Codes</p>
+                                      <p className="mt-1 text-xs font-semibold leading-5 text-slate-500">
+                                          Escolha uma imagem PNG para aparecer no centro dos QR Codes. A escolha fica salva neste navegador.
+                                      </p>
+                                      <p className="mt-1 text-[11px] font-bold text-slate-500">
+                                          Recomendado: PNG quadrado, fundo limpo e até 350 KB.
+                                      </p>
+                                  </div>
+
+                                  <div className="flex shrink-0 flex-col gap-3 sm:flex-row sm:items-start sm:justify-end">
+                                      <div className="flex shrink-0 items-center justify-center rounded-2xl bg-white px-3 py-3 ring-1 ring-slate-200">
+                                          <QrCodeComLogo
+                                              value={typeof window !== "undefined"
+                                                  ? `${window.location.origin}/?qr=exemplo-logo-configuracoes`
+                                                  : "https://controle-sst-qr.local/?qr=exemplo-logo-configuracoes"}
+                                              size={82}
+                                              level="H"
+                                              includeMargin
+                                              bgColor="#ffffff"
+                                              fgColor="#0f172a"
+                                              logoRatio={0.26}
+                                          />
+                                      </div>
+
+                                      <QrCodeLogoControls className="w-full max-w-[170px] shrink-0 sm:items-start sm:text-left" />
+                                  </div>
+                              </div>
+                          </div>
+
+
+
+
 
                         {mensagemAuditoriaPublica && (
                             <div className="mt-4 rounded-2xl bg-blue-50 px-4 py-3 text-xs font-bold text-blue-700 ring-1 ring-blue-200">
@@ -2592,7 +2628,7 @@ export function ConfiguracoesSistema({
                                     >
                                         <div className="flex items-start gap-3">
                                             <span className="mt-1 inline-flex h-9 w-9 shrink-0 cursor-grab items-center justify-center rounded-2xl bg-white text-slate-500 ring-1 ring-blue-100 active:cursor-grabbing">☰</span>
-                                            <div className="min-w-0 flex-1">
+                                            <div className="min-w-0 max-w-[620px]">
                                                 <div className="flex flex-wrap items-start justify-between gap-2">
                                                     <div className="min-w-0">
                                                         <h4 className="text-sm font-black text-blue-950">#{indiceReal + 1}. {secao.titulo}</h4>
@@ -2707,3 +2743,11 @@ export function ConfiguracoesSistema({
         </div>
     );
 }
+
+
+
+
+
+
+
+

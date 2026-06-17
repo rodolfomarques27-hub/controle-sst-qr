@@ -1,4 +1,4 @@
-/* eslint-disable no-unused-vars */
+﻿/* eslint-disable no-unused-vars */
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "../../lib/supabaseClient";
 import { Card, CardRecolhivel } from "../commonComponents";
@@ -53,6 +53,7 @@ import {
     validarAcessoAuditoriaPublicaPadrao,
 } from "../../services/auditoriaPublicaTokenService";
 import { QRCodeSVG } from "qrcode.react";
+import { QrCodeComLogo } from "../qr/QrCodeComLogo";
 import {
     AlertTriangle,
     ClipboardCheck,
@@ -981,7 +982,7 @@ export function NovaAuditoriaCampoDireta({ usuario = null, onAuditoriaSalva, emp
                         </div>
                         <div className="mx-auto w-full max-w-[220px] rounded-3xl bg-white p-3 text-center shadow-sm ring-1 ring-slate-200 lg:mx-0 lg:justify-self-end">
                             <div className="mx-auto flex h-32 w-32 items-center justify-center rounded-2xl bg-slate-50 p-2">
-                                {linkQrAuditoriaAtual ? <QRCodeSVG value={linkQrAuditoriaAtual} size={112} level="M" /> : <QrCode className="h-12 w-12 text-slate-300" />}
+                                {linkQrAuditoriaAtual ? <QrCodeComLogo value={linkQrAuditoriaAtual} size={112} level="H" logoRatio={0.22} /> : <QrCode className="h-12 w-12 text-slate-300" />}
                             </div>
                             <p className="mt-2 truncate text-[11px] font-black uppercase tracking-wide text-slate-950" title={alvoQrAuditoriaAtual || rotuloQrAuditoriaAtual}>
                                 {alvoQrAuditoriaAtual || rotuloQrAuditoriaAtual}
@@ -1453,3 +1454,5 @@ export function NovaAuditoriaCampoDireta({ usuario = null, onAuditoriaSalva, emp
         </div>
     );
 }
+
+

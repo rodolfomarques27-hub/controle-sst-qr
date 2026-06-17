@@ -1,6 +1,7 @@
-/* eslint-disable no-unused-vars */
+﻿/* eslint-disable no-unused-vars */
 import React, { useEffect, useMemo, useState } from "react";
 import { QRCodeSVG } from "qrcode.react";
+import { QrCodeComLogo } from "./QrCodeComLogo";
 import { ClipboardCheck, Download, QrCode, Search, ShieldCheck } from "lucide-react";
 import { Card, FotoColaborador, Header, QRCodeReal, StatusPill, obterFotoColaboradorSrc } from "../commonComponents";
 import { DAY } from "../../constants/sstConstants";
@@ -300,7 +301,7 @@ export function ConsultaQR({ colaborador, colaboradores = [], onSelecionarColabo
                             </div>
                             <div id={idImpressaoQrColaborador} className="hidden">
                                 <div className="cartao">
-                                    <QRCodeSVG value={urlConsultaColaborador} size={260} level="H" includeMargin bgColor="#ffffff" fgColor="#0f172a" />
+                                    <QrCodeComLogo value={urlConsultaColaborador} size={260} level="H" includeMargin bgColor="#ffffff" fgColor="#0f172a" logoRatio={0.24} />
                                     <h1>{colaboradorAtual.nome}</h1>
                                 </div>
                             </div>
@@ -433,3 +434,5 @@ export function ConsultaQR({ colaborador, colaboradores = [], onSelecionarColabo
         </div>
     );
 }
+
+
