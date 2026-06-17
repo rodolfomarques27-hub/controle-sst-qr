@@ -2532,153 +2532,195 @@ export function ConfiguracoesSistema({
                     );
                 })}
             </div>
+              {mostrarOrganizacaoCards && (
+                  <Card className="mb-6 mt-4">
+                      <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+                          <div>
+                              <h2 className="text-base font-bold text-slate-950">Personalizar painel de Configurações</h2>
+                              <p className="mt-1 text-sm text-slate-500">
+                                  Marque apenas as informações que devem aparecer na aba Configurações. Ajuste visibilidade, ordem, abertura e tamanho dos cards.
+                              </p>
+                          </div>
+                          <div className="flex flex-wrap gap-2">
+                              <button
+                                  type="button"
+                                  onClick={restaurarOrganizacaoCardsConfiguracoes}
+                                  className="rounded-xl bg-slate-950 px-3 py-2 text-xs font-semibold text-white hover:bg-slate-800"
+                              >
+                                  Mostrar padrão
+                              </button>
+                              <button
+                                  type="button"
+                                  onClick={recolherTodosBlocosConfiguracao}
+                                  className="rounded-xl bg-slate-100 px-3 py-2 text-xs font-semibold text-slate-700 ring-1 ring-slate-200 hover:bg-slate-200"
+                              >
+                                  Painel compacto
+                              </button>
+                          </div>
+                      </div>
 
-            {mostrarOrganizacaoCards && (
-                <Card className="mt-4 border-blue-100 bg-white">
-                    <div className="flex min-w-0 flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-                        <div className="min-w-0">
-                            <h2 className="text-lg font-black text-slate-950">Personalizar painel de Configurações</h2>
-                            <p className="mt-1 text-sm leading-relaxed text-slate-500">
-                                Marque apenas os cards que devem aparecer na aba Configurações. Ajuste tamanho, ordem e estado dos cards.
-                            </p>
-                        </div>
-                        <div className="flex flex-wrap gap-2">
-                            <button
-                                type="button"
-                                onClick={restaurarOrganizacaoCardsConfiguracoes}
-                                className="inline-flex min-h-[36px] items-center justify-center rounded-2xl bg-slate-950 px-4 py-2 text-xs font-black text-white shadow-sm transition hover:-translate-y-0.5 hover:bg-slate-800"
-                            >
-                                Mostrar padrão
-                            </button>
-                            <button
-                                type="button"
-                                onClick={recolherTodosBlocosConfiguracao}
-                                className="inline-flex min-h-[36px] items-center justify-center rounded-2xl bg-white px-4 py-2 text-xs font-black text-slate-700 ring-1 ring-slate-200 transition hover:-translate-y-0.5 hover:bg-slate-50"
-                            >
-                                Painel compacto
-                            </button>
-                        </div>
-                    </div>
+                      <div className="mt-5 rounded-3xl border border-slate-200 bg-white p-2 shadow-sm">
+                          <div className="grid gap-2 md:grid-cols-2">
+                              <button
+                                  type="button"
+                                  onClick={() => setFiltroPainelConfiguracoes("todos")}
+                                  className={classNames(
+                                      "rounded-2xl px-4 py-3 text-left ring-1 transition",
+                                      filtroPainelConfiguracoes === "todos"
+                                          ? "bg-blue-600 text-white ring-blue-600 shadow-sm"
+                                          : "bg-blue-50 text-blue-800 ring-blue-200 hover:bg-blue-100"
+                                  )}
+                              >
+                                  <span className="block text-xs font-black uppercase tracking-wide">Filtro 1</span>
+                                  <span className="mt-1 block text-sm font-bold">Cards da aba Configurações</span>
+                                  <span className={classNames("mt-0.5 block text-xs", filtroPainelConfiguracoes === "todos" ? "text-blue-100" : "text-blue-600")}>
+                                      Edite todos os cards administrativos da tela.
+                                  </span>
+                              </button>
 
-                    <button
-                        type="button"
-                        onClick={() => setFiltroPainelConfiguracoes("todos")}
-                        className="mt-5 w-full rounded-3xl bg-blue-600 p-4 text-left text-white ring-1 ring-blue-600 transition hover:-translate-y-0.5 hover:bg-blue-700"
-                    >
-                        <p className="text-xs font-black uppercase tracking-wide text-blue-100">Filtro</p>
-                        <h3 className="mt-1 text-sm font-black">Cards e quadros da aba Configurações</h3>
-                        <p className="mt-1 text-xs font-semibold text-blue-50">Organize visibilidade, ordem, abertura e tamanho dos cards administrativos.</p>
-                    </button>
+                              <button
+                                  type="button"
+                                  onClick={() => setFiltroPainelConfiguracoes("criticos")}
+                                  className={classNames(
+                                      "rounded-2xl px-4 py-3 text-left ring-1 transition",
+                                      filtroPainelConfiguracoes === "criticos"
+                                          ? "bg-emerald-600 text-white ring-emerald-600 shadow-sm"
+                                          : "bg-emerald-50 text-emerald-800 ring-emerald-200 hover:bg-emerald-100"
+                                  )}
+                              >
+                                  <span className="block text-xs font-black uppercase tracking-wide">Filtro 2</span>
+                                  <span className="mt-1 block text-sm font-bold">Cards críticos e operacionais</span>
+                                  <span className={classNames("mt-0.5 block text-xs", filtroPainelConfiguracoes === "criticos" ? "text-emerald-100" : "text-emerald-600")}>
+                                      Foque nos cards sensíveis da configuração.
+                                  </span>
+                              </button>
+                          </div>
+                      </div>
 
-                    <div className="mt-5 rounded-3xl bg-blue-50/60 p-3 ring-1 ring-blue-100">
-                        <div className="flex flex-col gap-3 border-b border-blue-100 pb-3 lg:flex-row lg:items-center lg:justify-between">
-                            <div>
-                                <p className="text-[11px] font-black uppercase tracking-wide text-blue-700">Organização</p>
-                                <h3 className="text-sm font-black text-slate-950">Cards da aba Configurações</h3>
-                                <p className="text-xs font-semibold text-slate-500">Mostrando {secoesPersonalizacaoConfiguracoes.length} de {secoesConfiguracoesOrdenadas.length} cards.</p>
-                            </div>
-                            <div className="flex flex-wrap gap-2">
-                                {FILTROS_PAINEL_CONFIGURACOES.map((filtro) => (
-                                    <button
-                                        key={filtro.chave}
-                                        type="button"
-                                        onClick={() => setFiltroPainelConfiguracoes(filtro.chave)}
-                                        className={classNames(
-                                            "rounded-2xl px-3 py-2 text-xs font-black ring-1 transition hover:-translate-y-0.5",
-                                            filtroPainelConfiguracoes === filtro.chave
-                                                ? "bg-blue-600 text-white ring-blue-600"
-                                                : "bg-white text-blue-700 ring-blue-100 hover:bg-blue-50"
-                                        )}
-                                    >
-                                        {filtro.label}
-                                    </button>
-                                ))}
-                            </div>
-                        </div>
+                      <div className="mt-6 rounded-3xl border border-blue-200 bg-blue-50/60 p-4 shadow-sm">
+                          <div className="mb-3 flex flex-col justify-between gap-2 sm:flex-row sm:items-center">
+                              <div>
+                                  <div className="flex flex-wrap items-center gap-2">
+                                      <span className="rounded-full bg-blue-600 px-2.5 py-1 text-[10px] font-black uppercase tracking-wide text-white">Seção 1</span>
+                                      <h3 className="text-sm font-bold text-slate-950">Cards principais da aba Configurações</h3>
+                                  </div>
+                                  <p className="mt-1 text-xs text-slate-600">
+                                      Mostrando {secoesPersonalizacaoConfiguracoes.length} de {secoesConfiguracoesOrdenadas.length} cards. Ajuste visibilidade, tamanho e ordem.
+                                  </p>
+                              </div>
+                              <div className="flex flex-wrap gap-2">
+                                  {FILTROS_PAINEL_CONFIGURACOES.map((filtro) => (
+                                      <button
+                                          key={filtro.chave}
+                                          type="button"
+                                          onClick={() => setFiltroPainelConfiguracoes(filtro.chave)}
+                                          className={classNames(
+                                              "self-start rounded-xl px-3 py-2 text-xs font-semibold ring-1 sm:self-auto",
+                                              filtroPainelConfiguracoes === filtro.chave
+                                                  ? "bg-blue-600 text-white ring-blue-600 hover:bg-blue-700"
+                                                  : "bg-white text-blue-700 ring-blue-200 hover:bg-blue-50"
+                                          )}
+                                      >
+                                          {filtro.label}
+                                      </button>
+                                  ))}
+                              </div>
+                          </div>
 
-                        <div className="mt-3 grid grid-cols-1 gap-3 lg:grid-cols-2">
-                            {secoesPersonalizacaoConfiguracoes.map((secao) => {
-                                const Icon = secao.icon;
-                                const indiceReal = secoesConfiguracoesOrdenadas.findIndex((item) => item.chave === secao.chave);
-                                const visivel = blocoConfiguracaoVisivel(secao.chave);
-                                const recolhido = blocoConfiguracaoRecolhido(secao.chave);
-                                const tamanhoAtual = obterTamanhoBlocoConfiguracao(secao.chave);
+                          <div className="grid gap-3 lg:grid-cols-2">
+                              {secoesPersonalizacaoConfiguracoes.map((secao) => {
+                                  const Icon = secao.icon || Settings;
+                                  const indiceReal = secoesConfiguracoesOrdenadas.findIndex((item) => item.chave === secao.chave);
+                                  const visivel = blocoConfiguracaoVisivel(secao.chave);
+                                  const recolhido = blocoConfiguracaoRecolhido(secao.chave);
+                                  const tamanhoAtual = obterTamanhoBlocoConfiguracao(secao.chave);
 
-                                return (
-                                    <div
-                                        key={secao.chave}
-                                        draggable
-                                        onDragStart={(evento) => {
-                                            setBlocoArrastandoConfiguracoes(secao.chave);
-                                            evento.dataTransfer.setData("text/plain", secao.chave);
-                                            evento.dataTransfer.effectAllowed = "move";
-                                        }}
-                                        onDragOver={(evento) => evento.preventDefault()}
-                                        onDrop={(evento) => {
-                                            evento.preventDefault();
-                                            const origem = evento.dataTransfer.getData("text/plain") || blocoArrastandoConfiguracoes;
-                                            moverBlocoParaConfiguracao(origem, secao.chave);
-                                            setBlocoArrastandoConfiguracoes("");
-                                        }}
-                                        onDragEnd={() => setBlocoArrastandoConfiguracoes("")}
-                                        className={classNames(
-                                            "rounded-3xl bg-blue-50/70 p-3 ring-1 ring-blue-100 transition",
-                                            blocoArrastandoConfiguracoes === secao.chave && "opacity-60 ring-2 ring-blue-300"
-                                        )}
-                                    >
-                                        <div className="flex items-start gap-3">
-                                            <span className="mt-1 inline-flex h-9 w-9 shrink-0 cursor-grab items-center justify-center rounded-2xl bg-white text-slate-500 ring-1 ring-blue-100 active:cursor-grabbing">☰</span>
-                                            <div className="min-w-0 max-w-[620px]">
-                                                <div className="flex flex-wrap items-start justify-between gap-2">
-                                                    <div className="min-w-0">
-                                                        <h4 className="text-sm font-black text-blue-950">#{indiceReal + 1}. {secao.titulo}</h4>
-                                                        <p className="mt-0.5 text-xs font-semibold leading-relaxed text-slate-500">{secao.descricao}</p>
-                                                    </div>
-                                                    <div className="flex shrink-0 items-center gap-1">
-                                                        <button type="button" onClick={() => moverBlocoConfiguracao(secao.chave, -1)} disabled={indiceReal === 0} className="rounded-xl bg-white px-2 py-1 text-xs font-black text-slate-600 ring-1 ring-blue-100 disabled:cursor-not-allowed disabled:opacity-40">↑</button>
-                                                        <button type="button" onClick={() => moverBlocoConfiguracao(secao.chave, 1)} disabled={indiceReal === secoesConfiguracoesOrdenadas.length - 1} className="rounded-xl bg-white px-2 py-1 text-xs font-black text-slate-600 ring-1 ring-blue-100 disabled:cursor-not-allowed disabled:opacity-40">↓</button>
-                                                        <button type="button" onClick={() => alternarVisibilidadeBlocoConfiguracao(secao.chave)} className={classNames("rounded-xl px-3 py-1 text-[11px] font-black uppercase ring-1", visivel ? "bg-blue-100 text-blue-700 ring-blue-200" : "bg-white text-slate-500 ring-slate-200")}>{visivel ? "Visível" : "Oculto"}</button>
-                                                    </div>
-                                                </div>
+                                  return (
+                                      <div
+                                          key={secao.chave}
+                                          onDragOver={(evento) => evento.preventDefault()}
+                                          onDrop={(evento) => {
+                                              evento.preventDefault();
+                                              const origem = evento.dataTransfer.getData("text/plain") || blocoArrastandoConfiguracoes;
+                                              moverBlocoParaConfiguracao(origem, secao.chave);
+                                              setBlocoArrastandoConfiguracoes("");
+                                          }}
+                                          className={classNames(
+                                              "rounded-2xl p-3 ring-1 transition",
+                                              visivel ? "bg-blue-50/60 ring-blue-200" : "bg-slate-50 ring-slate-200",
+                                              blocoArrastandoConfiguracoes === secao.chave && "opacity-60 ring-2 ring-blue-300"
+                                          )}
+                                      >
+                                          <div className="flex items-center justify-between gap-3">
+                                              <div className="flex min-w-0 items-start gap-2">
+                                                  <span
+                                                      draggable
+                                                      onDragStart={(evento) => {
+                                                          setBlocoArrastandoConfiguracoes(secao.chave);
+                                                          evento.dataTransfer.setData("text/plain", secao.chave);
+                                                          evento.dataTransfer.effectAllowed = "move";
+                                                      }}
+                                                      onDragEnd={() => setBlocoArrastandoConfiguracoes("")}
+                                                      className="mt-0.5 inline-flex h-7 w-7 shrink-0 cursor-grab items-center justify-center rounded-xl bg-white text-sm font-bold text-slate-500 ring-1 ring-slate-200 active:cursor-grabbing"
+                                                      title="Segure e arraste para mudar a ordem"
+                                                  >
+                                                      ☰
+                                                  </span>
 
-                                                <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4">
-                                                    {[
-                                                        ["padrao", "Padrão", "1 coluna"],
-                                                        ["medio", "Médio", "2 colunas"],
-                                                        ["grande", "Grande", "3 colunas"],
-                                                        ["destaque", "Destaque", "linha inteira"],
-                                                    ].map(([tamanho, label, detalhe]) => (
-                                                        <button
-                                                            key={tamanho}
-                                                            type="button"
-                                                            onClick={() => definirTamanhoBlocoConfiguracao(secao.chave, tamanho)}
-                                                            className={classNames(
-                                                                "rounded-2xl px-3 py-2 text-center ring-1 transition hover:-translate-y-0.5",
-                                                                tamanhoAtual === tamanho
-                                                                    ? "bg-slate-950 text-white ring-slate-950"
-                                                                    : "bg-white text-slate-700 ring-blue-100 hover:bg-blue-50"
-                                                            )}
-                                                        >
-                                                            <span className="block text-xs font-black">{label}</span>
-                                                            <span className={classNames("block text-[10px] font-semibold", tamanhoAtual === tamanho ? "text-slate-200" : "text-slate-400")}>{detalhe}</span>
-                                                        </button>
-                                                    ))}
-                                                </div>
+                                                  <div className="min-w-0">
+                                                      <div className="flex flex-wrap items-center gap-2">
+                                                          <span className="inline-flex h-7 w-7 items-center justify-center rounded-xl bg-white text-slate-500 ring-1 ring-blue-100">
+                                                              <Icon className="h-4 w-4" />
+                                                          </span>
+                                                          <h4 className="text-sm font-black text-blue-950">#{indiceReal + 1}. {secao.titulo}</h4>
+                                                      </div>
+                                                      <p className="mt-0.5 text-xs font-semibold leading-relaxed text-slate-500">{secao.descricao}</p>
+                                                  </div>
+                                              </div>
 
-                                                <div className="mt-3 flex flex-wrap gap-2">
-                                                    <button type="button" onClick={() => alternarRecolhidoBlocoConfiguracao(secao.chave)} className="rounded-2xl bg-white px-3 py-1.5 text-xs font-black text-blue-700 ring-1 ring-blue-100 hover:bg-blue-50">{recolhido ? "Abrir card" : "Recolher card"}</button>
-                                                    <button type="button" onClick={() => definirTamanhoBlocoConfiguracao(secao.chave, "padrao")} className="rounded-2xl bg-white px-3 py-1.5 text-xs font-black text-slate-600 ring-1 ring-blue-100 hover:bg-blue-50">Diminuir</button>
-                                                    <button type="button" onClick={() => definirTamanhoBlocoConfiguracao(secao.chave, "destaque")} className="rounded-2xl bg-white px-3 py-1.5 text-xs font-black text-slate-600 ring-1 ring-blue-100 hover:bg-blue-50">Aumentar</button>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                );
-                            })}
-                        </div>
-                    </div>
-                </Card>
-            )}
+                                              <div className="flex shrink-0 items-center gap-1">
+                                                  <button type="button" onClick={() => moverBlocoConfiguracao(secao.chave, -1)} disabled={indiceReal === 0} className="rounded-xl bg-white px-2 py-1 text-xs font-black text-slate-600 ring-1 ring-blue-100 disabled:cursor-not-allowed disabled:opacity-40">↑</button>
+                                                  <button type="button" onClick={() => moverBlocoConfiguracao(secao.chave, 1)} disabled={indiceReal === secoesConfiguracoesOrdenadas.length - 1} className="rounded-xl bg-white px-2 py-1 text-xs font-black text-slate-600 ring-1 ring-blue-100 disabled:cursor-not-allowed disabled:opacity-40">↓</button>
+                                                  <button type="button" onClick={() => alternarVisibilidadeBlocoConfiguracao(secao.chave)} className={classNames("rounded-xl px-3 py-1 text-[11px] font-black uppercase ring-1", visivel ? "bg-blue-100 text-blue-700 ring-blue-200" : "bg-white text-slate-500 ring-slate-200")}>{visivel ? "Visível" : "Oculto"}</button>
+                                              </div>
+                                          </div>
+
+                                          <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4">
+                                              {[
+                                                  ["padrao", "Padrão", "1 coluna"],
+                                                  ["medio", "Médio", "2 colunas"],
+                                                  ["grande", "Grande", "3 colunas"],
+                                                  ["destaque", "Destaque", "linha inteira"],
+                                              ].map(([tamanho, label, detalhe]) => (
+                                                  <button
+                                                      key={tamanho}
+                                                      type="button"
+                                                      onClick={() => definirTamanhoBlocoConfiguracao(secao.chave, tamanho)}
+                                                      className={classNames(
+                                                          "rounded-2xl px-3 py-2 text-center ring-1 transition hover:-translate-y-0.5",
+                                                          tamanhoAtual === tamanho
+                                                              ? "bg-slate-950 text-white ring-slate-950"
+                                                              : "bg-white text-slate-700 ring-blue-100 hover:bg-blue-50"
+                                                      )}
+                                                  >
+                                                      <span className="block text-xs font-black">{label}</span>
+                                                      <span className={classNames("block text-[10px] font-semibold", tamanhoAtual === tamanho ? "text-slate-200" : "text-slate-400")}>{detalhe}</span>
+                                                  </button>
+                                              ))}
+                                          </div>
+
+                                          <div className="mt-3 flex flex-wrap gap-2">
+                                              <button type="button" onClick={() => alternarRecolhidoBlocoConfiguracao(secao.chave)} className="rounded-2xl bg-white px-3 py-1.5 text-xs font-black text-blue-700 ring-1 ring-blue-100 hover:bg-blue-50">{recolhido ? "Abrir card" : "Recolher card"}</button>
+                                              <button type="button" onClick={() => definirTamanhoBlocoConfiguracao(secao.chave, "padrao")} className="rounded-2xl bg-white px-3 py-1.5 text-xs font-black text-slate-600 ring-1 ring-blue-100 hover:bg-blue-50">Diminuir</button>
+                                              <button type="button" onClick={() => definirTamanhoBlocoConfiguracao(secao.chave, "destaque")} className="rounded-2xl bg-white px-3 py-1.5 text-xs font-black text-slate-600 ring-1 ring-blue-100 hover:bg-blue-50">Aumentar</button>
+                                          </div>
+                                      </div>
+                                  );
+                              })}
+                          </div>
+                      </div>
+                  </Card>
+              )}
 
             <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
                 {secoesConfiguracoesOrdenadas.map((secao) => {
@@ -2743,6 +2785,7 @@ export function ConfiguracoesSistema({
         </div>
     );
 }
+
 
 
 
