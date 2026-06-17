@@ -2103,7 +2103,7 @@ export function ConfiguracoesSistema({
                                   <div className="min-w-0 max-w-[520px]">
                                       <p className="text-sm font-black text-slate-950">Personalização dos QR Codes</p>
                                       <p className="mt-1 text-xs font-semibold leading-5 text-slate-500">
-                                          Escolha uma imagem PNG para aparecer no centro dos QR Codes. A escolha fica salva neste navegador.
+                                          Escolha uma imagem PNG para aparecer no centro dos QR Codes. A imagem fica salva no sistema.
                                       </p>
                                       <p className="mt-1 text-[11px] font-bold text-slate-500">
                                           Recomendado: PNG quadrado, fundo limpo e até 350 KB.
@@ -2743,6 +2743,7 @@ export function ConfiguracoesSistema({
         </div>
     );
 }
+
 
 
 
