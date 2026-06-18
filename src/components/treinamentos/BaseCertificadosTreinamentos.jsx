@@ -155,6 +155,7 @@ export function BaseCertificadosTreinamentos({
     salvarDatasCertificado,
     salvandoDatasId = "",
     enviarDocumentoPendente,
+    enviarDocumentosPendentesEmLote,
     onVisualizarCertificado,
     onExcluirCertificado,
     recolhido = false,
@@ -336,9 +337,44 @@ export function BaseCertificadosTreinamentos({
                                                     </p>
                                                 </div>
 
-                                                <span className="rounded-full bg-white px-3 py-1 text-xs font-bold text-blue-700 ring-1 ring-blue-200">
-                                                    {pendentes.length} pendente(s)
-                                                </span>
+                                                <div className="flex flex-wrap items-center gap-2">
+
+
+                                                    <button
+
+
+                                                        type="button"
+
+
+                                                        onClick={() => enviarDocumentosPendentesEmLote?.(colaborador)}
+
+
+                                                        className="inline-flex items-center justify-center gap-2 rounded-xl bg-blue-600 px-3 py-2 text-xs font-semibold text-white hover:bg-blue-700"
+
+
+                                                    >
+
+
+                                                        <Upload className="h-4 w-4" />
+
+
+                                                        Enviar documentos em massa
+
+
+                                                    </button>
+
+
+
+                                                    <span className="rounded-full bg-white px-3 py-1 text-xs font-bold text-blue-700 ring-1 ring-blue-200">
+
+
+                                                        {pendentes.length} pendente(s)
+
+
+                                                    </span>
+
+
+                                                </div>
                                             </div>
 
                                             <div className="space-y-2">

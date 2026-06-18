@@ -668,6 +668,43 @@ export function Treinamentos({
             return grupo.certificados.length > 0 || grupo.pendentes.length > 0;
         });
 
+    const enviarDocumentosPendentesEmLote = (colaborador) => {
+        if (!podeUploadTreinamentosSistema) {
+            if (typeof window !== "undefined") window.alert(mensagemBloqueioUploadTreinamentos);
+            return;
+        }
+
+        if (!colaborador?.codigoFuncionario) {
+            alert("Colaborador não identificado para envio em massa.");
+            return;
+        }
+
+        setColabId(String(colaborador.codigoFuncionario));
+        setArquivoSelecionado(null);
+        setSugestaoDataArquivo(null);
+        setArquivosLote([]);
+        setObservacao("");
+        setDataRealizacao(obterDataHojeIso());
+        setResultadoLote("Colaborador selecionado. Use o botão Selecionar vários certificados no Envio em lote.");
+
+        setCardsTreinamentosRecolhidos((atual) => ({
+            ...atual,
+            lancamento: false,
+        }));
+
+        setTimeout(() => {
+            const alvo = typeof document !== "undefined"
+                ? document.getElementById("treinamentos-lancamento-certificado")
+                : null;
+
+            if (alvo?.scrollIntoView) {
+                alvo.scrollIntoView({ behavior: "smooth", block: "start" });
+            } else if (typeof window !== "undefined") {
+                window.scrollTo({ top: 0, behavior: "smooth" });
+            }
+        }, 80);
+    };
+
     const enviarDocumentoPendente = (colaborador, treinamento) => {
         if (!podeUploadTreinamentosSistema) {
             if (typeof window !== "undefined") window.alert(mensagemBloqueioUploadTreinamentos);
@@ -1213,7 +1250,7 @@ export function Treinamentos({
 
                     if (chave === "lancamento") {
                         return (
-                            <div key={chave} className={classePainel} style={estiloPainel}>
+                            <div id="treinamentos-lancamento-certificado" key={chave} className={classePainel} style={estiloPainel}>
                                 <FormularioLancamentoCertificado
                                     colaboradores={colaboradores}
                                     colabSelecionadoCodigo={colabSelecionadoCodigo}
@@ -1287,7 +1324,8 @@ export function Treinamentos({
                                     salvarDatasCertificado={salvarDatasCertificado}
                                     salvandoDatasId={salvandoDatasId}
                                     enviarDocumentoPendente={enviarDocumentoPendente}
-                                    onVisualizarCertificado={onVisualizarCertificado}
+                                    enviarDocumentosPendentesEmLote={enviarDocumentosPendentesEmLote}
+                                      onVisualizarCertificado={onVisualizarCertificado}
                                     onExcluirCertificado={excluirCertificadoSeguro}
                                     recolhido={cardsTreinamentosRecolhidos.base}
                                     onAlternarRecolhido={() => alternarCardTreinamento("base")}
