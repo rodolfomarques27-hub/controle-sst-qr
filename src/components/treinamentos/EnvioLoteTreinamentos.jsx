@@ -21,6 +21,8 @@ export function EnvioLoteTreinamentos({
     salvandoLote = false,
     preparandoLoteCertificados = false,
 }) {
+    const inputLoteId = "treinamentos-envio-lote-arquivos";
+
     return (
         <div className="mt-6 border-t border-slate-200 pt-5">
             <div className="rounded-3xl bg-blue-50 p-4">
@@ -34,7 +36,7 @@ export function EnvioLoteTreinamentos({
                 </p>
             </div>
 
-            <label className={classNames(
+            <label htmlFor={inputLoteId} className={classNames(
                 "mt-3 flex items-center justify-center gap-2 rounded-2xl border border-dashed border-blue-300 bg-white px-4 py-4 text-sm font-semibold text-blue-700 hover:bg-blue-50",
                 preparandoLoteCertificados ? "cursor-wait opacity-80" : "cursor-pointer"
             )}>
@@ -45,12 +47,17 @@ export function EnvioLoteTreinamentos({
                 )}
                 {preparandoLoteCertificados ? "Analisando certificados do lote..." : "Selecionar vários certificados"}
                 <input
+                    id={inputLoteId}
                     type="file"
-                    accept="application/pdf,image/*"
+                    accept=".pdf,.png,.jpg,.jpeg,.webp,application/pdf,image/*"
                     multiple
                     disabled={preparandoLoteCertificados}
                     className="hidden"
-                    onChange={(e) => prepararArquivosLote(e.target.files)}
+                    onChange={async (e) => {
+                        const arquivos = e.target.files;
+                        await prepararArquivosLote?.(arquivos);
+                        e.target.value = "";
+                    }}
                 />
             </label>
             <FileUploadAviso arquivos={arquivosLote.map((item) => item.arquivo)} tipo="documentoSimples" />
@@ -78,7 +85,7 @@ export function EnvioLoteTreinamentos({
             </button>
 
             {resultadoLote && arquivosLote.length === 0 && (
-                <div className="mt-3 rounded-2xl bg-slate-50 p-3 text-sm font-semibold text-slate-700">
+                <div className="mt-3 whitespace-pre-line rounded-2xl bg-slate-50 p-3 text-sm font-semibold leading-relaxed text-slate-700">
                     {resultadoLote}
                 </div>
             )}
@@ -186,7 +193,7 @@ export function EnvioLoteTreinamentos({
                     </div>
 
                     {resultadoLote && (
-                        <div className="rounded-2xl bg-slate-50 p-3 text-sm font-semibold text-slate-700">
+                        <div className="whitespace-pre-line rounded-2xl bg-slate-50 p-3 text-sm font-semibold leading-relaxed text-slate-700">
                             {resultadoLote}
                         </div>
                     )}

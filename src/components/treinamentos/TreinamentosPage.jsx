@@ -171,6 +171,7 @@ export function Treinamentos({
     const [analisandoArquivoCertificado, setAnalisandoArquivoCertificado] = useState(false);
     const [arquivosLote, setArquivosLote] = useState([]);
     const [salvandoLote, setSalvandoLote] = useState(false);
+    const [preparandoLoteCertificados, setPreparandoLoteCertificados] = useState(false);
     const [sincronizandoStorage, setSincronizandoStorage] = useState(false);
     const [resultadoLote, setResultadoLote] = useState("");
     const [datasRevisao, setDatasRevisao] = useState({});
@@ -423,6 +424,8 @@ export function Treinamentos({
 
         const arquivos = Array.from(listaArquivos || []);
 
+        if (!arquivos.length) return;
+
         if (!validarListaArquivosAntesUpload(arquivos, "documentoSimples")) {
             setArquivosLote([]);
             return;
@@ -439,15 +442,29 @@ export function Treinamentos({
             setDataRealizacao(dataBaseLote);
         }
 
-        const preparados = await prepararArquivosTreinamentoLote({
-            listaArquivos: arquivos,
-            colaboradores,
-            colabSelecionado,
-            dataRealizacao: dataBaseLote,
-        });
+        setPreparandoLoteCertificados(true);
+        setResultadoLote("Analisando certificados do lote...");
 
-        setArquivosLote(preparados);
-        setResultadoLote("");
+        try {
+            const preparados = await prepararArquivosTreinamentoLote({
+                listaArquivos: arquivos,
+                colaboradores,
+                colabSelecionado,
+                dataRealizacao: dataBaseLote,
+            });
+
+            setArquivosLote(preparados);
+            setResultadoLote("");
+        } catch (erro) {
+            console.error("Erro ao preparar arquivos em lote:", erro);
+            setArquivosLote([]);
+            setResultadoLote(erro?.message || "Não foi possível preparar os arquivos do lote.");
+            if (typeof window !== "undefined") {
+                window.alert(erro?.message || "Não foi possível preparar os arquivos do lote.");
+            }
+        } finally {
+            setPreparandoLoteCertificados(false);
+        }
     };
 
     const alterarColaboradorArquivoLote = (arquivoId, colaboradorCodigo) => {
@@ -570,39 +587,110 @@ export function Treinamentos({
         }
 
         setSalvandoLote(true);
-        setResultadoLote("");
+        setResultadoLote("Salvando lote de certificados...");
 
         let salvos = 0;
         let falhas = 0;
         const erros = [];
+        const motivos = [];
+        const alertaOriginalSalvarLote = typeof window !== "undefined" ? window.alert : null;
 
-        for (const item of arquivosLote) {
-            const colaboradorDoArquivo = colaboradores.find((c) => String(c.codigoFuncionario) === String(item.colaboradorCodigo));
+        if (alertaOriginalSalvarLote) {
+            window.alert = (mensagem) => {
+                if (mensagem) motivos.push(String(mensagem));
+            };
+        }
 
-            const ok = await onSalvarCertificado({
-                colaboradorCodigo: String(item.colaboradorCodigo || ""),
-                colaborador: colaboradorDoArquivo,
-                treinamentoId: Number(item.treinamentoId),
-                dataRealizacao: item.dataRealizacao,
-                dataVencimento: item.dataVencimento,
-                arquivo: item.arquivo,
-                arquivoNome: item.arquivo.name,
-                observacao: observacao.trim() || "Enviado em lote com distribuição automática por nome do arquivo",
-            });
+        try {
+            for (const item of arquivosLote) {
+                const colaboradorDoArquivo = colaboradores.find((c) => String(c.codigoFuncionario) === String(item.colaboradorCodigo));
 
-            if (ok) {
-                salvos += 1;
-            } else {
-                falhas += 1;
-                erros.push(item.arquivo.name);
+                try {
+                    const ok = await onSalvarCertificado({
+                        colaboradorCodigo: String(item.colaboradorCodigo || ""),
+                        colaborador: colaboradorDoArquivo,
+                        treinamentoId: Number(item.treinamentoId),
+                        dataRealizacao: item.dataRealizacao,
+                        dataVencimento: item.dataVencimento,
+                        arquivo: item.arquivo,
+                        arquivoNome: item.arquivo.name,
+                        observacao: observacao.trim() || "Enviado em lote com distribuição automática por nome do arquivo",
+                    });
+
+                    if (ok) {
+                        salvos += 1;
+                    } else {
+                        falhas += 1;
+                        erros.push(item.arquivo.name);
+                    }
+                } catch (erro) {
+                    falhas += 1;
+                    erros.push(item.arquivo?.name || "arquivo sem nome");
+                    motivos.push(erro?.message || String(erro || "Erro não identificado"));
+                }
+            }
+        } finally {
+            if (alertaOriginalSalvarLote) {
+                window.alert = alertaOriginalSalvarLote;
             }
         }
 
         setSalvandoLote(false);
-        setResultadoLote(
-            `${salvos} certificado(s) salvo(s) e distribuído(s) por treinamento. ${falhas} falha(s).${erros.length ? ` Falhas: ${erros.join(", ")}` : ""
-            }`
-        );
+
+        const limparMotivoFalhaLote = (motivo) =>
+            String(motivo || "")
+                .replace(/^Não foi possível salvar este documento\.\s*/i, "")
+                .replace(/^Motivo:\s*/i, "")
+                .replace(/\s*Corrija a informação indicada acima ou substitua o arquivo antes de tentar salvar novamente\.?$/i, "")
+                .replace(/\s+/g, " ")
+                .trim();
+
+        const motivosUnicos = Array.from(new Set(
+            motivos
+                .map(limparMotivoFalhaLote)
+                .filter(Boolean)
+        ));
+
+        const linhasResultado = [
+            "Resultado do envio em lote",
+            "",
+            `Salvos: ${salvos}`,
+            `Falhas: ${falhas}`,
+        ];
+
+        if (erros.length) {
+            linhasResultado.push(
+                "",
+                "Arquivos com falha:",
+                ...erros.slice(0, 10).map((nome) => `- ${nome}`)
+            );
+
+            if (erros.length > 10) {
+                linhasResultado.push(`- e mais ${erros.length - 10} arquivo(s)`);
+            }
+        }
+
+        if (motivosUnicos.length) {
+            linhasResultado.push(
+                "",
+                "Motivo principal:",
+                motivosUnicos[0]
+            );
+
+            if (motivosUnicos.length > 1) {
+                linhasResultado.push(`Outros motivos: ${motivosUnicos.slice(1, 3).join(" | ")}`);
+            }
+        }
+
+        if (falhas > 0) {
+            linhasResultado.push(
+                "",
+                "Próximo passo:",
+                "Revise os arquivos acima. Se forem documentos gerais/coletivos, aplique a regra de documento coletivo na próxima etapa."
+            );
+        }
+
+        setResultadoLote(linhasResultado.join("\n"));
 
         if (falhas === 0) {
             setArquivosLote([]);
@@ -1285,6 +1373,7 @@ export function Treinamentos({
                                     treinamentosBase={treinamentosBase}
                                     salvarCertificadosEmLote={salvarCertificadosEmLote}
                                     salvandoLote={salvandoLote}
+                                    preparandoLoteCertificados={preparandoLoteCertificados}
                                     recolhido={cardsTreinamentosRecolhidos.lancamento}
                                     onAlternarRecolhido={() => alternarCardTreinamento("lancamento")}
                                 />
