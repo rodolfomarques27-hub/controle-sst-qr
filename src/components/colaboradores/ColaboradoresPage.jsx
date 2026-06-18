@@ -32,7 +32,6 @@ import {
     avaliarTreinamentosColaborador,
     treinamentoSemValidade,
     obterTreinamento,
-    analisarArquivosTreinamentoMassa,
     statusGeral,
 } from "../../services/colaboradorDocumentosService";
 import {
@@ -203,7 +202,6 @@ export function Colaboradores({
         treinamentosRemovidos: [],
         treinamentosAdicionais: [],
         foto: null,
-        documentosMassa: [],
     });
 
     const empresasFiltro = ["Todas", ...Array.from(new Set(colaboradores.map((c) => c.empresa).filter(Boolean)))];
@@ -464,7 +462,6 @@ export function Colaboradores({
             treinamentosRemovidos: novo.treinamentosRemovidos || [],
             treinamentosAdicionais: novo.treinamentosAdicionais || [],
             foto: novo.foto,
-            documentosMassa: novo.documentosMassa || [],
             codigoFuncionario: gerarCodigoFuncionario(novo.nome),
         });
 
@@ -482,7 +479,6 @@ export function Colaboradores({
                 treinamentosRemovidos: [],
                 treinamentosAdicionais: [],
                 foto: null,
-                documentosMassa: [],
             });
         }
     };
@@ -503,9 +499,6 @@ export function Colaboradores({
         (treinamento) => !idsAplicadosNovo.includes(Number(treinamento.id))
     );
 
-    const arquivosMassaAnaliseNovo = analisarArquivosTreinamentoMassa(novo.documentosMassa || []);
-    const arquivosMassaReconhecidosNovo = arquivosMassaAnaliseNovo.filter((item) => item.reconhecido);
-    const arquivosMassaNaoReconhecidosNovo = arquivosMassaAnaliseNovo.filter((item) => !item.reconhecido);
 
     const atualizarNovoColaboradorRecolhido = (valorOuFuncao) => {
         setNovoColaboradorRecolhido((atual) => {
@@ -806,9 +799,6 @@ export function Colaboradores({
                                 treinamentosAplicadosNovo={treinamentosAplicadosNovo}
                                 treinamentosParaAdicionarNovo={treinamentosParaAdicionarNovo}
                                 idsAdicionaisNovo={idsAdicionaisNovo}
-                                arquivosMassaAnaliseNovo={arquivosMassaAnaliseNovo}
-                                arquivosMassaReconhecidosNovo={arquivosMassaReconhecidosNovo}
-                                arquivosMassaNaoReconhecidosNovo={arquivosMassaNaoReconhecidosNovo}
                                 removerTreinamentoNovo={removerTreinamentoNovo}
                                 adicionarTreinamentoNovo={adicionarTreinamentoNovo}
                                 adicionar={adicionar}

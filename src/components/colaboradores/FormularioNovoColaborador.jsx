@@ -1,26 +1,25 @@
-import React from "react";
-import { Camera, ChevronDown, FileText, Plus, Upload, UserPlus, X } from "lucide-react";
+﻿import React from "react";
+import { Camera, ChevronDown, Plus, Upload, UserPlus, X } from "lucide-react";
 import { classNames } from "../../utils/sstUtils";
 
 const STATUS_MOBILIZACAO = [
     "Liberado",
-    "Com pendência",
+    "Com pendÃªncia",
     "Bloqueado",
-    "Em análise",
+    "Em anÃ¡lise",
     "Desmobilizado",
     "Inativo",
 ];
 
 const INFORMACOES_STATUS_OBRA = {
     Liberado: "Mobilizado ativo.",
-    "Com pendência": "Mobilizado com pendências.",
-    Bloqueado: "Bloqueado por pendência crítica.",
-    "Em análise": "Em conferência documental.",
+    "Com pendÃªncia": "Mobilizado com pendÃªncias.",
+    Bloqueado: "Bloqueado por pendÃªncia crÃ­tica.",
+    "Em anÃ¡lise": "Em conferÃªncia documental.",
     Desmobilizado: "Fora da obra.",
-    Inativo: "Cadastro sem atuação atual.",
+    Inativo: "Cadastro sem atuaÃ§Ã£o atual.",
 };
 
-const TIPOS_DOCUMENTOS_MASSA = "ASO, EPI, INTEGRAÇÃO, NR-06, NR-11, NR-12, NR-18, NR-21, NR-25, NR-26, REGISTRO ou OS.";
 
 function CampoTexto({ label, value, onChange, placeholder, type = "text", list, children, className = "", inputClassName = "" }) {
     return (
@@ -69,12 +68,12 @@ function CampoFuncaoLivre({ label, value, onChange, funcoesDisponiveis = [], aju
                     type="text"
                     value={valorAtual}
                     onChange={(evento) => onChange(evento.target.value)}
-                    placeholder="Digite ou selecione uma função"
+                    placeholder="Digite ou selecione uma funÃ§Ã£o"
                     className="novo-colaborador-input-anterior min-w-0 flex-1 text-center"
                 />
                 <div className="relative w-[190px] shrink-0">
                     <select
-                        aria-label="Selecionar função cadastrada"
+                        aria-label="Selecionar funÃ§Ã£o cadastrada"
                         value=""
                         onChange={(evento) => {
                             const proximaFuncao = evento.target.value;
@@ -82,10 +81,10 @@ function CampoFuncaoLivre({ label, value, onChange, funcoesDisponiveis = [], aju
                         }}
                         className="novo-colaborador-input-anterior h-full w-full cursor-pointer appearance-none px-3 pr-10 text-center text-xs font-bold text-slate-950"
                     >
-                        <option value="">Selecionar função</option>
+                        <option value="">Selecionar funÃ§Ã£o</option>
                         {funcoesDisponiveis.map((funcao) => (
                             <option key={funcao.chave || funcao.rotulo} value={funcao.rotulo || ""} className="text-slate-900">
-                                {funcao.rotulo || "Função sem nome"}
+                                {funcao.rotulo || "FunÃ§Ã£o sem nome"}
                             </option>
                         ))}
                     </select>
@@ -112,8 +111,6 @@ export function FormularioNovoColaborador({
     empresasBanco = [],
     funcoesSugeridas = [],
     treinamentosAplicadosNovo = [],
-    arquivosMassaReconhecidosNovo = [],
-    arquivosMassaNaoReconhecidosNovo = [],
     adicionar,
     salvando,
 }) {
@@ -142,14 +139,6 @@ export function FormularioNovoColaborador({
         }));
     };
 
-    const alterarDocumentosMassa = (evento) => {
-        const arquivos = Array.from(evento.target.files || []);
-        setNovo((atual) => ({
-            ...atual,
-            documentosMassa: arquivos,
-            mostrarAniversarioDashboard: false,
-        }));
-    };
 
     const alterarFoto = (evento) => {
         const arquivo = evento.target.files?.[0] || null;
@@ -160,18 +149,12 @@ export function FormularioNovoColaborador({
         }));
     };
 
-    const limparDocumentosMassa = () => {
-        setNovo((atual) => ({ ...atual, documentosMassa: [], mostrarAniversarioDashboard: false }));
-    };
 
     const limparFoto = () => {
         setNovo((atual) => ({ ...atual, foto: null, mostrarAniversarioDashboard: false }));
     };
 
     const quantidadeTreinamentos = Array.isArray(treinamentosAplicadosNovo) ? treinamentosAplicadosNovo.length : 0;
-    const documentosSelecionados = Array.from(novo.documentosMassa || []);
-    const documentosReconhecidos = Array.isArray(arquivosMassaReconhecidosNovo) ? arquivosMassaReconhecidosNovo.length : 0;
-    const documentosNaoReconhecidos = Array.isArray(arquivosMassaNaoReconhecidosNovo) ? arquivosMassaNaoReconhecidosNovo.length : 0;
 
     return (
         <div className="novo-colaborador-layout-anterior">
@@ -180,7 +163,7 @@ export function FormularioNovoColaborador({
                     label="Nome completo"
                     value={novo.nome}
                     onChange={(valor) => alterarCampo("nome", valor)}
-                    placeholder="Ex.: João da Silva"
+                    placeholder="Ex.: JoÃ£o da Silva"
                     inputClassName="text-center"
                 />
 
@@ -210,10 +193,10 @@ export function FormularioNovoColaborador({
 
             <div className="grid gap-3 lg:grid-cols-[0.76fr_1.48fr_0.96fr]">
                 <CampoSelect
-                    label="Situação na obra"
+                    label="SituaÃ§Ã£o na obra"
                     value={novo.statusMobilizacao}
                     onChange={(valor) => alterarCampo("statusMobilizacao", valor)}
-                    ajuda={INFORMACOES_STATUS_OBRA[novo.statusMobilizacao] || "Selecione a situação atual do colaborador na obra."}
+                    ajuda={INFORMACOES_STATUS_OBRA[novo.statusMobilizacao] || "Selecione a situaÃ§Ã£o atual do colaborador na obra."}
                     inputClassName="text-center"
                 >
                     {STATUS_MOBILIZACAO.map((status) => (
@@ -222,55 +205,27 @@ export function FormularioNovoColaborador({
                 </CampoSelect>
 
                 <CampoFuncaoLivre
-                    label="Função"
+                    label="FunÃ§Ã£o"
                     value={novo.funcao}
                     onChange={(valor) => alterarCampo("funcao", valor)}
                     funcoesDisponiveis={funcoesDisponiveis}
-                    ajuda={`Matriz automática pela função. ${quantidadeTreinamentos > 0 ? `${quantidadeTreinamentos} treinamento(s) previsto(s).` : "Digite uma função nova ou selecione uma função cadastrada."}`}
+                    ajuda={`Matriz automÃ¡tica pela funÃ§Ã£o. ${quantidadeTreinamentos > 0 ? `${quantidadeTreinamentos} treinamento(s) previsto(s).` : "Digite uma funÃ§Ã£o nova ou selecione uma funÃ§Ã£o cadastrada."}`}
                 />
 
                 <CampoTexto
-                    label="Matrícula da empresa (opcional)"
+                    label="MatrÃ­cula da empresa (opcional)"
                     value={novo.matricula}
                     onChange={(valor) => alterarCampo("matricula", valor)}
-                    placeholder="Ex.: matrícula da empresa, crachá ou RE"
+                    placeholder="Ex.: matrÃ­cula da empresa, crachÃ¡ ou RE"
                     inputClassName="text-center"
                 >
                     <p className="novo-colaborador-ajuda-anterior">
-                        O código do sistema é gerado automaticamente. A matrícula é opcional e serve para crachá ou RE.
+                        O cÃ³digo do sistema Ã© gerado automaticamente. A matrÃ­cula Ã© opcional e serve para crachÃ¡ ou RE.
                     </p>
                 </CampoTexto>
             </div>
 
-            <div className="novo-colaborador-row-anterior novo-colaborador-row-anterior-2 novo-colaborador-uploads-anterior">
-                <div className="novo-colaborador-upload-card-anterior">
-                    <input
-                        id="novo-colaborador-documentos-massa"
-                        type="file"
-                        multiple
-                        accept=".pdf,.png,.jpg,.jpeg,.webp"
-                        onChange={alterarDocumentosMassa}
-                        className="sr-only"
-                    />
-                    <label htmlFor="novo-colaborador-documentos-massa" className="novo-colaborador-upload-label-anterior novo-colaborador-upload-label-documentos">
-                        <FileText className="h-4 w-4 shrink-0" />
-                        <span className="novo-colaborador-upload-info-anterior">
-                            <strong>Subir documentos</strong>
-                            <small>{resumoArquivos(documentosSelecionados)}</small>
-                            <small className="novo-colaborador-upload-tipos-anterior">{TIPOS_DOCUMENTOS_MASSA}</small>
-                        </span>
-                        <Upload className="h-4 w-4 shrink-0" />
-                    </label>
-                    {documentosSelecionados.length > 0 && (
-                        <div className="novo-colaborador-upload-status-anterior">
-                            <span>{documentosReconhecidos} reconhecido(s)</span>
-                            <span>{documentosNaoReconhecidos} para conferir</span>
-                            <button type="button" onClick={limparDocumentosMassa} title="Limpar documentos">
-                                <X className="h-3.5 w-3.5" />
-                            </button>
-                        </div>
-                    )}
-                </div>
+            <div className="novo-colaborador-row-anterior novo-colaborador-uploads-anterior" style={{ gridTemplateColumns: "minmax(0, 1fr)" }}>
 
                 <div className="novo-colaborador-upload-card-anterior">
                     <input
@@ -321,3 +276,4 @@ export function FormularioNovoColaborador({
         </div>
     );
 }
+
