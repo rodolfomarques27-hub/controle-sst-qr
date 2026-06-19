@@ -353,44 +353,40 @@ function obterIndiciosBloqueantesAntesSalvar(verificacao = {}) {
         });
 }
 
-function normalizarMensagemBloqueioDocumento(valor = "") {
+function limparMensagemBloqueioDocumento(valor = "") {
     return String(valor || "")
-        .replace(/N??o/g, "Nao")
-        .replace(/n??o/g, "nao")
-        .replace(/poss?vel/g, "possivel")
-        .replace(/presen??a/g, "presenca")
-        .replace(/confer??ncia/g, "conferencia")
-        .replace(/informa????o/g, "informacao")
-        .replace(/autom??tico/g, "automatico")
-        .replace(/autom??tica/g, "automatica")
-        .replace(/ind?cio/g, "indicio")
-        .replace(/h??/g, "ha")
-        .replace(/por??m/g, "porem")
-        .replace(/extra?do/g, "extraido")
-        .replace(/??ltima/g, "ultima")
-        .replace(/??/g, "c")
-        .replace(/??/g, "a")
-        .replace(/??/g, "e")
-        .replace(/??/g, "a")
-        .replace(/??/g, "e")
-        .replace(/??/g, "o")
-        .replace(/??/g, "u")
-        .replace(/Como o arquivo aparenta ser documento geral\/coletivo, manter em conferencia manual em vez de bloquear automaticamente\./gi, "Como o arquivo aparenta ser documento geral/coletivo, o salvamento automatico foi bloqueado para conferencia manual.")
-        .replace(/manter em conferencia manual em vez de bloquear automaticamente/gi, "o salvamento automatico foi bloqueado para conferencia manual");
+        .split("\\n").join(" ")
+        .split("\\r").join(" ")
+        .split("?").join("")
+        .split("?").join("")
+        .split("?").join("")
+        .replace(/\s+/g, " ")
+        .trim();
 }
 
 function montarMensagemBloqueioAntesSalvar({ indicios = [] } = {}) {
     const principal = indicios[0] || {};
-    const detalheOriginal = principal.detalhe || principal.titulo || "A verificacao documental encontrou divergencia bloqueante.";
-    const detalhe = normalizarMensagemBloqueioDocumento(detalheOriginal);
+    const codigo = String(principal.codigo || "");
+    const detalheOriginal = principal.detalhe || principal.titulo || "A verificacao documental encontrou divergencia."; 
+    const detalheLimpo = limparMensagemBloqueioDocumento(detalheOriginal);
+
+    if (codigo === "colaborador_nao_localizado_no_documento" ||
+        codigo === "colaborador_nao_confirmado_documento_coletivo" ||
+        codigo === "colaborador_confirmado_apenas_no_texto_ocr" ||
+        codigo === "assinatura_colaborador_nao_confirmada_lista") {
+        return [
+            "Nao foi possivel confirmar automaticamente este documento.",
+            "Motivo: o leitor local/OCR nao confirmou o nome e/ou a assinatura do colaborador no PDF.",
+            "Revise visualmente o documento. Se o nome e a assinatura estiverem corretos, mantenha para conferencia manual; se aparecer outro colaborador, substitua o arquivo.",
+        ].join("\\n");
+    }
 
     return [
         "Nao foi possivel salvar este documento.",
-        `Motivo: ${detalhe}`,
-        "Revise o documento: confirme se o nome do colaborador e a assinatura aparecem na lista. Se nao constarem, substitua o arquivo ou selecione o colaborador correto.",
-    ].join("\n");
+        `Motivo: ${detalheLimpo}`,
+        "Revise o documento antes de tentar salvar novamente.",
+    ].join("\\n");
 }
-
 
 function normalizarTextoValidacaoNomeArquivo(valor = "") {
     return String(valor || "")
