@@ -30,7 +30,7 @@ export function EnvioLoteTreinamentos({
       const textoBotaoSalvarLote = totalArquivosParaSalvarProcessamento === 0
           ? "Todos os documentos do lote já foram salvos"
           : totalArquivosFalhaProcessamento > 0
-              ? `Tentar novamente ${totalArquivosParaSalvarProcessamento} documento(s) pendente(s)/com falha`
+              ? `Revisar ${totalArquivosParaSalvarProcessamento} documento(s) com falha`
               : totalArquivosSalvosProcessamento > 0
                   ? `Salvar ${totalArquivosParaSalvarProcessamento} documento(s) restante(s)`
                   : `Salvar ${arquivosLote.length} certificado(s) distribuído(s)`;

@@ -306,14 +306,41 @@ function obterIndiciosBloqueantesAntesSalvar(verificacao = {}) {
         );
 }
 
+function normalizarMensagemBloqueioDocumento(valor = "") {
+    return String(valor || "")
+        .replace(/N??o/g, "Nao")
+        .replace(/n??o/g, "nao")
+        .replace(/poss?vel/g, "possivel")
+        .replace(/presen??a/g, "presenca")
+        .replace(/confer??ncia/g, "conferencia")
+        .replace(/informa????o/g, "informacao")
+        .replace(/autom??tico/g, "automatico")
+        .replace(/autom??tica/g, "automatica")
+        .replace(/ind?cio/g, "indicio")
+        .replace(/h??/g, "ha")
+        .replace(/por??m/g, "porem")
+        .replace(/extra?do/g, "extraido")
+        .replace(/??ltima/g, "ultima")
+        .replace(/??/g, "c")
+        .replace(/??/g, "a")
+        .replace(/??/g, "e")
+        .replace(/??/g, "a")
+        .replace(/??/g, "e")
+        .replace(/??/g, "o")
+        .replace(/??/g, "u")
+        .replace(/Como o arquivo aparenta ser documento geral\/coletivo, manter em conferencia manual em vez de bloquear automaticamente\./gi, "Como o arquivo aparenta ser documento geral/coletivo, o salvamento automatico foi bloqueado para conferencia manual.")
+        .replace(/manter em conferencia manual em vez de bloquear automaticamente/gi, "o salvamento automatico foi bloqueado para conferencia manual");
+}
+
 function montarMensagemBloqueioAntesSalvar({ indicios = [] } = {}) {
     const principal = indicios[0] || {};
-    const detalhe = principal.detalhe || principal.titulo || "A verificação documental encontrou divergência bloqueante.";
+    const detalheOriginal = principal.detalhe || principal.titulo || "A verificacao documental encontrou divergencia bloqueante.";
+    const detalhe = normalizarMensagemBloqueioDocumento(detalheOriginal);
 
     return [
-        "Não foi possível salvar este documento.",
+        "Nao foi possivel salvar este documento.",
         `Motivo: ${detalhe}`,
-        "Corrija a informação indicada acima ou substitua o arquivo antes de tentar salvar novamente.",
+        "Revise o documento: confirme se o nome do colaborador e a assinatura aparecem na lista. Se nao constarem, substitua o arquivo ou selecione o colaborador correto.",
     ].join("\n");
 }
 
