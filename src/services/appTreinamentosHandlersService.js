@@ -283,27 +283,74 @@ function verificacaoPareceListaPresencaOuColetivo(verificacao = {}) {
     return /\b(lista de presenca|documento coletivo|geral|integracao|treinamento|nr\s*\d+|nr\d+|ergonomia|seguranca|escavacoes|fundacoes|protetor solar|meio ambiente|residuos|sinalizacao|transito|transporte|movimentacao|maquinas|equipamentos)\b/.test(texto);
 }
 
+function indicioNomeDiferenteOuColaboradorDivergente(indicio = {}) {
+    const codigo = String(indicio?.codigo || "").toLowerCase();
+    const texto = [
+        indicio?.codigo,
+        indicio?.titulo,
+        indicio?.mensagem,
+        indicio?.descricao,
+        indicio?.detalhe,
+        indicio?.motivo,
+        indicio?.texto,
+        indicio?.recomendacao,
+    ]
+        .filter(Boolean)
+        .join(" ")
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .toLowerCase();
+
+    const falaDeDivergencia =
+        codigo.includes("diverg") ||
+        codigo.includes("outro_colaborador") ||
+        codigo.includes("colaborador_diferente") ||
+        texto.includes("nome diferente") ||
+        texto.includes("outro colaborador") ||
+        texto.includes("colaborador diferente") ||
+        texto.includes("divergencia de colaborador");
+
+    const falaDeLeituraFraca =
+        texto.includes("nao localizado") ||
+        texto.includes("nao encontrou") ||
+        texto.includes("nao confirmado") ||
+        texto.includes("apenas no texto") ||
+        texto.includes("nome do arquivo") ||
+        texto.includes("assinatura nao confirmada");
+
+    return Boolean(falaDeDivergencia && !falaDeLeituraFraca);
+}
+
 function obterIndiciosBloqueantesAntesSalvar(verificacao = {}) {
     const codigosBloqueioForte = new Set([
-        "colaborador_nao_localizado_no_documento",
-        "colaborador_nao_confirmado_documento_coletivo",
-        "colaborador_confirmado_apenas_no_texto_ocr",
-        "assinatura_colaborador_nao_confirmada_lista",
         "cnpj_empresa_nao_confere_documento",
         "cnpj_documento_diverge_empresa_selecionada",
     ]);
 
+    const codigosNaoBloqueiamPorLeituraFraca = new Set([
+        "colaborador_nao_localizado_no_documento",
+        "colaborador_nao_confirmado_documento_coletivo",
+        "colaborador_confirmado_apenas_no_texto_ocr",
+        "assinatura_colaborador_nao_confirmada_lista",
+        "colaborador_localizado_por_nome_arquivo",
+        "cpf_colaborador_nao_localizado_documento",
+        "empresa_nao_confirmada_no_documento",
+        "treinamento_nao_confirmado_no_documento",
+        "data_impressa_nao_confirmada_automaticamente",
+    ]);
+
     return (Array.isArray(verificacao?.indicios) ? verificacao.indicios : [])
-        .filter((indicio = {}) =>
-            Boolean(indicio?.bloqueia) ||
-            codigosBloqueioForte.has(indicio?.codigo) ||
-            indicioCpfDivergenteVerificacao(indicio) ||
-            indicioDocumentoColetivoNaoConfirmado(indicio, verificacao) ||
-            (
-                indicio?.codigo === "colaborador_nao_localizado_no_documento" &&
-                verificacaoPareceListaPresencaOuColetivo(verificacao)
-            )
-        );
+        .filter((indicio = {}) => {
+            const codigo = String(indicio?.codigo || "");
+
+            if (codigosNaoBloqueiamPorLeituraFraca.has(codigo)) {
+                return false;
+            }
+
+            return codigosBloqueioForte.has(codigo) ||
+                indicioCpfDivergenteVerificacao(indicio) ||
+                indicioNomeDiferenteOuColaboradorDivergente(indicio);
+        });
 }
 
 function normalizarMensagemBloqueioDocumento(valor = "") {
