@@ -206,9 +206,89 @@ function indicioCpfDivergenteVerificacao(indicio = {}) {
     return Boolean(cpfCadastro && cpfsExtraidos.length && !cpfsExtraidos.includes(cpfCadastro));
 }
 
+
+function indicioDocumentoColetivoNaoConfirmado(indicio = {}, verificacao = {}) {
+    const codigo = indicio?.codigo || "";
+    const dados = indicio?.dados || {};
+
+    if (
+        codigo !== "colaborador_nao_localizado_no_documento" &&
+        codigo !== "colaborador_nao_confirmado_documento_coletivo"
+    ) {
+        return false;
+    }
+
+    if (dados?.documentoColetivo === true || dados?.documentoColetivo === "true") {
+        return true;
+    }
+
+    const texto = [
+        indicio?.titulo,
+        indicio?.detalhe,
+        indicio?.recomendacao,
+        verificacao?.nome_documento,
+        verificacao?.nomeDocumento,
+        verificacao?.arquivo_nome,
+        verificacao?.arquivoNome,
+        verificacao?.tipo_documento,
+        verificacao?.tipoDocumento,
+        verificacao?.resumo,
+    ]
+        .filter(Boolean)
+        .join(" ")
+        .toLowerCase()
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .replace(/[^a-z0-9]+/g, " ")
+        .replace(/\s+/g, " ")
+        .trim();
+
+    if (!texto) return false;
+
+    const documentoIndividual = /\b(aso|atestado de saude ocupacional|ficha epi|ficha de epi|ficha registro|ficha de registro|ordem de servico|\bos\b)\b/.test(texto);
+    if (documentoIndividual) return false;
+
+    const coletivo = /\b(documento coletivo|geral|integracao|treinamento|lista de presenca|presenca|nr\s*\d+|nr\d+|ergonomia|seguranca|escavacoes|fundacoes|protecao solar|meio ambiente|residuos|sinalizacao|transito|transporte|movimentacao|maquinas|equipamentos)\b/.test(texto);
+
+    return coletivo;
+}
+
+
+function verificacaoPareceListaPresencaOuColetivo(verificacao = {}) {
+    const texto = [
+        verificacao?.nome_documento,
+        verificacao?.nomeDocumento,
+        verificacao?.arquivo_nome,
+        verificacao?.arquivoNome,
+        verificacao?.tipo_documento,
+        verificacao?.tipoDocumento,
+        verificacao?.resumo,
+        verificacao?.ocr_texto,
+        verificacao?.ocrTexto,
+    ]
+        .filter(Boolean)
+        .join(" ")
+        .toLowerCase()
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .replace(/[^a-z0-9]+/g, " ")
+        .replace(/\s+/g, " ")
+        .trim();
+
+    if (!texto) return false;
+
+    const individual = /\b(aso|atestado de saude ocupacional|ficha epi|ficha registro|ordem de servico|\bos\b)\b/.test(texto);
+    if (individual) return false;
+
+    return /\b(lista de presenca|documento coletivo|geral|integracao|treinamento|nr\s*\d+|nr\d+|ergonomia|seguranca|escavacoes|fundacoes|protetor solar|meio ambiente|residuos|sinalizacao|transito|transporte|movimentacao|maquinas|equipamentos)\b/.test(texto);
+}
+
 function obterIndiciosBloqueantesAntesSalvar(verificacao = {}) {
     const codigosBloqueioForte = new Set([
         "colaborador_nao_localizado_no_documento",
+        "colaborador_nao_confirmado_documento_coletivo",
+        "colaborador_confirmado_apenas_no_texto_ocr",
+        "assinatura_colaborador_nao_confirmada_lista",
         "cnpj_empresa_nao_confere_documento",
         "cnpj_documento_diverge_empresa_selecionada",
     ]);
@@ -217,7 +297,12 @@ function obterIndiciosBloqueantesAntesSalvar(verificacao = {}) {
         .filter((indicio = {}) =>
             Boolean(indicio?.bloqueia) ||
             codigosBloqueioForte.has(indicio?.codigo) ||
-            indicioCpfDivergenteVerificacao(indicio)
+            indicioCpfDivergenteVerificacao(indicio) ||
+            indicioDocumentoColetivoNaoConfirmado(indicio, verificacao) ||
+            (
+                indicio?.codigo === "colaborador_nao_localizado_no_documento" &&
+                verificacaoPareceListaPresencaOuColetivo(verificacao)
+            )
         );
 }
 
@@ -231,6 +316,134 @@ function montarMensagemBloqueioAntesSalvar({ indicios = [] } = {}) {
         "Corrija a informação indicada acima ou substitua o arquivo antes de tentar salvar novamente.",
     ].join("\n");
 }
+
+
+function normalizarTextoValidacaoNomeArquivo(valor = "") {
+    return String(valor || "")
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, " ")
+        .replace(/\s+/g, " ")
+        .trim();
+}
+
+function obterNomeArquivoCertificadoValidacao(certificado = {}) {
+    return (
+        certificado?.arquivo?.name ||
+        certificado?.arquivoNome ||
+        certificado?.arquivo_nome ||
+        certificado?.nomeArquivo ||
+        ""
+    );
+}
+
+function arquivoPareceDocumentoIndividualValidacao(nomeArquivo = "") {
+    const texto = normalizarTextoValidacaoNomeArquivo(nomeArquivo);
+
+    if (!texto) return false;
+
+    const ehColetivo = /\b(geral|lista|presenca|coletivo)\b/.test(texto);
+
+    if (ehColetivo) return false;
+
+    return /\b(aso|atestado|ficha|epi|epis|registro|reg|clt|esocial|ordem|servico|os|certif|certificado|nr\s*0?6|nr0?6)\b/.test(texto);
+}
+
+function extrairTokensNomeArquivoValidacao(nomeArquivo = "") {
+    const texto = normalizarTextoValidacaoNomeArquivo(nomeArquivo)
+        .replace(/\b(pdf|png|jpg|jpeg|webp|aso|atestado|saude|ocupacional|ficha|epi|epis|registro|reg|clt|esocial|ordem|servico|certif|certificado|treinamento|documento|nr|nr0?6|nr\s*0?6)\b/g, " ")
+        .replace(/\s+/g, " ")
+        .trim();
+
+    return texto
+        .split(" ")
+        .map((token) => token.trim())
+        .filter(Boolean);
+}
+
+function nomeArquivoCompativelComColaboradorValidacao({ nomeArquivo = "", nomeColaborador = "" } = {}) {
+    const tokensArquivo = extrairTokensNomeArquivoValidacao(nomeArquivo);
+    const tokensColaborador = normalizarTextoValidacaoNomeArquivo(nomeColaborador)
+        .split(" ")
+        .filter((token) => token.length >= 3 && !["dos", "das", "de", "da", "do"].includes(token));
+
+    if (!tokensArquivo.length || !tokensColaborador.length) return false;
+
+    const fortesArquivo = tokensArquivo.filter((token) => token.length >= 3);
+    const primeiroColaborador = tokensColaborador[0];
+    const ultimoColaborador = tokensColaborador[tokensColaborador.length - 1];
+
+    const fortesEncontrados = fortesArquivo.filter((token) =>
+        tokensColaborador.includes(token) ||
+        tokensColaborador.some((cadastro) => cadastro.includes(token) || token.includes(cadastro))
+    );
+
+    const encontrouPrimeiro = Boolean(primeiroColaborador && fortesArquivo.includes(primeiroColaborador));
+    const encontrouUltimo = Boolean(ultimoColaborador && fortesArquivo.includes(ultimoColaborador));
+
+    const iniciaisArquivo = tokensArquivo.filter((token) => token.length === 1);
+    const inicialIntermediariaCompativel = iniciaisArquivo.some((inicial) =>
+        tokensColaborador.some((token) => token.startsWith(inicial))
+    );
+
+    if (encontrouPrimeiro && encontrouUltimo) return true;
+    if (fortesEncontrados.length >= 2 && encontrouPrimeiro) return true;
+    if (fortesEncontrados.length >= 2 && inicialIntermediariaCompativel) return true;
+
+    return false;
+}
+
+function indicioBloqueiaSomentePorNomeNaoLidoValidacao(indicio = {}) {
+    const texto = normalizarTextoValidacaoNomeArquivo([
+        indicio?.codigo,
+        indicio?.titulo,
+        indicio?.mensagem,
+        indicio?.descricao,
+        indicio?.detalhe,
+        indicio?.motivo,
+        indicio?.texto,
+    ].filter(Boolean).join(" "));
+
+    if (!texto) return false;
+
+    const falaDeColaborador = texto.includes("colaborador") || texto.includes("nome");
+    const falaNaoLocalizado =
+        texto.includes("nao localizado") ||
+        texto.includes("nao encontrou") ||
+        texto.includes("nao confirmado") ||
+        texto.includes("ocr nao encontrou");
+
+    const divergenciaForte =
+        texto.includes("cpf") ||
+        texto.includes("cnpj") ||
+        texto.includes("diverg") ||
+        texto.includes("outro colaborador") ||
+        texto.includes("outra empresa") ||
+        texto.includes("empresa divergente");
+
+    return Boolean(falaDeColaborador && falaNaoLocalizado && !divergenciaForte);
+}
+
+function podePermitirSalvarPorNomeArquivoCompativel({
+    certificado = {},
+    colaborador = null,
+    indiciosBloqueantes = [],
+} = {}) {
+    if (!Array.isArray(indiciosBloqueantes) || !indiciosBloqueantes.length) return false;
+
+    const nomeArquivo = obterNomeArquivoCertificadoValidacao(certificado);
+    const nomeColaborador = colaborador?.nome || certificado?.colaborador?.nome || "";
+
+    if (!arquivoPareceDocumentoIndividualValidacao(nomeArquivo)) return false;
+
+    if (!nomeArquivoCompativelComColaboradorValidacao({ nomeArquivo, nomeColaborador })) {
+        return false;
+    }
+
+    return indiciosBloqueantes.every(indicioBloqueiaSomentePorNomeNaoLidoValidacao);
+}
+
 
 async function validarCertificadoAntesDoSalvamento({
     supabase,
@@ -270,9 +483,28 @@ async function validarCertificadoAntesDoSalvamento({
     });
 
     const indiciosBloqueantes = obterIndiciosBloqueantesAntesSalvar(verificacao);
+    const colaboradorReferenciaValidacao =
+        certificado?.colaborador ||
+        colaboradorSelecionado ||
+        colaboradores.find((colaborador) =>
+            String(colaborador.codigoFuncionario || "") === String(certificado?.colaboradorCodigo || "")
+        ) ||
+        null;
 
-    if (indiciosBloqueantes.length) {
+    const permitirPorNomeArquivoCompativel = podePermitirSalvarPorNomeArquivoCompativel({
+        certificado,
+        colaborador: colaboradorReferenciaValidacao,
+        indiciosBloqueantes,
+    });
+
+    if (indiciosBloqueantes.length && !permitirPorNomeArquivoCompativel) {
         throw new Error(montarMensagemBloqueioAntesSalvar({ indicios: indiciosBloqueantes }));
+    }
+
+    if (permitirPorNomeArquivoCompativel) {
+        console.warn(
+            "Salvamento permitido com conferência manual: OCR não confirmou o nome, mas o nome do arquivo é compatível com o colaborador selecionado."
+        );
     }
 
     return verificacao;

@@ -3,6 +3,7 @@ import React from "react";
 import { FileSearch, FileText, Loader2, Upload } from "lucide-react";
 import { FileUploadAviso } from "../FileUploadAviso";
 import { classNames } from "../../utils/sstUtils";
+import IndicadorSalvandoDocumento from "./IndicadorSalvandoDocumento";
 
 export function EnvioLoteTreinamentos({
     arquivosLote = [],
@@ -22,6 +23,17 @@ export function EnvioLoteTreinamentos({
     preparandoLoteCertificados = false,
 }) {
     const inputLoteId = "treinamentos-envio-lote-arquivos";
+      const arquivosPendentesProcessamento = arquivosLote.filter((item) => item.statusProcessamento !== "salvo");
+      const totalArquivosSalvosProcessamento = arquivosLote.filter((item) => item.statusProcessamento === "salvo").length;
+      const totalArquivosFalhaProcessamento = arquivosLote.filter((item) => item.statusProcessamento === "falhou").length;
+      const totalArquivosParaSalvarProcessamento = arquivosPendentesProcessamento.length;
+      const textoBotaoSalvarLote = totalArquivosParaSalvarProcessamento === 0
+          ? "Todos os documentos do lote já foram salvos"
+          : totalArquivosFalhaProcessamento > 0
+              ? `Tentar novamente ${totalArquivosParaSalvarProcessamento} documento(s) pendente(s)/com falha`
+              : totalArquivosSalvosProcessamento > 0
+                  ? `Salvar ${totalArquivosParaSalvarProcessamento} documento(s) restante(s)`
+                  : `Salvar ${arquivosLote.length} certificado(s) distribuído(s)`;
 
     return (
         <div className="mt-6 border-t border-slate-200 pt-5">
@@ -93,9 +105,9 @@ export function EnvioLoteTreinamentos({
             {arquivosLote.length > 0 && (
                 <div className="mt-4 space-y-3">
                     <div className="rounded-2xl bg-slate-50 p-3 text-xs text-slate-600">
-                        <strong>Regra do lote:</strong> os arquivos serão vinculados ao colaborador selecionado
-                        {" "}<strong>{colabSelecionado?.nome}</strong>. O treinamento é identificado automaticamente pelo nome de cada arquivo.
-                        Confira qualquer item marcado como atenção antes de salvar.
+                        <strong>Regra do lote:</strong> os arquivos serao analisados antes do salvamento para confirmar colaborador, treinamento, nome e assinatura quando aplicavel.
+                        {" "}O colaborador selecionado <strong>{colabSelecionado?.nome}</strong> sera usado apenas como referencia inicial.
+                        Documentos coletivos/listas de presenca sem nome e assinatura confirmados devem ficar em conferencia manual.
                     </div>
 
                     <div className="max-h-96 space-y-2 overflow-y-auto pr-1 scrollbar-discreta">
@@ -117,7 +129,66 @@ export function EnvioLoteTreinamentos({
                                         )}>
                                             {item.status}
                                         </p>
-                                        {item.sugestaoData?.mensagem && (
+
+                                        {item.tipoDocumentoTreinamentoLabel && (
+                                            <div className="mt-2 flex flex-wrap items-center gap-2">
+                                                <span className={classNames(
+                                                    "inline-flex rounded-full px-2.5 py-1 text-[11px] font-bold ring-1",
+                                                    item.tipoDocumentoTreinamento === "individual"
+                                                        ? "bg-emerald-50 text-emerald-700 ring-emerald-200"
+                                                        : item.tipoDocumentoTreinamento === "lista_presenca"
+                                                            ? "bg-blue-50 text-blue-700 ring-blue-200"
+                                                            : "bg-amber-50 text-amber-700 ring-amber-200"
+                                                )}>
+                                                    Tipo detectado: {item.tipoDocumentoTreinamentoLabel}
+                                                </span>
+
+                                                {item.tipoDocumentoTreinamentoConfianca ? (
+                                                    <span className="text-[11px] font-semibold text-slate-500">
+                                                        Confiança: {item.tipoDocumentoTreinamentoConfianca}%
+                                                    </span>
+                                                ) : null}
+                                            </div>
+                                        )}
+
+                                        {item.tipoDocumentoTreinamentoMotivo && (
+                                            <p className="mt-1 text-[11px] leading-relaxed text-slate-500">
+                                                {item.tipoDocumentoTreinamentoMotivo}
+                                            </p>
+                                        )}
+
+                                        {item.statusProcessamento && (
+                                              <div className="mt-2">
+                                                  <span className={classNames(
+                                                      "inline-flex rounded-full px-2.5 py-1 text-[11px] font-bold ring-1",
+                                                      item.statusProcessamento === "salvo"
+                                                          ? "bg-emerald-50 text-emerald-700 ring-emerald-200"
+                                                          : item.statusProcessamento === "falhou"
+                                                              ? "bg-red-50 text-red-700 ring-red-200"
+                                                              : item.statusProcessamento === "salvando"
+                                                                  ? "bg-blue-50 text-blue-700 ring-blue-200"
+                                                                  : "bg-slate-50 text-slate-700 ring-slate-200"
+                                                  )}>
+                                                      Status do envio: {
+                                                          item.statusProcessamento === "salvo"
+                                                              ? "Salvo"
+                                                              : item.statusProcessamento === "falhou"
+                                                                  ? "Falhou"
+                                                                  : item.statusProcessamento === "salvando"
+                                                                      ? "Salvando..."
+                                                                      : "Pendente"
+                                                      }
+                                                  </span>
+                                              </div>
+                                          )}
+
+                                          {item.erroProcessamento && (
+                                              <p className="mt-2 rounded-xl bg-red-50 px-3 py-2 text-[11px] font-semibold leading-relaxed text-red-700 ring-1 ring-red-200">
+                                                  {item.erroProcessamento}
+                                              </p>
+                                          )}
+
+                                          {item.sugestaoData?.mensagem && (
                                             <p className="mt-1 text-[11px] leading-relaxed text-slate-500">
                                                 {item.sugestaoData.mensagem}
                                             </p>
@@ -127,7 +198,8 @@ export function EnvioLoteTreinamentos({
                                     <button
                                         type="button"
                                         onClick={() => removerArquivoLote(item.id)}
-                                        className="rounded-xl bg-red-50 px-2 py-1 text-xs font-semibold text-red-700 ring-1 ring-red-200 hover:bg-red-100"
+                                          disabled={item.statusProcessamento === "salvando"}
+                                        className="rounded-xl bg-red-50 px-2 py-1 text-xs font-semibold text-red-700 ring-1 ring-red-200 hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-50"
                                     >
                                         Remover
                                     </button>
@@ -139,7 +211,8 @@ export function EnvioLoteTreinamentos({
                                         <select
                                             value={item.colaboradorCodigo}
                                             onChange={(e) => alterarColaboradorArquivoLote(item.id, e.target.value)}
-                                            className="w-full rounded-2xl border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-slate-300"
+                                            disabled={item.statusProcessamento === "salvo" || item.statusProcessamento === "salvando"}
+                                            className="w-full rounded-2xl border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-slate-300 disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-500"
                                         >
                                             <option value="">Selecione o colaborador</option>
                                             {colaboradores.map((c) => (
@@ -155,7 +228,8 @@ export function EnvioLoteTreinamentos({
                                         <select
                                             value={item.treinamentoId}
                                             onChange={(e) => alterarTreinamentoArquivoLote(item.id, e.target.value)}
-                                            className="w-full rounded-2xl border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-slate-300"
+                                            disabled={item.statusProcessamento === "salvo" || item.statusProcessamento === "salvando"}
+                                            className="w-full rounded-2xl border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-slate-300 disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-500"
                                         >
                                             <option value="">Selecione o treinamento</option>
                                             {treinamentosBase.map((treinamento) => (
@@ -192,7 +266,15 @@ export function EnvioLoteTreinamentos({
                         ))}
                     </div>
 
-                    {resultadoLote && (
+                    {(preparandoLoteCertificados || salvandoLote) && (
+                <IndicadorSalvandoDocumento
+                    titulo={salvandoLote ? "Salvando lote de documentos" : "Analisando documentos do lote"}
+                    descricao={salvandoLote ? "Aguarde enquanto os certificados são enviados e distribuídos para o colaborador." : "Aguarde enquanto o sistema lê os arquivos e prepara a conferência."}
+                    detalhe="Esse processo pode levar alguns segundos em arquivos PDF escaneados."
+                />
+            )}
+
+            {resultadoLote && (
                         <div className="whitespace-pre-line rounded-2xl bg-slate-50 p-3 text-sm font-semibold leading-relaxed text-slate-700">
                             {resultadoLote}
                         </div>
@@ -200,14 +282,19 @@ export function EnvioLoteTreinamentos({
 
                     <button
                         onClick={salvarCertificadosEmLote}
-                        disabled={salvandoLote || preparandoLoteCertificados}
+                        disabled={salvandoLote || preparandoLoteCertificados || totalArquivosParaSalvarProcessamento === 0}
                         className="w-full rounded-2xl bg-blue-600 px-4 py-3 text-sm font-semibold text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
                     >
                         {preparandoLoteCertificados
                             ? "Aguardando análise do lote..."
                             : salvandoLote
-                                ? "Salvando lote..."
-                                : `Salvar ${arquivosLote.length} certificado(s) distribuído(s)`}
+                                ? (
+                                <span className="inline-flex items-center justify-center gap-2">
+                                    <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/50 border-t-white" />
+                                    Salvando lote... aguarde
+                                </span>
+                            )
+                                : textoBotaoSalvarLote}
                     </button>
                 </div>
             )}

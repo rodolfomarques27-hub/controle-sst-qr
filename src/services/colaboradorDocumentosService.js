@@ -386,31 +386,41 @@ export function calcularVencimentoTreinamento(treinamentoId, dataRealizacao) {
 export function inferirTreinamentoPorNomeArquivo(nomeArquivo = "") {
     const texto = normalizarTextoBusca(nomeArquivo)
         .replace(/[_-]+/g, " ")
-        .replace(/\.pdf$|\.png$|\.jpg$|\.jpeg$|\.webp$/g, " ");
+        .replace(/\.pdf$|\.png$|\.jpg$|\.jpeg$|\.webp$/g, " ")
+        .replace(/\s+/g, " ")
+        .trim();
 
     const contem = (...termos) => termos.some((termo) => texto.includes(normalizarTextoBusca(termo)));
+    const palavra = (termo) => texto.split(" ").includes(normalizarTextoBusca(termo));
 
-    if (contem("registro", "ficha registro")) return obterTreinamento(21);
+    const ehOs = contem("ordem de servico", "ordem de serviço") || palavra("os");
+    const ehFichaRegistro = contem("ficha reg", "ficha registro", "ficha de registro", "registro de empregado", "clt", "esocial");
+    const ehFichaEpi = contem("ficha epi", "ficha de epi", "epis atualizada", "controle de entrega de epi", "entrega de epi", "equipamento de protecao individual", "equipamento de proteção individual");
+    const ehNr06 = contem("nr6", "nr 6", "nr06", "nr 06", "nr-6", "nr-06", "uso correto de epi", "uso correto de epis", "certif nr6", "certificado nr6", "certificado nr 6");
+
     if (contem("aso", "atestado de saude", "atestado saúde")) return obterTreinamento(22);
+    if (ehOs) return obterTreinamento(15);
+    if (ehFichaRegistro) return obterTreinamento(21);
+    if (ehFichaEpi) return obterTreinamento(14);
     if (contem("integracao", "integração", "mobilizacao", "mobilização")) return obterTreinamento(1);
 
-    if (contem("ficha epi", "ficha de epi", "epis atualizada", "epi ") && !contem("nr 06", "nr06", "nr-06")) {
-        return obterTreinamento(14);
-    }
+    if (ehNr06) return obterTreinamento(8);
 
-    if (contem("nr 06", "nr06", "nr-06", "uso correto de epi", "uso correto de epis")) return obterTreinamento(8);
-    if (contem("ordem de servico", "ordem de serviço", " os ")) return obterTreinamento(15);
     if (contem("procedimento operacional", "procedimento da funcao", "procedimento da função")) return obterTreinamento(13);
 
     if (contem("nr 10", "nr10", "nr-10")) return obterTreinamento(4);
     if (contem("nr 11", "nr11", "nr-11")) return obterTreinamento(11);
+
     if (contem("nr 12", "nr12", "nr-12", "maquinas", "máquinas", "equipamentos")) {
         if (contem("pemt", "pta", "plataforma")) return obterTreinamento(5);
         if (contem("lixadeira", "esmerilhadeira")) return obterTreinamento(7);
         return obterTreinamento(3);
     }
+
     if (contem("nr 17", "nr17", "nr-17", "ergonomia", "postural")) return obterTreinamento(18);
+
     if (contem("nr 18.06", "nr18.06", "nr-18.06", "nr 1806", "nr1806")) return obterTreinamento(9);
+
     if (contem("nr 18", "nr18", "nr-18")) {
         if (contem("escavacao", "escavação", "vala", "valas", "fundacao", "fundação", "fundacoes", "fundações")) return obterTreinamento(9);
         if (contem("solda", "quente")) return obterTreinamento(6);
@@ -418,15 +428,13 @@ export function inferirTreinamentoPorNomeArquivo(nomeArquivo = "") {
         if (contem("lixadeira", "esmerilhadeira")) return obterTreinamento(7);
         return obterTreinamento(9);
     }
+
     if (contem("nr 21", "nr21", "nr-21", "ceu aberto", "céu aberto", "protetor solar")) return obterTreinamento(16);
     if (contem("nr 23", "nr23", "nr-23", "incendio", "incêndio")) return obterTreinamento(20);
-    if (contem("nr 25", "nr25", "nr-25", "residuo", "resíduo", "meio ambiente")) return obterTreinamento(17);
-    if (contem("nr 26", "nr26", "nr-26", "sinalizacao", "sinalização", "vias")) return obterTreinamento(19);
+    if (contem("nr 25", "nr25", "nr-25", "residuo", "resíduo", "residuos", "resíduos", "meio ambiente")) return obterTreinamento(17);
+    if (contem("nr 26", "nr26", "nr-26", "sinalizacao", "sinalização", "vias", "transito", "trânsito")) return obterTreinamento(19);
     if (contem("nr 33", "nr33", "nr-33", "confinado")) return obterTreinamento(10);
     if (contem("nr 35", "nr35", "nr-35", "altura")) return obterTreinamento(2);
-
-    if (contem("lista")) return obterTreinamento(3);
-    if (contem("epi")) return obterTreinamento(14);
 
     return null;
 }

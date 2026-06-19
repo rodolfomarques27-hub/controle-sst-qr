@@ -415,7 +415,6 @@ export function Treinamentos({
             setDataRealizacao(obterDataHojeIso());
         }
     };
-
     const prepararArquivosLote = async (listaArquivos) => {
         if (!podeUploadTreinamentosSistema) {
             if (typeof window !== "undefined") window.alert(mensagemBloqueioUploadTreinamentos);
@@ -573,7 +572,14 @@ export function Treinamentos({
             return;
         }
 
-        const incompletos = arquivosLote.filter(
+        const arquivosParaSalvar = arquivosLote.filter((item) => item.statusProcessamento !== "salvo");
+
+        if (!arquivosParaSalvar.length) {
+            setResultadoLote("Todos os documentos do lote já foram salvos. Remova o lote ou selecione novos arquivos.");
+            return;
+        }
+
+        const incompletos = arquivosParaSalvar.filter(
             (item) =>
                 !item.colaboradorCodigo ||
                 !item.treinamentoId ||
@@ -582,15 +588,29 @@ export function Treinamentos({
         );
 
         if (incompletos.length > 0) {
-            alert("Antes de salvar, confira colaborador, treinamento e datas de todos os arquivos do lote.");
+            alert("Antes de salvar, confira colaborador, treinamento e datas dos arquivos pendentes ou com falha.");
             return;
         }
+
+        const atualizarItemProcessamento = (arquivoId, atualizacao) => {
+            setArquivosLote((atual) =>
+                atual.map((item) =>
+                    item.id === arquivoId
+                        ? {
+                            ...item,
+                            ...atualizacao,
+                        }
+                        : item
+                )
+            );
+        };
 
         setSalvandoLote(true);
         setResultadoLote("Salvando lote de certificados...");
 
         let salvos = 0;
         let falhas = 0;
+        let ignorados = 0;
         const erros = [];
         const motivos = [];
         const alertaOriginalSalvarLote = typeof window !== "undefined" ? window.alert : null;
@@ -603,7 +623,19 @@ export function Treinamentos({
 
         try {
             for (const item of arquivosLote) {
+                if (item.statusProcessamento === "salvo") {
+                    ignorados += 1;
+                    continue;
+                }
+
                 const colaboradorDoArquivo = colaboradores.find((c) => String(c.codigoFuncionario) === String(item.colaboradorCodigo));
+                const indiceMotivoAntes = motivos.length;
+
+                atualizarItemProcessamento(item.id, {
+                    statusProcessamento: "salvando",
+                    erroProcessamento: "",
+                    salvoEmLote: false,
+                });
 
                 try {
                     const ok = await onSalvarCertificado({
@@ -619,14 +651,32 @@ export function Treinamentos({
 
                     if (ok) {
                         salvos += 1;
+                        atualizarItemProcessamento(item.id, {
+                            statusProcessamento: "salvo",
+                            erroProcessamento: "",
+                            salvoEmLote: true,
+                        });
                     } else {
                         falhas += 1;
+                        const motivoItem = motivos.slice(indiceMotivoAntes).filter(Boolean).at(-1) || "Não foi possível salvar este documento.";
                         erros.push(item.arquivo.name);
+                        atualizarItemProcessamento(item.id, {
+                            statusProcessamento: "falhou",
+                            erroProcessamento: motivoItem,
+                            salvoEmLote: false,
+                        });
                     }
                 } catch (erro) {
                     falhas += 1;
+                    const motivoItem = erro?.message || String(erro || "Erro não identificado");
                     erros.push(item.arquivo?.name || "arquivo sem nome");
-                    motivos.push(erro?.message || String(erro || "Erro não identificado"));
+                    motivos.push(motivoItem);
+
+                    atualizarItemProcessamento(item.id, {
+                        statusProcessamento: "falhou",
+                        erroProcessamento: motivoItem,
+                        salvoEmLote: false,
+                    });
                 }
             }
         } finally {
@@ -654,9 +704,13 @@ export function Treinamentos({
         const linhasResultado = [
             "Resultado do envio em lote",
             "",
-            `Salvos: ${salvos}`,
-            `Falhas: ${falhas}`,
+            `Salvos nesta tentativa: ${salvos}`,
+            `Falhas nesta tentativa: ${falhas}`,
         ];
+
+        if (ignorados > 0) {
+            linhasResultado.push(`Já salvos e ignorados: ${ignorados}`);
+        }
 
         if (erros.length) {
             linhasResultado.push(
@@ -686,7 +740,7 @@ export function Treinamentos({
             linhasResultado.push(
                 "",
                 "Próximo passo:",
-                "Revise os arquivos acima. Se forem documentos gerais/coletivos, aplique a regra de documento coletivo na próxima etapa."
+                "Revise apenas os documentos marcados como Falhou. Os documentos marcados como Salvo não serão enviados novamente."
             );
         }
 

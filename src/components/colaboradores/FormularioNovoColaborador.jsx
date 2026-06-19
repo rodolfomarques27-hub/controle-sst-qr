@@ -4,20 +4,20 @@ import { classNames } from "../../utils/sstUtils";
 
 const STATUS_MOBILIZACAO = [
     "Liberado",
-    "Com pendÃªncia",
+    "Com pendência",
     "Bloqueado",
-    "Em anÃ¡lise",
+    "Em análise",
     "Desmobilizado",
     "Inativo",
 ];
 
 const INFORMACOES_STATUS_OBRA = {
     Liberado: "Mobilizado ativo.",
-    "Com pendÃªncia": "Mobilizado com pendÃªncias.",
-    Bloqueado: "Bloqueado por pendÃªncia crÃ­tica.",
-    "Em anÃ¡lise": "Em conferÃªncia documental.",
+    "Com pendência": "Mobilizado com pendências.",
+    Bloqueado: "Bloqueado por pendência crítica.",
+    "Em análise": "Em conferência documental.",
     Desmobilizado: "Fora da obra.",
-    Inativo: "Cadastro sem atuaÃ§Ã£o atual.",
+    Inativo: "Cadastro sem atuação atual.",
 };
 
 
@@ -68,12 +68,12 @@ function CampoFuncaoLivre({ label, value, onChange, funcoesDisponiveis = [], aju
                     type="text"
                     value={valorAtual}
                     onChange={(evento) => onChange(evento.target.value)}
-                    placeholder="Digite ou selecione uma funÃ§Ã£o"
+                    placeholder="Digite ou selecione uma função"
                     className="novo-colaborador-input-anterior min-w-0 flex-1 text-center"
                 />
                 <div className="relative w-[190px] shrink-0">
                     <select
-                        aria-label="Selecionar funÃ§Ã£o cadastrada"
+                        aria-label="Selecionar função cadastrada"
                         value=""
                         onChange={(evento) => {
                             const proximaFuncao = evento.target.value;
@@ -81,10 +81,10 @@ function CampoFuncaoLivre({ label, value, onChange, funcoesDisponiveis = [], aju
                         }}
                         className="novo-colaborador-input-anterior h-full w-full cursor-pointer appearance-none px-3 pr-10 text-center text-xs font-bold text-slate-950"
                     >
-                        <option value="">Selecionar funÃ§Ã£o</option>
+                        <option value="">Selecionar função</option>
                         {funcoesDisponiveis.map((funcao) => (
                             <option key={funcao.chave || funcao.rotulo} value={funcao.rotulo || ""} className="text-slate-900">
-                                {funcao.rotulo || "FunÃ§Ã£o sem nome"}
+                                {funcao.rotulo || "Função sem nome"}
                             </option>
                         ))}
                     </select>
@@ -163,7 +163,7 @@ export function FormularioNovoColaborador({
                     label="Nome completo"
                     value={novo.nome}
                     onChange={(valor) => alterarCampo("nome", valor)}
-                    placeholder="Ex.: JoÃ£o da Silva"
+                    placeholder="Ex.: João da Silva"
                     inputClassName="text-center"
                 />
 
@@ -193,10 +193,10 @@ export function FormularioNovoColaborador({
 
             <div className="grid gap-3 lg:grid-cols-[0.76fr_1.48fr_0.96fr]">
                 <CampoSelect
-                    label="SituaÃ§Ã£o na obra"
+                    label="Situação na obra"
                     value={novo.statusMobilizacao}
                     onChange={(valor) => alterarCampo("statusMobilizacao", valor)}
-                    ajuda={INFORMACOES_STATUS_OBRA[novo.statusMobilizacao] || "Selecione a situaÃ§Ã£o atual do colaborador na obra."}
+                    ajuda={INFORMACOES_STATUS_OBRA[novo.statusMobilizacao] || "Selecione a situação atual do colaborador na obra."}
                     inputClassName="text-center"
                 >
                     {STATUS_MOBILIZACAO.map((status) => (
@@ -205,22 +205,22 @@ export function FormularioNovoColaborador({
                 </CampoSelect>
 
                 <CampoFuncaoLivre
-                    label="FunÃ§Ã£o"
+                    label="Função"
                     value={novo.funcao}
                     onChange={(valor) => alterarCampo("funcao", valor)}
                     funcoesDisponiveis={funcoesDisponiveis}
-                    ajuda={`Matriz automÃ¡tica pela funÃ§Ã£o. ${quantidadeTreinamentos > 0 ? `${quantidadeTreinamentos} treinamento(s) previsto(s).` : "Digite uma funÃ§Ã£o nova ou selecione uma funÃ§Ã£o cadastrada."}`}
+                    ajuda={`Matriz automática pela função. ${quantidadeTreinamentos > 0 ? `${quantidadeTreinamentos} treinamento(s) previsto(s).` : "Digite uma função nova ou selecione uma função cadastrada."}`}
                 />
 
                 <CampoTexto
-                    label="MatrÃ­cula da empresa (opcional)"
+                    label="Matrícula da empresa (opcional)"
                     value={novo.matricula}
                     onChange={(valor) => alterarCampo("matricula", valor)}
-                    placeholder="Ex.: matrÃ­cula da empresa, crachÃ¡ ou RE"
+                    placeholder="Ex.: matrícula da empresa, crachá ou RE"
                     inputClassName="text-center"
                 >
                     <p className="novo-colaborador-ajuda-anterior">
-                        O cÃ³digo do sistema Ã© gerado automaticamente. A matrÃ­cula Ã© opcional e serve para crachÃ¡ ou RE.
+                        O código do sistema é gerado automaticamente. A matrícula é opcional e serve para crachá ou RE.
                     </p>
                 </CampoTexto>
             </div>

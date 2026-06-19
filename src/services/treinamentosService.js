@@ -5,6 +5,7 @@ import {
     obterTreinamento,
 } from "./colaboradorDocumentosService";
 import { normalizarTextoBusca } from "../utils/sstUtils";
+import { classificarDocumentoTreinamentoArquivo } from "./classificadorDocumentoTreinamentoService";
 
 export function identificarColaboradorPorArquivo(arquivo, colaboradores = []) {
     const nomeArquivoOriginal = arquivo?.name || "";
@@ -41,6 +42,38 @@ export function identificarColaboradorPorArquivo(arquivo, colaboradores = []) {
     return melhorPontuacao >= 25 ? melhor : null;
 }
 
+
+function nomesCompativeisTreinamentoLote(nomeSugerido = "", nomeSelecionado = "") {
+    const normalizar = (valor = "") =>
+        String(valor || "")
+            .normalize("NFD")
+            .replace(/[\u0300-\u036f]/g, "")
+            .toLowerCase()
+            .replace(/[^a-z0-9]+/g, " ")
+            .replace(/\s+/g, " ")
+            .trim();
+
+    const sugerido = normalizar(nomeSugerido);
+    const selecionado = normalizar(nomeSelecionado);
+
+    if (!sugerido || !selecionado) return false;
+
+    const sugeridoSemEspaco = sugerido.replace(/\s+/g, "");
+    const selecionadoSemEspaco = selecionado.replace(/\s+/g, "");
+
+    if (selecionado.includes(sugerido)) return true;
+    if (selecionadoSemEspaco.includes(sugeridoSemEspaco)) return true;
+
+    const tokensSugerido = sugerido.split(" ").filter((token) => token.length >= 3);
+    const tokensSelecionado = selecionado.split(" ").filter((token) => token.length >= 3);
+
+    if (!tokensSugerido.length || !tokensSelecionado.length) return false;
+
+    const encontrados = tokensSugerido.filter((token) => tokensSelecionado.includes(token));
+
+    return encontrados.length / tokensSugerido.length >= 0.8;
+}
+
 export async function prepararArquivosTreinamentoLote({
     listaArquivos = [],
     colaboradores = [],
@@ -53,6 +86,11 @@ export async function prepararArquivosTreinamentoLote({
         arquivos.map(async (arquivo, index) => {
             const treinamento = inferirTreinamentoPorNomeArquivo(arquivo.name);
             const sugestaoData = await detectarDataEmissaoArquivo(arquivo);
+            const classificacaoDocumento = classificarDocumentoTreinamentoArquivo({
+                arquivo,
+                treinamento,
+                sugestaoData,
+            });
             const dataArquivo = sugestaoData.data || dataRealizacao || "";
             const colaboradorSugerido = identificarColaboradorPorArquivo(arquivo, colaboradores);
             const pareceOutroColaborador =
@@ -69,8 +107,13 @@ export async function prepararArquivosTreinamentoLote({
                 dataRealizacao: dataArquivo,
                 dataVencimento: treinamento ? calcularVencimentoTreinamento(treinamento.id, dataArquivo) : "",
                 sugestaoData,
+                classificacaoDocumento,
+                tipoDocumentoTreinamento: classificacaoDocumento.tipo,
+                tipoDocumentoTreinamentoLabel: classificacaoDocumento.label,
+                tipoDocumentoTreinamentoConfianca: classificacaoDocumento.confianca,
+                tipoDocumentoTreinamentoMotivo: classificacaoDocumento.motivo,
                 status: treinamento
-                    ? pareceOutroColaborador
+                    ? pareceOutroColaborador && !nomesCompativeisTreinamentoLote(colaboradorSugerido?.nome || "", colabSelecionado?.nome || "")
                         ? `Atenção: arquivo parece ser de ${colaboradorSugerido.nome}`
                         : sugestaoData.data
                             ? "Treinamento e data identificados"
