@@ -472,12 +472,16 @@ function obterTextoConferencia(valor, textoSim = "Localizado", textoNao = "Não 
     return textoNa;
 }
 
-function LinhaConferenciaDocumental({ titulo, valor, detalhe = "", textoSim = "Localizado", textoNao = "Não localizado", textoNa = "Não avaliado" }) {
+function LinhaConferenciaDocumental({ titulo, valor, detalhe = "", textoSim = "Localizado", textoNao = "Não localizado", textoNa = "Não avaliado" , classeNao = "" }) {
+    const classeConferencia = normalizarBooleanoConferencia(valor) === "nao" && classeNao
+        ? classeNao
+        : obterClasseConferencia(valor);
+
     return (
         <div className="rounded-xl bg-slate-50 px-3 py-2 ring-1 ring-slate-100">
             <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
                 <p className="text-[10px] font-black uppercase tracking-wide text-slate-400">{titulo}</p>
-                <span className={`w-fit rounded-full px-2.5 py-1 text-[10px] font-black uppercase tracking-wide ring-1 ${obterClasseConferencia(valor)}`}>
+                <span className={`w-fit rounded-full px-2.5 py-1 text-[10px] font-black uppercase tracking-wide ring-1 ${classeConferencia}`}>
                     {obterTextoConferencia(valor, textoSim, textoNao, textoNa)}
                 </span>
             </div>
@@ -518,6 +522,8 @@ function PainelConferenciaDocumentalRobusta({ verificacao = null }) {
                 <LinhaConferenciaDocumental
                     titulo="Colaborador"
                     valor={colaborador.encontrado}
+                    textoNao={conferencia?.listaPresenca ? "Confer?ncia manual" : "N?o localizado"}
+                    classeNao={conferencia?.listaPresenca ? "bg-amber-50 text-amber-700 ring-amber-200" : ""}
                     detalhe={colaborador.encontrado ? `${colaborador.nomeCadastro || "Nome encontrado"}${colaborador.linhaOcr ? ` · Linha OCR: ${colaborador.linhaOcr}` : ""}` : colaborador.nomeCadastro || "Nome não informado no cadastro"}
                 />
 

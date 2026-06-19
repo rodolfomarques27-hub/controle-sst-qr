@@ -25,6 +25,10 @@ import {
     obterTamanhoArquivoVerificacao,
     valorUuidOuNullVerificacao,
 } from "../utils/documentosVerificacaoUtils";
+import {
+    analisarColaboradorDocumentoColetivoEtapa4,
+    classificarTipoDocumentoTreinamentoEtapa2,
+} from "./classificadorDocumentoTreinamentoService";
 
 let moduloOcrDocumentalPromise = null;
 
@@ -1135,13 +1139,32 @@ function montarConferenciaDocumentalCertificado({ leitura = {}, certificado = {}
     const linhaColaborador = linhaTabelaTemAssinatura || (!linhaOcrTemAssinatura && linhaColaboradorTabela)
         ? linhaColaboradorTabela
         : (linhaColaboradorOcr || linhaColaboradorTabela);
-    const listaPresenca = documentoPareceListaPresenca({ texto: textoDocumento, leitura });
+    const classificacaoTreinamentoEtapa2 = classificarTipoDocumentoTreinamentoEtapa2({
+        nomeArquivo: metadadosArquivo?.arquivoNome || "",
+        texto: textoComArquivo,
+        textoOcr: textoDocumento,
+        tipoDetectado: perfilDocumental,
+    });
+    const listaPresencaDetectada = documentoPareceListaPresenca({ texto: textoDocumento, leitura });
+    const listaPresenca = Boolean(
+        listaPresencaDetectada ||
+        classificacaoTreinamentoEtapa2?.tipoDocumento === "coletivo" ||
+        classificacaoTreinamentoEtapa2?.perfil === "lista_presenca"
+    );
+    const analiseColaboradorColetivoEtapa4 = listaPresenca && nomeColaborador
+        ? analisarColaboradorDocumentoColetivoEtapa4({
+            nomeColaborador,
+            texto: textoComArquivo,
+            textoOcr: textoDocumento,
+        })
+        : null;
     const assinaturaDocumentoIndividual = obterAssinaturaDocumentoIndividual(leitura);
     const documentoAssinaturaIndividual = documentoPareceAssinaturaIndividual({ texto: textoDocumento, treinamento, certificado });
     const nomeEncontradoTextoGeral = nomeColaborador
         ? textoContemNomePessoa({ texto: textoDocumento, nome: nomeColaborador })
         : null;
     const nomeEncontradoLinha = Boolean(linhaColaborador);
+    const nomeEncontradoColetivoEtapa4 = Boolean(analiseColaboradorColetivoEtapa4?.localizado);
     const documentoIndividualPorPerfil = typeof perfilDocumentalIndividualConferencia === "function"
         ? perfilDocumentalIndividualConferencia(perfilDocumental)
         : [
@@ -1183,7 +1206,7 @@ function montarConferenciaDocumentalCertificado({ leitura = {}, certificado = {}
 
     const nomeEncontrado = nomeColaborador
         ? (listaPresenca
-            ? nomeEncontradoLinha
+            ? Boolean(nomeEncontradoLinha || nomeEncontradoColetivoEtapa4)
             : Boolean(nomeEncontradoTextoGeral || nomeEncontradoLinha || nomeEncontradoPorArquivo))
         : null;
 
@@ -1281,12 +1304,14 @@ function montarConferenciaDocumentalCertificado({ leitura = {}, certificado = {}
             localizadoApenasPorArquivo: nomeLocalizadoApenasPorArquivo,
             origemIdentificacao: nomeEncontradoLinha
                 ? "linha_ocr_ou_tabela"
-                : nomeEncontradoTextoGeral
-                    ? "texto_ocr"
-                    : nomeEncontradoPorArquivo
-                        ? "nome_arquivo"
-                        : "nao_localizado",
-            confiancaIdentificacao: nomeEncontradoLinha || nomeEncontradoTextoGeral
+                : nomeEncontradoColetivoEtapa4
+                    ? "lista_presenca_nome_parcial_forte"
+                    : nomeEncontradoTextoGeral
+                        ? "texto_ocr"
+                        : nomeEncontradoPorArquivo
+                            ? "nome_arquivo"
+                            : "nao_localizado",
+            confiancaIdentificacao: nomeEncontradoLinha || nomeEncontradoColetivoEtapa4 || nomeEncontradoTextoGeral
                 ? "alta"
                 : nomeEncontradoPorArquivo
                     ? "media"
@@ -1301,8 +1326,10 @@ function montarConferenciaDocumentalCertificado({ leitura = {}, certificado = {}
                 : (linhaColaborador?.assinatura_origem === "fallback_tabela_presenca_linha_numerada"
                     ? "tabela_presenca_linha_numerada"
                     : (linhaColaborador?.origem_linha || "ocr")),
-            scoreLinha: linhaColaborador?.nome_score ?? null,
-            tokensEncontrados: linhaColaborador?.nome_tokens_encontrados || [],
+            scoreLinha: linhaColaborador?.nome_score ?? analiseColaboradorColetivoEtapa4?.confianca ?? null,
+            tokensEncontrados: linhaColaborador?.nome_tokens_encontrados || analiseColaboradorColetivoEtapa4?.tokensEncontrados || [],
+            nomeExtraidoColetivo: analiseColaboradorColetivoEtapa4?.nomeExtraido || "",
+            motivoIdentificacaoColetiva: analiseColaboradorColetivoEtapa4?.motivo || "",
         },
         cpf: {
             informadoCadastro: Boolean(cpfColaborador || cpfDocumentoEncontrado),
