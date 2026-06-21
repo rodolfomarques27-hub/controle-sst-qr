@@ -522,7 +522,7 @@ function PainelConferenciaDocumentalRobusta({ verificacao = null }) {
                 <LinhaConferenciaDocumental
                     titulo="Colaborador"
                     valor={colaborador.encontrado}
-                    textoNao={conferencia?.listaPresenca ? "Confer?ncia manual" : "N?o localizado"}
+                    textoNao={conferencia?.listaPresenca ? "Conferencia manual" : "N?o localizado"}
                     classeNao={conferencia?.listaPresenca ? "bg-amber-50 text-amber-700 ring-amber-200" : ""}
                     detalhe={colaborador.encontrado ? `${colaborador.nomeCadastro || "Nome encontrado"}${colaborador.linhaOcr ? ` · Linha OCR: ${colaborador.linhaOcr}` : ""}` : colaborador.nomeCadastro || "Nome não informado no cadastro"}
                 />

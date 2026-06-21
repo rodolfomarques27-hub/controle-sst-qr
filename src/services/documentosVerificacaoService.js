@@ -1658,9 +1658,14 @@ function avaliarConferenciaDocumentalCertificado({ conferencia = {}, leitura = {
     }
 
     if (conferencia?.colaborador?.nomeCadastro && conferencia?.colaborador?.encontrado === false && !colaboradorLocalizadoPorNomeForte) {
-        const documentoColetivo =
+        const documentoColetivo = Boolean(
+            conferencia?.listaPresenca ||
+            conferencia?.lista_presenca ||
+            conferencia?.documentoColetivo ||
+            conferencia?.documento_coletivo ||
             documentoListaPresencaOuColetivoSeguro(conferencia, arquivo, leitura) ||
-            documentoColetivoOuGeralParaConferencia(conferencia, arquivo, leitura);
+            documentoColetivoOuGeralParaConferencia(conferencia, arquivo, leitura)
+        );
         const nomeArquivoCompativelComColaborador = nomeArquivoCompativelComColaboradorConferencia({
             arquivo,
             nomeColaborador: conferencia?.colaborador?.nomeCadastro || "",
@@ -1757,6 +1762,41 @@ function avaliarConferenciaDocumentalCertificado({ conferencia = {}, leitura = {
     return indicios;
 }
 
+
+function normalizarIndiciosDocumentoColetivoTreinamentoEtapa57({ indicios = [], conferencia = {} } = {}) {
+    const listaPresenca = Boolean(
+        conferencia?.listaPresenca ||
+        conferencia?.lista_presenca ||
+        conferencia?.documentoColetivo ||
+        conferencia?.documento_coletivo
+    );
+
+    if (!listaPresenca || !Array.isArray(indicios) || !indicios.length) {
+        return indicios;
+    }
+
+    return indicios.map((indicio = {}) => {
+        if (indicio?.codigo !== "colaborador_nao_localizado_no_documento") {
+            return indicio;
+        }
+
+        return criarIndicioVerificacao({
+            ...indicio,
+            codigo: "colaborador_nao_confirmado_documento_coletivo",
+            tipo: indicio.tipo || DOCUMENTOS_VERIFICACAO_TIPOS_INDICIO.OCR,
+            titulo: "Colaborador nao confirmado automaticamente em documento coletivo",
+            detalhe: indicio.detalhe || "A leitura local/OCR nao confirmou automaticamente o nome do colaborador. Como o arquivo aparenta ser documento coletivo/lista de presenca, manter em conferencia manual em vez de bloquear automaticamente.",
+            peso: Math.min(Number(indicio.peso || 25), 25),
+            bloqueia: false,
+            recomendacao: indicio.recomendacao || "Conferir visualmente se o documento coletivo/lista geral corresponde ao colaborador, empresa e treinamento selecionados.",
+            dados: {
+                ...(indicio.dados || {}),
+                documentoColetivo: true,
+                conferenciaManual: true,
+            },
+        });
+    });
+}
 export function normalizarVerificacaoDocumental(item = {}) {
     return {
         ...item,
@@ -1986,14 +2026,19 @@ export async function analisarCertificadoLocal({
         }),
     ];
 
+    const indiciosBrutosNormalizados = normalizarIndiciosDocumentoColetivoTreinamentoEtapa57({
+        indicios: indiciosBrutos,
+        conferencia: conferenciaDocumental,
+    });
+
     const indicios = conferenciaDocumental?.documentoCorretoPorConferencia
-        ? indiciosBrutos.filter((indicio = {}) => ![
+        ? indiciosBrutosNormalizados.filter((indicio = {}) => ![
             "treinamento_nao_confirmado_no_documento",
             "data_impressa_nao_confirmada_automaticamente",
             "empresa_nao_confirmada_no_documento",
             "assinatura_colaborador_nao_confirmada_lista",
         ].includes(indicio.codigo))
-        : indiciosBrutos;
+        : indiciosBrutosNormalizados;
 
     const resultadoBase = montarResultadoVerificacaoBase({ indicios });
     const resultado = aplicarRevisaoManualQuandoDataNaoConfirmada(resultadoBase, indicios);
