@@ -316,6 +316,42 @@ const BLOCOS_CONFIGURACOES_RECOLHIDOS_PADRAO = CHAVES_BLOCOS_CONFIGURACOES_PADRA
     return acc;
 }, {});
 
+const clonarObjetoConfiguracoes = (valor = {}) => ({ ...(valor || {}) });
+
+const criarLayoutVisualPadraoConfiguracoes = () => ({
+    versao: VERSAO_LAYOUT_CONFIGURACOES_SISTEMA,
+    visiveis: clonarObjetoConfiguracoes(BLOCOS_CONFIGURACOES_VISIVEIS_PADRAO),
+    recolhidos: clonarObjetoConfiguracoes(BLOCOS_CONFIGURACOES_RECOLHIDOS_PADRAO),
+    ordem: [...CHAVES_BLOCOS_CONFIGURACOES_PADRAO],
+    tamanhos: clonarObjetoConfiguracoes(BLOCOS_CONFIGURACOES_TAMANHOS_PADRAO),
+});
+
+let layoutVisualConfiguracoesCache = null;
+
+const salvarLayoutVisualLocalConfiguracoes = (layout) => {
+    layoutVisualConfiguracoesCache = {
+        versao: VERSAO_LAYOUT_CONFIGURACOES_SISTEMA,
+        visiveis: clonarObjetoConfiguracoes(layout?.visiveis || BLOCOS_CONFIGURACOES_VISIVEIS_PADRAO),
+        recolhidos: clonarObjetoConfiguracoes(layout?.recolhidos || BLOCOS_CONFIGURACOES_RECOLHIDOS_PADRAO),
+        ordem: Array.isArray(layout?.ordem) ? [...layout.ordem] : [...CHAVES_BLOCOS_CONFIGURACOES_PADRAO],
+        tamanhos: clonarObjetoConfiguracoes(layout?.tamanhos || BLOCOS_CONFIGURACOES_TAMANHOS_PADRAO),
+    };
+
+    if (typeof window === "undefined") return layoutVisualConfiguracoesCache;
+
+    try {
+        window.localStorage.setItem(CHAVE_LAYOUT_CONFIGURACOES_SISTEMA, VERSAO_LAYOUT_CONFIGURACOES_SISTEMA);
+        window.localStorage.setItem(CHAVE_BLOCOS_VISIVEIS_CONFIGURACOES, JSON.stringify(layoutVisualConfiguracoesCache.visiveis));
+        window.localStorage.setItem(CHAVE_BLOCOS_RECOLHIDOS_CONFIGURACOES, JSON.stringify(layoutVisualConfiguracoesCache.recolhidos));
+        window.localStorage.setItem(CHAVE_ORDEM_BLOCOS_CONFIGURACOES, JSON.stringify(layoutVisualConfiguracoesCache.ordem));
+        window.localStorage.setItem(CHAVE_TAMANHOS_BLOCOS_CONFIGURACOES, JSON.stringify(layoutVisualConfiguracoesCache.tamanhos));
+    } catch {
+        // Mantém o cache em memória quando o navegador bloquear localStorage.
+    }
+
+    return layoutVisualConfiguracoesCache;
+};
+
 const carregarJsonLocalConfiguracoes = (chave, padrao) => {
     if (typeof window === "undefined") return padrao;
 
@@ -327,43 +363,55 @@ const carregarJsonLocalConfiguracoes = (chave, padrao) => {
     }
 };
 
-const carregarBlocosRecolhidosLocalConfiguracoes = () => {
-    if (typeof window === "undefined") return BLOCOS_CONFIGURACOES_RECOLHIDOS_PADRAO;
+const normalizarOrdemLayoutVisualConfiguracoes = (ordem = []) => {
+    if (!Array.isArray(ordem)) return [...CHAVES_BLOCOS_CONFIGURACOES_PADRAO];
+
+    return [
+        ...ordem.filter((chave) => CHAVES_BLOCOS_CONFIGURACOES_PADRAO.includes(chave)),
+        ...CHAVES_BLOCOS_CONFIGURACOES_PADRAO.filter((chave) => !ordem.includes(chave)),
+    ];
+};
+
+const carregarLayoutVisualLocalConfiguracoes = () => {
+    if (layoutVisualConfiguracoesCache) return layoutVisualConfiguracoesCache;
+
+    const layoutPadrao = criarLayoutVisualPadraoConfiguracoes();
+
+    if (typeof window === "undefined") {
+        layoutVisualConfiguracoesCache = layoutPadrao;
+        return layoutVisualConfiguracoesCache;
+    }
 
     try {
         const versaoAtual = window.localStorage.getItem(CHAVE_LAYOUT_CONFIGURACOES_SISTEMA);
 
         if (versaoAtual !== VERSAO_LAYOUT_CONFIGURACOES_SISTEMA) {
-            window.localStorage.setItem(
-                CHAVE_BLOCOS_RECOLHIDOS_CONFIGURACOES,
-                JSON.stringify(BLOCOS_CONFIGURACOES_RECOLHIDOS_PADRAO)
-            );
-            window.localStorage.setItem(CHAVE_LAYOUT_CONFIGURACOES_SISTEMA, VERSAO_LAYOUT_CONFIGURACOES_SISTEMA);
-            return BLOCOS_CONFIGURACOES_RECOLHIDOS_PADRAO;
+            return salvarLayoutVisualLocalConfiguracoes(layoutPadrao);
         }
 
-        return {
-            ...BLOCOS_CONFIGURACOES_RECOLHIDOS_PADRAO,
-            ...carregarJsonLocalConfiguracoes(CHAVE_BLOCOS_RECOLHIDOS_CONFIGURACOES, BLOCOS_CONFIGURACOES_RECOLHIDOS_PADRAO),
+        layoutVisualConfiguracoesCache = {
+            versao: VERSAO_LAYOUT_CONFIGURACOES_SISTEMA,
+            visiveis: {
+                ...BLOCOS_CONFIGURACOES_VISIVEIS_PADRAO,
+                ...carregarJsonLocalConfiguracoes(CHAVE_BLOCOS_VISIVEIS_CONFIGURACOES, BLOCOS_CONFIGURACOES_VISIVEIS_PADRAO),
+            },
+            recolhidos: {
+                ...BLOCOS_CONFIGURACOES_RECOLHIDOS_PADRAO,
+                ...carregarJsonLocalConfiguracoes(CHAVE_BLOCOS_RECOLHIDOS_CONFIGURACOES, BLOCOS_CONFIGURACOES_RECOLHIDOS_PADRAO),
+            },
+            ordem: normalizarOrdemLayoutVisualConfiguracoes(
+                JSON.parse(window.localStorage.getItem(CHAVE_ORDEM_BLOCOS_CONFIGURACOES) || "null")
+            ),
+            tamanhos: {
+                ...BLOCOS_CONFIGURACOES_TAMANHOS_PADRAO,
+                ...carregarJsonLocalConfiguracoes(CHAVE_TAMANHOS_BLOCOS_CONFIGURACOES, BLOCOS_CONFIGURACOES_TAMANHOS_PADRAO),
+            },
         };
+
+        return layoutVisualConfiguracoesCache;
     } catch {
-        return BLOCOS_CONFIGURACOES_RECOLHIDOS_PADRAO;
-    }
-};
-
-const carregarOrdemLocalConfiguracoes = () => {
-    if (typeof window === "undefined") return CHAVES_BLOCOS_CONFIGURACOES_PADRAO;
-
-    try {
-        const salvo = JSON.parse(window.localStorage.getItem(CHAVE_ORDEM_BLOCOS_CONFIGURACOES) || "null");
-        if (!Array.isArray(salvo)) return CHAVES_BLOCOS_CONFIGURACOES_PADRAO;
-
-        return [
-            ...salvo.filter((chave) => CHAVES_BLOCOS_CONFIGURACOES_PADRAO.includes(chave)),
-            ...CHAVES_BLOCOS_CONFIGURACOES_PADRAO.filter((chave) => !salvo.includes(chave)),
-        ];
-    } catch {
-        return CHAVES_BLOCOS_CONFIGURACOES_PADRAO;
+        layoutVisualConfiguracoesCache = layoutPadrao;
+        return layoutVisualConfiguracoesCache;
     }
 };
 
@@ -420,18 +468,18 @@ export function ConfiguracoesSistema({
 
     const [mostrarOrganizacaoCards, setMostrarOrganizacaoCards] = useState(false);
     const [filtroPainelConfiguracoes, setFiltroPainelConfiguracoes] = useState("todos");
-    const [blocosVisiveisConfiguracoes, setBlocosVisiveisConfiguracoes] = useState(() => ({
-        ...BLOCOS_CONFIGURACOES_VISIVEIS_PADRAO,
-        ...carregarJsonLocalConfiguracoes(CHAVE_BLOCOS_VISIVEIS_CONFIGURACOES, BLOCOS_CONFIGURACOES_VISIVEIS_PADRAO),
-    }));
-    const [blocosRecolhidosConfiguracoes, setBlocosRecolhidosConfiguracoes] = useState(() =>
-        carregarBlocosRecolhidosLocalConfiguracoes()
+    const [blocosVisiveisConfiguracoes, setBlocosVisiveisConfiguracoes] = useState(() =>
+        carregarLayoutVisualLocalConfiguracoes().visiveis
     );
-    const [ordemBlocosConfiguracoes, setOrdemBlocosConfiguracoes] = useState(() => carregarOrdemLocalConfiguracoes());
-    const [tamanhosBlocosConfiguracoes, setTamanhosBlocosConfiguracoes] = useState(() => ({
-        ...BLOCOS_CONFIGURACOES_TAMANHOS_PADRAO,
-        ...carregarJsonLocalConfiguracoes(CHAVE_TAMANHOS_BLOCOS_CONFIGURACOES, BLOCOS_CONFIGURACOES_TAMANHOS_PADRAO),
-    }));
+    const [blocosRecolhidosConfiguracoes, setBlocosRecolhidosConfiguracoes] = useState(() =>
+        carregarLayoutVisualLocalConfiguracoes().recolhidos
+    );
+    const [ordemBlocosConfiguracoes, setOrdemBlocosConfiguracoes] = useState(() =>
+        carregarLayoutVisualLocalConfiguracoes().ordem
+    );
+    const [tamanhosBlocosConfiguracoes, setTamanhosBlocosConfiguracoes] = useState(() =>
+        carregarLayoutVisualLocalConfiguracoes().tamanhos
+    );
     const [blocoArrastandoConfiguracoes, setBlocoArrastandoConfiguracoes] = useState("");
 
     const [permissaoSistemaAtual, setPermissaoSistemaAtual] = useState(null);
@@ -470,24 +518,18 @@ export function ConfiguracoesSistema({
 
 
     useEffect(() => {
-        if (typeof window === "undefined") return;
-        window.localStorage.setItem(CHAVE_BLOCOS_VISIVEIS_CONFIGURACOES, JSON.stringify(blocosVisiveisConfiguracoes));
-    }, [blocosVisiveisConfiguracoes]);
-
-    useEffect(() => {
-        if (typeof window === "undefined") return;
-        window.localStorage.setItem(CHAVE_BLOCOS_RECOLHIDOS_CONFIGURACOES, JSON.stringify(blocosRecolhidosConfiguracoes));
-    }, [blocosRecolhidosConfiguracoes]);
-
-    useEffect(() => {
-        if (typeof window === "undefined") return;
-        window.localStorage.setItem(CHAVE_ORDEM_BLOCOS_CONFIGURACOES, JSON.stringify(ordemBlocosConfiguracoes));
-    }, [ordemBlocosConfiguracoes]);
-
-    useEffect(() => {
-        if (typeof window === "undefined") return;
-        window.localStorage.setItem(CHAVE_TAMANHOS_BLOCOS_CONFIGURACOES, JSON.stringify(tamanhosBlocosConfiguracoes));
-    }, [tamanhosBlocosConfiguracoes]);
+        salvarLayoutVisualLocalConfiguracoes({
+            visiveis: blocosVisiveisConfiguracoes,
+            recolhidos: blocosRecolhidosConfiguracoes,
+            ordem: normalizarOrdemLayoutVisualConfiguracoes(ordemBlocosConfiguracoes),
+            tamanhos: tamanhosBlocosConfiguracoes,
+        });
+    }, [
+        blocosRecolhidosConfiguracoes,
+        blocosVisiveisConfiguracoes,
+        ordemBlocosConfiguracoes,
+        tamanhosBlocosConfiguracoes,
+    ]);
 
     useEffect(() => {
         let cancelado = false;
