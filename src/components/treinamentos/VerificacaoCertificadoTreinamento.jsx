@@ -501,6 +501,16 @@ function PainelConferenciaDocumentalRobusta({ verificacao = null }) {
     const cnpj = conferencia.cnpj || {};
     const cpf = conferencia.cpf || {};
     const treinamento = conferencia.treinamento || {};
+    const indiciosVerificacao = Array.isArray(verificacao?.indicios) ? verificacao.indicios : [];
+    const colaboradorEmConferenciaManual = Boolean(
+        conferencia?.listaPresenca ||
+        conferencia?.lista_presenca ||
+        indiciosVerificacao.some((indicio = {}) =>
+            indicio?.codigo === "colaborador_nao_confirmado_documento_coletivo" ||
+            indicio?.dados?.documentoColetivo === true ||
+            indicio?.dados?.conferenciaManual === true
+        )
+    );
 
     return (
         <div className="mb-3 rounded-2xl border border-blue-100 bg-white p-3">
@@ -522,8 +532,8 @@ function PainelConferenciaDocumentalRobusta({ verificacao = null }) {
                 <LinhaConferenciaDocumental
                     titulo="Colaborador"
                     valor={colaborador.encontrado}
-                    textoNao={conferencia?.listaPresenca ? "Conferencia manual" : "N?o localizado"}
-                    classeNao={conferencia?.listaPresenca ? "bg-amber-50 text-amber-700 ring-amber-200" : ""}
+                    textoNao={colaboradorEmConferenciaManual ? "Conferencia manual" : "Nao localizado"}
+                    classeNao={colaboradorEmConferenciaManual ? "bg-amber-50 text-amber-700 ring-amber-200" : ""}
                     detalhe={colaborador.encontrado ? `${colaborador.nomeCadastro || "Nome encontrado"}${colaborador.linhaOcr ? ` · Linha OCR: ${colaborador.linhaOcr}` : ""}` : colaborador.nomeCadastro || "Nome não informado no cadastro"}
                 />
 
