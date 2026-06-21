@@ -12,7 +12,7 @@ import {
 } from "../constants/documentosVerificacaoConstants";
 
 export function normalizarTextoVerificacao(valor = "") {
-    return String(valor || "")
+    return corrigirTextoMojibake(valor)
         .normalize("NFD")
         .replace(/[\u0300-\u036f]/g, "")
         .trim()
@@ -20,7 +20,30 @@ export function normalizarTextoVerificacao(valor = "") {
 }
 
 export function limparTextoVerificacao(valor = "") {
-    return String(valor || "").trim();
+    return corrigirTextoMojibake(valor).trim();
+}
+
+export function corrigirTextoMojibake(valor = "") {
+    let texto = String(valor || "");
+
+    const substituicoes = [
+        ["ÃƒÂ§", "ç"], ["ÃƒÂ£", "ã"], ["ÃƒÂµ", "õ"], ["ÃƒÂ¡", "á"], ["ÃƒÂ©", "é"],
+        ["ÃƒÂ­", "í"], ["ÃƒÂ³", "ó"], ["ÃƒÂº", "ú"], ["ÃƒÂª", "ê"], ["ÃƒÂ´", "ô"],
+        ["ÃƒÂ¢", "â"], ["ÃƒÂ ", "à"], ["Ãƒâ€°", "É"], ["Ãƒ", "Ã"],
+        ["Ã§", "ç"], ["Ã£", "ã"], ["Ãµ", "õ"], ["Ã¡", "á"], ["Ã©", "é"],
+        ["Ã­", "í"], ["Ã³", "ó"], ["Ãº", "ú"], ["Ãª", "ê"], ["Ã´", "ô"],
+        ["Ã¢", "â"], ["Ã ", "à"], ["Ã‡", "Ç"], ["Ã‰", "É"], ["Ã“", "Ó"],
+        ["Âº", "º"], ["Âª", "ª"], ["Â·", "·"], ["Â°", "°"], ["Â", ""],
+        ["â€”", "-"], ["â€“", "-"], ["â€¢", "•"], ["â€¦", "..."],
+    ];
+
+    for (let rodada = 0; rodada < 2; rodada += 1) {
+        substituicoes.forEach(([quebrado, correto]) => {
+            texto = texto.split(quebrado).join(correto);
+        });
+    }
+
+    return texto;
 }
 
 export function obterDataSeguraVerificacao(valor) {

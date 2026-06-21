@@ -1,4 +1,4 @@
-/* eslint-disable no-unused-vars */
+﻿/* eslint-disable no-unused-vars */
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
     AlertTriangle,
@@ -17,6 +17,7 @@ import {
     obterTreinamento,
     treinamentoSemValidade,
 } from "../../services/colaboradorDocumentosService";
+import { corrigirTextoMojibake, normalizarTextoVerificacao } from "../../utils/documentosVerificacaoUtils";
 import ResultadoVerificacaoDocumento from "../documentos/ResultadoVerificacaoDocumento";
 
 const ORIGEM_TIPO_CERTIFICADO = "certificado";
@@ -130,7 +131,7 @@ async function baixarArquivoCertificadoParaAnalise({ certificado = {} } = {}) {
             arquivo: null,
             bucket,
             caminho,
-            aviso: `Não foi possível baixar o arquivo salvo para reanálise (${error.message}). A análise usará apenas os dados cadastrados.`,
+            aviso: `NÃ£o foi possÃ­vel baixar o arquivo salvo para reanálise (${error.message}). A análise usarÃ¡ apenas os dados cadastrados.`,
         };
     }
 
@@ -189,7 +190,7 @@ function obterClassesStatus(status = "") {
         return "bg-emerald-50 text-emerald-700 ring-emerald-200";
     }
 
-    if (normalizado.includes("atenção") || normalizado.includes("atencao") || normalizado.includes("revisão") || normalizado.includes("revisao")) {
+    if (normalizado.includes("atenÃ§Ã£o") || normalizado.includes("atencao") || normalizado.includes("revisÃ£o") || normalizado.includes("revisao")) {
         return "bg-amber-50 text-amber-700 ring-amber-200";
     }
 
@@ -207,11 +208,11 @@ function obterClassesRisco(nivelRisco = "") {
         return "bg-emerald-50 text-emerald-700 ring-emerald-200";
     }
 
-    if (normalizado.includes("médio") || normalizado.includes("medio") || normalizado.includes("moderado")) {
+    if (normalizado.includes("mÃ©dio") || normalizado.includes("medio") || normalizado.includes("moderado")) {
         return "bg-amber-50 text-amber-700 ring-amber-200";
     }
 
-    if (normalizado.includes("alto") || normalizado.includes("crítico") || normalizado.includes("critico")) {
+    if (normalizado.includes("alto") || normalizado.includes("crÃ­tico") || normalizado.includes("critico")) {
         return "bg-red-50 text-red-700 ring-red-200";
     }
 
@@ -239,7 +240,7 @@ function normalizarDataIso(valor = "") {
     return `${ano}-${mes}-${dia}`;
 }
 
-function formatarDataPainel(valor = "", fallback = "Não informada") {
+function formatarDataPainel(valor = "", fallback = "NÃ£o informada") {
     const dataIso = normalizarDataIso(valor);
 
     if (!dataIso) return fallback;
@@ -250,7 +251,7 @@ function formatarDataPainel(valor = "", fallback = "Não informada") {
 }
 
 function formatarDataHoraPainel(valor = "") {
-    if (!valor) return "Não informada";
+    if (!valor) return "NÃ£o informada";
 
     const data = new Date(valor);
 
@@ -363,11 +364,66 @@ function verificarDivergenciaDatas({ certificado = {}, verificacao = null } = {}
     );
 }
 
+function obterAprovacaoColetivaConsolidada(verificacao = {}) {
+    const conferencia = obterConferenciaDocumentalVerificacao(verificacao) || {};
+    const listaOuColetivo = Boolean(
+        conferencia?.listaPresenca ||
+        conferencia?.lista_presenca ||
+        conferencia?.documentoColetivo ||
+        conferencia?.documento_coletivo
+    );
+    const empresaLocalizada = conferencia?.empresa?.encontrada === true;
+    const treinamentoLocalizado = conferencia?.treinamento?.encontrado === true;
+    const dataCoerente = Boolean(conferencia?.dataCoerenteLista);
+    const cnpjNaoExigido = conferencia?.cnpj?.obrigatorio === false || (!conferencia?.cnpj?.cnpjExtraido && listaOuColetivo);
+    const colaborador = conferencia?.colaborador || {};
+    const assinatura = conferencia?.assinatura || {};
+    const tokensEncontrados = Array.isArray(colaborador?.tokensEncontrados) ? colaborador.tokensEncontrados : [];
+    const assinaturaAceita = assinatura?.visualLocalizada === true ||
+        assinatura?.aplicavel === true ||
+        assinatura?.possuiColunaAssinatura === true ||
+        listaOuColetivo;
+    const colaboradorAceito = colaborador?.encontrado === true ||
+        colaborador?.localizadoPorCorrespondenciaParcial === true ||
+        colaborador?.localizadoPorPrimeiroNome === true ||
+        colaborador?.provavelPorPrimeiroNome === true ||
+        (listaOuColetivo && assinaturaAceita && Boolean(colaborador?.nomeCadastro || colaborador?.observacaoIdentificacao)) ||
+        tokensEncontrados.length >= 2;
+    const possuiBloqueio = Array.isArray(verificacao?.indicios) && verificacao.indicios.some((indicio) => indicio?.bloqueia);
+
+    return Boolean(
+        listaOuColetivo &&
+        empresaLocalizada &&
+        treinamentoLocalizado &&
+        dataCoerente &&
+        cnpjNaoExigido &&
+        colaboradorAceito &&
+        assinaturaAceita &&
+        !possuiBloqueio
+    );
+}
+
+function obterStatusExibicaoVerificacao(verificacao = {}, statusCertificado = "") {
+    const statusBase = verificacao?.statusVerificacao || statusCertificado || "Pendente de verificação";
+    const aprovadoComConferenciaVisual = Boolean(
+        verificacao?.retornoIa?.aprovacao_controlada ||
+        verificacao?.retorno_ia?.aprovacao_controlada ||
+        obterAprovacaoColetivaConsolidada(verificacao)
+    );
+
+    if (aprovadoComConferenciaVisual) {
+        return "Aprovado com conferência visual";
+    }
+
+    return statusBase;
+}
+
 function ResumoVerificacaoCertificado({ verificacao = null, statusCertificado = "" }) {
-    const statusExibicao = verificacao?.statusVerificacao || statusCertificado;
-    const nivelRisco = verificacao?.nivelRisco || "Aguardando análise";
-    const scoreRisco = verificacao?.scoreRisco ?? null;
-    const totalIndicios = Array.isArray(verificacao?.indicios) ? verificacao.indicios.length : 0;
+    const statusExibicao = obterStatusExibicaoVerificacao(verificacao, statusCertificado);
+    const aprovacaoColetiva = obterAprovacaoColetivaConsolidada(verificacao);
+    const nivelRisco = aprovacaoColetiva ? "baixo" : (verificacao?.nivelRisco || "Aguardando análise");
+    const scoreRisco = aprovacaoColetiva ? 0 : (verificacao?.scoreRisco ?? null);
+    const totalIndicios = aprovacaoColetiva ? 0 : (Array.isArray(verificacao?.indicios) ? verificacao.indicios.length : 0);
 
     return (
         <div className="flex flex-wrap items-center gap-2">
@@ -466,10 +522,10 @@ function obterClasseConferencia(valor) {
 function obterTextoConferencia(valor, textoSim = "Localizado", textoNao = "Não localizado", textoNa = "Não avaliado") {
     const normalizado = normalizarBooleanoConferencia(valor);
 
-    if (normalizado === "sim") return textoSim;
-    if (normalizado === "nao") return textoNao;
+    if (normalizado === "sim") return corrigirTextoMojibake(textoSim);
+    if (normalizado === "nao") return corrigirTextoMojibake(textoNao);
 
-    return textoNa;
+    return corrigirTextoMojibake(textoNa);
 }
 
 function LinhaConferenciaDocumental({ titulo, valor, detalhe = "", textoSim = "Localizado", textoNao = "Não localizado", textoNa = "Não avaliado" , classeNao = "" }) {
@@ -480,14 +536,137 @@ function LinhaConferenciaDocumental({ titulo, valor, detalhe = "", textoSim = "L
     return (
         <div className="rounded-xl bg-slate-50 px-3 py-2 ring-1 ring-slate-100">
             <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
-                <p className="text-[10px] font-black uppercase tracking-wide text-slate-400">{titulo}</p>
+                <p className="text-[10px] font-black uppercase tracking-wide text-slate-400">{corrigirTextoMojibake(titulo)}</p>
                 <span className={`w-fit rounded-full px-2.5 py-1 text-[10px] font-black uppercase tracking-wide ring-1 ${classeConferencia}`}>
                     {obterTextoConferencia(valor, textoSim, textoNao, textoNa)}
                 </span>
             </div>
-            {detalhe && <p className="mt-1 text-xs font-semibold text-slate-700">{detalhe}</p>}
+            {detalhe && <p className="mt-1 text-xs font-semibold text-slate-700">{corrigirTextoMojibake(detalhe)}</p>}
         </div>
     );
+}
+
+function textoContemAssinaturaLocalizada(texto = "") {
+    const base = normalizarTextoVerificacao(texto);
+    return base.includes("assinatura visual localizada") ||
+        base.includes("assinatura localizada") ||
+        base.includes("mesma faixa da linha do colaborador");
+}
+
+function obterStatusAssinaturaConsolidado({ assinatura = {}, conferencia = {} } = {}) {
+    const temColunaAssinatura = Boolean(
+        assinatura?.possuiColunaAssinatura ||
+        conferencia?.listaPresenca ||
+        conferencia?.lista_presenca ||
+        conferencia?.documentoColetivo ||
+        conferencia?.documento_coletivo
+    );
+    const visualLocalizada = assinatura?.visualLocalizada === true ||
+        assinatura?.visual_localizada === true ||
+        textoContemAssinaturaLocalizada(assinatura?.observacao || "");
+    const assinaturaAplicavel = Boolean(temColunaAssinatura || assinatura?.aplicavel);
+    const detalheVisual = conferencia?.listaPresenca || conferencia?.lista_presenca || conferencia?.documentoColetivo || conferencia?.documento_coletivo
+        ? "Assinatura aplicável em documento coletivo. Conferir visualmente a assinatura na linha do colaborador."
+        : "Assinatura visual localizada na linha do colaborador.";
+
+    if (visualLocalizada) {
+        return {
+            valor: true,
+            textoSim: "Localizada",
+            textoNao: "Não confirmada",
+            textoNa: "Conferir visualmente",
+            detalhe: detalheVisual,
+        };
+    }
+
+    if (assinaturaAplicavel) {
+        return {
+            valor: null,
+            textoSim: "Localizada",
+            textoNao: "Não confirmada",
+            textoNa: "Conferir visualmente",
+            detalhe: detalheVisual,
+        };
+    }
+
+    return {
+        valor: null,
+        textoSim: "Localizada",
+        textoNao: "Não confirmada",
+        textoNa: "Não aplicável",
+        detalhe: "Conferência visual automática da área de assinatura.",
+    };
+}
+
+function obterStatusColaboradorConsolidado({ colaborador = {}, conferencia = {}, indicios = [] } = {}) {
+    const documentoColetivo = Boolean(
+        conferencia?.listaPresenca ||
+        conferencia?.lista_presenca ||
+        conferencia?.documentoColetivo ||
+        conferencia?.documento_coletivo
+    );
+    const tokensEncontrados = Array.isArray(colaborador?.tokensEncontrados) ? colaborador.tokensEncontrados : [];
+    const localizado = colaborador?.encontrado === true ||
+        colaborador?.localizadoPorCorrespondenciaParcial === true ||
+        colaborador?.localizadoPorPrimeiroNome === true ||
+        colaborador?.provavelPorPrimeiroNome === true ||
+        (documentoColetivo && tokensEncontrados.length >= 2);
+    const conferenciaManualReal = !localizado && indicios.some((indicio = {}) =>
+        indicio?.codigo === "colaborador_nao_confirmado_documento_coletivo" ||
+        indicio?.dados?.documentoColetivo === true ||
+        indicio?.dados?.conferenciaManual === true
+    );
+
+    if (localizado) {
+        return {
+            valor: true,
+            textoSim: documentoColetivo ? "Localizado na lista" : "Localizado",
+            textoNao: "Conferência visual",
+            classeNao: "",
+        };
+    }
+
+    return {
+        valor: colaborador?.encontrado,
+        textoSim: "Localizado",
+        textoNao: conferenciaManualReal || documentoColetivo || conferencia?.listaPresenca ? "Conferir na lista" : "Nao localizado",
+        classeNao: conferenciaManualReal || documentoColetivo || conferencia?.listaPresenca ? "bg-amber-50 text-amber-700 ring-amber-200" : "",
+    };
+}
+
+function obterStatusCnpjConsolidado({ cnpj = {}, conferencia = {} } = {}) {
+    const listaPresenca = Boolean(
+        conferencia?.listaPresenca ||
+        conferencia?.lista_presenca ||
+        conferencia?.documentoColetivo ||
+        conferencia?.documento_coletivo
+    );
+    const cnpjExtraido = cnpj?.cnpjExtraido || cnpj?.cnpj_extraido || "";
+    const cnpjObrigatorio = cnpj?.obrigatorio !== false;
+
+    if (listaPresenca && !cnpjExtraido && !cnpjObrigatorio) {
+        return {
+            valor: null,
+            textoNa: "Não exigido",
+            detalhe: cnpj?.observacao || "Não exigido para este tipo de documento.",
+        };
+    }
+
+    if (listaPresenca && !cnpjExtraido) {
+        return {
+            valor: null,
+            textoNa: "Não informado",
+            detalhe: cnpj?.observacao || "Não informado no documento.",
+        };
+    }
+
+    return {
+        valor: cnpj?.informadoCadastro ? cnpj?.encontrado : null,
+        textoNa: "Não informado",
+        detalhe: cnpj?.informadoCadastro
+            ? (cnpjExtraido ? `CNPJ extraÃ­do: ${cnpjExtraido}` : "CNPJ do cadastro conferido no texto quando disponÃ­vel.")
+            : "CNPJ não informado no cadastro ou não presente no documento.",
+    };
 }
 
 function PainelConferenciaDocumentalRobusta({ verificacao = null }) {
@@ -502,15 +681,9 @@ function PainelConferenciaDocumentalRobusta({ verificacao = null }) {
     const cpf = conferencia.cpf || {};
     const treinamento = conferencia.treinamento || {};
     const indiciosVerificacao = Array.isArray(verificacao?.indicios) ? verificacao.indicios : [];
-    const colaboradorEmConferenciaManual = Boolean(
-        conferencia?.listaPresenca ||
-        conferencia?.lista_presenca ||
-        indiciosVerificacao.some((indicio = {}) =>
-            indicio?.codigo === "colaborador_nao_confirmado_documento_coletivo" ||
-            indicio?.dados?.documentoColetivo === true ||
-            indicio?.dados?.conferenciaManual === true
-        )
-    );
+    const statusColaborador = obterStatusColaboradorConsolidado({ colaborador, conferencia, indicios: indiciosVerificacao });
+    const statusAssinatura = obterStatusAssinaturaConsolidado({ assinatura, conferencia });
+    const statusCnpj = obterStatusCnpjConsolidado({ cnpj, conferencia });
 
     return (
         <div className="mb-3 rounded-2xl border border-blue-100 bg-white p-3">
@@ -531,19 +704,20 @@ function PainelConferenciaDocumentalRobusta({ verificacao = null }) {
             <div className="mt-3 grid gap-2 md:grid-cols-2 xl:grid-cols-3">
                 <LinhaConferenciaDocumental
                     titulo="Colaborador"
-                    valor={colaborador.encontrado}
-                    textoNao={colaboradorEmConferenciaManual ? "Conferencia manual" : "Nao localizado"}
-                    classeNao={colaboradorEmConferenciaManual ? "bg-amber-50 text-amber-700 ring-amber-200" : ""}
-                    detalhe={colaborador.encontrado ? `${colaborador.nomeCadastro || "Nome encontrado"}${colaborador.linhaOcr ? ` · Linha OCR: ${colaborador.linhaOcr}` : ""}` : colaborador.nomeCadastro || "Nome não informado no cadastro"}
+                    valor={statusColaborador.valor}
+                    textoSim={statusColaborador.textoSim}
+                    textoNao={statusColaborador.textoNao}
+                    classeNao={statusColaborador.classeNao}
+                    detalhe={colaborador.encontrado ? `${colaborador.nomeCadastro || "Nome encontrado"}${colaborador.linhaOcr ? ` Â· Linha OCR: ${colaborador.linhaOcr}` : ""}` : colaborador.nomeCadastro || "Nome não informado no cadastro"}
                 />
 
                 <LinhaConferenciaDocumental
                     titulo="Assinatura"
-                    valor={assinatura.aplicavel ? assinatura.visualLocalizada === true : null}
-                    textoSim="Assinatura visual localizada"
-                    textoNao="Não confirmada"
-                    textoNa="Não aplicável"
-                    detalhe={assinatura.observacao || "Conferência visual automática da área de assinatura."}
+                    valor={statusAssinatura.valor}
+                    textoSim={statusAssinatura.textoSim}
+                    textoNao={statusAssinatura.textoNao}
+                    textoNa={statusAssinatura.textoNa}
+                    detalhe={statusAssinatura.detalhe}
                 />
 
                 <LinhaConferenciaDocumental
@@ -556,15 +730,15 @@ function PainelConferenciaDocumentalRobusta({ verificacao = null }) {
                     titulo="Empresa"
                     valor={empresa.encontrada}
                     detalhe={empresa.origem === "vinculo_colaborador_cpf_documento"
-                        ? `${empresa.nomeCadastro || "Empresa do colaborador"} · confirmada pelo vínculo do colaborador e CPF no documento`
+                        ? `${empresa.nomeCadastro || "Empresa do colaborador"} Â· confirmada pelo vínculo do colaborador e CPF no documento`
                         : (empresa.nomeCadastro || empresa.nomeExtraido || "Empresa não informada")}
                 />
 
                 <LinhaConferenciaDocumental
                     titulo="CNPJ"
-                    valor={cnpj.informadoCadastro ? cnpj.encontrado : null}
-                    detalhe={cnpj.informadoCadastro ? (cnpj.cnpjExtraido ? `CNPJ extraído: ${cnpj.cnpjExtraido}` : "CNPJ do cadastro conferido no texto quando disponível.") : "CNPJ não informado no cadastro ou não presente no documento."}
-                    textoNa="Não informado"
+                    valor={statusCnpj.valor}
+                    detalhe={statusCnpj.detalhe}
+                    textoNa={statusCnpj.textoNa}
                 />
 
                 <LinhaConferenciaDocumental
@@ -836,7 +1010,7 @@ export function VerificacaoCertificadoTreinamento({ certificado = {} }) {
                                     )}
 
                                     <p className="mt-1 text-blue-700">
-                                        A data detectada serve como apoio para conferência. A aprovação continua usando as datas cadastradas até que o TST revise e salve o cadastro.
+                                        A data detectada serve como apoio para conferência. A aprovaÃ§Ã£o continua usando as datas cadastradas atÃ© que o TST revise e salve o cadastro.
                                     </p>
                                 </div>
                             )}
@@ -873,3 +1047,7 @@ export function VerificacaoCertificadoTreinamento({ certificado = {} }) {
         </div>
     );
 }
+
+
+
+

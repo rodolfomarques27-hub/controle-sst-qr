@@ -14,6 +14,7 @@ import {
 const LIMITE_BYTES_LEITURA_LOCAL = 8 * 1024 * 1024;
 const LIMITE_TEXTO_OCR_SALVAR = 6000;
 const LIMITE_TEXTO_PDFJS = 18000;
+const LIMITE_MAIOR_LADO_OCR_IMAGEM = 1800;
 const PAGINAS_MAXIMAS_PDFJS = 6;
 const PAGINAS_FINAIS_BUSCA_PDFJS = 10;
 const PAGINAS_MAXIMAS_BUSCA_PROFUNDA_PDFJS = 160;
@@ -1648,11 +1649,185 @@ async function reconhecerTextoCanvasComOcr(canvas) {
         return {
             texto: limparTextoPossivelDocumento(resultado?.data?.text || ""),
             palavras: Array.isArray(resultado?.data?.words) ? resultado.data.words : [],
+            confianca: Number(resultado?.data?.confidence || 0),
         };
     } finally {
         if (avisoOriginal) {
             console.warn = avisoOriginal;
         }
+    }
+}
+
+function carregarImagemParaOcr(arquivo) {
+    return new Promise((resolve, reject) => {
+        if (!arquivo || typeof URL === "undefined" || typeof Image === "undefined") {
+            reject(new Error("Imagem local indisponÃ­vel para OCR no navegador."));
+            return;
+        }
+
+        const url = URL.createObjectURL(arquivo);
+        const imagem = new Image();
+
+        imagem.onload = () => {
+            URL.revokeObjectURL(url);
+            resolve(imagem);
+        };
+
+        imagem.onerror = () => {
+            URL.revokeObjectURL(url);
+            reject(new Error("NÃ£o foi possÃ­vel carregar a imagem para OCR local."));
+        };
+
+        imagem.src = url;
+    });
+}
+
+function desenharImagemEmCanvasOcr(imagem) {
+    if (!imagem || typeof document === "undefined") {
+        throw new Error("Canvas indisponÃ­vel para OCR local da imagem.");
+    }
+
+    const larguraOriginal = Number(imagem.naturalWidth || imagem.width || 0);
+    const alturaOriginal = Number(imagem.naturalHeight || imagem.height || 0);
+
+    if (!larguraOriginal || !alturaOriginal) {
+        throw new Error("Imagem sem dimensÃµes vÃ¡lidas para OCR local.");
+    }
+
+    const maiorLado = Math.max(larguraOriginal, alturaOriginal);
+    const escala = Math.min(1, LIMITE_MAIOR_LADO_OCR_IMAGEM / maiorLado);
+    const largura = Math.max(1, Math.round(larguraOriginal * escala));
+    const altura = Math.max(1, Math.round(alturaOriginal * escala));
+    const canvas = document.createElement("canvas");
+    const contexto = canvas.getContext("2d", { willReadFrequently: true, alpha: false });
+
+    if (!contexto) {
+        throw new Error("NÃ£o foi possÃ­vel preparar o canvas para OCR local da imagem.");
+    }
+
+    canvas.width = largura;
+    canvas.height = altura;
+    contexto.fillStyle = "#ffffff";
+    contexto.fillRect(0, 0, largura, altura);
+    contexto.drawImage(imagem, 0, 0, largura, altura);
+
+    return {
+        canvas,
+        redimensionada: escala < 1,
+        larguraOriginal,
+        alturaOriginal,
+        largura,
+        altura,
+    };
+}
+
+async function extrairTextoImagemComOcr({ arquivo = null, arquivoNome = "", mimeType = "", extensao = "" } = {}) {
+    const avisos = [];
+
+    if (!arquivoPossuiArrayBuffer(arquivo)) {
+        return {
+            texto: "",
+            paginasLidas: 0,
+            totalPaginas: 0,
+            linhasOcr: [],
+            assinaturasTabela: [],
+            assinaturasDocumento: [],
+            confianca: 0,
+            avisos: ["Imagem sem arquivo local para executar OCR."],
+        };
+    }
+
+    if (typeof document === "undefined") {
+        return {
+            texto: "",
+            paginasLidas: 0,
+            totalPaginas: 0,
+            linhasOcr: [],
+            assinaturasTabela: [],
+            assinaturasDocumento: [],
+            confianca: 0,
+            avisos: ["OCR de imagem nÃ£o executado fora do navegador."],
+        };
+    }
+
+    try {
+        const imagem = await carregarImagemParaOcr(arquivo);
+        const dadosCanvas = desenharImagemEmCanvasOcr(imagem);
+
+        if (dadosCanvas.redimensionada) {
+            avisos.push(
+                `Imagem redimensionada de ${dadosCanvas.larguraOriginal}x${dadosCanvas.alturaOriginal} para ${dadosCanvas.largura}x${dadosCanvas.altura} antes do OCR, para preservar performance.`
+            );
+        }
+
+        const resultadoOcr = await reconhecerTextoCanvasComOcrComOrientacao(dadosCanvas.canvas);
+        const canvasAnalise = resultadoOcr?.canvasAnalise || dadosCanvas.canvas;
+        const textoOcr = limparTextoPossivelDocumento(resultadoOcr?.texto || "");
+        const linhasOcr = montarLinhasOcrComAssinatura(canvasAnalise, resultadoOcr?.palavras || [])
+            .map((linha) => ({
+                ...linha,
+                pagina: 1,
+                rotacao: resultadoOcr?.rotacao || 0,
+                texto: linha?.texto ? `Imagem: ${linha.texto}` : linha?.texto,
+            }));
+        const textoNormalizadoOcr = normalizarTextoVerificacao(textoOcr);
+        const assinaturasDocumento = detectarAssinaturasDocumento(canvasAnalise, 1, textoNormalizadoOcr)
+            .map((assinatura) => ({ ...assinatura, rotacao: resultadoOcr?.rotacao || 0 }));
+
+        if (resultadoOcr?.rotacao) {
+            avisos.push(`OCR local corrigiu orientaÃ§Ã£o da imagem em ${resultadoOcr.rotacao}Â°.`);
+        }
+
+        avisos.push("OCR local executado na imagem usando tesseract.js, sem API paga.");
+
+        try {
+            if (resultadoOcr?.canvasAnalise && resultadoOcr.canvasAnalise !== dadosCanvas.canvas) {
+                resultadoOcr.canvasAnalise.width = 1;
+                resultadoOcr.canvasAnalise.height = 1;
+            }
+            dadosCanvas.canvas.width = 1;
+            dadosCanvas.canvas.height = 1;
+        } catch {
+            // LiberaÃ§Ã£o de memÃ³ria sem bloquear o fluxo.
+        }
+
+        if (textoPossuiConteudoDocumentoConfiavel(textoOcr)) {
+            return {
+                texto: textoOcr,
+                paginasLidas: 1,
+                totalPaginas: 1,
+                linhasOcr,
+                assinaturasTabela: [],
+                assinaturasDocumento,
+                confianca: Number(resultadoOcr?.confianca || 0),
+                avisos,
+            };
+        }
+
+        return {
+            texto: "",
+            paginasLidas: 1,
+            totalPaginas: 1,
+            linhasOcr,
+            assinaturasTabela: [],
+            assinaturasDocumento,
+            confianca: Number(resultadoOcr?.confianca || 0),
+            avisos: [
+                ...avisos,
+                `OCR local executado, mas nÃ£o encontrou texto documental confiÃ¡vel na imagem ${arquivoNome || extensao || mimeType || ""}.`,
+            ],
+        };
+    } catch (error) {
+        return {
+            texto: "",
+            paginasLidas: 0,
+            totalPaginas: 0,
+            linhasOcr: [],
+            assinaturasTabela: [],
+            assinaturasDocumento: [],
+            confianca: 0,
+            avisos: [`OCR local da imagem indisponÃ­vel: ${error?.message || "erro desconhecido"}.`],
+        };
     }
 }
 
@@ -2110,6 +2285,7 @@ function montarRetornoLeituraBase({
     linhasOcr = [],
     assinaturasTabela = [],
     assinaturasDocumento = [],
+    confiancaOcr = null,
     avisos = [],
     erro = "",
 } = {}) {
@@ -2139,12 +2315,16 @@ function montarRetornoLeituraBase({
         buscaAmpliada,
     });
     const textoPrevia = montarPreviaTextoDocumento(textoSeguro);
-    const confianca = calcularConfiancaLeitura({
+    const confiancaCalculada = calcularConfiancaLeitura({
         textoExtraido: textoSeguro,
         datasTexto,
         tipoLeitura,
         textoLimitado,
     });
+    const confiancaInformada = Number(confiancaOcr);
+    const confianca = Number.isFinite(confiancaInformada) && confiancaInformada > 0
+        ? Math.round((confiancaCalculada + Math.min(100, Math.max(0, confiancaInformada))) / 2)
+        : confiancaCalculada;
     const comparacaoDatasPermitida = Boolean(
         COMPARACAO_AUTOMATICA_DATAS_OCR_ATIVA &&
         textoSeguro &&
@@ -2228,16 +2408,33 @@ export async function executarLeituraDocumentalLocal({ arquivo = null, arquivoNo
     }
 
     if (/^image\//i.test(mime) || ["jpg", "jpeg", "png", "webp"].includes(extensao)) {
-        return montarRetornoLeituraBase({
-            executado: false,
-            tipoLeitura: "imagem_dependente_ocr",
+        const leituraImagem = await extrairTextoImagemComOcr({
+            arquivo,
             arquivoNome: nome,
             mimeType: mime,
             extensao,
-            textoExtraido: "",
-            avisos: [
-                "Arquivo de imagem identificado. OCR real de imagem será tratado em etapa própria para não aumentar o bundle principal.",
-            ],
+        });
+        const textoExtraido = leituraImagem?.texto || "";
+        const avisos = [...(leituraImagem?.avisos || [])];
+
+        if (!textoExtraido) {
+            avisos.push("NÃ£o foi encontrado texto confiÃ¡vel na imagem. Conferir manualmente qualidade, enquadramento, foco e iluminaÃ§Ã£o do documento.");
+        }
+
+        return montarRetornoLeituraBase({
+            executado: true,
+            tipoLeitura: textoExtraido ? "ocr_imagem_local" : "imagem_dependente_ocr",
+            arquivoNome: nome,
+            mimeType: mime,
+            extensao,
+            textoExtraido,
+            linhasOcr: leituraImagem?.linhasOcr || [],
+            assinaturasTabela: leituraImagem?.assinaturasTabela || [],
+            assinaturasDocumento: leituraImagem?.assinaturasDocumento || [],
+            paginasLidas: leituraImagem?.paginasLidas || 0,
+            totalPaginas: leituraImagem?.totalPaginas || 0,
+            confiancaOcr: leituraImagem?.confianca ?? null,
+            avisos,
         });
     }
 

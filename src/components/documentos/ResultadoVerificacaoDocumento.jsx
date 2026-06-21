@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+﻿import React, { useMemo, useState } from "react";
 import {
     AlertTriangle,
     CheckCircle2,
@@ -11,6 +11,7 @@ import {
     Sparkles,
     XCircle,
 } from "lucide-react";
+import { corrigirTextoMojibake } from "../../utils/documentosVerificacaoUtils";
 
 const STATUS_CONFIG = {
     aprovado: {
@@ -59,7 +60,7 @@ const RISCO_CONFIG = {
 };
 
 function normalizarTexto(valor) {
-    return String(valor || "").trim();
+    return corrigirTextoMojibake(valor).trim();
 }
 
 function normalizarLista(valor) {
@@ -114,11 +115,11 @@ function textoParecePdfBrutoPainel(valor = "") {
         /\/DCTDecode\b/i,
         /\/Subtype\s*\/Image\b/i,
         /\/XObject\b/i,
-        /stream\s+[\s\S]{0,80}?(?:�|JFIF|Exif)/i,
+        /stream\s+[\s\S]{0,80}?(?:ï¿½|JFIF|Exif)/i,
         /endstream\s+endobj/i,
     ];
 
-    const quantidadeEstranha = (amostra.match(/[�\uFFFD]/g) || []).length;
+    const quantidadeEstranha = (amostra.match(/[ï¿½\uFFFD]/g) || []).length;
     const proporcaoEstranha = quantidadeEstranha / Math.max(1, amostra.length);
 
     return marcadores.some((regex) => regex.test(amostra)) || proporcaoEstranha > 0.025;
@@ -180,7 +181,7 @@ function obterEmpresaResumoPainel(texto = "") {
     return limitarTextoResumoPainel(
         obterPrimeiroGrupoPainel(
             texto,
-            /Empresa:\s*([\s\S]{3,180}?)(?:\s+CPF\s*\/\s*CNPJ|\s+CNPJ|\s+Endere[cç]o|\s+Unidade:|\s+CPF\b|$)/i
+            /Empresa:\s*([\s\S]{3,180}?)(?:\s+CPF\s*\/\s*CNPJ|\s+CNPJ|\s+Endere[cÃ§]o|\s+Unidade:|\s+CPF\b|$)/i
         ),
         120
     );
@@ -191,7 +192,7 @@ function obterCnpjResumoPainel(texto = "") {
 }
 
 function obterVigenciaResumoPainel(texto = "") {
-    const match = String(texto || "").match(/Vig[êe]ncia:[^0-9]{0,180}([0-3]?\d[\/.-][01]?\d[\/.-](?:19|20)\d{2})\s+a\s+([0-3]?\d[\/.-][01]?\d[\/.-](?:19|20)\d{2})/i);
+    const match = String(texto || "").match(/Vig[Ãªe]ncia:[^0-9]{0,180}([0-3]?\d[\/.-][01]?\d[\/.-](?:19|20)\d{2})\s+a\s+([0-3]?\d[\/.-][01]?\d[\/.-](?:19|20)\d{2})/i);
 
     if (!match) return "";
 
@@ -203,11 +204,11 @@ function obterDataAssinaturaResumoPainel(texto = "") {
 }
 
 function obterCodigoVerificacaoResumoPainel(texto = "") {
-    return obterPrimeiroGrupoPainel(texto, /C[oó]digo de verifica[cç][aã]o de autenticidade:\s*([A-Z0-9._-]{6,80})/i);
+    return obterPrimeiroGrupoPainel(texto, /C[oÃ³]digo de verifica[cÃ§][aÃ£]o de autenticidade:\s*([A-Z0-9._-]{6,80})/i);
 }
 
 function obterTotalFuncionariosResumoPainel(texto = "") {
-    return obterPrimeiroGrupoPainel(texto, /Total de funcion[aá]rios:\s*(\d{1,6})\b/i);
+    return obterPrimeiroGrupoPainel(texto, /Total de funcion[aÃ¡]rios:\s*(\d{1,6})\b/i);
 }
 
 function normalizarResumoTextualPainel(valor) {
@@ -415,8 +416,8 @@ function renderizarListaDatasClassificadas(titulo, datas = [], classe = "") {
                 {datas.map((data, indice) => (
                     <li key={`${titulo}-${data.iso || data.br}-${indice}`}>
                         <span className="font-semibold">{data.br}</span>
-                        {data.rotulo ? ` — ${data.rotulo}` : ""}
-                        {data.motivo ? ` — ${data.motivo}` : ""}
+                        {data.rotulo ? ` â€” ${corrigirTextoMojibake(data.rotulo)}` : ""}
+                        {data.motivo ? ` â€” ${corrigirTextoMojibake(data.motivo)}` : ""}
                     </li>
                 ))}
             </ul>
@@ -436,27 +437,28 @@ function formatarTipoLeitura(tipo = "") {
     if (chave === "pdf_texto_local") return "PDF com texto local";
     if (chave === "pdf_sem_texto_legivel") return "PDF sem texto confiável";
     if (chave === "imagem_dependente_ocr") return "Imagem depende de OCR";
+    if (chave === "ocr_imagem_local") return "OCR local de imagem";
     if (chave === "nome_arquivo") return "Nome do arquivo";
     if (chave === "sem_arquivo_local") return "Sem arquivo local";
     if (chave === "erro_leitura_local") return "Erro na leitura local";
 
-    return chave || "Não informado";
+    return corrigirTextoMojibake(chave || "Não informado");
 }
 
 function obterTituloIndicio(indicio) {
     if (!indicio) return "Indício sem descrição";
-    if (typeof indicio === "string") return indicio;
-    return indicio.titulo || indicio.codigo || "Indício identificado";
+    if (typeof indicio === "string") return corrigirTextoMojibake(indicio);
+    return corrigirTextoMojibake(indicio.titulo || indicio.codigo || "Indício identificado");
 }
 
 function obterDetalheIndicio(indicio) {
     if (!indicio || typeof indicio === "string") return "";
-    return indicio.detalhe || indicio.recomendacao || "";
+    return corrigirTextoMojibake(indicio.detalhe || indicio.recomendacao || "");
 }
 
 function obterTextoRecomendacao(recomendacao) {
-    if (typeof recomendacao === "string") return recomendacao;
-    return recomendacao?.texto || recomendacao?.titulo || "Revisar manualmente o documento.";
+    if (typeof recomendacao === "string") return corrigirTextoMojibake(recomendacao);
+    return corrigirTextoMojibake(recomendacao?.texto || recomendacao?.titulo || "Revisar manualmente o documento.");
 }
 
 function formatarStatus(status) {
@@ -471,7 +473,7 @@ function formatarRisco(risco) {
     if (chave === "medio") return "Médio";
     if (chave === "critico") return "Crítico";
 
-    return chave ? chave.charAt(0).toUpperCase() + chave.slice(1) : "Não avaliado";
+    return chave ? corrigirTextoMojibake(chave.charAt(0).toUpperCase() + chave.slice(1)) : "Não avaliado";
 }
 
 function formatarData(data) {
@@ -490,7 +492,7 @@ function formatarData(data) {
 
 function obterResumoCurto(resumo, statusTexto, riscoTexto, scoreRisco, conformidade) {
     if (resumo) return resumo;
-    return `Status ${statusTexto.toLowerCase()}, risco ${riscoTexto.toLowerCase()}, risco técnico ${scoreRisco}/100 e conformidade ${conformidade}/100.`;
+    return `Status ${statusTexto.toLowerCase()}, risco ${riscoTexto.toLowerCase()}, risco tÃ©cnico ${scoreRisco}/100 e conformidade ${conformidade}/100.`;
 }
 
 function PainelAnaliseManual({
@@ -516,9 +518,9 @@ function PainelAnaliseManual({
             </p>
             <ul className="mt-3 grid gap-2 text-xs text-orange-900 sm:grid-cols-2">
                 <li className="rounded-lg bg-white/80 p-2 ring-1 ring-orange-100">1. Abrir o PDF original e conferir empresa/CNPJ.</li>
-                <li className="rounded-lg bg-white/80 p-2 ring-1 ring-orange-100">2. Conferir emissão, vigência, revisão ou assinatura técnica.</li>
+                <li className="rounded-lg bg-white/80 p-2 ring-1 ring-orange-100">2. Conferir emissão, vigência, revisÃ£o ou assinatura tÃ©cnica.</li>
                 <li className="rounded-lg bg-white/80 p-2 ring-1 ring-orange-100">3. Validar assinatura digital, QR Code ou código de autenticidade, quando houver.</li>
-                <li className="rounded-lg bg-white/80 p-2 ring-1 ring-orange-100">4. Registrar a decisão no campo de observação antes de substituir/aprovar o documento.</li>
+                <li className="rounded-lg bg-white/80 p-2 ring-1 ring-orange-100">4. Registrar a decisão no campo de observaÃ§Ã£o antes de substituir/aprovar o documento.</li>
             </ul>
 
             {onAprovarManual && (
@@ -527,7 +529,7 @@ function PainelAnaliseManual({
                         <div className="min-w-0 text-xs leading-relaxed text-orange-950">
                             <p className="font-bold text-orange-800">Aprovação manual definitiva</p>
                             <p className="mt-1">
-                                Após a conferência humana, esta ação altera o documento para aprovado, com conformidade 100/100 e risco técnico 0/100.
+                                ApÃ³s a conferência humana, esta aÃ§Ã£o altera o documento para aprovado, com conformidade 100/100 e risco tÃ©cnico 0/100.
                             </p>
                         </div>
                         <div className="flex shrink-0 flex-wrap gap-2 text-[11px] font-bold">
@@ -580,7 +582,7 @@ function DetalhesVerificacao({
             {(dados.tipoDocumento || dados.arquivoNome) && (
                 <div className="rounded-xl bg-white p-3 text-xs text-slate-500 ring-1 ring-slate-100">
                     <strong className="text-slate-700">Documento:</strong> {dados.tipoDocumento || "Documento"}
-                    {dados.arquivoNome ? ` • ${dados.arquivoNome}` : ""}
+                    {dados.arquivoNome ? ` â€¢ ${dados.arquivoNome}` : ""}
                 </div>
             )}
 
@@ -609,7 +611,7 @@ function DetalhesVerificacao({
 
                     {dados.leituraDocumentalLocal?.resumo && (
                         <p className="mt-3 rounded-lg bg-white/80 p-2 text-xs leading-relaxed text-blue-900 ring-1 ring-blue-100">
-                            {dados.leituraDocumentalLocal.resumo}
+                            {corrigirTextoMojibake(dados.leituraDocumentalLocal.resumo)}
                         </p>
                     )}
 
@@ -618,11 +620,11 @@ function DetalhesVerificacao({
                             <strong className="block text-blue-700">Busca ampliada no PDF</strong>
                             {dados.buscaAmpliadaOcr.encontrouDataPrincipal ? (
                                 <span>
-                                    Foram analisadas {dados.buscaAmpliadaOcr.paginasLidas} página(s) de {dados.buscaAmpliadaOcr.totalPaginas}. Data documental provável localizada na página {dados.buscaAmpliadaOcr.paginaDataPrincipal}.
+                                    Foram analisadas {dados.buscaAmpliadaOcr.paginasLidas} página(s) de {dados.buscaAmpliadaOcr.totalPaginas}. Data documental provável localizada na pÃ¡gina {dados.buscaAmpliadaOcr.paginaDataPrincipal}.
                                 </span>
                             ) : (
                                 <span>
-                                    Foram analisadas {dados.buscaAmpliadaOcr.paginasLidas} página(s) de {dados.buscaAmpliadaOcr.totalPaginas}, sem localizar vigência, emissão, revisão ou assinatura confiável.
+                                    Foram analisadas {dados.buscaAmpliadaOcr.paginasLidas} página(s) de {dados.buscaAmpliadaOcr.totalPaginas}, sem localizar vigência, emissão, revisÃ£o ou assinatura confiÃ¡vel.
                                 </span>
                             )}
                         </div>
@@ -656,7 +658,7 @@ function DetalhesVerificacao({
                                 {dados.resumoTextoOcr.map((item, indice) => (
                                     <li key={`${item}-${indice}`} className="flex gap-2">
                                         <span className="mt-1 h-1.5 w-1.5 shrink-0 rounded-full bg-blue-500" />
-                                        <span>{item}</span>
+                                        <span>{corrigirTextoMojibake(item)}</span>
                                     </li>
                                 ))}
                             </ul>
@@ -673,7 +675,7 @@ function DetalhesVerificacao({
                         <ul className="mt-3 space-y-1 text-xs text-blue-900">
                             {dados.leituraDocumentalLocal.avisos.map((aviso, indice) => (
                                 <li key={`${aviso}-${indice}`} className="rounded-lg bg-white/80 px-2 py-1 ring-1 ring-blue-100">
-                                    {aviso}
+                                    {corrigirTextoMojibake(aviso)}
                                 </li>
                             ))}
                         </ul>
@@ -737,7 +739,7 @@ function DetalhesVerificacao({
             </div>
 
             <p className="text-xs text-slate-400">
-                A análise indica inconsistências e indícios. O sistema não confirma falsificação automaticamente.
+                A análise indica inconsistÃªncias e indícios. O sistema não confirma falsificaÃ§Ã£o automaticamente.
             </p>
         </div>
     );
@@ -914,7 +916,7 @@ export default function ResultadoVerificacaoDocumento({
                     {(dados.tipoDocumento || dados.arquivoNome) && (
                         <p className="mt-1 break-words text-xs text-slate-500 sm:text-sm">
                             {dados.tipoDocumento || "Documento"}
-                            {dados.arquivoNome ? ` • ${dados.arquivoNome}` : ""}
+                            {dados.arquivoNome ? ` â€¢ ${dados.arquivoNome}` : ""}
                         </p>
                     )}
 
@@ -964,3 +966,6 @@ export default function ResultadoVerificacaoDocumento({
         </div>
     );
 }
+
+
+
