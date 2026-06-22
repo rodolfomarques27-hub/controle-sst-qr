@@ -1,4 +1,4 @@
-﻿/* eslint-disable no-unused-vars */
+/* eslint-disable no-unused-vars */
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
     AlertTriangle,
@@ -25,6 +25,35 @@ const ORIGEM_TABELA_CERTIFICADOS = "certificados";
 
 const BUCKET_PADRAO_CERTIFICADOS = "certificados-treinamentos";
 
+function formatarCnpjPainelCertificado(valor = "") {
+    const digitos = String(valor || "").replace(/\D/g, "");
+
+    if (digitos.length !== 14) {
+        return String(valor || "").trim();
+    }
+
+    return `${digitos.slice(0, 2)}.${digitos.slice(2, 5)}.${digitos.slice(5, 8)}/${digitos.slice(8, 12)}-${digitos.slice(12, 14)}`;
+}
+
+function ehFichaRegistroPainelCertificado({ certificado = {}, treinamento = {} } = {}) {
+    const texto = normalizarTextoVerificacao([
+        certificado?.treinamento?.nome,
+        certificado?.nomeTreinamento,
+        certificado?.nome_treinamento,
+        certificado?.tipo_treinamento,
+        certificado?.tipoDocumento,
+        certificado?.tipo_documento,
+        certificado?.arquivoNome,
+        certificado?.arquivo_nome,
+        certificado?.arquivo,
+        treinamento?.nome,
+        treinamento?.tipo,
+        treinamento?.categoria,
+        treinamento?.base,
+    ].filter(Boolean).join(" "));
+
+    return /ficha\s+(de\s+)?registro|registro\s+(de\s+)?empregado|registro\s+clt|\bclt\b|e\s*social|\besocial\b|data\s+de\s+admissao/.test(texto);
+}
 function obterBucketCertificado(certificado = {}) {
     return certificado.bucket ||
         certificado.bucketNome ||
@@ -131,7 +160,7 @@ async function baixarArquivoCertificadoParaAnalise({ certificado = {} } = {}) {
             arquivo: null,
             bucket,
             caminho,
-            aviso: `NÃ£o foi possÃ­vel baixar o arquivo salvo para reanálise (${error.message}). A análise usarÃ¡ apenas os dados cadastrados.`,
+            aviso: `Não foi possível baixar o arquivo salvo para reanálise (${error.message}). A análise usarÃ¡ apenas os dados cadastrados.`,
         };
     }
 
@@ -240,7 +269,7 @@ function normalizarDataIso(valor = "") {
     return `${ano}-${mes}-${dia}`;
 }
 
-function formatarDataPainel(valor = "", fallback = "NÃ£o informada") {
+function formatarDataPainel(valor = "", fallback = "Não informada") {
     const dataIso = normalizarDataIso(valor);
 
     if (!dataIso) return fallback;
@@ -251,7 +280,7 @@ function formatarDataPainel(valor = "", fallback = "NÃ£o informada") {
 }
 
 function formatarDataHoraPainel(valor = "") {
-    if (!valor) return "NÃ£o informada";
+    if (!valor) return "Não informada";
 
     const data = new Date(valor);
 
@@ -664,7 +693,7 @@ function obterStatusCnpjConsolidado({ cnpj = {}, conferencia = {} } = {}) {
         valor: cnpj?.informadoCadastro ? cnpj?.encontrado : null,
         textoNa: "Não informado",
         detalhe: cnpj?.informadoCadastro
-            ? (cnpjExtraido ? `CNPJ extraÃ­do: ${cnpjExtraido}` : "CNPJ do cadastro conferido no texto quando disponÃ­vel.")
+            ? (cnpjExtraido ? `CNPJ localizado: ${formatarCnpjPainelCertificado(cnpjExtraido)}` : "CNPJ do cadastro conferido no texto quando disponível.")
             : "CNPJ não informado no cadastro ou não presente no documento.",
     };
 }
@@ -862,10 +891,20 @@ export function VerificacaoCertificadoTreinamento({ certificado = {} }) {
             });
 
             const statusValidacao = converterStatusVerificacaoParaStatusCertificado(resultado?.statusVerificacao);
+            const dataRealizacaoVerificada = resultado?.data_realizacao || resultado?.dataRealizacao || "";
+            const ehFichaRegistro = ehFichaRegistroPainelCertificado({ certificado: certificadoParaVerificacao, treinamento });
+            const atualizacaoCertificado = {
+                status_validacao: statusValidacao,
+            };
+
+            if (ehFichaRegistro && dataRealizacaoVerificada) {
+                atualizacaoCertificado.data_realizacao = dataRealizacaoVerificada;
+                atualizacaoCertificado.data_vencimento = null;
+            }
 
             const { error } = await supabase
                 .from("certificados")
-                .update({ status_validacao: statusValidacao })
+                .update(atualizacaoCertificado)
                 .eq("id", certificadoId);
 
             if (error) {
@@ -874,6 +913,21 @@ export function VerificacaoCertificadoTreinamento({ certificado = {} }) {
 
             setVerificacao(resultado);
             setStatusAtualValidacao(statusValidacao);
+
+            if (typeof window !== "undefined" && ehFichaRegistro) {
+                window.dispatchEvent(new CustomEvent("certificado-data-atualizada", {
+                    detail: {
+                        id: certificadoId,
+                        certificadoId,
+                        dataRealizacao: dataRealizacaoVerificada,
+                        data_realizacao: dataRealizacaoVerificada,
+                        dataVencimento: null,
+                        data_vencimento: null,
+                        statusValidacao,
+                        status_validacao: statusValidacao,
+                    },
+                }));
+            }
         } catch (error) {
             setErro(error?.message || "Erro ao reanalisar o certificado.");
         } finally {

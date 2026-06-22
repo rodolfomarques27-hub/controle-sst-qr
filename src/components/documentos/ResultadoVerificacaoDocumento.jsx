@@ -1,4 +1,4 @@
-﻿import React, { useMemo, useState } from "react";
+import React, { useMemo, useState } from "react";
 import {
     AlertTriangle,
     CheckCircle2,
@@ -582,7 +582,7 @@ function DetalhesVerificacao({
             {(dados.tipoDocumento || dados.arquivoNome) && (
                 <div className="rounded-xl bg-white p-3 text-xs text-slate-500 ring-1 ring-slate-100">
                     <strong className="text-slate-700">Documento:</strong> {dados.tipoDocumento || "Documento"}
-                    {dados.arquivoNome ? ` â€¢ ${dados.arquivoNome}` : ""}
+                    {dados.arquivoNome ? ` - ${dados.arquivoNome}` : ""}
                 </div>
             )}
 
@@ -739,7 +739,7 @@ function DetalhesVerificacao({
             </div>
 
             <p className="text-xs text-slate-400">
-                A análise indica inconsistÃªncias e indícios. O sistema não confirma falsificaÃ§Ã£o automaticamente.
+                {"A an\u00e1lise indica inconsist\u00eancias e ind\u00edcios. O sistema n\u00e3o confirma falsifica\u00e7\u00e3o automaticamente."}
             </p>
         </div>
     );
@@ -916,7 +916,7 @@ export default function ResultadoVerificacaoDocumento({
                     {(dados.tipoDocumento || dados.arquivoNome) && (
                         <p className="mt-1 break-words text-xs text-slate-500 sm:text-sm">
                             {dados.tipoDocumento || "Documento"}
-                            {dados.arquivoNome ? ` â€¢ ${dados.arquivoNome}` : ""}
+                            {dados.arquivoNome ? ` - ${dados.arquivoNome}` : ""}
                         </p>
                     )}
 

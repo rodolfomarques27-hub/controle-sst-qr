@@ -124,6 +124,88 @@ function FotoColaboradorBase({ colaborador = {} }) {
         };
     }, [fotoOrigem]);
 
+    const obterValorDataRevisaoFormulario = (itemKey, campo, valorIso) => {
+        const chave = `${itemKey}:${campo}`;
+
+        if (Object.prototype.hasOwnProperty.call(datasDigitadasRevisao, chave)) {
+            return datasDigitadasRevisao[chave];
+        }
+
+        return formatarDataBrFormularioCertificado(valorIso);
+    };
+
+    const alterarDataRevisaoFormulario = (documento, itemKey, campo, valorDigitado) => {
+        const chave = `${itemKey}:${campo}`;
+        const valorMascarado = aplicarMascaraDataBrFormularioCertificado(valorDigitado);
+
+        setDatasDigitadasRevisao((atual) => ({
+            ...atual,
+            [chave]: valorMascarado,
+        }));
+
+        if (!valorMascarado) {
+            alterarDataRevisao(documento, campo, "");
+            return;
+        }
+
+        const valorIso = converterDataBrFormularioCertificadoParaIso(valorMascarado);
+
+        if (valorIso) {
+            alterarDataRevisao(documento, campo, valorIso);
+        }
+    };
+
+    const salvarDatasCertificadoFormulario = (documento, itemKey, valoresAtuais = {}) => {
+        const chaveRealizado = `${itemKey}:realizado`;
+        const chaveVencimento = `${itemKey}:vencimento`;
+
+        const realizadoDigitado = datasDigitadasRevisao[chaveRealizado] || "";
+        const vencimentoDigitado = datasDigitadasRevisao[chaveVencimento] || "";
+
+        const realizadoIso = realizadoDigitado
+            ? converterDataBrFormularioCertificadoParaIso(realizadoDigitado)
+            : valoresAtuais.realizado || "";
+
+        const vencimentoIso = vencimentoDigitado
+            ? converterDataBrFormularioCertificadoParaIso(vencimentoDigitado)
+            : valoresAtuais.vencimento || "";
+
+        if (realizadoDigitado && !realizadoIso) {
+            alert("Data de admissão/registro inválida. Use o formato dd/mm/aaaa.");
+            return;
+        }
+
+        if (vencimentoDigitado && !vencimentoIso) {
+            alert("Data de vencimento inválida. Use o formato dd/mm/aaaa.");
+            return;
+        }
+
+        const documentoAtualizado = {
+            ...documento,
+            realizado: realizadoIso,
+            dataRealizacao: realizadoIso,
+            data_realizacao: realizadoIso,
+            vencimento: vencimentoIso || "",
+            dataVencimento: vencimentoIso || "",
+            data_vencimento: vencimentoIso || "",
+        };
+
+        alterarDataRevisao(documento, "realizado", realizadoIso);
+        alterarDataRevisao(documento, "vencimento", vencimentoIso || "");
+
+        setDatasCertificadosAtualizadas((atual) => ({
+            ...atual,
+            [String(documento.id || "")]: {
+                realizado: realizadoIso,
+                vencimento: vencimentoIso || "",
+            },
+        }));
+
+        setTimeout(() => {
+            salvarDatasCertificado(documentoAtualizado);
+        }, 0);
+    };
+
     return (
         <div className="flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-full bg-slate-100 text-sm font-black uppercase text-slate-500 ring-1 ring-slate-200 sm:h-16 sm:w-16">
             {fotoUrlResolvida && !fotoComErro ? (
@@ -141,6 +223,65 @@ function FotoColaboradorBase({ colaborador = {} }) {
     );
 }
 
+function normalizarDataIsoFormularioCertificado(valor = "") {
+    const texto = String(valor || "").trim();
+
+    if (!texto) return "";
+
+    const iso = texto.match(/^((?:19|20)\d{2})-(\d{2})-(\d{2})$/);
+    if (iso) {
+        return `${iso[1]}-${iso[2]}-${iso[3]}`;
+    }
+
+    const br = texto.match(/^([0-3]?\d)\/([01]?\d)\/((?:19|20)\d{2})$/);
+    if (!br) return "";
+
+    const dia = br[1].padStart(2, "0");
+    const mes = br[2].padStart(2, "0");
+    const ano = br[3];
+
+    const data = new Date(`${ano}-${mes}-${dia}T12:00:00`);
+
+    if (
+        Number.isNaN(data.getTime()) ||
+        data.getFullYear() !== Number(ano) ||
+        data.getMonth() + 1 !== Number(mes) ||
+        data.getDate() !== Number(dia)
+    ) {
+        return "";
+    }
+
+    return `${ano}-${mes}-${dia}`;
+}
+
+function formatarDataBrFormularioCertificado(valor = "") {
+    const iso = normalizarDataIsoFormularioCertificado(valor);
+
+    if (!iso) return "";
+
+    const [ano, mes, dia] = iso.split("-");
+
+    return `${dia}/${mes}/${ano}`;
+}
+
+function aplicarMascaraDataBrFormularioCertificado(valor = "") {
+    const digitos = String(valor || "").replace(/\D/g, "").slice(0, 8);
+
+    if (digitos.length <= 2) return digitos;
+    if (digitos.length <= 4) return `${digitos.slice(0, 2)}/${digitos.slice(2)}`;
+
+    return `${digitos.slice(0, 2)}/${digitos.slice(2, 4)}/${digitos.slice(4)}`;
+}
+
+function converterDataBrFormularioCertificadoParaIso(valor = "") {
+    const mascarada = aplicarMascaraDataBrFormularioCertificado(valor);
+
+    if (!/^\d{2}\/\d{2}\/\d{4}$/.test(mascarada)) {
+        return "";
+    }
+
+    return normalizarDataIsoFormularioCertificado(mascarada);
+}
 export function BaseCertificadosTreinamentos({
     documentos = [],
     documentosFiltrados = [],
@@ -161,6 +302,64 @@ export function BaseCertificadosTreinamentos({
     recolhido = false,
     onAlternarRecolhido,
 }) {
+    const [datasCertificadosAtualizadas, setDatasCertificadosAtualizadas] = React.useState({});
+    const [datasDigitadasRevisao, setDatasDigitadasRevisao] = React.useState({});
+
+    React.useEffect(() => {
+        if (typeof window === "undefined") return undefined;
+
+        const aoAtualizarDataCertificado = (event) => {
+            const detalhe = event?.detail || {};
+            const id = detalhe.id || detalhe.certificadoId || detalhe.certificado_id;
+
+            if (!id) return;
+
+            setDatasCertificadosAtualizadas((atual) => ({
+                ...atual,
+                [String(id)]: {
+                    realizado: detalhe.dataRealizacao || detalhe.data_realizacao || "",
+                    vencimento: detalhe.dataVencimento ?? detalhe.data_vencimento ?? "",
+                },
+            }));
+        };
+
+        window.addEventListener("certificado-data-atualizada", aoAtualizarDataCertificado);
+
+        return () => {
+            window.removeEventListener("certificado-data-atualizada", aoAtualizarDataCertificado);
+        };
+    }, []);
+    const obterValorDataRevisaoFormulario = (itemKey, campo, valorIso) => {
+        const chave = `${itemKey}:${campo}`;
+
+        if (Object.prototype.hasOwnProperty.call(datasDigitadasRevisao, chave)) {
+            return datasDigitadasRevisao[chave];
+        }
+
+        return formatarDataBrFormularioCertificado(valorIso);
+    };
+
+    const alterarDataRevisaoFormulario = (documento, itemKey, campo, valorDigitado) => {
+        const chave = `${itemKey}:${campo}`;
+        const valorMascarado = aplicarMascaraDataBrFormularioCertificado(valorDigitado);
+
+        setDatasDigitadasRevisao((atual) => ({
+            ...atual,
+            [chave]: valorMascarado,
+        }));
+
+        if (!valorMascarado) {
+            alterarDataRevisao(documento, campo, "");
+            return;
+        }
+
+        const valorIso = converterDataBrFormularioCertificadoParaIso(valorMascarado);
+
+        if (valorIso) {
+            alterarDataRevisao(documento, campo, valorIso);
+        }
+    };
+
     return (
         <Card className="self-start">
             <div
@@ -244,7 +443,38 @@ export function BaseCertificadosTreinamentos({
                         { emDia: 0, aVencer: 0, vencidos: 0 }
                     );
 
-                    return (
+                    const obterValorDataRevisaoFormulario = (itemKey, campo, valorIso) => {
+        const chave = `${itemKey}:${campo}`;
+
+        if (Object.prototype.hasOwnProperty.call(datasDigitadasRevisao, chave)) {
+            return datasDigitadasRevisao[chave];
+        }
+
+        return formatarDataBrFormularioCertificado(valorIso);
+    };
+
+    const alterarDataRevisaoFormulario = (documento, itemKey, campo, valorDigitado) => {
+        const chave = `${itemKey}:${campo}`;
+        const valorMascarado = aplicarMascaraDataBrFormularioCertificado(valorDigitado);
+
+        setDatasDigitadasRevisao((atual) => ({
+            ...atual,
+            [chave]: valorMascarado,
+        }));
+
+        if (!valorMascarado) {
+            alterarDataRevisao(documento, campo, "");
+            return;
+        }
+
+        const valorIso = converterDataBrFormularioCertificadoParaIso(valorMascarado);
+
+        if (valorIso) {
+            alterarDataRevisao(documento, campo, valorIso);
+        }
+    };
+
+    return (
                         <div
                             key={grupoKey}
                             className="rounded-3xl border border-slate-200 bg-white p-4 shadow-sm transition hover:border-slate-300 hover:shadow-md"
@@ -418,13 +648,58 @@ export function BaseCertificadosTreinamentos({
                                     )}
 
                                     {certificados.map((d, idx) => {
-                                        const valores = valoresRevisao(d);
+                                        const valoresBase = valoresRevisao(d);
+
+                                        const datasAtualizadas = datasCertificadosAtualizadas[String(d.id || "")] || {};
+
+                                        const valores = {
+
+                                            ...valoresBase,
+
+                                            realizado: Object.prototype.hasOwnProperty.call(datasAtualizadas, "realizado") ? datasAtualizadas.realizado : valoresBase.realizado,
+
+                                            vencimento: Object.prototype.hasOwnProperty.call(datasAtualizadas, "vencimento") ? datasAtualizadas.vencimento : valoresBase.vencimento,
+
+                                        };
                                         const semValidade = treinamentoSemValidade(d.treinamentoId);
+                                        const ehFichaRegistro = /ficha\s+(de\s+)?registro|registro\s+clt|\bclt\b|e\s*social|\besocial\b/i.test(String(d?.treinamento?.nome || ""));
+                                        const rotuloDataPrincipal = ehFichaRegistro ? "Admiss\u00e3o / Registro" : "Realiza\u00e7\u00e3o";
                                         const statusAtual = statusDocumento(valores.vencimento || d.vencimento, semValidade);
                                         const itemKey = String(d.id || `${d.colaborador.id}-${d.treinamentoId}-${idx}`);
                                         const aberto = Boolean(certificadosAbertos[itemKey]);
 
-                                        return (
+                                        const obterValorDataRevisaoFormulario = (itemKey, campo, valorIso) => {
+        const chave = `${itemKey}:${campo}`;
+
+        if (Object.prototype.hasOwnProperty.call(datasDigitadasRevisao, chave)) {
+            return datasDigitadasRevisao[chave];
+        }
+
+        return formatarDataBrFormularioCertificado(valorIso);
+    };
+
+    const alterarDataRevisaoFormulario = (documento, itemKey, campo, valorDigitado) => {
+        const chave = `${itemKey}:${campo}`;
+        const valorMascarado = aplicarMascaraDataBrFormularioCertificado(valorDigitado);
+
+        setDatasDigitadasRevisao((atual) => ({
+            ...atual,
+            [chave]: valorMascarado,
+        }));
+
+        if (!valorMascarado) {
+            alterarDataRevisao(documento, campo, "");
+            return;
+        }
+
+        const valorIso = converterDataBrFormularioCertificadoParaIso(valorMascarado);
+
+        if (valorIso) {
+            alterarDataRevisao(documento, campo, valorIso);
+        }
+    };
+
+    return (
                                             <div
                                                 key={itemKey}
                                                 className="rounded-2xl bg-slate-50 p-3 ring-1 ring-slate-100"
@@ -445,7 +720,7 @@ export function BaseCertificadosTreinamentos({
 
                                                         <div className="mt-3 grid gap-2 sm:grid-cols-2">
                                                             <div className="rounded-xl bg-white px-3 py-2 ring-1 ring-slate-100">
-                                                                <p className="text-[10px] font-bold uppercase tracking-wide text-slate-400">Realização</p>
+                                                                <p className="text-[10px] font-bold uppercase tracking-wide text-slate-400">{rotuloDataPrincipal}</p>
                                                                 <p className="text-xs font-semibold text-slate-700">{formatDate(valores.realizado)}</p>
                                                             </div>
 
@@ -472,12 +747,12 @@ export function BaseCertificadosTreinamentos({
                                                             {aberto ? (
                                                                 <>
                                                                     <ChevronUp className="h-4 w-4" />
-                                                                    Ocultar datas
+                                                                    Ocultar data
                                                                 </>
                                                             ) : (
                                                                 <>
                                                                     <ChevronDown className="h-4 w-4" />
-                                                                    Revisar datas
+                                                                    Rever data
                                                                 </>
                                                             )}
                                                         </button>
@@ -506,11 +781,14 @@ export function BaseCertificadosTreinamentos({
                                                     <div className="mt-4 rounded-2xl bg-white p-4 ring-1 ring-slate-100">
                                                         <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-[1fr_1fr_auto] xl:items-end">
                                                             <div>
-                                                                <p className="mb-1 text-[10px] font-bold uppercase tracking-wide text-slate-400">Realização</p>
+                                                                <p className="mb-1 text-[10px] font-bold uppercase tracking-wide text-slate-400">{rotuloDataPrincipal}</p>
                                                                 <input
-                                                                    type="date"
-                                                                    value={valores.realizado}
-                                                                    onChange={(e) => alterarDataRevisao(d, "realizado", e.target.value)}
+                                                                    type="text"
+                                                                    inputMode="numeric"
+                                                                    maxLength={10}
+                                                                    placeholder="dd/mm/aaaa"
+                                                                    value={obterValorDataRevisaoFormulario(itemKey, "realizado", valores.realizado)}
+                                                                    onChange={(e) => alterarDataRevisaoFormulario(d, itemKey, "realizado", e.target.value)}
                                                                     className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-slate-200"
                                                                 />
                                                             </div>
@@ -523,9 +801,12 @@ export function BaseCertificadosTreinamentos({
                                                                     </div>
                                                                 ) : (
                                                                     <input
-                                                                        type="date"
-                                                                        value={valores.vencimento}
-                                                                        onChange={(e) => alterarDataRevisao(d, "vencimento", e.target.value)}
+                                                                        type="text"
+                                                                        inputMode="numeric"
+                                                                        maxLength={10}
+                                                                        placeholder="dd/mm/aaaa"
+                                                                        value={obterValorDataRevisaoFormulario(itemKey, "vencimento", valores.vencimento)}
+                                                                        onChange={(e) => alterarDataRevisaoFormulario(d, itemKey, "vencimento", e.target.value)}
                                                                         className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-slate-200"
                                                                     />
                                                                 )}
@@ -533,7 +814,57 @@ export function BaseCertificadosTreinamentos({
 
                                                             <button
                                                                 type="button"
-                                                                onClick={() => salvarDatasCertificado(d)}
+                                                                onClick={() => {
+                                                                    const chaveRealizado = `${itemKey}:realizado`;
+                                                                    const chaveVencimento = `${itemKey}:vencimento`;
+                                                                    const realizadoDigitado = datasDigitadasRevisao[chaveRealizado] || "";
+                                                                    const vencimentoDigitado = datasDigitadasRevisao[chaveVencimento] || "";
+
+                                                                    const realizadoIso = realizadoDigitado
+                                                                        ? converterDataBrFormularioCertificadoParaIso(realizadoDigitado)
+                                                                        : valores.realizado || "";
+
+                                                                    const vencimentoIso = semValidade
+                                                                        ? ""
+                                                                        : (vencimentoDigitado
+                                                                            ? converterDataBrFormularioCertificadoParaIso(vencimentoDigitado)
+                                                                            : valores.vencimento || "");
+
+                                                                    if (realizadoDigitado && !realizadoIso) {
+                                                                        alert("Data de admissão/registro inválida. Use o formato dd/mm/aaaa.");
+                                                                        return;
+                                                                    }
+
+                                                                    if (!semValidade && vencimentoDigitado && !vencimentoIso) {
+                                                                        alert("Data de vencimento inválida. Use o formato dd/mm/aaaa.");
+                                                                        return;
+                                                                    }
+
+                                                                    const documentoAtualizado = {
+                                                                        ...d,
+                                                                        realizado: realizadoIso,
+                                                                        dataRealizacao: realizadoIso,
+                                                                        data_realizacao: realizadoIso,
+                                                                        vencimento: vencimentoIso || "",
+                                                                        dataVencimento: vencimentoIso || "",
+                                                                        data_vencimento: vencimentoIso || "",
+                                                                    };
+
+                                                                    alterarDataRevisao(d, "realizado", realizadoIso);
+                                                                    alterarDataRevisao(d, "vencimento", vencimentoIso || "");
+
+                                                                    setDatasCertificadosAtualizadas((atual) => ({
+                                                                        ...atual,
+                                                                        [String(d.id || "")]: {
+                                                                            realizado: realizadoIso,
+                                                                            vencimento: vencimentoIso || "",
+                                                                        },
+                                                                    }));
+
+                                                                    setTimeout(() => {
+                                                                        salvarDatasCertificado(documentoAtualizado);
+                                                                    }, 0);
+                                                                }}
                                                                 disabled={salvandoDatasId === d.id}
                                                                 className="rounded-xl bg-blue-50 px-4 py-2 text-sm font-semibold text-blue-700 ring-1 ring-blue-200 hover:bg-blue-100 disabled:opacity-60"
                                                             >

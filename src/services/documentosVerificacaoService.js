@@ -1,4 +1,4 @@
-﻿import {
+import {
     DOCUMENTOS_VERIFICACAO_BUCKETS,
     DOCUMENTOS_VERIFICACAO_ORIGEM_ANALISE,
     DOCUMENTOS_VERIFICACAO_ORIGENS,
@@ -342,6 +342,138 @@ function aplicarRevisaoManualQuandoDataNaoConfirmada(resultado = {}, indicios = 
     return proximoResultado;
 }
 
+function formatarCnpjVerificacao(valor = "") {
+    const digitos = String(valor || "").replace(/\D/g, "");
+
+    if (digitos.length !== 14) {
+        return String(valor || "").trim();
+    }
+
+    return `${digitos.slice(0, 2)}.${digitos.slice(2, 5)}.${digitos.slice(5, 8)}/${digitos.slice(8, 12)}-${digitos.slice(12, 14)}`;
+}
+function ehFichaRegistroCltEsocialVerificacao({ certificado = {}, treinamento = {}, conferencia = {} } = {}) {
+    const texto = normalizarTextoConferencia([
+        certificado?.tipo,
+        certificado?.tipo_documento,
+        certificado?.tipoDocumento,
+        certificado?.nome_documento,
+        certificado?.nomeDocumento,
+        certificado?.categoria,
+        certificado?.observacao,
+        certificado?.arquivo_nome,
+        certificado?.arquivoNome,
+        treinamento?.nome,
+        treinamento?.tipo,
+        treinamento?.categoria,
+        treinamento?.base,
+        conferencia?.tipoDocumento,
+        conferencia?.tipo_documento,
+        conferencia?.tipoDocumentoDetectado,
+        conferencia?.documentoTipo,
+        conferencia?.documentoIdentificado,
+        conferencia?.nomeDocumento,
+        conferencia?.nome_documento,
+        conferencia?.categoriaDocumento,
+        conferencia?.tipoDocumentoEsperado,
+        conferencia?.resumo,
+    ].filter(Boolean).join(" "));
+
+    return /ficha\s+(de\s+)?registro|registro\s+(de\s+)?empregado|registro\s+clt|\bclt\b|e\s*social|\besocial\b|data\s+de\s+admissao/.test(texto);
+}
+
+function indicioBloqueanteFichaRegistroNaoConfirmado(indicio = {}) {
+    const codigo = String(indicio?.codigo || "").toLowerCase();
+
+    if ([
+        "data_impressa_nao_confirmada_automaticamente",
+        "colaborador_localizado_por_nome_arquivo",
+    ].includes(codigo)) {
+        return false;
+    }
+
+    const texto = normalizarTextoConferencia([
+        codigo,
+        indicio?.titulo,
+        indicio?.detalhe,
+        indicio?.recomendacao,
+    ].filter(Boolean).join(" "));
+
+    return (
+        /colaborador.*nao.*confirmad/.test(texto) ||
+        /nome.*nao.*confirmad/.test(texto) ||
+        /empresa.*nao.*confirmad/.test(texto) ||
+        /cnpj.*(nao.*confirmad|divergent)/.test(texto) ||
+        /assinatura.*nao.*confirmad/.test(texto) ||
+        /documento.*(incorreto|nao.*confirmad)/.test(texto) ||
+        /tipo.*documento.*nao.*confirmad/.test(texto)
+    );
+}
+
+function conferenciaFichaRegistroPossuiEvidenciasFortes(conferencia = {}) {
+    const texto = normalizarTextoConferencia(JSON.stringify(conferencia || {}));
+
+    const empresaLocalizada = /empresa.*(localizad|confirmad|encontrad)/.test(texto);
+    const cnpjLocalizado = /cnpj.*(localizad|confirmad|extraid|compat|encontrad)/.test(texto);
+    const assinaturaLocalizada =
+        /assinatura.*(localizad|confirmad|visual)/.test(texto) ||
+        /assinatura_visual.*true/.test(texto) ||
+        /assinaturavisual.*true/.test(texto);
+    const documentoLocalizado =
+        /documento.*(correto|localizad|confirmad)/.test(texto) ||
+        /documentocorretoporconferencia.*true/.test(texto) ||
+        /treinamento.*(localizad|confirmad)/.test(texto) ||
+        /ficha.*registro/.test(texto);
+
+    return empresaLocalizada && cnpjLocalizado && assinaturaLocalizada && documentoLocalizado;
+}
+function filtrarDataNaoConfirmadaFichaRegistroAprovavel({
+    indicios = [],
+    certificado = {},
+    treinamento = {},
+    conferencia = {},
+} = {}) {
+    if (!ehFichaRegistroCltEsocialVerificacao({ certificado, treinamento, conferencia })) {
+        return indicios;
+    }
+
+    const possuiPendenciaObrigatoria = indicios.some(indicioBloqueanteFichaRegistroNaoConfirmado);
+
+    if (possuiPendenciaObrigatoria) {
+        return indicios;
+    }
+
+    const codigosTolerados = new Set(["data_impressa_nao_confirmada_automaticamente"]);
+
+    if (conferenciaFichaRegistroPossuiEvidenciasFortes(conferencia)) {
+        codigosTolerados.add("colaborador_localizado_por_nome_arquivo");
+    }
+
+    return indicios.filter(
+        (indicio = {}) => !codigosTolerados.has(indicio?.codigo)
+    );
+}
+
+function obterDataRealizacaoCertificadoVerificacao({ certificado = {}, treinamento = {}, conferencia = {}, leitura = {} } = {}) {
+    const campos = leitura?.camposExtraidos || leitura?.campos_extraidos || {};
+
+    if (ehFichaRegistroCltEsocialVerificacao({ certificado, treinamento, conferencia })) {
+        return (
+            campos?.data_admissao ||
+            campos?.dataAdmissao ||
+            campos?.data_registro ||
+            campos?.dataRegistro ||
+            campos?.data_inicio_contrato ||
+            campos?.dataInicioContrato ||
+            certificado?.data_admissao ||
+            certificado?.dataAdmissao ||
+            certificado?.data_registro ||
+            certificado?.dataRegistro ||
+            ""
+        );
+    }
+
+    return certificado?.data_realizacao || certificado?.dataRealizacao || "";
+}
 function normalizarTextoConferencia(valor = "") {
     return normalizarTextoVerificacao(valor)
         .replace(/[^a-z0-9]+/g, " ")
@@ -1721,7 +1853,7 @@ function montarConferenciaDocumentalCertificado({ leitura = {}, certificado = {}
             informadoCadastro: Boolean(cnpjEmpresa || cnpjDocumentoEncontrado),
             encontrado: cnpjEmpresa ? cnpjEncontrado : (cnpjDocumentoEncontrado || null),
             cnpjCadastro: cnpjEmpresa,
-            cnpjExtraido: campos?.cnpj || extrairCnpjsDocumentoConferencia(textoDocumento)[0] || "",
+            cnpjExtraido: formatarCnpjVerificacao(campos?.cnpj || extrairCnpjsDocumentoConferencia(textoDocumento)[0] || ""),
             cnpjsExtraidos: extrairCnpjsDocumentoConferencia(textoDocumento),
             obrigatorio: !(listaPresenca && empresaEncontrada === true && treinamentoEncontradoFinal === true),
             observacao: listaPresenca && empresaEncontrada === true && treinamentoEncontradoFinal === true && !cnpjDocumentoEncontrado
@@ -2102,7 +2234,7 @@ function avaliarConferenciaDocumentalCertificado({ conferencia = {}, leitura = {
             codigo: "cnpj_empresa_nao_confere_documento",
             tipo: DOCUMENTOS_VERIFICACAO_TIPOS_INDICIO.OCR,
             titulo: "CNPJ da empresa nÃƒÂ£o confere com o documento",
-            detalhe: "O documento possui CNPJ extraÃƒÂ­do, mas ele nÃƒÂ£o corresponde ao CNPJ vinculado ao colaborador/empresa.",
+            detalhe: "O documento possui CNPJ localizado, mas ele não corresponde ao CNPJ vinculado ao colaborador/empresa.",
             peso: 70,
             bloqueia: true,
             recomendacao: "Conferir se o documento pertence ÃƒÂ  empresa correta antes de aprovar.",
@@ -2591,7 +2723,7 @@ export async function analisarCertificadoLocal({
         conferencia: conferenciaDocumental,
     });
 
-    const indicios = conferenciaDocumental?.documentoCorretoPorConferencia
+    const indiciosPreConferencia = conferenciaDocumental?.documentoCorretoPorConferencia
         ? indiciosListaCoerente.filter((indicio = {}) => ![
             "treinamento_nao_confirmado_no_documento",
             "data_impressa_nao_confirmada_automaticamente",
@@ -2599,6 +2731,20 @@ export async function analisarCertificadoLocal({
             "assinatura_colaborador_nao_confirmada_lista",
         ].includes(indicio.codigo))
         : indiciosListaCoerente;
+
+    const indicios = filtrarDataNaoConfirmadaFichaRegistroAprovavel({
+        indicios: indiciosPreConferencia,
+        certificado,
+        treinamento,
+        conferencia: conferenciaDocumental,
+    });
+
+    const dataRealizacaoFinal = obterDataRealizacaoCertificadoVerificacao({
+        certificado,
+        treinamento,
+        conferencia: conferenciaDocumental,
+        leitura: leituraDocumental,
+    });
 
     const resultadoBase = montarResultadoVerificacaoBase({ indicios });
     const resultado = aplicarRevisaoManualQuandoDataNaoConfirmada(resultadoBase, indicios);
@@ -2628,7 +2774,7 @@ export async function analisarCertificadoLocal({
         tamanho_bytes: metadadosArquivo.tamanhoBytes,
         hash_arquivo: hashArquivo || null,
         data_emissao: null,
-        data_realizacao: formatarDataIsoVerificacao(certificado.data_realizacao || certificado.dataRealizacao),
+        data_realizacao: formatarDataIsoVerificacao(dataRealizacaoFinal),
         data_vencimento: formatarDataIsoVerificacao(certificado.data_vencimento || certificado.dataVencimento),
         origem_analise: leituraDocumental?.executado || leituraDocumental?.datasEncontradas?.length
             ? DOCUMENTOS_VERIFICACAO_ORIGEM_ANALISE.OCR_LOCAL

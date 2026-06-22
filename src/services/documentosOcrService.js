@@ -791,6 +791,165 @@ function obterTotalFuncionariosResumo(texto = "") {
 }
 
 
+function normalizarTextoDataAdmissaoRegistro(valor = "") {
+    return String(valor || "")
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .toLowerCase()
+        .replace(/\s+/g, " ")
+        .trim();
+}
+
+function obterDatasBrTextoAdmissaoRegistro(valor = "") {
+    return Array.from(String(valor || "").matchAll(/\b([0-3]?\d[\/.-][01]?\d[\/.-](?:19|20)\d{2})\b/g))
+        .map((match) => match?.[1] || "")
+        .filter(Boolean);
+}
+
+function obterDataPreferencialAdmissaoRegistro(datas = []) {
+    const lista = Array.isArray(datas) ? datas.filter(Boolean) : [];
+
+    if (!lista.length) return "";
+
+    const contagem = lista.reduce((acc, data) => {
+        acc[data] = (acc[data] || 0) + 1;
+        return acc;
+    }, {});
+
+    const repetida = lista.find((data) => contagem[data] >= 2);
+
+    return repetida || lista[0] || "";
+}
+
+function obterPrimeiraDataBrTextoAdmissaoRegistro(valor = "") {
+    return obterDataPreferencialAdmissaoRegistro(obterDatasBrTextoAdmissaoRegistro(valor));
+}
+
+function linhaOcrPossuiContextoProibidoAdmissao(linha = {}) {
+    const texto = linha?.textoNormalizado || normalizarTextoDataAdmissaoRegistro(linha?.texto || linha?.text || "");
+
+    return /\bnascimento\b|\bnaturalidade\b|\bctps\b|\bpis\b|\btitulo\b|\bcpf\b|\brg\b|\bidentidade\b|\bemissao\b|\bexpedicao\b/.test(texto);
+}
+
+function linhaOcrEhRotuloAdmissaoRegistro(linha = {}) {
+    const texto = linha?.textoNormalizado || normalizarTextoDataAdmissaoRegistro(linha?.texto || linha?.text || "");
+
+    if (/\bnascimento\b|\bnaturalidade\b/.test(texto)) {
+        return false;
+    }
+
+    return /\bdata\s+de\s+admissao\b/.test(texto) ||
+        /\badmissao\b/.test(texto) ||
+        /\bdata\s+do\s+registro\b/.test(texto) ||
+        /\binicio\s+do\s+contrato\b/.test(texto) ||
+        /\bopcao\s+em\s+fgts\b/.test(texto) ||
+        /\boptante\s+fgts\b/.test(texto);
+}
+
+function normalizarLinhasOcrAdmissaoRegistro(linhasOcr = []) {
+    return Array.isArray(linhasOcr)
+        ? linhasOcr
+            .map((linha, indice) => ({
+                indice,
+                texto: String(linha?.texto || linha?.text || ""),
+                textoNormalizado: normalizarTextoDataAdmissaoRegistro(linha?.texto || linha?.text || ""),
+                x0: Number(linha?.x0 || 0),
+                y0: Number(linha?.y0 || linha?.yCentro || 0),
+                yCentro: Number(linha?.yCentro || linha?.y0 || 0),
+            }))
+            .filter((linha) => linha.texto)
+            .sort((a, b) => {
+                const dy = a.yCentro - b.yCentro;
+                if (Math.abs(dy) > 0.002) return dy;
+                return a.x0 - b.x0;
+            })
+        : [];
+}
+
+function obterDataAdmissaoPorLinhasOcr(linhasOcr = []) {
+    const linhasOrdenadas = normalizarLinhasOcrAdmissaoRegistro(linhasOcr);
+
+    if (!linhasOrdenadas.length) return "";
+
+    for (let indice = 0; indice < linhasOrdenadas.length; indice += 1) {
+        const linha = linhasOrdenadas[indice];
+
+        if (!linhaOcrEhRotuloAdmissaoRegistro(linha)) {
+            continue;
+        }
+
+        const dataMesmaLinha = obterPrimeiraDataBrTextoAdmissaoRegistro(linha.texto);
+
+        if (dataMesmaLinha) {
+            return dataMesmaLinha;
+        }
+
+        const candidatasDepois = linhasOrdenadas
+            .map((candidata, indiceCandidata) => ({ ...candidata, indiceCandidata }))
+            .filter((candidata) => {
+                if (candidata.indiceCandidata <= indice || candidata.indiceCandidata > indice + 12) return false;
+                if (linhaOcrPossuiContextoProibidoAdmissao(candidata)) return false;
+
+                return Boolean(obterPrimeiraDataBrTextoAdmissaoRegistro(candidata.texto));
+            });
+
+        const dataDepois = obterPrimeiraDataBrTextoAdmissaoRegistro(candidatasDepois[0]?.texto || "");
+
+        if (dataDepois) {
+            return dataDepois;
+        }
+
+        const candidatasAntes = linhasOrdenadas
+            .map((candidata, indiceCandidata) => ({ ...candidata, indiceCandidata }))
+            .filter((candidata) => {
+                if (candidata.indiceCandidata >= indice || candidata.indiceCandidata < indice - 6) return false;
+                if (linhaOcrPossuiContextoProibidoAdmissao(candidata)) return false;
+
+                return Boolean(obterPrimeiraDataBrTextoAdmissaoRegistro(candidata.texto));
+            })
+            .reverse();
+
+        const dataAntes = obterPrimeiraDataBrTextoAdmissaoRegistro(candidatasAntes[0]?.texto || "");
+
+        if (dataAntes) {
+            return dataAntes;
+        }
+    }
+
+    return "";
+}
+
+function obterDataAdmissaoRegistroResumo(texto = "", linhasOcr = []) {
+    const dataPorLinha = obterDataAdmissaoPorLinhasOcr(linhasOcr);
+
+    if (dataPorLinha) {
+        return dataPorLinha;
+    }
+
+    const base = limparTextoPossivelDocumento(texto)
+        .replace(/\s+/g, " ")
+        .trim();
+
+    const padroes = [
+        /\bdata\s+de\s+admiss[aã]o\b[^0-9]{0,260}([0-3]?\d[\/.-][01]?\d[\/.-](?:19|20)\d{2})/i,
+        /\badmiss[aã]o\b[^0-9]{0,260}([0-3]?\d[\/.-][01]?\d[\/.-](?:19|20)\d{2})/i,
+        /\bdata\s+do\s+registro\b[^0-9]{0,260}([0-3]?\d[\/.-][01]?\d[\/.-](?:19|20)\d{2})/i,
+        /\bin[ií]cio\s+do\s+contrato\b[^0-9]{0,260}([0-3]?\d[\/.-][01]?\d[\/.-](?:19|20)\d{2})/i,
+        /\bop[cç][aã]o\s+em\s+fgts\b[^0-9]{0,260}([0-3]?\d[\/.-][01]?\d[\/.-](?:19|20)\d{2})/i,
+        /\boptante\s+fgts\b[^0-9]{0,260}([0-3]?\d[\/.-][01]?\d[\/.-](?:19|20)\d{2})/i,
+    ];
+
+    for (const padrao of padroes) {
+        const match = base.match(padrao);
+        const data = match?.[1] || "";
+
+        if (data) {
+            return data;
+        }
+    }
+
+    return "";
+}
 function montarCamposExtraidosDocumento({ textoExtraido = "", arquivoNome = "", datasClassificadas = {}, linhasOcr = [] } = {}) {
     const texto = limparTextoPossivelDocumento(textoExtraido);
     const tipoDocumento = obterTipoDocumentoResumo(texto, arquivoNome);
@@ -799,6 +958,7 @@ function montarCamposExtraidosDocumento({ textoExtraido = "", arquivoNome = "", 
     const codigoVerificacao = obterCodigoVerificacaoResumo(texto);
     const totalFuncionarios = obterTotalFuncionariosResumo(texto);
     const dataAssinaturaTexto = obterDataAssinaturaResumo(texto);
+    const dataAdmissaoRegistroTexto = obterDataAdmissaoRegistroResumo(texto, linhasOcr);
     const vigenciaClassificada = Array.isArray(datasClassificadas?.vigencia) ? datasClassificadas.vigencia : [];
     const inicioVigencia = vigenciaClassificada.find((data) => data?.tipo === "inicio_vigencia") || vigenciaClassificada[0] || null;
     const fimVigencia = vigenciaClassificada.find((data) => data?.tipo === "fim_vigencia") || vigenciaClassificada[1] || null;
@@ -815,6 +975,8 @@ function montarCamposExtraidosDocumento({ textoExtraido = "", arquivoNome = "", 
         vigencia_inicio_br: inicioVigencia?.br || "",
         vigencia_fim: fimVigencia?.iso || "",
         vigencia_fim_br: fimVigencia?.br || "",
+        data_admissao: dataIsoDeTextoDataBr(dataAdmissaoRegistroTexto) || "",
+        data_admissao_br: dataAdmissaoRegistroTexto || "",
         assinatura_data: assinaturaClassificada?.iso || dataIsoDeTextoDataBr(dataAssinaturaTexto) || dataEncerramento?.iso || "",
         assinatura_data_br: assinaturaClassificada?.br || dataAssinaturaTexto || dataEncerramento?.br || "",
         data_encerramento: dataEncerramento?.iso || "",

@@ -580,6 +580,30 @@ async function validarCertificadoAntesDoSalvamento({
     return verificacao;
 }
 
+
+function ehFichaRegistroTreinamentoApp({ certificado = {}, certificadoNormalizado = {}, treinamento = {} } = {}) {
+    const texto = [
+        certificado?.treinamento?.nome,
+        certificado?.nomeTreinamento,
+        certificado?.nome_treinamento,
+        certificado?.tipo_treinamento,
+        certificado?.arquivoNome,
+        certificado?.arquivo_nome,
+        certificado?.arquivo,
+        certificadoNormalizado?.nomeTreinamento,
+        certificadoNormalizado?.nome_treinamento,
+        certificadoNormalizado?.tipo_treinamento,
+        treinamento?.nome,
+        treinamento?.tipo,
+        treinamento?.categoria,
+        treinamento?.base,
+    ].filter(Boolean).join(" ")
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .toLowerCase();
+
+    return /ficha\s+(de\s+)?registro|registro\s+(de\s+)?empregado|registro\s+clt|\bclt\b|e\s*social|\besocial\b|data\s+de\s+admissao/.test(texto);
+}
 function converterStatusVerificacaoParaStatusCertificado(statusVerificacao = "") {
     const status = String(statusVerificacao || "").trim().toLowerCase();
 
@@ -673,10 +697,20 @@ async function executarVerificacaoCertificadoSemBloquearFluxo({
         });
 
         const statusValidacao = converterStatusVerificacaoParaStatusCertificado(verificacao?.statusVerificacao);
+        const dataRealizacaoVerificada = verificacao?.data_realizacao || verificacao?.dataRealizacao || "";
+        const ehFichaRegistro = ehFichaRegistroTreinamentoApp({ certificado, certificadoNormalizado, treinamento });
+        const atualizacaoCertificado = {
+            status_validacao: statusValidacao,
+        };
+
+        if (ehFichaRegistro && dataRealizacaoVerificada) {
+            atualizacaoCertificado.data_realizacao = dataRealizacaoVerificada;
+            atualizacaoCertificado.data_vencimento = null;
+        }
 
         const { error } = await supabase
             .from("certificados")
-            .update({ status_validacao: statusValidacao })
+            .update(atualizacaoCertificado)
             .eq("id", certificadoNormalizado.id);
 
         if (error) {
@@ -687,6 +721,14 @@ async function executarVerificacaoCertificadoSemBloquearFluxo({
             ...certificadoNormalizado,
             statusValidacao,
             status_validacao: statusValidacao,
+            ...(ehFichaRegistro && dataRealizacaoVerificada ? {
+                dataRealizacao: dataRealizacaoVerificada,
+                data_realizacao: dataRealizacaoVerificada,
+                realizado: dataRealizacaoVerificada,
+                dataVencimento: null,
+                data_vencimento: null,
+                vencimento: null,
+            } : {}),
         };
 
         atualizarCertificadoNosEstados({
