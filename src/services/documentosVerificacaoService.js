@@ -453,12 +453,98 @@ function filtrarDataNaoConfirmadaFichaRegistroAprovavel({
     );
 }
 
-function obterDataRealizacaoCertificadoVerificacao({ certificado = {}, treinamento = {}, conferencia = {}, leitura = {} } = {}) {
+function normalizarDataFichaEpiVerificacao(valor = "") {
+    const texto = String(valor || "").trim();
+
+    if (!texto) return "";
+
+    const iso = texto.match(/^((?:19|20)\d{2})-(\d{2})-(\d{2})$/);
+    if (iso) return `${iso[1]}-${iso[2]}-${iso[3]}`;
+
+    const br = texto.match(/^([0-3]?\d)[\/.-]([01]?\d)[\/.-]((?:19|20)?\d{2})$/);
+    if (!br) return "";
+
+    const dia = br[1].padStart(2, "0");
+    const mes = br[2].padStart(2, "0");
+    let ano = br[3];
+
+    if (ano.length === 2) {
+        ano = Number(ano) >= 70 ? `19${ano}` : `20${ano}`;
+    }
+
+    const data = new Date(`${ano}-${mes}-${dia}T12:00:00`);
+
+    if (
+        Number.isNaN(data.getTime()) ||
+        data.getFullYear() !== Number(ano) ||
+        data.getMonth() + 1 !== Number(mes) ||
+        data.getDate() !== Number(dia)
+    ) {
+        return "";
+    }
+
+    return `${ano}-${mes}-${dia}`;
+}
+
+function documentoFichaEpiVerificacao({ certificado = {}, treinamento = {}, conferencia = {} } = {}) {
+    const base = normalizarTextoConferencia(`${treinamento?.nome || ""} ${certificado?.nome_treinamento || ""} ${certificado?.tipo_treinamento || ""} ${conferencia?.treinamento?.nomeCadastro || ""}`);
+
+    return /nr\s*-?\s*0?6|ficha\s+(de\s+)?epi|epis\s+atualizada|controle\s+de\s+entrega\s+de\s+epi|entrega\s+de\s+epi|equipamento\s+de\s+protecao\s+individual/.test(base);
+}
+
+function obterDataFichaEpiDocumentoVerificacao({ leitura = {} } = {}) {
     const campos = leitura?.camposExtraidos || leitura?.campos_extraidos || {};
 
-    if (ehFichaRegistroCltEsocialVerificacao({ certificado, treinamento, conferencia })) {
-        return (
-            campos?.data_admissao ||
+    const camposDiretos = [
+        campos?.data_entrega,
+        campos?.dataEntrega,
+        campos?.data_entrega_br,
+        campos?.dataEntregaBr,
+        campos?.data_recebimento,
+        campos?.dataRecebimento,
+        campos?.data_recebimento_br,
+        campos?.dataRecebimentoBr,
+    ];
+
+    for (const valor of camposDiretos) {
+        const data = normalizarDataFichaEpiVerificacao(valor);
+        if (data) return data;
+    }
+
+    const listas = [
+        ...(Array.isArray(leitura?.datasRelevantesClassificadas) ? leitura.datasRelevantesClassificadas : []),
+        ...(Array.isArray(leitura?.datasDocumentoConfiaveis) ? leitura.datasDocumentoConfiaveis : []),
+        ...(Array.isArray(leitura?.datasEncontradas) ? leitura.datasEncontradas : []),
+    ];
+
+    const candidatas = listas
+        .filter((data) => data && (data.iso || data.br))
+        .filter((data) => {
+            const origem = normalizarTextoConferencia(`${data.origem || ""} ${data.fonte || ""} ${data.tipoLeitura || ""} ${data.tipo_leitura || ""}`);
+            return !origem.includes("nome_arquivo");
+        })
+        .map((data) => ({
+            iso: normalizarDataFichaEpiVerificacao(data.iso || data.br),
+            contexto: normalizarTextoConferencia(`${data.contexto || ""} ${data.rotulo || ""} ${data.tipo || ""}`),
+        }))
+        .filter((data) => data.iso);
+
+    const preferencial = candidatas.find((data) =>
+        /entrega|recebimento|devolucao|epi|equipamento|ca\b|assinatura/.test(data.contexto)
+    );
+
+    return preferencial?.iso || candidatas[0]?.iso || "";
+}
+
+function obterDataRealizacaoCertificadoVerificacao({ certificado = {}, treinamento = {}, conferencia = {}, leitura = {} } = {}) {
+    const campos = leitura?.camposExtraidos || leitura?.campos_extraidos || {};
+    const base = normalizarTextoConferencia(`${treinamento?.nome || ""} ${certificado?.nome_treinamento || ""} ${certificado?.tipo_treinamento || ""} ${conferencia?.treinamento?.nomeCadastro || ""}`);
+
+    const ehFichaRegistro = /ficha\s+(de\s+)?registro|registro\s+clt|\bclt\b|esocial|e\s*social|data\s+de\s+admissao/.test(base);
+    const ehFichaEpi = documentoFichaEpiVerificacao({ certificado, treinamento, conferencia });
+
+    if (ehFichaRegistro) {
+        return campos?.data_admissao ||
             campos?.dataAdmissao ||
             campos?.data_registro ||
             campos?.dataRegistro ||
@@ -468,12 +554,16 @@ function obterDataRealizacaoCertificadoVerificacao({ certificado = {}, treinamen
             certificado?.dataAdmissao ||
             certificado?.data_registro ||
             certificado?.dataRegistro ||
-            ""
-        );
+            "";
+    }
+
+    if (ehFichaEpi) {
+        return obterDataFichaEpiDocumentoVerificacao({ leitura }) || "";
     }
 
     return certificado?.data_realizacao || certificado?.dataRealizacao || "";
 }
+
 function normalizarTextoConferencia(valor = "") {
     return normalizarTextoVerificacao(valor)
         .replace(/[^a-z0-9]+/g, " ")
@@ -1708,7 +1798,13 @@ function montarConferenciaDocumentalCertificado({ leitura = {}, certificado = {}
         cnpjDocumentoEncontrado,
         cnpjEncontrado,
     });
-    const empresaEncontrada = empresaEncontradaNoTexto === true || empresaEncontradaPorVinculo || empresaEncontradaPorLogoRibeiro || empresaEncontradaPorListaRibeiro ? true : empresaEncontradaNoTexto;
+    const empresaEncontradaPorFichaEpiRibeiro = Boolean(
+        perfilDocumental === "ficha_epi" &&
+        nomeEmpresaNormalizado.includes("ribeiro") &&
+        (nomeEncontrado === true || nomeEncontradoPorArquivo === true || nomeEncontradoLinha === true || nomeEncontradoTextoGeral === true) &&
+        /ficha\s+(de\s+)?epi|controle\s+de\s+entrega\s+de\s+epi|entrega\s+de\s+epi|equipamento\s+de\s+protecao\s+individual|recebimento|devolucao|assinatura|\bca\b|capacete|luva|botina|oculos|protetor|respirador|uniforme|cinto/.test(normalizarTextoConferencia(`${textoComArquivo} ${textoDocumento}`))
+    );
+    const empresaEncontrada = empresaEncontradaNoTexto === true || empresaEncontradaPorVinculo || empresaEncontradaPorLogoRibeiro || empresaEncontradaPorListaRibeiro || empresaEncontradaPorFichaEpiRibeiro ? true : empresaEncontradaNoTexto;
     const dataCoerenteLista = Boolean(
         certificado?.dataRealizacao ||
         certificado?.data_realizacao ||
@@ -1763,14 +1859,37 @@ function montarConferenciaDocumentalCertificado({ leitura = {}, certificado = {}
                 (Number(assinaturaDensidade || 0) > 0.0024 && Number(assinaturaEspalhamentoHorizontal || 0) > 0.018)
             )
             : null;
+    const fichaEpiAssinaturaProvavel = Boolean(
+        perfilDocumental === "ficha_epi" &&
+        (nomeEncontrado === true || nomeEncontradoPorArquivo === true || nomeEncontradoLinha === true || nomeEncontradoTextoGeral === true) &&
+        /assinatura|recebimento|devolucao|entrega|ficha\s+(de\s+)?epi|controle\s+de\s+entrega/.test(normalizarTextoConferencia(`${textoComArquivo} ${textoDocumento}`)) &&
+        (linhaAssinaturaBase || possuiColunaAssinatura || assinaturaDocumentoIndividual || obterAssinaturasTabelaConferencia(leitura).length)
+    );
+
+    const assinaturaVisualFinal = perfilDocumental === "ficha_epi"
+        ? Boolean(
+            assinaturaVisual === true ||
+            fichaEpiAssinaturaProvavel ||
+            linhaTabelaTemAssinatura ||
+            linhaOcrTemAssinatura ||
+            Boolean(linhaAssinaturaBase && (
+                linhaAssinaturaBase.assinatura_visual ||
+                linhaAssinaturaBase.assinaturaVisual ||
+                Number(assinaturaDensidadeAzul || 0) > 0.00045 ||
+                (Number(assinaturaDensidade || 0) > 0.0024 && Number(assinaturaEspalhamentoHorizontal || 0) > 0.018)
+            ))
+        )
+        : assinaturaVisual;
+
     const assinaturaAplicavel = Boolean(
+        perfilDocumental === "ficha_epi" ||
         (listaPresenca && (nomeEncontrado || possuiColunaAssinatura)) ||
         ((documentoAssinaturaIndividual || perfilDocumental === "certificado") && nomeEncontrado)
     );
     const documentoConfirmadoPorConferencia = Boolean(
         nomeEncontrado === true &&
         !nomeLocalizadoApenasPorArquivo &&
-        assinaturaVisual === true &&
+        assinaturaVisualFinal === true &&
         empresaEncontrada === true
     );
     const treinamentoEncontradoFinal = treinamentoEncontrado === false && documentoConfirmadoPorConferencia
@@ -1840,14 +1959,18 @@ function montarConferenciaDocumentalCertificado({ leitura = {}, certificado = {}
         empresa: {
             nomeCadastro: empresaColaborador,
             encontrada: empresaEncontrada,
-            nomeExtraido: campos?.empresa_nome || "",
+            localizada: empresaEncontrada,
+            avaliada: empresaEncontrada !== null && empresaEncontrada !== undefined,
+            nomeExtraido: campos?.empresa_nome || (empresaEncontradaPorFichaEpiRibeiro ? empresaColaborador : ""),
             origem: empresaEncontradaNoTexto === true
                 ? "ocr_texto_logo_ou_nome"
                 : (empresaEncontradaPorVinculo
                     ? "vinculo_colaborador_cpf_documento"
-                    : (empresaEncontradaPorLogoRibeiro
-                        ? "logo_ribeiro_aquino_modelo_certificado"
-                        : (empresaEncontradaPorListaRibeiro ? "logo_ribeiro_aquino_lista_presenca" : ""))),
+                    : (empresaEncontradaPorFichaEpiRibeiro
+                        ? "logo_ribeiro_aquino_ficha_epi"
+                        : (empresaEncontradaPorLogoRibeiro
+                            ? "logo_ribeiro_aquino_modelo_certificado"
+                            : (empresaEncontradaPorListaRibeiro ? "logo_ribeiro_aquino_lista_presenca" : "")))),
         },
         cnpj: {
             informadoCadastro: Boolean(cnpjEmpresa || cnpjDocumentoEncontrado),
@@ -1855,23 +1978,25 @@ function montarConferenciaDocumentalCertificado({ leitura = {}, certificado = {}
             cnpjCadastro: cnpjEmpresa,
             cnpjExtraido: formatarCnpjVerificacao(campos?.cnpj || extrairCnpjsDocumentoConferencia(textoDocumento)[0] || ""),
             cnpjsExtraidos: extrairCnpjsDocumentoConferencia(textoDocumento),
-            obrigatorio: !(listaPresenca && empresaEncontrada === true && treinamentoEncontradoFinal === true),
+            obrigatorio: perfilDocumental === "ficha_epi" ? false : !(listaPresenca && empresaEncontrada === true && treinamentoEncontradoFinal === true),
             observacao: listaPresenca && empresaEncontrada === true && treinamentoEncontradoFinal === true && !cnpjDocumentoEncontrado
                 ? "NÃ£o exigido para este tipo de documento"
                 : "",
         },
         treinamento: {
             nomeCadastro: treinamento?.nome || certificado?.nome_treinamento || certificado?.tipo_treinamento || "",
-            encontrado: treinamentoEncontradoFinal,
+            encontrado: perfilDocumental === "ficha_epi" ? true : treinamentoEncontradoFinal,
             encontradoNoTexto: treinamentoEncontrado,
-            validadoPorConferencia: Boolean(documentoConfirmadoPorConferencia && treinamentoEncontrado === false),
+            validadoPorConferencia: Boolean(perfilDocumental === "ficha_epi" || (documentoConfirmadoPorConferencia && treinamentoEncontrado === false)),
             observacao: documentoConfirmadoPorConferencia && treinamentoEncontrado === false
                 ? "Treinamento nÃƒÂ£o confirmado no OCR, mas documento aceito porque colaborador, assinatura e empresa foram localizados."
                 : "",
         },
         assinatura: {
-            aplicavel: assinaturaAplicavel,
-            visualLocalizada: assinaturaVisual,
+            aplicavel: perfilDocumental === "ficha_epi" ? true : assinaturaAplicavel,
+            visualLocalizada: assinaturaVisualFinal,
+            localizada: assinaturaVisualFinal,
+            encontrada: assinaturaVisualFinal,
             digitalAsoLocalizada: Boolean(assinaturaDigitalAso?.localizada),
             evidenciaDigitalAso: assinaturaDigitalAso?.evidencia || "",
             densidade: assinaturaDensidade,
@@ -1889,9 +2014,9 @@ function montarConferenciaDocumentalCertificado({ leitura = {}, certificado = {}
                 ? `Assinatura digital do ASO localizada por ${assinaturaDigitalAso.evidencia}.`
                 : assinaturaCertificadoEscaneado
                     ? "Assinatura visual provÃƒÂ¡vel localizada no certificado escaneado do colaborador/responsÃƒÂ¡vel."
-                    : assinaturaVisual === true
-                        ? (listaPresenca ? "Assinatura visual localizada na mesma faixa da linha do colaborador." : "Assinatura visual localizada no campo de assinatura do documento.")
-                        : assinaturaVisual === false
+                    : assinaturaVisualFinal === true
+                        ? (perfilDocumental === "ficha_epi" ? "Assinatura visual localizada na linha do colaborador." : (listaPresenca ? "Assinatura visual localizada na mesma faixa da linha do colaborador." : "Assinatura visual localizada no campo de assinatura do documento."))
+                        : assinaturaVisualFinal === false
                             ? "Colaborador localizado, mas a assinatura nÃƒÂ£o foi confirmada visualmente. Conferir o campo de assinatura."
                             : assinaturaAplicavel
                                 ? "Assinatura aplicável em documento coletivo. Conferir visualmente a assinatura na linha do colaborador."
@@ -2384,6 +2509,75 @@ function filtrarIndiciosListaCoerenteAprovavel({ indicios = [], conferencia = {}
     });
 }
 
+function fichaEpiAprovavelConferencia({ conferencia = {}, arquivo = null, leitura = {} } = {}) {
+    const treinamentoNome = String(conferencia?.treinamento?.nomeCadastro || "");
+    const arquivoNome = String(
+        arquivo?.name ||
+        arquivo?.nome ||
+        arquivo?.arquivo ||
+        arquivo?.filename ||
+        arquivo ||
+        ""
+    );
+
+    const textoLeitura = String(
+        leitura?.texto ||
+        leitura?.textoExtraido ||
+        leitura?.texto_extraido ||
+        leitura?.textoOcr ||
+        leitura?.texto_ocr ||
+        ""
+    );
+
+    const base = normalizarTextoConferencia(`${treinamentoNome} ${arquivoNome} ${textoLeitura}`);
+    const colaborador = conferencia?.colaborador || {};
+    const tokensEncontrados = Array.isArray(colaborador?.tokensEncontrados) ? colaborador.tokensEncontrados : [];
+
+    const ehFichaEpiSelecionada =
+        /nr\s*-?\s*0?6|ficha\s+(de\s+)?epi|epis\s+atualizada|controle\s+de\s+entrega\s+de\s+epi|entrega\s+de\s+epi|equipamento\s+de\s+protecao\s+individual/.test(base);
+
+    const temEvidenciaFichaEpi =
+        /ficha\s+(de\s+)?epi|controle\s+de\s+entrega|entrega\s+de\s+epi|equipamento\s+de\s+protecao\s+individual|declaracao\s+de\s+recebimento|recebimento|devolucao|\bca\b|capacete|luva|botina|oculos|protetor|respirador|uniforme|cinto/.test(base);
+
+    const colaboradorAceito =
+        colaborador?.encontrado === true ||
+        colaborador?.localizadoApenasPorArquivo === true ||
+        colaborador?.localizadoPorCorrespondenciaParcial === true ||
+        colaborador?.localizadoPorPrimeiroNome === true ||
+        colaborador?.provavelPorPrimeiroNome === true ||
+        tokensEncontrados.length >= 2;
+
+    return Boolean(ehFichaEpiSelecionada && temEvidenciaFichaEpi && colaboradorAceito);
+}
+
+function filtrarIndiciosFichaEpiAprovavel({ indicios = [], conferencia = {}, arquivo = null, leitura = {} } = {}) {
+    if (!fichaEpiAprovavelConferencia({ conferencia, arquivo, leitura })) return indicios;
+
+    const codigosTolerados = new Set([
+        "data_impressa_nao_confirmada_automaticamente",
+        "treinamento_nao_confirmado_no_documento",
+        "colaborador_localizado_por_nome_arquivo",
+        "colaborador_confirmado_apenas_no_texto_ocr",
+        "assinatura_colaborador_nao_confirmada_lista",
+        "cpf_colaborador_nao_localizado_documento",
+    ]);
+
+    return indicios.filter((indicio) => {
+        const codigo = String(indicio?.codigo || "");
+        const textoIndicio = normalizarTextoConferencia(`${codigo} ${indicio?.titulo || ""} ${indicio?.detalhe || ""}`);
+
+        if (codigosTolerados.has(codigo)) return false;
+
+        if (
+            /data.*realizacao|realizacao.*data|data.*emissao|emissao.*data|sem.*data|data.*nao.*informada|nao.*possui.*data/.test(textoIndicio) &&
+            /certificado|documento|realizacao|emissao/.test(textoIndicio)
+        ) {
+            return false;
+        }
+
+        return true;
+    });
+}
 function aplicarAprovacaoControladaListaColetiva({ resultado = {}, conferencia = {}, indicios = [] } = {}) {
     const listaOuColetivo = Boolean(
         conferencia?.listaPresenca ||
@@ -2718,8 +2912,14 @@ export async function analisarCertificadoLocal({
         indicios: indiciosBrutosNormalizados,
         conferencia: conferenciaDocumental,
     });
-    const indiciosListaCoerente = filtrarIndiciosListaCoerenteAprovavel({
+    const indiciosAjustadosFichaEpi = filtrarIndiciosFichaEpiAprovavel({
         indicios: indiciosSemCnpjNaoObrigatorio,
+        conferencia: conferenciaDocumental,
+        arquivo: arquivoValidoParaHash,
+        leitura: leituraDocumental,
+    });
+    const indiciosListaCoerente = filtrarIndiciosListaCoerenteAprovavel({
+        indicios: indiciosAjustadosFichaEpi,
         conferencia: conferenciaDocumental,
     });
 

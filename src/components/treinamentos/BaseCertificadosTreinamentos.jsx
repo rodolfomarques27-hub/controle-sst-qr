@@ -662,8 +662,14 @@ export function BaseCertificadosTreinamentos({
 
                                         };
                                         const semValidade = treinamentoSemValidade(d.treinamentoId);
-                                        const ehFichaRegistro = /ficha\s+(de\s+)?registro|registro\s+clt|\bclt\b|e\s*social|\besocial\b/i.test(String(d?.treinamento?.nome || ""));
-                                        const rotuloDataPrincipal = ehFichaRegistro ? "Admiss\u00e3o / Registro" : "Realiza\u00e7\u00e3o";
+                                        const nomeTreinamentoAtual = String(d?.treinamento?.nome || "");
+                                        const ehFichaRegistro = /ficha\s+(de\s+)?registro|registro\s+clt|\bclt\b|e\s*social|\besocial\b/i.test(nomeTreinamentoAtual);
+                                        const ehFichaEpi = /nr\s*-?\s*0?6|ficha\s+(de\s+)?epi|epis\s+atualizada|controle\s+de\s+entrega\s+de\s+epi|entrega\s+de\s+epi|equipamento\s+de\s+prote[cç][aã]o\s+individual/i.test(nomeTreinamentoAtual);
+                                        const rotuloDataPrincipal = ehFichaRegistro
+                                            ? "Admiss\u00e3o / Registro"
+                                            : ehFichaEpi
+                                                ? "Entrega / Atualiza\u00e7\u00e3o"
+                                                : "Realiza\u00e7\u00e3o";
                                         const statusAtual = statusDocumento(valores.vencimento || d.vencimento, semValidade);
                                         const itemKey = String(d.id || `${d.colaborador.id}-${d.treinamentoId}-${idx}`);
                                         const aberto = Boolean(certificadosAbertos[itemKey]);

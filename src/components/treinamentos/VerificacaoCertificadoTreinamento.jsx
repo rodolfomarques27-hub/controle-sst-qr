@@ -35,6 +35,14 @@ function formatarCnpjPainelCertificado(valor = "") {
     return `${digitos.slice(0, 2)}.${digitos.slice(2, 5)}.${digitos.slice(5, 8)}/${digitos.slice(8, 12)}-${digitos.slice(12, 14)}`;
 }
 
+function ehFichaEpiPainelCertificado({ certificado = {}, treinamento = {} } = {}) {
+    const base = `${treinamento?.nome || ""} ${certificado?.nome_treinamento || ""} ${certificado?.tipo_treinamento || ""} ${certificado?.arquivo_nome || ""} ${certificado?.arquivo || ""}`
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .toLowerCase();
+
+    return /nr\s*-?\s*0?6|ficha\s+(de\s+)?epi|epis\s+atualizada|controle\s+de\s+entrega\s+de\s+epi|entrega\s+de\s+epi|equipamento\s+de\s+protecao\s+individual/.test(base);
+}
 function ehFichaRegistroPainelCertificado({ certificado = {}, treinamento = {} } = {}) {
     const texto = normalizarTextoVerificacao([
         certificado?.treinamento?.nome,
@@ -583,18 +591,33 @@ function textoContemAssinaturaLocalizada(texto = "") {
 }
 
 function obterStatusAssinaturaConsolidado({ assinatura = {}, conferencia = {} } = {}) {
-    const temColunaAssinatura = Boolean(
-        assinatura?.possuiColunaAssinatura ||
+    const documentoColetivo = Boolean(
         conferencia?.listaPresenca ||
         conferencia?.lista_presenca ||
         conferencia?.documentoColetivo ||
         conferencia?.documento_coletivo
     );
-    const visualLocalizada = assinatura?.visualLocalizada === true ||
+
+    const ehFichaEpi = String(conferencia?.perfilDocumental || conferencia?.perfil_documental || "").toLowerCase() === "ficha_epi";
+
+    const observacaoAssinatura = assinatura?.observacao || "";
+    const assinaturaAplicavel = Boolean(
+        assinatura?.aplicavel ||
+        assinatura?.possuiColunaAssinatura ||
+        documentoColetivo ||
+        ehFichaEpi
+    );
+
+    const visualLocalizada = Boolean(
+        assinatura?.visualLocalizada === true ||
         assinatura?.visual_localizada === true ||
-        textoContemAssinaturaLocalizada(assinatura?.observacao || "");
-    const assinaturaAplicavel = Boolean(temColunaAssinatura || assinatura?.aplicavel);
-    const detalheVisual = conferencia?.listaPresenca || conferencia?.lista_presenca || conferencia?.documentoColetivo || conferencia?.documento_coletivo
+        assinatura?.localizada === true ||
+        assinatura?.encontrada === true ||
+        textoContemAssinaturaLocalizada(observacaoAssinatura) ||
+        (ehFichaEpi && /assinatura|linha do colaborador|visual localizada|localizada/i.test(observacaoAssinatura))
+    );
+
+    const detalheVisual = documentoColetivo && !ehFichaEpi
         ? "Assinatura aplicável em documento coletivo. Conferir visualmente a assinatura na linha do colaborador."
         : "Assinatura visual localizada na linha do colaborador.";
 
@@ -610,11 +633,15 @@ function obterStatusAssinaturaConsolidado({ assinatura = {}, conferencia = {} } 
 
     if (assinaturaAplicavel) {
         return {
-            valor: null,
+            valor: ehFichaEpi ? true : null,
             textoSim: "Localizada",
             textoNao: "Não confirmada",
             textoNa: "Conferir visualmente",
-            detalhe: detalheVisual,
+            detalhe: ehFichaEpi
+                ? "Assinatura visual localizada na linha do colaborador."
+                : (documentoColetivo
+                    ? "Assinatura aplicável em documento coletivo. Conferir visualmente a assinatura na linha do colaborador."
+                    : "Conferir visualmente a assinatura do colaborador."),
         };
     }
 
@@ -626,7 +653,6 @@ function obterStatusAssinaturaConsolidado({ assinatura = {}, conferencia = {} } 
         detalhe: "Conferência visual automática da área de assinatura.",
     };
 }
-
 function obterStatusColaboradorConsolidado({ colaborador = {}, conferencia = {}, indicios = [] } = {}) {
     const documentoColetivo = Boolean(
         conferencia?.listaPresenca ||
@@ -893,12 +919,13 @@ export function VerificacaoCertificadoTreinamento({ certificado = {} }) {
             const statusValidacao = converterStatusVerificacaoParaStatusCertificado(resultado?.statusVerificacao);
             const dataRealizacaoVerificada = resultado?.data_realizacao || resultado?.dataRealizacao || "";
             const ehFichaRegistro = ehFichaRegistroPainelCertificado({ certificado: certificadoParaVerificacao, treinamento });
+            const ehFichaEpi = ehFichaEpiPainelCertificado({ certificado: certificadoParaVerificacao, treinamento });
             const atualizacaoCertificado = {
                 status_validacao: statusValidacao,
             };
 
-            if (ehFichaRegistro && dataRealizacaoVerificada) {
-                atualizacaoCertificado.data_realizacao = dataRealizacaoVerificada;
+            if (ehFichaRegistro || ehFichaEpi) {
+                atualizacaoCertificado.data_realizacao = dataRealizacaoVerificada || null;
                 atualizacaoCertificado.data_vencimento = null;
             }
 
@@ -914,7 +941,7 @@ export function VerificacaoCertificadoTreinamento({ certificado = {} }) {
             setVerificacao(resultado);
             setStatusAtualValidacao(statusValidacao);
 
-            if (typeof window !== "undefined" && ehFichaRegistro) {
+            if (typeof window !== "undefined" && (ehFichaRegistro || ehFichaEpi)) {
                 window.dispatchEvent(new CustomEvent("certificado-data-atualizada", {
                     detail: {
                         id: certificadoId,
