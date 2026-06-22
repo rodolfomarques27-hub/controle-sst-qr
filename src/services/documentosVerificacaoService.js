@@ -1633,7 +1633,6 @@ function documentoContemTreinamento({ texto = "", treinamento = {}, certificado 
         10: [/\bnr\s*33\b/, /espaco confinado|espaÃƒÂ§o confinado/],
         11: [/\bnr\s*11\b/, /transporte movimentacao|transporte movimentaÃƒÂ§ÃƒÂ£o/, /movimentacao armazenagem|movimentaÃƒÂ§ÃƒÂ£o armazenagem/, /manuseio de materiais/],
         12: [/escavacao|escavaÃƒÂ§ÃƒÂ£o|abertura de valas|vala|valas/],
-        13: [/procedimento operacional|ordem de servico|ordem de serviÃƒÂ§o/],
         14: [/ficha de epi|controle de entrega de epi|entrega de epi|equipamento de protecao individual|equipamento de proteÃƒÂ§ÃƒÂ£o individual/],
         15: [/ordem de servico|ordem de serviÃƒÂ§o|seguranca e saude do trabalho|seguranÃƒÂ§a e saÃƒÂºde do trabalho/],
         16: [/\bnr\s*21\b/, /trabalho a ceu aberto|trabalho a cÃƒÂ©u aberto/, /protetor solar|protecao solar|proteÃƒÂ§ÃƒÂ£o solar/],

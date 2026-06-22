@@ -406,7 +406,7 @@ export function inferirTreinamentoPorNomeArquivo(nomeArquivo = "") {
 
     if (ehNr06) return obterTreinamento(8);
 
-    if (contem("procedimento operacional", "procedimento da funcao", "procedimento da função")) return obterTreinamento(13);
+    if (contem("procedimento operacional", "procedimento da funcao", "procedimento da função")) return obterTreinamento(15);
 
     if (contem("nr 10", "nr10", "nr-10")) return obterTreinamento(4);
     if (contem("nr 11", "nr11", "nr-11")) return obterTreinamento(11);
