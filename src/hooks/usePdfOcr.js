@@ -195,6 +195,45 @@ function montarLinhaReconhecida({ texto, line, pagina, indiceGlobal, canvas }) {
   };
 }
 
+function calcularDiagnosticoOcr({ paginas, linhas, textoCamadaTotal, isPdfEscaneado }) {
+  const linhasSeguras = Array.isArray(linhas) ? linhas : [];
+  const textoCamada = typeof textoCamadaTotal === "string" ? textoCamadaTotal : "";
+  const totalLinhasOcr = linhasSeguras.length;
+  const totalLinhasComBbox = linhasSeguras.filter((linha) => Boolean(linha?.bbox)).length;
+  const totalLinhasSemBbox = totalLinhasOcr - totalLinhasComBbox;
+  const totalLinhasComConfianca = linhasSeguras.filter((linha) => Number.isFinite(Number(linha?.confianca))).length;
+  const somaConfianca = linhasSeguras.reduce((acumulado, linha) => {
+    const confianca = Number(linha?.confianca);
+    return Number.isFinite(confianca) ? acumulado + confianca : acumulado;
+  }, 0);
+  const mediaConfiancaLinhas = totalLinhasComConfianca > 0 ? somaConfianca / totalLinhasComConfianca : 0;
+  const totalLinhasComAssinaturaVisual = linhasSeguras.filter((linha) => Boolean(linha?.assinatura_visual)).length;
+  const amostraLinhas = linhasSeguras.slice(0, 10).map((linha) => ({
+    pagina: linha?.pagina ?? null,
+    indice: linha?.indice ?? null,
+    texto: linha?.texto ?? "",
+    nome: linha?.nome ?? "",
+    funcao: linha?.funcao ?? "",
+    confianca: Number.isFinite(Number(linha?.confianca)) ? Number(linha?.confianca) : null,
+    bbox: linha?.bbox ?? null,
+    assinatura_visual: Boolean(linha?.assinatura_visual),
+  }));
+
+  return {
+    totalPaginas: Array.isArray(paginas) ? paginas.length : 0,
+    totalLinhasOcr,
+    totalLinhasComBbox,
+    totalLinhasSemBbox,
+    totalLinhasComConfianca,
+    mediaConfiancaLinhas,
+    totalLinhasComAssinaturaVisual,
+    temCamadaTexto: textoCamada.trim().length > 0,
+    tamanhoTextoCamada: textoCamada.length,
+    isPdfEscaneado: Boolean(isPdfEscaneado),
+    amostraLinhas,
+  };
+}
+
 export async function executarPdfOcrArquivo(arquivo, opcoes = {}) {
   const { onProgresso } = opcoes || {};
 
@@ -301,6 +340,13 @@ export async function executarPdfOcrArquivo(arquivo, opcoes = {}) {
       onProgresso(1);
     }
 
+    const diagnosticoOcr = calcularDiagnosticoOcr({
+      paginas,
+      linhas,
+      textoCamadaTotal,
+      isPdfEscaneado,
+    });
+
     return {
       resultado: linhas,
       paginas,
@@ -309,6 +355,7 @@ export async function executarPdfOcrArquivo(arquivo, opcoes = {}) {
       paginaTotal: totalPaginas,
       isPdfEscaneado,
       progresso: 1,
+      diagnosticoOcr,
     };
   } finally {
     await worker.terminate().catch(() => {});
