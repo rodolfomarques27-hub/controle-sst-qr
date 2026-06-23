@@ -195,6 +195,159 @@ function montarLinhaReconhecida({ texto, line, pagina, indiceGlobal, canvas }) {
   };
 }
 
+function normalizarBboxOcr(bbox) {
+  if (!bbox || typeof bbox !== "object") {
+    return null;
+  }
+
+  const x0 = Number(bbox.x0);
+  const y0 = Number(bbox.y0);
+  const x1 = Number(bbox.x1);
+  const y1 = Number(bbox.y1);
+
+  if (![x0, y0, x1, y1].every((valor) => Number.isFinite(valor))) {
+    return null;
+  }
+
+  const largura = Math.max(0, x1 - x0);
+  const altura = Math.max(0, y1 - y0);
+
+  return {
+    x0,
+    y0,
+    x1,
+    y1,
+    largura,
+    altura,
+    centroX: x0 + largura / 2,
+    centroY: y0 + altura / 2,
+  };
+}
+
+function calcularDiagnosticoEstruturalOcr(linhas) {
+  const linhasSeguras = Array.isArray(linhas) ? linhas : [];
+  const linhasComCoordenadas = linhasSeguras
+    .map((linha, indice) => {
+      const bbox = normalizarBboxOcr(linha?.bbox);
+      return bbox ? { linha, bbox, indice } : null;
+    })
+    .filter(Boolean);
+
+  const totalLinhasComCoordenadas = linhasComCoordenadas.length;
+  const totalLinhasSemCoordenadas = linhasSeguras.length - totalLinhasComCoordenadas;
+
+  const xValores = linhasComCoordenadas.flatMap(({ bbox }) => [bbox.x0, bbox.x1]);
+  const yValores = linhasComCoordenadas.flatMap(({ bbox }) => [bbox.y0, bbox.y1]);
+  const xMin = xValores.length ? Math.min(...xValores) : null;
+  const xMax = xValores.length ? Math.max(...xValores) : null;
+  const yMin = yValores.length ? Math.min(...yValores) : null;
+  const yMax = yValores.length ? Math.max(...yValores) : null;
+
+  const larguraEstimativa = Number.isFinite(xMin) && Number.isFinite(xMax) ? Math.max(0, xMax - xMin) : null;
+  const alturaEstimativa = Number.isFinite(yMin) && Number.isFinite(yMax) ? Math.max(0, yMax - yMin) : null;
+
+  const distribPorEixo = (valor, minimo, maximo) => {
+    if (!Number.isFinite(valor) || !Number.isFinite(minimo) || !Number.isFinite(maximo) || maximo <= minimo) {
+      return { esquerda: 0, centro: 0, direita: 0 };
+    }
+
+    const proporcao = (valor - minimo) / (maximo - minimo || 1);
+    if (proporcao <= 1 / 3) {
+      return { esquerda: 1, centro: 0, direita: 0 };
+    }
+    if (proporcao <= 2 / 3) {
+      return { esquerda: 0, centro: 1, direita: 0 };
+    }
+    return { esquerda: 0, centro: 0, direita: 1 };
+  };
+
+  const distribuicaoHorizontal = linhasComCoordenadas.reduce(
+    (acumulado, { bbox }) => {
+      const atual = distribPorEixo(bbox.centroX, xMin, xMax);
+      return {
+        esquerda: acumulado.esquerda + atual.esquerda,
+        centro: acumulado.centro + atual.centro,
+        direita: acumulado.direita + atual.direita,
+      };
+    },
+    { esquerda: 0, centro: 0, direita: 0 },
+  );
+
+  const distribuicaoVertical = linhasComCoordenadas.reduce(
+    (acumulado, { bbox }) => {
+      const atual = distribPorEixo(bbox.centroY, yMin, yMax);
+      return {
+        topo: acumulado.topo + atual.esquerda,
+        meio: acumulado.meio + atual.centro,
+        base: acumulado.base + atual.direita,
+      };
+    },
+    { topo: 0, meio: 0, base: 0 },
+  );
+
+  const linhasPorPagina = linhasComCoordenadas.reduce((mapa, item) => {
+    const pagina = Number(item?.linha?.pagina || 0) || 0;
+    mapa.set(pagina, (mapa.get(pagina) || 0) + 1);
+    return mapa;
+  }, new Map());
+
+  const paginas = Array.from(linhasPorPagina.entries())
+    .sort((a, b) => a[0] - b[0])
+    .slice(0, 10)
+    .map(([pagina, totalLinhasPagina]) => ({ pagina, totalLinhasPagina }));
+
+  const regioesProvaveis = {
+    numero: { inicio: 0, fim: 15 },
+    nome: { inicio: 15, fim: 55 },
+    funcao: { inicio: 55, fim: 75 },
+    assinatura: { inicio: 75, fim: 100 },
+  };
+
+  const amostraEstrutural = linhasComCoordenadas.slice(0, 10).map(({ linha, bbox, indice }) => {
+    let regiaoProvavel = "nome";
+    if (Number.isFinite(bbox.centroX) && Number.isFinite(xMin) && Number.isFinite(xMax) && xMax > xMin) {
+      const percentual = ((bbox.centroX - xMin) / (xMax - xMin)) * 100;
+      if (percentual <= 15) {
+        regiaoProvavel = "numero";
+      } else if (percentual <= 55) {
+        regiaoProvavel = "nome";
+      } else if (percentual <= 75) {
+        regiaoProvavel = "funcao";
+      } else {
+        regiaoProvavel = "assinatura";
+      }
+    }
+
+    return {
+      pagina: linha?.pagina ?? null,
+      indice: Number.isFinite(indice) ? indice : null,
+      texto: linha?.texto ?? "",
+      bbox,
+      regiaoProvavel,
+      assinatura_visual: Boolean(linha?.assinatura_visual),
+      confianca: Number.isFinite(Number(linha?.confianca)) ? Number(linha?.confianca) : null,
+    };
+  });
+
+  return {
+    totalLinhasComCoordenadas,
+    totalLinhasSemCoordenadas,
+    limitesGerais: {
+      xMin,
+      xMax,
+      yMin,
+      yMax,
+      larguraEstimativa,
+      alturaEstimativa,
+    },
+    distribuicaoHorizontal,
+    distribuicaoVertical,
+    paginas,
+    regioesProvaveis,
+    amostraEstrutural,
+  };
+}
+
 function calcularDiagnosticoOcr({ paginas, linhas, textoCamadaTotal, isPdfEscaneado }) {
   const linhasSeguras = Array.isArray(linhas) ? linhas : [];
   const textoCamada = typeof textoCamadaTotal === "string" ? textoCamadaTotal : "";
@@ -231,6 +384,7 @@ function calcularDiagnosticoOcr({ paginas, linhas, textoCamadaTotal, isPdfEscane
     tamanhoTextoCamada: textoCamada.length,
     isPdfEscaneado: Boolean(isPdfEscaneado),
     amostraLinhas,
+    diagnosticoEstrutural: calcularDiagnosticoEstruturalOcr(linhasSeguras),
   };
 }
 
