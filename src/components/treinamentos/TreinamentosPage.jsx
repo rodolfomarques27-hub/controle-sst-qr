@@ -14,6 +14,7 @@ import { validarArquivoAntesUpload, validarListaArquivosAntesUpload } from "../F
 import { AlertasTstTreinamentos } from "./AlertasTstTreinamentos";
 import { BaseCertificadosTreinamentos } from "./BaseCertificadosTreinamentos";
 import { FormularioLancamentoCertificado } from "./FormularioLancamentoCertificado";
+import VerificadorListaPresenca from "../VerificadorListaPresenca";
 import {
     avaliarTreinamentosColaborador,
     statusGeral,
@@ -85,15 +86,17 @@ function normalizarDataLancamentoCertificado(data) {
 const cardsTreinamentosPadrao = {
     filtros: false,
     lancamento: false,
+    listaPresenca: false,
     alertas: false,
     base: false,
 };
 
-const ordemCardsTreinamentosPadrao = ["filtros", "lancamento", "alertas", "base"];
+const ordemCardsTreinamentosPadrao = ["filtros", "lancamento", "listaPresenca", "alertas", "base"];
 
 const tamanhosCardsTreinamentosPadrao = {
     filtros: "full",
     lancamento: "medio",
+    listaPresenca: "full",
     alertas: "medio",
     base: "full",
 };
@@ -326,11 +329,11 @@ export function Treinamentos({
     };
 
     const abrirTodosCardsTreinamentos = () => {
-        setCardsTreinamentosRecolhidos({ filtros: false, lancamento: false, alertas: false, base: false });
+        setCardsTreinamentosRecolhidos({ filtros: false, lancamento: false, listaPresenca: false, alertas: false, base: false });
     };
 
     const recolherTodosCardsTreinamentos = () => {
-        setCardsTreinamentosRecolhidos({ filtros: true, lancamento: true, alertas: true, base: true });
+        setCardsTreinamentosRecolhidos({ filtros: true, lancamento: true, listaPresenca: true, alertas: true, base: true });
     };
 
     const restaurarPainelTreinamentos = () => {
@@ -1183,6 +1186,7 @@ export function Treinamentos({
     const opcoesPainelTreinamentos = [
         { chave: "filtros", titulo: "Filtros da base", descricao: "Busca e status dos certificados." },
         { chave: "lancamento", titulo: "Lançar certificado", descricao: "Envio individual e em lote." },
+        { chave: "listaPresenca", titulo: "Verificador de lista de presença", descricao: "OCR local para conferir assinatura em listas." },
         { chave: "alertas", titulo: "Alertas para TST", descricao: "Pendências agrupadas por empresa." },
         { chave: "base", titulo: "Base de certificados", descricao: "Lista e revisão dos documentos." },
     ];
@@ -1435,6 +1439,16 @@ export function Treinamentos({
                         );
                     }
 
+                    if (chave === "listaPresenca") {
+                        return (
+                            <div key={chave} className={classePainel} style={estiloPainel}>
+                                <VerificadorListaPresenca
+                                    colaboradores={colaboradores}
+                                    colaboradorId={colabSelecionadoId || colaboradorInicialId}
+                                />
+                            </div>
+                        );
+                    }
                     if (chave === "alertas") {
                         return (
                             <div key={chave} className={classePainel} style={estiloPainel}>
