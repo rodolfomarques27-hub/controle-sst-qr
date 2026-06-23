@@ -177,6 +177,7 @@ function montarLinhaReconhecida({ texto, line, pagina, indiceGlobal, canvas }) {
   const numero = identificarNumeroLinha(textoLimpo);
   const funcao = identificarFuncao(textoLimpo);
   const nome = extrairNomeLinha(textoLimpo);
+  const bboxLinha = extrairBboxLinhaOcr(line);
 
   return {
     indice: indiceGlobal,
@@ -190,7 +191,7 @@ function montarLinhaReconhecida({ texto, line, pagina, indiceGlobal, canvas }) {
     assinou: assinaturaVisual,
     assinatura_visual: assinaturaVisual,
     confianca,
-    bbox: line?.bbox || null,
+    bbox: bboxLinha,
     textoCamada: "",
   };
 }
@@ -222,6 +223,83 @@ function normalizarBboxOcr(bbox) {
     centroX: x0 + largura / 2,
     centroY: y0 + altura / 2,
   };
+}
+
+function extrairBboxDiretoOcr(origem) {
+  if (!origem || typeof origem !== "object") {
+    return null;
+  }
+
+  const bboxOrigem = origem?.bbox && typeof origem.bbox === "object" ? origem.bbox : null;
+  const x0 = Number(origem?.x0 ?? bboxOrigem?.x0 ?? bboxOrigem?.left ?? origem?.left ?? null);
+  const y0 = Number(origem?.y0 ?? bboxOrigem?.y0 ?? bboxOrigem?.top ?? origem?.top ?? null);
+
+  let x1 = Number(origem?.x1 ?? bboxOrigem?.x1 ?? bboxOrigem?.right ?? origem?.right ?? null);
+  let y1 = Number(origem?.y1 ?? bboxOrigem?.y1 ?? bboxOrigem?.bottom ?? origem?.bottom ?? null);
+
+  const width = Number(origem?.width ?? bboxOrigem?.width ?? null);
+  const height = Number(origem?.height ?? bboxOrigem?.height ?? null);
+
+  if ((!Number.isFinite(x1) || !Number.isFinite(y1)) && Number.isFinite(x0) && Number.isFinite(y0)) {
+    if (Number.isFinite(width) && Number.isFinite(height)) {
+      x1 = x0 + width;
+      y1 = y0 + height;
+    }
+  }
+
+  if (!Number.isFinite(x0) || !Number.isFinite(y0) || !Number.isFinite(x1) || !Number.isFinite(y1)) {
+    return null;
+  }
+
+  const bboxNormalizado = normalizarBboxOcr({ x0, y0, x1, y1 });
+  if (!bboxNormalizado) {
+    return null;
+  }
+
+  return {
+    x0: bboxNormalizado.x0,
+    y0: bboxNormalizado.y0,
+    x1: bboxNormalizado.x1,
+    y1: bboxNormalizado.y1,
+  };
+}
+
+function unirBboxesOcr(bboxes) {
+  const bboxesValidos = (Array.isArray(bboxes) ? bboxes : [])
+    .map((bbox) => normalizarBboxOcr(bbox))
+    .filter(Boolean);
+
+  if (!bboxesValidos.length) {
+    return null;
+  }
+
+  return {
+    x0: Math.min(...bboxesValidos.map((bbox) => bbox.x0)),
+    y0: Math.min(...bboxesValidos.map((bbox) => bbox.y0)),
+    x1: Math.max(...bboxesValidos.map((bbox) => bbox.x1)),
+    y1: Math.max(...bboxesValidos.map((bbox) => bbox.y1)),
+  };
+}
+
+function extrairBboxLinhaOcr(line) {
+  const bboxDireto = extrairBboxDiretoOcr(line);
+  if (bboxDireto) {
+    return bboxDireto;
+  }
+
+  const colecoes = [line?.words, line?.children, line?.symbols].filter(Array.isArray);
+  const bboxes = [];
+
+  for (const colecao of colecoes) {
+    for (const item of colecao) {
+      const bboxItem = extrairBboxDiretoOcr(item);
+      if (bboxItem) {
+        bboxes.push(bboxItem);
+      }
+    }
+  }
+
+  return unirBboxesOcr(bboxes);
 }
 
 function calcularDiagnosticoEstruturalOcr(linhas) {
@@ -722,7 +800,7 @@ export async function executarPdfOcrArquivo(arquivo, opcoes = {}) {
         linhasTexto.forEach((textoLinha, indiceLinha) => {
           const linha = montarLinhaReconhecida({
             texto: textoLinha,
-            line: { confidence: 0, bbox: null },
+            line: { confidence: 0, bbox: null, words: [] },
             pagina: paginaAtual,
             indiceGlobal: linhas.length + indiceLinha + 1,
             canvas,
