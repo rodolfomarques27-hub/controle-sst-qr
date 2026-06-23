@@ -167,6 +167,13 @@ export default function VerificadorListaPresenca({
   const mediaConfiancaLinhas = Math.round(Number(diagnosticoOcr?.mediaConfiancaLinhas || 0));
   const totalLinhasComAssinaturaVisual = Number(diagnosticoOcr?.totalLinhasComAssinaturaVisual || 0);
   const tamanhoTextoCamada = Number(diagnosticoOcr?.tamanhoTextoCamada || 0);
+  const diagnosticoEstruturalOcr = diagnosticoOcr?.diagnosticoEstrutural || {};
+  const limitesGeraisOcr = diagnosticoEstruturalOcr?.limitesGerais || null;
+  const distribuicaoHorizontalOcr = diagnosticoEstruturalOcr?.distribuicaoHorizontal || {};
+  const distribuicaoVerticalOcr = diagnosticoEstruturalOcr?.distribuicaoVertical || {};
+  const paginasEstruturaisOcr = Array.isArray(diagnosticoEstruturalOcr?.paginas) ? diagnosticoEstruturalOcr.paginas : [];
+  const regioesProvaveisOcr = diagnosticoEstruturalOcr?.regioesProvaveis || {};
+  const amostraEstruturalOcr = Array.isArray(diagnosticoEstruturalOcr?.amostraEstrutural) ? diagnosticoEstruturalOcr.amostraEstrutural : [];
   const participantesTabelaConfiaveis = useMemo(() => participantesTabelaBase, [participantesTabelaBase]);
   const resultadoTabelaPdfComparadaValida = resultadoTabelaPdfComparada?.origem === "pdf_tabela_interna_comparada" ? resultadoTabelaPdfComparada : null;
   const resumoComparacaoTabela = resultadoTabelaPdfComparadaValida?.resumo || null;
@@ -616,6 +623,146 @@ export default function VerificadorListaPresenca({
                 Nenhuma amostra técnica disponível.
               </div>
             )}
+          <div className="border-t border-slate-200 px-4 py-4">
+            <div className="mb-3">
+              <h4 className="text-sm font-semibold text-slate-900">Diagnóstico estrutural OCR</h4>
+              <p className="text-xs text-slate-500">
+                Distribuição aproximada das linhas por coordenadas. Uso apenas técnico, sem alterar aprovação automática.
+              </p>
+            </div>
+
+            <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+              <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
+                <p className="text-xs uppercase tracking-wide text-slate-500">Linhas com coordenadas</p>
+                <p className="mt-1 text-sm font-semibold text-slate-900">{Number(diagnosticoEstruturalOcr?.totalLinhasComCoordenadas || 0)}</p>
+              </div>
+
+              <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
+                <p className="text-xs uppercase tracking-wide text-slate-500">Linhas sem coordenadas</p>
+                <p className="mt-1 text-sm font-semibold text-slate-900">{Number(diagnosticoEstruturalOcr?.totalLinhasSemCoordenadas || 0)}</p>
+              </div>
+
+              <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
+                <p className="text-xs uppercase tracking-wide text-slate-500">Horizontal</p>
+                <p className="mt-1 text-sm font-semibold text-slate-900">
+                  E {Number(distribuicaoHorizontalOcr?.esquerda || 0)} / C {Number(distribuicaoHorizontalOcr?.centro || 0)} / D {Number(distribuicaoHorizontalOcr?.direita || 0)}
+                </p>
+              </div>
+
+              <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
+                <p className="text-xs uppercase tracking-wide text-slate-500">Vertical</p>
+                <p className="mt-1 text-sm font-semibold text-slate-900">
+                  T {Number(distribuicaoVerticalOcr?.topo || 0)} / M {Number(distribuicaoVerticalOcr?.meio || 0)} / B {Number(distribuicaoVerticalOcr?.base || 0)}
+                </p>
+              </div>
+
+              <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
+                <p className="text-xs uppercase tracking-wide text-slate-500">Limites X</p>
+                <p className="mt-1 text-sm font-semibold text-slate-900">
+                  {Number.isFinite(Number(limitesGeraisOcr?.xMin)) && Number.isFinite(Number(limitesGeraisOcr?.xMax))
+                    ? `${Math.round(Number(limitesGeraisOcr.xMin))} - ${Math.round(Number(limitesGeraisOcr.xMax))}`
+                    : "-"}
+                </p>
+              </div>
+
+              <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
+                <p className="text-xs uppercase tracking-wide text-slate-500">Limites Y</p>
+                <p className="mt-1 text-sm font-semibold text-slate-900">
+                  {Number.isFinite(Number(limitesGeraisOcr?.yMin)) && Number.isFinite(Number(limitesGeraisOcr?.yMax))
+                    ? `${Math.round(Number(limitesGeraisOcr.yMin))} - ${Math.round(Number(limitesGeraisOcr.yMax))}`
+                    : "-"}
+                </p>
+              </div>
+            </div>
+
+            {paginasEstruturaisOcr.length ? (
+              <div className="mt-4 overflow-x-auto rounded-xl border border-slate-200">
+                <table className="min-w-full divide-y divide-slate-200 text-left text-sm">
+                  <thead className="bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
+                    <tr>
+                      <th className="px-4 py-3">Páginas analisadas</th>
+                      <th className="px-4 py-3">Linhas</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100 bg-white">
+                    {paginasEstruturaisOcr.map((pagina, indice) => (
+                      <tr key={`${pagina?.pagina ?? "p"}-${indice}`}>
+                        <td className="px-4 py-3 text-slate-700">{pagina?.pagina ?? "-"}</td>
+                        <td className="px-4 py-3 text-slate-700">{pagina?.totalLinhasPagina ?? pagina?.totalLinhas ?? "-"}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            ) : null}
+
+            <div className="mt-4 overflow-x-auto rounded-xl border border-slate-200">
+              <table className="min-w-full divide-y divide-slate-200 text-left text-sm">
+                <thead className="bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
+                  <tr>
+                    <th className="px-4 py-3">Região</th>
+                    <th className="px-4 py-3">Início</th>
+                    <th className="px-4 py-3">Fim</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100 bg-white">
+                  {[
+                    ["Nº", regioesProvaveisOcr?.numero],
+                    ["Nome", regioesProvaveisOcr?.nome],
+                    ["Função", regioesProvaveisOcr?.funcao],
+                    ["Assinatura", regioesProvaveisOcr?.assinatura],
+                  ].map(([rotulo, regiao]) => (
+                    <tr key={rotulo}>
+                      <td className="px-4 py-3 font-medium text-slate-900">{rotulo}</td>
+                      <td className="px-4 py-3 text-slate-700">
+                        {regiao && Number.isFinite(Number(regiao.inicio))
+                          ? `${Math.round(Number(regiao.inicio))}%`
+                          : "-"}
+                      </td>
+                      <td className="px-4 py-3 text-slate-700">
+                        {regiao && Number.isFinite(Number(regiao.fim))
+                          ? `${Math.round(Number(regiao.fim))}%`
+                          : "-"}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            {amostraEstruturalOcr.length ? (
+              <div className="mt-4 overflow-x-auto rounded-xl border border-slate-200">
+                <table className="min-w-full divide-y divide-slate-200 text-left text-sm">
+                  <thead className="bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
+                    <tr>
+                      <th className="px-4 py-3">Página</th>
+                      <th className="px-4 py-3">Índice</th>
+                      <th className="px-4 py-3">Texto</th>
+                      <th className="px-4 py-3">Região provável</th>
+                      <th className="px-4 py-3">Bbox</th>
+                      <th className="px-4 py-3">Assinatura visual</th>
+                      <th className="px-4 py-3">Confiança</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100 bg-white">
+                    {amostraEstruturalOcr.map((item, indice) => (
+                      <tr key={`${item?.pagina ?? "p"}-${item?.indice ?? indice}`}>
+                        <td className="px-4 py-3 text-slate-700">{item?.pagina ?? "-"}</td>
+                        <td className="px-4 py-3 text-slate-700">{item?.indice ?? "-"}</td>
+                        <td className="px-4 py-3 text-slate-700">
+                          <div className="max-w-[22rem] break-words">{item?.texto || "-"}</div>
+                        </td>
+                        <td className="px-4 py-3 text-slate-700">{item?.regiaoProvavel || "-"}</td>
+                        <td className="px-4 py-3 text-slate-700">{formatarBboxCurto(item?.bbox)}</td>
+                        <td className="px-4 py-3 text-slate-700">{item?.assinatura_visual ? "Sim" : "Não"}</td>
+                        <td className="px-4 py-3 text-slate-700">{Math.round(Number(item?.confianca || 0))}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            ) : null}
+          </div>
           </div>
         </div>
       ) : null}
