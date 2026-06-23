@@ -708,7 +708,133 @@ function calcularDiagnosticoSegmentacaoOcr(linhas) {
   };
 }
 
-function calcularDiagnosticoOcr({ paginas, linhas, textoCamadaTotal, isPdfEscaneado }) {
+function contarBboxesValidosOcr(itens) {
+  if (!Array.isArray(itens)) {
+    return {
+      total: 0,
+      totalComBboxBruto: 0,
+      totalComBboxValido: 0,
+      totalComBboxInvalido: 0,
+    };
+  }
+
+  const total = itens.length;
+  const totalComBboxBruto = itens.filter((item) => {
+    if (!item || typeof item !== "object") {
+      return false;
+    }
+
+    return Boolean(
+      item?.bbox ||
+      item?.x0 !== undefined ||
+      item?.y0 !== undefined ||
+      item?.x1 !== undefined ||
+      item?.y1 !== undefined ||
+      item?.left !== undefined ||
+      item?.top !== undefined ||
+      item?.right !== undefined ||
+      item?.bottom !== undefined ||
+      item?.width !== undefined ||
+      item?.height !== undefined ||
+      item?.x !== undefined ||
+      item?.y !== undefined,
+    );
+  }).length;
+
+  const totalComBboxValido = itens.filter((item) => Boolean(extrairBboxDiretoOcr(item))).length;
+
+  return {
+    total,
+    totalComBboxBruto,
+    totalComBboxValido,
+    totalComBboxInvalido: totalComBboxBruto - totalComBboxValido,
+  };
+}
+
+function calcularDiagnosticoEstruturaBrutaOcr(ocr) {
+  const texto = String(ocr?.text || "");
+  const lines = Array.isArray(ocr?.lines) ? ocr.lines : [];
+  const words = Array.isArray(ocr?.words) ? ocr.words : [];
+  const blocks = Array.isArray(ocr?.blocks) ? ocr.blocks : [];
+  const paragraphs = Array.isArray(ocr?.paragraphs) ? ocr.paragraphs : [];
+  const symbols = Array.isArray(ocr?.symbols) ? ocr.symbols : [];
+  const linhas = contarBboxesValidosOcr(lines);
+  const palavras = contarBboxesValidosOcr(words);
+  const blocos = contarBboxesValidosOcr(blocks);
+  const paragrafos = contarBboxesValidosOcr(paragraphs);
+  const simbolos = contarBboxesValidosOcr(symbols);
+
+  return {
+    temTextoOcr: Boolean(texto && texto.trim()),
+    tamanhoTextoOcr: texto.length,
+    totalLines: lines.length,
+    totalWords: words.length,
+    totalBlocks: blocks.length,
+    totalParagraphs: paragraphs.length,
+    totalSymbols: symbols.length,
+    linesComBboxBruto: linhas.totalComBboxBruto,
+    linesComBboxValido: linhas.totalComBboxValido,
+    linesComBboxInvalido: linhas.totalComBboxInvalido,
+    wordsComBboxBruto: palavras.totalComBboxBruto,
+    wordsComBboxValido: palavras.totalComBboxValido,
+    wordsComBboxInvalido: palavras.totalComBboxInvalido,
+    blocksComBboxValido: blocos.totalComBboxValido,
+    paragraphsComBboxValido: paragrafos.totalComBboxValido,
+    symbolsComBboxValido: simbolos.totalComBboxValido,
+    chavesDisponiveis: Object.keys(ocr || {}).slice(0, 30),
+  };
+}
+
+function calcularOrigemLeituraOcr({ textoCamadaTotal, isPdfEscaneado, diagnosticosEstruturaBruta }) {
+  const diagnosticos = Array.isArray(diagnosticosEstruturaBruta) ? diagnosticosEstruturaBruta : [];
+  const temCamadaTexto = String(textoCamadaTotal || "").trim().length > 0;
+  const temOcrTexto = diagnosticos.some((diagnostico) => Boolean(diagnostico?.temTextoOcr));
+  const temOcrEstruturado = diagnosticos.some((diagnostico) => Number(diagnostico?.totalLines || 0) > 0 || Number(diagnostico?.totalWords || 0) > 0);
+  const temBboxValido = diagnosticos.some((diagnostico) => Number(diagnostico?.linesComBboxValido || 0) > 0 || Number(diagnostico?.wordsComBboxValido || 0) > 0);
+  const usouFallbackTexto = diagnosticos.some((diagnostico) => Boolean(diagnostico?.usouFallbackTexto));
+
+  let origemLeitura = "indefinida";
+  if (temCamadaTexto && temOcrTexto && !temBboxValido) {
+    origemLeitura = "pdf_text_layer_com_ocr_texto";
+  } else if (temBboxValido) {
+    origemLeitura = "ocr_estruturado_com_bbox";
+  } else if (temOcrTexto && !temBboxValido) {
+    origemLeitura = "ocr_texto_sem_bbox";
+  } else if (temCamadaTexto && !temOcrTexto) {
+    origemLeitura = "pdf_text_layer";
+  }
+
+  let origemDescricao = "Origem da leitura não identificada com segurança.";
+  let recomendacaoTecnica = "Origem da leitura não identificada com segurança.";
+
+  if (origemLeitura === "pdf_text_layer_com_ocr_texto") {
+    origemDescricao = "Camada de texto do PDF e OCR experimental com texto, sem coordenadas úteis.";
+    recomendacaoTecnica = "Priorizar tabela interna do PDF. OCR experimental está lendo texto, mas sem coordenadas úteis.";
+  } else if (origemLeitura === "ocr_estruturado_com_bbox") {
+    origemDescricao = "OCR experimental com texto e coordenadas válidas.";
+    recomendacaoTecnica = "OCR possui coordenadas válidas para segmentação.";
+  } else if (origemLeitura === "ocr_texto_sem_bbox") {
+    origemDescricao = "OCR experimental retornou texto sem coordenadas válidas.";
+    recomendacaoTecnica = "OCR retornou texto sem coordenadas válidas. Usar apenas como apoio.";
+  } else if (origemLeitura === "pdf_text_layer") {
+    origemDescricao = "PDF com camada de texto detectada.";
+    recomendacaoTecnica = "PDF possui camada de texto. Priorizar leitura interna do PDF.";
+  }
+
+  return {
+    origemLeitura,
+    origemDescricao,
+    temCamadaTexto,
+    temOcrTexto,
+    temOcrEstruturado,
+    temBboxValido,
+    usouFallbackTexto,
+    recomendacaoTecnica,
+    isPdfEscaneado: Boolean(isPdfEscaneado),
+  };
+}
+
+function calcularDiagnosticoOcr({ paginas, linhas, textoCamadaTotal, isPdfEscaneado, diagnosticosEstruturaBruta }) {
   const linhasSeguras = Array.isArray(linhas) ? linhas : [];
   const textoCamada = typeof textoCamadaTotal === "string" ? textoCamadaTotal : "";
   const totalLinhasOcr = linhasSeguras.length;
@@ -749,6 +875,33 @@ function calcularDiagnosticoOcr({ paginas, linhas, textoCamadaTotal, isPdfEscane
     amostraLinhas,
     diagnosticoEstrutural: calcularDiagnosticoEstruturalOcr(linhasSeguras),
     diagnosticoSegmentacao: calcularDiagnosticoSegmentacaoOcr(linhasSeguras),
+    diagnosticoOrigem: calcularOrigemLeituraOcr({
+      textoCamadaTotal: textoCamada,
+      isPdfEscaneado,
+      diagnosticosEstruturaBruta,
+    }),
+    diagnosticoEstruturaBruta: {
+      paginas: Array.isArray(diagnosticosEstruturaBruta) ? diagnosticosEstruturaBruta.slice(0, 10) : [],
+      totalPaginasDiagnosticadas: Array.isArray(diagnosticosEstruturaBruta) ? diagnosticosEstruturaBruta.length : 0,
+      totalLines: Array.isArray(diagnosticosEstruturaBruta)
+        ? diagnosticosEstruturaBruta.reduce((acumulado, item) => acumulado + Number(item?.totalLines || 0), 0)
+        : 0,
+      totalWords: Array.isArray(diagnosticosEstruturaBruta)
+        ? diagnosticosEstruturaBruta.reduce((acumulado, item) => acumulado + Number(item?.totalWords || 0), 0)
+        : 0,
+      totalLinesComBboxValido: Array.isArray(diagnosticosEstruturaBruta)
+        ? diagnosticosEstruturaBruta.reduce((acumulado, item) => acumulado + Number(item?.linesComBboxValido || 0), 0)
+        : 0,
+      totalWordsComBboxValido: Array.isArray(diagnosticosEstruturaBruta)
+        ? diagnosticosEstruturaBruta.reduce((acumulado, item) => acumulado + Number(item?.wordsComBboxValido || 0), 0)
+        : 0,
+      totalLinesComBboxInvalido: Array.isArray(diagnosticosEstruturaBruta)
+        ? diagnosticosEstruturaBruta.reduce((acumulado, item) => acumulado + Number(item?.linesComBboxInvalido || 0), 0)
+        : 0,
+      totalWordsComBboxInvalido: Array.isArray(diagnosticosEstruturaBruta)
+        ? diagnosticosEstruturaBruta.reduce((acumulado, item) => acumulado + Number(item?.wordsComBboxInvalido || 0), 0)
+        : 0,
+    },
   };
 }
 
@@ -777,6 +930,7 @@ export async function executarPdfOcrArquivo(arquivo, opcoes = {}) {
 
   const paginas = [];
   const linhas = [];
+  const diagnosticosEstruturaBruta = [];
   let textoCamadaTotal = "";
   let isPdfEscaneado = false;
 
@@ -802,6 +956,13 @@ export async function executarPdfOcrArquivo(arquivo, opcoes = {}) {
       }
 
       const ocr = await executarOcrPagina(worker, canvas);
+      const diagnosticoEstruturaPagina = calcularDiagnosticoEstruturaBrutaOcr(ocr);
+      diagnosticosEstruturaBruta.push({
+        pagina: paginaAtual,
+        ...diagnosticoEstruturaPagina,
+        usouLinesEstruturadas: Array.isArray(ocr?.lines) && ocr.lines.length > 0,
+        usouFallbackTexto: !(Array.isArray(ocr?.lines) && ocr.lines.length > 0),
+      });
       const linhasPagina = [];
 
       const linhasTexto = Array.isArray(ocr?.lines) && ocr.lines.length
@@ -863,6 +1024,7 @@ export async function executarPdfOcrArquivo(arquivo, opcoes = {}) {
       linhas,
       textoCamadaTotal,
       isPdfEscaneado,
+      diagnosticosEstruturaBruta,
     });
 
     return {
