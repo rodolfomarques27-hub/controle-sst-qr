@@ -174,6 +174,9 @@ export default function VerificadorListaPresenca({
   const paginasEstruturaisOcr = Array.isArray(diagnosticoEstruturalOcr?.paginas) ? diagnosticoEstruturalOcr.paginas : [];
   const regioesProvaveisOcr = diagnosticoEstruturalOcr?.regioesProvaveis || {};
   const amostraEstruturalOcr = Array.isArray(diagnosticoEstruturalOcr?.amostraEstrutural) ? diagnosticoEstruturalOcr.amostraEstrutural : [];
+  const diagnosticoSegmentacaoOcr = diagnosticoOcr?.diagnosticoSegmentacao || {};
+  const paginasSegmentacaoOcr = Array.isArray(diagnosticoSegmentacaoOcr?.paginas) ? diagnosticoSegmentacaoOcr.paginas : [];
+  const amostraSegmentacaoOcr = Array.isArray(diagnosticoSegmentacaoOcr?.amostraSegmentacao) ? diagnosticoSegmentacaoOcr.amostraSegmentacao : [];
   const participantesTabelaConfiaveis = useMemo(() => participantesTabelaBase, [participantesTabelaBase]);
   const resultadoTabelaPdfComparadaValida = resultadoTabelaPdfComparada?.origem === "pdf_tabela_interna_comparada" ? resultadoTabelaPdfComparada : null;
   const resumoComparacaoTabela = resultadoTabelaPdfComparadaValida?.resumo || null;
@@ -756,6 +759,118 @@ export default function VerificadorListaPresenca({
                         <td className="px-4 py-3 text-slate-700">{formatarBboxCurto(item?.bbox)}</td>
                         <td className="px-4 py-3 text-slate-700">{item?.assinatura_visual ? "Sim" : "Não"}</td>
                         <td className="px-4 py-3 text-slate-700">{Math.round(Number(item?.confianca || 0))}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            ) : null}
+          </div>
+
+          <div className="border-t border-slate-200 px-4 py-4">
+            <div className="mb-3">
+              <h4 className="text-sm font-semibold text-slate-900">Diagnóstico de segmentação OCR</h4>
+              <p className="text-xs text-slate-500">
+                Agrupamento aproximado das linhas OCR por faixa visual e regiões de coluna. Uso apenas técnico, sem alterar aprovação automática.
+              </p>
+            </div>
+
+            <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-5">
+              <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
+                <p className="text-xs uppercase tracking-wide text-slate-500">Grupos de linha visual</p>
+                <p className="mt-1 text-sm font-semibold text-slate-900">{Number(diagnosticoSegmentacaoOcr?.totalGruposLinhaVisual || 0)}</p>
+              </div>
+
+              <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
+                <p className="text-xs uppercase tracking-wide text-slate-500">Linhas com coordenadas</p>
+                <p className="mt-1 text-sm font-semibold text-slate-900">{Number(diagnosticoSegmentacaoOcr?.totalLinhasComCoordenadas || 0)}</p>
+              </div>
+
+              <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
+                <p className="text-xs uppercase tracking-wide text-slate-500">Linhas sem coordenadas</p>
+                <p className="mt-1 text-sm font-semibold text-slate-900">{Number(diagnosticoSegmentacaoOcr?.totalLinhasSemCoordenadas || 0)}</p>
+              </div>
+
+              <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
+                <p className="text-xs uppercase tracking-wide text-slate-500">Páginas com grupos</p>
+                <p className="mt-1 text-sm font-semibold text-slate-900">{paginasSegmentacaoOcr.length}</p>
+              </div>
+
+              <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
+                <p className="text-xs uppercase tracking-wide text-slate-500">Amostras</p>
+                <p className="mt-1 text-sm font-semibold text-slate-900">{amostraSegmentacaoOcr.length}</p>
+              </div>
+            </div>
+
+            {paginasSegmentacaoOcr.length ? (
+              <div className="mt-4 overflow-x-auto rounded-xl border border-slate-200">
+                <table className="min-w-full divide-y divide-slate-200 text-left text-sm">
+                  <thead className="bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
+                    <tr>
+                      <th className="px-4 py-3">Página</th>
+                      <th className="px-4 py-3">Grupos</th>
+                      <th className="px-4 py-3">Linhas com coordenadas</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100 bg-white">
+                    {paginasSegmentacaoOcr.map((pagina, indice) => (
+                      <tr key={`${pagina?.pagina ?? "p"}-${indice}`}>
+                        <td className="px-4 py-3 text-slate-700">{pagina?.pagina ?? "-"}</td>
+                        <td className="px-4 py-3 text-slate-700">{pagina?.totalGrupos ?? "-"}</td>
+                        <td className="px-4 py-3 text-slate-700">{pagina?.totalLinhasComCoordenadas ?? "-"}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            ) : null}
+
+            {amostraSegmentacaoOcr.length ? (
+              <div className="mt-4 overflow-x-auto rounded-xl border border-slate-200">
+                <table className="min-w-full divide-y divide-slate-200 text-left text-sm">
+                  <thead className="bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
+                    <tr>
+                      <th className="px-4 py-3">Página</th>
+                      <th className="px-4 py-3">Grupo</th>
+                      <th className="px-4 py-3">Y</th>
+                      <th className="px-4 py-3">Total linhas</th>
+                      <th className="px-4 py-3">Nº</th>
+                      <th className="px-4 py-3">Nome</th>
+                      <th className="px-4 py-3">Função</th>
+                      <th className="px-4 py-3">Assinatura</th>
+                      <th className="px-4 py-3">Qtd. Nº</th>
+                      <th className="px-4 py-3">Qtd. Nome</th>
+                      <th className="px-4 py-3">Qtd. Função</th>
+                      <th className="px-4 py-3">Qtd. Assinatura</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100 bg-white">
+                    {amostraSegmentacaoOcr.map((item, indice) => (
+                      <tr key={`${item?.pagina ?? "p"}-${item?.indiceGrupo ?? indice}`}>
+                        <td className="px-4 py-3 text-slate-700">{item?.pagina ?? "-"}</td>
+                        <td className="px-4 py-3 text-slate-700">{item?.indiceGrupo ?? "-"}</td>
+                        <td className="px-4 py-3 text-slate-700">
+                          {Number.isFinite(Number(item?.yMin)) && Number.isFinite(Number(item?.yMax))
+                            ? `${Math.round(Number(item.yMin))} - ${Math.round(Number(item.yMax))}`
+                            : "-"}
+                        </td>
+                        <td className="px-4 py-3 text-slate-700">{item?.totalLinhas ?? "-"}</td>
+                        <td className="px-4 py-3 text-slate-700">
+                          <div className="max-w-[10rem] break-words">{item?.numero || "-"}</div>
+                        </td>
+                        <td className="px-4 py-3 text-slate-700">
+                          <div className="max-w-[16rem] break-words">{item?.nome || "-"}</div>
+                        </td>
+                        <td className="px-4 py-3 text-slate-700">
+                          <div className="max-w-[14rem] break-words">{item?.funcao || "-"}</div>
+                        </td>
+                        <td className="px-4 py-3 text-slate-700">
+                          <div className="max-w-[14rem] break-words">{item?.assinatura || "-"}</div>
+                        </td>
+                        <td className="px-4 py-3 text-slate-700">{Number(item?.totalRegiaoNumero || 0)}</td>
+                        <td className="px-4 py-3 text-slate-700">{Number(item?.totalRegiaoNome || 0)}</td>
+                        <td className="px-4 py-3 text-slate-700">{Number(item?.totalRegiaoFuncao || 0)}</td>
+                        <td className="px-4 py-3 text-slate-700">{Number(item?.totalRegiaoAssinatura || 0)}</td>
                       </tr>
                     ))}
                   </tbody>
