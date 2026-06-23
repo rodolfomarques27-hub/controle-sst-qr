@@ -344,6 +344,7 @@ export default function useVerificarListaPresenca() {
           paginaTotal: ocr?.paginaTotal || 0,
           isPdfEscaneado: Boolean(ocr?.isPdfEscaneado),
           textoCamadaTotal: ocr?.textoCamadaTotal || "",
+          diagnosticoOcr: ocr?.diagnosticoOcr || null,
         };
 
         setResultado(resultadoFinal);
