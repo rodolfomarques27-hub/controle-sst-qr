@@ -39,6 +39,11 @@ function estimarAssinatura(linha) {
   return texto.includes("ASSINATURA");
 }
 
+function assinaturaTextualSegura(valor) {
+  const texto = normalizarNome(String(valor ?? ""));
+  return ["SIM", "S", "X", "OK", "PRESENTE", "ASSINADO"].includes(texto);
+}
+
 function escolherMelhorCorrespondencia(colaborador, linhasOcr) {
   const nomeCadastro = String(colaborador?.nome || "").trim();
   let melhor = {
@@ -125,6 +130,140 @@ function classificarColaborador({ colaborador, melhor, colaboradorId }) {
     linhaOCR: melhor?.linhaOCR || null,
     encontrado: false,
     provavel: ehAlvo,
+  };
+}
+
+function escolherMelhorCorrespondenciaTabelaPdf(colaborador, participantesTabelaPdf) {
+  const nomeCadastro = String(colaborador?.nome || "").trim();
+  let melhor = {
+    score: 0,
+    similaridade: 0,
+    motivo: "Sem correspondencia forte",
+    participante: null,
+  };
+
+  for (const participante of participantesTabelaPdf) {
+    const candidatos = [participante?.nome, participante?.linhaOriginal, participante?.textoOCR, participante?.texto]
+      .filter(Boolean)
+      .map((texto) => String(texto).trim())
+      .filter(Boolean);
+
+    for (const candidato of candidatos) {
+      const comparacao = compararNomesLista(nomeCadastro, candidato);
+      if (comparacao.score > melhor.score) {
+        melhor = {
+          score: comparacao.score,
+          similaridade: comparacao.similaridade,
+          motivo: comparacao.motivo,
+          participante,
+        };
+      }
+    }
+  }
+
+  return melhor;
+}
+
+function classificarColaboradorTabelaPdf({ colaborador, melhor }) {
+  const score = Number(melhor?.score || 0);
+  const participante = melhor?.participante || null;
+  const nomeOCRBruto = obterTextoLinha(participante);
+  const nomeOCR = score >= 45 ? nomeOCRBruto : "Não localizado na tabela interna do PDF";
+  const funcaoCadastro = String(colaborador?.funcao || colaborador?.funcaoCadastro || "").trim();
+  const assinaturaSegura = assinaturaTextualSegura(participante?.assinatura);
+
+  if (score >= 80 && assinaturaSegura) {
+    return {
+      colaborador: colaborador || null,
+      nomeCadastro: colaborador?.nome || "",
+      funcaoCadastro,
+      nomeOCR,
+      status: "encontrado_e_assinou",
+      score,
+      motivo: "Nome encontrado na tabela interna; assinatura textual segura",
+      assinou: true,
+      linhaOCR: participante,
+      origem: "pdf_tabela_interna_comparada",
+    };
+  }
+
+  if (score >= 80) {
+    return {
+      colaborador: colaborador || null,
+      nomeCadastro: colaborador?.nome || "",
+      funcaoCadastro,
+      nomeOCR,
+      status: "conferencia_visual",
+      score,
+      motivo: "Nome encontrado na tabela interna; assinatura exige conferência visual",
+      assinou: false,
+      linhaOCR: participante,
+      origem: "pdf_tabela_interna_comparada",
+    };
+  }
+
+  if (score >= 45) {
+    return {
+      colaborador: colaborador || null,
+      nomeCadastro: colaborador?.nome || "",
+      funcaoCadastro,
+      nomeOCR,
+      status: "conferencia_visual",
+      score,
+      motivo: "Correspondência parcial na tabela interna do PDF",
+      assinou: false,
+      linhaOCR: participante,
+      origem: "pdf_tabela_interna_comparada",
+    };
+  }
+
+  return {
+    colaborador: colaborador || null,
+    nomeCadastro: colaborador?.nome || "",
+    funcaoCadastro,
+    nomeOCR: "Sem correspondência suficiente na tabela interna do PDF",
+    status: "ausente",
+    score,
+    motivo: "Sem correspondência suficiente na tabela interna do PDF",
+    assinou: false,
+    linhaOCR: participante,
+    origem: "pdf_tabela_interna_comparada",
+  };
+}
+
+export function compararTabelaPdfComColaboradores({
+  participantesTabelaPdf = [],
+  colaboradores = [],
+  colaboradorId = null,
+} = {}) {
+  const listaParticipantes = Array.isArray(participantesTabelaPdf) ? participantesTabelaPdf : [];
+  const listaColaboradores = Array.isArray(colaboradores) ? colaboradores : [];
+
+  const itens = listaColaboradores.map((colaborador) => {
+    const melhor = escolherMelhorCorrespondenciaTabelaPdf(colaborador, listaParticipantes);
+    return classificarColaboradorTabelaPdf({ colaborador, melhor, colaboradorId });
+  });
+
+  const encontrados = itens.filter((item) => item.status === "encontrado_e_assinou").length;
+  const assinados = itens.filter((item) => item.assinou).length;
+  const provaveis = itens.filter((item) => item.status === "conferencia_visual").length;
+  const ausentes = itens.filter((item) => item.status === "ausente").length;
+
+  return {
+    itens,
+    resumo: {
+      total: itens.length,
+      encontrados,
+      assinados,
+      provaveis,
+      ausentes,
+    },
+    origem: "pdf_tabela_interna_comparada",
+    diagnostico: {
+      totalParticipantesTabelaPdf: listaParticipantes.length,
+      totalColaboradores: listaColaboradores.length,
+      colaboradorId: colaboradorId || null,
+    },
   };
 }
 

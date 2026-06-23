@@ -11,7 +11,7 @@ import {
   XCircle,
 } from "lucide-react";
 import usePdfTabelaListaPresenca from "../hooks/usePdfTabelaListaPresenca";
-import useVerificarListaPresenca from "../hooks/useVerificarListaPresenca";
+import useVerificarListaPresenca, { compararTabelaPdfComColaboradores } from "../hooks/useVerificarListaPresenca";
 import { normalizarNome } from "../utils/normalizarNome";
 
 function formatarPercentual(valor) {
@@ -82,7 +82,9 @@ export default function VerificadorListaPresenca({
   const [termoBusca, setTermoBusca] = useState("");
   const [modoLeituraPdf, setModoLeituraPdf] = useState("tabela_pdf");
   const [resultadoTabelaPdf, setResultadoTabelaPdf] = useState(null);
+  const [resultadoTabelaPdfComparada, setResultadoTabelaPdfComparada] = useState(null);
   const [erroTabelaPdf, setErroTabelaPdf] = useState("");
+  const [erroComparacaoTabelaPdf, setErroComparacaoTabelaPdf] = useState("");
   const inputRef = useRef(null);
 
   const {
@@ -103,6 +105,11 @@ export default function VerificadorListaPresenca({
   useEffect(() => {
     setErroTabelaPdf(leitorTabelaPdf.erro || "");
   }, [leitorTabelaPdf.erro]);
+
+  useEffect(() => {
+    setResultadoTabelaPdfComparada(null);
+    setErroComparacaoTabelaPdf("");
+  }, [resultadoTabelaPdf]);
 
   const itensOcr = useMemo(() => {
     const lista = Array.isArray(resultadoOcr?.resultado) ? resultadoOcr.resultado : [];
@@ -132,17 +139,34 @@ export default function VerificadorListaPresenca({
   const resumoTabela = resultadoTabelaPdf?.diagnostico || {};
   const validacaoTabela = resultadoTabelaPdf?.validacao || {};
   const tabelaInternaConfiavel = Boolean(resumoTabela?.tabelaInternaConfiavel);
-  const totalParticipantesTabela = tabelaInternaConfiavel && Array.isArray(resultadoTabelaPdf?.participantes) ? resultadoTabelaPdf.participantes.length : 0;
-  const participantesTabelaConfiaveis = useMemo(
-    () => (tabelaInternaConfiavel && Array.isArray(resultadoTabelaPdf?.participantes) ? resultadoTabelaPdf.participantes : []),
-    [resultadoTabelaPdf, tabelaInternaConfiavel],
-  );
+  const participantesTabelaBase = tabelaInternaConfiavel && Array.isArray(resultadoTabelaPdf?.participantes) ? resultadoTabelaPdf.participantes : [];
+  const totalParticipantesTabela = participantesTabelaBase.length;
+  const participantesTabelaConfiaveis = useMemo(() => participantesTabelaBase, [participantesTabelaBase]);
+  const resultadoTabelaPdfComparadaValida = resultadoTabelaPdfComparada?.origem === "pdf_tabela_interna_comparada" ? resultadoTabelaPdfComparada : null;
+  const resumoComparacaoTabela = resultadoTabelaPdfComparadaValida?.resumo || null;
+  const itensComparacaoTabela = useMemo(() => {
+    const lista = Array.isArray(resultadoTabelaPdfComparadaValida?.itens) ? resultadoTabelaPdfComparadaValida.itens : [];
+    const filtro = normalizarNome(termoBusca);
+
+    if (!filtro) {
+      return lista;
+    }
+
+    return lista.filter((item) => {
+      const nome = normalizarNome(item?.nomeCadastro || "");
+      const funcao = normalizarNome(item?.funcaoCadastro || "");
+      const origem = normalizarNome(item?.origem || "");
+      return nome.includes(filtro) || funcao.includes(filtro) || origem.includes(filtro);
+    });
+  }, [resultadoTabelaPdfComparadaValida, termoBusca]);
   const camadaTextoDetectada = Boolean(resumoTabela?.temCamadaTexto);
   const validacaoOk = Boolean(validacaoTabela?.valido) && tabelaInternaConfiavel;
+  const podeCompararTabela = tabelaInternaConfiavel && Array.isArray(resultadoTabelaPdf?.participantes) && resultadoTabelaPdf.participantes.length > 0;
   const avisosTabela = [
     ...(Array.isArray(validacaoTabela?.avisos) ? validacaoTabela.avisos : []),
     ...(Array.isArray(resumoTabela?.avisos) ? resumoTabela.avisos : []),
     ...(tabelaInternaConfiavel ? [] : ["Nenhum participante confiável foi detectado na tabela interna do PDF."]),
+    ...(erroComparacaoTabelaPdf ? [erroComparacaoTabelaPdf] : []),
     ...(erroTabelaPdf ? [erroTabelaPdf] : []),
   ].filter(Boolean);
 
@@ -220,6 +244,23 @@ export default function VerificadorListaPresenca({
     await leitorTabelaPdf.executar(arquivo);
   }, [arquivo, leitorTabelaPdf]);
 
+  const compararTabelaInterna = useCallback(() => {
+    if (!podeCompararTabela) {
+      setErroComparacaoTabelaPdf("Nenhum participante confiável foi detectado na tabela interna do PDF para comparar.");
+      setResultadoTabelaPdfComparada(null);
+      return;
+    }
+
+    const comparacao = compararTabelaPdfComColaboradores({
+      participantesTabelaPdf: resultadoTabelaPdf?.participantes || [],
+      colaboradores,
+      colaboradorId,
+    });
+
+    setErroComparacaoTabelaPdf("");
+    setResultadoTabelaPdfComparada(comparacao);
+  }, [colaboradorId, colaboradores, podeCompararTabela, resultadoTabelaPdf?.participantes]);
+
   const statusTopoOcr = resultadoOcr?.status_verificacao || (resultadoOcr ? "APROVADO COM CONFERÊNCIA VISUAL" : "Aguardando arquivo");
 
   return (
@@ -244,15 +285,27 @@ export default function VerificadorListaPresenca({
           </button>
 
           {modoLeituraPdf === "tabela_pdf" ? (
-            <button
-              type="button"
-              onClick={executarLeituraTabela}
-              disabled={!arquivo || leitorTabelaPdf.carregando}
-              className="inline-flex items-center gap-2 rounded-lg bg-slate-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              {leitorTabelaPdf.carregando ? <Loader2 className="h-4 w-4 animate-spin" /> : <ShieldCheck className="h-4 w-4" />}
-              Ler PDF como tabela
-            </button>
+            <>
+              <button
+                type="button"
+                onClick={executarLeituraTabela}
+                disabled={!arquivo || leitorTabelaPdf.carregando}
+                className="inline-flex items-center gap-2 rounded-lg bg-slate-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {leitorTabelaPdf.carregando ? <Loader2 className="h-4 w-4 animate-spin" /> : <ShieldCheck className="h-4 w-4" />}
+                Ler PDF como tabela
+              </button>
+
+              <button
+                type="button"
+                onClick={compararTabelaInterna}
+                disabled={!podeCompararTabela}
+                className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition hover:border-slate-300 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                <CheckCircle2 className="h-4 w-4" />
+                Comparar tabela interna
+              </button>
+            </>
           ) : (
             <button
               type="button"
@@ -497,7 +550,7 @@ export default function VerificadorListaPresenca({
             <>
               <span className="inline-flex items-center gap-2 rounded-full bg-green-50 px-3 py-1 font-medium text-green-800">
                 <CheckCircle2 className="h-4 w-4" />
-                {validacaoOk ? "Tabela interna lida" : "Tabela interna com aviso"}
+                {resultadoTabelaPdfComparadaValida ? "Tabela interna comparada" : validacaoOk ? "Tabela interna lida" : "Tabela interna com aviso"}
               </span>
 
               <span className="inline-flex items-center gap-2 rounded-full bg-slate-100 px-3 py-1 font-medium text-slate-700">
@@ -509,6 +562,13 @@ export default function VerificadorListaPresenca({
                 <AlertTriangle className="h-4 w-4" />
                 {totalParticipantesTabela} participantes
               </span>
+
+              {resultadoTabelaPdfComparadaValida ? (
+                <span className="inline-flex items-center gap-2 rounded-full bg-blue-50 px-3 py-1 font-medium text-blue-800">
+                  <CheckCircle2 className="h-4 w-4" />
+                  PDF tabela interna comparada
+                </span>
+              ) : null}
             </>
           ) : (
             <span className="inline-flex items-center gap-2 rounded-full bg-slate-100 px-3 py-1 font-medium text-slate-700">
@@ -587,7 +647,92 @@ export default function VerificadorListaPresenca({
       ) : null}
 
       {modoLeituraPdf === "tabela_pdf" ? (
-        <div className="mt-4 overflow-hidden rounded-xl border border-slate-200">
+        <>
+          {resultadoTabelaPdfComparadaValida ? (
+            <div className="mt-4 grid gap-3 md:grid-cols-5">
+              <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
+                <p className="text-xs uppercase tracking-wide text-slate-500">Total</p>
+                <p className="mt-1 text-sm font-semibold text-slate-900">{Number(resumoComparacaoTabela?.total || 0)}</p>
+              </div>
+
+              <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
+                <p className="text-xs uppercase tracking-wide text-slate-500">Encontrados</p>
+                <p className="mt-1 text-sm font-semibold text-slate-900">{Number(resumoComparacaoTabela?.encontrados || 0)}</p>
+              </div>
+
+              <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
+                <p className="text-xs uppercase tracking-wide text-slate-500">Assinados</p>
+                <p className="mt-1 text-sm font-semibold text-slate-900">{Number(resumoComparacaoTabela?.assinados || 0)}</p>
+              </div>
+
+              <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
+                <p className="text-xs uppercase tracking-wide text-slate-500">Conferência visual</p>
+                <p className="mt-1 text-sm font-semibold text-slate-900">{Number(resumoComparacaoTabela?.provaveis || 0)}</p>
+              </div>
+
+              <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
+                <p className="text-xs uppercase tracking-wide text-slate-500">Ausentes</p>
+                <p className="mt-1 text-sm font-semibold text-slate-900">{Number(resumoComparacaoTabela?.ausentes || 0)}</p>
+              </div>
+            </div>
+          ) : null}
+
+          {resultadoTabelaPdfComparadaValida ? (
+            <div className="mt-4 overflow-hidden rounded-xl border border-slate-200">
+              <div className="flex items-center justify-between border-b border-slate-200 bg-slate-50 px-4 py-3">
+                <div>
+                  <h3 className="text-sm font-semibold text-slate-900">Colaboradores da lista</h3>
+                  <p className="text-xs text-slate-500">
+                    {itensComparacaoTabela.length} registros exibidos <span className="inline-flex items-center rounded-full bg-blue-50 px-2 py-0.5 text-blue-800">PDF tabela interna comparada</span>
+                  </p>
+                </div>
+              </div>
+
+              <div className="overflow-x-auto">
+                <table className="min-w-full divide-y divide-slate-200 text-left text-sm">
+                  <thead className="bg-white text-xs uppercase tracking-wide text-slate-500">
+                    <tr>
+                      <th className="px-4 py-3">Nome cadastro</th>
+                      <th className="px-4 py-3">Função</th>
+                      <th className="px-4 py-3">Nome PDF</th>
+                      <th className="px-4 py-3">Status</th>
+                      <th className="px-4 py-3">Score</th>
+                      <th className="px-4 py-3">Motivo</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100 bg-white">
+                    {itensComparacaoTabela.length ? (
+                      itensComparacaoTabela.map((item) => (
+                        <tr key={item?.id || `${item?.nomeCadastro || "colaborador"}-${item?.funcaoCadastro || "funcao"}`}>
+                          <td className="px-4 py-3 font-medium text-slate-900">{item?.nomeCadastro || "-"}</td>
+                          <td className="px-4 py-3 text-slate-700">{item?.funcaoCadastro || "-"}</td>
+                          <td className="px-4 py-3 text-slate-700">{item?.nomeOCR || "-"}</td>
+                          <td className="px-4 py-3">
+                            <span className={`inline-flex items-center rounded-full border px-3 py-1 text-xs font-semibold ${classeStatus(item?.status)}`}>
+                              {item?.status === "encontrado_e_assinou" ? <CheckCircle2 className="mr-1 h-3.5 w-3.5" /> : null}
+                              {item?.status === "conferencia_visual" ? <AlertTriangle className="mr-1 h-3.5 w-3.5" /> : null}
+                              {item?.status === "ausente" ? <XCircle className="mr-1 h-3.5 w-3.5" /> : null}
+                              {textoStatus(item?.status)}
+                            </span>
+                          </td>
+                          <td className="px-4 py-3 text-slate-700">{Math.round(Number(item?.score || 0))}</td>
+                          <td className="px-4 py-3 text-slate-700">{item?.motivo || "-"}</td>
+                        </tr>
+                      ))
+                    ) : (
+                      <tr>
+                        <td className="px-4 py-8 text-center text-slate-500" colSpan={6}>
+                          Nenhum colaborador encontrado para exibir.
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          ) : null}
+
+          <div className="mt-4 overflow-hidden rounded-xl border border-slate-200">
           <div className="flex items-center justify-between border-b border-slate-200 bg-slate-50 px-4 py-3">
             <div>
               <h3 className="text-sm font-semibold text-slate-900">Participantes extraídos da camada de texto</h3>
@@ -635,7 +780,8 @@ export default function VerificadorListaPresenca({
               </tbody>
             </table>
           </div>
-        </div>
+          </div>
+        </>
       ) : null}
 
       {modoLeituraPdf === "tabela_pdf" && resultadoTabelaPdf ? (
