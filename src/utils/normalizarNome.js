@@ -34,6 +34,10 @@ function obterPalavrasValidas(texto) {
     .filter((palavra) => palavra.length > 2);
 }
 
+function contarCaracteresUteis(texto) {
+  return normalizarNome(texto).replace(/[^A-Z0-9]/g, "").length;
+}
+
 function calcularProporcaoEmComum(palavrasA, palavrasB) {
   if (!palavrasA.length || !palavrasB.length) {
     return 0;
@@ -52,6 +56,29 @@ function calcularProporcaoEmComum(palavrasA, palavrasB) {
   return denominador > 0 ? comuns / denominador : 0;
 }
 
+function ocrTemConteudoMinimoParaComparar(textoOcr) {
+  const textoNormalizado = normalizarNome(textoOcr);
+  const caracteresUteis = contarCaracteresUteis(textoNormalizado);
+
+  if (caracteresUteis < 3) {
+    return false;
+  }
+
+  return obterPalavrasValidas(textoNormalizado).length > 0;
+}
+
+function ocrContemNomeCadastroCompleto(textoCadastro, textoOcr) {
+  const cadastroNormalizado = normalizarNome(textoCadastro);
+  const ocrNormalizado = normalizarNome(textoOcr);
+  const palavrasCadastro = obterPalavrasValidas(cadastroNormalizado);
+
+  if (palavrasCadastro.length < 2) {
+    return false;
+  }
+
+  return ocrNormalizado.includes(cadastroNormalizado);
+}
+
 export function calcularSimilaridade(a, b) {
   const textoA = normalizarNome(a);
   const textoB = normalizarNome(b);
@@ -64,12 +91,16 @@ export function calcularSimilaridade(a, b) {
     return 0;
   }
 
+  if (!ocrTemConteudoMinimoParaComparar(textoB)) {
+    return 0;
+  }
+
   if (textoA === textoB) {
     return 1;
   }
 
-  if (textoA.includes(textoB) || textoB.includes(textoA)) {
-    return 0.85;
+  if (ocrContemNomeCadastroCompleto(textoA, textoB)) {
+    return 0.95;
   }
 
   const palavrasA = obterPalavrasValidas(textoA);
@@ -95,13 +126,12 @@ export function compararNomesLista(nomeCadastro, nomeOcr) {
 
   if (!nomeCadastroNormalizado && !nomeOcrNormalizado) {
     motivo = "Nomes vazios ou não informados";
+  } else if (!ocrTemConteudoMinimoParaComparar(nomeOcrNormalizado)) {
+    motivo = "Trecho OCR muito curto para comparação confiável";
   } else if (nomeCadastroNormalizado === nomeOcrNormalizado) {
     motivo = "Nomes idênticos após normalização";
-  } else if (
-    nomeCadastroNormalizado.includes(nomeOcrNormalizado) ||
-    nomeOcrNormalizado.includes(nomeCadastroNormalizado)
-  ) {
-    motivo = "Correspondência parcial forte";
+  } else if (ocrContemNomeCadastroCompleto(nomeCadastroNormalizado, nomeOcrNormalizado)) {
+    motivo = "Nome completo localizado no OCR";
   } else if (similaridade >= 0.75) {
     motivo = "Correspondência forte por palavras em comum";
   } else if (similaridade >= 0.45) {

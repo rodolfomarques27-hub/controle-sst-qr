@@ -69,9 +69,10 @@ function escolherMelhorCorrespondencia(colaborador, linhasOcr) {
 
 function classificarColaborador({ colaborador, melhor, colaboradorId }) {
   const score = Number(melhor?.score || 0);
-  const nomeOCR = obterTextoLinha(melhor?.linhaOCR);
+  const nomeOCRBruto = obterTextoLinha(melhor?.linhaOCR);
+  const nomeOCR = score >= 45 ? nomeOCRBruto : "Não localizado no OCR";
   const funcaoCadastro = String(colaborador?.funcao || colaborador?.funcaoCadastro || "").trim();
-  const assinou = estimarAssinatura(melhor?.linhaOCR);
+  const assinou = score >= 45 ? estimarAssinatura(melhor?.linhaOCR) : false;
   const ehAlvo = colaboradorId != null && String(colaborador?.id) === String(colaboradorId);
 
   if (score >= 75) {
