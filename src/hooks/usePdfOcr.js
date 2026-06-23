@@ -196,22 +196,47 @@ function montarLinhaReconhecida({ texto, line, pagina, indiceGlobal, canvas }) {
   };
 }
 
+function converterNumeroBboxOcr(valor) {
+  if (valor === null || valor === undefined) {
+    return null;
+  }
+
+  if (typeof valor === "string" && valor.trim() === "") {
+    return null;
+  }
+
+  const numero = Number(valor);
+  if (!Number.isFinite(numero)) {
+    return null;
+  }
+
+  return numero;
+}
+
 function normalizarBboxOcr(bbox) {
   if (!bbox || typeof bbox !== "object") {
     return null;
   }
 
-  const x0 = Number(bbox.x0);
-  const y0 = Number(bbox.y0);
-  const x1 = Number(bbox.x1);
-  const y1 = Number(bbox.y1);
+  const x0 = converterNumeroBboxOcr(bbox.x0);
+  const y0 = converterNumeroBboxOcr(bbox.y0);
+  const x1 = converterNumeroBboxOcr(bbox.x1);
+  const y1 = converterNumeroBboxOcr(bbox.y1);
 
-  if (![x0, y0, x1, y1].every((valor) => Number.isFinite(valor))) {
+  if ([x0, y0, x1, y1].some((valor) => valor === null)) {
     return null;
   }
 
-  const largura = Math.max(0, x1 - x0);
-  const altura = Math.max(0, y1 - y0);
+  const largura = x1 - x0;
+  const altura = y1 - y0;
+
+  if (largura <= 0 || altura <= 0) {
+    return null;
+  }
+
+  if (x0 === 0 && y0 === 0 && x1 === 0 && y1 === 0) {
+    return null;
+  }
 
   return {
     x0,
@@ -231,23 +256,23 @@ function extrairBboxDiretoOcr(origem) {
   }
 
   const bboxOrigem = origem?.bbox && typeof origem.bbox === "object" ? origem.bbox : null;
-  const x0 = Number(origem?.x0 ?? bboxOrigem?.x0 ?? bboxOrigem?.left ?? origem?.left ?? null);
-  const y0 = Number(origem?.y0 ?? bboxOrigem?.y0 ?? bboxOrigem?.top ?? origem?.top ?? null);
+  const x0 = converterNumeroBboxOcr(origem?.x0 ?? bboxOrigem?.x0 ?? bboxOrigem?.left ?? origem?.left);
+  const y0 = converterNumeroBboxOcr(origem?.y0 ?? bboxOrigem?.y0 ?? bboxOrigem?.top ?? origem?.top);
 
-  let x1 = Number(origem?.x1 ?? bboxOrigem?.x1 ?? bboxOrigem?.right ?? origem?.right ?? null);
-  let y1 = Number(origem?.y1 ?? bboxOrigem?.y1 ?? bboxOrigem?.bottom ?? origem?.bottom ?? null);
+  let x1 = converterNumeroBboxOcr(origem?.x1 ?? bboxOrigem?.x1 ?? bboxOrigem?.right ?? origem?.right);
+  let y1 = converterNumeroBboxOcr(origem?.y1 ?? bboxOrigem?.y1 ?? bboxOrigem?.bottom ?? origem?.bottom);
 
-  const width = Number(origem?.width ?? bboxOrigem?.width ?? null);
-  const height = Number(origem?.height ?? bboxOrigem?.height ?? null);
+  const width = converterNumeroBboxOcr(origem?.width ?? bboxOrigem?.width);
+  const height = converterNumeroBboxOcr(origem?.height ?? bboxOrigem?.height);
 
-  if ((!Number.isFinite(x1) || !Number.isFinite(y1)) && Number.isFinite(x0) && Number.isFinite(y0)) {
-    if (Number.isFinite(width) && Number.isFinite(height)) {
+  if ((x1 === null || y1 === null) && x0 !== null && y0 !== null) {
+    if (width !== null && height !== null && width > 0 && height > 0) {
       x1 = x0 + width;
       y1 = y0 + height;
     }
   }
 
-  if (!Number.isFinite(x0) || !Number.isFinite(y0) || !Number.isFinite(x1) || !Number.isFinite(y1)) {
+  if (x0 === null || y0 === null || x1 === null || y1 === null) {
     return null;
   }
 
@@ -687,7 +712,8 @@ function calcularDiagnosticoOcr({ paginas, linhas, textoCamadaTotal, isPdfEscane
   const linhasSeguras = Array.isArray(linhas) ? linhas : [];
   const textoCamada = typeof textoCamadaTotal === "string" ? textoCamadaTotal : "";
   const totalLinhasOcr = linhasSeguras.length;
-  const totalLinhasComBbox = linhasSeguras.filter((linha) => Boolean(linha?.bbox)).length;
+  const totalLinhasComBboxBruto = linhasSeguras.filter((linha) => Boolean(linha?.bbox)).length;
+  const totalLinhasComBbox = linhasSeguras.filter((linha) => Boolean(normalizarBboxOcr(linha?.bbox))).length;
   const totalLinhasSemBbox = totalLinhasOcr - totalLinhasComBbox;
   const totalLinhasComConfianca = linhasSeguras.filter((linha) => Number.isFinite(Number(linha?.confianca))).length;
   const somaConfianca = linhasSeguras.reduce((acumulado, linha) => {
@@ -703,13 +729,15 @@ function calcularDiagnosticoOcr({ paginas, linhas, textoCamadaTotal, isPdfEscane
     nome: linha?.nome ?? "",
     funcao: linha?.funcao ?? "",
     confianca: Number.isFinite(Number(linha?.confianca)) ? Number(linha?.confianca) : null,
-    bbox: linha?.bbox ?? null,
+    bbox: normalizarBboxOcr(linha?.bbox),
     assinatura_visual: Boolean(linha?.assinatura_visual),
   }));
 
   return {
     totalPaginas: Array.isArray(paginas) ? paginas.length : 0,
     totalLinhasOcr,
+    totalLinhasComBboxBruto,
+    totalLinhasComBboxInvalido: totalLinhasComBboxBruto - totalLinhasComBbox,
     totalLinhasComBbox,
     totalLinhasSemBbox,
     totalLinhasComConfianca,
