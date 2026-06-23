@@ -8,20 +8,22 @@ const GRUPOS_CABECALHO = {
 
 const TERMOS_INSTITUCIONAIS = [
   "TREINAMENTO",
-  "CARGA HORÁRIA",
   "CARGA HORARIA",
   "INSTRUTOR",
   "EMPRESA",
   "CNPJ",
   "DATA",
   "NR",
-  "CONTEÚDO",
   "CONTEUDO",
   "OBJETIVO",
-  "AVALIAÇÃO",
   "AVALIACAO",
   "CERTIFICADO",
   "CAMSCANNER",
+  "SEGURANCA",
+  "TRANSITO",
+  "PROTECAO",
+  "RESIDUOS",
+  "MEIO AMBIENTE",
 ];
 
 const TERMOS_FUNCAO = [
@@ -33,7 +35,6 @@ const TERMOS_FUNCAO = [
   "ENCARREGADO",
   "OP DE MAQ",
   "OP DE MAO",
-  "OP DE MÁQUINAS",
   "OP DE MAQUINAS",
   "OP DE BETONEIRA",
   "CARPINTEIRO",
@@ -50,10 +51,7 @@ const TERMOS_FUNCAO = [
 
 function normalizarTextoPdfTabela(valor) {
   const texto = typeof valor === "string" ? valor : valor == null ? "" : String(valor);
-  return texto
-    .replace(/\r\n?/g, "\n")
-    .replace(/\s+/g, " ")
-    .trim();
+  return texto.replace(/\r\n?/g, "\n").replace(/\s+/g, " ").trim();
 }
 
 function normalizarTextoComparacaoPdf(valor) {
@@ -66,55 +64,116 @@ function normalizarTextoComparacaoPdf(valor) {
     .toLowerCase();
 }
 
+function textoEhRuidoPdfTabela(texto) {
+  const normalizado = normalizarTextoPdfTabela(texto);
+  if (!normalizado) {
+    return true;
+  }
+
+  const comparacao = normalizarTextoComparacaoPdf(normalizado);
+  if (!comparacao) {
+    return true;
+  }
+
+  if (/^(?:[-./\\_ ]+|\.\.\.+|-{2,}|_{2,}|\/{2,}|\\{2,})$/.test(comparacao)) {
+    return true;
+  }
+
+  const letras = comparacao.replace(/[^a-zà-ÿ]/gi, "");
+  const numeros = comparacao.replace(/[^0-9]/g, "");
+  const simbolos = comparacao.replace(/[\p{L}\p{N}\s]/gu, "");
+  const tokens = comparacao.split(" ").filter(Boolean);
+
+  if (letras.length < 3) {
+    return true;
+  }
+
+  if (comparacao.length > 0 && letras.length / comparacao.length < 0.4) {
+    return true;
+  }
+
+  if (simbolos.length > 2 && simbolos.length >= comparacao.length * 0.3) {
+    return true;
+  }
+
+  if (tokens.length <= 1 && numeros.length && letras.length < 5) {
+    return true;
+  }
+
+  if (tokens.every((token) => token.length <= 2 && !/^[a-zà-ÿ]+$/i.test(token))) {
+    return true;
+  }
+
+  return false;
+}
+
 function textoEhCabecalhoTabelaPdf(texto) {
   const textoNormalizado = normalizarTextoComparacaoPdf(texto);
   if (!textoNormalizado) {
     return false;
   }
 
-  const tokens = textoNormalizado
-    .split(" ")
-    .map((token) => token.trim())
-    .filter(Boolean);
-
+  const tokens = textoNormalizado.split(" ").map((token) => token.trim()).filter(Boolean);
   if (!tokens.length) {
     return false;
   }
 
-  if (tokens.length >= 2) {
-    const possuiGrupoNumero = tokens.some((token) => GRUPOS_CABECALHO.numero.includes(token));
-    const possuiGrupoNome = tokens.some((token) => GRUPOS_CABECALHO.nome.includes(token));
-    const possuiGrupoFuncao = tokens.some((token) => GRUPOS_CABECALHO.funcao.includes(token));
-    const possuiGrupoAssinatura = tokens.some((token) => GRUPOS_CABECALHO.assinatura.includes(token));
-    const possuiGrupoObservacao = tokens.some((token) => GRUPOS_CABECALHO.observacao.includes(token));
+  const grupos = {
+    numero: tokens.some((token) => GRUPOS_CABECALHO.numero.includes(token)),
+    nome: tokens.some((token) => GRUPOS_CABECALHO.nome.includes(token)),
+    funcao: tokens.some((token) => GRUPOS_CABECALHO.funcao.includes(token)),
+    assinatura: tokens.some((token) => GRUPOS_CABECALHO.assinatura.includes(token)),
+    observacao: tokens.some((token) => GRUPOS_CABECALHO.observacao.includes(token)),
+  };
 
-    const totalGruposFortes = [
-      possuiGrupoNumero,
-      possuiGrupoNome,
-      possuiGrupoFuncao,
-      possuiGrupoAssinatura,
-      possuiGrupoObservacao,
-    ].filter(Boolean).length;
-
-    if (totalGruposFortes >= 2) {
-      return true;
-    }
-
-    if (possuiGrupoNome && (possuiGrupoFuncao || possuiGrupoAssinatura || possuiGrupoNumero)) {
-      return true;
-    }
+  const totalGrupos = Object.values(grupos).filter(Boolean).length;
+  if (totalGrupos >= 2) {
+    return true;
   }
 
-  const temGrupoNome = tokens.some((token) => GRUPOS_CABECALHO.nome.includes(token));
-  const temGrupoFuncao = tokens.some((token) => GRUPOS_CABECALHO.funcao.includes(token));
-  const temGrupoAssinatura = tokens.some((token) => GRUPOS_CABECALHO.assinatura.includes(token));
-  const temGrupoNumero = tokens.some((token) => GRUPOS_CABECALHO.numero.includes(token));
-
-  if (temGrupoNome && (temGrupoFuncao || temGrupoAssinatura || temGrupoNumero)) {
+  if (grupos.nome && (grupos.funcao || grupos.assinatura || grupos.numero)) {
     return true;
   }
 
   return false;
+}
+
+function nomeProvavelPdfTabela(texto) {
+  const normalizado = normalizarTextoPdfTabela(texto);
+  if (!normalizado || textoEhRuidoPdfTabela(normalizado)) {
+    return false;
+  }
+
+  const comparacao = normalizarTextoComparacaoPdf(normalizado);
+  const tokens = comparacao
+    .split(" ")
+    .map((token) => token.trim())
+    .filter(Boolean)
+    .filter((token) => !["de", "da", "do", "das", "dos", "e"].includes(token));
+
+  const letrasTotal = comparacao.replace(/[^a-zà-ÿ]/gi, "");
+  if (letrasTotal.length < 5) {
+    return false;
+  }
+
+  if (tokens.length < 2) {
+    return false;
+  }
+
+  const palavrasFortes = tokens.filter((token) => token.replace(/[^a-zà-ÿ]/gi, "").length >= 3);
+  if (palavrasFortes.length < 2) {
+    return false;
+  }
+
+  const funcaoDetectada = identificarFuncaoTexto(normalizado);
+  if (funcaoDetectada) {
+    const restante = comparacao.replace(normalizarTextoComparacaoPdf(funcaoDetectada), "").replace(/\s+/g, " ").trim();
+    if (!restante || restante.length < 3) {
+      return false;
+    }
+  }
+
+  return true;
 }
 
 function extrairTextoItemPdf(item) {
@@ -143,17 +202,11 @@ function extrairYItemPdf(item) {
 }
 
 function extrairLarguraItemPdf(item) {
-  if (Number.isFinite(item?.width)) {
-    return item.width;
-  }
-  return null;
+  return Number.isFinite(item?.width) ? item.width : 0;
 }
 
 function extrairAlturaItemPdf(item) {
-  if (Number.isFinite(item?.height)) {
-    return item.height;
-  }
-  return null;
+  return Number.isFinite(item?.height) ? item.height : 0;
 }
 
 function calcularMediana(valores) {
@@ -165,9 +218,7 @@ function calcularMediana(valores) {
     return 0;
   }
   const meio = Math.floor(ordenados.length / 2);
-  return ordenados.length % 2 === 0
-    ? (ordenados[meio - 1] + ordenados[meio]) / 2
-    : ordenados[meio];
+  return ordenados.length % 2 === 0 ? (ordenados[meio - 1] + ordenados[meio]) / 2 : ordenados[meio];
 }
 
 function agruparItensTextoPdfEmLinhas(itensTextoPdf, opcoes = {}) {
@@ -195,8 +246,8 @@ function agruparItensTextoPdfEmLinhas(itensTextoPdf, opcoes = {}) {
       pagina: Number.isFinite(item?.pagina) ? item.pagina : Number.isFinite(item?.pageNumber) ? item.pageNumber : 1,
       x,
       y,
-      width: Number.isFinite(width) ? width : 0,
-      height: Number.isFinite(height) ? height : 0,
+      width,
+      height,
     });
   }
 
@@ -219,21 +270,17 @@ function agruparItensTextoPdfEmLinhas(itensTextoPdf, opcoes = {}) {
   }
 
   const linhas = [];
-
   for (const [pagina, itensPagina] of paginas.entries()) {
     const alturas = itensPagina.map((item) => item.height).filter((valor) => Number.isFinite(valor) && valor > 0);
-    const toleranciaY = Number.isFinite(toleranciaBase)
-      ? toleranciaBase
-      : Math.max(6, Math.min(18, calcularMediana(alturas) * 0.55 || 8));
+    const toleranciaY = Number.isFinite(toleranciaBase) ? toleranciaBase : Math.max(6, Math.min(18, calcularMediana(alturas) * 0.55 || 8));
 
+    const linhasPagina = [];
     const ordenados = [...itensPagina].sort((a, b) => {
       if (Math.abs(a.y - b.y) > toleranciaY) {
         return b.y - a.y;
       }
       return a.x - b.x;
     });
-
-    const linhasPagina = [];
 
     for (const item of ordenados) {
       const yCentro = item.y + (item.height > 0 ? item.height / 2 : 0);
@@ -268,13 +315,8 @@ function agruparItensTextoPdfEmLinhas(itensTextoPdf, opcoes = {}) {
       linha.celulas.sort((a, b) => a.x - b.x);
       const textos = linha.celulas.map((celula) => celula.texto).filter(Boolean);
       const xMin = linha.celulas.length ? Math.min(...linha.celulas.map((celula) => celula.x)) : 0;
-      const xMax = linha.celulas.length
-        ? Math.max(...linha.celulas.map((celula) => celula.x + (celula.width || 0)))
-        : 0;
-      const yMedio =
-        linha.celulas.length > 0
-          ? linha.celulas.reduce((acc, celula) => acc + celula.y, 0) / linha.celulas.length
-          : linha.yReferencia;
+      const xMax = linha.celulas.length ? Math.max(...linha.celulas.map((celula) => celula.x + (celula.width || 0))) : 0;
+      const yMedio = linha.celulas.length > 0 ? linha.celulas.reduce((acc, celula) => acc + celula.y, 0) / linha.celulas.length : linha.yReferencia;
 
       linhas.push({
         pagina,
@@ -304,7 +346,6 @@ function agruparItensTextoPdfEmLinhas(itensTextoPdf, opcoes = {}) {
 
 function detectarCabecalhoTabelaPdf(linhas) {
   const linhasEntrada = Array.isArray(linhas) ? linhas : [];
-
   for (let indiceLinha = 0; indiceLinha < linhasEntrada.length; indiceLinha += 1) {
     const linha = linhasEntrada[indiceLinha];
     const textoCabecalho = normalizarTextoPdfTabela(linha?.texto);
@@ -321,23 +362,23 @@ function detectarCabecalhoTabelaPdf(linhas) {
     };
 
     for (const celula of Array.isArray(linha?.celulas) ? linha.celulas : []) {
-      const textoCelula = normalizarTextoComparacaoPdf(celula?.texto).toUpperCase();
+      const textoCelula = normalizarTextoComparacaoPdf(celula?.texto);
       if (!textoCelula) {
         continue;
       }
-      if (textoCelula.includes("N") && (textoCelula.includes("NUMERO") || textoCelula === "N" || textoCelula === "NO")) {
+      if (GRUPOS_CABECALHO.numero.includes(textoCelula)) {
         mapaColunas.numero = mapaColunas.numero ?? celula.x;
       }
-      if (textoCelula.includes("NOME") || textoCelula.includes("COLABORADOR") || textoCelula.includes("FUNCIONARIO")) {
+      if (GRUPOS_CABECALHO.nome.includes(textoCelula)) {
         mapaColunas.nome = mapaColunas.nome ?? celula.x;
       }
-      if (textoCelula.includes("FUNCAO") || textoCelula.includes("CARGO")) {
+      if (GRUPOS_CABECALHO.funcao.includes(textoCelula)) {
         mapaColunas.funcao = mapaColunas.funcao ?? celula.x;
       }
-      if (textoCelula.includes("ASSINATURA") || textoCelula.includes("PRESENCA")) {
+      if (GRUPOS_CABECALHO.assinatura.includes(textoCelula)) {
         mapaColunas.assinatura = mapaColunas.assinatura ?? celula.x;
       }
-      if (textoCelula.includes("OBSERVACAO")) {
+      if (GRUPOS_CABECALHO.observacao.includes(textoCelula)) {
         mapaColunas.observacao = mapaColunas.observacao ?? celula.x;
       }
     }
@@ -365,10 +406,12 @@ function detectarCabecalhoTabelaPdf(linhas) {
 }
 
 function numeroCurtoEhValido(valor) {
-  if (!/^\d{1,3}$/.test(String(valor || "").trim())) {
+  const texto = String(valor || "").trim();
+  if (!/^\d{1,3}$/.test(texto)) {
     return false;
   }
-  const numero = Number(valor);
+
+  const numero = Number(texto);
   return Number.isInteger(numero) && numero >= 1 && numero <= 999;
 }
 
@@ -393,6 +436,7 @@ function textoInstitucionalDominante(textoOriginal) {
   if (!textoNormalizado) {
     return false;
   }
+
   return TERMOS_INSTITUCIONAIS.some((termo) => textoNormalizado.includes(normalizarTextoComparacaoPdf(termo).toUpperCase()));
 }
 
@@ -401,6 +445,17 @@ function limparTokensTexto(textoOriginal) {
     .split(" ")
     .map((token) => token.trim())
     .filter(Boolean);
+}
+
+function extrairNumeroCurtoDaLinha(texto) {
+  const textoNormalizado = normalizarTextoPdfTabela(texto);
+  if (!textoNormalizado) {
+    return "";
+  }
+
+  const tokens = limparTokensTexto(textoNormalizado);
+  const tokenNumero = tokens.find((token) => numeroCurtoEhValido(token));
+  return tokenNumero || "";
 }
 
 function separarLinhaPdfEmColunas(linha, mapaColunas) {
@@ -431,7 +486,7 @@ function separarLinhaPdfEmColunas(linha, mapaColunas) {
     return normalizarTextoPdfTabela(itens.map((celula) => celula.texto).join(" "));
   };
 
-  const ordenarMapas = [
+  const colunas = [
     ["numero", mapa.numero],
     ["nome", mapa.nome],
     ["funcao", mapa.funcao],
@@ -441,15 +496,12 @@ function separarLinhaPdfEmColunas(linha, mapaColunas) {
     .filter(([, x]) => Number.isFinite(x))
     .sort((a, b) => a[1] - b[1]);
 
-  if (ordenarMapas.length >= 2) {
-    const limites = ordenarMapas.map(([, x], indice) => {
-      const proximo = ordenarMapas[indice + 1]?.[1];
-      return {
-        chave: ordenarMapas[indice][0],
-        inicio: x,
-        fim: Number.isFinite(proximo) ? (x + proximo) / 2 : Infinity,
-      };
-    });
+  if (colunas.length >= 2) {
+    const limites = colunas.map(([chave, x], indice) => ({
+      chave,
+      inicio: x,
+      fim: Number.isFinite(colunas[indice + 1]?.[1]) ? (x + colunas[indice + 1][1]) / 2 : Infinity,
+    }));
 
     const obterCampo = (chave) => {
       const limite = limites.find((item) => item.chave === chave);
@@ -467,28 +519,27 @@ function separarLinhaPdfEmColunas(linha, mapaColunas) {
     return linhasSaida;
   }
 
-  const tokens = limparTokensTexto(textoOriginal);
-  const indiceNumero = tokens.findIndex((token) => numeroCurtoEhValido(token));
-  if (indiceNumero >= 0) {
-    linhasSaida.numero = tokens[indiceNumero];
-    const restante = tokens.slice(indiceNumero + 1);
-    const funcaoDetectada = identificarFuncaoTexto(restante.join(" "));
+  const numeroLinha = extrairNumeroCurtoDaLinha(textoOriginal);
+  if (numeroLinha) {
+    linhasSaida.numero = numeroLinha;
+    const restante = textoOriginal.replace(new RegExp(`^\\s*${numeroLinha}\\b\\s*`), "").trim();
+    const funcaoDetectada = identificarFuncaoTexto(restante);
+
     if (funcaoDetectada) {
-      const textoRestante = restante.join(" ");
+      const textoNormalizadoRestante = normalizarTextoComparacaoPdf(restante);
       const textoNormalizadoFuncao = normalizarTextoComparacaoPdf(funcaoDetectada);
-      const posicaoFuncao = normalizarTextoComparacaoPdf(textoRestante).indexOf(textoNormalizadoFuncao);
-      if (posicaoFuncao >= 0) {
-        const antesFuncao = textoRestante.slice(0, posicaoFuncao).trim();
-        const depoisFuncao = textoRestante.slice(posicaoFuncao + funcaoDetectada.length).trim();
-        linhasSaida.nome = antesFuncao;
+      const indiceFuncao = textoNormalizadoRestante.indexOf(textoNormalizadoFuncao);
+      if (indiceFuncao >= 0) {
+        linhasSaida.nome = restante.slice(0, indiceFuncao).trim();
         linhasSaida.funcao = funcaoDetectada;
-        linhasSaida.assinatura = depoisFuncao;
+        linhasSaida.assinatura = restante.slice(indiceFuncao + funcaoDetectada.length).trim();
       } else {
-        linhasSaida.nome = restante.join(" ");
+        linhasSaida.nome = restante;
       }
     } else {
-      linhasSaida.nome = restante.join(" ");
+      linhasSaida.nome = restante;
     }
+
     return linhasSaida;
   }
 
@@ -505,61 +556,123 @@ function separarLinhaPdfEmColunas(linha, mapaColunas) {
   return linhasSaida;
 }
 
-function textoPareceLinhaParticipante(textoOriginal) {
-  const texto = normalizarTextoPdfTabela(textoOriginal);
-  if (!texto) {
+function validarNomeTabelaPdf(texto) {
+  const nome = normalizarTextoPdfTabela(texto);
+  if (!nome || textoEhRuidoPdfTabela(nome)) {
     return false;
   }
 
-  if (textoInstitucionalDominante(texto)) {
+  const comparacao = normalizarTextoComparacaoPdf(nome);
+  const tokens = comparacao
+    .split(" ")
+    .map((token) => token.trim())
+    .filter(Boolean)
+    .filter((token) => !["de", "da", "do", "das", "dos", "e"].includes(token));
+
+  const letrasTotal = comparacao.replace(/[^a-zà-ÿ]/gi, "");
+  if (letrasTotal.length < 5) {
     return false;
   }
 
-  const tokens = limparTokensTexto(texto);
-  const letras = texto.replace(/[^A-Za-zÀ-ÿ]/g, "");
-  const palavras = tokens.filter((token) => /[A-Za-zÀ-ÿ]/.test(token));
-  const palavrasLongas = palavras.filter((token) => token.replace(/[^A-Za-zÀ-ÿ]/g, "").length >= 3);
-  const proporcaoLetras = texto.length > 0 ? letras.length / texto.length : 0;
-
-  if (palavras.length < 2) {
-    return false;
-  }
-  if (palavrasLongas.length < 2) {
-    return false;
-  }
-  if (letras.length < 6) {
-    return false;
-  }
-  if (proporcaoLetras < 0.45) {
+  if (tokens.length < 2) {
     return false;
   }
 
-  const funcaoDetectada = identificarFuncaoTexto(texto);
-  const textoSemFuncao = funcaoDetectada
-    ? normalizarTextoComparacaoPdf(texto).replace(normalizarTextoComparacaoPdf(funcaoDetectada), "").trim()
-    : texto;
+  const palavrasFortes = tokens.filter((token) => token.replace(/[^a-zà-ÿ]/gi, "").length >= 3);
+  if (palavrasFortes.length < 2) {
+    return false;
+  }
 
-  return textoSemFuncao.length >= 4;
+  return true;
 }
 
-function linhaEhCabecalhoOuInstitucional(linha, cabecalhoDetectado) {
-  const textoLinha = normalizarTextoPdfTabela(linha?.texto);
-  if (!textoLinha) {
-    return true;
+function validarParticipanteTabelaPdf(dadosLinha, textoLinha) {
+  const textoOriginal = normalizarTextoPdfTabela(textoLinha);
+  const numero = normalizarTextoPdfTabela(dadosLinha?.numero || extrairNumeroCurtoDaLinha(textoOriginal));
+  const nome = normalizarTextoPdfTabela(dadosLinha?.nome || "");
+  const funcao = normalizarTextoPdfTabela(dadosLinha?.funcao || "");
+  const assinatura = normalizarTextoPdfTabela(dadosLinha?.assinatura || "");
+
+  if (!textoOriginal) {
+    return { aceito: false, motivo: "vazio", numero, nome, funcao, assinatura, confianca: 0 };
   }
 
-  const textoComparacao = normalizarTextoComparacaoPdf(textoLinha).toUpperCase();
-  if (
-    TERMOS_INSTITUCIONAIS.some((termo) => textoComparacao.includes(normalizarTextoComparacaoPdf(termo).toUpperCase()))
-  ) {
-    return true;
+  if (textoEhCabecalhoTabelaPdf(textoOriginal)) {
+    return { aceito: false, motivo: "cabecalho", numero, nome, funcao, assinatura, confianca: 0 };
   }
 
-  if (textoEhCabecalhoTabelaPdf(textoLinha)) {
-    return true;
+  if (textoInstitucionalDominante(textoOriginal)) {
+    return { aceito: false, motivo: "institucional", numero, nome, funcao, assinatura, confianca: 0 };
   }
 
-  return Boolean(cabecalhoDetectado && normalizarTextoPdfTabela(cabecalhoDetectado.textoCabecalho) === textoLinha);
+  if (textoEhRuidoPdfTabela(textoOriginal)) {
+    return { aceito: false, motivo: "ruidoPdf", numero, nome, funcao, assinatura, confianca: 0 };
+  }
+
+  const nomeBase = nome || textoOriginal;
+  const nomeValido = validarNomeTabelaPdf(nomeBase);
+  const funcaoDetectada = Boolean(funcao) || Boolean(identificarFuncaoTexto(textoOriginal));
+  const possuiNumero = numeroCurtoEhValido(numero) || /^\d{1,3}\b/.test(textoOriginal.trim());
+  const nomeEhFuncao = Boolean(identificarFuncaoTexto(nomeBase)) && normalizarTextoComparacaoPdf(nomeBase).split(" ").filter(Boolean).length <= 2;
+
+  if (!nomeValido) {
+    return {
+      aceito: false,
+      motivo: !nomeBase ? "semNome" : textoEhRuidoPdfTabela(nomeBase) ? "ruidoPdf" : "nomeImprovavel",
+      numero,
+      nome,
+      funcao,
+      assinatura,
+      confianca: 0,
+    };
+  }
+
+  if (nomeEhFuncao) {
+    return {
+      aceito: false,
+      motivo: "nomeImprovavel",
+      numero,
+      nome,
+      funcao,
+      assinatura,
+      confianca: 0,
+    };
+  }
+
+  if (!possuiNumero && !funcaoDetectada && !assinatura) {
+    return {
+      aceito: false,
+      motivo: "nomeImprovavel",
+      numero,
+      nome,
+      funcao,
+      assinatura,
+      confianca: 0,
+    };
+  }
+
+  const palavrasNome = normalizarTextoComparacaoPdf(nomeBase)
+    .split(" ")
+    .filter(Boolean)
+    .filter((token) => !["de", "da", "do", "das", "dos", "e"].includes(token));
+  const totalLetrasNome = normalizarTextoComparacaoPdf(nomeBase).replace(/[^a-zà-ÿ]/gi, "").length;
+  const confianca = Math.max(
+    55,
+    Math.min(
+      95,
+      60 + Math.min(15, palavrasNome.length * 4) + Math.min(8, totalLetrasNome / 4) + (funcaoDetectada ? 5 : 0) + (assinatura ? 2 : 0),
+    ),
+  );
+
+  return {
+    aceito: true,
+    motivo: "ok",
+    numero,
+    nome,
+    funcao,
+    assinatura,
+    confianca,
+  };
 }
 
 function registrarLinhaAnalise(linhasAnalise, detalhe) {
@@ -579,100 +692,6 @@ function registrarLinhaAnalise(linhasAnalise, detalhe) {
   });
 }
 
-function extrairNumeroCurtoDaLinha(texto) {
-  const textoNormalizado = normalizarTextoPdfTabela(texto);
-  if (!textoNormalizado) {
-    return "";
-  }
-
-  const tokens = textoNormalizado.split(" ").filter(Boolean);
-  const tokenNumero = tokens.find((token) => numeroCurtoEhValido(token));
-  return tokenNumero || "";
-}
-
-function linhaTemParticipanteProvavel(linha, dadosLinha) {
-  const numeroLinha = normalizarTextoPdfTabela(dadosLinha?.numero || "");
-  const nomeLinha = normalizarTextoPdfTabela(dadosLinha?.nome || "");
-  const textoLinha = normalizarTextoPdfTabela(linha?.texto);
-
-  if (!textoLinha) {
-    return false;
-  }
-
-  if (numeroLinha && !numeroCurtoEhValido(numeroLinha)) {
-    return false;
-  }
-
-  const textoBase = nomeLinha || textoLinha;
-  if (!textoPareceLinhaParticipante(textoBase)) {
-    return false;
-  }
-
-  const palavrasNome = normalizarTextoComparacaoPdf(nomeLinha || textoBase)
-    .split(" ")
-    .filter(Boolean);
-  const possuiNomeComDuasPalavras = palavrasNome.filter((palavra) => palavra.replace(/[^a-z0-9]/g, "").length >= 3).length >= 2;
-  const possuiNomeLongo = normalizarTextoComparacaoPdf(nomeLinha || textoBase).replace(/\s+/g, "").length >= 8;
-
-  return possuiNomeComDuasPalavras || possuiNomeLongo;
-}
-
-function validarParticipanteTabelaPdf(dadosLinha, textoLinha) {
-  const textoOriginal = normalizarTextoPdfTabela(textoLinha);
-  const numero = normalizarTextoPdfTabela(dadosLinha?.numero || extrairNumeroCurtoDaLinha(textoOriginal));
-  const nome = normalizarTextoPdfTabela(dadosLinha?.nome || "");
-  const funcao = normalizarTextoPdfTabela(dadosLinha?.funcao || "");
-  const assinatura = normalizarTextoPdfTabela(dadosLinha?.assinatura || "");
-
-  if (!textoOriginal) {
-    return { aceito: false, motivo: "vazio", numero, nome, funcao, assinatura };
-  }
-
-  if (textoEhCabecalhoTabelaPdf(textoOriginal)) {
-    return { aceito: false, motivo: "cabecalho", numero, nome, funcao, assinatura };
-  }
-
-  if (textoInstitucionalDominante(textoOriginal)) {
-    return { aceito: false, motivo: "institucional", numero, nome, funcao, assinatura };
-  }
-
-  const textoComparacao = normalizarTextoComparacaoPdf(textoOriginal);
-  const possuiNumeroCurtoNoInicio = /^\d{1,3}\b/.test(textoOriginal.trim()) || Boolean(numero);
-  const palavrasNome = normalizarTextoComparacaoPdf(nome || textoOriginal)
-    .split(" ")
-    .filter(Boolean)
-    .filter((token) => token.replace(/[^a-z0-9]/g, "").length >= 2);
-  const temNomeComDuasPalavras = palavrasNome.length >= 2;
-  const temPalavraForte = palavrasNome.some((token) => token.replace(/[^a-z0-9]/g, "").length >= 4);
-  const funcaoDetectada = Boolean(funcao) || Boolean(identificarFuncaoTexto(textoOriginal));
-  const nomeProvavel = textoPareceLinhaParticipante(nome || textoOriginal);
-
-  if (possuiNumeroCurtoNoInicio && (nomeProvavel || temNomeComDuasPalavras || (temPalavraForte && funcaoDetectada))) {
-    return { aceito: true, motivo: "ok", numero, nome, funcao, assinatura };
-  }
-
-  if (temNomeComDuasPalavras && (funcaoDetectada || assinatura || numero)) {
-    return { aceito: true, motivo: "ok", numero, nome, funcao, assinatura };
-  }
-
-  if (temPalavraForte && funcaoDetectada) {
-    return { aceito: true, motivo: "ok", numero, nome, funcao, assinatura };
-  }
-
-  if (textoComparacao.includes("treinamento") || textoComparacao.includes("carga horaria")) {
-    return { aceito: false, motivo: "institucional", numero, nome, funcao, assinatura };
-  }
-
-  return {
-    aceito: false,
-    motivo: nome ? "nomeImprovavel" : "semNome",
-    numero,
-    nome,
-    funcao,
-    assinatura,
-  };
-}
-
 function extrairParticipantesTabelaPdf(itensTextoPdf, opcoes = {}) {
   const agrupamento = agruparItensTextoPdfEmLinhas(itensTextoPdf, opcoes);
   const cabecalho = detectarCabecalhoTabelaPdf(agrupamento.linhas);
@@ -682,11 +701,15 @@ function extrairParticipantesTabelaPdf(itensTextoPdf, opcoes = {}) {
   const avisos = [];
   const linhasAnalisadas = [];
   let totalLinhasIgnoradas = 0;
+  let totalLinhasRuido = 0;
+  let totalRejeitadosSemNome = 0;
+  let totalRejeitadosNomeImprovavel = 0;
 
   for (const linha of linhasAvaliadas) {
     const textoLinha = normalizarTextoPdfTabela(linha?.texto);
     if (!textoLinha) {
       totalLinhasIgnoradas += 1;
+      totalLinhasRuido += 1;
       registrarLinhaAnalise(linhasAnalisadas, {
         pagina: linha?.pagina,
         linhaOriginal: linha?.texto,
@@ -696,10 +719,7 @@ function extrairParticipantesTabelaPdf(itensTextoPdf, opcoes = {}) {
       continue;
     }
 
-    const textoComparacao = normalizarTextoComparacaoPdf(textoLinha).toUpperCase();
-    const ehCabecalho = Boolean(
-      cabecalho.encontrado && normalizarTextoPdfTabela(cabecalho.textoCabecalho) === textoLinha,
-    );
+    const ehCabecalho = Boolean(cabecalho.encontrado && normalizarTextoPdfTabela(cabecalho.textoCabecalho) === textoLinha);
     if (ehCabecalho) {
       totalLinhasIgnoradas += 1;
       registrarLinhaAnalise(linhasAnalisadas, {
@@ -711,15 +731,25 @@ function extrairParticipantesTabelaPdf(itensTextoPdf, opcoes = {}) {
       continue;
     }
 
-    if (
-      TERMOS_INSTITUCIONAIS.some((termo) => textoComparacao.includes(normalizarTextoComparacaoPdf(termo).toUpperCase()))
-    ) {
+    if (textoInstitucionalDominante(textoLinha)) {
       totalLinhasIgnoradas += 1;
       registrarLinhaAnalise(linhasAnalisadas, {
         pagina: linha?.pagina,
         linhaOriginal: textoLinha,
         aceito: false,
         motivo: "institucional",
+      });
+      continue;
+    }
+
+    if (textoEhRuidoPdfTabela(textoLinha)) {
+      totalLinhasIgnoradas += 1;
+      totalLinhasRuido += 1;
+      registrarLinhaAnalise(linhasAnalisadas, {
+        pagina: linha?.pagina,
+        linhaOriginal: textoLinha,
+        aceito: false,
+        motivo: "ruidoPdf",
       });
       continue;
     }
@@ -745,6 +775,14 @@ function extrairParticipantesTabelaPdf(itensTextoPdf, opcoes = {}) {
 
     if (!validacaoParticipante.aceito) {
       totalLinhasIgnoradas += 1;
+      if (validacaoParticipante.motivo === "semNome") {
+        totalRejeitadosSemNome += 1;
+      } else if (validacaoParticipante.motivo === "nomeImprovavel") {
+        totalRejeitadosNomeImprovavel += 1;
+      } else if (validacaoParticipante.motivo === "ruidoPdf") {
+        totalLinhasRuido += 1;
+      }
+
       registrarLinhaAnalise(linhasAnalisadas, {
         pagina: linha?.pagina,
         linhaOriginal: textoLinha,
@@ -754,34 +792,6 @@ function extrairParticipantesTabelaPdf(itensTextoPdf, opcoes = {}) {
         assinatura: validacaoParticipante.assinatura,
         aceito: false,
         motivo: validacaoParticipante.motivo || "outro",
-      });
-      continue;
-    }
-
-    const letrasNome = nomeLinha.replace(/[^A-Za-zÀ-ÿ]/g, "").length;
-    const confianca = Math.max(
-      40,
-      Math.min(
-        95,
-        55 +
-          Math.min(20, letrasNome / 2) +
-          (funcaoLinha ? 8 : 0) +
-          (assinaturaLinha ? 6 : 0) +
-          (linha.celulas.length >= 3 ? 6 : 0),
-      ),
-    );
-
-    if (confianca < 45) {
-      totalLinhasIgnoradas += 1;
-      registrarLinhaAnalise(linhasAnalisadas, {
-        pagina: linha?.pagina,
-        linhaOriginal: textoLinha,
-        numero: dadosLinha.numero,
-        nome: nomeLinha,
-        funcao: funcaoLinha,
-        assinatura: assinaturaLinha,
-        aceito: false,
-        motivo: "baixaConfianca",
       });
       continue;
     }
@@ -796,7 +806,7 @@ function extrairParticipantesTabelaPdf(itensTextoPdf, opcoes = {}) {
       pagina: linha.pagina || 1,
       linhaOriginal: textoLinha,
       origem: "pdf_tabela_interna",
-      confianca,
+      confianca: Number.isFinite(validacaoParticipante.confianca) ? validacaoParticipante.confianca : 0,
     });
 
     registrarLinhaAnalise(linhasAnalisadas, {
@@ -836,6 +846,9 @@ function extrairParticipantesTabelaPdf(itensTextoPdf, opcoes = {}) {
       totalLinhas: agrupamento.totalLinhas,
       totalParticipantes: participantesOrdenados.length,
       totalLinhasIgnoradas,
+      totalLinhasRuido,
+      totalRejeitadosSemNome,
+      totalRejeitadosNomeImprovavel,
       temCamadaTexto: agrupamento.totalItensTexto > 0,
       paginasDetectadas: agrupamento.paginasDetectadas,
       avisos,
@@ -874,6 +887,30 @@ function validarResultadoTabelaPdf(resultado) {
     : Array.isArray(resultado?.participantes)
       ? resultado.participantes.length
       : 0;
+  const totalLinhas = Number.isFinite(resultado?.diagnostico?.totalLinhas) ? resultado.diagnostico.totalLinhas : 0;
+  const totalIgnorados = Number.isFinite(resultado?.diagnostico?.totalLinhasIgnoradas) ? resultado.diagnostico.totalLinhasIgnoradas : 0;
+  const totalRejeitadosSemNome = Number.isFinite(resultado?.diagnostico?.totalRejeitadosSemNome)
+    ? resultado.diagnostico.totalRejeitadosSemNome
+    : 0;
+  const totalRejeitadosNomeImprovavel = Number.isFinite(resultado?.diagnostico?.totalRejeitadosNomeImprovavel)
+    ? resultado.diagnostico.totalRejeitadosNomeImprovavel
+    : 0;
+  const totalLinhasRuido = Number.isFinite(resultado?.diagnostico?.totalLinhasRuido) ? resultado.diagnostico.totalLinhasRuido : 0;
+  const rejeicoesFracas = totalRejeitadosSemNome + totalRejeitadosNomeImprovavel + totalLinhasRuido;
+  const proporcaoRejeicao = totalLinhas > 0 ? rejeicoesFracas / totalLinhas : 0;
+  const participantesComNomeValido = Array.isArray(resultado?.participantes)
+    ? resultado.participantes.filter((item) => nomeProvavelPdfTabela(item?.nome || "") && item?.nome !== "-" && item?.nome.trim() !== "").length
+    : 0;
+  const participantesInvalidos = totalParticipantes > 0 ? totalParticipantes - participantesComNomeValido : 0;
+  const candidatosRejeitadosAmostra = Array.isArray(resultado?.diagnostico?.linhasAnalisadas)
+    ? resultado.diagnostico.linhasAnalisadas
+        .filter((item) => !item?.aceito)
+        .slice(0, 10)
+        .map((item) => ({
+          linhaOriginal: item?.linhaOriginal || "",
+          motivo: item?.motivo || "outro",
+        }))
+    : [];
 
   if (!totalItensTexto) {
     avisos.push("PDF sem camada de texto detectável. Pode ser um PDF escaneado.");
@@ -883,8 +920,34 @@ function validarResultadoTabelaPdf(resultado) {
     avisos.push("Não foi possível montar tabela interna a partir do PDF.");
   }
 
+  if (proporcaoRejeicao > 0.6 || (totalParticipantes > 0 && participantesInvalidos > totalParticipantes / 2)) {
+    avisos.push(
+      "A camada de texto do PDF foi detectada, mas não parece conter uma tabela de presença válida. Use o OCR experimental apenas como apoio visual.",
+    );
+  }
+
+  const tabelaInternaConfiavel = totalItensTexto > 0 && totalParticipantes > 0 && proporcaoRejeicao <= 0.6 && participantesInvalidos <= totalParticipantes / 2;
+  const valido = tabelaInternaConfiavel;
+
+  if (!tabelaInternaConfiavel) {
+    const participantesDescartados = Array.isArray(resultado?.participantes) ? resultado.participantes.length : 0;
+    if (resultado?.diagnostico) {
+      resultado.diagnostico.participantesDescartadosPorTabelaInvalida = participantesDescartados;
+      resultado.diagnostico.tabelaInternaConfiavel = false;
+      resultado.diagnostico.candidatosRejeitadosAmostra = candidatosRejeitadosAmostra;
+      resultado.diagnostico.totalParticipantes = 0;
+    }
+    if (Array.isArray(resultado?.participantes)) {
+      resultado.participantes = [];
+    }
+  } else if (resultado?.diagnostico) {
+    resultado.diagnostico.tabelaInternaConfiavel = true;
+    resultado.diagnostico.participantesDescartadosPorTabelaInvalida = 0;
+    resultado.diagnostico.candidatosRejeitadosAmostra = candidatosRejeitadosAmostra;
+  }
+
   return {
-    valido: totalItensTexto > 0 && totalParticipantes > 0,
+    valido,
     avisos,
     erros,
   };
@@ -895,11 +958,13 @@ export {
   converterTabelaPdfParaTextoPlanilha,
   detectarCabecalhoTabelaPdf,
   extrairParticipantesTabelaPdf,
+  nomeProvavelPdfTabela,
   normalizarTextoComparacaoPdf,
   normalizarTextoPdfTabela,
-  validarParticipanteTabelaPdf,
-  textoEhCabecalhoTabelaPdf,
   separarLinhaPdfEmColunas,
+  textoEhCabecalhoTabelaPdf,
+  textoEhRuidoPdfTabela,
+  validarParticipanteTabelaPdf,
   validarResultadoTabelaPdf,
 };
 
@@ -908,10 +973,12 @@ export default {
   converterTabelaPdfParaTextoPlanilha,
   detectarCabecalhoTabelaPdf,
   extrairParticipantesTabelaPdf,
+  nomeProvavelPdfTabela,
   normalizarTextoComparacaoPdf,
   normalizarTextoPdfTabela,
-  validarParticipanteTabelaPdf,
-  textoEhCabecalhoTabelaPdf,
   separarLinhaPdfEmColunas,
+  textoEhCabecalhoTabelaPdf,
+  textoEhRuidoPdfTabela,
+  validarParticipanteTabelaPdf,
   validarResultadoTabelaPdf,
 };
