@@ -9,6 +9,7 @@ const GRUPOS_CABECALHO = {
 const TERMOS_INSTITUCIONAIS = [
   "TREINAMENTO",
   "CARGA HORARIA",
+  "CARGA HORÁRIA",
   "INSTRUTOR",
   "EMPRESA",
   "CNPJ",
@@ -24,6 +25,18 @@ const TERMOS_INSTITUCIONAIS = [
   "PROTECAO",
   "RESIDUOS",
   "MEIO AMBIENTE",
+  "HORARIO",
+  "HORÁRIO",
+  "HORARIO NORMAL",
+  "HORÁRIO NORMAL",
+  "DENTRO DO HORARIO NORMAL DE TRABALHO",
+  "DENTRO DO HORÁRIO NORMAL DE TRABALHO",
+  "PAVIMENTADORA",
+  "CONSTRUTORA",
+  "LTDA",
+  "MEI",
+  "RAZAO SOCIAL",
+  "RAZÃO SOCIAL",
 ];
 
 const TERMOS_FUNCAO = [
@@ -156,7 +169,7 @@ function nomeProvavelPdfTabela(texto) {
     return false;
   }
 
-  if (tokens.length < 2) {
+  if (tokens.length < 2 || tokens.length > 8) {
     return false;
   }
 
@@ -437,7 +450,99 @@ function textoInstitucionalDominante(textoOriginal) {
     return false;
   }
 
+  const termosFortes = [
+    "EMPRESA",
+    "CNPJ",
+    "CARGA HORARIA",
+    "HORARIO",
+    "HORARIO NORMAL",
+    "DENTRO DO HORARIO NORMAL DE TRABALHO",
+    "INSTRUTOR",
+    "TREINAMENTO",
+    "CONTEUDO",
+    "OBJETIVO",
+    "AVALIACAO",
+    "CERTIFICADO",
+    "LOCAL",
+    "DATA",
+    "ASSINATURA DO INSTRUTOR",
+    "RESPONSAVEL",
+    "PAVIMENTADORA",
+    "CONSTRUTORA",
+    "LTDA",
+    "MEI",
+    "RAZAO SOCIAL",
+  ];
+
+  if (termosFortes.some((termo) => textoNormalizado.includes(normalizarTextoComparacaoPdf(termo).toUpperCase()))) {
+    return true;
+  }
+
   return TERMOS_INSTITUCIONAIS.some((termo) => textoNormalizado.includes(normalizarTextoComparacaoPdf(termo).toUpperCase()));
+}
+
+function nomePareceEmpresaOuTextoInstitucional(nome) {
+  const texto = normalizarTextoComparacaoPdf(nome).toUpperCase();
+  if (!texto) {
+    return true;
+  }
+
+  const termosEmpresa = [
+    "LTDA",
+    "EIRELI",
+    "ME",
+    "MEI",
+    "CONSTRUTORA",
+    "PAVIMENTADORA",
+    "ENGENHARIA",
+    "SERVICOS",
+    "SERVIÇOS",
+    "COMERCIO",
+    "COMÉRCIO",
+    "EMPRESA",
+    "CNPJ",
+    "RAZAO SOCIAL",
+    "RAZÃO SOCIAL",
+    "DENTRO DO HORARIO",
+    "DENTRO DO HORÁRIO",
+    "HORARIO NORMAL",
+    "HORÁRIO NORMAL",
+    "CARGA HORARIA",
+    "CARGA HORÁRIA",
+  ];
+
+  if (termosEmpresa.some((termo) => texto.includes(normalizarTextoComparacaoPdf(termo).toUpperCase()))) {
+    return true;
+  }
+
+  const palavras = texto.split(" ").filter(Boolean);
+  if (palavras.length > 5) {
+    return true;
+  }
+
+  if (/[;:]/.test(nome)) {
+    return true;
+  }
+
+  if ((nome.match(/\//g) || []).length > 1) {
+    return true;
+  }
+
+  if ((nome.match(/\d/g) || []).length > 2) {
+    return true;
+  }
+
+  if (nome.length > 80) {
+    return true;
+  }
+
+  const letrasTotal = texto.replace(/[^\p{L}]/gu, "");
+  const simbolos = texto.replace(/[\p{L}\p{N}\s]/gu, "");
+  if (texto.length > 0 && simbolos.length >= texto.length * 0.25) {
+    return true;
+  }
+
+  return letrasTotal.length < 5;
 }
 
 function limparTokensTexto(textoOriginal) {
@@ -558,7 +663,31 @@ function separarLinhaPdfEmColunas(linha, mapaColunas) {
 
 function validarNomeTabelaPdf(texto) {
   const nome = normalizarTextoPdfTabela(texto);
-  if (!nome || textoEhRuidoPdfTabela(nome)) {
+  if (!nome || nome === "-" || nome === "." || nome === "..." || nome === "_" || nome === "/" || nome === "///") {
+    return false;
+  }
+
+  if (textoEhRuidoPdfTabela(nome)) {
+    return false;
+  }
+
+  if (nomePareceEmpresaOuTextoInstitucional(nome)) {
+    return false;
+  }
+
+  if (nome.length > 80) {
+    return false;
+  }
+
+  if (/[;:]/.test(nome)) {
+    return false;
+  }
+
+  if ((nome.match(/\//g) || []).length > 1) {
+    return false;
+  }
+
+  if ((nome.match(/\d/g) || []).length > 2) {
     return false;
   }
 
@@ -614,6 +743,18 @@ function validarParticipanteTabelaPdf(dadosLinha, textoLinha) {
   const funcaoDetectada = Boolean(funcao) || Boolean(identificarFuncaoTexto(textoOriginal));
   const possuiNumero = numeroCurtoEhValido(numero) || /^\d{1,3}\b/.test(textoOriginal.trim());
   const nomeEhFuncao = Boolean(identificarFuncaoTexto(nomeBase)) && normalizarTextoComparacaoPdf(nomeBase).split(" ").filter(Boolean).length <= 2;
+
+  if (nomePareceEmpresaOuTextoInstitucional(nomeBase)) {
+    return {
+      aceito: false,
+      motivo: "institucional",
+      numero,
+      nome,
+      funcao,
+      assinatura,
+      confianca: 0,
+    };
+  }
 
   if (!nomeValido) {
     return {
