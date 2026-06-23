@@ -73,6 +73,23 @@ function gerarCsvTextoLimpo(valor) {
   return String(valor ?? "").replace(/\r\n?/g, "\n");
 }
 
+function formatarBboxCurto(bbox) {
+  if (!bbox || typeof bbox !== "object") {
+    return "-";
+  }
+
+  const x0 = Number(bbox.x0);
+  const y0 = Number(bbox.y0);
+  const x1 = Number(bbox.x1);
+  const y1 = Number(bbox.y1);
+
+  if (![x0, y0, x1, y1].every((valor) => Number.isFinite(valor))) {
+    return "-";
+  }
+
+  return `x0:${Math.round(x0)} y0:${Math.round(y0)} x1:${Math.round(x1)} y1:${Math.round(y1)}`;
+}
+
 export default function VerificadorListaPresenca({
   colaboradores = [],
   colaboradorId = null,
@@ -141,6 +158,15 @@ export default function VerificadorListaPresenca({
   const tabelaInternaConfiavel = Boolean(resumoTabela?.tabelaInternaConfiavel);
   const participantesTabelaBase = tabelaInternaConfiavel && Array.isArray(resultadoTabelaPdf?.participantes) ? resultadoTabelaPdf.participantes : [];
   const totalParticipantesTabela = participantesTabelaBase.length;
+  const diagnosticoOcr = resultadoOcr?.diagnosticoOcr || {};
+  const amostraLinhasOcr = Array.isArray(diagnosticoOcr?.amostraLinhas) ? diagnosticoOcr.amostraLinhas : [];
+  const totalLinhasOcr = Number(diagnosticoOcr?.totalLinhasOcr || 0);
+  const totalLinhasComBbox = Number(diagnosticoOcr?.totalLinhasComBbox || 0);
+  const totalLinhasSemBbox = Number(diagnosticoOcr?.totalLinhasSemBbox || 0);
+  const totalLinhasComConfianca = Number(diagnosticoOcr?.totalLinhasComConfianca || 0);
+  const mediaConfiancaLinhas = Math.round(Number(diagnosticoOcr?.mediaConfiancaLinhas || 0));
+  const totalLinhasComAssinaturaVisual = Number(diagnosticoOcr?.totalLinhasComAssinaturaVisual || 0);
+  const tamanhoTextoCamada = Number(diagnosticoOcr?.tamanhoTextoCamada || 0);
   const participantesTabelaConfiaveis = useMemo(() => participantesTabelaBase, [participantesTabelaBase]);
   const resultadoTabelaPdfComparadaValida = resultadoTabelaPdfComparada?.origem === "pdf_tabela_interna_comparada" ? resultadoTabelaPdfComparada : null;
   const resumoComparacaoTabela = resultadoTabelaPdfComparadaValida?.resumo || null;
@@ -490,6 +516,109 @@ export default function VerificadorListaPresenca({
           </p>
         </div>
       </div>
+
+      {modoLeituraPdf === "ocr_experimental" && resultadoOcr?.diagnosticoOcr ? (
+        <div className="mt-4 overflow-hidden rounded-xl border border-slate-200 bg-white">
+          <div className="border-b border-slate-200 bg-slate-50 px-4 py-3">
+            <h3 className="text-sm font-semibold text-slate-900">Diagnóstico técnico do OCR experimental</h3>
+            <p className="text-xs text-slate-500">
+              Resumo técnico para avaliar qualidade da leitura OCR. Não altera aprovação automática.
+            </p>
+          </div>
+
+          <div className="grid gap-3 p-4 md:grid-cols-2 xl:grid-cols-4">
+            <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
+              <p className="text-xs uppercase tracking-wide text-slate-500">Linhas OCR</p>
+              <p className="mt-1 text-sm font-semibold text-slate-900">{totalLinhasOcr}</p>
+            </div>
+
+            <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
+              <p className="text-xs uppercase tracking-wide text-slate-500">Com bbox</p>
+              <p className="mt-1 text-sm font-semibold text-slate-900">{totalLinhasComBbox}</p>
+            </div>
+
+            <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
+              <p className="text-xs uppercase tracking-wide text-slate-500">Sem bbox</p>
+              <p className="mt-1 text-sm font-semibold text-slate-900">{totalLinhasSemBbox}</p>
+            </div>
+
+            <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
+              <p className="text-xs uppercase tracking-wide text-slate-500">Média confiança</p>
+              <p className="mt-1 text-sm font-semibold text-slate-900">{mediaConfiancaLinhas}</p>
+            </div>
+
+            <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
+              <p className="text-xs uppercase tracking-wide text-slate-500">Assinatura visual</p>
+              <p className="mt-1 text-sm font-semibold text-slate-900">{totalLinhasComAssinaturaVisual}</p>
+            </div>
+
+            <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
+              <p className="text-xs uppercase tracking-wide text-slate-500">Camada de texto</p>
+              <p className="mt-1 text-sm font-semibold text-slate-900">{diagnosticoOcr?.temCamadaTexto ? "Sim" : "Não"}</p>
+            </div>
+
+            <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
+              <p className="text-xs uppercase tracking-wide text-slate-500">PDF escaneado</p>
+              <p className="mt-1 text-sm font-semibold text-slate-900">{diagnosticoOcr?.isPdfEscaneado ? "Sim" : "Não"}</p>
+            </div>
+
+            <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
+              <p className="text-xs uppercase tracking-wide text-slate-500">Texto camada</p>
+              <p className="mt-1 text-sm font-semibold text-slate-900">{tamanhoTextoCamada}</p>
+            </div>
+          </div>
+
+          <div className="border-t border-slate-200 px-4 py-4">
+            <div className="mb-3">
+              <h4 className="text-sm font-semibold text-slate-900">Amostra técnica OCR</h4>
+              <p className="text-xs text-slate-500">Até 10 linhas com dados brutos de leitura.</p>
+            </div>
+
+            {amostraLinhasOcr.length ? (
+              <div className="overflow-x-auto rounded-xl border border-slate-200">
+                <table className="min-w-full divide-y divide-slate-200 text-left text-sm">
+                  <thead className="bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
+                    <tr>
+                      <th className="px-4 py-3">Página</th>
+                      <th className="px-4 py-3">Índice</th>
+                      <th className="px-4 py-3">Texto OCR</th>
+                      <th className="px-4 py-3">Nome extraído</th>
+                      <th className="px-4 py-3">Função</th>
+                      <th className="px-4 py-3">Confiança</th>
+                      <th className="px-4 py-3">Bbox</th>
+                      <th className="px-4 py-3">Assinatura visual</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100 bg-white">
+                    {amostraLinhasOcr.map((linha, indice) => (
+                      <tr key={`${linha?.pagina ?? "p"}-${linha?.indice ?? indice}`}>
+                        <td className="px-4 py-3 text-slate-700">{linha?.pagina ?? "-"}</td>
+                        <td className="px-4 py-3 text-slate-700">{linha?.indice ?? "-"}</td>
+                        <td className="px-4 py-3 text-slate-700">
+                          <div className="max-w-[22rem] break-words">{linha?.texto || "-"}</div>
+                        </td>
+                        <td className="px-4 py-3 text-slate-700">
+                          <div className="max-w-[18rem] break-words">{linha?.nome || "-"}</div>
+                        </td>
+                        <td className="px-4 py-3 text-slate-700">
+                          <div className="max-w-[14rem] break-words">{linha?.funcao || "-"}</div>
+                        </td>
+                        <td className="px-4 py-3 text-slate-700">{Math.round(Number(linha?.confianca || 0))}</td>
+                        <td className="px-4 py-3 text-slate-700">{formatarBboxCurto(linha?.bbox)}</td>
+                        <td className="px-4 py-3 text-slate-700">{linha?.assinatura_visual ? "Sim" : "Não"}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            ) : (
+              <div className="rounded-xl border border-dashed border-slate-300 bg-slate-50 px-4 py-6 text-sm text-slate-600">
+                Nenhuma amostra técnica disponível.
+              </div>
+            )}
+          </div>
+        </div>
+      ) : null}
 
       {modoLeituraPdf === "ocr_experimental" && erroOcr ? (
         <div className="mt-4 flex items-start gap-3 rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-800">
