@@ -348,6 +348,263 @@ function calcularDiagnosticoEstruturalOcr(linhas) {
   };
 }
 
+function classificarRegiaoHorizontalOcr(centroX, limitesGerais) {
+  const xMin = Number(limitesGerais?.xMin);
+  const xMax = Number(limitesGerais?.xMax);
+
+  if (!Number.isFinite(Number(centroX)) || !Number.isFinite(xMin) || !Number.isFinite(xMax) || xMax <= xMin) {
+    return "indefinida";
+  }
+
+  const percentual = ((Number(centroX) - xMin) / (xMax - xMin)) * 100;
+  if (!Number.isFinite(percentual)) {
+    return "indefinida";
+  }
+
+  if (percentual <= 15) {
+    return "numero";
+  }
+  if (percentual <= 55) {
+    return "nome";
+  }
+  if (percentual <= 75) {
+    return "funcao";
+  }
+  return "assinatura";
+}
+
+function calcularFaixaYLinhaOcr(bbox) {
+  const normalizado = normalizarBboxOcr(bbox);
+  if (!normalizado) {
+    return null;
+  }
+
+  return {
+    y0: normalizado.y0,
+    y1: normalizado.y1,
+    centroY: normalizado.centroY,
+    altura: normalizado.altura,
+  };
+}
+
+function calcularMedianaNumeros(valores) {
+  const limpos = (Array.isArray(valores) ? valores : [])
+    .map((valor) => Number(valor))
+    .filter((valor) => Number.isFinite(valor))
+    .sort((a, b) => a - b);
+
+  if (!limpos.length) {
+    return null;
+  }
+
+  const meio = Math.floor(limpos.length / 2);
+  if (limpos.length % 2 === 0) {
+    return (limpos[meio - 1] + limpos[meio]) / 2;
+  }
+
+  return limpos[meio];
+}
+
+function agruparLinhasOcrPorLinhaVisual(linhas, limitesGerais) {
+  const linhasSeguras = Array.isArray(linhas) ? linhas : [];
+  const linhasComCoordenadas = linhasSeguras
+    .map((linha, indice) => {
+      const bbox = normalizarBboxOcr(linha?.bbox);
+      const faixaY = calcularFaixaYLinhaOcr(bbox);
+      return bbox && faixaY ? { linha, bbox, faixaY, indice } : null;
+    })
+    .filter(Boolean)
+    .sort((a, b) => {
+      if (a.linha?.pagina !== b.linha?.pagina) {
+        return Number(a.linha?.pagina || 0) - Number(b.linha?.pagina || 0);
+      }
+      if (a.faixaY.centroY !== b.faixaY.centroY) {
+        return a.faixaY.centroY - b.faixaY.centroY;
+      }
+      return a.bbox.x0 - b.bbox.x0;
+    });
+
+  const porPagina = new Map();
+  for (const item of linhasComCoordenadas) {
+    const pagina = Number(item?.linha?.pagina || 0) || 0;
+    const lista = porPagina.get(pagina) || [];
+    lista.push(item);
+    porPagina.set(pagina, lista);
+  }
+
+  const grupos = [];
+  const pages = Array.from(porPagina.entries()).sort((a, b) => a[0] - b[0]);
+
+  for (const [pagina, itensPagina] of pages) {
+    const limitesPagina = {
+      xMin: limitesGerais?.xMin,
+      xMax: limitesGerais?.xMax,
+    };
+
+    const xPagina = itensPagina.flatMap(({ bbox }) => [bbox.x0, bbox.x1]).filter((valor) => Number.isFinite(valor));
+    if (xPagina.length) {
+      limitesPagina.xMin = Math.min(...xPagina);
+      limitesPagina.xMax = Math.max(...xPagina);
+    }
+
+    const alturas = itensPagina.map((item) => item.faixaY.altura);
+    const alturaMediana = calcularMedianaNumeros(alturas);
+    const toleranciaY = Math.max(8, Math.min(22, (alturaMediana ? alturaMediana * 0.9 : 12)));
+
+    const gruposPagina = [];
+    let grupoAtual = null;
+    let indiceGrupo = 0;
+
+    for (const item of itensPagina) {
+      if (!grupoAtual) {
+        grupoAtual = {
+          pagina,
+          indiceGrupo: indiceGrupo + 1,
+          itens: [item],
+          yMin: item.faixaY.y0,
+          yMax: item.faixaY.y1,
+          centroYMedio: item.faixaY.centroY,
+        };
+        indiceGrupo += 1;
+        continue;
+      }
+
+      const diferencaY = Math.abs(item.faixaY.centroY - grupoAtual.centroYMedio);
+      if (diferencaY <= toleranciaY) {
+        grupoAtual.itens.push(item);
+        grupoAtual.yMin = Math.min(grupoAtual.yMin, item.faixaY.y0);
+        grupoAtual.yMax = Math.max(grupoAtual.yMax, item.faixaY.y1);
+        grupoAtual.centroYMedio =
+          grupoAtual.itens.reduce((acumulado, atual) => acumulado + atual.faixaY.centroY, 0) / grupoAtual.itens.length;
+      } else {
+        gruposPagina.push(grupoAtual);
+        grupoAtual = {
+          pagina,
+          indiceGrupo: indiceGrupo + 1,
+          itens: [item],
+          yMin: item.faixaY.y0,
+          yMax: item.faixaY.y1,
+          centroYMedio: item.faixaY.centroY,
+        };
+        indiceGrupo += 1;
+      }
+    }
+
+    if (grupoAtual) {
+      gruposPagina.push(grupoAtual);
+    }
+
+    const gruposPaginaNormalizados = gruposPagina.map((grupo) => {
+      const linhasGrupo = grupo.itens
+        .map((item) => ({
+          indice: item.linha?.indice ?? item.indice ?? null,
+          texto: item.linha?.texto || "",
+          nome: item.linha?.nome || "",
+          funcao: item.linha?.funcao || "",
+          confianca: Number.isFinite(Number(item.linha?.confianca)) ? Number(item.linha?.confianca) : null,
+          bbox: item.linha?.bbox || null,
+          assinatura_visual: Boolean(item.linha?.assinatura_visual),
+          regiaoHorizontal: classificarRegiaoHorizontalOcr(item.bbox.centroX, limitesPagina),
+        }))
+        .sort((a, b) => {
+          const bboxA = normalizarBboxOcr(a.bbox);
+          const bboxB = normalizarBboxOcr(b.bbox);
+          return (bboxA?.x0 ?? 0) - (bboxB?.x0 ?? 0);
+        });
+
+      const regioes = {
+        numero: linhasGrupo.filter((linha) => linha.regiaoHorizontal === "numero"),
+        nome: linhasGrupo.filter((linha) => linha.regiaoHorizontal === "nome"),
+        funcao: linhasGrupo.filter((linha) => linha.regiaoHorizontal === "funcao"),
+        assinatura: linhasGrupo.filter((linha) => linha.regiaoHorizontal === "assinatura"),
+        indefinida: linhasGrupo.filter((linha) => linha.regiaoHorizontal === "indefinida"),
+      };
+
+      return {
+        pagina,
+        indiceGrupo: grupo.indiceGrupo,
+        yMin: grupo.yMin,
+        yMax: grupo.yMax,
+        totalLinhas: linhasGrupo.length,
+        textoLinha: linhasGrupo.map((linha) => linha.texto || "").filter(Boolean).join(" ").trim(),
+        linhas: linhasGrupo,
+        regioes,
+      };
+    });
+
+    grupos.push(...gruposPaginaNormalizados);
+  }
+
+  return grupos;
+}
+
+function montarAmostraSegmentacaoOcr(gruposLinhaVisual) {
+  return (Array.isArray(gruposLinhaVisual) ? gruposLinhaVisual : []).slice(0, 10).map((grupo) => {
+    const extrairTextoRegiao = (regiao) => (Array.isArray(regiao) ? regiao.map((linha) => linha.texto || "").filter(Boolean).join(" ").trim() : "");
+    const numero = extrairTextoRegiao(grupo?.regioes?.numero);
+    const nome = extrairTextoRegiao(grupo?.regioes?.nome);
+    const funcao = extrairTextoRegiao(grupo?.regioes?.funcao);
+    const assinatura = extrairTextoRegiao(grupo?.regioes?.assinatura);
+
+    return {
+      pagina: grupo?.pagina ?? null,
+      indiceGrupo: grupo?.indiceGrupo ?? null,
+      yMin: Number.isFinite(Number(grupo?.yMin)) ? Number(grupo.yMin) : null,
+      yMax: Number.isFinite(Number(grupo?.yMax)) ? Number(grupo.yMax) : null,
+      totalLinhas: Number(grupo?.totalLinhas || 0),
+      textoLinha: grupo?.textoLinha || "",
+      numero,
+      nome,
+      funcao,
+      assinatura,
+      totalRegiaoNumero: Array.isArray(grupo?.regioes?.numero) ? grupo.regioes.numero.length : 0,
+      totalRegiaoNome: Array.isArray(grupo?.regioes?.nome) ? grupo.regioes.nome.length : 0,
+      totalRegiaoFuncao: Array.isArray(grupo?.regioes?.funcao) ? grupo.regioes.funcao.length : 0,
+      totalRegiaoAssinatura: Array.isArray(grupo?.regioes?.assinatura) ? grupo.regioes.assinatura.length : 0,
+    };
+  });
+}
+
+function calcularDiagnosticoSegmentacaoOcr(linhas) {
+  const linhasSeguras = Array.isArray(linhas) ? linhas : [];
+  const totalLinhasComCoordenadas = linhasSeguras.filter((linha) => Boolean(normalizarBboxOcr(linha?.bbox))).length;
+  const totalLinhasSemCoordenadas = linhasSeguras.length - totalLinhasComCoordenadas;
+  const linhasComCoordenadas = linhasSeguras.filter((linha) => Boolean(normalizarBboxOcr(linha?.bbox)));
+  const limitesGerais = (() => {
+    const bboxes = linhasComCoordenadas.map((linha) => normalizarBboxOcr(linha?.bbox)).filter(Boolean);
+    const xMin = bboxes.length ? Math.min(...bboxes.map((bbox) => bbox.x0)) : null;
+    const xMax = bboxes.length ? Math.max(...bboxes.map((bbox) => bbox.x1)) : null;
+    return { xMin, xMax };
+  })();
+  const gruposLinhaVisual = agruparLinhasOcrPorLinhaVisual(linhasSeguras, limitesGerais);
+  const porPagina = new Map();
+
+  for (const grupo of gruposLinhaVisual) {
+    const pagina = Number(grupo?.pagina || 0) || 0;
+    const item = porPagina.get(pagina) || { pagina, totalGrupos: 0, totalLinhasComCoordenadas: 0 };
+    item.totalGrupos += 1;
+    item.totalLinhasComCoordenadas += Number(grupo?.totalLinhas || 0);
+    porPagina.set(pagina, item);
+  }
+
+  const paginas = Array.from(porPagina.values())
+    .sort((a, b) => a.pagina - b.pagina)
+    .slice(0, 10)
+    .map((item) => ({
+      pagina: item.pagina,
+      totalGrupos: item.totalGrupos,
+      totalLinhasComCoordenadas: item.totalLinhasComCoordenadas,
+    }));
+
+  return {
+    totalGruposLinhaVisual: gruposLinhaVisual.length,
+    totalLinhasComCoordenadas,
+    totalLinhasSemCoordenadas,
+    paginas,
+    amostraSegmentacao: montarAmostraSegmentacaoOcr(gruposLinhaVisual),
+  };
+}
+
 function calcularDiagnosticoOcr({ paginas, linhas, textoCamadaTotal, isPdfEscaneado }) {
   const linhasSeguras = Array.isArray(linhas) ? linhas : [];
   const textoCamada = typeof textoCamadaTotal === "string" ? textoCamadaTotal : "";
@@ -385,6 +642,7 @@ function calcularDiagnosticoOcr({ paginas, linhas, textoCamadaTotal, isPdfEscane
     isPdfEscaneado: Boolean(isPdfEscaneado),
     amostraLinhas,
     diagnosticoEstrutural: calcularDiagnosticoEstruturalOcr(linhasSeguras),
+    diagnosticoSegmentacao: calcularDiagnosticoSegmentacaoOcr(linhasSeguras),
   };
 }
 
