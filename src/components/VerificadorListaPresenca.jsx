@@ -1657,6 +1657,39 @@ export default function VerificadorListaPresenca({
                     <p className="mt-1 text-sm font-semibold text-slate-900">{Number(diagnosticoComparativoAncoraNumerica?.totalNomesDivergentes || 0)}</p>
                   </div>
                 </div>
+                {Array.isArray(diagnosticoComparativoAncoraNumerica?.amostraSomenteAncora) && diagnosticoComparativoAncoraNumerica.amostraSomenteAncora.length ? (
+                  <div className="mt-3 overflow-x-auto rounded-lg border border-slate-200 bg-white">
+                    <div className="border-b border-slate-200 bg-slate-50 px-3 py-2">
+                      <p className="text-xs uppercase tracking-wide text-slate-500">Amostra: somente na âncora</p>
+                    </div>
+
+                    <table className="min-w-full divide-y divide-slate-200 text-left text-xs">
+                      <thead className="bg-slate-50 uppercase tracking-wide text-slate-500">
+                        <tr>
+                          <th className="px-3 py-2">Nº</th>
+                          <th className="px-3 py-2">Nome âncora</th>
+                          <th className="px-3 py-2">Função</th>
+                          <th className="px-3 py-2">Assinatura</th>
+                          <th className="px-3 py-2">Confiança</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-100 bg-white">
+                        {diagnosticoComparativoAncoraNumerica.amostraSomenteAncora.map((item, indice) => (
+                          <tr key={`${item?.numero || "n"}-${item?.nome || "nome"}-${indice}`}>
+                            <td className="px-3 py-2 text-slate-700">{item?.numero || "-"}</td>
+                            <td className="px-3 py-2 text-slate-700">
+                              <div className="max-w-[18rem] break-words">{item?.nome || "-"}</div>
+                            </td>
+                            <td className="px-3 py-2 text-slate-700">{item?.funcao || "-"}</td>
+                            <td className="px-3 py-2 text-slate-700">{item?.assinatura || "-"}</td>
+                            <td className="px-3 py-2 text-slate-700">{Number(item?.confianca || 0)}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                ) : null}
+
               </div>
             </div>
           ) : null}
