@@ -177,6 +177,9 @@ export default function VerificadorListaPresenca({
   const diagnosticoSegmentacaoOcr = diagnosticoOcr?.diagnosticoSegmentacao || {};
   const paginasSegmentacaoOcr = Array.isArray(diagnosticoSegmentacaoOcr?.paginas) ? diagnosticoSegmentacaoOcr.paginas : [];
   const amostraSegmentacaoOcr = Array.isArray(diagnosticoSegmentacaoOcr?.amostraSegmentacao) ? diagnosticoSegmentacaoOcr.amostraSegmentacao : [];
+  const diagnosticoOrigemOcr = diagnosticoOcr?.diagnosticoOrigem || {};
+  const diagnosticoEstruturaBrutaOcr = diagnosticoOcr?.diagnosticoEstruturaBruta || {};
+  const paginasEstruturaBrutaOcr = Array.isArray(diagnosticoEstruturaBrutaOcr?.paginas) ? diagnosticoEstruturaBrutaOcr.paginas : [];
   const participantesTabelaConfiaveis = useMemo(() => participantesTabelaBase, [participantesTabelaBase]);
   const resultadoTabelaPdfComparadaValida = resultadoTabelaPdfComparada?.origem === "pdf_tabela_interna_comparada" ? resultadoTabelaPdfComparada : null;
   const resumoComparacaoTabela = resultadoTabelaPdfComparadaValida?.resumo || null;
@@ -576,6 +579,122 @@ export default function VerificadorListaPresenca({
               <p className="text-xs uppercase tracking-wide text-slate-500">Texto camada</p>
               <p className="mt-1 text-sm font-semibold text-slate-900">{tamanhoTextoCamada}</p>
             </div>
+          </div>
+
+          <div className="border-t border-slate-200 px-4 py-4">
+            <div className="mb-3">
+              <h4 className="text-sm font-semibold text-slate-900">Origem e estrutura bruta do OCR</h4>
+              <p className="text-xs text-slate-500">
+                Identifica se a leitura veio de camada de texto, OCR estruturado ou fallback textual. Uso apenas técnico, sem alterar aprovação automática.
+              </p>
+            </div>
+
+            <div className="rounded-xl border border-slate-200 bg-slate-50 p-3 text-sm text-slate-700">
+              <div className="grid gap-2 md:grid-cols-3">
+                <div>
+                  <span className="font-medium text-slate-900">Origem da leitura:</span>{" "}
+                  <span>{diagnosticoOrigemOcr?.origemLeitura || "-"}</span>
+                </div>
+                <div>
+                  <span className="font-medium text-slate-900">Descrição:</span>{" "}
+                  <span>{diagnosticoOrigemOcr?.origemDescricao || "-"}</span>
+                </div>
+                <div>
+                  <span className="font-medium text-slate-900">Recomendação técnica:</span>{" "}
+                  <span>{diagnosticoOrigemOcr?.recomendacaoTecnica || "-"}</span>
+                </div>
+              </div>
+            </div>
+
+            <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+              <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
+                <p className="text-xs uppercase tracking-wide text-slate-500">Tem camada de texto</p>
+                <p className="mt-1 text-sm font-semibold text-slate-900">{diagnosticoOrigemOcr?.temCamadaTexto ? "Sim" : "Não"}</p>
+              </div>
+              <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
+                <p className="text-xs uppercase tracking-wide text-slate-500">Tem texto OCR</p>
+                <p className="mt-1 text-sm font-semibold text-slate-900">{diagnosticoOrigemOcr?.temOcrTexto ? "Sim" : "Não"}</p>
+              </div>
+              <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
+                <p className="text-xs uppercase tracking-wide text-slate-500">OCR estruturado</p>
+                <p className="mt-1 text-sm font-semibold text-slate-900">{diagnosticoOrigemOcr?.temOcrEstruturado ? "Sim" : "Não"}</p>
+              </div>
+              <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
+                <p className="text-xs uppercase tracking-wide text-slate-500">Bbox válido</p>
+                <p className="mt-1 text-sm font-semibold text-slate-900">{diagnosticoOrigemOcr?.temBboxValido ? "Sim" : "Não"}</p>
+              </div>
+              <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
+                <p className="text-xs uppercase tracking-wide text-slate-500">Usou fallback texto</p>
+                <p className="mt-1 text-sm font-semibold text-slate-900">{diagnosticoOrigemOcr?.usouFallbackTexto ? "Sim" : "Não"}</p>
+              </div>
+              <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
+                <p className="text-xs uppercase tracking-wide text-slate-500">Páginas diagnosticadas</p>
+                <p className="mt-1 text-sm font-semibold text-slate-900">{Number(diagnosticoEstruturaBrutaOcr?.totalPaginasDiagnosticadas || 0)}</p>
+              </div>
+              <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
+                <p className="text-xs uppercase tracking-wide text-slate-500">Lines OCR</p>
+                <p className="mt-1 text-sm font-semibold text-slate-900">{Number(diagnosticoEstruturaBrutaOcr?.totalLines || 0)}</p>
+              </div>
+              <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
+                <p className="text-xs uppercase tracking-wide text-slate-500">Words OCR</p>
+                <p className="mt-1 text-sm font-semibold text-slate-900">{Number(diagnosticoEstruturaBrutaOcr?.totalWords || 0)}</p>
+              </div>
+              <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
+                <p className="text-xs uppercase tracking-wide text-slate-500">Lines bbox válido</p>
+                <p className="mt-1 text-sm font-semibold text-slate-900">{Number(diagnosticoEstruturaBrutaOcr?.totalLinesComBboxValido || 0)}</p>
+              </div>
+              <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
+                <p className="text-xs uppercase tracking-wide text-slate-500">Words bbox válido</p>
+                <p className="mt-1 text-sm font-semibold text-slate-900">{Number(diagnosticoEstruturaBrutaOcr?.totalWordsComBboxValido || 0)}</p>
+              </div>
+              <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
+                <p className="text-xs uppercase tracking-wide text-slate-500">Lines bbox inválido</p>
+                <p className="mt-1 text-sm font-semibold text-slate-900">{Number(diagnosticoEstruturaBrutaOcr?.totalLinesComBboxInvalido || 0)}</p>
+              </div>
+              <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
+                <p className="text-xs uppercase tracking-wide text-slate-500">Words bbox inválido</p>
+                <p className="mt-1 text-sm font-semibold text-slate-900">{Number(diagnosticoEstruturaBrutaOcr?.totalWordsComBboxInvalido || 0)}</p>
+              </div>
+            </div>
+
+            {paginasEstruturaBrutaOcr.length ? (
+              <div className="mt-4 overflow-x-auto rounded-xl border border-slate-200">
+                <table className="min-w-full divide-y divide-slate-200 text-left text-sm">
+                  <thead className="bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
+                    <tr>
+                      <th className="px-4 py-3">Página</th>
+                      <th className="px-4 py-3">Texto OCR</th>
+                      <th className="px-4 py-3">Tamanho texto</th>
+                      <th className="px-4 py-3">Lines</th>
+                      <th className="px-4 py-3">Words</th>
+                      <th className="px-4 py-3">Lines bbox válido</th>
+                      <th className="px-4 py-3">Words bbox válido</th>
+                      <th className="px-4 py-3">Lines bbox inválido</th>
+                      <th className="px-4 py-3">Words bbox inválido</th>
+                      <th className="px-4 py-3">Fallback texto</th>
+                      <th className="px-4 py-3">Lines estruturadas</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100 bg-white">
+                    {paginasEstruturaBrutaOcr.map((item, indice) => (
+                      <tr key={`${item?.pagina ?? "p"}-${indice}`}>
+                        <td className="px-4 py-3 text-slate-700">{item?.pagina ?? "-"}</td>
+                        <td className="px-4 py-3 text-slate-700">{item?.temTextoOcr ? "Sim" : "Não"}</td>
+                        <td className="px-4 py-3 text-slate-700">{item?.tamanhoTextoOcr ?? "-"}</td>
+                        <td className="px-4 py-3 text-slate-700">{item?.totalLines ?? "-"}</td>
+                        <td className="px-4 py-3 text-slate-700">{item?.totalWords ?? "-"}</td>
+                        <td className="px-4 py-3 text-slate-700">{item?.linesComBboxValido ?? "-"}</td>
+                        <td className="px-4 py-3 text-slate-700">{item?.wordsComBboxValido ?? "-"}</td>
+                        <td className="px-4 py-3 text-slate-700">{item?.linesComBboxInvalido ?? "-"}</td>
+                        <td className="px-4 py-3 text-slate-700">{item?.wordsComBboxInvalido ?? "-"}</td>
+                        <td className="px-4 py-3 text-slate-700">{item?.usouFallbackTexto ? "Sim" : "Não"}</td>
+                        <td className="px-4 py-3 text-slate-700">{item?.usouLinesEstruturadas ? "Sim" : "Não"}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            ) : null}
           </div>
 
           <div className="border-t border-slate-200 px-4 py-4">
