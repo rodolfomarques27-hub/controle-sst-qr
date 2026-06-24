@@ -880,23 +880,47 @@ function extrairParticipantesPorAncoraNumericaPdf(linhas) {
   const linhasEntrada = Array.isArray(linhas) ? linhas : [];
   const candidatos = [];
   const numerosDetectados = [];
+  const numerosAceitos = [];
+  const numerosRejeitados = [];
+  const numerosDuplicados = [];
+  const numerosAceitosUnicos = new Set();
   let totalLinhasComAncora = 0;
   let totalAceitos = 0;
   let totalRejeitados = 0;
+  let totalDuplicadosNumero = 0;
+  let totalIgnoradosPreFiltro = 0;
 
   for (const linha of linhasEntrada) {
+    const textoLinha = normalizarTextoPdfTabela(linha?.texto || "");
+
+    if (
+      !textoLinha ||
+      textoEhCabecalhoTabelaPdf(textoLinha) ||
+      textoInstitucionalDominante(textoLinha) ||
+      textoEhRuidoPdfTabela(textoLinha)
+    ) {
+      totalIgnoradosPreFiltro += 1;
+      continue;
+    }
+
     const celulas = Array.isArray(linha?.celulas) ? [...linha.celulas].sort((a, b) => a.x - b.x) : [];
     if (!celulas.length) {
+      totalIgnoradosPreFiltro += 1;
       continue;
     }
 
     const ancora = celulas.find((celula) => {
       const x = Number.isFinite(celula?.x) ? celula.x : 0;
-      if (x > 90) {
+      if (x < 25 || x > 90) {
         return false;
       }
 
-      return Boolean(normalizarNumeroAncoraTabelaPdf(celula?.texto));
+      const textoAncoraBruto = normalizarTextoPdfTabela(celula?.texto || "").replace(/\s+/g, "");
+      if (!/^[0-9oOgGqQIl]{1,3}$/.test(textoAncoraBruto)) {
+        return false;
+      }
+
+      return Boolean(normalizarNumeroAncoraTabelaPdf(textoAncoraBruto));
     });
 
     if (!ancora) {
@@ -925,13 +949,24 @@ function extrairParticipantesPorAncoraNumericaPdf(linhas) {
         assinatura,
         observacao,
       },
-      linha?.texto,
+      textoLinha,
     );
 
-    if (validacao?.aceito) {
+    const duplicadoNumero = Boolean(validacao?.aceito) && numerosAceitosUnicos.has(numero);
+    const aceitoFinal = Boolean(validacao?.aceito) && !duplicadoNumero;
+    const motivoAncora = duplicadoNumero ? "duplicadoNumero" : normalizarTextoPdfTabela(validacao?.motivo || "outro");
+
+    if (aceitoFinal) {
+      numerosAceitosUnicos.add(numero);
+      numerosAceitos.push(numero);
       totalAceitos += 1;
     } else {
       totalRejeitados += 1;
+      numerosRejeitados.push(`${numero}:${motivoAncora}`);
+      if (duplicadoNumero) {
+        totalDuplicadosNumero += 1;
+        numerosDuplicados.push(numero);
+      }
     }
 
     if (candidatos.length < 30) {
@@ -942,14 +977,14 @@ function extrairParticipantesPorAncoraNumericaPdf(linhas) {
         funcao: funcaoDetectada,
         assinatura,
         observacao,
-        aceito: Boolean(validacao?.aceito),
-        motivo: normalizarTextoPdfTabela(validacao?.motivo || "outro"),
-        confianca: Number.isFinite(validacao?.confianca) ? Math.round(validacao.confianca) : 0,
+        aceito: aceitoFinal,
+        motivo: motivoAncora,
+        confianca: aceitoFinal && Number.isFinite(validacao?.confianca) ? Math.round(validacao.confianca) : 0,
         xMin: Number.isFinite(linha?.xMin) ? Math.round(linha.xMin) : null,
         xMax: Number.isFinite(linha?.xMax) ? Math.round(linha.xMax) : null,
         yMedio: Number.isFinite(linha?.yMedio) ? Math.round(linha.yMedio) : null,
         totalCelulas: celulas.length,
-        linhaOriginal: normalizarTextoPdfTabela(linha?.texto || ""),
+        linhaOriginal: textoLinha,
       });
     }
   }
@@ -958,8 +993,13 @@ function extrairParticipantesPorAncoraNumericaPdf(linhas) {
     totalLinhasComAncora,
     totalAceitos,
     totalRejeitados,
+    totalDuplicadosNumero,
+    totalIgnoradosPreFiltro,
     totalCandidatosAmostra: candidatos.length,
-    numerosDetectados: numerosDetectados.slice(0, 60),
+    numerosDetectados: Array.from(new Set(numerosDetectados)).slice(0, 60),
+    numerosAceitos: Array.from(new Set(numerosAceitos)).slice(0, 60),
+    numerosRejeitados: numerosRejeitados.slice(0, 60),
+    numerosDuplicados: Array.from(new Set(numerosDuplicados)).slice(0, 60),
     candidatosAmostra: candidatos,
   };
 }
