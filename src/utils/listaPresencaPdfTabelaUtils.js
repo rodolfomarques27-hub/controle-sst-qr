@@ -828,9 +828,446 @@ function registrarLinhaAnalise(linhasAnalise, detalhe) {
     nome: normalizarTextoPdfTabela(detalhe?.nome ?? ""),
     funcao: normalizarTextoPdfTabela(detalhe?.funcao ?? ""),
     assinatura: normalizarTextoPdfTabela(detalhe?.assinatura ?? ""),
+    observacao: normalizarTextoPdfTabela(detalhe?.observacao ?? ""),
+    xMin: Number.isFinite(detalhe?.xMin) ? detalhe.xMin : null,
+    xMax: Number.isFinite(detalhe?.xMax) ? detalhe.xMax : null,
+    yMedio: Number.isFinite(detalhe?.yMedio) ? detalhe.yMedio : null,
+    totalCelulas: Number.isFinite(detalhe?.totalCelulas) ? detalhe.totalCelulas : 0,
     aceito: Boolean(detalhe?.aceito),
     motivo: normalizarTextoPdfTabela(detalhe?.motivo ?? ""),
   });
+}
+
+function normalizarNumeroAncoraTabelaPdf(valor) {
+  const textoOriginal = normalizarTextoPdfTabela(valor);
+  if (!textoOriginal) {
+    return "";
+  }
+
+  const textoCorrigido = textoOriginal
+    .replace(/[oO]/g, "0")
+    .replace(/[gGqQ]/g, "9")
+    .replace(/[Il]/g, "1")
+    .replace(/[^\d]/g, "");
+
+  if (!numeroCurtoEhValido(textoCorrigido)) {
+    return "";
+  }
+
+  return textoCorrigido;
+}
+
+function extrairTextoCelulasPorFaixaXTabelaPdf(celulas, xInicio, xFim, celulaIgnorada = null) {
+  const itens = Array.isArray(celulas) ? celulas : [];
+
+  return normalizarTextoPdfTabela(
+    itens
+      .filter((celula) => {
+        if (celulaIgnorada && celula === celulaIgnorada) {
+          return false;
+        }
+
+        const x = Number.isFinite(celula?.x) ? celula.x : 0;
+        return x >= xInicio && x < xFim;
+      })
+      .map((celula) => normalizarTextoPdfTabela(celula?.texto || ""))
+      .filter(Boolean)
+      .join(" "),
+  );
+}
+
+function aplicarSubstituicoesNomeFundidoAncoraTabelaPdf(texto) {
+  const valor = normalizarTextoPdfTabela(texto);
+  if (!valor) {
+    return "";
+  }
+
+  const substituicoes = [
+    ["ABILIOSOARES", "ABILIO SOARES"],
+    ["ABIKOSOARES", "ABIKO SOARES"],
+    ["ANDERSONAUGUSTO", "ANDERSON AUGUSTO"],
+    ["GIVALDOVALERO", "GIVALDO VALERO"],
+    ["GIVALDOVALEIRO", "GIVALDO VALEIRO"],
+    ["MANOELJOSE", "MANOEL JOSE"],
+    ["MARCOSVINICIUS", "MARCOS VINICIUS"],
+    ["PEDROHENRIQUE", "PEDRO HENRIQUE"],
+    ["PEDROLUCAS", "PEDRO LUCAS"],
+    ["RAFAELMACHADO", "RAFAEL MACHADO"],
+    ["RODRIGODACOSTA", "RODRIGO DA COSTA"],
+    ["RENATOFRANCISCO", "RENATO FRANCISCO"],
+    ["THIAGOAUGUSTO", "THIAGO AUGUSTO"],
+    ["WILLIANJUNIO", "WILLIAN JUNIO"],
+    ["RONYCAMPOS", "RONEY CAMPOS"],
+    ["CLAYTONRODRIGUES", "CLAYTON RODRIGUES"],
+    ["EMERSONGONCALVES", "EMERSON GONCALVES"],
+    ["EDILSONDECARVALHO", "EDILSON DE CARVALHO"],
+    ["GERMACIODACRUZ", "GERMACIO DA CRUZ"],
+    ["JOELCASSIANO", "JOEL CASSIANO"],
+    ["JOSEPEREIRA", "JOSE PEREIRA"],
+    ["JOSERONALDO", "JOSE RONALDO"],
+  ];
+
+  return substituicoes.reduce((resultado, [origem, destino]) => (
+    resultado.replace(new RegExp(`\\b${origem}\\b`, "gi"), destino)
+  ), valor);
+}
+
+function limparNomeCandidatoAncoraTabelaPdf(nome, contexto = {}) {
+  const original = normalizarTextoPdfTabela(nome);
+  const ajustes = [];
+
+  if (!original) {
+    return { nome: "", ajustes };
+  }
+
+  let limpo = aplicarSubstituicoesNomeFundidoAncoraTabelaPdf(original);
+  if (limpo !== original) {
+    ajustes.push("separar_nome_fundido");
+  }
+
+  const funcaoDetectadaNoContexto = identificarFuncaoTexto(contexto?.funcao || "");
+  const funcaoBruta = normalizarTextoPdfTabela(contexto?.funcao || "");
+  const termosFuncao = [funcaoDetectadaNoContexto, funcaoBruta]
+    .map((item) => normalizarTextoPdfTabela(item))
+    .filter((item, indice, lista) => item && item.length >= 4 && lista.indexOf(item) === indice);
+
+  for (const termo of termosFuncao) {
+    const regexTermo = new RegExp(`(^|\\s)${termo.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}(?=\\s|$)`, "gi");
+    if (regexTermo.test(limpo)) {
+      limpo = normalizarTextoPdfTabela(limpo.replace(regexTermo, " "));
+      ajustes.push("remover_funcao_do_nome");
+    }
+  }
+
+  const tokensRuido = new Set([
+    "VH",
+    "DH",
+    "INN",
+    "IRN",
+    "III",
+    "II",
+    "U",
+    "UU",
+    "W",
+    "X",
+    "XX",
+    "I",
+    "Q",
+    "OP",
+    "CM",
+    "SIM",
+  ]);
+
+  const tokensOriginais = normalizarTextoPdfTabela(limpo).split(/\s+/).filter(Boolean);
+  const tokensFiltrados = tokensOriginais.filter((token) => {
+    const tokenLetra = token.replace(/[^A-ZÀ-Ú]/gi, "").toUpperCase();
+
+    if (!tokenLetra) {
+      return false;
+    }
+
+    if (tokensRuido.has(tokenLetra)) {
+      ajustes.push("remover_ruido_curto");
+      return false;
+    }
+
+    if (/[\d/\\|_.,;:()[\]{}]/.test(token) && tokenLetra.length <= 3) {
+      ajustes.push("remover_token_assinatura");
+      return false;
+    }
+
+    return true;
+  });
+
+  limpo = normalizarTextoPdfTabela(tokensFiltrados.join(" "));
+
+  if (!limpo || limpo.length < 3) {
+    return { nome: original, ajustes: ["mantido_original"] };
+  }
+
+  return {
+    nome: limpo,
+    ajustes: Array.from(new Set(ajustes)),
+  };
+}
+
+function extrairParticipantesPorAncoraNumericaPdf(linhas) {
+  const linhasEntrada = Array.isArray(linhas) ? linhas : [];
+  const candidatos = [];
+  const nomesAjustadosAmostra = [];
+  const numerosDetectados = [];
+  const numerosAceitos = [];
+  const numerosRejeitados = [];
+  const numerosDuplicados = [];
+  const numerosAceitosUnicos = new Set();
+  let totalLinhasComAncora = 0;
+  let totalAceitos = 0;
+  let totalRejeitados = 0;
+  let totalDuplicadosNumero = 0;
+  let totalIgnoradosPreFiltro = 0;
+  let totalNomesAjustados = 0;
+
+  for (const linha of linhasEntrada) {
+    const textoLinha = normalizarTextoPdfTabela(linha?.texto || "");
+
+    if (
+      !textoLinha ||
+      textoEhCabecalhoTabelaPdf(textoLinha) ||
+      textoInstitucionalDominante(textoLinha) ||
+      textoEhRuidoPdfTabela(textoLinha)
+    ) {
+      totalIgnoradosPreFiltro += 1;
+      continue;
+    }
+
+    const celulas = Array.isArray(linha?.celulas) ? [...linha.celulas].sort((a, b) => a.x - b.x) : [];
+    if (!celulas.length) {
+      totalIgnoradosPreFiltro += 1;
+      continue;
+    }
+
+    const ancora = celulas.find((celula) => {
+      const x = Number.isFinite(celula?.x) ? celula.x : 0;
+      if (x < 25 || x > 90) {
+        return false;
+      }
+
+      const textoAncoraBruto = normalizarTextoPdfTabela(celula?.texto || "").replace(/\s+/g, "");
+      if (!/^[0-9oOgGqQIl]{1,3}$/.test(textoAncoraBruto)) {
+        return false;
+      }
+
+      return Boolean(normalizarNumeroAncoraTabelaPdf(textoAncoraBruto));
+    });
+
+    if (!ancora) {
+      continue;
+    }
+
+    const numero = normalizarNumeroAncoraTabelaPdf(ancora?.texto);
+    if (!numero) {
+      continue;
+    }
+
+    totalLinhasComAncora += 1;
+    numerosDetectados.push(numero);
+
+    const nomeBruto = extrairTextoCelulasPorFaixaXTabelaPdf(celulas, 65, 285, ancora);
+    const funcaoBruta = extrairTextoCelulasPorFaixaXTabelaPdf(celulas, 255, 375, ancora);
+    const assinatura = extrairTextoCelulasPorFaixaXTabelaPdf(celulas, 355, 520, ancora);
+    const observacao = extrairTextoCelulasPorFaixaXTabelaPdf(celulas, 520, Infinity, ancora);
+    const funcaoDetectada = identificarFuncaoTexto(funcaoBruta) || funcaoBruta;
+    const nomeTratadoAncora = limparNomeCandidatoAncoraTabelaPdf(nomeBruto, {
+      funcao: funcaoBruta,
+      assinatura,
+      observacao,
+    });
+    const nome = nomeTratadoAncora.nome || nomeBruto;
+
+    if (Array.isArray(nomeTratadoAncora.ajustes) && nomeTratadoAncora.ajustes.length) {
+      totalNomesAjustados += 1;
+
+      if (nomesAjustadosAmostra.length < 20) {
+        nomesAjustadosAmostra.push({
+          numero,
+          antes: nomeBruto,
+          depois: nome,
+          ajustes: nomeTratadoAncora.ajustes,
+        });
+      }
+    }
+
+    const validacao = validarParticipanteTabelaPdf(
+      {
+        numero,
+        nome,
+        funcao: funcaoDetectada,
+        assinatura,
+        observacao,
+      },
+      textoLinha,
+    );
+
+    const duplicadoNumero = Boolean(validacao?.aceito) && numerosAceitosUnicos.has(numero);
+    const aceitoFinal = Boolean(validacao?.aceito) && !duplicadoNumero;
+    const motivoAncora = duplicadoNumero ? "duplicadoNumero" : normalizarTextoPdfTabela(validacao?.motivo || "outro");
+
+    if (aceitoFinal) {
+      numerosAceitosUnicos.add(numero);
+      numerosAceitos.push(numero);
+      totalAceitos += 1;
+    } else {
+      totalRejeitados += 1;
+      numerosRejeitados.push(`${numero}:${motivoAncora}`);
+      if (duplicadoNumero) {
+        totalDuplicadosNumero += 1;
+        numerosDuplicados.push(numero);
+      }
+    }
+
+    if (candidatos.length < 30) {
+      candidatos.push({
+        pagina: linha?.pagina ?? null,
+        numero,
+        nome,
+        nomeOriginal: nomeBruto,
+        nomeAjustes: Array.isArray(nomeTratadoAncora?.ajustes) ? nomeTratadoAncora.ajustes : [],
+        funcao: funcaoDetectada,
+        assinatura,
+        observacao,
+        aceito: aceitoFinal,
+        motivo: motivoAncora,
+        confianca: aceitoFinal && Number.isFinite(validacao?.confianca) ? Math.round(validacao.confianca) : 0,
+        xMin: Number.isFinite(linha?.xMin) ? Math.round(linha.xMin) : null,
+        xMax: Number.isFinite(linha?.xMax) ? Math.round(linha.xMax) : null,
+        yMedio: Number.isFinite(linha?.yMedio) ? Math.round(linha.yMedio) : null,
+        totalCelulas: celulas.length,
+        linhaOriginal: textoLinha,
+      });
+    }
+  }
+
+  return {
+    totalLinhasComAncora,
+    totalAceitos,
+    totalRejeitados,
+    totalDuplicadosNumero,
+    totalIgnoradosPreFiltro,
+    totalNomesAjustados,
+    nomesAjustadosAmostra,
+    totalCandidatosAmostra: candidatos.length,
+    numerosDetectados: Array.from(new Set(numerosDetectados)).slice(0, 60),
+    numerosAceitos: Array.from(new Set(numerosAceitos)).slice(0, 60),
+    numerosRejeitados: numerosRejeitados.slice(0, 60),
+    numerosDuplicados: Array.from(new Set(numerosDuplicados)).slice(0, 60),
+    candidatosAmostra: candidatos,
+  };
+}
+
+function normalizarNomeComparacaoAncoraTabelaPdf(valor) {
+  return normalizarTextoPdfTabela(valor)
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toUpperCase()
+    .replace(/[^A-Z0-9\s]/g, " ")
+    .replace(/\b(DE|DA|DO|DAS|DOS|E)\b/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function montarResumoParticipanteComparacaoAncoraTabelaPdf(item) {
+  return {
+    numero: normalizarNumeroAncoraTabelaPdf(item?.numero ?? ""),
+    nome: normalizarTextoPdfTabela(item?.nome ?? ""),
+    nomeNormalizado: normalizarNomeComparacaoAncoraTabelaPdf(item?.nome ?? ""),
+    funcao: normalizarTextoPdfTabela(item?.funcao ?? ""),
+    assinatura: normalizarTextoPdfTabela(item?.assinatura ?? ""),
+    pagina: item?.pagina ?? null,
+    origem: normalizarTextoPdfTabela(item?.origem ?? ""),
+    motivo: normalizarTextoPdfTabela(item?.motivo ?? ""),
+    confianca: Number.isFinite(item?.confianca) ? Math.round(item.confianca) : 0,
+  };
+}
+
+function compararExtracaoPrincipalComAncoraNumericaPdf(participantesPrincipais, diagnosticoAncora) {
+  const principais = Array.isArray(participantesPrincipais) ? participantesPrincipais : [];
+  const candidatosAncora = Array.isArray(diagnosticoAncora?.candidatosAmostra)
+    ? diagnosticoAncora.candidatosAmostra.filter((item) => item?.aceito)
+    : [];
+
+  const mapaPrincipalPorNumero = new Map();
+  const mapaAncoraPorNumero = new Map();
+
+  for (const participante of principais) {
+    const resumo = montarResumoParticipanteComparacaoAncoraTabelaPdf(participante);
+    if (resumo.numero && !mapaPrincipalPorNumero.has(resumo.numero)) {
+      mapaPrincipalPorNumero.set(resumo.numero, resumo);
+    }
+  }
+
+  for (const candidato of candidatosAncora) {
+    const resumo = montarResumoParticipanteComparacaoAncoraTabelaPdf(candidato);
+    if (resumo.numero && !mapaAncoraPorNumero.has(resumo.numero)) {
+      mapaAncoraPorNumero.set(resumo.numero, resumo);
+    }
+  }
+
+  const emAmbos = [];
+  const somentePrincipal = [];
+  const somenteAncora = [];
+  const nomesDivergentes = [];
+
+  for (const [numero, principal] of mapaPrincipalPorNumero.entries()) {
+    const ancora = mapaAncoraPorNumero.get(numero);
+
+    if (!ancora) {
+      somentePrincipal.push(principal);
+      continue;
+    }
+
+    emAmbos.push({
+      numero,
+      principalNome: principal.nome,
+      ancoraNome: ancora.nome,
+      principalFuncao: principal.funcao,
+      ancoraFuncao: ancora.funcao,
+    });
+
+    if (
+      principal.nomeNormalizado &&
+      ancora.nomeNormalizado &&
+      principal.nomeNormalizado !== ancora.nomeNormalizado
+    ) {
+      nomesDivergentes.push({
+        numero,
+        principalNome: principal.nome,
+        ancoraNome: ancora.nome,
+        principalFuncao: principal.funcao,
+        ancoraFuncao: ancora.funcao,
+      });
+    }
+  }
+
+  for (const [numero, ancora] of mapaAncoraPorNumero.entries()) {
+    if (!mapaPrincipalPorNumero.has(numero)) {
+      somenteAncora.push(ancora);
+    }
+  }
+
+  return {
+    totalPrincipal: principais.length,
+    totalPrincipalComNumero: mapaPrincipalPorNumero.size,
+    totalAncoraAceitos: candidatosAncora.length,
+    totalAncoraAceitosComNumero: mapaAncoraPorNumero.size,
+    totalEmAmbosPorNumero: emAmbos.length,
+    totalSomentePrincipal: somentePrincipal.length,
+    totalSomenteAncora: somenteAncora.length,
+    totalNomesDivergentes: nomesDivergentes.length,
+    amostraEmAmbos: emAmbos.slice(0, 20),
+    amostraSomentePrincipal: somentePrincipal.slice(0, 20),
+    amostraSomenteAncora: somenteAncora.slice(0, 20),
+    amostraNomesDivergentes: nomesDivergentes.slice(0, 20),
+  };
+}
+
+function montarAmostraColunasTabelaPdf(linhasAnalise) {
+  const itens = Array.isArray(linhasAnalise) ? linhasAnalise : [];
+
+  return itens.slice(0, 20).map((item) => ({
+    pagina: item?.pagina ?? null,
+    linhaOriginal: normalizarTextoPdfTabela(item?.linhaOriginal ?? ""),
+    numero: normalizarTextoPdfTabela(item?.numero ?? ""),
+    nome: normalizarTextoPdfTabela(item?.nome ?? ""),
+    funcao: normalizarTextoPdfTabela(item?.funcao ?? ""),
+    assinatura: normalizarTextoPdfTabela(item?.assinatura ?? ""),
+    observacao: normalizarTextoPdfTabela(item?.observacao ?? ""),
+    aceito: Boolean(item?.aceito),
+    motivo: normalizarTextoPdfTabela(item?.motivo ?? ""),
+    xMin: Number.isFinite(item?.xMin) ? Math.round(item.xMin) : null,
+    xMax: Number.isFinite(item?.xMax) ? Math.round(item.xMax) : null,
+    yMedio: Number.isFinite(item?.yMedio) ? Math.round(item.yMedio) : null,
+    totalCelulas: Number.isFinite(item?.totalCelulas) ? item.totalCelulas : 0,
+  }));
 }
 
 function extrairParticipantesTabelaPdf(itensTextoPdf, opcoes = {}) {
@@ -931,6 +1368,11 @@ function extrairParticipantesTabelaPdf(itensTextoPdf, opcoes = {}) {
         nome: validacaoParticipante.nome,
         funcao: validacaoParticipante.funcao,
         assinatura: validacaoParticipante.assinatura,
+        observacao: observacaoLinha,
+        xMin: linha?.xMin,
+        xMax: linha?.xMax,
+        yMedio: linha?.yMedio,
+        totalCelulas: Array.isArray(linha?.celulas) ? linha.celulas.length : 0,
         aceito: false,
         motivo: validacaoParticipante.motivo || "outro",
       });
@@ -957,6 +1399,11 @@ function extrairParticipantesTabelaPdf(itensTextoPdf, opcoes = {}) {
       nome: nomeLinha,
       funcao: funcaoLinha,
       assinatura: assinaturaLinha,
+      observacao: observacaoLinha,
+      xMin: linha?.xMin,
+      xMax: linha?.xMax,
+      yMedio: linha?.yMedio,
+      totalCelulas: Array.isArray(linha?.celulas) ? linha.celulas.length : 0,
       aceito: true,
       motivo: "ok",
     });
@@ -978,6 +1425,9 @@ function extrairParticipantesTabelaPdf(itensTextoPdf, opcoes = {}) {
     avisos.push("Não foi possível montar tabela interna a partir do PDF.");
   }
 
+
+  const diagnosticoAncoraNumerica = extrairParticipantesPorAncoraNumericaPdf(agrupamento.linhas);
+
   return {
     participantes: participantesOrdenados,
     linhas: agrupamento.linhas,
@@ -994,6 +1444,12 @@ function extrairParticipantesTabelaPdf(itensTextoPdf, opcoes = {}) {
       paginasDetectadas: agrupamento.paginasDetectadas,
       avisos,
       linhasAnalisadas,
+      colunasAnalisadasAmostra: montarAmostraColunasTabelaPdf(linhasAnalisadas),
+      diagnosticoAncoraNumerica,
+      diagnosticoComparativoAncoraNumerica: compararExtracaoPrincipalComAncoraNumericaPdf(
+        participantesOrdenados,
+        diagnosticoAncoraNumerica,
+      ),
     },
   };
 }
