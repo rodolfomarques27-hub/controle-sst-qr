@@ -1425,6 +1425,9 @@ function extrairParticipantesTabelaPdf(itensTextoPdf, opcoes = {}) {
     avisos.push("Não foi possível montar tabela interna a partir do PDF.");
   }
 
+
+  const diagnosticoAncoraNumerica = extrairParticipantesPorAncoraNumericaPdf(agrupamento.linhas);
+
   return {
     participantes: participantesOrdenados,
     linhas: agrupamento.linhas,
@@ -1442,10 +1445,10 @@ function extrairParticipantesTabelaPdf(itensTextoPdf, opcoes = {}) {
       avisos,
       linhasAnalisadas,
       colunasAnalisadasAmostra: montarAmostraColunasTabelaPdf(linhasAnalisadas),
-      diagnosticoAncoraNumerica: extrairParticipantesPorAncoraNumericaPdf(agrupamento.linhas),
+      diagnosticoAncoraNumerica,
       diagnosticoComparativoAncoraNumerica: compararExtracaoPrincipalComAncoraNumericaPdf(
         participantesOrdenados,
-        extrairParticipantesPorAncoraNumericaPdf(agrupamento.linhas),
+        diagnosticoAncoraNumerica,
       ),
     },
   };
