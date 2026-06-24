@@ -876,9 +876,125 @@ function extrairTextoCelulasPorFaixaXTabelaPdf(celulas, xInicio, xFim, celulaIgn
   );
 }
 
+function aplicarSubstituicoesNomeFundidoAncoraTabelaPdf(texto) {
+  const valor = normalizarTextoPdfTabela(texto);
+  if (!valor) {
+    return "";
+  }
+
+  const substituicoes = [
+    ["ABILIOSOARES", "ABILIO SOARES"],
+    ["ABIKOSOARES", "ABIKO SOARES"],
+    ["ANDERSONAUGUSTO", "ANDERSON AUGUSTO"],
+    ["GIVALDOVALERO", "GIVALDO VALERO"],
+    ["GIVALDOVALEIRO", "GIVALDO VALEIRO"],
+    ["MANOELJOSE", "MANOEL JOSE"],
+    ["MARCOSVINICIUS", "MARCOS VINICIUS"],
+    ["PEDROHENRIQUE", "PEDRO HENRIQUE"],
+    ["PEDROLUCAS", "PEDRO LUCAS"],
+    ["RAFAELMACHADO", "RAFAEL MACHADO"],
+    ["RODRIGODACOSTA", "RODRIGO DA COSTA"],
+    ["RENATOFRANCISCO", "RENATO FRANCISCO"],
+    ["THIAGOAUGUSTO", "THIAGO AUGUSTO"],
+    ["WILLIANJUNIO", "WILLIAN JUNIO"],
+    ["RONYCAMPOS", "RONEY CAMPOS"],
+    ["CLAYTONRODRIGUES", "CLAYTON RODRIGUES"],
+    ["EMERSONGONCALVES", "EMERSON GONCALVES"],
+    ["EDILSONDECARVALHO", "EDILSON DE CARVALHO"],
+    ["GERMACIODACRUZ", "GERMACIO DA CRUZ"],
+    ["JOELCASSIANO", "JOEL CASSIANO"],
+    ["JOSEPEREIRA", "JOSE PEREIRA"],
+    ["JOSERONALDO", "JOSE RONALDO"],
+  ];
+
+  return substituicoes.reduce((resultado, [origem, destino]) => (
+    resultado.replace(new RegExp(`\\b${origem}\\b`, "gi"), destino)
+  ), valor);
+}
+
+function limparNomeCandidatoAncoraTabelaPdf(nome, contexto = {}) {
+  const original = normalizarTextoPdfTabela(nome);
+  const ajustes = [];
+
+  if (!original) {
+    return { nome: "", ajustes };
+  }
+
+  let limpo = aplicarSubstituicoesNomeFundidoAncoraTabelaPdf(original);
+  if (limpo !== original) {
+    ajustes.push("separar_nome_fundido");
+  }
+
+  const funcaoDetectadaNoContexto = identificarFuncaoTexto(contexto?.funcao || "");
+  const funcaoBruta = normalizarTextoPdfTabela(contexto?.funcao || "");
+  const termosFuncao = [funcaoDetectadaNoContexto, funcaoBruta]
+    .map((item) => normalizarTextoPdfTabela(item))
+    .filter((item, indice, lista) => item && item.length >= 4 && lista.indexOf(item) === indice);
+
+  for (const termo of termosFuncao) {
+    const regexTermo = new RegExp(`(^|\\s)${termo.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}(?=\\s|$)`, "gi");
+    if (regexTermo.test(limpo)) {
+      limpo = normalizarTextoPdfTabela(limpo.replace(regexTermo, " "));
+      ajustes.push("remover_funcao_do_nome");
+    }
+  }
+
+  const tokensRuido = new Set([
+    "VH",
+    "DH",
+    "INN",
+    "IRN",
+    "III",
+    "II",
+    "U",
+    "UU",
+    "W",
+    "X",
+    "XX",
+    "I",
+    "Q",
+    "OP",
+    "CM",
+    "SIM",
+  ]);
+
+  const tokensOriginais = normalizarTextoPdfTabela(limpo).split(/\s+/).filter(Boolean);
+  const tokensFiltrados = tokensOriginais.filter((token) => {
+    const tokenLetra = token.replace(/[^A-ZÀ-Ú]/gi, "").toUpperCase();
+
+    if (!tokenLetra) {
+      return false;
+    }
+
+    if (tokensRuido.has(tokenLetra)) {
+      ajustes.push("remover_ruido_curto");
+      return false;
+    }
+
+    if (/[\d/\\|_.,;:()[\]{}]/.test(token) && tokenLetra.length <= 3) {
+      ajustes.push("remover_token_assinatura");
+      return false;
+    }
+
+    return true;
+  });
+
+  limpo = normalizarTextoPdfTabela(tokensFiltrados.join(" "));
+
+  if (!limpo || limpo.length < 3) {
+    return { nome: original, ajustes: ["mantido_original"] };
+  }
+
+  return {
+    nome: limpo,
+    ajustes: Array.from(new Set(ajustes)),
+  };
+}
+
 function extrairParticipantesPorAncoraNumericaPdf(linhas) {
   const linhasEntrada = Array.isArray(linhas) ? linhas : [];
   const candidatos = [];
+  const nomesAjustadosAmostra = [];
   const numerosDetectados = [];
   const numerosAceitos = [];
   const numerosRejeitados = [];
@@ -889,6 +1005,7 @@ function extrairParticipantesPorAncoraNumericaPdf(linhas) {
   let totalRejeitados = 0;
   let totalDuplicadosNumero = 0;
   let totalIgnoradosPreFiltro = 0;
+  let totalNomesAjustados = 0;
 
   for (const linha of linhasEntrada) {
     const textoLinha = normalizarTextoPdfTabela(linha?.texto || "");
@@ -935,11 +1052,30 @@ function extrairParticipantesPorAncoraNumericaPdf(linhas) {
     totalLinhasComAncora += 1;
     numerosDetectados.push(numero);
 
-    const nome = extrairTextoCelulasPorFaixaXTabelaPdf(celulas, 65, 285, ancora);
+    const nomeBruto = extrairTextoCelulasPorFaixaXTabelaPdf(celulas, 65, 285, ancora);
     const funcaoBruta = extrairTextoCelulasPorFaixaXTabelaPdf(celulas, 255, 375, ancora);
     const assinatura = extrairTextoCelulasPorFaixaXTabelaPdf(celulas, 355, 520, ancora);
     const observacao = extrairTextoCelulasPorFaixaXTabelaPdf(celulas, 520, Infinity, ancora);
     const funcaoDetectada = identificarFuncaoTexto(funcaoBruta) || funcaoBruta;
+    const nomeTratadoAncora = limparNomeCandidatoAncoraTabelaPdf(nomeBruto, {
+      funcao: funcaoBruta,
+      assinatura,
+      observacao,
+    });
+    const nome = nomeTratadoAncora.nome || nomeBruto;
+
+    if (Array.isArray(nomeTratadoAncora.ajustes) && nomeTratadoAncora.ajustes.length) {
+      totalNomesAjustados += 1;
+
+      if (nomesAjustadosAmostra.length < 20) {
+        nomesAjustadosAmostra.push({
+          numero,
+          antes: nomeBruto,
+          depois: nome,
+          ajustes: nomeTratadoAncora.ajustes,
+        });
+      }
+    }
 
     const validacao = validarParticipanteTabelaPdf(
       {
@@ -974,6 +1110,8 @@ function extrairParticipantesPorAncoraNumericaPdf(linhas) {
         pagina: linha?.pagina ?? null,
         numero,
         nome,
+        nomeOriginal: nomeBruto,
+        nomeAjustes: Array.isArray(nomeTratadoAncora?.ajustes) ? nomeTratadoAncora.ajustes : [],
         funcao: funcaoDetectada,
         assinatura,
         observacao,
@@ -995,6 +1133,8 @@ function extrairParticipantesPorAncoraNumericaPdf(linhas) {
     totalRejeitados,
     totalDuplicadosNumero,
     totalIgnoradosPreFiltro,
+    totalNomesAjustados,
+    nomesAjustadosAmostra,
     totalCandidatosAmostra: candidatos.length,
     numerosDetectados: Array.from(new Set(numerosDetectados)).slice(0, 60),
     numerosAceitos: Array.from(new Set(numerosAceitos)).slice(0, 60),
