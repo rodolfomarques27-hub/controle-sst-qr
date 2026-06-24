@@ -1423,6 +1423,106 @@ export default function VerificadorListaPresenca({
             ) : null}
           </div>
 
+          {resumoTabela?.diagnosticoAncoraNumerica ? (
+            <div className="px-4 pb-4">
+              <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
+                <div className="flex flex-col gap-1">
+                  <p className="text-xs uppercase tracking-wide text-slate-500">Diagnóstico por âncora numérica</p>
+                  <p className="text-xs text-slate-500">
+                    Leitura paralela: tenta localizar linhas pelo número inicial e separar nome, função e assinatura por posição X.
+                  </p>
+                </div>
+
+                <div className="mt-3 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+                  <div className="rounded-lg border border-slate-200 bg-white p-3">
+                    <p className="text-xs uppercase tracking-wide text-slate-500">Linhas com âncora</p>
+                    <p className="mt-1 text-sm font-semibold text-slate-900">{Number(resumoTabela?.diagnosticoAncoraNumerica?.totalLinhasComAncora || 0)}</p>
+                  </div>
+
+                  <div className="rounded-lg border border-slate-200 bg-white p-3">
+                    <p className="text-xs uppercase tracking-wide text-slate-500">Aceitos</p>
+                    <p className="mt-1 text-sm font-semibold text-slate-900">{Number(resumoTabela?.diagnosticoAncoraNumerica?.totalAceitos || 0)}</p>
+                  </div>
+
+                  <div className="rounded-lg border border-slate-200 bg-white p-3">
+                    <p className="text-xs uppercase tracking-wide text-slate-500">Rejeitados</p>
+                    <p className="mt-1 text-sm font-semibold text-slate-900">{Number(resumoTabela?.diagnosticoAncoraNumerica?.totalRejeitados || 0)}</p>
+                  </div>
+
+                  <div className="rounded-lg border border-slate-200 bg-white p-3">
+                    <p className="text-xs uppercase tracking-wide text-slate-500">Amostra</p>
+                    <p className="mt-1 text-sm font-semibold text-slate-900">{Number(resumoTabela?.diagnosticoAncoraNumerica?.totalCandidatosAmostra || 0)}</p>
+                  </div>
+                </div>
+
+                {Array.isArray(resumoTabela?.diagnosticoAncoraNumerica?.numerosDetectados) && resumoTabela.diagnosticoAncoraNumerica.numerosDetectados.length ? (
+                  <div className="mt-3 rounded-lg border border-slate-200 bg-white p-3">
+                    <p className="text-xs uppercase tracking-wide text-slate-500">Números detectados</p>
+                    <p className="mt-1 break-words text-xs text-slate-700">
+                      {resumoTabela.diagnosticoAncoraNumerica.numerosDetectados.join(", ")}
+                    </p>
+                  </div>
+                ) : null}
+
+                {Array.isArray(resumoTabela?.diagnosticoAncoraNumerica?.candidatosAmostra) && resumoTabela.diagnosticoAncoraNumerica.candidatosAmostra.length ? (
+                  <div className="mt-3 overflow-x-auto rounded-lg border border-slate-200 bg-white">
+                    <table className="min-w-full divide-y divide-slate-200 text-left text-xs">
+                      <thead className="bg-slate-50 uppercase tracking-wide text-slate-500">
+                        <tr>
+                          <th className="px-3 py-2">Página</th>
+                          <th className="px-3 py-2">Nº</th>
+                          <th className="px-3 py-2">Nome</th>
+                          <th className="px-3 py-2">Função</th>
+                          <th className="px-3 py-2">Assinatura</th>
+                          <th className="px-3 py-2">Observação</th>
+                          <th className="px-3 py-2">X</th>
+                          <th className="px-3 py-2">Y</th>
+                          <th className="px-3 py-2">Células</th>
+                          <th className="px-3 py-2">Status</th>
+                          <th className="px-3 py-2">Motivo</th>
+                          <th className="px-3 py-2">Confiança</th>
+                          <th className="px-3 py-2">Linha original</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-100 bg-white">
+                        {resumoTabela.diagnosticoAncoraNumerica.candidatosAmostra.map((item, indice) => (
+                          <tr key={`${item?.pagina ?? "p"}-${item?.numero || "n"}-${indice}`}>
+                            <td className="px-3 py-2 text-slate-700">{item?.pagina ?? "-"}</td>
+                            <td className="px-3 py-2 text-slate-700">{item?.numero || "-"}</td>
+                            <td className="px-3 py-2 text-slate-700">
+                              <div className="max-w-[14rem] break-words">{item?.nome || "-"}</div>
+                            </td>
+                            <td className="px-3 py-2 text-slate-700">{item?.funcao || "-"}</td>
+                            <td className="px-3 py-2 text-slate-700">{item?.assinatura || "-"}</td>
+                            <td className="px-3 py-2 text-slate-700">{item?.observacao || "-"}</td>
+                            <td className="px-3 py-2 text-slate-700">
+                              {Number.isFinite(Number(item?.xMin)) && Number.isFinite(Number(item?.xMax))
+                                ? `${Math.round(Number(item.xMin))}-${Math.round(Number(item.xMax))}`
+                                : "-"}
+                            </td>
+                            <td className="px-3 py-2 text-slate-700">
+                              {Number.isFinite(Number(item?.yMedio)) ? Math.round(Number(item.yMedio)) : "-"}
+                            </td>
+                            <td className="px-3 py-2 text-slate-700">{Number(item?.totalCelulas || 0)}</td>
+                            <td className="px-3 py-2 text-slate-700">{item?.aceito ? "Aceito" : "Rejeitado"}</td>
+                            <td className="px-3 py-2 text-slate-700">{item?.motivo || "-"}</td>
+                            <td className="px-3 py-2 text-slate-700">{Number(item?.confianca || 0)}</td>
+                            <td className="px-3 py-2 text-slate-700">
+                              <div className="max-w-[22rem] break-words">{item?.linhaOriginal || "-"}</div>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                ) : (
+                  <div className="mt-3 rounded-lg border border-slate-200 bg-white p-3 text-xs text-slate-500">
+                    Nenhum candidato por âncora numérica foi gerado no diagnóstico.
+                  </div>
+                )}
+              </div>
+            </div>
+          ) : null}
           {avisosTabela.length ? (
             <div className="space-y-2 px-4 pb-4">
               {avisosTabela.map((aviso, indice) => (

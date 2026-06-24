@@ -838,6 +838,132 @@ function registrarLinhaAnalise(linhasAnalise, detalhe) {
   });
 }
 
+function normalizarNumeroAncoraTabelaPdf(valor) {
+  const textoOriginal = normalizarTextoPdfTabela(valor);
+  if (!textoOriginal) {
+    return "";
+  }
+
+  const textoCorrigido = textoOriginal
+    .replace(/[oO]/g, "0")
+    .replace(/[gGqQ]/g, "9")
+    .replace(/[Il]/g, "1")
+    .replace(/[^\d]/g, "");
+
+  if (!numeroCurtoEhValido(textoCorrigido)) {
+    return "";
+  }
+
+  return textoCorrigido;
+}
+
+function extrairTextoCelulasPorFaixaXTabelaPdf(celulas, xInicio, xFim, celulaIgnorada = null) {
+  const itens = Array.isArray(celulas) ? celulas : [];
+
+  return normalizarTextoPdfTabela(
+    itens
+      .filter((celula) => {
+        if (celulaIgnorada && celula === celulaIgnorada) {
+          return false;
+        }
+
+        const x = Number.isFinite(celula?.x) ? celula.x : 0;
+        return x >= xInicio && x < xFim;
+      })
+      .map((celula) => normalizarTextoPdfTabela(celula?.texto || ""))
+      .filter(Boolean)
+      .join(" "),
+  );
+}
+
+function extrairParticipantesPorAncoraNumericaPdf(linhas) {
+  const linhasEntrada = Array.isArray(linhas) ? linhas : [];
+  const candidatos = [];
+  const numerosDetectados = [];
+  let totalLinhasComAncora = 0;
+  let totalAceitos = 0;
+  let totalRejeitados = 0;
+
+  for (const linha of linhasEntrada) {
+    const celulas = Array.isArray(linha?.celulas) ? [...linha.celulas].sort((a, b) => a.x - b.x) : [];
+    if (!celulas.length) {
+      continue;
+    }
+
+    const ancora = celulas.find((celula) => {
+      const x = Number.isFinite(celula?.x) ? celula.x : 0;
+      if (x > 90) {
+        return false;
+      }
+
+      return Boolean(normalizarNumeroAncoraTabelaPdf(celula?.texto));
+    });
+
+    if (!ancora) {
+      continue;
+    }
+
+    const numero = normalizarNumeroAncoraTabelaPdf(ancora?.texto);
+    if (!numero) {
+      continue;
+    }
+
+    totalLinhasComAncora += 1;
+    numerosDetectados.push(numero);
+
+    const nome = extrairTextoCelulasPorFaixaXTabelaPdf(celulas, 65, 285, ancora);
+    const funcaoBruta = extrairTextoCelulasPorFaixaXTabelaPdf(celulas, 255, 375, ancora);
+    const assinatura = extrairTextoCelulasPorFaixaXTabelaPdf(celulas, 355, 520, ancora);
+    const observacao = extrairTextoCelulasPorFaixaXTabelaPdf(celulas, 520, Infinity, ancora);
+    const funcaoDetectada = identificarFuncaoTexto(funcaoBruta) || funcaoBruta;
+
+    const validacao = validarParticipanteTabelaPdf(
+      {
+        numero,
+        nome,
+        funcao: funcaoDetectada,
+        assinatura,
+        observacao,
+      },
+      linha?.texto,
+    );
+
+    if (validacao?.aceito) {
+      totalAceitos += 1;
+    } else {
+      totalRejeitados += 1;
+    }
+
+    if (candidatos.length < 30) {
+      candidatos.push({
+        pagina: linha?.pagina ?? null,
+        numero,
+        nome,
+        funcao: funcaoDetectada,
+        assinatura,
+        observacao,
+        aceito: Boolean(validacao?.aceito),
+        motivo: normalizarTextoPdfTabela(validacao?.motivo || "outro"),
+        confianca: Number.isFinite(validacao?.confianca) ? Math.round(validacao.confianca) : 0,
+        xMin: Number.isFinite(linha?.xMin) ? Math.round(linha.xMin) : null,
+        xMax: Number.isFinite(linha?.xMax) ? Math.round(linha.xMax) : null,
+        yMedio: Number.isFinite(linha?.yMedio) ? Math.round(linha.yMedio) : null,
+        totalCelulas: celulas.length,
+        linhaOriginal: normalizarTextoPdfTabela(linha?.texto || ""),
+      });
+    }
+  }
+
+  return {
+    totalLinhasComAncora,
+    totalAceitos,
+    totalRejeitados,
+    totalCandidatosAmostra: candidatos.length,
+    numerosDetectados: numerosDetectados.slice(0, 60),
+    candidatosAmostra: candidatos,
+  };
+}
+
 function montarAmostraColunasTabelaPdf(linhasAnalise) {
   const itens = Array.isArray(linhasAnalise) ? linhasAnalise : [];
 
@@ -1030,6 +1156,7 @@ function extrairParticipantesTabelaPdf(itensTextoPdf, opcoes = {}) {
       avisos,
       linhasAnalisadas,
       colunasAnalisadasAmostra: montarAmostraColunasTabelaPdf(linhasAnalisadas),
+      diagnosticoAncoraNumerica: extrairParticipantesPorAncoraNumericaPdf(agrupamento.linhas),
     },
   };
 }
