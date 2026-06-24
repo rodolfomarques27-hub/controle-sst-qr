@@ -828,9 +828,34 @@ function registrarLinhaAnalise(linhasAnalise, detalhe) {
     nome: normalizarTextoPdfTabela(detalhe?.nome ?? ""),
     funcao: normalizarTextoPdfTabela(detalhe?.funcao ?? ""),
     assinatura: normalizarTextoPdfTabela(detalhe?.assinatura ?? ""),
+    observacao: normalizarTextoPdfTabela(detalhe?.observacao ?? ""),
+    xMin: Number.isFinite(detalhe?.xMin) ? detalhe.xMin : null,
+    xMax: Number.isFinite(detalhe?.xMax) ? detalhe.xMax : null,
+    yMedio: Number.isFinite(detalhe?.yMedio) ? detalhe.yMedio : null,
+    totalCelulas: Number.isFinite(detalhe?.totalCelulas) ? detalhe.totalCelulas : 0,
     aceito: Boolean(detalhe?.aceito),
     motivo: normalizarTextoPdfTabela(detalhe?.motivo ?? ""),
   });
+}
+
+function montarAmostraColunasTabelaPdf(linhasAnalise) {
+  const itens = Array.isArray(linhasAnalise) ? linhasAnalise : [];
+
+  return itens.slice(0, 20).map((item) => ({
+    pagina: item?.pagina ?? null,
+    linhaOriginal: normalizarTextoPdfTabela(item?.linhaOriginal ?? ""),
+    numero: normalizarTextoPdfTabela(item?.numero ?? ""),
+    nome: normalizarTextoPdfTabela(item?.nome ?? ""),
+    funcao: normalizarTextoPdfTabela(item?.funcao ?? ""),
+    assinatura: normalizarTextoPdfTabela(item?.assinatura ?? ""),
+    observacao: normalizarTextoPdfTabela(item?.observacao ?? ""),
+    aceito: Boolean(item?.aceito),
+    motivo: normalizarTextoPdfTabela(item?.motivo ?? ""),
+    xMin: Number.isFinite(item?.xMin) ? Math.round(item.xMin) : null,
+    xMax: Number.isFinite(item?.xMax) ? Math.round(item.xMax) : null,
+    yMedio: Number.isFinite(item?.yMedio) ? Math.round(item.yMedio) : null,
+    totalCelulas: Number.isFinite(item?.totalCelulas) ? item.totalCelulas : 0,
+  }));
 }
 
 function extrairParticipantesTabelaPdf(itensTextoPdf, opcoes = {}) {
@@ -931,6 +956,11 @@ function extrairParticipantesTabelaPdf(itensTextoPdf, opcoes = {}) {
         nome: validacaoParticipante.nome,
         funcao: validacaoParticipante.funcao,
         assinatura: validacaoParticipante.assinatura,
+        observacao: observacaoLinha,
+        xMin: linha?.xMin,
+        xMax: linha?.xMax,
+        yMedio: linha?.yMedio,
+        totalCelulas: Array.isArray(linha?.celulas) ? linha.celulas.length : 0,
         aceito: false,
         motivo: validacaoParticipante.motivo || "outro",
       });
@@ -957,6 +987,11 @@ function extrairParticipantesTabelaPdf(itensTextoPdf, opcoes = {}) {
       nome: nomeLinha,
       funcao: funcaoLinha,
       assinatura: assinaturaLinha,
+      observacao: observacaoLinha,
+      xMin: linha?.xMin,
+      xMax: linha?.xMax,
+      yMedio: linha?.yMedio,
+      totalCelulas: Array.isArray(linha?.celulas) ? linha.celulas.length : 0,
       aceito: true,
       motivo: "ok",
     });
@@ -994,6 +1029,7 @@ function extrairParticipantesTabelaPdf(itensTextoPdf, opcoes = {}) {
       paginasDetectadas: agrupamento.paginasDetectadas,
       avisos,
       linhasAnalisadas,
+      colunasAnalisadasAmostra: montarAmostraColunasTabelaPdf(linhasAnalisadas),
     },
   };
 }

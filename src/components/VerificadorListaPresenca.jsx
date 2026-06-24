@@ -1361,6 +1361,66 @@ export default function VerificadorListaPresenca({
                 </div>
               </div>
             ) : null}
+
+            {Array.isArray(resumoTabela?.colunasAnalisadasAmostra) && resumoTabela.colunasAnalisadasAmostra.length ? (
+              <div className="rounded-xl border border-slate-200 bg-slate-50 p-3 md:col-span-2 xl:col-span-3">
+                <div className="flex flex-col gap-1">
+                  <p className="text-xs uppercase tracking-wide text-slate-500">Amostra de colunas analisadas</p>
+                  <p className="text-xs text-slate-500">
+                    Mostra como a camada de texto foi separada em número, nome, função, assinatura e observação.
+                  </p>
+                </div>
+
+                <div className="mt-3 overflow-x-auto rounded-lg border border-slate-200 bg-white">
+                  <table className="min-w-full divide-y divide-slate-200 text-left text-xs">
+                    <thead className="bg-slate-50 uppercase tracking-wide text-slate-500">
+                      <tr>
+                        <th className="px-3 py-2">Página</th>
+                        <th className="px-3 py-2">Nº</th>
+                        <th className="px-3 py-2">Nome</th>
+                        <th className="px-3 py-2">Função</th>
+                        <th className="px-3 py-2">Assinatura</th>
+                        <th className="px-3 py-2">Observação</th>
+                        <th className="px-3 py-2">X</th>
+                        <th className="px-3 py-2">Y</th>
+                        <th className="px-3 py-2">Células</th>
+                        <th className="px-3 py-2">Status</th>
+                        <th className="px-3 py-2">Motivo</th>
+                        <th className="px-3 py-2">Linha original</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100 bg-white">
+                      {resumoTabela.colunasAnalisadasAmostra.map((item, indice) => (
+                        <tr key={`${item?.pagina ?? "p"}-${item?.linhaOriginal || "linha"}-${indice}`}>
+                          <td className="px-3 py-2 text-slate-700">{item?.pagina ?? "-"}</td>
+                          <td className="px-3 py-2 text-slate-700">{item?.numero || "-"}</td>
+                          <td className="px-3 py-2 text-slate-700">
+                            <div className="max-w-[14rem] break-words">{item?.nome || "-"}</div>
+                          </td>
+                          <td className="px-3 py-2 text-slate-700">{item?.funcao || "-"}</td>
+                          <td className="px-3 py-2 text-slate-700">{item?.assinatura || "-"}</td>
+                          <td className="px-3 py-2 text-slate-700">{item?.observacao || "-"}</td>
+                          <td className="px-3 py-2 text-slate-700">
+                            {Number.isFinite(Number(item?.xMin)) && Number.isFinite(Number(item?.xMax))
+                              ? `${Math.round(Number(item.xMin))}-${Math.round(Number(item.xMax))}`
+                              : "-"}
+                          </td>
+                          <td className="px-3 py-2 text-slate-700">
+                            {Number.isFinite(Number(item?.yMedio)) ? Math.round(Number(item.yMedio)) : "-"}
+                          </td>
+                          <td className="px-3 py-2 text-slate-700">{Number(item?.totalCelulas || 0)}</td>
+                          <td className="px-3 py-2 text-slate-700">{item?.aceito ? "Aceito" : "Rejeitado"}</td>
+                          <td className="px-3 py-2 text-slate-700">{item?.motivo || "-"}</td>
+                          <td className="px-3 py-2 text-slate-700">
+                            <div className="max-w-[22rem] break-words">{item?.linhaOriginal || "-"}</div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            ) : null}
           </div>
 
           {avisosTabela.length ? (
