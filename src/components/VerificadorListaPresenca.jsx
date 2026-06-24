@@ -1205,6 +1205,10 @@ export default function VerificadorListaPresenca({
                       <th className="px-4 py-3">Nome cadastro</th>
                       <th className="px-4 py-3">Função</th>
                       <th className="px-4 py-3">Nome PDF</th>
+                      <th className="px-4 py-3">Candidato usado</th>
+                      <th className="px-4 py-3">Origem candidato</th>
+                      <th className="px-4 py-3">Pagina</th>
+                      <th className="px-4 py-3">Assinatura PDF</th>
                       <th className="px-4 py-3">Status</th>
                       <th className="px-4 py-3">Score</th>
                       <th className="px-4 py-3">Motivo</th>
@@ -1217,6 +1221,12 @@ export default function VerificadorListaPresenca({
                           <td className="px-4 py-3 font-medium text-slate-900">{item?.nomeCadastro || "-"}</td>
                           <td className="px-4 py-3 text-slate-700">{item?.funcaoCadastro || "-"}</td>
                           <td className="px-4 py-3 text-slate-700">{item?.nomeOCR || "-"}</td>
+                          <td className="max-w-xs px-4 py-3 text-slate-700">
+                            <span className="line-clamp-2">{item?.diagnosticoComparacaoTabela?.candidatoTexto || "-"}</span>
+                          </td>
+                          <td className="px-4 py-3 text-slate-700">{item?.diagnosticoComparacaoTabela?.candidatoOrigem || "-"}</td>
+                          <td className="px-4 py-3 text-slate-700">{item?.diagnosticoComparacaoTabela?.participantePagina || "-"}</td>
+                          <td className="px-4 py-3 text-slate-700">{item?.diagnosticoComparacaoTabela?.participanteAssinatura || "-"}</td>
                           <td className="px-4 py-3">
                             <span className={`inline-flex items-center rounded-full border px-3 py-1 text-xs font-semibold ${classeStatus(item?.status)}`}>
                               {item?.status === "encontrado_e_assinou" ? <CheckCircle2 className="mr-1 h-3.5 w-3.5" /> : null}
@@ -1231,7 +1241,7 @@ export default function VerificadorListaPresenca({
                       ))
                     ) : (
                       <tr>
-                        <td className="px-4 py-8 text-center text-slate-500" colSpan={6}>
+                        <td className="px-4 py-8 text-center text-slate-500" colSpan={10}>
                           Nenhum colaborador encontrado para exibir.
                         </td>
                       </tr>
