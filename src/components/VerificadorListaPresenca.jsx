@@ -1433,7 +1433,7 @@ export default function VerificadorListaPresenca({
                   </p>
                 </div>
 
-                <div className="mt-3 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+                <div className="mt-3 grid gap-3 md:grid-cols-2 xl:grid-cols-6">
                   <div className="rounded-lg border border-slate-200 bg-white p-3">
                     <p className="text-xs uppercase tracking-wide text-slate-500">Linhas com âncora</p>
                     <p className="mt-1 text-sm font-semibold text-slate-900">{Number(resumoTabela?.diagnosticoAncoraNumerica?.totalLinhasComAncora || 0)}</p>
@@ -1453,6 +1453,16 @@ export default function VerificadorListaPresenca({
                     <p className="text-xs uppercase tracking-wide text-slate-500">Amostra</p>
                     <p className="mt-1 text-sm font-semibold text-slate-900">{Number(resumoTabela?.diagnosticoAncoraNumerica?.totalCandidatosAmostra || 0)}</p>
                   </div>
+
+                  <div className="rounded-lg border border-slate-200 bg-white p-3">
+                    <p className="text-xs uppercase tracking-wide text-slate-500">Duplicados por número</p>
+                    <p className="mt-1 text-sm font-semibold text-slate-900">{Number(resumoTabela?.diagnosticoAncoraNumerica?.totalDuplicadosNumero || 0)}</p>
+                  </div>
+
+                  <div className="rounded-lg border border-slate-200 bg-white p-3">
+                    <p className="text-xs uppercase tracking-wide text-slate-500">Ignorados no pré-filtro</p>
+                    <p className="mt-1 text-sm font-semibold text-slate-900">{Number(resumoTabela?.diagnosticoAncoraNumerica?.totalIgnoradosPreFiltro || 0)}</p>
+                  </div>
                 </div>
 
                 {Array.isArray(resumoTabela?.diagnosticoAncoraNumerica?.numerosDetectados) && resumoTabela.diagnosticoAncoraNumerica.numerosDetectados.length ? (
@@ -1463,6 +1473,35 @@ export default function VerificadorListaPresenca({
                     </p>
                   </div>
                 ) : null}
+
+                <div className="mt-3 grid gap-3 md:grid-cols-3">
+                  <div className="rounded-lg border border-slate-200 bg-white p-3">
+                    <p className="text-xs uppercase tracking-wide text-slate-500">Números aceitos</p>
+                    <p className="mt-1 break-words text-xs text-slate-700">
+                      {Array.isArray(resumoTabela?.diagnosticoAncoraNumerica?.numerosAceitos) && resumoTabela.diagnosticoAncoraNumerica.numerosAceitos.length
+                        ? resumoTabela.diagnosticoAncoraNumerica.numerosAceitos.join(", ")
+                        : "-"}
+                    </p>
+                  </div>
+
+                  <div className="rounded-lg border border-slate-200 bg-white p-3">
+                    <p className="text-xs uppercase tracking-wide text-slate-500">Números rejeitados</p>
+                    <p className="mt-1 break-words text-xs text-slate-700">
+                      {Array.isArray(resumoTabela?.diagnosticoAncoraNumerica?.numerosRejeitados) && resumoTabela.diagnosticoAncoraNumerica.numerosRejeitados.length
+                        ? resumoTabela.diagnosticoAncoraNumerica.numerosRejeitados.join(", ")
+                        : "-"}
+                    </p>
+                  </div>
+
+                  <div className="rounded-lg border border-slate-200 bg-white p-3">
+                    <p className="text-xs uppercase tracking-wide text-slate-500">Números duplicados</p>
+                    <p className="mt-1 break-words text-xs text-slate-700">
+                      {Array.isArray(resumoTabela?.diagnosticoAncoraNumerica?.numerosDuplicados) && resumoTabela.diagnosticoAncoraNumerica.numerosDuplicados.length
+                        ? resumoTabela.diagnosticoAncoraNumerica.numerosDuplicados.join(", ")
+                        : "-"}
+                    </p>
+                  </div>
+                </div>
 
                 {Array.isArray(resumoTabela?.diagnosticoAncoraNumerica?.candidatosAmostra) && resumoTabela.diagnosticoAncoraNumerica.candidatosAmostra.length ? (
                   <div className="mt-3 overflow-x-auto rounded-lg border border-slate-200 bg-white">
