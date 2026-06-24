@@ -1207,6 +1207,8 @@ export default function VerificadorListaPresenca({
                       <th className="px-4 py-3">Nome PDF</th>
                       <th className="px-4 py-3">Candidato usado</th>
                       <th className="px-4 py-3">Origem candidato</th>
+                      <th className="px-4 py-3">Estrategia</th>
+                      <th className="px-4 py-3">Tokens</th>
                       <th className="px-4 py-3">Pagina</th>
                       <th className="px-4 py-3">Assinatura PDF</th>
                       <th className="px-4 py-3">Status</th>
@@ -1225,6 +1227,14 @@ export default function VerificadorListaPresenca({
                             <span className="line-clamp-2">{item?.diagnosticoComparacaoTabela?.candidatoTexto || "-"}</span>
                           </td>
                           <td className="px-4 py-3 text-slate-700">{item?.diagnosticoComparacaoTabela?.candidatoOrigem || "-"}</td>
+                          <td className="px-4 py-3 text-slate-700">{item?.diagnosticoComparacaoTabela?.estrategiaComparacao || "-"}</td>
+                          <td className="max-w-xs px-4 py-3 text-slate-700">
+                            <span className="line-clamp-2">
+                              {Array.isArray(item?.diagnosticoComparacaoTabela?.tokensComparacao) && item.diagnosticoComparacaoTabela.tokensComparacao.length
+                                ? item.diagnosticoComparacaoTabela.tokensComparacao.join(", ")
+                                : "-"}
+                            </span>
+                          </td>
                           <td className="px-4 py-3 text-slate-700">{item?.diagnosticoComparacaoTabela?.participantePagina || "-"}</td>
                           <td className="px-4 py-3 text-slate-700">{item?.diagnosticoComparacaoTabela?.participanteAssinatura || "-"}</td>
                           <td className="px-4 py-3">
@@ -1241,7 +1251,7 @@ export default function VerificadorListaPresenca({
                       ))
                     ) : (
                       <tr>
-                        <td className="px-4 py-8 text-center text-slate-500" colSpan={10}>
+                        <td className="px-4 py-8 text-center text-slate-500" colSpan={12}>
                           Nenhum colaborador encontrado para exibir.
                         </td>
                       </tr>
