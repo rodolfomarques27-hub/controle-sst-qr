@@ -133,6 +133,145 @@ function classificarColaborador({ colaborador, melhor, colaboradorId }) {
   };
 }
 
+const PARTICULAS_NOME_TABELA_PDF = new Set(["DE", "DA", "DO", "DAS", "DOS", "E"]);
+
+function obterPalavrasNomeTabelaPdf(valor) {
+  return normalizarNome(valor)
+    .split(" ")
+    .map((palavra) => palavra.trim())
+    .filter((palavra) => palavra.length > 2 && !PARTICULAS_NOME_TABELA_PDF.has(palavra));
+}
+
+function calcularDistanciaLevenshteinTabelaPdf(a, b) {
+  const textoA = String(a || "");
+  const textoB = String(b || "");
+
+  if (!textoA) {
+    return textoB.length;
+  }
+
+  if (!textoB) {
+    return textoA.length;
+  }
+
+  const anterior = Array.from({ length: textoB.length + 1 }, (_, indice) => indice);
+  const atual = new Array(textoB.length + 1);
+
+  for (let i = 1; i <= textoA.length; i += 1) {
+    atual[0] = i;
+
+    for (let j = 1; j <= textoB.length; j += 1) {
+      const custo = textoA[i - 1] === textoB[j - 1] ? 0 : 1;
+      atual[j] = Math.min(
+        anterior[j] + 1,
+        atual[j - 1] + 1,
+        anterior[j - 1] + custo,
+      );
+    }
+
+    for (let j = 0; j <= textoB.length; j += 1) {
+      anterior[j] = atual[j];
+    }
+  }
+
+  return anterior[textoB.length];
+}
+
+function calcularSimilaridadeTokenTabelaPdf(a, b) {
+  const textoA = normalizarNome(a);
+  const textoB = normalizarNome(b);
+
+  if (!textoA || !textoB) {
+    return 0;
+  }
+
+  if (textoA === textoB) {
+    return 1;
+  }
+
+  if (textoA.length < 4 || textoB.length < 4) {
+    return 0;
+  }
+
+  if (textoA[0] !== textoB[0]) {
+    return 0;
+  }
+
+  const distancia = calcularDistanciaLevenshteinTabelaPdf(textoA, textoB);
+  const maior = Math.max(textoA.length, textoB.length);
+
+  return maior > 0 ? Math.max(0, 1 - distancia / maior) : 0;
+}
+
+function calcularComparacaoAproximadaTabelaPdf(nomeCadastro, candidatoTexto) {
+  const palavrasCadastro = obterPalavrasNomeTabelaPdf(nomeCadastro);
+  const palavrasCandidato = obterPalavrasNomeTabelaPdf(candidatoTexto);
+
+  if (palavrasCadastro.length < 2 || palavrasCandidato.length < 1) {
+    return null;
+  }
+
+  const indicesUsados = new Set();
+  const correspondencias = [];
+
+  for (const palavraCadastro of palavrasCadastro) {
+    let melhorToken = null;
+
+    for (let indice = 0; indice < palavrasCandidato.length; indice += 1) {
+      if (indicesUsados.has(indice)) {
+        continue;
+      }
+
+      const palavraCandidato = palavrasCandidato[indice];
+      const similaridadeToken = calcularSimilaridadeTokenTabelaPdf(palavraCadastro, palavraCandidato);
+
+      if (similaridadeToken >= 0.72 && (!melhorToken || similaridadeToken > melhorToken.similaridade)) {
+        melhorToken = {
+          indice,
+          cadastro: palavraCadastro,
+          candidato: palavraCandidato,
+          similaridade: similaridadeToken,
+        };
+      }
+    }
+
+    if (melhorToken) {
+      indicesUsados.add(melhorToken.indice);
+      correspondencias.push(melhorToken);
+    }
+  }
+
+  if (correspondencias.length < 2) {
+    return null;
+  }
+
+  const coberturaCadastro = correspondencias.length / palavrasCadastro.length;
+  const mediaSimilaridade = correspondencias.reduce((total, item) => total + item.similaridade, 0) / correspondencias.length;
+  const temTokenForte = correspondencias.some((item) => item.similaridade >= 0.92 && item.cadastro.length >= 5 && item.candidato.length >= 5);
+
+  if (coberturaCadastro < 0.5 && !temTokenForte) {
+    return null;
+  }
+
+  const scoreCalculado = Math.round((coberturaCadastro * 55) + (mediaSimilaridade * 35) + Math.min(10, correspondencias.length * 2));
+  const score = Math.min(79, Math.max(45, scoreCalculado));
+
+  if (score < 45) {
+    return null;
+  }
+
+  const tokens = correspondencias.map((item) => `${item.cadastro}~${item.candidato}`);
+
+  return {
+    score,
+    similaridade: score / 100,
+    motivo: `Correspondencia aproximada por tokens: ${tokens.join(", ")}`,
+    encontrado: false,
+    estrategiaComparacao: "aproximada_tokens",
+    tokensComparacao: tokens,
+  };
+}
+
 function escolherMelhorCorrespondenciaTabelaPdf(colaborador, participantesTabelaPdf) {
   const nomeCadastro = String(colaborador?.nome || "").trim();
   let melhor = {
@@ -142,6 +281,8 @@ function escolherMelhorCorrespondenciaTabelaPdf(colaborador, participantesTabela
     participante: null,
     candidatoTexto: "",
     candidatoOrigem: "",
+    estrategiaComparacao: "direta",
+    tokensComparacao: [],
   };
 
   for (const participante of participantesTabelaPdf) {
@@ -158,16 +299,40 @@ function escolherMelhorCorrespondenciaTabelaPdf(colaborador, participantesTabela
       .filter((item) => item.texto);
 
     for (const candidato of candidatos) {
-      const comparacao = compararNomesLista(nomeCadastro, candidato.texto);
-      if (comparacao.score > melhor.score) {
-        melhor = {
-          score: comparacao.score,
-          similaridade: comparacao.similaridade,
-          motivo: comparacao.motivo,
-          participante,
+      const comparacaoDireta = compararNomesLista(nomeCadastro, candidato.texto);
+      const comparacoes = [
+        {
+          ...comparacaoDireta,
           candidatoTexto: candidato.texto,
           candidatoOrigem: candidato.origem,
-        };
+          estrategiaComparacao: "direta",
+          tokensComparacao: [],
+        },
+      ];
+
+      const comparacaoAproximada = calcularComparacaoAproximadaTabelaPdf(nomeCadastro, candidato.texto);
+
+      if (comparacaoAproximada) {
+        comparacoes.push({
+          ...comparacaoAproximada,
+          candidatoTexto: candidato.texto,
+          candidatoOrigem: `${candidato.origem}_aproximada`,
+        });
+      }
+
+      for (const comparacao of comparacoes) {
+        if (comparacao.score > melhor.score) {
+          melhor = {
+            score: comparacao.score,
+            similaridade: comparacao.similaridade,
+            motivo: comparacao.motivo,
+            participante,
+            candidatoTexto: comparacao.candidatoTexto,
+            candidatoOrigem: comparacao.candidatoOrigem,
+            estrategiaComparacao: comparacao.estrategiaComparacao || "direta",
+            tokensComparacao: Array.isArray(comparacao.tokensComparacao) ? comparacao.tokensComparacao : [],
+          };
+        }
       }
     }
   }
@@ -194,6 +359,8 @@ function classificarColaboradorTabelaPdf({ colaborador, melhor }) {
     score: Number(melhor?.score || 0),
     similaridade: Number(melhor?.similaridade || 0),
     motivo: melhor?.motivo || "",
+    estrategiaComparacao: melhor?.estrategiaComparacao || "direta",
+    tokensComparacao: Array.isArray(melhor?.tokensComparacao) ? melhor.tokensComparacao : [],
   };
 
   if (score >= 80 && assinaturaSegura) {
