@@ -140,22 +140,33 @@ function escolherMelhorCorrespondenciaTabelaPdf(colaborador, participantesTabela
     similaridade: 0,
     motivo: "Sem correspondencia forte",
     participante: null,
+    candidatoTexto: "",
+    candidatoOrigem: "",
   };
 
   for (const participante of participantesTabelaPdf) {
-    const candidatos = [participante?.nome, participante?.linhaOriginal, participante?.textoOCR, participante?.texto]
-      .filter(Boolean)
-      .map((texto) => String(texto).trim())
-      .filter(Boolean);
+    const candidatos = [
+      { texto: participante?.nome, origem: "nome" },
+      { texto: participante?.linhaOriginal, origem: "linhaOriginal" },
+      { texto: participante?.textoOCR, origem: "textoOCR" },
+      { texto: participante?.texto, origem: "texto" },
+    ]
+      .map((item) => ({
+        texto: String(item?.texto || "").trim(),
+        origem: item?.origem || "",
+      }))
+      .filter((item) => item.texto);
 
     for (const candidato of candidatos) {
-      const comparacao = compararNomesLista(nomeCadastro, candidato);
+      const comparacao = compararNomesLista(nomeCadastro, candidato.texto);
       if (comparacao.score > melhor.score) {
         melhor = {
           score: comparacao.score,
           similaridade: comparacao.similaridade,
           motivo: comparacao.motivo,
           participante,
+          candidatoTexto: candidato.texto,
+          candidatoOrigem: candidato.origem,
         };
       }
     }
@@ -171,6 +182,19 @@ function classificarColaboradorTabelaPdf({ colaborador, melhor }) {
   const nomeOCR = score >= 45 ? nomeOCRBruto : "Não localizado na tabela interna do PDF";
   const funcaoCadastro = String(colaborador?.funcao || colaborador?.funcaoCadastro || "").trim();
   const assinaturaSegura = assinaturaTextualSegura(participante?.assinatura);
+  const diagnosticoComparacaoTabela = {
+    candidatoTexto: melhor?.candidatoTexto || "",
+    candidatoOrigem: melhor?.candidatoOrigem || "",
+    participanteNome: participante?.nome || "",
+    participanteFuncao: participante?.funcao || "",
+    participanteAssinatura: participante?.assinatura || "",
+    participantePagina: participante?.pagina || null,
+    participanteNumero: participante?.numero || "",
+    participanteLinhaOriginal: participante?.linhaOriginal || "",
+    score: Number(melhor?.score || 0),
+    similaridade: Number(melhor?.similaridade || 0),
+    motivo: melhor?.motivo || "",
+  };
 
   if (score >= 80 && assinaturaSegura) {
     return {
@@ -184,6 +208,7 @@ function classificarColaboradorTabelaPdf({ colaborador, melhor }) {
       assinou: true,
       linhaOCR: participante,
       origem: "pdf_tabela_interna_comparada",
+      diagnosticoComparacaoTabela,
     };
   }
 
@@ -199,6 +224,7 @@ function classificarColaboradorTabelaPdf({ colaborador, melhor }) {
       assinou: false,
       linhaOCR: participante,
       origem: "pdf_tabela_interna_comparada",
+      diagnosticoComparacaoTabela,
     };
   }
 
@@ -214,6 +240,7 @@ function classificarColaboradorTabelaPdf({ colaborador, melhor }) {
       assinou: false,
       linhaOCR: participante,
       origem: "pdf_tabela_interna_comparada",
+      diagnosticoComparacaoTabela,
     };
   }
 
@@ -228,6 +255,7 @@ function classificarColaboradorTabelaPdf({ colaborador, melhor }) {
     assinou: false,
     linhaOCR: participante,
     origem: "pdf_tabela_interna_comparada",
+    diagnosticoComparacaoTabela,
   };
 }
 
