@@ -1463,6 +1463,11 @@ export default function VerificadorListaPresenca({
                     <p className="text-xs uppercase tracking-wide text-slate-500">Ignorados no pré-filtro</p>
                     <p className="mt-1 text-sm font-semibold text-slate-900">{Number(resumoTabela?.diagnosticoAncoraNumerica?.totalIgnoradosPreFiltro || 0)}</p>
                   </div>
+
+                  <div className="rounded-lg border border-slate-200 bg-white p-3">
+                    <p className="text-xs uppercase tracking-wide text-slate-500">Nomes ajustados</p>
+                    <p className="mt-1 text-sm font-semibold text-slate-900">{Number(resumoTabela?.diagnosticoAncoraNumerica?.totalNomesAjustados || 0)}</p>
+                  </div>
                 </div>
 
                 {Array.isArray(resumoTabela?.diagnosticoAncoraNumerica?.numerosDetectados) && resumoTabela.diagnosticoAncoraNumerica.numerosDetectados.length ? (
@@ -1503,6 +1508,44 @@ export default function VerificadorListaPresenca({
                   </div>
                 </div>
 
+                {Array.isArray(resumoTabela?.diagnosticoAncoraNumerica?.nomesAjustadosAmostra) && resumoTabela.diagnosticoAncoraNumerica.nomesAjustadosAmostra.length ? (
+                  <div className="mt-3 overflow-x-auto rounded-lg border border-slate-200 bg-white">
+                    <div className="border-b border-slate-200 bg-slate-50 px-3 py-2">
+                      <p className="text-xs uppercase tracking-wide text-slate-500">Amostra de nomes ajustados</p>
+                      <p className="mt-1 text-xs text-slate-500">
+                        Mostra o nome antes e depois da limpeza aplicada apenas no diagnóstico por âncora numérica.
+                      </p>
+                    </div>
+
+                    <table className="min-w-full divide-y divide-slate-200 text-left text-xs">
+                      <thead className="bg-slate-50 uppercase tracking-wide text-slate-500">
+                        <tr>
+                          <th className="px-3 py-2">Nº</th>
+                          <th className="px-3 py-2">Antes</th>
+                          <th className="px-3 py-2">Depois</th>
+                          <th className="px-3 py-2">Ajustes</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-100 bg-white">
+                        {resumoTabela.diagnosticoAncoraNumerica.nomesAjustadosAmostra.map((item, indice) => (
+                          <tr key={`${item?.numero || "n"}-${item?.antes || "nome"}-${indice}`}>
+                            <td className="px-3 py-2 text-slate-700">{item?.numero || "-"}</td>
+                            <td className="px-3 py-2 text-slate-700">
+                              <div className="max-w-[18rem] break-words">{item?.antes || "-"}</div>
+                            </td>
+                            <td className="px-3 py-2 text-slate-700">
+                              <div className="max-w-[18rem] break-words">{item?.depois || "-"}</div>
+                            </td>
+                            <td className="px-3 py-2 text-slate-700">
+                              {Array.isArray(item?.ajustes) && item.ajustes.length ? item.ajustes.join(", ") : "-"}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                ) : null}
+
                 {Array.isArray(resumoTabela?.diagnosticoAncoraNumerica?.candidatosAmostra) && resumoTabela.diagnosticoAncoraNumerica.candidatosAmostra.length ? (
                   <div className="mt-3 overflow-x-auto rounded-lg border border-slate-200 bg-white">
                     <table className="min-w-full divide-y divide-slate-200 text-left text-xs">
@@ -1511,6 +1554,8 @@ export default function VerificadorListaPresenca({
                           <th className="px-3 py-2">Página</th>
                           <th className="px-3 py-2">Nº</th>
                           <th className="px-3 py-2">Nome</th>
+                          <th className="px-3 py-2">Nome original</th>
+                          <th className="px-3 py-2">Ajustes nome</th>
                           <th className="px-3 py-2">Função</th>
                           <th className="px-3 py-2">Assinatura</th>
                           <th className="px-3 py-2">Observação</th>
@@ -1530,6 +1575,12 @@ export default function VerificadorListaPresenca({
                             <td className="px-3 py-2 text-slate-700">{item?.numero || "-"}</td>
                             <td className="px-3 py-2 text-slate-700">
                               <div className="max-w-[14rem] break-words">{item?.nome || "-"}</div>
+                            </td>
+                            <td className="px-3 py-2 text-slate-700">
+                              <div className="max-w-[14rem] break-words">{item?.nomeOriginal || "-"}</div>
+                            </td>
+                            <td className="px-3 py-2 text-slate-700">
+                              {Array.isArray(item?.nomeAjustes) && item.nomeAjustes.length ? item.nomeAjustes.join(", ") : "-"}
                             </td>
                             <td className="px-3 py-2 text-slate-700">{item?.funcao || "-"}</td>
                             <td className="px-3 py-2 text-slate-700">{item?.assinatura || "-"}</td>
