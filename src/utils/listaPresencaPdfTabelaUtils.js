@@ -1144,6 +1144,112 @@ function extrairParticipantesPorAncoraNumericaPdf(linhas) {
   };
 }
 
+function normalizarNomeComparacaoAncoraTabelaPdf(valor) {
+  return normalizarTextoPdfTabela(valor)
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toUpperCase()
+    .replace(/[^A-Z0-9\s]/g, " ")
+    .replace(/\b(DE|DA|DO|DAS|DOS|E)\b/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function montarResumoParticipanteComparacaoAncoraTabelaPdf(item) {
+  return {
+    numero: normalizarNumeroAncoraTabelaPdf(item?.numero ?? ""),
+    nome: normalizarTextoPdfTabela(item?.nome ?? ""),
+    nomeNormalizado: normalizarNomeComparacaoAncoraTabelaPdf(item?.nome ?? ""),
+    funcao: normalizarTextoPdfTabela(item?.funcao ?? ""),
+    assinatura: normalizarTextoPdfTabela(item?.assinatura ?? ""),
+    pagina: item?.pagina ?? null,
+    origem: normalizarTextoPdfTabela(item?.origem ?? ""),
+    motivo: normalizarTextoPdfTabela(item?.motivo ?? ""),
+    confianca: Number.isFinite(item?.confianca) ? Math.round(item.confianca) : 0,
+  };
+}
+
+function compararExtracaoPrincipalComAncoraNumericaPdf(participantesPrincipais, diagnosticoAncora) {
+  const principais = Array.isArray(participantesPrincipais) ? participantesPrincipais : [];
+  const candidatosAncora = Array.isArray(diagnosticoAncora?.candidatosAmostra)
+    ? diagnosticoAncora.candidatosAmostra.filter((item) => item?.aceito)
+    : [];
+
+  const mapaPrincipalPorNumero = new Map();
+  const mapaAncoraPorNumero = new Map();
+
+  for (const participante of principais) {
+    const resumo = montarResumoParticipanteComparacaoAncoraTabelaPdf(participante);
+    if (resumo.numero && !mapaPrincipalPorNumero.has(resumo.numero)) {
+      mapaPrincipalPorNumero.set(resumo.numero, resumo);
+    }
+  }
+
+  for (const candidato of candidatosAncora) {
+    const resumo = montarResumoParticipanteComparacaoAncoraTabelaPdf(candidato);
+    if (resumo.numero && !mapaAncoraPorNumero.has(resumo.numero)) {
+      mapaAncoraPorNumero.set(resumo.numero, resumo);
+    }
+  }
+
+  const emAmbos = [];
+  const somentePrincipal = [];
+  const somenteAncora = [];
+  const nomesDivergentes = [];
+
+  for (const [numero, principal] of mapaPrincipalPorNumero.entries()) {
+    const ancora = mapaAncoraPorNumero.get(numero);
+
+    if (!ancora) {
+      somentePrincipal.push(principal);
+      continue;
+    }
+
+    emAmbos.push({
+      numero,
+      principalNome: principal.nome,
+      ancoraNome: ancora.nome,
+      principalFuncao: principal.funcao,
+      ancoraFuncao: ancora.funcao,
+    });
+
+    if (
+      principal.nomeNormalizado &&
+      ancora.nomeNormalizado &&
+      principal.nomeNormalizado !== ancora.nomeNormalizado
+    ) {
+      nomesDivergentes.push({
+        numero,
+        principalNome: principal.nome,
+        ancoraNome: ancora.nome,
+        principalFuncao: principal.funcao,
+        ancoraFuncao: ancora.funcao,
+      });
+    }
+  }
+
+  for (const [numero, ancora] of mapaAncoraPorNumero.entries()) {
+    if (!mapaPrincipalPorNumero.has(numero)) {
+      somenteAncora.push(ancora);
+    }
+  }
+
+  return {
+    totalPrincipal: principais.length,
+    totalPrincipalComNumero: mapaPrincipalPorNumero.size,
+    totalAncoraAceitos: candidatosAncora.length,
+    totalAncoraAceitosComNumero: mapaAncoraPorNumero.size,
+    totalEmAmbosPorNumero: emAmbos.length,
+    totalSomentePrincipal: somentePrincipal.length,
+    totalSomenteAncora: somenteAncora.length,
+    totalNomesDivergentes: nomesDivergentes.length,
+    amostraEmAmbos: emAmbos.slice(0, 20),
+    amostraSomentePrincipal: somentePrincipal.slice(0, 20),
+    amostraSomenteAncora: somenteAncora.slice(0, 20),
+    amostraNomesDivergentes: nomesDivergentes.slice(0, 20),
+  };
+}
+
 function montarAmostraColunasTabelaPdf(linhasAnalise) {
   const itens = Array.isArray(linhasAnalise) ? linhasAnalise : [];
 
@@ -1337,6 +1443,10 @@ function extrairParticipantesTabelaPdf(itensTextoPdf, opcoes = {}) {
       linhasAnalisadas,
       colunasAnalisadasAmostra: montarAmostraColunasTabelaPdf(linhasAnalisadas),
       diagnosticoAncoraNumerica: extrairParticipantesPorAncoraNumericaPdf(agrupamento.linhas),
+      diagnosticoComparativoAncoraNumerica: compararExtracaoPrincipalComAncoraNumericaPdf(
+        participantesOrdenados,
+        extrairParticipantesPorAncoraNumericaPdf(agrupamento.linhas),
+      ),
     },
   };
 }

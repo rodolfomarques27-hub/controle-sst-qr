@@ -155,6 +155,7 @@ export default function VerificadorListaPresenca({
 
   const resumoTabela = resultadoTabelaPdf?.diagnostico || {};
   const validacaoTabela = resultadoTabelaPdf?.validacao || {};
+  const diagnosticoComparativoAncoraNumerica = resumoTabela?.diagnosticoComparativoAncoraNumerica || null;
   const tabelaInternaConfiavel = Boolean(resumoTabela?.tabelaInternaConfiavel);
   const participantesTabelaBase = tabelaInternaConfiavel && Array.isArray(resultadoTabelaPdf?.participantes) ? resultadoTabelaPdf.participantes : [];
   const totalParticipantesTabela = participantesTabelaBase.length;
@@ -1613,6 +1614,53 @@ export default function VerificadorListaPresenca({
               </div>
             </div>
           ) : null}
+          {diagnosticoComparativoAncoraNumerica ? (
+            <div className="px-4 pb-4">
+              <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
+                <div className="flex flex-col gap-1">
+                  <p className="text-xs uppercase tracking-wide text-slate-500">Comparativo: principal x âncora</p>
+                  <p className="text-xs text-slate-500">
+                    Diagnóstico paralelo para comparar a extração principal da tabela interna com os candidatos aceitos por âncora numérica. Não altera o resultado principal.
+                  </p>
+                </div>
+
+                <div className="mt-3 grid gap-3 md:grid-cols-2 xl:grid-cols-6">
+                  <div className="rounded-lg border border-slate-200 bg-white p-3">
+                    <p className="text-xs uppercase tracking-wide text-slate-500">Principal</p>
+                    <p className="mt-1 text-sm font-semibold text-slate-900">{Number(diagnosticoComparativoAncoraNumerica?.totalPrincipal || 0)}</p>
+                    <p className="mt-1 text-[11px] text-slate-500">Com número: {Number(diagnosticoComparativoAncoraNumerica?.totalPrincipalComNumero || 0)}</p>
+                  </div>
+
+                  <div className="rounded-lg border border-slate-200 bg-white p-3">
+                    <p className="text-xs uppercase tracking-wide text-slate-500">Âncora aceitos</p>
+                    <p className="mt-1 text-sm font-semibold text-slate-900">{Number(diagnosticoComparativoAncoraNumerica?.totalAncoraAceitos || 0)}</p>
+                    <p className="mt-1 text-[11px] text-slate-500">Com número: {Number(diagnosticoComparativoAncoraNumerica?.totalAncoraAceitosComNumero || 0)}</p>
+                  </div>
+
+                  <div className="rounded-lg border border-slate-200 bg-white p-3">
+                    <p className="text-xs uppercase tracking-wide text-slate-500">Em ambos</p>
+                    <p className="mt-1 text-sm font-semibold text-slate-900">{Number(diagnosticoComparativoAncoraNumerica?.totalEmAmbosPorNumero || 0)}</p>
+                  </div>
+
+                  <div className="rounded-lg border border-slate-200 bg-white p-3">
+                    <p className="text-xs uppercase tracking-wide text-slate-500">Só na principal</p>
+                    <p className="mt-1 text-sm font-semibold text-slate-900">{Number(diagnosticoComparativoAncoraNumerica?.totalSomentePrincipal || 0)}</p>
+                  </div>
+
+                  <div className="rounded-lg border border-slate-200 bg-white p-3">
+                    <p className="text-xs uppercase tracking-wide text-slate-500">Só na âncora</p>
+                    <p className="mt-1 text-sm font-semibold text-slate-900">{Number(diagnosticoComparativoAncoraNumerica?.totalSomenteAncora || 0)}</p>
+                  </div>
+
+                  <div className="rounded-lg border border-slate-200 bg-white p-3">
+                    <p className="text-xs uppercase tracking-wide text-slate-500">Nomes divergentes</p>
+                    <p className="mt-1 text-sm font-semibold text-slate-900">{Number(diagnosticoComparativoAncoraNumerica?.totalNomesDivergentes || 0)}</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          ) : null}
+
           {avisosTabela.length ? (
             <div className="space-y-2 px-4 pb-4">
               {avisosTabela.map((aviso, indice) => (
