@@ -434,7 +434,7 @@ export default function VerificadorListaPresenca({
           <div className="mt-4 grid gap-3 md:grid-cols-5">
             <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
               <p className="text-xs uppercase tracking-wide text-slate-500">Páginas</p>
-              <p className="mt-1 text-sm font-semibold text-slate-900">{Number(resumoTabela?.totalPaginas || 0)}</p>
+              <p className="mt-1 text-sm font-semibold text-slate-900">{Number(resumoTabela?.paginasDetectadas ?? resumoTabela?.totalPaginas ?? 0)}</p>
             </div>
 
             <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
@@ -1306,7 +1306,7 @@ export default function VerificadorListaPresenca({
           <div className="grid gap-3 p-4 md:grid-cols-2 xl:grid-cols-3">
             <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
               <p className="text-xs uppercase tracking-wide text-slate-500">Páginas</p>
-              <p className="mt-1 text-sm font-semibold text-slate-900">{Number(resumoTabela?.totalPaginas || 0)}</p>
+              <p className="mt-1 text-sm font-semibold text-slate-900">{Number(resumoTabela?.paginasDetectadas ?? resumoTabela?.totalPaginas ?? 0)}</p>
             </div>
 
             <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
