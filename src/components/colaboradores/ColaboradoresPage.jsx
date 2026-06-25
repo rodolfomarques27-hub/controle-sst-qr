@@ -19,6 +19,7 @@ import {
 import { Card, FotoColaborador, Header, obterFotoColaboradorSrc } from "../commonComponents";
 import { MobilizacaoBadge } from "../MobilizacaoBadge";
 import { FormularioNovoColaborador } from "./FormularioNovoColaborador";
+import { ImportacaoMassaColaboradores } from "./ImportacaoMassaColaboradores";
 import { ModalNovaFuncaoColaborador } from "./ModalNovaFuncaoColaborador";
 import { ModalRevisaoColaborador } from "./ModalRevisaoColaborador";
 import {
@@ -177,6 +178,7 @@ export function Colaboradores({
         [versaoFiltroSalvoColaboradoresTreinamentos]
     );
     const [salvando, setSalvando] = useState(false);
+    const [importandoMassa, setImportandoMassa] = useState(false);
     const [colaboradorEdicao, setColaboradorEdicao] = useState(null);
     const [colaboradorExclusao, setColaboradorExclusao] = useState(null);
     const [permissaoSistemaAtual, setPermissaoSistemaAtual] = useState(null);
@@ -485,6 +487,12 @@ export function Colaboradores({
                 empresaNome: "",
                 funcao: "",
                 matricula: "",
+                cpf: "",
+                telefone: "",
+                contatoEmergenciaNome: "",
+                contatoEmergenciaParentesco: "",
+                contatoEmergenciaTelefone: "",
+                dataAdmissao: "",
                 dataNascimento: "",
                 mostrarAniversarioDashboard: false,
                 statusMobilizacao: obterStatusInicialColaborador(),
@@ -492,6 +500,69 @@ export function Colaboradores({
                 treinamentosAdicionais: [],
                 foto: null,
             });
+        }
+    };
+
+    const importarColaboradoresEmMassa = async (itens = []) => {
+        if (!podeCadastrarColaboradoresSistema) {
+            if (typeof window !== "undefined") window.alert(mensagemBloqueioCadastroColaboradores);
+            return { sucesso: 0, erros: [mensagemBloqueioCadastroColaboradores] };
+        }
+
+        const lista = Array.isArray(itens) ? itens : [];
+
+        if (lista.length === 0) {
+            return { sucesso: 0, erros: ["Nenhum colaborador válido para importar."] };
+        }
+
+        setImportandoMassa(true);
+
+        let sucesso = 0;
+        const erros = [];
+
+        try {
+            for (const [indice, item] of lista.entries()) {
+                const linha = item.linha || indice + 2;
+                const ok = await onAdicionarColaborador({
+                    nome: String(item.nome || "").trim(),
+                    empresaNome: String(item.empresaNome || "").trim(),
+                    funcao: String(item.funcao || "").trim(),
+                    matricula: String(item.matricula || "").trim(),
+                    cpf: String(item.cpf || "").trim(),
+                    telefone: String(item.telefone || "").trim(),
+                    contatoEmergenciaNome: String(item.contatoEmergenciaNome || "").trim(),
+                    contatoEmergenciaParentesco: String(item.contatoEmergenciaParentesco || "").trim(),
+                    contatoEmergenciaTelefone: String(item.contatoEmergenciaTelefone || "").trim(),
+                    dataAdmissao: item.dataAdmissao || "",
+                    dataNascimento: item.dataNascimento || "",
+                    mostrarAniversarioDashboard: item.mostrarAniversarioDashboard !== false,
+                    statusMobilizacao: item.statusMobilizacao || obterStatusInicialColaborador(),
+                    treinamentosRemovidos: [],
+                    treinamentosAdicionais: [],
+                    foto: null,
+                    codigoFuncionario: gerarCodigoFuncionario(item.nome),
+                });
+
+                if (ok) {
+                    sucesso += 1;
+                } else {
+                    erros.push(`Linha ${linha}: não foi possível cadastrar este colaborador.`);
+                }
+            }
+
+            if (typeof window !== "undefined") {
+                if (erros.length) {
+                    window.alert(
+                        `Importação concluída com ressalvas.\n\nCadastrados: ${sucesso}\nNão cadastrados: ${erros.length}\n\n${erros.slice(0, 8).join("\n")}`
+                    );
+                } else {
+                    window.alert(`Importação concluída. ${sucesso} colaborador(es) cadastrado(s).`);
+                }
+            }
+
+            return { sucesso, erros };
+        } finally {
+            setImportandoMassa(false);
         }
     };
 
@@ -850,6 +921,14 @@ export function Colaboradores({
                         </Card>
                     )}
                 </section>
+
+                <ImportacaoMassaColaboradores
+                    colaboradores={colaboradores}
+                    podeCadastrar={podeCadastrarColaboradoresSistema}
+                    mensagemBloqueio={mensagemBloqueioCadastroColaboradores}
+                    onImportar={importarColaboradoresEmMassa}
+                    importando={importandoMassa}
+                />
 
                 <Card className={`colaboradores-info-card ${informacoesColaboradoresRecolhidas ? "colaboradores-info-card-recolhido" : ""}`}>
                     <div className={`flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between ${informacoesColaboradoresRecolhidas ? "mb-0 border-b-0 pb-0" : "mb-5 border-b border-slate-100 pb-4"}`}>
