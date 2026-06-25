@@ -168,7 +168,33 @@ export function avaliarTreinamentosColaborador(colaborador) {
     };
 }
 
+function apenasDigitosColaboradorDocumento(valor = "") {
+    return String(valor || "").replace(/\D/g, "");
+}
+
+function formatarCpfColaboradorDocumento(valor = "") {
+    const digitos = apenasDigitosColaboradorDocumento(valor).slice(0, 11);
+
+    if (digitos.length <= 3) return digitos;
+    if (digitos.length <= 6) return `${digitos.slice(0, 3)}.${digitos.slice(3)}`;
+    if (digitos.length <= 9) return `${digitos.slice(0, 3)}.${digitos.slice(3, 6)}.${digitos.slice(6)}`;
+
+    return `${digitos.slice(0, 3)}.${digitos.slice(3, 6)}.${digitos.slice(6, 9)}-${digitos.slice(9, 11)}`;
+}
+
+function formatarTelefoneColaboradorDocumento(valor = "") {
+    const digitos = apenasDigitosColaboradorDocumento(valor).slice(0, 11);
+
+    if (!digitos) return "";
+    if (digitos.length <= 2) return `(${digitos}`;
+    if (digitos.length <= 6) return `(${digitos.slice(0, 2)}) ${digitos.slice(2)}`;
+    if (digitos.length <= 10) return `(${digitos.slice(0, 2)}) ${digitos.slice(2, 6)}-${digitos.slice(6)}`;
+
+    return `(${digitos.slice(0, 2)}) ${digitos.slice(2, 7)}-${digitos.slice(7, 11)}`;
+}
 export function normalizarColaborador(item) {
+    const matriculaEsocial = item.matricula_esocial || item.matriculaEsocial || item.matricula || "";
+
     return {
         id: item.id,
         empresaId: item.empresa_id || item.empresaId || null,
@@ -180,7 +206,14 @@ export function normalizarColaborador(item) {
         empresaExibicao: item.empresaExibicao || item.empresas?.nome || item.empresa || "Empresa não informada",
         cargo: item.cargo || item.cargo_funcao || item.funcao || "",
         funcao: item.funcao || item.cargo || item.cargo_funcao || "-",
-        matricula: item.matricula || "-",
+        cpf: formatarCpfColaboradorDocumento(item.cpf || ""),
+        matricula: matriculaEsocial || "-",
+        matriculaEsocial,
+        telefone: formatarTelefoneColaboradorDocumento(item.telefone || ""),
+        contatoEmergenciaNome: item.contato_emergencia_nome || item.contatoEmergenciaNome || "",
+        contatoEmergenciaParentesco: item.contato_emergencia_parentesco || item.contatoEmergenciaParentesco || "",
+        contatoEmergenciaTelefone: formatarTelefoneColaboradorDocumento(item.contato_emergencia_telefone || item.contatoEmergenciaTelefone || ""),
+        dataAdmissao: item.data_admissao || item.dataAdmissao || "",
         codigoFuncionario: item.codigo_funcionario || item.codigoFuncionario || `COL-${String(item.id).slice(0, 8).toUpperCase()}`,
         fotoUrl: item.foto_url || item.fotoUrl || "",
         fotoNome: item.foto_nome || item.fotoNome || "",

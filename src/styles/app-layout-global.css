@@ -234,10 +234,10 @@
 
 
 
-  /* DEFINIÇÃO FINAL DE GRID DE INDICADORES
-     Padrão aprovado: 5 cards por linha em desktop/notebook largo,
-     todos com mesma largura, mesma altura mínima e texto reduzido/controlado.
-     Usar em Configurações, Auditoria do sistema e Dashboard Auditoria de Campo. */
+  /* DEFINIÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¡ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢O FINAL DE GRID DE INDICADORES
+     PadrÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â£o aprovado: 5 cards por linha em desktop/notebook largo,
+     todos com mesma largura, mesma altura mÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â­nima e texto reduzido/controlado.
+     Usar em ConfiguraÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â§ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Âµes, Auditoria do sistema e Dashboard Auditoria de Campo. */
   .cards-grid--fixed-5,
   .summary-grid-fixed-5,
   .config-summary-grid,
@@ -765,8 +765,8 @@
 
 
 
-  /* ETAPA 8 — acabamento final de harmonia dos formulários e personalização.
-     Objetivo: eliminar espaços vazios, manter campos em linhas equilibradas e permitir arrastar cards. */
+  /* ETAPA 8 ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â acabamento final de harmonia dos formulÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¡rios e personalizaÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â§ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â£o.
+     Objetivo: eliminar espaÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â§os vazios, manter campos em linhas equilibradas e permitir arrastar cards. */
   .colaborador-formulario-unificado {
     overflow: hidden;
   }
@@ -1075,7 +1075,7 @@
   }
 
 
-  /* ETAPA 9 — formulário do novo colaborador largo, sem buracos visuais, e estados recolhidos persistidos no navegador. */
+  /* ETAPA 9 ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â formulÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¡rio do novo colaborador largo, sem buracos visuais, e estados recolhidos persistidos no navegador. */
   .colaborador-formulario-unificado {
     overflow: hidden;
   }
@@ -1236,7 +1236,7 @@
     }
   }
 
-  /* ETAPA 10 — Novo colaborador em 3 linhas: Nome/Data/Empresa, Situação/Matrícula/Função, Documentos/Foto. */
+  /* ETAPA 10 ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â Novo colaborador em 3 linhas: Nome/Data/Empresa, SituaÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â§ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â£o/MatrÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â­cula/FunÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â§ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â£o, Documentos/Foto. */
   .colaborador-formulario-unificado > :not(.colaborador-form-toggle) > :where(.space-y-3, .space-y-4):has(input),
   .colaborador-formulario-unificado > :not(.colaborador-form-toggle) > :where(.space-y-3, .space-y-4):has(select) {
     grid-template-columns: repeat(12, minmax(0, 1fr)) !important;
@@ -1269,7 +1269,7 @@
     grid-column: 9 / span 4 !important;
   }
 
-  /* Linha 2: Situação na obra / Matrícula da empresa / Função */
+  /* Linha 2: SituaÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â§ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â£o na obra / MatrÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â­cula da empresa / FunÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â§ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â£o */
   .colaborador-formulario-unificado > :not(.colaborador-form-toggle) > :where(.space-y-3, .space-y-4):has(input) > :nth-child(3),
   .colaborador-formulario-unificado > :not(.colaborador-form-toggle) > :where(.space-y-3, .space-y-4):has(select) > :nth-child(3) {
     order: 4 !important;
@@ -1288,7 +1288,7 @@
     grid-column: 9 / span 4 !important;
   }
 
-  /* Remove da tela o check "Mostrar em aniversariantes" mantendo o valor salvo no estado do formulário. */
+  /* Remove da tela o check "Mostrar em aniversariantes" mantendo o valor salvo no estado do formulÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¡rio. */
   .colaborador-formulario-unificado > :not(.colaborador-form-toggle) > :where(.space-y-3, .space-y-4):has(input) > :nth-child(5),
   .colaborador-formulario-unificado > :not(.colaborador-form-toggle) > :where(.space-y-3, .space-y-4):has(select) > :nth-child(5) {
     display: none !important;
@@ -1375,7 +1375,7 @@
 
 
 
-  /* ETAPA 11 — layout final do Novo colaborador em 4 linhas fixas e sem checkbox de aniversariante. */
+  /* ETAPA 11 ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â layout final do Novo colaborador em 4 linhas fixas e sem checkbox de aniversariante. */
   .novo-colaborador-layout-final {
     display: grid;
     gap: 1rem;
@@ -1571,7 +1571,7 @@
     }
   }
 
-  /* ETAPA 12 — Novo colaborador no visual anterior, mantendo a disposição final em 4 linhas. */
+  /* ETAPA 12 ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â Novo colaborador no visual anterior, mantendo a disposiÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â§ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â£o final em 4 linhas. */
   .novo-colaborador-layout-anterior {
     display: grid;
     gap: 1rem;
@@ -1755,7 +1755,7 @@
     }
   }
 
-  /* ETAPA 13 — cabeçalho do novo colaborador dentro do cartão branco, no padrão do site. */
+  /* ETAPA 13 ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â cabeÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â§alho do novo colaborador dentro do cartÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â£o branco, no padrÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â£o do site. */
   .colaborador-formulario-unificado {
     background: #ffffff;
     border: 1px solid #dbe5f0;
@@ -1858,7 +1858,7 @@
     }
   }
 
-  /* ETAPA 14 — informação dinâmica da situação na obra e documentos aceitos centralizados. */
+  /* ETAPA 14 ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â informaÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â§ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â£o dinÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢mica da situaÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â§ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â£o na obra e documentos aceitos centralizados. */
   .novo-colaborador-ajuda-anterior {
     min-height: 2rem;
   }
@@ -1902,7 +1902,7 @@
   }
 
 
-  /* ETAPA 15 — cards de upload com a mesma altura visual. */
+  /* ETAPA 15 ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â cards de upload com a mesma altura visual. */
   .novo-colaborador-uploads-anterior {
     align-items: stretch !important;
   }
@@ -1921,7 +1921,7 @@
   }
 
 
-  /* ETAPA 20 — Empresas e documentos: cadastro compacto e Base de empresas em grade fixa de 3 cards por linha. */
+  /* ETAPA 20 ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â Empresas e documentos: cadastro compacto e Base de empresas em grade fixa de 3 cards por linha. */
   .empresas-cadastro-unificado {
     background: #ffffff !important;
     border-color: #dbe7f2 !important;
@@ -2201,7 +2201,7 @@
   }
 
 
-  /* ETAPA 21 — Empresas final: cadastro harmônico, documento preenchendo altura e base de empresas em 3 cards por linha. */
+  /* ETAPA 21 ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â Empresas final: cadastro harmÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â´nico, documento preenchendo altura e base de empresas em 3 cards por linha. */
   .empresas-cadastro-unificado {
     padding: clamp(0.85rem, 1vw, 1.15rem) !important;
     background: #ffffff !important;
@@ -2558,7 +2558,7 @@
   }
 
 
-  /* ETAPA 22 — Empresas definitivo: cadastro compacto, sem sobreposição e com contrato visível. */
+  /* ETAPA 22 ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â Empresas definitivo: cadastro compacto, sem sobreposiÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â§ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â£o e com contrato visÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â­vel. */
   .empresas-cadastro-unificado .empresas-cadastro-grid {
     grid-template-columns: minmax(0, 1.12fr) minmax(0, 0.88fr) !important;
     align-items: start !important;
@@ -2783,7 +2783,7 @@
   }
 
 
-  /* ETAPA 24 — Documento da empresa em cards verticais grandes e base com 2 empresas por linha. */
+  /* ETAPA 24 ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â Documento da empresa em cards verticais grandes e base com 2 empresas por linha. */
   .empresas-form-panel--documento .empresa-form-grid--documento {
     display: grid !important;
     grid-template-columns: 1fr !important;
@@ -2901,7 +2901,7 @@
   }
 
 
-  /* ETAPA 25 — Resumo dos documentos em 3 linhas sem reticências e sem esticar o cadastro lateral. */
+  /* ETAPA 25 ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â Resumo dos documentos em 3 linhas sem reticÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Âªncias e sem esticar o cadastro lateral. */
   .empresas-cadastro-grid > .empresas-form-panel {
     min-height: auto !important;
     align-self: start !important;
@@ -2964,7 +2964,7 @@
   }
 
 
-  /* ETAPA 26 — usa o espaço lateral dos cards LTCAT/PCMSO/PGR para reduzir altura e eliminar sobra visual. */
+  /* ETAPA 26 ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â usa o espaÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â§o lateral dos cards LTCAT/PCMSO/PGR para reduzir altura e eliminar sobra visual. */
   .empresa-doc-tipos-grid--vertical {
     gap: 0.52rem !important;
   }
@@ -3026,7 +3026,7 @@
   }
 
 
-  /* ETAPA 27 — cards de LTCAT/PCMSO/PGR mais alinhados ao bloco de datas e usando melhor a largura lateral. */
+  /* ETAPA 27 ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â cards de LTCAT/PCMSO/PGR mais alinhados ao bloco de datas e usando melhor a largura lateral. */
   .empresas-form-panel--documento .empresa-form-grid--documento {
     gap: 0.5rem !important;
   }
@@ -3081,7 +3081,7 @@
   }
 
 
-  /* ETAPA 28 — faz LTCAT/PCMSO/PGR ocuparem toda a largura disponível, eliminando a sobra lateral. */
+  /* ETAPA 28 ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â faz LTCAT/PCMSO/PGR ocuparem toda a largura disponÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â­vel, eliminando a sobra lateral. */
   .empresa-doc-tipos-grid--vertical {
     width: 100% !important;
     max-width: none !important;
@@ -3149,7 +3149,7 @@
   }
 
 
-  /* ETAPA 29 — força LTCAT/PCMSO/PGR a terem a mesma largura do seletor "Selecione a empresa". */
+  /* ETAPA 29 ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â forÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â§a LTCAT/PCMSO/PGR a terem a mesma largura do seletor "Selecione a empresa". */
   .empresas-form-panel--documento .empresa-form-grid--documento {
     width: 100% !important;
     max-width: none !important;
@@ -3207,7 +3207,7 @@
   }
 
 
-  /* ETAPA 30 — impede LTCAT/PCMSO/PGR de invadir a divisória e simplifica o texto do LTCAT. */
+  /* ETAPA 30 ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â impede LTCAT/PCMSO/PGR de invadir a divisÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â³ria e simplifica o texto do LTCAT. */
   .empresas-form-panel--documento .empresa-doc-tipos-grid--vertical > .empresa-doc-tipo-card--grande {
     grid-template-columns: 6.35rem minmax(0, 1fr) !important;
     min-height: 4.85rem !important;
@@ -3273,7 +3273,7 @@
   }
 
 
-  /* ETAPA 31 — remove observação do cadastro de documento e compacta o painel para alinhar os dois lados. */
+  /* ETAPA 31 ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â remove observaÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â§ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â£o do cadastro de documento e compacta o painel para alinhar os dois lados. */
   .empresas-form-panel--documento .empresa-form-grid--documento {
     gap: 0.5rem !important;
   }
@@ -3291,13 +3291,13 @@
   }
 
 
-  /* ETAPA 32 — textos curtos nos botões de upload de empresa. */
+  /* ETAPA 32 ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â textos curtos nos botÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Âµes de upload de empresa. */
   .empresa-form-linha--uploads :where(label, button) {
     white-space: nowrap !important;
   }
 
 
-  /* ETAPA 33 — harmoniza largura dos painéis e reduz o bloco de PDF para alinhar Cadastrar empresa e Salvar documento. */
+  /* ETAPA 33 ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â harmoniza largura dos painÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â©is e reduz o bloco de PDF para alinhar Cadastrar empresa e Salvar documento. */
   .empresas-cadastro-unificado .empresas-cadastro-grid {
     grid-template-columns: minmax(0, 1.06fr) minmax(0, 0.94fr) !important;
     gap: 0.9rem !important;
@@ -3342,7 +3342,7 @@
   }
 
 
-  /* ETAPA 34 — largura final dos cards LTCAT/PCMSO/PGR igual ao seletor e alinhamento dos botões finais. */
+  /* ETAPA 34 ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â largura final dos cards LTCAT/PCMSO/PGR igual ao seletor e alinhamento dos botÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Âµes finais. */
   .empresas-cadastro-unificado .empresas-cadastro-grid {
     grid-template-columns: minmax(0, 1.02fr) minmax(0, 0.98fr) !important;
     gap: 0.82rem !important;
@@ -3466,7 +3466,7 @@
   }
 
 
-  /* ETAPA 35 — centraliza ícone/texto dos botões e aumenta um pouco o salvar documento para harmonizar com cadastrar empresa. */
+  /* ETAPA 35 ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â centraliza ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â­cone/texto dos botÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Âµes e aumenta um pouco o salvar documento para harmonizar com cadastrar empresa. */
   .empresa-form-linha--uploads .empresa-upload-card,
   .empresa-doc-upload-grande,
   .empresa-botao-cadastrar-final,
@@ -3509,7 +3509,7 @@
   }
 
 
-  /* ETAPA 36 — aproxima ícone do texto no selecionar PDF, aumenta um pouco o painel direito e melhora a harmonia final dos botões. */
+  /* ETAPA 36 ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â aproxima ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â­cone do texto no selecionar PDF, aumenta um pouco o painel direito e melhora a harmonia final dos botÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Âµes. */
   .empresas-cadastro-unificado .empresas-cadastro-grid {
     grid-template-columns: minmax(0, 0.99fr) minmax(0, 1.01fr) !important;
     gap: 0.86rem !important;
@@ -3567,7 +3567,7 @@
   }
 
 
-  /* ETAPA 37 — escopo saiu da linha das informações e virou ação própria abaixo de Revisar documentos. */
+  /* ETAPA 37 ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â escopo saiu da linha das informaÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â§ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Âµes e virou aÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â§ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â£o prÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â³pria abaixo de Revisar documentos. */
   .empresa-base-card__escopo-area {
     width: 100%;
     margin-top: 0.75rem;
@@ -3601,7 +3601,7 @@
   }
 
 
-  /* ETAPA 38 — alinha Cadastrar empresa com Salvar documento e amplia discretamente o painel de documentos. */
+  /* ETAPA 38 ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â alinha Cadastrar empresa com Salvar documento e amplia discretamente o painel de documentos. */
   .empresas-cadastro-unificado .empresas-cadastro-grid {
     grid-template-columns: minmax(0, 0.97fr) minmax(0, 1.03fr) !important;
     align-items: stretch !important;
@@ -3673,9 +3673,9 @@
 
 
 /* Ajuste complementar do Dashboard SST
-   Mantém o layout global original e garante que o Filtro 1 consiga alterar
+   MantÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â©m o layout global original e garante que o Filtro 1 consiga alterar
    o tamanho das cartas principais mesmo quando o CSS global do grid define
-   regras próprias para .dashboard-summary-card. */
+   regras prÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â³prias para .dashboard-summary-card. */
 .dashboard-summary-grid > .dashboard-summary-card[data-dashboard-card-tamanho="padrao"] {
     grid-column: span 1 / span 1 !important;
 }
@@ -3732,10 +3732,10 @@
 }
 
 
-/* ROTEIRO 6 — ETAPA 13
-   Padrão visual mobile separado do desktop.
-   Desktop permanece com sidebar e grids largos. Celular vira experiência de campo:
-   cabeçalho próprio, cards em uma coluna, botões grandes e menos risco de estouro horizontal. */
+/* ROTEIRO 6 ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ETAPA 13
+   PadrÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â£o visual mobile separado do desktop.
+   Desktop permanece com sidebar e grids largos. Celular vira experiÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Âªncia de campo:
+   cabeÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â§alho prÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â³prio, cards em uma coluna, botÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Âµes grandes e menos risco de estouro horizontal. */
 @media (max-width: 767.98px) {
     html,
     body,
@@ -4095,14 +4095,14 @@
 
 
 
-/* ROTEIRO 6 — ETAPA 14
-   Correção fina do mobile e sidebar:
-   - remove travamento/efeito pesado do cabeçalho sticky no celular;
-   - compacta o cabeçalho mobile;
+/* ROTEIRO 6 ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ETAPA 14
+   CorreÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â§ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â£o fina do mobile e sidebar:
+   - remove travamento/efeito pesado do cabeÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â§alho sticky no celular;
+   - compacta o cabeÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â§alho mobile;
    - deixa os cards do dashboard com altura menor no celular;
    - impede o card de armazenamento de estourar;
    - melhora o scroll interno da lateral;
-   - prepara a lateral para abrir temporariamente por aproximação/hover. */
+   - prepara a lateral para abrir temporariamente por aproximaÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â§ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â£o/hover. */
 .app-sidebar {
     position: sticky;
     top: 0;
@@ -4387,9 +4387,9 @@
 }
 
 
-/* ROTEIRO 6 — ETAPA 15
-   Ajuste do espaço em branco no mobile e melhoria do card de Armazenamento.
-   A identificação do card é feita no AppLayout para não depender de alterar o App.jsx. */
+/* ROTEIRO 6 ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ETAPA 15
+   Ajuste do espaÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â§o em branco no mobile e melhoria do card de Armazenamento.
+   A identificaÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â§ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â£o do card ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â© feita no AppLayout para nÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â£o depender de alterar o App.jsx. */
 .dashboard-summary-card[data-dashboard-storage-card="true"],
 .summary-card-fixed[data-dashboard-storage-card="true"],
 .info-card[data-dashboard-storage-card="true"] {
@@ -4524,9 +4524,9 @@
     }
 }
 
-/* ROTEIRO 6 — ETAPA 16
-   Sidebar fixa no desktop para páginas longas.
-   Objetivo: evitar coluna lateral vazia quando o conteúdo é alto e manter a navegação sempre acessível. */
+/* ROTEIRO 6 ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ETAPA 16
+   Sidebar fixa no desktop para pÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¡ginas longas.
+   Objetivo: evitar coluna lateral vazia quando o conteÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Âºdo ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â© alto e manter a navegaÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â§ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â£o sempre acessÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â­vel. */
 @media (min-width: 1024px) {
     .app-shell {
         display: block !important;
@@ -4587,8 +4587,8 @@
 }
 
 
-/* ROTEIRO 6 — ETAPA 17
-   Acabamento da sidebar recolhida: ícones centralizados, alvo visual fixo e logo mais limpo. */
+/* ROTEIRO 6 ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ETAPA 17
+   Acabamento da sidebar recolhida: ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â­cones centralizados, alvo visual fixo e logo mais limpo. */
 @media (min-width: 1024px) {
     .app-sidebar[data-sidebar-expanded="false"] {
         align-items: center !important;
@@ -4676,8 +4676,8 @@
 }
 
 
-/* ROTEIRO 6 — ETAPA 19
-   Correção mobile: fotos padronizadas, QR centralizado, auditoria com melhor leitura e tabelas sem corte visual. */
+/* ROTEIRO 6 ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ETAPA 19
+   CorreÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â§ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â£o mobile: fotos padronizadas, QR centralizado, auditoria com melhor leitura e tabelas sem corte visual. */
 @media (max-width: 767.98px) {
     .consulta-qr-page,
     .consulta-qr-publica-page {
@@ -4820,10 +4820,10 @@
 
 
 
-/* ROTEIRO 6 — ETAPA 20
-   Correção final do ícone cortado na sidebar recolhida.
-   O ajuste deixa a coluna recolhida com centro óptico fixo, remove recortes do botão ativo
-   e simplifica o logo superior para não parecer um quadrado dentro de outro. */
+/* ROTEIRO 6 ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ETAPA 20
+   CorreÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â§ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â£o final do ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â­cone cortado na sidebar recolhida.
+   O ajuste deixa a coluna recolhida com centro ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â³ptico fixo, remove recortes do botÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â£o ativo
+   e simplifica o logo superior para nÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â£o parecer um quadrado dentro de outro. */
 @media (min-width: 1024px) {
     .app-sidebar[data-sidebar-expanded="false"] {
         width: 5rem !important;
@@ -4963,11 +4963,11 @@
     }
 }
 
-/* ROTEIRO 7 — ETAPA 5.6
+/* ROTEIRO 7 ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ETAPA 5.6
    Ajuste final do mobile horizontal:
-   - reduz espaço em branco entre cabeçalho, título, ações e primeiros cards;
+   - reduz espaÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â§o em branco entre cabeÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â§alho, tÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â­tulo, aÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â§ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Âµes e primeiros cards;
    - compacta as abas Dashboard SST e Treinamentos em paisagem;
-   - harmoniza Pendências críticas, dando respiro ao QR na borda direita. */
+   - harmoniza PendÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Âªncias crÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â­ticas, dando respiro ao QR na borda direita. */
 @media (max-width: 1023.98px) and (orientation: landscape),
        (max-width: 1023.98px) and (max-height: 540px) {
     .app-main {
@@ -5182,8 +5182,8 @@
     }
 }
 
-/* ROTEIRO 7 — ETAPA 5.8
-   Correção sobre a base 5.6: mantém o espaçamento compacto já aprovado
+/* ROTEIRO 7 ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ETAPA 5.8
+   CorreÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â§ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â£o sobre a base 5.6: mantÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â©m o espaÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â§amento compacto jÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¡ aprovado
    e corrige somente a quebra do bloco logo + Controle SST QR no mobile horizontal. */
 @media (max-width: 1023.98px) and (orientation: landscape),
        (max-width: 1023.98px) and (max-height: 540px) {
@@ -5296,10 +5296,10 @@
     }
 }
 
-/* ROTEIRO 7 — ETAPA 5.9
-   Ajuste final dos botões de ação no mobile horizontal.
-   Objetivo: evitar botões quebrados em linhas soltas no Dashboard SST e demais painéis,
-   mantendo pares lado a lado, com largura igual e alinhamento harmônico. */
+/* ROTEIRO 7 ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ETAPA 5.9
+   Ajuste final dos botÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Âµes de aÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â§ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â£o no mobile horizontal.
+   Objetivo: evitar botÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Âµes quebrados em linhas soltas no Dashboard SST e demais painÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â©is,
+   mantendo pares lado a lado, com largura igual e alinhamento harmÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â´nico. */
 @media (max-width: 1023.98px) and (orientation: landscape),
        (max-width: 1023.98px) and (max-height: 540px) {
     .page-actions,
@@ -5380,15 +5380,15 @@
     }
 }
 
-/* ROTEIRO 7 — ETAPA 5.10
+/* ROTEIRO 7 ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ETAPA 5.10
    Arquivo completo consolidado.
    Ajuste final mobile:
-   - botões de ação em uma única linha no modo horizontal;
-   - textos protegidos para não estourar fora do botão/card;
-   - ícone/logo do cabeçalho padronizado no vertical e horizontal;
-   - sobrescreve o comportamento anterior da Etapa 5.9 que dividia os botões em 2 linhas. */
+   - botÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Âµes de aÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â§ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â£o em uma ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Âºnica linha no modo horizontal;
+   - textos protegidos para nÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â£o estourar fora do botÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â£o/card;
+   - ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â­cone/logo do cabeÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â§alho padronizado no vertical e horizontal;
+   - sobrescreve o comportamento anterior da Etapa 5.9 que dividia os botÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Âµes em 2 linhas. */
 
-/* PADRÃO ÚNICO DO ÍCONE/LOGO NO MOBILE */
+/* PADRÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢O ÃƒÆ’Ã†â€™Ãƒâ€¦Ã‚Â¡NICO DO ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚ÂCONE/LOGO NO MOBILE */
 @media (max-width: 1023.98px) {
   .app-mobile-header__marca {
     display: flex !important;
@@ -5452,7 +5452,7 @@
   }
 }
 
-/* MOBILE HORIZONTAL — CABEÇALHO COMPACTO E SEM QUEBRA */
+/* MOBILE HORIZONTAL ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â CABEÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¡ALHO COMPACTO E SEM QUEBRA */
 @media (max-width: 1023.98px) and (orientation: landscape),
        (max-width: 1023.98px) and (max-height: 540px) {
   .app-mobile-header {
@@ -5529,7 +5529,7 @@
   }
 }
 
-/* MOBILE HORIZONTAL — BOTÕES DO DASHBOARD EM UMA ÚNICA LINHA */
+/* MOBILE HORIZONTAL ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â BOTÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢ES DO DASHBOARD EM UMA ÃƒÆ’Ã†â€™Ãƒâ€¦Ã‚Â¡NICA LINHA */
 @media (max-width: 1023.98px) and (orientation: landscape),
        (max-width: 1023.98px) and (max-height: 540px) {
   .page-actions,
@@ -5632,7 +5632,7 @@
   }
 }
 
-/* MOBILE HORIZONTAL MUITO ESTREITO — mantém uma linha, mas reduz texto para não explodir. */
+/* MOBILE HORIZONTAL MUITO ESTREITO ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â mantÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â©m uma linha, mas reduz texto para nÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â£o explodir. */
 @media (max-width: 760px) and (orientation: landscape),
        (max-height: 430px) and (max-width: 900px) {
   .page-actions,
@@ -5671,7 +5671,7 @@
   }
 }
 
-/* MOBILE HORIZONTAL — PROTEÇÃO PARA TEXTOS NÃO ESTOURAREM CARDS */
+/* MOBILE HORIZONTAL ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â PROTEÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¡ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢O PARA TEXTOS NÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢O ESTOURAREM CARDS */
 @media (max-width: 1023.98px) and (orientation: landscape),
        (max-width: 1023.98px) and (max-height: 540px) {
   .dashboard-summary-card,
@@ -5730,7 +5730,7 @@
   }
 }
 
-/* MOBILE VERTICAL — mantém padrão aprovado e só padroniza o ícone. */
+/* MOBILE VERTICAL ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â mantÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â©m padrÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â£o aprovado e sÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â³ padroniza o ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â­cone. */
 @media (max-width: 767.98px) and (orientation: portrait) {
   .page-actions,
   .page-actions > *,
@@ -5754,13 +5754,13 @@
   }
 }
 
-/* ROTEIRO 7 — ETAPA 5.12
-   Correção final mobile horizontal sem regressão:
-   - aplica botões em linha nas abas com ações;
-   - mantém classe exclusiva do Dashboard SST;
+/* ROTEIRO 7 ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ETAPA 5.12
+   CorreÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â§ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â£o final mobile horizontal sem regressÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â£o:
+   - aplica botÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Âµes em linha nas abas com aÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â§ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Âµes;
+   - mantÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â©m classe exclusiva do Dashboard SST;
    - corrige card Armazenamento no horizontal;
-   - restaura harmonia da tabela Pendências críticas;
-   - não altera o padrão do ícone mobile já aprovado. */
+   - restaura harmonia da tabela PendÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Âªncias crÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â­ticas;
+   - nÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â£o altera o padrÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â£o do ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â­cone mobile jÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¡ aprovado. */
 @media (max-width: 1023.98px) and (orientation: landscape),
        (max-width: 1023.98px) and (max-height: 540px) {
     .page-header {
@@ -6009,7 +6009,7 @@
     }
 }
 
-/* Pendências críticas no mobile horizontal: tabela com respiro para Status, E-mail e QR. */
+/* PendÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Âªncias crÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â­ticas no mobile horizontal: tabela com respiro para Status, E-mail e QR. */
 @media (max-width: 1023.98px) and (orientation: landscape),
        (max-width: 1023.98px) and (max-height: 540px) {
     .dashboard-blocos-grid .responsive-table,
@@ -6085,17 +6085,17 @@
 }
 
 
-/* ROTEIRO 7 — ETAPA 5.13
-   Correção final e isolada para mobile horizontal.
+/* ROTEIRO 7 ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ETAPA 5.13
+   CorreÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â§ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â£o final e isolada para mobile horizontal.
    Objetivos:
-   1) desfazer o efeito global que estava esmagando botões em outras abas;
-   2) aplicar 2x2 somente nos botões do Dashboard SST;
-   3) recuperar Pendências críticas em uma tela horizontal, sem textos sobrepostos;
+   1) desfazer o efeito global que estava esmagando botÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Âµes em outras abas;
+   2) aplicar 2x2 somente nos botÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Âµes do Dashboard SST;
+   3) recuperar PendÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Âªncias crÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â­ticas em uma tela horizontal, sem textos sobrepostos;
    4) deixar o card de Armazenamento sem corte de texto/barra.
 */
 @media (max-width: 1023.98px) and (orientation: landscape),
        (max-width: 1023.98px) and (max-height: 540px) {
-    /* Reset das ações globais: outras abas voltam ao comportamento normal. */
+    /* Reset das aÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â§ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Âµes globais: outras abas voltam ao comportamento normal. */
     .page-actions,
     .page-actions > *,
     .page-actions > .flex,
@@ -6155,7 +6155,7 @@
         box-sizing: border-box !important;
     }
 
-    /* Solução isolada: somente Dashboard SST fica em 2x2. */
+    /* SoluÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â§ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â£o isolada: somente Dashboard SST fica em 2x2. */
     .dashboard-sst-actions-horizontal {
         display: grid !important;
         width: min(100%, 44rem) !important;
@@ -6270,7 +6270,7 @@
     }
 }
 
-/* Pendências críticas: ajuste específico do bloco, sem mexer nos demais blocos do Dashboard. */
+/* PendÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Âªncias crÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â­ticas: ajuste especÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â­fico do bloco, sem mexer nos demais blocos do Dashboard. */
 @media (max-width: 1023.98px) and (orientation: landscape),
        (max-width: 1023.98px) and (max-height: 540px) {
     [data-dashboard-bloco="pendencias"] .responsive-table,
@@ -6398,11 +6398,11 @@
     }
 }
 
-/* ROTEIRO 7 — ETAPA 5.14
-   Ajuste exclusivo do bloco Pendências críticas no mobile horizontal.
+/* ROTEIRO 7 ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ETAPA 5.14
+   Ajuste exclusivo do bloco PendÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Âªncias crÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â­ticas no mobile horizontal.
    Objetivo: manter a tabela completa dentro do card, com colunas em ordem,
-   texto sem sobreposição, botões E-mail/QR com respiro e sem estourar a borda.
-   Não altera o padrão do ícone mobile nem os botões 2x2 do Dashboard SST. */
+   texto sem sobreposiÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â§ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â£o, botÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Âµes E-mail/QR com respiro e sem estourar a borda.
+   NÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â£o altera o padrÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â£o do ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â­cone mobile nem os botÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Âµes 2x2 do Dashboard SST. */
 @media (max-width: 1023.98px) and (orientation: landscape),
        (max-width: 1023.98px) and (max-height: 540px) {
     [data-dashboard-bloco="pendencias"] {
@@ -6698,15 +6698,15 @@
     }
 }
 
-/* ROTEIRO 7 — ETAPA 5.15
-   Correção restrita ao mobile horizontal:
+/* ROTEIRO 7 ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ETAPA 5.15
+   CorreÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â§ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â£o restrita ao mobile horizontal:
    1) A regra 2x2 fica SOMENTE no Dashboard SST (.dashboard-sst-actions-horizontal).
-   2) As ações das outras abas voltam ao comportamento flex normal para não esmagar botões.
-   3) Pendências críticas volta a ficar em uma linha harmônica, sem texto espalhado e sem QR colado na borda.
-   4) Não altera o ícone do cabeçalho mobile, pois ele já foi aprovado. */
+   2) As aÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â§ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Âµes das outras abas voltam ao comportamento flex normal para nÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â£o esmagar botÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Âµes.
+   3) PendÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Âªncias crÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â­ticas volta a ficar em uma linha harmÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â´nica, sem texto espalhado e sem QR colado na borda.
+   4) NÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â£o altera o ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â­cone do cabeÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â§alho mobile, pois ele jÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¡ foi aprovado. */
 @media (max-width: 1023.98px) and (orientation: landscape),
        (max-width: 1023.98px) and (max-height: 540px) {
-    /* Volta o padrão das ações gerais das demais abas. */
+    /* Volta o padrÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â£o das aÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â§ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Âµes gerais das demais abas. */
     .page-actions,
     .page-actions > *:not(.dashboard-sst-actions-horizontal),
     .page-actions > .flex:not(.dashboard-sst-actions-horizontal),
@@ -6770,7 +6770,7 @@
         text-overflow: ellipsis !important;
     }
 
-    /* Exceção única: Dashboard SST em 2x2. */
+    /* ExceÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â§ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â£o ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Âºnica: Dashboard SST em 2x2. */
     .page-actions > .dashboard-sst-actions-horizontal,
     .dashboard-sst-actions-horizontal {
         display: grid !important;
@@ -6836,7 +6836,7 @@
         white-space: nowrap !important;
     }
 
-    /* Pendências críticas: tabela em linha, colunas proporcionais e sem espalhar texto. */
+    /* PendÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Âªncias crÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â­ticas: tabela em linha, colunas proporcionais e sem espalhar texto. */
     [data-dashboard-bloco="pendencias"] {
         width: 100% !important;
         max-width: 100% !important;
@@ -7105,10 +7105,10 @@
 }
 
 
-/* ROTEIRO 7 — ETAPA 5.16
-   Correção final somente do bloco Pendências críticas no mobile horizontal.
+/* ROTEIRO 7 ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ETAPA 5.16
+   CorreÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â§ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â£o final somente do bloco PendÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Âªncias crÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â­ticas no mobile horizontal.
    Motivo: a tabela real usa 4 colunas visuais no Dashboard:
-   Colaborador | Treinamento | Vencimento | Status/Ações.
+   Colaborador | Treinamento | Vencimento | Status/AÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â§ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Âµes.
    As regras anteriores tratavam como 6 colunas e espremiam status, e-mail e QR.
    Esta regra sobrescreve apenas [data-dashboard-bloco="pendencias"]. */
 @media (max-width: 1023.98px) and (orientation: landscape),
@@ -7413,9 +7413,9 @@
     }
 }
 
-/* ROTEIRO 7 — ETAPA 5.17
-   Correção definitiva das Pendências críticas.
-   Troca a dependência visual da tabela por linhas em grid controlado,
+/* ROTEIRO 7 ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ETAPA 5.17
+   CorreÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â§ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â£o definitiva das PendÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Âªncias crÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â­ticas.
+   Troca a dependÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Âªncia visual da tabela por linhas em grid controlado,
    mantendo tudo em uma linha no mobile horizontal sem texto espalhado. */
 .dashboard-pendencias-final {
     width: 100%;
@@ -7912,12 +7912,12 @@
     }
 }
 
-/* ROTEIRO 7 — ETAPA 5.18
-   Ajuste fino apenas de Pendências críticas no mobile horizontal.
+/* ROTEIRO 7 ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ETAPA 5.18
+   Ajuste fino apenas de PendÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Âªncias crÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â­ticas no mobile horizontal.
    Objetivos:
    - foto real do colaborador sem quebrar o layout;
-   - cabeçalhos exatamente acima das informações;
-   - linha harmônica, sem texto espalhado e sem sobreposição. */
+   - cabeÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â§alhos exatamente acima das informaÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â§ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Âµes;
+   - linha harmÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â´nica, sem texto espalhado e sem sobreposiÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â§ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â£o. */
 .dashboard-pendencias-final__foto {
     display: inline-flex;
     flex: 0 0 auto;
@@ -8203,4 +8203,124 @@
         min-width: 2.1rem !important;
         max-width: 2.1rem !important;
     }
+}
+
+/* Roteiro v1.0.4.9 ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â ajuste pontual da aba Colaboradores */
+.novo-colaborador-cabecalho-branco__icone {
+  background: #020617 !important;
+  color: #ffffff !important;
+  border-color: #020617 !important;
+}
+
+.novo-colaborador-cabecalho-branco__icone svg {
+  color: #ffffff !important;
+  stroke: #ffffff !important;
+}
+
+/* Apenas o texto pequeno BASE DE COLABORADORES em azul */
+.colaboradores-section-destaque .group > div:nth-child(2) > p:first-child {
+  color: #2563eb !important;
+}
+
+/* Apenas reduz o respiro inferior da base, sem esconder conteÃƒÆ’Ã‚Âºdo */
+.colaboradores-section-destaque {
+  padding-bottom: 1rem !important;
+}
+
+.colaboradores-section-destaque .border-t {
+  margin-top: 0.65rem !important;
+}
+
+/* Roteiro v1.0.4.9 Ã¢â‚¬â€ ajuste final controlado da Base de colaboradores */
+.novo-colaborador-cabecalho-branco__icone {
+  background: #020617 !important;
+  color: #ffffff !important;
+  border-color: #020617 !important;
+}
+
+.novo-colaborador-cabecalho-branco__icone svg {
+  color: #ffffff !important;
+  stroke: #ffffff !important;
+}
+
+.colaboradores-info-card-recolhido {
+  padding-bottom: 1rem !important;
+}
+
+.colaboradores-info-card-recolhido > div:first-child {
+  margin-bottom: 0 !important;
+  padding-bottom: 0 !important;
+  border-bottom: 0 !important;
+}
+
+/* Roteiro v1.0.4.9 Ã¢â‚¬â€ mÃƒÂ¡scaras visuais, datas centralizadas e foto redonda */
+.colaborador-formulario-unificado input[type="date"],
+.colaborador-formulario-recolhido input[type="date"],
+.colaboradores-info-card input[type="date"] {
+  text-align: center !important;
+  text-align-last: center !important;
+}
+
+.colaboradores-info-card img.h-20.w-20,
+.colaboradores-info-card .h-20.w-20 {
+  border-radius: 9999px !important;
+  overflow: hidden !important;
+}
+
+/* Roteiro v1.0.4.9 â€” ajuste final: datas centralizadas e moldura da foto do colaborador */
+.colaborador-formulario-unificado input[type="date"],
+.colaborador-formulario-full input[type="date"],
+.novo-colaborador-layout-anterior input[type="date"],
+.novo-colaborador-layout-final input[type="date"],
+.colaboradores-info-card input[type="date"] {
+  text-align: center !important;
+  text-align-last: center !important;
+  padding-left: 3rem !important;
+  padding-right: 3rem !important;
+}
+
+.colaborador-formulario-unificado input[type="date"]::-webkit-datetime-edit,
+.colaborador-formulario-full input[type="date"]::-webkit-datetime-edit,
+.novo-colaborador-layout-anterior input[type="date"]::-webkit-datetime-edit,
+.novo-colaborador-layout-final input[type="date"]::-webkit-datetime-edit,
+.colaboradores-info-card input[type="date"]::-webkit-datetime-edit {
+  width: 100% !important;
+  text-align: center !important;
+}
+
+.colaborador-formulario-unificado input[type="date"]::-webkit-datetime-edit-fields-wrapper,
+.colaborador-formulario-full input[type="date"]::-webkit-datetime-edit-fields-wrapper,
+.novo-colaborador-layout-anterior input[type="date"]::-webkit-datetime-edit-fields-wrapper,
+.novo-colaborador-layout-final input[type="date"]::-webkit-datetime-edit-fields-wrapper,
+.colaboradores-info-card input[type="date"]::-webkit-datetime-edit-fields-wrapper {
+  justify-content: center !important;
+}
+
+/* Foto/avatar do funcionÃ¡rio com moldura circular na Base de colaboradores */
+.colaboradores-info-card img.h-20.w-20,
+.colaboradores-info-card .h-20.w-20 {
+  border-radius: 9999px !important;
+  overflow: hidden !important;
+  object-fit: cover !important;
+  background: #f8fafc !important;
+  border: 4px solid #ffffff !important;
+  outline: 2px solid #dbe5f0 !important;
+  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.12) !important;
+}
+
+/* Roteiro v1.0.4.9 — moldura foto colaborador modelo 1: clean profissional */
+.colaboradores-info-card img.h-20.w-20,
+.colaboradores-info-card .h-20.w-20,
+.colaboradores-info-card img.rounded-full,
+.colaboradores-info-card .rounded-full img {
+  border-radius: 9999px !important;
+  object-fit: cover !important;
+  background: #f8fafc !important;
+  border: 4px solid #ffffff !important;
+  outline: 1.5px solid #d8e2ef !important;
+  box-shadow: 0 8px 18px rgba(15, 23, 42, 0.10) !important;
+}
+
+.colaboradores-info-card .h-20.w-20 {
+  overflow: hidden !important;
 }

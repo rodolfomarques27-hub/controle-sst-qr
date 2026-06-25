@@ -55,10 +55,25 @@ function compararTreinamentosPorOrdemNumerica(a, b) {
 }
 
 export function ConsultaQRPublica({ dados }) {
+    const formatarTelefoneConsultaPublica = (valor = "") => {
+        const digitos = String(valor || "").replace(/\D/g, "").slice(0, 11);
+
+        if (!digitos) return "";
+        if (digitos.length <= 2) return `(${digitos}`;
+        if (digitos.length <= 6) return `(${digitos.slice(0, 2)}) ${digitos.slice(2)}`;
+        if (digitos.length <= 10) return `(${digitos.slice(0, 2)}) ${digitos.slice(2, 6)}-${digitos.slice(6)}`;
+
+        return `(${digitos.slice(0, 2)}) ${digitos.slice(2, 7)}-${digitos.slice(7, 11)}`;
+    };
     const colaborador = dados?.colaborador || {};
     const treinamentos = dados?.treinamentos || [];
     const treinamentosOrdenados = [...treinamentos].sort(compararTreinamentosPorOrdemNumerica);
     const geral = statusGeralConsultaPublica(colaborador, treinamentos);
+    const contatoEmergenciaNome = String(colaborador.contatoEmergenciaNome || colaborador.contato_emergencia_nome || "").trim();
+    const contatoEmergenciaParentesco = String(colaborador.contatoEmergenciaParentesco || colaborador.contato_emergencia_parentesco || "").trim();
+    const contatoEmergenciaTelefone = formatarTelefoneConsultaPublica(colaborador.contatoEmergenciaTelefone || colaborador.contato_emergencia_telefone || "");
+    const temContatoEmergencia = Boolean(contatoEmergenciaNome || contatoEmergenciaTelefone);
+    const [contatoEmergenciaAberto, setContatoEmergenciaAberto] = useState(false);
     const tokenAuditoriaPublicaUrl = obterTokenAuditoriaPublicaUrl();
     const [tokenAuditoriaPublicaEfetivo, setTokenAuditoriaPublicaEfetivo] = useState(tokenAuditoriaPublicaUrl);
     const [auditoriasCampoQr, setAuditoriasCampoQr] = useState([]);
@@ -174,23 +189,59 @@ export function ConsultaQRPublica({ dados }) {
                     </div>
 
                     <div className="mt-4 grid gap-3 md:grid-cols-3">
-                        <div className="rounded-2xl bg-slate-50 p-4 ring-1 ring-slate-200">
+                        <div className="flex min-h-[4.8rem] flex-col items-center justify-center rounded-2xl bg-slate-50 p-4 text-center ring-1 ring-slate-200">
                             <p className="text-xs font-bold uppercase tracking-wide text-slate-400">Última auditoria</p>
                             <p className="mt-1 text-sm font-bold text-slate-900">{carregandoAuditoriasCampoQr ? "Carregando..." : ultimaAuditoriaCampoQr ? formatarDataHora(ultimaAuditoriaCampoQr.createdAt) : "Sem registro"}</p>
                         </div>
-                        <div className="rounded-2xl bg-slate-50 p-4 ring-1 ring-slate-200">
+                        <div className="flex min-h-[4.8rem] flex-col items-center justify-center rounded-2xl bg-slate-50 p-4 text-center ring-1 ring-slate-200">
                             <p className="text-xs font-bold uppercase tracking-wide text-slate-400">Pontuação média</p>
                             <p className="mt-1 text-sm font-bold text-slate-900">{mediaAuditoriaCampoQr === null ? "Sem média" : `${mediaAuditoriaCampoQr}%`}</p>
                         </div>
-                        <div className="rounded-2xl bg-slate-50 p-4 ring-1 ring-slate-200">
+                        <div className="flex min-h-[4.8rem] flex-col items-center justify-center rounded-2xl bg-slate-50 p-4 text-center ring-1 ring-slate-200">
                             <p className="text-xs font-bold uppercase tracking-wide text-slate-400">Classificação</p>
                             <span className={classNames("mt-2 inline-flex rounded-full px-3 py-1 text-xs font-bold ring-1", classeClassificacaoAuditoriaCampo(ultimaAuditoriaCampoQr?.classificacao))}>
                                 {ultimaAuditoriaCampoQr?.classificacao || "Sem auditoria"}
                             </span>
                         </div>
                     </div>
+                    {temContatoEmergencia && (
+                        <div className="mt-3 rounded-2xl bg-slate-50 p-3 text-left ring-1 ring-slate-200">
+                            <div className="flex items-center justify-between gap-3">
+                                <div className="min-w-0">
+                                    <p className="text-xs font-bold uppercase tracking-wide text-slate-400">Contato de emergência</p>
+                                    <p className="mt-1 text-xs font-semibold text-slate-500">
+                                        Informação disponível para emergência.
+                                    </p>
+                                </div>
 
-                    <AuditoriaCampoQRCode
+                                <button
+                                    type="button"
+                                    onClick={() => setContatoEmergenciaAberto((valor) => !valor)}
+                                    className="shrink-0 rounded-full bg-slate-950 px-3 py-1.5 text-[11px] font-black text-white"
+                                >
+                                    {contatoEmergenciaAberto ? "Fechar" : "Abrir"}
+                                </button>
+                            </div>
+
+                            {contatoEmergenciaAberto && (
+                                <div className="mt-3 grid gap-3 rounded-2xl bg-white p-3 text-center ring-1 ring-slate-100 sm:grid-cols-3">
+                                    <div>
+                                        <p className="text-[10px] font-black uppercase tracking-wide text-slate-400">Nome</p>
+                                        <p className="mt-1 text-xs font-black text-slate-950">{contatoEmergenciaNome || "-"}</p>
+                                    </div>
+                                    <div>
+                                        <p className="text-[10px] font-black uppercase tracking-wide text-slate-400">Parentesco</p>
+                                        <p className="mt-1 text-xs font-black text-slate-950">{contatoEmergenciaParentesco || "-"}</p>
+                                    </div>
+                                    <div>
+                                        <p className="text-[10px] font-black uppercase tracking-wide text-slate-400">Telefone</p>
+                                        <p className="mt-1 text-xs font-black text-slate-950">{contatoEmergenciaTelefone || "-"}</p>
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+                    )}
+<AuditoriaCampoQRCode
                         colaborador={colaborador}
                         treinamentos={treinamentos}
                         tokenAuditoria={tokenAuditoriaPublicaEfetivo || tokenAuditoriaPublicaUrl}

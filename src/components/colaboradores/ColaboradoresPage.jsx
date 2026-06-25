@@ -196,6 +196,12 @@ export function Colaboradores({
         empresaNome: "",
         funcao: "",
         matricula: "",
+        cpf: "",
+        telefone: "",
+        contatoEmergenciaNome: "",
+        contatoEmergenciaParentesco: "",
+        contatoEmergenciaTelefone: "",
+        dataAdmissao: "",
         dataNascimento: "",
         mostrarAniversarioDashboard: false,
         statusMobilizacao: obterStatusInicialColaborador(),
@@ -456,6 +462,12 @@ export function Colaboradores({
             empresaNome: novo.empresaNome.trim(),
             funcao: novo.funcao.trim(),
             matricula: novo.matricula.trim(),
+            cpf: novo.cpf.trim(),
+            telefone: novo.telefone.trim(),
+            contatoEmergenciaNome: novo.contatoEmergenciaNome.trim(),
+            contatoEmergenciaParentesco: novo.contatoEmergenciaParentesco.trim(),
+            contatoEmergenciaTelefone: novo.contatoEmergenciaTelefone.trim(),
+            dataAdmissao: novo.dataAdmissao || "",
             dataNascimento: novo.dataNascimento || "",
             mostrarAniversarioDashboard: false,
             statusMobilizacao: novo.statusMobilizacao,
@@ -598,6 +610,12 @@ export function Colaboradores({
             empresaNome: colaborador.empresa || "",
             funcao: colaborador.funcao || "",
             matricula: colaborador.matricula === "-" ? "" : colaborador.matricula || "",
+            cpf: colaborador.cpf || "",
+            telefone: colaborador.telefone || "",
+            contatoEmergenciaNome: colaborador.contatoEmergenciaNome || "",
+            contatoEmergenciaParentesco: colaborador.contatoEmergenciaParentesco || "",
+            contatoEmergenciaTelefone: colaborador.contatoEmergenciaTelefone || "",
+            dataAdmissao: colaborador.dataAdmissao || "",
             dataNascimento: colaborador.dataNascimento || "",
             mostrarAniversarioDashboard: colaborador.mostrarAniversarioDashboard !== false,
             codigoFuncionario: colaborador.codigoFuncionario || "",
@@ -833,14 +851,14 @@ export function Colaboradores({
                     )}
                 </section>
 
-                <Card className="colaboradores-info-card">
-                    <div className="mb-5 flex flex-col gap-3 border-b border-slate-100 pb-4 lg:flex-row lg:items-center lg:justify-between">
+                <Card className={`colaboradores-info-card ${informacoesColaboradoresRecolhidas ? "colaboradores-info-card-recolhido" : ""}`}>
+                    <div className={`flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between ${informacoesColaboradoresRecolhidas ? "mb-0 border-b-0 pb-0" : "mb-5 border-b border-slate-100 pb-4"}`}>
                         <div className="flex min-w-0 items-start gap-3">
                             <div className="rounded-2xl bg-slate-950 p-3 text-white shadow-sm">
                                 <Users className="h-5 w-5" />
                             </div>
                             <div className="min-w-0">
-                                <p className="text-xs font-black uppercase tracking-wide text-slate-400">Base de colaboradores</p>
+                                <p className="text-xs font-black uppercase tracking-wide text-blue-700">Base de colaboradores</p>
                                 <h2 className="mt-1 text-xl font-black text-slate-950">Informações dos funcionários</h2>
                                 <p className="mt-1 text-sm leading-6 text-slate-500">
                                     Consulte status, pendências, QR Code, treinamentos e dados cadastrais em um bloco único destacado.

@@ -10,6 +10,49 @@ import {
 } from "../../services/colaboradorDocumentosService";
 import { classNames } from "../../utils/sstUtils";
 
+function apenasDigitosColaborador(valor = "") {
+    return String(valor || "").replace(/\D/g, "");
+}
+
+function formatarCpfColaboradorCampo(valor = "") {
+    const digitos = apenasDigitosColaborador(valor).slice(0, 11);
+
+    if (digitos.length <= 3) return digitos;
+    if (digitos.length <= 6) return `${digitos.slice(0, 3)}.${digitos.slice(3)}`;
+    if (digitos.length <= 9) return `${digitos.slice(0, 3)}.${digitos.slice(3, 6)}.${digitos.slice(6)}`;
+
+    return `${digitos.slice(0, 3)}.${digitos.slice(3, 6)}.${digitos.slice(6, 9)}-${digitos.slice(9, 11)}`;
+}
+
+function formatarTelefoneColaboradorCampo(valor = "") {
+    const digitos = apenasDigitosColaborador(valor).slice(0, 11);
+
+    if (!digitos) return "";
+    if (digitos.length <= 2) return `(${digitos}`;
+    if (digitos.length <= 6) return `(${digitos.slice(0, 2)}) ${digitos.slice(2)}`;
+    if (digitos.length <= 10) return `(${digitos.slice(0, 2)}) ${digitos.slice(2, 6)}-${digitos.slice(6)}`;
+
+    return `(${digitos.slice(0, 2)}) ${digitos.slice(2, 7)}-${digitos.slice(7, 11)}`;
+}
+function formatarDataColaboradorCampo(valor = "") {
+    const digitos = String(valor || "").replace(/\D/g, "").slice(0, 8);
+
+    if (digitos.length <= 2) return digitos;
+    if (digitos.length <= 4) return `${digitos.slice(0, 2)}/${digitos.slice(2)}`;
+
+    const dia = digitos.slice(0, 2);
+    const mes = digitos.slice(2, 4);
+    const anoDigitado = digitos.slice(4, 8);
+
+    if (anoDigitado.length < 4) {
+        return `${dia}/${mes}/${anoDigitado}`;
+    }
+
+    const anoNumero = Number(anoDigitado);
+    const anoTravado = Math.min(2099, Math.max(1950, anoNumero));
+
+    return `${dia}/${mes}/${anoTravado}`;
+}
 export function ModalRevisaoColaborador({
     colaboradorEdicao,
     setColaboradorEdicao,
@@ -110,6 +153,12 @@ export function ModalRevisaoColaborador({
             empresaNome: colaboradorEdicao.empresaNome.trim(),
             funcao: colaboradorEdicao.funcao.trim(),
             matricula: colaboradorEdicao.matricula.trim(),
+            cpf: colaboradorEdicao.cpf.trim(),
+            telefone: colaboradorEdicao.telefone.trim(),
+            contatoEmergenciaNome: colaboradorEdicao.contatoEmergenciaNome.trim(),
+            contatoEmergenciaParentesco: colaboradorEdicao.contatoEmergenciaParentesco.trim(),
+            contatoEmergenciaTelefone: colaboradorEdicao.contatoEmergenciaTelefone.trim(),
+            dataAdmissao: colaboradorEdicao.dataAdmissao || "",
             dataNascimento: colaboradorEdicao.dataNascimento || "",
             mostrarAniversarioDashboard: colaboradorEdicao.mostrarAniversarioDashboard !== false,
             status: colaboradorEdicao.status || "Ativo",
@@ -190,7 +239,7 @@ export function ModalRevisaoColaborador({
                         </div>
 
                         <div>
-                            <label className="mb-1 block text-xs font-bold uppercase tracking-wide text-slate-500">Matrícula da empresa (opcional)</label>
+                            <label className="mb-1 block text-xs font-bold uppercase tracking-wide text-slate-500">Matrícula eSocial (opcional)</label>
                             <input
                                 value={colaboradorEdicao.matricula}
                                 onChange={(e) => atualizarEdicao({ matricula: e.target.value })}
@@ -227,11 +276,68 @@ export function ModalRevisaoColaborador({
                         <div>
                             <label className="mb-1 block text-xs font-bold uppercase tracking-wide text-slate-500">Data de nascimento</label>
                             <input
-                                type="date"
+                                type="text"
+                                inputMode="numeric"
+                                placeholder="dd/mm/aaaa"
                                 value={colaboradorEdicao.dataNascimento || ""}
-                                onChange={(e) => atualizarEdicao({ dataNascimento: e.target.value })}
-                                className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none focus:border-slate-400 focus:ring-4 focus:ring-slate-100"
+                                onChange={(e) => atualizarEdicao({ dataNascimento: formatarDataColaboradorCampo(e.target.value) })}
+                                className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-center text-sm outline-none focus:border-slate-400 focus:ring-4 focus:ring-slate-100"
                             />
+                        </div>
+                        <div>
+                            <label className="mb-1 block text-xs font-bold uppercase tracking-wide text-slate-500">CPF</label>
+                            <input
+                                value={colaboradorEdicao.cpf || ""}
+                                onChange={(e) => atualizarEdicao({ cpf: formatarCpfColaboradorCampo(e.target.value) })}
+                                placeholder="Ex.: 000.000.000-00"
+                                className="w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-slate-400 focus:ring-4 focus:ring-slate-100"
+                            />
+                        </div>
+
+                        <div>
+                            <label className="mb-1 block text-xs font-bold uppercase tracking-wide text-slate-500">Telefone principal</label>
+                            <input
+                                value={colaboradorEdicao.telefone || ""}
+                                onChange={(e) => atualizarEdicao({ telefone: formatarTelefoneColaboradorCampo(e.target.value) })}
+                                placeholder="Ex.: (12) 99999-9999"
+                                className="w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-slate-400 focus:ring-4 focus:ring-slate-100"
+                            />
+                        </div>
+
+                        <div>
+                            <label className="mb-1 block text-xs font-bold uppercase tracking-wide text-slate-500">Data de admissão</label>
+                            <input
+                                type="text"
+                                inputMode="numeric"
+                                placeholder="dd/mm/aaaa"
+                                value={colaboradorEdicao.dataAdmissao || ""}
+                                onChange={(e) => atualizarEdicao({ dataAdmissao: formatarDataColaboradorCampo(e.target.value) })}
+                                className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-center text-sm outline-none focus:border-slate-400 focus:ring-4 focus:ring-slate-100"
+                            />
+                        </div>
+
+                        <div className="md:col-span-2 rounded-3xl border border-slate-200 bg-slate-50 p-4">
+                            <p className="text-xs font-bold uppercase tracking-wide text-slate-500">Contato de emergência</p>
+                            <div className="mt-3 grid gap-3 md:grid-cols-3">
+                                <input
+                                    value={colaboradorEdicao.contatoEmergenciaNome || ""}
+                                    onChange={(e) => atualizarEdicao({ contatoEmergenciaNome: e.target.value })}
+                                    placeholder="Nome do contato"
+                                    className="w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-slate-400 focus:ring-4 focus:ring-slate-100"
+                                />
+                                <input
+                                    value={colaboradorEdicao.contatoEmergenciaParentesco || ""}
+                                    onChange={(e) => atualizarEdicao({ contatoEmergenciaParentesco: e.target.value })}
+                                    placeholder="Parentesco"
+                                    className="w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-slate-400 focus:ring-4 focus:ring-slate-100"
+                                />
+                                <input
+                                    value={colaboradorEdicao.contatoEmergenciaTelefone || ""}
+                                    onChange={(e) => atualizarEdicao({ contatoEmergenciaTelefone: formatarTelefoneColaboradorCampo(e.target.value) })}
+                                    placeholder="Telefone de emergência"
+                                    className="w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-slate-400 focus:ring-4 focus:ring-slate-100"
+                                />
+                            </div>
                         </div>
 
                         <label className="flex min-h-[46px] cursor-pointer items-center gap-2 rounded-2xl bg-slate-50 px-3 py-2 text-xs font-semibold text-slate-600 ring-1 ring-slate-200">

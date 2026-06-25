@@ -1,4 +1,4 @@
-﻿import React from "react";
+import React from "react";
 import { Camera, ChevronDown, Plus, Upload, UserPlus, X } from "lucide-react";
 import { classNames } from "../../utils/sstUtils";
 
@@ -105,6 +105,49 @@ function resumoArquivos(arquivos = []) {
     return `${lista.length} arquivos selecionados`;
 }
 
+function apenasDigitosColaborador(valor = "") {
+    return String(valor || "").replace(/\D/g, "");
+}
+
+function formatarCpfColaboradorCampo(valor = "") {
+    const digitos = apenasDigitosColaborador(valor).slice(0, 11);
+
+    if (digitos.length <= 3) return digitos;
+    if (digitos.length <= 6) return `${digitos.slice(0, 3)}.${digitos.slice(3)}`;
+    if (digitos.length <= 9) return `${digitos.slice(0, 3)}.${digitos.slice(3, 6)}.${digitos.slice(6)}`;
+
+    return `${digitos.slice(0, 3)}.${digitos.slice(3, 6)}.${digitos.slice(6, 9)}-${digitos.slice(9, 11)}`;
+}
+
+function formatarTelefoneColaboradorCampo(valor = "") {
+    const digitos = apenasDigitosColaborador(valor).slice(0, 11);
+
+    if (!digitos) return "";
+    if (digitos.length <= 2) return `(${digitos}`;
+    if (digitos.length <= 6) return `(${digitos.slice(0, 2)}) ${digitos.slice(2)}`;
+    if (digitos.length <= 10) return `(${digitos.slice(0, 2)}) ${digitos.slice(2, 6)}-${digitos.slice(6)}`;
+
+    return `(${digitos.slice(0, 2)}) ${digitos.slice(2, 7)}-${digitos.slice(7, 11)}`;
+}
+function formatarDataColaboradorCampo(valor = "") {
+    const digitos = String(valor || "").replace(/\D/g, "").slice(0, 8);
+
+    if (digitos.length <= 2) return digitos;
+    if (digitos.length <= 4) return `${digitos.slice(0, 2)}/${digitos.slice(2)}`;
+
+    const dia = digitos.slice(0, 2);
+    const mes = digitos.slice(2, 4);
+    const anoDigitado = digitos.slice(4, 8);
+
+    if (anoDigitado.length < 4) {
+        return `${dia}/${mes}/${anoDigitado}`;
+    }
+
+    const anoNumero = Number(anoDigitado);
+    const anoTravado = Math.min(2099, Math.max(1950, anoNumero));
+
+    return `${dia}/${mes}/${anoTravado}`;
+}
 export function FormularioNovoColaborador({
     novo,
     setNovo,
@@ -169,9 +212,10 @@ export function FormularioNovoColaborador({
 
                 <CampoTexto
                     label="Data de nascimento"
-                    type="date"
+                    type="text"
                     value={novo.dataNascimento}
-                    onChange={(valor) => alterarCampo("dataNascimento", valor)}
+                    placeholder="dd/mm/aaaa"
+                    onChange={(valor) => alterarCampo("dataNascimento", formatarDataColaboradorCampo(valor))}
                     inputClassName="text-center"
                 />
 
@@ -189,6 +233,30 @@ export function FormularioNovoColaborador({
                         </option>
                     ))}
                 </CampoSelect>
+            </div>
+            <div className="grid gap-3 lg:grid-cols-3">
+                <CampoTexto
+                    label="CPF"
+                    value={novo.cpf}
+                    onChange={(valor) => alterarCampo("cpf", formatarCpfColaboradorCampo(valor))}
+                    placeholder="Ex.: 000.000.000-00"
+                    inputClassName="text-center"
+                />
+                <CampoTexto
+                    label="Telefone principal (opcional)"
+                    value={novo.telefone}
+                    onChange={(valor) => alterarCampo("telefone", formatarTelefoneColaboradorCampo(valor))}
+                    placeholder="Ex.: (12) 99999-9999"
+                    inputClassName="text-center"
+                />
+                <CampoTexto
+                    label="Data de admissão (opcional)"
+                    type="text"
+                    value={novo.dataAdmissao}
+                    placeholder="dd/mm/aaaa"
+                    onChange={(valor) => alterarCampo("dataAdmissao", formatarDataColaboradorCampo(valor))}
+                    inputClassName="text-center"
+                />
             </div>
 
             <div className="grid gap-3 lg:grid-cols-[0.76fr_1.48fr_0.96fr]">
@@ -213,21 +281,59 @@ export function FormularioNovoColaborador({
                 />
 
                 <CampoTexto
-                    label="Matrícula da empresa (opcional)"
+                    label="Matrícula eSocial (opcional)"
                     value={novo.matricula}
                     onChange={(valor) => alterarCampo("matricula", valor)}
-                    placeholder="Ex.: matrícula da empresa, crachá ou RE"
+                    placeholder="Ex.: matrícula eSocial"
                     inputClassName="text-center"
                 >
                     <p className="novo-colaborador-ajuda-anterior">
-                        O código do sistema é gerado automaticamente. A matrícula é opcional e serve para crachá ou RE.
+                        O código do sistema é gerado automaticamente. A matrícula eSocial é opcional e pode ser preenchida depois.
                     </p>
                 </CampoTexto>
             </div>
 
             <div className="novo-colaborador-row-anterior novo-colaborador-uploads-anterior" style={{ gridTemplateColumns: "minmax(0, 1fr)" }}>
 
-                <div className="novo-colaborador-upload-card-anterior">
+    
+            <details className="rounded-3xl border border-slate-200 bg-slate-50 p-4">
+                <summary className="flex cursor-pointer list-none items-center justify-between gap-3 rounded-2xl bg-white px-4 py-3 text-left ring-1 ring-slate-200 [&::-webkit-details-marker]:hidden">
+                    <div>
+                        <p className="text-xs font-black uppercase tracking-wide text-slate-500">Contato de emergência</p>
+                        <p className="mt-1 text-xs font-semibold text-slate-500">
+                            Opcional. Abra somente se quiser informar contato de referência agora.
+                        </p>
+                    </div>
+                    <span className="shrink-0 rounded-full bg-slate-950 px-4 py-2 text-xs font-black text-white">
+                        Abrir / fechar
+                    </span>
+                </summary>
+
+                <div className="mt-4 grid gap-3 lg:grid-cols-3">
+                    <CampoTexto
+                        label="Nome do contato"
+                        value={novo.contatoEmergenciaNome}
+                        onChange={(valor) => alterarCampo("contatoEmergenciaNome", valor)}
+                        placeholder="Ex.: Maria Aparecida"
+                        inputClassName="text-center"
+                    />
+                    <CampoTexto
+                        label="Parentesco"
+                        value={novo.contatoEmergenciaParentesco}
+                        onChange={(valor) => alterarCampo("contatoEmergenciaParentesco", valor)}
+                        placeholder="Ex.: esposa, filho, mãe"
+                        inputClassName="text-center"
+                    />
+                    <CampoTexto
+                        label="Telefone de emergência"
+                        value={novo.contatoEmergenciaTelefone}
+                        onChange={(valor) => alterarCampo("contatoEmergenciaTelefone", formatarTelefoneColaboradorCampo(valor))}
+                        placeholder="Ex.: (12) 99999-9999"
+                        inputClassName="text-center"
+                    />
+                </div>
+            </details>
+            <div className="novo-colaborador-upload-card-anterior">
                     <input
                         id="novo-colaborador-foto"
                         type="file"
