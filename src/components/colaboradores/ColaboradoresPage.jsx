@@ -1032,7 +1032,7 @@ ${erros.slice(0, 8).join("\n")}`
                 <Card className={`colaboradores-info-card ${informacoesColaboradoresRecolhidas ? "colaboradores-info-card-recolhido" : ""}`}>
                     <div className={`flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between ${informacoesColaboradoresRecolhidas ? "mb-0 border-b-0 pb-0" : "mb-5 border-b border-slate-100 pb-4"}`}>
                         <div className="flex min-w-0 items-start gap-3">
-                            <div className="rounded-2xl bg-slate-950 p-3 text-white shadow-sm">
+                            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-slate-950 text-white shadow-sm">
                                 <Users className="h-5 w-5" />
                             </div>
                             <div className="min-w-0">
