@@ -254,13 +254,10 @@ export function ImportacaoFotosMassaColaboradores({
                             <p className="text-xs font-black uppercase tracking-wide text-sky-700">Fotos em massa</p>
                             <h2 className="mt-1 text-xl font-black text-slate-950">Enviar fotos dos colaboradores</h2>
                             <p className="mt-1 max-w-2xl text-sm leading-5 text-slate-600">
-                                Importe várias imagens nomeadas por CPF, matrícula eSocial, código ou nome completo.
+                                Importe várias imagens nomeadas por CPF, matrícula eSocial, código ou nome completo. (Ex.: 00000000000.jpg, MATRICULA001.png ou NOME_COMPLETO.jpg.)
                             </p>
                         </div>
                     </div>
-                    <p className="mt-2 text-xs font-semibold leading-5 text-slate-500">
-                        Ex.: <span className="font-black text-slate-900">40269348883.jpg</span>, <span className="font-black text-slate-900">TESTE001.png</span> ou <span className="font-black text-slate-900">RODOLFO HENRIQUE.jpg</span>.
-                    </p>
                 </div>
 
                 <div className="flex flex-col gap-2 sm:flex-row lg:shrink-0">
