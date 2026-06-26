@@ -245,15 +245,15 @@ export function ImportacaoFotosMassaColaboradores({
     return (
         <Card className="border-slate-200 bg-white">
             <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-                <div className="min-w-0">
+                <div className="min-w-0 flex-1">
                     <div className="flex items-start gap-3">
                         <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-slate-950 text-white shadow-sm">
                             <Camera className="h-5 w-5" />
                         </div>
-                        <div className="min-w-0">
+                        <div className="min-w-0 flex-1">
                             <p className="text-xs font-black uppercase tracking-wide text-blue-700">FOTOS EM MASSA</p>
                             <h2 className="mt-1 text-xl font-black text-slate-950">Enviar fotos dos colaboradores</h2>
-                            <p className="mt-1 max-w-3xl text-sm leading-5 text-slate-600">
+                            <p className="mt-1 max-w-none whitespace-nowrap text-sm leading-5 text-slate-600">
                                 Envie imagens em massa. O vínculo é feito pelo nome do arquivo. Ex.: 00000000000.jpg, MATRICULA001.png ou NOME_COMPLETO.jpg.
                             </p>
                         </div>
