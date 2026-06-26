@@ -930,18 +930,21 @@ export default function App() {
     }, [usuario, colaboradores]);
 
     const navCompleta = useMemo(() => [
-        { id: "dashboard", label: "Dashboard SST", icon: LayoutDashboard },
-        { id: "auditoriaCampo", label: "Dashboard Auditoria", icon: ClipboardCheck },
-        { id: "novaAuditoriaCampo", label: "Nova Auditoria", icon: Plus },
-        { id: "empresas", label: "Empresas", icon: Building2 },
-        { id: "colaboradores", label: "Colaboradores", icon: Users },
-        { id: "aniversariantes", label: "Aniversariantes", icon: CalendarClock },
-        { id: "treinamentos", label: "Treinamentos", icon: ClipboardCheck },
-        { id: "qr", label: "Consulta QR", icon: QrCode },
-        ...(podeAcessarAuditoria ? [{ id: "auditoria", label: "Auditoria de sistema", icon: Database }] : []),
-        { id: "acessosApp", label: "Acessos do App", icon: ShieldCheck },
-        { id: "configuracoes", label: "Configurações", icon: Settings },
-        { id: "roteiro", label: "Manuais", icon: BookOpen },
+        { id: "dashboard", label: "Dashboard SST", icon: LayoutDashboard, grupo: "VISÃO GERAL" },
+
+        { id: "auditoriaCampo", label: "Dashboard Auditoria", icon: ClipboardCheck, grupo: "AUDITORIA" },
+        { id: "novaAuditoriaCampo", label: "Nova Auditoria", icon: Plus, grupo: "AUDITORIA" },
+
+        { id: "empresas", label: "Empresas", icon: Building2, grupo: "CADASTROS" },
+        { id: "colaboradores", label: "Colaboradores", icon: Users, grupo: "CADASTROS" },
+        { id: "aniversariantes", label: "Aniversariantes", icon: CalendarClock, grupo: "CADASTROS" },
+        { id: "treinamentos", label: "Treinamentos", icon: ClipboardCheck, grupo: "CADASTROS" },
+        { id: "qr", label: "Consulta QR", icon: QrCode, grupo: "CADASTROS" },
+
+        ...(podeAcessarAuditoria ? [{ id: "auditoria", label: "Auditoria de sistema", icon: Database, grupo: "SISTEMA" }] : []),
+        { id: "acessosApp", label: "Acessos do App", icon: ShieldCheck, grupo: "SISTEMA" },
+        { id: "configuracoes", label: "Configurações", icon: Settings, grupo: "SISTEMA" },
+        { id: "roteiro", label: "Manuais", icon: BookOpen, grupo: "SISTEMA" },
     ], [podeAcessarAuditoria]);
 
     const nav = useMemo(() => {

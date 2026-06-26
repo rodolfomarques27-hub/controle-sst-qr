@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useMemo, useState } from "react";
 import { ChevronDown, ShieldCheck } from "lucide-react";
 import { classNames } from "../../utils/sstUtils";
 
@@ -56,7 +56,17 @@ export function AppSidebar({
     const alternarMenuFixo = () => {
         setExpandidoPorHover(false);
         setMenuLateralAberto((valor) => !valor);
-    };
+    };    const gruposNavegacao = useMemo(() => {
+        const ordemGrupos = ["VISÃO GERAL", "AUDITORIA", "CADASTROS", "SISTEMA"];
+
+        return ordemGrupos
+            .map((titulo) => ({
+                titulo,
+                itens: (nav || []).filter((item) => item.grupo === titulo),
+            }))
+            .filter((grupo) => grupo.itens.length > 0);
+    }, [nav]);
+
 
     return (
         <aside
@@ -109,27 +119,45 @@ export function AppSidebar({
                     menuExpandido ? "space-y-1" : "grid justify-items-center gap-2"
                 )}
             >
-                {nav.map((item) => {
-                    const Icon = item.icon;
+                {gruposNavegacao.map((grupo, indiceGrupo) => (
+                    <div
+                        key={grupo.titulo}
+                        className={classNames(
+                            "app-sidebar-nav-group",
+                            indiceGrupo > 0 && (menuExpandido ? "mt-4 border-t border-slate-200 pt-3" : "mt-3 border-t border-slate-200 pt-3")
+                        )}
+                    >
+                        {menuExpandido && (
+                            <p className="mb-2 px-3 text-[10px] font-black uppercase tracking-[0.18em] text-slate-400">
+                                {grupo.titulo}
+                            </p>
+                        )}
 
-                    return (
-                        <button
-                            key={item.id}
-                            onClick={() => onSelecionarTela(item.id, item.label)}
-                            className={classNames(
-                                "app-sidebar-nav-button flex items-center rounded-2xl text-left text-sm font-medium transition",
-                                menuExpandido ? "w-full gap-3 px-3 py-2" : "h-10 w-10 justify-center p-0",
-                                tela === item.id
-                                    ? "bg-slate-950 text-white shadow-sm"
-                                    : "text-slate-600 hover:bg-slate-100 hover:text-slate-950"
-                            )}
-                            title={!menuExpandido ? item.label : undefined}
-                        >
-                            <Icon className="app-sidebar-nav-icon h-4 w-4 shrink-0" />
-                            {menuExpandido && <span className="truncate">{item.label}</span>}
-                        </button>
-                    );
-                })}
+                        <div className={menuExpandido ? "space-y-1" : "grid justify-items-center gap-2"}>
+                            {grupo.itens.map((item) => {
+                                const Icon = item.icon;
+
+                                return (
+                                    <button
+                                        key={item.id}
+                                        onClick={() => onSelecionarTela(item.id, item.label)}
+                                        className={classNames(
+                                            "app-sidebar-nav-button flex items-center rounded-2xl text-left text-sm font-medium transition",
+                                            menuExpandido ? "w-full gap-3 px-3 py-2" : "h-10 w-10 justify-center p-0",
+                                            tela === item.id
+                                                ? "bg-slate-950 text-white shadow-sm"
+                                                : "text-slate-600 hover:bg-slate-100 hover:text-slate-950"
+                                        )}
+                                        title={!menuExpandido ? `${grupo.titulo} · ${item.label}` : undefined}
+                                    >
+                                        <Icon className="app-sidebar-nav-icon h-4 w-4 shrink-0" />
+                                        {menuExpandido && <span className="truncate">{item.label}</span>}
+                                    </button>
+                                );
+                            })}
+                        </div>
+                    </div>
+                ))}
             </nav>
 
             {menuExpandido ? (
