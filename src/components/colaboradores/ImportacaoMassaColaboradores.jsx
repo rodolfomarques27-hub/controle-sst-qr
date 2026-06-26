@@ -462,7 +462,7 @@ export function ImportacaoMassaColaboradores({
         <section className="rounded-3xl border border-blue-100 bg-white p-5 shadow-sm">
             <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
                 <div className="flex min-w-0 items-start gap-3">
-                    <div className="rounded-2xl bg-blue-50 p-3 text-blue-700 ring-1 ring-blue-100">
+                    <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-slate-950 text-white shadow-sm">
                         <FileSpreadsheet className="h-5 w-5" />
                     </div>
                     <div className="min-w-0">
