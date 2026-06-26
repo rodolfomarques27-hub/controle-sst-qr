@@ -35,7 +35,15 @@ function formatarTelefoneColaboradorCampo(valor = "") {
     return `(${digitos.slice(0, 2)}) ${digitos.slice(2, 7)}-${digitos.slice(7, 11)}`;
 }
 function formatarDataColaboradorCampo(valor = "") {
-    const digitos = String(valor || "").replace(/\D/g, "").slice(0, 8);
+    const texto = String(valor || "").trim();
+    const iso = texto.match(/^(\d{4})-(\d{2})-(\d{2})/);
+
+    if (iso) {
+        const [, ano, mes, dia] = iso;
+        return `${dia}/${mes}/${ano}`;
+    }
+
+    const digitos = texto.replace(/\D/g, "").slice(0, 8);
 
     if (digitos.length <= 2) return digitos;
     if (digitos.length <= 4) return `${digitos.slice(0, 2)}/${digitos.slice(2)}`;
@@ -52,6 +60,19 @@ function formatarDataColaboradorCampo(valor = "") {
     const anoTravado = Math.min(2099, Math.max(1950, anoNumero));
 
     return `${dia}/${mes}/${anoTravado}`;
+}
+
+function converterDataColaboradorParaIso(valor = "") {
+    const texto = String(valor || "").trim();
+
+    if (!texto) return "";
+    if (/^\d{4}-\d{2}-\d{2}/.test(texto)) return texto.slice(0, 10);
+
+    const match = texto.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+    if (!match) return texto;
+
+    const [, dia, mes, ano] = match;
+    return `${ano}-${mes}-${dia}`;
 }
 export function ModalRevisaoColaborador({
     colaboradorEdicao,
@@ -158,8 +179,8 @@ export function ModalRevisaoColaborador({
             contatoEmergenciaNome: colaboradorEdicao.contatoEmergenciaNome.trim(),
             contatoEmergenciaParentesco: colaboradorEdicao.contatoEmergenciaParentesco.trim(),
             contatoEmergenciaTelefone: colaboradorEdicao.contatoEmergenciaTelefone.trim(),
-            dataAdmissao: colaboradorEdicao.dataAdmissao || "",
-            dataNascimento: colaboradorEdicao.dataNascimento || "",
+            dataAdmissao: converterDataColaboradorParaIso(colaboradorEdicao.dataAdmissao),
+            dataNascimento: converterDataColaboradorParaIso(colaboradorEdicao.dataNascimento),
             mostrarAniversarioDashboard: colaboradorEdicao.mostrarAniversarioDashboard !== false,
             status: colaboradorEdicao.status || "Ativo",
             statusMobilizacao: colaboradorEdicao.statusMobilizacao || obterStatusInicialColaborador(),
@@ -279,7 +300,7 @@ export function ModalRevisaoColaborador({
                                 type="text"
                                 inputMode="numeric"
                                 placeholder="dd/mm/aaaa"
-                                value={colaboradorEdicao.dataNascimento || ""}
+                                value={formatarDataColaboradorCampo(colaboradorEdicao.dataNascimento || "")}
                                 onChange={(e) => atualizarEdicao({ dataNascimento: formatarDataColaboradorCampo(e.target.value) })}
                                 className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-center text-sm outline-none focus:border-slate-400 focus:ring-4 focus:ring-slate-100"
                             />
@@ -310,7 +331,7 @@ export function ModalRevisaoColaborador({
                                 type="text"
                                 inputMode="numeric"
                                 placeholder="dd/mm/aaaa"
-                                value={colaboradorEdicao.dataAdmissao || ""}
+                                value={formatarDataColaboradorCampo(colaboradorEdicao.dataAdmissao || "")}
                                 onChange={(e) => atualizarEdicao({ dataAdmissao: formatarDataColaboradorCampo(e.target.value) })}
                                 className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-center text-sm outline-none focus:border-slate-400 focus:ring-4 focus:ring-slate-100"
                             />

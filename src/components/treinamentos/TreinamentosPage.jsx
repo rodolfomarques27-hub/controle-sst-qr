@@ -813,6 +813,19 @@ export function Treinamentos({
             return grupo.certificados.length > 0 || grupo.pendentes.length > 0;
         });
 
+    const colaboradorTemEmpresaCadastrada = (colaborador = {}) => {
+        const empresaId = String(colaborador.empresaId || colaborador.empresa_id || "").trim();
+
+        if (!empresaId) return false;
+
+        if (!Array.isArray(empresasBanco) || empresasBanco.length === 0) {
+            return true;
+        }
+
+        return empresasBanco.some((empresa) => String(empresa.id || "") === empresaId);
+    };
+
+    const mensagemEmpresaObrigatoriaDocumentosMassa = "Selecione/vincule uma empresa cadastrada ao colaborador antes de enviar documentos.";
     const enviarDocumentosPendentesEmLote = (colaborador) => {
         if (!podeUploadTreinamentosSistema) {
             if (typeof window !== "undefined") window.alert(mensagemBloqueioUploadTreinamentos);

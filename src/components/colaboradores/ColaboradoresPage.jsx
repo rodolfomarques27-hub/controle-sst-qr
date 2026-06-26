@@ -55,6 +55,7 @@ import {
 
 const CHAVE_NOVO_COLABORADOR_RECOLHIDO = "controleSstColaboradoresNovoColaboradorRecolhido";
 const CHAVE_INFO_COLABORADORES_RECOLHIDA = "controleSstColaboradoresInformacoesRecolhidas";
+const CHAVE_CADASTRO_MASSA_RECOLHIDO = "controleSstColaboradoresCadastroMassaRecolhido";
 const CHAVE_FILTROS_PENDENCIAS_TREINAMENTOS = "controle-sst-qr:pendencias-treinamentos:filtros-salvos:v1";
 const CHAVE_FILTROS_COLABORADORES_TREINAMENTOS = "controle-sst-qr:colaboradores-treinamentos:filtros-salvos:v1";
 
@@ -166,6 +167,7 @@ export function Colaboradores({
     const [busca, setBusca] = useState("");
     const [empresa, setEmpresa] = useState("Todas");
     const [filtroClassificacao, setFiltroClassificacao] = useState("Todos");
+    const [ordenacaoFuncionarios, setOrdenacaoFuncionarios] = useState("nome_az");
     const [versaoFiltroSalvoPendenciasTreinamentos, setVersaoFiltroSalvoPendenciasTreinamentos] = useState(0);
 
     const filtrosSalvosPendenciasTreinamentosDisponiveis = useMemo(
@@ -187,6 +189,7 @@ export function Colaboradores({
     const [mensagemPermissaoSistema, setMensagemPermissaoSistema] = useState("Carregando permissões do sistema...");
     const [pendenciasAbertas, setPendenciasAbertas] = useState(null);
     const [novoColaboradorRecolhido, setNovoColaboradorRecolhido] = useState(() => carregarPreferenciaPainelBoolean(CHAVE_NOVO_COLABORADOR_RECOLHIDO, false));
+    const [cadastroMassaRecolhido, setCadastroMassaRecolhido] = useState(() => carregarPreferenciaPainelBoolean(CHAVE_CADASTRO_MASSA_RECOLHIDO, false));
     const [informacoesColaboradoresRecolhidas, setInformacoesColaboradoresRecolhidas] = useState(() => carregarPreferenciaPainelBoolean(CHAVE_INFO_COLABORADORES_RECOLHIDA, false));
     const [modalFuncaoAberto, setModalFuncaoAberto] = useState(false);
     const [versaoFuncoes, setVersaoFuncoes] = useState(0);
@@ -214,18 +217,35 @@ export function Colaboradores({
         foto: null,
     });
 
+    const converterDataColaboradorParaIso = (valor = "") => {
+        const texto = String(valor || "").trim();
+
+        if (!texto) return "";
+        if (/^\d{4}-\d{2}-\d{2}/.test(texto)) return texto.slice(0, 10);
+
+        const match = texto.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+        if (!match) return texto;
+
+        const [, dia, mes, ano] = match;
+        return `${ano}-${mes}-${dia}`;
+    };
     const empresasFiltro = ["Todas", ...Array.from(new Set(colaboradores.map((c) => c.empresa).filter(Boolean)))];
 
-    const filtrados = colaboradores.filter((c) => {
-        const avaliacao = avaliarTreinamentosColaborador(c);
-        const geral = statusGeral(c);
-        const texto = normalizarTextoBusca(`${c.nome} ${c.empresa} ${c.empresaExibicao} ${c.empresaPaiNome} ${c.funcao} ${c.matricula} ${c.codigoFuncionario} ${c.statusMobilizacao} ${geral.texto} ${avaliacao.matriz.rotulo}`);
-        const bateBusca = texto.includes(normalizarTextoBusca(busca));
-        const bateEmpresa = empresa === "Todas" || c.empresa === empresa;
-        const bateClassificacao = filtroClassificacao === "Todos" || geral.texto === filtroClassificacao;
+    const filtrados = colaboradores
+        .filter((c) => {
+            const avaliacao = avaliarTreinamentosColaborador(c);
+            const geral = statusGeral(c);
+            const texto = normalizarTextoBusca(`${c.nome} ${c.empresa} ${c.empresaExibicao} ${c.empresaPaiNome} ${c.funcao} ${c.matricula} ${c.codigoFuncionario} ${c.statusMobilizacao} ${geral.texto} ${avaliacao.matriz.rotulo}`);
+            const bateBusca = texto.includes(normalizarTextoBusca(busca));
+            const bateEmpresa = empresa === "Todas" || c.empresa === empresa;
+            const bateClassificacao = filtroClassificacao === "Todos" || geral.texto === filtroClassificacao;
 
-        return bateBusca && bateEmpresa && bateClassificacao;
-    });
+            return bateBusca && bateEmpresa && bateClassificacao;
+        })
+        .sort((a, b) => {
+            const comparacao = String(a.nome || "").localeCompare(String(b.nome || ""), "pt-BR", { sensitivity: "base" });
+            return ordenacaoFuncionarios === "nome_za" ? -comparacao : comparacao;
+        });
 
     const filtrosAtuaisPendenciasTreinamentos = useMemo(
         () => ({
@@ -471,8 +491,8 @@ export function Colaboradores({
             contatoEmergenciaNome: novo.contatoEmergenciaNome.trim(),
             contatoEmergenciaParentesco: novo.contatoEmergenciaParentesco.trim(),
             contatoEmergenciaTelefone: novo.contatoEmergenciaTelefone.trim(),
-            dataAdmissao: novo.dataAdmissao || "",
-            dataNascimento: novo.dataNascimento || "",
+            dataAdmissao: converterDataColaboradorParaIso(novo.dataAdmissao),
+            dataNascimento: converterDataColaboradorParaIso(novo.dataNascimento),
             mostrarAniversarioDashboard: false,
             statusMobilizacao: novo.statusMobilizacao,
             treinamentosRemovidos: novo.treinamentosRemovidos || [],
@@ -523,11 +543,35 @@ export function Colaboradores({
         const erros = [];
 
         try {
+            const empresasPorId = new Map(
+                (empresasBanco || [])
+                    .filter((empresaItem) => String(empresaItem?.id || "").trim())
+                    .map((empresaItem) => [String(empresaItem.id), empresaItem])
+            );
+
+            const empresasPorNomeNormalizado = new Map(
+                (empresasBanco || [])
+                    .filter((empresaItem) => String(empresaItem?.nome || "").trim())
+                    .map((empresaItem) => [normalizarTextoBusca(empresaItem.nome), empresaItem])
+            );
+
             for (const [indice, item] of lista.entries()) {
                 const linha = item.linha || indice + 2;
+                const empresaIdInformada = String(item.empresaId || item.empresa_id || "").trim();
+                const empresaInformada = String(item.empresaNome || "").trim();
+                const empresaExistente = empresaIdInformada
+                    ? empresasPorId.get(empresaIdInformada)
+                    : empresasPorNomeNormalizado.get(normalizarTextoBusca(empresaInformada));
+
+                if (!empresaExistente) {
+                    erros.push(`Linha ${linha}: empresa "${empresaInformada || "não informada"}" não encontrada no cadastro. Cadastre/corrija a empresa antes de importar.`);
+                    continue;
+                }
+
                 const ok = await onAdicionarColaborador({
                     nome: String(item.nome || "").trim(),
-                    empresaNome: String(item.empresaNome || "").trim(),
+                    empresaId: empresaExistente.id,
+                    empresaNome: empresaExistente.nome,
                     funcao: String(item.funcao || "").trim(),
                     matricula: String(item.matricula || "").trim(),
                     cpf: String(item.cpf || "").trim(),
@@ -1009,25 +1053,60 @@ ${erros.slice(0, 8).join("\n")}`
                     )}
                 </section>
 
-                <ImportacaoMassaColaboradores
-                    colaboradores={colaboradores}
-                    podeCadastrar={podeCadastrarColaboradoresSistema}
-                    mensagemBloqueio={mensagemBloqueioCadastroColaboradores}
-                    onImportar={importarColaboradoresEmMassa}
-                    importando={importandoMassa}
-                />
+                <Card className="border-blue-100 bg-white">
+                    <div className={`flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between ${cadastroMassaRecolhido ? "mb-0 border-b-0 pb-0" : "mb-4 border-b border-slate-100 pb-4"}`}>
+                        <div className="flex min-w-0 items-start gap-3">
+                            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-slate-950 text-white shadow-sm">
+                                <Upload className="h-5 w-5" />
+                            </div>
+                            <div className="min-w-0">
+                                <p className="text-xs font-black uppercase tracking-wide text-blue-700">Cadastro em massa</p>
+                                <h2 className="mt-1 text-xl font-black text-slate-950">Importações em lote</h2>
+                                <p className="mt-1 text-sm leading-6 text-slate-600">
+                                    Importe colaboradores por planilha ou envie fotos dos colaboradores em massa.
+                                </p>
+                            </div>
+                        </div>
 
-                <ImportacaoFotosMassaColaboradores
-                    colaboradores={colaboradores}
-                    podeEnviar={podeUploadColaboradoresSistema && podeEditarColaboradoresSistema}
-                    mensagemBloqueio={
-                        !podeUploadColaboradoresSistema
-                            ? mensagemBloqueioUploadColaboradores
-                            : mensagemBloqueioEdicaoColaboradores
-                    }
-                    onEnviarFotos={enviarFotosColaboradoresEmMassa}
-                    enviando={importandoFotosMassa}
-                />
+                        <button
+                            type="button"
+                            onClick={() =>
+                                setCadastroMassaRecolhido((atual) =>
+                                    salvarPreferenciaPainelBoolean(CHAVE_CADASTRO_MASSA_RECOLHIDO, !atual)
+                                )
+                            }
+                            className="inline-flex items-center justify-center gap-2 rounded-2xl bg-slate-950 px-4 py-2 text-xs font-black text-white shadow-sm hover:bg-slate-800"
+                        >
+                            {cadastroMassaRecolhido ? <ChevronDown className="h-4 w-4" /> : <ChevronUp className="h-4 w-4" />}
+                            {cadastroMassaRecolhido ? "Abrir importações" : "Recolher importações"}
+                        </button>
+                    </div>
+
+                    {!cadastroMassaRecolhido && (
+                        <div className="space-y-4">
+                            <ImportacaoMassaColaboradores
+                                colaboradores={colaboradores}
+                                empresasBanco={empresasBanco}
+                                podeCadastrar={podeCadastrarColaboradoresSistema}
+                                mensagemBloqueio={mensagemBloqueioCadastroColaboradores}
+                                onImportar={importarColaboradoresEmMassa}
+                                importando={importandoMassa}
+                            />
+
+                            <ImportacaoFotosMassaColaboradores
+                                colaboradores={colaboradores}
+                                podeEnviar={podeUploadColaboradoresSistema && podeEditarColaboradoresSistema}
+                                mensagemBloqueio={
+                                    !podeUploadColaboradoresSistema
+                                        ? mensagemBloqueioUploadColaboradores
+                                        : mensagemBloqueioEdicaoColaboradores
+                                }
+                                onEnviarFotos={enviarFotosColaboradoresEmMassa}
+                                enviando={importandoFotosMassa}
+                            />
+                        </div>
+                    )}
+                </Card>
 
                 <Card className={`colaboradores-info-card ${informacoesColaboradoresRecolhidas ? "colaboradores-info-card-recolhido" : ""}`}>
                     <div className={`flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between ${informacoesColaboradoresRecolhidas ? "mb-0 border-b-0 pb-0" : "mb-5 border-b border-slate-100 pb-4"}`}>
@@ -1090,6 +1169,17 @@ ${erros.slice(0, 8).join("\n")}`
                                 {STATUS_CLASSIFICACAO_COLABORADOR.map((status) => (
                                     <option key={status} value={status}>{status}</option>
                                 ))}
+                            </select>
+                        </div>
+
+                        <div className="relative min-w-56">
+                            <select
+                                value={ordenacaoFuncionarios}
+                                onChange={(e) => setOrdenacaoFuncionarios(e.target.value)}
+                                className="w-full appearance-none rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none focus:border-slate-400 focus:ring-4 focus:ring-slate-100"
+                            >
+                                <option value="nome_az">Nome A-Z</option>
+                                <option value="nome_za">Nome Z-A</option>
                             </select>
                         </div>
                     </div>
@@ -1266,7 +1356,7 @@ ${erros.slice(0, 8).join("\n")}`
                                                 <div className="flex items-start gap-4 lg:pt-1">
                                                     <button
                                                         onClick={() => onSelectColab(c)}
-                                                        className="flex h-20 w-20 shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-slate-100 text-slate-700 transition group-hover:bg-slate-950 group-hover:text-white"
+                                                        className="flex h-20 w-20 shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-slate-100 text-slate-700 ring-1 ring-slate-200 shadow-sm transition group-hover:ring-slate-300"
                                                     >
                                                         <FotoColaborador
                                                             src={c}
@@ -1275,6 +1365,7 @@ ${erros.slice(0, 8).join("\n")}`
                                                             nome={c.nome}
                                                             className="h-full w-full rounded-2xl"
                                                             iconClassName="h-8 w-8"
+                                                            imageStyle={{ objectFit: "contain", objectPosition: "center center" }}
                                                         />
                                                     </button>
 

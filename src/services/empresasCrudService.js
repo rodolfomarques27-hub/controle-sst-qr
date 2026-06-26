@@ -207,6 +207,25 @@ export async function obterOuCriarEmpresaCrud({ supabase, nomeEmpresa, empresasB
         };
     }
 
+    const { data: existenteBanco, error: erroConsultaBanco } = await supabase
+        .from("empresas")
+        .select(EMPRESA_SELECT)
+        .ilike("nome", nomeTratado)
+        .order("created_at", { ascending: true })
+        .limit(1)
+        .maybeSingle();
+
+    if (erroConsultaBanco) {
+        throw new Error(`Erro ao consultar empresa existente: ${erroConsultaBanco.message}`);
+    }
+
+    if (existenteBanco) {
+        return {
+            empresa: existenteBanco,
+            criada: false,
+        };
+    }
+
     const { data, error } = await supabase
         .from("empresas")
         .insert({

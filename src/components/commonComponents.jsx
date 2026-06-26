@@ -1,4 +1,4 @@
-﻿import React, { useEffect, useState } from "react";
+import React, { useEffect, useState } from "react";
 import { ChevronDown, ChevronUp, Eye, EyeOff, Lock, UserRound } from "lucide-react";
 import { supabase, SUPABASE_ANON_KEY, SUPABASE_URL } from "../lib/supabaseClient";
 import { useStorageUrl } from "../hooks/useStorageUrl";
@@ -90,7 +90,7 @@ function escolherArquivoFotoMaisRecente(arquivos = []) {
     return imagens[0] || (arquivos || []).find((arquivo) => arquivo?.name && !arquivo.name.endsWith("/")) || null;
 }
 
-export function FotoColaborador({ src, colaborador = null, colaboradorId = "", nome, className = "h-12 w-12", iconClassName = "h-5 w-5" }) {
+export function FotoColaborador({ src, colaborador = null, colaboradorId = "", nome, className = "h-12 w-12", iconClassName = "h-5 w-5", imageStyle = null }) {
     const origem = colaborador || src;
     const idParaBusca = obterIdColaboradorFoto(origem, colaboradorId);
     const [erroImagem, setErroImagem] = useState(false);
@@ -154,7 +154,8 @@ export function FotoColaborador({ src, colaborador = null, colaboradorId = "", n
         <img
             src={url}
             alt={`Foto ${nome || "colaborador"}`}
-            className={classNames("shrink-0 object-cover", className)}
+            className={classNames("shrink-0 bg-white object-cover", className)}
+            style={imageStyle || undefined}
             loading="lazy"
             onError={() => setErroImagem(true)}
         />
@@ -173,7 +174,8 @@ export function FotoAuditoriaPreview({ url, label }) {
                     src={urlAssinada}
                     alt={label}
                     className="h-44 w-full bg-slate-100 object-contain"
-                    loading="lazy"
+                    style={imageStyle || undefined}
+            loading="lazy"
                     onError={() => setErro(true)}
                 />
             ) : (

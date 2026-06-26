@@ -566,7 +566,7 @@ export function Aniversariantes({ colaboradores = [], empresasBanco = [] }) {
                                                 <div className="min-w-0">
                                                     <p className="break-words font-bold leading-snug text-slate-950">{colaborador.nome}</p>
                                                     <p className="mt-0.5 text-xs font-medium text-slate-500">
-                                                        {obterIniciais(colaborador.nome)} • {obterNomeMes(mesAniversarioColaborador(colaborador))}
+                                                        Aniversário em {obterNomeMes(mesAniversarioColaborador(colaborador))}
                                                     </p>
                                                 </div>
                                             </div>

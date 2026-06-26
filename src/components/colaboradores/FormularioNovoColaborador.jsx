@@ -130,7 +130,15 @@ function formatarTelefoneColaboradorCampo(valor = "") {
     return `(${digitos.slice(0, 2)}) ${digitos.slice(2, 7)}-${digitos.slice(7, 11)}`;
 }
 function formatarDataColaboradorCampo(valor = "") {
-    const digitos = String(valor || "").replace(/\D/g, "").slice(0, 8);
+    const texto = String(valor || "").trim();
+    const iso = texto.match(/^(\d{4})-(\d{2})-(\d{2})/);
+
+    if (iso) {
+        const [, ano, mes, dia] = iso;
+        return `${dia}/${mes}/${ano}`;
+    }
+
+    const digitos = texto.replace(/\D/g, "").slice(0, 8);
 
     if (digitos.length <= 2) return digitos;
     if (digitos.length <= 4) return `${digitos.slice(0, 2)}/${digitos.slice(2)}`;
@@ -213,7 +221,7 @@ export function FormularioNovoColaborador({
                 <CampoTexto
                     label="Data de nascimento"
                     type="text"
-                    value={novo.dataNascimento}
+                    value={formatarDataColaboradorCampo(novo.dataNascimento)}
                     placeholder="dd/mm/aaaa"
                     onChange={(valor) => alterarCampo("dataNascimento", formatarDataColaboradorCampo(valor))}
                     inputClassName="text-center"
@@ -252,7 +260,7 @@ export function FormularioNovoColaborador({
                 <CampoTexto
                     label="Data de admissão (opcional)"
                     type="text"
-                    value={novo.dataAdmissao}
+                    value={formatarDataColaboradorCampo(novo.dataAdmissao)}
                     placeholder="dd/mm/aaaa"
                     onChange={(valor) => alterarCampo("dataAdmissao", formatarDataColaboradorCampo(valor))}
                     inputClassName="text-center"

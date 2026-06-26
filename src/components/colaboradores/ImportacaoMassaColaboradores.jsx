@@ -283,8 +283,7 @@ function prepararLinhaImportacao(linha = {}, cpfsArquivo = new Map(), cpfsExiste
     const erros = [];
 
     if (!String(linha.nome || "").trim()) erros.push("nome obrigatório");
-    if (!String(linha.empresa_terceirizada || "").trim()) erros.push("empresa terceirizada obrigatória");
-    if (!String(linha.funcao || "").trim()) erros.push("função obrigatória");
+if (!String(linha.funcao || "").trim()) erros.push("função obrigatória");
 
     if (cpf && apenasDigitos(cpf).length !== 11) erros.push("CPF incompleto");
     if (telefone && ![10, 11].includes(apenasDigitos(telefone).length)) erros.push("telefone principal incompleto");
@@ -368,6 +367,7 @@ function baixarModeloCsv() {
 
 export function ImportacaoMassaColaboradores({
     colaboradores = [],
+    empresasBanco = [],
     podeCadastrar = true,
     mensagemBloqueio = "Sem permissão para cadastrar colaboradores.",
     onImportar,
@@ -378,6 +378,7 @@ export function ImportacaoMassaColaboradores({
     const [linhas, setLinhas] = useState([]);
     const [erroLeitura, setErroLeitura] = useState("");
     const [resultado, setResultado] = useState(null);
+    const [empresaSelecionadaId, setEmpresaSelecionadaId] = useState("");
 
     const cpfsExistentes = useMemo(() => {
         return new Set(
@@ -386,6 +387,40 @@ export function ImportacaoMassaColaboradores({
                 .filter(Boolean)
         );
     }, [colaboradores]);
+
+    const empresasDisponiveis = useMemo(() => {
+        const mapa = new Map();
+
+        const adicionarEmpresa = (empresa) => {
+            const id = String(empresa?.id || empresa?.empresaId || empresa?.empresa_id || "").trim();
+            const nome = String(empresa?.nome || empresa?.empresa || empresa?.empresaNome || empresa?.empresa_nome || "").trim();
+
+            if (!id || !nome) return;
+
+            mapa.set(id, {
+                id,
+                nome,
+            });
+        };
+
+        (empresasBanco || []).forEach(adicionarEmpresa);
+
+        if (mapa.size === 0) {
+            (colaboradores || []).forEach((colaborador) => {
+                adicionarEmpresa({
+                    id: colaborador.empresaId || colaborador.empresa_id,
+                    nome: colaborador.empresa || colaborador.empresaNome || colaborador.empresa_nome,
+                });
+            });
+        }
+
+        return Array.from(mapa.values())
+            .sort((a, b) => String(a.nome || "").localeCompare(String(b.nome || ""), "pt-BR"));
+    }, [empresasBanco, colaboradores]);
+
+    const empresaSelecionada = useMemo(() => {
+        return empresasDisponiveis.find((empresa) => String(empresa.id) === String(empresaSelecionadaId)) || null;
+    }, [empresasDisponiveis, empresaSelecionadaId]);
 
     const resumo = useMemo(() => {
         const validos = linhas.filter((linha) => linha.valido).length;
@@ -453,7 +488,18 @@ export function ImportacaoMassaColaboradores({
             return;
         }
 
-        const resposta = await onImportar?.(validos);
+        if (!empresaSelecionada) {
+            if (typeof window !== "undefined") window.alert("Selecione a empresa do lote antes de importar.");
+            return;
+        }
+
+        const validosComEmpresa = validos.map((linha) => ({
+            ...linha,
+            empresaId: empresaSelecionada.id,
+            empresaNome: empresaSelecionada.nome,
+        }));
+
+        const resposta = await onImportar?.(validosComEmpresa);
 
         setResultado(resposta || null);
     };
@@ -496,8 +542,7 @@ export function ImportacaoMassaColaboradores({
                     </button>
                 </div>
             </div>
-
-            <input
+<input
                 ref={inputRef}
                 type="file"
                 accept=".csv,text/csv,.txt"
@@ -506,19 +551,43 @@ export function ImportacaoMassaColaboradores({
             />
 
             {arquivoNome && (
-                <div className="mt-4 flex flex-col gap-3 rounded-2xl bg-slate-50 p-3 text-sm text-slate-600 ring-1 ring-slate-200 sm:flex-row sm:items-center sm:justify-between">
-                    <span className="truncate">
-                        <strong>Arquivo:</strong> {arquivoNome}
-                    </span>
-                    <button
-                        type="button"
-                        onClick={limpar}
-                        className="inline-flex items-center justify-center gap-2 rounded-xl bg-white px-3 py-2 text-xs font-black text-slate-700 ring-1 ring-slate-200 hover:bg-slate-50"
-                    >
-                        <X className="h-3.5 w-3.5" />
-                        Limpar
-                    </button>
-                </div>
+                <>
+                    <div className="mt-4 flex flex-col gap-3 rounded-2xl bg-slate-50 p-3 text-sm text-slate-600 ring-1 ring-slate-200 sm:flex-row sm:items-center sm:justify-between">
+                        <span className="truncate">
+                            <strong>Arquivo:</strong> {arquivoNome}
+                        </span>
+                        <button
+                            type="button"
+                            onClick={limpar}
+                            className="inline-flex items-center justify-center gap-2 rounded-xl bg-white px-3 py-2 text-xs font-black text-slate-700 ring-1 ring-slate-200 hover:bg-slate-50"
+                        >
+                            <X className="h-3.5 w-3.5" />
+                            Limpar
+                        </button>
+                    </div>
+
+                    <div className="mt-4 rounded-2xl bg-slate-50 p-4 ring-1 ring-slate-200">
+                        <label className="block text-xs font-black uppercase tracking-wide text-blue-700">
+                            EMPRESA DO LOTE
+                        </label>
+                        <select
+                            value={empresaSelecionadaId}
+                            onChange={(e) => setEmpresaSelecionadaId(e.target.value)}
+                            disabled={!podeCadastrar || importando || empresasDisponiveis.length === 0}
+                            className="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 outline-none transition focus:border-blue-400 focus:ring-2 focus:ring-blue-100 disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-400"
+                        >
+                            <option value="">Selecione a empresa cadastrada</option>
+                            {empresasDisponiveis.map((empresa) => (
+                                <option key={empresa.id} value={empresa.id}>
+                                    {empresa.nome}
+                                </option>
+                            ))}
+                        </select>
+                        <p className="mt-2 text-xs font-semibold text-slate-500">
+                            Todos os colaboradores válidos serão vinculados à empresa selecionada. A empresa escrita na planilha não cria cadastro automaticamente.
+                        </p>
+                    </div>
+                </>
             )}
 
             {erroLeitura && (
@@ -577,7 +646,7 @@ export function ImportacaoMassaColaboradores({
                                                 </span>
                                             </td>
                                             <td className="px-3 py-2 font-semibold text-slate-800">{linha.nome || "-"}</td>
-                                            <td className="px-3 py-2 text-slate-600">{linha.empresaNome || "-"}</td>
+                                            <td className="px-3 py-2 text-slate-600">{empresaSelecionada?.nome || linha.empresaNome || "-"}</td>
                                             <td className="px-3 py-2 text-slate-600">{linha.funcao || "-"}</td>
                                             <td className="px-3 py-2 text-slate-600">{linha.cpf || "-"}</td>
                                             <td className="px-3 py-2 text-red-700">{linha.erros.join("; ") || "-"}</td>
@@ -605,7 +674,7 @@ export function ImportacaoMassaColaboradores({
                         <button
                             type="button"
                             onClick={importar}
-                            disabled={!podeCadastrar || importando || resumo.validos === 0}
+                            disabled={!podeCadastrar || importando || resumo.validos === 0 || !empresaSelecionada}
                             title={podeCadastrar ? "Cadastrar linhas válidas" : mensagemBloqueio}
                             className="inline-flex items-center justify-center gap-2 rounded-2xl bg-blue-700 px-5 py-3 text-sm font-black text-white shadow-sm hover:bg-blue-800 disabled:cursor-not-allowed disabled:opacity-50"
                         >
