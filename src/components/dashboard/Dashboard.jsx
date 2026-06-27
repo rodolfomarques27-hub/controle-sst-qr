@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import { supabase } from "../../lib/supabaseClient";
 import { Header } from "../commonComponents";
+import dashboardHeroBackground from "../../assets/dashboard-hero-sst.png";
 import { calcularUsoStorageRealSistema } from "../../services/storageSegurancaService";
 import { DashboardBlocosGrid } from "./DashboardBlocosGrid";
 import { DashboardHeaderAcoes } from "./DashboardHeaderAcoes";
@@ -78,11 +79,59 @@ import {
 const CACHE_USO_STORAGE_DASHBOARD = "dashboardSstUsoStorageResumo";
 const hoje = new Date();
 
+function obterDataHeroDashboard(data = new Date()) {
+    return new Intl.DateTimeFormat("pt-BR", {
+        day: "2-digit",
+        month: "long",
+        year: "numeric",
+    }).format(data);
+}
+
+function obterDiaSemanaHeroDashboard(data = new Date()) {
+    return new Intl.DateTimeFormat("pt-BR", {
+        weekday: "long",
+    }).format(data);
+}
+
+function obterHoraHeroDashboard(data = new Date()) {
+    return new Intl.DateTimeFormat("pt-BR", {
+        hour: "2-digit",
+        minute: "2-digit",
+    }).format(data);
+}
+
+function obterPrimeiroNomeUsuarioHeroDashboard(usuario = null) {
+    const email = String(usuario?.email || "").trim();
+    const nomeCompleto = String(
+        usuario?.nome
+        || usuario?.name
+        || usuario?.displayName
+        || usuario?.user_metadata?.nome
+        || usuario?.user_metadata?.name
+        || ""
+    ).trim();
+
+    const origem = nomeCompleto || (email.includes("@") ? email.split("@")[0] : "");
+    const origemLimpa = origem
+        .replace(/\d+/g, "")
+        .replace(/[._-]+/g, " ")
+        .trim();
+
+    if (/^rodolfo/i.test(origemLimpa)) return "Rodolfo";
+
+    const primeiroNome = origemLimpa.split(/\s+/).filter(Boolean)[0] || "";
+
+    return primeiroNome
+        ? primeiroNome.charAt(0).toUpperCase() + primeiroNome.slice(1).toLowerCase()
+        : "usuário";
+}
+
 function emailTstDaEmpresa(colaborador) {
     return normalizarEmailDestinatario(colaborador?.empresaTstEmail || "");
 }
 
 export function Dashboard({
+    usuario = null,
     colaboradores = [],
     empresasBanco = [],
     documentosEmpresas = [],
@@ -93,6 +142,12 @@ export function Dashboard({
     onAtualizarInformacoes,
     atualizandoInformacoes = false,
 }) {
+    const dataHoraHeroDashboard = useMemo(() => new Date(), []);
+    const dataHeroDashboard = useMemo(() => obterDataHeroDashboard(dataHoraHeroDashboard), [dataHoraHeroDashboard]);
+    const diaSemanaHeroDashboard = useMemo(() => obterDiaSemanaHeroDashboard(dataHoraHeroDashboard), [dataHoraHeroDashboard]);
+    const horaHeroDashboard = useMemo(() => obterHoraHeroDashboard(dataHoraHeroDashboard), [dataHoraHeroDashboard]);
+    const nomeUsuarioHeroDashboard = useMemo(() => obterPrimeiroNomeUsuarioHeroDashboard(usuario), [usuario]);
+
     const [enviandoEmail, setEnviandoEmail] = useState(false);
     const [atualizandoInformacoesLocais, setAtualizandoInformacoesLocais] = useState(false);
     const [usoStorageDashboard, setUsoStorageDashboard] = useState(() => {
@@ -763,7 +818,6 @@ export function Dashboard({
         <div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
             <Header
                 titulo="Dashboard SST"
-                subtitulo="Visão executiva dos colaboradores, empresas, documentos, treinamentos, auditoria e armazenamento."
                 acao={
                     <div className="top-actions-nowrap dashboard-sst-actions-horizontal">
                         <button
@@ -788,6 +842,43 @@ export function Dashboard({
                 }
             />
 
+            <section className="relative mb-6 overflow-hidden rounded-[22px] border border-[#E5E9EF] bg-[#111827] shadow-[0_10px_28px_rgba(26,35,50,0.12)]">
+                <div
+                    className="absolute inset-0 bg-cover bg-center bg-no-repeat opacity-100"
+                    style={{
+                        backgroundImage: `url(${dashboardHeroBackground})`,
+                        backgroundPosition: "center center",
+                        backgroundSize: "cover",
+                    }}
+                />
+                <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(17,24,39,0.34)_0%,rgba(17,24,39,0.22)_34%,rgba(17,24,39,0.08)_68%,rgba(17,24,39,0.06)_100%)]" />
+
+                <div className="relative flex min-h-[155px] flex-col justify-between gap-5 px-6 py-6 text-white lg:flex-row lg:items-center">
+                    <div className="min-w-0" style={{ textShadow: "0 2px 10px rgba(0,0,0,0.65)" }}>
+                        <p className="text-xs font-black uppercase tracking-[0.22em] text-emerald-300">
+                            SafeScan Brasil
+                        </p>
+                        <h2 className="mt-2 text-xl font-black leading-tight text-white md:text-2xl">
+                            Olá, <span className="text-emerald-300">{nomeUsuarioHeroDashboard}</span>!
+                        </h2>
+                        <p className="mt-2 text-base font-bold text-slate-200 md:text-lg">
+                            Bem-vindo ao painel SST.
+                        </p>
+                        <div className="mt-5 h-1 w-14 rounded-full bg-[#1E7C3A]" />
+                    </div>
+
+                    <div className="rounded-2xl border border-white/10 bg-black/35 px-4 py-3 text-sm font-black text-white shadow-[0_8px_24px_rgba(0,0,0,0.22)] backdrop-blur">
+                        <div className="flex flex-wrap items-center gap-2">
+                            <CalendarClock className="h-4 w-4 text-emerald-300" />
+                            <span>{dataHeroDashboard}</span>
+                            <span className="text-emerald-300">•</span>
+                            <span className="capitalize">{diaSemanaHeroDashboard}</span>
+                            <span className="text-emerald-300">•</span>
+                            <span>{horaHeroDashboard}</span>
+                        </div>
+                    </div>
+                </div>
+            </section>
             <DashboardControles
                 mostrarFiltroPainel={mostrarFiltroPainel}
                 abaPersonalizacaoPainel={abaPersonalizacaoPainel}

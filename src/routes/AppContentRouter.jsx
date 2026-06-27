@@ -724,6 +724,7 @@ export function AppContentRouter({
         <React.Suspense fallback={null}>
             {tela === "dashboard" && (
                 <Dashboard
+                            usuario={usuario}
                     colaboradores={colaboradores}
                     empresasBanco={empresasBanco}
                     documentosEmpresas={documentosEmpresas}
