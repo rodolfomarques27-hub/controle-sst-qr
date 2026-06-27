@@ -679,16 +679,16 @@ export function Dashboard({
                         data-dashboard-storage-card={ehArmazenamento ? "true" : undefined}
                         data-dashboard-storage-level={ehArmazenamento ? (storagePercentual >= 90 ? "critico" : storagePercentual >= 70 ? "atencao" : "normal") : undefined}
                         style={ehArmazenamento ? { "--storage-percent": `${storagePercentual}%` } : undefined}
-                        className={`dashboard-summary-card rounded-3xl bg-white p-4 shadow-sm ring-1 ring-slate-200 transition hover:shadow-md ${obterClasseTamanhoCartaDashboard(item.chave)}`}
+                        className={`dashboard-summary-card rounded-[18px] border border-[#E5E9EF] bg-white p-4 shadow-[0_8px_22px_rgba(26,35,50,0.06)] transition duration-200 hover:-translate-y-0.5 hover:border-[#D8DEE8] hover:shadow-[0_12px_28px_rgba(26,35,50,0.10)] ${obterClasseTamanhoCartaDashboard(item.chave)}`}
                     >
                         <div className="flex items-start gap-3">
-                            <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl ring-1 ${estilos.icone || "bg-slate-50 text-slate-600 ring-slate-100"}`}>
+                            <div className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl shadow-sm ring-1 ${estilos.icone || "bg-[#F4F6F9] text-[#1A2332] ring-[#E5E9EF]"}`}>
                                 <Icon className="h-5 w-5" />
                             </div>
 
                             <div className="min-w-0 flex-1">
                                 <div className="flex min-w-0 items-start justify-between gap-2">
-                                    <h3 className="break-words text-sm font-black leading-snug text-slate-950">
+                                    <h3 className="break-words text-[0.82rem] font-black leading-snug text-[#1A2332]">
                                         {item.label}
                                     </h3>
 
@@ -699,17 +699,17 @@ export function Dashboard({
                                             disabled={carregandoStorageDashboard}
                                             title="Atualizar armazenamento"
                                             data-storage-extra-icon="true"
-                                            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200 hover:bg-emerald-100 disabled:opacity-60"
+                                            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-[#E8F5EC] text-[#1E7C3A] ring-1 ring-[#CDE8D5] transition hover:bg-[#DDF0E4] disabled:opacity-60"
                                         >
                                             <Upload className="h-4 w-4" />
                                         </button>
                                     )}
                                 </div>
 
-                                <p className={`mt-3 border-b border-slate-100 pb-2 font-black leading-none ${obterClasseValorCartaDashboard(item.chave)} ${estilos.valor || "text-slate-950"}`}>
+                                <p className={`mt-3 border-b border-[#EEF2F6] pb-2 font-black leading-none tracking-tight ${obterClasseValorCartaDashboard(item.chave)} ${estilos.valor || "text-[#1A2332]"}`}>
                                     {item.valor}
                                 </p>
-                                <p className="mt-2 text-xs font-medium text-slate-500">{item.detalhe}</p>
+                                <p className="mt-2 text-xs font-semibold leading-snug text-[#6B7A8D]">{item.detalhe}</p>
                             </div>
                         </div>
                     </div>
