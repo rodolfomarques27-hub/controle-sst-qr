@@ -253,9 +253,9 @@ export function AppLayout({
     }, [tela]);
 
     return (
-        <div className="min-h-screen bg-slate-100 text-slate-900">
+        <div className="min-h-screen bg-[#F4F6F9] text-slate-900">
             <div
-                className="app-shell flex min-h-screen"
+                className="app-shell flex min-h-screen w-full bg-[#F4F6F9]"
                 data-sidebar-open={menuLateralAberto ? "true" : "false"}
             >
                 <AppSidebar
@@ -268,8 +268,8 @@ export function AppLayout({
                     onSelecionarTela={selecionarTelaComPermissao}
                 />
 
-                <main className="app-main">
-                    <div className="app-content">
+                <main className="app-main flex min-w-0 flex-1 bg-[#F4F6F9]">
+                    <div className="app-content min-w-0 flex-1 bg-[#F4F6F9]">
                         <AppMobileHeader
                             nav={navPermitida}
                             tela={tela}

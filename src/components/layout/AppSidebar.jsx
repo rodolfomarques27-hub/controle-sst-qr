@@ -74,28 +74,28 @@ export function AppSidebar({
             onMouseEnter={abrirTemporariamente}
             onMouseLeave={fecharTemporariamente}
             className={classNames(
-                "app-sidebar hidden h-screen max-h-screen overflow-hidden border-r border-slate-200 bg-white transition-all duration-300 lg:flex lg:flex-col",
-                menuExpandido ? "w-72 p-4" : "w-20 p-3"
+                "app-sidebar hidden h-screen max-h-screen overflow-hidden border-r border-[#253247] bg-[#1A2332] text-[#A8B8C8] transition-all duration-300 lg:flex lg:flex-col",
+                menuExpandido ? "w-[264px] p-4" : "w-16 p-3"
             )}
         >
             <div
                 className={classNames(
-                    "app-sidebar-brand flex items-center bg-slate-950 text-white shadow-sm",
+                    "app-sidebar-brand flex items-center bg-[#101827] text-white shadow-sm",
                     menuExpandido ? "gap-3 rounded-3xl p-3" : "mx-auto h-12 w-12 justify-center rounded-2xl p-0"
                 )}
             >
                 <div
                     className={classNames(
                         "app-sidebar-brand-icon flex shrink-0 items-center justify-center rounded-2xl",
-                        menuExpandido ? "h-10 w-10 bg-white/10" : "h-12 w-12 bg-transparent"
+                        menuExpandido ? "h-10 w-10 bg-[#1E7C3A]" : "h-12 w-12 bg-transparent"
                     )}
                 >
                     <ShieldCheck className={classNames("shrink-0", menuExpandido ? "h-5 w-5" : "h-5 w-5")} />
                 </div>
                 {menuExpandido && (
                     <div className="min-w-0 flex-1">
-                        <h1 className="truncate font-bold">Controle SST QR</h1>
-                        <p className="truncate text-xs text-slate-300">Treinamentos · Terceiros</p>
+                        <h1 className="truncate font-bold">SafeScan Brasil</h1>
+                        <p className="truncate text-xs text-[#A8B8C8]">Controle de SST</p>
                     </div>
                 )}
             </div>
@@ -104,12 +104,12 @@ export function AppSidebar({
                 type="button"
                 onClick={alternarMenuFixo}
                 className={classNames(
-                    "app-sidebar-toggle mt-2 flex items-center justify-center gap-2 rounded-2xl bg-slate-50 px-3 py-1.5 text-xs font-semibold text-slate-600 ring-1 ring-slate-200 hover:bg-slate-100",
+                    "app-sidebar-toggle mt-2 flex items-center justify-center gap-2 rounded-2xl bg-white/5 px-3 py-1.5 text-xs font-semibold text-[#A8B8C8] ring-1 ring-white/10 hover:bg-white/10 hover:text-white",
                     menuExpandido ? "w-full" : "mx-auto h-10 w-10 px-0"
                 )}
-                title={menuLateralAberto ? "Fixar menu recolhido" : "Fixar menu aberto"}
+                title={menuLateralAberto ? "Recolher menu" : "Fixar menu"}
             >
-                <span className="text-base leading-none">{menuExpandido ? "‹" : "›"}</span>
+                <span className="text-base leading-none">{menuExpandido ? "<" : ">"}</span>
                 {menuExpandido && <span>{menuLateralAberto ? "Ocultar menu" : "Fixar menu"}</span>}
             </button>
 
@@ -124,11 +124,11 @@ export function AppSidebar({
                         key={grupo.titulo}
                         className={classNames(
                             "app-sidebar-nav-group",
-                            indiceGrupo > 0 && (menuExpandido ? "mt-4 border-t border-slate-200 pt-3" : "mt-3 border-t border-slate-200 pt-3")
+                            indiceGrupo > 0 && (menuExpandido ? "mt-4 border-t border-white/10 pt-3" : "mt-3 border-t border-white/10 pt-3")
                         )}
                     >
                         {menuExpandido && (
-                            <p className="mb-2 px-3 text-[10px] font-black uppercase tracking-[0.18em] text-slate-400">
+                            <p className="mb-2 px-3 text-[10px] font-black uppercase tracking-[0.18em] text-[#7E8EA3]">
                                 {grupo.titulo}
                             </p>
                         )}
@@ -145,10 +145,10 @@ export function AppSidebar({
                                             "app-sidebar-nav-button flex items-center rounded-2xl text-left text-sm font-medium transition",
                                             menuExpandido ? "w-full gap-3 px-3 py-2" : "h-10 w-10 justify-center p-0",
                                             tela === item.id
-                                                ? "bg-slate-950 text-white shadow-sm"
-                                                : "text-slate-600 hover:bg-slate-100 hover:text-slate-950"
+                                                ? "bg-[#1E7C3A] text-white shadow-sm"
+                                                : "text-[#A8B8C8] hover:bg-white/5 hover:text-white"
                                         )}
-                                        title={!menuExpandido ? `${grupo.titulo} · ${item.label}` : undefined}
+                                        title={!menuExpandido ? `${grupo.titulo} - ${item.label}` : undefined}
                                     >
                                         <Icon className="app-sidebar-nav-icon h-4 w-4 shrink-0" />
                                         {menuExpandido && <span className="truncate">{item.label}</span>}
@@ -161,7 +161,7 @@ export function AppSidebar({
             </nav>
 
             {menuExpandido ? (
-                <div className="app-sidebar-user mt-3 rounded-3xl bg-slate-50 p-3 ring-1 ring-slate-100">
+                <div className="app-sidebar-user mt-3 rounded-3xl bg-[#101827] p-3 text-white ring-1 ring-white/10">
                     <button
                         type="button"
                         onClick={() => setUsuarioLogadoAberto((valor) => !valor)}
@@ -169,16 +169,16 @@ export function AppSidebar({
                         aria-expanded={usuarioLogadoAberto}
                     >
                         <div className="min-w-0 flex-1">
-                            <p className="text-[0.65rem] font-bold uppercase tracking-[0.18em] text-slate-400">Usuário logado</p>
-                            <p className="mt-1 truncate text-sm font-bold leading-5 text-slate-950" title={nomeUsuario}>
+                            <p className="text-[0.65rem] font-bold uppercase tracking-[0.18em] text-[#7E8EA3]">Usuário logado</p>
+                            <p className="mt-1 truncate text-sm font-bold leading-5 text-white" title={nomeUsuario}>
                                 {nomeUsuario}
                             </p>
-                            <p className="truncate text-[0.7rem] font-semibold leading-4 text-slate-500" title={perfilUsuario}>
+                            <p className="truncate text-[0.7rem] font-semibold leading-4 text-[#A8B8C8]" title={perfilUsuario}>
                                 {perfilUsuario}
                             </p>
                         </div>
 
-                        <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-2xl bg-white text-slate-500 ring-1 ring-slate-200 transition hover:bg-slate-100">
+                        <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-2xl bg-white/5 text-[#A8B8C8] ring-1 ring-white/10 transition hover:bg-white/10 hover:text-white">
                             <ChevronDown
                                 className={classNames(
                                     "h-4 w-4 transition-transform duration-200",
@@ -189,24 +189,24 @@ export function AppSidebar({
                     </button>
 
                     {usuarioLogadoAberto && (
-                        <div className="mt-3 min-w-0 space-y-1.5 border-t border-slate-200 pt-3">
+                        <div className="mt-3 min-w-0 space-y-1.5 border-t border-white/10 pt-3">
                             <div>
-                                <p className="text-[0.65rem] font-semibold uppercase tracking-wide text-slate-400">Função</p>
-                                <p className="truncate text-xs font-semibold leading-5 text-slate-600" title={funcaoUsuario}>
+                                <p className="text-[0.65rem] font-semibold uppercase tracking-wide text-[#7E8EA3]">Função</p>
+                                <p className="truncate text-xs font-semibold leading-5 text-[#A8B8C8]" title={funcaoUsuario}>
                                     {funcaoUsuario}
                                 </p>
                             </div>
 
                             <div>
-                                <p className="text-[0.65rem] font-semibold uppercase tracking-wide text-slate-400">Perfil</p>
-                                <p className="truncate text-xs font-bold leading-5 text-slate-950" title={perfilUsuario}>
+                                <p className="text-[0.65rem] font-semibold uppercase tracking-wide text-[#7E8EA3]">Perfil</p>
+                                <p className="truncate text-xs font-bold leading-5 text-white" title={perfilUsuario}>
                                     {perfilUsuario}
                                 </p>
                             </div>
 
                             <div>
-                                <p className="text-[0.65rem] font-semibold uppercase tracking-wide text-slate-400">E-mail</p>
-                                <p className="truncate text-[0.72rem] font-semibold leading-4 text-slate-700" title={emailUsuario}>
+                                <p className="text-[0.65rem] font-semibold uppercase tracking-wide text-[#7E8EA3]">E-mail</p>
+                                <p className="truncate text-[0.72rem] font-semibold leading-4 text-[#A8B8C8]" title={emailUsuario}>
                                     {emailUsuario}
                                 </p>
                             </div>
@@ -216,8 +216,8 @@ export function AppSidebar({
             ) : (
                 <div className="app-sidebar-user-compact mt-4 flex justify-center">
                     <span
-                        className="inline-flex h-10 w-10 items-center justify-center rounded-2xl bg-slate-50 text-[0.6rem] font-bold uppercase tracking-wide text-slate-500 ring-1 ring-slate-200"
-                        title={`${nomeUsuario} · ${perfilUsuario} · ${emailUsuario}`}
+                        className="inline-flex h-10 w-10 items-center justify-center rounded-2xl bg-white/5 text-[0.6rem] font-bold uppercase tracking-wide text-[#A8B8C8] ring-1 ring-white/10"
+                        title={`${nomeUsuario} - ${perfilUsuario} - ${emailUsuario}`}
                     >
                         User
                     </span>
@@ -227,7 +227,7 @@ export function AppSidebar({
             <button
                 onClick={sair}
                 className={classNames(
-                    "app-sidebar-logout shrink-0 rounded-2xl bg-white text-xs font-semibold text-slate-600 ring-1 ring-slate-200 transition hover:bg-slate-100 hover:text-slate-950",
+                    "app-sidebar-logout shrink-0 rounded-2xl bg-white/5 text-xs font-semibold text-[#A8B8C8] ring-1 ring-white/10 transition hover:bg-white/10 hover:text-white",
                     menuExpandido ? "mt-3 w-full px-3 py-2" : "mx-auto mt-3 h-10 w-10 px-0"
                 )}
                 title={`Sair de ${nomeUsuario}`}
