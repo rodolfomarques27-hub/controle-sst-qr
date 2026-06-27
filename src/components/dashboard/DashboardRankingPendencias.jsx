@@ -16,8 +16,8 @@ export function DashboardRankingPendencias({
             titulo="Ranking de pendências por empresa"
             subtitulo="Tabela com tamanho e posição configuráveis no painel. Use Destaque para ocupar a linha inteira."
             badge={(
-                <div className="flex flex-wrap gap-2 text-xs font-semibold">
-                    <span className="rounded-full bg-emerald-50 px-3 py-1 text-emerald-700 ring-1 ring-emerald-200">Regular</span>
+                <div className="flex flex-wrap gap-2 text-xs font-black">
+                    <span className="rounded-full bg-[#E8F5EC] px-3 py-1 text-[#1E7C3A] ring-1 ring-[#CDE8D5]">Regular</span>
                     <span className="rounded-full bg-orange-50 px-3 py-1 text-orange-700 ring-1 ring-orange-200">Atenção</span>
                     <span className="rounded-full bg-red-50 px-3 py-1 text-red-700 ring-1 ring-red-200">Crítico</span>
                 </div>
