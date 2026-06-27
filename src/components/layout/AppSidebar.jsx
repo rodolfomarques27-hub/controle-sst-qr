@@ -42,6 +42,29 @@ export function AppSidebar({
     const nomeUsuario = obterNomeUsuario(usuario, emailUsuario);
     const funcaoUsuario = usuario?.funcao || usuario?.cargo || "Função não informada";
     const perfilUsuario = formatarPerfilUsuario(usuario?.perfil);
+    const fotoUsuario = String(
+        usuario?.fotoUrl
+        || usuario?.foto_url
+        || usuario?.foto
+        || usuario?.avatarUrl
+        || usuario?.avatar_url
+        || usuario?.photoURL
+        || usuario?.picture
+        || usuario?.user_metadata?.avatar_url
+        || usuario?.user_metadata?.picture
+        || usuario?.user_metadata?.photoURL
+        || ""
+    ).trim();
+    const iniciaisUsuario = String(nomeUsuario || emailUsuario || "US")
+        .replace(/@.*/, "")
+        .split(/\s+/)
+        .filter(Boolean)
+        .slice(0, 2)
+        .map((parte) => parte[0] || "")
+        .join("")
+        .padEnd(2, "S")
+        .slice(0, 2)
+        .toUpperCase();
 
     const abrirTemporariamente = () => {
         if (!menuLateralAberto) {
@@ -168,17 +191,30 @@ export function AppSidebar({
                         className="flex w-full items-center justify-between gap-3 text-left"
                         aria-expanded={usuarioLogadoAberto}
                     >
-                        <div className="min-w-0 flex-1">
-                            <p className="text-[0.65rem] font-bold uppercase tracking-[0.18em] text-[#7E8EA3]">Usuário logado</p>
-                            <p className="mt-1 truncate text-sm font-bold leading-5 text-white" title={nomeUsuario}>
-                                {nomeUsuario}
-                            </p>
-                            <p className="truncate text-[0.7rem] font-semibold leading-4 text-[#A8B8C8]" title={perfilUsuario}>
-                                {perfilUsuario}
-                            </p>
+                        <div className="flex min-w-0 flex-1 items-center gap-2">
+                            {fotoUsuario ? (
+                                <img
+                                    src={fotoUsuario}
+                                    alt={nomeUsuario}
+                                    className="h-9 w-9 shrink-0 rounded-full object-cover ring-2 ring-white/15"
+                                />
+                            ) : (
+                                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#1E7C3A] text-[0.68rem] font-black uppercase text-white ring-2 ring-white/15">
+                                    {iniciaisUsuario}
+                                </span>
+                            )}
+
+                            <div className="min-w-0 flex-1">
+                                <p className="truncate text-[0.78rem] font-bold leading-4 text-white" title={nomeUsuario}>
+                                    {nomeUsuario}
+                                </p>
+                                <p className="truncate text-[0.66rem] font-semibold leading-4 text-[#A8B8C8]" title={perfilUsuario}>
+                                    {perfilUsuario}
+                                </p>
+                            </div>
                         </div>
 
-                        <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-2xl bg-white/5 text-[#A8B8C8] ring-1 ring-white/10 transition hover:bg-white/10 hover:text-white">
+                        <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-2xl bg-white/5 text-[#A8B8C8] ring-1 ring-white/10 transition hover:bg-white/10 hover:text-white">
                             <ChevronDown
                                 className={classNames(
                                     "h-4 w-4 transition-transform duration-200",
@@ -215,12 +251,21 @@ export function AppSidebar({
                 </div>
             ) : (
                 <div className="app-sidebar-user-compact mt-4 flex justify-center">
-                    <span
-                        className="inline-flex h-10 w-10 items-center justify-center rounded-2xl bg-white/5 text-[0.6rem] font-bold uppercase tracking-wide text-[#A8B8C8] ring-1 ring-white/10"
-                        title={`${nomeUsuario} - ${perfilUsuario} - ${emailUsuario}`}
-                    >
-                        User
-                    </span>
+                    {fotoUsuario ? (
+                        <img
+                            src={fotoUsuario}
+                            alt={nomeUsuario}
+                            className="h-10 w-10 rounded-full object-cover ring-2 ring-white/15"
+                            title={`${nomeUsuario} - ${perfilUsuario} - ${emailUsuario}`}
+                        />
+                    ) : (
+                        <span
+                            className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-white/5 text-[0.6rem] font-bold uppercase tracking-wide text-[#A8B8C8] ring-1 ring-white/10"
+                            title={`${nomeUsuario} - ${perfilUsuario} - ${emailUsuario}`}
+                        >
+                            {iniciaisUsuario}
+                        </span>
+                    )}
                 </div>
             )}
 
