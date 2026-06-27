@@ -1,7 +1,7 @@
 import React, { useMemo, useState } from "react";
 import { ChevronDown, ChevronsLeft, LogOut, ShieldCheck } from "lucide-react";
 import { classNames } from "../../utils/sstUtils";
-import sidebarBackground from "../../assets/hero.png";
+import sidebarBackground from "../../assets/sidebar-construcao.png";
 
 const PERFIS_USUARIO_LABEL = {
     administrador: "Administrador",
@@ -112,30 +112,35 @@ export function AppSidebar({
                 menuExpandido ? "w-[264px] p-4" : "w-16 p-3"
             )}
             style={{
-                backgroundImage: `linear-gradient(rgba(10, 18, 32, 0.78), rgba(8, 13, 23, 0.92)), url(${sidebarBackground})`,
+                backgroundImage: `linear-gradient(180deg, rgba(3, 8, 16, 0.86) 0%, rgba(5, 10, 18, 0.78) 42%, rgba(3, 6, 12, 0.94) 100%), linear-gradient(90deg, rgba(3, 8, 16, 0.92) 0%, rgba(3, 8, 16, 0.70) 62%, rgba(3, 8, 16, 0.42) 100%), url(${sidebarBackground})`,
                 backgroundSize: "cover",
-                backgroundPosition: "center",
+                backgroundPosition: "center top",
+                textShadow: "0 1px 2px rgba(0, 0, 0, 0.72)",
             }}
         >
             <div
                 className={classNames(
-                    "app-sidebar-brand flex items-center bg-[#101827]/90 text-white shadow-sm ring-1 ring-white/10",
-                    menuExpandido ? "gap-3 rounded-3xl p-3" : "mx-auto h-12 w-12 justify-center rounded-2xl p-0"
+                    "app-sidebar-brand flex min-w-0 items-center text-white",
+                    menuExpandido ? "w-full gap-2 px-0 py-1" : "mx-auto h-12 w-12 justify-center p-0"
                 )}
             >
                 <div
                     className={classNames(
-                        "app-sidebar-brand-icon flex shrink-0 items-center justify-center rounded-2xl",
-                        menuExpandido ? "h-10 w-10 bg-[#1E7C3A]" : "h-12 w-12 bg-transparent"
+                        "app-sidebar-brand-icon flex shrink-0 items-center justify-center rounded-2xl bg-[#1E7C3A] shadow-sm shadow-black/30",
+                        menuExpandido ? "h-9 w-9" : "h-12 w-12"
                     )}
                 >
                     <ShieldCheck className={classNames("shrink-0", menuExpandido ? "h-5 w-5" : "h-5 w-5")} />
                 </div>
 
                 {menuExpandido && (
-                    <div className="min-w-0 flex-1">
-                        <h1 className="truncate font-bold">SafeScan Brasil</h1>
-                        <p className="truncate text-xs text-[#A8B8C8]">Controle de SST</p>
+                    <div className="min-w-0 flex-1 overflow-hidden">
+                        <h1 className="truncate text-[0.78rem] font-black leading-4 text-white drop-shadow" title="SafeScan Brasil">
+                            SafeScan Brasil
+                        </h1>
+                        <p className="truncate text-[0.68rem] font-semibold leading-4 text-[#D7E0EA] drop-shadow" title="Controle de SST">
+                            Controle de SST
+                        </p>
                     </div>
                 )}
             </div>
@@ -164,7 +169,7 @@ export function AppSidebar({
                                 <button
                                     type="button"
                                     onClick={() => alternarGrupo(grupo.titulo)}
-                                    className="mb-2 flex w-full items-center justify-between gap-2 px-3 text-left text-[10px] font-black uppercase tracking-[0.18em] text-[#7E8EA3] transition hover:text-white"
+                                    className="mb-2 flex w-full items-center justify-between gap-2 px-3 text-left text-[10px] font-black uppercase tracking-[0.18em] text-[#B7C4D6] transition hover:text-white"
                                     title={grupoFechado ? `Abrir ${grupo.titulo}` : `Fechar ${grupo.titulo}`}
                                 >
                                     <span>{grupo.titulo}</span>
@@ -187,11 +192,11 @@ export function AppSidebar({
                                                 key={item.id}
                                                 onClick={() => onSelecionarTela(item.id, item.label)}
                                                 className={classNames(
-                                                    "app-sidebar-nav-button flex items-center rounded-2xl text-left text-sm font-medium transition",
+                                                    "app-sidebar-nav-button flex items-center rounded-2xl text-left text-sm font-semibold transition",
                                                     menuExpandido ? "w-full gap-3 px-3 py-2" : "h-10 w-10 justify-center p-0",
                                                     tela === item.id
                                                         ? "bg-[#1E7C3A] text-white shadow-sm"
-                                                        : "text-[#A8B8C8] hover:bg-white/5 hover:text-white"
+                                                        : "text-[#E5ECF5] hover:bg-white/10 hover:text-white"
                                                 )}
                                                 title={!menuExpandido ? `${grupo.titulo} - ${item.label}` : undefined}
                                             >
