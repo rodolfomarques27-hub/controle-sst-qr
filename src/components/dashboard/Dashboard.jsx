@@ -770,7 +770,7 @@ export function Dashboard({
                             type="button"
                             onClick={atualizarInformacoesDashboard}
                             disabled={atualizandoDashboardSstCompleto}
-                            className="inline-flex items-center gap-2 rounded-2xl bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 shadow-sm ring-1 ring-slate-200 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
+                            className="inline-flex items-center gap-2 rounded-2xl border border-[#E5E9EF] bg-white px-4 py-2.5 text-sm font-black text-[#1A2332] shadow-[0_6px_16px_rgba(26,35,50,0.06)] transition hover:-translate-y-0.5 hover:bg-[#F8FAFC] hover:shadow-[0_10px_22px_rgba(26,35,50,0.10)] disabled:cursor-not-allowed disabled:opacity-60"
                             title="Atualizar colaboradores, empresas, documentos, auditorias e armazenamento do Dashboard SST"
                         >
                             <RefreshCw className={`h-4 w-4 ${atualizandoDashboardSstCompleto ? "animate-spin" : ""}`} />

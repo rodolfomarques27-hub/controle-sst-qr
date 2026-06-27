@@ -12,7 +12,7 @@ export function DashboardHeaderAcoes({
             <button
                 type="button"
                 onClick={() => setMostrarFiltroPainel((valor) => !valor)}
-                className="inline-flex items-center gap-2 rounded-2xl bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 shadow-sm ring-1 ring-slate-200 hover:bg-slate-50"
+                className="inline-flex items-center gap-2 rounded-2xl border border-[#E5E9EF] bg-white px-4 py-2.5 text-sm font-black text-[#1A2332] shadow-[0_6px_16px_rgba(26,35,50,0.06)] transition hover:-translate-y-0.5 hover:bg-[#F8FAFC] hover:shadow-[0_10px_22px_rgba(26,35,50,0.10)]"
             >
                 <Filter className="h-4 w-4" />
                 Personalizar painel
@@ -22,7 +22,7 @@ export function DashboardHeaderAcoes({
                 type="button"
                 onClick={enviarAlertasPendenciasCriticas}
                 disabled={enviandoEmail || pendencias.length === 0}
-                className="inline-flex items-center gap-2 rounded-2xl bg-red-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-50"
+                className="inline-flex items-center gap-2 rounded-2xl border border-red-400 bg-red-500 px-4 py-2.5 text-sm font-black text-white shadow-[0_8px_20px_rgba(239,68,68,0.22)] transition hover:-translate-y-0.5 hover:bg-red-600 hover:shadow-[0_12px_26px_rgba(239,68,68,0.28)] disabled:cursor-not-allowed disabled:opacity-50"
             >
                 <AlertTriangle className="h-4 w-4" />
                 {enviandoEmail ? "Enviando..." : "Enviar alertas por e-mail"}
@@ -31,7 +31,7 @@ export function DashboardHeaderAcoes({
             <button
                 type="button"
                 onClick={baixarRelatorioDashboard}
-                className="inline-flex items-center gap-2 rounded-2xl bg-slate-950 px-4 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-slate-800"
+                className="inline-flex items-center gap-2 rounded-2xl border border-[#0F172A] bg-[#111827] px-4 py-2.5 text-sm font-black text-white shadow-[0_8px_20px_rgba(15,23,42,0.22)] transition hover:-translate-y-0.5 hover:bg-[#0B1220] hover:shadow-[0_12px_26px_rgba(15,23,42,0.30)]"
             >
                 <Download className="h-4 w-4" />
                 Exportar relatório
