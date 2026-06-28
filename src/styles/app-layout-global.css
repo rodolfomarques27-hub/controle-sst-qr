@@ -212,8 +212,8 @@
 
   .dashboard-summary-card {
     display: flex;
-    min-height: 9.5rem;
-    height: 100%;
+    min-height: 6.25rem;
+    height: auto;
   }
 
   .dashboard-summary-card > div {
@@ -229,7 +229,7 @@
 
   .dashboard-auditoria-card {
     min-height: 8.5rem;
-    height: 100%;
+    height: auto;
   }
 
 
@@ -276,7 +276,7 @@
   .auditoria-summary-card .summary-card-content,
   .dashboard-campo-summary-card .summary-card-content {
     min-height: 7.2rem;
-    height: 100%;
+    height: auto;
     display: flex;
     align-items: flex-start;
     gap: 0.75rem;
@@ -534,7 +534,7 @@
 
   .empresas-cadastro-grid > * {
     min-width: 0;
-    height: 100%;
+    height: auto;
   }
 
   .empresas-cadastro-unificado {
@@ -568,7 +568,7 @@
   }
 
   .empresas-form-panel {
-    height: 100%;
+    height: auto;
   }
 
   .empresas-form-panel .-m-5 {
@@ -4394,7 +4394,7 @@
 .summary-card-fixed[data-dashboard-storage-card="true"],
 .info-card[data-dashboard-storage-card="true"] {
     position: relative;
-    padding-bottom: 1.45rem !important;
+    padding-bottom: 0.9rem !important;
 }
 
 .dashboard-summary-card[data-dashboard-storage-card="true"]::after,
@@ -4501,8 +4501,8 @@
     .dashboard-summary-card[data-dashboard-storage-card="true"],
     .summary-card-fixed[data-dashboard-storage-card="true"],
     .info-card[data-dashboard-storage-card="true"] {
-        min-height: 7.2rem !important;
-        padding-bottom: 1.5rem !important;
+        min-height: 6.25rem !important;
+        padding-bottom: 0.9rem !important;
     }
 
     .dashboard-summary-card[data-dashboard-storage-card="true"]::after,
@@ -5077,8 +5077,8 @@
     .dashboard-summary-grid > .dashboard-summary-card,
     .dashboard-summary-card,
     .summary-card-fixed {
-        min-height: 5.25rem !important;
-        padding: 0.52rem !important;
+        min-height: 6.25rem !important;
+        padding: 0.75rem !important;
     }
 
     .dashboard-blocos-grid,
@@ -6227,10 +6227,10 @@
     .dashboard-summary-card[data-dashboard-storage-card="true"],
     .summary-card-fixed[data-dashboard-storage-card="true"],
     .info-card[data-dashboard-storage-card="true"] {
-        min-height: 7.15rem !important;
+        min-height: 6.25rem !important;
         height: auto !important;
         max-height: none !important;
-        padding: 0.75rem 0.85rem 1.58rem !important;
+        padding: 0.75rem 0.85rem 0.95rem !important;
         overflow: hidden !important;
     }
 

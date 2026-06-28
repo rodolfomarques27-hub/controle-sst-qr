@@ -487,6 +487,115 @@ export function Dashboard({
 
     const cardsVisiveis = cardsOrdenados.filter((item) => cartasVisiveisDashboard[item.chave] !== false);
 
+    const obterAcentoCartaDashboard = (chave) => {
+        const mapa = {
+            colaboradoresMobilizados: {
+                borda: "border-blue-200/80",
+                faixa: "from-blue-500 to-cyan-400",
+                fundoIcone: "bg-blue-50 text-blue-700 ring-blue-100",
+            },
+            colaboradoresLiberados: {
+                borda: "border-emerald-200/80",
+                faixa: "from-emerald-500 to-teal-400",
+                fundoIcone: "bg-emerald-50 text-emerald-700 ring-emerald-100",
+            },
+            comPendencia: {
+                borda: "border-orange-200/80",
+                faixa: "from-orange-500 to-amber-400",
+                fundoIcone: "bg-orange-50 text-orange-700 ring-orange-100",
+            },
+            emAnalise: {
+                borda: "border-violet-200/80",
+                faixa: "from-violet-500 to-fuchsia-400",
+                fundoIcone: "bg-violet-50 text-violet-700 ring-violet-100",
+            },
+            empresasAtivas: {
+                borda: "border-cyan-200/80",
+                faixa: "from-cyan-500 to-sky-400",
+                fundoIcone: "bg-cyan-50 text-cyan-700 ring-cyan-100",
+            },
+            documentosVencidos: {
+                borda: "border-red-200/80",
+                faixa: "from-red-500 to-rose-400",
+                fundoIcone: "bg-red-50 text-red-700 ring-red-100",
+            },
+            documentosAVencer: {
+                borda: "border-amber-200/80",
+                faixa: "from-amber-500 to-orange-400",
+                fundoIcone: "bg-amber-50 text-amber-700 ring-amber-100",
+            },
+            treinamentosVencidos: {
+                borda: "border-purple-200/80",
+                faixa: "from-purple-500 to-violet-400",
+                fundoIcone: "bg-purple-50 text-purple-700 ring-purple-100",
+            },
+            colaboradoresBloqueados: {
+                borda: "border-teal-200/80",
+                faixa: "from-teal-500 to-emerald-400",
+                fundoIcone: "bg-teal-50 text-teal-700 ring-teal-100",
+            },
+            desviosAbertos: {
+                borda: "border-red-200/80",
+                faixa: "from-red-500 to-orange-400",
+                fundoIcone: "bg-red-50 text-red-700 ring-red-100",
+            },
+            aniversariantesMes: {
+                borda: "border-sky-200/80",
+                faixa: "from-sky-500 to-blue-400",
+                fundoIcone: "bg-sky-50 text-sky-700 ring-sky-100",
+            },
+            armazenamentoUtilizado: {
+                borda: "border-slate-200",
+                faixa: "from-slate-500 to-slate-300",
+                fundoIcone: "bg-slate-100 text-slate-700 ring-slate-200",
+            },
+        };
+
+        return mapa[chave] || {
+            borda: "border-slate-200/80",
+            faixa: "from-slate-500 to-slate-300",
+            fundoIcone: "bg-slate-100 text-slate-700 ring-slate-200",
+        };
+    };
+
+    const obterTituloCompactoCartaDashboard = (item) => {
+        const mapa = {
+            colaboradoresMobilizados: "Mobilizados",
+            colaboradoresLiberados: "Liberados",
+            comPendencia: "Com pendência",
+            emAnalise: "Em análise",
+            empresasAtivas: "Empresas ativas",
+            documentosVencidos: "Docs vencidos",
+            documentosAVencer: "Docs a vencer",
+            treinamentosVencidos: "Trein. vencidos",
+            colaboradoresBloqueados: "Bloqueados",
+            desviosAbertos: "Desvios abertos",
+            aniversariantesMes: "Aniversariantes",
+            armazenamentoUtilizado: "Armazenamento",
+        };
+
+        return mapa[item.chave] || item.label;
+    };
+
+    const obterDetalheCompactoCartaDashboard = (item) => {
+        const mapa = {
+            colaboradoresMobilizados: "Liberados ou com pendência",
+            colaboradoresLiberados: "Em dia",
+            comPendencia: "Sem bloqueio",
+            emAnalise: "Aguardando conferência",
+            empresasAtivas: "Liberadas",
+            documentosVencidos: "Contratos",
+            documentosAVencer: "Próximos 30 dias",
+            treinamentosVencidos: "Colaboradores",
+            colaboradoresBloqueados: "Pendência bloqueante",
+            desviosAbertos: "Registros não concluídos",
+            aniversariantesMes: "Nenhum no mês",
+            armazenamentoUtilizado: `${totalStorageLabel} / ${storageLimiteLabelDashboard}`,
+        };
+
+        return mapa[item.chave] || item.detalhe;
+    };
+
     const montarPayloadEmailPendencia = (item) => {
         const statusEmail =
             item.status.chave === "pendente"
@@ -726,45 +835,60 @@ export function Dashboard({
                 const Icon = item.icon;
                 const estilos = estiloCartaDashboard(item.chave) || {};
                 const ehArmazenamento = item.chave === "armazenamentoUtilizado";
+                const acento = obterAcentoCartaDashboard(item.chave);
+                const tituloCompacto = obterTituloCompactoCartaDashboard(item);
+                const detalheCompacto = obterDetalheCompactoCartaDashboard(item);
+                const storagePercentualRotulo = `${Number(storagePercentual || 0)}%`;
+                const tituloExibido = ehArmazenamento ? "ARMAZ\u200BENAMENTO" : tituloCompacto;
+                const storagePercentualValor = Math.max(0, Math.min(100, Number(storagePercentual || 0)));
+                const storageAngulo = Math.round((storagePercentualValor / 100) * 360);
+                const storageFundoAnel = "conic-gradient(from 180deg, rgba(16,185,129,0.96) 0deg, rgba(16,185,129,0.96) var(--storage-angulo), rgba(226,232,240,0.95) var(--storage-angulo), rgba(226,232,240,0.95) 360deg)";
 
                 return (
                     <div
                         key={item.chave}
                         data-dashboard-card-tamanho={obterTamanhoCartaDashboard(item.chave)}
-                        data-dashboard-storage-card={ehArmazenamento ? "true" : undefined}
-                        data-dashboard-storage-level={ehArmazenamento ? (storagePercentual >= 90 ? "critico" : storagePercentual >= 70 ? "atencao" : "normal") : undefined}
-                        style={ehArmazenamento ? { "--storage-percent": `${storagePercentual}%` } : undefined}
-                        className={`dashboard-summary-card rounded-[18px] border border-[#E5E9EF] bg-white p-4 shadow-[0_8px_22px_rgba(26,35,50,0.06)] transition duration-200 hover:-translate-y-0.5 hover:border-[#D8DEE8] hover:shadow-[0_12px_28px_rgba(26,35,50,0.10)] ${obterClasseTamanhoCartaDashboard(item.chave)}`}
+                        className={`dashboard-summary-card group relative flex h-auto min-h-[6.25rem] overflow-hidden rounded-[22px] border bg-[linear-gradient(180deg,rgba(255,255,255,0.98)_0%,rgba(246,249,252,0.96)_100%)] px-3 pt-3 pb-2 shadow-[0_10px_26px_rgba(26,35,50,0.08)] transition duration-200 hover:-translate-y-0.5 hover:shadow-[0_16px_34px_rgba(26,35,50,0.13)] ${acento.borda} ${obterClasseTamanhoCartaDashboard(item.chave)}`}
                     >
-                        <div className="flex items-start gap-3">
-                            <div className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl shadow-sm ring-1 ${estilos.icone || "bg-[#F4F6F9] text-[#1A2332] ring-[#E5E9EF]"}`}>
-                                <Icon className="h-5 w-5" />
+                        <span className={`absolute inset-x-0 top-0 h-1 bg-gradient-to-r ${acento.faixa}`} />
+                        <div className="flex min-h-0 flex-1 items-center justify-center gap-2">
+                            <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl shadow-sm ring-1 ${ehArmazenamento ? "bg-slate-50 ring-slate-200" : (acento.fundoIcone || estilos.icone || "bg-[#F4F6F9] text-[#1A2332] ring-[#E5E9EF]")}`}>
+                                {ehArmazenamento ? (
+                                    <div
+                                        className="relative flex h-[2.85rem] w-[2.85rem] items-center justify-center rounded-full bg-white text-[11px] font-black text-slate-900 shadow-inner ring-1 ring-slate-200"
+                                        style={{ background: storageFundoAnel, "--storage-angulo": `${storageAngulo}deg` }}
+                                    >
+                                        <span className="relative z-10">{storagePercentualRotulo}</span>
+                                    </div>
+                                ) : (
+                                    <Icon className="h-5 w-5" />
+                                )}
                             </div>
 
-                            <div className="min-w-0 flex-1">
-                                <div className="flex min-w-0 items-start justify-between gap-2">
-                                    <h3 className="break-words text-[0.82rem] font-black leading-snug text-[#1A2332]">
-                                        {item.label}
+                            <div className="min-w-0 flex-1 text-center">
+                                <div className="flex min-w-0 justify-center gap-2">
+                                    <h3 className="min-w-0 whitespace-nowrap break-normal hyphens-none text-[12px] font-black uppercase tracking-[0.08em] leading-tight text-slate-800">
+                                        {tituloExibido}
                                     </h3>
 
-                                    {ehArmazenamento && (
-                                        <button
-                                            type="button"
-                                            onClick={carregarUsoStorageDashboard}
-                                            disabled={carregandoStorageDashboard}
-                                            title="Atualizar armazenamento"
-                                            data-storage-extra-icon="true"
-                                            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-[#E8F5EC] text-[#1E7C3A] ring-1 ring-[#CDE8D5] transition hover:bg-[#DDF0E4] disabled:opacity-60"
-                                        >
-                                            <Upload className="h-4 w-4" />
-                                        </button>
-                                    )}
                                 </div>
 
-                                <p className={`mt-3 border-b border-[#EEF2F6] pb-2 font-black leading-none tracking-tight ${obterClasseValorCartaDashboard(item.chave)} ${estilos.valor || "text-[#1A2332]"}`}>
-                                    {item.valor}
-                                </p>
-                                <p className="mt-2 text-xs font-semibold leading-snug text-[#6B7A8D]">{item.detalhe}</p>
+                                {ehArmazenamento ? (
+                                    <div className="mt-1.5 min-w-0">
+                                        <p className="whitespace-nowrap text-[10px] font-semibold leading-tight text-slate-500">
+                                            {detalheCompacto}
+                                        </p>
+                                    </div>
+                                ) : (
+                                    <>
+                                        <p className={`mt-1.5 border-b border-slate-200/80 pb-1 text-[1.8rem] font-black leading-none tracking-tight ${obterClasseValorCartaDashboard(item.chave)} ${estilos.valor || "text-slate-950"}`}>
+                                            {item.valor}
+                                        </p>
+                                        <p className="mt-1.25 text-[10px] font-semibold leading-tight text-slate-500 whitespace-nowrap break-normal hyphens-none">
+                                            {detalheCompacto}
+                                        </p>
+                                    </>
+                                )}
                             </div>
                         </div>
                     </div>
