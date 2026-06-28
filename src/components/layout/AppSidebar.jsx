@@ -1,7 +1,10 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { ChevronDown, ChevronsLeft, LogOut, ShieldCheck } from "lucide-react";
 import { classNames } from "../../utils/sstUtils";
+import { supabase } from "../../lib/supabaseClient";
 import sidebarBackground from "../../assets/sidebar-construcao.png";
+
+const BUCKET_FOTOS_USUARIOS_SIDEBAR = "fotos-colaboradores";
 
 const PERFIS_USUARIO_LABEL = {
     administrador: "Administrador",
@@ -34,6 +37,134 @@ function obterIniciaisUsuario(nome = "", email = "") {
     return iniciais.slice(0, 2).toUpperCase();
 }
 
+function obterFotoUsuarioSidebar(usuario = null) {
+    const metadados = usuario?.user_metadata || {};
+    return String(
+        usuario?.foto_url
+        || usuario?.fotoUrl
+        || usuario?.fotoPerfil
+        || usuario?.fotoPerfilUrl
+        || usuario?.avatar_url
+        || usuario?.avatarUrl
+        || usuario?.photoURL
+        || usuario?.picture
+        || usuario?.imagem
+        || usuario?.imagem_url
+        || metadados?.foto_url
+        || metadados?.fotoUrl
+        || metadados?.fotoPerfil
+        || metadados?.fotoPerfilUrl
+        || metadados?.avatar_url
+        || metadados?.avatarUrl
+        || metadados?.photoURL
+        || metadados?.picture
+        || metadados?.imagem
+        || metadados?.imagem_url
+        || ""
+    ).trim();
+}
+
+function valorFotoSidebarEhUrlFinal(valor = "") {
+    const texto = String(valor || "").trim();
+    return /^https?:\/\//i.test(texto) || texto.startsWith("blob:") || texto.startsWith("data:");
+}
+
+function normalizarCaminhoFotoSidebar(valor = "") {
+    const texto = String(valor || "").trim();
+    if (!texto) return "";
+
+    if (valorFotoSidebarEhUrlFinal(texto) && !texto.includes("/storage/v1/object/")) return texto;
+
+    try {
+        const url = new URL(texto);
+        const partes = url.pathname.split("/").filter(Boolean);
+        const indiceBucket = partes.findIndex((parte) => parte === BUCKET_FOTOS_USUARIOS_SIDEBAR);
+        if (indiceBucket >= 0 && partes.length > indiceBucket + 1) {
+            return decodeURIComponent(partes.slice(indiceBucket + 1).join("/"));
+        }
+    } catch {
+        // Mantem o valor original quando nao for uma URL completa.
+    }
+
+    return texto
+        .replace(new RegExp(`^${BUCKET_FOTOS_USUARIOS_SIDEBAR}/`, "i"), "")
+        .replace(/^\/+/, "")
+        .trim();
+}
+
+async function resolverUrlFotoSidebar(valor = "") {
+    const foto = normalizarCaminhoFotoSidebar(valor);
+
+    if (!foto) return { url: "", revogar: false };
+    if (valorFotoSidebarEhUrlFinal(foto) && !foto.includes("/storage/v1/object/")) {
+        return { url: foto, revogar: false };
+    }
+
+    try {
+        const { data, error } = await supabase.storage
+            .from(BUCKET_FOTOS_USUARIOS_SIDEBAR)
+            .download(foto);
+
+        if (!error && data && typeof URL !== "undefined") {
+            return { url: URL.createObjectURL(data), revogar: true };
+        }
+    } catch {
+        // Se o download autenticado falhar, tenta URL assinada.
+    }
+
+    try {
+        const { data, error } = await supabase.storage
+            .from(BUCKET_FOTOS_USUARIOS_SIDEBAR)
+            .createSignedUrl(foto, 60 * 60 * 6);
+
+        if (!error && data?.signedUrl) {
+            return { url: data.signedUrl, revogar: false };
+        }
+    } catch {
+        // Mantem fallback para iniciais.
+    }
+
+    return { url: "", revogar: false };
+}
+
+async function buscarFotoUsuarioSidebarPorEmail(email = "") {
+    const emailTratado = String(email || "").trim().toLowerCase();
+
+    if (!emailTratado || !emailTratado.includes("@")) return "";
+
+    try {
+        const { data, error } = await supabase.rpc("admin_listar_usuarios_permissoes_sistema");
+
+        if (!error && Array.isArray(data)) {
+            const usuarioComFoto = data.find((item) =>
+                String(item?.email || "").trim().toLowerCase() === emailTratado
+                && obterFotoUsuarioSidebar(item)
+            );
+
+            const foto = obterFotoUsuarioSidebar(usuarioComFoto);
+
+            if (foto) return foto;
+        }
+    } catch {
+        // Mantem fallback para iniciais.
+    }
+
+    try {
+        const { data, error } = await supabase
+            .from("usuarios_permissoes_sistema")
+            .select("*")
+            .eq("email", emailTratado)
+            .maybeSingle();
+
+        if (!error) {
+            return obterFotoUsuarioSidebar(data);
+        }
+    } catch {
+        // Mantem fallback para iniciais.
+    }
+
+    return "";
+}
 const CHAVE_GRUPOS_FECHADOS_SIDEBAR = "safescan:sidebar:grupos-fechados";
 
 function construirGruposFechadosPadrao(grupos = []) {
@@ -95,6 +226,8 @@ export function AppSidebar({
     const [hoverLiberado, setHoverLiberado] = useState(() => Boolean(menuLateralAberto));
     const [usuarioLogadoAberto, setUsuarioLogadoAberto] = useState(false);
     const [gruposFechados, setGruposFechados] = useState(() => lerGruposFechadosSidebarSalvos() || construirGruposFechadosPadrao(nav));
+    const [fotoUsuarioUrl, setFotoUsuarioUrl] = useState("");
+    const [fotoUsuarioComErro, setFotoUsuarioComErro] = useState(false);
     const menuExpandido = menuLateralAberto || expandidoPorHover;
 
     const emailUsuario = usuario?.email || "e-mail n\u00e3o informado";
@@ -102,22 +235,52 @@ export function AppSidebar({
     const funcaoUsuario = usuario?.funcao || usuario?.cargo || "Fun\u00e7\u00e3o n\u00e3o informada";
     const perfilUsuario = formatarPerfilUsuario(usuario?.perfil);
 
-    const fotoUsuario = String(
-        usuario?.fotoUrl
-        || usuario?.foto_url
-        || usuario?.foto
-        || usuario?.avatarUrl
-        || usuario?.avatar_url
-        || usuario?.photoURL
-        || usuario?.picture
-        || usuario?.user_metadata?.avatar_url
-        || usuario?.user_metadata?.picture
-        || usuario?.user_metadata?.photoURL
-        || ""
-    ).trim();
-
+    const fotoUsuario = obterFotoUsuarioSidebar(usuario);
+    const mostrarFotoUsuario = Boolean(fotoUsuarioUrl && !fotoUsuarioComErro);
     const iniciaisUsuario = obterIniciaisUsuario(nomeUsuario, emailUsuario);
 
+    useEffect(() => {
+        let cancelado = false;
+        let objectUrl = "";
+
+        setFotoUsuarioComErro(false);
+
+        async function carregarFotoUsuario() {
+            let fotoParaResolver = fotoUsuario;
+
+            if (!fotoParaResolver) {
+                fotoParaResolver = await buscarFotoUsuarioSidebarPorEmail(emailUsuario);
+            }
+
+            if (cancelado) return;
+
+            if (!fotoParaResolver) {
+                setFotoUsuarioUrl("");
+                return;
+            }
+
+            const resultado = await resolverUrlFotoSidebar(fotoParaResolver);
+
+            if (cancelado) {
+                if (resultado.revogar && resultado.url && typeof URL !== "undefined") {
+                    URL.revokeObjectURL(resultado.url);
+                }
+                return;
+            }
+
+            objectUrl = resultado.revogar ? resultado.url : "";
+            setFotoUsuarioUrl(resultado.url || "");
+        }
+
+        carregarFotoUsuario();
+
+        return () => {
+            cancelado = true;
+            if (objectUrl && typeof URL !== "undefined") {
+                URL.revokeObjectURL(objectUrl);
+            }
+        };
+    }, [emailUsuario, fotoUsuario]);
     const salvarPreferenciaSidebar = (proximoAberto) => {
         try {
             if (typeof window === "undefined") return;
@@ -325,10 +488,11 @@ export function AppSidebar({
                         aria-expanded={usuarioLogadoAberto}
                     >
                         <div className="flex min-w-0 flex-1 items-center gap-2">
-                            {fotoUsuario ? (
+                            {mostrarFotoUsuario ? (
                                 <img
-                                    src={fotoUsuario}
+                                    src={fotoUsuarioUrl}
                                     alt={nomeUsuario}
+                                    onError={() => setFotoUsuarioComErro(true)}
                                     className="h-9 w-9 shrink-0 rounded-full object-cover ring-2 ring-white/15"
                                 />
                             ) : (
@@ -377,10 +541,11 @@ export function AppSidebar({
                 </div>
             ) : (
                 <div className="app-sidebar-user-compact mt-4 flex justify-center">
-                    {fotoUsuario ? (
+                    {mostrarFotoUsuario ? (
                         <img
-                            src={fotoUsuario}
+                            src={fotoUsuarioUrl}
                             alt={nomeUsuario}
+                            onError={() => setFotoUsuarioComErro(true)}
                             className="h-10 w-10 rounded-full object-cover ring-2 ring-white/15"
                             title={`${nomeUsuario} - ${perfilUsuario} - ${emailUsuario}`}
                         />

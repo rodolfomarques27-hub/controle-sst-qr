@@ -73,6 +73,23 @@ function montarUsuarioComPerfilSistema(usuario = null, permissao = null, carrega
     const emailSistema = obterEmailUsuarioSistema(usuario, permissao);
     const nomeSistema = obterNomeUsuarioSistema(usuario, permissao);
     const funcaoSistema = obterFuncaoUsuarioSistema(usuario, permissao);
+    const fotoSistema = String(
+        permissao?.foto_url
+        || permissao?.fotoUrl
+        || permissao?.avatar_url
+        || permissao?.avatarUrl
+        || usuario?.foto_url
+        || usuario?.fotoUrl
+        || usuario?.avatar_url
+        || usuario?.avatarUrl
+        || usuario?.picture
+        || usuario?.user_metadata?.foto_url
+        || usuario?.user_metadata?.fotoUrl
+        || usuario?.user_metadata?.avatar_url
+        || usuario?.user_metadata?.avatarUrl
+        || usuario?.user_metadata?.picture
+        || ""
+    ).trim();
 
     return {
         ...usuario,
@@ -80,6 +97,8 @@ function montarUsuarioComPerfilSistema(usuario = null, permissao = null, carrega
         nome: nomeSistema,
         name: nomeSistema,
         displayName: nomeSistema,
+        foto_url: fotoSistema,
+        fotoUrl: fotoSistema || usuario?.fotoUrl || "",
         funcao: funcaoSistema,
         cargo: funcaoSistema,
         funcaoSistema,
@@ -251,8 +270,7 @@ export function AppLayout({
             window.removeEventListener("resize", agendarAtualizacao);
         };
     }, [tela]);
-
-    return (
+return (
         <div className="min-h-screen bg-[#F4F6F9] text-slate-900">
             <div
                 className="app-shell flex min-h-screen w-full bg-[#F4F6F9]"

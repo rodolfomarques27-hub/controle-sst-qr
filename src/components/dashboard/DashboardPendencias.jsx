@@ -1,7 +1,8 @@
-import React, { useEffect, useMemo, useState } from "react";
-import { ChevronUp, Mail, QrCode } from "lucide-react";
+﻿import React, { useEffect, useMemo, useState } from "react";
+import { Mail, QrCode } from "lucide-react";
 import { supabase } from "../../lib/supabaseClient";
 import { formatDate } from "../../utils/sstUtils";
+import { DashboardBlocoRecolhivel } from "./DashboardBlocoRecolhivel";
 
 const FOTO_BUCKET_COLABORADORES = "fotos-colaboradores";
 const CACHE_FOTOS_ASSINADAS = new Map();
@@ -349,7 +350,6 @@ export function DashboardPendencias({
     enviandoEmail = false,
     onSelectColab,
 }) {
-    const recolhido = Boolean(blocosRecolhidosDashboard?.pendencias);
     const totalPendencias = pendencias.length;
     const [mostrarTodasPendencias, setMostrarTodasPendencias] = useState(false);
     const possuiMaisPendencias = totalPendencias > LIMITE_INICIAL_PENDENCIAS;
@@ -362,112 +362,100 @@ export function DashboardPendencias({
     }, [totalPendencias]);
 
     return (
-        <section className="dashboard-pendencias-final rounded-3xl bg-white p-5 shadow-sm ring-1 ring-slate-200">
+        <DashboardBlocoRecolhivel
+            chaveBloco="pendencias"
+            titulo="Pendências críticas"
+            subtitulo="Certificados enviados, vencidos ou a vencer em até 30 dias."
+            badge={<span className="dashboard-pendencias-final__contador rounded-full bg-slate-100 px-3 py-1 text-xs font-black text-slate-600 ring-1 ring-slate-200">{possuiMaisPendencias && !mostrarTodasPendencias ? `${pendenciasVisiveis.length} de ${totalPendencias}` : `${totalPendencias} itens`}</span>}
+            blocosRecolhidosDashboard={blocosRecolhidosDashboard}
+            alternarBlocoRecolhidoDashboard={alternarBlocoRecolhidoDashboard}
+        >
             <style>{ESTILOS_PENDENCIAS_DESKTOP}</style>
-            <div className="dashboard-pendencias-final__topo">
-                <div className="min-w-0">
-                    <h2 className="dashboard-pendencias-final__titulo">Pendências críticas</h2>
-                    <p className="dashboard-pendencias-final__subtitulo">Certificados enviados, vencidos ou a vencer em até 30 dias.</p>
+            <div className="dashboard-pendencias-final__quadro" data-dashboard-pendencias-final="true">
+                <div className="dashboard-pendencias-final__cabecalho" aria-hidden="true">
+                    <span>Colaborador</span>
+                    <span>Treinamento</span>
+                    <span>Vencimento</span>
+                    <span>Status / Ações</span>
                 </div>
 
-                <div className="dashboard-pendencias-final__controles">
-                    <span className="dashboard-pendencias-final__contador">{possuiMaisPendencias && !mostrarTodasPendencias ? `${pendenciasVisiveis.length} de ${totalPendencias}` : `${totalPendencias} itens`}</span>
-                    <button
-                        type="button"
-                        onClick={() => alternarBlocoRecolhidoDashboard?.("pendencias")}
-                        className="dashboard-pendencias-final__recolher"
-                    >
-                        <ChevronUp className={recolhido ? "rotate-180" : ""} />
-                        {recolhido ? "Abrir" : "Recolher"}
-                    </button>
-                </div>
-            </div>
+                {totalPendencias === 0 ? (
+                    <div className="dashboard-pendencias-final__vazio">Nenhuma pendência crítica encontrada.</div>
+                ) : (
+                    <div className="dashboard-pendencias-final__lista">
+                        {pendenciasVisiveis.map((item, indice) => {
+                            const colaborador = item.colaborador || item.colaboradorDados || item.colaborador_dados || {};
+                            const nome = obterNomeColaborador(colaborador, item);
+                            const empresa = obterEmpresaColaborador(colaborador, item);
+                            const situacao = obterSituacaoColaborador(colaborador, item);
+                            const treinamento = obterTreinamentoTexto(item);
+                            const vencimento = obterVencimentoTexto(item);
+                            const statusTexto = obterStatusTexto(item);
 
-            {!recolhido && (
-                <div className="dashboard-pendencias-final__quadro" data-dashboard-pendencias-final="true">
-                    <div className="dashboard-pendencias-final__cabecalho" aria-hidden="true">
-                        <span>Colaborador</span>
-                        <span>Treinamento</span>
-                        <span>Vencimento</span>
-                        <span>Status / Ações</span>
-                    </div>
-
-                    {totalPendencias === 0 ? (
-                        <div className="dashboard-pendencias-final__vazio">Nenhuma pendência crítica encontrada.</div>
-                    ) : (
-                        <div className="dashboard-pendencias-final__lista">
-                            {pendenciasVisiveis.map((item, indice) => {
-                                const colaborador = item.colaborador || item.colaboradorDados || item.colaborador_dados || {};
-                                const nome = obterNomeColaborador(colaborador, item);
-                                const empresa = obterEmpresaColaborador(colaborador, item);
-                                const situacao = obterSituacaoColaborador(colaborador, item);
-                                const treinamento = obterTreinamentoTexto(item);
-                                const vencimento = obterVencimentoTexto(item);
-                                const statusTexto = obterStatusTexto(item);
-
-                                return (
-                                    <div key={`${colaborador.id || colaborador.codigoFuncionario || colaborador.codigo_funcionario || nome}-${item.treinamento?.id || treinamento}-${indice}`} className="dashboard-pendencias-final__linha">
-                                        <div className="dashboard-pendencias-final__colaborador">
-                                            <AvatarColaborador item={item} colaborador={colaborador} />
-                                            <div className="dashboard-pendencias-final__colaborador-texto">
-                                                <strong title={nome}>{nome}</strong>
-                                                <span title={`${empresa}${situacao ? ` · ${situacao}` : ""}`}>
-                                                    {empresa}{situacao ? ` · ${situacao}` : ""}
-                                                </span>
-                                            </div>
-                                        </div>
-
-                                        <div className="dashboard-pendencias-final__treinamento" title={treinamento}>
-                                            {treinamento}
-                                        </div>
-
-                                        <div className="dashboard-pendencias-final__vencimento" title={vencimento}>
-                                            {vencimento}
-                                        </div>
-
-                                        <div className="dashboard-pendencias-final__acoes">
-                                            <span className={obterStatusClasse(item)} title={statusTexto}>{statusTexto}</span>
-                                            <button
-                                                type="button"
-                                                onClick={() => enviarAlertaEmailPendencia?.(item)}
-                                                disabled={enviandoEmail}
-                                                className="dashboard-pendencias-final__botao dashboard-pendencias-final__botao--email"
-                                                title="Enviar alerta por e-mail"
-                                            >
-                                                <Mail />
-                                                <span>E-mail</span>
-                                            </button>
-                                            <button
-                                                type="button"
-                                                onClick={() => onSelectColab?.(colaborador)}
-                                                className="dashboard-pendencias-final__botao dashboard-pendencias-final__botao--qr"
-                                                title="Abrir QR do colaborador"
-                                            >
-                                                <QrCode />
-                                                <span>QR</span>
-                                            </button>
+                            return (
+                                <div key={`${colaborador.id || colaborador.codigoFuncionario || colaborador.codigo_funcionario || nome}-${item.treinamento?.id || treinamento}-${indice}`} className="dashboard-pendencias-final__linha">
+                                    <div className="dashboard-pendencias-final__colaborador">
+                                        <AvatarColaborador item={item} colaborador={colaborador} />
+                                        <div className="dashboard-pendencias-final__colaborador-texto">
+                                            <strong title={nome}>{nome}</strong>
+                                            <span title={`${empresa}${situacao ? ` · ${situacao}` : ""}`}>
+                                                {empresa}{situacao ? ` · ${situacao}` : ""}
+                                            </span>
                                         </div>
                                     </div>
-                                );
-                            })}
 
-                            {possuiMaisPendencias && (
-                                <div className="dashboard-pendencias-final__rodape-lista">
-                                    <button
-                                        type="button"
-                                        onClick={() => setMostrarTodasPendencias((valorAtual) => !valorAtual)}
-                                        className="dashboard-pendencias-final__mostrar-mais"
-                                    >
-                                        {mostrarTodasPendencias
-                                            ? "Mostrar menos"
-                                            : `Mostrar mais ${totalPendencias - LIMITE_INICIAL_PENDENCIAS} item(ns)`}
-                                    </button>
+                                    <div className="dashboard-pendencias-final__treinamento" title={treinamento}>
+                                        {treinamento}
+                                    </div>
+
+                                    <div className="dashboard-pendencias-final__vencimento" title={vencimento}>
+                                        {vencimento}
+                                    </div>
+
+                                    <div className="dashboard-pendencias-final__acoes">
+                                        <span className={obterStatusClasse(item)} title={statusTexto}>{statusTexto}</span>
+                                        <button
+                                            type="button"
+                                            onClick={() => enviarAlertaEmailPendencia?.(item)}
+                                            disabled={enviandoEmail}
+                                            className="dashboard-pendencias-final__botao dashboard-pendencias-final__botao--email"
+                                            title="Enviar alerta por e-mail"
+                                        >
+                                            <Mail />
+                                            <span>E-mail</span>
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={() => onSelectColab?.(colaborador)}
+                                            className="dashboard-pendencias-final__botao dashboard-pendencias-final__botao--qr"
+                                            title="Abrir QR do colaborador"
+                                        >
+                                            <QrCode />
+                                            <span>QR</span>
+                                        </button>
+                                    </div>
                                 </div>
-                            )}
-                        </div>
-                    )}
-                </div>
-            )}
-        </section>
+                            );
+                        })}
+
+                        {possuiMaisPendencias && (
+                            <div className="dashboard-pendencias-final__rodape-lista">
+                                <button
+                                    type="button"
+                                    onClick={() => setMostrarTodasPendencias((valorAtual) => !valorAtual)}
+                                    className="dashboard-pendencias-final__mostrar-mais"
+                                >
+                                    {mostrarTodasPendencias
+                                        ? "Mostrar menos"
+                                        : `Mostrar mais ${totalPendencias - LIMITE_INICIAL_PENDENCIAS} item(ns)`}
+                                </button>
+                            </div>
+                        )}
+                    </div>
+                )}
+            </div>
+        </DashboardBlocoRecolhivel>
     );
 }
+
+export default DashboardPendencias;

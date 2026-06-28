@@ -775,6 +775,13 @@ export default function App() {
 
             try {
                 let permissao = null;
+                const obterFotoPermissaoAtual = (dados = null) => String(
+                    dados?.foto_url
+                    || dados?.fotoUrl
+                    || dados?.avatar_url
+                    || dados?.avatarUrl
+                    || ""
+                ).trim();
 
                 try {
                     const { data: permissaoRegistrada, error: registrarLoginError } = await supabase.rpc("registrar_login_usuario_sistema");
@@ -789,6 +796,19 @@ export default function App() {
 
                 if (!permissao) {
                     permissao = await carregarPermissaoSistemaAtualService({ supabase });
+                } else if (!obterFotoPermissaoAtual(permissao)) {
+                    const permissaoCompleta = await carregarPermissaoSistemaAtualService({ supabase });
+                    const fotoPermissaoCompleta = obterFotoPermissaoAtual(permissaoCompleta);
+
+                    if (fotoPermissaoCompleta) {
+                        permissao = {
+                            ...permissao,
+                            foto_url: permissao.foto_url || permissao.fotoUrl || fotoPermissaoCompleta,
+                            fotoUrl: permissao.fotoUrl || permissao.foto_url || fotoPermissaoCompleta,
+                            avatar_url: permissao.avatar_url || permissao.avatarUrl || permissaoCompleta?.avatar_url || permissaoCompleta?.avatarUrl || "",
+                            avatarUrl: permissao.avatarUrl || permissao.avatar_url || permissaoCompleta?.avatarUrl || permissaoCompleta?.avatar_url || "",
+                        };
+                    }
                 }
 
                 if (!componenteAtivo) return;
@@ -804,6 +824,10 @@ export default function App() {
                             nome: permissao.nome || atual.nome || (atual.email?.includes("@") ? atual.email.split("@")[0] : atual.nome),
                             funcao: permissao.funcao || atual.funcao || "",
                             perfil: permissao.perfil || atual.perfil || "",
+                            foto_url: permissao.foto_url || permissao.fotoUrl || atual.foto_url || atual.fotoUrl || atual.user_metadata?.foto_url || atual.user_metadata?.avatar_url || atual.user_metadata?.picture || "",
+                            fotoUrl: permissao.foto_url || permissao.fotoUrl || atual.fotoUrl || atual.foto_url || "",
+                            avatar_url: permissao.avatar_url || permissao.avatarUrl || atual.avatar_url || atual.avatarUrl || "",
+                            avatarUrl: permissao.avatarUrl || permissao.avatar_url || atual.avatarUrl || atual.avatar_url || "",
                             bloqueado: permissao.bloqueado,
                             ativo: permissao.ativo,
                             acesso_global: permissao.acesso_global,

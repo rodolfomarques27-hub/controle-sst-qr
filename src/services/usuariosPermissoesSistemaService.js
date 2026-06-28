@@ -365,6 +365,16 @@ function validarAlteracaoSeguraPermissaoPropria({ usuarioAlvo = {}, usuarioAtual
     }
 }
 
+function obterFotoPermissaoSistema(permissao = null) {
+    return normalizarTexto(
+        permissao?.foto_url
+        || permissao?.fotoUrl
+        || permissao?.avatar_url
+        || permissao?.avatarUrl
+        || permissao?.picture
+        || ""
+    );
+}
 export async function carregarPermissaoSistemaAtualService({ supabase }) {
     if (!supabase) {
         throw new Error("Cliente Supabase não informado para carregar permissões do sistema.");
@@ -377,10 +387,41 @@ export async function carregarPermissaoSistemaAtualService({ supabase }) {
     }
 
     const permissao = Array.isArray(data) ? data[0] : data;
+    const permissaoNormalizada = normalizarPermissaoSistema(permissao || null);
 
-    return normalizarPermissaoSistema(permissao || null);
+    if (!permissaoNormalizada || obterFotoPermissaoSistema(permissaoNormalizada)) {
+        return permissaoNormalizada;
+    }
+
+    try {
+        const { data: usuarios, error: erroUsuarios } = await supabase.rpc("admin_listar_usuarios_permissoes_sistema");
+
+        if (!erroUsuarios && Array.isArray(usuarios)) {
+            const emailAtual = normalizarEmail(permissaoNormalizada.email);
+            const usuarioComFoto = usuarios.find((usuario) =>
+                normalizarEmail(usuario?.email) === emailAtual
+                && obterFotoPermissaoSistema(usuario)
+            );
+
+            const usuarioComFotoNormalizado = normalizarPermissaoSistema(usuarioComFoto || null);
+            const fotoUsuarioComFoto = obterFotoPermissaoSistema(usuarioComFotoNormalizado);
+
+            if (fotoUsuarioComFoto) {
+                return {
+                    ...permissaoNormalizada,
+                    foto_url: permissaoNormalizada.foto_url || usuarioComFotoNormalizado?.foto_url || fotoUsuarioComFoto,
+                    fotoUrl: permissaoNormalizada.fotoUrl || usuarioComFotoNormalizado?.fotoUrl || usuarioComFotoNormalizado?.foto_url || fotoUsuarioComFoto,
+                    avatar_url: permissaoNormalizada.avatar_url || usuarioComFotoNormalizado?.avatar_url || usuarioComFotoNormalizado?.avatarUrl || "",
+                    avatarUrl: permissaoNormalizada.avatarUrl || usuarioComFotoNormalizado?.avatarUrl || usuarioComFotoNormalizado?.avatar_url || "",
+                };
+            }
+        }
+    } catch {
+        // Mantem a permissao atual se a listagem administrativa nao estiver disponivel.
+    }
+
+    return permissaoNormalizada;
 }
-
 export async function listarUsuariosPermissoesSistemaService({ supabase }) {
     if (!supabase) {
         throw new Error("Cliente Supabase não informado para listar usuários e permissões do sistema.");

@@ -1,8 +1,9 @@
-﻿/* eslint-disable no-unused-vars */
+/* eslint-disable no-unused-vars */
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "../../lib/supabaseClient";
-import { Card, CardRecolhivel } from "../commonComponents";
+import { Card } from "../commonComponents";
 import { FileUploadAviso, validarArquivoAntesUpload } from "../FileUploadAviso";
+import dashboardHeroBackground from "../../assets/nova-auditoria-hero-bg.png";
 import {
     obterCategoriaPadronizadaAuditoriaCampo,
     obterTipoAuditoriaCampoPorParametro,
@@ -57,6 +58,10 @@ import { QrCodeComLogo } from "../qr/QrCodeComLogo";
 import {
     AlertTriangle,
     ClipboardCheck,
+    CheckCircle2,
+    ChevronDown,
+    ChevronUp,
+    Image,
     Lock,
     Mail,
     MessageCircle,
@@ -175,6 +180,107 @@ async function carregarTokenAuditoriaCampoPorCodigoQr(codigoQrCampo = "") {
 async function carregarTokenAuditoriaPublicaAtivoDireto() {
     const resultado = await carregarTokenAuditoriaPublicaAtivoPadrao();
     return normalizarTokenAuditoriaCampoDireta(resultado?.tokenPublico);
+}
+
+function lerPersistenciaCardEtapaAuditoriaCampo(persistKey, defaultOpen) {
+    if (typeof window === "undefined" || !persistKey) {
+        return defaultOpen;
+    }
+
+    try {
+        const valor = window.localStorage.getItem(persistKey);
+        if (valor === null) {
+            return defaultOpen;
+        }
+        return valor === "1";
+    } catch {
+        return defaultOpen;
+    }
+}
+
+function CardEtapaAuditoriaCampo({
+    numero,
+    titulo,
+    subtitulo,
+    badge,
+    contador,
+    acao,
+    icone: Icone,
+    children,
+    className = "",
+    defaultOpen = false,
+    persistKey = "",
+    accentClassName = "from-sky-400 via-blue-500 to-cyan-400",
+    iconClassName = "bg-sky-100 text-sky-700 ring-sky-200",
+}) {
+    const [aberto, setAberto] = useState(() => lerPersistenciaCardEtapaAuditoriaCampo(persistKey, defaultOpen));
+
+    useEffect(() => {
+        if (!persistKey || typeof window === "undefined") {
+            return;
+        }
+
+        try {
+            window.localStorage.setItem(persistKey, aberto ? "1" : "0");
+        } catch {
+            /* ignora indisponibilidade */
+        }
+    }, [aberto, persistKey]);
+
+    return (
+        <Card className={classNames("relative overflow-hidden border border-slate-200 bg-white/95 shadow-[0_18px_40px_-26px_rgba(15,23,42,0.34)] ring-1 ring-slate-200/70", className)}>
+            <span className={classNames("pointer-events-none absolute inset-x-0 top-0 h-1 bg-gradient-to-r", accentClassName)} />
+            <div className="flex flex-col gap-3 px-3 py-3 sm:px-4 sm:py-3.5 lg:flex-row lg:items-center lg:justify-between">
+                <button
+                    type="button"
+                    onClick={() => setAberto((atual) => !atual)}
+                    className="flex min-w-0 flex-1 items-center gap-3 rounded-2xl text-left transition hover:bg-slate-50 focus:outline-none focus:ring-4 focus:ring-slate-100"
+                >
+                    <div className={classNames("flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl ring-1", iconClassName)}>
+                        {Icone ? <Icone className="h-5 w-5" /> : <span className="text-sm font-black text-inherit">{numero}</span>}
+                    </div>
+                    <div className="min-w-0 flex-1">
+                        <div className="flex flex-wrap items-center gap-2">
+                            <span className="rounded-full bg-slate-100 px-2.5 py-1 text-[10px] font-black uppercase tracking-[0.18em] text-slate-500 ring-1 ring-slate-200">
+                                Etapa {numero}
+                            </span>
+                            <h2 className="min-w-0 text-[12px] font-black uppercase tracking-[0.08em] text-slate-950">
+                                {titulo}
+                            </h2>
+                            {badge ? (
+                                <span className="rounded-full bg-slate-100 px-2.5 py-1 text-[10px] font-black uppercase tracking-wide text-slate-500 ring-1 ring-slate-200">
+                                    {badge}
+                                </span>
+                            ) : null}
+                        </div>
+                        {subtitulo ? <p className="mt-1 text-[11px] font-semibold leading-tight text-slate-500">{subtitulo}</p> : null}
+                    </div>
+                </button>
+
+                <div className="flex shrink-0 items-center gap-2 self-start lg:self-auto">
+                    {contador ? (
+                        <span className="rounded-full bg-slate-100 px-3 py-1 text-[11px] font-black uppercase tracking-wide text-slate-600 ring-1 ring-slate-200">
+                            {contador}
+                        </span>
+                    ) : null}
+                    {acao ? <div className="shrink-0">{acao}</div> : null}
+                    <button
+                        type="button"
+                        onClick={() => setAberto((atual) => !atual)}
+                        className="inline-flex items-center justify-center gap-1.5 rounded-full bg-slate-950 px-3.5 py-2 text-xs font-bold text-white shadow-sm transition hover:bg-slate-800"
+                    >
+                        {aberto ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+                        {aberto ? "Recolher" : "Abrir"}
+                    </button>
+                </div>
+            </div>
+            {aberto ? (
+                <div className="border-t border-slate-100 px-3 pb-3 pt-0 sm:px-4 sm:pb-4">
+                    {children}
+                </div>
+            ) : null}
+        </Card>
+    );
 }
 
 export function NovaAuditoriaCampoDireta({ usuario = null, onAuditoriaSalva, empresasBanco = [] }) {
@@ -957,36 +1063,59 @@ export function NovaAuditoriaCampoDireta({ usuario = null, onAuditoriaSalva, emp
     return (
         <div className="min-h-screen overflow-x-hidden bg-slate-100 p-3 text-slate-900 sm:p-4 md:p-6">
             <div className="mx-auto w-full max-w-6xl space-y-5">
-                <Card className="overflow-hidden border-emerald-100 bg-gradient-to-br from-white via-white to-emerald-50/60">
-                    <div className="flex min-w-0 flex-col gap-5 lg:grid lg:grid-cols-[minmax(0,1fr)_180px] lg:items-center">
-                        <div className="flex min-w-0 flex-col items-center gap-3 text-center sm:flex-row sm:items-start sm:text-left">
-                            <div className="shrink-0 rounded-2xl bg-emerald-100 p-3 text-emerald-700">
-                                <ClipboardCheck className="h-6 w-6" />
-                            </div>
-                            <div className="min-w-0 w-full">
-                                <p className="text-xs font-bold uppercase tracking-[0.22em] text-emerald-700">Link direto</p>
-                                <h1 className="mt-1 text-2xl font-black leading-tight text-slate-950 md:text-3xl">Nova Auditoria de Campo</h1>
-                                <p className="mx-auto mt-1 max-w-3xl text-sm leading-relaxed text-slate-500 sm:mx-0">
-                                    Formulário rápido para áreas externas, pátios, frentes de serviço, máquinas, equipamentos ou locais sem QR Code específico.
+                <Card className="relative overflow-hidden border-slate-200 bg-white/95 shadow-[0_24px_60px_-34px_rgba(15,23,42,0.55)] ring-1 ring-slate-200/80">
+    <div
+        className="absolute inset-0 bg-cover opacity-[0.72]"
+        style={{
+            backgroundImage: `url(${dashboardHeroBackground})`,
+            backgroundPosition: "62% center",
+        }}
+    />
+    <div className="absolute inset-0 bg-gradient-to-r from-white/88 via-white/54 to-white/22" />
+    <div className="absolute left-0 top-0 hidden h-full w-[52%] bg-gradient-to-r from-white/95 via-white/82 to-transparent lg:block" />
+    <div className="relative flex min-h-[240px] flex-col gap-3 p-4 sm:min-h-[240px] sm:p-4 lg:grid lg:h-[200px] lg:min-h-0 lg:grid-cols-[minmax(0,1fr)_250px] lg:items-stretch lg:p-4">
+        <div className="flex min-w-0 items-center">
+            <div className="flex min-w-0 flex-col justify-center gap-3">
+                                <div className="flex w-fit items-center gap-2 rounded-full bg-emerald-100/90 px-3 py-1 text-[10px] font-black uppercase tracking-[0.24em] text-emerald-700 ring-1 ring-emerald-200">
+                                    <span className="h-2 w-2 rounded-full bg-emerald-500" />
+                                    LINK DIRETO
+                                </div>
+                                <h1 className="text-[1.8rem] font-black leading-tight tracking-[-0.03em] text-slate-950 md:whitespace-nowrap md:text-[2.15rem]">
+                                    Nova Auditoria de Campo
+                                </h1>
+                                <p className="max-w-3xl text-sm font-medium leading-tight text-slate-600 md:whitespace-nowrap">
+                                    Acesse e compartilhe auditorias com rapidez pela SafeScan Brasil.
                                 </p>
-                                <div className="mx-auto mt-4 flex w-full max-w-full min-w-0 flex-col gap-2 sm:mx-0 sm:max-w-3xl sm:flex-row sm:items-center">
-                                    <div className="w-full min-w-0 overflow-hidden rounded-2xl bg-white px-4 py-3 text-xs font-semibold text-slate-500 ring-1 ring-slate-200">
-                                        <span className="block truncate">{linkQrAuditoriaAtual || (carregandoTokenAuditoriaPublica ? "Carregando token público ativo do Supabase..." : "Token público ativo não encontrado. Verifique Configurações > Auditoria pública e QR Code.")}</span>
-                                    </div>
-                                    <button type="button" onClick={() => linkQrAuditoriaAtual && copiarTexto(linkQrAuditoriaAtual, alvoQrAuditoriaAtual ? "Link do QR Code específico copiado." : "Link geral copiado.")} disabled={!linkQrAuditoriaAtual} className="inline-flex w-full shrink-0 items-center justify-center gap-2 rounded-2xl bg-slate-950 px-4 py-3 text-sm font-bold text-white hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto">
-                                        <QrCode className="h-4 w-4" />
-                                        {alvoQrAuditoriaAtual ? "Copiar link do QR" : "Copiar link geral"}
+                            </div>
+                        </div>
+
+                        <div className="flex h-full w-full items-center justify-center">
+                            <div className="w-full max-w-[240px] flex flex-col items-center justify-center rounded-[28px] border border-slate-200 bg-white/96 p-2.5 text-center shadow-[0_18px_40px_-24px_rgba(15,23,42,0.5)] backdrop-blur">
+                                <p className="w-full text-center text-[10px] font-black uppercase leading-none tracking-[0.24em] text-slate-950">QR CODE GERAL</p>
+                                <div className="mx-auto mt-2 flex h-24 w-24 items-center justify-center rounded-2xl bg-slate-50 p-2 ring-1 ring-slate-200">
+                                    {linkQrAuditoriaAtual ? <QrCodeComLogo value={linkQrAuditoriaAtual} size={96} level="H" logoRatio={0.22} /> : <QrCode className="h-11 w-11 text-slate-300" />}
+                                </div>
+                                <div className="mt-3 grid w-full grid-cols-2 gap-2">
+                                    <button
+                                        type="button"
+                                        onClick={() => linkQrAuditoriaAtual && copiarTexto(linkQrAuditoriaAtual, alvoQrAuditoriaAtual ? "Link do QR Code específico copiado." : "Link geral copiado.")}
+                                        disabled={!linkQrAuditoriaAtual}
+                                        className="inline-flex w-full items-center justify-center gap-1.5 whitespace-nowrap rounded-full bg-slate-950 px-3 py-1.5 text-[11px] font-bold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
+                                    >
+                                        <QrCode className="h-3.5 w-3.5 text-emerald-400" />
+                                        Copiar link
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={() => linkQrAuditoriaAtual && window.open(linkQrAuditoriaAtual, "_blank", "noopener,noreferrer")}
+                                        disabled={!linkQrAuditoriaAtual}
+                                        className="inline-flex w-full items-center justify-center gap-1.5 whitespace-nowrap rounded-full bg-white px-3 py-1.5 text-[11px] font-bold text-slate-700 ring-1 ring-slate-200 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
+                                    >
+                                        <QrCode className="h-3.5 w-3.5 text-emerald-600" />
+                                        Abrir link
                                     </button>
                                 </div>
                             </div>
-                        </div>
-                        <div className="mx-auto w-full max-w-[220px] rounded-3xl bg-white p-3 text-center shadow-sm ring-1 ring-slate-200 lg:mx-0 lg:justify-self-end">
-                            <div className="mx-auto flex h-32 w-32 items-center justify-center rounded-2xl bg-slate-50 p-2">
-                                {linkQrAuditoriaAtual ? <QrCodeComLogo value={linkQrAuditoriaAtual} size={112} level="H" logoRatio={0.22} /> : <QrCode className="h-12 w-12 text-slate-300" />}
-                            </div>
-                            <p className="mt-2 truncate text-[11px] font-black uppercase tracking-wide text-slate-950" title={alvoQrAuditoriaAtual || rotuloQrAuditoriaAtual}>
-                                {alvoQrAuditoriaAtual || rotuloQrAuditoriaAtual}
-                            </p>
                         </div>
                     </div>
                 </Card>
@@ -1040,9 +1169,43 @@ export function NovaAuditoriaCampoDireta({ usuario = null, onAuditoriaSalva, emp
                     </Card>
                 )}
 
-                <div className="grid gap-5">
-                    <div className="space-y-5">
-                        <CardRecolhivel titulo="Dados da auditoria" subtitulo="Preencha as informações principais da auditoria de campo." defaultOpen={false} persistKey="novaAuditoriaCampo:dados">
+                <div className="space-y-5">
+                    <div className="rounded-3xl border border-slate-200 bg-white/95 p-4 shadow-sm ring-1 ring-slate-200/70">
+                        <div className="grid gap-3 md:grid-cols-5">
+                            {[
+                                { numero: "1", titulo: "Identificação", label: "Dados da auditoria", cor: "from-sky-400 via-blue-500 to-cyan-400" },
+                                { numero: "2", titulo: "Inspeção", label: "Checklist dinâmico", cor: "from-emerald-400 via-teal-500 to-cyan-400" },
+                                { numero: "3", titulo: "Evidências", label: "Fotos da auditoria", cor: "from-violet-400 via-fuchsia-500 to-purple-500" },
+                                { numero: "4", titulo: "Tratativa", label: "Responsáveis", cor: "from-amber-400 via-orange-500 to-rose-500" },
+                                { numero: "5", titulo: "Finalização", label: "Preenchimento", cor: "from-slate-500 via-slate-700 to-slate-900" },
+                            ].map((etapa) => (
+                                <div key={etapa.numero} className="flex items-center gap-3 rounded-2xl bg-white px-3 py-2.5 ring-1 ring-slate-200">
+                                    <div className={classNames("flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-gradient-to-br text-sm font-black text-white ring-4 ring-white", etapa.cor)}>
+                                        {etapa.numero}
+                                    </div>
+                                    <div className="min-w-0">
+                                        <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Etapa</p>
+                                        <p className="truncate text-sm font-black text-slate-950">{etapa.titulo}</p>
+                                        <p className="truncate text-[11px] font-semibold text-slate-500">{etapa.label}</p>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+
+                    <div className="flex flex-col gap-5">
+                        <CardEtapaAuditoriaCampo
+                            numero="1"
+                            titulo="Dados da auditoria"
+                            subtitulo="Preencha as informações principais da auditoria de campo."
+                            badge="Obrigatório"
+                            defaultOpen={false}
+                            persistKey="novaAuditoriaCampo:dados"
+                            icone={ClipboardCheck}
+                            accentClassName="from-sky-400 via-blue-500 to-cyan-400"
+                            iconClassName="bg-sky-100 text-sky-700 ring-sky-200"
+                            className="order-1"
+                        >
                             <div className="grid gap-4 md:grid-cols-2">
                                 <div>
                                     <label className="text-xs font-bold uppercase tracking-wide text-slate-500">Tipo de auditoria</label>
@@ -1215,9 +1378,20 @@ export function NovaAuditoriaCampoDireta({ usuario = null, onAuditoriaSalva, emp
                                     <textarea value={formulario.observacoesGerais} onChange={(e) => alterarFormulario("observacoesGerais", e.target.value)} rows={3} placeholder="Observações adicionais, se necessário" className="mt-2 w-full resize-none rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-slate-300" />
                                 </div>
                             </div>
-                        </CardRecolhivel>
+                        </CardEtapaAuditoriaCampo>
 
-                        <CardRecolhivel titulo="Responsáveis e notificação" subtitulo="Dados de tratativa e contatos ficam recolhidos para não poluir a tela durante o preenchimento inicial." defaultOpen={false} persistKey="novaAuditoriaCampo:responsaveisNotificacao">
+                        <CardEtapaAuditoriaCampo
+                            numero="4"
+                            titulo="Responsáveis e notificação"
+                            subtitulo="Dados de tratativa e contatos ficam recolhidos para não poluir a tela durante o preenchimento inicial."
+                            badge="Obrigatório"
+                            defaultOpen={false}
+                            persistKey="novaAuditoriaCampo:responsaveisNotificacao"
+                            icone={Mail}
+                            accentClassName="from-amber-400 via-orange-500 to-rose-500"
+                            iconClassName="bg-amber-100 text-amber-700 ring-amber-200"
+                            className="order-4"
+                        >
                             <div className="mb-4 rounded-3xl bg-blue-50 p-4 ring-1 ring-blue-100">
                                 <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
                                     <div>
@@ -1346,9 +1520,21 @@ export function NovaAuditoriaCampoDireta({ usuario = null, onAuditoriaSalva, emp
                                 </div>
 
                             </div>
-                        </CardRecolhivel>
+                        </CardEtapaAuditoriaCampo>
 
-                        <CardRecolhivel titulo={`Checklist dinâmico — ${tipoAtual.label}`} subtitulo="O checklist começa como não aplicável e o auditor altera apenas os itens avaliados." contador={`${resultado.classificacao} · ${resultado.percentual}%`} defaultOpen={false} persistKey="novaAuditoriaCampo:checklist">
+                        <CardEtapaAuditoriaCampo
+                            numero="2"
+                            titulo={`Checklist dinâmico — ${tipoAtual.label}`}
+                            subtitulo="O checklist começa como não aplicável e o auditor altera apenas os itens avaliados."
+                            badge="Conformidade"
+                            contador={`${resultado.classificacao} · ${resultado.percentual}%`}
+                            defaultOpen={false}
+                            persistKey="novaAuditoriaCampo:checklist"
+                            icone={ShieldCheck}
+                            accentClassName="from-emerald-400 via-teal-500 to-cyan-400"
+                            iconClassName="bg-emerald-100 text-emerald-700 ring-emerald-200"
+                            className="order-2"
+                        >
                             <div className="grid gap-3 lg:grid-cols-2">
                                 {checklistAtual.map((pergunta) => (
                                     <div key={pergunta} className="rounded-2xl bg-slate-50 p-3 ring-1 ring-slate-200">
@@ -1359,9 +1545,20 @@ export function NovaAuditoriaCampoDireta({ usuario = null, onAuditoriaSalva, emp
                                     </div>
                                 ))}
                             </div>
-                        </CardRecolhivel>
+                        </CardEtapaAuditoriaCampo>
 
-                        <CardRecolhivel titulo="Fotos da auditoria" subtitulo="Fotos grandes serão reduzidas automaticamente antes do envio." defaultOpen={false} persistKey="novaAuditoriaCampo:fotos">
+                        <CardEtapaAuditoriaCampo
+                            numero="3"
+                            titulo="Fotos da auditoria"
+                            subtitulo="Fotos grandes serão reduzidas automaticamente antes do envio."
+                            badge="Opcional"
+                            defaultOpen={false}
+                            persistKey="novaAuditoriaCampo:fotos"
+                            icone={Image}
+                            accentClassName="from-violet-400 via-fuchsia-500 to-purple-500"
+                            iconClassName="bg-violet-100 text-violet-700 ring-violet-200"
+                            className="order-3"
+                        >
                             <div className="grid gap-4 md:grid-cols-2">
                                 {[
                                     { campo: "fotoAntes", preview: previewFotos.antes, label: "Foto antes" },
@@ -1378,7 +1575,7 @@ export function NovaAuditoriaCampoDireta({ usuario = null, onAuditoriaSalva, emp
                                     </div>
                                 ))}
                             </div>
-                        </CardRecolhivel>
+                        </CardEtapaAuditoriaCampo>
                     </div>
                 </div>
 
@@ -1442,14 +1639,27 @@ export function NovaAuditoriaCampoDireta({ usuario = null, onAuditoriaSalva, emp
                     </Card>
                 )}
 
-                <div className="flex flex-col gap-3 rounded-3xl bg-white/95 p-3 shadow-xl ring-1 ring-slate-200 backdrop-blur md:sticky md:bottom-4 md:z-10 md:flex-row">
-                    <button type="button" onClick={salvarAuditoriaDireta} disabled={salvando || Boolean(auditoriaSalva)} className="flex-1 rounded-2xl bg-slate-950 px-4 py-3 text-sm font-bold text-white hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60">
-                        {salvando ? "Salvando auditoria..." : auditoriaSalva ? "Auditoria já salva — clique em Nova auditoria" : "+ Salvar nova auditoria de campo"}
-                    </button>
-                    <button type="button" onClick={limparFormularioAuditoriaCampo} className="rounded-2xl bg-slate-100 px-4 py-3 text-sm font-bold text-slate-700 hover:bg-slate-200 md:w-auto">
-                        Nova auditoria / limpar formulário
-                    </button>
-                </div>
+                <CardEtapaAuditoriaCampo
+                    numero="5"
+                    titulo="Preenchimento da auditoria"
+                    subtitulo="Confira o resumo e salve a nova auditoria de campo."
+                    badge={auditoriaSalva ? "Pronta" : "Final"}
+                    defaultOpen
+                    persistKey="novaAuditoriaCampo:finalizacao"
+                    icone={CheckCircle2}
+                    accentClassName="from-slate-500 via-slate-700 to-slate-950"
+                    iconClassName="bg-slate-100 text-slate-700 ring-slate-200"
+                    className="order-5"
+                >
+                    <div className="flex flex-col gap-3 sm:flex-row">
+                        <button type="button" onClick={salvarAuditoriaDireta} disabled={salvando || Boolean(auditoriaSalva)} className="flex-1 rounded-2xl bg-slate-950 px-4 py-3 text-sm font-bold text-white hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60">
+                            {salvando ? "Salvando auditoria..." : auditoriaSalva ? "Auditoria já salva — clique em Nova auditoria" : "+ Salvar nova auditoria de campo"}
+                        </button>
+                        <button type="button" onClick={limparFormularioAuditoriaCampo} className="rounded-2xl bg-slate-100 px-4 py-3 text-sm font-bold text-slate-700 hover:bg-slate-200 md:w-auto">
+                            Nova auditoria / limpar formulário
+                        </button>
+                    </div>
+                </CardEtapaAuditoriaCampo>
             </div>
         </div>
     );

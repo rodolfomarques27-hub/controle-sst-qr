@@ -403,6 +403,7 @@ export function DashboardAuditoriaCampo({
     onAuditoriaAtualizada,
 }) {
     const [mostrarPersonalizacao, setMostrarPersonalizacao] = useState(false);
+    const [atualizandoDados, setAtualizandoDados] = useState(false);
     const [tokenAuditoriaCampoConfigurado, setTokenAuditoriaCampoConfigurado] = useState("");
     const [carregandoTokenAuditoriaCampo, setCarregandoTokenAuditoriaCampo] = useState(false);
     const [mensagemTokenAuditoriaCampo, setMensagemTokenAuditoriaCampo] = useState("");
@@ -410,9 +411,12 @@ export function DashboardAuditoriaCampo({
     const auditoriasCampoRecebidas = Array.isArray(auditoriasCampo) ? auditoriasCampo : [];
     const [auditoriasCampoFallback, setAuditoriasCampoFallback] = useState([]);
     const [carregandoAuditoriasCampoFallback, setCarregandoAuditoriasCampoFallback] = useState(false);
+    const [auditoriasCampoFallbackCarregadas, setAuditoriasCampoFallbackCarregadas] = useState(false);
     const [erroAuditoriasCampoFallback, setErroAuditoriasCampoFallback] = useState("");
     const auditoriasCampoEfetivas = auditoriasCampoRecebidas.length > 0 ? auditoriasCampoRecebidas : auditoriasCampoFallback;
     const carregandoAuditoriasCampoEfetivo = Boolean(carregando || carregandoAuditoriasCampoFallback);
+    const carregandoInicialAuditoriasCampo = carregandoAuditoriasCampoEfetivo && auditoriasCampoEfetivas.length === 0 && !auditoriasCampoFallbackCarregadas;
+    const atualizacaoDadosEmAndamento = Boolean(atualizandoDados || carregandoInicialAuditoriasCampo);
     const erroAuditoriasCampoEfetivo = erro || erroAuditoriasCampoFallback;
     const [qrcodesCampo, setQrcodesCampo] = useState([]);
     const [qrcodesCampoCarregados, setQrcodesCampoCarregados] = useState(false);
@@ -760,11 +764,13 @@ export function DashboardAuditoriaCampo({
             setAuditoriasCampoFallback([]);
         } finally {
             setCarregandoAuditoriasCampoFallback(false);
+            setAuditoriasCampoFallbackCarregadas(true);
         }
     }, [carregandoAuditoriasCampoFallback]);
 
     useEffect(() => {
         if (auditoriasCampoRecebidas.length > 0) return;
+        if (auditoriasCampoFallbackCarregadas) return;
         if (carregando || carregandoAuditoriasCampoFallback) return;
 
         const timer = window.setTimeout(() => {
@@ -774,6 +780,7 @@ export function DashboardAuditoriaCampo({
         return () => window.clearTimeout(timer);
     }, [
         auditoriasCampoRecebidas.length,
+        auditoriasCampoFallbackCarregadas,
         carregando,
         carregandoAuditoriasCampoFallback,
         carregarAuditoriasCampoFallbackDashboard,
@@ -797,6 +804,24 @@ export function DashboardAuditoriaCampo({
 
         return () => window.clearTimeout(timer);
     }, [auditoriasCampoEfetivas.length, auditoriasCampoCargaInicialSolicitada, carregando, onRecarregar]);
+
+    const atualizarDadosDashboardAuditoriaCampo = useCallback(async () => {
+        if (atualizacaoDadosEmAndamento) return;
+
+        setAtualizandoDados(true);
+        try {
+            if (typeof onRecarregar === "function") {
+                await onRecarregar();
+                return;
+            }
+
+            await carregarAuditoriasCampoFallbackDashboard();
+        } finally {
+            setAtualizandoDados(false);
+        }
+    }, [atualizacaoDadosEmAndamento, onRecarregar, carregarAuditoriasCampoFallbackDashboard]);
+
+    const classeBotaoCabecalhoDashboardAuditoriaCampo = "inline-flex min-h-10 items-center justify-center gap-2 rounded-2xl bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 shadow-sm ring-1 ring-slate-200 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60";
 
     const empresasQrCampoOpcoes = useMemo(() => {
         const mapaEmpresas = new Map();
@@ -1045,55 +1070,122 @@ export function DashboardAuditoriaCampo({
         .sort((a, b) => String(b.createdAt || "").localeCompare(String(a.createdAt || "")))
         .slice(0, 10);
 
+    const temasCartasAuditoriaCampo = {
+        totalAuditorias: {
+            borda: "border-cyan-200/80",
+            fundo: "bg-gradient-to-br from-cyan-50 via-white to-sky-50",
+            acento: "from-cyan-400 via-sky-500 to-blue-500",
+            icone: "bg-cyan-100 text-cyan-700 ring-cyan-200/70",
+            etiqueta: "text-cyan-700",
+            valor: "text-slate-950",
+            detalhe: "text-slate-500",
+        },
+        auditoriasMes: {
+            borda: "border-blue-200/80",
+            fundo: "bg-gradient-to-br from-blue-50 via-white to-sky-50",
+            acento: "from-blue-400 via-sky-500 to-cyan-500",
+            icone: "bg-blue-100 text-blue-700 ring-blue-200/70",
+            etiqueta: "text-blue-700",
+            valor: "text-slate-950",
+            detalhe: "text-slate-500",
+        },
+        auditoriasAbertas: {
+            borda: "border-violet-200/80",
+            fundo: "bg-gradient-to-br from-violet-50 via-white to-indigo-50",
+            acento: "from-violet-400 via-fuchsia-500 to-indigo-500",
+            icone: "bg-violet-100 text-violet-700 ring-violet-200/70",
+            etiqueta: "text-violet-700",
+            valor: "text-slate-950",
+            detalhe: "text-slate-500",
+        },
+        auditoriasVencidas: {
+            borda: "border-amber-200/80",
+            fundo: "bg-gradient-to-br from-amber-50 via-white to-orange-50",
+            acento: "from-amber-400 via-orange-500 to-rose-400",
+            icone: "bg-amber-100 text-amber-700 ring-amber-200/70",
+            etiqueta: "text-amber-700",
+            valor: "text-slate-950",
+            detalhe: "text-slate-500",
+        },
+        desviosCriticos: {
+            borda: "border-rose-200/80",
+            fundo: "bg-gradient-to-br from-rose-50 via-white to-pink-50",
+            acento: "from-rose-400 via-red-500 to-pink-500",
+            icone: "bg-rose-100 text-rose-700 ring-rose-200/70",
+            etiqueta: "text-rose-700",
+            valor: "text-slate-950",
+            detalhe: "text-slate-500",
+        },
+        desviosAbertos: {
+            borda: "border-orange-200/80",
+            fundo: "bg-gradient-to-br from-orange-50 via-white to-amber-50",
+            acento: "from-orange-400 via-amber-500 to-yellow-500",
+            icone: "bg-orange-100 text-orange-700 ring-orange-200/70",
+            etiqueta: "text-orange-700",
+            valor: "text-slate-950",
+            detalhe: "text-slate-500",
+        },
+        mediaConformidade: {
+            borda: "border-emerald-200/80",
+            fundo: "bg-gradient-to-br from-emerald-50 via-white to-teal-50",
+            acento: "from-emerald-400 via-teal-500 to-cyan-500",
+            icone: "bg-emerald-100 text-emerald-700 ring-emerald-200/70",
+            etiqueta: "text-emerald-700",
+            valor: "text-slate-950",
+            detalhe: "text-slate-500",
+        },
+    };
+    const obterTemaCartaAuditoriaCampo = (chave) => temasCartasAuditoriaCampo[chave] || temasCartasAuditoriaCampo.totalAuditorias;
+
     const cartas = [
         {
             chave: "totalAuditorias",
-            label: "Total de auditorias",
+            label: "Total",
             valor: auditoriasBaseDashboard.length,
             icon: ClipboardCheck,
-            detalhe: "Registros válidos no banco",
+            detalhe: "Registros",
         },
         {
             chave: "auditoriasMes",
-            label: "Auditorias do mês",
+            label: "No mês",
             valor: auditoriasMes.length,
             icon: ClipboardCheck,
-            detalhe: "Registradas no mês atual",
+            detalhe: "Mês atual",
         },
         {
             chave: "auditoriasAbertas",
-            label: "Auditorias abertas",
+            label: "Abertas",
             valor: auditoriasAbertas,
             icon: AlertTriangle,
-            detalhe: "Aguardando tratativa",
+            detalhe: "Tratativa",
         },
         {
             chave: "auditoriasVencidas",
-            label: "Auditorias vencidas",
+            label: "Vencidas",
             valor: auditoriasVencidas,
             icon: CalendarClock,
-            detalhe: "Prazo de adequação vencido",
+            detalhe: "Prazo vencido",
         },
         {
             chave: "desviosCriticos",
-            label: "Desvios críticos",
+            label: "Críticos",
             valor: desviosCriticos,
             icon: AlertTriangle,
-            detalhe: "Alto/crítico ou ação imediata",
+            detalhe: "Ação imediata",
         },
         {
             chave: "desviosAbertos",
-            label: "Desvios abertos",
+            label: "Abertos",
             valor: desviosAbertos,
             icon: AlertTriangle,
-            detalhe: "Pendências não encerradas",
+            detalhe: "Pendentes",
         },
         {
             chave: "mediaConformidade",
-            label: "Média de conformidade",
+            label: "Conformidade",
             valor: `${mediaConformidade}%`,
             icon: BadgeCheck,
-            detalhe: "Média das auditorias do mês",
+            detalhe: "Média do mês",
         },
     ];
     const blocos = [
@@ -2250,13 +2342,13 @@ export function DashboardAuditoriaCampo({
     const renderBarraResumoAuditoria = (item, total, classe = "bg-blue-500") => {
         const percentual = total ? Math.round((item.total / total) * 100) : 0;
         return (
-            <div key={item.label} className="space-y-1.5 rounded-2xl bg-slate-50 p-3 ring-1 ring-slate-100">
+            <div key={item.label} className="space-y-2 rounded-2xl border border-slate-200 bg-gradient-to-br from-white via-slate-50 to-white p-3 shadow-sm">
                 <div className="flex items-center justify-between gap-2 text-xs">
                     <span className="font-bold text-slate-700">{item.label}</span>
                     <span className="font-black text-slate-950">{item.total}</span>
                 </div>
-                <div className="h-2 overflow-hidden rounded-full bg-white ring-1 ring-slate-100">
-                    <div className={classNames("h-full rounded-full", classe)} style={{ width: `${Math.max(percentual, item.total > 0 ? 6 : 0)}%` }} />
+                <div className="h-2 overflow-hidden rounded-full bg-slate-100">
+                    <div className={classNames("h-full rounded-full shadow-sm", classe)} style={{ width: `${Math.max(percentual, item.total > 0 ? 6 : 0)}%` }} />
                 </div>
             </div>
         );
@@ -2264,18 +2356,74 @@ export function DashboardAuditoriaCampo({
 
     const blocoWrapper = (chave, titulo, subtitulo, children) => {
         const recolhido = Boolean(blocosRecolhidos[chave]);
+        const iconeBloco = {
+            historico: CalendarClock,
+            resumoVisual: BadgeCheck,
+            topDesvios: AlertTriangle,
+            empresas: ClipboardCheck,
+            areas: ClipboardCheck,
+            boasPraticas: BadgeCheck,
+            qrcodes: QrCode,
+        }[chave] || ClipboardCheck;
+        const Icone = iconeBloco;
+        const temaBloco = {
+            historico: {
+                borda: "border-cyan-200/80",
+                acento: "from-cyan-400 via-blue-500 to-violet-500",
+                icone: "bg-cyan-100 text-cyan-700 ring-cyan-200/70",
+            },
+            resumoVisual: {
+                borda: "border-emerald-200/80",
+                acento: "from-emerald-400 via-teal-500 to-cyan-500",
+                icone: "bg-emerald-100 text-emerald-700 ring-emerald-200/70",
+            },
+            qrcodes: {
+                borda: "border-blue-200/80",
+                acento: "from-blue-400 via-cyan-500 to-sky-500",
+                icone: "bg-blue-100 text-blue-700 ring-blue-200/70",
+            },
+            boasPraticas: {
+                borda: "border-emerald-200/80",
+                acento: "from-emerald-400 via-green-500 to-teal-500",
+                icone: "bg-emerald-100 text-emerald-700 ring-emerald-200/70",
+            },
+            topDesvios: {
+                borda: "border-orange-200/80",
+                acento: "from-orange-400 via-amber-500 to-rose-400",
+                icone: "bg-orange-100 text-orange-700 ring-orange-200/70",
+            },
+            empresas: {
+                borda: "border-blue-200/80",
+                acento: "from-blue-400 via-indigo-500 to-cyan-500",
+                icone: "bg-blue-100 text-blue-700 ring-blue-200/70",
+            },
+            areas: {
+                borda: "border-indigo-200/80",
+                acento: "from-indigo-400 via-sky-500 to-cyan-500",
+                icone: "bg-indigo-100 text-indigo-700 ring-indigo-200/70",
+            },
+        }[chave] || {
+            borda: "border-slate-200/80",
+            acento: "from-cyan-400 via-blue-500 to-violet-500",
+            icone: "bg-slate-100 text-slate-700 ring-slate-200/70",
+        };
+
         return (
-            <Card className={classeTamanho(tamanhosBlocos[chave])}>
-                <div className="flex items-start justify-between gap-2">
-                    <div>
-                        <h2 className="text-lg font-bold text-slate-950">{titulo}</h2>
-                        <p className="mt-1 text-sm text-slate-500">{subtitulo}</p>
+            <Card className={classNames("relative overflow-hidden rounded-[22px] border bg-white/95 shadow-[0_18px_48px_-34px_rgba(15,23,42,0.5)]", temaBloco.borda, classeTamanho(tamanhosBlocos[chave]))}>
+                <span className={classNames("absolute inset-x-0 top-0 h-1 bg-gradient-to-r", temaBloco.acento)} />
+                <div className="flex items-center gap-3 border-b border-slate-100/80 px-4 py-3.5 md:px-5">
+                    <div className={classNames("flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl ring-1", temaBloco.icone)}>
+                        <Icone className="h-5 w-5" />
                     </div>
-                    <button type="button" onClick={() => setBlocosRecolhidos((atual) => ({ ...atual, [chave]: !atual[chave] }))} className="rounded-xl bg-slate-50 px-3 py-2 text-xs font-bold text-slate-600 ring-1 ring-slate-200 hover:bg-slate-100">
+                    <div className="min-w-0 flex-1">
+                        <h2 className="truncate text-[15px] font-black tracking-tight text-slate-950">{titulo}</h2>
+                        <p className="mt-0.5 line-clamp-2 text-[11px] font-medium leading-snug text-slate-500">{subtitulo}</p>
+                    </div>
+                    <button type="button" onClick={() => setBlocosRecolhidos((atual) => ({ ...atual, [chave]: !atual[chave] }))} className="shrink-0 rounded-full bg-slate-950 px-3 py-1.5 text-xs font-black text-white shadow-sm transition hover:bg-slate-800">
                         {recolhido ? "Abrir" : "Recolher"}
                     </button>
                 </div>
-                {!recolhido && <div className="mt-4">{children}</div>}
+                {!recolhido && <div className="px-4 py-4 md:px-5 md:py-5">{children}</div>}
             </Card>
         );
     };
@@ -2299,7 +2447,7 @@ export function DashboardAuditoriaCampo({
 
             return blocoWrapper(chave, "Histórico de auditorias", "Filtre, abra e acompanhe os registros de campo por área, máquina, empresa e responsável.", (
                 <div className="space-y-4">
-                    <div className="rounded-3xl border border-slate-200 bg-slate-50/70 p-4">
+                    <div className="rounded-3xl border border-slate-200 bg-gradient-to-br from-slate-50 via-white to-slate-50 p-4 shadow-sm">
                         <div className="flex items-center justify-between gap-3">
                             <div>
                                 <p className="text-xs font-black uppercase tracking-wide text-slate-500">Buscar auditoria</p>
@@ -2309,7 +2457,7 @@ export function DashboardAuditoriaCampo({
                                 <button
                                     type="button"
                                     onClick={imprimirRelatorioHistoricoAuditoriasCampo}
-                                    className="inline-flex items-center gap-2 rounded-2xl bg-slate-950 px-4 py-2 text-xs font-bold text-white hover:bg-slate-800"
+                                    className="inline-flex items-center gap-2 rounded-2xl bg-slate-950 px-4 py-2 text-xs font-bold text-white shadow-sm transition hover:bg-slate-800"
                                 >
                                     <Download className="h-3.5 w-3.5" />
                                     Imprimir histórico
@@ -2317,7 +2465,7 @@ export function DashboardAuditoriaCampo({
                                 <button
                                     type="button"
                                     onClick={() => setBuscarAuditoriaRecolhido((valor) => !valor)}
-                                    className="inline-flex items-center gap-2 rounded-2xl bg-white px-4 py-2 text-xs font-bold text-slate-700 ring-1 ring-slate-200 hover:bg-slate-100"
+                                    className="inline-flex items-center gap-2 rounded-2xl bg-white px-4 py-2 text-xs font-bold text-slate-700 ring-1 ring-slate-200 transition hover:bg-slate-100"
                                 >
                                     {buscarAuditoriaRecolhido ? "Abrir filtros" : "Recolher filtros"}
                                 </button>
@@ -2326,7 +2474,7 @@ export function DashboardAuditoriaCampo({
 
                         {!buscarAuditoriaRecolhido && (
                             <>
-                                <div className="mt-4 flex flex-col gap-3 rounded-2xl border border-slate-200 bg-white p-3 lg:flex-row lg:items-center lg:justify-between">
+                                <div className="mt-4 flex flex-col gap-3 rounded-2xl border border-slate-200 bg-white p-3 shadow-sm lg:flex-row lg:items-center lg:justify-between">
                                     <div>
                                         <p className="text-xs font-black uppercase tracking-wide text-slate-500">Filtros salvos do relatório</p>
                                         <p className="mt-1 text-xs font-semibold text-slate-500">Salve uma combinação de filtros para reutilizar no histórico da Auditoria de Campo.</p>
@@ -2603,38 +2751,39 @@ export function DashboardAuditoriaCampo({
             return blocoWrapper(chave, "Resumo visual das auditorias", "Distribuição por status, categoria padronizada e grau de risco para leitura gerencial.", (
                 <div className="space-y-4">
                     <div className="grid gap-3 md:grid-cols-3">
-                        <div className="rounded-3xl bg-slate-950 p-4 text-center text-white shadow-sm">
-                            <p className="text-xs font-black uppercase tracking-wide text-slate-300">Total analisado</p>
-                            <p className="mt-2 text-3xl font-black">{auditoriasNormalizadas.length}</p>
-                            <p className="mt-1 text-xs text-slate-300">auditoria(s) no histórico</p>
+                        <div className="relative overflow-hidden rounded-3xl border border-slate-200 bg-gradient-to-br from-slate-950 via-slate-900 to-slate-800 p-4 text-center text-white shadow-[0_18px_48px_-34px_rgba(15,23,42,0.65)]">
+                            <span className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-cyan-400 via-blue-500 to-violet-500" />
+                            <p className="text-[11px] font-black uppercase tracking-[0.18em] text-slate-300">Total analisado</p>
+                            <p className="mt-2 text-3xl font-black tracking-tight">{auditoriasNormalizadas.length}</p>
+                            <p className="mt-1 text-[11px] font-semibold text-slate-300">auditoria(s) no histórico</p>
                         </div>
-                        <div className="rounded-3xl bg-red-50 p-4 text-center ring-1 ring-red-100">
-                            <p className="text-xs font-black uppercase tracking-wide text-red-600">Críticas / ação imediata</p>
-                            <p className="mt-2 text-3xl font-black text-red-700">{auditoriasCriticas}</p>
-                            <p className="mt-1 text-xs text-red-600">priorizar acompanhamento</p>
+                        <div className="rounded-3xl border border-rose-200/80 bg-gradient-to-br from-rose-50 via-white to-pink-50 p-4 text-center shadow-sm">
+                            <p className="text-[11px] font-black uppercase tracking-[0.18em] text-rose-700">Críticas / ação imediata</p>
+                            <p className="mt-2 text-3xl font-black tracking-tight text-rose-700">{auditoriasCriticas}</p>
+                            <p className="mt-1 text-[11px] font-semibold text-rose-600">priorizar acompanhamento</p>
                         </div>
-                        <div className="rounded-3xl bg-orange-50 p-4 text-center ring-1 ring-orange-100">
-                            <p className="text-xs font-black uppercase tracking-wide text-orange-600">Vencidas</p>
-                            <p className="mt-2 text-3xl font-black text-orange-700">{auditoriasVencidas}</p>
-                            <p className="mt-1 text-xs text-orange-600">fora do prazo de adequação</p>
+                        <div className="rounded-3xl border border-amber-200/80 bg-gradient-to-br from-amber-50 via-white to-orange-50 p-4 text-center shadow-sm">
+                            <p className="text-[11px] font-black uppercase tracking-[0.18em] text-amber-700">Vencidas</p>
+                            <p className="mt-2 text-3xl font-black tracking-tight text-amber-700">{auditoriasVencidas}</p>
+                            <p className="mt-1 text-[11px] font-semibold text-amber-600">fora do prazo de adequação</p>
                         </div>
                     </div>
 
                     <div className="grid gap-4 lg:grid-cols-3">
-                        <div className="rounded-3xl border border-slate-200 bg-white p-4 shadow-sm">
-                            <p className="text-xs font-black uppercase tracking-wide text-slate-400">Por status</p>
+                        <div className="rounded-3xl border border-slate-200 bg-gradient-to-br from-white via-slate-50 to-white p-4 shadow-sm">
+                            <p className="text-xs font-black uppercase tracking-[0.18em] text-slate-400">Por status</p>
                             <div className="mt-3 space-y-2">
                                 {dadosResumoVisualAuditoria.porStatus.length === 0 ? <p className="text-sm text-slate-500">Sem dados.</p> : dadosResumoVisualAuditoria.porStatus.map((item) => renderBarraResumoAuditoria(item, dadosResumoVisualAuditoria.total, "bg-emerald-500"))}
                             </div>
                         </div>
-                        <div className="rounded-3xl border border-slate-200 bg-white p-4 shadow-sm">
-                            <p className="text-xs font-black uppercase tracking-wide text-slate-400">Por categoria</p>
+                        <div className="rounded-3xl border border-slate-200 bg-gradient-to-br from-white via-slate-50 to-white p-4 shadow-sm">
+                            <p className="text-xs font-black uppercase tracking-[0.18em] text-slate-400">Por categoria</p>
                             <div className="mt-3 space-y-2">
                                 {dadosResumoVisualAuditoria.porTipo.length === 0 ? <p className="text-sm text-slate-500">Sem dados.</p> : dadosResumoVisualAuditoria.porTipo.map((item) => renderBarraResumoAuditoria(item, dadosResumoVisualAuditoria.total, "bg-blue-500"))}
                             </div>
                         </div>
-                        <div className="rounded-3xl border border-slate-200 bg-white p-4 shadow-sm">
-                            <p className="text-xs font-black uppercase tracking-wide text-slate-400">Por risco</p>
+                        <div className="rounded-3xl border border-slate-200 bg-gradient-to-br from-white via-slate-50 to-white p-4 shadow-sm">
+                            <p className="text-xs font-black uppercase tracking-[0.18em] text-slate-400">Por risco</p>
                             <div className="mt-3 space-y-2">
                                 {dadosResumoVisualAuditoria.porRisco.length === 0 ? <p className="text-sm text-slate-500">Sem dados.</p> : dadosResumoVisualAuditoria.porRisco.map((item) => renderBarraResumoAuditoria(item, dadosResumoVisualAuditoria.total, normalizarTextoBusca(item.label).includes("crit") ? "bg-red-500" : normalizarTextoBusca(item.label).includes("alto") ? "bg-orange-500" : normalizarTextoBusca(item.label).includes("medio") ? "bg-amber-500" : "bg-emerald-500"))}
                             </div>
@@ -2643,7 +2792,7 @@ export function DashboardAuditoriaCampo({
 
                     <div className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm">
                         <table className="w-full text-left text-sm">
-                            <thead className="bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
+                            <thead className="bg-slate-50 text-xs uppercase tracking-[0.14em] text-slate-500">
                                 <tr>
                                     <th className="px-4 py-3">Grupo</th>
                                     <th className="px-4 py-3">Item</th>
@@ -2671,7 +2820,7 @@ export function DashboardAuditoriaCampo({
             const tipoSelecionado = obterTipoAuditoriaCampoDireta(qrFormCampo.tipo);
             return blocoWrapper(chave, "QR Codes de campo", "Crie, imprima e consulte QR Codes específicos para máquinas, equipamentos, containers, banheiros e pontos fixos.", (
                 <div className="grid gap-4 xl:grid-cols-[0.85fr_1.15fr]">
-                    <div className="rounded-3xl border border-slate-200 bg-slate-50/70 p-4">
+                    <div className="rounded-3xl border border-slate-200 bg-gradient-to-br from-slate-50 via-white to-slate-50 p-4 shadow-sm">
                         <div className="grid gap-3 md:grid-cols-2">
                             <label className="block text-xs font-bold uppercase tracking-wide text-slate-500">
                                 Tipo
@@ -2728,12 +2877,12 @@ export function DashboardAuditoriaCampo({
                             </label>
                         </div>
 
-                        <div id="qr-auditoria-campo-para-impressao" className="mt-4 rounded-3xl bg-white p-3 text-center ring-1 ring-slate-200">
+                        <div id="qr-auditoria-campo-para-impressao" className="mt-4 rounded-3xl border border-slate-200 bg-white p-3 text-center shadow-sm">
                             <div className="card">
-                                <div className="mx-auto flex w-fit justify-center rounded-3xl bg-white p-3 ring-1 ring-slate-200 shadow-sm">
+                                <div className="mx-auto flex w-fit justify-center rounded-3xl bg-slate-950 p-3 ring-1 ring-slate-900/10 shadow-sm">
                                     <QrCodeComLogo value={linkQrCampoAtual} size={160} level="H" logoRatio={0.24} />
                                 </div>
-                                <h2 className="mt-3 truncate text-base font-black uppercase text-slate-950" title={qrFormCampo.identificacao || "Identificação pendente"}>{qrFormCampo.identificacao || "Identificação pendente"}</h2>
+                                <h2 className="mt-3 truncate text-base font-black uppercase tracking-tight text-slate-950" title={qrFormCampo.identificacao || "Identificação pendente"}>{qrFormCampo.identificacao || "Identificação pendente"}</h2>
                             </div>
                         </div>
 
@@ -2746,7 +2895,7 @@ export function DashboardAuditoriaCampo({
                         </div>
                     </div>
 
-                    <div className="min-w-0 self-start overflow-visible rounded-3xl border border-slate-200 bg-white p-4">
+                    <div className="min-w-0 self-start overflow-visible rounded-3xl border border-slate-200 bg-white p-4 shadow-sm">
                         <div className="flex flex-wrap items-start justify-between gap-3">
                             <div>
                                 <p className="text-sm font-black text-slate-950">QR Codes salvos</p>
@@ -2776,7 +2925,7 @@ export function DashboardAuditoriaCampo({
                         </div>
 
                         {qrcodesCampoCarregados && qrcodesCampo.length > 0 && (
-                            <div className="mt-3 grid gap-2 rounded-2xl bg-slate-50 p-3 ring-1 ring-slate-100 md:grid-cols-[1fr_180px_190px_auto]">
+                        <div className="mt-3 grid gap-2 rounded-2xl border border-slate-200 bg-gradient-to-br from-slate-50 via-white to-slate-50 p-3 shadow-sm md:grid-cols-[1fr_180px_190px_auto]">
                                 <label className="relative block">
                                     <span className="sr-only">Pesquisar QR Code</span>
                                     <input
@@ -3163,7 +3312,7 @@ export function DashboardAuditoriaCampo({
                     {boasPraticasAuditoria.length === 0 ? (
                         <div className="rounded-2xl border border-dashed border-emerald-200 bg-emerald-50/40 p-5 text-center text-sm text-emerald-700">Nenhuma boa prática registrada ainda.</div>
                     ) : boasPraticasAuditoria.map((item) => (
-                        <div key={item.id || `${item.colaboradorNome}-${item.createdAt}-boas-praticas`} className="rounded-2xl bg-emerald-50/60 p-3 ring-1 ring-emerald-100">
+                        <div key={item.id || `${item.colaboradorNome}-${item.createdAt}-boas-praticas`} className="rounded-2xl border border-emerald-200/80 bg-gradient-to-br from-emerald-50 via-white to-emerald-50 p-3 shadow-sm">
                             <div className="flex flex-wrap items-start justify-between gap-2">
                                 <div>
                                     <p className="text-sm font-bold text-emerald-950">{identificarAlvoAuditoriaCampo(item).titulo}</p>
@@ -3183,7 +3332,7 @@ export function DashboardAuditoriaCampo({
                     {topDesvios.length === 0 ? (
                         <div className="rounded-2xl border border-dashed border-slate-300 p-5 text-center text-sm text-slate-500">Nenhum desvio registrado.</div>
                     ) : topDesvios.map((item, index) => (
-                        <div key={item.categoria} className="flex items-center justify-between gap-3 rounded-2xl bg-slate-50 p-3 ring-1 ring-slate-200">
+                        <div key={item.categoria} className="flex items-center justify-between gap-3 rounded-2xl border border-slate-200 bg-gradient-to-r from-white via-slate-50 to-white p-3 shadow-sm">
                             <div>
                                 <p className="text-sm font-bold text-slate-950">#{index + 1} {item.categoria}</p>
                                 <p className="text-xs text-slate-500">{item.abertos} aberto(s)</p>
@@ -3196,7 +3345,7 @@ export function DashboardAuditoriaCampo({
         }
         if (chave === "empresas") {
             return blocoWrapper(chave, "Ranking por empresa", "Resumo de auditorias, desvios e média por empresa.", (
-                <div className="overflow-hidden rounded-2xl border border-slate-200">
+                <div className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm">
                     <table className="w-full text-sm">
                         <thead className="bg-slate-50 text-center text-xs uppercase tracking-wide text-slate-500">
                             <tr>
@@ -3224,7 +3373,7 @@ export function DashboardAuditoriaCampo({
         }
         if (chave === "areas") {
             return blocoWrapper(chave, "Ranking por área/local", "Áreas, locais ou máquinas com mais auditorias e desvios registrados.", (
-                <div className="overflow-hidden rounded-2xl border border-slate-200">
+                <div className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm">
                     <table className="w-full text-sm">
                         <thead className="bg-slate-50 text-center text-xs uppercase tracking-wide text-slate-500">
                             <tr>
@@ -3269,21 +3418,20 @@ export function DashboardAuditoriaCampo({
     };
 
     return (
-        <div>
-            <Header
-                titulo="Dashboard Auditoria de Campo"
-                subtitulo="Indicadores, histórico e desvios das auditorias realizadas via QR Code."
-                acao={(
+            <div>
+                <Header
+                    titulo="Dashboard Auditoria de Campo"
+                    acao={(
                     <div className="flex flex-wrap items-center gap-2">
-                        <button type="button" onClick={imprimirRelatorioDashboardAuditoriaCampo} className="inline-flex items-center gap-2 rounded-2xl bg-slate-950 px-4 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-slate-800">
+                        <button type="button" onClick={imprimirRelatorioDashboardAuditoriaCampo} className={classeBotaoCabecalhoDashboardAuditoriaCampo}>
                             <Download className="h-4 w-4" />
                             Imprimir relatório
                         </button>
-                        <button type="button" onClick={onRecarregar} className="inline-flex items-center gap-2 rounded-2xl bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 shadow-sm ring-1 ring-slate-200 hover:bg-slate-50">
-                            <RefreshCw className={classNames("h-4 w-4", carregandoAuditoriasCampoEfetivo ? "animate-spin" : "")} />
+                        <button type="button" onClick={atualizarDadosDashboardAuditoriaCampo} disabled={atualizacaoDadosEmAndamento} className={classeBotaoCabecalhoDashboardAuditoriaCampo}>
+                            <RefreshCw className={classNames("h-4 w-4", atualizacaoDadosEmAndamento ? "animate-spin" : "")} />
                             Atualizar dados
                         </button>
-                        <button type="button" onClick={() => setMostrarPersonalizacao((valor) => !valor)} className="inline-flex items-center gap-2 rounded-2xl bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 shadow-sm ring-1 ring-slate-200 hover:bg-slate-50">
+                        <button type="button" onClick={() => setMostrarPersonalizacao((valor) => !valor)} className={classeBotaoCabecalhoDashboardAuditoriaCampo}>
                             <Filter className="h-4 w-4" />
                             Personalizar painel
                         </button>
@@ -3438,18 +3586,24 @@ export function DashboardAuditoriaCampo({
                 </div>
             )}
 
-            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
+            <div className="grid auto-rows-fr items-stretch gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
                 {cartasOrdenadas.filter((item) => cartasVisiveis[item.chave] !== false).map((item) => {
                     const Icon = item.icon;
+                    const tema = obterTemaCartaAuditoriaCampo(item.chave);
                     return (
-                        <Card key={item.chave} className={classNames("overflow-hidden border-dashed transition hover:border-slate-300", classeTamanho(tamanhosCartas[item.chave]))}>
-                            <div className="flex items-start justify-between gap-2">
-                                <div className="min-w-0">
-                                    <p className="text-sm font-medium text-slate-500">{item.label}</p>
-                                    <p className="mt-2 break-words text-3xl font-bold text-slate-950">{item.valor}</p>
-                                    <p className="mt-1 text-xs text-slate-400">{item.detalhe}</p>
+                        <Card key={item.chave} className={classNames("dashboard-summary-card group relative flex h-auto min-h-[6.25rem] overflow-hidden rounded-[22px] border bg-[linear-gradient(180deg,rgba(255,255,255,0.98)_0%,rgba(246,249,252,0.96)_100%)] px-3 pt-3 pb-2 shadow-[0_10px_26px_rgba(26,35,50,0.08)] transition duration-200 hover:-translate-y-0.5 hover:shadow-[0_16px_34px_rgba(26,35,50,0.13)]", tema.borda, tema.fundo, classeTamanho(tamanhosCartas[item.chave]))}>
+                            <span className={classNames("absolute inset-x-0 top-0 h-1 bg-gradient-to-r", tema.acento)} />
+                            <div className="flex min-h-0 flex-1 items-center justify-center gap-2">
+                                <div className={classNames("flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl shadow-sm ring-1", tema.icone)}>
+                                    <Icon className="h-4 w-4" />
                                 </div>
-                                <div className="shrink-0 rounded-2xl bg-slate-100 p-3 text-slate-700"><Icon className="h-4 w-4" /></div>
+                                <div className="min-w-0 flex-1 text-center">
+                                    <div className="flex min-w-0 justify-center gap-2">
+                                        <h3 className={classNames("min-w-0 whitespace-nowrap break-normal hyphens-none text-[12px] font-black uppercase tracking-[0.08em] leading-tight", tema.etiqueta)}>{item.label}</h3>
+                                    </div>
+                                    <p className={classNames("mt-1.5 text-[1.8rem] font-black leading-none tracking-tight", tema.valor)}>{item.valor}</p>
+                                    <p className={classNames("mt-1 text-[10px] font-semibold leading-tight", tema.detalhe)}>{item.detalhe}</p>
+                                </div>
                             </div>
                         </Card>
                     );
@@ -3464,5 +3618,3 @@ export function DashboardAuditoriaCampo({
         </div>
     );
 }
-
-
