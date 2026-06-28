@@ -1,4 +1,4 @@
-﻿/* eslint-disable no-unused-vars */
+/* eslint-disable no-unused-vars */
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
     AlertTriangle,
@@ -28,7 +28,7 @@ import {
 import { tiposAuditoriaCampoDireta } from "../../constants/sstConstants";
 import { normalizarTextoBusca, formatDate, formatarDataHora, classNames } from "../../utils/sstUtils";
 import { LIMITE_QRCODES_CAMPO_POR_CARGA } from "../../constants/sistemaLimitesConstants";
-import { QrCodeComLogo } from "../qr/QrCodeComLogo";
+import { QrCodeComLogo, obterLogoQrCodeAtual } from "../qr/QrCodeComLogo";
 import { carregarTokenAuditoriaPublicaAtivoPadrao } from "../../services/auditoriaPublicaTokenService";
 
 
@@ -1638,9 +1638,13 @@ export function DashboardAuditoriaCampo({
             .replace(/"/g, "&quot;")
             .replace(/'/g, "&#039;");
 
-    const montarHtmlImpressaoQrCampo = ({ titulo = "", qrHtml = "" } = {}) => {
+    const montarHtmlImpressaoQrCampo = ({ titulo = "", qrHtml = "", logoSrc = "" } = {}) => {
         const tituloImpressao = escaparTextoImpressaoQr(String(titulo || "QR Code de campo").trim().toUpperCase());
         const conteudoQr = qrHtml || "<p class=\"aviso\">QR Code indisponível para impressão.</p>";
+const logoQr = String(logoSrc || "").trim();
+const logoHtml = logoQr
+    ? `<span class="qr-logo-fundo"><img class="qr-logo" src="${escaparTextoImpressaoQr(logoQr)}" alt="" /></span>`
+    : "";
 
         return `<!doctype html>
 <html>
@@ -1695,7 +1699,55 @@ export function DashboardAuditoriaCampo({
             font-size: 14px;
             font-weight: 700;
         }
-        @media print {
+
+.qr {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 260px;
+  height: 260px;
+  min-width: 260px;
+  min-height: 260px;
+  margin: 0 auto;
+  background: #ffffff;
+  line-height: 0;
+}
+
+.qr svg {
+  display: block;
+  width: 260px !important;
+  height: 260px !important;
+  max-width: 260px !important;
+  max-height: 260px !important;
+}
+
+.qr-logo-fundo {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 62px;
+  height: 62px;
+  transform: translate(-50%, -50%);
+  border-radius: 18px;
+  background: #ffffff;
+  box-shadow: 0 0 0 4px #ffffff, 0 6px 16px rgba(15, 23, 42, 0.14);
+}
+
+.qr-logo {
+  display: block;
+  width: 52px;
+  height: 52px;
+  max-width: 52px;
+  max-height: 52px;
+  object-fit: contain;
+  border-radius: 14px;
+}
+@media print {
             body { padding: 0; }
             .etiqueta { gap: 16px; max-width: none; }
             .titulo { font-size: 26px; }
@@ -1706,7 +1758,7 @@ export function DashboardAuditoriaCampo({
 <body>
     <main class="etiqueta">
         <h1 class="titulo">${tituloImpressao}</h1>
-        <div class="qr">${conteudoQr}</div>
+        <div class="qr">${conteudoQr}${logoHtml}</div>
     </main>
 </body>
 </html>`;
@@ -1723,12 +1775,12 @@ export function DashboardAuditoriaCampo({
             return;
         }
 
-        janela.document.write(montarHtmlImpressaoQrCampo({ titulo: identificacao, qrHtml }));
+        janela.document.write(montarHtmlImpressaoQrCampo({ titulo: identificacao, qrHtml, logoSrc: obterLogoQrCodeAtual({ usarPadrao: true }) }));
         janela.document.close();
         janela.focus();
         janela.setTimeout(() => {
             janela.print();
-        }, 250);
+        }, 700);
     };
 
     const chaveQrCampoSalvo = (item) =>
@@ -1750,12 +1802,12 @@ export function DashboardAuditoriaCampo({
             return;
         }
 
-        janela.document.write(montarHtmlImpressaoQrCampo({ titulo: identificacao, qrHtml }));
+        janela.document.write(montarHtmlImpressaoQrCampo({ titulo: identificacao, qrHtml, logoSrc: obterLogoQrCodeAtual({ usarPadrao: true }) }));
         janela.document.close();
         janela.focus();
         janela.setTimeout(() => {
             janela.print();
-        }, 250);
+        }, 700);
     };
 
     const tiposFiltroQrcodesCampo = useMemo(() => {
@@ -2144,7 +2196,7 @@ export function DashboardAuditoriaCampo({
         janela.focus();
         janela.setTimeout(() => {
             janela.print();
-        }, 250);
+        }, 700);
         return true;
     };
 
