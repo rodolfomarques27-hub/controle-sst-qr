@@ -61,6 +61,38 @@ const carregarConsultaPublicaQrHandlers = () => import("./services/consultaPubli
 const carregarEmpresaDocumentosHandlers = () => import("./services/empresaDocumentosService");
 
 const hoje = new Date();
+const CHAVE_SIDEBAR_COLAPSADA = "safescan:sidebar:collapsed";
+const CHAVE_SIDEBAR_ANTIGA = "menuLateralAbertoSST";
+
+function obterEstadoInicialMenuLateral() {
+    if (typeof window === "undefined") return true;
+
+    try {
+        const salvoNovo = window.localStorage.getItem(CHAVE_SIDEBAR_COLAPSADA);
+
+        if (salvoNovo === "true") {
+            return false;
+        }
+
+        if (salvoNovo === "false") {
+            return true;
+        }
+
+        const salvoAntigo = window.localStorage.getItem(CHAVE_SIDEBAR_ANTIGA);
+
+        if (salvoAntigo === "true") {
+            return true;
+        }
+
+        if (salvoAntigo === "false") {
+            return false;
+        }
+    } catch {
+        return true;
+    }
+
+    return true;
+}
 
 const ORDEM_TELAS_INICIAIS_PERMITIDAS_APP = [
     "dashboard",
@@ -104,14 +136,7 @@ export default function App() {
     const [senhaConfiguracoes, setSenhaConfiguracoes] = useState("");
     const [mostrarSenhaConfiguracoes, setMostrarSenhaConfiguracoes] = useState(false);
     const [erroSenhaConfiguracoes, setErroSenhaConfiguracoes] = useState("");
-    const [menuLateralAberto, setMenuLateralAberto] = useState(() => {
-        try {
-            const salvo = window.localStorage.getItem("menuLateralAbertoSST");
-            return salvo === null ? true : salvo === "true";
-        } catch {
-            return true;
-        }
-    });
+    const [menuLateralAberto, setMenuLateralAberto] = useState(() => obterEstadoInicialMenuLateral());
     const [colaboradores, setColaboradores] = useState([]);
     const [empresasBanco, setEmpresasBanco] = useState([]);
     const [documentosEmpresas, setDocumentosEmpresas] = useState([]);
@@ -142,14 +167,6 @@ export default function App() {
     const [permissaoSistemaUsuario, setPermissaoSistemaUsuario] = useState(null);
     const [carregandoPermissaoSistemaUsuario, setCarregandoPermissaoSistemaUsuario] = useState(false);
     const [erroPermissaoSistemaUsuario, setErroPermissaoSistemaUsuario] = useState("");
-
-    useEffect(() => {
-        try {
-            window.localStorage.setItem("menuLateralAbertoSST", String(menuLateralAberto));
-        } catch {
-            // Ignora indisponibilidade do localStorage.
-        }
-    }, [menuLateralAberto]);
 
     useEffect(() => {
         if (!SUPABASE_CONFIGURADO) return undefined;

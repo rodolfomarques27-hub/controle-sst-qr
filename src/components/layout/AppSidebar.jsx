@@ -44,6 +44,7 @@ export function AppSidebar({
     onSelecionarTela,
 }) {
     const [expandidoPorHover, setExpandidoPorHover] = useState(false);
+    const [hoverLiberado, setHoverLiberado] = useState(true);
     const [usuarioLogadoAberto, setUsuarioLogadoAberto] = useState(false);
     const [gruposFechados, setGruposFechados] = useState({});
     const menuExpandido = menuLateralAberto || expandidoPorHover;
@@ -69,19 +70,41 @@ export function AppSidebar({
 
     const iniciaisUsuario = obterIniciaisUsuario(nomeUsuario, emailUsuario);
 
+    const salvarPreferenciaSidebar = (proximoAberto) => {
+        try {
+            if (typeof window === "undefined") return;
+
+            window.localStorage.setItem("safescan:sidebar:collapsed", proximoAberto ? "false" : "true");
+            window.localStorage.setItem("menuLateralAbertoSST", proximoAberto ? "true" : "false");
+        } catch {
+            // ignorar indisponibilidade do localStorage
+        }
+    };
+
     const abrirTemporariamente = () => {
         if (!menuLateralAberto) {
+            if (!hoverLiberado) {
+                return;
+            }
             setExpandidoPorHover(true);
         }
     };
 
     const fecharTemporariamente = () => {
         setExpandidoPorHover(false);
+        setHoverLiberado(true);
     };
 
     const alternarMenuFixo = () => {
+        const proximoAberto = !menuLateralAberto;
         setExpandidoPorHover(false);
-        setMenuLateralAberto((valor) => !valor);
+        if (!proximoAberto) {
+            setHoverLiberado(false);
+        } else {
+            setHoverLiberado(true);
+        }
+        salvarPreferenciaSidebar(proximoAberto);
+        setMenuLateralAberto(proximoAberto);
     };
 
     const alternarGrupo = (titulo) => {
@@ -321,10 +344,10 @@ export function AppSidebar({
                     <ChevronsLeft
                         className={classNames(
                             "h-4 w-4 shrink-0 transition-transform duration-200",
-                            menuExpandido ? "rotate-0" : "rotate-180"
+                            menuLateralAberto ? "rotate-0" : "rotate-180"
                         )}
                     />
-                    {menuExpandido && <span>Recolher</span>}
+                    {menuExpandido && <span>{menuLateralAberto ? "Recolher" : "Fixar"}</span>}
                 </button>
             </div>
         </aside>
