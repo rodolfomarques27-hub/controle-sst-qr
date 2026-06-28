@@ -1,4 +1,4 @@
-﻿/* eslint-disable no-unused-vars */
+/* eslint-disable no-unused-vars */
 import React, { useEffect, useMemo, useState } from "react";
 import { QRCodeSVG } from "qrcode.react";
 import { QrCodeComLogo } from "./QrCodeComLogo";
@@ -45,6 +45,113 @@ function compararTreinamentosPorOrdemNumerica(a, b) {
     return ordemA.nome.localeCompare(ordemB.nome, "pt-BR", { numeric: true, sensitivity: "base" });
 }
 
+const QR_CODE_PRINT_STYLES = `
+* {
+    box-sizing: border-box;
+}
+
+html,
+body {
+    min-height: 100%;
+}
+
+body {
+    margin: 0;
+    padding: 32px;
+    background: #ffffff;
+    color: #0f172a;
+    font-family: Arial, Helvetica, sans-serif;
+    text-align: center;
+}
+
+.cartao {
+    display: inline-flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 22px;
+    width: min(100%, 380px);
+    border: 1px solid #e2e8f0;
+    border-radius: 28px;
+    padding: 28px;
+    background: #ffffff;
+    box-shadow: 0 8px 28px rgba(15, 23, 42, 0.08);
+}
+
+.qr-print-safe-box {
+    position: relative !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    width: 260px !important;
+    height: 260px !important;
+    min-width: 260px !important;
+    min-height: 260px !important;
+    margin: 0 auto !important;
+    overflow: visible !important;
+    background: #ffffff !important;
+    line-height: 0 !important;
+}
+
+.qr-print-safe-box > * {
+    position: relative !important;
+    display: block !important;
+    width: 260px !important;
+    height: 260px !important;
+    min-width: 260px !important;
+    min-height: 260px !important;
+}
+
+.qr-print-safe-box svg {
+    display: block !important;
+    width: 260px !important;
+    height: 260px !important;
+    max-width: 260px !important;
+    max-height: 260px !important;
+}
+
+.qr-print-safe-box img {
+    position: absolute !important;
+    left: 50% !important;
+    top: 50% !important;
+    z-index: 10 !important;
+    width: 58px !important;
+    height: 58px !important;
+    max-width: 58px !important;
+    max-height: 58px !important;
+    transform: translate(-50%, -50%) !important;
+    object-fit: contain !important;
+    border-radius: 16px !important;
+    background: #ffffff !important;
+}
+
+h1 {
+    display: block;
+    width: 100%;
+    max-width: 330px;
+    margin: 0;
+    padding-top: 4px;
+    color: #0f172a;
+    font-size: 20px;
+    line-height: 1.2;
+    font-weight: 900;
+    letter-spacing: 0.01em;
+    text-transform: uppercase;
+    overflow-wrap: anywhere;
+}
+
+@media print {
+    body {
+        padding: 18mm;
+    }
+
+    .cartao {
+        box-shadow: none;
+        break-inside: avoid;
+        page-break-inside: avoid;
+    }
+}
+`;
 export function ConsultaQR({ colaborador, colaboradores = [], onSelecionarColaborador }) {
     const [busca, setBusca] = useState("");
     const [filtroEmpresaQR, setFiltroEmpresaQR] = useState("Todas");
@@ -152,7 +259,7 @@ export function ConsultaQR({ colaborador, colaboradores = [], onSelecionarColabo
         if (!elemento) return;
         const janela = window.open("", "_blank", "width=520,height=640");
         if (!janela) return;
-        janela.document.write(`<!doctype html><html><head><title>QR Code ${colaboradorAtual.nome || "Colaborador"}</title><style>body{font-family:Arial,sans-serif;margin:0;padding:32px;text-align:center;color:#0f172a}.cartao{display:inline-flex;flex-direction:column;align-items:center;gap:18px;border:1px solid #e2e8f0;border-radius:28px;padding:28px;box-shadow:0 8px 28px rgba(15,23,42,.08)}h1{font-size:20px;margin:0;text-transform:uppercase;max-width:360px}</style></head><body>${elemento.innerHTML}</body></html>`);
+        janela.document.write(`<!doctype html><html><head><title>QR Code ${colaboradorAtual.nome || "Colaborador"}</title><style>${QR_CODE_PRINT_STYLES}</style></head><body>${elemento.innerHTML}</body></html>`);
         janela.document.close();
         janela.focus();
         janela.print();
@@ -301,7 +408,9 @@ export function ConsultaQR({ colaborador, colaboradores = [], onSelecionarColabo
                             </div>
                             <div id={idImpressaoQrColaborador} className="hidden">
                                 <div className="cartao">
-                                    <QrCodeComLogo value={urlConsultaColaborador} size={260} level="H" includeMargin bgColor="#ffffff" fgColor="#0f172a" logoRatio={0.24} />
+                                    <div className="qr-print-safe-box">
+         <QrCodeComLogo value={urlConsultaColaborador} size={260} level="H" includeMargin bgColor="#ffffff" fgColor="#0f172a" logoRatio={0.22} />
+     </div>
                                     <h1>{colaboradorAtual.nome}</h1>
                                 </div>
                             </div>
