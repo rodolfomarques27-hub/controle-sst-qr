@@ -77,7 +77,6 @@ import {
 } from "../../utils/sstUtils";
 
 const CACHE_USO_STORAGE_DASHBOARD = "dashboardSstUsoStorageResumo";
-const hoje = new Date();
 
 function obterDataHeroDashboard(data = new Date()) {
     return new Intl.DateTimeFormat("pt-BR", {
@@ -142,10 +141,17 @@ export function Dashboard({
     onAtualizarInformacoes,
     atualizandoInformacoes = false,
 }) {
-    const dataHoraHeroDashboard = useMemo(() => new Date(), []);
-    const dataHeroDashboard = useMemo(() => obterDataHeroDashboard(dataHoraHeroDashboard), [dataHoraHeroDashboard]);
-    const diaSemanaHeroDashboard = useMemo(() => obterDiaSemanaHeroDashboard(dataHoraHeroDashboard), [dataHoraHeroDashboard]);
-    const horaHeroDashboard = useMemo(() => obterHoraHeroDashboard(dataHoraHeroDashboard), [dataHoraHeroDashboard]);
+    const [agoraHeroDashboard, setAgoraHeroDashboard] = useState(() => new Date());
+    useEffect(() => {
+        const intervaloAgoraHeroDashboard = setInterval(() => {
+            setAgoraHeroDashboard(new Date());
+        }, 60000);
+
+        return () => clearInterval(intervaloAgoraHeroDashboard);
+    }, []);
+    const dataHeroDashboard = useMemo(() => obterDataHeroDashboard(agoraHeroDashboard), [agoraHeroDashboard]);
+    const diaSemanaHeroDashboard = useMemo(() => obterDiaSemanaHeroDashboard(agoraHeroDashboard), [agoraHeroDashboard]);
+    const horaHeroDashboard = useMemo(() => obterHoraHeroDashboard(agoraHeroDashboard), [agoraHeroDashboard]);
     const nomeUsuarioHeroDashboard = useMemo(() => obterPrimeiroNomeUsuarioHeroDashboard(usuario), [usuario]);
 
     const [enviandoEmail, setEnviandoEmail] = useState(false);
@@ -415,7 +421,7 @@ export function Dashboard({
         auditoriasCampo,
         usoStorageDashboard,
         carregandoStorageDashboard,
-        dataReferencia: hoje,
+        dataReferencia: agoraHeroDashboard,
     }), [
         colaboradores,
         empresasBanco,
@@ -424,6 +430,7 @@ export function Dashboard({
         auditoriasCampo,
         usoStorageDashboard,
         carregandoStorageDashboard,
+        agoraHeroDashboard,
     ]);
 
     const {

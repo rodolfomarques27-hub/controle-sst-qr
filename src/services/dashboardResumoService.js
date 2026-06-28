@@ -221,7 +221,7 @@ export function calcularResumoDashboardSst({
     ).sort((a, b) => b.total - a.total || b.graves - a.graves).slice(0, 5);
 
     const aniversariantesElegiveis = colaboradores
-        .filter((colaborador) => deveMostrarAniversarioColaborador(colaborador) && colaboradorContaComoMobilizado(colaborador))
+        .filter((colaborador) => deveMostrarAniversarioColaborador(colaborador) && statusGeral(colaborador).texto === "Liberado")
         .map((colaborador) => ajustarProximoAniversarioParaAnoAtual(colaborador, dataReferencia));
     const aniversariantesMes = aniversariantesElegiveis
         .filter((colaborador) => mesAniversarioColaborador(colaborador) === mesAtual + 1)
