@@ -140,6 +140,59 @@ h1 {
     overflow-wrap: anywhere;
 }
 
+
+.grade-qrs {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 18px;
+    width: 100%;
+    max-width: 820px;
+    margin: 0 auto;
+    text-align: center;
+}
+
+.cartao-lote {
+    width: 100%;
+    max-width: none;
+    min-height: 345px;
+    padding: 18px;
+    gap: 12px;
+}
+
+.cartao-lote .qr-print-safe-box,
+.cartao-lote .qr-print-safe-box > *,
+.cartao-lote .qr-print-safe-box svg {
+    width: 210px !important;
+    height: 210px !important;
+    min-width: 210px !important;
+    min-height: 210px !important;
+    max-width: 210px !important;
+    max-height: 210px !important;
+}
+
+.cartao-lote .qr-print-safe-box img {
+    width: 48px !important;
+    height: 48px !important;
+    max-width: 48px !important;
+    max-height: 48px !important;
+    border-radius: 14px !important;
+}
+
+.cartao-lote h1 {
+    max-width: 100%;
+    font-size: 14px;
+    line-height: 1.2;
+}
+
+.meta-qr {
+    margin: -4px 0 0;
+    color: #475569;
+    font-size: 10px;
+    line-height: 1.35;
+    font-weight: 700;
+    text-transform: uppercase;
+    overflow-wrap: anywhere;
+}
 @media print {
     body {
         padding: 18mm;
@@ -218,10 +271,11 @@ export function ConsultaQR({ colaborador, colaboradores = [], onSelecionarColabo
                 );
 
                 return texto.includes(termo);
-            })
-            .slice(0, 12);
+            });
     }, [busca, colaboradoresPorEmpresa]);
 
+    const totalColaboradoresCarregados = colaboradores.length;
+    const totalColaboradoresEmpresa = colaboradoresPorEmpresa.length;
     if (!colaboradorAtual) {
         return (
             <div className="consulta-qr-page">
@@ -246,14 +300,17 @@ export function ConsultaQR({ colaborador, colaboradores = [], onSelecionarColabo
     const geral = statusGeral(colaboradorAtual);
     const treinamentos = colaboradorAtual.treinamentos || [];
     const treinamentosOrdenados = [...treinamentos].sort(compararTreinamentosPorOrdemNumerica);
-    const urlConsultaColaborador = typeof window !== "undefined"
+    const montarUrlConsultaColaborador = (item) => typeof window !== "undefined"
         ? montarUrlConsultaQrColaboradorPublica({
-            tokenQrColaborador: colaboradorAtual.token,
+            tokenQrColaborador: item?.token,
             tokenAuditoriaPublica,
         })
         : "";
+
+    const urlConsultaColaborador = montarUrlConsultaColaborador(colaboradorAtual);
     const idImpressaoQrColaborador = `qr-colaborador-impressao-${colaboradorAtual.id || colaboradorAtual.token}`;
     const idImpressaoCrachaColaborador = `cracha-colaborador-impressao-${colaboradorAtual.id || colaboradorAtual.token}`;
+    const idImpressaoLoteColaboradores = "qr-colaboradores-lote-impressao";
     const imprimirQrColaborador = () => {
         const elemento = document.getElementById(idImpressaoQrColaborador);
         if (!elemento) return;
@@ -265,6 +322,24 @@ export function ConsultaQR({ colaborador, colaboradores = [], onSelecionarColabo
         janela.print();
     };
 
+    const imprimirQrColaboradoresEmLote = () => {
+        if (!colaboradoresFiltrados.length) return;
+
+        const elemento = document.getElementById(idImpressaoLoteColaboradores);
+        if (!elemento) return;
+
+        const janela = window.open("", "_blank", "width=980,height=760");
+        if (!janela) return;
+
+        const titulo = filtroEmpresaQR === "Todas"
+            ? "QR Codes dos funcionários"
+            : `QR Codes - ${filtroEmpresaQR}`;
+
+        janela.document.write(`<!doctype html><html><head><title>${titulo}</title><style>${QR_CODE_PRINT_STYLES}</style></head><body>${elemento.innerHTML}</body></html>`);
+        janela.document.close();
+        janela.focus();
+        setTimeout(() => janela.print(), 700);
+    };
     const imprimirCrachaColaborador = () => {
         const elemento = document.getElementById(idImpressaoCrachaColaborador);
         if (!elemento) return;
@@ -302,7 +377,7 @@ export function ConsultaQR({ colaborador, colaboradores = [], onSelecionarColabo
                         </div>
 
                         <p className="mt-1 text-xs text-slate-400">
-                            {colaboradoresFiltrados.length} colaborador(es) encontrado(s)
+                            {colaboradoresFiltrados.length} encontrado(s) · {totalColaboradoresEmpresa} na empresa/filtro · {totalColaboradoresCarregados} carregado(s)
                         </p>
 
                         {(busca || filtroEmpresaQR !== "Todas") && (
@@ -414,7 +489,22 @@ export function ConsultaQR({ colaborador, colaboradores = [], onSelecionarColabo
                                     <h1>{colaboradorAtual.nome}</h1>
                                 </div>
                             </div>
-                            {CRACHA_COLABORADOR_HABILITADO && (
+
+                            <div id={idImpressaoLoteColaboradores} className="hidden">
+                                <div className="grade-qrs">
+                                    {colaboradoresFiltrados.map((item) => (
+                                        <div key={item.id || item.token || item.codigoFuncionario || item.nome} className="cartao cartao-lote">
+                                            <div className="qr-print-safe-box">
+                                                <QrCodeComLogo value={montarUrlConsultaColaborador(item)} size={210} level="H" includeMargin bgColor="#ffffff" fgColor="#0f172a" logoRatio={0.22} />
+                                            </div>
+                                            <h1>{item.nome}</h1>
+                                            <p className="meta-qr">
+                                                {item.codigoFuncionario || "Sem código"} · {item.empresaExibicao || item.empresa || "Empresa não informada"}
+                                            </p>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>{CRACHA_COLABORADOR_HABILITADO && (
                                 <div id={idImpressaoCrachaColaborador} className="pointer-events-none fixed -left-[9999px] top-0 opacity-0">
                                     <CrachaColaboradorPrint
                                         colaborador={colaboradorAtual}
@@ -430,6 +520,15 @@ export function ConsultaQR({ colaborador, colaboradores = [], onSelecionarColabo
                                 >
                                     <Download className="h-4 w-4" />
                                     Imprimir QR Code do funcionário
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={imprimirQrColaboradoresEmLote}
+                                    disabled={colaboradoresFiltrados.length === 0}
+                                    className="inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-slate-950 px-4 py-2 text-xs font-bold text-white ring-1 ring-slate-950 hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto"
+                                >
+                                    <Download className="h-4 w-4" />
+                                    Imprimir QRs filtrados ({colaboradoresFiltrados.length})
                                 </button>
                                 {CRACHA_COLABORADOR_HABILITADO && (
                                     <button
