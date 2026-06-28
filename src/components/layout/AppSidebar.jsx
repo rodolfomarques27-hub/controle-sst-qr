@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { ChevronDown, ChevronsLeft, LogOut, ShieldCheck } from "lucide-react";
 import { classNames } from "../../utils/sstUtils";
 import sidebarBackground from "../../assets/sidebar-construcao.png";
@@ -34,6 +34,54 @@ function obterIniciaisUsuario(nome = "", email = "") {
     return iniciais.slice(0, 2).toUpperCase();
 }
 
+const CHAVE_GRUPOS_FECHADOS_SIDEBAR = "safescan:sidebar:grupos-fechados";
+
+function construirGruposFechadosPadrao(grupos = []) {
+    return (Array.isArray(grupos) ? grupos : []).reduce((acumulado, grupo) => {
+        if (grupo?.titulo) {
+            acumulado[grupo.titulo] = true;
+        }
+
+        return acumulado;
+    }, {});
+}
+
+function lerGruposFechadosSidebarSalvos() {
+    if (typeof window === "undefined") return null;
+
+    try {
+        const bruto = window.localStorage.getItem(CHAVE_GRUPOS_FECHADOS_SIDEBAR);
+        if (!bruto) return null;
+
+        const parseado = JSON.parse(bruto);
+        const objetoSimples = Object.prototype.toString.call(parseado) === "[object Object]";
+
+        if (!objetoSimples) {
+            return null;
+        }
+
+        return Object.entries(parseado).reduce((acumulado, [chave, valor]) => {
+            if (typeof chave !== "string" || !chave.trim()) {
+                return acumulado;
+            }
+
+            acumulado[chave] = Boolean(valor);
+            return acumulado;
+        }, {});
+    } catch {
+        return null;
+    }
+}
+
+function salvarGruposFechadosSidebar(gruposFechados = {}) {
+    try {
+        if (typeof window === "undefined") return;
+        window.localStorage.setItem(CHAVE_GRUPOS_FECHADOS_SIDEBAR, JSON.stringify(gruposFechados));
+    } catch {
+        // ignorar indisponibilidade do localStorage
+    }
+}
+
 export function AppSidebar({
     nav = [],
     tela,
@@ -44,9 +92,9 @@ export function AppSidebar({
     onSelecionarTela,
 }) {
     const [expandidoPorHover, setExpandidoPorHover] = useState(false);
-    const [hoverLiberado, setHoverLiberado] = useState(true);
+    const [hoverLiberado, setHoverLiberado] = useState(() => Boolean(menuLateralAberto));
     const [usuarioLogadoAberto, setUsuarioLogadoAberto] = useState(false);
-    const [gruposFechados, setGruposFechados] = useState({});
+    const [gruposFechados, setGruposFechados] = useState(() => lerGruposFechadosSidebarSalvos() || construirGruposFechadosPadrao(nav));
     const menuExpandido = menuLateralAberto || expandidoPorHover;
 
     const emailUsuario = usuario?.email || "e-mail n\u00e3o informado";
@@ -108,10 +156,15 @@ export function AppSidebar({
     };
 
     const alternarGrupo = (titulo) => {
-        setGruposFechados((valorAtual) => ({
-            ...valorAtual,
-            [titulo]: !valorAtual[titulo],
-        }));
+        setGruposFechados((valorAtual) => {
+            const proximoEstado = {
+                ...(valorAtual && typeof valorAtual === "object" ? valorAtual : {}),
+                [titulo]: !Boolean(valorAtual?.[titulo]),
+            };
+
+            salvarGruposFechadosSidebar(proximoEstado);
+            return proximoEstado;
+        });
     };
 
     const gruposNavegacao = useMemo(() => {
@@ -124,6 +177,34 @@ export function AppSidebar({
             }))
             .filter((grupo) => grupo.itens.length > 0);
     }, [nav]);
+
+    useEffect(() => {
+        if (!Array.isArray(gruposNavegacao) || gruposNavegacao.length === 0) {
+            return undefined;
+        }
+
+        setGruposFechados((estadoAtual) => {
+            const estadoBase = estadoAtual && typeof estadoAtual === "object" ? estadoAtual : {};
+            const proximoEstado = { ...estadoBase };
+            let alterado = false;
+
+            gruposNavegacao.forEach((grupo) => {
+                if (typeof proximoEstado[grupo.titulo] !== "boolean") {
+                    proximoEstado[grupo.titulo] = true;
+                    alterado = true;
+                }
+            });
+
+            if (!alterado) {
+                return estadoAtual;
+            }
+
+            salvarGruposFechadosSidebar(proximoEstado);
+            return proximoEstado;
+        });
+
+        return undefined;
+    }, [gruposNavegacao]);
 
     return (
         <aside
