@@ -1912,7 +1912,7 @@ export function Empresas({
 
                     {informacoesEmpresasRecolhidas ? null : (
                         <>
-                    <div className="mb-4 rounded-2xl border border-slate-200 bg-white p-3">
+                    <div className="empresas-filtros-salvos-card mb-4 rounded-2xl border border-slate-200 bg-white p-3">
                         <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
                             <div>
                                 <p className="text-xs font-black uppercase tracking-wide text-slate-500">{"Filtros salvos do relat\u00f3rio de empresas e documentos"}</p>
@@ -1956,7 +1956,7 @@ export function Empresas({
                         </div>
                     </div>
 
-                    <div className="empresas-filtros-grid mb-5 grid gap-3 lg:grid-cols-[1fr_220px_220px]">
+                    <div className="empresas-filtros-grid empresas-filtros-grid--premium mb-5 grid gap-3 lg:grid-cols-[1fr_220px_220px]">
                         <div className="relative">
                             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
                             <input
@@ -2024,7 +2024,7 @@ export function Empresas({
                     )}
 
                     {empresasBanco.length > 0 && (
-                        <div className="mt-8 border-t border-slate-200 pt-5">
+                        <div className="empresas-relatorios-pdf-card mt-8 border-t border-slate-200 pt-5">
                             <p className="mb-3 text-center text-xs font-semibold uppercase tracking-wide text-slate-400">
                                 Relatórios gerais em PDF
                             </p>
@@ -2034,7 +2034,7 @@ export function Empresas({
                                     onClick={baixarRelatorioEmpresas}
                                     disabled={!podeExportarEmpresasSistema}
                                     title={podeExportarEmpresasSistema ? "Baixar relatório geral" : mensagemBloqueioExportacaoEmpresas}
-                                    className="inline-flex items-center gap-2 rounded-2xl bg-slate-950 px-5 py-3 text-xs font-semibold text-white hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50"
+                                    className="empresas-relatorios-pdf-card__botao empresas-relatorios-pdf-card__botao--principal inline-flex items-center gap-2 rounded-2xl bg-slate-950 px-5 py-3 text-xs font-semibold text-white hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50"
                                 >
                                     <Download className="h-4 w-4" />
                                     Baixar PDF geral
@@ -2044,7 +2044,7 @@ export function Empresas({
                                     onClick={baixarRelatorioPendencias}
                                     disabled={!podeExportarEmpresasSistema}
                                     title={podeExportarEmpresasSistema ? "Baixar relatório de pendências" : mensagemBloqueioExportacaoEmpresas}
-                                    className="inline-flex items-center gap-2 rounded-2xl bg-orange-50 px-5 py-3 text-xs font-semibold text-orange-700 ring-1 ring-orange-200 hover:bg-orange-100 disabled:cursor-not-allowed disabled:opacity-50"
+                                    className="empresas-relatorios-pdf-card__botao empresas-relatorios-pdf-card__botao--alerta inline-flex items-center gap-2 rounded-2xl bg-orange-50 px-5 py-3 text-xs font-semibold text-orange-700 ring-1 ring-orange-200 hover:bg-orange-100 disabled:cursor-not-allowed disabled:opacity-50"
                                 >
                                     <AlertTriangle className="h-4 w-4" />
                                     Baixar PDF pendências
