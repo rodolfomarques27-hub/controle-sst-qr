@@ -45,6 +45,40 @@ function compararTreinamentosPorOrdemNumerica(a, b) {
     return ordemA.nome.localeCompare(ordemB.nome, "pt-BR", { numeric: true, sensitivity: "base" });
 }
 
+function abreviarNomeEtiquetaQr(nome = "", limite = 24) {
+    const partes = String(nome || "")
+        .trim()
+        .split(/\s+/)
+        .filter(Boolean);
+
+    if (!partes.length) return "COLABORADOR";
+
+    const conectores = new Set(["DA", "DE", "DO", "DAS", "DOS", "E"]);
+    const nomeCompleto = partes.join(" ").toUpperCase();
+
+    if (nomeCompleto.length <= limite) return nomeCompleto;
+
+    if (partes.length <= 2) {
+        return `${nomeCompleto.slice(0, Math.max(1, limite - 3)).trim()}...`;
+    }
+
+    const primeiro = partes[0];
+    const ultimo = partes[partes.length - 1];
+    const iniciais = partes
+        .slice(1, -1)
+        .filter((parte) => !conectores.has(parte.toUpperCase()))
+        .map((parte) => `${parte.charAt(0).toUpperCase()}.`);
+
+    const abreviado = [primeiro, ...iniciais, ultimo].join(" ").toUpperCase();
+
+    if (abreviado.length <= limite) return abreviado;
+
+    const primeiroUltimo = `${primeiro} ${ultimo}`.toUpperCase();
+
+    if (primeiroUltimo.length <= limite) return primeiroUltimo;
+
+    return `${primeiroUltimo.slice(0, Math.max(1, limite - 3)).trim()}...`;
+}
 const QR_CODE_PRINT_STYLES = `
 * {
     box-sizing: border-box;
@@ -151,23 +185,29 @@ h1 {
     text-align: center;
 }
 
+
 .cartao-lote {
     width: 100%;
     max-width: none;
-    min-height: 345px;
-    padding: 18px;
-    gap: 12px;
+    min-height: 255px;
+    padding: 8px 10px 10px;
+    gap: 3px;
 }
 
+.cartao-lote-unico {
+    width: 270px;
+    max-width: 270px;
+    margin: 0 auto;
+}
 .cartao-lote .qr-print-safe-box,
 .cartao-lote .qr-print-safe-box > *,
 .cartao-lote .qr-print-safe-box svg {
-    width: 210px !important;
-    height: 210px !important;
-    min-width: 210px !important;
-    min-height: 210px !important;
-    max-width: 210px !important;
-    max-height: 210px !important;
+    width: 190px !important;
+    height: 190px !important;
+    min-width: 190px !important;
+    min-height: 190px !important;
+    max-width: 190px !important;
+    max-height: 190px !important;
 }
 
 .cartao-lote .qr-print-safe-box img {
@@ -179,20 +219,33 @@ h1 {
 }
 
 .cartao-lote h1 {
-    max-width: 100%;
-    font-size: 14px;
-    line-height: 1.2;
+    width: 190px;
+    max-width: 190px;
+    margin: 1px auto 0;
+    padding: 0;
+    font-size: 10.5px;
+    line-height: 1.05;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    text-align: center;
 }
 
 .meta-qr {
-    margin: -4px 0 0;
+    width: 190px;
+    max-width: 190px;
+    margin: 0 auto;
     color: #475569;
-    font-size: 10px;
-    line-height: 1.35;
-    font-weight: 700;
+    font-size: 7px;
+    line-height: 1.05;
+    font-weight: 800;
     text-transform: uppercase;
-    overflow-wrap: anywhere;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    text-align: center;
 }
+
 @media print {
     body {
         padding: 18mm;
@@ -482,14 +535,16 @@ export function ConsultaQR({ colaborador, colaboradores = [], onSelecionarColabo
                                 </p>
                             </div>
                             <div id={idImpressaoQrColaborador} className="hidden">
-                                <div className="cartao">
+                                <div className="cartao cartao-lote cartao-lote-unico">
                                     <div className="qr-print-safe-box">
-         <QrCodeComLogo value={urlConsultaColaborador} size={260} level="H" includeMargin bgColor="#ffffff" fgColor="#0f172a" logoRatio={0.22} />
-     </div>
-                                    <h1>{colaboradorAtual.nome}</h1>
+                                        <QrCodeComLogo value={urlConsultaColaborador} size={210} level="H" includeMargin bgColor="#ffffff" fgColor="#0f172a" logoRatio={0.22} />
+                                    </div>
+                                    <h1>{abreviarNomeEtiquetaQr(colaboradorAtual.nome, 24)}</h1>
+                                    <p className="meta-qr">
+                                        {colaboradorAtual.empresaExibicao || colaboradorAtual.empresa || "Empresa não informada"}
+                                    </p>
                                 </div>
                             </div>
-
                             <div id={idImpressaoLoteColaboradores} className="hidden">
                                 <div className="grade-qrs">
                                     {colaboradoresFiltrados.map((item) => (
@@ -497,9 +552,9 @@ export function ConsultaQR({ colaborador, colaboradores = [], onSelecionarColabo
                                             <div className="qr-print-safe-box">
                                                 <QrCodeComLogo value={montarUrlConsultaColaborador(item)} size={210} level="H" includeMargin bgColor="#ffffff" fgColor="#0f172a" logoRatio={0.22} />
                                             </div>
-                                            <h1>{item.nome}</h1>
+                                            <h1>{abreviarNomeEtiquetaQr(item.nome, 24)}</h1>
                                             <p className="meta-qr">
-                                                {item.codigoFuncionario || "Sem código"} · {item.empresaExibicao || item.empresa || "Empresa não informada"}
+                                                {item.empresaExibicao || item.empresa || "Empresa não informada"}
                                             </p>
                                         </div>
                                     ))}
