@@ -1449,7 +1449,7 @@ export function Empresas({
                 acao={
                     <button
                         onClick={onAtualizarBanco}
-                        className="inline-flex items-center gap-2 rounded-2xl bg-slate-950 px-4 py-2.5 text-sm font-semibold text-white"
+                        className="empresas-cadastro-header__acao"
                     >
                         <RefreshCw className={classNames("h-4 w-4", carregandoBanco && "animate-spin")} />
                         Atualizar banco
@@ -1494,7 +1494,7 @@ export function Empresas({
                             <button
                                 type="button"
                                 onClick={() => atualizarCadastroEmpresasRecolhido((valor) => !valor)}
-                                className="inline-flex items-center justify-center gap-2 rounded-2xl bg-slate-950 px-4 py-2 text-xs font-black text-white shadow-sm hover:bg-slate-800"
+                                className="empresas-cadastro-header__acao"
                             >
                                 {cadastroEmpresasRecolhido ? <ChevronDown className="h-4 w-4" /> : <ChevronUp className="h-4 w-4" />}
                                 {cadastroEmpresasRecolhido ? "Abrir cadastro" : "Recolher cadastro"}
@@ -1870,7 +1870,7 @@ export function Empresas({
                             <button
                                 type="button"
                                 onClick={() => atualizarInformacoesEmpresasRecolhidas((valor) => !valor)}
-                                className="inline-flex items-center justify-center gap-2 rounded-2xl bg-slate-950 px-4 py-2 text-xs font-black text-white shadow-sm hover:bg-slate-800"
+                                className="empresas-cadastro-header__acao"
                             >
                                 {informacoesEmpresasRecolhidas ? <ChevronDown className="h-4 w-4" /> : <ChevronUp className="h-4 w-4" />}
                                 {informacoesEmpresasRecolhidas ? "Abrir informações" : "Recolher informações"}
