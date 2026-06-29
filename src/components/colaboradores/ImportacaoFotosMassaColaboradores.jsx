@@ -243,24 +243,24 @@ export function ImportacaoFotosMassaColaboradores({
     };
 
     return (
-        <Card className="border-slate-200 bg-white">
-            <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+        <Card className="colaboradores-importacao-card colaboradores-importacao-card--fotos border-slate-200 bg-white">
+            <div className="colaboradores-importacao-card__header flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
                 <div className="min-w-0 flex-1">
                     <div className="flex items-start gap-3">
-                        <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-slate-950 text-white shadow-sm">
+                        <div className="colaboradores-importacao-card__icone flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-slate-950 text-white shadow-sm">
                             <Camera className="h-5 w-5" />
                         </div>
                         <div className="min-w-0 flex-1">
                             <p className="text-xs font-black uppercase tracking-wide text-blue-700">FOTOS EM MASSA</p>
                             <h2 className="mt-1 text-xl font-black text-slate-950">Enviar fotos dos colaboradores</h2>
                             <p className="mt-1 max-w-none whitespace-nowrap text-sm leading-5 text-slate-600">
-                                Envie imagens em massa. O vínculo é feito pelo nome do arquivo. Ex.: 00000000000.jpg, MATRICULA001.png ou NOME_COMPLETO.jpg.
+                                Envie fotos em massa vinculadas pelo nome do arquivo.
                             </p>
                         </div>
                     </div>
                 </div>
 
-                <div className="flex flex-col gap-2 sm:flex-row lg:shrink-0">
+                <div className="colaboradores-importacao-card__acoes flex flex-col gap-2 sm:flex-row lg:shrink-0">
                     <input
                         ref={inputRef}
                         type="file"
@@ -274,7 +274,7 @@ export function ImportacaoFotosMassaColaboradores({
                         onClick={() => inputRef.current?.click()}
                         disabled={!podeEnviar || enviando}
                         title={podeEnviar ? "Selecionar fotos" : mensagemBloqueio}
-                        className="inline-flex items-center justify-center gap-2 rounded-2xl bg-slate-950 px-4 py-2.5 text-xs font-black uppercase tracking-wide text-white shadow-sm transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-500"
+                        className="colaboradores-importacao-card__botao colaboradores-importacao-card__botao--primario inline-flex items-center justify-center gap-2 rounded-2xl bg-slate-950 px-4 py-2.5 text-xs font-black uppercase tracking-wide text-white shadow-sm transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-500"
                     >
                         <ImagePlus className="h-4 w-4" />
                         Selecionar fotos
@@ -285,7 +285,7 @@ export function ImportacaoFotosMassaColaboradores({
                             type="button"
                             onClick={limparSelecao}
                             disabled={enviando}
-                            className="inline-flex items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-2.5 text-xs font-black uppercase tracking-wide text-slate-700 shadow-sm transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
+                            className="colaboradores-importacao-card__botao colaboradores-importacao-card__botao--secundario inline-flex items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-2.5 text-xs font-black uppercase tracking-wide text-slate-700 shadow-sm transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
                         >
                             <Trash2 className="h-4 w-4" />
                             Limpar

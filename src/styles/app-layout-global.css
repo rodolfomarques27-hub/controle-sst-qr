@@ -9485,3 +9485,206 @@
 .colaboradores-section-destaque + .colaboradores-cadastro-massa-card {
   margin-top: 0 !important;
 }
+/* MICROETAPA 2F - acabamento importacoes em lote colaboradores */
+.colaboradores-card-aberto-padrao--massa > .space-y-4 {
+  display: grid !important;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) !important;
+  align-items: stretch !important;
+  gap: 0.72rem !important;
+}
+
+.colaboradores-importacao-card {
+  position: relative !important;
+  display: flex !important;
+  min-height: 3.95rem !important;
+  height: 100% !important;
+  overflow: hidden !important;
+  border: 1px solid #dbe7f2 !important;
+  border-radius: 1.1rem !important;
+  background: #ffffff !important;
+  padding: 0.58rem 0.68rem !important;
+  box-shadow:
+    0 4px 12px rgba(15, 23, 42, 0.03),
+    inset 0 0 0 1px rgba(226, 232, 240, 0.28) !important;
+}
+
+.colaboradores-importacao-card::before {
+  content: "";
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: 2px;
+  background: linear-gradient(90deg, #0ea5e9 0%, #2563eb 72%, #22c55e 100%);
+  opacity: 0.82;
+}
+
+.colaboradores-importacao-card--fotos::before {
+  background: linear-gradient(90deg, #22c55e 0%, #06b6d4 60%, #2563eb 100%);
+}
+
+.colaboradores-importacao-card__header {
+  position: relative !important;
+  z-index: 1 !important;
+  display: flex !important;
+  width: 100% !important;
+  height: 100% !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  gap: 0.7rem !important;
+}
+
+.colaboradores-importacao-card__header > .flex,
+.colaboradores-importacao-card__header .flex.items-start {
+  min-width: 0 !important;
+  align-items: center !important;
+  gap: 0.55rem !important;
+}
+
+.colaboradores-importacao-card__icone {
+  height: 2.1rem !important;
+  width: 2.1rem !important;
+  min-width: 2.1rem !important;
+  border: 1px solid rgba(147, 197, 253, 0.46) !important;
+  border-radius: 0.7rem !important;
+  background: #eff6ff !important;
+  color: #1d4ed8 !important;
+  box-shadow: none !important;
+}
+
+.colaboradores-importacao-card--fotos .colaboradores-importacao-card__icone {
+  border-color: rgba(134, 239, 172, 0.52) !important;
+  background: #ecfdf5 !important;
+  color: #059669 !important;
+}
+
+.colaboradores-importacao-card__icone svg {
+  width: 0.92rem !important;
+  height: 0.92rem !important;
+  color: currentColor !important;
+  stroke: currentColor !important;
+}
+
+.colaboradores-importacao-card .min-w-0,
+.colaboradores-importacao-card .min-w-0.flex-1 {
+  min-width: 0 !important;
+}
+
+.colaboradores-importacao-card p.text-xs {
+  margin: 0 !important;
+  color: #2563eb !important;
+  font-size: 0.56rem !important;
+  line-height: 1 !important;
+  letter-spacing: 0.075em !important;
+  white-space: nowrap !important;
+}
+
+.colaboradores-importacao-card h2 {
+  margin-top: 0.08rem !important;
+  color: #020617 !important;
+  font-size: clamp(0.86rem, 1vw, 0.98rem) !important;
+  font-weight: 950 !important;
+  line-height: 1.08 !important;
+  letter-spacing: -0.02em !important;
+  white-space: nowrap !important;
+}
+
+.colaboradores-importacao-card h2 + p,
+.colaboradores-importacao-card p.text-sm {
+  margin-top: 0.16rem !important;
+  max-width: none !important;
+  overflow: hidden !important;
+  color: #475569 !important;
+  font-size: 0.66rem !important;
+  font-weight: 600 !important;
+  line-height: 1.18 !important;
+  text-overflow: ellipsis !important;
+  white-space: nowrap !important;
+}
+
+.colaboradores-importacao-card p.whitespace-nowrap {
+  white-space: nowrap !important;
+}
+
+.colaboradores-importacao-card__acoes {
+  flex: 0 0 auto !important;
+  align-items: center !important;
+  gap: 0.34rem !important;
+}
+
+.colaboradores-importacao-card__botao {
+  min-height: 1.82rem !important;
+  min-width: max-content !important;
+  border-radius: 999px !important;
+  padding: 0.34rem 0.62rem !important;
+  font-size: 0.56rem !important;
+  font-weight: 900 !important;
+  letter-spacing: 0.03em !important;
+  line-height: 1 !important;
+  white-space: nowrap !important;
+  box-shadow: 0 4px 10px rgba(15, 23, 42, 0.07) !important;
+  transition:
+    transform 0.16s ease,
+    background 0.16s ease,
+    border-color 0.16s ease,
+    box-shadow 0.16s ease !important;
+}
+
+.colaboradores-importacao-card__botao:hover {
+  transform: translateY(-1px);
+}
+
+.colaboradores-importacao-card__botao svg {
+  width: 0.74rem !important;
+  height: 0.74rem !important;
+}
+
+.colaboradores-importacao-card__botao--primario {
+  border: 0 !important;
+  background: #020617 !important;
+  color: #ffffff !important;
+}
+
+.colaboradores-importacao-card__botao--primario:hover {
+  background: #0f172a !important;
+}
+
+.colaboradores-importacao-card__botao--secundario {
+  border: 1px solid #d9e4ef !important;
+  background: #ffffff !important;
+  color: #334155 !important;
+}
+
+.colaboradores-importacao-card__botao--secundario:hover {
+  border-color: #cbd5e1 !important;
+  background: #f8fafc !important;
+}
+
+@media (max-width: 1180px) {
+  .colaboradores-card-aberto-padrao--massa > .space-y-4 {
+    grid-template-columns: 1fr !important;
+  }
+}
+
+@media (max-width: 920px) {
+  .colaboradores-importacao-card {
+    min-height: auto !important;
+  }
+
+  .colaboradores-importacao-card__header {
+    align-items: stretch !important;
+  }
+
+  .colaboradores-importacao-card h2,
+  .colaboradores-importacao-card h2 + p,
+  .colaboradores-importacao-card p.text-sm {
+    white-space: normal !important;
+  }
+
+  .colaboradores-importacao-card__acoes {
+    width: 100% !important;
+    align-items: stretch !important;
+  }
+
+  .colaboradores-importacao-card__botao {
+    width: 100% !important;
+  }
+}

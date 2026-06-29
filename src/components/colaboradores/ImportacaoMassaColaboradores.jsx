@@ -505,26 +505,26 @@ export function ImportacaoMassaColaboradores({
     };
 
     return (
-        <section className="rounded-3xl border border-blue-100 bg-white p-5 shadow-sm">
-            <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+        <section className="colaboradores-importacao-card colaboradores-importacao-card--planilha rounded-3xl border border-blue-100 bg-white p-5 shadow-sm">
+            <div className="colaboradores-importacao-card__header flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
                 <div className="flex min-w-0 items-start gap-3">
-                    <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-slate-950 text-white shadow-sm">
+                    <div className="colaboradores-importacao-card__icone flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-slate-950 text-white shadow-sm">
                         <FileSpreadsheet className="h-5 w-5" />
                     </div>
                     <div className="min-w-0">
                         <p className="text-xs font-black uppercase tracking-wide text-blue-700">Cadastro em massa</p>
                         <h2 className="mt-1 text-xl font-black text-slate-950">Importar colaboradores por planilha</h2>
                         <p className="mt-1 text-sm leading-6 text-slate-500">
-                            Baixe o modelo CSV, preencha no Excel ou Google Sheets e importe com pré-validação antes de salvar.
+                            Baixe o CSV, preencha e importe com pré-validação.
                         </p>
                     </div>
                 </div>
 
-                <div className="flex flex-col gap-2 sm:flex-row">
+                <div className="colaboradores-importacao-card__acoes flex flex-col gap-2 sm:flex-row">
                     <button
                         type="button"
                         onClick={baixarModeloCsv}
-                        className="inline-flex items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-2.5 text-xs font-black uppercase tracking-wide text-slate-700 shadow-sm hover:bg-slate-50"
+                        className="colaboradores-importacao-card__botao colaboradores-importacao-card__botao--secundario inline-flex items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-2.5 text-xs font-black uppercase tracking-wide text-slate-700 shadow-sm hover:bg-slate-50"
                     >
                         <Download className="h-4 w-4" />
                         Baixar modelo
@@ -535,7 +535,7 @@ export function ImportacaoMassaColaboradores({
                         onClick={() => inputRef.current?.click()}
                         disabled={!podeCadastrar || importando}
                         title={podeCadastrar ? "Selecionar planilha CSV" : mensagemBloqueio}
-                        className="inline-flex items-center justify-center gap-2 rounded-2xl bg-slate-950 px-4 py-2.5 text-xs font-black uppercase tracking-wide text-white shadow-sm hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50"
+                        className="colaboradores-importacao-card__botao colaboradores-importacao-card__botao--primario inline-flex items-center justify-center gap-2 rounded-2xl bg-slate-950 px-4 py-2.5 text-xs font-black uppercase tracking-wide text-white shadow-sm hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50"
                     >
                         <Upload className="h-4 w-4" />
                         Selecionar CSV
