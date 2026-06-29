@@ -1512,7 +1512,8 @@ export function Empresas({
                     <Card
                             className={classNames(
                                 "empresas-cadastro-unificado border-blue-100 bg-blue-50/40",
-                                cadastroEmpresasRecolhido && "empresas-card-recolhido-padrao empresas-card-recolhido-padrao--cadastro"
+                                cadastroEmpresasRecolhido && "empresas-card-recolhido-padrao empresas-card-recolhido-padrao--cadastro",
+                                !cadastroEmpresasRecolhido && "empresas-card-aberto-padrao empresas-card-aberto-padrao--cadastro"
                             )}
                         >
                         <div className="empresas-cadastro-header">
@@ -1534,7 +1535,7 @@ export function Empresas({
                                 className="empresas-cadastro-header__acao"
                             >
                                 {cadastroEmpresasRecolhido ? <ChevronDown className="h-4 w-4" /> : <ChevronUp className="h-4 w-4" />}
-                                {cadastroEmpresasRecolhido ? "Abrir" : "Recolher cadastro"}
+                                {cadastroEmpresasRecolhido ? "Abrir" : "Recolher"}
                             </button>
                         </div>
 
@@ -1891,7 +1892,8 @@ export function Empresas({
                 <Card
                     className={classNames(
                         "empresas-info-card",
-                        informacoesEmpresasRecolhidas && "empresas-card-recolhido-padrao empresas-card-recolhido-padrao--informacoes"
+                        informacoesEmpresasRecolhidas && "empresas-card-recolhido-padrao empresas-card-recolhido-padrao--informacoes",
+                        !informacoesEmpresasRecolhidas && "empresas-card-aberto-padrao empresas-card-aberto-padrao--informacoes"
                     )}
                 >
                     <div className="mb-5 flex flex-col gap-3 border-b border-slate-100 pb-4 lg:flex-row lg:items-center lg:justify-between">
@@ -1915,7 +1917,7 @@ export function Empresas({
                                 className="empresas-cadastro-header__acao"
                             >
                                 {informacoesEmpresasRecolhidas ? <ChevronDown className="h-4 w-4" /> : <ChevronUp className="h-4 w-4" />}
-                                {informacoesEmpresasRecolhidas ? "Abrir" : "Recolher informações"}
+                                {informacoesEmpresasRecolhidas ? "Abrir" : "Recolher"}
                             </button>
                         </div>
                     </div>
