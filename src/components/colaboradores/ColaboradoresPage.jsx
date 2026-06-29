@@ -1038,7 +1038,7 @@ ${erros.slice(0, 8).join("\n")}`
                                     className="inline-flex items-center justify-center gap-2 rounded-2xl bg-slate-950 px-4 py-2 text-xs font-black text-white shadow-sm hover:bg-slate-800"
                                 >
                                     <ChevronUp className="h-4 w-4" />
-                                    Recolher informação
+                                    Recolher
                                 </button>
                             </div>
 
@@ -1057,7 +1057,7 @@ ${erros.slice(0, 8).join("\n")}`
                             />
                         </div>
                     ) : (
-                        <Card className="colaborador-formulario-recolhido border-blue-100 bg-blue-50/40">
+                        <Card className="colaborador-formulario-recolhido colaboradores-card-recolhido-padrao colaboradores-card-recolhido-padrao--novo border-blue-100 bg-blue-50/40">
                             <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
                                 <div className="flex min-w-0 items-start gap-3">
                                     <div className="novo-colaborador-cabecalho-branco__icone shrink-0">
@@ -1077,14 +1077,19 @@ ${erros.slice(0, 8).join("\n")}`
                                     className="inline-flex items-center justify-center gap-2 rounded-2xl bg-slate-950 px-4 py-2 text-xs font-black text-white shadow-sm hover:bg-slate-800"
                                 >
                                     <ChevronDown className="h-4 w-4" />
-                                    Abrir informações
+                                    Abrir
                                 </button>
                             </div>
                         </Card>
                     )}
                 </section>
 
-                <Card className="border-blue-100 bg-white">
+                <Card
+                        className={classNames(
+                            "colaboradores-cadastro-massa-card border-blue-100 bg-white",
+                            cadastroMassaRecolhido && "colaboradores-card-recolhido-padrao colaboradores-card-recolhido-padrao--massa"
+                        )}
+                    >
                     <div className={`flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between ${cadastroMassaRecolhido ? "mb-0 border-b-0 pb-0" : "mb-4 border-b border-slate-100 pb-4"}`}>
                         <div className="flex min-w-0 items-start gap-3">
                             <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-slate-950 text-white shadow-sm">
@@ -1109,7 +1114,7 @@ ${erros.slice(0, 8).join("\n")}`
                             className="inline-flex items-center justify-center gap-2 rounded-2xl bg-slate-950 px-4 py-2 text-xs font-black text-white shadow-sm hover:bg-slate-800"
                         >
                             {cadastroMassaRecolhido ? <ChevronDown className="h-4 w-4" /> : <ChevronUp className="h-4 w-4" />}
-                            {cadastroMassaRecolhido ? "Abrir importações" : "Recolher importações"}
+                            {cadastroMassaRecolhido ? "Abrir" : "Recolher"}
                         </button>
                     </div>
 
@@ -1139,7 +1144,12 @@ ${erros.slice(0, 8).join("\n")}`
                     )}
                 </Card>
 
-                <Card className={`colaboradores-info-card ${informacoesColaboradoresRecolhidas ? "colaboradores-info-card-recolhido" : ""}`}>
+                <Card
+                        className={classNames(
+                            "colaboradores-info-card",
+                            informacoesColaboradoresRecolhidas && "colaboradores-info-card-recolhido colaboradores-card-recolhido-padrao colaboradores-card-recolhido-padrao--info"
+                        )}
+                    >
                     <div className={`flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between ${informacoesColaboradoresRecolhidas ? "mb-0 border-b-0 pb-0" : "mb-5 border-b border-slate-100 pb-4"}`}>
                         <div className="flex min-w-0 items-start gap-3">
                             <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-slate-950 text-white shadow-sm">
@@ -1159,7 +1169,7 @@ ${erros.slice(0, 8).join("\n")}`
                             className="inline-flex items-center justify-center gap-2 rounded-2xl bg-slate-950 px-4 py-2 text-xs font-black text-white shadow-sm hover:bg-slate-800"
                         >
                             {informacoesColaboradoresRecolhidas ? <ChevronDown className="h-4 w-4" /> : <ChevronUp className="h-4 w-4" />}
-                            {informacoesColaboradoresRecolhidas ? "Abrir informações" : "Recolher informações"}
+                            {informacoesColaboradoresRecolhidas ? "Abrir" : "Recolher"}
                         </button>
                     </div>
 

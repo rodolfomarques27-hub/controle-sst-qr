@@ -9193,3 +9193,143 @@
     justify-content: flex-start;
   }
 }
+/* MICROETAPA 2D - cards recolhidos colaboradores */
+.colaboradores-card-recolhido-padrao {
+  position: relative !important;
+  min-height: 5.95rem !important;
+  overflow: hidden !important;
+  border: 1px solid #dbe7f2 !important;
+  border-radius: 1.45rem !important;
+  background: #ffffff !important;
+  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.07) !important;
+  padding: 0 !important;
+}
+
+.colaboradores-card-recolhido-padrao::before {
+  content: "";
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: 3px;
+  width: auto;
+  background: linear-gradient(90deg, #06b6d4 0%, #2563eb 60%, #7c3aed 100%);
+}
+
+.colaboradores-card-recolhido-padrao--massa::before {
+  background: linear-gradient(90deg, #0ea5e9 0%, #2563eb 58%, #22c55e 100%);
+}
+
+.colaboradores-card-recolhido-padrao--info::before {
+  background: linear-gradient(90deg, #22c55e 0%, #06b6d4 62%, #2563eb 100%);
+}
+
+.colaboradores-card-recolhido-padrao > .flex {
+  position: relative !important;
+  z-index: 1 !important;
+  margin: 0 !important;
+  min-height: 5rem !important;
+  align-items: center !important;
+  border-bottom: 0 !important;
+  padding: 0.8rem 1rem !important;
+}
+
+.colaboradores-card-recolhido-padrao > .flex > div:first-child {
+  align-items: center !important;
+  gap: 0.9rem !important;
+}
+
+.colaboradores-card-recolhido-padrao .novo-colaborador-cabecalho-branco__icone,
+.colaboradores-card-recolhido-padrao .flex.h-12.w-12,
+.colaboradores-card-recolhido-padrao div.flex.h-12.w-12 {
+  height: 3rem !important;
+  width: 3rem !important;
+  min-width: 3rem !important;
+  border-radius: 1rem !important;
+  border: 0 !important;
+  background: #cffafe !important;
+  color: #0369a1 !important;
+  box-shadow: none !important;
+}
+
+.colaboradores-card-recolhido-padrao--massa .flex.h-12.w-12,
+.colaboradores-card-recolhido-padrao--massa div.flex.h-12.w-12 {
+  background: #dbeafe !important;
+  color: #1d4ed8 !important;
+}
+
+.colaboradores-card-recolhido-padrao--info .flex.h-12.w-12,
+.colaboradores-card-recolhido-padrao--info div.flex.h-12.w-12 {
+  background: #dcfce7 !important;
+  color: #059669 !important;
+}
+
+.colaboradores-card-recolhido-padrao .novo-colaborador-cabecalho-branco__icone svg,
+.colaboradores-card-recolhido-padrao .flex.h-12.w-12 svg,
+.colaboradores-card-recolhido-padrao div.flex.h-12.w-12 svg {
+  width: 1.1rem !important;
+  height: 1.1rem !important;
+  color: currentColor !important;
+  stroke: currentColor !important;
+}
+
+.colaboradores-card-recolhido-padrao p.text-xs,
+.colaboradores-card-recolhido-padrao .text-xs.font-black.uppercase {
+  display: none !important;
+}
+
+.colaboradores-card-recolhido-padrao h2 {
+  margin-top: 0 !important;
+  color: #020617 !important;
+  font-size: 1.05rem !important;
+  font-weight: 950 !important;
+  line-height: 1.15 !important;
+  letter-spacing: -0.02em !important;
+}
+
+.colaboradores-card-recolhido-padrao p.text-sm {
+  margin-top: 0.28rem !important;
+  color: #475569 !important;
+  font-size: 0.8rem !important;
+  font-weight: 600 !important;
+  line-height: 1.35 !important;
+}
+
+.colaboradores-card-recolhido-padrao button {
+  min-width: 6.8rem !important;
+  min-height: 2rem !important;
+  border: 0 !important;
+  border-radius: 999px !important;
+  background: #020617 !important;
+  padding: 0.35rem 0.95rem !important;
+  color: #ffffff !important;
+  font-size: 0.78rem !important;
+  font-weight: 900 !important;
+  box-shadow: 0 9px 20px rgba(15, 23, 42, 0.14) !important;
+}
+
+.colaboradores-card-recolhido-padrao button:hover {
+  transform: translateY(-1px);
+  background: #0f172a !important;
+}
+
+.colaboradores-card-recolhido-padrao button svg {
+  width: 0.9rem !important;
+  height: 0.9rem !important;
+}
+
+.novo-colaborador-cabecalho-branco > button {
+  min-width: 6.8rem !important;
+  min-height: 2rem !important;
+  border-radius: 999px !important;
+  font-size: 0.78rem !important;
+}
+
+@media (max-width: 760px) {
+  .colaboradores-card-recolhido-padrao > .flex {
+    flex-direction: column !important;
+    align-items: stretch !important;
+  }
+
+  .colaboradores-card-recolhido-padrao button {
+    width: 100% !important;
+  }
+}
