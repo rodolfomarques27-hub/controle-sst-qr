@@ -9333,3 +9333,155 @@
     width: 100% !important;
   }
 }
+/* MICROETAPA 2E - cabecalhos abertos colaboradores */
+.colaboradores-card-aberto-padrao {
+  position: relative !important;
+  overflow: hidden !important;
+  border: 1px solid #dbe7f2 !important;
+  border-radius: 1.45rem !important;
+  background: #ffffff !important;
+  box-shadow: 0 12px 28px rgba(15, 23, 42, 0.065) !important;
+}
+
+.colaboradores-card-aberto-padrao::before {
+  content: "";
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: 3px;
+  background: linear-gradient(90deg, #06b6d4 0%, #2563eb 60%, #7c3aed 100%);
+}
+
+.colaboradores-card-aberto-padrao--massa::before {
+  background: linear-gradient(90deg, #0ea5e9 0%, #2563eb 58%, #22c55e 100%);
+}
+
+.colaboradores-card-aberto-padrao--info::before {
+  background: linear-gradient(90deg, #22c55e 0%, #06b6d4 62%, #2563eb 100%);
+}
+
+.colaboradores-card-aberto-padrao > .novo-colaborador-cabecalho-branco,
+.colaboradores-card-aberto-padrao > div:first-child {
+  position: relative !important;
+  z-index: 1 !important;
+  margin: 0 0 0.85rem !important;
+  min-height: 4.6rem !important;
+  align-items: center !important;
+  border-bottom: 1px solid #e2e8f0 !important;
+  padding: 0.75rem 0.95rem 0.85rem !important;
+  background: #ffffff !important;
+}
+
+.colaboradores-card-aberto-padrao .novo-colaborador-cabecalho-branco__etiqueta,
+.colaboradores-card-aberto-padrao > div:first-child .text-xs.font-black.uppercase {
+  display: none !important;
+}
+
+.colaboradores-card-aberto-padrao .novo-colaborador-cabecalho-branco__icone,
+.colaboradores-card-aberto-padrao > div:first-child .flex.h-12.w-12,
+.colaboradores-card-aberto-padrao > div:first-child div.flex.h-12.w-12 {
+  height: 2.85rem !important;
+  width: 2.85rem !important;
+  min-width: 2.85rem !important;
+  border: 0 !important;
+  border-radius: 1rem !important;
+  background: #cffafe !important;
+  color: #0369a1 !important;
+  box-shadow: none !important;
+}
+
+.colaboradores-card-aberto-padrao--massa > div:first-child .flex.h-12.w-12,
+.colaboradores-card-aberto-padrao--massa > div:first-child div.flex.h-12.w-12 {
+  background: #dbeafe !important;
+  color: #1d4ed8 !important;
+}
+
+.colaboradores-card-aberto-padrao--info > div:first-child .flex.h-12.w-12,
+.colaboradores-card-aberto-padrao--info > div:first-child div.flex.h-12.w-12 {
+  background: #dcfce7 !important;
+  color: #059669 !important;
+}
+
+.colaboradores-card-aberto-padrao .novo-colaborador-cabecalho-branco__icone svg,
+.colaboradores-card-aberto-padrao > div:first-child .flex.h-12.w-12 svg,
+.colaboradores-card-aberto-padrao > div:first-child div.flex.h-12.w-12 svg {
+  width: 1.05rem !important;
+  height: 1.05rem !important;
+  color: currentColor !important;
+  stroke: currentColor !important;
+}
+
+.colaboradores-card-aberto-padrao .novo-colaborador-cabecalho-branco__titulo,
+.colaboradores-card-aberto-padrao > div:first-child h2 {
+  margin-top: 0 !important;
+  color: #020617 !important;
+  font-size: 1.08rem !important;
+  font-weight: 950 !important;
+  line-height: 1.15 !important;
+  letter-spacing: -0.02em !important;
+}
+
+.colaboradores-card-aberto-padrao .novo-colaborador-cabecalho-branco__subtitulo,
+.colaboradores-card-aberto-padrao > div:first-child p.mt-1 {
+  margin-top: 0.28rem !important;
+  color: #475569 !important;
+  font-size: 0.82rem !important;
+  font-weight: 600 !important;
+  line-height: 1.35 !important;
+}
+
+.colaboradores-card-aberto-padrao > .novo-colaborador-cabecalho-branco > button,
+.colaboradores-card-aberto-padrao > div:first-child > button {
+  min-height: 2.1rem !important;
+  min-width: 6.8rem !important;
+  border: 0 !important;
+  border-radius: 999px !important;
+  background: #020617 !important;
+  padding: 0.38rem 0.95rem !important;
+  color: #ffffff !important;
+  font-size: 0.78rem !important;
+  font-weight: 900 !important;
+  box-shadow: 0 9px 20px rgba(15, 23, 42, 0.14) !important;
+}
+
+.colaboradores-card-aberto-padrao > .novo-colaborador-cabecalho-branco > button:hover,
+.colaboradores-card-aberto-padrao > div:first-child > button:hover {
+  transform: translateY(-1px);
+  background: #0f172a !important;
+}
+
+.colaboradores-card-aberto-padrao > .novo-colaborador-cabecalho-branco > button svg,
+.colaboradores-card-aberto-padrao > div:first-child > button svg {
+  width: 0.9rem !important;
+  height: 0.9rem !important;
+}
+
+@media (max-width: 760px) {
+  .colaboradores-card-aberto-padrao > .novo-colaborador-cabecalho-branco,
+  .colaboradores-card-aberto-padrao > div:first-child {
+    flex-direction: column !important;
+    align-items: stretch !important;
+  }
+
+  .colaboradores-card-aberto-padrao > .novo-colaborador-cabecalho-branco > button,
+  .colaboradores-card-aberto-padrao > div:first-child > button {
+    width: 100% !important;
+  }
+}
+/* MICROETAPA 2E.1 - linha superior novo colaborador aberto */
+.colaboradores-card-aberto-padrao--novo::before {
+  z-index: 3 !important;
+  background: linear-gradient(90deg, #06b6d4 0%, #2563eb 60%, #7c3aed 100%) !important;
+  pointer-events: none !important;
+}
+
+.colaboradores-card-aberto-padrao--novo > .novo-colaborador-cabecalho-branco {
+  padding-top: 0.9rem !important;
+}
+/* MICROETAPA 2E.2 - equalizar espacamento entre cards colaboradores */
+.colaboradores-section-destaque {
+  padding-bottom: 0 !important;
+}
+
+.colaboradores-section-destaque + .colaboradores-cadastro-massa-card {
+  margin-top: 0 !important;
+}

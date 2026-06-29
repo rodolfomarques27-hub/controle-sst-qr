@@ -1017,7 +1017,7 @@ ${erros.slice(0, 8).join("\n")}`
             <div className="space-y-6">
                 <section className="colaboradores-section-destaque">
                     {!novoColaboradorRecolhido ? (
-                        <div className="colaborador-formulario-full colaborador-formulario-unificado">
+                        <div className="colaborador-formulario-full colaborador-formulario-unificado colaboradores-card-aberto-padrao colaboradores-card-aberto-padrao--novo">
                             <div className="novo-colaborador-cabecalho-branco">
                                 <div className="novo-colaborador-cabecalho-branco__info">
                                     <div className="novo-colaborador-cabecalho-branco__icone">
@@ -1087,7 +1087,8 @@ ${erros.slice(0, 8).join("\n")}`
                 <Card
                         className={classNames(
                             "colaboradores-cadastro-massa-card border-blue-100 bg-white",
-                            cadastroMassaRecolhido && "colaboradores-card-recolhido-padrao colaboradores-card-recolhido-padrao--massa"
+                            cadastroMassaRecolhido && "colaboradores-card-recolhido-padrao colaboradores-card-recolhido-padrao--massa",
+                            !cadastroMassaRecolhido && "colaboradores-card-aberto-padrao colaboradores-card-aberto-padrao--massa"
                         )}
                     >
                     <div className={`flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between ${cadastroMassaRecolhido ? "mb-0 border-b-0 pb-0" : "mb-4 border-b border-slate-100 pb-4"}`}>
@@ -1147,7 +1148,8 @@ ${erros.slice(0, 8).join("\n")}`
                 <Card
                         className={classNames(
                             "colaboradores-info-card",
-                            informacoesColaboradoresRecolhidas && "colaboradores-info-card-recolhido colaboradores-card-recolhido-padrao colaboradores-card-recolhido-padrao--info"
+                            informacoesColaboradoresRecolhidas && "colaboradores-info-card-recolhido colaboradores-card-recolhido-padrao colaboradores-card-recolhido-padrao--info",
+                            !informacoesColaboradoresRecolhidas && "colaboradores-card-aberto-padrao colaboradores-card-aberto-padrao--info"
                         )}
                     >
                     <div className={`flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between ${informacoesColaboradoresRecolhidas ? "mb-0 border-b-0 pb-0" : "mb-5 border-b border-slate-100 pb-4"}`}>
