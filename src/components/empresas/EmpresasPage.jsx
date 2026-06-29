@@ -29,6 +29,7 @@ import {
     classeStatusEmpresa,
 } from "../../services/empresaDocumentosService";
 import { documentosEmpresaBase } from "../../constants/documentosEmpresaConstants";
+import dashboardHeroBackground from "../../assets/dashboard-hero-sst.png";
 import {
     baixarRelatorioDocumentosEmpresaPDF,
     baixarRelatorioEmpresasDocumentosPDF,
@@ -1445,7 +1446,7 @@ export function Empresas({
         <div>
             <Header
                 titulo="Empresas e documentos"
-                subtitulo="Cadastro de empresas terceirizadas e controle de LTCAT, PCMSO e PGR."
+                subtitulo={null}
                 acao={
                     <button
                         onClick={onAtualizarBanco}
@@ -1457,6 +1458,37 @@ export function Empresas({
                 }
             />
 
+            <section className="empresas-hero-banner">
+                <div
+                    className="empresas-hero-banner__bg"
+                    style={{
+                        backgroundImage: `url(${dashboardHeroBackground})`,
+                    }}
+                />
+                <div className="empresas-hero-banner__overlay" />
+                <div className="empresas-hero-banner__content">
+                    <div className="min-w-0">
+                        <p className="empresas-hero-banner__eyebrow">SAFESCAN BRASIL</p>
+                        <h2 className="empresas-hero-banner__title">
+                            Gestão documental de empresas terceirizadas
+                        </h2>
+                        <p className="empresas-hero-banner__text">
+                            Controle empresas, documentos e prazos em uma visão única.
+                        </p>
+                    </div>
+
+                    <div className="empresas-hero-banner__stats">
+                        <div className="empresas-hero-banner__stat">
+                            <Building2 className="h-4 w-4 text-emerald-300" />
+                            <span>{empresasBanco.length} empresas ativas</span>
+                        </div>
+                        <div className="empresas-hero-banner__stat">
+                            <FileText className="h-4 w-4 text-emerald-300" />
+                            <span>{documentosEmpresas.length} documentos SST</span>
+                        </div>
+                    </div>
+                </div>
+            </section>
             {erroBanco && (
                 <div className="mb-5 rounded-2xl bg-red-50 p-4 text-sm font-medium text-red-700 ring-1 ring-red-200">
                     {erroBanco}
