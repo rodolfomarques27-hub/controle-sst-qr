@@ -9014,3 +9014,182 @@
     font-size: 0.76rem !important;
   }
 }
+/* MICROETAPA 2B - botoes superiores colaboradores */
+.colaboradores-header-acoes {
+  align-items: center !important;
+  justify-content: flex-end !important;
+}
+
+.colaboradores-header-acao {
+  min-height: 2.55rem !important;
+  border-radius: 999px !important;
+  padding-inline: 1.08rem !important;
+  font-size: 0.82rem !important;
+  font-weight: 850 !important;
+  letter-spacing: -0.01em !important;
+  transition:
+    transform 0.16s ease,
+    box-shadow 0.16s ease,
+    background 0.16s ease,
+    border-color 0.16s ease !important;
+}
+
+.colaboradores-header-acao:hover {
+  transform: translateY(-1px);
+}
+
+.colaboradores-header-acao svg {
+  width: 0.95rem !important;
+  height: 0.95rem !important;
+  flex: 0 0 auto !important;
+}
+
+.colaboradores-header-acao--primaria {
+  background:
+    linear-gradient(135deg, #020617 0%, #0f172a 100%) !important;
+  box-shadow: 0 10px 22px rgba(15, 23, 42, 0.14) !important;
+}
+
+.colaboradores-header-acao--secundaria {
+  border: 1px solid rgba(203, 213, 225, 0.92) !important;
+  background: rgba(255, 255, 255, 0.96) !important;
+  color: #334155 !important;
+  box-shadow: 0 10px 22px rgba(15, 23, 42, 0.055) !important;
+}
+
+.colaboradores-header-acao--secundaria:hover {
+  border-color: rgba(148, 163, 184, 0.95) !important;
+  background: #f8fafc !important;
+}
+
+@media (max-width: 720px) {
+  .colaboradores-header-acoes,
+  .colaboradores-header-acao {
+    width: 100% !important;
+  }
+
+  .colaboradores-header-acoes {
+    justify-content: stretch !important;
+  }
+
+  .colaboradores-header-acao {
+    justify-content: center !important;
+  }
+}
+/* MICROETAPA 2C - hero visual colaboradores */
+.colaboradores-hero-banner {
+  position: relative;
+  isolation: isolate;
+  min-height: 8.45rem;
+  margin: 0.85rem 0 1.35rem;
+  overflow: hidden;
+  border: 1px solid rgba(148, 163, 184, 0.22);
+  border-radius: 1.35rem;
+  background: #0f172a;
+  box-shadow: 0 18px 38px rgba(15, 23, 42, 0.12);
+}
+
+.colaboradores-hero-banner__bg,
+.colaboradores-hero-banner__overlay {
+  position: absolute;
+  inset: 0;
+}
+
+.colaboradores-hero-banner__bg {
+  z-index: -2;
+  background-image: url("../assets/dashboard-hero-sst.png");
+  background-position: center center;
+  background-repeat: no-repeat;
+  background-size: cover;
+  transform: scale(1.01);
+}
+
+.colaboradores-hero-banner__overlay {
+  z-index: -1;
+  background:
+    linear-gradient(90deg, rgba(2, 6, 23, 0.72) 0%, rgba(15, 23, 42, 0.48) 48%, rgba(15, 23, 42, 0.18) 100%),
+    radial-gradient(circle at 12% 0%, rgba(34, 197, 94, 0.16), transparent 34%),
+    radial-gradient(circle at 100% 0%, rgba(245, 158, 11, 0.13), transparent 42%);
+}
+
+.colaboradores-hero-banner__content {
+  display: flex;
+  min-height: 8.45rem;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1.1rem;
+  padding: clamp(1rem, 1.65vw, 1.38rem);
+}
+
+.colaboradores-hero-banner__eyebrow {
+  margin: 0 0 0.34rem;
+  color: #86efac;
+  font-size: 0.66rem;
+  font-weight: 950;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+.colaboradores-hero-banner__title {
+  margin: 0;
+  max-width: none;
+  color: #ffffff;
+  font-size: clamp(1.28rem, 1.72vw, 1.78rem);
+  font-weight: 950;
+  letter-spacing: -0.04em;
+  line-height: 1.02;
+  text-shadow: 0 2px 12px rgba(0, 0, 0, 0.34);
+  white-space: nowrap;
+}
+
+.colaboradores-hero-banner__text {
+  margin: 0.48rem 0 0;
+  max-width: 47rem;
+  color: rgba(248, 250, 252, 0.92);
+  font-size: 0.84rem;
+  font-weight: 700;
+  line-height: 1.35;
+  text-shadow: 0 1px 8px rgba(0, 0, 0, 0.28);
+}
+
+.colaboradores-hero-banner__stats {
+  display: flex;
+  width: auto;
+  min-width: max-content;
+  flex-wrap: nowrap;
+  justify-content: flex-end;
+  gap: 0.5rem;
+}
+
+.colaboradores-hero-banner__stat {
+  display: inline-flex;
+  min-height: 2.15rem;
+  align-items: center;
+  gap: 0.42rem;
+  border: 1px solid rgba(226, 232, 240, 0.20);
+  border-radius: 999px;
+  background: rgba(15, 23, 42, 0.42);
+  padding: 0.42rem 0.68rem;
+  color: #f8fafc;
+  font-size: 0.66rem;
+  font-weight: 850;
+  box-shadow: 0 8px 18px rgba(0, 0, 0, 0.10);
+  backdrop-filter: blur(10px);
+}
+
+@media (max-width: 1180px) {
+  .colaboradores-hero-banner__content {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .colaboradores-hero-banner__title {
+    white-space: normal;
+  }
+
+  .colaboradores-hero-banner__stats {
+    min-width: 0;
+    flex-wrap: wrap;
+    justify-content: flex-start;
+  }
+}

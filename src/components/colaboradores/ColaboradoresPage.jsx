@@ -941,9 +941,9 @@ ${erros.slice(0, 8).join("\n")}`
         <div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
             <Header
                 titulo="Colaboradores"
-                subtitulo="Cadastro com foto, código automático, matriz de treinamentos por função e alerta de vencimentos."
+                subtitulo={null}
                 acao={
-                    <div className="flex flex-wrap gap-2">
+                    <div className="colaboradores-header-acoes flex flex-wrap gap-2">
                         <button
                             onClick={() => {
                                 if (!podeEditarColaboradoresSistema) {
@@ -954,7 +954,7 @@ ${erros.slice(0, 8).join("\n")}`
                             }}
                             disabled={!podeEditarColaboradoresSistema}
                             title={podeEditarColaboradoresSistema ? "Nova função" : mensagemBloqueioEdicaoColaboradores}
-                            className="inline-flex items-center gap-2 rounded-2xl bg-slate-950 px-4 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50"
+                            className="colaboradores-header-acao colaboradores-header-acao--primaria inline-flex items-center gap-2 rounded-2xl bg-slate-950 px-4 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50"
                         >
                             <Plus className="h-4 w-4" />
                             Nova função
@@ -962,7 +962,7 @@ ${erros.slice(0, 8).join("\n")}`
 
                         <button
                             onClick={onAtualizarBanco}
-                            className="inline-flex items-center gap-2 rounded-2xl bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 shadow-sm ring-1 ring-slate-200 hover:bg-slate-50"
+                            className="colaboradores-header-acao colaboradores-header-acao--secundaria inline-flex items-center gap-2 rounded-2xl bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 shadow-sm ring-1 ring-slate-200 hover:bg-slate-50"
                         >
                             <RefreshCw className={classNames("h-4 w-4", carregandoBanco && "animate-spin")} />
                             Atualizar banco
@@ -970,6 +970,37 @@ ${erros.slice(0, 8).join("\n")}`
                     </div>
                 }
             />
+
+            <section className="colaboradores-hero-banner">
+                <div className="colaboradores-hero-banner__bg" />
+                <div className="colaboradores-hero-banner__overlay" />
+                <div className="colaboradores-hero-banner__content">
+                    <div className="min-w-0">
+                        <p className="colaboradores-hero-banner__eyebrow">SAFESCAN BRASIL</p>
+                        <h2 className="colaboradores-hero-banner__title">
+                            Gestão de colaboradores e treinamentos
+                        </h2>
+                        <p className="colaboradores-hero-banner__text">
+                            Controle colaboradores, treinamentos, vencimentos e QR Code em uma visão única.
+                        </p>
+                    </div>
+
+                    <div className="colaboradores-hero-banner__stats">
+                        <div className="colaboradores-hero-banner__stat">
+                            <Users className="h-4 w-4 text-emerald-300" />
+                            <span>{colaboradores.length} colaboradores</span>
+                        </div>
+                        <div className="colaboradores-hero-banner__stat">
+                            <ShieldCheck className="h-4 w-4 text-emerald-300" />
+                            <span>{resumoTreinamentos.liberados} liberados</span>
+                        </div>
+                        <div className="colaboradores-hero-banner__stat">
+                            <AlertTriangle className="h-4 w-4 text-amber-300" />
+                            <span>{resumoTreinamentos.pendentes + resumoTreinamentos.vencidos} pendências</span>
+                        </div>
+                    </div>
+                </div>
+            </section>
 
             {erroBanco && (
                 <div className="mb-5 rounded-2xl bg-red-50 p-4 text-sm font-medium text-red-700 ring-1 ring-red-200">
