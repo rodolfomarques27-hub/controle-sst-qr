@@ -8822,3 +8822,62 @@
     max-height: none !important;
   }
 }
+/* MICROETAPA 1K - cabecalho interno empresas documental equilibrado */
+.empresas-form-panel__titulo-escuro {
+  position: relative !important;
+  isolation: isolate !important;
+  overflow: hidden !important;
+  background: #bfdbfe !important;
+  color: #0f172a !important;
+  box-shadow:
+    inset 0 -1px 0 rgba(37, 99, 235, 0.22),
+    0 8px 20px rgba(15, 23, 42, 0.055) !important;
+}
+
+.empresas-form-panel__titulo-escuro::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -2;
+  background-image: url("../assets/empresas-documentos-bg.svg");
+  background-position: center center;
+  background-repeat: no-repeat;
+  background-size: cover;
+  opacity: 1;
+  filter: saturate(1.14) contrast(1.06);
+}
+
+.empresas-form-panel__titulo-escuro::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background:
+    linear-gradient(90deg, rgba(191, 219, 254, 0.82) 0%, rgba(224, 242, 254, 0.68) 46%, rgba(187, 247, 208, 0.58) 100%),
+    radial-gradient(circle at 0% 0%, rgba(37, 99, 235, 0.18), transparent 34%),
+    radial-gradient(circle at 100% 0%, rgba(34, 197, 94, 0.20), transparent 42%) !important;
+}
+
+.empresas-form-panel__titulo-escuro > .flex {
+  position: relative !important;
+  z-index: 1 !important;
+}
+
+.empresas-form-panel__titulo-escuro .rounded-2xl.bg-white\/10 {
+  background: rgba(37, 99, 235, 0.12) !important;
+  color: #1d4ed8 !important;
+  box-shadow:
+    inset 0 0 0 1px rgba(37, 99, 235, 0.28),
+    0 8px 18px rgba(37, 99, 235, 0.1) !important;
+  backdrop-filter: blur(6px) !important;
+}
+
+.empresas-form-panel__titulo-escuro h2 {
+  color: #020617 !important;
+  text-shadow: none !important;
+}
+
+.empresas-form-panel__titulo-escuro p {
+  color: #1e293b !important;
+  text-shadow: none !important;
+}
