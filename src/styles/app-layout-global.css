@@ -9688,3 +9688,125 @@
     width: 100% !important;
   }
 }
+/* MICROETAPA 2G - filtros e resumo base colaboradores */
+.colaboradores-base-filtros-grid {
+  align-items: stretch !important;
+  gap: 0.72rem !important;
+  margin-bottom: 0.95rem !important;
+}
+
+.colaboradores-base-filtros-grid > .relative {
+  min-width: 0 !important;
+}
+
+.colaboradores-base-filtros-grid :where(input, select) {
+  min-height: 2.85rem !important;
+  border-color: rgba(203, 213, 225, 0.92) !important;
+  border-radius: 1rem !important;
+  background-color: rgba(255, 255, 255, 0.98) !important;
+  color: #0f172a !important;
+  font-size: 0.78rem !important;
+  font-weight: 650 !important;
+  box-shadow:
+    0 8px 18px rgba(15, 23, 42, 0.035),
+    inset 0 0 0 1px rgba(248, 250, 252, 0.72) !important;
+  transition:
+    border-color 150ms ease,
+    box-shadow 150ms ease,
+    background 150ms ease !important;
+}
+
+.colaboradores-base-filtros-grid :where(input, select):focus {
+  border-color: rgba(37, 99, 235, 0.42) !important;
+  box-shadow:
+    0 0 0 4px rgba(37, 99, 235, 0.075),
+    0 10px 22px rgba(15, 23, 42, 0.055) !important;
+}
+
+.colaboradores-base-filtros-grid input::placeholder {
+  color: #94a3b8 !important;
+  font-weight: 600 !important;
+}
+
+.colaboradores-base-filtros-grid svg {
+  color: #64748b !important;
+}
+
+.colaboradores-status-grid--premium {
+  gap: 0.62rem !important;
+  margin-bottom: 1rem !important;
+}
+
+.colaboradores-status-grid--premium .colaborador-status-card {
+  position: relative !important;
+  min-height: 4.6rem !important;
+  overflow: hidden !important;
+  border: 1px solid rgba(219, 231, 242, 0.92) !important;
+  border-radius: 1.05rem !important;
+  padding: 0.68rem 0.55rem !important;
+  box-shadow:
+    0 7px 16px rgba(15, 23, 42, 0.035),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.62) !important;
+}
+
+.colaboradores-status-grid--premium .colaborador-status-card::before {
+  content: "";
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: 2px;
+  opacity: 0.82;
+  background: linear-gradient(90deg, #0ea5e9 0%, #2563eb 70%, #22c55e 100%);
+}
+
+.colaboradores-status-grid--premium .colaborador-status-card:nth-child(2)::before {
+  background: linear-gradient(90deg, #22c55e 0%, #16a34a 100%);
+}
+
+.colaboradores-status-grid--premium .colaborador-status-card:nth-child(3)::before {
+  background: linear-gradient(90deg, #3b82f6 0%, #2563eb 100%);
+}
+
+.colaboradores-status-grid--premium .colaborador-status-card:nth-child(4)::before {
+  background: linear-gradient(90deg, #ef4444 0%, #dc2626 100%);
+}
+
+.colaboradores-status-grid--premium .colaborador-status-card:nth-child(5)::before {
+  background: linear-gradient(90deg, #8b5cf6 0%, #7c3aed 100%);
+}
+
+.colaboradores-status-grid--premium .colaborador-status-card:nth-child(6)::before,
+.colaboradores-status-grid--premium .colaborador-status-card:nth-child(7)::before {
+  background: linear-gradient(90deg, #94a3b8 0%, #64748b 100%);
+}
+
+.colaboradores-status-grid--premium .colaborador-status-card p:first-child {
+  min-height: auto !important;
+  color: inherit !important;
+  font-size: 0.62rem !important;
+  font-weight: 850 !important;
+  line-height: 1.05 !important;
+  letter-spacing: 0.01em !important;
+}
+
+.colaboradores-status-grid--premium .colaborador-status-card p:last-child {
+  margin-top: 0.22rem !important;
+  font-size: clamp(1.15rem, 1.42vw, 1.45rem) !important;
+  font-weight: 950 !important;
+  line-height: 1.1 !important;
+}
+
+@media (max-width: 1280px) {
+  .colaboradores-status-grid--premium {
+    grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+  }
+}
+
+@media (max-width: 760px) {
+  .colaboradores-base-filtros-grid {
+    grid-template-columns: 1fr !important;
+  }
+
+  .colaboradores-status-grid--premium {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
+}

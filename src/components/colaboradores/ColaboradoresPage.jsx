@@ -1227,7 +1227,7 @@ ${erros.slice(0, 8).join("\n")}`
                         </div>
                     </div>
 
-                    <div className="colaboradores-status-grid mb-4">
+                    <div className="colaboradores-status-grid colaboradores-status-grid--premium mb-4">
                         <div className="colaborador-status-card flex min-h-[92px] flex-col items-center justify-center rounded-2xl bg-slate-50 p-3 text-center">
                             <p className="text-xs font-medium text-slate-500">Total</p>
                             <p className="text-2xl font-bold text-slate-950">{colaboradores.length}</p>
