@@ -2438,7 +2438,18 @@
   }
 
   .empresas-info-card {
+    border: 1px solid #dbe7f2 !important;
+    border-radius: 1.5rem !important;
+    background: linear-gradient(180deg, #ffffff 0%, #fbfdff 100%) !important;
+    box-shadow: 0 18px 42px rgba(15, 23, 42, 0.06) !important;
     padding: clamp(0.9rem, 1vw, 1.1rem) !important;
+  }
+
+  .empresas-cadastro-unificado {
+    border: 1px solid #dbe7f2 !important;
+    border-radius: 1.5rem !important;
+    background: linear-gradient(180deg, #ffffff 0%, #fbfdff 100%) !important;
+    box-shadow: 0 18px 42px rgba(15, 23, 42, 0.06) !important;
   }
 
   .empresas-info-card > .mb-5 {
@@ -8548,5 +8559,109 @@
   .empresas-relatorios-pdf-card__botao {
     width: 100% !important;
     justify-content: center !important;
+  }
+}
+/* MICROETAPA 1H - cards recolhidos empresas com classe explicita */
+.empresas-card-recolhido-padrao {
+  position: relative !important;
+  min-height: 5.95rem !important;
+  overflow: hidden !important;
+  border: 1px solid #dbe7f2 !important;
+  border-radius: 1.45rem !important;
+  background: #ffffff !important;
+  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.07) !important;
+}
+
+.empresas-card-recolhido-padrao::before {
+  content: "";
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: 3px;
+  background: linear-gradient(90deg, #06b6d4 0%, #2563eb 60%, #7c3aed 100%);
+}
+
+.empresas-card-recolhido-padrao--informacoes::before {
+  background: linear-gradient(90deg, #22c55e 0%, #06b6d4 62%, #2563eb 100%);
+}
+
+.empresas-card-recolhido-padrao .empresas-cadastro-header,
+.empresas-card-recolhido-padrao.empresas-info-card > .mb-5 {
+  position: relative !important;
+  margin: 0 !important;
+  min-height: 5rem !important;
+  align-items: center !important;
+  border-bottom: 0 !important;
+  padding: 0.8rem 1rem !important;
+}
+
+.empresas-card-recolhido-padrao .empresas-cadastro-header__etiqueta,
+.empresas-card-recolhido-padrao.empresas-info-card > .mb-5 .text-slate-400 {
+  display: none !important;
+}
+
+.empresas-card-recolhido-padrao .empresas-cadastro-header__icone,
+.empresas-card-recolhido-padrao.empresas-info-card .rounded-2xl.bg-slate-950 {
+  height: 3rem !important;
+  width: 3rem !important;
+  border-radius: 1rem !important;
+  background: #cffafe !important;
+  color: #0369a1 !important;
+  box-shadow: none !important;
+}
+
+.empresas-card-recolhido-padrao--informacoes.rounded-2xl,
+.empresas-card-recolhido-padrao--informacoes .rounded-2xl.bg-slate-950 {
+  background: #dcfce7 !important;
+  color: #059669 !important;
+}
+
+.empresas-card-recolhido-padrao .empresas-cadastro-header__titulo,
+.empresas-card-recolhido-padrao.empresas-info-card h2 {
+  margin-top: 0 !important;
+  color: #020617 !important;
+  font-size: 1.05rem !important;
+  font-weight: 950 !important;
+  line-height: 1.15 !important;
+}
+
+.empresas-card-recolhido-padrao .empresas-cadastro-header__subtitulo,
+.empresas-card-recolhido-padrao.empresas-info-card p.mt-1 {
+  margin-top: 0.28rem !important;
+  color: #475569 !important;
+  font-size: 0.8rem !important;
+  font-weight: 600 !important;
+  line-height: 1.35 !important;
+}
+
+.empresas-card-recolhido-padrao .empresas-cadastro-header__acao {
+  min-height: 2rem !important;
+  border: 0 !important;
+  border-radius: 999px !important;
+  background: #020617 !important;
+  padding: 0.35rem 0.95rem !important;
+  color: #ffffff !important;
+  font-size: 0.78rem !important;
+  font-weight: 900 !important;
+  box-shadow: 0 9px 20px rgba(15, 23, 42, 0.14) !important;
+}
+
+.empresas-card-recolhido-padrao .empresas-cadastro-header__acao:hover {
+  transform: translateY(-1px);
+  background: #0f172a !important;
+}
+
+.empresas-card-recolhido-padrao.empresas-info-card > .mb-5 > .flex.flex-wrap > span {
+  display: none !important;
+}
+
+@media (max-width: 760px) {
+  .empresas-card-recolhido-padrao .empresas-cadastro-header,
+  .empresas-card-recolhido-padrao.empresas-info-card > .mb-5 {
+    flex-direction: column !important;
+    align-items: stretch !important;
+  }
+
+  .empresas-card-recolhido-padrao .empresas-cadastro-header__acao {
+    width: 100% !important;
   }
 }

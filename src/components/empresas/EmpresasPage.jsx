@@ -1509,7 +1509,12 @@ export function Empresas({
 
             <div className="space-y-6">
                 <section className="empresas-section-destaque">
-                    <Card className="empresas-cadastro-unificado border-blue-100 bg-blue-50/40">
+                    <Card
+                            className={classNames(
+                                "empresas-cadastro-unificado border-blue-100 bg-blue-50/40",
+                                cadastroEmpresasRecolhido && "empresas-card-recolhido-padrao empresas-card-recolhido-padrao--cadastro"
+                            )}
+                        >
                         <div className="empresas-cadastro-header">
                             <div className="empresas-cadastro-header__info">
                                 <div className="empresas-cadastro-header__icone">
@@ -1529,7 +1534,7 @@ export function Empresas({
                                 className="empresas-cadastro-header__acao"
                             >
                                 {cadastroEmpresasRecolhido ? <ChevronDown className="h-4 w-4" /> : <ChevronUp className="h-4 w-4" />}
-                                {cadastroEmpresasRecolhido ? "Abrir cadastro" : "Recolher cadastro"}
+                                {cadastroEmpresasRecolhido ? "Abrir" : "Recolher cadastro"}
                             </button>
                         </div>
 
@@ -1883,7 +1888,12 @@ export function Empresas({
                     </Card>
                 </section>
 
-                <Card className="empresas-info-card">
+                <Card
+                    className={classNames(
+                        "empresas-info-card",
+                        informacoesEmpresasRecolhidas && "empresas-card-recolhido-padrao empresas-card-recolhido-padrao--informacoes"
+                    )}
+                >
                     <div className="mb-5 flex flex-col gap-3 border-b border-slate-100 pb-4 lg:flex-row lg:items-center lg:justify-between">
                         <div className="min-w-0 flex items-start gap-3">
                             <div className="rounded-2xl bg-slate-950 p-3 text-white">
@@ -1905,7 +1915,7 @@ export function Empresas({
                                 className="empresas-cadastro-header__acao"
                             >
                                 {informacoesEmpresasRecolhidas ? <ChevronDown className="h-4 w-4" /> : <ChevronUp className="h-4 w-4" />}
-                                {informacoesEmpresasRecolhidas ? "Abrir informações" : "Recolher informações"}
+                                {informacoesEmpresasRecolhidas ? "Abrir" : "Recolher informações"}
                             </button>
                         </div>
                     </div>
