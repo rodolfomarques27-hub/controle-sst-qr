@@ -8767,3 +8767,58 @@
     width: 100% !important;
   }
 }
+/* MICROETAPA 1J - alinhar uploads do cadastro de empresas */
+.empresa-form-linha--uploads {
+  align-items: stretch !important;
+}
+
+.empresa-form-linha--uploads > select,
+.empresa-form-linha--uploads .empresa-upload-wrapper,
+.empresa-form-linha--uploads .empresa-upload-card {
+  width: 100% !important;
+  min-width: 0 !important;
+}
+
+.empresa-form-linha--uploads > select,
+.empresa-form-linha--uploads .empresa-upload-card {
+  height: 2.38rem !important;
+  min-height: 2.38rem !important;
+  max-height: 2.38rem !important;
+  border-radius: 0.95rem !important;
+  padding: 0.58rem 0.78rem !important;
+  box-sizing: border-box !important;
+}
+
+.empresa-form-linha--uploads .empresa-upload-card {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 0.42rem !important;
+  line-height: 1 !important;
+}
+
+.empresa-form-linha--uploads .empresa-upload-card svg {
+  flex: 0 0 auto !important;
+  width: 1rem !important;
+  height: 1rem !important;
+}
+
+.empresa-form-linha--uploads .empresa-upload-card span {
+  display: block !important;
+  min-width: 0 !important;
+  overflow: hidden !important;
+  text-align: center !important;
+  text-overflow: ellipsis !important;
+  white-space: nowrap !important;
+  font-size: 0.78rem !important;
+  line-height: 1 !important;
+}
+
+@media (max-width: 900px) {
+  .empresa-form-linha--uploads > select,
+  .empresa-form-linha--uploads .empresa-upload-card {
+    height: 2.45rem !important;
+    min-height: 2.45rem !important;
+    max-height: none !important;
+  }
+}
