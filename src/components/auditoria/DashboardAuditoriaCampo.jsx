@@ -2460,10 +2460,26 @@ const logoHtml = logoQr
             icone: "bg-slate-100 text-slate-700 ring-slate-200/70",
         };
 
+        const alternarBlocoAuditoriaCampoPorArea = (evento) => {
+            const alvoInterativo = evento.target.closest?.(
+                "button, a, input, select, textarea, label, table, [role='button'], [data-auditoria-campo-nao-alternar]"
+            );
+
+            if (alvoInterativo) return;
+
+            if (!recolhido) {
+                const cabecalho = evento.currentTarget.querySelector("[data-auditoria-campo-bloco-cabecalho='true']");
+                if (cabecalho && !cabecalho.contains(evento.target)) return;
+            }
+
+            setBlocosRecolhidos((atual) => ({ ...atual, [chave]: !atual[chave] }));
+        };
+
         return (
-            <Card className={classNames("relative overflow-hidden rounded-[22px] border bg-white/95 shadow-[0_18px_48px_-34px_rgba(15,23,42,0.5)]", temaBloco.borda, classeTamanho(tamanhosBlocos[chave]))}>
+            <div className={classNames(classeTamanho(tamanhosBlocos[chave]), "h-full")} onClick={alternarBlocoAuditoriaCampoPorArea}>
+                <Card className={classNames("relative h-full overflow-hidden rounded-[22px] border bg-white/95 shadow-[0_18px_48px_-34px_rgba(15,23,42,0.5)]", temaBloco.borda)}>
                 <span className={classNames("absolute inset-x-0 top-0 h-1 bg-gradient-to-r", temaBloco.acento)} />
-                <div className="flex items-center gap-3 border-b border-slate-100/80 px-4 py-3.5 md:px-5">
+                    <div data-auditoria-campo-bloco-cabecalho="true" className="flex items-center gap-3 border-b border-slate-100/80 px-4 py-3.5 md:px-5">
                     <div className={classNames("flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl ring-1", temaBloco.icone)}>
                         <Icone className="h-5 w-5" />
                     </div>
@@ -2471,12 +2487,20 @@ const logoHtml = logoQr
                         <h2 className="truncate text-[15px] font-black tracking-tight text-slate-950">{titulo}</h2>
                         <p className="mt-0.5 line-clamp-2 text-[11px] font-medium leading-snug text-slate-500">{subtitulo}</p>
                     </div>
-                    <button type="button" onClick={() => setBlocosRecolhidos((atual) => ({ ...atual, [chave]: !atual[chave] }))} className="shrink-0 rounded-full bg-slate-950 px-3 py-1.5 text-xs font-black text-white shadow-sm transition hover:bg-slate-800">
+                    <button
+                        type="button"
+                        onClick={(evento) => {
+                            evento.stopPropagation();
+                            setBlocosRecolhidos((atual) => ({ ...atual, [chave]: !atual[chave] }));
+                        }}
+                        className="shrink-0 rounded-full bg-slate-950 px-3 py-1.5 text-xs font-black text-white shadow-sm transition hover:bg-slate-800"
+                    >
                         {recolhido ? "Abrir" : "Recolher"}
                     </button>
                 </div>
                 {!recolhido && <div className="px-4 py-4 md:px-5 md:py-5">{children}</div>}
-            </Card>
+                </Card>
+            </div>
         );
     };
 
