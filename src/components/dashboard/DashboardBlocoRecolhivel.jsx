@@ -106,10 +106,27 @@ export function DashboardBlocoRecolhivel({
     const tema = TEMAS_BLOCOS_RECOLHIVEIS[chaveBloco] || TEMAS_BLOCOS_RECOLHIVEIS.default;
     const Icone = obterIconeBlocoRecolhivel(chaveBloco);
 
+    const alternarBlocoRecolhivelPorArea = (evento) => {
+        const alvoInterativo = evento.target.closest?.(
+            "button, a, input, select, textarea, label, [role='button'], [data-dashboard-bloco-nao-alternar]"
+        );
+
+        if (alvoInterativo) return;
+        if (!alternarBlocoRecolhidoDashboard) return;
+
+        if (!recolhido) {
+            const cabecalho = evento.currentTarget.querySelector("[data-dashboard-bloco-cabecalho='true']");
+            if (cabecalho && !cabecalho.contains(evento.target)) return;
+        }
+
+        alternarBlocoRecolhidoDashboard(chaveBloco);
+    };
+
     return (
-        <Card className={classNames("relative h-full overflow-hidden rounded-[22px] border bg-white/95 shadow-[0_18px_48px_-34px_rgba(15,23,42,0.5)] ring-0", tema.borda, tema.fundo)}>
+        <div className="h-full" onClick={alternarBlocoRecolhivelPorArea}>
+            <Card className={classNames("relative h-full overflow-hidden rounded-[22px] border bg-white/95 shadow-[0_18px_48px_-34px_rgba(15,23,42,0.5)] ring-0", tema.borda, tema.fundo)}>
             <span className={classNames("absolute inset-x-0 top-0 h-1 bg-gradient-to-r", tema.acento)} />
-            <div className={classNames("flex items-center gap-3 px-4 py-3.5 md:px-5", recolhido ? "border-b border-slate-100/80" : "border-b border-slate-100/80")}>
+                <div data-dashboard-bloco-cabecalho="true" className={classNames("flex items-center gap-3 px-4 py-3.5 md:px-5", recolhido ? "border-b border-slate-100/80" : "border-b border-slate-100/80")}>
                 <div className={classNames("flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl ring-1", tema.icone)}>
                     <Icone className="h-5 w-5" />
                 </div>
@@ -121,7 +138,10 @@ export function DashboardBlocoRecolhivel({
                     {badge}
                     <button
                         type="button"
-                        onClick={() => alternarBlocoRecolhidoDashboard?.(chaveBloco)}
+                        onClick={(evento) => {
+                            evento.stopPropagation();
+                            alternarBlocoRecolhidoDashboard?.(chaveBloco);
+                        }}
                         className="inline-flex items-center gap-1.5 rounded-full bg-[#1A2332] px-3 py-1.5 text-xs font-black text-white shadow-sm transition hover:bg-[#2A3647]"
                     >
                         {recolhido ? <ChevronDown className="h-3.5 w-3.5" /> : <ChevronUp className="h-3.5 w-3.5" />}
@@ -131,7 +151,8 @@ export function DashboardBlocoRecolhivel({
             </div>
 
             {!recolhido && <div className="px-4 py-4 md:px-5 md:py-5">{children}</div>}
-        </Card>
+            </Card>
+        </div>
     );
 }
 
