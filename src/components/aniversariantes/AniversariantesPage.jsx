@@ -1,10 +1,11 @@
 import React, { useMemo, useState } from "react";
-import { CalendarDays, Download, Search, Users } from "lucide-react";
+import { CalendarDays, ChevronDown, Download, Search, Users } from "lucide-react";
 import { Card, FotoColaborador, Header, obterFotoColaboradorSrc } from "../commonComponents";
 import { STATUS_CLASSIFICACAO_COLABORADOR } from "../../constants/sstConstants";
 import { baixarRelatorioAniversariantesPDF } from "../../services/exportacaoService";
 import { classNames, formatarAniversario, normalizarTextoBusca } from "../../utils/sstUtils";
 import { obterUrlLogoEmpresa } from "../../services/supabaseServices";
+import aniversariantesHeroBackground from "../../assets/dashboard-hero-sst.png";
 import {
     obterDataAniversarioColaborador,
     mesAniversarioColaborador,
@@ -83,7 +84,56 @@ const obterIniciais = (nome = "") => {
 };
 
 const CHAVE_FILTROS_ANIVERSARIANTES = "controle-sst-qr:aniversariantes:filtros-salvos:v1";
+const CHAVE_LAYOUT_ANIVERSARIANTES = "controle-sst-qr:aniversariantes:layout-recolhido:v1";
 
+
+function carregarLayoutAniversariantes() {
+    if (typeof window === "undefined" || !window.localStorage) {
+        return {
+            filtrosRecolhidos: false,
+            listaRecolhida: false,
+        };
+    }
+
+    try {
+        const bruto = window.localStorage.getItem(CHAVE_LAYOUT_ANIVERSARIANTES);
+        if (!bruto) {
+            return {
+                filtrosRecolhidos: false,
+                listaRecolhida: false,
+            };
+        }
+
+        const dados = JSON.parse(bruto);
+        if (!dados || typeof dados !== "object") {
+            return {
+                filtrosRecolhidos: false,
+                listaRecolhida: false,
+            };
+        }
+
+        return {
+            filtrosRecolhidos: Boolean(dados.filtrosRecolhidos),
+            listaRecolhida: Boolean(dados.listaRecolhida),
+        };
+    } catch (error) {
+        console.error("Erro ao carregar layout de aniversariantes:", error);
+        return {
+            filtrosRecolhidos: false,
+            listaRecolhida: false,
+        };
+    }
+}
+
+function salvarLayoutAniversariantes(proximoLayout) {
+    if (typeof window === "undefined" || !window.localStorage) return;
+
+    try {
+        window.localStorage.setItem(CHAVE_LAYOUT_ANIVERSARIANTES, JSON.stringify(proximoLayout));
+    } catch (error) {
+        console.error("Erro ao salvar layout de aniversariantes:", error);
+    }
+}
 function obterFiltrosPadraoAniversariantes() {
     return {
         mes: "Todos",
@@ -132,6 +182,17 @@ export function Aniversariantes({ colaboradores = [], empresasBanco = [] }) {
     const [busca, setBusca] = useState("");
     const [exportandoPDF, setExportandoPDF] = useState(false);
     const [versaoFiltroSalvo, setVersaoFiltroSalvo] = useState(0);
+    const [layoutAniversariantes, setLayoutAniversariantes] = useState(() => carregarLayoutAniversariantes());
+    const filtrosAniversariantesRecolhidos = layoutAniversariantes.filtrosRecolhidos;
+    const listaAniversariantesRecolhida = layoutAniversariantes.listaRecolhida;
+
+    const atualizarLayoutAniversariantes = (atualizador) => {
+        setLayoutAniversariantes((layoutAtual) => {
+            const proximoLayout = typeof atualizador === "function" ? atualizador(layoutAtual) : atualizador;
+            salvarLayoutAniversariantes(proximoLayout);
+            return proximoLayout;
+        });
+    };
 
     const filtrosSalvosDisponiveis = useMemo(
         () => Boolean(carregarFiltrosSalvosAniversariantes()),
@@ -349,13 +410,7 @@ export function Aniversariantes({ colaboradores = [], empresasBanco = [] }) {
             <Header
                 titulo="Aniversariantes"
                 className="header-aniversariantes"
-                subtitulo={(
-                    <>
-                        Consulta de aniversariantes de todos os meses, com todos os colaboradores autorizados para aparecer no painel.
-                        <br className="hidden sm:block" />
-                        Use os filtros para separar por mês, empresa, função, status e busca por texto.
-                    </>
-                )}
+                subtitulo={null}
                 acao={(
                     <button
                         type="button"
@@ -369,163 +424,240 @@ export function Aniversariantes({ colaboradores = [], empresasBanco = [] }) {
                 )}
             />
 
-            <div className="mb-5 grid gap-4 xl:grid-cols-[0.9fr_1.1fr_1.45fr]">
-                <Card>
-                    <div className="flex h-full items-center gap-4">
-                        <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-blue-50 text-blue-700 ring-1 ring-blue-100">
+            <section className="aniversariantes-hero-banner">
+                <div
+                    className="aniversariantes-hero-banner__bg"
+                    style={{
+                        backgroundImage: `url(${aniversariantesHeroBackground})`,
+                    }}
+                />
+                <div className="aniversariantes-hero-banner__overlay" />
+                <div className="aniversariantes-hero-banner__content">
+                    <div className="min-w-0">
+                        <p className="aniversariantes-hero-banner__eyebrow">SAFESCAN BRASIL</p>
+                        <h2 className="aniversariantes-hero-banner__title">
+                            Gestão de aniversariantes
+                        </h2>
+                        <p className="aniversariantes-hero-banner__text">
+                            Acompanhe aniversários por mês e empresa em uma visão única.
+                        </p>
+                    </div>
+
+
+                </div>
+            </section>
+
+            <Card className="aniversariantes-resumo-unificado mb-5">
+                <div className="aniversariantes-resumo-unificado__grid">
+                    <section className="aniversariantes-resumo-unificado__item aniversariantes-resumo-unificado__item--total">
+                        <div className="aniversariantes-resumo-unificado__icone aniversariantes-resumo-unificado__icone--total">
                             <Users className="h-6 w-6" />
                         </div>
-                        <div>
-                            <p className="text-sm font-semibold text-slate-500">{tituloResumoRegistros}</p>
-                            <div className="mt-1 flex flex-wrap items-baseline gap-2">
-                                <span className="text-3xl font-bold text-slate-950">{filtrados.length}</span>
-                                <span className="text-sm font-semibold text-slate-600">{textoQuantidadeRegistros}</span>
+                        <div className="aniversariantes-resumo-unificado__texto">
+                            <p className="aniversariantes-resumo-unificado__rotulo">{tituloResumoRegistros}</p>
+                            <div className="aniversariantes-resumo-unificado__numero-linha">
+                                <strong>{filtrados.length}</strong>
+                                <span>{textoQuantidadeRegistros}</span>
                             </div>
-                            <p className="mt-1 text-xs text-slate-500">{textoApoioRegistros}</p>
+                            <p className="aniversariantes-resumo-unificado__apoio">{textoApoioRegistros}</p>
                         </div>
-                    </div>
-                </Card>
+                    </section>
 
-                <Card>
-                    <div className="flex h-full items-center gap-4">
-                        <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-violet-50 text-violet-700 ring-1 ring-violet-100">
+                    <section className="aniversariantes-resumo-unificado__item aniversariantes-resumo-unificado__item--proximo">
+                        <div className="aniversariantes-resumo-unificado__icone aniversariantes-resumo-unificado__icone--proximo">
                             <CalendarDays className="h-6 w-6" />
                         </div>
-                        <div className="min-w-0">
-                            <p className="text-sm font-semibold text-slate-500">Próximo aniversário</p>
-                            <p className="mt-1 break-words text-lg font-bold leading-snug text-slate-950">{proximo?.colaborador?.nome || "-"}</p>
-                            <p className="mt-1 text-sm text-slate-500">
+                        <div className="aniversariantes-resumo-unificado__texto">
+                            <p className="aniversariantes-resumo-unificado__rotulo">Próximo aniversário</p>
+                            <p className="aniversariantes-resumo-unificado__nome">{proximo?.colaborador?.nome || "-"}</p>
+                            <p className="aniversariantes-resumo-unificado__apoio">
                                 {proximo ? formatarProximoAniversario(proximo.colaborador) : "Sem data cadastrada"}
                                 {diasAteProximo !== null ? ` • faltam ${diasAteProximo} dia(s)` : ""}
                             </p>
                         </div>
-                    </div>
-                </Card>
+                    </section>
 
-                <Card>
-                    <div className="flex flex-col gap-3">
-                        <div className="flex flex-wrap items-start justify-between gap-3">
+                    <section className="aniversariantes-resumo-unificado__grafico">
+                        <div className="aniversariantes-resumo-unificado__grafico-topo">
                             <div>
-                                <p className="text-sm font-semibold text-slate-500">Aniversariantes por mês</p>
-                                <p className="mt-1 text-xs text-slate-500">
-                                    Total anual: <strong className="text-slate-900">{resumoMensal.totalAno}</strong>
-                                    {resumoMensal.mesComMais ? (
-                                        <> • Maior mês: <strong className="capitalize text-slate-900">{resumoMensal.mesComMais.nome}</strong></>
-                                    ) : null}
-                                </p>
+                                <p className="aniversariantes-resumo-unificado__grafico-titulo">Distribuição mensal</p>
+                                <div className="aniversariantes-resumo-unificado__grafico-subtitulo">
+
+
+                                </div>
                             </div>
-                            <span className="rounded-full bg-slate-950 px-3 py-1 text-xs font-bold text-white">
-                                {resumoMensal.mesComMais
-                                    ? `Mês destaque: ${resumoMensal.mesComMais.nome} · ${resumoMensal.mesComMais.total} ${resumoMensal.mesComMais.total === 1 ? "colaborador" : "colaboradores"}`
-                                    : "Sem aniversariantes"}
-                            </span>
+
+
                         </div>
 
-                        <div className="grid grid-cols-12 items-end gap-1.5 pt-1">
+                        <div className="aniversariantes-resumo-unificado__barras">
                             {resumoMensal.totais.map((item) => {
                                 const altura = resumoMensal.maiorTotal > 0 ? Math.max(18, Math.round((item.total / resumoMensal.maiorTotal) * 72)) : 18;
                                 const ativo = mes !== "Todos" && String(item.numero).padStart(2, "0") === mes;
                                 const mesAtual = item.numero === resumoMensal.mesAtual;
 
                                 return (
-                                    <div key={item.valor} className="flex min-w-0 flex-col items-center gap-1 text-center">
-                                        <span className="text-[10px] font-bold leading-none text-slate-700">{item.total}</span>
+                                    <div key={item.valor} className="aniversariantes-resumo-unificado__mes">
+                                        <span className="aniversariantes-resumo-unificado__valor">{item.total}</span>
                                         <div
                                             className={classNames(
-                                                "w-full max-w-[22px] rounded-t-xl border transition",
-                                                ativo
-                                                    ? "border-slate-950 bg-slate-950"
-                                                    : mesAtual
-                                                        ? "border-blue-200 bg-blue-500"
-                                                        : "border-slate-200 bg-slate-200"
+                                                "aniversariantes-resumo-unificado__barra",
+                                                ativo && "aniversariantes-resumo-unificado__barra--ativa",
+                                                !ativo && mesAtual && "aniversariantes-resumo-unificado__barra--atual"
                                             )}
                                             style={{ height: `${altura}px` }}
                                             title={`${item.nome}: ${item.total}`}
                                         />
-                                        <span className="truncate text-[10px] font-semibold capitalize text-slate-500">{item.curto}</span>
+                                        <span className="aniversariantes-resumo-unificado__mes-label">{item.curto}</span>
                                     </div>
                                 );
                             })}
                         </div>
-                    </div>
-                </Card>
-            </div>
-
-            <Card className="mb-5">
-                <div className="mb-3 flex flex-col gap-3 rounded-2xl border border-slate-100 bg-slate-50 p-3 sm:flex-row sm:items-center sm:justify-between">
-                    <div>
-                        <p className="text-xs font-black uppercase tracking-wide text-slate-500">Filtros salvos</p>
-                        <p className="mt-1 text-xs font-semibold text-slate-500">Salve uma combinação de filtros para reutilizar neste relatório.</p>
-                    </div>
-                    <div className="flex flex-col gap-2 sm:flex-row">
-                        <button
-                            type="button"
-                            onClick={salvarFiltrosAniversariantes}
-                            className="rounded-2xl border border-slate-200 bg-white px-4 py-2 text-xs font-black uppercase tracking-wide text-slate-700 shadow-sm transition hover:border-slate-300 hover:bg-slate-100"
-                        >
-                            Salvar filtro
-                        </button>
-                        <button
-                            type="button"
-                            onClick={aplicarFiltrosSalvosAniversariantes}
-                            disabled={!filtrosSalvosDisponiveis}
-                            className={classNames(
-                                "rounded-2xl border px-4 py-2 text-xs font-black uppercase tracking-wide shadow-sm transition",
-                                filtrosSalvosDisponiveis
-                                    ? "border-slate-900 bg-slate-900 text-white hover:bg-slate-800"
-                                    : "cursor-not-allowed border-slate-200 bg-slate-100 text-slate-400"
-                            )}
-                        >
-                            Aplicar filtro salvo
-                        </button>
-                        <button
-                            type="button"
-                            onClick={limparFiltrosSalvosAniversariantes}
-                            disabled={!filtrosSalvosDisponiveis}
-                            className={classNames(
-                                "rounded-2xl border px-4 py-2 text-xs font-black uppercase tracking-wide shadow-sm transition",
-                                filtrosSalvosDisponiveis
-                                    ? "border-red-100 bg-white text-red-600 hover:bg-red-50"
-                                    : "cursor-not-allowed border-slate-200 bg-slate-100 text-slate-400"
-                            )}
-                        >
-                            Limpar filtro salvo
-                        </button>
-                    </div>
-                </div>
-
-                <div className="grid gap-3 lg:grid-cols-[1.2fr_repeat(4,minmax(0,1fr))]">
-                    <label className="relative block">
-                        <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-                        <input
-                            value={busca}
-                            onChange={(e) => setBusca(e.target.value)}
-                            placeholder="Buscar por nome, empresa ou função"
-                            className="w-full rounded-2xl border border-slate-200 bg-white py-3 pl-11 pr-4 text-sm outline-none focus:border-slate-400 focus:ring-4 focus:ring-slate-100"
-                        />
-                    </label>
-
-                    <select value={mes} onChange={(e) => setMes(e.target.value)} className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none focus:border-slate-400 focus:ring-4 focus:ring-slate-100">
-                        <option value="Todos">Todos os meses</option>
-                        {MESES_ANIVERSARIO.map((item) => <option key={item.valor} value={item.valor}>{item.nome}</option>)}
-                    </select>
-
-                    <select value={empresa} onChange={(e) => setEmpresa(e.target.value)} className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none focus:border-slate-400 focus:ring-4 focus:ring-slate-100">
-                        {opcoesEmpresa.map((item) => <option key={item}>{item}</option>)}
-                    </select>
-
-                    <select value={funcao} onChange={(e) => setFuncao(e.target.value)} className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none focus:border-slate-400 focus:ring-4 focus:ring-slate-100">
-                        {opcoesFuncao.map((item) => <option key={item}>{item}</option>)}
-                    </select>
-
-                    <select value={status} onChange={(e) => setStatus(e.target.value)} className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none focus:border-slate-400 focus:ring-4 focus:ring-slate-100">
-                        {opcoesStatus.map((item) => <option key={item}>{item}</option>)}
-                    </select>
+                    </section>
                 </div>
             </Card>
+            <Card
+                className={classNames(
+                    "aniversariantes-filtros-card mb-5",
+                    filtrosAniversariantesRecolhidos && "aniversariantes-filtros-card--recolhido"
+                )}
+            >
+                <div className="aniversariantes-filtros-card__cabecalho">
+                    <div className="aniversariantes-filtros-card__titulo">
+                        <p>Filtros salvos</p>
+                        <span>
+                            {filtrosAniversariantesRecolhidos
+                                ? "Filtros recolhidos para deixar a tela mais compacta."
+                                : "Salve uma combinação de filtros para reutilizar neste relatório."}
+                        </span>
+                    </div>
 
-            <Card>
-                <div className="overflow-x-auto scrollbar-discreta">
+                    <div className="aniversariantes-filtros-card__acoes">
+                        {!filtrosAniversariantesRecolhidos && (
+                            <>
+                                <button
+                                    type="button"
+                                    onClick={salvarFiltrosAniversariantes}
+                                    className="aniversariantes-filtros-card__botao aniversariantes-filtros-card__botao--principal"
+                                >
+                                    Salvar filtro
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={aplicarFiltrosSalvosAniversariantes}
+                                    disabled={!filtrosSalvosDisponiveis}
+                                    className={classNames(
+                                        "aniversariantes-filtros-card__botao",
+                                        filtrosSalvosDisponiveis
+                                            ? "aniversariantes-filtros-card__botao--escuro"
+                                            : "aniversariantes-filtros-card__botao--desabilitado"
+                                    )}
+                                >
+                                    Aplicar filtro salvo
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={limparFiltrosSalvosAniversariantes}
+                                    disabled={!filtrosSalvosDisponiveis}
+                                    className={classNames(
+                                        "aniversariantes-filtros-card__botao",
+                                        filtrosSalvosDisponiveis
+                                            ? "aniversariantes-filtros-card__botao--limpar"
+                                            : "aniversariantes-filtros-card__botao--desabilitado"
+                                    )}
+                                >
+                                    Limpar filtro salvo
+                                </button>
+                            </>
+                        )}
+
+                        <button
+                            type="button"
+                            onClick={() => atualizarLayoutAniversariantes((layoutAtual) => ({
+                                ...layoutAtual,
+                                filtrosRecolhidos: !layoutAtual.filtrosRecolhidos,
+                            }))}
+                            className="aniversariantes-filtros-card__toggle"
+                        >
+                            <ChevronDown
+                                className={classNames(
+                                    "h-3.5 w-3.5 transition",
+                                    !filtrosAniversariantesRecolhidos && "rotate-180"
+                                )}
+                            />
+                            {filtrosAniversariantesRecolhidos ? "Abrir" : "Recolher"}
+                        </button>
+                    </div>
+                </div>
+
+                {!filtrosAniversariantesRecolhidos && (
+                    <div className="aniversariantes-filtros-card__grid">
+                        <label className="relative block">
+                            <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                            <input
+                                value={busca}
+                                onChange={(e) => setBusca(e.target.value)}
+                                placeholder="Buscar por nome, empresa ou função"
+                                className="w-full rounded-2xl border border-slate-200 bg-white py-3 pl-11 pr-4 text-sm outline-none focus:border-slate-400 focus:ring-4 focus:ring-slate-100"
+                            />
+                        </label>
+
+                        <select value={mes} onChange={(e) => setMes(e.target.value)} className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none focus:border-slate-400 focus:ring-4 focus:ring-slate-100">
+                            <option value="Todos">Todos os meses</option>
+                            {MESES_ANIVERSARIO.map((item) => <option key={item.valor} value={item.valor}>{item.nome}</option>)}
+                        </select>
+
+                        <select value={empresa} onChange={(e) => setEmpresa(e.target.value)} className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none focus:border-slate-400 focus:ring-4 focus:ring-slate-100">
+                            {opcoesEmpresa.map((item) => <option key={item}>{item}</option>)}
+                        </select>
+
+                        <select value={funcao} onChange={(e) => setFuncao(e.target.value)} className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none focus:border-slate-400 focus:ring-4 focus:ring-slate-100">
+                            {opcoesFuncao.map((item) => <option key={item}>{item}</option>)}
+                        </select>
+
+                        <select value={status} onChange={(e) => setStatus(e.target.value)} className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none focus:border-slate-400 focus:ring-4 focus:ring-slate-100">
+                            {opcoesStatus.map((item) => <option key={item}>{item}</option>)}
+                        </select>
+                    </div>
+                )}
+            </Card>
+            <Card
+                className={classNames(
+                    "aniversariantes-lista-card",
+                    listaAniversariantesRecolhida && "aniversariantes-lista-card--recolhido"
+                )}
+            >
+                <div className="aniversariantes-lista-card__cabecalho">
+                    <div className="aniversariantes-lista-card__titulo">
+                        <p>Lista de aniversariantes</p>
+                        <span>
+                            {listaAniversariantesRecolhida
+                                ? `${filtrados.length} ${filtrados.length === 1 ? "colaborador encontrado" : "colaboradores encontrados"}. Clique em abrir para visualizar a lista.`
+                                : "Consulte colaboradores, empresas, datas de aniversario e status em uma lista unica."}
+                        </span>
+                    </div>
+
+                    <button
+                        type="button"
+                        onClick={() => atualizarLayoutAniversariantes((layoutAtual) => ({
+                            ...layoutAtual,
+                            listaRecolhida: !layoutAtual.listaRecolhida,
+                        }))}
+                        className="aniversariantes-lista-card__toggle"
+                    >
+                        <ChevronDown
+                            className={classNames(
+                                "h-3.5 w-3.5 transition",
+                                !listaAniversariantesRecolhida && "rotate-180"
+                            )}
+                        />
+                        {listaAniversariantesRecolhida ? "Abrir" : "Recolher"}
+                    </button>
+                </div>
+
+                {!listaAniversariantesRecolhida && (
+                    <>
+<div className="overflow-x-auto scrollbar-discreta">
                     <table className="min-w-[980px] w-full border-separate border-spacing-y-2 text-sm">
                         <thead className="text-center text-xs uppercase tracking-wide text-slate-500">
                             <tr>
@@ -592,6 +724,8 @@ export function Aniversariantes({ colaboradores = [], empresasBanco = [] }) {
                         </tbody>
                     </table>
                 </div>
+                    </>
+                )}
             </Card>
         </div>
     );

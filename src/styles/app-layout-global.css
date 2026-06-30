@@ -10394,3 +10394,1193 @@
 .colaborador-lista-card__identificacao {
   opacity: 0.96 !important;
 }
+/* MICROETAPA 3B - hero aniversariantes */
+.aniversariantes-hero-banner {
+  position: relative !important;
+  min-height: 7.2rem !important;
+  margin: 0 0 1.25rem 0 !important;
+  overflow: hidden !important;
+  border: 1px solid rgba(15, 23, 42, 0.08) !important;
+  border-radius: 1.45rem !important;
+  background: #020617 !important;
+  box-shadow: 0 18px 38px rgba(15, 23, 42, 0.12) !important;
+}
+
+.aniversariantes-hero-banner__bg {
+  position: absolute !important;
+  inset: 0 !important;
+  background-position: center 48% !important;
+  background-repeat: no-repeat !important;
+  background-size: cover !important;
+  filter: saturate(1.02) contrast(1.02) !important;
+  opacity: 0.78 !important;
+}
+
+.aniversariantes-hero-banner__overlay {
+  position: absolute !important;
+  inset: 0 !important;
+  background:
+    linear-gradient(90deg, rgba(2, 6, 23, 0.9) 0%, rgba(15, 23, 42, 0.72) 45%, rgba(15, 23, 42, 0.4) 100%),
+    radial-gradient(circle at 12% 20%, rgba(34, 197, 94, 0.16), transparent 34%),
+    radial-gradient(circle at 88% 14%, rgba(37, 99, 235, 0.24), transparent 36%) !important;
+}
+
+.aniversariantes-hero-banner__content {
+  position: relative !important;
+  z-index: 1 !important;
+  display: flex !important;
+  min-height: 7.2rem !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  gap: 1rem !important;
+  padding: 1.2rem 1.35rem !important;
+}
+
+.aniversariantes-hero-banner__eyebrow {
+  margin: 0 0 0.45rem !important;
+  color: #86efac !important;
+  font-size: 0.72rem !important;
+  font-weight: 950 !important;
+  letter-spacing: 0.18em !important;
+  text-transform: uppercase !important;
+}
+
+.aniversariantes-hero-banner__title {
+  max-width: 48rem !important;
+  margin: 0 !important;
+  color: #ffffff !important;
+  font-size: clamp(1.45rem, 2.6vw, 2.2rem) !important;
+  font-weight: 950 !important;
+  line-height: 1.02 !important;
+  letter-spacing: -0.04em !important;
+  text-shadow: 0 2px 18px rgba(0, 0, 0, 0.42) !important;
+  white-space: nowrap !important;
+}
+
+.aniversariantes-hero-banner__text {
+  max-width: 48rem !important;
+  margin: 0.55rem 0 0 !important;
+  color: rgba(241, 245, 249, 0.94) !important;
+  font-size: 0.94rem !important;
+  font-weight: 750 !important;
+  line-height: 1.35 !important;
+  text-shadow: 0 1px 12px rgba(0, 0, 0, 0.35) !important;
+}
+
+.aniversariantes-hero-banner__stats {
+  display: flex !important;
+  flex-wrap: wrap !important;
+  justify-content: flex-end !important;
+  gap: 0.62rem !important;
+  min-width: max-content !important;
+}
+
+.aniversariantes-hero-banner__stat {
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 0.42rem !important;
+  min-height: 2.25rem !important;
+  border: 1px solid rgba(255, 255, 255, 0.14) !important;
+  border-radius: 999px !important;
+  background: rgba(15, 23, 42, 0.56) !important;
+  padding: 0.45rem 0.72rem !important;
+  color: #ffffff !important;
+  font-size: 0.78rem !important;
+  font-weight: 900 !important;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08), 0 10px 22px rgba(0, 0, 0, 0.18) !important;
+  backdrop-filter: blur(8px) !important;
+}
+
+@media (max-width: 980px) {
+  .aniversariantes-hero-banner__content {
+    align-items: flex-start !important;
+    flex-direction: column !important;
+  }
+
+  .aniversariantes-hero-banner__title {
+    white-space: normal !important;
+  }
+
+  .aniversariantes-hero-banner__stats {
+    justify-content: flex-start !important;
+    min-width: 0 !important;
+  }
+}
+/* MICROETAPA 3B.1 - padronizar hero aniversariantes */
+.aniversariantes-hero-banner {
+  min-height: 8.05rem !important;
+  margin: 0 0 1.35rem 0 !important;
+  border-radius: 1.55rem !important;
+}
+
+.aniversariantes-hero-banner__bg {
+  background-position: center 52% !important;
+  background-size: cover !important;
+  opacity: 0.86 !important;
+  filter: saturate(1.08) contrast(1.04) brightness(0.92) !important;
+}
+
+.aniversariantes-hero-banner__overlay {
+  background:
+    linear-gradient(90deg, rgba(2, 6, 23, 0.88) 0%, rgba(15, 23, 42, 0.7) 46%, rgba(15, 23, 42, 0.34) 100%),
+    radial-gradient(circle at 10% 18%, rgba(34, 197, 94, 0.2), transparent 34%),
+    radial-gradient(circle at 82% 12%, rgba(251, 191, 36, 0.16), transparent 34%),
+    radial-gradient(circle at 92% 72%, rgba(37, 99, 235, 0.18), transparent 36%) !important;
+}
+
+.aniversariantes-hero-banner__content {
+  min-height: 8.05rem !important;
+  padding: 1.35rem 1.55rem !important;
+}
+
+.aniversariantes-hero-banner__eyebrow {
+  margin-bottom: 0.5rem !important;
+}
+
+.aniversariantes-hero-banner__title {
+  max-width: 44rem !important;
+  font-size: clamp(1.75rem, 3.1vw, 2.55rem) !important;
+  line-height: 0.98 !important;
+  letter-spacing: -0.045em !important;
+}
+
+.aniversariantes-hero-banner__text {
+  max-width: 44rem !important;
+  margin-top: 0.62rem !important;
+  font-size: 1rem !important;
+  line-height: 1.32 !important;
+}
+
+.aniversariantes-hero-banner__stats {
+  gap: 0.7rem !important;
+}
+
+.aniversariantes-hero-banner__stat {
+  min-height: 2.45rem !important;
+  padding: 0.52rem 0.82rem !important;
+  font-size: 0.82rem !important;
+}
+/* MICROETAPA 3B.2 - refinar hero aniversariantes */
+.aniversariantes-hero-banner {
+  min-height: 7.45rem !important;
+}
+
+.aniversariantes-hero-banner__content {
+  min-height: 7.45rem !important;
+  justify-content: flex-start !important;
+  padding: 1.25rem 1.55rem !important;
+}
+
+.aniversariantes-hero-banner__eyebrow {
+  margin-bottom: 0.36rem !important;
+  font-size: 0.68rem !important;
+  font-weight: 900 !important;
+  letter-spacing: 0.17em !important;
+}
+
+.aniversariantes-hero-banner__title {
+  max-width: 42rem !important;
+  font-size: clamp(1.55rem, 2.65vw, 2.2rem) !important;
+  font-weight: 850 !important;
+  line-height: 1.03 !important;
+  letter-spacing: -0.035em !important;
+  text-shadow: 0 2px 14px rgba(0, 0, 0, 0.38) !important;
+}
+
+.aniversariantes-hero-banner__text {
+  max-width: 42rem !important;
+  margin-top: 0.34rem !important;
+  font-size: 0.9rem !important;
+  font-weight: 650 !important;
+  line-height: 1.28 !important;
+}
+
+.aniversariantes-hero-banner__stats,
+.aniversariantes-hero-banner__stat {
+  display: none !important;
+}
+/* MICROETAPA 3C - painel unico aniversariantes */
+.aniversariantes-resumo-unificado {
+  overflow: hidden !important;
+  border: 1px solid #dbe7f2 !important;
+  border-radius: 1.55rem !important;
+  background: #ffffff !important;
+  box-shadow: 0 14px 34px rgba(15, 23, 42, 0.075) !important;
+}
+
+.aniversariantes-resumo-unificado__grid {
+  display: grid !important;
+  grid-template-columns: minmax(16rem, 0.88fr) minmax(18rem, 0.98fr) minmax(28rem, 1.65fr) !important;
+  min-height: 9rem !important;
+  align-items: stretch !important;
+}
+
+.aniversariantes-resumo-unificado__item,
+.aniversariantes-resumo-unificado__grafico {
+  min-width: 0 !important;
+  padding: 1.15rem 1.25rem !important;
+}
+
+.aniversariantes-resumo-unificado__item {
+  display: flex !important;
+  align-items: center !important;
+  gap: 1rem !important;
+  border-right: 1px solid #e2e8f0 !important;
+}
+
+.aniversariantes-resumo-unificado__icone {
+  display: inline-flex !important;
+  width: 4.05rem !important;
+  height: 4.05rem !important;
+  flex: 0 0 auto !important;
+  align-items: center !important;
+  justify-content: center !important;
+  border-radius: 999px !important;
+  background: #ecfdf5 !important;
+  color: #059669 !important;
+  ring: 1px solid #a7f3d0 !important;
+  box-shadow: inset 0 0 0 1px rgba(16, 185, 129, 0.16), 0 8px 18px rgba(16, 185, 129, 0.08) !important;
+}
+
+.aniversariantes-resumo-unificado__icone--proximo {
+  background: #f5f3ff !important;
+  color: #4f46e5 !important;
+  box-shadow: inset 0 0 0 1px rgba(99, 102, 241, 0.16), 0 8px 18px rgba(99, 102, 241, 0.08) !important;
+}
+
+.aniversariantes-resumo-unificado__texto {
+  min-width: 0 !important;
+}
+
+.aniversariantes-resumo-unificado__rotulo,
+.aniversariantes-resumo-unificado__grafico-titulo {
+  margin: 0 !important;
+  color: #475569 !important;
+  font-size: 0.92rem !important;
+  font-weight: 800 !important;
+  line-height: 1.15 !important;
+}
+
+.aniversariantes-resumo-unificado__numero-linha {
+  display: flex !important;
+  align-items: baseline !important;
+  gap: 0.55rem !important;
+  margin-top: 0.35rem !important;
+}
+
+.aniversariantes-resumo-unificado__numero-linha strong {
+  color: #059669 !important;
+  font-size: 2.45rem !important;
+  font-weight: 850 !important;
+  line-height: 0.95 !important;
+  letter-spacing: -0.055em !important;
+}
+
+.aniversariantes-resumo-unificado__numero-linha span,
+.aniversariantes-resumo-unificado__apoio,
+.aniversariantes-resumo-unificado__grafico-subtitulo {
+  color: #64748b !important;
+  font-size: 0.82rem !important;
+  font-weight: 650 !important;
+  line-height: 1.3 !important;
+}
+
+.aniversariantes-resumo-unificado__apoio {
+  margin: 0.35rem 0 0 !important;
+}
+
+.aniversariantes-resumo-unificado__nome {
+  margin: 0.35rem 0 0 !important;
+  overflow: hidden !important;
+  color: #0f172a !important;
+  font-size: 1.18rem !important;
+  font-weight: 900 !important;
+  letter-spacing: -0.025em !important;
+  line-height: 1.1 !important;
+  text-overflow: ellipsis !important;
+  white-space: nowrap !important;
+}
+
+.aniversariantes-resumo-unificado__grafico {
+  display: grid !important;
+  align-content: center !important;
+  gap: 0.7rem !important;
+}
+
+.aniversariantes-resumo-unificado__grafico-topo {
+  display: flex !important;
+  align-items: flex-start !important;
+  justify-content: space-between !important;
+  gap: 1rem !important;
+}
+
+.aniversariantes-resumo-unificado__grafico-subtitulo {
+  margin: 0.25rem 0 0 !important;
+}
+
+.aniversariantes-resumo-unificado__grafico-subtitulo strong {
+  color: #0f766e !important;
+  font-weight: 900 !important;
+}
+
+.aniversariantes-resumo-unificado__destaque {
+  display: inline-flex !important;
+  align-items: center !important;
+  min-height: 2rem !important;
+  max-width: 18rem !important;
+  border: 1px solid #99f6e4 !important;
+  border-radius: 999px !important;
+  background: #f0fdfa !important;
+  padding: 0.42rem 0.75rem !important;
+  color: #0f766e !important;
+  font-size: 0.76rem !important;
+  font-weight: 900 !important;
+  line-height: 1.05 !important;
+  white-space: nowrap !important;
+}
+
+.aniversariantes-resumo-unificado__barras {
+  display: grid !important;
+  grid-template-columns: repeat(12, minmax(0, 1fr)) !important;
+  align-items: end !important;
+  gap: 0.48rem !important;
+  min-height: 4.6rem !important;
+}
+
+.aniversariantes-resumo-unificado__mes {
+  display: grid !important;
+  min-width: 0 !important;
+  justify-items: center !important;
+  gap: 0.25rem !important;
+}
+
+.aniversariantes-resumo-unificado__valor {
+  color: #0f172a !important;
+  font-size: 0.68rem !important;
+  font-weight: 900 !important;
+  line-height: 1 !important;
+}
+
+.aniversariantes-resumo-unificado__barra {
+  width: min(100%, 1.45rem) !important;
+  border-radius: 999px 999px 0.45rem 0.45rem !important;
+  background: linear-gradient(180deg, #d9f4ee 0%, #c7ebe3 100%) !important;
+}
+
+.aniversariantes-resumo-unificado__barra--atual,
+.aniversariantes-resumo-unificado__barra--ativa {
+  background: linear-gradient(180deg, #34d399 0%, #059669 100%) !important;
+}
+
+.aniversariantes-resumo-unificado__mes-label {
+  overflow: hidden !important;
+  max-width: 100% !important;
+  color: #64748b !important;
+  font-size: 0.62rem !important;
+  font-weight: 800 !important;
+  text-overflow: ellipsis !important;
+  white-space: nowrap !important;
+}
+
+@media (max-width: 1320px) {
+  .aniversariantes-resumo-unificado__grid {
+    grid-template-columns: 1fr 1fr !important;
+  }
+
+  .aniversariantes-resumo-unificado__grafico {
+    grid-column: 1 / -1 !important;
+    border-top: 1px solid #e2e8f0 !important;
+  }
+
+  .aniversariantes-resumo-unificado__item--proximo {
+    border-right: 0 !important;
+  }
+}
+
+@media (max-width: 760px) {
+  .aniversariantes-resumo-unificado__grid {
+    grid-template-columns: 1fr !important;
+  }
+
+  .aniversariantes-resumo-unificado__item {
+    border-right: 0 !important;
+    border-bottom: 1px solid #e2e8f0 !important;
+  }
+
+  .aniversariantes-resumo-unificado__grafico-topo {
+    flex-direction: column !important;
+  }
+
+  .aniversariantes-resumo-unificado__destaque {
+    max-width: 100% !important;
+    white-space: normal !important;
+  }
+
+  .aniversariantes-resumo-unificado__barras {
+    gap: 0.3rem !important;
+  }
+}
+/* MICROETAPA 3C.1 - refinar painel unico aniversariantes */
+.aniversariantes-resumo-unificado {
+  max-width: 100% !important;
+}
+
+.aniversariantes-resumo-unificado__grid {
+  grid-template-columns: minmax(15rem, 0.78fr) minmax(17rem, 0.86fr) minmax(25rem, 1.36fr) !important;
+  min-height: 8.35rem !important;
+}
+
+.aniversariantes-resumo-unificado__item,
+.aniversariantes-resumo-unificado__grafico {
+  padding: 1rem 1.08rem !important;
+}
+
+.aniversariantes-resumo-unificado__item {
+  gap: 0.82rem !important;
+}
+
+.aniversariantes-resumo-unificado__icone {
+  width: 3.55rem !important;
+  height: 3.55rem !important;
+}
+
+.aniversariantes-resumo-unificado__icone--proximo {
+  background: #ecfdf5 !important;
+  color: #059669 !important;
+  box-shadow: inset 0 0 0 1px rgba(16, 185, 129, 0.18), 0 8px 18px rgba(16, 185, 129, 0.08) !important;
+}
+
+.aniversariantes-resumo-unificado__item--proximo .aniversariantes-resumo-unificado__rotulo {
+  color: #475569 !important;
+}
+
+.aniversariantes-resumo-unificado__item--proximo .aniversariantes-resumo-unificado__nome {
+  color: #047857 !important;
+  font-weight: 850 !important;
+}
+
+.aniversariantes-resumo-unificado__numero-linha strong {
+  font-size: 2.18rem !important;
+  font-weight: 820 !important;
+}
+
+.aniversariantes-resumo-unificado__numero-linha span,
+.aniversariantes-resumo-unificado__apoio {
+  font-size: 0.78rem !important;
+}
+
+.aniversariantes-resumo-unificado__nome {
+  font-size: 1.06rem !important;
+  font-weight: 850 !important;
+}
+
+.aniversariantes-resumo-unificado__grafico {
+  gap: 0.58rem !important;
+}
+
+.aniversariantes-resumo-unificado__grafico-topo {
+  align-items: flex-start !important;
+  gap: 0.75rem !important;
+}
+
+.aniversariantes-resumo-unificado__grafico-titulo {
+  color: #334155 !important;
+  font-size: 0.9rem !important;
+  font-weight: 820 !important;
+}
+
+.aniversariantes-resumo-unificado__grafico-subtitulo {
+  display: grid !important;
+  gap: 0.08rem !important;
+  margin: 0.22rem 0 0 !important;
+  color: #64748b !important;
+  font-size: 0.76rem !important;
+  font-weight: 650 !important;
+  line-height: 1.2 !important;
+}
+
+.aniversariantes-resumo-unificado__grafico-subtitulo strong {
+  color: #047857 !important;
+  font-weight: 900 !important;
+}
+
+.aniversariantes-resumo-unificado__destaque {
+  min-height: 1.72rem !important;
+  max-width: 15rem !important;
+  padding: 0.32rem 0.62rem !important;
+  font-size: 0.68rem !important;
+  font-weight: 850 !important;
+}
+
+.aniversariantes-resumo-unificado__barras {
+  min-height: 4.1rem !important;
+  gap: 0.42rem !important;
+}
+
+.aniversariantes-resumo-unificado__barra {
+  width: min(100%, 1.25rem) !important;
+}
+
+@media (max-width: 1320px) {
+  .aniversariantes-resumo-unificado__grid {
+    grid-template-columns: 1fr 1fr !important;
+  }
+
+  .aniversariantes-resumo-unificado__grafico {
+    grid-column: 1 / -1 !important;
+  }
+}
+/* MICROETAPA 3C.2 - grafico aniversariantes em linha */
+.aniversariantes-resumo-unificado__grafico-topo {
+  display: grid !important;
+  grid-template-columns: minmax(0, 1fr) auto !important;
+  align-items: center !important;
+  gap: 0.85rem !important;
+}
+
+.aniversariantes-resumo-unificado__grafico-topo > div:first-child {
+  display: flex !important;
+  min-width: 0 !important;
+  align-items: center !important;
+  gap: 0.7rem !important;
+  white-space: nowrap !important;
+}
+
+.aniversariantes-resumo-unificado__grafico-titulo {
+  flex: 0 0 auto !important;
+  margin: 0 !important;
+}
+
+.aniversariantes-resumo-unificado__grafico-subtitulo {
+  display: flex !important;
+  min-width: 0 !important;
+  align-items: center !important;
+  gap: 0.55rem !important;
+  margin: 0 !important;
+  white-space: nowrap !important;
+}
+
+.aniversariantes-resumo-unificado__grafico-subtitulo span {
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 0.22rem !important;
+}
+
+.aniversariantes-resumo-unificado__grafico-subtitulo span + span::before {
+  content: "•" !important;
+  color: #94a3b8 !important;
+  font-weight: 900 !important;
+  margin-right: 0.32rem !important;
+}
+
+.aniversariantes-resumo-unificado__destaque {
+  justify-self: end !important;
+  max-width: none !important;
+  min-height: 1.9rem !important;
+  border-color: #5eead4 !important;
+  background: #f0fdfa !important;
+  color: #047857 !important;
+  padding: 0.38rem 0.78rem !important;
+  font-size: 0.72rem !important;
+  font-weight: 900 !important;
+  white-space: nowrap !important;
+}
+
+@media (max-width: 980px) {
+  .aniversariantes-resumo-unificado__grafico-topo {
+    grid-template-columns: 1fr !important;
+  }
+
+  .aniversariantes-resumo-unificado__grafico-topo > div:first-child {
+    align-items: flex-start !important;
+    flex-direction: column !important;
+    gap: 0.25rem !important;
+    white-space: normal !important;
+  }
+
+  .aniversariantes-resumo-unificado__grafico-subtitulo {
+    flex-wrap: wrap !important;
+    white-space: normal !important;
+  }
+
+  .aniversariantes-resumo-unificado__destaque {
+    justify-self: start !important;
+  }
+}
+/* MICROETAPA 3C.3 - pilulas e largura painel aniversariantes */
+.aniversariantes-resumo-unificado {
+  width: calc(100% - 1rem) !important;
+  margin-left: auto !important;
+  margin-right: auto !important;
+}
+
+.aniversariantes-resumo-unificado__grid {
+  grid-template-columns: minmax(14.5rem, 0.72fr) minmax(15.5rem, 0.72fr) minmax(29rem, 1.56fr) !important;
+}
+
+.aniversariantes-resumo-unificado__item--proximo {
+  justify-content: center !important;
+}
+
+.aniversariantes-resumo-unificado__item--proximo .aniversariantes-resumo-unificado__texto {
+  width: auto !important;
+  max-width: 18rem !important;
+}
+
+.aniversariantes-resumo-unificado__grafico-topo {
+  grid-template-columns: minmax(0, 1fr) auto !important;
+  align-items: center !important;
+}
+
+.aniversariantes-resumo-unificado__grafico-topo > div:first-child {
+  display: flex !important;
+  align-items: center !important;
+  gap: 0.42rem !important;
+  flex-wrap: nowrap !important;
+}
+
+.aniversariantes-resumo-unificado__grafico-titulo,
+.aniversariantes-resumo-unificado__grafico-subtitulo span {
+  display: inline-flex !important;
+  align-items: center !important;
+  min-height: 1.85rem !important;
+  border: 1px solid #99f6e4 !important;
+  border-radius: 999px !important;
+  background: #f0fdfa !important;
+  color: #047857 !important;
+  padding: 0.34rem 0.66rem !important;
+  font-size: 0.72rem !important;
+  font-weight: 900 !important;
+  line-height: 1.05 !important;
+  white-space: nowrap !important;
+}
+
+.aniversariantes-resumo-unificado__grafico-titulo {
+  margin: 0 !important;
+}
+
+.aniversariantes-resumo-unificado__grafico-subtitulo {
+  display: flex !important;
+  align-items: center !important;
+  gap: 0.42rem !important;
+  margin: 0 !important;
+}
+
+.aniversariantes-resumo-unificado__grafico-subtitulo span {
+  gap: 0.22rem !important;
+}
+
+.aniversariantes-resumo-unificado__grafico-subtitulo span + span::before {
+  content: none !important;
+}
+
+.aniversariantes-resumo-unificado__grafico-subtitulo strong {
+  color: #065f46 !important;
+  font-weight: 950 !important;
+}
+
+.aniversariantes-resumo-unificado__destaque {
+  min-height: 1.85rem !important;
+  border-color: #5eead4 !important;
+  background: #f0fdfa !important;
+  color: #047857 !important;
+  padding: 0.34rem 0.72rem !important;
+  font-size: 0.72rem !important;
+  font-weight: 900 !important;
+}
+
+@media (max-width: 1320px) {
+  .aniversariantes-resumo-unificado {
+    width: 100% !important;
+  }
+
+  .aniversariantes-resumo-unificado__grid {
+    grid-template-columns: 1fr 1fr !important;
+  }
+
+  .aniversariantes-resumo-unificado__item--proximo {
+    justify-content: flex-start !important;
+  }
+}
+
+@media (max-width: 980px) {
+  .aniversariantes-resumo-unificado__grafico-topo > div:first-child,
+  .aniversariantes-resumo-unificado__grafico-subtitulo {
+    flex-wrap: wrap !important;
+  }
+}
+/* MICROETAPA 3C.4 - distribuir painel aniversariantes */
+.aniversariantes-resumo-unificado {
+  width: calc(100% - 1.35rem) !important;
+}
+
+.aniversariantes-resumo-unificado__grid {
+  grid-template-columns: minmax(15rem, 0.68fr) minmax(17rem, 0.78fr) minmax(34rem, 1.74fr) !important;
+}
+
+.aniversariantes-resumo-unificado__item,
+.aniversariantes-resumo-unificado__grafico {
+  padding: 0.95rem 1rem !important;
+}
+
+.aniversariantes-resumo-unificado__item--total {
+  justify-content: flex-start !important;
+}
+
+.aniversariantes-resumo-unificado__item--proximo {
+  justify-content: center !important;
+  padding-left: 1.2rem !important;
+  padding-right: 1.2rem !important;
+}
+
+.aniversariantes-resumo-unificado__item--proximo .aniversariantes-resumo-unificado__texto {
+  max-width: 16.5rem !important;
+}
+
+.aniversariantes-resumo-unificado__grafico {
+  padding-left: 1.15rem !important;
+  padding-right: 1.15rem !important;
+}
+
+.aniversariantes-resumo-unificado__grafico-topo {
+  display: grid !important;
+  grid-template-columns: minmax(0, 1fr) auto !important;
+  align-items: center !important;
+  column-gap: 0.95rem !important;
+  row-gap: 0.45rem !important;
+}
+
+.aniversariantes-resumo-unificado__grafico-topo > div:first-child {
+  display: flex !important;
+  min-width: 0 !important;
+  align-items: center !important;
+  justify-content: flex-start !important;
+  gap: 0.38rem !important;
+  flex-wrap: wrap !important;
+}
+
+.aniversariantes-resumo-unificado__grafico-subtitulo {
+  display: flex !important;
+  align-items: center !important;
+  gap: 0.38rem !important;
+  flex-wrap: wrap !important;
+}
+
+.aniversariantes-resumo-unificado__grafico-titulo,
+.aniversariantes-resumo-unificado__grafico-subtitulo span,
+.aniversariantes-resumo-unificado__destaque {
+  min-height: 1.72rem !important;
+  padding: 0.3rem 0.58rem !important;
+  font-size: 0.68rem !important;
+}
+
+.aniversariantes-resumo-unificado__destaque {
+  justify-self: end !important;
+}
+
+.aniversariantes-resumo-unificado__barras {
+  gap: 0.58rem !important;
+  min-height: 4.35rem !important;
+}
+
+.aniversariantes-resumo-unificado__barra {
+  width: min(100%, 1.38rem) !important;
+}
+
+@media (min-width: 1321px) {
+  .aniversariantes-resumo-unificado__grafico-topo > div:first-child {
+    max-width: 28rem !important;
+  }
+}
+
+@media (max-width: 1320px) {
+  .aniversariantes-resumo-unificado {
+    width: 100% !important;
+  }
+
+  .aniversariantes-resumo-unificado__grid {
+    grid-template-columns: 1fr 1fr !important;
+  }
+
+  .aniversariantes-resumo-unificado__item--proximo {
+    justify-content: flex-start !important;
+  }
+}
+/* MICROETAPA 3C.5 - remover pilulas redundantes aniversariantes */
+.aniversariantes-resumo-unificado__grafico-topo {
+  grid-template-columns: 1fr !important;
+}
+
+.aniversariantes-resumo-unificado__grafico-topo > div:first-child {
+  max-width: none !important;
+}
+
+.aniversariantes-resumo-unificado__grafico-subtitulo {
+  gap: 0 !important;
+}
+
+.aniversariantes-resumo-unificado__grafico-subtitulo span {
+  min-height: 1.72rem !important;
+}
+
+.aniversariantes-resumo-unificado__destaque {
+  display: none !important;
+}
+/* MICROETAPA 3C.6 - centralizar titulo distribuicao mensal */
+.aniversariantes-resumo-unificado__grafico-topo {
+  display: flex !important;
+  justify-content: center !important;
+  align-items: center !important;
+  text-align: center !important;
+}
+
+.aniversariantes-resumo-unificado__grafico-topo > div:first-child {
+  display: flex !important;
+  justify-content: center !important;
+  align-items: center !important;
+  width: 100% !important;
+  max-width: none !important;
+}
+
+.aniversariantes-resumo-unificado__grafico-titulo {
+  margin-left: auto !important;
+  margin-right: auto !important;
+}
+
+.aniversariantes-resumo-unificado__grafico-subtitulo {
+  display: none !important;
+}
+/* MICROETAPA 3D.2 - filtros recolhiveis aniversariantes */
+.aniversariantes-filtros-card {
+  position: relative !important;
+  overflow: hidden !important;
+  border: 1px solid #dbe7f2 !important;
+  border-radius: 1.35rem !important;
+  background: #ffffff !important;
+  box-shadow: 0 10px 26px rgba(15, 23, 42, 0.06) !important;
+}
+
+.aniversariantes-filtros-card::before {
+  content: "" !important;
+  position: absolute !important;
+  inset: 0 0 auto 0 !important;
+  height: 3px !important;
+  background: linear-gradient(90deg, #0ea5e9 0%, #2563eb 58%, #22c55e 100%) !important;
+}
+
+.aniversariantes-filtros-card__cabecalho {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  gap: 1rem !important;
+  margin-bottom: 0.88rem !important;
+  border: 1px solid #edf2f7 !important;
+  border-radius: 1.05rem !important;
+  background: #f8fafc !important;
+  padding: 0.82rem 0.95rem !important;
+}
+
+.aniversariantes-filtros-card--recolhido .aniversariantes-filtros-card__cabecalho {
+  margin-bottom: 0 !important;
+  border-color: transparent !important;
+  background: transparent !important;
+  padding: 0.55rem 0.35rem !important;
+}
+
+.aniversariantes-filtros-card__titulo {
+  min-width: 0 !important;
+}
+
+.aniversariantes-filtros-card__titulo p {
+  margin: 0 !important;
+  color: #1e3a8a !important;
+  font-size: 0.72rem !important;
+  font-weight: 950 !important;
+  letter-spacing: 0.055em !important;
+  text-transform: uppercase !important;
+}
+
+.aniversariantes-filtros-card__titulo span {
+  display: block !important;
+  margin-top: 0.25rem !important;
+  color: #64748b !important;
+  font-size: 0.78rem !important;
+  font-weight: 650 !important;
+  line-height: 1.25 !important;
+}
+
+.aniversariantes-filtros-card__acoes {
+  display: flex !important;
+  flex-wrap: wrap !important;
+  align-items: center !important;
+  justify-content: flex-end !important;
+  gap: 0.48rem !important;
+}
+
+.aniversariantes-filtros-card__botao,
+.aniversariantes-filtros-card__toggle {
+  display: inline-flex !important;
+  min-height: 2.15rem !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 0.35rem !important;
+  border-radius: 999px !important;
+  padding: 0.48rem 0.85rem !important;
+  font-size: 0.68rem !important;
+  font-weight: 900 !important;
+  letter-spacing: 0.02em !important;
+  text-transform: uppercase !important;
+  transition: all 0.18s ease !important;
+}
+
+.aniversariantes-filtros-card__botao--principal {
+  border: 1px solid #dbe5ef !important;
+  background: #ffffff !important;
+  color: #334155 !important;
+  box-shadow: 0 7px 16px rgba(15, 23, 42, 0.06) !important;
+}
+
+.aniversariantes-filtros-card__botao--escuro,
+.aniversariantes-filtros-card__toggle {
+  border: 1px solid #020617 !important;
+  background: #020617 !important;
+  color: #ffffff !important;
+  box-shadow: 0 8px 18px rgba(15, 23, 42, 0.14) !important;
+}
+
+.aniversariantes-filtros-card__botao--limpar {
+  border: 1px solid #fecdd3 !important;
+  background: #fff1f2 !important;
+  color: #be123c !important;
+}
+
+.aniversariantes-filtros-card__botao--desabilitado {
+  cursor: not-allowed !important;
+  border: 1px solid #e2e8f0 !important;
+  background: #f1f5f9 !important;
+  color: #94a3b8 !important;
+}
+
+.aniversariantes-filtros-card__grid {
+  display: grid !important;
+  grid-template-columns: 1.2fr repeat(4, minmax(0, 1fr)) !important;
+  gap: 0.72rem !important;
+}
+
+.aniversariantes-filtros-card__grid input,
+.aniversariantes-filtros-card__grid select {
+  min-height: 2.85rem !important;
+  border-color: #dbe5ef !important;
+  border-radius: 1rem !important;
+}
+
+@media (max-width: 1180px) {
+  .aniversariantes-filtros-card__cabecalho {
+    align-items: flex-start !important;
+    flex-direction: column !important;
+  }
+
+  .aniversariantes-filtros-card__acoes {
+    justify-content: flex-start !important;
+    width: 100% !important;
+  }
+
+  .aniversariantes-filtros-card__grid {
+    grid-template-columns: 1fr 1fr !important;
+  }
+}
+
+@media (max-width: 760px) {
+  .aniversariantes-filtros-card__grid {
+    grid-template-columns: 1fr !important;
+  }
+
+  .aniversariantes-filtros-card__botao,
+  .aniversariantes-filtros-card__toggle {
+    width: 100% !important;
+  }
+}
+/* MICROETAPA 3E.1 - lista recolhivel aniversariantes */
+.aniversariantes-lista-card {
+  position: relative !important;
+  overflow: hidden !important;
+  border: 1px solid #dbe7f2 !important;
+  border-radius: 1.35rem !important;
+  background: #ffffff !important;
+  box-shadow: 0 10px 26px rgba(15, 23, 42, 0.06) !important;
+}
+
+.aniversariantes-lista-card::before {
+  content: "" !important;
+  position: absolute !important;
+  inset: 0 0 auto 0 !important;
+  height: 3px !important;
+  background: linear-gradient(90deg, #0ea5e9 0%, #2563eb 58%, #22c55e 100%) !important;
+}
+
+.aniversariantes-lista-card__cabecalho {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  gap: 1rem !important;
+  margin-bottom: 0.9rem !important;
+  border-bottom: 1px solid #e2e8f0 !important;
+  padding: 0.42rem 0.2rem 0.88rem !important;
+}
+
+.aniversariantes-lista-card--recolhido .aniversariantes-lista-card__cabecalho {
+  margin-bottom: 0 !important;
+  border-bottom: 0 !important;
+  padding-bottom: 0.35rem !important;
+}
+
+.aniversariantes-lista-card__titulo {
+  min-width: 0 !important;
+}
+
+.aniversariantes-lista-card__titulo p {
+  margin: 0 !important;
+  color: #1e3a8a !important;
+  font-size: 0.72rem !important;
+  font-weight: 950 !important;
+  letter-spacing: 0.055em !important;
+  text-transform: uppercase !important;
+}
+
+.aniversariantes-lista-card__titulo span {
+  display: block !important;
+  margin-top: 0.25rem !important;
+  color: #64748b !important;
+  font-size: 0.78rem !important;
+  font-weight: 650 !important;
+  line-height: 1.25 !important;
+}
+
+.aniversariantes-lista-card__toggle {
+  display: inline-flex !important;
+  min-height: 2.15rem !important;
+  min-width: 7.4rem !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 0.35rem !important;
+  border: 1px solid #020617 !important;
+  border-radius: 999px !important;
+  background: #020617 !important;
+  padding: 0.48rem 0.85rem !important;
+  color: #ffffff !important;
+  font-size: 0.68rem !important;
+  font-weight: 900 !important;
+  letter-spacing: 0.02em !important;
+  text-transform: uppercase !important;
+  box-shadow: 0 8px 18px rgba(15, 23, 42, 0.14) !important;
+  transition: all 0.18s ease !important;
+}
+
+.aniversariantes-lista-card__toggle:hover {
+  transform: translateY(-1px) !important;
+}
+
+@media (max-width: 760px) {
+  .aniversariantes-lista-card__cabecalho {
+    align-items: flex-start !important;
+    flex-direction: column !important;
+  }
+
+  .aniversariantes-lista-card__toggle {
+    width: 100% !important;
+  }
+}
+/* MICROETAPA 3E.3 - harmonizar cards recolhidos aniversariantes */
+.aniversariantes-filtros-card,
+.aniversariantes-lista-card {
+  width: calc(100% - 1.35rem) !important;
+  margin-left: auto !important;
+  margin-right: auto !important;
+}
+
+.aniversariantes-filtros-card--recolhido,
+.aniversariantes-lista-card--recolhido {
+  min-height: 5.15rem !important;
+  padding-top: 0.95rem !important;
+  padding-bottom: 0.95rem !important;
+}
+
+.aniversariantes-filtros-card--recolhido .aniversariantes-filtros-card__cabecalho,
+.aniversariantes-lista-card--recolhido .aniversariantes-lista-card__cabecalho {
+  min-height: 3.15rem !important;
+  display: grid !important;
+  grid-template-columns: minmax(0, 1fr) 7.65rem !important;
+  align-items: center !important;
+  gap: 1rem !important;
+  margin: 0 !important;
+  padding: 0.2rem 0.25rem !important;
+}
+
+.aniversariantes-filtros-card--recolhido .aniversariantes-filtros-card__acoes {
+  justify-content: flex-end !important;
+  width: auto !important;
+}
+
+.aniversariantes-filtros-card--recolhido .aniversariantes-filtros-card__titulo,
+.aniversariantes-lista-card--recolhido .aniversariantes-lista-card__titulo {
+  align-self: center !important;
+}
+
+.aniversariantes-filtros-card--recolhido .aniversariantes-filtros-card__titulo p,
+.aniversariantes-lista-card--recolhido .aniversariantes-lista-card__titulo p {
+  font-size: 0.72rem !important;
+  line-height: 1.05 !important;
+}
+
+.aniversariantes-filtros-card--recolhido .aniversariantes-filtros-card__titulo span,
+.aniversariantes-lista-card--recolhido .aniversariantes-lista-card__titulo span {
+  margin-top: 0.3rem !important;
+  font-size: 0.78rem !important;
+  line-height: 1.18 !important;
+}
+
+.aniversariantes-filtros-card__toggle,
+.aniversariantes-lista-card__toggle {
+  width: 7.65rem !important;
+  min-width: 7.65rem !important;
+  max-width: 7.65rem !important;
+  min-height: 2.28rem !important;
+  border-radius: 999px !important;
+  padding: 0.48rem 0.78rem !important;
+  font-size: 0.68rem !important;
+  line-height: 1 !important;
+}
+
+.aniversariantes-filtros-card--recolhido .aniversariantes-filtros-card__toggle,
+.aniversariantes-lista-card--recolhido .aniversariantes-lista-card__toggle {
+  justify-self: end !important;
+  align-self: center !important;
+  margin: 0 !important;
+}
+
+.aniversariantes-filtros-card__toggle svg,
+.aniversariantes-lista-card__toggle svg {
+  width: 0.82rem !important;
+  height: 0.82rem !important;
+  flex: 0 0 auto !important;
+}
+
+@media (max-width: 1320px) {
+  .aniversariantes-filtros-card,
+  .aniversariantes-lista-card {
+    width: 100% !important;
+  }
+}
+
+@media (max-width: 760px) {
+  .aniversariantes-filtros-card--recolhido .aniversariantes-filtros-card__cabecalho,
+  .aniversariantes-lista-card--recolhido .aniversariantes-lista-card__cabecalho {
+    grid-template-columns: 1fr !important;
+  }
+
+  .aniversariantes-filtros-card__toggle,
+  .aniversariantes-lista-card__toggle {
+    width: 100% !important;
+    max-width: none !important;
+  }
+}
