@@ -361,10 +361,10 @@ export function BaseCertificadosTreinamentos({
     };
 
     return (
-        <Card className="self-start">
+        <Card className={classNames("self-start treinamentos-base-certificados-card", recolhido && "treinamentos-base-certificados-card--recolhido")}>
             <div
                 className={classNames(
-                    "flex flex-col justify-between gap-3 md:flex-row md:items-start",
+                    "treinamentos-base-certificados-card__cabecalho flex flex-col justify-between gap-3 md:flex-row md:items-start",
                     !recolhido && "mb-4"
                 )}
             >
@@ -374,9 +374,11 @@ export function BaseCertificadosTreinamentos({
                 </div>
 
                 <div className="flex flex-wrap gap-2 md:justify-end">
-                    <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-600">
-                        {documentosFiltrados.length} certificado(s) · {totalPorStatusCertificados.pendentes} pendente(s)
-                    </span>
+                    {!recolhido && (
+                        <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-600">
+                            {documentosFiltrados.length} certificado(s) · {totalPorStatusCertificados.pendentes} pendente(s)
+                        </span>
+                    )}
                     <button
                         type="button"
                         onClick={onAlternarRecolhido}
@@ -398,9 +400,9 @@ export function BaseCertificadosTreinamentos({
             </div>
 
             {recolhido ? null : (
-            <div className="space-y-3">
+            <div className="treinamentos-base-certificados-card__lista space-y-3">
                 {documentos.length === 0 && totalPorStatusCertificados.pendentes === 0 && (
-                    <div className="rounded-3xl border border-dashed border-slate-300 p-8 text-center">
+                    <div className="treinamentos-base-certificados-card__vazio rounded-3xl border border-dashed border-slate-300 p-8 text-center">
                         <FileText className="mx-auto h-10 w-10 text-slate-300" />
                         <h3 className="mt-3 font-bold text-slate-900">Nenhum certificado lançado ainda</h3>
                         <p className="mt-1 text-sm text-slate-500">
@@ -410,7 +412,7 @@ export function BaseCertificadosTreinamentos({
                 )}
 
                 {documentos.length > 0 && documentosPorColaborador.length === 0 && (
-                    <div className="rounded-3xl border border-dashed border-slate-300 p-8 text-center">
+                    <div className="treinamentos-base-certificados-card__vazio rounded-3xl border border-dashed border-slate-300 p-8 text-center">
                         <Filter className="mx-auto h-10 w-10 text-slate-300" />
                         <h3 className="mt-3 font-bold text-slate-900">Nenhum certificado encontrado</h3>
                         <p className="mt-1 text-sm text-slate-500">
@@ -419,12 +421,30 @@ export function BaseCertificadosTreinamentos({
                     </div>
                 )}
 
-                {documentosPorColaborador.map((grupo) => {
+                {documentosPorColaborador.map((grupo, indiceGrupo) => {
                     const colaborador = grupo.colaborador;
                     const certificados = grupo.certificados || [];
                     const pendentes = grupo.pendentes || [];
                     const grupoKey = String(colaborador?.id || colaborador?.codigoFuncionario || "sem-colaborador");
                     const grupoAberto = Boolean(gruposCertificadosAbertos[grupoKey]);
+                    const indiceParGrupo = indiceGrupo % 2 === 0 ? indiceGrupo + 1 : indiceGrupo - 1;
+                    const grupoPar = documentosPorColaborador[indiceParGrupo];
+                    const colaboradorPar = grupoPar?.colaborador || {};
+                    const grupoParKey = grupoPar
+                        ? String(colaboradorPar?.id || colaboradorPar?.codigoFuncionario || "sem-colaborador")
+                        : "";
+
+                    const alternarGrupoTreinamentosComPar = () => {
+                        setGruposCertificadosAbertos((atual) => {
+                            const proximoAberto = !atual[grupoKey];
+
+                            return {
+                                ...atual,
+                                [grupoKey]: proximoAberto,
+                                ...(grupoParKey ? { [grupoParKey]: proximoAberto } : {}),
+                            };
+                        });
+                    };
 
                     const resumoStatus = certificados.reduce(
                         (acc, certificado) => {
@@ -477,9 +497,32 @@ export function BaseCertificadosTreinamentos({
     return (
                         <div
                             key={grupoKey}
-                            className="rounded-3xl border border-slate-200 bg-white p-4 shadow-sm transition hover:border-slate-300 hover:shadow-md"
+                            className="treinamentos-base-certificados-card__colaborador rounded-3xl border border-slate-200 bg-white p-4 shadow-sm transition hover:border-slate-300 hover:shadow-md"
                         >
-                            <div className="flex flex-col justify-between gap-4 lg:flex-row lg:items-start">
+                                                        <div
+                                role={!grupoAberto ? "button" : undefined}
+                                tabIndex={!grupoAberto ? 0 : undefined}
+                                onClick={(evento) => {
+
+                                    const alvoInterativo = evento.target.closest?.(
+                                        "button, a, input, select, textarea, label, [data-base-certificados-acao]"
+                                    );
+
+                                    if (alvoInterativo) return;
+
+                                    alternarGrupoTreinamentosComPar();
+                                }}
+                                onKeyDown={(evento) => {
+                                        if (evento.key !== "Enter" && evento.key !== " ") return;
+
+                                    evento.preventDefault();
+                                    alternarGrupoTreinamentosComPar();
+                                }}
+                                className={classNames(
+                                    "treinamentos-base-certificados-card__cabecalho-colaborador flex flex-col justify-between gap-4 lg:flex-row lg:items-start",
+                                    !grupoAberto && "treinamentos-base-certificados-card__cabecalho-colaborador--clicavel"
+                                )}
+                            >
                                 <div className="flex min-w-0 items-start gap-3">
                                     <FotoColaboradorBase colaborador={colaborador} />
 
@@ -527,36 +570,43 @@ export function BaseCertificadosTreinamentos({
                                             </span>
                                         )}
                                     </div>
-
-                                    <button
-                                        type="button"
-                                        onClick={() =>
-                                            setGruposCertificadosAbertos((atual) => ({
-                                                ...atual,
-                                                [grupoKey]: !atual[grupoKey],
-                                            }))
-                                        }
-                                        className="inline-flex items-center justify-center gap-2 rounded-xl bg-slate-950 px-4 py-2 text-xs font-semibold text-white hover:bg-slate-800"
-                                    >
-                                        {grupoAberto ? (
-                                            <>
-                                                <ChevronUp className="h-4 w-4" />
-                                                Recolher treinamentos
-                                            </>
-                                        ) : (
-                                            <>
-                                                <ChevronDown className="h-4 w-4" />
-                                                Ver treinamentos
-                                            </>
+                                    <div className="treinamentos-base-certificados-card__acoes-colaborador flex flex-wrap justify-end gap-2">
+                                        {grupoAberto && pendentes.length > 0 && (
+                                            <button
+                                                type="button"
+                                                onClick={() => enviarDocumentosPendentesEmLote?.(colaborador)}
+                                                className="treinamentos-base-certificados-card__acao-lote inline-flex items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 py-2 text-xs font-semibold text-white hover:bg-blue-700"
+                                            >
+                                                <Upload className="h-4 w-4" />
+                                                Enviar documentos em massa
+                                            </button>
                                         )}
-                                    </button>
+
+                                        <button
+                                            type="button"
+                                            onClick={alternarGrupoTreinamentosComPar}
+                                            className="treinamentos-base-certificados-card__acao-treinamentos inline-flex items-center justify-center gap-2 rounded-xl bg-slate-950 px-4 py-2 text-xs font-semibold text-white hover:bg-slate-800"
+                                        >
+                                            {grupoAberto ? (
+                                                <>
+                                                    <ChevronUp className="h-4 w-4" />
+                                                    Recolher treinamentos
+                                                </>
+                                            ) : (
+                                                <>
+                                                    <ChevronDown className="h-4 w-4" />
+                                                    Ver treinamentos
+                                                </>
+                                            )}
+                                        </button>
+                                    </div>
                                 </div>
                             </div>
 
                             {grupoAberto && (
-                                <div className="mt-4 space-y-3 border-t border-slate-100 pt-4">
+                                <div className="treinamentos-base-certificados-card__detalhes mt-4 space-y-3 border-t border-slate-100 pt-4">
                                     {pendentes.length > 0 && (
-                                        <div className="rounded-2xl border border-dashed border-blue-200 bg-blue-50 p-3">
+                                        <div className="treinamentos-base-certificados-card__pendentes rounded-2xl border border-dashed border-blue-200 bg-blue-50 p-3">
                                             <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
                                                 <div>
                                                     <p className="text-xs font-bold uppercase tracking-wide text-blue-700">
@@ -568,34 +618,7 @@ export function BaseCertificadosTreinamentos({
                                                 </div>
 
                                                 <div className="flex flex-wrap items-center gap-2">
-
-
-                                                    <button
-
-
-                                                        type="button"
-
-
-                                                        onClick={() => enviarDocumentosPendentesEmLote?.(colaborador)}
-
-
-                                                        className="inline-flex items-center justify-center gap-2 rounded-xl bg-blue-600 px-3 py-2 text-xs font-semibold text-white hover:bg-blue-700"
-
-
-                                                    >
-
-
-                                                        <Upload className="h-4 w-4" />
-
-
-                                                        Enviar documentos em massa
-
-
-                                                    </button>
-
-
-
-                                                    <span className="rounded-full bg-white px-3 py-1 text-xs font-bold text-blue-700 ring-1 ring-blue-200">
+<span className="rounded-full bg-white px-3 py-1 text-xs font-bold text-blue-700 ring-1 ring-blue-200">
 
 
                                                         {pendentes.length} pendente(s)
@@ -611,7 +634,7 @@ export function BaseCertificadosTreinamentos({
                                                 {pendentes.map((item) => (
                                                     <div
                                                         key={`pendente-${grupoKey}-${item.treinamento.id}`}
-                                                        className="flex flex-col justify-between gap-2 rounded-xl bg-white px-3 py-2 ring-1 ring-blue-100 lg:flex-row lg:items-center"
+                                                        className="treinamentos-base-certificados-card__pendente-item flex flex-col justify-between gap-2 rounded-xl bg-white px-3 py-2 ring-1 ring-blue-100 lg:flex-row lg:items-center"
                                                     >
                                                         <div className="min-w-0">
                                                             <div className="flex flex-wrap items-center gap-2">
@@ -630,7 +653,7 @@ export function BaseCertificadosTreinamentos({
                                                         <button
                                                             type="button"
                                                             onClick={() => enviarDocumentoPendente(colaborador, item.treinamento)}
-                                                            className="inline-flex items-center justify-center gap-2 rounded-xl bg-blue-600 px-3 py-2 text-xs font-semibold text-white hover:bg-blue-700"
+                                                            className="treinamentos-base-certificados-card__acao-documento inline-flex items-center justify-center gap-2 rounded-xl bg-blue-600 px-3 py-2 text-xs font-semibold text-white hover:bg-blue-700"
                                                         >
                                                             <Upload className="h-4 w-4" />
                                                             Enviar documento
@@ -708,7 +731,7 @@ export function BaseCertificadosTreinamentos({
     return (
                                             <div
                                                 key={itemKey}
-                                                className="rounded-2xl bg-slate-50 p-3 ring-1 ring-slate-100"
+                                                className="treinamentos-base-certificados-card__certificado rounded-2xl bg-slate-50 p-3 ring-1 ring-slate-100"
                                             >
                                                 <div className="grid gap-3 lg:grid-cols-[1fr_150px] lg:items-start">
                                                     <div className="min-w-0">
@@ -784,7 +807,7 @@ export function BaseCertificadosTreinamentos({
                                                 </div>
 
                                                 {aberto && (
-                                                    <div className="mt-4 rounded-2xl bg-white p-4 ring-1 ring-slate-100">
+                                                    <div className="treinamentos-base-certificados-card__revisao mt-4 rounded-2xl bg-white p-4 ring-1 ring-slate-100">
                                                         <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-[1fr_1fr_auto] xl:items-end">
                                                             <div>
                                                                 <p className="mb-1 text-[10px] font-bold uppercase tracking-wide text-slate-400">{rotuloDataPrincipal}</p>

@@ -11584,3 +11584,902 @@
     max-width: none !important;
   }
 }
+/* MICROETAPA 4B - hero treinamentos */
+.treinamentos-hero-banner {
+  position: relative !important;
+  min-height: 7.45rem !important;
+  margin: 0 0 1.35rem 0 !important;
+  overflow: hidden !important;
+  border: 1px solid rgba(15, 23, 42, 0.08) !important;
+  border-radius: 1.55rem !important;
+  background: #020617 !important;
+  box-shadow: 0 18px 38px rgba(15, 23, 42, 0.12) !important;
+}
+
+.treinamentos-hero-banner__bg {
+  position: absolute !important;
+  inset: 0 !important;
+  background-position: center 52% !important;
+  background-repeat: no-repeat !important;
+  background-size: cover !important;
+  filter: saturate(1.08) contrast(1.04) brightness(0.92) !important;
+  opacity: 0.86 !important;
+}
+
+.treinamentos-hero-banner__overlay {
+  position: absolute !important;
+  inset: 0 !important;
+  background:
+    linear-gradient(90deg, rgba(2, 6, 23, 0.88) 0%, rgba(15, 23, 42, 0.7) 46%, rgba(15, 23, 42, 0.34) 100%),
+    radial-gradient(circle at 10% 18%, rgba(34, 197, 94, 0.2), transparent 34%),
+    radial-gradient(circle at 82% 12%, rgba(37, 99, 235, 0.18), transparent 34%) !important;
+}
+
+.treinamentos-hero-banner__content {
+  position: relative !important;
+  z-index: 1 !important;
+  display: flex !important;
+  min-height: 7.45rem !important;
+  align-items: center !important;
+  justify-content: flex-start !important;
+  padding: 1.25rem 1.55rem !important;
+}
+
+.treinamentos-hero-banner__eyebrow {
+  margin: 0 0 0.36rem !important;
+  color: #86efac !important;
+  font-size: 0.68rem !important;
+  font-weight: 900 !important;
+  letter-spacing: 0.17em !important;
+  text-transform: uppercase !important;
+}
+
+.treinamentos-hero-banner__title {
+  max-width: 46rem !important;
+  margin: 0 !important;
+  color: #ffffff !important;
+  font-size: clamp(1.55rem, 2.65vw, 2.2rem) !important;
+  font-weight: 850 !important;
+  line-height: 1.03 !important;
+  letter-spacing: -0.035em !important;
+  text-shadow: 0 2px 14px rgba(0, 0, 0, 0.38) !important;
+}
+
+.treinamentos-hero-banner__text {
+  max-width: 46rem !important;
+  margin: 0.34rem 0 0 !important;
+  color: rgba(241, 245, 249, 0.94) !important;
+  font-size: 0.9rem !important;
+  font-weight: 650 !important;
+  line-height: 1.28 !important;
+  text-shadow: 0 1px 12px rgba(0, 0, 0, 0.35) !important;
+}
+
+@media (max-width: 760px) {
+  .treinamentos-hero-banner {
+    min-height: 8.2rem !important;
+  }
+
+  .treinamentos-hero-banner__content {
+    min-height: 8.2rem !important;
+    padding: 1.1rem 1.2rem !important;
+  }
+
+  .treinamentos-hero-banner__title {
+    font-size: 1.55rem !important;
+  }
+}
+/* MICROETAPA 4C.1 - cards recolhidos treinamentos */
+.treinamentos-layout-grid {
+  gap: 1.05rem !important;
+}
+
+.treinamentos-layout-card > * {
+  position: relative !important;
+  overflow: hidden !important;
+  border: 1px solid #dbe7f2 !important;
+  border-radius: 1.35rem !important;
+  background: #ffffff !important;
+  box-shadow: 0 10px 26px rgba(15, 23, 42, 0.06) !important;
+}
+
+.treinamentos-layout-card > *::before {
+  content: "" !important;
+  position: absolute !important;
+  inset: 0 0 auto 0 !important;
+  height: 3px !important;
+  background: linear-gradient(90deg, #0ea5e9 0%, #2563eb 58%, #22c55e 100%) !important;
+}
+
+.treinamentos-layout-card h2 {
+  color: #020617 !important;
+  font-size: 1.02rem !important;
+  font-weight: 950 !important;
+  letter-spacing: -0.025em !important;
+}
+
+.treinamentos-layout-card h2 + p,
+.treinamentos-layout-card h2 ~ p {
+  color: #475569 !important;
+  font-size: 0.86rem !important;
+  font-weight: 650 !important;
+  line-height: 1.35 !important;
+}
+
+.treinamentos-layout-card button:has(svg),
+.treinamentos-layout-card button[class*="ring-slate-200"] {
+  min-height: 2.25rem !important;
+  border-radius: 999px !important;
+  font-size: 0.74rem !important;
+  font-weight: 900 !important;
+}
+
+.treinamentos-layout-card button[class*="ring-slate-200"]:not(:disabled) {
+  border: 1px solid #dbe7f2 !important;
+  background: #ffffff !important;
+  color: #0f172a !important;
+  box-shadow: 0 8px 18px rgba(15, 23, 42, 0.06) !important;
+}
+
+.treinamentos-layout-card button[class*="ring-slate-200"]:hover:not(:disabled) {
+  background: #f8fafc !important;
+  transform: translateY(-1px) !important;
+}
+
+.treinamentos-layout-card .rounded-full,
+.treinamentos-layout-card span[class*="rounded-full"] {
+  font-weight: 900 !important;
+}
+
+@media (max-width: 760px) {
+  .treinamentos-layout-grid {
+    gap: 0.9rem !important;
+  }
+
+  .treinamentos-layout-card button[class*="ring-slate-200"] {
+    width: 100% !important;
+  }
+}
+/* MICROETAPA 4C.3 - padronizar botoes abrir treinamentos */
+.treinamentos-layout-card > * > div:first-child button,
+.treinamentos-layout-card button:has(svg) {
+  width: 6.85rem !important;
+  min-width: 6.85rem !important;
+  max-width: 6.85rem !important;
+  min-height: 2.28rem !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 0.38rem !important;
+  border: 1px solid #dbe7f2 !important;
+  border-radius: 999px !important;
+  background: #ffffff !important;
+  color: #0f172a !important;
+  padding: 0.48rem 0.78rem !important;
+  font-size: 0.74rem !important;
+  font-weight: 900 !important;
+  line-height: 1 !important;
+  box-shadow: 0 8px 18px rgba(15, 23, 42, 0.06) !important;
+}
+
+.treinamentos-layout-card > * > div:first-child button:hover,
+.treinamentos-layout-card button:has(svg):hover {
+  background: #f8fafc !important;
+  transform: translateY(-1px) !important;
+}
+
+.treinamentos-layout-card > * > div:first-child button svg,
+.treinamentos-layout-card button:has(svg) svg {
+  width: 0.82rem !important;
+  height: 0.82rem !important;
+  flex: 0 0 auto !important;
+}
+
+.treinamentos-layout-card > * > div:first-child button:not(:has(svg))::before {
+  content: "";
+  width: 0.82rem;
+  height: 0.82rem;
+  flex: 0 0 auto;
+  background-color: currentColor;
+  clip-path: polygon(20% 35%, 50% 65%, 80% 35%, 88% 43%, 50% 82%, 12% 43%);
+}
+
+@media (max-width: 760px) {
+  .treinamentos-layout-card > * > div:first-child button,
+  .treinamentos-layout-card button:has(svg) {
+    width: 100% !important;
+    max-width: none !important;
+  }
+}
+/* MICROETAPA 4C.4 - centralizar pilulas treinamentos */
+.treinamentos-layout-card > * > div:first-child span[class*="rounded-full"],
+.treinamentos-layout-card > * > div:first-child span[class*="rounded-2xl"],
+.treinamentos-layout-card > * > div:first-child .rounded-full,
+.treinamentos-layout-card > * > div:first-child .rounded-2xl {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  min-height: 2.18rem !important;
+  line-height: 1 !important;
+  text-align: center !important;
+  vertical-align: middle !important;
+  white-space: nowrap !important;
+}
+
+.treinamentos-layout-card > * > div:first-child span[class*="rounded-full"] *,
+.treinamentos-layout-card > * > div:first-child span[class*="rounded-2xl"] *,
+.treinamentos-layout-card > * > div:first-child .rounded-full *,
+.treinamentos-layout-card > * > div:first-child .rounded-2xl * {
+  line-height: 1 !important;
+}
+
+.treinamentos-layout-card > * > div:first-child span[class*="item"],
+.treinamentos-layout-card > * > div:first-child span[class*="certificado"],
+.treinamentos-layout-card > * > div:first-child span[class*="pendente"],
+.treinamentos-layout-card > * > div:first-child span[class*="alerta"] {
+  align-items: center !important;
+  justify-content: center !important;
+  text-align: center !important;
+}
+/* MICROETAPA 4D.1 - filtros certificados treinamentos */
+.treinamentos-filtros-certificados-card {
+  background:
+    linear-gradient(180deg, #ffffff 0%, #fbfdff 100%) !important;
+}
+
+.treinamentos-filtros-certificados-card__cabecalho {
+  border: 1px solid #edf2f7 !important;
+  border-radius: 1.05rem !important;
+  background: #f8fafc !important;
+  padding: 0.82rem 0.95rem !important;
+}
+
+.treinamentos-filtros-certificados-card__conteudo {
+  align-items: stretch !important;
+  border: 1px solid #e2edf8 !important;
+  border-radius: 1.18rem !important;
+  background:
+    linear-gradient(135deg, rgba(240, 253, 250, 0.55) 0%, rgba(239, 246, 255, 0.75) 100%) !important;
+  padding: 0.9rem !important;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.75) !important;
+}
+
+.treinamentos-filtros-certificados-card__busca {
+  min-width: 0 !important;
+}
+
+.treinamentos-filtros-certificados-card__input,
+.treinamentos-filtros-certificados-card__select {
+  min-height: 2.95rem !important;
+  border-color: #dbe7f2 !important;
+  border-radius: 1rem !important;
+  background-color: rgba(255, 255, 255, 0.96) !important;
+  color: #0f172a !important;
+  box-shadow: 0 8px 18px rgba(15, 23, 42, 0.035) !important;
+}
+
+.treinamentos-filtros-certificados-card__input::placeholder {
+  color: #94a3b8 !important;
+  font-weight: 600 !important;
+}
+
+.treinamentos-filtros-certificados-card__input:focus,
+.treinamentos-filtros-certificados-card__select:focus {
+  border-color: #38bdf8 !important;
+  box-shadow:
+    0 0 0 4px rgba(56, 189, 248, 0.12),
+    0 8px 18px rgba(15, 23, 42, 0.045) !important;
+}
+
+.treinamentos-filtros-certificados-card__select {
+  cursor: pointer !important;
+  font-weight: 850 !important;
+}
+
+@media (max-width: 900px) {
+  .treinamentos-filtros-certificados-card__conteudo {
+    grid-template-columns: 1fr !important;
+  }
+}
+/* MICROETAPA 4E.1 - alertas tst treinamentos */
+.treinamentos-alertas-tst-card {
+  background: linear-gradient(180deg, #ffffff 0%, #fbfdff 100%) !important;
+}
+
+.treinamentos-alertas-tst-card__cabecalho {
+  border: 1px solid #edf2f7 !important;
+  border-radius: 1.05rem !important;
+  background: #f8fafc !important;
+  padding: 0.82rem 0.95rem !important;
+}
+
+.treinamentos-alertas-tst-card__vazio {
+  border-color: #bbf7d0 !important;
+  background: linear-gradient(135deg, rgba(240, 253, 244, 0.9), rgba(239, 246, 255, 0.78)) !important;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.82) !important;
+}
+
+.treinamentos-alertas-tst-card__vazio h3 {
+  color: #064e3b !important;
+  font-size: 0.98rem !important;
+  font-weight: 950 !important;
+}
+
+.treinamentos-alertas-tst-card__vazio p {
+  color: #475569 !important;
+  font-weight: 650 !important;
+}
+
+.treinamentos-alertas-tst-card__lista {
+  display: grid !important;
+  gap: 0.85rem !important;
+}
+
+.treinamentos-alertas-tst-card__grupo {
+  border-color: #dbe7f2 !important;
+  background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%) !important;
+  box-shadow: 0 8px 20px rgba(15, 23, 42, 0.045) !important;
+}
+
+.treinamentos-alertas-tst-card__grupo h3 {
+  color: #020617 !important;
+  font-size: 0.98rem !important;
+  font-weight: 950 !important;
+}
+
+.treinamentos-alertas-tst-card__grupo button {
+  border-radius: 999px !important;
+  min-height: 2.35rem !important;
+  font-size: 0.76rem !important;
+  font-weight: 900 !important;
+}
+
+.treinamentos-alertas-tst-card__itens {
+  border-top: 1px solid #e2e8f0 !important;
+  padding-top: 0.78rem !important;
+}
+
+.treinamentos-alertas-tst-card__item {
+  border-radius: 1rem !important;
+  padding: 0.78rem 0.9rem !important;
+}
+
+.treinamentos-alertas-tst-card__item strong {
+  color: #020617 !important;
+  font-weight: 950 !important;
+}
+
+.treinamentos-alertas-tst-card__nota {
+  border: 1px solid #e2e8f0 !important;
+  background: linear-gradient(135deg, rgba(248, 250, 252, 0.96), rgba(239, 246, 255, 0.7)) !important;
+  color: #64748b !important;
+  font-weight: 650 !important;
+  line-height: 1.35 !important;
+}
+/* MICROETAPA 4E.2 - alertas tst recolhido limpo */
+.treinamentos-alertas-tst-card--recolhido .treinamentos-alertas-tst-card__cabecalho {
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  padding: 0 !important;
+  box-shadow: none !important;
+}
+/* MICROETAPA 4F.1 - base certificados treinamentos */
+.treinamentos-base-certificados-card {
+  background: linear-gradient(180deg, #ffffff 0%, #fbfdff 100%) !important;
+}
+
+.treinamentos-base-certificados-card__cabecalho {
+  border: 1px solid #edf2f7 !important;
+  border-radius: 1.05rem !important;
+  background: #f8fafc !important;
+  padding: 0.82rem 0.95rem !important;
+}
+
+.treinamentos-base-certificados-card--recolhido .treinamentos-base-certificados-card__cabecalho {
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  padding: 0 !important;
+  box-shadow: none !important;
+}
+
+.treinamentos-base-certificados-card__lista {
+  display: grid !important;
+  gap: 0.9rem !important;
+}
+
+.treinamentos-base-certificados-card__vazio {
+  border-color: #cbd5e1 !important;
+  background: linear-gradient(135deg, rgba(248, 250, 252, 0.96), rgba(239, 246, 255, 0.74)) !important;
+}
+
+.treinamentos-base-certificados-card__vazio h3 {
+  color: #0f172a !important;
+  font-weight: 950 !important;
+}
+
+.treinamentos-base-certificados-card__colaborador {
+  border-color: #dbe7f2 !important;
+  background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%) !important;
+  box-shadow: 0 8px 20px rgba(15, 23, 42, 0.045) !important;
+}
+
+.treinamentos-base-certificados-card__colaborador:hover {
+  border-color: #cbd5e1 !important;
+  box-shadow: 0 12px 26px rgba(15, 23, 42, 0.075) !important;
+}
+
+.treinamentos-base-certificados-card__colaborador button {
+  border-radius: 999px !important;
+  min-height: 2.25rem !important;
+  font-size: 0.74rem !important;
+  font-weight: 900 !important;
+}
+
+.treinamentos-base-certificados-card__detalhes {
+  border-top-color: #e2e8f0 !important;
+  padding-top: 0.85rem !important;
+}
+
+.treinamentos-base-certificados-card__pendentes {
+  border-color: #bfdbfe !important;
+  background: linear-gradient(135deg, rgba(239, 246, 255, 0.98), rgba(240, 253, 250, 0.72)) !important;
+}
+
+.treinamentos-base-certificados-card__pendente-item {
+  border-radius: 0.95rem !important;
+  box-shadow: 0 5px 14px rgba(37, 99, 235, 0.045) !important;
+}
+
+.treinamentos-base-certificados-card__certificado {
+  border: 1px solid #e2e8f0 !important;
+  border-radius: 1.05rem !important;
+  background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%) !important;
+  box-shadow: 0 6px 16px rgba(15, 23, 42, 0.035) !important;
+}
+
+.treinamentos-base-certificados-card__certificado h3 {
+  color: #020617 !important;
+  font-size: 0.98rem !important;
+  font-weight: 950 !important;
+}
+
+.treinamentos-base-certificados-card__revisao {
+  border: 1px solid #dbe7f2 !important;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.98), rgba(239, 246, 255, 0.68)) !important;
+}
+
+.treinamentos-base-certificados-card__revisao input {
+  min-height: 2.45rem !important;
+  border-color: #dbe7f2 !important;
+  border-radius: 0.9rem !important;
+}
+
+.treinamentos-base-certificados-card__revisao input:focus {
+  border-color: #38bdf8 !important;
+  box-shadow: 0 0 0 4px rgba(56, 189, 248, 0.12) !important;
+}
+/* MICROETAPA 4F.2 - base certificados duas colunas e foto maior */
+.treinamentos-base-certificados-card__lista {
+  grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  align-items: start !important;
+}
+
+.treinamentos-base-certificados-card__colaborador {
+  min-width: 0 !important;
+}
+
+.treinamentos-base-certificados-card__colaborador--aberto {
+  grid-column: 1 / -1 !important;
+}
+
+.treinamentos-base-certificados-card__colaborador > div:first-child {
+  min-height: 5.45rem !important;
+  align-items: center !important;
+}
+
+.treinamentos-base-certificados-card__colaborador > div:first-child > div:first-child {
+  align-items: center !important;
+}
+
+.treinamentos-base-certificados-card__colaborador > div:first-child > div:first-child > div:first-child {
+  width: 5.25rem !important;
+  height: 5.25rem !important;
+  min-width: 5.25rem !important;
+  min-height: 5.25rem !important;
+  flex: 0 0 5.25rem !important;
+  border-radius: 999px !important;
+  box-shadow:
+    0 0 0 4px #ffffff,
+    0 0 0 5px #dbe7f2,
+    0 12px 24px rgba(15, 23, 42, 0.1) !important;
+}
+
+.treinamentos-base-certificados-card__colaborador > div:first-child > div:first-child > div:first-child img {
+  width: 100% !important;
+  height: 100% !important;
+  object-fit: cover !important;
+}
+
+.treinamentos-base-certificados-card__colaborador > div:first-child > div:first-child > div:nth-child(2) {
+  display: flex !important;
+  min-height: 5.25rem !important;
+  flex-direction: column !important;
+  justify-content: center !important;
+}
+
+.treinamentos-base-certificados-card__colaborador > div:first-child > div:first-child > div:nth-child(2) p:first-child {
+  margin-top: 0 !important;
+}
+
+@media (max-width: 1180px) {
+  .treinamentos-base-certificados-card__lista {
+    grid-template-columns: 1fr !important;
+  }
+}
+/* MICROETAPA 4F.3 - base certificados acoes colaborador */
+.treinamentos-base-certificados-card__colaborador--aberto {
+  grid-column: auto !important;
+}
+
+.treinamentos-base-certificados-card__colaborador > div:first-child > div:last-child {
+  min-width: 10.5rem !important;
+}
+
+.treinamentos-base-certificados-card__acao-treinamentos,
+.treinamentos-base-certificados-card__acao-lote {
+  width: auto !important;
+  min-width: 11.8rem !important;
+  max-width: none !important;
+  min-height: 2.45rem !important;
+  padding: 0.58rem 1rem !important;
+  white-space: nowrap !important;
+  line-height: 1.05 !important;
+}
+
+.treinamentos-base-certificados-card__acao-treinamentos {
+  background: #0f172a !important;
+  color: #ffffff !important;
+  box-shadow: 0 10px 22px rgba(15, 23, 42, 0.14) !important;
+}
+
+.treinamentos-base-certificados-card__acao-lote {
+  background: #2563eb !important;
+  color: #ffffff !important;
+  box-shadow: 0 10px 22px rgba(37, 99, 235, 0.16) !important;
+}
+
+.treinamentos-base-certificados-card__acao-treinamentos svg,
+.treinamentos-base-certificados-card__acao-lote svg {
+  width: 0.92rem !important;
+  height: 0.92rem !important;
+}
+
+.treinamentos-base-certificados-card__pendentes > div:first-child > div:last-child {
+  justify-content: flex-end !important;
+}
+
+@media (max-width: 1320px) {
+  .treinamentos-base-certificados-card__lista {
+    grid-template-columns: 1fr !important;
+  }
+}
+
+@media (max-width: 760px) {
+  .treinamentos-base-certificados-card__colaborador > div:first-child > div:last-child {
+    min-width: 0 !important;
+    width: 100% !important;
+  }
+
+  .treinamentos-base-certificados-card__acao-treinamentos,
+  .treinamentos-base-certificados-card__acao-lote {
+    width: 100% !important;
+    min-width: 0 !important;
+  }
+}
+/* MICROETAPA 4F.4 - abertura em par e envio em massa */
+.treinamentos-base-certificados-card__acoes {
+  width: 100% !important;
+  align-items: center !important;
+}
+
+.treinamentos-base-certificados-card__acao-treinamentos,
+.treinamentos-base-certificados-card__acao-lote {
+  min-width: 13.2rem !important;
+  min-height: 2.5rem !important;
+  padding: 0.58rem 1rem !important;
+  white-space: nowrap !important;
+  line-height: 1 !important;
+}
+
+.treinamentos-base-certificados-card__acao-lote {
+  background: #2563eb !important;
+  color: #ffffff !important;
+}
+
+.treinamentos-base-certificados-card__acao-treinamentos {
+  background: #0f172a !important;
+  color: #ffffff !important;
+}
+
+.treinamentos-base-certificados-card__acao-treinamentos svg,
+.treinamentos-base-certificados-card__acao-lote svg {
+  flex: 0 0 auto !important;
+}
+
+.treinamentos-base-certificados-card__pendentes > div:first-child {
+  align-items: center !important;
+}
+
+@media (max-width: 760px) {
+  .treinamentos-base-certificados-card__acoes {
+    justify-content: stretch !important;
+  }
+
+  .treinamentos-base-certificados-card__acao-treinamentos,
+  .treinamentos-base-certificados-card__acao-lote {
+    width: 100% !important;
+    min-width: 0 !important;
+  }
+}
+/* MICROETAPA 4F.4.2 - acoes colaborador base certificados */
+.treinamentos-base-certificados-card__acoes-colaborador {
+  width: 100% !important;
+  display: flex !important;
+  flex-wrap: nowrap !important;
+  align-items: center !important;
+  justify-content: flex-end !important;
+  gap: 0.5rem !important;
+}
+
+.treinamentos-base-certificados-card__acoes-colaborador .treinamentos-base-certificados-card__acao-treinamentos,
+.treinamentos-base-certificados-card__acoes-colaborador .treinamentos-base-certificados-card__acao-lote {
+  width: auto !important;
+  max-width: none !important;
+  min-height: 2.55rem !important;
+  border-radius: 999px !important;
+  padding: 0.62rem 0.95rem !important;
+  font-size: 0.68rem !important;
+  font-weight: 950 !important;
+  line-height: 1 !important;
+  white-space: nowrap !important;
+}
+
+.treinamentos-base-certificados-card__acoes-colaborador .treinamentos-base-certificados-card__acao-treinamentos {
+  min-width: 11.5rem !important;
+  background: #0f172a !important;
+  color: #ffffff !important;
+  box-shadow: 0 10px 22px rgba(15, 23, 42, 0.14) !important;
+}
+
+.treinamentos-base-certificados-card__acoes-colaborador .treinamentos-base-certificados-card__acao-lote {
+  min-width: 13.5rem !important;
+  background: #2563eb !important;
+  color: #ffffff !important;
+  box-shadow: 0 10px 22px rgba(37, 99, 235, 0.16) !important;
+}
+
+.treinamentos-base-certificados-card__acoes-colaborador svg {
+  width: 0.88rem !important;
+  height: 0.88rem !important;
+  flex: 0 0 auto !important;
+}
+
+@media (max-width: 760px) {
+  .treinamentos-base-certificados-card__acoes-colaborador {
+    flex-wrap: wrap !important;
+    justify-content: stretch !important;
+  }
+
+  .treinamentos-base-certificados-card__acoes-colaborador .treinamentos-base-certificados-card__acao-treinamentos,
+  .treinamentos-base-certificados-card__acoes-colaborador .treinamentos-base-certificados-card__acao-lote {
+    width: 100% !important;
+    min-width: 0 !important;
+  }
+}
+/* MICROETAPA 4F.4.3 - card clicavel e hover acoes */
+.treinamentos-base-certificados-card__colaborador--clicavel {
+  cursor: pointer !important;
+}
+
+.treinamentos-base-certificados-card__colaborador--clicavel:hover {
+  border-color: #93c5fd !important;
+  box-shadow: 0 14px 30px rgba(37, 99, 235, 0.11) !important;
+  transform: translateY(-1px) !important;
+}
+
+.treinamentos-base-certificados-card__colaborador--clicavel:focus-visible {
+  outline: 3px solid rgba(37, 99, 235, 0.2) !important;
+  outline-offset: 3px !important;
+}
+
+.treinamentos-base-certificados-card__acoes-colaborador .treinamentos-base-certificados-card__acao-treinamentos:hover:not(:disabled),
+.treinamentos-base-certificados-card__acoes-colaborador .treinamentos-base-certificados-card__acao-treinamentos:focus-visible:not(:disabled) {
+  background: #0f172a !important;
+  color: #ffffff !important;
+  border-color: #0f172a !important;
+  opacity: 1 !important;
+  transform: translateY(-1px) !important;
+}
+
+.treinamentos-base-certificados-card__acoes-colaborador .treinamentos-base-certificados-card__acao-lote:hover:not(:disabled),
+.treinamentos-base-certificados-card__acoes-colaborador .treinamentos-base-certificados-card__acao-lote:focus-visible:not(:disabled) {
+  background: #1d4ed8 !important;
+  color: #ffffff !important;
+  border-color: #1d4ed8 !important;
+  opacity: 1 !important;
+  transform: translateY(-1px) !important;
+}
+
+.treinamentos-base-certificados-card__acoes-colaborador .treinamentos-base-certificados-card__acao-treinamentos *,
+.treinamentos-base-certificados-card__acoes-colaborador .treinamentos-base-certificados-card__acao-lote * {
+  color: inherit !important;
+}
+/* MICROETAPA 4F.4.4 - card clicavel e enviar documento linha unica */
+.treinamentos-base-certificados-card__colaborador--clicavel {
+  cursor: pointer !important;
+}
+
+.treinamentos-base-certificados-card__colaborador--clicavel:hover {
+  border-color: #93c5fd !important;
+  box-shadow: 0 14px 30px rgba(37, 99, 235, 0.11) !important;
+  transform: translateY(-1px) !important;
+}
+
+.treinamentos-base-certificados-card__colaborador--clicavel:focus-visible {
+  outline: 3px solid rgba(37, 99, 235, 0.2) !important;
+  outline-offset: 3px !important;
+}
+
+.treinamentos-base-certificados-card__acao-documento {
+  width: auto !important;
+  min-width: 9.7rem !important;
+  max-width: none !important;
+  min-height: 2.38rem !important;
+  padding: 0.58rem 0.92rem !important;
+  white-space: nowrap !important;
+  line-height: 1 !important;
+  font-size: 0.7rem !important;
+  font-weight: 950 !important;
+}
+
+.treinamentos-base-certificados-card__acao-documento svg {
+  width: 0.86rem !important;
+  height: 0.86rem !important;
+  flex: 0 0 auto !important;
+}
+
+.treinamentos-base-certificados-card__acao-documento:hover:not(:disabled),
+.treinamentos-base-certificados-card__acao-documento:focus-visible:not(:disabled) {
+  background: #1d4ed8 !important;
+  color: #ffffff !important;
+  border-color: #1d4ed8 !important;
+  opacity: 1 !important;
+  transform: translateY(-1px) !important;
+}
+
+.treinamentos-base-certificados-card__acao-documento * {
+  color: inherit !important;
+}
+
+@media (max-width: 760px) {
+  .treinamentos-base-certificados-card__acao-documento {
+    width: 100% !important;
+    min-width: 0 !important;
+  }
+}
+/* MICROETAPA 4F.4.5 - cabecalho clicavel e pilula documento maior */
+.treinamentos-base-certificados-card__cabecalho-colaborador--clicavel {
+  cursor: pointer !important;
+}
+
+.treinamentos-base-certificados-card__cabecalho-colaborador--clicavel:hover {
+  border-radius: 1rem !important;
+}
+
+.treinamentos-base-certificados-card__cabecalho-colaborador--clicavel:focus-visible {
+  outline: 3px solid rgba(37, 99, 235, 0.2) !important;
+  outline-offset: 3px !important;
+  border-radius: 1rem !important;
+}
+
+.treinamentos-base-certificados-card__pendente-item > button,
+.treinamentos-base-certificados-card__acao-documento {
+  width: auto !important;
+  min-width: 11.4rem !important;
+  max-width: none !important;
+  min-height: 2.55rem !important;
+  padding: 0.62rem 1rem !important;
+  white-space: nowrap !important;
+  line-height: 1 !important;
+  font-size: 0.72rem !important;
+  font-weight: 950 !important;
+}
+
+.treinamentos-base-certificados-card__pendente-item > button svg,
+.treinamentos-base-certificados-card__acao-documento svg {
+  width: 0.88rem !important;
+  height: 0.88rem !important;
+  flex: 0 0 auto !important;
+}
+
+.treinamentos-base-certificados-card__pendente-item > button:hover:not(:disabled),
+.treinamentos-base-certificados-card__acao-documento:hover:not(:disabled) {
+  background: #1d4ed8 !important;
+  color: #ffffff !important;
+  opacity: 1 !important;
+  transform: translateY(-1px) !important;
+}
+
+.treinamentos-base-certificados-card__pendente-item > button *,
+.treinamentos-base-certificados-card__acao-documento * {
+  color: inherit !important;
+}
+
+@media (max-width: 760px) {
+  .treinamentos-base-certificados-card__pendente-item > button,
+  .treinamentos-base-certificados-card__acao-documento {
+    width: 100% !important;
+    min-width: 0 !important;
+  }
+}
+/* MICROETAPA 4F.4.6 - clique harmonico e pilula documento maior */
+.treinamentos-base-certificados-card__cabecalho-colaborador,
+.treinamentos-base-certificados-card__colaborador {
+  cursor: default !important;
+}
+
+.treinamentos-base-certificados-card__cabecalho-colaborador--clicavel,
+.treinamentos-base-certificados-card__colaborador--clicavel {
+  cursor: default !important;
+}
+
+.treinamentos-base-certificados-card__cabecalho-colaborador--clicavel:hover,
+.treinamentos-base-certificados-card__colaborador--clicavel:hover {
+  transform: none !important;
+}
+
+.treinamentos-layout-card .treinamentos-base-certificados-card__pendente-item > button,
+.treinamentos-layout-card .treinamentos-base-certificados-card__pendente-item > button.treinamentos-base-certificados-card__acao-documento,
+.treinamentos-base-certificados-card__pendente-item > .treinamentos-base-certificados-card__acao-documento {
+  width: 12.8rem !important;
+  min-width: 12.8rem !important;
+  max-width: 12.8rem !important;
+  min-height: 2.68rem !important;
+  padding: 0.68rem 1.15rem !important;
+  white-space: nowrap !important;
+  line-height: 1 !important;
+  font-size: 0.76rem !important;
+  font-weight: 950 !important;
+  border-radius: 999px !important;
+}
+
+.treinamentos-layout-card .treinamentos-base-certificados-card__pendente-item > button svg,
+.treinamentos-base-certificados-card__acao-documento svg {
+  width: 0.94rem !important;
+  height: 0.94rem !important;
+  flex: 0 0 auto !important;
+}
+
+.treinamentos-layout-card .treinamentos-base-certificados-card__pendente-item > button:hover:not(:disabled),
+.treinamentos-base-certificados-card__acao-documento:hover:not(:disabled) {
+  background: #1d4ed8 !important;
+  color: #ffffff !important;
+  opacity: 1 !important;
+  transform: translateY(-1px) !important;
+}
+
+.treinamentos-layout-card .treinamentos-base-certificados-card__pendente-item > button *,
+.treinamentos-base-certificados-card__acao-documento * {
+  color: inherit !important;
+}
+
+@media (max-width: 760px) {
+  .treinamentos-layout-card .treinamentos-base-certificados-card__pendente-item > button,
+  .treinamentos-base-certificados-card__pendente-item > .treinamentos-base-certificados-card__acao-documento {
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: none !important;
+  }
+}

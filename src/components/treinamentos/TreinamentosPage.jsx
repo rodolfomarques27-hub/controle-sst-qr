@@ -33,6 +33,7 @@ import {
 } from "../../services/treinamentosService";
 import { FUNCAO_EMAIL_ALERTA_TST } from "../../constants/sistemaConstants";
 import { treinamentosBase } from "../../constants/treinamentosConstants";
+import treinamentosHeroBackground from "../../assets/dashboard-hero-sst.png";
 import {
     normalizarTextoBusca,
     diasParaVencer,
@@ -268,6 +269,28 @@ export function Treinamentos({
             ...atual,
             [chave]: !atual[chave],
         }));
+    };
+
+    const alternarCardTreinamentoPorArea = (chave, recolhido, evento) => {
+        const alvoInterativo = evento.target.closest?.(
+            "button, a, input, select, textarea, label, [role='button'], [data-treinamentos-nao-alternar], [data-base-certificados-acao]"
+        );
+
+        if (alvoInterativo) return;
+
+        if (!recolhido) {
+            let cabecalho = null;
+
+            try {
+                cabecalho = evento.currentTarget.querySelector(":scope > * > div:first-child");
+            } catch {
+                cabecalho = evento.currentTarget.querySelector("div");
+            }
+
+            if (cabecalho && !cabecalho.contains(evento.target)) return;
+        }
+
+        alternarCardTreinamento(chave);
     };
 
     const moverCardTreinamento = (chave, direcao) => {
@@ -1208,7 +1231,7 @@ export function Treinamentos({
         <div>
             <Header
                 titulo="Treinamentos e certificados"
-                subtitulo="Lançamento de certificados no Supabase, validade e controle automático de status."
+                subtitulo={null}
                 acao={
                     <div className="top-actions-nowrap">
                         <button
@@ -1222,6 +1245,27 @@ export function Treinamentos({
                     </div>
                 }
             />
+
+            <section className="treinamentos-hero-banner">
+                <div
+                    className="treinamentos-hero-banner__bg"
+                    style={{
+                        backgroundImage: `url(${treinamentosHeroBackground})`,
+                    }}
+                />
+                <div className="treinamentos-hero-banner__overlay" />
+                <div className="treinamentos-hero-banner__content">
+                    <div className="min-w-0">
+                        <p className="treinamentos-hero-banner__eyebrow">SAFESCAN BRASIL</p>
+                        <h2 className="treinamentos-hero-banner__title">
+                            Gestão de treinamentos e certificados
+                        </h2>
+                        <p className="treinamentos-hero-banner__text">
+                            Controle certificados, validade, pendências e envios em uma visão única.
+                        </p>
+                    </div>
+                </div>
+            </section>
 
             {permissaoSistemaAtual && (!podeCadastrarTreinamentosSistema || !podeEditarTreinamentosSistema || !podeUploadTreinamentosSistema || !podeExportarTreinamentosSistema) && (
                 <div className="mb-5 rounded-2xl bg-amber-50 p-4 text-sm font-semibold text-amber-800 ring-1 ring-amber-200">
@@ -1359,7 +1403,12 @@ export function Treinamentos({
 
                     if (chave === "filtros") {
                         return (
-                            <div key={chave} className={classePainel} style={estiloPainel}>
+                            <div
+                key={chave}
+                className={classePainel}
+                style={estiloPainel}
+                onClick={(evento) => alternarCardTreinamentoPorArea(chave, cardsTreinamentosRecolhidos.filtros, evento)}
+            >
                                 <Card className="h-full">
                                     <div className="flex flex-col justify-between gap-3 md:flex-row md:items-start">
                                         <div>
@@ -1372,7 +1421,7 @@ export function Treinamentos({
                                             onClick={() => alternarCardTreinamento("filtros")}
                                             className="inline-flex items-center justify-center rounded-2xl bg-white px-4 py-2 text-xs font-bold text-slate-700 ring-1 ring-slate-200 hover:bg-slate-50"
                                         >
-                                            {cardsTreinamentosRecolhidos.filtros ? "Abrir filtros" : "Recolher filtros"}
+                                            {cardsTreinamentosRecolhidos.filtros ? "Abrir" : "Recolher"}
                                         </button>
                                     </div>
 
@@ -1384,14 +1433,14 @@ export function Treinamentos({
                                                     value={buscaCertificados}
                                                     onChange={(e) => setBuscaCertificados(e.target.value)}
                                                     placeholder="Pesquisar certificados por colaborador, empresa, código, treinamento ou arquivo"
-                                                    className="w-full rounded-2xl border border-slate-200 bg-white py-3 pl-11 pr-4 text-sm outline-none focus:border-slate-400 focus:ring-4 focus:ring-slate-100"
+                                                    className="treinamentos-filtros-certificados-card__input w-full rounded-2xl border border-slate-200 bg-white py-3 pl-11 pr-4 text-sm outline-none focus:border-slate-400 focus:ring-4 focus:ring-slate-100"
                                                 />
                                             </div>
 
                                             <select
                                                 value={filtroStatusCertificados}
                                                 onChange={(e) => setFiltroStatusCertificados(e.target.value)}
-                                                className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 outline-none focus:border-slate-400 focus:ring-4 focus:ring-slate-100"
+                                                className="treinamentos-filtros-certificados-card__select w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 outline-none focus:border-slate-400 focus:ring-4 focus:ring-slate-100"
                                             >
                                                 <option value="Todos">Todos os status</option>
                                                 <option value="Pendentes">Pendentes ({totalPorStatusCertificados.pendentes})</option>
@@ -1409,7 +1458,13 @@ export function Treinamentos({
 
                     if (chave === "lancamento") {
                         return (
-                            <div id="treinamentos-lancamento-certificado" key={chave} className={classePainel} style={estiloPainel}>
+                            <div
+                id="treinamentos-lancamento-certificado"
+                key={chave}
+                className={classePainel}
+                style={estiloPainel}
+                onClick={(evento) => alternarCardTreinamentoPorArea(chave, cardsTreinamentosRecolhidos.lancamento, evento)}
+            >
                                 <FormularioLancamentoCertificado
                                     colaboradores={colaboradores}
                                     colabSelecionadoCodigo={colabSelecionadoCodigo}
@@ -1464,7 +1519,12 @@ export function Treinamentos({
                     }
                     if (chave === "alertas") {
                         return (
-                            <div key={chave} className={classePainel} style={estiloPainel}>
+                            <div
+                key={chave}
+                className={classePainel}
+                style={estiloPainel}
+                onClick={(evento) => alternarCardTreinamentoPorArea(chave, cardsTreinamentosRecolhidos.alertas, evento)}
+            >
                                 <AlertasTstTreinamentos
                                     alertasTstPorEmpresa={alertasTstPorEmpresa}
                                     enviandoAlertaTst={enviandoAlertaTst}
@@ -1479,7 +1539,12 @@ export function Treinamentos({
 
                     if (chave === "base") {
                         return (
-                            <div key={chave} className={classePainel} style={estiloPainel}>
+                            <div
+                key={chave}
+                className={classePainel}
+                style={estiloPainel}
+                onClick={(evento) => alternarCardTreinamentoPorArea(chave, cardsTreinamentosRecolhidos.base, evento)}
+            >
                                 <BaseCertificadosTreinamentos
                                     documentos={documentos}
                                     documentosFiltrados={documentosFiltrados}

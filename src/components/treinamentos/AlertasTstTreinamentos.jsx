@@ -14,10 +14,10 @@ export function AlertasTstTreinamentos({
     const totalAlertas = alertasTstPorEmpresa.reduce((total, grupo) => total + grupo.itens.length, 0);
 
     return (
-        <Card className="self-start">
+        <Card className={classNames("self-start treinamentos-alertas-tst-card", recolhido && "treinamentos-alertas-tst-card--recolhido")}>
             <div
                 className={classNames(
-                    "flex flex-col justify-between gap-3 lg:flex-row lg:items-start",
+                    "treinamentos-alertas-tst-card__cabecalho flex flex-col justify-between gap-3 lg:flex-row lg:items-start",
                     !recolhido && "mb-4"
                 )}
             >
@@ -29,9 +29,11 @@ export function AlertasTstTreinamentos({
                 </div>
 
                 <div className="flex flex-wrap gap-2 lg:justify-end">
-                    <span className="w-fit rounded-full bg-orange-50 px-3 py-1 text-xs font-semibold text-orange-700 ring-1 ring-orange-200">
-                        {totalAlertas} item(ns) em alerta
-                    </span>
+                    {!recolhido && (
+                        <span className="w-fit rounded-full bg-orange-50 px-3 py-1 text-xs font-semibold text-orange-700 ring-1 ring-orange-200">
+                            {totalAlertas} item(ns) em alerta
+                        </span>
+                    )}
                     <button
                         type="button"
                         onClick={onAlternarRecolhido}
@@ -53,7 +55,7 @@ export function AlertasTstTreinamentos({
             </div>
 
             {recolhido ? null : alertasTstPorEmpresa.length === 0 ? (
-                <div className="rounded-3xl border border-dashed border-slate-300 p-6 text-center">
+                <div className="treinamentos-alertas-tst-card__vazio rounded-3xl border border-dashed border-slate-300 p-6 text-center">
                     <CheckCircle2 className="mx-auto h-9 w-9 text-emerald-500" />
                     <h3 className="mt-3 font-bold text-slate-900">Nenhum documento vencido ou a vencer</h3>
                     <p className="mt-1 text-sm text-slate-500">
@@ -61,9 +63,9 @@ export function AlertasTstTreinamentos({
                     </p>
                 </div>
             ) : (
-                <div className="space-y-3">
+                <div className="treinamentos-alertas-tst-card__lista space-y-3">
                     {alertasTstPorEmpresa.map((grupo) => (
-                        <div key={grupo.empresa} className="rounded-3xl border border-slate-200 bg-white p-4">
+                        <div key={grupo.empresa} className="treinamentos-alertas-tst-card__grupo rounded-3xl border border-slate-200 bg-white p-4">
                             <div className="flex flex-col justify-between gap-3 lg:flex-row lg:items-start">
                                 <div>
                                     <p className="text-[10px] font-bold uppercase tracking-wide text-slate-400">Empresa</p>
@@ -93,7 +95,7 @@ export function AlertasTstTreinamentos({
                                 </div>
                             </div>
 
-                            <div className="mt-3 space-y-2">
+                            <div className="treinamentos-alertas-tst-card__itens mt-3 space-y-2">
                                 {grupo.itens
                                     .sort((a, b) => a.dias - b.dias)
                                     .map((item, index) => {
@@ -106,7 +108,7 @@ export function AlertasTstTreinamentos({
                                             <div
                                                 key={`${grupo.empresa}-${item.codigo}-${item.treinamento}-${index}`}
                                                 className={classNames(
-                                                    "rounded-2xl px-3 py-2 text-sm ring-1",
+                                                    "treinamentos-alertas-tst-card__item rounded-2xl px-3 py-2 text-sm ring-1",
                                                     vencido
                                                         ? "bg-red-50 text-red-900 ring-red-100"
                                                         : "bg-orange-50 text-orange-950 ring-orange-100"
@@ -139,7 +141,7 @@ export function AlertasTstTreinamentos({
             )}
 
             {!recolhido && (
-                <p className="mt-3 rounded-2xl bg-slate-50 p-3 text-xs text-slate-500">
+                <p className="treinamentos-alertas-tst-card__nota mt-3 rounded-2xl bg-slate-50 p-3 text-xs text-slate-500">
                     O botão de e-mail envia automaticamente pela função Supabase enviar-alerta-tst. Use Copiar aviso como alternativa manual quando precisar enviar pelo Outlook, Gmail ou WhatsApp.
                 </p>
             )}
