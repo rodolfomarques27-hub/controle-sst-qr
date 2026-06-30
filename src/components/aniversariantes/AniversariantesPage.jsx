@@ -516,13 +516,30 @@ export function Aniversariantes({ colaboradores = [], empresasBanco = [] }) {
                     </section>
                 </div>
             </Card>
+            <div onClick={(evento) => {
+                const alvoInterativo = evento.target.closest?.(
+                    "button, a, input, select, textarea, label, table, [role='button'], [data-aniversariantes-nao-alternar]"
+                );
+
+                if (alvoInterativo) return;
+
+                if (!filtrosAniversariantesRecolhidos) {
+                    const cabecalho = evento.currentTarget.querySelector("[data-aniversariantes-card-cabecalho='filtros']");
+                    if (cabecalho && !cabecalho.contains(evento.target)) return;
+                }
+
+                atualizarLayoutAniversariantes((layoutAtual) => ({
+                    ...layoutAtual,
+                    filtrosRecolhidos: !layoutAtual.filtrosRecolhidos,
+                }));
+            }}>
             <Card
                 className={classNames(
                     "aniversariantes-filtros-card mb-5",
                     filtrosAniversariantesRecolhidos && "aniversariantes-filtros-card--recolhido"
                 )}
             >
-                <div className="aniversariantes-filtros-card__cabecalho">
+                <div data-aniversariantes-card-cabecalho="filtros" className="aniversariantes-filtros-card__cabecalho">
                     <div className="aniversariantes-filtros-card__titulo">
                         <p>Filtros salvos</p>
                         <span>
@@ -621,13 +638,31 @@ export function Aniversariantes({ colaboradores = [], empresasBanco = [] }) {
                     </div>
                 )}
             </Card>
+            </div>
+            <div onClick={(evento) => {
+                const alvoInterativo = evento.target.closest?.(
+                    "button, a, input, select, textarea, label, table, [role='button'], [data-aniversariantes-nao-alternar]"
+                );
+
+                if (alvoInterativo) return;
+
+                if (!listaAniversariantesRecolhida) {
+                    const cabecalho = evento.currentTarget.querySelector("[data-aniversariantes-card-cabecalho='lista']");
+                    if (cabecalho && !cabecalho.contains(evento.target)) return;
+                }
+
+                atualizarLayoutAniversariantes((layoutAtual) => ({
+                    ...layoutAtual,
+                    listaRecolhida: !layoutAtual.listaRecolhida,
+                }));
+            }}>
             <Card
                 className={classNames(
                     "aniversariantes-lista-card",
                     listaAniversariantesRecolhida && "aniversariantes-lista-card--recolhido"
                 )}
             >
-                <div className="aniversariantes-lista-card__cabecalho">
+                <div data-aniversariantes-card-cabecalho="lista" className="aniversariantes-lista-card__cabecalho">
                     <div className="aniversariantes-lista-card__titulo">
                         <p>Lista de aniversariantes</p>
                         <span>
@@ -727,6 +762,7 @@ export function Aniversariantes({ colaboradores = [], empresasBanco = [] }) {
                     </>
                 )}
             </Card>
+            </div>
         </div>
     );
 }
