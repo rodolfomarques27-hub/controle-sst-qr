@@ -9810,3 +9810,587 @@
     grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
   }
 }
+/* MICROETAPA 2H FINAL - cards individuais colaboradores consolidados */
+.colaboradores-lista-grid {
+  gap: 0.9rem !important;
+}
+
+@media (min-width: 1180px) {
+  .colaboradores-lista-grid {
+    display: grid !important;
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    align-items: stretch !important;
+  }
+}
+
+.colaborador-lista-card {
+  position: relative !important;
+  overflow: hidden !important;
+  border: 1px solid #dbe7f2 !important;
+  border-radius: 1.25rem !important;
+  background: #ffffff !important;
+  padding: 0.72rem !important;
+  box-shadow: 0 8px 20px rgba(15, 23, 42, 0.045) !important;
+}
+
+.colaborador-lista-card::before {
+  content: "" !important;
+  position: absolute !important;
+  top: 0 !important;
+  left: 0 !important;
+  right: 0 !important;
+  height: 3px !important;
+  border-top-left-radius: inherit !important;
+  border-top-right-radius: inherit !important;
+  background: linear-gradient(90deg, #0ea5e9 0%, #2563eb 58%, #22c55e 100%) !important;
+}
+
+.colaborador-lista-card__layout {
+  position: relative !important;
+  z-index: 1 !important;
+  display: grid !important;
+  grid-template-columns: minmax(0, 1fr) 9rem !important;
+  gap: 0.72rem !important;
+  align-items: start !important;
+}
+
+.colaborador-lista-card__principal {
+  display: grid !important;
+  min-width: 0 !important;
+  gap: 0.48rem !important;
+  align-content: start !important;
+}
+
+.colaborador-lista-card__cabecalho-expandido {
+  display: grid !important;
+  grid-template-columns: 4.35rem minmax(0, 1fr) !important;
+  gap: 0.68rem !important;
+  align-items: start !important;
+  min-width: 0 !important;
+}
+
+.colaborador-lista-card__foto-wrap {
+  width: 4.25rem !important;
+  height: 4.25rem !important;
+}
+
+.colaborador-lista-card__foto-botao {
+  width: 4.25rem !important;
+  height: 4.25rem !important;
+  min-width: 4.25rem !important;
+  min-height: 4.25rem !important;
+  overflow: hidden !important;
+  border: 3px solid #ffffff !important;
+  border-radius: 999px !important;
+  background: #f8fafc !important;
+  outline: 1px solid #d8e2ef !important;
+  box-shadow: 0 8px 18px rgba(15, 23, 42, 0.09) !important;
+}
+
+.colaborador-lista-card__foto-botao img,
+.colaborador-lista-card__foto-botao .h-full.w-full {
+  width: 100% !important;
+  height: 100% !important;
+  border-radius: 999px !important;
+  object-fit: cover !important;
+}
+
+.colaborador-lista-card__dados {
+  display: grid !important;
+  min-width: 0 !important;
+  gap: 0.12rem !important;
+  padding-top: 0.02rem !important;
+}
+
+.colaborador-lista-card__nome-linha,
+.colaborador-lista-card__nome-status {
+  display: flex !important;
+  align-items: center !important;
+  gap: 0.42rem !important;
+  min-width: 0 !important;
+}
+
+.colaborador-lista-card__nome-linha h3,
+.colaborador-lista-card h3 {
+  min-width: 0 !important;
+  overflow: hidden !important;
+  color: #020617 !important;
+  font-size: clamp(0.98rem, 1vw, 1.08rem) !important;
+  font-weight: 950 !important;
+  line-height: 1.08 !important;
+  letter-spacing: -0.015em !important;
+  text-overflow: ellipsis !important;
+  white-space: nowrap !important;
+}
+
+.colaborador-lista-card__status-nome {
+  flex: 0 0 auto !important;
+  align-self: center !important;
+  margin-top: 0 !important;
+  border: 1px solid #cbd5e1 !important;
+  background: #f8fafc !important;
+  color: #475569 !important;
+  font-size: 0.58rem !important;
+  font-weight: 900 !important;
+  line-height: 1 !important;
+}
+
+.colaborador-lista-card__status-nome[data-status*="liberado"] {
+  border-color: #bbf7d0 !important;
+  background: #ecfdf5 !important;
+  color: #047857 !important;
+}
+
+.colaborador-lista-card__status-nome[data-status*="bloqueado"] {
+  border-color: #fecdd3 !important;
+  background: #fff1f2 !important;
+  color: #be123c !important;
+}
+
+.colaborador-lista-card__identificacao {
+  display: grid !important;
+  gap: 0.1rem !important;
+  margin-top: 0 !important;
+}
+
+.colaborador-lista-card__funcao,
+.colaborador-lista-card__empresa,
+.colaborador-lista-card__codigo {
+  margin: 0 !important;
+  overflow: hidden !important;
+  line-height: 1.1 !important;
+  text-overflow: ellipsis !important;
+  white-space: nowrap !important;
+}
+
+.colaborador-lista-card__funcao {
+  color: #0f172a !important;
+  font-size: 0.72rem !important;
+  font-weight: 900 !important;
+  text-transform: uppercase !important;
+}
+
+.colaborador-lista-card__empresa {
+  color: #334155 !important;
+  font-size: 0.68rem !important;
+  font-weight: 800 !important;
+}
+
+.colaborador-lista-card__codigo {
+  color: #64748b !important;
+  font-size: 0.64rem !important;
+  font-weight: 850 !important;
+}
+
+.colaborador-lista-card__treinamentos,
+.colaborador-lista-card--pendencias-abertas .colaborador-lista-card__treinamentos {
+  display: grid !important;
+  width: 100% !important;
+  max-width: 100% !important;
+  min-height: 4.25rem !important;
+  height: auto !important;
+  margin-top: 0.38rem !important;
+  padding: 0.56rem 0.62rem !important;
+  box-sizing: border-box !important;
+  align-content: center !important;
+  border: 1px solid #dbeafe !important;
+  border-radius: 0.95rem !important;
+  background: #f8fafc !important;
+  outline: none !important;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.62) !important;
+}
+
+.colaborador-lista-card__treinamentos:hover,
+.colaborador-lista-card__treinamentos:focus,
+.colaborador-lista-card__treinamentos:focus-visible,
+.colaborador-lista-card__treinamentos:active {
+  border-color: #bfdbfe !important;
+  outline: none !important;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.62) !important;
+}
+
+.colaborador-lista-card__treinamentos-conteudo,
+.colaborador-lista-card--pendencias-abertas .colaborador-lista-card__treinamentos-conteudo {
+  display: grid !important;
+  grid-template-columns: minmax(0, 0.72fr) minmax(0, 1.28fr) !important;
+  align-items: center !important;
+  gap: 0.62rem !important;
+  width: 100% !important;
+}
+
+.colaborador-lista-card__treinamentos-info {
+  min-width: 0 !important;
+}
+
+.colaborador-lista-card__treinamentos-titulo {
+  overflow: hidden !important;
+  color: #334155 !important;
+  font-size: 0.58rem !important;
+  font-weight: 950 !important;
+  letter-spacing: 0.055em !important;
+  line-height: 1.05 !important;
+  text-overflow: ellipsis !important;
+  text-transform: uppercase !important;
+  white-space: nowrap !important;
+}
+
+.colaborador-lista-card__treinamentos-descricao {
+  margin-top: 0.14rem !important;
+  overflow: hidden !important;
+  color: #475569 !important;
+  font-size: 0.6rem !important;
+  font-weight: 700 !important;
+  line-height: 1.08 !important;
+  text-overflow: ellipsis !important;
+  white-space: nowrap !important;
+}
+
+.colaborador-lista-card__treinamentos-resumo,
+.colaborador-lista-card--pendencias-abertas .colaborador-lista-card__treinamentos-resumo {
+  display: grid !important;
+  grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+  gap: 0.34rem !important;
+  align-items: stretch !important;
+  width: 100% !important;
+}
+
+.colaborador-lista-card__treinamentos-metrica,
+.colaborador-lista-card--pendencias-abertas .colaborador-lista-card__treinamentos-metrica {
+  display: grid !important;
+  min-height: 2.4rem !important;
+  min-width: 0 !important;
+  align-content: center !important;
+  justify-items: center !important;
+  gap: 0.08rem !important;
+  border: 1px solid #e2e8f0 !important;
+  border-radius: 0.75rem !important;
+  padding: 0.36rem 0.28rem !important;
+  text-align: center !important;
+}
+
+.colaborador-lista-card__treinamentos-metrica strong {
+  font-size: 0.9rem !important;
+  font-weight: 950 !important;
+  line-height: 1 !important;
+}
+
+.colaborador-lista-card__treinamentos-metrica small {
+  overflow: hidden !important;
+  max-width: 100% !important;
+  font-size: 0.48rem !important;
+  font-weight: 900 !important;
+  line-height: 1.05 !important;
+  text-overflow: ellipsis !important;
+  white-space: nowrap !important;
+}
+
+.colaborador-lista-card__treinamentos-metrica--concluidos {
+  border-color: #bfdbfe !important;
+  background: #eff6ff !important;
+  color: #1d4ed8 !important;
+}
+
+.colaborador-lista-card__treinamentos-metrica--em-dia {
+  border-color: #bbf7d0 !important;
+  background: #ecfdf5 !important;
+  color: #047857 !important;
+}
+
+.colaborador-lista-card__treinamentos-metrica--pendentes {
+  border-color: #fde68a !important;
+  background: #fffbeb !important;
+  color: #b45309 !important;
+}
+
+.colaborador-lista-card__treinamentos-metrica--vencidos {
+  border-color: #fecdd3 !important;
+  background: #fff1f2 !important;
+  color: #be123c !important;
+}
+
+.colaborador-lista-card__pendencias {
+  width: 100% !important;
+  max-width: 100% !important;
+  margin-top: 0.6rem !important;
+  border-radius: 0.95rem !important;
+}
+
+.colaborador-lista-card__acoes,
+.colaborador-lista-card__layout > div:last-child {
+  display: flex !important;
+  flex-direction: column !important;
+  align-self: start !important;
+  justify-content: flex-start !important;
+  align-content: start !important;
+  gap: 0.42rem !important;
+  width: 100% !important;
+  height: auto !important;
+  min-width: 0 !important;
+  margin-top: 0 !important;
+  padding: 0 !important;
+  border: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+.colaborador-lista-card__acao {
+  display: inline-flex !important;
+  width: 100% !important;
+  min-height: 2rem !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 0.34rem !important;
+  overflow: hidden !important;
+  border-radius: 999px !important;
+  padding: 0.46rem 0.58rem !important;
+  font-size: 0.62rem !important;
+  font-weight: 900 !important;
+  line-height: 1.05 !important;
+  text-overflow: ellipsis !important;
+  white-space: nowrap !important;
+}
+
+.colaborador-lista-card__acao svg {
+  width: 0.82rem !important;
+  height: 0.82rem !important;
+  flex: 0 0 auto !important;
+}
+
+.colaborador-lista-card__acao--qr {
+  background: #020617 !important;
+  color: #ffffff !important;
+}
+
+.colaborador-lista-card__acao--revisar {
+  border: 1px solid #dbe5ef !important;
+  background: #ffffff !important;
+  color: #334155 !important;
+}
+
+.colaborador-lista-card__acao--treinamento {
+  border: 1px solid #bfdbfe !important;
+  background: #eff6ff !important;
+  color: #1d4ed8 !important;
+}
+
+.colaborador-lista-card__acao--excluir {
+  border: 1px solid #fecdd3 !important;
+  background: #fff1f2 !important;
+  color: #be123c !important;
+}
+
+@media (max-width: 1180px) {
+  .colaborador-lista-card__layout {
+    grid-template-columns: 1fr !important;
+  }
+
+  .colaborador-lista-card__acoes,
+  .colaborador-lista-card__layout > div:last-child {
+    display: grid !important;
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
+
+  .colaborador-lista-card__treinamentos-conteudo {
+    grid-template-columns: 1fr !important;
+  }
+
+  .colaborador-lista-card__treinamentos-resumo {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
+}
+
+@media (max-width: 760px) {
+  .colaborador-lista-card__cabecalho-expandido {
+    grid-template-columns: 3.75rem minmax(0, 1fr) !important;
+  }
+
+  .colaborador-lista-card__foto-wrap,
+  .colaborador-lista-card__foto-botao {
+    width: 3.65rem !important;
+    height: 3.65rem !important;
+    min-width: 3.65rem !important;
+    min-height: 3.65rem !important;
+  }
+}
+/* MICROETAPA 2H.32 - fixar metricas treinamentos a direita */
+.colaborador-lista-card__treinamentos,
+.colaborador-lista-card--pendencias-abertas .colaborador-lista-card__treinamentos {
+  position: relative !important;
+  display: block !important;
+  width: 100% !important;
+  max-width: 100% !important;
+  min-height: 4.25rem !important;
+  padding: 0.62rem 17.25rem 0.62rem 0.74rem !important;
+  box-sizing: border-box !important;
+}
+
+.colaborador-lista-card__treinamentos-conteudo,
+.colaborador-lista-card--pendencias-abertas .colaborador-lista-card__treinamentos-conteudo {
+  display: block !important;
+  width: 100% !important;
+  min-width: 0 !important;
+}
+
+.colaborador-lista-card__treinamentos-info,
+.colaborador-lista-card--pendencias-abertas .colaborador-lista-card__treinamentos-info {
+  display: block !important;
+  width: 100% !important;
+  min-width: 0 !important;
+  max-width: none !important;
+  padding-right: 0.5rem !important;
+}
+
+.colaborador-lista-card__treinamentos-titulo {
+  max-width: 15rem !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  white-space: nowrap !important;
+}
+
+.colaborador-lista-card__treinamentos-descricao {
+  max-width: 15rem !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  white-space: nowrap !important;
+}
+
+.colaborador-lista-card__treinamentos-resumo,
+.colaborador-lista-card--pendencias-abertas .colaborador-lista-card__treinamentos-resumo {
+  position: absolute !important;
+  top: 50% !important;
+  right: 0.74rem !important;
+  transform: translateY(-50%) !important;
+  display: grid !important;
+  grid-template-columns: 4.45rem 3.55rem 3.8rem 3.65rem !important;
+  gap: 0.42rem !important;
+  width: auto !important;
+  min-width: 0 !important;
+  max-width: none !important;
+  margin: 0 !important;
+  align-items: stretch !important;
+  justify-content: end !important;
+  justify-items: stretch !important;
+}
+
+.colaborador-lista-card__treinamentos-metrica,
+.colaborador-lista-card--pendencias-abertas .colaborador-lista-card__treinamentos-metrica {
+  width: 100% !important;
+  min-width: 0 !important;
+  min-height: 2.48rem !important;
+  padding: 0.38rem 0.22rem !important;
+  box-sizing: border-box !important;
+}
+
+.colaborador-lista-card__treinamentos-metrica--concluidos,
+.colaborador-lista-card--pendencias-abertas .colaborador-lista-card__treinamentos-metrica--concluidos {
+  min-width: 4.45rem !important;
+}
+
+.colaborador-lista-card__treinamentos-metrica small,
+.colaborador-lista-card--pendencias-abertas .colaborador-lista-card__treinamentos-metrica small {
+  display: block !important;
+  max-width: 100% !important;
+  overflow: visible !important;
+  text-overflow: clip !important;
+  white-space: nowrap !important;
+  font-size: 0.5rem !important;
+  letter-spacing: -0.015em !important;
+}
+
+.colaborador-lista-card__treinamentos-metrica strong,
+.colaborador-lista-card--pendencias-abertas .colaborador-lista-card__treinamentos-metrica strong {
+  font-size: 0.92rem !important;
+  line-height: 1 !important;
+}
+
+@media (min-width: 1180px) and (max-width: 1320px) {
+  .colaborador-lista-card__treinamentos,
+  .colaborador-lista-card--pendencias-abertas .colaborador-lista-card__treinamentos {
+    padding-right: 15.55rem !important;
+  }
+
+  .colaborador-lista-card__treinamentos-resumo,
+  .colaborador-lista-card--pendencias-abertas .colaborador-lista-card__treinamentos-resumo {
+    grid-template-columns: 4.05rem 3.25rem 3.45rem 3.35rem !important;
+    gap: 0.34rem !important;
+  }
+
+  .colaborador-lista-card__treinamentos-metrica--concluidos,
+  .colaborador-lista-card--pendencias-abertas .colaborador-lista-card__treinamentos-metrica--concluidos {
+    min-width: 4.05rem !important;
+  }
+
+  .colaborador-lista-card__treinamentos-metrica small,
+  .colaborador-lista-card--pendencias-abertas .colaborador-lista-card__treinamentos-metrica small {
+    font-size: 0.46rem !important;
+  }
+}
+
+@media (max-width: 1180px) {
+  .colaborador-lista-card__treinamentos,
+  .colaborador-lista-card--pendencias-abertas .colaborador-lista-card__treinamentos {
+    padding: 0.62rem 0.74rem !important;
+  }
+
+  .colaborador-lista-card__treinamentos-conteudo,
+  .colaborador-lista-card--pendencias-abertas .colaborador-lista-card__treinamentos-conteudo {
+    display: grid !important;
+    grid-template-columns: 1fr !important;
+    gap: 0.65rem !important;
+  }
+
+  .colaborador-lista-card__treinamentos-info,
+  .colaborador-lista-card--pendencias-abertas .colaborador-lista-card__treinamentos-info {
+    padding-right: 0 !important;
+  }
+
+  .colaborador-lista-card__treinamentos-resumo,
+  .colaborador-lista-card--pendencias-abertas .colaborador-lista-card__treinamentos-resumo {
+    position: static !important;
+    transform: none !important;
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    width: 100% !important;
+    margin-top: 0.45rem !important;
+  }
+}
+/* MICROETAPA 2H.33 - pendencias ocupam area lateral em aberto */
+@media (min-width: 1180px) {
+  .colaborador-lista-card--pendencias-abertas .colaborador-lista-card__pendencias {
+    width: calc(100% + 9rem + 0.72rem) !important;
+    max-width: calc(100% + 9rem + 0.72rem) !important;
+    box-sizing: border-box !important;
+    align-self: stretch !important;
+  }
+}
+
+@media (max-width: 1180px) {
+  .colaborador-lista-card--pendencias-abertas .colaborador-lista-card__pendencias {
+    width: 100% !important;
+    max-width: 100% !important;
+  }
+}
+/* MICROETAPA 2H.34 - suavizar textos secundarios colaborador */
+.colaborador-lista-card__nome-linha h3,
+.colaborador-lista-card h3 {
+  color: #020617 !important;
+  font-weight: 950 !important;
+}
+
+.colaborador-lista-card__funcao {
+  color: #1e293b !important;
+  font-weight: 850 !important;
+}
+
+.colaborador-lista-card__empresa {
+  color: #475569 !important;
+  font-weight: 760 !important;
+}
+
+.colaborador-lista-card__codigo {
+  color: #7b8798 !important;
+  font-weight: 780 !important;
+}
+
+.colaborador-lista-card__identificacao {
+  opacity: 0.96 !important;
+}

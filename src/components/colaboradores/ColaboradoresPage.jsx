@@ -1383,168 +1383,160 @@ ${erros.slice(0, 8).join("\n")}`
                         </div>
                     )}
 
-                    <div className="grid gap-4">
+                    <div className="colaboradores-lista-grid grid gap-4">
                         {!carregandoBanco &&
-                            filtrados.map((c) => {
+                            filtrados.map((c, index) => {
                                 const geral = statusGeral(c);
                                 const avaliacao = avaliarTreinamentosColaborador(c);
+                                const totalTreinamentos = Number(avaliacao.total || avaliacao.itens?.length || 0);
+                                const treinamentosEmDia = Array.isArray(avaliacao.emDia) ? avaliacao.emDia.length : 0;
+                                const treinamentosPendentes = Array.isArray(avaliacao.pendentes) ? avaliacao.pendentes.length : 0;
+                                const treinamentosVencidos = Array.isArray(avaliacao.vencidos) ? avaliacao.vencidos.length : 0;
+                                const percentualTreinamentos = totalTreinamentos ? Math.round((treinamentosEmDia / totalTreinamentos) * 100) : 0;
+                                const grupoPendenciasLinha = `linha-${Math.floor(index / 2)}`;
+                                const pendenciasLinhaAberta = pendenciasAbertas === grupoPendenciasLinha;
 
                                 return (
                                     <div
                                         key={c.id}
-                                        className="group rounded-3xl border border-slate-200 bg-white p-5 transition hover:border-slate-300 hover:shadow-md"
+                                        className={classNames(
+                                            "colaborador-lista-card group rounded-3xl border border-slate-200 bg-white p-5 transition hover:border-slate-300 hover:shadow-md",
+                                            pendenciasLinhaAberta && "colaborador-lista-card--pendencias-abertas"
+                                        )}
                                     >
-                                        <div className="grid gap-4 lg:grid-cols-[1fr_170px] lg:items-stretch">
-                                            <div className="min-w-0 flex h-full flex-col">
-                                                <div className="flex items-start gap-4 lg:pt-1">
+                                        <div className="colaborador-lista-card__layout grid gap-4 lg:grid-cols-[1fr_170px] lg:items-stretch">
+                                            <div className="colaborador-lista-card__principal">
+                                                <div className="colaborador-lista-card__cabecalho-expandido">
+                                                    <div className="colaborador-lista-card__foto-wrap">
+                                                        <button
+                                                            onClick={() => onSelectColab(c)}
+                                                            className="colaborador-lista-card__foto-botao flex h-20 w-20 shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-slate-100 text-slate-700 ring-1 ring-slate-200 shadow-sm transition group-hover:ring-slate-300"
+                                                        >
+                                                            <FotoColaborador
+                                                                src={c}
+                                                                colaborador={c}
+                                                                colaboradorId={c.id}
+                                                                nome={c.nome}
+                                                                className="h-full w-full rounded-2xl"
+                                                                iconClassName="h-8 w-8"
+                                                                imageStyle={{ objectFit: "contain", objectPosition: "center center" }}
+                                                            />
+                                                        </button>
+                                                    </div>
+
+                                                    <div className="colaborador-lista-card__dados min-w-0">
+                                                        <div className="colaborador-lista-card__nome-linha colaborador-lista-card__nome-status flex flex-wrap items-start gap-2">
+                                                                <h3 className="max-w-full break-words text-lg font-bold leading-snug text-slate-950">
+                                                                    {c.nome}
+                                                                </h3>
+
+                                                                <span
+                                                                    title={geral.detalhe}
+                                                                    data-status={normalizarTextoBusca(geral.texto)}
+                                                                    className={classNames("colaborador-lista-card__status-nome inline-flex items-center rounded-full px-2.5 py-1 text-[11px] font-bold", geral.classe)}
+                                                                >
+                                                                    {geral.texto}
+                                                                </span>
+                                                            </div>
+
+                                                        <div className="colaborador-lista-card__identificacao mt-1">
+                                                            <p className="colaborador-lista-card__funcao">{c.funcao}</p>
+                                                            <p className="colaborador-lista-card__empresa">{c.empresaExibicao || c.empresa}</p>
+                                                            <p className="colaborador-lista-card__codigo">Código: {c.codigoFuncionario}</p>
+                                                        </div>
+                                                    </div>
+                                                </div>
+
                                                     <button
-                                                        onClick={() => onSelectColab(c)}
-                                                        className="flex h-20 w-20 shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-slate-100 text-slate-700 ring-1 ring-slate-200 shadow-sm transition group-hover:ring-slate-300"
+                                                        type="button"
+                                                        onClick={() => setPendenciasAbertas(pendenciasLinhaAberta ? null : grupoPendenciasLinha)}
+                                                        className="colaborador-lista-card__treinamentos mt-4 flex flex-1 flex-col justify-between rounded-2xl bg-slate-50 p-3 text-left transition hover:bg-slate-100"
                                                     >
-                                                        <FotoColaborador
-                                                            src={c}
-                                                            colaborador={c}
-                                                            colaboradorId={c.id}
-                                                            nome={c.nome}
-                                                            className="h-full w-full rounded-2xl"
-                                                            iconClassName="h-8 w-8"
-                                                            imageStyle={{ objectFit: "contain", objectPosition: "center center" }}
-                                                        />
+                                                        <div className="colaborador-lista-card__treinamentos-conteudo">
+                                                            <div className="colaborador-lista-card__treinamentos-info">
+                                                                <p className="colaborador-lista-card__treinamentos-titulo text-xs font-bold uppercase tracking-wide text-slate-500">
+                                                                    TREINAMENTOS OBRIGATÓRIOS
+                                                                </p>
+                                                                <p className="colaborador-lista-card__treinamentos-descricao mt-1 text-xs text-slate-500">
+                                                                    Clique para visualizar pendências.
+                                                                </p>
+                                                            </div>
+
+                                                            <div className="colaborador-lista-card__treinamentos-resumo">
+                                                                <span className="colaborador-lista-card__treinamentos-metrica colaborador-lista-card__treinamentos-metrica--concluidos">
+                                                                    <strong>{percentualTreinamentos}%</strong>
+                                                                    <small>Concluídos</small>
+                                                                </span>
+                                                                <span className="colaborador-lista-card__treinamentos-metrica colaborador-lista-card__treinamentos-metrica--em-dia">
+                                                                    <strong>{treinamentosEmDia}</strong>
+                                                                    <small>Em dia</small>
+                                                                </span>
+                                                                <span className="colaborador-lista-card__treinamentos-metrica colaborador-lista-card__treinamentos-metrica--pendentes">
+                                                                    <strong>{treinamentosPendentes}</strong>
+                                                                    <small>Pendentes</small>
+                                                                </span>
+                                                                <span className="colaborador-lista-card__treinamentos-metrica colaborador-lista-card__treinamentos-metrica--vencidos">
+                                                                    <strong>{treinamentosVencidos}</strong>
+                                                                    <small>Vencidos</small>
+                                                                </span>
+                                                            </div>
+                                                        </div>
                                                     </button>
 
-                                                    <div className="min-w-0 flex-1">
-                                                        <div className="flex flex-wrap items-start gap-2">
-                                                            <h3 className="max-w-full break-words text-lg font-bold leading-snug text-slate-950">
-                                                                {c.nome}
-                                                            </h3>
-
-                                                            <MobilizacaoBadge status={c.statusMobilizacao || geral.texto} />
-                                                        </div>
-
-                                                        <div className="mt-1 flex flex-wrap items-center gap-2 text-sm text-slate-500">
-                                                            <span>{c.funcao}</span>
-                                                            <span className="text-slate-300">•</span>
-                                                            <span className="text-xs font-semibold text-slate-500">
-                                                                Código: {c.codigoFuncionario}
-                                                            </span>
-                                                        </div>
-
-                                                        <p className="mt-1 break-words text-xs text-slate-500">
-                                                            <strong>Empresa:</strong> {c.empresaExibicao || c.empresa}
-                                                        </p>
-                                                    </div>
-                                                </div>
-
-                                                <button
-                                                    type="button"
-                                                    onClick={() => setPendenciasAbertas(pendenciasAbertas === c.id ? null : c.id)}
-                                                    className="mt-4 flex flex-1 flex-col justify-between rounded-2xl bg-slate-50 p-3 text-left transition hover:bg-slate-100"
-                                                >
-                                                    <div className="flex flex-wrap items-center justify-between gap-3">
-                                                        <div>
-                                                            <p className="text-xs font-bold uppercase tracking-wide text-slate-500">
-                                                                Treinamentos obrigatórios
+                                                    {pendenciasLinhaAberta && (
+                                                        <div className="colaborador-lista-card__pendencias mt-2 rounded-2xl border border-slate-200 bg-white p-3">
+                                                            <p className="mb-2 text-xs font-bold uppercase tracking-wide text-slate-500">
+                                                                Treinamentos e pendências
                                                             </p>
-                                                            <p className="mt-1 text-xs text-slate-500">
-                                                                Clique para visualizar pendências.
-                                                            </p>
-                                                        </div>
 
-                                                        <div className="min-w-[220px] flex-1">
-                                                            <div className="mb-2 flex flex-wrap justify-end gap-2 text-xs font-semibold">
-                                                                <span className="rounded-full bg-emerald-50 px-2 py-1 text-emerald-700 ring-1 ring-emerald-200">
-                                                                    Em dia: {avaliacao.emDia.length}
-                                                                </span>
-                                                                <span className="rounded-full bg-blue-50 px-2 py-1 text-blue-700 ring-1 ring-blue-200">
-                                                                    Pendentes: {avaliacao.pendentes.length}
-                                                                </span>
-                                                            </div>
+                                                            <div className="space-y-1.5">
+                                                                {avaliacao.itens.map((item) => {
+                                                                    const temDocumentoLancado = Boolean(item.realizado);
+                                                                    const semValidade = treinamentoSemValidade(item.treinamento.id);
+                                                                    const dataElaboracao = item.realizado?.realizado || "";
+                                                                    const dataVencimento = item.realizado?.vencimento || "";
 
-                                                            <div className="h-2 overflow-hidden rounded-full bg-slate-200">
-                                                                <div
-                                                                    className="h-full rounded-full bg-emerald-500 transition-all"
-                                                                    style={{
-                                                                        width: `${avaliacao.total ? Math.round((avaliacao.emDia.length / avaliacao.total) * 100) : 0}%`,
-                                                                    }}
-                                                                />
-                                                            </div>
+                                                                    return (
+                                                                        <div
+                                                                            key={item.treinamento.id}
+                                                                            className="flex flex-col gap-2 rounded-xl bg-slate-50 px-3 py-2 text-xs lg:flex-row lg:items-center lg:justify-between"
+                                                                        >
+                                                                            <div className="min-w-0 flex-1">
+                                                                                <p className="break-words font-medium text-slate-700">{item.treinamento.nome}</p>
 
-                                                            <p className="mt-1 text-right text-[11px] font-medium text-slate-500">
-                                                                {avaliacao.emDia.length} de {avaliacao.total} treinamento(s) em dia
-                                                            </p>
-                                                        </div>
-                                                    </div>
-                                                </button>
+                                                                                {temDocumentoLancado ? (
+                                                                                    <div className="mt-1 flex flex-wrap gap-1.5 text-[10px] font-semibold">
+                                                                                        <span className="rounded-full bg-white px-2 py-0.5 text-slate-600 ring-1 ring-slate-200">
+                                                                                            Elaboração: {formatDate(dataElaboracao)}
+                                                                                        </span>
+                                                                                        <span className="rounded-full bg-white px-2 py-0.5 text-slate-600 ring-1 ring-slate-200">
+                                                                                            Vencimento: {semValidade ? "Sem validade" : formatDate(dataVencimento)}
+                                                                                        </span>
+                                                                                    </div>
+                                                                                ) : (
+                                                                                    <p className="mt-1 text-[10px] font-medium text-slate-400">
+                                                                                        Documento ainda não enviado.
+                                                                                    </p>
+                                                                                )}
+                                                                            </div>
 
-                                                {pendenciasAbertas === c.id && (
-                                                    <div className="mt-2 rounded-2xl border border-slate-200 bg-white p-3">
-                                                        <p className="mb-2 text-xs font-bold uppercase tracking-wide text-slate-500">
-                                                            Treinamentos e pendências
-                                                        </p>
-
-                                                        <div className="space-y-1.5">
-                                                            {avaliacao.itens.map((item) => {
-                                                                const temDocumentoLancado = Boolean(item.realizado);
-                                                                const semValidade = treinamentoSemValidade(item.treinamento.id);
-                                                                const dataElaboracao = item.realizado?.realizado || "";
-                                                                const dataVencimento = item.realizado?.vencimento || "";
-
-                                                                return (
-                                                                    <div
-                                                                        key={item.treinamento.id}
-                                                                        className="flex flex-col gap-2 rounded-xl bg-slate-50 px-3 py-2 text-xs lg:flex-row lg:items-center lg:justify-between"
-                                                                    >
-                                                                        <div className="min-w-0 flex-1">
-                                                                            <p className="break-words font-medium text-slate-700">{item.treinamento.nome}</p>
-
-                                                                            {temDocumentoLancado ? (
-                                                                                <div className="mt-1 flex flex-wrap gap-1.5 text-[10px] font-semibold">
-                                                                                    <span className="rounded-full bg-white px-2 py-0.5 text-slate-600 ring-1 ring-slate-200">
-                                                                                        Elaboração: {formatDate(dataElaboracao)}
-                                                                                    </span>
-                                                                                    <span className="rounded-full bg-white px-2 py-0.5 text-slate-600 ring-1 ring-slate-200">
-                                                                                        Vencimento: {semValidade ? "Sem validade" : formatDate(dataVencimento)}
-                                                                                    </span>
-                                                                                </div>
-                                                                            ) : (
-                                                                                <p className="mt-1 text-[10px] font-medium text-slate-400">
-                                                                                    Documento ainda não enviado.
-                                                                                </p>
-                                                                            )}
+                                                                            <span className={classNames("w-fit shrink-0 rounded-full px-2 py-0.5 text-[10px] font-semibold ring-1", item.status.classe)}>
+                                                                                {item.status.texto}
+                                                                            </span>
                                                                         </div>
-
-                                                                        <span className={classNames("w-fit shrink-0 rounded-full px-2 py-0.5 text-[10px] font-semibold ring-1", item.status.classe)}>
-                                                                            {item.status.texto}
-                                                                        </span>
-                                                                    </div>
-                                                                );
-                                                            })}
+                                                                    );
+                                                                })}
+                                                            </div>
                                                         </div>
-                                                    </div>
-                                                )}
-                                            </div>
-
-                                            <div className="flex h-full flex-col gap-2">
-                                                <div
-                                                    title={geral.detalhe}
-                                                    className={classNames("inline-flex items-center justify-center gap-2 rounded-xl px-3 py-2 text-xs font-semibold", geral.classe)}
-                                                >
-                                                    {geral.texto}
+                                                    )}
                                                 </div>
 
-                                                <button
-                                                    onClick={() => onSelectColab(c)}
-                                                    className="inline-flex items-center justify-center gap-2 rounded-xl bg-slate-950 px-3 py-2 text-xs font-semibold text-white hover:bg-slate-800"
-                                                >
-                                                    <QrCode className="h-3.5 w-3.5" />
-                                                    Ver QR
-                                                </button>
-
+                                            <aside className="colaborador-lista-card__acoes flex h-full flex-col gap-2">
                                                 <button
                                                     onClick={() => abrirRevisaoColaborador(c)}
                                                     disabled={!podeEditarColaboradoresSistema}
                                                     title={podeEditarColaboradoresSistema ? "Revisar dados" : mensagemBloqueioEdicaoColaboradores}
-                                                    className="inline-flex items-center justify-center gap-2 rounded-xl bg-white px-3 py-2 text-xs font-semibold text-slate-700 ring-1 ring-slate-200 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
+                                                    className="colaborador-lista-card__acao colaborador-lista-card__acao--revisar inline-flex items-center justify-center gap-2 rounded-xl bg-white px-3 py-2 text-xs font-semibold text-slate-700 ring-1 ring-slate-200 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
                                                 >
                                                     <FileText className="h-3.5 w-3.5" />
                                                     Revisar dados
@@ -1554,22 +1546,30 @@ ${erros.slice(0, 8).join("\n")}`
                                                     onClick={() => enviarTreinamentoColaboradorSeguro(c)}
                                                     disabled={!podeUploadColaboradoresSistema}
                                                     title={podeUploadColaboradoresSistema ? "Enviar treinamento" : mensagemBloqueioUploadColaboradores}
-                                                    className="inline-flex items-center justify-center gap-2 rounded-xl bg-blue-50 px-3 py-2 text-xs font-semibold text-blue-700 ring-1 ring-blue-200 hover:bg-blue-100 disabled:cursor-not-allowed disabled:opacity-50"
+                                                    className="colaborador-lista-card__acao colaborador-lista-card__acao--treinamento inline-flex items-center justify-center gap-2 rounded-xl bg-blue-50 px-3 py-2 text-xs font-semibold text-blue-700 ring-1 ring-blue-200 hover:bg-blue-100 disabled:cursor-not-allowed disabled:opacity-50"
                                                 >
                                                     <Upload className="h-3.5 w-3.5" />
-                                                    {podeUploadColaboradoresSistema ? "Enviar treinamento" : "Bloqueado"}
+                                                    {podeUploadColaboradoresSistema ? "Treinamento" : "Bloqueado"}
+                                                </button>
+
+                                                <button
+                                                    onClick={() => onSelectColab(c)}
+                                                    className="colaborador-lista-card__acao colaborador-lista-card__acao--qr inline-flex items-center justify-center gap-2 rounded-xl bg-slate-950 px-3 py-2 text-xs font-semibold text-white hover:bg-slate-800"
+                                                >
+                                                    <QrCode className="h-3.5 w-3.5" />
+                                                    Ver QR Code
                                                 </button>
 
                                                 <button
                                                     onClick={() => solicitarExclusaoColaborador(c)}
                                                     disabled={!podeExcluirColaboradoresSistema}
                                                     title={podeExcluirColaboradoresSistema ? "Excluir colaborador" : mensagemBloqueioExclusaoColaboradores}
-                                                    className="inline-flex items-center justify-center gap-2 rounded-xl bg-red-50 px-3 py-2 text-xs font-semibold text-red-700 ring-1 ring-red-200 hover:bg-red-100 disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-400 disabled:ring-slate-200"
+                                                    className="colaborador-lista-card__acao colaborador-lista-card__acao--excluir inline-flex items-center justify-center gap-2 rounded-xl bg-red-50 px-3 py-2 text-xs font-semibold text-red-700 ring-1 ring-red-200 hover:bg-red-100 disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-400 disabled:ring-slate-200"
                                                 >
                                                     <Trash2 className="h-3.5 w-3.5" />
                                                     {podeExcluirColaboradoresSistema ? "Excluir" : "Bloqueado"}
                                                 </button>
-                                            </div>
+                                            </aside>
                                         </div>
                                     </div>
                                 );
@@ -1645,5 +1645,3 @@ ${erros.slice(0, 8).join("\n")}`
         </div>
     );
 }
-
-
