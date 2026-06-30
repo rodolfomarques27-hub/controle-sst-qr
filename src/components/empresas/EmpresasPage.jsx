@@ -1509,6 +1509,20 @@ export function Empresas({
 
             <div className="space-y-6">
                 <section className="empresas-section-destaque">
+                    <div onClick={(evento) => {
+                        const alvoInterativo = evento.target.closest?.(
+                            "button, a, input, select, textarea, label, table, [role='button'], [data-empresas-nao-alternar]"
+                        );
+
+                        if (alvoInterativo) return;
+
+                        if (!cadastroEmpresasRecolhido) {
+                            const cabecalho = evento.currentTarget.querySelector("[data-empresas-card-cabecalho='cadastro']");
+                            if (cabecalho && !cabecalho.contains(evento.target)) return;
+                        }
+
+                        atualizarCadastroEmpresasRecolhido((valor) => !valor);
+                    }}>
                     <Card
                             className={classNames(
                                 "empresas-cadastro-unificado border-blue-100 bg-blue-50/40",
@@ -1516,7 +1530,7 @@ export function Empresas({
                                 !cadastroEmpresasRecolhido && "empresas-card-aberto-padrao empresas-card-aberto-padrao--cadastro"
                             )}
                         >
-                        <div className="empresas-cadastro-header">
+                        <div data-empresas-card-cabecalho="cadastro" className="empresas-cadastro-header">
                             <div className="empresas-cadastro-header__info">
                                 <div className="empresas-cadastro-header__icone">
                                     <Building2 className="h-5 w-5" />
@@ -1531,7 +1545,10 @@ export function Empresas({
                             </div>
                             <button
                                 type="button"
-                                onClick={() => atualizarCadastroEmpresasRecolhido((valor) => !valor)}
+                                onClick={(evento) => {
+                                    evento.stopPropagation();
+                                    atualizarCadastroEmpresasRecolhido((valor) => !valor);
+                                }}
                                 className="empresas-cadastro-header__acao"
                             >
                                 {cadastroEmpresasRecolhido ? <ChevronDown className="h-4 w-4" /> : <ChevronUp className="h-4 w-4" />}
@@ -1887,8 +1904,23 @@ export function Empresas({
                         </div>
                     )}
                     </Card>
+                    </div>
                 </section>
 
+                <div onClick={(evento) => {
+                    const alvoInterativo = evento.target.closest?.(
+                        "button, a, input, select, textarea, label, table, [role='button'], [data-empresas-nao-alternar]"
+                    );
+
+                    if (alvoInterativo) return;
+
+                    if (!informacoesEmpresasRecolhidas) {
+                        const cabecalho = evento.currentTarget.querySelector("[data-empresas-card-cabecalho='informacoes']");
+                        if (cabecalho && !cabecalho.contains(evento.target)) return;
+                    }
+
+                    atualizarInformacoesEmpresasRecolhidas((valor) => !valor);
+                }}>
                 <Card
                     className={classNames(
                         "empresas-info-card",
@@ -1896,7 +1928,7 @@ export function Empresas({
                         !informacoesEmpresasRecolhidas && "empresas-card-aberto-padrao empresas-card-aberto-padrao--informacoes"
                     )}
                 >
-                    <div className="mb-5 flex flex-col gap-3 border-b border-slate-100 pb-4 lg:flex-row lg:items-center lg:justify-between">
+                    <div data-empresas-card-cabecalho="informacoes" className="mb-5 flex flex-col gap-3 border-b border-slate-100 pb-4 lg:flex-row lg:items-center lg:justify-between">
                         <div className="min-w-0 flex items-start gap-3">
                             <div className="rounded-2xl bg-slate-950 p-3 text-white">
                                 <Building2 className="h-5 w-5" />
@@ -1913,7 +1945,10 @@ export function Empresas({
                             </span>
                             <button
                                 type="button"
-                                onClick={() => atualizarInformacoesEmpresasRecolhidas((valor) => !valor)}
+                                onClick={(evento) => {
+                                    evento.stopPropagation();
+                                    atualizarInformacoesEmpresasRecolhidas((valor) => !valor);
+                                }}
                                 className="empresas-cadastro-header__acao"
                             >
                                 {informacoesEmpresasRecolhidas ? <ChevronDown className="h-4 w-4" /> : <ChevronUp className="h-4 w-4" />}
@@ -2069,6 +2104,7 @@ export function Empresas({
                     )}
 
                 </Card>
+                </div>
             </div>
 
             {empresaEdicao && (
