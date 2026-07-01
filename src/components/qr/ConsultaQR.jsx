@@ -2,7 +2,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { QRCodeSVG } from "qrcode.react";
 import { QrCodeComLogo } from "./QrCodeComLogo";
-import { ClipboardCheck, Download, QrCode, Search, ShieldCheck } from "lucide-react";
+import { Check, ClipboardCheck, Copy, Download, Link2, QrCode, Search, ShieldCheck } from "lucide-react";
 import { Card, FotoColaborador, Header, QRCodeReal, StatusPill, obterFotoColaboradorSrc } from "../commonComponents";
 import { DAY } from "../../constants/sstConstants";
 import { obterTreinamento, statusDocumento, statusGeral, treinamentoSemValidade } from "../../services/colaboradorDocumentosService";
@@ -261,6 +261,7 @@ h1 {
 export function ConsultaQR({ colaborador, colaboradores = [], onSelecionarColaborador }) {
     const [busca, setBusca] = useState("");
     const [filtroEmpresaQR, setFiltroEmpresaQR] = useState("Todas");
+    const [linkPublicoCopiado, setLinkPublicoCopiado] = useState(false);
     const [tokenAuditoriaPublica, setTokenAuditoriaPublica] = useState("");
     const [mensagemTokenAuditoriaPublica, setMensagemTokenAuditoriaPublica] = useState("Carregando token público da auditoria...");
 
@@ -361,6 +362,31 @@ export function ConsultaQR({ colaborador, colaboradores = [], onSelecionarColabo
         : "";
 
     const urlConsultaColaborador = montarUrlConsultaColaborador(colaboradorAtual);
+    const copiarLinkPublicoColaborador = async () => {
+        if (!urlConsultaColaborador) return;
+
+        try {
+            if (typeof navigator !== "undefined" && navigator.clipboard?.writeText) {
+                await navigator.clipboard.writeText(urlConsultaColaborador);
+            } else if (typeof document !== "undefined") {
+                const campoTemporario = document.createElement("textarea");
+                campoTemporario.value = urlConsultaColaborador;
+                campoTemporario.setAttribute("readonly", "readonly");
+                campoTemporario.style.position = "fixed";
+                campoTemporario.style.left = "-9999px";
+                document.body.appendChild(campoTemporario);
+                campoTemporario.select();
+                document.execCommand("copy");
+                document.body.removeChild(campoTemporario);
+            }
+
+            setLinkPublicoCopiado(true);
+            setTimeout(() => setLinkPublicoCopiado(false), 1800);
+        } catch {
+            setLinkPublicoCopiado(false);
+        }
+    };
+
     const idImpressaoQrColaborador = `qr-colaborador-impressao-${colaboradorAtual.id || colaboradorAtual.token}`;
     const idImpressaoCrachaColaborador = `cracha-colaborador-impressao-${colaboradorAtual.id || colaboradorAtual.token}`;
     const idImpressaoLoteColaboradores = "qr-colaboradores-lote-impressao";
@@ -522,17 +548,31 @@ export function ConsultaQR({ colaborador, colaboradores = [], onSelecionarColabo
                                 Código: {colaboradorAtual.codigoFuncionario}
                             </p>
 
-                            <div className="mt-4 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-left">
-                                <p className="text-[11px] font-black uppercase tracking-wide text-slate-400">Link público</p>
-                                <p className="texto-quebra-segura mt-1 text-xs font-semibold text-slate-600">
-                                    {urlConsultaColaborador || "Link público indisponível."}
-                                </p>
-                                <p className={classNames(
-                                    "mt-2 text-[11px] font-bold",
-                                    tokenAuditoriaPublica ? "text-emerald-600" : "text-orange-600"
-                                )}>
-                                    {mensagemTokenAuditoriaPublica}
-                                </p>
+                            <div className="mt-4 flex flex-col gap-2 sm:flex-row sm:flex-wrap">
+                                <button
+                                    type="button"
+                                    onClick={copiarLinkPublicoColaborador}
+                                    disabled={!urlConsultaColaborador}
+                                    className={classNames(
+                                        "inline-flex w-full items-center justify-center gap-2 rounded-2xl px-4 py-2 text-xs font-bold ring-1 transition sm:w-auto",
+                                        linkPublicoCopiado
+                                            ? "bg-emerald-600 text-white ring-emerald-600"
+                                            : "bg-white text-slate-700 ring-slate-200 hover:bg-slate-50",
+                                        !urlConsultaColaborador && "cursor-not-allowed opacity-50"
+                                    )}
+                                >
+                                    {linkPublicoCopiado ? <Check className="h-4 w-4" /> : <Link2 className="h-4 w-4" />}
+                                    {linkPublicoCopiado ? "Link copiado" : "Copiar link público"}
+                                </button>
+
+                                <button
+                                    type="button"
+                                    onClick={imprimirQrColaborador}
+                                    className="inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-slate-950 px-4 py-2 text-xs font-bold text-white ring-1 ring-slate-950 hover:bg-slate-800 sm:w-auto"
+                                >
+                                    <Download className="h-4 w-4" />
+                                    Imprimir QR Code do funcionário
+                                </button>
                             </div>
                             <div id={idImpressaoQrColaborador} className="hidden">
                                 <div className="cartao cartao-lote cartao-lote-unico">
@@ -567,35 +607,6 @@ export function ConsultaQR({ colaborador, colaboradores = [], onSelecionarColabo
                                     />
                                 </div>
                             )}
-                            <div className="mt-3 flex flex-col gap-2 sm:flex-row sm:flex-wrap">
-                                <button
-                                    type="button"
-                                    onClick={imprimirQrColaborador}
-                                    className="inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-white px-4 py-2 text-xs font-bold text-slate-700 ring-1 ring-slate-200 hover:bg-slate-50 sm:w-auto"
-                                >
-                                    <Download className="h-4 w-4" />
-                                    Imprimir QR Code do funcionário
-                                </button>
-                                <button
-                                    type="button"
-                                    onClick={imprimirQrColaboradoresEmLote}
-                                    disabled={colaboradoresFiltrados.length === 0}
-                                    className="inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-slate-950 px-4 py-2 text-xs font-bold text-white ring-1 ring-slate-950 hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto"
-                                >
-                                    <Download className="h-4 w-4" />
-                                    Imprimir QRs filtrados ({colaboradoresFiltrados.length})
-                                </button>
-                                {CRACHA_COLABORADOR_HABILITADO && (
-                                    <button
-                                        type="button"
-                                        onClick={imprimirCrachaColaborador}
-                                        className="inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-slate-950 px-4 py-2 text-xs font-bold text-white ring-1 ring-slate-950 hover:bg-slate-800 sm:w-auto"
-                                    >
-                                        <Download className="h-4 w-4" />
-                                        Imprimir crachá
-                                    </button>
-                                )}
-                            </div>
                         </div>
 
                         <div className="consulta-qr-code-area mt-2 flex w-full justify-center lg:mt-0 lg:justify-end">
@@ -697,5 +708,3 @@ export function ConsultaQR({ colaborador, colaboradores = [], onSelecionarColabo
         </div>
     );
 }
-
-
