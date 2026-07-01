@@ -1017,8 +1017,22 @@ ${erros.slice(0, 8).join("\n")}`
             <div className="space-y-6">
                 <section className="colaboradores-section-destaque">
                     {!novoColaboradorRecolhido ? (
-                        <div className="colaborador-formulario-full colaborador-formulario-unificado colaboradores-card-aberto-padrao colaboradores-card-aberto-padrao--novo">
-                            <div className="novo-colaborador-cabecalho-branco">
+                        <div
+                            onClick={(evento) => {
+                                const alvoInterativo = evento.target.closest?.(
+                                    "button, a, input, select, textarea, label, table, [role='button'], [data-colaboradores-nao-alternar]"
+                                );
+
+                                if (alvoInterativo) return;
+
+                                const cabecalho = evento.currentTarget.querySelector("[data-colaboradores-card-cabecalho='novo']");
+                                if (cabecalho && !cabecalho.contains(evento.target)) return;
+
+                                atualizarNovoColaboradorRecolhido(true);
+                            }}
+                            className="colaborador-formulario-full colaborador-formulario-unificado colaboradores-card-aberto-padrao colaboradores-card-aberto-padrao--novo"
+                        >
+                            <div data-colaboradores-card-cabecalho="novo" className="novo-colaborador-cabecalho-branco">
                                 <div className="novo-colaborador-cabecalho-branco__info">
                                     <div className="novo-colaborador-cabecalho-branco__icone">
                                         <Users className="h-5 w-5" />
@@ -1034,7 +1048,10 @@ ${erros.slice(0, 8).join("\n")}`
 
                                 <button
                                     type="button"
-                                    onClick={() => atualizarNovoColaboradorRecolhido(true)}
+                                    onClick={(evento) => {
+                                        evento.stopPropagation();
+                                        atualizarNovoColaboradorRecolhido(true);
+                                    }}
                                     className="inline-flex items-center justify-center gap-2 rounded-2xl bg-slate-950 px-4 py-2 text-xs font-black text-white shadow-sm hover:bg-slate-800"
                                 >
                                     <ChevronUp className="h-4 w-4" />
@@ -1057,7 +1074,18 @@ ${erros.slice(0, 8).join("\n")}`
                             />
                         </div>
                     ) : (
-                        <Card className="colaborador-formulario-recolhido colaboradores-card-recolhido-padrao colaboradores-card-recolhido-padrao--novo border-blue-100 bg-blue-50/40">
+                        <div
+                            onClick={(evento) => {
+                                const alvoInterativo = evento.target.closest?.(
+                                    "button, a, input, select, textarea, label, table, [role='button'], [data-colaboradores-nao-alternar]"
+                                );
+
+                                if (alvoInterativo) return;
+
+                                atualizarNovoColaboradorRecolhido(false);
+                            }}
+                        >
+                            <Card className="colaborador-formulario-recolhido colaboradores-card-recolhido-padrao colaboradores-card-recolhido-padrao--novo border-blue-100 bg-blue-50/40">
                             <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
                                 <div className="flex min-w-0 items-start gap-3">
                                     <div className="novo-colaborador-cabecalho-branco__icone shrink-0">
@@ -1073,7 +1101,10 @@ ${erros.slice(0, 8).join("\n")}`
                                 </div>
                                 <button
                                     type="button"
-                                    onClick={() => atualizarNovoColaboradorRecolhido(false)}
+                                    onClick={(evento) => {
+                                        evento.stopPropagation();
+                                        atualizarNovoColaboradorRecolhido(false);
+                                    }}
                                     className="inline-flex items-center justify-center gap-2 rounded-2xl bg-slate-950 px-4 py-2 text-xs font-black text-white shadow-sm hover:bg-slate-800"
                                 >
                                     <ChevronDown className="h-4 w-4" />
@@ -1081,9 +1112,26 @@ ${erros.slice(0, 8).join("\n")}`
                                 </button>
                             </div>
                         </Card>
+                        </div>
                     )}
                 </section>
 
+                <div onClick={(evento) => {
+                    const alvoInterativo = evento.target.closest?.(
+                        "button, a, input, select, textarea, label, table, [role='button'], [data-colaboradores-nao-alternar]"
+                    );
+
+                    if (alvoInterativo) return;
+
+                    if (!cadastroMassaRecolhido) {
+                        const cabecalho = evento.currentTarget.querySelector("[data-colaboradores-card-cabecalho='massa']");
+                        if (cabecalho && !cabecalho.contains(evento.target)) return;
+                    }
+
+                    setCadastroMassaRecolhido((atual) =>
+                        salvarPreferenciaPainelBoolean(CHAVE_CADASTRO_MASSA_RECOLHIDO, !atual)
+                    );
+                }}>
                 <Card
                         className={classNames(
                             "colaboradores-cadastro-massa-card border-blue-100 bg-white",
@@ -1091,7 +1139,7 @@ ${erros.slice(0, 8).join("\n")}`
                             !cadastroMassaRecolhido && "colaboradores-card-aberto-padrao colaboradores-card-aberto-padrao--massa"
                         )}
                     >
-                    <div className={`flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between ${cadastroMassaRecolhido ? "mb-0 border-b-0 pb-0" : "mb-4 border-b border-slate-100 pb-4"}`}>
+                    <div data-colaboradores-card-cabecalho="massa" className={`flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between ${cadastroMassaRecolhido ? "mb-0 border-b-0 pb-0" : "mb-4 border-b border-slate-100 pb-4"}`}>
                         <div className="flex min-w-0 items-start gap-3">
                             <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-slate-950 text-white shadow-sm">
                                 <Upload className="h-5 w-5" />
@@ -1107,11 +1155,12 @@ ${erros.slice(0, 8).join("\n")}`
 
                         <button
                             type="button"
-                            onClick={() =>
+                            onClick={(evento) => {
+                                evento.stopPropagation();
                                 setCadastroMassaRecolhido((atual) =>
                                     salvarPreferenciaPainelBoolean(CHAVE_CADASTRO_MASSA_RECOLHIDO, !atual)
-                                )
-                            }
+                                );
+                            }}
                             className="inline-flex items-center justify-center gap-2 rounded-2xl bg-slate-950 px-4 py-2 text-xs font-black text-white shadow-sm hover:bg-slate-800"
                         >
                             {cadastroMassaRecolhido ? <ChevronDown className="h-4 w-4" /> : <ChevronUp className="h-4 w-4" />}
@@ -1144,7 +1193,22 @@ ${erros.slice(0, 8).join("\n")}`
                         </div>
                     )}
                 </Card>
+                </div>
 
+                <div onClick={(evento) => {
+                    const alvoInterativo = evento.target.closest?.(
+                        "button, a, input, select, textarea, label, table, [role='button'], [data-colaboradores-nao-alternar]"
+                    );
+
+                    if (alvoInterativo) return;
+
+                    if (!informacoesColaboradoresRecolhidas) {
+                        const cabecalho = evento.currentTarget.querySelector("[data-colaboradores-card-cabecalho='informacoes']");
+                        if (cabecalho && !cabecalho.contains(evento.target)) return;
+                    }
+
+                    atualizarInformacoesColaboradoresRecolhidas((valor) => !valor);
+                }}>
                 <Card
                         className={classNames(
                             "colaboradores-info-card",
@@ -1152,7 +1216,7 @@ ${erros.slice(0, 8).join("\n")}`
                             !informacoesColaboradoresRecolhidas && "colaboradores-card-aberto-padrao colaboradores-card-aberto-padrao--info"
                         )}
                     >
-                    <div className={`flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between ${informacoesColaboradoresRecolhidas ? "mb-0 border-b-0 pb-0" : "mb-5 border-b border-slate-100 pb-4"}`}>
+                    <div data-colaboradores-card-cabecalho="informacoes" className={`flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between ${informacoesColaboradoresRecolhidas ? "mb-0 border-b-0 pb-0" : "mb-5 border-b border-slate-100 pb-4"}`}>
                         <div className="flex min-w-0 items-start gap-3">
                             <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-slate-950 text-white shadow-sm">
                                 <Users className="h-5 w-5" />
@@ -1167,7 +1231,10 @@ ${erros.slice(0, 8).join("\n")}`
                         </div>
                         <button
                             type="button"
-                            onClick={() => atualizarInformacoesColaboradoresRecolhidas((valor) => !valor)}
+                            onClick={(evento) => {
+                                evento.stopPropagation();
+                                atualizarInformacoesColaboradoresRecolhidas((valor) => !valor);
+                            }}
                             className="inline-flex items-center justify-center gap-2 rounded-2xl bg-slate-950 px-4 py-2 text-xs font-black text-white shadow-sm hover:bg-slate-800"
                         >
                             {informacoesColaboradoresRecolhidas ? <ChevronDown className="h-4 w-4" /> : <ChevronUp className="h-4 w-4" />}
@@ -1578,6 +1645,7 @@ ${erros.slice(0, 8).join("\n")}`
                         </>
                     )}
                 </Card>
+                </div>
             </div>
             {colaboradorExclusao && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/55 px-4 py-6 backdrop-blur-sm">
