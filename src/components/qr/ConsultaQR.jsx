@@ -571,6 +571,22 @@ export function ConsultaQR({ colaborador, colaboradores = [], onSelecionarColabo
         contatoEmergenciaTelefone
     );
 
+    const estadoObraTextoBruto = String(
+        colaboradorAtual.statusMobilizacao ||
+        colaboradorAtual.status_mobilizacao ||
+        "Mobilizado"
+    ).trim();
+
+    const estadoObraTexto = estadoObraTextoBruto || "Mobilizado";
+    const estadoObraBusca = normalizarTextoBusca(estadoObraTexto);
+    const estadoObraClasse =
+        estadoObraBusca.includes("bloquead") || estadoObraBusca.includes("imped")
+            ? "border-red-100 bg-red-50 text-red-700"
+            : estadoObraBusca.includes("desmobil") || estadoObraBusca.includes("inativ")
+                ? "border-slate-200 bg-slate-50 text-slate-600"
+                : estadoObraBusca.includes("analise") || estadoObraBusca.includes("aguard")
+                    ? "border-amber-100 bg-amber-50 text-amber-700"
+                    : "border-emerald-100 bg-emerald-50 text-emerald-700";
     const urlConsultaColaborador = montarUrlConsultaColaborador(colaboradorAtual);
     const copiarLinkPublicoColaborador = async () => {
         if (!urlConsultaColaborador) return;
@@ -854,18 +870,42 @@ export function ConsultaQR({ colaborador, colaboradores = [], onSelecionarColabo
                     )}
                 </div>
             </Card>
-            <div className="consulta-qr-card w-full rounded-[2rem] bg-slate-950 p-2 shadow-2xl sm:p-2.5">
+            <div className="consulta-qr-card w-full rounded-[2rem] border border-slate-100 bg-white p-0 shadow-lg ring-1 ring-slate-100/80">
                 <div className="rounded-[1.5rem] bg-white p-4 sm:p-5 md:p-6">
                                         <div className="grid w-full gap-2 rounded-[1.25rem] bg-white lg:grid-cols-[560px_minmax(0,1fr)_16cm_minmax(0,1fr)_124px_118px] lg:items-center">
                         <div className="flex min-w-0 items-center justify-start gap-3 pl-0 pr-4 lg:border-r lg:border-slate-200">
-                            <FotoColaborador
-                                src={colaboradorAtual}
-                                colaborador={colaboradorAtual}
-                                colaboradorId={colaboradorAtual.id}
-                                nome={colaboradorAtual.nome}
-                                className="h-24 w-24 shrink-0 rounded-3xl border-4 border-white object-cover shadow-lg ring-1 ring-slate-200"
-                                iconClassName="h-10 w-10"
-                            />
+                            <div className="flex shrink-0 flex-col items-center gap-1.5">
+
+                                <FotoColaborador
+
+                                    src={colaboradorAtual}
+
+                                    colaborador={colaboradorAtual}
+
+                                    colaboradorId={colaboradorAtual.id}
+
+                                    nome={colaboradorAtual.nome}
+
+                                    className="h-[88px] w-[88px] shrink-0 rounded-3xl border-4 border-white object-cover shadow-lg ring-1 ring-slate-200"
+
+                                    iconClassName="h-9 w-9"
+
+                                />
+
+
+                                <span className={classNames(
+
+                                    "inline-flex max-w-[104px] items-center justify-center truncate rounded-2xl border px-3 py-1 text-[10px] font-black uppercase tracking-[0.08em]",
+
+                                    estadoObraClasse
+
+                                )}>
+
+                                    {estadoObraTexto}
+
+                                </span>
+
+                            </div>
 
                             <div className="min-w-0">
                                 <div className="flex min-w-0 items-center gap-2">
@@ -950,10 +990,10 @@ export function ConsultaQR({ colaborador, colaboradores = [], onSelecionarColabo
                             </div>
                         </div>
 
-                        <div className="flex min-h-[2.5cm] w-[16cm] max-w-full items-center rounded-3xl border border-red-100 bg-red-50/60 px-5 py-3 shadow-sm lg:col-start-3 lg:self-center lg:justify-self-center">
+                        <div className={classNames("flex min-h-[2.5cm] w-[16cm] max-w-full items-center rounded-3xl px-5 py-3 shadow-sm lg:col-start-3 lg:self-center lg:justify-self-center", geral.texto === "Liberado" ? "border border-emerald-100 bg-emerald-50/70" : "border border-red-100 bg-red-50/60")}>
                             <div className="flex w-full items-center justify-center gap-6">
                                 <div className="flex min-w-0 items-center gap-3">
-                                    <span className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-2xl bg-red-100 text-red-700">
+                                    <span className={classNames("inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-2xl", geral.texto === "Liberado" ? "bg-emerald-100 text-emerald-700" : "bg-red-100 text-red-700")}>
                                         <ShieldCheck className="h-4 w-4" />
                                     </span>
                                     <div className="min-w-0">
@@ -1119,11 +1159,7 @@ export function ConsultaQR({ colaborador, colaboradores = [], onSelecionarColabo
                             );
                         })}
                     </div>
-
-                    <div className="mt-6 rounded-3xl bg-slate-50 p-4 text-sm leading-relaxed text-slate-600">
-                        Dados sensíveis como CPF completo, endereço, ASO detalhado e documentos médicos não aparecem nesta consulta pública. A visualização completa fica restrita ao perfil autorizado.
-                    </div>
-                </div>
+</div>
             </div>
 
 <Card className="relative mt-10 mb-5 w-full overflow-hidden rounded-[26px] border border-slate-200 bg-white shadow-sm">
