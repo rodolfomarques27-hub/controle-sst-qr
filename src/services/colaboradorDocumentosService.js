@@ -376,7 +376,7 @@ export function obterFuncaoCargoColaborador(colaborador) {
 export function colaboradorContaComoMobilizado(colaborador) {
     const classificacao = statusGeral(colaborador).texto;
 
-    return classificacao === "Liberado" || classificacao === "Com pendência";
+    return classificacao === "Liberado" || classificacao === "Com pendência" || classificacao === "A vencer";
 }
 
 
@@ -1286,6 +1286,7 @@ export function classeClassificacaoColaborador(status) {
 
     if (texto === "Liberado") return "bg-emerald-600 text-white";
     if (texto === "Com pendência") return "bg-blue-50 text-blue-700 ring-1 ring-blue-200";
+    if (texto === "A vencer") return "bg-orange-50 text-orange-700 ring-1 ring-orange-200";
     if (texto === "Bloqueado") return "bg-red-600 text-white";
     if (texto === "Em análise") return "bg-violet-50 text-violet-700 ring-1 ring-violet-200";
     if (texto === "Desmobilizado") return "bg-slate-600 text-white";
@@ -1353,16 +1354,25 @@ export function statusGeral(colaborador) {
 
     const pendenciasNaoBloqueantes = avaliacao.pendentes.filter((item) => !itemDocumentoCriticoColaborador(item));
 
-    if (pendenciasNaoBloqueantes.length > 0 || avaliacao.vencendo.length > 0) {
+    if (pendenciasNaoBloqueantes.length > 0) {
         const detalhes = [];
 
-        if (pendenciasNaoBloqueantes.length > 0) detalhes.push(`${pendenciasNaoBloqueantes.length} pendência(s) não bloqueante(s)`);
+        detalhes.push(`${pendenciasNaoBloqueantes.length} pendência(s) não bloqueante(s)`);
         if (avaliacao.vencendo.length > 0) detalhes.push(`${avaliacao.vencendo.length} item(ns) a vencer em até 30 dias`);
 
         return {
             texto: "Com pendência",
             classe: classeClassificacaoColaborador("Com pendência"),
             detalhe: detalhes.join("; ") || "Existe pendência, mas não bloqueia a mobilização.",
+            avaliacao,
+        };
+    }
+
+    if (avaliacao.vencendo.length > 0) {
+        return {
+            texto: "A vencer",
+            classe: classeClassificacaoColaborador("A vencer"),
+            detalhe: `${avaliacao.vencendo.length} item(ns) válido(s), porém a vencer em até 30 dias.`,
             avaliacao,
         };
     }
@@ -1374,4 +1384,3 @@ export function statusGeral(colaborador) {
         avaliacao,
     };
 }
-
