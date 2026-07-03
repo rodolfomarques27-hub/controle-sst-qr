@@ -12,6 +12,7 @@ import {
     Send,
     Trash2,
 } from "lucide-react";
+import dashboardHeroBackground from "../../assets/dashboard-hero-sst.png";
 import { supabase } from "../../lib/supabaseClient";
 import { Card, FotoAuditoriaPreview, Header } from "../commonComponents";
 import {
@@ -3493,6 +3494,21 @@ const logoHtml = logoQr
         return null;
     };
 
+
+    const agoraHeroDashboardAuditoriaCampo = new Date();
+    const dataHeroDashboardAuditoriaCampo = new Intl.DateTimeFormat("pt-BR", {
+        day: "2-digit",
+        month: "long",
+        year: "numeric",
+    }).format(agoraHeroDashboardAuditoriaCampo);
+    const diaSemanaHeroDashboardAuditoriaCampo = new Intl.DateTimeFormat("pt-BR", {
+        weekday: "long",
+    }).format(agoraHeroDashboardAuditoriaCampo);
+    const horaHeroDashboardAuditoriaCampo = new Intl.DateTimeFormat("pt-BR", {
+        hour: "2-digit",
+        minute: "2-digit",
+    }).format(agoraHeroDashboardAuditoriaCampo);
+
     return (
             <div>
                 <Header
@@ -3514,6 +3530,47 @@ const logoHtml = logoQr
                     </div>
                 )}
             />
+
+            <section
+                data-dashboard-auditoria-campo-hero="true"
+                className="relative mb-6 overflow-hidden rounded-[22px] border border-[#E5E9EF] bg-[#111827] shadow-[0_10px_28px_rgba(26,35,50,0.12)]"
+            >
+                <div
+                    className="absolute inset-0 bg-cover bg-center bg-no-repeat opacity-100"
+                    style={{
+                        backgroundImage: `url(${dashboardHeroBackground})`,
+                        backgroundPosition: "center center",
+                        backgroundSize: "cover",
+                    }}
+                />
+                <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(17,24,39,0.36)_0%,rgba(17,24,39,0.24)_34%,rgba(17,24,39,0.10)_68%,rgba(17,24,39,0.08)_100%)]" />
+
+                <div className="relative flex min-h-[155px] flex-col justify-between gap-5 px-6 py-6 text-white lg:flex-row lg:items-center">
+                    <div className="min-w-0" style={{ textShadow: "0 2px 10px rgba(0,0,0,0.65)" }}>
+                        <p className="text-xs font-black uppercase tracking-[0.22em] text-emerald-300">
+                            SafeScan Brasil
+                        </p>
+                        <h2 className="mt-2 text-xl font-black leading-tight text-white md:text-2xl">
+                            Dashboard Auditoria de Campo
+                        </h2>
+                        <p className="mt-2 text-base font-bold text-slate-200 md:text-lg">
+                            Acompanhe auditorias, desvios e tratativas em uma visão executiva.
+                        </p>
+                        <div className="mt-5 h-1 w-14 rounded-full bg-[#1E7C3A]" />
+                    </div>
+
+                    <div className="rounded-2xl border border-white/10 bg-black/35 px-4 py-3 text-sm font-black text-white shadow-[0_8px_24px_rgba(0,0,0,0.22)] backdrop-blur">
+                        <div className="flex flex-wrap items-center gap-2">
+                            <CalendarClock className="h-4 w-4 text-emerald-300" />
+                            <span>{dataHeroDashboardAuditoriaCampo}</span>
+                            <span className="text-emerald-300">•</span>
+                            <span className="capitalize">{diaSemanaHeroDashboardAuditoriaCampo}</span>
+                            <span className="text-emerald-300">•</span>
+                            <span>{horaHeroDashboardAuditoriaCampo}</span>
+                        </div>
+                    </div>
+                </div>
+            </section>
 
             {erroAuditoriasCampoEfetivo && (
                 <div className="mb-4 rounded-2xl bg-red-50 px-4 py-3 text-sm font-semibold text-red-700 ring-1 ring-red-200">
