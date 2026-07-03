@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from "react";
-import { ClipboardCheck, ShieldCheck } from "lucide-react";
+import { ChevronDown, ClipboardCheck, PhoneCall, ShieldCheck } from "lucide-react";
 import { supabase } from "../../lib/supabaseClient";
 import { FotoColaborador, StatusPill, obterFotoColaboradorSrc } from "../commonComponents";
 import { AuditoriaCampoQRCode, statusGeralConsultaPublica } from "./AuditoriaCampoQRCode";
@@ -15,6 +15,7 @@ import {
 import { DAY } from "../../constants/sstConstants";
 import { obterTokenAuditoriaPublicaUrl } from "../../constants/auditoriaPublicaConstants";
 import { carregarTokenAuditoriaPublicaAtivoPadrao } from "../../services/auditoriaPublicaTokenService";
+import { validarContatoEmergenciaQrService } from "../../services/consultaPublicaQrService";
 import {
     classNames,
     diasParaVencer,
@@ -69,11 +70,91 @@ export function ConsultaQRPublica({ dados }) {
     const treinamentos = dados?.treinamentos || [];
     const treinamentosOrdenados = [...treinamentos].sort(compararTreinamentosPorOrdemNumerica);
     const geral = statusGeralConsultaPublica(colaborador, treinamentos);
-    const contatoEmergenciaNome = String(colaborador.contatoEmergenciaNome || colaborador.contato_emergencia_nome || "").trim();
-    const contatoEmergenciaParentesco = String(colaborador.contatoEmergenciaParentesco || colaborador.contato_emergencia_parentesco || "").trim();
-    const contatoEmergenciaTelefone = formatarTelefoneConsultaPublica(colaborador.contatoEmergenciaTelefone || colaborador.contato_emergencia_telefone || "");
-    const temContatoEmergencia = Boolean(contatoEmergenciaNome || contatoEmergenciaTelefone);
     const [contatoEmergenciaAberto, setContatoEmergenciaAberto] = useState(false);
+    const [senhaEmergenciaQr, setSenhaEmergenciaQr] = useState("");
+    const [contatoEmergenciaLiberado, setContatoEmergenciaLiberado] = useState(null);
+    const [erroContatoEmergencia, setErroContatoEmergencia] = useState("");
+    const [carregandoContatoEmergencia, setCarregandoContatoEmergencia] = useState(false);
+    const [telefoneEmergenciaCopiado, setTelefoneEmergenciaCopiado] = useState(false);
+
+    const contatoEmergenciaDisponivel =
+        colaborador.contatoEmergenciaDisponivel === true ||
+        colaborador.contatoEmergenciaRestrito === true ||
+        colaborador.contato_emergencia_disponivel === true ||
+        Boolean(colaborador.contatoEmergenciaNome || colaborador.contato_emergencia_nome || colaborador.contatoEmergenciaTelefone || colaborador.contato_emergencia_telefone);
+
+    const contatoEmergenciaNome = String(contatoEmergenciaLiberado?.nome || "").trim();
+    const contatoEmergenciaParentesco = String(contatoEmergenciaLiberado?.parentesco || "").trim();
+    const contatoEmergenciaTelefone = formatarTelefoneConsultaPublica(contatoEmergenciaLiberado?.telefone || "");
+    const telefoneEmergenciaLimpo = String(contatoEmergenciaLiberado?.telefone || contatoEmergenciaTelefone || "").replace(/\D/g, "");
+    const tokenContatoEmergenciaQr = String(
+        colaborador.token ||
+        colaborador.token_qr ||
+        dados?.token ||
+        (typeof window !== "undefined" ? new URLSearchParams(window.location.search).get("qr") : "") ||
+        ""
+    ).trim();
+
+    const situacaoObraPublica = String(
+        colaborador.statusMobilizacao ||
+        colaborador.status_mobilizacao ||
+        "Mobilizado"
+    ).trim() || "Mobilizado";
+
+    const validarSenhaContatoEmergenciaPublica = async (evento) => {
+        evento?.preventDefault?.();
+
+        if (!tokenContatoEmergenciaQr) {
+            setErroContatoEmergencia("Token do QR nao localizado para validar emergencia.");
+            return;
+        }
+
+        const senhaTratada = String(senhaEmergenciaQr || "").trim();
+
+        if (!senhaTratada) {
+            setErroContatoEmergencia("Informe a senha/PIN de emergencia da empresa.");
+            return;
+        }
+
+        setCarregandoContatoEmergencia(true);
+        setErroContatoEmergencia("");
+
+        try {
+            const resultado = await validarContatoEmergenciaQrService({
+                supabase,
+                tokenQr: tokenContatoEmergenciaQr,
+                senha: senhaTratada,
+            });
+
+            const contato = resultado?.contatoEmergencia || {};
+            setContatoEmergenciaLiberado({
+                nome: contato.nome || "",
+                parentesco: contato.parentesco || "",
+                telefone: contato.telefone || "",
+            });
+            setTelefoneEmergenciaCopiado(false);
+        } catch (error) {
+            setContatoEmergenciaLiberado(null);
+            setErroContatoEmergencia(error?.message || "Nao foi possivel liberar o contato de emergencia.");
+        } finally {
+            setCarregandoContatoEmergencia(false);
+        }
+    };
+
+    const copiarTelefoneEmergenciaPublica = async () => {
+        if (!contatoEmergenciaTelefone) return;
+
+        try {
+            if (typeof navigator !== "undefined" && navigator.clipboard?.writeText) {
+                await navigator.clipboard.writeText(contatoEmergenciaTelefone);
+            }
+
+            setTelefoneEmergenciaCopiado(true);
+            setTimeout(() => setTelefoneEmergenciaCopiado(false), 1800);
+        } catch {
+            setTelefoneEmergenciaCopiado(false);
+        }
+    };
     const tokenAuditoriaPublicaUrl = obterTokenAuditoriaPublicaUrl();
     const [tokenAuditoriaPublicaEfetivo, setTokenAuditoriaPublicaEfetivo] = useState(tokenAuditoriaPublicaUrl);
     const [auditoriasCampoQr, setAuditoriasCampoQr] = useState([]);
@@ -181,12 +262,16 @@ export function ConsultaQRPublica({ dados }) {
                         </div>
                     </div>
 
-                    <div className="mt-5">
-                        <div className="w-full rounded-2xl bg-slate-950 px-4 py-4 text-center shadow-sm sm:px-5">
-                            <p className="text-xs font-bold uppercase tracking-wide text-slate-300">Status geral do colaborador</p>
-                            <p className="mt-1 text-base font-bold text-white">{geral.texto}</p>
-                        </div>
-                    </div>
+                    <div className="mt-3 grid gap-2 text-left sm:grid-cols-2">
+<div className="rounded-2xl bg-emerald-50 px-3 py-2 ring-1 ring-emerald-100">
+    <p className="text-[10px] font-black uppercase tracking-wide text-emerald-700">Situacao na obra</p>
+    <p className="mt-1 text-xs font-black text-slate-950">{situacaoObraPublica}</p>
+</div>
+<div className="rounded-2xl bg-slate-50 px-3 py-2 ring-1 ring-slate-200">
+    <p className="text-[10px] font-black uppercase tracking-wide text-slate-500">Conformidade SST</p>
+    <p className="mt-1 text-xs font-black text-slate-950">{geral.texto}</p>
+</div>
+</div>
 
                     <div className="mt-4 grid gap-3 md:grid-cols-3">
                         <div className="flex min-h-[4.8rem] flex-col items-center justify-center rounded-2xl bg-slate-50 p-4 text-center ring-1 ring-slate-200">
@@ -204,42 +289,110 @@ export function ConsultaQRPublica({ dados }) {
                             </span>
                         </div>
                     </div>
-                    {temContatoEmergencia && (
-                        <div className="mt-3 rounded-2xl bg-slate-50 p-3 text-left ring-1 ring-slate-200">
-                            <div className="flex items-center justify-between gap-3">
-                                <div className="min-w-0">
-                                    <p className="text-xs font-bold uppercase tracking-wide text-slate-400">Contato de emergência</p>
-                                    <p className="mt-1 text-xs font-semibold text-slate-500">
-                                        Informação disponível para emergência.
-                                    </p>
-                                </div>
+                    {contatoEmergenciaDisponivel && (
+<div className="mt-3 rounded-2xl bg-slate-50 p-3 text-left ring-1 ring-slate-200">
+    <div className="flex flex-wrap items-center justify-between gap-2">
+        <div className="min-w-[180px] flex-1">
+            <p className="text-[11px] font-black uppercase tracking-wide text-slate-500">Emergencia</p>
+            <p className="mt-0.5 text-xs font-semibold text-slate-600">Acesso restrito por senha/PIN.</p>
+        </div>
 
-                                <button
-                                    type="button"
-                                    onClick={() => setContatoEmergenciaAberto((valor) => !valor)}
-                                    className="shrink-0 rounded-full bg-slate-950 px-3 py-1.5 text-[11px] font-black text-white"
-                                >
-                                    {contatoEmergenciaAberto ? "Fechar" : "Abrir"}
-                                </button>
-                            </div>
+        <button
+            type="button"
+            onClick={() => {
+                setContatoEmergenciaAberto((valor) => !valor);
+                setErroContatoEmergencia("");
+            }}
+            className="inline-flex min-w-[118px] shrink-0 items-center justify-center gap-1.5 whitespace-nowrap rounded-full bg-slate-950 px-4 py-2 text-xs font-black text-white"
+        >
+            <PhoneCall className="h-3.5 w-3.5" />
+            Emergencia
+            <ChevronDown
+                className={classNames(
+                    "h-3.5 w-3.5 transition",
+                    contatoEmergenciaAberto && "rotate-180"
+                )}
+            />
+        </button>
+    </div>
 
-                            {contatoEmergenciaAberto && (
-                                <div className="mt-3 grid gap-3 rounded-2xl bg-white p-3 text-center ring-1 ring-slate-100 sm:grid-cols-3">
-                                    <div>
-                                        <p className="text-[10px] font-black uppercase tracking-wide text-slate-400">Nome</p>
-                                        <p className="mt-1 text-xs font-black text-slate-950">{contatoEmergenciaNome || "-"}</p>
-                                    </div>
-                                    <div>
-                                        <p className="text-[10px] font-black uppercase tracking-wide text-slate-400">Parentesco</p>
-                                        <p className="mt-1 text-xs font-black text-slate-950">{contatoEmergenciaParentesco || "-"}</p>
-                                    </div>
-                                    <div>
-                                        <p className="text-[10px] font-black uppercase tracking-wide text-slate-400">Telefone</p>
-                                        <p className="mt-1 text-xs font-black text-slate-950">{contatoEmergenciaTelefone || "-"}</p>
-                                    </div>
-                                </div>
-                            )}
+    {contatoEmergenciaAberto && (
+        <div className="mt-3 rounded-2xl bg-white p-3 text-left ring-1 ring-slate-100">
+            <div className="rounded-2xl border border-red-100 bg-red-50 px-3 py-2">
+                <p className="text-xs font-black uppercase tracking-wide text-red-700">Area restrita</p>
+                <p className="mt-1 text-xs font-semibold leading-relaxed text-slate-600">
+                    Digite a senha/PIN da empresa para liberar o contato.
+                </p>
+            </div>
+
+            {contatoEmergenciaLiberado ? (
+                <div className="mt-3 grid gap-3 rounded-2xl bg-emerald-50 p-3 text-center ring-1 ring-emerald-100 sm:grid-cols-3">
+                    <div>
+                        <p className="text-[10px] font-black uppercase tracking-wide text-slate-400">Nome</p>
+                        <p className="mt-1 text-xs font-black text-slate-950">{contatoEmergenciaNome || "-"}</p>
+                    </div>
+                    <div>
+                        <p className="text-[10px] font-black uppercase tracking-wide text-slate-400">Parentesco</p>
+                        <p className="mt-1 text-xs font-black text-slate-950">{contatoEmergenciaParentesco || "-"}</p>
+                    </div>
+                    <div>
+                        <p className="text-[10px] font-black uppercase tracking-wide text-slate-400">Telefone</p>
+                        <div className="mt-1 flex flex-col items-center gap-1">
+                            <a
+                                href={telefoneEmergenciaLimpo ? `tel:${telefoneEmergenciaLimpo}` : undefined}
+                                className="rounded-full bg-red-600 px-3 py-1.5 text-[11px] font-black text-white hover:bg-red-700"
+                            >
+                                Ligar agora
+                            </a>
+                            <button
+                                type="button"
+                                onClick={copiarTelefoneEmergenciaPublica}
+                                className="text-[10px] font-black text-slate-600 underline"
+                            >
+                                {telefoneEmergenciaCopiado ? "Copiado" : "Copiar telefone"}
+                            </button>
                         </div>
+                    </div>
+                </div>
+            ) : (
+                <form onSubmit={validarSenhaContatoEmergenciaPublica} className="mt-3 space-y-2">
+                    <label className="block">
+                        <span className="text-[11px] font-black uppercase tracking-[0.12em] text-slate-500">
+                            Senha/PIN da empresa
+                        </span>
+                        <inpu
+                            type="password"
+                            value={senhaEmergenciaQr}
+                            onChange={(evento) => setSenhaEmergenciaQr(evento.target.value)}
+                            className="mt-1 w-full rounded-2xl border border-slate-200 bg-white px-3 py-2 text-sm font-bold text-slate-950 outline-none transition focus:border-red-300 focus:ring-2 focus:ring-red-100"
+                            placeholder="Digite a senha/PIN"
+                            autoComplete="off"
+                        />
+                    </label>
+
+                    {erroContatoEmergencia && (
+                        <p className="rounded-2xl border border-red-100 bg-red-50 px-3 py-2 text-[11px] font-bold text-red-700">
+                            {erroContatoEmergencia}
+                        </p>
+                    )}
+
+                    <button
+                        type="submit"
+                        disabled={carregandoContatoEmergencia}
+                        className={classNames(
+                            "inline-flex w-full items-center justify-center rounded-2xl px-4 py-3 text-xs font-black text-white transition",
+                            carregandoContatoEmergencia
+                                ? "cursor-wait bg-slate-400"
+                                : "bg-slate-950 hover:bg-slate-800"
+                        )}
+                    >
+                        {carregandoContatoEmergencia ? "Validando..." : "Acessar contato"}
+                    </button>
+                </form>
+            )}
+        </div>
+    )}
+</div>
                     )}
 <AuditoriaCampoQRCode
                         colaborador={colaborador}
@@ -327,4 +480,3 @@ export function ConsultaQRPublica({ dados }) {
         </div>
     );
 }
-
