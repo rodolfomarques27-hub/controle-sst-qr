@@ -996,24 +996,24 @@ export function VerificacaoCertificadoTreinamento({ certificado = {} }) {
                     )}
                 </div>
 
-                <div className="flex flex-wrap gap-2 lg:justify-end">
+                <div className="treinamentos-certificados-verificacao-acoes">
                     {aberto && (
                         <>
                             <button
                                 type="button"
                                 onClick={reanalisarCertificado}
                                 disabled={reanalisando || carregando}
-                                className="inline-flex items-center justify-center gap-2 rounded-xl bg-emerald-50 px-3 py-2 text-xs font-bold text-emerald-700 ring-1 ring-emerald-200 hover:bg-emerald-100 disabled:opacity-60"
+                                className="treinamentos-certificados-verificacao-acao treinamentos-certificados-verificacao-acao--reanalisar inline-flex items-center justify-center gap-2 rounded-xl bg-emerald-50 px-3 py-2 text-xs font-bold text-emerald-700 ring-1 ring-emerald-200 hover:bg-emerald-100 disabled:opacity-60"
                             >
                                 <RefreshCw className={`h-4 w-4 ${reanalisando ? "animate-spin" : ""}`} />
-                                {reanalisando ? "Reanalisando..." : "Reanalisar certificado"}
+                                {reanalisando ? "Reanalisando..." : "Reanalisar"}
                             </button>
 
                             <button
                                 type="button"
                                 onClick={carregarVerificacao}
                                 disabled={carregando || reanalisando}
-                                className="inline-flex items-center justify-center gap-2 rounded-xl bg-blue-50 px-3 py-2 text-xs font-bold text-blue-700 ring-1 ring-blue-200 hover:bg-blue-100 disabled:opacity-60"
+                                className="treinamentos-certificados-verificacao-acao treinamentos-certificados-verificacao-acao--atualizar inline-flex items-center justify-center gap-2 rounded-xl bg-blue-50 px-3 py-2 text-xs font-bold text-blue-700 ring-1 ring-blue-200 hover:bg-blue-100 disabled:opacity-60"
                             >
                                 <RefreshCw className={`h-4 w-4 ${carregando ? "animate-spin" : ""}`} />
                                 Atualizar
@@ -1024,17 +1024,17 @@ export function VerificacaoCertificadoTreinamento({ certificado = {} }) {
                     <button
                         type="button"
                         onClick={alternarPainel}
-                        className="inline-flex items-center justify-center gap-2 rounded-xl bg-slate-950 px-3 py-2 text-xs font-bold text-white hover:bg-slate-800"
+                        className="treinamentos-certificados-verificacao-botao bg-white text-slate-700 ring-1 ring-slate-200 transition hover:bg-slate-50"
                     >
                         {aberto ? (
                             <>
                                 <ChevronUp className="h-4 w-4" />
-                                Recolher verificação
+                                Fechar
                             </>
                         ) : (
                             <>
                                 <ChevronDown className="h-4 w-4" />
-                                Abrir verificação
+                                Abrir
                             </>
                         )}
                     </button>
@@ -1059,7 +1059,7 @@ export function VerificacaoCertificadoTreinamento({ certificado = {} }) {
                     {!carregando && !reanalisando && !erro && !verificacao && (
                         <div className="rounded-2xl border border-dashed border-slate-300 bg-white px-4 py-3 text-sm text-slate-600">
                             Nenhum resultado de verificação documental foi localizado para este certificado.
-                            Clique em Reanalisar certificado para gerar uma nova análise local usando as datas cadastradas no sistema.
+                            Clique em Reanalisar para gerar uma nova análise local usando as datas cadastradas no sistema.
                         </div>
                     )}
 
@@ -1128,7 +1128,3 @@ export function VerificacaoCertificadoTreinamento({ certificado = {} }) {
         </div>
     );
 }
-
-
-
-

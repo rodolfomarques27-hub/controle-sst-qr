@@ -762,44 +762,44 @@ export function BaseCertificadosTreinamentos({
                                                         </div>
                                                     </div>
 
-                                                    <div className="flex flex-col gap-2 lg:items-stretch">
-                                                        <button
-                                                            type="button"
-                                                            onClick={() =>
-                                                                setCertificadosAbertos((atual) => ({
-                                                                    ...atual,
-                                                                    [itemKey]: !atual[itemKey],
-                                                                }))
-                                                            }
-                                                            className="inline-flex items-center justify-center gap-2 rounded-xl bg-white px-4 py-2 text-xs font-semibold text-slate-700 ring-1 ring-slate-200 hover:bg-slate-100"
-                                                        >
-                                                            {aberto ? (
-                                                                <>
-                                                                    <ChevronUp className="h-4 w-4" />
-                                                                    Ocultar data
-                                                                </>
-                                                            ) : (
-                                                                <>
-                                                                    <ChevronDown className="h-4 w-4" />
-                                                                    Rever data
-                                                                </>
-                                                            )}
-                                                        </button>
+                                                    <div className="treinamentos-certificados-acoes-documento">
+                                                    <button
+                                                        type="button"
+                                                        onClick={() =>
+                                                            setCertificadosAbertos((atual) => ({
+                                                                ...atual,
+                                                                [itemKey]: !atual[itemKey],
+                                                            }))
+                                                        }
+                                                        className="treinamentos-certificados-acao treinamentos-certificados-acao--rever bg-white text-slate-700 ring-1 ring-slate-200 transition hover:bg-slate-50"
+                                                    >
+                                                        {aberto ? (
+                                                            <>
+                                                                <ChevronUp className="h-4 w-4" />
+                                                                Ocultar data
+                                                            </>
+                                                        ) : (
+                                                            <>
+                                                                <ChevronDown className="h-4 w-4" />
+                                                                Rever data
+                                                            </>
+                                                        )}
+                                                    </button>
 
-                                                        <button
-                                                            onClick={() => onVisualizarCertificado(d)}
-                                                            className="rounded-xl bg-slate-950 px-4 py-2 text-xs font-semibold text-white hover:bg-slate-800"
-                                                        >
-                                                            Abrir
-                                                        </button>
+                                                    <button
+                                                        onClick={() => onVisualizarCertificado(d)}
+                                                        className="treinamentos-certificados-acao treinamentos-certificados-acao--abrir bg-slate-950 text-white hover:bg-slate-800"
+                                                    >
+                                                        Abrir
+                                                    </button>
 
-                                                        <button
-                                                            onClick={() => onExcluirCertificado(d)}
-                                                            className="rounded-xl bg-red-50 px-4 py-2 text-xs font-semibold text-red-700 ring-1 ring-red-200 hover:bg-red-100"
-                                                        >
-                                                            Excluir
-                                                        </button>
-                                                    </div>
+                                                    <button
+                                                        onClick={() => onExcluirCertificado(d)}
+                                                        className="treinamentos-certificados-acao treinamentos-certificados-acao--excluir bg-red-50 text-red-700 ring-1 ring-red-200 hover:bg-red-100"
+                                                    >
+                                                        Excluir
+                                                    </button>
+                                                </div>
                                                 </div>
 
                                                 <div className="mt-3">

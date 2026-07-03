@@ -12483,3 +12483,246 @@
     max-width: none !important;
   }
 }
+
+.treinamentos-certificados-acoes-documento {
+  width: 9.75rem !important;
+  min-width: 9.75rem !important;
+  flex: 0 0 9.75rem !important;
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: stretch !important;
+  gap: 0.5rem !important;
+}
+
+.treinamentos-certificados-acao {
+  width: 100% !important;
+  min-height: 2.5rem !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 0.5rem !important;
+  border-radius: 0.875rem !important;
+  padding: 0.5rem 1rem !important;
+  font-size: 0.75rem !important;
+  font-weight: 700 !important;
+  line-height: 1 !important;
+  white-space: nowrap !important;
+}
+
+.treinamentos-certificados-verificacao-botao {
+  width: 11.5rem !important;
+  min-width: 11.5rem !important;
+  min-height: 2.5rem !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 0.5rem !important;
+  border-radius: 999px !important;
+  padding: 0.5rem 1rem !important;
+  font-size: 0.75rem !important;
+  font-weight: 800 !important;
+  line-height: 1 !important;
+  white-space: nowrap !important;
+}
+
+/* T.1L - sobrepor regra antiga button:has(svg) nos botoes de certificados */
+.treinamentos-layout-card .treinamentos-certificados-acoes-documento {
+  width: 9.75rem !important;
+  min-width: 9.75rem !important;
+  max-width: 9.75rem !important;
+  flex: 0 0 9.75rem !important;
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: stretch !important;
+  gap: 0.5rem !important;
+}
+
+.treinamentos-layout-card button.treinamentos-certificados-acao {
+  width: 100% !important;
+  min-width: 100% !important;
+  max-width: 100% !important;
+  height: 2.5rem !important;
+  min-height: 2.5rem !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 0.5rem !important;
+  border-radius: 0.875rem !important;
+  padding: 0.5rem 1rem !important;
+  font-size: 0.75rem !important;
+  font-weight: 700 !important;
+  line-height: 1 !important;
+  white-space: nowrap !important;
+  box-sizing: border-box !important;
+}
+
+.treinamentos-layout-card button.treinamentos-certificados-verificacao-botao {
+  width: 11.5rem !important;
+  min-width: 11.5rem !important;
+  max-width: 11.5rem !important;
+  height: 2.5rem !important;
+  min-height: 2.5rem !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 0.5rem !important;
+  border-radius: 999px !important;
+  padding: 0.5rem 1rem !important;
+  font-size: 0.75rem !important;
+  font-weight: 800 !important;
+  line-height: 1 !important;
+  white-space: nowrap !important;
+  box-sizing: border-box !important;
+}
+
+.treinamentos-layout-card button.treinamentos-certificados-acao svg,
+.treinamentos-layout-card button.treinamentos-certificados-verificacao-botao svg {
+  width: 0.9rem !important;
+  height: 0.9rem !important;
+  flex: 0 0 auto !important;
+}
+
+
+/* T.1N - manter botoes da verificacao documental na mesma linha */
+.treinamentos-layout-card .treinamentos-certificados-verificacao-acoes {
+  margin-left: auto !important;
+  width: max-content !important;
+  min-width: max-content !important;
+  max-width: none !important;
+  display: flex !important;
+  flex-wrap: nowrap !important;
+  align-items: center !important;
+  justify-content: flex-end !important;
+  gap: 0.5rem !important;
+  overflow: visible !important;
+}
+
+.treinamentos-layout-card .treinamentos-certificados-verificacao-acoes > button {
+  flex: 0 0 auto !important;
+  height: 2.5rem !important;
+  min-height: 2.5rem !important;
+  max-height: 2.5rem !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 0.45rem !important;
+  white-space: nowrap !important;
+  border-radius: 999px !important;
+  padding: 0.5rem 0.85rem !important;
+  line-height: 1 !important;
+  box-sizing: border-box !important;
+  max-width: none !important;
+}
+
+.treinamentos-layout-card button.treinamentos-certificados-verificacao-acao--reanalisar {
+  width: 8.9rem !important;
+  min-width: 8.9rem !important;
+  max-width: 8.9rem !important;
+}
+
+.treinamentos-layout-card button.treinamentos-certificados-verificacao-acao--atualizar {
+  width: 6.7rem !important;
+  min-width: 6.7rem !important;
+  max-width: 6.7rem !important;
+}
+
+.treinamentos-layout-card button.treinamentos-certificados-verificacao-botao {
+  width: 10.9rem !important;
+  min-width: 10.9rem !important;
+  max-width: 10.9rem !important;
+}
+
+.treinamentos-layout-card button.treinamentos-certificados-verificacao-acao svg,
+.treinamentos-layout-card button.treinamentos-certificados-verificacao-botao svg {
+  width: 0.86rem !important;
+  height: 0.86rem !important;
+  flex: 0 0 auto !important;
+}
+
+@media (max-width: 760px) {
+  .treinamentos-layout-card .treinamentos-certificados-verificacao-acoes {
+    width: 100% !important;
+    min-width: 0 !important;
+    flex-wrap: wrap !important;
+    justify-content: flex-start !important;
+  }
+
+  .treinamentos-layout-card .treinamentos-certificados-verificacao-acoes > button {
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: none !important;
+  }
+}
+
+
+/* T.1O - reduzir botoes da verificacao documental */
+.treinamentos-layout-card .treinamentos-certificados-verificacao-acoes {
+  margin-left: auto !important;
+  width: max-content !important;
+  min-width: max-content !important;
+  max-width: none !important;
+  display: flex !important;
+  flex-wrap: nowrap !important;
+  align-items: center !important;
+  justify-content: flex-end !important;
+  gap: 0.38rem !important;
+  overflow: visible !important;
+}
+
+.treinamentos-layout-card .treinamentos-certificados-verificacao-acoes > button {
+  flex: 0 0 auto !important;
+  height: 2.35rem !important;
+  min-height: 2.35rem !important;
+  max-height: 2.35rem !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 0.38rem !important;
+  white-space: nowrap !important;
+  border-radius: 999px !important;
+  padding: 0.45rem 0.7rem !important;
+  font-size: 0.72rem !important;
+  line-height: 1 !important;
+  box-sizing: border-box !important;
+  max-width: none !important;
+}
+
+.treinamentos-layout-card button.treinamentos-certificados-verificacao-acao--reanalisar {
+  width: 6.9rem !important;
+  min-width: 6.9rem !important;
+  max-width: 6.9rem !important;
+}
+
+.treinamentos-layout-card button.treinamentos-certificados-verificacao-acao--atualizar {
+  width: 5.7rem !important;
+  min-width: 5.7rem !important;
+  max-width: 5.7rem !important;
+}
+
+.treinamentos-layout-card button.treinamentos-certificados-verificacao-botao {
+  width: 5.4rem !important;
+  min-width: 5.4rem !important;
+  max-width: 5.4rem !important;
+}
+
+.treinamentos-layout-card button.treinamentos-certificados-verificacao-acao svg,
+.treinamentos-layout-card button.treinamentos-certificados-verificacao-botao svg {
+  width: 0.78rem !important;
+  height: 0.78rem !important;
+  flex: 0 0 auto !important;
+}
+
+@media (max-width: 760px) {
+  .treinamentos-layout-card .treinamentos-certificados-verificacao-acoes {
+    width: 100% !important;
+    min-width: 0 !important;
+    flex-wrap: wrap !important;
+    justify-content: flex-start !important;
+  }
+
+  .treinamentos-layout-card .treinamentos-certificados-verificacao-acoes > button {
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: none !important;
+  }
+}
