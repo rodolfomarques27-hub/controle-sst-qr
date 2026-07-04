@@ -33,7 +33,7 @@ export const STATUS_CLASSIFICACAO_COLABORADOR = [
     "Inativo",
 ];
 export const IDS_DOCUMENTOS_CRITICOS_COLABORADOR = [1, 14, 15, 21, 22];
-export const treinamentosBaseObra = [1, 14, 15, 8, 9, 16, 17, 18, 20, 21, 22];
+export const treinamentosBaseObra = [1, 14, 15, 8, 9, 16, 17, 18, 21, 22];
 export const matrizTreinamentosPorFuncao = [
     {
         chave: "pedreiro",
@@ -118,7 +118,13 @@ export const matrizTreinamentosPorFuncao = [
         rotulo: "ELETRICISTA",
         termos: ["eletricista", "eletrica", "elétrica", "eletrico", "elétrico"],
         treinamentos: [...treinamentosBaseObra, 2, 3, 4],
+    },    {
+        chave: "brigada-incendio",
+        rotulo: "BRIGADA / EMERGÊNCIA",
+        termos: ["brigadista", "brigada", "bombeiro civil", "emergencia", "emergência", "incendio", "incêndio", "combate a incendio", "combate a incêndio"],
+        treinamentos: [...treinamentosBaseObra, 20],
     },
+
     {
         chave: "geral",
         rotulo: "MATRIZ BÁSICA DE OBRA",

@@ -152,19 +152,25 @@ export function avaliarTreinamentosColaborador(colaborador) {
         };
     }));
 
-    const pendentes = itens.filter((item) => item.status.chave === "pendente");
-    const vencidos = itens.filter((item) => item.status.chave === "vencido");
-    const vencendo = itens.filter((item) => item.status.chave === "vencendo");
-    const emDia = itens.filter((item) => ["emdia", "semvalidade"].includes(item.status.chave));
+    const itensObrigatoriosMatriz = itens.filter((item) => item.obrigatorioMatriz);
+    const itensAdicionaisEnviados = itens.filter((item) => !item.obrigatorioMatriz && item.realizado);
+
+    const pendentes = itensObrigatoriosMatriz.filter((item) => item.status.chave === "pendente");
+    const vencidos = itensObrigatoriosMatriz.filter((item) => item.status.chave === "vencido");
+    const vencendo = itensObrigatoriosMatriz.filter((item) => item.status.chave === "vencendo");
+    const emDia = itensObrigatoriosMatriz.filter((item) => ["emdia", "semvalidade"].includes(item.status.chave));
 
     return {
         matriz: obterMatrizFuncao(colaborador.funcao),
         itens,
+        itensObrigatoriosMatriz,
+        itensAdicionaisEnviados,
         pendentes,
         vencidos,
         vencendo,
         emDia,
-        total: itens.length,
+        total: itensObrigatoriosMatriz.length,
+        totalExibido: itens.length,
     };
 }
 
@@ -1357,7 +1363,16 @@ export function statusGeral(colaborador) {
     if (pendenciasNaoBloqueantes.length > 0) {
         const detalhes = [];
 
-        detalhes.push(`${pendenciasNaoBloqueantes.length} pendência(s) não bloqueante(s)`);
+        const nomesPendenciasNaoBloqueantes = pendenciasNaoBloqueantes
+            .map((item) => item?.treinamento?.nome || item?.nomeTreinamento || item?.tipoTreinamento || "")
+            .filter(Boolean);
+
+        detalhes.push(
+            nomesPendenciasNaoBloqueantes.length > 0
+                ? `Pendência não bloqueante: ${nomesPendenciasNaoBloqueantes.slice(0, 3).join(", ")}`
+                : `${pendenciasNaoBloqueantes.length} pendência(s) não bloqueante(s)`
+        );
+
         if (avaliacao.vencendo.length > 0) detalhes.push(`${avaliacao.vencendo.length} item(ns) a vencer em até 30 dias`);
 
         return {

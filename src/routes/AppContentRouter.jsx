@@ -25,6 +25,7 @@ const DashboardAuditoriaCampo = React.lazy(() => import("../components/auditoria
 const NovaAuditoriaCampoDireta = React.lazy(() => import("../components/auditoria/NovaAuditoriaCampoDireta").then((modulo) => ({ default: modulo.NovaAuditoriaCampoDireta })));
 const ConfiguracoesSistema = React.lazy(() => import("../components/configuracoes/ConfiguracoesSistema").then((modulo) => ({ default: modulo.ConfiguracoesSistema })));
 const ConfiguracoesBloqueio = React.lazy(() => import("../components/configuracoes/ConfiguracoesBloqueio").then((modulo) => ({ default: modulo.ConfiguracoesBloqueio })));
+const EmergenciaQrPinCard = React.lazy(() => import("../components/configuracoes/EmergenciaQrPinCard").then((modulo) => ({ default: modulo.EmergenciaQrPinCard })));
 const AcessosAppPage = React.lazy(() => import("../components/acessos/AcessosAppPage").then((modulo) => ({ default: modulo.AcessosAppPage })));
 
 
@@ -873,6 +874,11 @@ export function AppContentRouter({
                             onSalvarSenhaConfiguracoes={onSalvarSenhaConfiguracoes}
                             onRegistrarAuditoria={onRegistrarAuditoria}
                         />
+
+                        <EmergenciaQrPinCard
+                            empresasBanco={empresasBanco}
+                        />
+
                     </div>
                 ) : (
                     <ConfiguracoesBloqueio

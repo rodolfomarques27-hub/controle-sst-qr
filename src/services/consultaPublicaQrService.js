@@ -23,6 +23,24 @@ export async function obterFotoColaboradorQrPorEdgeFunction({ supabase, tokenCon
     }
 }
 
+function normalizarListaTreinamentosMatrizPublica(valor) {
+    if (Array.isArray(valor)) {
+        return valor.map(Number).filter((id) => Number.isFinite(id) && id > 0);
+    }
+
+    if (typeof valor === "string") {
+        try {
+            const parsed = JSON.parse(valor);
+            if (Array.isArray(parsed)) {
+                return parsed.map(Number).filter((id) => Number.isFinite(id) && id > 0);
+            }
+        } catch {
+            return [];
+        }
+    }
+
+    return [];
+}
 export async function normalizarConsultaPublicaComFoto({ supabase, dadosConsulta, tokenQr } = {}) {
     if (!dadosConsulta?.colaborador) return dadosConsulta;
 
@@ -52,6 +70,14 @@ export async function normalizarConsultaPublicaComFoto({ supabase, dadosConsulta
                 colaboradorConsulta.statusMobilizacao ||
                 colaboradorConsulta.status_mobilizacao ||
                 "",
+            treinamentosRemovidos: normalizarListaTreinamentosMatrizPublica(
+                colaboradorConsulta.treinamentosRemovidos ||
+                colaboradorConsulta.treinamentos_removidos
+            ),
+            treinamentosAdicionais: normalizarListaTreinamentosMatrizPublica(
+                colaboradorConsulta.treinamentosAdicionais ||
+                colaboradorConsulta.treinamentos_adicionais
+            ),
             token: colaboradorConsulta.token || colaboradorConsulta.token_qr || tokenQr,
         },
     };
