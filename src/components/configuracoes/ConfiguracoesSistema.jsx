@@ -1,6 +1,6 @@
 /* eslint-disable no-unused-vars */
 import React, { useEffect, useMemo, useState } from "react";
-import {
+import { CalendarClock,
     AlertTriangle,
     CheckCircle2,
     ChevronDown,
@@ -20,6 +20,7 @@ import {
     ShieldCheck,
     SlidersHorizontal,
 } from "lucide-react";
+import dashboardHeroBackground from "../../assets/dashboard-hero-sst.png";
 import { Header, Card } from "../commonComponents";
 import { ArquivosStorageConfiguracoes } from "./ArquivosStorageConfiguracoes";
 import {
@@ -2628,11 +2629,81 @@ export function ConfiguracoesSistema({
         }
     };
 
+    const obterTemaCardResumoConfiguracoes = (label = "") => {
+        const chave = String(label || "").toLowerCase();
+
+        if (chave.includes("eventos")) {
+            return {
+                faixa: "from-sky-400 via-blue-500 to-cyan-400",
+                borda: "border-sky-100",
+                icone: "bg-sky-50 text-blue-700 ring-sky-100",
+                etiqueta: "text-blue-700",
+            };
+        }
+
+        if (chave.includes("origem")) {
+            return {
+                faixa: "from-violet-400 via-purple-500 to-fuchsia-400",
+                borda: "border-violet-100",
+                icone: "bg-violet-50 text-violet-700 ring-violet-100",
+                etiqueta: "text-violet-700",
+            };
+        }
+
+        if (chave.includes("limites")) {
+            return {
+                faixa: "from-amber-400 via-orange-500 to-rose-400",
+                borda: "border-amber-100",
+                icone: "bg-amber-50 text-amber-700 ring-amber-100",
+                etiqueta: "text-amber-700",
+            };
+        }
+
+        if (chave.includes("permissão") || chave.includes("permissao")) {
+            return {
+                faixa: "from-emerald-400 via-teal-500 to-cyan-400",
+                borda: "border-emerald-100",
+                icone: "bg-emerald-50 text-emerald-700 ring-emerald-100",
+                etiqueta: "text-emerald-700",
+            };
+        }
+
+        if (chave.includes("alertas")) {
+            return {
+                faixa: "from-rose-400 via-red-500 to-orange-400",
+                borda: "border-rose-100",
+                icone: "bg-rose-50 text-rose-700 ring-rose-100",
+                etiqueta: "text-rose-700",
+            };
+        }
+
+        return {
+            faixa: "from-slate-300 via-slate-500 to-slate-300",
+            borda: "border-slate-100",
+            icone: "bg-slate-50 text-slate-700 ring-slate-200",
+            etiqueta: "text-slate-700",
+        };
+    };
+
+    const agoraHeroConfiguracoes = new Date();
+    const dataHeroConfiguracoes = new Intl.DateTimeFormat("pt-BR", {
+        day: "2-digit",
+        month: "long",
+        year: "numeric",
+    }).format(agoraHeroConfiguracoes);
+    const diaSemanaHeroConfiguracoes = new Intl.DateTimeFormat("pt-BR", {
+        weekday: "long",
+    }).format(agoraHeroConfiguracoes);
+    const horaHeroConfiguracoes = new Intl.DateTimeFormat("pt-BR", {
+        hour: "2-digit",
+        minute: "2-digit",
+    }).format(agoraHeroConfiguracoes);
+
     return (
         <div className="page-shell">
             <Header
                 titulo="Configurações do sistema"
-                subtitulo="Painel técnico para limites, Storage, tokens públicos, auditoria, segurança e configurações críticas do sistema SST."
+                subtitulo={null}
                 acao={(
                     <div className="top-actions-nowrap flex-wrap justify-end">
                         {acaoTopo}
@@ -2663,20 +2734,68 @@ export function ConfiguracoesSistema({
                     </div>
                 )}
             />
+            <section
+                data-configuracoes-hero="true"
+                className="relative mb-6 overflow-hidden rounded-[22px] border border-[#E5E9EF] bg-[#111827] shadow-[0_10px_28px_rgba(26,35,50,0.12)]"
+            >
+                <div
+                    className="absolute inset-0 bg-cover bg-center bg-no-repeat opacity-100"
+                    style={{
+                        backgroundImage: `url(${dashboardHeroBackground})`,
+                        backgroundPosition: "center center",
+                        backgroundSize: "cover",
+                    }}
+                />
+                <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(17,24,39,0.36)_0%,rgba(17,24,39,0.24)_34%,rgba(17,24,39,0.10)_68%,rgba(17,24,39,0.08)_100%)]" />
+
+                <div className="relative flex min-h-[155px] flex-col justify-between gap-5 px-6 py-6 text-white lg:flex-row lg:items-center">
+                    <div className="min-w-0" style={{ textShadow: "0 2px 10px rgba(0,0,0,0.65)" }}>
+                        <p className="text-xs font-black uppercase tracking-[0.22em] text-emerald-300">
+                            SafeScan Brasil
+                        </p>
+                        <h2 className="mt-2 text-xl font-black leading-tight text-white md:text-2xl">
+                            Configurações do sistema
+                        </h2>
+                        <p className="mt-2 max-w-3xl text-base font-bold text-slate-200 md:text-lg">
+                            Painel técnico para limites, Storage, tokens públicos, auditoria, segurança e configurações críticas do sistema SST.
+                        </p>
+                        <div className="mt-5 h-1 w-14 rounded-full bg-[#1E7C3A]" />
+                    </div>
+
+                    <div className="rounded-2xl border border-white/10 bg-black/35 px-4 py-3 text-sm font-black text-white shadow-[0_8px_24px_rgba(0,0,0,0.22)] backdrop-blur">
+                        <div className="flex flex-wrap items-center gap-2">
+                            <CalendarClock className="h-4 w-4 text-emerald-300" />
+                            <span>{dataHeroConfiguracoes}</span>
+                            <span className="text-emerald-300">•</span>
+                            <span className="capitalize">{diaSemanaHeroConfiguracoes}</span>
+                            <span className="text-emerald-300">•</span>
+                            <span>{horaHeroConfiguracoes}</span>
+                        </div>
+                    </div>
+                </div>
+            </section>
 
             <div className="config-summary-grid cards-grid--fixed-5">
                 {cardsResumo.map((card) => {
-                    const Icon = card.icon;
-                    return (
-                        <Card key={card.label} className="config-summary-card summary-card-fixed h-full">
-                            <div className="summary-card-content">
-                                <div className="summary-card-icon flex shrink-0 items-center justify-center rounded-2xl bg-slate-100 text-slate-700 ring-1 ring-slate-200">
-                                    <Icon className="h-4 w-4" />
-                                </div>
-                                <div className="flex min-w-0 flex-1 flex-col">
-                                    <p className="summary-card-label texto-quebra-segura">{card.label}</p>
-                                    <p className={classNames("summary-card-value texto-quebra-segura", card.label === "Token Auditoria pública" && "summary-card-value--token")}>{card.valor}</p>
-                                    <p className="summary-card-detail">{card.detalhe}</p>
+                        const Icon = card.icon;
+                        const tema = obterTemaCardResumoConfiguracoes(card.label);
+                        return (
+                            <Card
+                                key={card.label}
+                                className={classNames(
+                                    "config-summary-card summary-card-fixed group relative h-full min-h-[5.6rem] overflow-hidden rounded-[22px] border bg-[linear-gradient(180deg,rgba(255,255,255,0.98)_0%,rgba(246,249,252,0.96)_100%)] px-3 py-2 shadow-[0_10px_26px_rgba(26,35,50,0.08)] transition duration-200 hover:-translate-y-0.5 hover:shadow-[0_16px_34px_rgba(26,35,50,0.13)]",
+                                    tema.borda
+                                )}
+                            >
+                                <span className={classNames("absolute inset-x-0 top-0 h-1 bg-gradient-to-r", tema.faixa)} />
+                                <div className="summary-card-content flex min-h-0 flex-1 items-center justify-center gap-2 py-1">
+                                    <div className={classNames("summary-card-icon flex h-8 w-8 shrink-0 items-center justify-center rounded-2xl shadow-sm ring-1", tema.icone)}>
+                                        <Icon className="h-4 w-4" />
+                                    </div>
+                                    <div className="flex min-w-0 flex-1 flex-col text-center">
+                                        <p className={classNames("summary-card-label texto-quebra-segura text-[11px] font-black uppercase tracking-[0.08em] leading-tight", tema.etiqueta)}>{card.label}</p>
+                                        <p className={classNames("summary-card-value texto-quebra-segura", card.label === "Token Auditoria pública" && "summary-card-value--token")}>{card.valor}</p>
+                                        <p className="summary-card-detail">{card.detalhe}</p>
                                 </div>
                             </div>
                         </Card>
