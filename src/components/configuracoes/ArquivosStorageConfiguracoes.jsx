@@ -476,7 +476,7 @@ Essa ação remove apenas o arquivo físico sem vínculo no banco e não pode se
     return (
         <Card>
             <div className="flex flex-col gap-4 border-b border-slate-100 pb-4 lg:flex-row lg:items-start lg:justify-between">
-                <div>
+                <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-2">
                         <HardDrive className="h-5 w-5 text-slate-500" />
                         <h2 id="config-arquivos-storage" className="scroll-mt-24 text-lg font-black text-slate-950">Arquivos salvos no Storage</h2>
@@ -487,14 +487,12 @@ Essa ação remove apenas o arquivo físico sem vínculo no banco e não pode se
                     <p className="mt-2 text-xs font-bold text-slate-400">{mensagemPermissao}</p>
                 </div>
 
-                <div className="flex flex-wrap items-center gap-2">
-                    {controleCard}
-
+                <div className="flex shrink-0 flex-nowrap items-center justify-end gap-2 overflow-x-auto pb-1">
                     <button
                         type="button"
                         onClick={carregarStorage}
                         disabled={carregandoStorage || limpandoStorage || !onListarArquivosStorage}
-                        className="inline-flex min-h-[46px] items-center justify-center gap-2 rounded-2xl bg-slate-950 px-4 py-3 text-sm font-semibold text-white hover:bg-slate-800 disabled:opacity-60"
+                        className="inline-flex min-h-[46px] shrink-0 items-center justify-center gap-2 whitespace-nowrap rounded-2xl bg-slate-950 px-4 py-3 text-sm font-semibold text-white hover:bg-slate-800 disabled:opacity-60"
                     >
                         {arquivosStorage.length > 0 ? <RefreshCw className="h-4 w-4" /> : <Database className="h-4 w-4" />}
                         {carregandoStorage ? "Carregando..." : arquivosStorage.length > 0 ? "Atualizar arquivos" : "Carregar arquivos"}
@@ -505,7 +503,7 @@ Essa ação remove apenas o arquivo físico sem vínculo no banco e não pode se
                         onClick={acionarBotaoLimpezaStorage}
                         disabled={botaoLimpezaStorageBloqueado}
                         className={classNames(
-                            "inline-flex min-h-[46px] items-center justify-center gap-2 rounded-2xl px-4 py-3 text-sm font-semibold ring-1 transition disabled:opacity-50",
+                            "inline-flex min-h-[46px] shrink-0 items-center justify-center gap-2 whitespace-nowrap rounded-2xl px-4 py-3 text-sm font-semibold ring-1 transition disabled:opacity-50",
                             mostrarPainelLimpezaStorage
                                 ? "bg-red-600 text-white ring-red-600 hover:bg-red-700"
                                 : "bg-red-50 text-red-700 ring-red-200 hover:bg-red-100"
@@ -515,6 +513,8 @@ Essa ação remove apenas o arquivo físico sem vínculo no banco e não pode se
                         <Trash2 className="h-4 w-4" />
                         {textoBotaoLimpezaStorage}
                     </button>
+
+                    {controleCard}
                 </div>
             </div>
 

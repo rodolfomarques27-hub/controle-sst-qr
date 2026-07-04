@@ -1,4 +1,4 @@
-﻿/* eslint-disable no-unused-vars */
+/* eslint-disable no-unused-vars */
 import React, { useEffect, useMemo, useState } from "react";
 import {
     AlertTriangle,
@@ -121,7 +121,6 @@ const CHAVES_BLOCOS_CONFIGURACOES_PADRAO = [
     "config-seguranca-publica",
     "config-storage-privado",
     "config-supabase-geral",
-    "config-status-etapa",
 ];
 
 const VERSAO_LAYOUT_CONFIGURACOES_SISTEMA = "roteiro15a-configuracoes-tecnicas-sem-gestao-acessos";
@@ -645,6 +644,18 @@ export function ConfiguracoesSistema({
         }));
     };
 
+    const cliqueVeioDeControleInterativoConfiguracao = (evento) => {
+        const alvo = evento?.target;
+
+        if (!alvo || typeof alvo.closest !== "function") return false;
+
+        const controleInterativo = alvo.closest(
+            "button, input, textarea, select, option, a, label, summary, [role='button'], [role='checkbox'], [role='switch'], [contenteditable='true'], [data-nao-alternar-card='true']"
+        );
+
+        return Boolean(controleInterativo && controleInterativo !== evento.currentTarget);
+    };
+
     const abrirTodosBlocosConfiguracao = () => {
         setBlocosRecolhidosConfiguracoes(CHAVES_BLOCOS_CONFIGURACOES_PADRAO.reduce((acc, chave) => {
             acc[chave] = false;
@@ -791,7 +802,10 @@ export function ConfiguracoesSistema({
         return (
             <button
                 type="button"
-                onClick={() => alternarRecolhidoBlocoConfiguracao(chave)}
+                onClick={(evento) => {
+                    evento.stopPropagation();
+                    alternarRecolhidoBlocoConfiguracao(chave);
+                }}
                 className={classNames(
                     "inline-flex min-h-[34px] items-center justify-center gap-2 rounded-2xl bg-slate-950 px-3.5 py-2 text-xs font-black text-white shadow-sm ring-1 ring-slate-950 transition hover:-translate-y-0.5 hover:bg-slate-800",
                     extraClassName
@@ -803,18 +817,104 @@ export function ConfiguracoesSistema({
         );
     };
 
-    const topoControleBlocoConfiguracao = (chave, titulo = "") => (
-        <div className="mb-2 flex items-center justify-end gap-2">
-            {botaoRecolherBlocoConfiguracao(chave, "w-full sm:w-auto")}
-        </div>
-    );
+    const renderizarCabecalhoComControleBlocoConfiguracao = (cabecalho, chave) => {
+        const controle = botaoRecolherBlocoConfiguracao(chave, "shrink-0");
+
+        if (!React.isValidElement(cabecalho)) {
+            return (
+                <div className="flex items-center justify-end gap-2">
+                    {controle}
+                </div>
+            );
+        }
+
+        const filhosCabecalho = React.Children.toArray(cabecalho.props.children);
+        const indiceAcoes = filhosCabecalho.length - 1;
+        const acoes = filhosCabecalho[indiceAcoes];
+        const classeAcoes = React.isValidElement(acoes) ? String(acoes.props.className || "") : "";
+        const ultimoFilhoPareceAcoes = filhosCabecalho.length > 1 && React.isValidElement(acoes) && classeAcoes.includes("flex");
+
+        if (ultimoFilhoPareceAcoes) {
+            return React.cloneElement(cabecalho, {
+                className: classNames(cabecalho.props.className || "", "items-start"),
+                children: (
+                    <>
+                        {filhosCabecalho.slice(0, indiceAcoes)}
+                        {React.cloneElement(acoes, {
+                            className: classNames(acoes.props.className || "", "items-center justify-end"),
+                            children: (
+                                <>
+                                    {acoes.props.children}
+                                    {controle}
+                                </>
+                            ),
+                        })}
+                    </>
+                ),
+            });
+        }
+
+        return React.cloneElement(cabecalho, {
+            className: classNames(cabecalho.props.className || "", "md:flex-row md:items-start md:justify-between"),
+            children: (
+                <>
+                    {cabecalho.props.children}
+                    <div className="flex shrink-0 flex-wrap items-center justify-end gap-2">
+                        {controle}
+                    </div>
+                </>
+            ),
+        });
+    };
+
+    const renderizarConteudoAbertoComControleConfiguracao = (conteudo, chave) => {
+        const filhosConteudo = React.Children.toArray(conteudo?.props?.children);
+
+        if (!filhosConteudo.length) {
+            return (
+                <>
+                    <div className="flex items-center justify-end gap-2">
+                        {botaoRecolherBlocoConfiguracao(chave, "shrink-0")}
+                    </div>
+                    {conteudo?.props?.children}
+                </>
+            );
+        }
+
+        const [cabecalho, ...resto] = filhosConteudo;
+
+        return (
+            <>
+                {renderizarCabecalhoComControleBlocoConfiguracao(cabecalho, chave)}
+                {resto}
+            </>
+        );
+    };
 
     const renderBlocoConfiguracaoComControle = (chave, titulo, descricao, conteudo) => {
         if (!blocoConfiguracaoVisivel(chave)) return null;
 
         if (blocoConfiguracaoRecolhido(chave)) {
             return (
-                <Card className="h-full py-3">
+                <div
+                    className="h-full"
+                    role="button"
+                    tabIndex={0}
+                    aria-label={`Abrir ${titulo}`}
+                    onClickCapture={(evento) => {
+                        if (cliqueVeioDeControleInterativoConfiguracao(evento)) return;
+                        alternarRecolhidoBlocoConfiguracao(chave);
+                    }}
+                    onKeyDown={(evento) => {
+                        if (evento.target !== evento.currentTarget) return;
+
+                        if (evento.key === "Enter" || evento.key === " ") {
+                            evento.preventDefault();
+                            alternarRecolhidoBlocoConfiguracao(chave);
+                        }
+                    }}
+                >
+                    <Card className="h-full py-3 transition hover:-translate-y-0.5 hover:shadow-md">
                     <div className="flex min-w-0 items-center justify-between gap-3">
                         <div className="min-w-0">
                             <p className="text-[10px] font-black uppercase tracking-wide text-slate-400">Card recolhido</p>
@@ -825,27 +925,53 @@ export function ConfiguracoesSistema({
                             {botaoRecolherBlocoConfiguracao(chave, "px-3 py-1.5 text-[11px]")}
                         </div>
                     </div>
-                </Card>
+                    </Card>
+                </div>
             );
         }
 
         if (React.isValidElement(conteudo)) {
-            return React.cloneElement(conteudo, {
-                className: classNames(conteudo.props.className || "", "h-full"),
-                children: (
-                    <>
-                        {topoControleBlocoConfiguracao(chave, titulo)}
-                        {conteudo.props.children}
-                    </>
-                ),
-            });
+            return (
+                <div
+                    className="h-full"
+                    aria-label={`Recolher ${titulo}`}
+                    onClick={(evento) => {
+                        if (cliqueVeioDeControleInterativoConfiguracao(evento)) return;
+                        alternarRecolhidoBlocoConfiguracao(chave);
+                    }}
+                >
+                    {React.cloneElement(conteudo, {
+                        className: classNames(conteudo.props.className || "", "h-full"),
+                        children: renderizarConteudoAbertoComControleConfiguracao(conteudo, chave),
+                    })}
+                </div>
+            );
         }
 
         return (
-            <Card>
-                {topoControleBlocoConfiguracao(chave, titulo)}
-                {conteudo}
-            </Card>
+            <div
+                className="h-full"
+                aria-label={`Recolher ${titulo}`}
+                onClick={(evento) => {
+                    if (cliqueVeioDeControleInterativoConfiguracao(evento)) return;
+                    alternarRecolhidoBlocoConfiguracao(chave);
+                }}
+            >
+                <Card className="h-full">
+                    <div className="flex flex-col gap-3 border-b border-slate-100 pb-4 md:flex-row md:items-start md:justify-between">
+                        <div>
+                            <h2 className="text-lg font-black text-slate-950">{titulo}</h2>
+                            <p className="mt-1 text-sm text-slate-500">{descricao}</p>
+                        </div>
+                        <div className="flex shrink-0 flex-wrap items-center justify-end gap-2">
+                            {botaoRecolherBlocoConfiguracao(chave, "shrink-0")}
+                        </div>
+                    </div>
+                    <div className="mt-4">
+                        {conteudo}
+                    </div>
+                </Card>
+            </div>
         );
     };
 
@@ -1550,7 +1676,6 @@ export function ConfiguracoesSistema({
         { chave: "config-seguranca-publica", titulo: "Checklist da auditoria pública", descricao: "Conferência operacional de token público e QR Code.", icon: ShieldAlert },
         { chave: "config-storage-privado", titulo: "Checklist do Storage privado", descricao: "Buckets, URLs assinadas e arquivos sensíveis.", icon: HardDrive },
         { chave: "config-supabase-geral", titulo: "Revisão Supabase / RLS / RPC", descricao: "Conferência técnica de tabelas, RLS, RPCs e buckets.", icon: Database },
-        { chave: "config-status-etapa", titulo: "Resumo técnico da tela", descricao: "Estado atual das configurações e do usuário autenticado.", icon: CheckCircle2 },
     ];
 
 
@@ -2412,13 +2537,22 @@ export function ConfiguracoesSistema({
             }
 
             return (
-                <ArquivosStorageConfiguracoes
-                    limiteStorageMb={limitesEditaveis.storageMb || limites.storageMb || 1024}
-                    onListarArquivosStorage={onListarArquivosStorage}
-                    onExcluirArquivoStorage={onExcluirArquivoStorage}
-                    onAtualizarAuditoria={onAtualizarAuditoria}
-                    controleCard={botaoRecolherBlocoConfiguracao("config-arquivos-storage", "w-full sm:w-auto")}
-                />
+                <div
+                    className="h-full"
+                    aria-label="Recolher Arquivos salvos no Storage"
+                    onClick={(evento) => {
+                        if (cliqueVeioDeControleInterativoConfiguracao(evento)) return;
+                        alternarRecolhidoBlocoConfiguracao("config-arquivos-storage");
+                    }}
+                >
+                    <ArquivosStorageConfiguracoes
+                        limiteStorageMb={limitesEditaveis.storageMb || limites.storageMb || 1024}
+                        onListarArquivosStorage={onListarArquivosStorage}
+                        onExcluirArquivoStorage={onExcluirArquivoStorage}
+                        onAtualizarAuditoria={onAtualizarAuditoria}
+                        controleCard={botaoRecolherBlocoConfiguracao("config-arquivos-storage", "shrink-0 whitespace-nowrap")}
+                    />
+                </div>
             );
 
         case "config-supabase-geral":
@@ -2484,31 +2618,6 @@ export function ConfiguracoesSistema({
                                     </div>
                                 </div>
                             ))}
-                        </div>
-                    </Card>
-                )
-            );
-
-        case "config-status-etapa":
-            return renderBlocoConfiguracaoComControle(
-                "config-status-etapa",
-                "Status da etapa",
-                "Resumo do usuário atual e do estado da tela.",
-                (
-                    <Card>
-                        <div className="flex items-start gap-3">
-                            <div className="rounded-2xl bg-blue-50 p-3 text-blue-700">
-                                <CheckCircle2 className="h-5 w-5" />
-                            </div>
-                            <div>
-                                <h2 id="config-status-etapa" className="scroll-mt-24 text-lg font-black text-slate-950">Status da etapa</h2>
-                                <p className="mt-1 text-sm leading-relaxed text-slate-500">
-                                    Esta tela centraliza as configurações sem alterar regras de login, RLS, Storage, upload ou QR público.
-                                </p>
-                                <p className="mt-3 text-xs font-semibold text-slate-400">
-                                    Usuário atual: {usuario?.email || "não informado"}
-                                </p>
-                            </div>
                         </div>
                     </Card>
                 )
