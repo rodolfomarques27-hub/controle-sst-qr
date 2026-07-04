@@ -1,14 +1,23 @@
 /* eslint-disable no-unused-vars */
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
+    Activity,
+    CalendarClock,
+    CheckCircle2,
     ChevronDown,
     ChevronUp,
     Database,
     Download,
+    Filter,
     Lock,
+    LogIn,
+    Mail,
+    PencilLine,
     RefreshCw,
     Search,
+    XCircle,
 } from "lucide-react";
+import dashboardHeroBackground from "../../assets/dashboard-hero-sst.png";
 import { CardRecolhivel, Header } from "../commonComponents";
 import { LIMITE_STORAGE_MB } from "../../constants/sstConstants";
 import {
@@ -1010,13 +1019,13 @@ Essa ação remove arquivos do Storage e não altera registros do banco.`;
 
 
     const cartasResumoAuditoriaSistema = [
-        { chave: "totalEventos", titulo: "Total de eventos", valor: auditoria.length, classe: "text-slate-950" },
-        { chave: "eventosFiltrados", titulo: "Eventos filtrados", valor: registrosFiltrados.length, classe: "text-blue-700" },
-        { chave: "acessos", titulo: "Acessos", valor: auditoriaVerificada.filter((item) => String(item.acao || "").includes("ACESSO")).length, classe: "text-emerald-700" },
-        { chave: "alteracoes", titulo: "Alterações", valor: auditoriaVerificada.filter(ehAlteracaoAuditoriaSistema).length, classe: "text-orange-700" },
-        { chave: "emailsMes", titulo: "E-mails no mês", valor: emailsMesAuditoria.length, classe: "text-blue-700" },
-        { chave: "emailsSucesso", titulo: "E-mails com sucesso", valor: emailsSucessoAuditoria.length, classe: "text-emerald-700" },
-        { chave: "emailsErro", titulo: "E-mails com erro", valor: emailsErroAuditoria.length, classe: "text-red-700" },
+        { chave: "totalEventos", titulo: "Total de eventos", valor: auditoria.length, detalhe: "Eventos carregados", classe: "text-slate-950", icon: Activity },
+        { chave: "eventosFiltrados", titulo: "Eventos filtrados", valor: registrosFiltrados.length, detalhe: "Resultado dos filtros", classe: "text-blue-700", icon: Filter },
+        { chave: "acessos", titulo: "Acessos", valor: auditoriaVerificada.filter((item) => String(item.acao || "").includes("ACESSO")).length, detalhe: "Entradas e consultas", classe: "text-emerald-700", icon: LogIn },
+        { chave: "alteracoes", titulo: "Alterações", valor: auditoriaVerificada.filter(ehAlteracaoAuditoriaSistema).length, detalhe: "Mudanças registradas", classe: "text-orange-700", icon: PencilLine },
+        { chave: "emailsMes", titulo: "E-mails no mês", valor: emailsMesAuditoria.length, detalhe: "Envios no período", classe: "text-blue-700", icon: Mail },
+        { chave: "emailsSucesso", titulo: "E-mails com sucesso", valor: emailsSucessoAuditoria.length, detalhe: "Entregas confirmadas", classe: "text-emerald-700", icon: CheckCircle2 },
+        { chave: "emailsErro", titulo: "E-mails com erro", valor: emailsErroAuditoria.length, detalhe: "Falhas de envio", classe: "text-red-700", icon: XCircle },
     ];
 
     const cartasResumoAuditoriaOrdenadas = [
@@ -1025,6 +1034,68 @@ Essa ação remove arquivos do Storage e não altera registros do banco.`;
             .filter(Boolean),
         ...cartasResumoAuditoriaSistema.filter((carta) => !ordemCartasAuditoria.includes(carta.chave)),
     ];
+
+    const obterTemaCartaAuditoriaSistema = (chave = "") => {
+        const chaveNormalizada = String(chave || "").toLowerCase();
+
+        if (chaveNormalizada.includes("total")) {
+            return {
+                faixa: "from-slate-400 via-slate-700 to-slate-400",
+                borda: "border-slate-100",
+                icone: "bg-slate-50 text-slate-700 ring-slate-200",
+                etiqueta: "text-slate-700",
+                valor: "text-slate-950",
+            };
+        }
+
+        if (chaveNormalizada.includes("filtrados") || chaveNormalizada.includes("emailsmes")) {
+            return {
+                faixa: "from-sky-400 via-blue-500 to-cyan-400",
+                borda: "border-sky-100",
+                icone: "bg-sky-50 text-blue-700 ring-sky-100",
+                etiqueta: "text-blue-700",
+                valor: "text-blue-700",
+            };
+        }
+
+        if (chaveNormalizada.includes("acessos") || chaveNormalizada.includes("sucesso")) {
+            return {
+                faixa: "from-emerald-400 via-teal-500 to-cyan-400",
+                borda: "border-emerald-100",
+                icone: "bg-emerald-50 text-emerald-700 ring-emerald-100",
+                etiqueta: "text-emerald-700",
+                valor: "text-emerald-700",
+            };
+        }
+
+        if (chaveNormalizada.includes("alteracoes")) {
+            return {
+                faixa: "from-amber-400 via-orange-500 to-rose-400",
+                borda: "border-amber-100",
+                icone: "bg-amber-50 text-orange-700 ring-amber-100",
+                etiqueta: "text-orange-700",
+                valor: "text-orange-700",
+            };
+        }
+
+        if (chaveNormalizada.includes("erro")) {
+            return {
+                faixa: "from-rose-400 via-red-500 to-orange-400",
+                borda: "border-rose-100",
+                icone: "bg-rose-50 text-red-700 ring-rose-100",
+                etiqueta: "text-red-700",
+                valor: "text-red-700",
+            };
+        }
+
+        return {
+            faixa: "from-slate-300 via-slate-500 to-slate-300",
+            borda: "border-slate-100",
+            icone: "bg-slate-50 text-slate-700 ring-slate-200",
+            etiqueta: "text-slate-700",
+            valor: "text-slate-950",
+        };
+    };
 
     const opcoesBlocosAuditoriaSistema = [
         { chave: "atividades", titulo: "Últimas atividades" },
@@ -1358,11 +1429,25 @@ Essa ação remove arquivos do Storage e não altera registros do banco.`;
         </div>
     );
 
+    const agoraHeroAuditoriaSistema = new Date();
+    const dataHeroAuditoriaSistema = new Intl.DateTimeFormat("pt-BR", {
+        day: "2-digit",
+        month: "long",
+        year: "numeric",
+    }).format(agoraHeroAuditoriaSistema);
+    const diaSemanaHeroAuditoriaSistema = new Intl.DateTimeFormat("pt-BR", {
+        weekday: "long",
+    }).format(agoraHeroAuditoriaSistema);
+    const horaHeroAuditoriaSistema = new Intl.DateTimeFormat("pt-BR", {
+        hour: "2-digit",
+        minute: "2-digit",
+    }).format(agoraHeroAuditoriaSistema);
+
     return (
         <div>
             <Header
                 titulo="Auditoria do Sistema"
-                subtitulo="Histórico de rastreabilidade das ações realizadas no sistema, incluindo acessos, alterações, exclusões, uploads, QR Code e eventos administrativos."
+                subtitulo={null}
                 acao={
                     <div className="flex flex-wrap gap-2">
                         <button
@@ -1421,6 +1506,47 @@ Essa ação remove arquivos do Storage e não altera registros do banco.`;
                     </div>
                 }
             />
+
+            <section
+                data-auditoria-sistema-hero="true"
+                className="relative mb-6 overflow-hidden rounded-[22px] border border-[#E5E9EF] bg-[#111827] shadow-[0_10px_28px_rgba(26,35,50,0.12)]"
+            >
+                <div
+                    className="absolute inset-0 bg-cover bg-center bg-no-repeat opacity-100"
+                    style={{
+                        backgroundImage: `url(${dashboardHeroBackground})`,
+                        backgroundPosition: "center center",
+                        backgroundSize: "cover",
+                    }}
+                />
+                <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(17,24,39,0.36)_0%,rgba(17,24,39,0.24)_34%,rgba(17,24,39,0.10)_68%,rgba(17,24,39,0.08)_100%)]" />
+
+                <div className="relative flex min-h-[155px] flex-col justify-between gap-5 px-6 py-6 text-white lg:flex-row lg:items-center">
+                    <div className="min-w-0" style={{ textShadow: "0 2px 10px rgba(0,0,0,0.65)" }}>
+                        <p className="text-xs font-black uppercase tracking-[0.22em] text-emerald-300">
+                            SafeScan Brasil
+                        </p>
+                        <h2 className="mt-2 text-xl font-black leading-tight text-white md:text-2xl">
+                            Auditoria do Sistema
+                        </h2>
+                        <p className="mt-2 max-w-3xl text-base font-bold text-slate-200 md:text-lg">
+                            Histórico de rastreabilidade das ações realizadas no sistema, incluindo acessos, alterações, exclusões, uploads, QR Code e eventos administrativos.
+                        </p>
+                        <div className="mt-5 h-1 w-14 rounded-full bg-[#1E7C3A]" />
+                    </div>
+
+                    <div className="rounded-2xl border border-white/10 bg-black/35 px-4 py-3 text-sm font-black text-white shadow-[0_8px_24px_rgba(0,0,0,0.22)] backdrop-blur">
+                        <div className="flex flex-wrap items-center gap-2">
+                            <CalendarClock className="h-4 w-4 text-emerald-300" />
+                            <span>{dataHeroAuditoriaSistema}</span>
+                            <span className="text-emerald-300">•</span>
+                            <span className="capitalize">{diaSemanaHeroAuditoriaSistema}</span>
+                            <span className="text-emerald-300">•</span>
+                            <span>{horaHeroAuditoriaSistema}</span>
+                        </div>
+                    </div>
+                </div>
+            </section>
 
             {mensagemResumoAuditoria && (
                 <div className="mb-5 rounded-3xl bg-emerald-50 px-5 py-4 text-sm font-bold text-emerald-700 ring-1 ring-emerald-200">
@@ -1500,13 +1626,33 @@ Essa ação remove arquivos do Storage e não altera registros do banco.`;
             <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
                 {cartasResumoAuditoriaOrdenadas
                     .filter((carta) => cartasVisiveisAuditoria[carta.chave] !== false)
-                    .map((carta) => (
-                        <div key={carta.chave} className={classeTamanhoCartaAuditoriaSistema(tamanhosCartasAuditoria[carta.chave])}>
-                            <CardRecolhivel titulo={carta.titulo} defaultOpen compacto>
-                                <p className={classNames("text-3xl font-bold", carta.classe)}>{carta.valor}</p>
-                            </CardRecolhivel>
-                        </div>
-                    ))}
+                    .map((carta) => {
+                        const Icon = carta.icon || Activity;
+                        const tema = obterTemaCartaAuditoriaSistema(carta.chave);
+
+                        return (
+                            <div key={carta.chave} className={classeTamanhoCartaAuditoriaSistema(tamanhosCartasAuditoria[carta.chave])}>
+                                <div
+                                    className={classNames(
+                                        "group relative h-full min-h-[5.6rem] overflow-hidden rounded-[22px] border bg-[linear-gradient(180deg,rgba(255,255,255,0.98)_0%,rgba(246,249,252,0.96)_100%)] px-3 py-2 shadow-[0_10px_26px_rgba(26,35,50,0.08)] transition duration-200 hover:-translate-y-0.5 hover:shadow-[0_16px_34px_rgba(26,35,50,0.13)]",
+                                        tema.borda
+                                    )}
+                                >
+                                    <span className={classNames("absolute inset-x-0 top-0 h-1 bg-gradient-to-r", tema.faixa)} />
+                                    <div className="flex min-h-0 flex-1 items-center justify-center gap-2 py-1">
+                                        <div className={classNames("flex h-8 w-8 shrink-0 items-center justify-center rounded-2xl shadow-sm ring-1", tema.icone)}>
+                                            <Icon className="h-4 w-4" />
+                                        </div>
+                                        <div className="flex min-w-0 flex-1 flex-col text-center">
+                                            <p className={classNames("texto-quebra-segura text-[11px] font-black uppercase tracking-[0.08em] leading-tight", tema.etiqueta)}>{carta.titulo}</p>
+                                            <p className={classNames("texto-quebra-segura text-2xl font-black leading-tight", tema.valor)}>{carta.valor}</p>
+                                            <p className="texto-quebra-segura text-[11px] font-semibold leading-tight text-slate-500">{carta.detalhe}</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        );
+                    })}
             </div>
 
             <div className="mt-5 grid gap-5 xl:grid-cols-4">
