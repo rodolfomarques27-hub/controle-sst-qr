@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import {
     AlertTriangle,
+    CalendarClock,
     Camera,
     CheckCircle2,
     ClipboardList,
@@ -14,6 +15,7 @@ import {
     UsersRound,
     X,
 } from "lucide-react";
+import dashboardHeroBackground from "../../assets/dashboard-hero-sst.png";
 import { Card } from "../commonComponents";
 import {
     ACOES_USUARIOS_PERMISSOES,
@@ -2827,31 +2829,86 @@ export function AcessosAppPage({ usuario = null }) {
         };
     }, [usuario?.email, usuario?.id, usuario?.user_id]);
 
+    const agoraHeroAcessosApp = new Date();
+    const dataHeroAcessosApp = new Intl.DateTimeFormat("pt-BR", {
+        day: "2-digit",
+        month: "long",
+        year: "numeric",
+    }).format(agoraHeroAcessosApp);
+    const diaSemanaHeroAcessosApp = new Intl.DateTimeFormat("pt-BR", {
+        weekday: "long",
+    }).format(agoraHeroAcessosApp);
+    const horaHeroAcessosApp = new Intl.DateTimeFormat("pt-BR", {
+        hour: "2-digit",
+        minute: "2-digit",
+    }).format(agoraHeroAcessosApp);
+
     return (
         <div className="page-shell space-y-5">
+            <section
+                data-acessos-app-hero="true"
+                className="relative overflow-hidden rounded-[22px] border border-[#E5E9EF] bg-[#111827] shadow-[0_10px_28px_rgba(26,35,50,0.12)]"
+            >
+                <div
+                    className="absolute inset-0 bg-cover bg-center bg-no-repeat opacity-100"
+                    style={{
+                        backgroundImage: `url(${dashboardHeroBackground})`,
+                        backgroundPosition: "center center",
+                        backgroundSize: "cover",
+                    }}
+                />
+                <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(17,24,39,0.36)_0%,rgba(17,24,39,0.24)_34%,rgba(17,24,39,0.10)_68%,rgba(17,24,39,0.08)_100%)]" />
+
+                <div className="relative flex min-h-[155px] flex-col justify-between gap-5 px-6 py-6 text-white lg:flex-row lg:items-center">
+                    <div className="min-w-0" style={{ textShadow: "0 2px 10px rgba(0,0,0,0.65)" }}>
+                        <p className="text-xs font-black uppercase tracking-[0.22em] text-emerald-300">
+                            SafeScan Brasil
+                        </p>
+                        <h2 className="mt-2 text-xl font-black leading-tight text-white md:text-2xl">
+                            Acessos do App
+                        </h2>
+                        <p className="mt-2 max-w-3xl text-base font-bold text-slate-200 md:text-lg">
+                            Central administrativa para login real, senha temporária, perfis, bloqueios e permissões de acesso ao sistema SST.
+                        </p>
+                        <div className="mt-5 h-1 w-14 rounded-full bg-[#1E7C3A]" />
+                    </div>
+
+                    <div className="rounded-2xl border border-white/10 bg-black/35 px-4 py-3 text-sm font-black text-white shadow-[0_8px_24px_rgba(0,0,0,0.22)] backdrop-blur">
+                        <div className="flex flex-wrap items-center gap-2">
+                            <CalendarClock className="h-4 w-4 text-emerald-300" />
+                            <span>{dataHeroAcessosApp}</span>
+                            <span className="text-emerald-300">•</span>
+                            <span className="capitalize">{diaSemanaHeroAcessosApp}</span>
+                            <span className="text-emerald-300">•</span>
+                            <span>{horaHeroAcessosApp}</span>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
             <Card className="overflow-hidden border border-slate-200 bg-white p-0 shadow-[0_18px_50px_rgba(15,23,42,0.08)]">
                 <div className="grid gap-0 lg:grid-cols-[0.56fr_0.44fr]">
                     <section className="px-6 py-7 sm:px-8">
                         <div className="flex flex-wrap items-center gap-3">
                             <BadgeEtapa variante="sucesso">Área administrativa</BadgeEtapa>
-                            <BadgeEtapa>Login e permissões</BadgeEtapa>
+                            <BadgeEtapa>Ações rápidas</BadgeEtapa>
                         </div>
 
                         <h2 className="mt-5 text-3xl font-black tracking-tight text-slate-950 sm:text-4xl">
-                            Acessos do App
+                            Atalhos administrativos
                         </h2>
                         <p className="mt-3 max-w-3xl text-sm font-semibold leading-7 text-slate-500">
-                            Central para cadastrar pessoas, criar login real, revisar perfis, bloquear usuários e controlar permissões de acesso ao sistema SST.
+                            Use os atalhos abaixo para acessar cadastro de login, solicitações pendentes, atualização da lista e edição dos perfis de permissão.
                         </p>
 
                         <div className="mt-5 space-y-2 text-sm font-semibold leading-6 text-slate-500">
                             <div className="flex items-center gap-2">
                                 <Info className="h-4 w-4 text-blue-600" strokeWidth={2.2} />
-                                <span>Central de gestão de acessos e perfis do sistema SST.</span>
+                                <span>Gestão operacional de acessos, perfis e solicitações.</span>
                             </div>
                             <div className="flex items-center gap-2">
                                 <UsersRound className="h-4 w-4 text-blue-600" strokeWidth={2.2} />
-                                <span>Garanta segurança e controle total sobre quem acessa o sistema.</span>
+                                <span>Controle quem acessa, quem fica bloqueado e quais módulos cada perfil pode usar.</span>
                             </div>
                         </div>
 
