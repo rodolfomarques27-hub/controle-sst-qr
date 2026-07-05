@@ -81,6 +81,10 @@ const CAMPOS_NOME_EMPRESA_DDS = [
     "label",
 ];
 
+const CHAVE_OBRA_SETOR_DDS_POR_EMPRESA = "controle-sst-qr:dds:obra-setor-por-empresa:v1";
+const CHAVE_FISCAL_IDEALIZA_DDS_POR_EMPRESA = "controle-sst-qr:dds:fiscal-idealiza-por-empresa:v1";
+const CHAVE_EMPRESA_SELECIONADA_DDS = "controle-sst-qr:dds:empresa-selecionada:v1";
+
 const CAMPOS_OBRA_SETOR_DDS = [
     "obra_setor",
     "obraSetor",
@@ -92,12 +96,193 @@ const CAMPOS_OBRA_SETOR_DDS = [
     "endereco_obra",
 ];
 
+function carregarObrasSetorDdsPorEmpresa() {
+    if (typeof window === "undefined" || !window.localStorage) return {};
+
+    try {
+        const bruto = window.localStorage.getItem(CHAVE_OBRA_SETOR_DDS_POR_EMPRESA);
+        if (!bruto) return {};
+
+        const dados = JSON.parse(bruto);
+        return dados && typeof dados === "object" ? dados : {};
+    } catch {
+        return {};
+    }
+}
+
+function salvarObrasSetorDdsPorEmpresa(dados = {}) {
+    if (typeof window === "undefined" || !window.localStorage) return;
+
+    try {
+        window.localStorage.setItem(CHAVE_OBRA_SETOR_DDS_POR_EMPRESA, JSON.stringify(dados || {}));
+    } catch {
+        // Ignora navegador sem localStorage disponível.
+    }
+}
+
+function carregarFiscalIdealizaDdsPorEmpresa() {
+    if (typeof window === "undefined" || !window.localStorage) return {};
+
+    try {
+        const bruto = window.localStorage.getItem(CHAVE_FISCAL_IDEALIZA_DDS_POR_EMPRESA);
+        if (!bruto) return {};
+
+        const dados = JSON.parse(bruto);
+        return dados && typeof dados === "object" ? dados : {};
+    } catch {
+        return {};
+    }
+}
+
+function salvarFiscalIdealizaDdsPorEmpresa(dados = {}) {
+    if (typeof window === "undefined" || !window.localStorage) return;
+
+    try {
+        window.localStorage.setItem(CHAVE_FISCAL_IDEALIZA_DDS_POR_EMPRESA, JSON.stringify(dados || {}));
+    } catch {
+        // Ignora navegador sem localStorage disponível.
+    }
+}
+
+function carregarEmpresaSelecionadaDds() {
+    if (typeof window === "undefined" || !window.localStorage) return "";
+
+    try {
+        return String(window.localStorage.getItem(CHAVE_EMPRESA_SELECIONADA_DDS) || "").trim();
+    } catch {
+        return "";
+    }
+}
+
+function salvarEmpresaSelecionadaDds(chaveEmpresa = "") {
+    if (typeof window === "undefined" || !window.localStorage) return;
+
+    try {
+        if (chaveEmpresa) {
+            window.localStorage.setItem(CHAVE_EMPRESA_SELECIONADA_DDS, chaveEmpresa);
+        } else {
+            window.localStorage.removeItem(CHAVE_EMPRESA_SELECIONADA_DDS);
+        }
+    } catch {
+        // Ignora navegador sem localStorage disponível.
+    }
+}
+
 const CAMPOS_FUNCAO_DDS = [
     "funcao",
+    "função",
+    "funcao_nome",
+    "funcaoNome",
+    "nome_funcao",
+    "nomeFuncao",
     "cargo",
+    "cargo_atual",
+    "cargoAtual",
     "profissao",
+    "profissão",
     "ocupacao",
+    "ocupação",
+    "atividade",
 ];
+
+const CAMPOS_TST_EMPRESA_DDS = [
+    "tst_responsavel",
+    "tstResponsavel",
+    "responsavel_tecnico",
+    "responsavelTecnico",
+    "responsavel_sst",
+    "responsavelSst",
+    "tecnico_responsavel",
+    "tecnicoResponsavel",
+];
+
+const CAMPOS_ID_EMPRESA_DDS = [
+    "id",
+    "empresa_id",
+    "empresaId",
+    "id_empresa",
+    "codigo",
+    "uuid",
+];
+
+function obterIdEmpresaObjetoDds(empresa = null) {
+    return obterPrimeiroTextoDds(empresa, CAMPOS_ID_EMPRESA_DDS);
+}
+
+function obterChaveEmpresaDds(empresa = null, indice = 0) {
+    return String(
+        obterIdEmpresaObjetoDds(empresa)
+        || obterNomeEmpresaObjetoDds(empresa)
+        || `empresa-${indice}`
+    ).trim();
+}
+
+function normalizarComparacaoDds(valor = "") {
+    return normalizarTextoCodigoDds(valor)
+        .replace(/\s+/g, " ")
+        .trim();
+}
+
+function obterNomeEmpresaColaboradorDds(colaborador = null) {
+    if (!colaborador || typeof colaborador !== "object") return "";
+
+    if (colaborador.empresa && typeof colaborador.empresa === "object") {
+        return obterNomeEmpresaObjetoDds(colaborador.empresa);
+    }
+
+    return String(
+        colaborador?.empresa
+        || colaborador?.empresa_nome
+        || colaborador?.empresaNome
+        || colaborador?.nome_empresa
+        || colaborador?.razao_social
+        || colaborador?.razaoSocial
+        || colaborador?.nome_fantasia
+        || colaborador?.nomeFantasia
+        || ""
+    ).trim();
+}
+
+function obterIdEmpresaColaboradorDds(colaborador = null) {
+    if (!colaborador || typeof colaborador !== "object") return "";
+
+    return String(
+        colaborador?.empresa_id
+        || colaborador?.empresaId
+        || colaborador?.id_empresa
+        || colaborador?.empresa?.id
+        || colaborador?.empresa?.empresa_id
+        || ""
+    ).trim();
+}
+
+function colaboradorPertenceEmpresaDds(colaborador = null, empresa = null) {
+    if (!empresa) return true;
+
+    const idEmpresa = obterIdEmpresaObjetoDds(empresa);
+    const idColaboradorEmpresa = obterIdEmpresaColaboradorDds(colaborador);
+
+    if (idEmpresa && idColaboradorEmpresa && String(idEmpresa) === String(idColaboradorEmpresa)) {
+        return true;
+    }
+
+    const nomeEmpresa = normalizarComparacaoDds(obterNomeEmpresaObjetoDds(empresa));
+    const nomeEmpresaColaborador = normalizarComparacaoDds(obterNomeEmpresaColaboradorDds(colaborador));
+
+    if (nomeEmpresa && nomeEmpresaColaborador && nomeEmpresa === nomeEmpresaColaborador) {
+        return true;
+    }
+
+    return false;
+}
+
+function filtrarColaboradoresPorEmpresaDds(colaboradores = [], empresa = null) {
+    const lista = Array.isArray(colaboradores) ? colaboradores : [];
+
+    if (!empresa) return lista;
+
+    return lista.filter((colaborador) => colaboradorPertenceEmpresaDds(colaborador, empresa));
+}
 
 function formatarDataDds(data) {
     const dataSegura = data instanceof Date && !Number.isNaN(data.getTime()) ? data : new Date();
@@ -195,12 +380,17 @@ function obterFuncaoPessoaDds(pessoa = null) {
     return obterPrimeiroTextoDds(pessoa, CAMPOS_FUNCAO_DDS);
 }
 
+function obterTstEmpresaDds(empresa = null) {
+    return obterPrimeiroTextoDds(empresa, CAMPOS_TST_EMPRESA_DDS);
+}
+
 function textoContemTermosDds(texto = "", termos = []) {
     const normalizado = normalizarTextoCodigoDds(texto);
     return termos.some((termo) => normalizado.includes(normalizarTextoCodigoDds(termo)));
 }
 
-function obterEmpresaBaseDds({ empresasBanco = [], colaboradores = [] } = {}) {
+function obterEmpresaBaseDds({ empresasBanco = [], colaboradores = [], empresaSelecionada = null } = {}) {
+    if (empresaSelecionada) return empresaSelecionada;
     const empresasValidas = Array.isArray(empresasBanco) ? empresasBanco.filter(Boolean) : [];
 
     if (empresasValidas.length > 0) {
@@ -221,7 +411,16 @@ function obterEmpresaBaseDds({ empresasBanco = [], colaboradores = [] } = {}) {
     return nomeEmpresaColaborador ? { nome: nomeEmpresaColaborador } : null;
 }
 
-function obterResponsavelTecnicoDds({ colaboradores = [], usuario = null } = {}) {
+function obterResponsavelTecnicoDds({ colaboradores = [], usuario = null, empresaSelecionada = null } = {}) {
+    const tstEmpresa = obterTstEmpresaDds(empresaSelecionada);
+
+    if (tstEmpresa) {
+        return {
+            nome: tstEmpresa,
+            funcao: "Téc. de Segurança do Trabalho",
+        };
+    }
+
     const funcaoUsuario = obterFuncaoPessoaDds(usuario);
     const perfilUsuario = String(usuario?.perfil || "").trim();
 
@@ -266,11 +465,11 @@ function obterLiderDds({ colaboradores = [] } = {}) {
     return "Líder não definido";
 }
 
-function montarDadosDdsAutomaticos({ empresasBanco = [], colaboradores = [], usuario = null, inicioSemana = obterInicioSemanaDds(), fimSemana = obterFimSemanaDds(inicioSemana) } = {}) {
-    const empresaBase = obterEmpresaBaseDds({ empresasBanco, colaboradores });
+function montarDadosDdsAutomaticos({ empresasBanco = [], colaboradores = [], usuario = null, empresaSelecionada = null, inicioSemana = obterInicioSemanaDds(), fimSemana = obterFimSemanaDds(inicioSemana) } = {}) {
+    const empresaBase = obterEmpresaBaseDds({ empresasBanco, colaboradores, empresaSelecionada });
     const nomeEmpresa = obterNomeEmpresaObjetoDds(empresaBase) || "Empresa não definida";
     const obraSetor = obterPrimeiroTextoDds(empresaBase, CAMPOS_OBRA_SETOR_DDS) || "Obra / Setor não definido";
-    const responsavelTecnico = obterResponsavelTecnicoDds({ colaboradores, usuario });
+    const responsavelTecnico = obterResponsavelTecnicoDds({ colaboradores, usuario, empresaSelecionada: empresaBase });
     const periodo = `${formatarDataDds(inicioSemana)} a ${formatarDataDds(fimSemana)}`;
 
     return {
@@ -279,6 +478,7 @@ function montarDadosDdsAutomaticos({ empresasBanco = [], colaboradores = [], usu
         responsavel: responsavelTecnico.nome,
         funcaoResponsavel: responsavelTecnico.funcao,
         turno: "Diurno",
+        fiscalIdealiza: "Fiscal Idealiza não definido",
         encarregado: obterLiderDds({ colaboradores }),
         periodo,
         resumoSemana: obterResumoSemanaDds(inicioSemana, fimSemana),
@@ -289,11 +489,10 @@ function montarDadosDdsAutomaticos({ empresasBanco = [], colaboradores = [], usu
 const dadosDdsPadrao = montarDadosDdsAutomaticos();
 
 const camposDadosDds = [
-    { chave: "empresa", rotulo: "Empresa" },
     { chave: "obraSetor", rotulo: "Obra / Setor" },
     { chave: "responsavel", rotulo: "Responsável / TST" },
-    { chave: "funcaoResponsavel", rotulo: "Função do responsável" },
     { chave: "turno", rotulo: "Turno" },
+    { chave: "fiscalIdealiza", rotulo: "Fiscal Idealiza" },
     { chave: "encarregado", rotulo: "Líder / Encarregado" },
 ];
 
@@ -302,14 +501,66 @@ function obterValorTextoDds(...valores) {
     return String(encontrado || "-").trim();
 }
 
+function abreviarNomePessoaDds(nome = "", limite = 28) {
+    const texto = String(nome || "").replace(/\s+/g, " ").trim();
+
+    if (!texto || texto === "-") return "-";
+    if (texto.length <= limite) return texto;
+
+    const conectores = new Set(["de", "da", "do", "das", "dos", "e"]);
+    const partes = texto.split(" ").filter(Boolean);
+
+    if (partes.length <= 2) return texto;
+
+    const primeira = partes[0];
+    const ultima = partes[partes.length - 1];
+    const iniciais = partes
+        .slice(1, -1)
+        .filter((parte) => !conectores.has(parte.toLowerCase()))
+        .map((parte) => `${parte[0]}.`);
+
+    const abreviado = [primeira, ...iniciais, ultima].join(" ");
+
+    if (abreviado.length <= limite + 8) return abreviado;
+
+    return `${primeira} ${ultima}`;
+}
+
+function abreviarFuncaoResponsavelDds(funcao = "") {
+    const texto = String(funcao || "").replace(/\s+/g, " ").trim();
+
+    if (!texto || texto === "-") return "-";
+
+    const normalizado = normalizarTextoCodigoDds(texto);
+
+    if (
+        normalizado.includes("SEGURANCA DO TRABALHO")
+        || normalizado.includes("SEGURANCA TRABALHO")
+        || normalizado.includes("TST")
+    ) {
+        return "Téc. Seg. Trabalho";
+    }
+
+    return texto;
+}
+
+function formatarResponsavelCabecalhoDds(dadosDds = {}) {
+    const nome = abreviarNomePessoaDds(dadosDds.responsavel);
+    const funcao = abreviarFuncaoResponsavelDds(dadosDds.funcaoResponsavel);
+
+    if (!funcao || funcao === "-") return nome;
+
+    return `${nome} — ${funcao}`;
+}
+
 function normalizarParticipantesDdsSistema(colaboradores = []) {
-    const base = Array.isArray(colaboradores) && colaboradores.length > 0 ? colaboradores : participantesDds;
+    const base = Array.isArray(colaboradores) ? colaboradores : [];
 
     return base
         .map((colaborador, indice) => ({
             numero: indice + 1,
             nome: obterValorTextoDds(colaborador.nome, colaborador.nomeCompleto, colaborador.nome_completo),
-            funcao: obterValorTextoDds(colaborador.funcao, colaborador.cargo, colaborador.ocupacao),
+            funcao: obterFuncaoPessoaDds(colaborador),
             empresa: obterValorTextoDds(
                 colaborador.empresaExibicao,
                 colaborador.empresa_exibicao,
@@ -414,10 +665,13 @@ function DdsPreviewImpresso({ participantes = participantesDds, mostrarAssinatur
                     <section className="mt-3 grid grid-cols-3 overflow-hidden rounded-xl border border-slate-300">
                         <DdsCampoObra rotulo="Empresa" valor={dadosDds.empresa} />
                         <DdsCampoObra rotulo="Obra / Setor" valor={dadosDds.obraSetor} />
-                        <DdsCampoObra rotulo="Responsável pelo DDS" valor={dadosDds.responsavel} />
-                        <DdsCampoObra rotulo="Função do responsável" valor={dadosDds.funcaoResponsavel} />
                         <DdsCampoObra rotulo="Turno" valor={dadosDds.turno} />
-                        <DdsCampoObra rotulo="Encarregado" valor={dadosDds.encarregado} />
+                        <DdsCampoObra
+                            rotulo="Responsável pelo DDS"
+                            valor={formatarResponsavelCabecalhoDds(dadosDds)}
+                        />
+                        <DdsCampoObra rotulo="Fiscal Idealiza" valor={dadosDds.fiscalIdealiza} />
+                        <DdsCampoObra rotulo="Líder / Encarregado" valor={dadosDds.encarregado} />
                     </section>
 
                     <section className="mt-3 overflow-hidden rounded-xl border border-slate-300">
@@ -869,28 +1123,186 @@ function DdsPrintStyles() {
     );
 }
 export function DdsPage({ colaboradores = [], empresasBanco = [], usuario = null }) {
-    const inicioSemanaDds = useMemo(() => obterInicioSemanaDds(), []);
+    const empresasDds = useMemo(
+        () => (Array.isArray(empresasBanco) ? empresasBanco.filter(Boolean) : []),
+        [empresasBanco]
+    );
+
+    const [empresaSelecionadaChaveDds, setEmpresaSelecionadaChaveDds] = useState(() => carregarEmpresaSelecionadaDds());
+    const [deslocamentoSemanasDds, setDeslocamentoSemanasDds] = useState(0);
+    const [obrasSetorPorEmpresaDds, setObrasSetorPorEmpresaDds] = useState(() => carregarObrasSetorDdsPorEmpresa());
+    const [fiscalIdealizaPorEmpresaDds, setFiscalIdealizaPorEmpresaDds] = useState(() => carregarFiscalIdealizaDdsPorEmpresa());
+
+    function atualizarEmpresaSelecionadaDds(chaveEmpresa) {
+        setEmpresaSelecionadaChaveDds(chaveEmpresa);
+        salvarEmpresaSelecionadaDds(chaveEmpresa);
+    }
+
+    useEffect(() => {
+        if (empresasDds.length === 0) {
+            setEmpresaSelecionadaChaveDds("");
+            salvarEmpresaSelecionadaDds("");
+            return;
+        }
+
+        const existeEmpresaSelecionada = empresasDds.some((empresa, indice) =>
+            obterChaveEmpresaDds(empresa, indice) === empresaSelecionadaChaveDds
+        );
+
+        if (!empresaSelecionadaChaveDds || !existeEmpresaSelecionada) {
+            const chaveEmpresaInicial = obterChaveEmpresaDds(empresasDds[0], 0);
+            setEmpresaSelecionadaChaveDds(chaveEmpresaInicial);
+            salvarEmpresaSelecionadaDds(chaveEmpresaInicial);
+        }
+    }, [empresasDds, empresaSelecionadaChaveDds]);
+
+    const empresaSelecionadaDds = useMemo(
+        () => empresasDds.find((empresa, indice) =>
+            obterChaveEmpresaDds(empresa, indice) === empresaSelecionadaChaveDds
+        ) || null,
+        [empresasDds, empresaSelecionadaChaveDds]
+    );
+
+    const colaboradoresEmpresaDds = useMemo(
+        () => filtrarColaboradoresPorEmpresaDds(colaboradores, empresaSelecionadaDds),
+        [colaboradores, empresaSelecionadaDds]
+    );
+
+    const inicioSemanaDds = useMemo(
+        () => adicionarDiasDds(obterInicioSemanaDds(), deslocamentoSemanasDds * 7),
+        [deslocamentoSemanasDds]
+    );
     const fimSemanaDds = useMemo(() => obterFimSemanaDds(inicioSemanaDds), [inicioSemanaDds]);
     const diasSemanaDds = useMemo(() => gerarDiasSemanaDds(inicioSemanaDds), [inicioSemanaDds]);
 
-    const dadosDdsAutomaticos = useMemo(
-        () => montarDadosDdsAutomaticos({
-            colaboradores,
+    const dadosDdsAutomaticos = useMemo(() => {
+        const dadosAutomaticos = montarDadosDdsAutomaticos({
+            colaboradores: colaboradoresEmpresaDds,
             empresasBanco,
+            empresaSelecionada: empresaSelecionadaDds,
             usuario,
             inicioSemana: inicioSemanaDds,
             fimSemana: fimSemanaDds,
-        }),
-        [colaboradores, empresasBanco, usuario, inicioSemanaDds, fimSemanaDds]
-    );
+        });
+
+        const obraSetorSalva = String(obrasSetorPorEmpresaDds?.[empresaSelecionadaChaveDds] || "").trim();
+        const fiscalIdealizaFoiSalvoAutomatico = empresaSelecionadaChaveDds
+            ? Object.prototype.hasOwnProperty.call(fiscalIdealizaPorEmpresaDds || {}, empresaSelecionadaChaveDds)
+            : false;
+        const fiscalIdealizaSalvo = fiscalIdealizaFoiSalvoAutomatico
+            ? String(fiscalIdealizaPorEmpresaDds?.[empresaSelecionadaChaveDds] || "")
+            : "";
+
+        return {
+            ...dadosAutomaticos,
+            obraSetor: obraSetorSalva || dadosAutomaticos.obraSetor,
+            fiscalIdealiza: fiscalIdealizaFoiSalvoAutomatico ? fiscalIdealizaSalvo : dadosAutomaticos.fiscalIdealiza,
+        };
+    }, [
+        colaboradoresEmpresaDds,
+        empresasBanco,
+        empresaSelecionadaDds,
+        usuario,
+        inicioSemanaDds,
+        fimSemanaDds,
+        obrasSetorPorEmpresaDds,
+        fiscalIdealizaPorEmpresaDds,
+        empresaSelecionadaChaveDds,
+    ]);
 
     const [dadosDds, setDadosDds] = useState(dadosDdsAutomaticos);
 
+    const obraSetorFoiSalvaParaEmpresaDds = empresaSelecionadaChaveDds
+        ? Object.prototype.hasOwnProperty.call(obrasSetorPorEmpresaDds || {}, empresaSelecionadaChaveDds)
+        : false;
+
+    const obraSetorSalvaEmpresaDds = obraSetorFoiSalvaParaEmpresaDds
+        ? String(obrasSetorPorEmpresaDds?.[empresaSelecionadaChaveDds] || "")
+        : "";
+
+    const valorObraSetorDds = obraSetorFoiSalvaParaEmpresaDds
+        ? obraSetorSalvaEmpresaDds
+        : String(dadosDds.obraSetor || "");
+
+    const fiscalIdealizaFoiSalvoParaEmpresaDds = empresaSelecionadaChaveDds
+        ? Object.prototype.hasOwnProperty.call(fiscalIdealizaPorEmpresaDds || {}, empresaSelecionadaChaveDds)
+        : false;
+
+    const fiscalIdealizaSalvoEmpresaDds = fiscalIdealizaFoiSalvoParaEmpresaDds
+        ? String(fiscalIdealizaPorEmpresaDds?.[empresaSelecionadaChaveDds] || "")
+        : "";
+
+    const valorFiscalIdealizaDds = fiscalIdealizaFoiSalvoParaEmpresaDds
+        ? fiscalIdealizaSalvoEmpresaDds
+        : String(dadosDds.fiscalIdealiza || "");
+
     useEffect(() => {
-        setDadosDds(dadosDdsAutomaticos);
-    }, [dadosDdsAutomaticos]);
+        setDadosDds({
+            ...dadosDdsAutomaticos,
+            obraSetor: obraSetorFoiSalvaParaEmpresaDds
+                ? obraSetorSalvaEmpresaDds
+                : dadosDdsAutomaticos.obraSetor,
+            fiscalIdealiza: fiscalIdealizaFoiSalvoParaEmpresaDds
+                ? fiscalIdealizaSalvoEmpresaDds
+                : dadosDdsAutomaticos.fiscalIdealiza,
+        });
+    }, [
+        dadosDdsAutomaticos,
+        obraSetorFoiSalvaParaEmpresaDds,
+        obraSetorSalvaEmpresaDds,
+        fiscalIdealizaFoiSalvoParaEmpresaDds,
+        fiscalIdealizaSalvoEmpresaDds,
+    ]);
+
+    function atualizarObraSetorDds(valor) {
+        setDadosDds((dadosAtuais) => ({
+            ...dadosAtuais,
+            obraSetor: valor,
+        }));
+
+        if (empresaSelecionadaChaveDds) {
+            setObrasSetorPorEmpresaDds((dadosAtuais) => {
+                const atualizados = {
+                    ...(dadosAtuais || {}),
+                    [empresaSelecionadaChaveDds]: valor,
+                };
+
+                salvarObrasSetorDdsPorEmpresa(atualizados);
+                return atualizados;
+            });
+        }
+    }
+
+    function atualizarFiscalIdealizaDds(valor) {
+        setDadosDds((dadosAtuais) => ({
+            ...dadosAtuais,
+            fiscalIdealiza: valor,
+        }));
+
+        if (empresaSelecionadaChaveDds) {
+            setFiscalIdealizaPorEmpresaDds((dadosAtuais) => {
+                const atualizados = {
+                    ...(dadosAtuais || {}),
+                    [empresaSelecionadaChaveDds]: valor,
+                };
+
+                salvarFiscalIdealizaDdsPorEmpresa(atualizados);
+                return atualizados;
+            });
+        }
+    }
 
     function atualizarCampoDadosDds(chave, valor) {
+        if (chave === "obraSetor") {
+            atualizarObraSetorDds(valor);
+            return;
+        }
+
+        if (chave === "fiscalIdealiza") {
+            atualizarFiscalIdealizaDds(valor);
+            return;
+        }
+
         setDadosDds((dadosAtuais) => ({
             ...dadosAtuais,
             [chave]: valor,
@@ -898,8 +1310,8 @@ export function DdsPage({ colaboradores = [], empresasBanco = [], usuario = null
     }
 
     const participantesSistemaDds = useMemo(
-        () => normalizarParticipantesDdsSistema(colaboradores),
-        [colaboradores]
+        () => normalizarParticipantesDdsSistema(colaboradoresEmpresaDds),
+        [colaboradoresEmpresaDds]
     );
     const primeiraFolhaParticipantes = participantesSistemaDds.slice(0, LIMITE_PARTICIPANTES_PRIMEIRA_FOLHA_DDS);
     const folhasContinuacaoDds = useMemo(
@@ -976,17 +1388,93 @@ export function DdsPage({ colaboradores = [], empresasBanco = [], usuario = null
                     </div>
 
                     <div className="mt-5 grid gap-3 md:grid-cols-3">
+                        <label className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
+                            <span className="text-[11px] font-black uppercase tracking-wide text-slate-400">Empresa cadastrada</span>
+                            <select
+                                value={empresaSelecionadaChaveDds}
+                                onChange={(evento) => atualizarEmpresaSelecionadaDds(evento.target.value)}
+                                className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-black text-slate-800 outline-none transition focus:border-emerald-400 focus:ring-2 focus:ring-emerald-100"
+                            >
+                                {empresasDds.length === 0 && (
+                                    <option value="">Nenhuma empresa cadastrada</option>
+                                )}
+                                {empresasDds.map((empresa, indice) => {
+                                    const chaveEmpresa = obterChaveEmpresaDds(empresa, indice);
+                                    const nomeEmpresa = obterNomeEmpresaObjetoDds(empresa) || `Empresa ${indice + 1}`;
+
+                                    return (
+                                        <option key={chaveEmpresa} value={chaveEmpresa}>
+                                            {nomeEmpresa}
+                                        </option>
+                                    );
+                                })}
+                            </select>
+                        </label>
+
                         {camposDadosDds.map((campo) => (
                             <label key={campo.chave} className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
                                 <span className="text-[11px] font-black uppercase tracking-wide text-slate-400">{campo.rotulo}</span>
                                 <input
                                     type="text"
-                                    value={dadosDds[campo.chave] || ""}
+                                    value={
+                                        campo.chave === "obraSetor"
+                                            ? valorObraSetorDds
+                                            : campo.chave === "fiscalIdealiza"
+                                                ? valorFiscalIdealizaDds
+                                                : dadosDds[campo.chave] || ""
+                                    }
                                     onChange={(evento) => atualizarCampoDadosDds(campo.chave, evento.target.value)}
                                     className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-black text-slate-800 outline-none transition focus:border-emerald-400 focus:ring-2 focus:ring-emerald-100"
                                 />
+                                {campo.chave === "obraSetor" && (
+                                    <span className="mt-2 block text-[11px] font-bold text-slate-500">
+                                        Salvo automaticamente para a empresa selecionada neste computador.
+                                    </span>
+                                )}
+                                {campo.chave === "fiscalIdealiza" && (
+                                    <span className="mt-2 block text-[11px] font-bold text-slate-500">
+                                        Salvo automaticamente para a empresa selecionada neste computador.
+                                    </span>
+                                )}
+
                             </label>
                         ))}
+
+                        <div className="rounded-2xl border border-emerald-100 bg-emerald-50 px-4 py-3 md:col-span-3">
+                            <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+                                <div>
+                                    <p className="text-[11px] font-black uppercase tracking-wide text-emerald-700">Semana do DDS</p>
+                                    <p className="mt-1 text-sm font-black text-slate-800">{dadosDds.periodo}</p>
+                                    <p className="mt-1 text-xs font-semibold text-slate-500">
+                                        Código automático: <span className="font-black text-slate-800">{dadosDds.codigo}</span>
+                                    </p>
+                                </div>
+
+                                <div className="flex flex-wrap gap-2">
+                                    <button
+                                        type="button"
+                                        onClick={() => setDeslocamentoSemanasDds((valor) => valor - 1)}
+                                        className="rounded-xl border border-emerald-200 bg-white px-3 py-2 text-xs font-black text-emerald-800 shadow-sm transition hover:-translate-y-0.5 hover:bg-emerald-50"
+                                    >
+                                        Semana anterior
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={() => setDeslocamentoSemanasDds(0)}
+                                        className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-black text-slate-700 shadow-sm transition hover:-translate-y-0.5 hover:bg-slate-50"
+                                    >
+                                        Semana atual
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={() => setDeslocamentoSemanasDds((valor) => valor + 1)}
+                                        className="rounded-xl border border-emerald-200 bg-white px-3 py-2 text-xs font-black text-emerald-800 shadow-sm transition hover:-translate-y-0.5 hover:bg-emerald-50"
+                                    >
+                                        Próxima semana
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
 
