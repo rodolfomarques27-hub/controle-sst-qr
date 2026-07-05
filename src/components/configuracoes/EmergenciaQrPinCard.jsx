@@ -21,11 +21,22 @@ function ordenarEmpresasEmergenciaQr(empresas = []) {
         .sort((a, b) => obterNomeEmpresa(a).localeCompare(obterNomeEmpresa(b), "pt-BR"));
 }
 
+const CHAVE_STORAGE_RECOLHIDO_EMERGENCIA_QR = "safescan:configuracoes:emergencia-qr-card-recolhido";
+
 export function EmergenciaQrPinCard({ empresasBanco = [] }) {
     const empresas = useMemo(() => ordenarEmpresasEmergenciaQr(empresasBanco), [empresasBanco]);
     const [empresaId, setEmpresaId] = useState(() => obterIdEmpresa(empresas[0] || ""));
     const [ativo, setAtivo] = useState(true);
-    const [recolhido, setRecolhido] = useState(false);
+    const [recolhido, setRecolhido] = useState(() => {
+        if (typeof window === "undefined") return false;
+
+        try {
+            const salvo = window.localStorage.getItem(CHAVE_STORAGE_RECOLHIDO_EMERGENCIA_QR);
+            return salvo === null ? false : salvo === "true";
+        } catch {
+            return false;
+        }
+    });
     const [pin, setPin] = useState("");
     const [confirmarPin, setConfirmarPin] = useState("");
     const [mostrarPin, setMostrarPin] = useState(false);
@@ -34,6 +45,15 @@ export function EmergenciaQrPinCard({ empresasBanco = [] }) {
     const [erro, setErro] = useState("");
 
     const empresaSelecionada = empresas.find((item) => obterIdEmpresa(item) === empresaId) || null;
+    React.useEffect(() => {
+        if (typeof window === "undefined") return;
+
+        try {
+            window.localStorage.setItem(CHAVE_STORAGE_RECOLHIDO_EMERGENCIA_QR, String(recolhido));
+        } catch {
+            // Ignora localStorage indisponivel.
+        }
+    }, [recolhido]);
     const alternarRecolhidoCardEmergenciaQr = () => {
         setRecolhido((valor) => !valor);
     };
