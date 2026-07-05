@@ -102,6 +102,7 @@ const ORDEM_TELAS_INICIAIS_PERMITIDAS_APP = [
     "empresas",
     "colaboradores",
     "treinamentos",
+    "dds",
     "aniversariantes",
     "auditoria",
     "acessosApp",
@@ -980,6 +981,7 @@ export default function App() {
         { id: "colaboradores", label: "Colaboradores", icon: Users, grupo: "CADASTROS" },
         { id: "aniversariantes", label: "Aniversariantes", icon: CalendarClock, grupo: "CADASTROS" },
         { id: "treinamentos", label: "Treinamentos", icon: ClipboardCheck, grupo: "CADASTROS" },
+        { id: "dds", label: "DDS Semanal", icon: ClipboardCheck, grupo: "DDS" },
         { id: "qr", label: "Consulta QR", icon: QrCode, grupo: "CADASTROS" },
 
         ...(podeAcessarAuditoria ? [{ id: "auditoria", label: "Auditoria de sistema", icon: Database, grupo: "SISTEMA" }] : []),

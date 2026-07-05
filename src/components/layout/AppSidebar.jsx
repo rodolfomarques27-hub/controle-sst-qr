@@ -331,7 +331,7 @@ export function AppSidebar({
     };
 
     const gruposNavegacao = useMemo(() => {
-        const ordemGrupos = ["VIS\u00c3O GERAL", "AUDITORIA", "CADASTROS", "SISTEMA"];
+        const ordemGrupos = ["VIS\u00c3O GERAL", "AUDITORIA", "CADASTROS", "DDS", "SISTEMA"];
 
         return ordemGrupos
             .map((titulo) => ({

@@ -20,6 +20,7 @@ const Dashboard = React.lazy(() => import("../components/dashboard/Dashboard").t
 const Empresas = React.lazy(() => import("../components/empresas/EmpresasPage").then((modulo) => ({ default: modulo.Empresas })));
 const Colaboradores = React.lazy(() => import("../components/colaboradores/ColaboradoresPage").then((modulo) => ({ default: modulo.Colaboradores })));
 const Treinamentos = React.lazy(() => import("../components/treinamentos/TreinamentosPage").then((modulo) => ({ default: modulo.Treinamentos })));
+const DdsPage = React.lazy(() => import("../components/dds/DdsPage").then((modulo) => ({ default: modulo.DdsPage })));
 const RelatorioAuditoria = React.lazy(() => import("../components/auditoria/RelatorioAuditoria").then((modulo) => ({ default: modulo.RelatorioAuditoria })));
 const DashboardAuditoriaCampo = React.lazy(() => import("../components/auditoria/DashboardAuditoriaCampo").then((modulo) => ({ default: modulo.DashboardAuditoriaCampo })));
 const NovaAuditoriaCampoDireta = React.lazy(() => import("../components/auditoria/NovaAuditoriaCampoDireta").then((modulo) => ({ default: modulo.NovaAuditoriaCampoDireta })));
@@ -45,6 +46,8 @@ function precarregarModuloTelaSistema(tela = "") {
             return import("../components/aniversariantes/AniversariantesPage");
         case "treinamentos":
             return import("../components/treinamentos/TreinamentosPage");
+        case "dds":
+            return import("../components/dds/DdsPage");
         case "qr":
             return import("../components/qr/ConsultaQR");
         case "auditoria":
@@ -71,6 +74,7 @@ const ORDEM_REDIRECIONAMENTO_TELAS_PERMITIDAS = [
     "empresas",
     "colaboradores",
     "treinamentos",
+    "dds",
     "aniversariantes",
     "auditoria",
     "acessosApp",
@@ -92,6 +96,7 @@ const ROTULOS_TELAS_ACESSO_BLOQUEADO = Object.freeze({
     colaboradores: "Colaboradores",
     aniversariantes: "Aniversariantes",
     treinamentos: "Treinamentos",
+    dds: "DDS",
     qr: "QR Code",
     auditoria: "Auditoria do Sistema",
     acessosApp: "Acessos do App",
@@ -104,6 +109,7 @@ const ROTULOS_MODULOS_ACESSO_BLOQUEADO = Object.freeze({
     empresas: "Empresas",
     colaboradores: "Colaboradores",
     treinamentos: "Treinamentos",
+    dds: "DDS",
     qr_code: "QR Code",
     dashboard_auditoria: "Auditoria",
     nova_auditoria: "Nova Auditoria",
@@ -811,6 +817,10 @@ export function AppContentRouter({
                     onSincronizarStorage={onSincronizarStorage}
                     onRegistrarEmailEnviado={onRegistrarEmailEnviado}
                 />
+            )}
+
+            {tela === "dds" && (
+                <DdsPage colaboradores={colaboradores} />
             )}
 
             {tela === "qr" && (
