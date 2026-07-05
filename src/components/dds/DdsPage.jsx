@@ -1122,10 +1122,20 @@ function DdsPrintStyles() {
         </style>
     );
 }
-export function DdsPage({ colaboradores = [], empresasBanco = [], usuario = null }) {
+export function DdsPage({
+    colaboradores = [],
+    empresasBanco = [],
+    obrasEmpresasBanco = [],
+    usuario = null,
+}) {
     const empresasDds = useMemo(
         () => (Array.isArray(empresasBanco) ? empresasBanco.filter(Boolean) : []),
         [empresasBanco]
+    );
+
+    const obrasEmpresasDds = useMemo(
+        () => (Array.isArray(obrasEmpresasBanco) ? obrasEmpresasBanco.filter(Boolean) : []),
+        [obrasEmpresasBanco]
     );
 
     const [empresaSelecionadaChaveDds, setEmpresaSelecionadaChaveDds] = useState(() => carregarEmpresaSelecionadaDds());

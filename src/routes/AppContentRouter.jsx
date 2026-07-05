@@ -412,6 +412,7 @@ export function AppContentRouter({
     tela,
     colaboradores,
     empresasBanco,
+    obrasEmpresasBanco = [],
     documentosEmpresas,
     auditoria,
     auditoriasCampo,
@@ -823,6 +824,7 @@ export function AppContentRouter({
                 <DdsPage
                     colaboradores={colaboradores}
                     empresasBanco={empresasBanco}
+                    obrasEmpresasBanco={obrasEmpresasBanco}
                     usuario={usuario}
                 />
             )}

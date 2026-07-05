@@ -59,6 +59,7 @@ const carregarTreinamentosHandlers = () => import("./services/appTreinamentosHan
 const carregarAuditoriaHandlers = () => import("./services/appAuditoriaHandlersService");
 const carregarConsultaPublicaQrHandlers = () => import("./services/consultaPublicaQrService");
 const carregarEmpresaDocumentosHandlers = () => import("./services/empresaDocumentosService");
+const carregarObrasEmpresasService = () => import("./services/obrasEmpresasService");
 
 const hoje = new Date();
 const CHAVE_SIDEBAR_COLAPSADA = "safescan:sidebar:collapsed";
@@ -140,6 +141,7 @@ export default function App() {
     const [menuLateralAberto, setMenuLateralAberto] = useState(() => obterEstadoInicialMenuLateral());
     const [colaboradores, setColaboradores] = useState([]);
     const [empresasBanco, setEmpresasBanco] = useState([]);
+    const [obrasEmpresasBanco, setObrasEmpresasBanco] = useState([]);
     const [documentosEmpresas, setDocumentosEmpresas] = useState([]);
     const [carregandoBanco, setCarregandoBanco] = useState(false);
     const [atualizandoDashboardSst, setAtualizandoDashboardSst] = useState(false);
@@ -224,6 +226,19 @@ export default function App() {
             supabase,
             setEmpresasBanco,
         });
+    }, []);
+
+    const carregarObrasEmpresas = useCallback(async () => {
+        const { listarObrasEmpresas } = await carregarObrasEmpresasService();
+
+        try {
+            const obras = await listarObrasEmpresas();
+            setObrasEmpresasBanco(obras);
+            return obras;
+        } catch (error) {
+            console.error("Erro ao carregar obras das empresas:", error);
+            return [];
+        }
     }, []);
 
     const carregarDocumentosEmpresas = useCallback(async () => {
@@ -902,12 +917,13 @@ export default function App() {
 
         const timer = window.setTimeout(async () => {
             carregarColaboradores();
+            carregarObrasEmpresas();
             registrarAuditoria("ACESSO", "sistema", "Usuário acessou o sistema");
             await verificarAcessoAuditoria();
         }, 0);
 
         return () => window.clearTimeout(timer);
-    }, [usuario, carregarColaboradores, registrarAuditoria, verificarAcessoAuditoria]);
+    }, [usuario, carregarColaboradores, carregarObrasEmpresas, registrarAuditoria, verificarAcessoAuditoria]);
 
     useEffect(() => {
         if (!usuario) return undefined;
@@ -1072,6 +1088,7 @@ export default function App() {
         setCarregandoPermissaoSistemaUsuario(false);
         setColaboradores([]);
         setEmpresasBanco([]);
+        setObrasEmpresasBanco([]);
         setDocumentosEmpresas([]);
         setColaboradorSelecionado(null);
         setAuditoria([]);
@@ -1263,6 +1280,7 @@ export default function App() {
                         tela={tela}
                         colaboradores={colaboradores}
                         empresasBanco={empresasBanco}
+                        obrasEmpresasBanco={obrasEmpresasBanco}
                         documentosEmpresas={documentosEmpresas}
                         auditoria={auditoria}
                         auditoriasCampo={auditoriasCampo}
