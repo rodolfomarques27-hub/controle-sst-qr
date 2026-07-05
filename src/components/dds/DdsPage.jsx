@@ -1449,7 +1449,7 @@ export function DdsPage({
                 />
             </section>
 
-            <section className="dds-no-print grid gap-4 lg:grid-cols-[1fr_0.8fr]">
+            <section className="dds-no-print space-y-4">
                 <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
                     <div className="flex items-center gap-3">
                         <span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-blue-50 text-blue-700 ring-1 ring-blue-100">
