@@ -820,7 +820,11 @@ export function AppContentRouter({
             )}
 
             {tela === "dds" && (
-                <DdsPage colaboradores={colaboradores} />
+                <DdsPage
+                    colaboradores={colaboradores}
+                    empresasBanco={empresasBanco}
+                    usuario={usuario}
+                />
             )}
 
             {tela === "qr" && (

@@ -1,4 +1,4 @@
-import React, { useMemo } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import {
     BookOpen,
     Gift,
@@ -69,6 +69,232 @@ const LINHAS_COMPLEMENTARES_ULTIMA_FOLHA_DDS = 16;
 const aniversariantesDds = [
     { data: "16/06", nome: "Anderson Augusto Pereira" },
     { data: "18/06", nome: "Alcir Pimenta dos Santos" },
+];
+
+const CAMPOS_NOME_EMPRESA_DDS = [
+    "razao_social",
+    "razaoSocial",
+    "nome_fantasia",
+    "nomeFantasia",
+    "nome",
+    "empresa",
+    "label",
+];
+
+const CAMPOS_OBRA_SETOR_DDS = [
+    "obra_setor",
+    "obraSetor",
+    "obra",
+    "setor",
+    "unidade",
+    "local",
+    "endereco",
+    "endereco_obra",
+];
+
+const CAMPOS_FUNCAO_DDS = [
+    "funcao",
+    "cargo",
+    "profissao",
+    "ocupacao",
+];
+
+function formatarDataDds(data) {
+    const dataSegura = data instanceof Date && !Number.isNaN(data.getTime()) ? data : new Date();
+    return new Intl.DateTimeFormat("pt-BR", {
+        day: "2-digit",
+        month: "2-digit",
+        year: "numeric",
+    }).format(dataSegura);
+}
+
+function adicionarDiasDds(data, quantidadeDias = 0) {
+    const novaData = new Date(data);
+    novaData.setDate(novaData.getDate() + quantidadeDias);
+    return novaData;
+}
+
+function obterInicioSemanaDds(dataReferencia = new Date()) {
+    const base = dataReferencia instanceof Date && !Number.isNaN(dataReferencia.getTime())
+        ? new Date(dataReferencia)
+        : new Date();
+
+    base.setHours(0, 0, 0, 0);
+    base.setDate(base.getDate() - base.getDay());
+    return base;
+}
+
+function obterFimSemanaDds(inicioSemana = obterInicioSemanaDds()) {
+    return adicionarDiasDds(inicioSemana, 6);
+}
+
+function obterResumoSemanaDds(inicioSemana = obterInicioSemanaDds(), fimSemana = obterFimSemanaDds(inicioSemana)) {
+    const diaInicio = String(inicioSemana.getDate()).padStart(2, "0");
+    const diaFim = String(fimSemana.getDate()).padStart(2, "0");
+    const mesInicio = String(inicioSemana.getMonth() + 1).padStart(2, "0");
+    const mesFim = String(fimSemana.getMonth() + 1).padStart(2, "0");
+
+    if (mesInicio === mesFim) {
+        return `${diaInicio} a ${diaFim}/${mesFim}`;
+    }
+
+    return `${diaInicio}/${mesInicio} a ${diaFim}/${mesFim}`;
+}
+
+function gerarDiasSemanaDds(inicioSemana = obterInicioSemanaDds()) {
+    return diasDds.map((dia, indice) => ({
+        ...dia,
+        data: formatarDataDds(adicionarDiasDds(inicioSemana, indice)),
+    }));
+}
+
+function normalizarTextoCodigoDds(valor = "") {
+    return String(valor || "")
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .replace(/[^a-zA-Z0-9\s]/g, " ")
+        .trim()
+        .toUpperCase();
+}
+
+function obterSiglaEmpresaDds(nomeEmpresa = "") {
+    const palavrasIgnoradas = new Set(["LTDA", "LTD", "ME", "EPP", "SA", "S", "A", "DE", "DA", "DO", "DAS", "DOS", "CONSTRUCOES", "CONSTRUCAO", "SERVICOS"]);
+    const palavras = normalizarTextoCodigoDds(nomeEmpresa)
+        .split(/\s+/)
+        .filter((parte) => parte && !palavrasIgnoradas.has(parte));
+
+    const sigla = palavras.slice(0, 3).map((parte) => parte[0]).join("");
+    return sigla || "SST";
+}
+
+function gerarCodigoDdsAutomatico(nomeEmpresa = "", inicioSemana = obterInicioSemanaDds()) {
+    const ano = inicioSemana.getFullYear();
+    const mes = String(inicioSemana.getMonth() + 1).padStart(2, "0");
+    const dia = String(inicioSemana.getDate()).padStart(2, "0");
+    const sigla = obterSiglaEmpresaDds(nomeEmpresa);
+
+    return `DDS-${ano}-${mes}-${sigla}-${dia}`;
+}
+
+function obterPrimeiroTextoDds(objeto = null, campos = []) {
+    if (!objeto || typeof objeto !== "object") return "";
+
+    for (const campo of campos) {
+        const valor = String(objeto?.[campo] || "").trim();
+        if (valor) return valor;
+    }
+
+    return "";
+}
+
+function obterNomeEmpresaObjetoDds(empresa = null) {
+    return obterPrimeiroTextoDds(empresa, CAMPOS_NOME_EMPRESA_DDS);
+}
+
+function obterFuncaoPessoaDds(pessoa = null) {
+    return obterPrimeiroTextoDds(pessoa, CAMPOS_FUNCAO_DDS);
+}
+
+function textoContemTermosDds(texto = "", termos = []) {
+    const normalizado = normalizarTextoCodigoDds(texto);
+    return termos.some((termo) => normalizado.includes(normalizarTextoCodigoDds(termo)));
+}
+
+function obterEmpresaBaseDds({ empresasBanco = [], colaboradores = [] } = {}) {
+    const empresasValidas = Array.isArray(empresasBanco) ? empresasBanco.filter(Boolean) : [];
+
+    if (empresasValidas.length > 0) {
+        return empresasValidas[0];
+    }
+
+    const primeiroColaboradorComEmpresa = (Array.isArray(colaboradores) ? colaboradores : []).find((colaborador) =>
+        String(colaborador?.empresa || colaborador?.empresa_nome || colaborador?.empresaNome || "").trim()
+    );
+
+    const nomeEmpresaColaborador = String(
+        primeiroColaboradorComEmpresa?.empresa
+        || primeiroColaboradorComEmpresa?.empresa_nome
+        || primeiroColaboradorComEmpresa?.empresaNome
+        || ""
+    ).trim();
+
+    return nomeEmpresaColaborador ? { nome: nomeEmpresaColaborador } : null;
+}
+
+function obterResponsavelTecnicoDds({ colaboradores = [], usuario = null } = {}) {
+    const funcaoUsuario = obterFuncaoPessoaDds(usuario);
+    const perfilUsuario = String(usuario?.perfil || "").trim();
+
+    if (
+        textoContemTermosDds(funcaoUsuario, ["técnico", "tecnico", "segurança do trabalho", "seguranca do trabalho", "tst"])
+        || textoContemTermosDds(perfilUsuario, ["tecnico_sst", "técnico sst", "tecnico sst"])
+    ) {
+        return {
+            nome: String(usuario?.nome || usuario?.name || usuario?.displayName || usuario?.email || "Técnico SST").trim(),
+            funcao: funcaoUsuario || "Téc. de Segurança do Trabalho",
+        };
+    }
+
+    const colaboradorTst = (Array.isArray(colaboradores) ? colaboradores : []).find((colaborador) => {
+        const funcao = obterFuncaoPessoaDds(colaborador);
+        return textoContemTermosDds(funcao, ["técnico", "tecnico", "segurança do trabalho", "seguranca do trabalho", "tst"]);
+    });
+
+    if (colaboradorTst) {
+        return {
+            nome: String(colaboradorTst.nome || colaboradorTst.nome_completo || colaboradorTst.name || "Técnico SST").trim(),
+            funcao: obterFuncaoPessoaDds(colaboradorTst) || "Téc. de Segurança do Trabalho",
+        };
+    }
+
+    return {
+        nome: "Técnico SST não definido",
+        funcao: "Téc. de Segurança do Trabalho",
+    };
+}
+
+function obterLiderDds({ colaboradores = [] } = {}) {
+    const colaboradorLider = (Array.isArray(colaboradores) ? colaboradores : []).find((colaborador) => {
+        const funcao = obterFuncaoPessoaDds(colaborador);
+        return textoContemTermosDds(funcao, ["encarregado", "lider", "líder", "mestre", "supervisor"]);
+    });
+
+    if (colaboradorLider) {
+        return String(colaboradorLider.nome || colaboradorLider.nome_completo || colaboradorLider.name || "Líder não definido").trim();
+    }
+
+    return "Líder não definido";
+}
+
+function montarDadosDdsAutomaticos({ empresasBanco = [], colaboradores = [], usuario = null, inicioSemana = obterInicioSemanaDds(), fimSemana = obterFimSemanaDds(inicioSemana) } = {}) {
+    const empresaBase = obterEmpresaBaseDds({ empresasBanco, colaboradores });
+    const nomeEmpresa = obterNomeEmpresaObjetoDds(empresaBase) || "Empresa não definida";
+    const obraSetor = obterPrimeiroTextoDds(empresaBase, CAMPOS_OBRA_SETOR_DDS) || "Obra / Setor não definido";
+    const responsavelTecnico = obterResponsavelTecnicoDds({ colaboradores, usuario });
+    const periodo = `${formatarDataDds(inicioSemana)} a ${formatarDataDds(fimSemana)}`;
+
+    return {
+        empresa: nomeEmpresa,
+        obraSetor,
+        responsavel: responsavelTecnico.nome,
+        funcaoResponsavel: responsavelTecnico.funcao,
+        turno: "Diurno",
+        encarregado: obterLiderDds({ colaboradores }),
+        periodo,
+        resumoSemana: obterResumoSemanaDds(inicioSemana, fimSemana),
+        codigo: gerarCodigoDdsAutomatico(nomeEmpresa, inicioSemana),
+    };
+}
+
+const dadosDdsPadrao = montarDadosDdsAutomaticos();
+
+const camposDadosDds = [
+    { chave: "empresa", rotulo: "Empresa" },
+    { chave: "obraSetor", rotulo: "Obra / Setor" },
+    { chave: "responsavel", rotulo: "Responsável / TST" },
+    { chave: "funcaoResponsavel", rotulo: "Função do responsável" },
+    { chave: "turno", rotulo: "Turno" },
+    { chave: "encarregado", rotulo: "Líder / Encarregado" },
 ];
 
 function obterValorTextoDds(...valores) {
@@ -149,7 +375,7 @@ function QuadradoPresenca() {
     return <span className="inline-block h-3.5 w-3.5 rounded-[2px] border border-slate-700 bg-white align-middle" />;
 }
 
-function DdsPreviewImpresso({ participantes = participantesDds, mostrarAssinaturas = true }) {
+function DdsPreviewImpresso({ participantes = participantesDds, mostrarAssinaturas = true, dadosDds = dadosDdsPadrao, diasSemana = diasDds, aniversariantes = aniversariantesDds }) {
     return (
         <section className="dds-print-page overflow-hidden rounded-[28px] border border-slate-200 bg-white p-4 shadow-[0_18px_50px_rgba(15,23,42,0.08)]">
             <div className="overflow-x-auto">
@@ -174,9 +400,9 @@ function DdsPreviewImpresso({ participantes = participantesDds, mostrarAssinatur
                         <div className="grid grid-cols-[1fr_94px] gap-3">
                             <div className="rounded-2xl border border-slate-300 p-3">
                                 <p className="text-[9px] font-black uppercase text-slate-500">Semana</p>
-                                <p className="text-lg font-black text-slate-950">14/06/2026 a 20/06/2026</p>
+                                <p className="text-lg font-black text-slate-950">{dadosDds.periodo}</p>
                                 <p className="mt-2 text-[9px] font-black uppercase text-slate-500">Código do DDS</p>
-                                <p className="rounded-lg bg-slate-950 px-2 py-1 text-center text-sm font-black text-white">DDS-2026-06-RAQ-001</p>
+                                <p className="rounded-lg bg-slate-950 px-2 py-1 text-center text-sm font-black text-white">{dadosDds.codigo}</p>
                             </div>
                             <div className="flex flex-col items-center justify-center rounded-2xl border border-slate-300 p-2 text-center">
                                 <QrCode className="h-14 w-14 text-slate-950" />
@@ -186,12 +412,12 @@ function DdsPreviewImpresso({ participantes = participantesDds, mostrarAssinatur
                     </header>
 
                     <section className="mt-3 grid grid-cols-3 overflow-hidden rounded-xl border border-slate-300">
-                        <DdsCampoObra rotulo="Empresa" valor="Ribeiro Aquino Construções Ltda" />
-                        <DdsCampoObra rotulo="Obra / Setor" valor="Parque Luna — Bloco A" />
-                        <DdsCampoObra rotulo="Responsável pelo DDS" valor="Paulo Toledo" />
-                        <DdsCampoObra rotulo="Função do responsável" valor="Téc. de Segurança do Trabalho" />
-                        <DdsCampoObra rotulo="Turno" valor="Diurno" />
-                        <DdsCampoObra rotulo="Encarregado" valor="Rafael Silva Cardoso" />
+                        <DdsCampoObra rotulo="Empresa" valor={dadosDds.empresa} />
+                        <DdsCampoObra rotulo="Obra / Setor" valor={dadosDds.obraSetor} />
+                        <DdsCampoObra rotulo="Responsável pelo DDS" valor={dadosDds.responsavel} />
+                        <DdsCampoObra rotulo="Função do responsável" valor={dadosDds.funcaoResponsavel} />
+                        <DdsCampoObra rotulo="Turno" valor={dadosDds.turno} />
+                        <DdsCampoObra rotulo="Encarregado" valor={dadosDds.encarregado} />
                     </section>
 
                     <section className="mt-3 overflow-hidden rounded-xl border border-slate-300">
@@ -201,7 +427,7 @@ function DdsPreviewImpresso({ participantes = participantesDds, mostrarAssinatur
                         <table className="w-full table-fixed border-collapse text-center text-[11px]">
                             <thead>
                                 <tr className="bg-slate-900 text-white">
-                                    {diasDds.map((dia) => (
+                                    {diasSemana.map((dia) => (
                                         <th key={dia.curto} className="w-[14.285%] border border-slate-400 px-2 py-2">
                                             <span className="block text-xs font-black uppercase">{dia.nome}</span>
                                             <span className="block text-[11px] font-black text-emerald-300">{dia.data}</span>
@@ -211,14 +437,14 @@ function DdsPreviewImpresso({ participantes = participantesDds, mostrarAssinatur
                             </thead>
                             <tbody>
                                 <tr>
-                                    {diasDds.map((dia) => (
+                                    {diasSemana.map((dia) => (
                                         <td key={dia.curto} className="h-16 w-[14.285%] border border-slate-300 px-3 py-2 align-middle font-bold leading-tight">
                                             {dia.tema}
                                         </td>
                                     ))}
                                 </tr>
                                 <tr>
-                                    {diasDds.map((dia) => (
+                                    {diasSemana.map((dia) => (
                                         <td key={dia.curto} className="w-[14.285%] border border-slate-300 px-3 py-1.5 text-[10px] font-black text-slate-700">
                                             {dia.responsavel}
                                         </td>
@@ -236,7 +462,7 @@ function DdsPreviewImpresso({ participantes = participantesDds, mostrarAssinatur
                                     <th className="w-[230px] border border-slate-400 px-2 py-2">Funcionário</th>
                                     <th className="w-[150px] border border-slate-400 px-2 py-2">Função</th>
                                     <th className="w-[140px] border border-slate-400 px-2 py-2">Empresa</th>
-                                    {diasDds.map((dia) => (
+                                    {diasSemana.map((dia) => (
                                         <th key={dia.curto} className="w-[72px] border border-slate-400 px-1 py-2">
                                             <span className="block">{dia.curto}</span>
                                             <span className="block text-[9px] text-emerald-300">{dia.data.slice(0, 5)}</span>
@@ -252,7 +478,7 @@ function DdsPreviewImpresso({ participantes = participantesDds, mostrarAssinatur
                                         <td className="border border-slate-300 px-2 py-1 font-semibold">{participante.nome}</td>
                                         <td className="border border-slate-300 px-2 py-1 text-center font-semibold">{participante.funcao}</td>
                                         <td className="border border-slate-300 px-2 py-1 text-center font-semibold">{participante.empresa}</td>
-                                        {diasDds.map((dia) => (
+                                        {diasSemana.map((dia) => (
                                             <td key={dia.curto} className="border border-slate-300 px-1 py-1 text-center">
                                                 <span className="block h-5" />
                                             </td>
@@ -275,7 +501,7 @@ function DdsPreviewImpresso({ participantes = participantesDds, mostrarAssinatur
                                 </div>
 
                                 <div className="mt-2 space-y-1 text-[10px] font-bold text-slate-800">
-                                    {aniversariantesDds.map((item) => (
+                                    {aniversariantes.map((item) => (
                                         <div key={item.nome} className="grid grid-cols-[48px_1fr] items-center gap-3">
                                             <span>{item.data}</span>
                                             <span className="border-b border-slate-500 pb-0.5">{item.nome}</span>
@@ -363,7 +589,7 @@ function DdsPreviewImpresso({ participantes = participantesDds, mostrarAssinatur
     );
 }
 
-function DdsPreviewImpressoContinuacao({ participantes = participantesDdsContinuacao, numeroPagina = 2, totalPaginas = 2, ultimaFolha = true, numeroInicial = 16 }) {
+function DdsPreviewImpressoContinuacao({ participantes = participantesDdsContinuacao, numeroPagina = 2, totalPaginas = 2, ultimaFolha = true, numeroInicial = 16, dadosDds = dadosDdsPadrao, diasSemana = diasDds }) {
     const participantesFolha = ultimaFolha
         ? completarParticipantesUltimaFolhaDds(participantes, LINHAS_COMPLEMENTARES_ULTIMA_FOLHA_DDS, numeroInicial)
         : participantes;
@@ -385,15 +611,15 @@ function DdsPreviewImpressoContinuacao({ participantes = participantesDdsContinu
                         <div className="text-center">
                             <p className="text-[10px] font-black uppercase tracking-[0.22em] text-emerald-700">{`Página ${numeroPagina} de ${totalPaginas}`}</p>
                             <h2 className="text-3xl font-black uppercase tracking-tight text-slate-950">Continuação da Lista de Presença</h2>
-                            <p className="mt-1 text-sm font-semibold text-slate-500">DDS Semanal de Obra — 14/06/2026 a 20/06/2026</p>
+                            <p className="mt-1 text-sm font-semibold text-slate-500">DDS Semanal de Obra — {dadosDds.periodo}</p>
                         </div>
 
                         <div className="grid grid-cols-[1fr_82px] gap-3">
                             <div className="rounded-2xl border border-slate-300 p-3">
                                 <p className="text-[9px] font-black uppercase text-slate-500">Código do DDS</p>
-                                <p className="rounded-lg bg-slate-950 px-2 py-1 text-center text-sm font-black text-white">DDS-2026-06-RAQ-001</p>
+                                <p className="rounded-lg bg-slate-950 px-2 py-1 text-center text-sm font-black text-white">{dadosDds.codigo}</p>
                                 <p className="mt-2 text-[9px] font-black uppercase text-slate-500">Obra / Setor</p>
-                                <p className="text-xs font-black uppercase text-slate-950">Parque Luna — Bloco A</p>
+                                <p className="text-xs font-black uppercase text-slate-950">{dadosDds.obraSetor}</p>
                             </div>
                             <div className="flex flex-col items-center justify-center rounded-2xl border border-slate-300 p-2 text-center">
                                 <QrCode className="h-12 w-12 text-slate-950" />
@@ -405,15 +631,15 @@ function DdsPreviewImpressoContinuacao({ participantes = participantesDdsContinu
                     <section className="mt-3 grid grid-cols-4 overflow-hidden rounded-xl border border-slate-300 text-[10px]">
                         <div className="border-r border-slate-300 px-3 py-2">
                             <p className="font-black uppercase tracking-wide text-slate-500">Empresa</p>
-                            <p className="mt-1 font-black uppercase text-slate-950">Ribeiro Aquino Construções Ltda</p>
+                            <p className="mt-1 font-black uppercase text-slate-950">{dadosDds.empresa}</p>
                         </div>
                         <div className="border-r border-slate-300 px-3 py-2">
                             <p className="font-black uppercase tracking-wide text-slate-500">Responsável pelo DDS</p>
-                            <p className="mt-1 font-black uppercase text-slate-950">Paulo Toledo</p>
+                            <p className="mt-1 font-black uppercase text-slate-950">{dadosDds.responsavel}</p>
                         </div>
                         <div className="border-r border-slate-300 px-3 py-2">
                             <p className="font-black uppercase tracking-wide text-slate-500">Encarregado</p>
-                            <p className="mt-1 font-black uppercase text-slate-950">Rafael Silva Cardoso</p>
+                            <p className="mt-1 font-black uppercase text-slate-950">{dadosDds.encarregado}</p>
                         </div>
                         <div className="px-3 py-2">
                             <p className="font-black uppercase tracking-wide text-slate-500">Controle</p>
@@ -429,7 +655,7 @@ function DdsPreviewImpressoContinuacao({ participantes = participantesDdsContinu
                                     <th className="w-[250px] border border-slate-400 px-2 py-2">Funcionário</th>
                                     <th className="w-[155px] border border-slate-400 px-2 py-2">Função</th>
                                     <th className="w-[145px] border border-slate-400 px-2 py-2">Empresa</th>
-                                    {diasDds.map((dia) => (
+                                    {diasSemana.map((dia) => (
                                         <th key={dia.curto} className="w-[76px] border border-slate-400 px-1 py-2">
                                             <span className="block">{dia.curto}</span>
                                             <span className="block text-[9px] text-emerald-300">{dia.data.slice(0, 5)}</span>
@@ -445,7 +671,7 @@ function DdsPreviewImpressoContinuacao({ participantes = participantesDdsContinu
                                         <td className="border border-slate-300 px-2 py-1.5 font-semibold">{participante.nome}</td>
                                         <td className="border border-slate-300 px-2 py-1.5 text-center font-semibold">{participante.funcao}</td>
                                         <td className="border border-slate-300 px-2 py-1.5 text-center font-semibold">{participante.empresa}</td>
-                                        {diasDds.map((dia) => (
+                                        {diasSemana.map((dia) => (
                                             <td key={dia.curto} className="border border-slate-300 px-1 py-1.5 text-center">
                                                 <span className="block h-5" />
                                             </td>
@@ -642,7 +868,35 @@ function DdsPrintStyles() {
         </style>
     );
 }
-export function DdsPage({ colaboradores = [] }) {
+export function DdsPage({ colaboradores = [], empresasBanco = [], usuario = null }) {
+    const inicioSemanaDds = useMemo(() => obterInicioSemanaDds(), []);
+    const fimSemanaDds = useMemo(() => obterFimSemanaDds(inicioSemanaDds), [inicioSemanaDds]);
+    const diasSemanaDds = useMemo(() => gerarDiasSemanaDds(inicioSemanaDds), [inicioSemanaDds]);
+
+    const dadosDdsAutomaticos = useMemo(
+        () => montarDadosDdsAutomaticos({
+            colaboradores,
+            empresasBanco,
+            usuario,
+            inicioSemana: inicioSemanaDds,
+            fimSemana: fimSemanaDds,
+        }),
+        [colaboradores, empresasBanco, usuario, inicioSemanaDds, fimSemanaDds]
+    );
+
+    const [dadosDds, setDadosDds] = useState(dadosDdsAutomaticos);
+
+    useEffect(() => {
+        setDadosDds(dadosDdsAutomaticos);
+    }, [dadosDdsAutomaticos]);
+
+    function atualizarCampoDadosDds(chave, valor) {
+        setDadosDds((dadosAtuais) => ({
+            ...dadosAtuais,
+            [chave]: valor,
+        }));
+    }
+
     const participantesSistemaDds = useMemo(
         () => normalizarParticipantesDdsSistema(colaboradores),
         [colaboradores]
@@ -686,8 +940,8 @@ export function DdsPage({ colaboradores = [] }) {
                 <DdsResumoCard
                     icone={CalendarClock}
                     titulo="Semana atual"
-                    valor="14 a 20/06"
-                    texto="Domingo como primeiro dia da semana."
+                    valor={dadosDds.resumoSemana || "14 a 20/06"}
+                    texto={dadosDds.periodo || "Domingo como primeiro dia da semana."}
                 />
                 <DdsResumoCard
                     icone={BookOpen}
@@ -717,16 +971,21 @@ export function DdsPage({ colaboradores = [] }) {
                         </span>
                         <div>
                             <h2 className="text-lg font-black text-slate-950">Novo DDS semanal</h2>
-                            <p className="text-sm font-semibold text-slate-500">Base visual inicial. Integração real com colaboradores será feita em etapa futura.</p>
+                            <p className="text-sm font-semibold text-slate-500">Preencha os dados principais do DDS. A impressão será atualizada automaticamente.</p>
                         </div>
                     </div>
 
                     <div className="mt-5 grid gap-3 md:grid-cols-3">
-                        {["Empresa", "Obra / Setor", "Responsável", "Semana", "Turno", "Encarregado"].map((campo) => (
-                            <div key={campo} className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
-                                <p className="text-[11px] font-black uppercase tracking-wide text-slate-400">{campo}</p>
-                                <p className="mt-1 text-sm font-black text-slate-800">Prévia mockada</p>
-                            </div>
+                        {camposDadosDds.map((campo) => (
+                            <label key={campo.chave} className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
+                                <span className="text-[11px] font-black uppercase tracking-wide text-slate-400">{campo.rotulo}</span>
+                                <input
+                                    type="text"
+                                    value={dadosDds[campo.chave] || ""}
+                                    onChange={(evento) => atualizarCampoDadosDds(campo.chave, evento.target.value)}
+                                    className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-black text-slate-800 outline-none transition focus:border-emerald-400 focus:ring-2 focus:ring-emerald-100"
+                                />
+                            </label>
                         ))}
                     </div>
                 </div>
@@ -748,12 +1007,20 @@ export function DdsPage({ colaboradores = [] }) {
             </section>
 
             <div className="dds-print-area space-y-6">
-                <DdsPreviewImpresso participantes={primeiraFolhaParticipantes} mostrarAssinaturas={totalFolhasDds === 1} />
+                <DdsPreviewImpresso
+                    participantes={primeiraFolhaParticipantes}
+                    mostrarAssinaturas={totalFolhasDds === 1}
+                    dadosDds={dadosDds}
+                    diasSemana={diasSemanaDds}
+                    aniversariantes={aniversariantesDds}
+                />
 
                 {folhasContinuacaoDds.map((participantes, indice) => (
                     <DdsPreviewImpressoContinuacao
                         key={`folha-dds-${indice + 2}`}
                         participantes={participantes}
+                        dadosDds={dadosDds}
+                        diasSemana={diasSemanaDds}
                         numeroPagina={indice + 2}
                         totalPaginas={totalFolhasDds}
                         ultimaFolha={indice === folhasContinuacaoDds.length - 1}
