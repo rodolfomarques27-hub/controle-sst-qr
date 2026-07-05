@@ -1461,8 +1461,8 @@ export function DdsPage({
                         </div>
                     </div>
 
-                    <div className="mt-5 grid gap-3 md:grid-cols-3">
-                        <label className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
+                    <div className="mt-4 grid gap-2 md:grid-cols-2 xl:grid-cols-4">
+                        <label className="rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2.5">
                             <span className="text-[11px] font-black uppercase tracking-wide text-slate-400">Empresa cadastrada</span>
                             <select
                                 value={empresaSelecionadaChaveDds}
@@ -1485,7 +1485,7 @@ export function DdsPage({
                             </select>
                         </label>
 
-                        <label className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
+                        <label className="rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2.5">
                             <span className="text-[11px] font-black uppercase tracking-wide text-slate-400">Obra cadastrada</span>
                             <select
                                 value={obraSelecionadaIdDds}
@@ -1512,7 +1512,7 @@ export function DdsPage({
                         </label>
 
                         {camposDadosDds.map((campo) => (
-                            <label key={campo.chave} className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
+                            <label key={campo.chave} className="rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2.5">
                                 <span className="text-[11px] font-black uppercase tracking-wide text-slate-400">{campo.rotulo}</span>
                                 <input
                                     type="text"
@@ -1540,7 +1540,7 @@ export function DdsPage({
                             </label>
                         ))}
 
-                        <div className="rounded-2xl border border-emerald-100 bg-emerald-50 px-4 py-3 md:col-span-3">
+                        <div className="rounded-2xl border border-emerald-100 bg-emerald-50 px-4 py-3 md:col-span-2 xl:col-span-4">
                             <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
                                 <div>
                                     <p className="text-[11px] font-black uppercase tracking-wide text-emerald-700">Semana do DDS</p>
