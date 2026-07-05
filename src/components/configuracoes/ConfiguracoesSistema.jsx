@@ -74,6 +74,10 @@ import {
 import { supabase } from "../../lib/supabaseClient";
 import { reduzirFotoParaAuditoria } from "../../services/imagemService";
 import { QrCodeComLogo, QrCodeLogoControls } from "../qr/QrCodeComLogo";
+import {
+    listarObras,
+    listarVinculosEmpresasObras,
+} from "../../services/obrasService";
 
 const classNames = (...classes) => classes.filter(Boolean).join(" ");
 
@@ -113,8 +117,8 @@ function formatarPerfilPermissaoSistema(perfil = "") {
 
 const CHAVES_BLOCOS_CONFIGURACOES_PADRAO = [
     "config-limites-carregamento",
-    "config-auditoria-publica",
-    "config-arquivos-storage",
+    "config-auditoria-publica",    "config-arquivos-storage",
+    "config-obras",
     "config-relatorios-evidencias",
     "config-senha-configuracoes",
     "config-login-visual",
@@ -275,8 +279,8 @@ function carregarVersaoFundoLoginConfiguracoes() {
 
 const BLOCOS_CONFIGURACOES_ABERTOS_PADRAO = new Set([
     "config-limites-carregamento",
-    "config-auditoria-publica",
-    "config-arquivos-storage",
+    "config-auditoria-publica",    "config-arquivos-storage",
+    "config-obras",
     "config-relatorios-evidencias",
 ]);
 
@@ -484,6 +488,10 @@ export function ConfiguracoesSistema({
 
     const [permissaoSistemaAtual, setPermissaoSistemaAtual] = useState(null);
     const [carregandoPermissaoSistema, setCarregandoPermissaoSistema] = useState(false);
+    const [obrasConfiguracoes, setObrasConfiguracoes] = useState([]);
+    const [vinculosObrasConfiguracoes, setVinculosObrasConfiguracoes] = useState([]);
+    const [carregandoObrasConfiguracoes, setCarregandoObrasConfiguracoes] = useState(false);
+    const [mensagemObrasConfiguracoes, setMensagemObrasConfiguracoes] = useState("Obras ainda nao carregadas.");
     const [mensagemPermissaoSistema, setMensagemPermissaoSistema] = useState(
         "Permissão geral ainda não carregada do Supabase."
     );
@@ -1289,6 +1297,36 @@ export function ConfiguracoesSistema({
 
 
 
+    const carregarObrasConfiguracoes = async () => {
+        setCarregandoObrasConfiguracoes(true);
+        setMensagemObrasConfiguracoes("Carregando obras e vinculos...");
+
+        try {
+            const [obras, vinculos] = await Promise.all([
+                listarObras(),
+                listarVinculosEmpresasObras(),
+            ]);
+
+            setObrasConfiguracoes(obras);
+            setVinculosObrasConfiguracoes(vinculos);
+            setMensagemObrasConfiguracoes(`${obras.length} obra(s) e ${vinculos.length} vinculo(s) carregado(s).`);
+        } catch (erro) {
+            console.error("Erro ao carregar obras nas Configuracoes:", erro);
+            setObrasConfiguracoes([]);
+            setVinculosObrasConfiguracoes([]);
+            setMensagemObrasConfiguracoes(`Nao foi possivel carregar as obras. Supabase: ${erro?.message || "erro nao identificado"}`);
+        } finally {
+            setCarregandoObrasConfiguracoes(false);
+        }
+    };
+
+    useEffect(() => {
+        const timer = window.setTimeout(() => {
+            carregarObrasConfiguracoes();
+        }, 0);
+
+        return () => window.clearTimeout(timer);
+    }, []);
     const carregarConfiguracaoAuditoriaPublicaSupabase = async () => {
         setCarregandoAuditoriaPublica(true);
         setMensagemAuditoriaPublica("Carregando token público ativo pelo serviço central da auditoria pública...");
@@ -1631,6 +1669,9 @@ export function ConfiguracoesSistema({
         });
     };
 
+    const totalObrasAtivasConfiguracoes = obrasConfiguracoes.filter((obra) => obra.status !== "Inativa").length;
+    const totalVinculosObrasAtivosConfiguracoes = vinculosObrasConfiguracoes.filter((vinculo) => vinculo.status !== "Inativa").length;
+
     const cardsResumo = [
         {
             label: "Eventos habilitados",
@@ -1670,6 +1711,7 @@ export function ConfiguracoesSistema({
         { chave: "config-limites-carregamento", titulo: "Limites e armazenamento", descricao: "Registros por carga e limite administrativo do Storage.", icon: SlidersHorizontal },
         { chave: "config-auditoria-publica", titulo: "Auditoria pública, tokens e QR", descricao: "Token ativo, QR colaborador e QR de campo.", icon: KeyRound },
         { chave: "config-arquivos-storage", titulo: "Arquivos salvos no Storage", descricao: "Capacidade, vínculos, filtros e limpeza protegida.", icon: Database },
+        { chave: "config-obras", titulo: "Obras", descricao: "Cadastro mestre de obras e vinculos com empresas.", icon: Database },
         { chave: "config-relatorios-evidencias", titulo: "Relatórios e evidências", descricao: "Resumo copiável e TXT das configurações atuais.", icon: FileText },
         { chave: "config-senha-configuracoes", titulo: "Senha da aba Configurações", descricao: "Desbloqueio operacional, origem da senha e permissões críticas.", icon: Lock },
         { chave: "config-login-visual", titulo: "Aparência do login", descricao: "Imagem pública de fundo da tela de acesso.", icon: ImagePlus },
@@ -1892,6 +1934,147 @@ export function ConfiguracoesSistema({
             );
 
 
+        case "config-obras":
+            return renderBlocoConfiguracaoComControle(
+                "config-obras",
+                "Obras",
+                "Cadastro mestre de obras e vinculos com empresas.",
+                (
+                    <Card>
+                        <div className="flex flex-col gap-3 border-b border-slate-100 pb-4 md:flex-row md:items-start md:justify-between">
+                            <div>
+                                <div className="flex items-center gap-2">
+                                    <Database className="h-5 w-5 text-slate-500" />
+                                    <h2 id="config-obras" className="scroll-mt-24 text-lg font-black text-slate-950">Obras</h2>
+                                </div>
+                                <p className="mt-1 text-sm text-slate-500">
+                                    Consulte o cadastro mestre de obras e os vinculos atuais com empresas participantes.
+                                </p>
+                            </div>
+
+                            <button
+                                type="button"
+                                onClick={carregarObrasConfiguracoes}
+                                disabled={carregandoObrasConfiguracoes}
+                                className="inline-flex items-center justify-center gap-2 rounded-2xl bg-slate-950 px-3 py-2 text-xs font-black text-white hover:bg-slate-800 disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-500"
+                            >
+                                <RefreshCw className={classNames("h-4 w-4", carregandoObrasConfiguracoes ? "animate-spin" : "")} />
+                                {carregandoObrasConfiguracoes ? "Carregando..." : "Atualizar obras"}
+                            </button>
+                        </div>
+
+                        <div className="mt-4 grid gap-3 md:grid-cols-3">
+                            <div className="rounded-2xl bg-slate-50 px-3 py-3 ring-1 ring-slate-100">
+                                <p className="text-[11px] font-black uppercase tracking-wide text-slate-400">Obras cadastradas</p>
+                                <p className="mt-1 text-2xl font-black text-slate-950">{obrasConfiguracoes.length}</p>
+                                <p className="mt-1 text-xs font-semibold text-slate-500">total no cadastro mestre</p>
+                            </div>
+                            <div className="rounded-2xl bg-emerald-50 px-3 py-3 ring-1 ring-emerald-100">
+                                <p className="text-[11px] font-black uppercase tracking-wide text-emerald-700">Obras ativas</p>
+                                <p className="mt-1 text-2xl font-black text-emerald-900">{totalObrasAtivasConfiguracoes}</p>
+                                <p className="mt-1 text-xs font-semibold text-emerald-700">disponiveis para vinculo</p>
+                            </div>
+                            <div className="rounded-2xl bg-blue-50 px-3 py-3 ring-1 ring-blue-100">
+                                <p className="text-[11px] font-black uppercase tracking-wide text-blue-700">Vinculos ativos</p>
+                                <p className="mt-1 text-2xl font-black text-blue-900">{totalVinculosObrasAtivosConfiguracoes}</p>
+                                <p className="mt-1 text-xs font-semibold text-blue-700">empresa/obra</p>
+                            </div>
+                        </div>
+
+                        {mensagemObrasConfiguracoes && (
+                            <div className="mt-4 rounded-2xl bg-blue-50 px-4 py-3 text-xs font-bold text-blue-700 ring-1 ring-blue-200">
+                                {mensagemObrasConfiguracoes}
+                            </div>
+                        )}
+
+                        <div className="mt-4 grid gap-4 xl:grid-cols-[minmax(0,1.1fr)_minmax(320px,0.9fr)]">
+                            <div className="rounded-2xl bg-slate-50 px-4 py-4 ring-1 ring-slate-100">
+                                <div className="flex items-center justify-between gap-3">
+                                    <h3 className="text-sm font-black text-slate-900">Obras cadastradas</h3>
+                                    <span className="rounded-full bg-white px-3 py-1 text-[11px] font-black uppercase tracking-wide text-slate-500 ring-1 ring-slate-200">
+                                        {obrasConfiguracoes.length} registro(s)
+                                    </span>
+                                </div>
+
+                                <div className="mt-3 space-y-2">
+                                    {obrasConfiguracoes.length === 0 ? (
+                                        <p className="rounded-2xl bg-white px-4 py-3 text-sm font-semibold text-slate-500 ring-1 ring-slate-100">
+                                            Nenhuma obra carregada.
+                                        </p>
+                                    ) : (
+                                        obrasConfiguracoes.slice(0, 12).map((obra) => (
+                                            <div key={obra.id} className="rounded-2xl bg-white px-4 py-3 ring-1 ring-slate-100">
+                                                <div className="flex flex-col gap-2 md:flex-row md:items-start md:justify-between">
+                                                    <div>
+                                                        <p className="text-sm font-black text-slate-950">{obra.nome || "Obra sem nome"}</p>
+                                                        <p className="mt-1 text-xs font-semibold text-slate-500">
+                                                            {[obra.cidade, obra.uf].filter(Boolean).join(" / ") || "Local nao informado"}
+                                                        </p>
+                                                    </div>
+                                                    <span className={classNames(
+                                                        "rounded-full px-3 py-1 text-[11px] font-black uppercase tracking-wide ring-1",
+                                                        obra.status === "Inativa"
+                                                            ? "bg-slate-100 text-slate-500 ring-slate-200"
+                                                            : "bg-emerald-50 text-emerald-700 ring-emerald-200"
+                                                    )}>
+                                                        {obra.status}
+                                                    </span>
+                                                </div>
+
+                                                <div className="mt-3 grid gap-2 text-xs font-semibold text-slate-600 md:grid-cols-2">
+                                                    <p>Fiscal: {obra.fiscalIdealiza || "nao informado"}</p>
+                                                    <p>Lider: {obra.liderEncarregado || "nao informado"}</p>
+                                                </div>
+                                            </div>
+                                        ))
+                                    )}
+                                </div>
+
+                                {obrasConfiguracoes.length > 12 && (
+                                    <p className="mt-3 text-xs font-semibold text-slate-500">
+                                        Mostrando as 12 primeiras obras. O cadastro completo entra na proxima microetapa.
+                                    </p>
+                                )}
+                            </div>
+
+                            <div className="rounded-2xl bg-slate-50 px-4 py-4 ring-1 ring-slate-100">
+                                <div className="flex items-center justify-between gap-3">
+                                    <h3 className="text-sm font-black text-slate-900">Vinculos empresa/obra</h3>
+                                    <span className="rounded-full bg-white px-3 py-1 text-[11px] font-black uppercase tracking-wide text-slate-500 ring-1 ring-slate-200">
+                                        {vinculosObrasConfiguracoes.length} vinculo(s)
+                                    </span>
+                                </div>
+
+                                <div className="mt-3 space-y-2">
+                                    {vinculosObrasConfiguracoes.length === 0 ? (
+                                        <p className="rounded-2xl bg-white px-4 py-3 text-sm font-semibold text-slate-500 ring-1 ring-slate-100">
+                                            Nenhum vinculo carregado.
+                                        </p>
+                                    ) : (
+                                        vinculosObrasConfiguracoes.slice(0, 10).map((vinculo) => (
+                                            <div key={vinculo.id} className="rounded-2xl bg-white px-4 py-3 ring-1 ring-slate-100">
+                                                <p className="text-sm font-black text-slate-950">
+                                                    {vinculo.empresa?.nome || "Empresa nao informada"}
+                                                </p>
+                                                <p className="mt-1 text-xs font-semibold text-slate-500">
+                                                    {vinculo.obra?.nome || "Obra nao informada"}
+                                                </p>
+                                                <p className="mt-2 text-[11px] font-black uppercase tracking-wide text-slate-400">
+                                                    Status: {vinculo.status}
+                                                </p>
+                                            </div>
+                                        ))
+                                    )}
+                                </div>
+                            </div>
+                        </div>
+
+                        <p className="mt-4 rounded-2xl bg-amber-50 px-4 py-3 text-xs font-semibold leading-relaxed text-amber-800 ring-1 ring-amber-200">
+                            Esta microetapa e somente leitura. Cadastro, edicao, inativacao e vinculo manual entram na proxima etapa.
+                        </p>
+                    </Card>
+                )
+            );
         case "config-relatorios-evidencias":
             return renderBlocoConfiguracaoComControle(
                 "config-relatorios-evidencias",
