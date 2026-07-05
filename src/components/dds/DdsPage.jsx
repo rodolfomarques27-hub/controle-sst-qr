@@ -209,6 +209,34 @@ function obterIdEmpresaObjetoDds(empresa = null) {
     return obterPrimeiroTextoDds(empresa, CAMPOS_ID_EMPRESA_DDS);
 }
 
+function obterEmpresaIdObraDds(obra = null) {
+    return obterPrimeiroTextoDds(obra, ["empresaId", "empresa_id", "id_empresa", "empresa"]);
+}
+
+function obterIdObraEmpresaDds(obra = null, indice = 0) {
+    return String(
+        obterPrimeiroTextoDds(obra, ["id", "obraId", "obra_id", "uuid"])
+        || `obra-${indice}`
+    ).trim();
+}
+
+function obterNomeObraEmpresaDds(obra = null) {
+    return obterPrimeiroTextoDds(obra, ["nome", "obraSetor", "obra_setor", "obra", "setor"]);
+}
+
+function obterFiscalObraEmpresaDds(obra = null) {
+    return obterPrimeiroTextoDds(obra, ["fiscalIdealiza", "fiscal_idealiza"]);
+}
+
+function obterLiderObraEmpresaDds(obra = null) {
+    return obterPrimeiroTextoDds(obra, [
+        "liderEncarregado",
+        "lider_encarregado",
+        "responsavelObra",
+        "responsavel_obra",
+    ]);
+}
+
 function obterChaveEmpresaDds(empresa = null, indice = 0) {
     return String(
         obterIdEmpresaObjetoDds(empresa)
@@ -1139,12 +1167,14 @@ export function DdsPage({
     );
 
     const [empresaSelecionadaChaveDds, setEmpresaSelecionadaChaveDds] = useState(() => carregarEmpresaSelecionadaDds());
+    const [obraSelecionadaIdDds, setObraSelecionadaIdDds] = useState("");
     const [deslocamentoSemanasDds, setDeslocamentoSemanasDds] = useState(0);
     const [obrasSetorPorEmpresaDds, setObrasSetorPorEmpresaDds] = useState(() => carregarObrasSetorDdsPorEmpresa());
     const [fiscalIdealizaPorEmpresaDds, setFiscalIdealizaPorEmpresaDds] = useState(() => carregarFiscalIdealizaDdsPorEmpresa());
 
     function atualizarEmpresaSelecionadaDds(chaveEmpresa) {
         setEmpresaSelecionadaChaveDds(chaveEmpresa);
+        setObraSelecionadaIdDds("");
         salvarEmpresaSelecionadaDds(chaveEmpresa);
     }
 
@@ -1177,6 +1207,17 @@ export function DdsPage({
         () => filtrarColaboradoresPorEmpresaDds(colaboradores, empresaSelecionadaDds),
         [colaboradores, empresaSelecionadaDds]
     );
+
+    const obrasEmpresaSelecionadaDds = useMemo(() => {
+        const empresaIdSelecionada = obterIdEmpresaObjetoDds(empresaSelecionadaDds);
+
+        if (!empresaIdSelecionada) return [];
+
+        return obrasEmpresasDds.filter((obra) =>
+            obterEmpresaIdObraDds(obra) === empresaIdSelecionada
+            && String(obra?.status || "Ativa").trim() !== "Inativa"
+        );
+    }, [empresaSelecionadaDds, obrasEmpresasDds]);
 
     const inicioSemanaDds = useMemo(
         () => adicionarDiasDds(obterInicioSemanaDds(), deslocamentoSemanasDds * 7),
@@ -1263,6 +1304,29 @@ export function DdsPage({
         fiscalIdealizaFoiSalvoParaEmpresaDds,
         fiscalIdealizaSalvoEmpresaDds,
     ]);
+
+    function aplicarObraCadastradaDds(idObra) {
+        setObraSelecionadaIdDds(idObra);
+
+        const obra = obrasEmpresaSelecionadaDds.find((item, indice) =>
+            obterIdObraEmpresaDds(item, indice) === idObra
+        );
+
+        if (!obra) return;
+
+        const nomeObra = obterNomeObraEmpresaDds(obra);
+        const fiscalObra = obterFiscalObraEmpresaDds(obra);
+        const liderObra = obterLiderObraEmpresaDds(obra);
+
+        if (nomeObra) atualizarObraSetorDds(nomeObra);
+        if (fiscalObra) atualizarFiscalIdealizaDds(fiscalObra);
+        if (liderObra) {
+            setDadosDds((dadosAtuais) => ({
+                ...dadosAtuais,
+                encarregado: liderObra,
+            }));
+        }
+    }
 
     function atualizarObraSetorDds(valor) {
         setDadosDds((dadosAtuais) => ({
@@ -1419,6 +1483,32 @@ export function DdsPage({
                                     );
                                 })}
                             </select>
+                        </label>
+
+                        <label className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
+                            <span className="text-[11px] font-black uppercase tracking-wide text-slate-400">Obra cadastrada</span>
+                            <select
+                                value={obraSelecionadaIdDds}
+                                onChange={(evento) => aplicarObraCadastradaDds(evento.target.value)}
+                                className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-black text-slate-800 outline-none transition focus:border-emerald-400 focus:ring-2 focus:ring-emerald-100"
+                            >
+                                <option value="">
+                                    {obrasEmpresaSelecionadaDds.length > 0 ? "Selecionar obra" : "Nenhuma obra cadastrada"}
+                                </option>
+                                {obrasEmpresaSelecionadaDds.map((obra, indice) => {
+                                    const idObra = obterIdObraEmpresaDds(obra, indice);
+                                    const nomeObra = obterNomeObraEmpresaDds(obra) || `Obra ${indice + 1}`;
+
+                                    return (
+                                        <option key={idObra} value={idObra}>
+                                            {nomeObra}
+                                        </option>
+                                    );
+                                })}
+                            </select>
+                            <span className="mt-2 block text-[11px] font-bold text-slate-500">
+                                Ao selecionar, o DDS preenche Obra / Setor, Fiscal Idealiza e Líder / Encarregado.
+                            </span>
                         </label>
 
                         {camposDadosDds.map((campo) => (
