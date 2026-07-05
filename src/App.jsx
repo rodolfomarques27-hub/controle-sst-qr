@@ -59,7 +59,7 @@ const carregarTreinamentosHandlers = () => import("./services/appTreinamentosHan
 const carregarAuditoriaHandlers = () => import("./services/appAuditoriaHandlersService");
 const carregarConsultaPublicaQrHandlers = () => import("./services/consultaPublicaQrService");
 const carregarEmpresaDocumentosHandlers = () => import("./services/empresaDocumentosService");
-const carregarObrasEmpresasService = () => import("./services/obrasEmpresasService");
+const carregarObrasEmpresasService = () => import("./services/obrasService");
 
 const hoje = new Date();
 const CHAVE_SIDEBAR_COLAPSADA = "safescan:sidebar:collapsed";
@@ -229,10 +229,10 @@ export default function App() {
     }, []);
 
     const carregarObrasEmpresas = useCallback(async () => {
-        const { listarObrasEmpresas } = await carregarObrasEmpresasService();
+        const { listarVinculosEmpresasObras } = await carregarObrasEmpresasService();
 
         try {
-            const obras = await listarObrasEmpresas();
+            const obras = await listarVinculosEmpresasObras();
             setObrasEmpresasBanco(obras);
             return obras;
         } catch (error) {

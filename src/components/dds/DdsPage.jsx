@@ -209,32 +209,60 @@ function obterIdEmpresaObjetoDds(empresa = null) {
     return obterPrimeiroTextoDds(empresa, CAMPOS_ID_EMPRESA_DDS);
 }
 
+function obterObraBaseDds(item = null) {
+    if (!item || typeof item !== "object") return {};
+
+    if (item.obra && typeof item.obra === "object") {
+        return item.obra;
+    }
+
+    return item;
+}
 function obterEmpresaIdObraDds(obra = null) {
-    return obterPrimeiroTextoDds(obra, ["empresaId", "empresa_id", "id_empresa", "empresa"]);
+    return (
+        obterPrimeiroTextoDds(obra, ["empresaId", "empresa_id", "id_empresa"]) ||
+        obterPrimeiroTextoDds(obra?.empresa, ["id", "empresa_id", "empresaId"]) ||
+        obterPrimeiroTextoDds(obra, ["empresa"])
+    );
 }
 
 function obterIdObraEmpresaDds(obra = null, indice = 0) {
+    const obraBase = obterObraBaseDds(obra);
+
     return String(
-        obterPrimeiroTextoDds(obra, ["id", "obraId", "obra_id", "uuid"])
-        || `obra-${indice}`
+        obterPrimeiroTextoDds(obra, ["obraId", "obra_id", "id_obra"]) ||
+        obterPrimeiroTextoDds(obraBase, ["id", "uuid"]) ||
+        obterPrimeiroTextoDds(obra, ["id", "uuid"]) ||
+        `obra-${indice}`
     ).trim();
 }
 
 function obterNomeObraEmpresaDds(obra = null) {
-    return obterPrimeiroTextoDds(obra, ["nome", "obraSetor", "obra_setor", "obra", "setor"]);
+    const obraBase = obterObraBaseDds(obra);
+
+    return (
+        obterPrimeiroTextoDds(obraBase, ["nome", "nome_obra", "nomeObra", "obra_setor", "obraSetor", "obra", "setor", "local"]) ||
+        obterPrimeiroTextoDds(obra, ["nome", "nome_obra", "nomeObra", "obra_setor", "obraSetor", "obra", "setor", "local"]) ||
+        "Obra cadastrada"
+    );
 }
 
 function obterFiscalObraEmpresaDds(obra = null) {
-    return obterPrimeiroTextoDds(obra, ["fiscalIdealiza", "fiscal_idealiza"]);
+    const obraBase = obterObraBaseDds(obra);
+
+    return (
+        obterPrimeiroTextoDds(obraBase, ["fiscalIdealiza", "fiscal_idealiza", "fiscal", "fiscal_obra", "fiscalObra"]) ||
+        obterPrimeiroTextoDds(obra, ["fiscalIdealiza", "fiscal_idealiza", "fiscal", "fiscal_obra", "fiscalObra"])
+    );
 }
 
 function obterLiderObraEmpresaDds(obra = null) {
-    return obterPrimeiroTextoDds(obra, [
-        "liderEncarregado",
-        "lider_encarregado",
-        "responsavelObra",
-        "responsavel_obra",
-    ]);
+    const obraBase = obterObraBaseDds(obra);
+
+    return (
+        obterPrimeiroTextoDds(obraBase, ["liderEncarregado", "lider_encarregado", "lider", "encarregado", "responsavel_obra", "responsavelObra"]) ||
+        obterPrimeiroTextoDds(obra, ["liderEncarregado", "lider_encarregado", "lider", "encarregado", "responsavel_obra", "responsavelObra"])
+    );
 }
 
 function obterChaveEmpresaDds(empresa = null, indice = 0) {
@@ -1213,10 +1241,15 @@ export function DdsPage({
 
         if (!empresaIdSelecionada) return [];
 
-        return obrasEmpresasDds.filter((obra) =>
-            obterEmpresaIdObraDds(obra) === empresaIdSelecionada
-            && String(obra?.status || "Ativa").trim() !== "Inativa"
-        );
+        return obrasEmpresasDds.filter((item) => {
+            const obraBase = obterObraBaseDds(item);
+
+            return (
+                obterEmpresaIdObraDds(item) === empresaIdSelecionada &&
+                item?.status !== "Inativa" &&
+                obraBase?.status !== "Inativa"
+            );
+        });
     }, [empresaSelecionadaDds, obrasEmpresasDds]);
 
     const inicioSemanaDds = useMemo(
