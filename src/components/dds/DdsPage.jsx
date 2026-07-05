@@ -1128,7 +1128,7 @@ function DdsPrintStyles() {
                     }
 
                     .dds-print-area .dds-print-page:not(:first-child) .dds-print-sheet {
-                        zoom: 0.84 !important;
+                        zoom: 0.835 !important;
                     }
 
                     .dds-print-sheet header {
