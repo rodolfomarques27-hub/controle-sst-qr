@@ -77,8 +77,11 @@ import { QrCodeComLogo, QrCodeLogoControls } from "../qr/QrCodeComLogo";
 import {
     adicionarObra,
     atualizarObra,
+    atualizarVinculoEmpresaObra,
+    excluirVinculoEmpresaObra,
     listarObras,
     listarVinculosEmpresasObras,
+    vincularEmpresaObra,
 } from "../../services/obrasService";
 
 const classNames = (...classes) => classes.filter(Boolean).join(" ");
@@ -107,6 +110,19 @@ function criarFormularioObraConfiguracoes(obra = {}) {
         status: obra.status === "Inativa" ? "Inativa" : "Ativa",
         observacoes: obra.observacoes || "",
     };
+}
+function obterIdEmpresaObrasConfiguracoes(item = {}) {
+    return String(item.id || item.empresa_id || item.empresaId || "").trim();
+}
+
+function obterNomeEmpresaObrasConfiguracoes(item = {}) {
+    return String(item.nome || item.nome_fantasia || item.razao_social || item.empresa || "Empresa sem nome").trim();
+}
+
+function ordenarEmpresasObrasConfiguracoes(empresas = []) {
+    return [...(empresas || [])]
+        .filter((empresa) => obterIdEmpresaObrasConfiguracoes(empresa))
+        .sort((a, b) => obterNomeEmpresaObrasConfiguracoes(a).localeCompare(obterNomeEmpresaObrasConfiguracoes(b), "pt-BR"));
 }
 function formatarDataHoraConfiguracoes(valor) {
     if (!valor) return "Sem data";
@@ -447,6 +463,7 @@ const carregarLayoutVisualLocalConfiguracoes = () => {
 };
 
 export function ConfiguracoesSistema({
+    empresasBanco = [],
     usuario = null,
     podeAcessarAuditoria = false,
     limites = {},
@@ -523,6 +540,15 @@ export function ConfiguracoesSistema({
     const [formularioObraAbertoConfiguracoes, setFormularioObraAbertoConfiguracoes] = useState(false);
     const [editandoObraConfiguracoesId, setEditandoObraConfiguracoesId] = useState("");
     const [salvandoObraConfiguracoes, setSalvandoObraConfiguracoes] = useState(false);
+    const [empresaVinculoObraConfiguracoesId, setEmpresaVinculoObraConfiguracoesId] = useState("");
+    const [obraVinculoConfiguracoesId, setObraVinculoConfiguracoesId] = useState("");
+    const [statusVinculoObraConfiguracoes, setStatusVinculoObraConfiguracoes] = useState("Ativa");
+    const [salvandoVinculoObraConfiguracoes, setSalvandoVinculoObraConfiguracoes] = useState(false);
+
+    const empresasVinculoObrasConfiguracoes = useMemo(
+        () => ordenarEmpresasObrasConfiguracoes(empresasBanco),
+        [empresasBanco]
+    );
     const [mensagemPermissaoSistema, setMensagemPermissaoSistema] = useState(
         "Permissão geral ainda não carregada do Supabase."
     );
@@ -1427,6 +1453,95 @@ export function ConfiguracoesSistema({
         }
     };
 
+    const salvarVinculoObraConfiguracoes = async (evento) => {
+        evento?.preventDefault?.();
+
+        if (!empresaVinculoObraConfiguracoesId) {
+            setMensagemObrasConfiguracoes("Selecione a empresa para criar o vinculo.");
+            return;
+        }
+
+        if (!obraVinculoConfiguracoesId) {
+            setMensagemObrasConfiguracoes("Selecione a obra para criar o vinculo.");
+            return;
+        }
+
+        const vinculoExistente = vinculosObrasConfiguracoes.find((vinculo) =>
+            vinculo.empresaId === empresaVinculoObraConfiguracoesId &&
+            vinculo.obraId === obraVinculoConfiguracoesId
+        );
+
+        setSalvandoVinculoObraConfiguracoes(true);
+        setMensagemObrasConfiguracoes(vinculoExistente ? "Atualizando vinculo existente..." : "Criando vinculo empresa/obra...");
+
+        try {
+            if (vinculoExistente?.id) {
+                await atualizarVinculoEmpresaObra({
+                    id: vinculoExistente.id,
+                    status: statusVinculoObraConfiguracoes,
+                });
+            } else {
+                await vincularEmpresaObra(
+                    empresaVinculoObraConfiguracoesId,
+                    obraVinculoConfiguracoesId,
+                    { status: statusVinculoObraConfiguracoes }
+                );
+            }
+
+            await carregarObrasConfiguracoes();
+            setMensagemObrasConfiguracoes(vinculoExistente ? "Vinculo atualizado com sucesso." : "Vinculo criado com sucesso.");
+        } catch (erro) {
+            console.error("Erro ao salvar vinculo empresa/obra:", erro);
+            setMensagemObrasConfiguracoes(`Nao foi possivel salvar o vinculo. Supabase: ${erro?.message || "erro nao identificado"}`);
+        } finally {
+            setSalvandoVinculoObraConfiguracoes(false);
+        }
+    };
+
+    const alternarStatusVinculoObraConfiguracoes = async (vinculo = {}) => {
+        if (!vinculo.id) return;
+
+        const proximoStatus = vinculo.status === "Inativa" ? "Ativa" : "Inativa";
+
+        setSalvandoVinculoObraConfiguracoes(true);
+        setMensagemObrasConfiguracoes(`Atualizando vinculo para ${proximoStatus}...`);
+
+        try {
+            await atualizarVinculoEmpresaObra({
+                id: vinculo.id,
+                status: proximoStatus,
+            });
+
+            await carregarObrasConfiguracoes();
+            setMensagemObrasConfiguracoes(`Vinculo marcado como ${proximoStatus}.`);
+        } catch (erro) {
+            console.error("Erro ao atualizar status do vinculo:", erro);
+            setMensagemObrasConfiguracoes(`Nao foi possivel atualizar o vinculo. Supabase: ${erro?.message || "erro nao identificado"}`);
+        } finally {
+            setSalvandoVinculoObraConfiguracoes(false);
+        }
+    };
+
+    const removerVinculoObraConfiguracoes = async (vinculo = {}) => {
+        if (!vinculo.id) return;
+
+        const confirmar = window.confirm("Remover este vinculo empresa/obra?");
+        if (!confirmar) return;
+
+        setSalvandoVinculoObraConfiguracoes(true);
+        setMensagemObrasConfiguracoes("Removendo vinculo empresa/obra...");
+
+        try {
+            await excluirVinculoEmpresaObra(vinculo.id);
+            await carregarObrasConfiguracoes();
+            setMensagemObrasConfiguracoes("Vinculo removido com sucesso.");
+        } catch (erro) {
+            console.error("Erro ao remover vinculo empresa/obra:", erro);
+            setMensagemObrasConfiguracoes(`Nao foi possivel remover o vinculo. Supabase: ${erro?.message || "erro nao identificado"}`);
+        } finally {
+            setSalvandoVinculoObraConfiguracoes(false);
+        }
+    };
     useEffect(() => {
         const timer = window.setTimeout(() => {
             carregarObrasConfiguracoes();
@@ -1434,6 +1549,19 @@ export function ConfiguracoesSistema({
 
         return () => window.clearTimeout(timer);
     }, []);
+
+    useEffect(() => {
+        if (!empresaVinculoObraConfiguracoesId && empresasVinculoObrasConfiguracoes.length > 0) {
+            setEmpresaVinculoObraConfiguracoesId(obterIdEmpresaObrasConfiguracoes(empresasVinculoObrasConfiguracoes[0]));
+        }
+    }, [empresaVinculoObraConfiguracoesId, empresasVinculoObrasConfiguracoes]);
+
+    useEffect(() => {
+        if (!obraVinculoConfiguracoesId && obrasConfiguracoes.length > 0) {
+            const primeiraObraAtiva = obrasConfiguracoes.find((obra) => obra.status !== "Inativa") || obrasConfiguracoes[0];
+            setObraVinculoConfiguracoesId(primeiraObraAtiva?.id || "");
+        }
+    }, [obraVinculoConfiguracoesId, obrasConfiguracoes]);
     const carregarConfiguracaoAuditoriaPublicaSupabase = async () => {
         setCarregandoAuditoriaPublica(true);
         setMensagemAuditoriaPublica("Carregando token público ativo pelo serviço central da auditoria pública...");
@@ -2296,6 +2424,70 @@ export function ConfiguracoesSistema({
                                     </span>
                                 </div>
 
+                                <form onSubmit={salvarVinculoObraConfiguracoes} className="mt-3 rounded-2xl bg-white p-3 ring-1 ring-slate-100">
+                                    <h4 className="text-xs font-black uppercase tracking-wide text-slate-500">Criar vinculo empresa/obra</h4>
+
+                                    <div className="mt-3 grid gap-2">
+                                        <label className="block">
+                                            <span className="mb-1 block text-[11px] font-black uppercase tracking-wide text-slate-400">Empresa</span>
+                                            <select
+                                                value={empresaVinculoObraConfiguracoesId}
+                                                onChange={(evento) => setEmpresaVinculoObraConfiguracoesId(evento.target.value)}
+                                                className="w-full rounded-2xl border border-slate-200 bg-white px-3 py-2 text-xs font-bold text-slate-800 outline-none focus:border-slate-400 focus:ring-4 focus:ring-slate-100"
+                                            >
+                                                {empresasVinculoObrasConfiguracoes.length === 0 ? (
+                                                    <option value="">Nenhuma empresa carregada</option>
+                                                ) : (
+                                                    empresasVinculoObrasConfiguracoes.map((empresa) => (
+                                                        <option key={obterIdEmpresaObrasConfiguracoes(empresa)} value={obterIdEmpresaObrasConfiguracoes(empresa)}>
+                                                            {obterNomeEmpresaObrasConfiguracoes(empresa)}
+                                                        </option>
+                                                    ))
+                                                )}
+                                            </select>
+                                        </label>
+
+                                        <label className="block">
+                                            <span className="mb-1 block text-[11px] font-black uppercase tracking-wide text-slate-400">Obra</span>
+                                            <select
+                                                value={obraVinculoConfiguracoesId}
+                                                onChange={(evento) => setObraVinculoConfiguracoesId(evento.target.value)}
+                                                className="w-full rounded-2xl border border-slate-200 bg-white px-3 py-2 text-xs font-bold text-slate-800 outline-none focus:border-slate-400 focus:ring-4 focus:ring-slate-100"
+                                            >
+                                                {obrasConfiguracoes.length === 0 ? (
+                                                    <option value="">Nenhuma obra cadastrada</option>
+                                                ) : (
+                                                    obrasConfiguracoes.map((obra) => (
+                                                        <option key={obra.id} value={obra.id}>
+                                                            {obra.nome} - {obra.status}
+                                                        </option>
+                                                    ))
+                                                )}
+                                            </select>
+                                        </label>
+
+                                        <label className="block">
+                                            <span className="mb-1 block text-[11px] font-black uppercase tracking-wide text-slate-400">Status do vinculo</span>
+                                            <select
+                                                value={statusVinculoObraConfiguracoes}
+                                                onChange={(evento) => setStatusVinculoObraConfiguracoes(evento.target.value)}
+                                                className="w-full rounded-2xl border border-slate-200 bg-white px-3 py-2 text-xs font-bold text-slate-800 outline-none focus:border-slate-400 focus:ring-4 focus:ring-slate-100"
+                                            >
+                                                <option value="Ativa">Ativa</option>
+                                                <option value="Inativa">Inativa</option>
+                                            </select>
+                                        </label>
+
+                                        <button
+                                            type="submit"
+                                            disabled={salvandoVinculoObraConfiguracoes || !empresaVinculoObraConfiguracoesId || !obraVinculoConfiguracoesId}
+                                            className="rounded-2xl bg-slate-950 px-3 py-2 text-xs font-black text-white hover:bg-slate-800 disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-500"
+                                        >
+                                            {salvandoVinculoObraConfiguracoes ? "Salvando vinculo..." : "Salvar vinculo"}
+                                        </button>
+                                    </div>
+                                </form>
+
                                 <div className="mt-3 space-y-2">
                                     {vinculosObrasConfiguracoes.length === 0 ? (
                                         <p className="rounded-2xl bg-white px-4 py-3 text-sm font-semibold text-slate-500 ring-1 ring-slate-100">
@@ -2310,9 +2502,34 @@ export function ConfiguracoesSistema({
                                                 <p className="mt-1 text-xs font-semibold text-slate-500">
                                                     {vinculo.obra?.nome || "Obra nao informada"}
                                                 </p>
-                                                <p className="mt-2 text-[11px] font-black uppercase tracking-wide text-slate-400">
-                                                    Status: {vinculo.status}
-                                                </p>
+                                                <div className="mt-3 flex flex-wrap items-center gap-2">
+                                                    <span className={classNames(
+                                                        "rounded-full px-3 py-1 text-[11px] font-black uppercase tracking-wide ring-1",
+                                                        vinculo.status === "Inativa"
+                                                            ? "bg-slate-100 text-slate-500 ring-slate-200"
+                                                            : "bg-emerald-50 text-emerald-700 ring-emerald-200"
+                                                    )}>
+                                                        {vinculo.status}
+                                                    </span>
+
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => alternarStatusVinculoObraConfiguracoes(vinculo)}
+                                                        disabled={salvandoVinculoObraConfiguracoes}
+                                                        className="rounded-full bg-white px-3 py-1 text-[11px] font-black uppercase tracking-wide text-slate-700 ring-1 ring-slate-200 hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-60"
+                                                    >
+                                                        {vinculo.status === "Inativa" ? "Ativar" : "Inativar"}
+                                                    </button>
+
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => removerVinculoObraConfiguracoes(vinculo)}
+                                                        disabled={salvandoVinculoObraConfiguracoes}
+                                                        className="rounded-full bg-red-50 px-3 py-1 text-[11px] font-black uppercase tracking-wide text-red-700 ring-1 ring-red-200 hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-60"
+                                                    >
+                                                        Remover
+                                                    </button>
+                                                </div>
                                             </div>
                                         ))
                                     )}
@@ -2321,7 +2538,7 @@ export function ConfiguracoesSistema({
                         </div>
 
                         <p className="mt-4 rounded-2xl bg-amber-50 px-4 py-3 text-xs font-semibold leading-relaxed text-amber-800 ring-1 ring-amber-200">
-                            Cadastro e edicao de obras habilitados. O vinculo manual empresa/obra entra na proxima etapa.
+                            Cadastro, edicao e vinculo manual empresa/obra habilitados. O DDS sera migrado para usar estes vinculos na proxima etapa.
                         </p>
                     </Card>
                 )

@@ -864,6 +864,7 @@ export function AppContentRouter({
                 configuracoesDesbloqueadas ? (
                     <div className="page-shell space-y-4">
                         <ConfiguracoesSistema
+                            empresasBanco={empresasBanco}
                             acaoTopo={(
                                 <button
                                     type="button"
