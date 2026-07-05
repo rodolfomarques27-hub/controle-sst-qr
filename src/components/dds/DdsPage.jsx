@@ -1,4 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
+import { QRCodeSVG } from "qrcode.react";
+import { salvarRegistroDds } from "../../services/ddsRegistrosService";
 import {
     BookOpen,
     Gift,
@@ -682,6 +684,32 @@ function QuadradoPresenca() {
     return <span className="inline-block h-3.5 w-3.5 rounded-[2px] border border-slate-700 bg-white align-middle" />;
 }
 
+
+function obterUuidSeguroDds(valor = "") {
+    const texto = String(valor ?? "").trim();
+    return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(texto)
+        ? texto
+        : "";
+}
+
+function DdsQrConferenciaImpresso({ url = "", size = 56, fallbackClassName = "h-14 w-14" }) {
+    const urlSeguro = String(url || "").trim();
+
+    if (!urlSeguro) {
+        return <QrCode className={`${fallbackClassName} text-slate-950`} />;
+    }
+
+    return (
+        <QRCodeSVG
+            value={urlSeguro}
+            size={size}
+            level="H"
+            includeMargin
+            bgColor="#ffffff"
+            fgColor="#0f172a"
+        />
+    );
+}
 function DdsPreviewImpresso({ participantes = participantesDds, mostrarAssinaturas = true, dadosDds = dadosDdsPadrao, diasSemana = diasDds, aniversariantes = aniversariantesDds }) {
     return (
         <section className="dds-print-page overflow-hidden rounded-[28px] border border-slate-200 bg-white p-4 shadow-[0_18px_50px_rgba(15,23,42,0.08)]">
@@ -712,8 +740,8 @@ function DdsPreviewImpresso({ participantes = participantesDds, mostrarAssinatur
                                 <p className="rounded-lg bg-slate-950 px-2 py-1 text-center text-sm font-black text-white">{dadosDds.codigo}</p>
                             </div>
                             <div className="flex flex-col items-center justify-center rounded-2xl border border-slate-300 p-2 text-center">
-                                <QrCode className="h-14 w-14 text-slate-950" />
-                                <p className="mt-1 text-[8px] font-black uppercase leading-tight text-emerald-700">QR de conferência</p>
+                                <DdsQrConferenciaImpresso url={dadosDds.qrConferenciaUrl} size={72} fallbackClassName="h-[72px] w-[72px]" />
+                                <p className="mt-0.5 text-[5.5px] font-black uppercase leading-tight text-emerald-700">QR de conferência</p>
                             </div>
                         </div>
                     </header>
@@ -932,8 +960,8 @@ function DdsPreviewImpressoContinuacao({ participantes = participantesDdsContinu
                                 <p className="text-xs font-black uppercase text-slate-950">{dadosDds.obraSetor}</p>
                             </div>
                             <div className="flex flex-col items-center justify-center rounded-2xl border border-slate-300 p-2 text-center">
-                                <QrCode className="h-12 w-12 text-slate-950" />
-                                <p className="mt-1 text-[7px] font-black uppercase leading-tight text-emerald-700">QR de conferência</p>
+                                <DdsQrConferenciaImpresso url={dadosDds.qrConferenciaUrl} size={64} fallbackClassName="h-16 w-16" />
+                                <p className="mt-0.5 text-[5px] font-black uppercase leading-tight text-emerald-700">QR de conferência</p>
                             </div>
                         </div>
                     </header>
@@ -1179,6 +1207,7 @@ function DdsPrintStyles() {
     );
 }
 export function DdsPage({
+    supabase = null,
     colaboradores = [],
     empresasBanco = [],
     obrasEmpresasBanco = [],
@@ -1295,6 +1324,16 @@ export function DdsPage({
     ]);
 
     const [dadosDds, setDadosDds] = useState(dadosDdsAutomaticos);
+    const [registroDdsConferencia, setRegistroDdsConferencia] = useState(null);
+    const [salvandoRegistroDds, setSalvandoRegistroDds] = useState(false);
+    const [erroRegistroDds, setErroRegistroDds] = useState("");
+
+    const dadosDdsComRegistro = useMemo(() => ({
+        ...dadosDds,
+        tokenDds: registroDdsConferencia?.tokenPublico || "",
+        qrConferenciaUrl: registroDdsConferencia?.urlConferencia || "",
+    }), [dadosDds, registroDdsConferencia]);
+
 
     const obraSetorFoiSalvaParaEmpresaDds = empresaSelecionadaChaveDds
         ? Object.prototype.hasOwnProperty.call(obrasSetorPorEmpresaDds || {}, empresaSelecionadaChaveDds)
@@ -1426,6 +1465,60 @@ export function DdsPage({
         [participantesSistemaDds]
     );
     const totalFolhasDds = Math.max(1, 1 + folhasContinuacaoDds.length);
+    async function imprimirDdsComQrConferencia() {
+        if (salvandoRegistroDds) return;
+
+        if (!supabase) {
+            window.print();
+            return;
+        }
+
+        setSalvandoRegistroDds(true);
+        setErroRegistroDds("");
+
+        try {
+            const registro = await salvarRegistroDds({
+                supabase,
+                registro: {
+                    codigo: dadosDds.codigo,
+                    empresaId: obterUuidSeguroDds(obterIdEmpresaObjetoDds(empresaSelecionadaDds)),
+                    obraId: obterUuidSeguroDds(obraSelecionadaIdDds),
+                    empresaNome: dadosDds.empresa,
+                    obraNome: dadosDds.obraSetor,
+                    periodoInicio: inicioSemanaDds,
+                    periodoFim: fimSemanaDds,
+                    responsavelNome: dadosDds.responsavel,
+                    fiscalIdealiza: dadosDds.fiscalIdealiza,
+                    liderEncarregado: dadosDds.encarregado,
+                    dados: {
+                        periodo: dadosDds.periodo,
+                        resumoSemana: dadosDds.resumoSemana,
+                        turno: dadosDds.turno,
+                        funcaoResponsavel: dadosDds.funcaoResponsavel,
+                        totalParticipantes: participantesSistemaDds.length,
+                        totalFolhas: folhasContinuacaoDds.length + 1,
+                        diasSemana: diasSemanaDds.map((dia) => ({
+                            dia: dia.dia,
+                            data: dia.data,
+                            tema: dia.tema,
+                            responsavel: dia.responsavel,
+                        })),
+                    },
+                    status: "Ativo",
+                },
+            });
+
+            setRegistroDdsConferencia(registro);
+            window.setTimeout(() => window.print(), 150);
+        } catch (error) {
+            const mensagem = error?.message || "Não foi possível gerar o QR de conferência do DDS.";
+            setErroRegistroDds(mensagem);
+            window.alert(mensagem);
+        } finally {
+            setSalvandoRegistroDds(false);
+        }
+    }
+
     return (
         <div className="space-y-6">
             <DdsPrintStyles />
@@ -1445,7 +1538,7 @@ export function DdsPage({
                         </div>
                         <button
                             type="button"
-                            onClick={() => window.print()}
+                            onClick={imprimirDdsComQrConferencia}
                             className="inline-flex items-center justify-center gap-2 rounded-2xl bg-emerald-500 px-4 py-3 text-sm font-black text-white shadow-lg shadow-emerald-950/20 transition hover:bg-emerald-400"
                         >
                             <Printer className="h-4 w-4" />
@@ -1631,7 +1724,7 @@ export function DdsPage({
                 <DdsPreviewImpresso
                     participantes={primeiraFolhaParticipantes}
                     mostrarAssinaturas={totalFolhasDds === 1}
-                    dadosDds={dadosDds}
+                    dadosDds={dadosDdsComRegistro}
                     diasSemana={diasSemanaDds}
                     aniversariantes={aniversariantesDds}
                 />
@@ -1640,7 +1733,7 @@ export function DdsPage({
                     <DdsPreviewImpressoContinuacao
                         key={`folha-dds-${indice + 2}`}
                         participantes={participantes}
-                        dadosDds={dadosDds}
+                        dadosDds={dadosDdsComRegistro}
                         diasSemana={diasSemanaDds}
                         numeroPagina={indice + 2}
                         totalPaginas={totalFolhasDds}

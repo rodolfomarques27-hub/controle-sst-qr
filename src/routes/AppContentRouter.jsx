@@ -822,6 +822,7 @@ export function AppContentRouter({
 
             {tela === "dds" && (
                 <DdsPage
+                    supabase={supabase}
                     colaboradores={colaboradores}
                     empresasBanco={empresasBanco}
                     obrasEmpresasBanco={obrasEmpresasBanco}
