@@ -75,12 +75,39 @@ import { supabase } from "../../lib/supabaseClient";
 import { reduzirFotoParaAuditoria } from "../../services/imagemService";
 import { QrCodeComLogo, QrCodeLogoControls } from "../qr/QrCodeComLogo";
 import {
+    adicionarObra,
+    atualizarObra,
     listarObras,
     listarVinculosEmpresasObras,
 } from "../../services/obrasService";
 
 const classNames = (...classes) => classes.filter(Boolean).join(" ");
 
+const FORMULARIO_OBRA_CONFIGURACOES_INICIAL = {
+    id: "",
+    nome: "",
+    cidade: "",
+    uf: "",
+    endereco: "",
+    fiscalIdealiza: "",
+    liderEncarregado: "",
+    status: "Ativa",
+    observacoes: "",
+};
+
+function criarFormularioObraConfiguracoes(obra = {}) {
+    return {
+        id: obra.id || "",
+        nome: obra.nome || "",
+        cidade: obra.cidade || "",
+        uf: obra.uf || "",
+        endereco: obra.endereco || "",
+        fiscalIdealiza: obra.fiscalIdealiza || obra.fiscal_idealiza || "",
+        liderEncarregado: obra.liderEncarregado || obra.lider_encarregado || "",
+        status: obra.status === "Inativa" ? "Inativa" : "Ativa",
+        observacoes: obra.observacoes || "",
+    };
+}
 function formatarDataHoraConfiguracoes(valor) {
     if (!valor) return "Sem data";
 
@@ -492,6 +519,10 @@ export function ConfiguracoesSistema({
     const [vinculosObrasConfiguracoes, setVinculosObrasConfiguracoes] = useState([]);
     const [carregandoObrasConfiguracoes, setCarregandoObrasConfiguracoes] = useState(false);
     const [mensagemObrasConfiguracoes, setMensagemObrasConfiguracoes] = useState("Obras ainda nao carregadas.");
+    const [formObraConfiguracoes, setFormObraConfiguracoes] = useState(() => criarFormularioObraConfiguracoes(FORMULARIO_OBRA_CONFIGURACOES_INICIAL));
+    const [formularioObraAbertoConfiguracoes, setFormularioObraAbertoConfiguracoes] = useState(false);
+    const [editandoObraConfiguracoesId, setEditandoObraConfiguracoesId] = useState("");
+    const [salvandoObraConfiguracoes, setSalvandoObraConfiguracoes] = useState(false);
     const [mensagemPermissaoSistema, setMensagemPermissaoSistema] = useState(
         "Permissão geral ainda não carregada do Supabase."
     );
@@ -1320,6 +1351,82 @@ export function ConfiguracoesSistema({
         }
     };
 
+    const iniciarNovaObraConfiguracoes = () => {
+        setEditandoObraConfiguracoesId("");
+        setFormObraConfiguracoes(criarFormularioObraConfiguracoes(FORMULARIO_OBRA_CONFIGURACOES_INICIAL));
+        setFormularioObraAbertoConfiguracoes(true);
+        setMensagemObrasConfiguracoes("Preencha os dados da nova obra.");
+    };
+
+    const editarObraConfiguracoes = (obra = {}) => {
+        setEditandoObraConfiguracoesId(obra.id || "");
+        setFormObraConfiguracoes(criarFormularioObraConfiguracoes(obra));
+        setFormularioObraAbertoConfiguracoes(true);
+        setMensagemObrasConfiguracoes(`Editando obra: ${obra.nome || "obra sem nome"}.`);
+    };
+
+    const cancelarEdicaoObraConfiguracoes = () => {
+        setEditandoObraConfiguracoesId("");
+        setFormObraConfiguracoes(criarFormularioObraConfiguracoes(FORMULARIO_OBRA_CONFIGURACOES_INICIAL));
+        setFormularioObraAbertoConfiguracoes(false);
+        setMensagemObrasConfiguracoes("Edicao de obra cancelada.");
+    };
+
+    const atualizarCampoObraConfiguracoes = (campo, valor) => {
+        setFormObraConfiguracoes((atual) => ({
+            ...atual,
+            [campo]: valor,
+        }));
+    };
+
+    const salvarObraConfiguracoes = async (evento) => {
+        evento?.preventDefault?.();
+
+        const payload = {
+            ...formObraConfiguracoes,
+            nome: String(formObraConfiguracoes.nome || "").trim(),
+            cidade: String(formObraConfiguracoes.cidade || "").trim(),
+            uf: String(formObraConfiguracoes.uf || "").trim().toUpperCase(),
+            endereco: String(formObraConfiguracoes.endereco || "").trim(),
+            fiscalIdealiza: String(formObraConfiguracoes.fiscalIdealiza || "").trim(),
+            liderEncarregado: String(formObraConfiguracoes.liderEncarregado || "").trim(),
+            status: formObraConfiguracoes.status === "Inativa" ? "Inativa" : "Ativa",
+            observacoes: String(formObraConfiguracoes.observacoes || "").trim(),
+        };
+
+        if (!payload.nome) {
+            setMensagemObrasConfiguracoes("Informe o nome da obra antes de salvar.");
+            return;
+        }
+
+        setSalvandoObraConfiguracoes(true);
+        setMensagemObrasConfiguracoes(editandoObraConfiguracoesId ? "Atualizando obra..." : "Cadastrando obra...");
+
+        try {
+            if (editandoObraConfiguracoesId) {
+                await atualizarObra({
+                    ...payload,
+                    id: editandoObraConfiguracoesId,
+                });
+            } else {
+                await adicionarObra(payload);
+            }
+
+            setEditandoObraConfiguracoesId("");
+            setFormObraConfiguracoes(criarFormularioObraConfiguracoes(FORMULARIO_OBRA_CONFIGURACOES_INICIAL));
+            setFormularioObraAbertoConfiguracoes(false);
+
+            await carregarObrasConfiguracoes();
+
+            setMensagemObrasConfiguracoes(editandoObraConfiguracoesId ? "Obra atualizada com sucesso." : "Obra cadastrada com sucesso.");
+        } catch (erro) {
+            console.error("Erro ao salvar obra nas Configuracoes:", erro);
+            setMensagemObrasConfiguracoes(`Nao foi possivel salvar a obra. Supabase: ${erro?.message || "erro nao identificado"}`);
+        } finally {
+            setSalvandoObraConfiguracoes(false);
+        }
+    };
+
     useEffect(() => {
         const timer = window.setTimeout(() => {
             carregarObrasConfiguracoes();
@@ -1952,15 +2059,25 @@ export function ConfiguracoesSistema({
                                 </p>
                             </div>
 
-                            <button
-                                type="button"
-                                onClick={carregarObrasConfiguracoes}
-                                disabled={carregandoObrasConfiguracoes}
-                                className="inline-flex items-center justify-center gap-2 rounded-2xl bg-slate-950 px-3 py-2 text-xs font-black text-white hover:bg-slate-800 disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-500"
-                            >
-                                <RefreshCw className={classNames("h-4 w-4", carregandoObrasConfiguracoes ? "animate-spin" : "")} />
-                                {carregandoObrasConfiguracoes ? "Carregando..." : "Atualizar obras"}
-                            </button>
+                            <div className="flex flex-wrap items-center justify-end gap-2">
+                                <button
+                                    type="button"
+                                    onClick={iniciarNovaObraConfiguracoes}
+                                    className="inline-flex items-center justify-center gap-2 rounded-2xl bg-emerald-600 px-3 py-2 text-xs font-black text-white hover:bg-emerald-700"
+                                >
+                                    Nova obra
+                                </button>
+
+                                <button
+                                    type="button"
+                                    onClick={carregarObrasConfiguracoes}
+                                    disabled={carregandoObrasConfiguracoes}
+                                    className="inline-flex items-center justify-center gap-2 rounded-2xl bg-slate-950 px-3 py-2 text-xs font-black text-white hover:bg-slate-800 disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-500"
+                                >
+                                    <RefreshCw className={classNames("h-4 w-4", carregandoObrasConfiguracoes ? "animate-spin" : "")} />
+                                    {carregandoObrasConfiguracoes ? "Carregando..." : "Atualizar obras"}
+                                </button>
+                            </div>
                         </div>
 
                         <div className="mt-4 grid gap-3 md:grid-cols-3">
@@ -1987,6 +2104,130 @@ export function ConfiguracoesSistema({
                             </div>
                         )}
 
+                        {formularioObraAbertoConfiguracoes && (
+                            <form onSubmit={salvarObraConfiguracoes} className="mt-4 rounded-3xl bg-slate-50 p-4 ring-1 ring-slate-100">
+                                <div className="flex flex-col gap-2 md:flex-row md:items-start md:justify-between">
+                                    <div>
+                                        <h3 className="text-sm font-black text-slate-950">
+                                            {editandoObraConfiguracoesId ? "Editar obra" : "Nova obra"}
+                                        </h3>
+                                        <p className="mt-1 text-xs font-semibold text-slate-500">
+                                            Dados da obra usados no DDS e nos vinculos com empresas.
+                                        </p>
+                                    </div>
+
+                                    <div className="flex flex-wrap items-center gap-2">
+                                        <button
+                                            type="button"
+                                            onClick={cancelarEdicaoObraConfiguracoes}
+                                            className="rounded-2xl bg-white px-3 py-2 text-xs font-black text-slate-600 ring-1 ring-slate-200 hover:bg-slate-100"
+                                        >
+                                            Cancelar
+                                        </button>
+
+                                        <button
+                                            type="submit"
+                                            disabled={salvandoObraConfiguracoes}
+                                            className="rounded-2xl bg-slate-950 px-3 py-2 text-xs font-black text-white hover:bg-slate-800 disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-500"
+                                        >
+                                            {salvandoObraConfiguracoes ? "Salvando..." : editandoObraConfiguracoesId ? "Salvar alteracoes" : "Cadastrar obra"}
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+                                    <label className="block xl:col-span-2">
+                                        <span className="mb-1 block text-[11px] font-black uppercase tracking-wide text-slate-500">Nome da obra</span>
+                                        <input
+                                            type="text"
+                                            value={formObraConfiguracoes.nome}
+                                            onChange={(evento) => atualizarCampoObraConfiguracoes("nome", evento.target.value)}
+                                            className="w-full rounded-2xl border border-slate-200 bg-white px-3 py-2 text-sm font-bold text-slate-800 outline-none focus:border-slate-400 focus:ring-4 focus:ring-slate-100"
+                                            placeholder="Ex.: Obra Teste DDS"
+                                        />
+                                    </label>
+
+                                    <label className="block">
+                                        <span className="mb-1 block text-[11px] font-black uppercase tracking-wide text-slate-500">Status</span>
+                                        <select
+                                            value={formObraConfiguracoes.status}
+                                            onChange={(evento) => atualizarCampoObraConfiguracoes("status", evento.target.value)}
+                                            className="w-full rounded-2xl border border-slate-200 bg-white px-3 py-2 text-sm font-bold text-slate-800 outline-none focus:border-slate-400 focus:ring-4 focus:ring-slate-100"
+                                        >
+                                            <option value="Ativa">Ativa</option>
+                                            <option value="Inativa">Inativa</option>
+                                        </select>
+                                    </label>
+
+                                    <label className="block">
+                                        <span className="mb-1 block text-[11px] font-black uppercase tracking-wide text-slate-500">UF</span>
+                                        <input
+                                            type="text"
+                                            value={formObraConfiguracoes.uf}
+                                            onChange={(evento) => atualizarCampoObraConfiguracoes("uf", evento.target.value.toUpperCase().slice(0, 2))}
+                                            className="w-full rounded-2xl border border-slate-200 bg-white px-3 py-2 text-sm font-bold text-slate-800 outline-none focus:border-slate-400 focus:ring-4 focus:ring-slate-100"
+                                            placeholder="SP"
+                                            maxLength={2}
+                                        />
+                                    </label>
+
+                                    <label className="block">
+                                        <span className="mb-1 block text-[11px] font-black uppercase tracking-wide text-slate-500">Cidade</span>
+                                        <input
+                                            type="text"
+                                            value={formObraConfiguracoes.cidade}
+                                            onChange={(evento) => atualizarCampoObraConfiguracoes("cidade", evento.target.value)}
+                                            className="w-full rounded-2xl border border-slate-200 bg-white px-3 py-2 text-sm font-bold text-slate-800 outline-none focus:border-slate-400 focus:ring-4 focus:ring-slate-100"
+                                            placeholder="Sao Jose dos Campos"
+                                        />
+                                    </label>
+
+                                    <label className="block xl:col-span-3">
+                                        <span className="mb-1 block text-[11px] font-black uppercase tracking-wide text-slate-500">Endereco</span>
+                                        <input
+                                            type="text"
+                                            value={formObraConfiguracoes.endereco}
+                                            onChange={(evento) => atualizarCampoObraConfiguracoes("endereco", evento.target.value)}
+                                            className="w-full rounded-2xl border border-slate-200 bg-white px-3 py-2 text-sm font-bold text-slate-800 outline-none focus:border-slate-400 focus:ring-4 focus:ring-slate-100"
+                                            placeholder="Rua, numero, bairro"
+                                        />
+                                    </label>
+
+                                    <label className="block xl:col-span-2">
+                                        <span className="mb-1 block text-[11px] font-black uppercase tracking-wide text-slate-500">Fiscal Idealiza</span>
+                                        <input
+                                            type="text"
+                                            value={formObraConfiguracoes.fiscalIdealiza}
+                                            onChange={(evento) => atualizarCampoObraConfiguracoes("fiscalIdealiza", evento.target.value)}
+                                            className="w-full rounded-2xl border border-slate-200 bg-white px-3 py-2 text-sm font-bold text-slate-800 outline-none focus:border-slate-400 focus:ring-4 focus:ring-slate-100"
+                                            placeholder="Nome do fiscal"
+                                        />
+                                    </label>
+
+                                    <label className="block xl:col-span-2">
+                                        <span className="mb-1 block text-[11px] font-black uppercase tracking-wide text-slate-500">Lider / encarregado</span>
+                                        <input
+                                            type="text"
+                                            value={formObraConfiguracoes.liderEncarregado}
+                                            onChange={(evento) => atualizarCampoObraConfiguracoes("liderEncarregado", evento.target.value)}
+                                            className="w-full rounded-2xl border border-slate-200 bg-white px-3 py-2 text-sm font-bold text-slate-800 outline-none focus:border-slate-400 focus:ring-4 focus:ring-slate-100"
+                                            placeholder="Nome do lider"
+                                        />
+                                    </label>
+
+                                    <label className="block md:col-span-2 xl:col-span-4">
+                                        <span className="mb-1 block text-[11px] font-black uppercase tracking-wide text-slate-500">Observacoes</span>
+                                        <textarea
+                                            value={formObraConfiguracoes.observacoes}
+                                            onChange={(evento) => atualizarCampoObraConfiguracoes("observacoes", evento.target.value)}
+                                            className="min-h-[84px] w-full rounded-2xl border border-slate-200 bg-white px-3 py-2 text-sm font-bold text-slate-800 outline-none focus:border-slate-400 focus:ring-4 focus:ring-slate-100"
+                                            placeholder="Observacoes internas da obra"
+                                        />
+                                    </label>
+                                </div>
+                            </form>
+                        )}
+
                         <div className="mt-4 grid gap-4 xl:grid-cols-[minmax(0,1.1fr)_minmax(320px,0.9fr)]">
                             <div className="rounded-2xl bg-slate-50 px-4 py-4 ring-1 ring-slate-100">
                                 <div className="flex items-center justify-between gap-3">
@@ -2011,14 +2252,24 @@ export function ConfiguracoesSistema({
                                                             {[obra.cidade, obra.uf].filter(Boolean).join(" / ") || "Local nao informado"}
                                                         </p>
                                                     </div>
-                                                    <span className={classNames(
-                                                        "rounded-full px-3 py-1 text-[11px] font-black uppercase tracking-wide ring-1",
-                                                        obra.status === "Inativa"
-                                                            ? "bg-slate-100 text-slate-500 ring-slate-200"
-                                                            : "bg-emerald-50 text-emerald-700 ring-emerald-200"
-                                                    )}>
-                                                        {obra.status}
-                                                    </span>
+                                                    <div className="flex shrink-0 items-center gap-2">
+                                                        <span className={classNames(
+                                                            "rounded-full px-3 py-1 text-[11px] font-black uppercase tracking-wide ring-1",
+                                                            obra.status === "Inativa"
+                                                                ? "bg-slate-100 text-slate-500 ring-slate-200"
+                                                                : "bg-emerald-50 text-emerald-700 ring-emerald-200"
+                                                        )}>
+                                                            {obra.status}
+                                                        </span>
+
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => editarObraConfiguracoes(obra)}
+                                                            className="rounded-full bg-slate-950 px-3 py-1 text-[11px] font-black uppercase tracking-wide text-white hover:bg-slate-800"
+                                                        >
+                                                            Editar
+                                                        </button>
+                                                    </div>
                                                 </div>
 
                                                 <div className="mt-3 grid gap-2 text-xs font-semibold text-slate-600 md:grid-cols-2">
@@ -2070,7 +2321,7 @@ export function ConfiguracoesSistema({
                         </div>
 
                         <p className="mt-4 rounded-2xl bg-amber-50 px-4 py-3 text-xs font-semibold leading-relaxed text-amber-800 ring-1 ring-amber-200">
-                            Esta microetapa e somente leitura. Cadastro, edicao, inativacao e vinculo manual entram na proxima etapa.
+                            Cadastro e edicao de obras habilitados. O vinculo manual empresa/obra entra na proxima etapa.
                         </p>
                     </Card>
                 )
