@@ -1115,6 +1115,96 @@ function BlocoRecadosDdsImpresso({ texto = "" }) {
         </div>
     );
 }
+
+function obterDataNascimentoColaboradorDds(colaborador = {}) {
+    return (
+        colaborador?.dataNascimento ||
+        colaborador?.data_nascimento ||
+        colaborador?.nascimento ||
+        colaborador?.dt_nascimento ||
+        colaborador?.data_de_nascimento ||
+        colaborador?.data_aniversario ||
+        colaborador?.dataAniversario ||
+        colaborador?.aniversario ||
+        ""
+    );
+}
+
+function extrairDiaMesNascimentoDds(valor = "") {
+    const texto = String(valor ?? "").trim();
+
+    if (!texto) return null;
+
+    const iso = texto.match(/^(\d{4})-(\d{2})-(\d{2})/);
+    if (iso) {
+        return {
+            dia: Number(iso[3]),
+            mes: Number(iso[2]),
+        };
+    }
+
+    const br = texto.match(/^(\d{1,2})[/-](\d{1,2})(?:[/-]\d{2,4})?/);
+    if (br) {
+        return {
+            dia: Number(br[1]),
+            mes: Number(br[2]),
+        };
+    }
+
+    return null;
+}
+
+function limparHoraDataDds(data) {
+    const limpa = new Date(data);
+    limpa.setHours(0, 0, 0, 0);
+    return limpa;
+}
+
+function formatarDiaMesDds(data) {
+    const dia = String(data.getDate()).padStart(2, "0");
+    const mes = String(data.getMonth() + 1).padStart(2, "0");
+
+    return `${dia}/${mes}`;
+}
+
+function colaboradorDeveAparecerAniversarioDds(colaborador = {}) {
+    return (
+        colaborador?.mostrarAniversarioDashboard !== false &&
+        colaborador?.mostrar_aniversario_dashboard !== false
+    );
+}
+
+function montarAniversariantesSemanaDds({ colaboradores = [], inicioSemana = new Date(), fimSemana = new Date() } = {}) {
+    const lista = Array.isArray(colaboradores) ? colaboradores : [];
+    const inicio = limparHoraDataDds(inicioSemana);
+    const fim = limparHoraDataDds(fimSemana);
+    const anoInicial = inicio.getFullYear();
+    const anosPossiveis = Array.from(new Set([anoInicial, fim.getFullYear(), anoInicial + 1]));
+
+    return lista
+        .filter(colaboradorDeveAparecerAniversarioDds)
+        .map((colaborador) => {
+            const dataNascimento = extrairDiaMesNascimentoDds(obterDataNascimentoColaboradorDds(colaborador));
+
+            if (!dataNascimento?.dia || !dataNascimento?.mes) return null;
+
+            const dataAniversario = anosPossiveis
+                .map((ano) => limparHoraDataDds(new Date(ano, dataNascimento.mes - 1, dataNascimento.dia)))
+                .find((data) => data >= inicio && data <= fim);
+
+            if (!dataAniversario) return null;
+
+            return {
+                data: formatarDiaMesDds(dataAniversario),
+                nome: String(colaborador?.nome || colaborador?.nomeCompleto || colaborador?.colaborador || "").trim(),
+                ordem: dataAniversario.getTime(),
+            };
+        })
+        .filter((item) => item?.nome)
+        .sort((a, b) => a.ordem - b.ordem || a.nome.localeCompare(b.nome))
+        .slice(0, 3)
+        .map(({ data, nome }) => ({ data, nome }));
+}
 function DdsPreviewImpresso({ participantes = participantesDds, mostrarAssinaturas = true, dadosDds = dadosDdsPadrao, diasSemana = diasDds, aniversariantes = aniversariantesDds }) {
     return (
         <section className="dds-print-page overflow-hidden rounded-[28px] border border-slate-200 bg-white p-4 shadow-[0_18px_50px_rgba(15,23,42,0.08)]">
@@ -1247,7 +1337,7 @@ function DdsPreviewImpresso({ participantes = participantesDds, mostrarAssinatur
                                         </div>
                                     ))}
 
-                                    {Array.from({ length: Math.max(0, 3 - aniversariantesDds.length) }).map((_, indice) => (
+                                    {Array.from({ length: Math.max(0, 3 - aniversariantes.length) }).map((_, indice) => (
                                         <div key={`aniversariante-vazio-${indice}`} className="grid grid-cols-[48px_1fr] items-center gap-3">
                                             <span>&nbsp;</span>
                                             <span className="border-b border-slate-500 pb-0.5">&nbsp;</span>
@@ -1949,6 +2039,12 @@ export function DdsPage({
     function restaurarTemasPadraoDds() {
         setTemasDdsEditaveis(criarTemasEditaveisDds());
     }
+
+    const aniversariantesSemanaDds = useMemo(() => montarAniversariantesSemanaDds({
+        colaboradores: colaboradoresEmpresaDds,
+        inicioSemana: inicioSemanaDds,
+        fimSemana: fimSemanaDds,
+    }), [colaboradoresEmpresaDds, inicioSemanaDds, fimSemanaDds]);
     const participantesSistemaDds = useMemo(
         () => normalizarParticipantesDdsSistema(colaboradoresEmpresaDds),
         [colaboradoresEmpresaDds]
@@ -2318,7 +2414,7 @@ export function DdsPage({
                     mostrarAssinaturas={totalFolhasDds === 1}
                     dadosDds={dadosDdsComRegistro}
                     diasSemana={diasSemanaComTemasDds}
-                    aniversariantes={aniversariantesDds}
+                    aniversariantes={aniversariantesSemanaDds}
                 />
 
                 {folhasContinuacaoDds.map((participantes, indice) => (
