@@ -819,6 +819,65 @@ function salvarTemasDdsLocal(chave = "", temas = []) {
     }
 }
 
+
+const ORIENTACOES_PADRAO_DDS = [
+    "Use sempre seus EPIs adequadamente.",
+    "Siga os procedimentos e ordens de serviço.",
+    "Mantenha o canteiro limpo e organizado.",
+    "Em caso de dúvida, pare e pergunte.",
+    "Segurança é responsabilidade de todos!",
+    "Comunique imediatamente qualquer condição insegura.",
+];
+
+const CHAVE_LOCAL_ORIENTACOES_DDS = "controle-sst-qr:dds:orientacoes-por-codigo:v1";
+
+function criarOrientacoesPadraoDds() {
+    return ORIENTACOES_PADRAO_DDS.map((orientacao) => String(orientacao || "").trim());
+}
+
+function normalizarOrientacoesDdsLocal(orientacoes = null) {
+    const lista = Array.isArray(orientacoes) ? orientacoes : [];
+
+    return Array.from({ length: 6 }, (_, indice) => (
+        Object.prototype.hasOwnProperty.call(lista, indice)
+            ? String(lista[indice] ?? "").trim()
+            : String(ORIENTACOES_PADRAO_DDS[indice] || "").trim()
+    ));
+}
+
+function carregarOrientacoesDdsLocal(chave = "") {
+    if (typeof window === "undefined") return null;
+
+    const chaveSegura = String(chave ?? "").trim();
+
+    if (!chaveSegura) return null;
+
+    try {
+        const mapa = JSON.parse(window.localStorage.getItem(CHAVE_LOCAL_ORIENTACOES_DDS) || "{}");
+        const orientacoesSalvas = mapa?.[chaveSegura];
+
+        return Array.isArray(orientacoesSalvas) ? normalizarOrientacoesDdsLocal(orientacoesSalvas) : null;
+    } catch {
+        return null;
+    }
+}
+
+function salvarOrientacoesDdsLocal(chave = "", orientacoes = []) {
+    if (typeof window === "undefined") return;
+
+    const chaveSegura = String(chave ?? "").trim();
+
+    if (!chaveSegura) return;
+
+    try {
+        const mapa = JSON.parse(window.localStorage.getItem(CHAVE_LOCAL_ORIENTACOES_DDS) || "{}");
+
+        mapa[chaveSegura] = normalizarOrientacoesDdsLocal(orientacoes);
+        window.localStorage.setItem(CHAVE_LOCAL_ORIENTACOES_DDS, JSON.stringify(mapa));
+    } catch {
+        // Persistência local não deve bloquear a impressão do DDS.
+    }
+}
 const CHAVE_LOCAL_RECADOS_DDS = "controle-sst-qr:dds:recados-por-codigo:v1";
 
 function normalizarRecadosDdsLocal(valor = "") {
@@ -1096,9 +1155,9 @@ function BlocoRecadosDdsImpresso({ texto = "" }) {
         .split("\n")
         .map((linha) => linha.trim())
         .filter(Boolean)
-        .slice(0, 5);
+        .slice(0, 6);
 
-    const linhasImpressao = Array.from({ length: 5 }, (_, indice) => linhas[indice] || "");
+    const linhasImpressao = Array.from({ length: 6 }, (_, indice) => linhas[indice] || "");
 
     return (
         <div className="mt-2 space-y-1.5 text-[10px] font-bold leading-4 text-slate-800">
@@ -1202,7 +1261,7 @@ function montarAniversariantesSemanaDds({ colaboradores = [], inicioSemana = new
         })
         .filter((item) => item?.nome)
         .sort((a, b) => a.ordem - b.ordem || a.nome.localeCompare(b.nome))
-        .slice(0, 3)
+        .slice(0, 5)
         .map(({ data, nome }) => ({ data, nome }));
 }
 function DdsPreviewImpresso({ participantes = participantesDds, mostrarAssinaturas = true, dadosDds = dadosDdsPadrao, diasSemana = diasDds, aniversariantes = aniversariantesDds }) {
@@ -1329,23 +1388,23 @@ function DdsPreviewImpresso({ participantes = participantesDds, mostrarAssinatur
                                     <p className="text-sm font-black uppercase text-emerald-700">Aniversariantes da semana</p>
                                 </div>
 
-                                <div className="mt-2 space-y-1 text-[10px] font-bold text-slate-800">
+                                <div className="mt-2 grid min-h-[104px] grid-rows-5 gap-1 text-[11px] font-bold text-slate-800">
                                     {aniversariantes.map((item) => (
-                                        <div key={item.nome} className="grid grid-cols-[48px_1fr] items-center gap-3">
-                                            <span>{item.data}</span>
-                                            <span className="border-b border-slate-500 pb-0.5">{item.nome}</span>
+                                        <div key={item.nome} className="grid min-h-[20px] grid-cols-[44px_16px_minmax(0,1fr)] items-center gap-1 border-b border-slate-300 px-1 pb-0.5 last:border-b-0">
+                                            <span className="font-black text-slate-700">{item.data}</span>
+                                            <span className="text-center font-black text-slate-400">—</span>
+                                            <span className="truncate font-black text-slate-900">{item.nome}</span>
                                         </div>
                                     ))}
 
-                                    {Array.from({ length: Math.max(0, 3 - aniversariantes.length) }).map((_, indice) => (
-                                        <div key={`aniversariante-vazio-${indice}`} className="grid grid-cols-[48px_1fr] items-center gap-3">
-                                            <span>&nbsp;</span>
-                                            <span className="border-b border-slate-500 pb-0.5">&nbsp;</span>
+                                    {Array.from({ length: Math.max(0, 5 - aniversariantes.length) }).map((_, indice) => (
+                                        <div key={`aniversariante-vazio-${indice}`} className="min-h-[20px] border-b border-slate-300 px-1 pb-0.5 last:border-b-0">
+                                            &nbsp;
                                         </div>
                                     ))}
                                 </div>
 
-                                <p className="mt-2 text-center text-[10px] font-bold leading-4 text-emerald-700">
+                                <p className="mt-2 border-t border-emerald-100 pt-1.5 text-center text-[11.5px] font-black leading-[16px] text-emerald-700">
                                     Parabéns aos aniversariantes da semana.<br />
                                     Segurança também é cuidar das pessoas.
                                 </p>
@@ -1360,25 +1419,23 @@ function DdsPreviewImpresso({ participantes = participantesDds, mostrarAssinatur
                                 <BlocoRecadosDdsImpresso texto={dadosDds.recadosSemana} />
                             </div>
 
-                            <div className="rounded-xl border border-slate-300 p-2.5">
+                            <div className="rounded-xl border border-emerald-600 p-2.5">
                                 <div className="flex items-center gap-2">
                                     <ShieldCheck className="h-5 w-5 text-emerald-700" />
                                     <p className="text-sm font-black uppercase text-emerald-700">Orientações importantes</p>
                                 </div>
 
-                                <div className="mt-2 space-y-1 text-[10px] font-bold leading-4 text-slate-800">
-                                    {[
-                                        "Use sempre seus EPIs adequadamente.",
-                                        "Siga os procedimentos e ordens de serviço.",
-                                        "Mantenha o canteiro limpo e organizado.",
-                                        "Em caso de dúvida, pare e pergunte.",
-                                        "Segurança é responsabilidade de todos!",
-                                    ].map((orientacao) => (
-                                        <div key={orientacao} className="flex items-start gap-2">
-                                            <CheckCircle2 className="mt-0.5 h-3.5 w-3.5 shrink-0 text-emerald-700" />
-                                            <span>{orientacao}</span>
-                                        </div>
-                                    ))}
+                                <div className="mt-2 grid min-h-[132px] grid-rows-6 gap-1 text-[10px] font-bold leading-4 text-slate-800">
+                                    {(Array.isArray(dadosDds.orientacoesImportantes) ? dadosDds.orientacoesImportantes : criarOrientacoesPadraoDds())
+                                        .map((orientacao) => String(orientacao || "").trim())
+                                        .filter(Boolean)
+                                        .slice(0, 6)
+                                        .map((orientacao, indice) => (
+                                            <div key={`orientacao-impressa-dds-${indice}`} className="flex min-h-[18px] items-center gap-2 border-b border-slate-200 px-1 pb-1 last:border-b-0">
+                                                <CheckCircle2 className="mt-0.5 h-3.5 w-3.5 shrink-0 text-emerald-700" />
+                                                <span>{orientacao}</span>
+                                            </div>
+                                        ))}
                                 </div>
                             </div>
                         </div>
@@ -1812,6 +1869,9 @@ export function DdsPage({
     const [chaveTemasDdsCarregada, setChaveTemasDdsCarregada] = useState("");
     const [recadosDdsEditaveis, setRecadosDdsEditaveis] = useState("");
     const [chaveRecadosDdsCarregada, setChaveRecadosDdsCarregada] = useState("");
+
+    const [orientacoesDdsEditaveis, setOrientacoesDdsEditaveis] = useState(() => criarOrientacoesPadraoDds());
+    const [chaveOrientacoesDdsCarregada, setChaveOrientacoesDdsCarregada] = useState("");
     const [registroDdsConferencia, setRegistroDdsConferencia] = useState(null);
     const [salvandoRegistroDds, setSalvandoRegistroDds] = useState(false);
     const [erroRegistroDds, setErroRegistroDds] = useState("");
@@ -1846,7 +1906,8 @@ export function DdsPage({
         contratanteNome: empresaContratanteDds?.nome || "",
         logosEmpresasCabecalho: logosEmpresasCabecalhoDds,
         recadosSemana: recadosDdsEditaveis,
-    }), [dadosDds, registroDdsConferencia, logoEmpresaDds, empresaSelecionadaDds, logoContratanteDds, empresaContratanteDds, logosEmpresasCabecalhoDds, recadosDdsEditaveis]);
+        orientacoesImportantes: orientacoesDdsEditaveis,
+    }), [dadosDds, registroDdsConferencia, logoEmpresaDds, empresaSelecionadaDds, logoContratanteDds, empresaContratanteDds, logosEmpresasCabecalhoDds, recadosDdsEditaveis, orientacoesDdsEditaveis]);
 
 
     const obraSetorFoiSalvaParaEmpresaDds = empresaSelecionadaChaveDds
@@ -1972,6 +2033,37 @@ export function DdsPage({
 
 
 
+
+    const chaveOrientacoesDds = useMemo(() => criarChaveTemasDdsLocal({
+        codigo: dadosDds.codigo,
+    }), [dadosDds.codigo]);
+
+    useEffect(() => {
+        const orientacoesSalvas = carregarOrientacoesDdsLocal(chaveOrientacoesDds);
+
+        setOrientacoesDdsEditaveis(orientacoesSalvas || criarOrientacoesPadraoDds());
+        setChaveOrientacoesDdsCarregada(chaveOrientacoesDds);
+    }, [chaveOrientacoesDds]);
+
+    useEffect(() => {
+        if (!chaveOrientacoesDds || chaveOrientacoesDdsCarregada !== chaveOrientacoesDds) return;
+
+        salvarOrientacoesDdsLocal(chaveOrientacoesDds, orientacoesDdsEditaveis);
+    }, [chaveOrientacoesDds, chaveOrientacoesDdsCarregada, orientacoesDdsEditaveis]);
+
+    function atualizarOrientacaoDds(indiceOrientacao, valor) {
+        setOrientacoesDdsEditaveis((orientacoesAtuais) => {
+            const atualizadas = normalizarOrientacoesDdsLocal(orientacoesAtuais);
+
+            atualizadas[indiceOrientacao] = valor;
+
+            return atualizadas;
+        });
+    }
+
+    function restaurarOrientacoesPadraoDds() {
+        setOrientacoesDdsEditaveis(criarOrientacoesPadraoDds());
+    }
     const chaveRecadosDds = useMemo(() => criarChaveTemasDdsLocal({
         codigo: dadosDds.codigo,
     }), [dadosDds.codigo]);
@@ -2407,6 +2499,49 @@ export function DdsPage({
                     placeholder="Ex.: Reforçar uso de óculos de segurança, organização do canteiro, atenção em atividades com máquinas..."
                     className="mt-4 w-full resize-none rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-bold leading-6 text-slate-800 outline-none transition focus:border-emerald-400 focus:bg-white focus:ring-2 focus:ring-emerald-100"
                 />
+            </section>
+
+            <section className="dds-no-print rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
+                <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+                    <div>
+                        <p className="text-[11px] font-black uppercase tracking-[0.22em] text-emerald-600">
+                            Editor de orientações importantes do DDS
+                        </p>
+                        <h2 className="mt-1 text-lg font-black text-slate-950">
+                            Orientações importantes
+                        </h2>
+                        <p className="mt-1 text-sm font-semibold text-slate-500">
+                            Ajuste as orientações que serão impressas no rodapé do DDS.
+                        </p>
+                    </div>
+
+                    <button
+                        type="button"
+                        onClick={restaurarOrientacoesPadraoDds}
+                        className="inline-flex items-center justify-center rounded-2xl border border-slate-200 bg-slate-50 px-4 py-2 text-xs font-black text-slate-700 shadow-sm transition hover:-translate-y-0.5 hover:bg-white"
+                    >
+                        Restaurar orientações padrão
+                    </button>
+                </div>
+
+                <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-6">
+                    {orientacoesDdsEditaveis.map((orientacao, indice) => (
+                        <label
+                            key={`orientacao-dds-${indice}`}
+                            className="block rounded-2xl border border-slate-200 bg-slate-50 p-3"
+                        >
+                            <span className="text-[10px] font-black uppercase tracking-wide text-slate-400">
+                                Orientação {indice + 1}
+                            </span>
+                            <textarea
+                                value={orientacao}
+                                onChange={(evento) => atualizarOrientacaoDds(indice, evento.target.value)}
+                                rows={3}
+                                className="mt-1 w-full resize-none rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-bold leading-5 text-slate-800 outline-none transition focus:border-emerald-400 focus:ring-2 focus:ring-emerald-100"
+                            />
+                        </label>
+                    ))}
+                </div>
             </section>
             <div className="dds-print-area space-y-6">
                 <DdsPreviewImpresso
