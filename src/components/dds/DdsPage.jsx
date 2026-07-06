@@ -4,6 +4,8 @@ import { salvarRegistroDds } from "../../services/ddsRegistrosService";
 import { obterUrlLogoEmpresa } from "../../services/supabaseServices";
 import {
     BookOpen,
+    ChevronDown,
+    ChevronUp,
     Gift,
     Megaphone,
     Printer,
@@ -635,7 +637,12 @@ function normalizarParticipantesDdsSistema(colaboradores = []) {
                 colaborador.empresa
             ),
         }))
-        .filter((participante) => participante.nome && participante.nome !== "-");
+        .filter((participante) => participante.nome && participante.nome !== "-")
+        .sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR", { sensitivity: "base" }))
+        .map((participante, indice) => ({
+            ...participante,
+            numero: indice + 1,
+        }));
 }
 
 function dividirParticipantesDds(participantes = [], inicio = 15, tamanho = 20) {
@@ -762,6 +769,55 @@ function MarcaIdealizaDdsImpresso({ compacto = false }) {
 
 
 
+
+const CHAVE_LOCAL_CARDS_DDS = "controle-sst-qr:dds:cards-recolhiveis:v1";
+
+const CARDS_DDS_PADRAO = {
+    qr: true,
+    novo: true,
+    temas: true,
+    recados: true,
+    orientacoes: true,
+};
+
+function carregarCardsDdsLocal() {
+    if (typeof window === "undefined") return { ...CARDS_DDS_PADRAO };
+
+    try {
+        const salvo = JSON.parse(window.localStorage.getItem(CHAVE_LOCAL_CARDS_DDS) || "{}");
+
+        return {
+            ...CARDS_DDS_PADRAO,
+            ...(salvo && typeof salvo === "object" ? salvo : {}),
+        };
+    } catch {
+        return { ...CARDS_DDS_PADRAO };
+    }
+}
+
+function salvarCardsDdsLocal(cards = {}) {
+    if (typeof window === "undefined") return;
+
+    try {
+        window.localStorage.setItem(CHAVE_LOCAL_CARDS_DDS, JSON.stringify({
+            ...CARDS_DDS_PADRAO,
+            ...(cards && typeof cards === "object" ? cards : {}),
+        }));
+    } catch {
+        // Persistência visual não deve bloquear o DDS.
+    }
+}
+
+function BotaoAlternarCardDds({ aberto = true }) {
+    const Icone = aberto ? ChevronUp : ChevronDown;
+
+    return (
+        <span className="inline-flex items-center gap-2 rounded-2xl border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs font-black text-slate-700 shadow-sm transition hover:bg-white">
+            {aberto ? "Fechar" : "Abrir"}
+            <Icone className="h-4 w-4" />
+        </span>
+    );
+}
 const CHAVE_LOCAL_TEMAS_DDS = "controle-sst-qr:dds:temas-por-codigo:v1";
 
 function criarChaveTemasDdsLocal({ codigo = "" } = {}) {
@@ -1324,9 +1380,16 @@ function DdsPreviewImpresso({ participantes = participantesDds, mostrarAssinatur
                                 </tr>
                             </thead>
                             <tbody>
+                                <tr className="bg-slate-50">
+                                    {diasSemana.map((dia) => (
+                                        <td key={`${dia.curto}-rotulo-tema`} className="w-[14.285%] border border-slate-300 px-2 py-1 text-[9px] font-black uppercase tracking-[0.16em] text-slate-500">
+                                            Tema
+                                        </td>
+                                    ))}
+                                </tr>
                                 <tr>
                                     {diasSemana.map((dia) => (
-                                        <td key={dia.curto} className="h-16 w-[14.285%] border border-slate-300 px-3 py-2 align-middle font-bold leading-tight">
+                                        <td key={dia.curto} className="h-14 w-[14.285%] border border-slate-300 px-3 py-2 align-middle font-bold leading-tight">
                                             {dia.tema}
                                         </td>
                                     ))}
@@ -1872,10 +1935,27 @@ export function DdsPage({
 
     const [orientacoesDdsEditaveis, setOrientacoesDdsEditaveis] = useState(() => criarOrientacoesPadraoDds());
     const [chaveOrientacoesDdsCarregada, setChaveOrientacoesDdsCarregada] = useState("");
+    const [cardsDdsAbertos, setCardsDdsAbertos] = useState(() => carregarCardsDdsLocal());
     const [registroDdsConferencia, setRegistroDdsConferencia] = useState(null);
     const [salvandoRegistroDds, setSalvandoRegistroDds] = useState(false);
     const [erroRegistroDds, setErroRegistroDds] = useState("");
 
+
+    useEffect(() => {
+        salvarCardsDdsLocal(cardsDdsAbertos);
+    }, [cardsDdsAbertos]);
+
+    function cardDdsAberto(chaveCard) {
+        return cardsDdsAbertos?.[chaveCard] !== false;
+    }
+
+    function alternarCardDds(chaveCard) {
+        setCardsDdsAbertos((cardsAtuais) => ({
+            ...CARDS_DDS_PADRAO,
+            ...(cardsAtuais || {}),
+            [chaveCard]: cardsAtuais?.[chaveCard] === false,
+        }));
+    }
     const empresaContratanteDds = useMemo(() => obterEmpresaContratanteDds({
         empresaSelecionada: empresaSelecionadaDds,
         empresasDds,
@@ -2259,7 +2339,14 @@ export function DdsPage({
 
             <section className="dds-no-print space-y-4">
                 <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
-                    <div className="flex items-center gap-3">
+                    <div
+                        onClick={() => alternarCardDds("novo")}
+                        role="button"
+                        tabIndex={0}
+                        onKeyDown={(evento) => { if (evento.key === "Enter" || evento.key === " ") alternarCardDds("novo"); }}
+                        className="flex cursor-pointer items-center justify-between gap-3 rounded-2xl transition hover:bg-slate-50"
+                    >
+                        <div className="flex items-center gap-3">
                         <span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-blue-50 text-blue-700 ring-1 ring-blue-100">
                             <Building2 className="h-5 w-5" />
                         </span>
@@ -2268,7 +2355,16 @@ export function DdsPage({
                             <p className="text-sm font-semibold text-slate-500">Preencha os dados principais do DDS. A impressão será atualizada automaticamente.</p>
                         </div>
                     </div>
+                        <button
+                            type="button"
+                            onClick={(evento) => { evento.stopPropagation(); alternarCardDds("novo"); }}
+                            className="shrink-0"
+                        >
+                            <BotaoAlternarCardDds aberto={cardDdsAberto("novo")} />
+                        </button>
+                    </div>
 
+                    {cardDdsAberto("novo") && (
                     <div className="mt-4 grid gap-2 md:grid-cols-2 xl:grid-cols-4">
                         <label className="rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2.5">
                             <span className="text-[11px] font-black uppercase tracking-wide text-slate-400">Empresa cadastrada</span>
@@ -2384,6 +2480,7 @@ export function DdsPage({
                             </div>
                         </div>
                     </div>
+                    )}
                 </div>
 
                 <div className="rounded-3xl border border-emerald-100 bg-emerald-50 p-5 shadow-sm">
@@ -2404,7 +2501,13 @@ export function DdsPage({
 
 
             <section className="dds-no-print rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
-                <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+                <div
+                    onClick={() => alternarCardDds("temas")}
+                    role="button"
+                    tabIndex={0}
+                    onKeyDown={(evento) => { if (evento.key === "Enter" || evento.key === " ") alternarCardDds("temas"); }}
+                    className="flex cursor-pointer flex-col gap-3 rounded-2xl transition hover:bg-slate-50 lg:flex-row lg:items-start lg:justify-between"
+                >
                     <div>
                         <p className="text-[11px] font-black uppercase tracking-[0.22em] text-emerald-600">
                             Editor dos temas do DDS
@@ -2417,15 +2520,25 @@ export function DdsPage({
                         </p>
                     </div>
 
-                    <button
-                        type="button"
-                        onClick={restaurarTemasPadraoDds}
-                        className="inline-flex items-center justify-center rounded-2xl border border-slate-200 bg-slate-50 px-4 py-2 text-xs font-black text-slate-700 shadow-sm transition hover:-translate-y-0.5 hover:bg-white"
-                    >
-                        Restaurar temas padrão
-                    </button>
-                </div>
+                    <div className="flex shrink-0 flex-wrap items-center gap-2" onClick={(evento) => evento.stopPropagation()}>
+                        <button
+                            type="button"
+                            onClick={restaurarTemasPadraoDds}
+                            className="inline-flex items-center justify-center rounded-2xl border border-slate-200 bg-slate-50 px-4 py-2 text-xs font-black text-slate-700 shadow-sm transition hover:-translate-y-0.5 hover:bg-white"
+                        >
+                            Restaurar temas padrão
+                        </button>
 
+                        <button
+                            type="button"
+                            onClick={() => alternarCardDds("temas")}
+                            className="shrink-0"
+                        >
+                            <BotaoAlternarCardDds aberto={cardDdsAberto("temas")} />
+                        </button>
+                    </div>
+                </div>
+                {cardDdsAberto("temas") && (
                 <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-7">
                     {diasSemanaComTemasDds.map((dia, indice) => (
                         <div
@@ -2467,10 +2580,17 @@ export function DdsPage({
                         </div>
                     ))}
                 </div>
+                )}
             </section>
 
             <section className="dds-no-print rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
-                <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+                <div
+                    onClick={() => alternarCardDds("recados")}
+                    role="button"
+                    tabIndex={0}
+                    onKeyDown={(evento) => { if (evento.key === "Enter" || evento.key === " ") alternarCardDds("recados"); }}
+                    className="flex cursor-pointer flex-col gap-3 rounded-2xl transition hover:bg-slate-50 lg:flex-row lg:items-start lg:justify-between"
+                >
                     <div>
                         <p className="text-[11px] font-black uppercase tracking-[0.22em] text-emerald-600">
                             Editor de recados do DDS
@@ -2483,6 +2603,7 @@ export function DdsPage({
                         </p>
                     </div>
 
+                    <div className="flex shrink-0 flex-wrap items-center gap-2" onClick={(evento) => evento.stopPropagation()}>
                     <button
                         type="button"
                         onClick={() => setRecadosDdsEditaveis("")}
@@ -2490,8 +2611,17 @@ export function DdsPage({
                     >
                         Limpar recados
                     </button>
+                        <button
+                            type="button"
+                            onClick={() => alternarCardDds("recados")}
+                            className="shrink-0"
+                        >
+                            <BotaoAlternarCardDds aberto={cardDdsAberto("recados")} />
+                        </button>
+                    </div>
                 </div>
 
+                {cardDdsAberto("recados") && (
                 <textarea
                     value={recadosDdsEditaveis}
                     onChange={(evento) => setRecadosDdsEditaveis(evento.target.value)}
@@ -2499,10 +2629,17 @@ export function DdsPage({
                     placeholder="Ex.: Reforçar uso de óculos de segurança, organização do canteiro, atenção em atividades com máquinas..."
                     className="mt-4 w-full resize-none rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-bold leading-6 text-slate-800 outline-none transition focus:border-emerald-400 focus:bg-white focus:ring-2 focus:ring-emerald-100"
                 />
+                )}
             </section>
 
             <section className="dds-no-print rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
-                <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+                <div
+                    onClick={() => alternarCardDds("orientacoes")}
+                    role="button"
+                    tabIndex={0}
+                    onKeyDown={(evento) => { if (evento.key === "Enter" || evento.key === " ") alternarCardDds("orientacoes"); }}
+                    className="flex cursor-pointer flex-col gap-3 rounded-2xl transition hover:bg-slate-50 lg:flex-row lg:items-start lg:justify-between"
+                >
                     <div>
                         <p className="text-[11px] font-black uppercase tracking-[0.22em] text-emerald-600">
                             Editor de orientações importantes do DDS
@@ -2515,6 +2652,7 @@ export function DdsPage({
                         </p>
                     </div>
 
+                    <div className="flex shrink-0 flex-wrap items-center gap-2" onClick={(evento) => evento.stopPropagation()}>
                     <button
                         type="button"
                         onClick={restaurarOrientacoesPadraoDds}
@@ -2522,8 +2660,17 @@ export function DdsPage({
                     >
                         Restaurar orientações padrão
                     </button>
+                        <button
+                            type="button"
+                            onClick={() => alternarCardDds("orientacoes")}
+                            className="shrink-0"
+                        >
+                            <BotaoAlternarCardDds aberto={cardDdsAberto("orientacoes")} />
+                        </button>
+                    </div>
                 </div>
 
+                {cardDdsAberto("orientacoes") && (
                 <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-6">
                     {orientacoesDdsEditaveis.map((orientacao, indice) => (
                         <label
@@ -2542,6 +2689,7 @@ export function DdsPage({
                         </label>
                     ))}
                 </div>
+                )}
             </section>
             <div className="dds-print-area space-y-6">
                 <DdsPreviewImpresso
