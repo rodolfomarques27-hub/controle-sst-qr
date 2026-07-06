@@ -25,6 +25,13 @@ const diasDds = [
     { curto: "SEX", nome: "Sexta-feira", data: "19/06/2026", tema: "Organização e limpeza no canteiro", responsavel: "Paulo Toledo" },
     { curto: "SÁB", nome: "Sábado", data: "20/06/2026", tema: "Hidratação e calor", responsavel: "Paulo Toledo" },
 ];
+function criarTemasEditaveisDds() {
+    return diasDds.map((dia) => ({
+        tema: String(dia?.tema || "").trim(),
+        responsavel: String(dia?.responsavel || "").trim(),
+    }));
+}
+
 
 const participantesDds = [
     { nome: "Abílio Soares da Silva", funcao: "Pedreiro", empresa: "Ribeiro Aquino" },
@@ -754,6 +761,63 @@ function MarcaIdealizaDdsImpresso({ compacto = false }) {
 }
 
 
+
+const CHAVE_LOCAL_TEMAS_DDS = "controle-sst-qr:dds:temas-por-codigo:v1";
+
+function criarChaveTemasDdsLocal({ codigo = "" } = {}) {
+    const codigoSeguro = String(codigo ?? "").trim();
+
+    return codigoSeguro || "dds-temas-sem-codigo";
+}
+
+function normalizarTemasDdsEditaveis(temas = null) {
+    const lista = Array.isArray(temas) ? temas : [];
+
+    return diasDds.map((dia, indice) => {
+        const item = lista[indice] && typeof lista[indice] === "object" ? lista[indice] : {};
+        const temTema = Object.prototype.hasOwnProperty.call(item, "tema");
+        const temResponsavel = Object.prototype.hasOwnProperty.call(item, "responsavel");
+
+        return {
+            tema: String(temTema ? item.tema : dia?.tema || "").trim(),
+            responsavel: String(temResponsavel ? item.responsavel : dia?.responsavel || "").trim(),
+        };
+    });
+}
+
+function carregarTemasDdsLocal(chave = "") {
+    if (typeof window === "undefined") return null;
+
+    const chaveSegura = String(chave ?? "").trim();
+
+    if (!chaveSegura) return null;
+
+    try {
+        const mapa = JSON.parse(window.localStorage.getItem(CHAVE_LOCAL_TEMAS_DDS) || "{}");
+        const temasSalvos = mapa?.[chaveSegura];
+
+        return Array.isArray(temasSalvos) ? normalizarTemasDdsEditaveis(temasSalvos) : null;
+    } catch {
+        return null;
+    }
+}
+
+function salvarTemasDdsLocal(chave = "", temas = []) {
+    if (typeof window === "undefined") return;
+
+    const chaveSegura = String(chave ?? "").trim();
+
+    if (!chaveSegura) return;
+
+    try {
+        const mapa = JSON.parse(window.localStorage.getItem(CHAVE_LOCAL_TEMAS_DDS) || "{}");
+
+        mapa[chaveSegura] = normalizarTemasDdsEditaveis(temas);
+        window.localStorage.setItem(CHAVE_LOCAL_TEMAS_DDS, JSON.stringify(mapa));
+    } catch {
+        // Persistência local não deve bloquear a impressão do DDS.
+    }
+}
 function resolverLogoEmpresaDds(valor = "") {
     const texto = String(valor ?? "").trim();
 
@@ -951,6 +1015,40 @@ function MarcaEmpresaDdsImpresso({ logoUrl = "", compacto = false }) {
         </div>
     );
 }
+
+function normalizarTextoTemaDds(valor = "") {
+    return String(valor ?? "")
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .replace(/\s+/g, " ")
+        .trim()
+        .toUpperCase();
+}
+
+function temaDdsSemAtividade(dia = {}) {
+    const tema = normalizarTextoTemaDds(dia?.tema);
+
+    return tema.includes("NAO HOUVE ATIVIDADE");
+}
+
+function MarcacaoDiaSemAtividadeDds() {
+    return (
+        <span className="inline-flex h-5 min-w-8 items-center justify-center text-base font-black text-slate-500">
+            {"\u2014"}
+        </span>
+    );
+}
+
+function CelulaAssinaturaDiaDds({ dia = {}, compacto = false }) {
+    return (
+        <td className={compacto
+            ? "border border-slate-300 px-1 py-1.5 text-center"
+            : "border border-slate-300 px-1 py-1 text-center"}
+        >
+            {temaDdsSemAtividade(dia) ? <MarcacaoDiaSemAtividadeDds /> : null}
+        </td>
+    );
+}
 function DdsPreviewImpresso({ participantes = participantesDds, mostrarAssinaturas = true, dadosDds = dadosDdsPadrao, diasSemana = diasDds, aniversariantes = aniversariantesDds }) {
     return (
         <section className="dds-print-page overflow-hidden rounded-[28px] border border-slate-200 bg-white p-4 shadow-[0_18px_50px_rgba(15,23,42,0.08)]">
@@ -1054,8 +1152,8 @@ function DdsPreviewImpresso({ participantes = participantesDds, mostrarAssinatur
                                         <td className="border border-slate-300 px-2 py-1 text-center font-semibold">{participante.funcao}</td>
                                         <td className="border border-slate-300 px-2 py-1 text-center font-semibold">{participante.empresa}</td>
                                         {diasSemana.map((dia) => (
-                                            <td key={dia.curto} className="border border-slate-300 px-1 py-1 text-center">
-                                                <span className="block h-5" />
+                                            <td key={dia.curto} className="border border-slate-300 px-1 py-1 text-center align-middle">
+                                                {dia.semAtividade ? <MarcacaoDiaSemAtividadeDds /> : null}
                                             </td>
                                         ))}
                                         <td className="border border-slate-300 px-1 py-1 text-center">
@@ -1244,8 +1342,8 @@ function DdsPreviewImpressoContinuacao({ participantes = participantesDdsContinu
                                         <td className="border border-slate-300 px-2 py-1.5 text-center font-semibold">{participante.funcao}</td>
                                         <td className="border border-slate-300 px-2 py-1.5 text-center font-semibold">{participante.empresa}</td>
                                         {diasSemana.map((dia) => (
-                                            <td key={dia.curto} className="border border-slate-300 px-1 py-1.5 text-center">
-                                                <span className="block h-5" />
+                                            <td key={dia.curto} className="border border-slate-300 px-1 py-1.5 text-center align-middle">
+                                                {dia.semAtividade ? <MarcacaoDiaSemAtividadeDds /> : null}
                                             </td>
                                         ))}
                                         <td className="border border-slate-300 px-1 py-1.5 text-center">
@@ -1558,6 +1656,8 @@ export function DdsPage({
     ]);
 
     const [dadosDds, setDadosDds] = useState(dadosDdsAutomaticos);
+    const [temasDdsEditaveis, setTemasDdsEditaveis] = useState(() => criarTemasEditaveisDds());
+    const [chaveTemasDdsCarregada, setChaveTemasDdsCarregada] = useState("");
     const [registroDdsConferencia, setRegistroDdsConferencia] = useState(null);
     const [salvandoRegistroDds, setSalvandoRegistroDds] = useState(false);
     const [erroRegistroDds, setErroRegistroDds] = useState("");
@@ -1714,6 +1814,59 @@ export function DdsPage({
         }));
     }
 
+
+
+    const chaveTemasDds = useMemo(() => criarChaveTemasDdsLocal({
+        codigo: dadosDds.codigo,
+    }), [dadosDds.codigo]);
+
+    useEffect(() => {
+        const temasSalvos = carregarTemasDdsLocal(chaveTemasDds);
+
+        setTemasDdsEditaveis(temasSalvos || criarTemasEditaveisDds());
+        setChaveTemasDdsCarregada(chaveTemasDds);
+    }, [chaveTemasDds]);
+
+    useEffect(() => {
+        if (!chaveTemasDds || chaveTemasDdsCarregada !== chaveTemasDds) return;
+
+        salvarTemasDdsLocal(chaveTemasDds, temasDdsEditaveis);
+    }, [chaveTemasDds, chaveTemasDdsCarregada, temasDdsEditaveis]);
+    const diasSemanaComTemasDds = useMemo(() => (
+        diasSemanaDds.map((dia, indice) => {
+            const temaEditavel = temasDdsEditaveis[indice] || {};
+            const temaFinal = String(temaEditavel.tema ?? "").trim();
+            const responsavelFinal = String(temaEditavel.responsavel ?? "").trim();
+            const temaNormalizado = normalizarTextoTemaDds(temaFinal);
+            const semAtividade = temaNormalizado.includes("NAO HOUVE ATIVIDADE");
+
+            return {
+                ...dia,
+                tema: temaFinal,
+                responsavel: responsavelFinal,
+                semAtividade,
+            };
+        })
+    ), [diasSemanaDds, temasDdsEditaveis]);
+    function atualizarTemaDiaDds(indiceDia, campo, valor) {
+        setTemasDdsEditaveis((temasAtuais) => {
+            const atualizados = criarTemasEditaveisDds().map((temaPadrao, indice) => ({
+                ...temaPadrao,
+                ...(temasAtuais[indice] || {}),
+            }));
+
+            atualizados[indiceDia] = {
+                ...(atualizados[indiceDia] || {}),
+                [campo]: valor,
+            };
+
+            return atualizados;
+        });
+    }
+
+    function restaurarTemasPadraoDds() {
+        setTemasDdsEditaveis(criarTemasEditaveisDds());
+    }
     const participantesSistemaDds = useMemo(
         () => normalizarParticipantesDdsSistema(colaboradoresEmpresaDds),
         [colaboradoresEmpresaDds]
@@ -1756,7 +1909,7 @@ export function DdsPage({
                         funcaoResponsavel: dadosDds.funcaoResponsavel,
                         totalParticipantes: participantesSistemaDds.length,
                         totalFolhas: folhasContinuacaoDds.length + 1,
-                        diasSemana: diasSemanaDds.map((dia) => ({
+                        diasSemana: diasSemanaComTemasDds.map((dia) => ({
                             dia: dia.dia,
                             data: dia.data,
                             tema: dia.tema,
@@ -1979,12 +2132,78 @@ export function DdsPage({
                 </div>
             </section>
 
+
+            <section className="dds-no-print rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
+                <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+                    <div>
+                        <p className="text-[11px] font-black uppercase tracking-[0.22em] text-emerald-600">
+                            Editor dos temas do DDS
+                        </p>
+                        <h2 className="mt-1 text-lg font-black text-slate-950">
+                            Temas por dia da semana
+                        </h2>
+                        <p className="mt-1 text-sm font-semibold text-slate-500">
+                            Ajuste o tema e o responsável de cada dia antes de imprimir. A folha impressa será atualizada automaticamente.
+                        </p>
+                    </div>
+
+                    <button
+                        type="button"
+                        onClick={restaurarTemasPadraoDds}
+                        className="inline-flex items-center justify-center rounded-2xl border border-slate-200 bg-slate-50 px-4 py-2 text-xs font-black text-slate-700 shadow-sm transition hover:-translate-y-0.5 hover:bg-white"
+                    >
+                        Restaurar temas padrão
+                    </button>
+                </div>
+
+                <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-7">
+                    {diasSemanaComTemasDds.map((dia, indice) => (
+                        <div
+                            key={`${dia.curto}-${dia.data}`}
+                            className="rounded-2xl border border-slate-200 bg-slate-50 p-3"
+                        >
+                            <div className="rounded-xl bg-slate-950 px-3 py-2 text-center text-white">
+                                <p className="text-[11px] font-black uppercase tracking-wide">
+                                    {dia.nome}
+                                </p>
+                                <p className="mt-0.5 text-xs font-black text-emerald-200">
+                                    {dia.data}
+                                </p>
+                            </div>
+
+                            <label className="mt-3 block">
+                                <span className="text-[10px] font-black uppercase tracking-wide text-slate-400">
+                                    Tema
+                                </span>
+                                <textarea
+                                    value={temasDdsEditaveis[indice]?.tema || ""}
+                                    onChange={(evento) => atualizarTemaDiaDds(indice, "tema", evento.target.value)}
+                                    rows={3}
+                                    className="mt-1 w-full resize-none rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-bold leading-5 text-slate-800 outline-none transition focus:border-emerald-400 focus:ring-2 focus:ring-emerald-100"
+                                />
+                            </label>
+
+                            <label className="mt-2 block">
+                                <span className="text-[10px] font-black uppercase tracking-wide text-slate-400">
+                                    Responsável
+                                </span>
+                                <input
+                                    type="text"
+                                    value={temasDdsEditaveis[indice]?.responsavel || ""}
+                                    onChange={(evento) => atualizarTemaDiaDds(indice, "responsavel", evento.target.value)}
+                                    className="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-black text-slate-800 outline-none transition focus:border-emerald-400 focus:ring-2 focus:ring-emerald-100"
+                                />
+                            </label>
+                        </div>
+                    ))}
+                </div>
+            </section>
             <div className="dds-print-area space-y-6">
                 <DdsPreviewImpresso
                     participantes={primeiraFolhaParticipantes}
                     mostrarAssinaturas={totalFolhasDds === 1}
                     dadosDds={dadosDdsComRegistro}
-                    diasSemana={diasSemanaDds}
+                    diasSemana={diasSemanaComTemasDds}
                     aniversariantes={aniversariantesDds}
                 />
 
@@ -1993,7 +2212,7 @@ export function DdsPage({
                         key={`folha-dds-${indice + 2}`}
                         participantes={participantes}
                         dadosDds={dadosDdsComRegistro}
-                        diasSemana={diasSemanaDds}
+                        diasSemana={diasSemanaComTemasDds}
                         numeroPagina={indice + 2}
                         totalPaginas={totalFolhasDds}
                         ultimaFolha={indice === folhasContinuacaoDds.length - 1}
