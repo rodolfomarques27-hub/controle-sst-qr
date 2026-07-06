@@ -1324,8 +1324,8 @@ function DdsPreviewImpresso({ participantes = participantesDds, mostrarAssinatur
     return (
         <section className="dds-print-page overflow-hidden rounded-[28px] border border-slate-200 bg-white p-4 shadow-[0_18px_50px_rgba(15,23,42,0.08)]">
             <div className="overflow-x-auto">
-                <div className="dds-print-sheet mx-auto min-w-[1180px] max-w-[1320px] rounded-2xl border border-slate-300 bg-white p-4 text-slate-950">
-                    <header className="grid grid-cols-[260px_minmax(0,1fr)_360px] items-center gap-4 border-b border-slate-300 pb-3">
+                <div className="dds-print-sheet mx-auto min-w-[1180px] max-w-[1320px] rounded-2xl border border-slate-300 bg-white p-3 text-slate-950">
+                    <header className="grid grid-cols-[250px_minmax(0,1fr)_350px] items-center gap-3 border-b border-slate-300 pb-2">
                         <div className="space-y-2">
                             <MarcaLogosEmpresasDdsImpresso
                                 logos={dadosDds.logosEmpresasCabecalho}
@@ -1333,17 +1333,17 @@ function DdsPreviewImpresso({ participantes = participantesDds, mostrarAssinatur
                         </div>
 
                         <div className="text-center">
-                            <h2 className="text-4xl font-black uppercase tracking-tight text-slate-950">DDS Semanal de Obra</h2>
-                            <p className="mt-1 text-2xl font-black uppercase text-emerald-700">Diálogo Diário de Segurança</p>
-                            <p className="mt-1 text-sm font-semibold text-slate-500">Segurança se faz todos os dias. Prevenção, atenção e cuidado.</p>
+                            <h2 className="text-3xl font-black uppercase tracking-tight text-slate-950">DDS Semanal de Obra</h2>
+                            <p className="mt-0.5 text-xl font-black uppercase text-emerald-700">Diálogo Diário de Segurança</p>
+                            <p className="mt-0.5 text-xs font-semibold text-slate-500">Segurança se faz todos os dias. Prevenção, atenção e cuidado.</p>
                         </div>
 
                         <div className="grid grid-cols-[1fr_94px] gap-3">
-                            <div className="rounded-2xl border border-slate-300 p-3">
+                            <div className="rounded-2xl border border-slate-300 p-2.5">
                                 <p className="text-[9px] font-black uppercase text-slate-500">Semana</p>
-                                <p className="text-lg font-black text-slate-950">{dadosDds.periodo}</p>
+                                <p className="text-base font-black text-slate-950">{dadosDds.periodo}</p>
                                 <p className="mt-2 text-[9px] font-black uppercase text-slate-500">Código do DDS</p>
-                                <p className="rounded-lg bg-slate-950 px-2 py-1 text-center text-sm font-black text-white">{dadosDds.codigo}</p>
+                                <p className="rounded-lg bg-slate-950 px-2 py-0.5 text-center text-xs font-black text-white">{dadosDds.codigo}</p>
                             </div>
                             <div className="flex flex-col items-center justify-center rounded-2xl border border-slate-300 p-2 text-center">
                                 <DdsQrConferenciaImpresso url={dadosDds.qrConferenciaUrl} size={72} fallbackClassName="h-[72px] w-[72px]" />
@@ -1352,7 +1352,7 @@ function DdsPreviewImpresso({ participantes = participantesDds, mostrarAssinatur
                         </div>
                     </header>
 
-                    <section className="mt-3 grid grid-cols-3 overflow-hidden rounded-xl border border-slate-300">
+                    <section className="mt-2 grid grid-cols-3 overflow-hidden rounded-xl border border-slate-300">
                         <DdsCampoObra rotulo="Empresa" valor={dadosDds.empresa} />
                         <DdsCampoObra rotulo="Obra / Setor" valor={dadosDds.obraSetor} />
                         <DdsCampoObra rotulo="Turno" valor={dadosDds.turno} />
@@ -1364,15 +1364,15 @@ function DdsPreviewImpresso({ participantes = participantesDds, mostrarAssinatur
                         <DdsCampoObra rotulo="Líder / Encarregado" valor={dadosDds.encarregado} />
                     </section>
 
-                    <section className="mt-3 overflow-hidden rounded-xl border border-slate-300">
-                        <div className="bg-slate-950 py-1.5 text-center text-xs font-black uppercase tracking-wide text-white">
+                    <section className="mt-2 overflow-hidden rounded-xl border border-slate-300">
+                        <div className="bg-slate-950 py-1 text-center text-[11px] font-black uppercase tracking-wide text-white">
                             Temas do DDS por dia da semana
                         </div>
                         <table className="w-full table-fixed border-collapse text-center text-[11px]">
                             <thead>
                                 <tr className="bg-slate-900 text-white">
                                     {diasSemana.map((dia) => (
-                                        <th key={dia.curto} className="w-[14.285%] border border-slate-400 px-2 py-2">
+                                        <th key={dia.curto} className="w-[14.285%] border border-slate-400 px-2 py-1.5">
                                             <span className="block text-xs font-black uppercase">{dia.nome}</span>
                                             <span className="block text-[11px] font-black text-emerald-300">{dia.data}</span>
                                         </th>
@@ -1389,14 +1389,14 @@ function DdsPreviewImpresso({ participantes = participantesDds, mostrarAssinatur
                                 </tr>
                                 <tr>
                                     {diasSemana.map((dia) => (
-                                        <td key={dia.curto} className="h-14 w-[14.285%] border border-slate-300 px-3 py-2 align-middle font-bold leading-tight">
+                                        <td key={dia.curto} className="h-10 w-[14.285%] border border-slate-300 px-2 py-1 align-middle font-bold leading-tight">
                                             {dia.tema}
                                         </td>
                                     ))}
                                 </tr>
                                 <tr>
                                     {diasSemana.map((dia) => (
-                                        <td key={dia.curto} className="w-[14.285%] border border-slate-300 px-3 py-1.5 text-[10px] font-black text-slate-700">
+                                        <td key={dia.curto} className="w-[14.285%] border border-slate-300 px-2 py-1 text-[9px] font-black text-slate-700">
                                             {dia.responsavel}
                                         </td>
                                     ))}
@@ -1405,36 +1405,36 @@ function DdsPreviewImpresso({ participantes = participantesDds, mostrarAssinatur
                         </table>
                     </section>
 
-                    <section className="mt-3 overflow-hidden rounded-xl border border-slate-300">
-                        <table className="w-full border-collapse text-[10px]">
+                    <section className="mt-2 overflow-hidden rounded-xl border border-slate-300">
+                        <table className="w-full border-collapse text-[9.5px]">
                             <thead>
                                 <tr className="bg-slate-950 text-white">
-                                    <th className="w-10 border border-slate-400 px-1 py-2">Nº</th>
-                                    <th className="w-[230px] border border-slate-400 px-2 py-2">Funcionário</th>
-                                    <th className="w-[150px] border border-slate-400 px-2 py-2">Função</th>
-                                    <th className="w-[140px] border border-slate-400 px-2 py-2">Empresa</th>
+                                    <th className="w-10 border border-slate-400 px-1 py-1.5">Nº</th>
+                                    <th className="w-[230px] border border-slate-400 px-2 py-1.5">Funcionário</th>
+                                    <th className="w-[150px] border border-slate-400 px-2 py-1.5">Função</th>
+                                    <th className="w-[140px] border border-slate-400 px-2 py-1.5">Empresa</th>
                                     {diasSemana.map((dia) => (
-                                        <th key={dia.curto} className="w-[72px] border border-slate-400 px-1 py-2">
+                                        <th key={dia.curto} className="w-[72px] border border-slate-400 px-1 py-1.5">
                                             <span className="block">{dia.curto}</span>
                                             <span className="block text-[9px] text-emerald-300">{dia.data.slice(0, 5)}</span>
                                         </th>
                                     ))}
-                                    <th className="w-[74px] border border-slate-400 px-1 py-2">Presente</th>
+                                    <th className="w-[74px] border border-slate-400 px-1 py-1.5">Presente</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 {participantes.map((participante, indice) => (
                                     <tr key={participante.nome || `linha-em-branco-${participante.numero}`} className="odd:bg-white even:bg-slate-50">
-                                        <td className="border border-slate-300 px-1 py-1 text-center font-black">{participante.numero || indice + 1}</td>
-                                        <td className="border border-slate-300 px-2 py-1 font-semibold">{participante.nome}</td>
-                                        <td className="border border-slate-300 px-2 py-1 text-center font-semibold">{participante.funcao}</td>
-                                        <td className="border border-slate-300 px-2 py-1 text-center font-semibold">{participante.empresa}</td>
+                                        <td className="border border-slate-300 px-1 py-0.5 text-center font-black">{participante.numero || indice + 1}</td>
+                                        <td className="border border-slate-300 px-2 py-0.5 font-semibold">{participante.nome}</td>
+                                        <td className="border border-slate-300 px-2 py-0.5 text-center font-semibold">{participante.funcao}</td>
+                                        <td className="border border-slate-300 px-2 py-0.5 text-center font-semibold">{participante.empresa}</td>
                                         {diasSemana.map((dia) => (
-                                            <td key={dia.curto} className="border border-slate-300 px-1 py-1 text-center align-middle">
+                                            <td key={dia.curto} className="border border-slate-300 px-1 py-0.5 text-center align-middle">
                                                 {dia.semAtividade ? <MarcacaoDiaSemAtividadeDds /> : null}
                                             </td>
                                         ))}
-                                        <td className="border border-slate-300 px-1 py-1 text-center">
+                                        <td className="border border-slate-300 px-1 py-0.5 text-center">
                                             <QuadradoPresenca />
                                         </td>
                                     </tr>
@@ -1443,17 +1443,17 @@ function DdsPreviewImpresso({ participantes = participantesDds, mostrarAssinatur
                         </table>
                     </section>
 
-                    <footer className="dds-folha1-footer mt-3 space-y-3">
-                        <div className="dds-folha1-complementos grid gap-3 lg:grid-cols-[0.82fr_1.1fr_1fr]">
-                            <div className="rounded-xl border border-emerald-600 p-2.5">
+                    <footer className="dds-folha1-footer mt-2 space-y-2">
+                        <div className="dds-folha1-complementos grid gap-2 lg:grid-cols-[0.82fr_1.1fr_1fr]">
+                            <div className="rounded-xl border border-emerald-600 p-2">
                                 <div className="flex items-center gap-2">
-                                    <Gift className="h-5 w-5 text-emerald-700" />
-                                    <p className="text-sm font-black uppercase text-emerald-700">Aniversariantes da semana</p>
+                                    <Gift className="h-4 w-4 text-emerald-700" />
+                                    <p className="text-[12px] font-black uppercase text-emerald-700">Aniversariantes da semana</p>
                                 </div>
 
-                                <div className="mt-2 grid min-h-[104px] grid-rows-5 gap-1 text-[11px] font-bold text-slate-800">
+                                <div className="mt-1.5 grid min-h-[84px] grid-rows-5 gap-0.5 text-[10px] font-bold text-slate-800">
                                     {aniversariantes.map((item) => (
-                                        <div key={item.nome} className="grid min-h-[20px] grid-cols-[44px_16px_minmax(0,1fr)] items-center gap-1 border-b border-slate-300 px-1 pb-0.5 last:border-b-0">
+                                        <div key={item.nome} className="grid min-h-[15px] grid-cols-[42px_14px_minmax(0,1fr)] items-center gap-1 border-b border-slate-300 px-1 pb-0.5 last:border-b-0">
                                             <span className="font-black text-slate-700">{item.data}</span>
                                             <span className="text-center font-black text-slate-400">—</span>
                                             <span className="truncate font-black text-slate-900">{item.nome}</span>
@@ -1461,40 +1461,40 @@ function DdsPreviewImpresso({ participantes = participantesDds, mostrarAssinatur
                                     ))}
 
                                     {Array.from({ length: Math.max(0, 5 - aniversariantes.length) }).map((_, indice) => (
-                                        <div key={`aniversariante-vazio-${indice}`} className="min-h-[20px] border-b border-slate-300 px-1 pb-0.5 last:border-b-0">
+                                        <div key={`aniversariante-vazio-${indice}`} className="min-h-[15px] border-b border-slate-300 px-1 pb-0.5 last:border-b-0">
                                             &nbsp;
                                         </div>
                                     ))}
                                 </div>
 
-                                <p className="mt-2 border-t border-emerald-100 pt-1.5 text-center text-[11.5px] font-black leading-[16px] text-emerald-700">
+                                <p className="mt-1 border-t border-emerald-100 pt-1 text-center text-[10px] font-black leading-[13px] text-emerald-700">
                                     Parabéns aos aniversariantes da semana.<br />
                                     Segurança também é cuidar das pessoas.
                                 </p>
                             </div>
 
-                            <div className="rounded-xl border border-emerald-600 p-2.5">
+                            <div className="rounded-xl border border-emerald-600 p-2">
                                 <div className="flex items-center gap-2">
-                                    <Megaphone className="h-5 w-5 text-emerald-700" />
-                                    <p className="text-sm font-black uppercase text-emerald-700">Recados e pontos reforçados na semana</p>
+                                    <Megaphone className="h-4 w-4 text-emerald-700" />
+                                    <p className="text-[12px] font-black uppercase text-emerald-700">Recados e pontos reforçados na semana</p>
                                 </div>
 
                                 <BlocoRecadosDdsImpresso texto={dadosDds.recadosSemana} />
                             </div>
 
-                            <div className="rounded-xl border border-emerald-600 p-2.5">
+                            <div className="rounded-xl border border-emerald-600 p-2">
                                 <div className="flex items-center gap-2">
-                                    <ShieldCheck className="h-5 w-5 text-emerald-700" />
-                                    <p className="text-sm font-black uppercase text-emerald-700">Orientações importantes</p>
+                                    <ShieldCheck className="h-4 w-4 text-emerald-700" />
+                                    <p className="text-[12px] font-black uppercase text-emerald-700">Orientações importantes</p>
                                 </div>
 
-                                <div className="mt-2 grid min-h-[132px] grid-rows-6 gap-1 text-[10px] font-bold leading-4 text-slate-800">
+                                <div className="mt-1.5 grid min-h-[108px] grid-rows-6 gap-0.5 text-[9.5px] font-bold leading-3 text-slate-800">
                                     {(Array.isArray(dadosDds.orientacoesImportantes) ? dadosDds.orientacoesImportantes : criarOrientacoesPadraoDds())
                                         .map((orientacao) => String(orientacao || "").trim())
                                         .filter(Boolean)
                                         .slice(0, 6)
                                         .map((orientacao, indice) => (
-                                            <div key={`orientacao-impressa-dds-${indice}`} className="flex min-h-[18px] items-center gap-2 border-b border-slate-200 px-1 pb-1 last:border-b-0">
+                                            <div key={`orientacao-impressa-dds-${indice}`} className="flex min-h-[15px] items-center gap-1.5 border-b border-slate-200 px-1 pb-0.5 last:border-b-0">
                                                 <CheckCircle2 className="mt-0.5 h-3.5 w-3.5 shrink-0 text-emerald-700" />
                                                 <span>{orientacao}</span>
                                             </div>
@@ -1513,7 +1513,7 @@ function DdsPreviewImpresso({ participantes = participantesDds, mostrarAssinatur
                                 </div>
 
                                 <div className="rounded-xl border border-emerald-600 p-3 text-center">
-                                    <p className="text-sm font-black uppercase text-emerald-700">Encarregado</p>
+                                    <p className="text-[12px] font-black uppercase text-emerald-700">Encarregado</p>
                                     <div className="mx-auto mt-10 w-[82%] border-b border-slate-800" />
                                     <p className="mt-2 text-[10px] font-bold uppercase text-slate-600">Nome / Assinatura</p>
                                     <p className="mt-5 text-[10px] font-bold text-slate-700">Data: ____/____/______</p>
@@ -1522,7 +1522,7 @@ function DdsPreviewImpresso({ participantes = participantesDds, mostrarAssinatur
                         )}
                     </footer>
 
-                    <div className="mt-3 flex items-center justify-between border-t border-slate-300 pt-2 text-[10px] font-black uppercase text-slate-600">
+                    <div className="mt-2 flex items-center justify-between border-t border-slate-300 pt-1.5 text-[9px] font-black uppercase text-slate-600">
                         <span>Segurança é valor.</span>
                         <span>Prevenção é atitude.</span>
                         <span>Todos juntos, nenhum acidente.</span>
@@ -1724,6 +1724,43 @@ function DdsPrintStyles() {
                         page-break-after: always !important;
                     }
 
+                    /* DDS folha 1 compacta pós-rodapé */
+                    .dds-print-area .dds-print-page:first-child .dds-print-sheet {
+                        zoom: 0.82 !important;
+                        padding: 9px !important;
+                    }
+
+                    .dds-print-area .dds-print-page:first-child .dds-print-sheet header {
+                        padding-bottom: 6px !important;
+                    }
+
+                    .dds-print-area .dds-print-page:first-child .dds-print-sheet section {
+                        margin-top: 6px !important;
+                    }
+
+                    .dds-print-area .dds-print-page:first-child .dds-print-sheet table {
+                        line-height: 1.04 !important;
+                    }
+
+                    .dds-print-area .dds-print-page:first-child .dds-print-sheet th,
+                    .dds-print-area .dds-print-page:first-child .dds-print-sheet td {
+                        padding-top: 2px !important;
+                        padding-bottom: 2px !important;
+                    }
+
+                    .dds-print-area .dds-print-page:first-child .dds-folha1-footer {
+                        margin-top: 5px !important;
+                        gap: 5px !important;
+                    }
+
+                    .dds-print-area .dds-print-page:first-child .dds-folha1-complementos {
+                        gap: 6px !important;
+                    }
+
+                    .dds-print-area .dds-print-page:first-child .dds-folha1-complementos > div {
+                        padding: 6px !important;
+                        min-height: 0 !important;
+                    }
                     .dds-print-page:last-child {
                         break-after: auto !important;
                         page-break-after: auto !important;
@@ -1747,7 +1784,7 @@ function DdsPrintStyles() {
                         max-width: 1320px !important;
                         min-width: 1320px !important;
                         margin: 0 auto !important;
-                        padding: 14px !important;
+                        padding: 9px !important;
                         border-radius: 0 !important;
                         box-shadow: none !important;
                         background: #ffffff !important;
@@ -1756,11 +1793,11 @@ function DdsPrintStyles() {
                     }
 
                     .dds-print-area .dds-print-page:first-child .dds-print-sheet {
-                        zoom: 0.835 !important;
+                        zoom: 0.82 !important;
                     }
 
                     .dds-print-area .dds-print-page:not(:first-child) .dds-print-sheet {
-                        zoom: 0.835 !important;
+                        zoom: 0.82 !important;
                     }
 
                     .dds-print-sheet header {
@@ -2259,6 +2296,15 @@ export function DdsPage({
                         funcaoResponsavel: dadosDds.funcaoResponsavel,
                         totalParticipantes: participantesSistemaDds.length,
                         totalFolhas: folhasContinuacaoDds.length + 1,
+                        recadosSemana: recadosDdsEditaveis,
+                        orientacoesImportantes: orientacoesDdsEditaveis,
+                        aniversariantesSemana: aniversariantesSemanaDds,
+                        participantes: participantesSistemaDds.map((participante) => ({
+                            numero: participante.numero,
+                            nome: participante.nome,
+                            funcao: participante.funcao,
+                            empresa: participante.empresa,
+                        })),
                         diasSemana: diasSemanaComTemasDds.map((dia) => ({
                             dia: dia.dia,
                             data: dia.data,

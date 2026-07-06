@@ -108,6 +108,61 @@ export function normalizarRegistroDdsBanco(registro = {}) {
 }
 
 export function normalizarConsultaPublicaDds(resposta = {}) {
+    const dadosRegistro = normalizarObjetoDds(resposta.dados || resposta.snapshot || resposta.dadosDds);
+
+    const diasSemanaOrigem = Array.isArray(resposta.diasSemana)
+        ? resposta.diasSemana
+        : Array.isArray(dadosRegistro.diasSemana)
+            ? dadosRegistro.diasSemana
+            : [];
+
+    const participantesOrigem = Array.isArray(resposta.participantes)
+        ? resposta.participantes
+        : Array.isArray(dadosRegistro.participantes)
+            ? dadosRegistro.participantes
+            : [];
+
+    const orientacoesOrigem = Array.isArray(resposta.orientacoesImportantes)
+        ? resposta.orientacoesImportantes
+        : Array.isArray(dadosRegistro.orientacoesImportantes)
+            ? dadosRegistro.orientacoesImportantes
+            : [];
+
+    const aniversariantesOrigem = Array.isArray(resposta.aniversariantesSemana)
+        ? resposta.aniversariantesSemana
+        : Array.isArray(dadosRegistro.aniversariantesSemana)
+            ? dadosRegistro.aniversariantesSemana
+            : [];
+
+    const diasSemana = diasSemanaOrigem
+        .map((dia) => ({
+            dia: textoSeguroDds(dia?.dia || dia?.nome || dia?.curto),
+            data: textoSeguroDds(dia?.data),
+            tema: textoSeguroDds(dia?.tema),
+            responsavel: textoSeguroDds(dia?.responsavel),
+        }))
+        .filter((dia) => dia.dia || dia.data || dia.tema || dia.responsavel);
+
+    const participantes = participantesOrigem
+        .map((participante, indice) => ({
+            numero: Number(participante?.numero || indice + 1),
+            nome: textoSeguroDds(participante?.nome),
+            funcao: textoSeguroDds(participante?.funcao),
+            empresa: textoSeguroDds(participante?.empresa),
+        }))
+        .filter((participante) => participante.nome);
+
+    const orientacoesImportantes = orientacoesOrigem
+        .map((orientacao) => textoSeguroDds(orientacao))
+        .filter(Boolean);
+
+    const aniversariantesSemana = aniversariantesOrigem
+        .map((aniversariante) => ({
+            data: textoSeguroDds(aniversariante?.data),
+            nome: textoSeguroDds(aniversariante?.nome),
+        }))
+        .filter((aniversariante) => aniversariante.data || aniversariante.nome);
+
     return {
         ok: Boolean(resposta.ok),
         tipo: textoSeguroDds(resposta.tipo || "dds"),
@@ -115,8 +170,6 @@ export function normalizarConsultaPublicaDds(resposta = {}) {
         codigo: textoSeguroDds(resposta.codigo),
         empresa: textoSeguroDds(resposta.empresa),
         obra: textoSeguroDds(resposta.obra),
-        empresaLogoUrl: obterUrlLogoEmpresa(textoSeguroDds(resposta.empresaLogoUrl)),
-        empresaLogoNome: textoSeguroDds(resposta.empresaLogoNome),
         periodoInicio: textoSeguroDds(resposta.periodoInicio),
         periodoFim: textoSeguroDds(resposta.periodoFim),
         responsavel: textoSeguroDds(resposta.responsavel),
@@ -126,9 +179,19 @@ export function normalizarConsultaPublicaDds(resposta = {}) {
         geradoEm: resposta.geradoEm || "",
         atualizadoEm: resposta.atualizadoEm || "",
         autenticidade: normalizarObjetoDds(resposta.autenticidade),
+        dados: dadosRegistro,
+        diasSemana,
+        recadosSemana: textoSeguroDds(resposta.recadosSemana || dadosRegistro.recadosSemana || dadosRegistro.recados),
+        orientacoesImportantes,
+        aniversariantesSemana,
+        participantes,
+        totalParticipantes: Number(resposta.totalParticipantes || dadosRegistro.totalParticipantes || participantes.length || 0),
+        totalFolhas: Number(resposta.totalFolhas || dadosRegistro.totalFolhas || 1),
+        turno: textoSeguroDds(resposta.turno || dadosRegistro.turno),
+        funcaoResponsavel: textoSeguroDds(resposta.funcaoResponsavel || dadosRegistro.funcaoResponsavel),
+        resumoSemana: textoSeguroDds(resposta.resumoSemana || dadosRegistro.resumoSemana),
     };
 }
-
 export async function salvarRegistroDds({ supabase, registro = {} } = {}) {
     if (!supabase) {
         throw new Error("Cliente Supabase não informado.");
