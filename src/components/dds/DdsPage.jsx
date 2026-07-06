@@ -818,6 +818,46 @@ function salvarTemasDdsLocal(chave = "", temas = []) {
         // Persistência local não deve bloquear a impressão do DDS.
     }
 }
+
+const CHAVE_LOCAL_RECADOS_DDS = "controle-sst-qr:dds:recados-por-codigo:v1";
+
+function normalizarRecadosDdsLocal(valor = "") {
+    return String(valor ?? "").replace(/\r\n/g, "\n").trimEnd();
+}
+
+function carregarRecadosDdsLocal(chave = "") {
+    if (typeof window === "undefined") return "";
+
+    const chaveSegura = String(chave ?? "").trim();
+
+    if (!chaveSegura) return "";
+
+    try {
+        const mapa = JSON.parse(window.localStorage.getItem(CHAVE_LOCAL_RECADOS_DDS) || "{}");
+        const recadoSalvo = mapa?.[chaveSegura];
+
+        return typeof recadoSalvo === "string" ? normalizarRecadosDdsLocal(recadoSalvo) : "";
+    } catch {
+        return "";
+    }
+}
+
+function salvarRecadosDdsLocal(chave = "", valor = "") {
+    if (typeof window === "undefined") return;
+
+    const chaveSegura = String(chave ?? "").trim();
+
+    if (!chaveSegura) return;
+
+    try {
+        const mapa = JSON.parse(window.localStorage.getItem(CHAVE_LOCAL_RECADOS_DDS) || "{}");
+
+        mapa[chaveSegura] = normalizarRecadosDdsLocal(valor);
+        window.localStorage.setItem(CHAVE_LOCAL_RECADOS_DDS, JSON.stringify(mapa));
+    } catch {
+        // Persistência local não deve bloquear a impressão do DDS.
+    }
+}
 function resolverLogoEmpresaDds(valor = "") {
     const texto = String(valor ?? "").trim();
 
@@ -1049,6 +1089,32 @@ function CelulaAssinaturaDiaDds({ dia = {}, compacto = false }) {
         </td>
     );
 }
+
+function BlocoRecadosDdsImpresso({ texto = "" }) {
+    const linhas = String(texto ?? "")
+        .replace(/\r\n/g, "\n")
+        .split("\n")
+        .map((linha) => linha.trim())
+        .filter(Boolean)
+        .slice(0, 5);
+
+    const linhasImpressao = Array.from({ length: 5 }, (_, indice) => linhas[indice] || "");
+
+    return (
+        <div className="mt-2 space-y-1.5 text-[10px] font-bold leading-4 text-slate-800">
+            {linhasImpressao.map((linha, indice) => (
+                <div
+                    key={`linha-recado-dds-${indice}`}
+                    className="min-h-[14px] border-b border-slate-400 px-1 pb-0.5"
+                >
+                    <span className="block break-words">
+                        {linha || "\u00A0"}
+                    </span>
+                </div>
+            ))}
+        </div>
+    );
+}
 function DdsPreviewImpresso({ participantes = participantesDds, mostrarAssinaturas = true, dadosDds = dadosDdsPadrao, diasSemana = diasDds, aniversariantes = aniversariantesDds }) {
     return (
         <section className="dds-print-page overflow-hidden rounded-[28px] border border-slate-200 bg-white p-4 shadow-[0_18px_50px_rgba(15,23,42,0.08)]">
@@ -1201,11 +1267,7 @@ function DdsPreviewImpresso({ participantes = participantesDds, mostrarAssinatur
                                     <p className="text-sm font-black uppercase text-emerald-700">Recados e pontos reforçados na semana</p>
                                 </div>
 
-                                <div className="mt-2 space-y-1.5">
-                                    {Array.from({ length: 5 }).map((_, indice) => (
-                                        <div key={`recado-dds-${indice}`} className="h-3 border-b border-slate-400" />
-                                    ))}
-                                </div>
+                                <BlocoRecadosDdsImpresso texto={dadosDds.recadosSemana} />
                             </div>
 
                             <div className="rounded-xl border border-slate-300 p-2.5">
@@ -1658,6 +1720,8 @@ export function DdsPage({
     const [dadosDds, setDadosDds] = useState(dadosDdsAutomaticos);
     const [temasDdsEditaveis, setTemasDdsEditaveis] = useState(() => criarTemasEditaveisDds());
     const [chaveTemasDdsCarregada, setChaveTemasDdsCarregada] = useState("");
+    const [recadosDdsEditaveis, setRecadosDdsEditaveis] = useState("");
+    const [chaveRecadosDdsCarregada, setChaveRecadosDdsCarregada] = useState("");
     const [registroDdsConferencia, setRegistroDdsConferencia] = useState(null);
     const [salvandoRegistroDds, setSalvandoRegistroDds] = useState(false);
     const [erroRegistroDds, setErroRegistroDds] = useState("");
@@ -1691,7 +1755,8 @@ export function DdsPage({
         contratanteLogoNome: empresaContratanteDds?.logo_nome || empresaContratanteDds?.logoNome || "",
         contratanteNome: empresaContratanteDds?.nome || "",
         logosEmpresasCabecalho: logosEmpresasCabecalhoDds,
-    }), [dadosDds, registroDdsConferencia, logoEmpresaDds, empresaSelecionadaDds, logoContratanteDds, empresaContratanteDds, logosEmpresasCabecalhoDds]);
+        recadosSemana: recadosDdsEditaveis,
+    }), [dadosDds, registroDdsConferencia, logoEmpresaDds, empresaSelecionadaDds, logoContratanteDds, empresaContratanteDds, logosEmpresasCabecalhoDds, recadosDdsEditaveis]);
 
 
     const obraSetorFoiSalvaParaEmpresaDds = empresaSelecionadaChaveDds
@@ -1816,6 +1881,23 @@ export function DdsPage({
 
 
 
+
+    const chaveRecadosDds = useMemo(() => criarChaveTemasDdsLocal({
+        codigo: dadosDds.codigo,
+    }), [dadosDds.codigo]);
+
+    useEffect(() => {
+        const recadosSalvos = carregarRecadosDdsLocal(chaveRecadosDds);
+
+        setRecadosDdsEditaveis(recadosSalvos);
+        setChaveRecadosDdsCarregada(chaveRecadosDds);
+    }, [chaveRecadosDds]);
+
+    useEffect(() => {
+        if (!chaveRecadosDds || chaveRecadosDdsCarregada !== chaveRecadosDds) return;
+
+        salvarRecadosDdsLocal(chaveRecadosDds, recadosDdsEditaveis);
+    }, [chaveRecadosDds, chaveRecadosDdsCarregada, recadosDdsEditaveis]);
     const chaveTemasDds = useMemo(() => criarChaveTemasDdsLocal({
         codigo: dadosDds.codigo,
     }), [dadosDds.codigo]);
@@ -2197,6 +2279,38 @@ export function DdsPage({
                         </div>
                     ))}
                 </div>
+            </section>
+
+            <section className="dds-no-print rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
+                <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+                    <div>
+                        <p className="text-[11px] font-black uppercase tracking-[0.22em] text-emerald-600">
+                            Editor de recados do DDS
+                        </p>
+                        <h2 className="mt-1 text-lg font-black text-slate-950">
+                            Recados e pontos reforçados da semana
+                        </h2>
+                        <p className="mt-1 text-sm font-semibold text-slate-500">
+                            O texto abaixo será impresso no rodapé do DDS. Se apagar, o campo fica em branco.
+                        </p>
+                    </div>
+
+                    <button
+                        type="button"
+                        onClick={() => setRecadosDdsEditaveis("")}
+                        className="inline-flex items-center justify-center rounded-2xl border border-slate-200 bg-slate-50 px-4 py-2 text-xs font-black text-slate-700 shadow-sm transition hover:-translate-y-0.5 hover:bg-white"
+                    >
+                        Limpar recados
+                    </button>
+                </div>
+
+                <textarea
+                    value={recadosDdsEditaveis}
+                    onChange={(evento) => setRecadosDdsEditaveis(evento.target.value)}
+                    rows={4}
+                    placeholder="Ex.: Reforçar uso de óculos de segurança, organização do canteiro, atenção em atividades com máquinas..."
+                    className="mt-4 w-full resize-none rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-bold leading-6 text-slate-800 outline-none transition focus:border-emerald-400 focus:bg-white focus:ring-2 focus:ring-emerald-100"
+                />
             </section>
             <div className="dds-print-area space-y-6">
                 <DdsPreviewImpresso
