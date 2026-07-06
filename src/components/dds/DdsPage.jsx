@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { QRCodeSVG } from "qrcode.react";
 import { salvarRegistroDds } from "../../services/ddsRegistrosService";
+import { obterUrlLogoEmpresa } from "../../services/supabaseServices";
 import {
     BookOpen,
     Gift,
@@ -710,20 +711,256 @@ function DdsQrConferenciaImpresso({ url = "", size = 56, fallbackClassName = "h-
         />
     );
 }
+
+function obterIniciaisEmpresaDdsImpresso(nome = "") {
+    const texto = String(nome ?? "").trim();
+
+    if (!texto) return "EMP";
+
+    return texto
+        .split(/\s+/)
+        .filter(Boolean)
+        .slice(0, 3)
+        .map((parte) => parte.charAt(0))
+        .join("")
+        .toUpperCase() || "EMP";
+}
+
+function MarcaIdealizaDdsImpresso({ compacto = false }) {
+    return (
+        <div className="flex items-center gap-3">
+            <div className={compacto
+                ? "flex h-12 w-12 items-center justify-center rounded-2xl border border-amber-200 bg-amber-50 text-amber-700"
+                : "flex h-16 w-16 items-center justify-center rounded-2xl border border-amber-200 bg-amber-50 text-amber-700"}
+            >
+                <span className={compacto ? "text-xl font-black" : "text-2xl font-black"}>I</span>
+            </div>
+            <div>
+                <p className={compacto
+                    ? "text-2xl font-black leading-none text-slate-950"
+                    : "text-4xl font-black leading-none text-slate-950"}
+                >
+                    IDEALIZA
+                </p>
+                <p className={compacto
+                    ? "text-[10px] font-black uppercase tracking-[0.18em] text-amber-700"
+                    : "text-base font-black uppercase tracking-[0.18em] text-amber-700"}
+                >
+                    Segurança do Trabalho
+                </p>
+            </div>
+        </div>
+    );
+}
+
+
+function resolverLogoEmpresaDds(valor = "") {
+    const texto = String(valor ?? "").trim();
+
+    if (!texto) return "";
+
+    if (/^(https?:|data:|blob:|\/)/i.test(texto)) {
+        return texto;
+    }
+
+    return obterUrlLogoEmpresa(texto);
+}
+
+function obterLogoEmpresaSelecionadaDds({ empresaSelecionada = null, colaboradoresEmpresa = [], dadosDds = {} } = {}) {
+    const colaboradores = Array.isArray(colaboradoresEmpresa) ? colaboradoresEmpresa : [];
+    const colaboradorComLogo = colaboradores.find((colaborador) =>
+        String(colaborador?.empresaLogoUrl || colaborador?.logo_url || colaborador?.logoUrl || "").trim()
+    );
+
+    const candidatos = [
+        empresaSelecionada?.logo_url,
+        empresaSelecionada?.logoUrl,
+        empresaSelecionada?.empresaLogoUrl,
+        empresaSelecionada?.logoAtual,
+        dadosDds?.empresaLogoUrl,
+        colaboradorComLogo?.empresaLogoUrl,
+        colaboradorComLogo?.logo_url,
+        colaboradorComLogo?.logoUrl,
+    ];
+
+    const caminhoLogo = candidatos.find((valor) => String(valor ?? "").trim());
+
+    return resolverLogoEmpresaDds(caminhoLogo || "");
+}
+
+function normalizarTextoEmpresaDds(valor = "") {
+    return String(valor ?? "")
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .toLowerCase()
+        .trim();
+}
+
+function obterLogoRawEmpresaDds(empresa = null) {
+    return (
+        empresa?.logo_url ||
+        empresa?.logoUrl ||
+        empresa?.empresaLogoUrl ||
+        empresa?.logoAtual ||
+        ""
+    );
+}
+
+function empresaEhIdealizarCidadesDds(empresa = null) {
+    const nome = normalizarTextoEmpresaDds(empresa?.nome);
+    const tipo = normalizarTextoEmpresaDds(empresa?.tipo_empresa || empresa?.tipoEmpresa);
+
+    return nome.includes("idealiz") || tipo.includes("idealiz");
+}
+
+function obterEmpresaPorIdDds(empresas = [], id = "") {
+    const idSeguro = String(id ?? "").trim();
+    if (!idSeguro) return null;
+
+    return (Array.isArray(empresas) ? empresas : []).find((empresa) =>
+        String(empresa?.id ?? "").trim() === idSeguro
+    ) || null;
+}
+
+function obterEmpresaContratanteDds({ empresaSelecionada = null, empresasDds = [] } = {}) {
+    const empresas = Array.isArray(empresasDds) ? empresasDds.filter(Boolean) : [];
+    const paiDireto = obterEmpresaPorIdDds(
+        empresas,
+        empresaSelecionada?.empresa_pai_id || empresaSelecionada?.empresaPaiId || ""
+    );
+    const avo = obterEmpresaPorIdDds(
+        empresas,
+        paiDireto?.empresa_pai_id || paiDireto?.empresaPaiId || ""
+    );
+
+    if (empresaEhIdealizarCidadesDds(empresaSelecionada)) return empresaSelecionada;
+    if (empresaEhIdealizarCidadesDds(paiDireto)) return paiDireto;
+    if (empresaEhIdealizarCidadesDds(avo)) return avo;
+
+    return empresas.find(empresaEhIdealizarCidadesDds) || paiDireto || null;
+}
+
+
+function adicionarLogoEmpresaCabecalhoDds(lista = [], empresa = null) {
+    const logoUrl = resolverLogoEmpresaDds(obterLogoRawEmpresaDds(empresa));
+
+    if (!logoUrl) return lista;
+
+    const chave = String(empresa?.id || empresa?.nome || logoUrl || "").trim();
+
+    if (lista.some((item) => item.chave === chave || item.logoUrl === logoUrl)) {
+        return lista;
+    }
+
+    return [
+        ...lista,
+        {
+            chave,
+            logoUrl,
+        },
+    ];
+}
+
+function obterLogosEmpresasCabecalhoDds({ empresaSelecionada = null, empresasDds = [] } = {}) {
+    const empresas = Array.isArray(empresasDds) ? empresasDds.filter(Boolean) : [];
+    const empresaIdealiza = empresas.find(empresaEhIdealizarCidadesDds) || null;
+    const paiDireto = obterEmpresaPorIdDds(
+        empresas,
+        empresaSelecionada?.empresa_pai_id || empresaSelecionada?.empresaPaiId || ""
+    );
+    const avo = obterEmpresaPorIdDds(
+        empresas,
+        paiDireto?.empresa_pai_id || paiDireto?.empresaPaiId || ""
+    );
+
+    let logos = [];
+
+    if (empresaEhIdealizarCidadesDds(avo)) {
+        logos = adicionarLogoEmpresaCabecalhoDds(logos, avo);
+    } else if (empresaIdealiza) {
+        logos = adicionarLogoEmpresaCabecalhoDds(logos, empresaIdealiza);
+    }
+
+    if (paiDireto && !empresaEhIdealizarCidadesDds(paiDireto)) {
+        logos = adicionarLogoEmpresaCabecalhoDds(logos, paiDireto);
+    }
+
+    if (empresaSelecionada && !empresaEhIdealizarCidadesDds(empresaSelecionada)) {
+        logos = adicionarLogoEmpresaCabecalhoDds(logos, empresaSelecionada);
+    }
+
+    if (logos.length === 0 && empresaSelecionada) {
+        logos = adicionarLogoEmpresaCabecalhoDds(logos, empresaSelecionada);
+    }
+
+    return logos;
+}
+function MarcaLogosEmpresasDdsImpresso({ logos = [], compacto = false }) {
+    const logosNormalizados = (Array.isArray(logos) ? logos : [])
+        .map((item) => ({
+            logoUrl: resolverLogoEmpresaDds(item?.logoUrl || item),
+        }))
+        .filter((item) => item.logoUrl);
+
+    const tresOuMaisLogos = logosNormalizados.length >= 3;
+
+    const classeContainer = compacto
+        ? "flex w-full translate-x-3 items-center justify-center gap-3"
+        : tresOuMaisLogos
+            ? "flex w-full translate-x-5 items-center justify-center gap-4"
+            : "flex w-full translate-x-5 items-center justify-center gap-7";
+
+    const classeImagem = compacto
+        ? tresOuMaisLogos
+            ? "h-[52px] max-w-[82px] object-contain"
+            : "h-[60px] max-w-[118px] object-contain"
+        : tresOuMaisLogos
+            ? "h-[82px] max-w-[92px] object-contain"
+            : "h-[88px] max-w-[148px] object-contain";
+
+    return (
+        <div className={classeContainer}>
+            {logosNormalizados.map((item, indice) => (
+                <img
+                    key={`${item.logoUrl}-${indice}`}
+                    src={item.logoUrl}
+                    alt="Logo da empresa"
+                    className={classeImagem}
+                />
+            ))}
+        </div>
+    );
+}
+function MarcaEmpresaDdsImpresso({ logoUrl = "", compacto = false }) {
+    const logoSeguro = resolverLogoEmpresaDds(logoUrl);
+
+    return (
+        <div className={compacto
+            ? "flex h-14 items-center justify-center rounded-2xl border border-slate-300 bg-white p-2"
+            : "flex h-20 items-center justify-center rounded-2xl border border-slate-300 bg-white p-3"}
+        >
+            {logoSeguro ? (
+                <img
+                    src={logoSeguro}
+                    alt="Logo da empresa"
+                    className={compacto
+                        ? "h-11 max-w-[180px] object-contain"
+                        : "h-16 max-w-[240px] object-contain"}
+                />
+            ) : null}
+        </div>
+    );
+}
 function DdsPreviewImpresso({ participantes = participantesDds, mostrarAssinaturas = true, dadosDds = dadosDdsPadrao, diasSemana = diasDds, aniversariantes = aniversariantesDds }) {
     return (
         <section className="dds-print-page overflow-hidden rounded-[28px] border border-slate-200 bg-white p-4 shadow-[0_18px_50px_rgba(15,23,42,0.08)]">
             <div className="overflow-x-auto">
                 <div className="dds-print-sheet mx-auto min-w-[1180px] max-w-[1320px] rounded-2xl border border-slate-300 bg-white p-4 text-slate-950">
                     <header className="grid grid-cols-[260px_minmax(0,1fr)_360px] items-center gap-4 border-b border-slate-300 pb-3">
-                        <div className="flex items-center gap-3">
-                            <div className="flex h-16 w-16 items-center justify-center rounded-2xl border border-emerald-200 bg-emerald-50 text-emerald-700">
-                                <ShieldCheck className="h-10 w-10" />
-                            </div>
-                            <div>
-                                <p className="text-4xl font-black leading-none text-slate-950">SafeScan</p>
-                                <p className="text-2xl font-black uppercase tracking-[0.22em] text-emerald-700">Brasil</p>
-                            </div>
+                        <div className="space-y-2">
+                            <MarcaLogosEmpresasDdsImpresso
+                                logos={dadosDds.logosEmpresasCabecalho}
+                            />
                         </div>
 
                         <div className="text-center">
@@ -936,14 +1173,11 @@ function DdsPreviewImpressoContinuacao({ participantes = participantesDdsContinu
             <div className="overflow-x-auto">
                 <div className="dds-print-sheet mx-auto min-w-[1180px] max-w-[1320px] rounded-2xl border border-slate-300 bg-white p-4 text-slate-950">
                     <header className="grid grid-cols-[240px_minmax(0,1fr)_330px] items-center gap-4 border-b border-slate-300 pb-3">
-                        <div className="flex items-center gap-3">
-                            <div className="flex h-12 w-12 items-center justify-center rounded-2xl border border-emerald-200 bg-emerald-50 text-emerald-700">
-                                <ShieldCheck className="h-7 w-7" />
-                            </div>
-                            <div>
-                                <p className="text-2xl font-black leading-none text-slate-950">SafeScan</p>
-                                <p className="text-sm font-black uppercase tracking-[0.22em] text-emerald-700">Brasil</p>
-                            </div>
+                        <div className="space-y-2">
+                            <MarcaLogosEmpresasDdsImpresso
+                                logos={dadosDds.logosEmpresasCabecalho}
+                                compacto
+                            />
                         </div>
 
                         <div className="text-center">
@@ -1328,11 +1562,36 @@ export function DdsPage({
     const [salvandoRegistroDds, setSalvandoRegistroDds] = useState(false);
     const [erroRegistroDds, setErroRegistroDds] = useState("");
 
+    const empresaContratanteDds = useMemo(() => obterEmpresaContratanteDds({
+        empresaSelecionada: empresaSelecionadaDds,
+        empresasDds,
+    }), [empresaSelecionadaDds, empresasDds]);
+
+    const logoContratanteDds = useMemo(
+        () => resolverLogoEmpresaDds(obterLogoRawEmpresaDds(empresaContratanteDds)),
+        [empresaContratanteDds]
+    );
+    const logosEmpresasCabecalhoDds = useMemo(() => obterLogosEmpresasCabecalhoDds({
+        empresaSelecionada: empresaSelecionadaDds,
+        empresasDds,
+    }), [empresaSelecionadaDds, empresasDds]);
+    const logoEmpresaDds = useMemo(() => obterLogoEmpresaSelecionadaDds({
+        empresaSelecionada: empresaSelecionadaDds,
+        colaboradoresEmpresa: colaboradoresEmpresaDds,
+        dadosDds,
+    }), [empresaSelecionadaDds, colaboradoresEmpresaDds, dadosDds]);
+
     const dadosDdsComRegistro = useMemo(() => ({
         ...dadosDds,
         tokenDds: registroDdsConferencia?.tokenPublico || "",
         qrConferenciaUrl: registroDdsConferencia?.urlConferencia || "",
-    }), [dadosDds, registroDdsConferencia]);
+        empresaLogoUrl: logoEmpresaDds,
+        empresaLogoNome: empresaSelecionadaDds?.logo_nome || empresaSelecionadaDds?.logoNome || "",
+        contratanteLogoUrl: logoContratanteDds,
+        contratanteLogoNome: empresaContratanteDds?.logo_nome || empresaContratanteDds?.logoNome || "",
+        contratanteNome: empresaContratanteDds?.nome || "",
+        logosEmpresasCabecalho: logosEmpresasCabecalhoDds,
+    }), [dadosDds, registroDdsConferencia, logoEmpresaDds, empresaSelecionadaDds, logoContratanteDds, empresaContratanteDds, logosEmpresasCabecalhoDds]);
 
 
     const obraSetorFoiSalvaParaEmpresaDds = empresaSelecionadaChaveDds

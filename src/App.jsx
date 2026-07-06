@@ -24,6 +24,7 @@ import {
     obterTokenQrPublicoApp,
     verificarRotaNovaAuditoriaCampoApp,
 } from "./routes/appRoutesService";
+import { obterTokenDdsPublicoUrl } from "./services/ddsRegistrosService";
 import { sanitizarNomeArquivo } from "./utils/sstUtils";
 import {
     carregarPermissaoSistemaAtualService,
@@ -46,6 +47,7 @@ import {
 
 const LoginScreen = React.lazy(() => import("./components/LoginScreen").then((modulo) => ({ default: modulo.LoginScreen })));
 const ConsultaQRPublica = React.lazy(() => import("./components/qr/ConsultaQRPublica").then((modulo) => ({ default: modulo.ConsultaQRPublica })));
+const ConsultaDdsPublica = React.lazy(() => import("./components/dds/ConsultaDdsPublica").then((modulo) => ({ default: modulo.ConsultaDdsPublica })));
 const NovaAuditoriaCampoDireta = React.lazy(() => import("./components/auditoria/NovaAuditoriaCampoDireta").then((modulo) => ({ default: modulo.NovaAuditoriaCampoDireta })));
 const importarAppContentRouter = () => import("./routes/AppContentRouter");
 const importarAppLayout = () => import("./components/layout/AppLayout");
@@ -58,6 +60,7 @@ const carregarColaboradoresHandlers = () => import("./services/appColaboradoresH
 const carregarTreinamentosHandlers = () => import("./services/appTreinamentosHandlersService");
 const carregarAuditoriaHandlers = () => import("./services/appAuditoriaHandlersService");
 const carregarConsultaPublicaQrHandlers = () => import("./services/consultaPublicaQrService");
+const carregarDdsRegistrosHandlers = () => import("./services/ddsRegistrosService");
 const carregarEmpresaDocumentosHandlers = () => import("./services/empresaDocumentosService");
 const carregarObrasEmpresasService = () => import("./services/obrasService");
 
@@ -912,7 +915,48 @@ export default function App() {
         };
     }, []);
 
+
     useEffect(() => {
+        if (!SUPABASE_CONFIGURADO) return;
+
+        const tokenDds = obterTokenDdsPublicoUrl();
+
+        if (!tokenDds) return;
+
+        let ativo = true;
+
+        async function carregarConsultaDdsPublica() {
+            setCarregandoConsultaDdsPublica(true);
+            setErroConsultaDdsPublica("");
+
+            try {
+                const { consultarDdsPublico } = await carregarDdsRegistrosHandlers();
+                const dadosNormalizados = await consultarDdsPublico({
+                    supabase,
+                    token: tokenDds,
+                });
+
+                if (!ativo) return;
+
+                setConsultaDdsPublica(dadosNormalizados);
+            } catch (error) {
+                if (!ativo) return;
+
+                setErroConsultaDdsPublica(error.message || "Erro ao carregar conferência pública do DDS.");
+                setConsultaDdsPublica(null);
+            } finally {
+                if (ativo) {
+                    setCarregandoConsultaDdsPublica(false);
+                }
+            }
+        }
+
+        carregarConsultaDdsPublica();
+
+        return () => {
+            ativo = false;
+        };
+    }, []);    useEffect(() => {
         if (!usuario) return;
 
         const timer = window.setTimeout(async () => {
@@ -1115,6 +1159,7 @@ export default function App() {
     }
 
     const tokenQrPublico = obterTokenQrPublicoApp();
+    const tokenDdsPublico = obterTokenDdsPublicoUrl();
     const rotaNovaAuditoriaCampo = verificarRotaNovaAuditoriaCampoApp();
 
     if (rotaNovaAuditoriaCampo) {
@@ -1129,6 +1174,26 @@ export default function App() {
         );
     }
 
+
+    if (tokenDdsPublico && !usuario) {
+        if (carregandoConsultaDdsPublica || carregandoSessao) {
+            return <AppConsultaPublicaCarregando />;
+        }
+
+        if (erroConsultaDdsPublica || !consultaDdsPublica) {
+            return (
+                <AppConsultaPublicaErro
+                    mensagem={erroConsultaDdsPublica || "Não foi possível localizar a conferência pública deste DDS."}
+                />
+            );
+        }
+
+        return (
+            <React.Suspense fallback={<CarregandoTela mensagem="Carregando conferência DDS..." />}>
+                <ConsultaDdsPublica dados={consultaDdsPublica} />
+            </React.Suspense>
+        );
+    }
     if (tokenQrPublico && !usuario) {
         if (carregandoConsultaPublica || carregandoSessao) {
             return <AppConsultaPublicaCarregando />;

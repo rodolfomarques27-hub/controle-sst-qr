@@ -1,3 +1,4 @@
+import { obterUrlLogoEmpresa } from "./supabaseServices";
 const textoSeguroDds = (valor = "") => String(valor ?? "").trim();
 
 const somenteDataIsoDds = (valor = "") => {
@@ -114,6 +115,8 @@ export function normalizarConsultaPublicaDds(resposta = {}) {
         codigo: textoSeguroDds(resposta.codigo),
         empresa: textoSeguroDds(resposta.empresa),
         obra: textoSeguroDds(resposta.obra),
+        empresaLogoUrl: obterUrlLogoEmpresa(textoSeguroDds(resposta.empresaLogoUrl)),
+        empresaLogoNome: textoSeguroDds(resposta.empresaLogoNome),
         periodoInicio: textoSeguroDds(resposta.periodoInicio),
         periodoFim: textoSeguroDds(resposta.periodoFim),
         responsavel: textoSeguroDds(resposta.responsavel),
