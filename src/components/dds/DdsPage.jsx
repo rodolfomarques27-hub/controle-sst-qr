@@ -2438,7 +2438,7 @@ export function DdsPage({
                 }),
                 montarItem({
                     titulo: "Assinatura / presença",
-                    detalhe: "Não avaliada nesta etapa. Próxima fase fará análise provável por linha, sem validação grafológica.",
+                    detalhe: "Não avaliada automaticamente. Permanece como conferência visual provável/manual, sem validação grafológica.",
                     status: "pendente",
                 }),
             ],
@@ -3475,7 +3475,7 @@ export function DdsPage({
                             <div className="rounded-2xl border border-cyan-100 bg-white p-4 text-sm font-bold leading-6 text-slate-600 ring-1 ring-cyan-50">
                                 <p className="font-black text-cyan-900">Primeira etapa do scanner DDS</p>
                                 <p className="mt-1">
-                                    Nesta etapa o sistema carrega o gabarito digital salvo na impressão. Depois vamos anexar a folha assinada e comparar presença/assinaturas por linha.
+                                    O scanner usa o gabarito digital salvo, a folha anexada e a leitura inicial para indicar status técnico e necessidade de conferência manual.
                                 </p>
                             </div>
 
@@ -3489,7 +3489,7 @@ export function DdsPage({
                                             Upload da folha DDS assinada
                                         </h3>
                                         <p className="mt-1 text-sm font-semibold text-slate-500">
-                                            Anexe o PDF escaneado ou a foto da folha assinada. A leitura automática será adicionada na próxima etapa.
+                                            Anexe o PDF escaneado ou a foto da folha assinada. Depois execute a leitura inicial para gerar diagnóstico e resultado final.
                                         </p>
                                     </div>
 
@@ -3586,7 +3586,7 @@ export function DdsPage({
                                                     Leitura executada
                                                 </h4>
                                                 <p className="mt-1 text-xs font-bold text-slate-600">
-                                                    Resultado técnico de apoio. A conferência de assinatura/presença será feita nas próximas etapas.
+                                                    Resultado técnico de apoio. A assinatura/presença permanece como conferência visual provável ou manual.
                                                 </p>
                                             </div>
                                             <span className="rounded-xl border border-indigo-200 bg-white px-3 py-2 text-xs font-black text-indigo-800">
@@ -3773,7 +3773,7 @@ export function DdsPage({
                 Participantes do gabarito x leitura da folha
             </h4>
             <p className="mt-1 text-xs font-bold text-slate-500">
-                Conferência técnica auxiliar. Não valida assinatura, biometria ou grafia; indica apenas localização provável por texto/código quando a leitura permite.
+                Conferência técnica auxiliar. Não valida assinatura, biometria ou grafia; indica apenas localização provável por texto/código quando a leitura for confiável.
             </p>
         </div>
 
