@@ -1705,7 +1705,9 @@ function calcularScoreTextoOcrOrientacao(texto = "") {
         "certificado", "treinamento", "lista", "presenca", "presença", "ordem", "servico", "serviço",
         "registro", "empregado", "aso", "atestado", "saude", "saúde", "ocupacional", "empresa", "cnpj",
         "cpf", "colaborador", "nome", "funcao", "função", "assinatura", "ribeiro", "aquino", "data",
-        "admissao", "admissão", "epi", "ergonomia", "maquinas", "máquinas", "sinalizacao", "sinalização"
+        "admissao", "admissão", "epi", "ergonomia", "maquinas", "máquinas", "sinalizacao", "sinalização",
+        "dds", "dialogo", "diálogo", "diario", "diário", "seguranca", "segurança", "semanal",
+        "safescan", "participantes", "obra", "setor", "presenca", "presença", "folha", "conferencia", "conferência"
     ].reduce((total, termo) => total + (normalizado.includes(normalizarTextoVerificacao(termo)) ? 1 : 0), 0);
 
     return Math.min(100, tokens.length + termos * 8 + datas * 12 + Math.min(18, Math.floor(limpo.length / 80)));
@@ -1753,7 +1755,7 @@ async function reconhecerTextoCanvasComOcrComOrientacao(canvas) {
         return tentativas[0];
     }
 
-    for (const rotacao of [90, 270]) {
+    for (const rotacao of [90, 180, 270]) {
         const canvasRotacionado = criarCanvasRotacionado(canvas, rotacao);
         if (!canvasRotacionado || canvasRotacionado === canvas) continue;
 
@@ -2181,6 +2183,335 @@ async function extrairTextoPrimeiraPaginaPdfComOcr(buffer) {
     }
 }
 
+function normalizarTextoDdsScanner(valor = "") {
+    return normalizarTextoVerificacao(String(valor || ""))
+        .replace(/[^a-z0-9]+/g, " ")
+        .replace(/\s+/g, " ")
+        .trim();
+}
+
+function gerarVariacoesCodigoDds(codigo = "") {
+    const bruto = String(codigo || "").trim();
+    const normalizado = normalizarTextoDdsScanner(bruto);
+    const semSeparadores = normalizado.replace(/\s+/g, "");
+
+    return Array.from(new Set([
+        bruto,
+        normalizado,
+        semSeparadores,
+        bruto.replace(/-/g, " "),
+        bruto.replace(/-/g, ""),
+        bruto.replace(/^DDS/i, "DDS "),
+    ].map((item) => normalizarTextoDdsScanner(item)).filter((item) => item.length >= 5)));
+}
+
+function pontuarTextoDdsScanner(texto = "", contextoDds = {}) {
+    const normalizado = normalizarTextoDdsScanner(texto);
+    const indicios = [];
+    let score = 0;
+
+    if (!normalizado) {
+        return { score: 0, indicios, encontrouCodigo: false, termosLocalizados: 0 };
+    }
+
+    const contem = (valor = "") => {
+        const termo = normalizarTextoDdsScanner(valor);
+        return termo.length >= 3 && normalizado.includes(termo);
+    };
+
+    const codigos = gerarVariacoesCodigoDds(contextoDds?.codigo || contextoDds?.codigoEsperado || "");
+    const encontrouCodigo = codigos.some((codigo) => codigo && normalizado.includes(codigo));
+
+    if (encontrouCodigo) {
+        score += 45;
+        indicios.push("codigo_dds");
+    }
+
+    const termosFortes = [
+        ["dds", 12],
+        ["dds semanal", 18],
+        ["dialogo diario de seguranca", 18],
+        ["dialogo de seguranca", 14],
+        ["diario de seguranca", 14],
+        ["safescan", 12],
+        ["lista de presenca", 12],
+        ["participantes", 10],
+        ["codigo safescan", 10],
+        ["obra", 6],
+        ["periodo", 6],
+        ["responsavel", 5],
+    ];
+
+    let termosLocalizados = 0;
+
+    for (const [termo, peso] of termosFortes) {
+        if (contem(termo)) {
+            score += peso;
+            termosLocalizados += 1;
+            indicios.push(`termo:${termo}`);
+        }
+    }
+
+    const empresa = contextoDds?.empresaNome || contextoDds?.empresa || "";
+    const obra = contextoDds?.obraNome || contextoDds?.obra || "";
+    const periodoInicio = contextoDds?.periodoInicio || "";
+    const periodoFim = contextoDds?.periodoFim || "";
+
+    if (empresa && contem(empresa)) {
+        score += 14;
+        indicios.push("empresa");
+    }
+
+    if (obra && contem(obra)) {
+        score += 12;
+        indicios.push("obra");
+    }
+
+    if (periodoInicio && contem(periodoInicio)) {
+        score += 8;
+        indicios.push("periodo_inicio");
+    }
+
+    if (periodoFim && contem(periodoFim)) {
+        score += 8;
+        indicios.push("periodo_fim");
+    }
+
+    const participantes = Array.isArray(contextoDds?.participantes) ? contextoDds.participantes : [];
+    const amostraParticipantes = participantes.slice(0, 80);
+    let participantesLocalizados = 0;
+
+    for (const participante of amostraParticipantes) {
+        const codigo = participante?.codigoSafescan || participante?.codigoSafeScan || participante?.codigoFuncionario || participante?.codigo || "";
+        const nome = participante?.nome || "";
+
+        if ((codigo && contem(codigo)) || (nome && contem(nome))) {
+            participantesLocalizados += 1;
+        }
+    }
+
+    if (participantesLocalizados > 0) {
+        score += Math.min(20, participantesLocalizados * 4);
+        indicios.push(`participantes:${participantesLocalizados}`);
+    }
+
+    const tokens = normalizado.match(/[a-z0-9]{3,}/g) || [];
+    score += Math.min(15, Math.floor(tokens.length / 8));
+
+    return {
+        score: Math.max(0, Math.min(100, Math.round(score))),
+        indicios,
+        encontrouCodigo,
+        termosLocalizados,
+        participantesLocalizados,
+    };
+}
+
+async function extrairTextoPdfDdsComOcrDirecionado(buffer, contextoDds = {}) {
+    const avisos = [];
+
+    if (!buffer || !buffer.byteLength || typeof document === "undefined") {
+        return {
+            texto: "",
+            linhasOcr: [],
+            paginasLidas: 0,
+            totalPaginas: 0,
+            assinaturasTabela: [],
+            assinaturasDocumento: [],
+            confianca: 0,
+            diagnosticoDdsOcr: {
+                score: 0,
+                origem: "dds_ocr_nao_executado",
+            },
+            avisos,
+        };
+    }
+
+    try {
+        const pdfjsLib = await carregarPdfJsDocumental();
+        const tarefa = pdfjsLib.getDocument({
+            data: new Uint8Array(buffer.slice(0)),
+            disableFontFace: true,
+            useSystemFonts: true,
+            verbosity: 0,
+        });
+
+        const pdf = await tarefa.promise;
+        const totalPaginas = Number(pdf?.numPages || 0);
+
+        if (!totalPaginas) {
+            return {
+                texto: "",
+                linhasOcr: [],
+                paginasLidas: 0,
+                totalPaginas: 0,
+                assinaturasTabela: [],
+                assinaturasDocumento: [],
+                confianca: 0,
+                diagnosticoDdsOcr: {
+                    score: 0,
+                    origem: "dds_pdf_sem_paginas",
+                },
+                avisos: ["OCR direcionado DDS não encontrou páginas no PDF."],
+            };
+        }
+
+        const paginas = totalPaginas <= 6 ? Array.from({ length: totalPaginas }, (_, indice) => indice + 1) : Array.from(new Set([1, 2, totalPaginas - 1, totalPaginas].filter((pagina) => pagina >= 1 && pagina <= totalPaginas)));
+        const tentativas = [];
+
+        async function executarPagina(numeroPagina) {
+            const pagina = await pdf.getPage(numeroPagina);
+            const viewportBase = pagina.getViewport({ scale: 1 });
+            const escalaBase = 2.25;
+            const limiteLargura = 2400;
+            const limiteAltura = 1800;
+            const escalaMaximaPorLargura = viewportBase.width ? limiteLargura / viewportBase.width : escalaBase;
+            const escalaMaximaPorAltura = viewportBase.height ? limiteAltura / viewportBase.height : escalaBase;
+            const escalaSegura = Math.max(1.5, Math.min(escalaBase, escalaMaximaPorLargura, escalaMaximaPorAltura));
+            const viewport = pagina.getViewport({ scale: escalaSegura });
+            const canvas = document.createElement("canvas");
+            const contexto = canvas.getContext("2d", { willReadFrequently: true, alpha: false });
+
+            if (!contexto) {
+                avisos.push(`OCR direcionado DDS não conseguiu preparar canvas da página ${numeroPagina}.`);
+                return;
+            }
+
+            canvas.width = Math.ceil(viewport.width);
+            canvas.height = Math.ceil(viewport.height);
+            contexto.fillStyle = "#ffffff";
+            contexto.fillRect(0, 0, canvas.width, canvas.height);
+
+            await pagina.render({ canvasContext: contexto, viewport }).promise;
+            await new Promise((resolve) => setTimeout(resolve, 0));
+
+            const resultadoOcr = await reconhecerTextoCanvasComOcrComOrientacao(canvas);
+            const canvasAnalise = resultadoOcr?.canvasAnalise || canvas;
+            const texto = limparTextoPossivelDocumento(resultadoOcr?.texto || "");
+            const pontuacao = pontuarTextoDdsScanner(texto, contextoDds);
+            const textoNormalizadoOcr = normalizarTextoVerificacao(texto);
+
+            const linhasOcr = montarLinhasOcrComAssinatura(canvasAnalise, resultadoOcr?.palavras || [])
+                .map((linha) => ({
+                    ...linha,
+                    pagina: numeroPagina,
+                    rotacao: resultadoOcr?.rotacao || 0,
+                    texto: linha?.texto ? `DDS pág. ${numeroPagina}: ${linha.texto}` : linha?.texto,
+                }));
+
+            const pareceDds = pontuacao.score >= 25 || /dds|dialogo|diálogo|safescan|lista de presenca|lista de presença/.test(textoNormalizadoOcr);
+            const assinaturasTabela = pareceDds
+                ? detectarAssinaturasTabelaPresenca(canvasAnalise, { yInicio: 0.28, x0: 0.60, x1: 0.98, maxLinhas: 65 })
+                    .map((assinatura) => ({ ...assinatura, pagina: numeroPagina, rotacao: resultadoOcr?.rotacao || 0 }))
+                : [];
+
+            const assinaturasDocumento = detectarAssinaturasDocumento(canvasAnalise, numeroPagina, textoNormalizadoOcr)
+                .map((assinatura) => ({ ...assinatura, rotacao: resultadoOcr?.rotacao || 0 }));
+
+            tentativas.push({
+                pagina: numeroPagina,
+                texto,
+                linhasOcr,
+                assinaturasTabela,
+                assinaturasDocumento,
+                confianca: Number(resultadoOcr?.confianca || 0),
+                rotacao: resultadoOcr?.rotacao || 0,
+                score: pontuacao.score,
+                pontuacao,
+            });
+
+            try {
+                if (resultadoOcr?.canvasAnalise && resultadoOcr.canvasAnalise !== canvas) {
+                    resultadoOcr.canvasAnalise.width = 1;
+                    resultadoOcr.canvasAnalise.height = 1;
+                }
+
+                canvas.width = 1;
+                canvas.height = 1;
+            } catch {
+                // Liberação de memória sem bloquear o fluxo.
+            }
+
+            await new Promise((resolve) => setTimeout(resolve, 0));
+        }
+
+        for (const numeroPagina of paginas) {
+            await executarPagina(numeroPagina);
+        }
+
+        try {
+            await pdf.destroy();
+        } catch {
+            // Liberação de memória sem bloquear o fluxo.
+        }
+
+        const ordenadas = tentativas.sort((a, b) => {
+            const scoreA = Number(a.score || 0) + Math.min(20, Number(a.confianca || 0) / 5);
+            const scoreB = Number(b.score || 0) + Math.min(20, Number(b.confianca || 0) / 5);
+            return scoreB - scoreA;
+        });
+
+        const melhor = ordenadas[0] || null;
+        const textoFinal = limparTextoPossivelDocumento(
+            ordenadas
+                .filter((item) => item?.texto)
+                .slice(0, 2)
+                .map((item) => `Página ${item.pagina}: ${item.texto}`)
+                .join(" ")
+        );
+
+        const linhasOcr = ordenadas.flatMap((item) => item?.linhasOcr || []).slice(0, 120);
+        const assinaturasTabela = ordenadas.flatMap((item) => item?.assinaturasTabela || []).slice(0, 60);
+        const assinaturasDocumento = ordenadas.flatMap((item) => item?.assinaturasDocumento || []).slice(0, 30);
+        const score = Number(melhor?.score || 0);
+
+        avisos.push(`OCR direcionado DDS analisou página(s) ${paginas.join(", ")} em resolução ampliada para buscar código/cabeçalho do DDS.`);
+
+        if (melhor?.rotacao) {
+            avisos.push(`OCR direcionado DDS selecionou leitura com rotação ${melhor.rotacao}° na página ${melhor.pagina}.`);
+        }
+
+        if (score < 35) {
+            avisos.push("OCR direcionado DDS não encontrou código/cabeçalho com segurança suficiente.");
+        }
+
+        return {
+            texto: textoFinal,
+            linhasOcr,
+            paginasLidas: paginas.length,
+            totalPaginas,
+            assinaturasTabela,
+            assinaturasDocumento,
+            confianca: Number(melhor?.confianca || 0),
+            diagnosticoDdsOcr: {
+                score,
+                pagina: melhor?.pagina || 0,
+                rotacao: melhor?.rotacao || 0,
+                encontrouCodigo: Boolean(melhor?.pontuacao?.encontrouCodigo),
+                termosLocalizados: Number(melhor?.pontuacao?.termosLocalizados || 0),
+                participantesLocalizados: Number(melhor?.pontuacao?.participantesLocalizados || 0),
+                indicios: melhor?.pontuacao?.indicios || [],
+                origem: "dds_ocr_direcionado",
+            },
+            avisos,
+        };
+    } catch (error) {
+        return {
+            texto: "",
+            linhasOcr: [],
+            paginasLidas: 0,
+            totalPaginas: 0,
+            assinaturasTabela: [],
+            assinaturasDocumento: [],
+            confianca: 0,
+            diagnosticoDdsOcr: {
+                score: 0,
+                origem: "dds_ocr_erro",
+            },
+            avisos: [`OCR direcionado DDS indisponível: ${error?.message || "erro desconhecido"}.`],
+        };
+    }
+}
 function contextoIndicaDataDocumentalPrincipal(contexto = "") {
     const texto = normalizarTextoVerificacao(contexto);
 
@@ -2670,6 +3001,119 @@ export async function executarLeituraDocumentalLocal({ arquivo = null, arquivoNo
     }
 }
 
+export async function executarLeituraDdsLocal({
+    arquivo = null,
+    arquivoNome = "",
+    mimeType = "",
+    contextoDds = {},
+} = {}) {
+    const leituraBase = await executarLeituraDocumentalLocal({ arquivo, arquivoNome, mimeType });
+    const nome = obterNomeArquivo(arquivo, arquivoNome);
+    const mime = obterMimeArquivo(arquivo, mimeType);
+    const extensao = obterExtensaoArquivo({ arquivo, arquivoNome: nome });
+
+    const textoBase = [
+        leituraBase?.textoExtraido || "",
+        leituraBase?.textoPrevia || "",
+        ...((leituraBase?.linhasOcr || []).map((linha) => linha?.texto || "")),
+    ].join(" ");
+
+    const pontuacaoBase = pontuarTextoDdsScanner(textoBase, contextoDds);
+    let leituraDirecionada = null;
+
+    if (arquivoPossuiArrayBuffer(arquivo) && (mime === "application/pdf" || extensao === "pdf")) {
+        try {
+            const buffer = await arquivo.arrayBuffer();
+            leituraDirecionada = await extrairTextoPdfDdsComOcrDirecionado(buffer, contextoDds);
+        } catch (error) {
+            leituraDirecionada = {
+                texto: "",
+                linhasOcr: [],
+                paginasLidas: 0,
+                totalPaginas: leituraBase?.totalPaginas || 0,
+                assinaturasTabela: [],
+                assinaturasDocumento: [],
+                confianca: 0,
+                diagnosticoDdsOcr: {
+                    score: 0,
+                    origem: "dds_ocr_erro",
+                },
+                avisos: [`OCR direcionado DDS falhou: ${error?.message || "erro desconhecido"}.`],
+            };
+        }
+    }
+
+    const pontuacaoDirecionada = leituraDirecionada?.diagnosticoDdsOcr || {
+        ...pontuacaoBase,
+        origem: "leitura_base",
+    };
+
+    const scoreBase = Number(pontuacaoBase?.score || 0);
+    const scoreDirecionado = Number(pontuacaoDirecionada?.score || 0);
+    const textoDirecionado = limparTextoPossivelDocumento(leituraDirecionada?.texto || "");
+    const deveUsarDirecionada = Boolean(
+        textoDirecionado &&
+        (
+            scoreDirecionado >= Math.max(28, scoreBase + 8) ||
+            pontuacaoDirecionada.encontrouCodigo ||
+            scoreDirecionado >= 45
+        )
+    );
+
+    if (!deveUsarDirecionada) {
+        return {
+            ...leituraBase,
+            diagnosticoDdsOcr: {
+                score: scoreBase,
+                pagina: 0,
+                rotacao: 0,
+                encontrouCodigo: Boolean(pontuacaoBase?.encontrouCodigo),
+                termosLocalizados: Number(pontuacaoBase?.termosLocalizados || 0),
+                participantesLocalizados: Number(pontuacaoBase?.participantesLocalizados || 0),
+                indicios: pontuacaoBase?.indicios || [],
+                origem: "leitura_base",
+                scoreDirecionado,
+            },
+            avisos: [
+                ...(leituraBase?.avisos || []),
+                ...(leituraDirecionada?.avisos || []),
+                "Leitura direcionada DDS executada como apoio, mas a leitura base permaneceu como referência principal.",
+            ],
+        };
+    }
+
+    const textoSeguro = limitarTextoParaSalvar(textoDirecionado);
+    const confiancaBase = Number(leituraBase?.confianca || 0);
+    const confiancaDirecionada = Number(leituraDirecionada?.confianca || 0);
+    const confiancaFinal = Math.max(
+        confiancaBase,
+        Math.min(92, Math.round((confiancaDirecionada + scoreDirecionado) / 2))
+    );
+
+    return {
+        ...leituraBase,
+        tipoLeitura: "dds_ocr_direcionado",
+        textoExtraido: textoSeguro,
+        textoPrevia: montarPreviaTextoDocumento(textoSeguro),
+        linhasOcr: Array.isArray(leituraDirecionada?.linhasOcr) ? leituraDirecionada.linhasOcr.slice(0, 120) : [],
+        assinaturasTabela: Array.isArray(leituraDirecionada?.assinaturasTabela) ? leituraDirecionada.assinaturasTabela.slice(0, 60) : [],
+        assinaturasDocumento: Array.isArray(leituraDirecionada?.assinaturasDocumento) ? leituraDirecionada.assinaturasDocumento.slice(0, 30) : [],
+        paginasLidas: leituraDirecionada?.paginasLidas || leituraBase?.paginasLidas || 0,
+        totalPaginas: leituraDirecionada?.totalPaginas || leituraBase?.totalPaginas || 0,
+        confianca: confiancaFinal,
+        diagnosticoDdsOcr: {
+            ...pontuacaoDirecionada,
+            score: scoreDirecionado,
+            scoreBase,
+            origem: "dds_ocr_direcionado",
+        },
+        avisos: [
+            ...(leituraBase?.avisos || []),
+            ...(leituraDirecionada?.avisos || []),
+            `Leitura direcionada DDS selecionada com score ${scoreDirecionado}/100.`,
+        ],
+    };
+}
 function encontrarDataMaisProxima(dataCadastroIso, datas = []) {
     const dataCadastro = obterDataSeguraVerificacao(dataCadastroIso);
 
