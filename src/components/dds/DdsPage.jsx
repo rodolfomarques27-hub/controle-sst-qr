@@ -4,6 +4,8 @@ import {
     carregarRegistroDdsPorCodigo,
     salvarRegistroDds,
 } from "../../services/ddsRegistrosService";
+import { executarLeituraDocumentalLocal } from "../../services/documentosOcrService";
+
 import { obterUrlLogoEmpresa } from "../../services/supabaseServices";
 import { gerarCodigoFuncionario } from "../../services/colaboradorDocumentosService";
 import {
@@ -2150,6 +2152,9 @@ export function DdsPage({
     const [erroScannerDds, setErroScannerDds] = useState("");
     const [arquivoScannerDds, setArquivoScannerDds] = useState(null);
     const [erroArquivoScannerDds, setErroArquivoScannerDds] = useState("");
+    const [leituraArquivoScannerDds, setLeituraArquivoScannerDds] = useState(null);
+    const [carregandoLeituraArquivoScannerDds, setCarregandoLeituraArquivoScannerDds] = useState(false);
+    const [erroLeituraArquivoScannerDds, setErroLeituraArquivoScannerDds] = useState("");
 
 
     useEffect(() => {
@@ -2224,6 +2229,67 @@ export function DdsPage({
             tamanho: tamanhoFormatado,
         };
     }, [arquivoScannerDds]);
+
+    const avisosLeituraArquivoScannerDds = useMemo(
+        () => Array.isArray(leituraArquivoScannerDds?.avisos) ? leituraArquivoScannerDds.avisos : [],
+        [leituraArquivoScannerDds]
+    );
+
+    const linhasLeituraArquivoScannerDds = useMemo(
+        () => Array.isArray(leituraArquivoScannerDds?.linhasOcr) ? leituraArquivoScannerDds.linhasOcr : [],
+        [leituraArquivoScannerDds]
+    );
+
+    const textoPreviaArquivoScannerDds = useMemo(() => {
+        const texto = String(leituraArquivoScannerDds?.textoPrevia || leituraArquivoScannerDds?.textoExtraido || "").trim();
+
+        if (!texto) return "";
+
+        return texto.length > 900 ? `${texto.slice(0, 900).trim()}...` : texto;
+    }, [leituraArquivoScannerDds]);
+
+    const qualidadeLeituraArquivoScannerDds = useMemo(() => {
+        if (!leituraArquivoScannerDds) {
+            return {
+                textoStatus: "-",
+                statusConferencia: "Aguardando leitura",
+                confiavel: false,
+            };
+        }
+
+        const avisosTexto = avisosLeituraArquivoScannerDds.join(" ").toLowerCase();
+        const confianca = Number(leituraArquivoScannerDds?.confianca || 0);
+        const possuiTexto = Boolean(textoPreviaArquivoScannerDds);
+        const possuiLinhas = linhasLeituraArquivoScannerDds.length > 0;
+        const avisoSemTextoConfiavel =
+            avisosTexto.includes("não encontrou texto documental confiável") ||
+            avisosTexto.includes("nao encontrou texto documental confiavel") ||
+            avisosTexto.includes("não foi encontrado texto confiável") ||
+            avisosTexto.includes("nao foi encontrado texto confiavel") ||
+            avisosTexto.includes("conferência manual");
+
+        if (!possuiTexto) {
+            return {
+                textoStatus: "Não localizado",
+                statusConferencia: "Exige conferência manual",
+                confiavel: false,
+            };
+        }
+
+        if (avisoSemTextoConfiavel || !possuiLinhas || confianca < 65) {
+            return {
+                textoStatus: "Parcial / não confiável",
+                statusConferencia: "Exige conferência manual",
+                confiavel: false,
+            };
+        }
+
+        return {
+            textoStatus: "Localizado",
+            statusConferencia: "Leitura inicial aproveitável",
+            confiavel: true,
+        };
+    }, [avisosLeituraArquivoScannerDds, leituraArquivoScannerDds, linhasLeituraArquivoScannerDds, textoPreviaArquivoScannerDds]);
 
 
     const obraSetorFoiSalvaParaEmpresaDds = empresaSelecionadaChaveDds
@@ -2595,6 +2661,10 @@ export function DdsPage({
         const arquivo = evento?.target?.files?.[0] || null;
 
         setErroArquivoScannerDds("");
+        setLeituraArquivoScannerDds(null);
+        setErroLeituraArquivoScannerDds("");
+        setCarregandoLeituraArquivoScannerDds(false);
+
 
         if (!arquivo) {
             setArquivoScannerDds(null);
@@ -2628,6 +2698,41 @@ export function DdsPage({
     function limparArquivoScannerDds() {
         setArquivoScannerDds(null);
         setErroArquivoScannerDds("");
+        setLeituraArquivoScannerDds(null);
+        setErroLeituraArquivoScannerDds("");
+        setCarregandoLeituraArquivoScannerDds(false);
+    }
+
+    async function executarLeituraArquivoScannerDds() {
+        if (!arquivoScannerDds) {
+            setErroLeituraArquivoScannerDds("Anexe a folha DDS assinada antes de executar a leitura inicial.");
+            return;
+        }
+
+        if (carregandoLeituraArquivoScannerDds) return;
+
+        setCarregandoLeituraArquivoScannerDds(true);
+        setErroLeituraArquivoScannerDds("");
+        setLeituraArquivoScannerDds(null);
+
+        try {
+            const leitura = await executarLeituraDocumentalLocal({
+                arquivo: arquivoScannerDds,
+                arquivoNome: arquivoScannerDds.name || "",
+                mimeType: arquivoScannerDds.type || "",
+            });
+
+            setLeituraArquivoScannerDds(leitura || null);
+
+            if (leitura?.erro) {
+                setErroLeituraArquivoScannerDds(leitura.erro);
+            }
+        } catch (error) {
+            setLeituraArquivoScannerDds(null);
+            setErroLeituraArquivoScannerDds(error?.message || "Não foi possível executar a leitura inicial da folha DDS.");
+        } finally {
+            setCarregandoLeituraArquivoScannerDds(false);
+        }
     }
 
     return (
@@ -2976,23 +3081,153 @@ export function DdsPage({
                                 )}
 
                                 {resumoArquivoScannerDds && (
-                                    <div className="mt-4 grid gap-2 sm:grid-cols-3">
-                                        <div className="rounded-xl bg-slate-50 p-3 ring-1 ring-slate-100">
-                                            <p className="text-[10px] font-black uppercase tracking-wide text-slate-400">Arquivo</p>
-                                            <p className="mt-1 truncate text-sm font-black text-slate-900" title={resumoArquivoScannerDds.nome}>
-                                                {resumoArquivoScannerDds.nome}
+                                    <>
+                                        <div className="mt-4 grid gap-2 sm:grid-cols-3">
+                                            <div className="rounded-xl bg-slate-50 p-3 ring-1 ring-slate-100">
+                                                <p className="text-[10px] font-black uppercase tracking-wide text-slate-400">Arquivo</p>
+                                                <p className="mt-1 truncate text-sm font-black text-slate-900" title={resumoArquivoScannerDds.nome}>
+                                                    {resumoArquivoScannerDds.nome}
+                                                </p>
+                                            </div>
+                                            <div className="rounded-xl bg-slate-50 p-3 ring-1 ring-slate-100">
+                                                <p className="text-[10px] font-black uppercase tracking-wide text-slate-400">Tamanho</p>
+                                                <p className="mt-1 text-sm font-black text-slate-900">{resumoArquivoScannerDds.tamanho}</p>
+                                            </div>
+                                            <div className="rounded-xl bg-slate-50 p-3 ring-1 ring-slate-100">
+                                                <p className="text-[10px] font-black uppercase tracking-wide text-slate-400">Tipo</p>
+                                                <p className="mt-1 truncate text-sm font-black text-slate-900" title={resumoArquivoScannerDds.tipo}>
+                                                    {resumoArquivoScannerDds.tipo}
+                                                </p>
+                                            </div>
+                                        </div>
+
+                                        <div className="mt-4 flex flex-col gap-3 rounded-2xl border border-slate-100 bg-slate-50 p-3 sm:flex-row sm:items-center sm:justify-between">
+                                            <div>
+                                                <p className="text-xs font-black text-slate-900">Leitura inicial do arquivo</p>
+                                                <p className="mt-1 text-xs font-bold text-slate-500">
+                                                    Executa leitura local do PDF/imagem para identificar texto, páginas e linhas. Ainda não valida assinatura nem presença.
+                                                </p>
+                                            </div>
+                                            <button
+                                                type="button"
+                                                onClick={executarLeituraArquivoScannerDds}
+                                                disabled={!arquivoScannerDds || carregandoLeituraArquivoScannerDds}
+                                                className="rounded-xl bg-cyan-600 px-4 py-2 text-xs font-black text-white shadow-sm transition hover:bg-cyan-500 disabled:cursor-not-allowed disabled:opacity-60"
+                                            >
+                                                {carregandoLeituraArquivoScannerDds ? "Lendo arquivo..." : "Ler arquivo anexado"}
+                                            </button>
+                                        </div>
+                                    </>
+                                )}
+
+                                {erroLeituraArquivoScannerDds && (
+                                    <p className="mt-3 rounded-xl border border-red-100 bg-red-50 px-3 py-2 text-xs font-bold text-red-700">
+                                        {erroLeituraArquivoScannerDds}
+                                    </p>
+                                )}
+
+                                {leituraArquivoScannerDds && (
+                                    <div className="mt-4 rounded-2xl border border-indigo-100 bg-indigo-50/60 p-4 ring-1 ring-indigo-50">
+                                        <div className="flex flex-col gap-2 lg:flex-row lg:items-start lg:justify-between">
+                                            <div>
+                                                <p className="text-[11px] font-black uppercase tracking-wide text-indigo-700">
+                                                    Diagnóstico inicial do arquivo
+                                                </p>
+                                                <h4 className="mt-1 text-base font-black text-slate-950">
+                                                    Leitura executada
+                                                </h4>
+                                                <p className="mt-1 text-xs font-bold text-slate-600">
+                                                    Resultado técnico de apoio. A conferência de assinatura/presença será feita nas próximas etapas.
+                                                </p>
+                                            </div>
+                                            <span className="rounded-xl border border-indigo-200 bg-white px-3 py-2 text-xs font-black text-indigo-800">
+                                                {String(leituraArquivoScannerDds.tipoLeitura || "leitura_inicial").replace(/_/g, " ")}
+                                            </span>
+                                        </div>
+
+                                        <div className="mt-4 grid gap-2 sm:grid-cols-4">
+                                            <div className="rounded-xl bg-white p-3 ring-1 ring-indigo-100">
+                                                <p className="text-[10px] font-black uppercase tracking-wide text-slate-400">Páginas lidas</p>
+                                                <p className="mt-1 text-lg font-black text-slate-950">
+                                                    {leituraArquivoScannerDds.paginasLidas || 0}/{leituraArquivoScannerDds.totalPaginas || 0}
+                                                </p>
+                                            </div>
+                                            <div className="rounded-xl bg-white p-3 ring-1 ring-indigo-100">
+                                                <p className="text-[10px] font-black uppercase tracking-wide text-slate-400">Linhas OCR</p>
+                                                <p className="mt-1 text-lg font-black text-slate-950">{linhasLeituraArquivoScannerDds.length}</p>
+                                            </div>
+                                            <div className="rounded-xl bg-white p-3 ring-1 ring-indigo-100">
+                                                <p className="text-[10px] font-black uppercase tracking-wide text-slate-400">Texto</p>
+                                                <p className="mt-1 text-lg font-black text-slate-950">
+                                                    {qualidadeLeituraArquivoScannerDds.textoStatus}
+                                                </p>
+                                            </div>
+                                            <div className="rounded-xl bg-white p-3 ring-1 ring-indigo-100">
+                                                <p className="text-[10px] font-black uppercase tracking-wide text-slate-400">Confiança</p>
+                                                <p className="mt-1 text-lg font-black text-slate-950">
+                                                    {Number.isFinite(Number(leituraArquivoScannerDds.confianca)) ? `${Math.round(Number(leituraArquivoScannerDds.confianca))}%` : "-"}
+                                                </p>
+                                            </div>
+                                        </div>
+
+                                        <div className={`mt-4 rounded-xl border p-3 ${
+                                            qualidadeLeituraArquivoScannerDds.confiavel
+                                                ? "border-emerald-100 bg-emerald-50 text-emerald-800"
+                                                : "border-amber-100 bg-amber-50 text-amber-800"
+                                        }`}>
+                                            <p className="text-[10px] font-black uppercase tracking-wide">Status técnico da leitura</p>
+                                            <p className="mt-1 text-sm font-black">
+                                                {qualidadeLeituraArquivoScannerDds.statusConferencia}
                                             </p>
+                                            {!qualidadeLeituraArquivoScannerDds.confiavel && (
+                                                <p className="mt-1 text-xs font-bold">
+                                                    O arquivo foi lido, mas o texto retornado não tem qualidade suficiente para comparar presença ou assinatura automaticamente.
+                                                </p>
+                                            )}
                                         </div>
-                                        <div className="rounded-xl bg-slate-50 p-3 ring-1 ring-slate-100">
-                                            <p className="text-[10px] font-black uppercase tracking-wide text-slate-400">Tamanho</p>
-                                            <p className="mt-1 text-sm font-black text-slate-900">{resumoArquivoScannerDds.tamanho}</p>
-                                        </div>
-                                        <div className="rounded-xl bg-slate-50 p-3 ring-1 ring-slate-100">
-                                            <p className="text-[10px] font-black uppercase tracking-wide text-slate-400">Tipo</p>
-                                            <p className="mt-1 truncate text-sm font-black text-slate-900" title={resumoArquivoScannerDds.tipo}>
-                                                {resumoArquivoScannerDds.tipo}
-                                            </p>
-                                        </div>
+
+                                        {textoPreviaArquivoScannerDds && (
+                                            <div className="mt-4 rounded-xl bg-white p-3 ring-1 ring-indigo-100">
+                                                <p className="text-[10px] font-black uppercase tracking-wide text-slate-400">Prévia do texto lido</p>
+                                                <pre className="mt-2 max-h-40 overflow-auto whitespace-pre-wrap text-xs font-semibold leading-5 text-slate-700">
+                                                    {textoPreviaArquivoScannerDds}
+                                                </pre>
+                                            </div>
+                                        )}
+
+                                        {avisosLeituraArquivoScannerDds.length > 0 && (
+                                            <div className="mt-4 rounded-xl border border-amber-100 bg-amber-50 p-3">
+                                                <p className="text-[10px] font-black uppercase tracking-wide text-amber-700">Avisos da leitura</p>
+                                                <ul className="mt-2 space-y-1 text-xs font-bold text-amber-800">
+                                                    {avisosLeituraArquivoScannerDds.slice(0, 6).map((aviso, indice) => (
+                                                        <li key={`aviso-leitura-dds-${indice}`}>• {aviso}</li>
+                                                    ))}
+                                                </ul>
+                                            </div>
+                                        )}
+
+                                        {linhasLeituraArquivoScannerDds.length > 0 && (
+                                            <div className="mt-4 overflow-hidden rounded-xl border border-indigo-100 bg-white">
+                                                <div className="max-h-56 overflow-auto">
+                                                    <table className="w-full border-collapse text-left text-xs">
+                                                        <thead className="sticky top-0 bg-indigo-50 text-[10px] uppercase tracking-wide text-indigo-500">
+                                                            <tr>
+                                                                <th className="px-3 py-2">Página</th>
+                                                                <th className="px-3 py-2">Linha lida</th>
+                                                            </tr>
+                                                        </thead>
+                                                        <tbody className="divide-y divide-indigo-50">
+                                                            {linhasLeituraArquivoScannerDds.slice(0, 12).map((linha, indice) => (
+                                                                <tr key={`linha-leitura-dds-${linha?.pagina || "p"}-${linha?.indice ?? indice}`}>
+                                                                    <td className="w-20 px-3 py-2 font-black text-slate-500">{linha?.pagina || "-"}</td>
+                                                                    <td className="px-3 py-2 font-semibold text-slate-700">{linha?.texto || "-"}</td>
+                                                                </tr>
+                                                            ))}
+                                                        </tbody>
+                                                    </table>
+                                                </div>
+                                            </div>
+                                        )}
                                     </div>
                                 )}
                             </div>
