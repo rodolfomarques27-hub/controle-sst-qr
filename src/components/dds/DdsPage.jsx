@@ -2611,6 +2611,135 @@ export function DdsPage({
         qualidadeLeituraArquivoScannerDds,
     ]);
 
+    const resultadoFinalScannerDds = useMemo(() => {
+        const gabaritoCarregado = Boolean(registroScannerDds);
+        const folhaAnexada = Boolean(arquivoScannerDds);
+        const leituraExecutada = Boolean(leituraArquivoScannerDds);
+        const leituraConfiavel = Boolean(qualidadeLeituraArquivoScannerDds?.confiavel);
+        const participantesTotal = Number(preConferenciaParticipantesScannerDds?.total || 0);
+        const participantesLocalizados = Number(preConferenciaParticipantesScannerDds?.localizados || 0);
+        const participantesManuais = Number(preConferenciaParticipantesScannerDds?.manuais || 0);
+        const participantesNaoLocalizados = Number(preConferenciaParticipantesScannerDds?.naoLocalizados || 0);
+        const participantesPendentes = Number(preConferenciaParticipantesScannerDds?.pendentes || 0);
+
+        const itens = [
+            {
+                titulo: "Gabarito digital",
+                ok: gabaritoCarregado,
+                detalhe: gabaritoCarregado ? "Registro DDS carregado." : "Gabarito DDS ainda não carregado.",
+            },
+            {
+                titulo: "Folha assinada",
+                ok: folhaAnexada,
+                detalhe: folhaAnexada ? "Arquivo anexado para conferência." : "Folha assinada ainda não anexada.",
+            },
+            {
+                titulo: "Leitura inicial",
+                ok: leituraExecutada && leituraConfiavel,
+                detalhe: leituraExecutada
+                    ? qualidadeLeituraArquivoScannerDds.statusConferencia
+                    : "Leitura inicial ainda não executada.",
+                manual: leituraExecutada && !leituraConfiavel,
+            },
+            {
+                titulo: "Diagnóstico estrutural",
+                ok: diagnosticoEstruturalScannerDds?.statusVisual === "ok",
+                detalhe: diagnosticoEstruturalScannerDds?.statusGeral || "Aguardando diagnóstico estrutural.",
+                manual: diagnosticoEstruturalScannerDds?.statusVisual === "manual",
+            },
+            {
+                titulo: "Participantes",
+                ok: participantesTotal > 0 && participantesLocalizados === participantesTotal,
+                detalhe: `${participantesLocalizados}/${participantesTotal} participante(s) localizado(s); ${participantesManuais} em conferência manual.`,
+                manual: participantesTotal > 0 && (participantesManuais > 0 || participantesNaoLocalizados > 0 || participantesPendentes > 0),
+            },
+            {
+                titulo: "Assinatura / presença",
+                ok: false,
+                detalhe: "Não há validação grafológica automática. A assinatura permanece como conferência visual provável/manual.",
+                manual: true,
+            },
+        ];
+
+        let statusFinal = "Exige conferência manual";
+        let statusVisual = "manual";
+        let titulo = "Exige conferência manual";
+        let descricao = "A conferência automática não tem base suficiente para concluir o DDS sem revisão humana.";
+
+        if (!gabaritoCarregado || !folhaAnexada || !leituraExecutada) {
+            statusFinal = "Parcial";
+            statusVisual = "parcial";
+            titulo = "Conferência parcial";
+            descricao = "Ainda faltam etapas obrigatórias para concluir a conferência do DDS.";
+        } else if (
+            leituraConfiavel &&
+            diagnosticoEstruturalScannerDds?.statusVisual === "ok" &&
+            participantesTotal > 0 &&
+            participantesLocalizados === participantesTotal
+        ) {
+            statusFinal = "Conferido";
+            statusVisual = "ok";
+            titulo = "DDS conferido tecnicamente";
+            descricao = "Gabarito, folha, leitura e participantes ficaram compatíveis. A assinatura ainda deve ser tratada como conferência visual provável, não como perícia grafotécnica.";
+        } else if (
+            leituraConfiavel &&
+            participantesLocalizados > 0 &&
+            participantesLocalizados < participantesTotal
+        ) {
+            statusFinal = "Parcial";
+            statusVisual = "parcial";
+            titulo = "Conferência parcial";
+            descricao = "Parte dos dados foi localizada, mas ainda existem participantes ou campos que exigem revisão manual.";
+        }
+
+        const recomendacoes = [];
+
+        if (!gabaritoCarregado) {
+            recomendacoes.push("Buscar o registro DDS pelo código impresso antes de concluir.");
+        }
+
+        if (!folhaAnexada) {
+            recomendacoes.push("Anexar a folha DDS assinada em PDF ou imagem.");
+        }
+
+        if (!leituraExecutada) {
+            recomendacoes.push("Executar a leitura inicial do arquivo anexado.");
+        }
+
+        if (leituraExecutada && !leituraConfiavel) {
+            recomendacoes.push("Refazer o scan em melhor qualidade, preferencialmente alinhado, sem rotação e com boa iluminação.");
+        }
+
+        if (participantesManuais > 0 || participantesNaoLocalizados > 0) {
+            recomendacoes.push("Conferir manualmente as linhas dos participantes marcados como manual/não localizados.");
+        }
+
+        recomendacoes.push("Não usar o resultado como validação grafológica; manter conferência visual/documental.");
+
+        return {
+            statusFinal,
+            statusVisual,
+            titulo,
+            descricao,
+            itens,
+            recomendacoes,
+            resumo: {
+                participantesTotal,
+                participantesLocalizados,
+                participantesManuais,
+                participantesNaoLocalizados,
+                participantesPendentes,
+            },
+        };
+    }, [
+        arquivoScannerDds,
+        diagnosticoEstruturalScannerDds,
+        leituraArquivoScannerDds,
+        preConferenciaParticipantesScannerDds,
+        qualidadeLeituraArquivoScannerDds,
+        registroScannerDds,
+    ]);
+
 
     const obraSetorFoiSalvaParaEmpresaDds = empresaSelecionadaChaveDds
         ? Object.prototype.hasOwnProperty.call(obrasSetorPorEmpresaDds || {}, empresaSelecionadaChaveDds)
@@ -3732,6 +3861,99 @@ export function DdsPage({
     <p className="mt-3 text-[11px] font-bold leading-5 text-slate-500">
         Observação: esta etapa não substitui conferência visual da assinatura. O status indica apenas localização textual provável ou necessidade de conferência manual.
     </p>
+</div>
+)}
+
+{resultadoFinalScannerDds && (
+<div className={`rounded-2xl border p-5 ring-1 lg:col-span-2 ${
+    resultadoFinalScannerDds.statusVisual === "ok"
+        ? "border-emerald-200 bg-emerald-50 ring-emerald-100"
+        : resultadoFinalScannerDds.statusVisual === "parcial"
+            ? "border-amber-200 bg-amber-50 ring-amber-100"
+            : "border-red-200 bg-red-50 ring-red-100"
+}`}>
+    <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+        <div>
+            <p className={`text-[11px] font-black uppercase tracking-wide ${
+                resultadoFinalScannerDds.statusVisual === "ok"
+                    ? "text-emerald-700"
+                    : resultadoFinalScannerDds.statusVisual === "parcial"
+                        ? "text-amber-700"
+                        : "text-red-700"
+            }`}>
+                Resultado final da conferência DDS
+            </p>
+            <h4 className="mt-1 text-xl font-black text-slate-950">
+                {resultadoFinalScannerDds.titulo}
+            </h4>
+            <p className="mt-1 max-w-4xl text-sm font-bold leading-6 text-slate-700">
+                {resultadoFinalScannerDds.descricao}
+            </p>
+        </div>
+
+        <span className={`rounded-xl border px-4 py-2 text-sm font-black ${
+            resultadoFinalScannerDds.statusVisual === "ok"
+                ? "border-emerald-300 bg-white text-emerald-800"
+                : resultadoFinalScannerDds.statusVisual === "parcial"
+                    ? "border-amber-300 bg-white text-amber-800"
+                    : "border-red-300 bg-white text-red-800"
+        }`}>
+            {resultadoFinalScannerDds.statusFinal}
+        </span>
+    </div>
+
+    <div className="mt-4 grid gap-2 sm:grid-cols-2 xl:grid-cols-5">
+        <div className="rounded-xl bg-white/80 p-3 ring-1 ring-white">
+            <p className="text-[10px] font-black uppercase tracking-wide text-slate-400">Participantes</p>
+            <p className="mt-1 text-lg font-black text-slate-950">{resultadoFinalScannerDds.resumo.participantesTotal}</p>
+        </div>
+        <div className="rounded-xl bg-white/80 p-3 ring-1 ring-white">
+            <p className="text-[10px] font-black uppercase tracking-wide text-emerald-700">Localizados</p>
+            <p className="mt-1 text-lg font-black text-emerald-900">{resultadoFinalScannerDds.resumo.participantesLocalizados}</p>
+        </div>
+        <div className="rounded-xl bg-white/80 p-3 ring-1 ring-white">
+            <p className="text-[10px] font-black uppercase tracking-wide text-amber-700">Manual</p>
+            <p className="mt-1 text-lg font-black text-amber-900">{resultadoFinalScannerDds.resumo.participantesManuais}</p>
+        </div>
+        <div className="rounded-xl bg-white/80 p-3 ring-1 ring-white">
+            <p className="text-[10px] font-black uppercase tracking-wide text-red-700">Não localizados</p>
+            <p className="mt-1 text-lg font-black text-red-900">{resultadoFinalScannerDds.resumo.participantesNaoLocalizados}</p>
+        </div>
+        <div className="rounded-xl bg-white/80 p-3 ring-1 ring-white">
+            <p className="text-[10px] font-black uppercase tracking-wide text-slate-400">Pendentes</p>
+            <p className="mt-1 text-lg font-black text-slate-950">{resultadoFinalScannerDds.resumo.participantesPendentes}</p>
+        </div>
+    </div>
+
+    <div className="mt-4 grid gap-2 lg:grid-cols-3">
+        {resultadoFinalScannerDds.itens.map((item, indice) => (
+            <div
+                key={`resultado-final-dds-${indice}`}
+                className="rounded-xl bg-white/80 p-3 ring-1 ring-white"
+            >
+                <p className={`text-[10px] font-black uppercase tracking-wide ${
+                    item.ok
+                        ? "text-emerald-700"
+                        : item.manual
+                            ? "text-amber-700"
+                            : "text-slate-400"
+                }`}>
+                    {item.ok ? "OK" : item.manual ? "Manual" : "Pendente"}
+                </p>
+                <p className="mt-1 text-sm font-black text-slate-950">{item.titulo}</p>
+                <p className="mt-1 text-xs font-bold leading-5 text-slate-600">{item.detalhe}</p>
+            </div>
+        ))}
+    </div>
+
+    <div className="mt-4 rounded-xl bg-white/80 p-3 ring-1 ring-white">
+        <p className="text-[10px] font-black uppercase tracking-wide text-slate-500">Recomendações</p>
+        <ul className="mt-2 space-y-1 text-xs font-bold leading-5 text-slate-700">
+            {resultadoFinalScannerDds.recomendacoes.map((item, indice) => (
+                <li key={`recomendacao-final-dds-${indice}`}>• {item}</li>
+            ))}
+        </ul>
+    </div>
 </div>
 )}
 
