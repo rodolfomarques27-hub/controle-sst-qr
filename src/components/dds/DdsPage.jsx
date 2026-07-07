@@ -1,6 +1,9 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { QRCodeSVG } from "qrcode.react";
-import { salvarRegistroDds } from "../../services/ddsRegistrosService";
+import {
+    carregarRegistroDdsPorCodigo,
+    salvarRegistroDds,
+} from "../../services/ddsRegistrosService";
 import { obterUrlLogoEmpresa } from "../../services/supabaseServices";
 import { gerarCodigoFuncionario } from "../../services/colaboradorDocumentosService";
 import {
@@ -2141,6 +2144,10 @@ export function DdsPage({
     const [registroDdsConferencia, setRegistroDdsConferencia] = useState(null);
     const [salvandoRegistroDds, setSalvandoRegistroDds] = useState(false);
     const [erroRegistroDds, setErroRegistroDds] = useState("");
+    const [codigoConferenciaDds, setCodigoConferenciaDds] = useState("");
+    const [registroScannerDds, setRegistroScannerDds] = useState(null);
+    const [carregandoScannerDds, setCarregandoScannerDds] = useState(false);
+    const [erroScannerDds, setErroScannerDds] = useState("");
 
 
     useEffect(() => {
@@ -2190,6 +2197,16 @@ export function DdsPage({
         recadosSemana: recadosDdsEditaveis,
         orientacoesImportantes: orientacoesDdsEditaveis,
     }), [dadosDds, registroDdsConferencia, logoEmpresaDds, empresaSelecionadaDds, logoContratanteDds, empresaContratanteDds, logosEmpresasCabecalhoDds, recadosDdsEditaveis, orientacoesDdsEditaveis]);
+
+    const participantesRegistroScannerDds = useMemo(
+        () => Array.isArray(registroScannerDds?.dados?.participantes) ? registroScannerDds.dados.participantes : [],
+        [registroScannerDds]
+    );
+
+    const diasRegistroScannerDds = useMemo(
+        () => Array.isArray(registroScannerDds?.dados?.diasSemana) ? registroScannerDds.dados.diasSemana : [],
+        [registroScannerDds]
+    );
 
 
     const obraSetorFoiSalvaParaEmpresaDds = empresaSelecionadaChaveDds
@@ -2513,6 +2530,50 @@ export function DdsPage({
         }
     }
 
+    async function buscarRegistroScannerDds(evento = null) {
+        evento?.preventDefault?.();
+
+        if (carregandoScannerDds) return;
+
+        const codigoBusca = String(codigoConferenciaDds || dadosDds.codigo || "").trim();
+
+        if (!codigoBusca) {
+            setErroScannerDds("Informe o código do DDS impresso.");
+            setRegistroScannerDds(null);
+            return;
+        }
+
+        if (!supabase) {
+            setErroScannerDds("Supabase não disponível para carregar o registro do DDS.");
+            setRegistroScannerDds(null);
+            return;
+        }
+
+        setCarregandoScannerDds(true);
+        setErroScannerDds("");
+
+        try {
+            const registro = await carregarRegistroDdsPorCodigo({
+                supabase,
+                codigo: codigoBusca,
+            });
+
+            if (!registro) {
+                setRegistroScannerDds(null);
+                setErroScannerDds("Nenhum registro de DDS foi localizado para este código.");
+                return;
+            }
+
+            setRegistroScannerDds(registro);
+            setCodigoConferenciaDds(registro.codigo || codigoBusca);
+        } catch (error) {
+            setRegistroScannerDds(null);
+            setErroScannerDds(error?.message || "Não foi possível carregar o registro do DDS.");
+        } finally {
+            setCarregandoScannerDds(false);
+        }
+    }
+
     return (
         <div className="space-y-6">
             <DdsPrintStyles />
@@ -2728,6 +2789,161 @@ export function DdsPage({
                     <div className="mt-4 rounded-2xl bg-white p-4 text-sm font-bold leading-6 text-slate-600 ring-1 ring-emerald-100">
                         A folha semanal terá domingo a sábado, assinatura/rubrica nos dias e uma coluna final Presente com quadrado para marcação.
                     </div>
+                </div>
+
+                <div className="rounded-3xl border border-cyan-100 bg-cyan-50 p-5 shadow-sm">
+                    <div
+                        onClick={() => alternarCardDds("conferencia")}
+                        role="button"
+                        tabIndex={0}
+                        onKeyDown={(evento) => { if (evento.key === "Enter" || evento.key === " ") alternarCardDds("conferencia"); }}
+                        className="flex cursor-pointer items-center justify-between gap-3 rounded-2xl transition hover:bg-white/50"
+                    >
+                        <div className="flex items-center gap-3">
+                            <span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-white text-cyan-700 ring-1 ring-cyan-100">
+                                <ShieldCheck className="h-5 w-5" />
+                            </span>
+                            <div>
+                                <h2 className="text-lg font-black text-cyan-950">Conferência DDS</h2>
+                                <p className="text-sm font-semibold text-cyan-800">
+                                    Busque o DDS salvo pelo código impresso antes de analisar a folha assinada.
+                                </p>
+                            </div>
+                        </div>
+                        <button
+                            type="button"
+                            onClick={(evento) => { evento.stopPropagation(); alternarCardDds("conferencia"); }}
+                            className="shrink-0"
+                        >
+                            <BotaoAlternarCardDds aberto={cardDdsAberto("conferencia")} />
+                        </button>
+                    </div>
+
+                    {cardDdsAberto("conferencia") && (
+                        <div className="mt-4 grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(320px,420px)]">
+                            <form
+                                onSubmit={buscarRegistroScannerDds}
+                                className="rounded-2xl border border-cyan-100 bg-white p-4 ring-1 ring-cyan-50"
+                            >
+                                <label className="block">
+                                    <span className="text-[11px] font-black uppercase tracking-wide text-cyan-700">
+                                        Código do DDS
+                                    </span>
+                                    <input
+                                        type="text"
+                                        value={codigoConferenciaDds}
+                                        onChange={(evento) => setCodigoConferenciaDds(evento.target.value)}
+                                        placeholder={dadosDds.codigo || "Ex.: DDS-EMP-2026-06-14"}
+                                        className="mt-2 w-full rounded-xl border border-cyan-100 bg-cyan-50/60 px-3 py-2 text-sm font-black text-slate-800 outline-none transition focus:border-cyan-400 focus:ring-2 focus:ring-cyan-100"
+                                    />
+                                </label>
+
+                                <div className="mt-3 flex flex-wrap gap-2">
+                                    <button
+                                        type="submit"
+                                        disabled={carregandoScannerDds}
+                                        className="rounded-xl bg-cyan-600 px-4 py-2 text-xs font-black text-white shadow-sm transition hover:bg-cyan-500 disabled:cursor-not-allowed disabled:opacity-60"
+                                    >
+                                        {carregandoScannerDds ? "Buscando..." : "Buscar registro"}
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={() => setCodigoConferenciaDds(dadosDds.codigo || "")}
+                                        className="rounded-xl border border-cyan-200 bg-white px-4 py-2 text-xs font-black text-cyan-800 shadow-sm transition hover:bg-cyan-50"
+                                    >
+                                        Usar código atual
+                                    </button>
+                                </div>
+
+                                {erroScannerDds && (
+                                    <p className="mt-3 rounded-xl border border-red-100 bg-red-50 px-3 py-2 text-xs font-bold text-red-700">
+                                        {erroScannerDds}
+                                    </p>
+                                )}
+                            </form>
+
+                            <div className="rounded-2xl border border-cyan-100 bg-white p-4 text-sm font-bold leading-6 text-slate-600 ring-1 ring-cyan-50">
+                                <p className="font-black text-cyan-900">Primeira etapa do scanner DDS</p>
+                                <p className="mt-1">
+                                    Nesta etapa o sistema carrega o gabarito digital salvo na impressão. Depois vamos anexar a folha assinada e comparar presença/assinaturas por linha.
+                                </p>
+                            </div>
+
+                            {registroScannerDds && (
+                                <div className="rounded-2xl border border-emerald-100 bg-white p-4 ring-1 ring-emerald-50 lg:col-span-2">
+                                    <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+                                        <div>
+                                            <p className="text-[11px] font-black uppercase tracking-wide text-emerald-700">
+                                                Registro localizado
+                                            </p>
+                                            <h3 className="mt-1 text-xl font-black text-slate-950">
+                                                {registroScannerDds.codigo}
+                                            </h3>
+                                            <p className="mt-1 text-sm font-semibold text-slate-600">
+                                                {registroScannerDds.empresaNome || "Empresa não informada"} · {registroScannerDds.obraNome || "Obra não informada"}
+                                            </p>
+                                            <p className="mt-1 text-xs font-bold text-slate-500">
+                                                Período: {registroScannerDds.periodoInicio || "-"} a {registroScannerDds.periodoFim || "-"}
+                                            </p>
+                                        </div>
+
+                                        {registroScannerDds.urlConferencia && (
+                                            <a
+                                                href={registroScannerDds.urlConferencia}
+                                                target="_blank"
+                                                rel="noreferrer"
+                                                className="rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs font-black text-emerald-800 transition hover:bg-emerald-100"
+                                            >
+                                                Abrir QR público
+                                            </a>
+                                        )}
+                                    </div>
+
+                                    <div className="mt-4 grid gap-2 sm:grid-cols-3">
+                                        <div className="rounded-xl bg-slate-50 p-3 ring-1 ring-slate-100">
+                                            <p className="text-[10px] font-black uppercase tracking-wide text-slate-400">Participantes</p>
+                                            <p className="mt-1 text-lg font-black text-slate-950">{participantesRegistroScannerDds.length}</p>
+                                        </div>
+                                        <div className="rounded-xl bg-slate-50 p-3 ring-1 ring-slate-100">
+                                            <p className="text-[10px] font-black uppercase tracking-wide text-slate-400">Dias DDS</p>
+                                            <p className="mt-1 text-lg font-black text-slate-950">{diasRegistroScannerDds.length || 7}</p>
+                                        </div>
+                                        <div className="rounded-xl bg-slate-50 p-3 ring-1 ring-slate-100">
+                                            <p className="text-[10px] font-black uppercase tracking-wide text-slate-400">Status</p>
+                                            <p className="mt-1 text-lg font-black text-emerald-700">Gabarito carregado</p>
+                                        </div>
+                                    </div>
+
+                                    {participantesRegistroScannerDds.length > 0 && (
+                                        <div className="mt-4 overflow-hidden rounded-xl border border-slate-100">
+                                            <div className="max-h-64 overflow-auto">
+                                                <table className="w-full border-collapse text-left text-xs">
+                                                    <thead className="sticky top-0 bg-slate-50 text-[10px] uppercase tracking-wide text-slate-400">
+                                                        <tr>
+                                                            <th className="px-3 py-2">Nº</th>
+                                                            <th className="px-3 py-2">Nome</th>
+                                                            <th className="px-3 py-2">Função</th>
+                                                            <th className="px-3 py-2">Código SafeScan</th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody className="divide-y divide-slate-100">
+                                                        {participantesRegistroScannerDds.slice(0, 80).map((participante, indice) => (
+                                                            <tr key={`${participante.nome || "participante"}-${indice}`}>
+                                                                <td className="px-3 py-2 font-black text-slate-500">{participante.numero || indice + 1}</td>
+                                                                <td className="px-3 py-2 font-bold text-slate-800">{participante.nome || "-"}</td>
+                                                                <td className="px-3 py-2 text-slate-600">{participante.funcao || "-"}</td>
+                                                                <td className="px-3 py-2 font-mono text-[11px] font-bold text-slate-700">{participante.codigoSafescan || participante.codigoFuncionario || "-"}</td>
+                                                            </tr>
+                                                        ))}
+                                                    </tbody>
+                                                </table>
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+                            )}
+                        </div>
+                    )}
                 </div>
             </section>
 
