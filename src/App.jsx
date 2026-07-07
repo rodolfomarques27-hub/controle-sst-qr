@@ -24,7 +24,7 @@ import {
     obterTokenQrPublicoApp,
     verificarRotaNovaAuditoriaCampoApp,
 } from "./routes/appRoutesService";
-import { obterTokenDdsPublicoUrl } from "./services/ddsRegistrosService";
+import { consultarDdsPublico, obterTokenDdsPublicoUrl } from "./services/ddsRegistrosService";
 import { sanitizarNomeArquivo } from "./utils/sstUtils";
 import {
     carregarPermissaoSistemaAtualService,
@@ -60,7 +60,6 @@ const carregarColaboradoresHandlers = () => import("./services/appColaboradoresH
 const carregarTreinamentosHandlers = () => import("./services/appTreinamentosHandlersService");
 const carregarAuditoriaHandlers = () => import("./services/appAuditoriaHandlersService");
 const carregarConsultaPublicaQrHandlers = () => import("./services/consultaPublicaQrService");
-const carregarDdsRegistrosHandlers = () => import("./services/ddsRegistrosService");
 const carregarEmpresaDocumentosHandlers = () => import("./services/empresaDocumentosService");
 const carregarObrasEmpresasService = () => import("./services/obrasService");
 
@@ -933,7 +932,6 @@ export default function App() {
             setErroConsultaDdsPublica("");
 
             try {
-                const { consultarDdsPublico } = await carregarDdsRegistrosHandlers();
                 const dadosNormalizados = await consultarDdsPublico({
                     supabase,
                     token: tokenDds,
