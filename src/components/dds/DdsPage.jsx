@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import { QRCodeSVG } from "qrcode.react";
 import { salvarRegistroDds } from "../../services/ddsRegistrosService";
 import { obterUrlLogoEmpresa } from "../../services/supabaseServices";
+import { gerarCodigoFuncionario } from "../../services/colaboradorDocumentosService";
 import {
     BookOpen,
     ChevronDown,
@@ -621,12 +622,47 @@ function formatarResponsavelCabecalhoDds(dadosDds = {}) {
     return `${nome} — ${funcao}`;
 }
 
+function obterCodigoSafescanParticipanteDds(colaborador = {}) {
+    if (!colaborador || typeof colaborador !== "object") return "";
+
+    const codigoExistente = obterValorTextoDds(
+        colaborador.codigoFuncionario,
+        colaborador.codigo_funcionario,
+        colaborador.codigoSafescan,
+        colaborador.codigoSafeScan,
+        colaborador.codigo_safescan,
+        colaborador.codigo,
+        colaborador.codigo_colaborador,
+        colaborador.codigoColaborador,
+        colaborador.codigo_qr,
+        colaborador.qr_codigo,
+        colaborador.codigoQr,
+        colaborador.matricula_esocial,
+        colaborador.matriculaEsocial,
+        colaborador.matricula
+    );
+
+    if (codigoExistente) return codigoExistente;
+
+    const nomeColaborador = obterValorTextoDds(
+        colaborador.nome,
+        colaborador.nomeCompleto,
+        colaborador.nome_completo,
+        colaborador.colaborador,
+        colaborador.nomeColaborador
+    );
+
+    return nomeColaborador ? gerarCodigoFuncionario(nomeColaborador) : "";
+}
 function normalizarParticipantesDdsSistema(colaboradores = []) {
     const base = Array.isArray(colaboradores) ? colaboradores : [];
 
     return base
         .map((colaborador, indice) => ({
             numero: indice + 1,
+            codigoSafescan: obterCodigoSafescanParticipanteDds(colaborador),
+            codigoFuncionario: obterCodigoSafescanParticipanteDds(colaborador),
+            codigo_funcionario: obterCodigoSafescanParticipanteDds(colaborador),
             nome: obterValorTextoDds(colaborador.nome, colaborador.nomeCompleto, colaborador.nome_completo),
             funcao: obterFuncaoPessoaDds(colaborador),
             empresa: obterValorTextoDds(
@@ -1368,7 +1404,7 @@ function DdsPreviewImpresso({ participantes = participantesDds, mostrarAssinatur
                         <div className="bg-slate-950 py-1 text-center text-[11px] font-black uppercase tracking-wide text-white">
                             Temas do DDS por dia da semana
                         </div>
-                        <table className="w-full table-fixed border-collapse text-center text-[11px]">
+                        <table className="dds-tabela-temas-semanal w-full table-fixed border-collapse text-center text-[11px]" style={{ tableLayout: "fixed", width: "100%" }}>
                             <thead>
                                 <tr className="bg-slate-900 text-white">
                                     {diasSemana.map((dia) => (
@@ -1379,27 +1415,50 @@ function DdsPreviewImpresso({ participantes = participantesDds, mostrarAssinatur
                                     ))}
                                 </tr>
                             </thead>
-                            <tbody>
-                                <tr className="bg-slate-50">
-                                    {diasSemana.map((dia) => (
-                                        <td key={`${dia.curto}-rotulo-tema`} className="w-[14.285%] border border-slate-300 px-2 py-1 text-[9px] font-black uppercase tracking-[0.16em] text-slate-500">
-                                            Tema
-                                        </td>
-                                    ))}
-                                </tr>
+                                                        <tbody>
                                 <tr>
-                                    {diasSemana.map((dia) => (
-                                        <td key={dia.curto} className="h-10 w-[14.285%] border border-slate-300 px-2 py-1 align-middle font-bold leading-tight">
-                                            {dia.tema}
-                                        </td>
-                                    ))}
-                                </tr>
-                                <tr>
-                                    {diasSemana.map((dia) => (
-                                        <td key={dia.curto} className="w-[14.285%] border border-slate-300 px-2 py-1 text-[9px] font-black text-slate-700">
-                                            {dia.responsavel}
-                                        </td>
-                                    ))}
+                                    {diasSemana.map((dia) => {
+                                        const diaSemAtividade = temaDdsSemAtividade(dia);
+                                        const temaDia = diaSemAtividade ? "NÃO HOUVE ATIVIDADES" : (dia.tema || "");
+                                        const responsavelDia = diaSemAtividade ? "" : (dia.responsavel || "");
+
+                                        return (
+                                            <td
+                                                key={dia.curto}
+                                                className="dds-tema-celula h-24 w-[14.285%] max-w-0 border border-slate-300 align-top"
+                                            >
+                                                <div className="flex h-full min-h-[104px] flex-col">
+                                                    <div className="border-b border-slate-300 bg-slate-50 py-1 text-center text-[8px] font-black uppercase tracking-[0.18em] text-slate-500">
+                                                        Tema
+                                                    </div>
+                                                    <div className="flex min-h-[58px] flex-1 items-center justify-center border-b border-slate-200 px-2 py-1.5 text-center text-[9.5px] font-bold leading-[1.22] text-slate-950">
+                                                        <span
+                                                            className="block w-full max-w-full whitespace-normal break-words"
+                                                            style={{
+                                                                overflowWrap: "anywhere",
+                                                                wordBreak: "break-word",
+                                                                hyphens: "auto",
+                                                            }}
+                                                        >
+                                                            {temaDia || "\u00A0"}
+                                                        </span>
+                                                    </div>
+                                                    <div className="flex min-h-[26px] items-center justify-center px-1.5 py-1 text-center text-[8px] font-bold leading-tight text-slate-700">
+                                                        {responsavelDia ? (
+                                                            <>
+                                                                <span className="mr-1 font-black uppercase tracking-[0.12em] text-slate-400">
+                                                                    Resp.
+                                                                </span>
+                                                                {responsavelDia}
+                                                            </>
+                                                        ) : (
+                                                            <span>&nbsp;</span>
+                                                        )}
+                                                    </div>
+                                                </div>
+                                            </td>
+                                        );
+                                    })}
                                 </tr>
                             </tbody>
                         </table>
@@ -1724,7 +1783,37 @@ function DdsPrintStyles() {
                         page-break-after: always !important;
                     }
 
-                    /* DDS folha 1 compacta pós-rodapé */
+
+
+    .dds-tabela-temas-semanal {
+        table-layout: fixed !important;
+        width: 100% !important;
+    }
+
+    .dds-tabela-temas-semanal .dds-tema-celula,
+    .dds-tabela-temas-semanal .dds-tema-celula span {
+        max-width: 100% !important;
+        white-space: normal !important;
+        overflow-wrap: anywhere !important;
+        word-break: break-word !important;
+        hyphens: auto !important;
+    }
+/* dds-print-tema-quebra */
+    .dds-print-page td,
+    .dds-print-page th {
+        overflow-wrap: anywhere !important;
+        word-break: break-word !important;
+    }
+
+    .dds-print-page .dds-tema-texto,
+    .dds-print-page .dds-tema-celula {
+        min-height: 82px !important;
+        white-space: normal !important;
+        overflow-wrap: anywhere !important;
+        word-break: break-word !important;
+        vertical-align: top !important;
+    }
+/* DDS folha 1 compacta pós-rodapé */
                     .dds-print-area .dds-print-page:first-child .dds-print-sheet {
                         zoom: 0.82 !important;
                         padding: 9px !important;
@@ -1901,10 +1990,86 @@ export function DdsPage({
         [empresasDds, empresaSelecionadaChaveDds]
     );
 
-    const colaboradoresEmpresaDds = useMemo(
-        () => filtrarColaboradoresPorEmpresaDds(colaboradores, empresaSelecionadaDds),
-        [colaboradores, empresaSelecionadaDds]
-    );
+    const colaboradoresEmpresaDds = useMemo(() => {
+        const colaboradoresFiltradosDds = filtrarColaboradoresPorEmpresaDds(colaboradores, empresaSelecionadaDds);
+        const colaboradoresOriginaisDds = Array.isArray(colaboradores) ? colaboradores : [];
+
+        return colaboradoresFiltradosDds.map((colaboradorFiltrado) => {
+            const idFiltradoDds = obterValorTextoDds(colaboradorFiltrado?.id, colaboradorFiltrado?.colaborador_id, colaboradorFiltrado?.token);
+            const nomeFiltradoDds = normalizarTextoCodigoDds(obterValorTextoDds(
+                colaboradorFiltrado?.nome,
+                colaboradorFiltrado?.nomeCompleto,
+                colaboradorFiltrado?.nome_completo,
+                colaboradorFiltrado?.colaborador,
+                colaboradorFiltrado?.nomeColaborador
+            ));
+            const empresaFiltradaDds = normalizarTextoCodigoDds(obterValorTextoDds(
+                colaboradorFiltrado?.empresaExibicao,
+                colaboradorFiltrado?.empresa_exibicao,
+                colaboradorFiltrado?.empresaNome,
+                colaboradorFiltrado?.empresa_nome,
+                colaboradorFiltrado?.empresa
+            ));
+
+            const colaboradorOriginalDds = colaboradoresOriginaisDds.find((colaboradorOriginal) => {
+                const idOriginalDds = obterValorTextoDds(colaboradorOriginal?.id, colaboradorOriginal?.colaborador_id, colaboradorOriginal?.token);
+
+                if (idFiltradoDds && idOriginalDds && idFiltradoDds === idOriginalDds) {
+                    return true;
+                }
+
+                const nomeOriginalDds = normalizarTextoCodigoDds(obterValorTextoDds(
+                    colaboradorOriginal?.nome,
+                    colaboradorOriginal?.nomeCompleto,
+                    colaboradorOriginal?.nome_completo,
+                    colaboradorOriginal?.colaborador,
+                    colaboradorOriginal?.nomeColaborador
+                ));
+
+                if (!nomeFiltradoDds || !nomeOriginalDds || nomeFiltradoDds !== nomeOriginalDds) {
+                    return false;
+                }
+
+                const empresaOriginalDds = normalizarTextoCodigoDds(obterValorTextoDds(
+                    colaboradorOriginal?.empresaExibicao,
+                    colaboradorOriginal?.empresa_exibicao,
+                    colaboradorOriginal?.empresaNome,
+                    colaboradorOriginal?.empresa_nome,
+                    colaboradorOriginal?.empresa
+                ));
+
+                return !empresaFiltradaDds ||
+                    !empresaOriginalDds ||
+                    empresaOriginalDds.includes(empresaFiltradaDds) ||
+                    empresaFiltradaDds.includes(empresaOriginalDds);
+            });
+
+            const codigoFuncionarioDds = obterValorTextoDds(
+                colaboradorFiltrado?.codigoFuncionario,
+                colaboradorFiltrado?.codigo_funcionario,
+                colaboradorFiltrado?.codigoSafescan,
+                colaboradorFiltrado?.codigoSafeScan,
+                colaboradorFiltrado?.codigo_safescan,
+                colaboradorFiltrado?.codigo,
+                colaboradorFiltrado?.codigo_colaborador,
+                colaboradorOriginalDds?.codigoFuncionario,
+                colaboradorOriginalDds?.codigo_funcionario,
+                colaboradorOriginalDds?.codigoSafescan,
+                colaboradorOriginalDds?.codigoSafeScan,
+                colaboradorOriginalDds?.codigo_safescan,
+                colaboradorOriginalDds?.codigo,
+                colaboradorOriginalDds?.codigo_colaborador
+            );
+
+            return {
+                ...(colaboradorOriginalDds || {}),
+                ...colaboradorFiltrado,
+                codigoFuncionario: codigoFuncionarioDds,
+                codigo_funcionario: codigoFuncionarioDds,
+                codigoSafescan: obterValorTextoDds(colaboradorFiltrado?.codigoSafescan, codigoFuncionarioDds),
+            };
+        });
+    }, [colaboradores, empresaSelecionadaDds]);
 
     const obrasEmpresaSelecionadaDds = useMemo(() => {
         const empresaIdSelecionada = obterIdEmpresaObjetoDds(empresaSelecionadaDds);
@@ -2299,8 +2464,29 @@ export function DdsPage({
                         recadosSemana: recadosDdsEditaveis,
                         orientacoesImportantes: orientacoesDdsEditaveis,
                         aniversariantesSemana: aniversariantesSemanaDds,
-                        participantes: participantesSistemaDds.map((participante) => ({
-                            numero: participante.numero,
+                        logosEmpresasCabecalho: dadosDdsComRegistro.logosEmpresasCabecalho || [],
+                        empresaLogoUrl: dadosDdsComRegistro.empresaLogoUrl || "" ,
+                        empresaLogoNome: dadosDdsComRegistro.empresaLogoNome || "" ,
+                        contratanteLogoUrl: dadosDdsComRegistro.contratanteLogoUrl || "" ,
+                        contratanteLogoNome: dadosDdsComRegistro.contratanteLogoNome || "" ,
+                        participantes: participantesSistemaDds.map((participante, indice) => ({
+                            numero: participante.numero || indice + 1,
+                            codigoSafescan:
+                                participante.codigoFuncionario ||
+                                participante.codigo_funcionario ||
+                                participante.codigoSafescan ||
+                                participante.codigoSafeScan ||
+                                participante.codigo_safescan ||
+                                participante.codigo ||
+                                participante.codigo_colaborador ||
+                                participante.codigoColaborador ||
+                                participante.codigo_qr ||
+                                participante.qr_codigo ||
+                                participante.codigoQr ||
+                                participante.matricula_esocial ||
+                                participante.matriculaEsocial ||
+                                participante.matricula ||
+                                "",
                             nome: participante.nome,
                             funcao: participante.funcao,
                             empresa: participante.empresa,

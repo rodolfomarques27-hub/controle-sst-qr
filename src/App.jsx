@@ -153,6 +153,9 @@ export default function App() {
     const [consultaPublica, setConsultaPublica] = useState(null);
     const [carregandoConsultaPublica, setCarregandoConsultaPublica] = useState(false);
     const [erroConsultaPublica, setErroConsultaPublica] = useState("");
+    const [consultaDdsPublica, setConsultaDdsPublica] = useState(null);
+    const [carregandoConsultaDdsPublica, setCarregandoConsultaDdsPublica] = useState(false);
+    const [erroConsultaDdsPublica, setErroConsultaDdsPublica] = useState("");
     const [auditoria, setAuditoria] = useState([]);
     const [emailsEnviados, setEmailsEnviados] = useState([]);
     const [auditoriasCampo, setAuditoriasCampo] = useState([]);
@@ -956,7 +959,8 @@ export default function App() {
         return () => {
             ativo = false;
         };
-    }, []);    useEffect(() => {
+    }, []);
+    useEffect(() => {
         if (!usuario) return;
 
         const timer = window.setTimeout(async () => {

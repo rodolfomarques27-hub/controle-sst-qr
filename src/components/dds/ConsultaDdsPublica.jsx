@@ -1,26 +1,64 @@
 import React from "react";
-import {
-    AlertTriangle,
-    Building2,
-    CalendarDays,
-    CheckCircle2,
-    ClipboardCheck,
-    MapPin,
-    UserCheck,
-} from "lucide-react";
-import { StatusPill } from "../commonComponents";
+import { gerarCodigoFuncionario } from "../../services/colaboradorDocumentosService";
 
 const textoSeguro = (valor = "") => String(valor ?? "").trim();
+
+const DIAS_SEMANA_DDS_PUBLICO = [
+    "Domingo",
+    "Segunda-feira",
+    "Terça-feira",
+    "Quarta-feira",
+    "Quinta-feira",
+    "Sexta-feira",
+    "Sábado",
+];
+
+
+function normalizarArray(valor) {
+    if (Array.isArray(valor)) return valor;
+
+    if (typeof valor === "string") {
+        try {
+            const convertido = JSON.parse(valor);
+            return Array.isArray(convertido) ? convertido : [];
+        } catch {
+            return [];
+        }
+    }
+
+    return [];
+}
+
+function pegarPrimeiro(...valores) {
+    return valores.find((valor) => textoSeguro(valor)) ?? "";
+}
+function normalizarTextoBuscaDdsPublico(valor = "") {
+    return textoSeguro(valor)
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .toUpperCase();
+}
+
+function ehDiaSemAtividadeDdsPublico(dia = {}, tema = "") {
+    const textoTema = normalizarTextoBuscaDdsPublico(tema || dia?.tema || dia?.assunto);
+    const textoStatus = normalizarTextoBuscaDdsPublico(dia?.status || dia?.situacao || "");
+
+    return Boolean(dia?.semAtividade) ||
+        textoTema.includes("NAO HOUVE ATIVIDADE") ||
+        textoTema.includes("NAO HOUVE ATIVIDADES") ||
+        textoStatus.includes("NAO HOUVE ATIVIDADE") ||
+        textoStatus.includes("SEM ATIVIDADE");
+}
 
 function formatarDataPublica(valor = "") {
     const texto = textoSeguro(valor);
 
     if (!texto) return "-";
 
-    const partes = texto.slice(0, 10).split("-");
+    const partesIso = texto.slice(0, 10).split("-");
 
-    if (partes.length === 3) {
-        return `${partes[2]}/${partes[1]}/${partes[0]}`;
+    if (partesIso.length === 3 && partesIso[0].length === 4) {
+        return `${partesIso[2]}/${partesIso[1]}/${partesIso[0]}`;
     }
 
     return texto;
@@ -41,353 +79,462 @@ function formatarDataHoraPublica(valor = "") {
     }).format(data);
 }
 
+function textoDaOrientacao(item) {
+    if (typeof item === "string") return textoSeguro(item);
 
-function obterIniciaisEmpresaDdsPublica(nome = "") {
-    const texto = textoSeguro(nome);
-    if (!texto) return "EMP";
-
-    const partes = texto
-        .split(/\s+/)
-        .filter(Boolean)
-        .slice(0, 3);
-
-    return partes
-        .map((parte) => parte.charAt(0))
-        .join("")
-        .toUpperCase() || "EMP";
+    return textoSeguro(item?.texto || item?.descricao || item?.orientacao || item?.titulo);
 }
 
-function MarcaIdealizaDdsPublica() {
-    return (
-        <div className="flex items-center gap-4">
-            <div className="flex h-16 w-16 items-center justify-center rounded-2xl border border-amber-200 bg-amber-50 text-amber-700">
-                <span className="text-xl font-black">I</span>
-            </div>
-            <div>
-                <p className="text-2xl font-black leading-none text-slate-950">
-                    IDEALIZA
-                </p>
-                <p className="mt-1 text-xs font-black uppercase tracking-[0.28em] text-amber-700">
-                    Segurança do Trabalho
-                </p>
-            </div>
-        </div>
+function textoDoAniversariante(item) {
+    if (typeof item === "string") return textoSeguro(item);
+
+    const nome = textoSeguro(item?.nome || item?.colaborador || item?.nomeColaborador);
+    const data = formatarDataPublica(item?.data || item?.nascimento || item?.dataNascimento || "");
+
+    if (nome && data !== "-") return `${nome} — ${data}`;
+    return nome || data;
+}
+
+function nomeParticipante(item) {
+    if (typeof item === "string") return textoSeguro(item);
+
+    return textoSeguro(item?.nome || item?.colaborador || item?.nomeColaborador || item?.nome_completo);
+}
+
+function funcaoParticipante(item) {
+    if (!item || typeof item === "string") return "";
+
+    return textoSeguro(item?.funcao || item?.cargo || item?.atividade);
+}
+function empresaParticipante(item) {
+    if (!item || typeof item === "string") return "";
+
+    return textoSeguro(
+        item?.empresa ||
+        item?.empresaNome ||
+        item?.nomeEmpresa ||
+        item?.razaoSocialEmpresa ||
+        item?.empresa_nome
     );
 }
 
-function MarcaEmpresaDdsPublica({ logoUrl = "" }) {
-    const logoSeguro = textoSeguro(logoUrl);
+function codigoSafescanParticipante(item) {
+    if (!item || typeof item === "string") return "";
+
+    const codigoExistente = textoSeguro(
+        item?.codigoFuncionario ||
+        item?.codigo_funcionario ||
+        item?.codigoSafescan ||
+        item?.codigoSafeScan ||
+        item?.codigo_safescan ||
+        item?.codigo ||
+        item?.matricula_esocial ||
+        item?.matriculaEsocial ||
+        item?.matricula ||
+        item?.id
+    );
+
+    if (codigoExistente) return codigoExistente;
+
+    const nome = nomeParticipante(item);
+    return nome ? gerarCodigoFuncionario(nome) : "";
+}
+
+function normalizarLogoDdsPublico(item) {
+    if (!item) return null;
+
+    if (typeof item === "string") {
+        const logoUrl = textoSeguro(item);
+        return logoUrl ? { logoUrl, nome: "Logo da empresa" } : null;
+    }
+
+    const logoUrl = textoSeguro(
+        item.logoUrl ||
+        item.logo_url ||
+        item.empresaLogoUrl ||
+        item.contratanteLogoUrl ||
+        item.url ||
+        item.src ||
+        ""
+    );
+
+    if (!logoUrl) return null;
+
+    return {
+        logoUrl,
+        nome: textoSeguro(item.nome || item.empresa || item.razaoSocial || item.label || "Logo da empresa"),
+    };
+}
+
+function obterLogosCabecalhoDdsPublico(dados = {}, dadosRegistro = {}) {
+    const listas = [
+        dados.logosEmpresasCabecalho,
+        dadosRegistro.logosEmpresasCabecalho,
+        dados.logosCabecalho,
+        dadosRegistro.logosCabecalho,
+        dados.logos,
+        dadosRegistro.logos,
+    ];
+
+    const logos = [];
+
+    listas.forEach((lista) => {
+        normalizarArray(lista).forEach((item) => {
+            const logo = normalizarLogoDdsPublico(item);
+            if (!logo) return;
+
+            const jaExiste = logos.some((existente) => existente.logoUrl === logo.logoUrl);
+            if (!jaExiste) logos.push(logo);
+        });
+    });
+
+    [
+        {
+            logoUrl: dados.contratanteLogoUrl || dadosRegistro.contratanteLogoUrl,
+            nome: dados.contratanteLogoNome || dadosRegistro.contratanteLogoNome || "Contratante",
+        },
+        {
+            logoUrl: dados.empresaLogoUrl || dadosRegistro.empresaLogoUrl,
+            nome: dados.empresaLogoNome || dadosRegistro.empresaLogoNome || dados.empresa || dadosRegistro.empresa || "Empresa",
+        },
+    ].forEach((item) => {
+        const logo = normalizarLogoDdsPublico(item);
+        if (!logo) return;
+
+        const jaExiste = logos.some((existente) => existente.logoUrl === logo.logoUrl);
+        if (!jaExiste) logos.push(logo);
+    });
+
+    return logos.slice(0, 4);
+}
+
+function LogosCabecalhoDdsPublico({ logos = [], empresa = "" }) {
+    const logosValidos = normalizarArray(logos)
+        .map(normalizarLogoDdsPublico)
+        .filter(Boolean);
+
+    if (logosValidos.length === 0) {
+        return (
+            <div className="flex h-full min-h-[64px] items-center rounded-xl border border-slate-200 bg-slate-50 px-4">
+                <div>
+                    <p className="text-[9px] font-black uppercase tracking-[0.24em] text-slate-500">
+                        Empresas vinculadas
+                    </p>
+                    <p className="mt-1 text-[13px] font-black uppercase leading-tight text-slate-900">
+                        {empresa || "Logo não disponível no QR"}
+                    </p>
+                </div>
+            </div>
+        );
+    }
 
     return (
-        <div className="flex min-h-[88px] items-center justify-center rounded-2xl border border-slate-200 bg-slate-50 px-5 py-4">
-            {logoSeguro ? (
+        <div className="flex h-full min-h-[64px] items-center justify-center gap-4 rounded-xl border border-slate-200 bg-white px-4 py-2">
+            {logosValidos.map((logo, indice) => (
                 <img
-                    src={logoSeguro}
-                    alt="Logo da empresa"
-                    className="h-16 max-w-[260px] object-contain"
+                    key={`${logo.logoUrl}-${indice}`}
+                    src={logo.logoUrl}
+                    alt={logo.nome || "Logo da empresa"}
+                    className="max-h-12 max-w-[82px] object-contain"
+                    loading="lazy"
                 />
-            ) : null}
+            ))}
         </div>
     );
 }
-function InfoConferenciaDds({ icon: Icon, rotulo, valor }) {
+function StatusDocumento({ ok, status }) {
+    const statusSeguro = textoSeguro(status) || (ok ? "Ativo" : "Inválido");
+
     return (
-        <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-            <div className="flex items-start gap-3">
-                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-emerald-50 text-emerald-700">
-                    <Icon className="h-5 w-5" />
-                </div>
-                <div className="min-w-0">
-                    <p className="text-[11px] font-black uppercase tracking-[0.18em] text-slate-500">
-                        {rotulo}
-                    </p>
-                    <p className="mt-1 break-words text-base font-black text-slate-950">
-                        {valor || "-"}
-                    </p>
-                </div>
-            </div>
+        <div className={`rounded-full px-3 py-1.5 text-center text-[10px] font-black uppercase tracking-[0.18em] shadow-sm ring-1 ${
+            ok
+                ? "bg-emerald-50 text-emerald-800 ring-emerald-200"
+                : "bg-red-50 text-red-800 ring-red-200"
+        }`}>
+            {statusSeguro}
         </div>
+    );
+}
+
+function CelulaInfo({ rotulo, valor, className = "" }) {
+    return (
+        <div className={`border border-slate-200 bg-white px-3 py-2 ${className}`}>
+            <p className="text-[9px] font-black uppercase tracking-[0.2em] text-slate-500/90">
+                {rotulo}
+            </p>
+            <p className="mt-1 min-h-[16px] text-[12px] font-black leading-snug text-slate-900">
+                {valor || "-"}
+            </p>
+        </div>
+    );
+}
+
+function BlocoInferior({ titulo, children }) {
+    return (
+        <section className="flex min-h-[150px] flex-col rounded-xl border border-slate-300 bg-white p-3 shadow-sm shadow-slate-200/70">
+            <h3 className="border-b border-slate-200 pb-1 text-[10px] font-black uppercase tracking-[0.24em] text-slate-800">
+                {titulo}
+            </h3>
+            <div
+                className="mt-2 flex-1 px-1 text-[11px] font-semibold leading-[24px] text-slate-700"
+                style={{
+                    backgroundImage: "repeating-linear-gradient(to bottom, transparent 0, transparent 23px, rgba(148, 163, 184, 0.45) 24px)",
+                    backgroundSize: "100% 24px",
+                    backgroundRepeat: "repeat",
+                }}
+            >
+                {children}
+            </div>
+        </section>
     );
 }
 
 export function ConsultaDdsPublica({ dados = {} }) {
-    const ok = Boolean(dados?.ok);
-    const autenticidade = dados?.autenticidade || {};
-    const mensagemAutenticidade = textoSeguro(autenticidade.mensagem || dados.mensagem);
-    const statusAutenticidade = textoSeguro(autenticidade.status || (ok ? "Documento localizado" : "Documento não localizado"));
-    const dadosRegistroDdsPublica = dados?.dados && typeof dados.dados === "object" ? dados.dados : {};
+    const dadosRegistro = dados?.dados && typeof dados.dados === "object" ? dados.dados : {};
+    const autenticidade = dados.autenticidade || {};
+    const ok = dados.ok !== false;
 
-    const diasSemanaDdsPublica = (Array.isArray(dados?.diasSemana)
-        ? dados.diasSemana
-        : Array.isArray(dadosRegistroDdsPublica.diasSemana)
-            ? dadosRegistroDdsPublica.diasSemana
-            : [])
-        .map((dia) => ({
-            dia: textoSeguro(dia?.dia || dia?.nome || dia?.curto),
-            data: textoSeguro(dia?.data),
-            tema: textoSeguro(dia?.tema),
-            responsavel: textoSeguro(dia?.responsavel),
-        }))
-        .filter((dia) => dia.dia || dia.data || dia.tema || dia.responsavel);
+    const codigo = pegarPrimeiro(dados.codigo, dadosRegistro.codigo);
+    const empresa = pegarPrimeiro(dados.empresa, dados.empresaNome, dadosRegistro.empresa, dadosRegistro.empresaNome);
+    const obra = pegarPrimeiro(dados.obra, dados.obraNome, dadosRegistro.obra, dadosRegistro.obraNome);
+    const responsavel = pegarPrimeiro(dados.responsavel, dados.responsavelNome, dadosRegistro.responsavel, dadosRegistro.responsavelNome);
+    const fiscalIdealiza = pegarPrimeiro(dados.fiscalIdealiza, dados.fiscal_idealiza, dadosRegistro.fiscalIdealiza);
+    const liderEncarregado = pegarPrimeiro(dados.liderEncarregado, dados.lider_encarregado, dadosRegistro.liderEncarregado);
+    const tipo = pegarPrimeiro(dados.tipo, dadosRegistro.tipo, "DDS");
+    const turno = pegarPrimeiro(dados.turno, dadosRegistro.turno);
+    const status = pegarPrimeiro(dados.status, ok ? "Ativo" : "Inválido");
 
-    const recadosSemanaDdsPublica = textoSeguro(dados?.recadosSemana || dadosRegistroDdsPublica.recadosSemana);
+    const periodoInicio = pegarPrimeiro(dados.periodoInicio, dados.periodo_inicio, dadosRegistro.periodoInicio);
+    const periodoFim = pegarPrimeiro(dados.periodoFim, dados.periodo_fim, dadosRegistro.periodoFim);
+    const periodoTexto = pegarPrimeiro(
+        dados.periodo,
+        dadosRegistro.periodo,
+        periodoInicio || periodoFim ? `${formatarDataPublica(periodoInicio)} a ${formatarDataPublica(periodoFim)}` : ""
+    );
 
-    const orientacoesDdsPublica = (Array.isArray(dados?.orientacoesImportantes)
-        ? dados.orientacoesImportantes
-        : Array.isArray(dadosRegistroDdsPublica.orientacoesImportantes)
-            ? dadosRegistroDdsPublica.orientacoesImportantes
-            : [])
-        .map((orientacao) => textoSeguro(orientacao))
+    const diasSemana = normalizarArray(dados.diasSemana ?? dadosRegistro.diasSemana).slice(0, 7);
+    const orientacoesImportantes = normalizarArray(dados.orientacoesImportantes ?? dadosRegistro.orientacoesImportantes)
+        .map(textoDaOrientacao)
         .filter(Boolean);
-
-    const aniversariantesDdsPublica = (Array.isArray(dados?.aniversariantesSemana)
-        ? dados.aniversariantesSemana
-        : Array.isArray(dadosRegistroDdsPublica.aniversariantesSemana)
-            ? dadosRegistroDdsPublica.aniversariantesSemana
-            : [])
-        .map((aniversariante) => ({
-            data: textoSeguro(aniversariante?.data),
-            nome: textoSeguro(aniversariante?.nome),
-        }))
-        .filter((aniversariante) => aniversariante.data || aniversariante.nome);
-
-    const participantesDdsPublica = (Array.isArray(dados?.participantes)
-        ? dados.participantes
-        : Array.isArray(dadosRegistroDdsPublica.participantes)
-            ? dadosRegistroDdsPublica.participantes
-            : [])
+    const aniversariantesSemana = normalizarArray(dados.aniversariantesSemana ?? dadosRegistro.aniversariantesSemana)
+        .map(textoDoAniversariante)
+        .filter(Boolean);
+    const participantes = normalizarArray(dados.participantes ?? dadosRegistro.participantes)
         .map((participante, indice) => ({
-            numero: Number(participante?.numero || indice + 1),
-            nome: textoSeguro(participante?.nome),
-            funcao: textoSeguro(participante?.funcao),
-            empresa: textoSeguro(participante?.empresa),
+            id: participante?.id || participante?.codigo || `participante-${indice}`,
+            nome: nomeParticipante(participante),
+            funcao: funcaoParticipante(participante),
+            empresa: empresaParticipante(participante),
+            numero: Number(participante?.numero || participante?.ordem || indice + 1),
+            codigoSafescan: codigoSafescanParticipante(participante),
         }))
         .filter((participante) => participante.nome);
 
-    const possuiSnapshotDdsPublica = Boolean(
-        diasSemanaDdsPublica.length ||
-        recadosSemanaDdsPublica ||
-        orientacoesDdsPublica.length ||
-        aniversariantesDdsPublica.length ||
-        participantesDdsPublica.length
-    );
+    const recadosSemana = textoSeguro(dados.recadosSemana ?? dadosRegistro.recadosSemana ?? dadosRegistro.recados);
+    const totalParticipantes = Number(dados.totalParticipantes ?? dadosRegistro.totalParticipantes ?? participantes.length) || participantes.length;
+    const totalFolhas = Number(dados.totalFolhas ?? dadosRegistro.totalFolhas ?? 1) || 1;
+
+    const statusAutenticidade = textoSeguro(autenticidade.status || (ok ? "Documento localizado" : "Documento não localizado"));
+    const mensagemAutenticidade = textoSeguro(autenticidade.mensagem || "DDS conferido na base SafeScan Brasil.");
+    const logosCabecalho = obterLogosCabecalhoDdsPublico(dados, dadosRegistro);
+
+    const diasRender = Array.from({ length: 7 }, (_, indice) => diasSemana[indice] || {});
 
     return (
-        <main className="min-h-screen bg-slate-950 px-4 py-8 text-slate-950">
-            <section className="mx-auto max-w-5xl overflow-hidden rounded-[2rem] bg-slate-50 shadow-2xl">
-                <div className="border-b border-slate-200 bg-white px-6 py-6 sm:px-8">
-                    <div className="flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
-                        <MarcaIdealizaDdsPublica />
-
-                        <MarcaEmpresaDdsPublica
-                            logoUrl={dados.empresaLogoUrl}
+        <main className="min-h-screen bg-[#eef3f8] px-4 py-5 print:bg-white print:p-0">
+            <div className="mx-auto max-w-[1240px] overflow-x-auto">
+                <article className="mx-auto w-[1200px] overflow-hidden rounded-[22px] bg-white shadow-[0_18px_60px_rgba(15,23,42,0.16)] ring-1 ring-slate-300 print:w-full print:rounded-none print:shadow-none print:ring-0">
+                    <header className="grid grid-cols-[260px_minmax(0,1fr)_220px] gap-4 border-b border-slate-300 bg-gradient-to-r from-white via-slate-50 to-white px-5 pb-4 pt-4">
+                        <LogosCabecalhoDdsPublico
+                            logos={logosCabecalho}
+                            empresa={empresa}
                         />
-                    </div>
-                </div>
 
-                <div className="px-6 py-8 sm:px-8">
-                    <div
-                        className={[
-                            "rounded-[2rem] border p-6",
-                            ok
-                                ? "border-emerald-200 bg-emerald-50"
-                                : "border-amber-200 bg-amber-50",
-                        ].join(" ")}
-                    >
-                        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-                            <div className="flex items-start gap-4">
-                                <div
-                                    className={[
-                                        "flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl",
-                                        ok ? "bg-emerald-600 text-white" : "bg-amber-500 text-white",
-                                    ].join(" ")}
-                                >
-                                    {ok ? <CheckCircle2 className="h-8 w-8" /> : <AlertTriangle className="h-8 w-8" />}
-                                </div>
-                                <div>
-                                    <p className="text-[11px] font-black uppercase tracking-[0.22em] text-slate-500">
-                                        Status de autenticidade
-                                    </p>
-                                    <h1 className="mt-1 text-2xl font-black text-slate-950 sm:text-3xl">
-                                        {statusAutenticidade}
-                                    </h1>
-                                    <p className="mt-2 max-w-2xl text-sm font-semibold text-slate-700">
-                                        {mensagemAutenticidade || "Consulta pública realizada na base SafeScan Brasil."}
-                                    </p>
-                                </div>
-                            </div>
-
-                            <StatusPill status={dados.status || (ok ? "Ativo" : "Inválido")} />
+                        <div className="text-center">
+                            <p className="text-[10px] font-black uppercase tracking-[0.34em] text-slate-500">
+                                Consulta pública por QR Code
+                            </p>
+                            <h1 className="mt-1 text-[29px] font-black uppercase tracking-tight text-slate-950">
+                                DDS semanal
+                            </h1>
+                            <p className="mt-1 text-[11px] font-bold text-slate-500">
+                                Documento registrado digitalmente no SafeScan Brasil
+                            </p>
                         </div>
-                    </div>
 
-                    <div className="mt-6 grid gap-4 md:grid-cols-2">
-                        <InfoConferenciaDds
-                            icon={ClipboardCheck}
-                            rotulo="Código do DDS"
-                            valor={dados.codigo}
-                        />
-                        <InfoConferenciaDds
-                            icon={CalendarDays}
-                            rotulo="Período"
-                            valor={`${formatarDataPublica(dados.periodoInicio)} a ${formatarDataPublica(dados.periodoFim)}`}
-                        />
-                        <InfoConferenciaDds
-                            icon={Building2}
-                            rotulo="Empresa"
-                            valor={dados.empresa}
-                        />
-                        <InfoConferenciaDds
-                            icon={MapPin}
-                            rotulo="Obra / Setor"
-                            valor={dados.obra}
-                        />
-                        <InfoConferenciaDds
-                            icon={UserCheck}
-                            rotulo="Responsável pelo DDS"
-                            valor={dados.responsavel}
-                        />
-                        <InfoConferenciaDds
-                            icon={UserCheck}
-                            rotulo="Líder / Encarregado"
-                            valor={dados.liderEncarregado}
-                        />
-                    </div>
-
-                    <div className="mt-6 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-                        <p className="text-[11px] font-black uppercase tracking-[0.18em] text-slate-500">
-                            Dados complementares
-                        </p>
-                        <div className="mt-4 grid gap-3 text-sm font-semibold text-slate-700 sm:grid-cols-2">
-                            <div>
-                                <span className="text-slate-500">Fiscal Idealiza: </span>
-                                <span className="font-black text-slate-950">{dados.fiscalIdealiza || "-"}</span>
-                            </div>
-                            <div>
-                                <span className="text-slate-500">Gerado em: </span>
-                                <span className="font-black text-slate-950">{formatarDataHoraPublica(dados.geradoEm)}</span>
-                            </div>
-                            <div>
-                                <span className="text-slate-500">Atualizado em: </span>
-                                <span className="font-black text-slate-950">{formatarDataHoraPublica(dados.atualizadoEm)}</span>
-                            </div>
-                            <div>
-                                <span className="text-slate-500">Tipo: </span>
-                                <span className="font-black uppercase text-slate-950">{dados.tipo || "dds"}</span>
+                        <div className="space-y-2">
+                            <StatusDocumento ok={ok} status={status} />
+                            <div className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-1.5 text-center shadow-sm">
+                                <p className="text-[9px] font-black uppercase tracking-[0.2em] text-slate-500/90">
+                                    Autenticidade
+                                </p>
+                                <p className="mt-1 text-[12px] font-black text-slate-950">
+                                    {statusAutenticidade}
+                                </p>
                             </div>
                         </div>
-                    </div>
+                    </header>
 
+                    <section className="mx-5 mt-4 grid grid-cols-4 overflow-hidden rounded-xl border border-slate-300 shadow-sm">
+                        <CelulaInfo rotulo="Código do DDS" valor={codigo} />
+                        <CelulaInfo rotulo="Período" valor={periodoTexto} />
+                        <CelulaInfo rotulo="Empresa" valor={empresa} />
+                        <CelulaInfo rotulo="Obra / Setor" valor={obra || "Não definido"} />
 
-                    {possuiSnapshotDdsPublica && (
-                        <div className="mt-6 space-y-4">
-                            <div className="rounded-2xl border border-emerald-200 bg-white p-5 shadow-sm">
-                                <p className="text-[11px] font-black uppercase tracking-[0.18em] text-emerald-700">
+                        <CelulaInfo rotulo="Responsável pelo DDS" valor={responsavel || "Não definido"} />
+                        <CelulaInfo rotulo="Fiscal Idealiza" valor={fiscalIdealiza || "Não definido"} />
+                        <CelulaInfo rotulo="Líder / Encarregado" valor={liderEncarregado || "Não definido"} />
+                        <CelulaInfo rotulo="Turno / Tipo" valor={`${turno || "-"} / ${tipo || "DDS"}`} />
+
+                        <CelulaInfo rotulo="Gerado em" valor={formatarDataHoraPublica(dados.geradoEm || dados.created_at)} />
+                        <CelulaInfo rotulo="Atualizado em" valor={formatarDataHoraPublica(dados.atualizadoEm || dados.updated_at)} />
+                        <CelulaInfo rotulo="Total de participantes" valor={String(totalParticipantes)} />
+                        <CelulaInfo rotulo="Total de folhas" valor={String(totalFolhas)} />
+                    </section>
+
+                    <section className="mx-5 mt-3 rounded-xl border border-emerald-200 bg-gradient-to-r from-emerald-50 via-white to-emerald-50 px-4 py-2.5 shadow-sm">
+                        <div className="flex items-center justify-between gap-4">
+                            <div>
+                                <p className="text-[10px] font-black uppercase tracking-[0.26em] text-emerald-800">
                                     Snapshot público do DDS
                                 </p>
-                                <p className="mt-1 text-sm font-semibold text-slate-600">
-                                    Dados registrados no momento da geração do QR de conferência.
+                                <p className="mt-1 text-[12px] font-bold text-emerald-950">
+                                    {mensagemAutenticidade}
                                 </p>
                             </div>
+                            <p className="text-[11px] font-black uppercase tracking-[0.18em] text-emerald-800">
+                                Conferido por QR
+                            </p>
+                        </div>
+                    </section>
 
-                            {diasSemanaDdsPublica.length > 0 && (
-                                <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-                                    <h2 className="text-lg font-black text-slate-950">Temas por dia da semana</h2>
-                                    <div className="mt-4 grid gap-3 md:grid-cols-2 lg:grid-cols-4">
-                                        {diasSemanaDdsPublica.map((dia, indice) => (
-                                            <div key={`tema-publico-dds-${indice}`} className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-                                                <div className="flex items-center justify-between gap-3">
-                                                    <span className="text-xs font-black uppercase text-slate-500">{dia.dia || "-"}</span>
-                                                    <span className="rounded-full bg-emerald-100 px-2 py-1 text-[11px] font-black text-emerald-800">{dia.data || "-"}</span>
-                                                </div>
-                                                <p className="mt-3 text-[10px] font-black uppercase tracking-[0.18em] text-slate-400">Tema</p>
-                                                <p className="mt-1 text-sm font-black text-slate-950">{dia.tema || "-"}</p>
-                                                <p className="mt-3 text-[10px] font-black uppercase tracking-[0.18em] text-slate-400">Responsável</p>
-                                                <p className="mt-1 text-sm font-bold text-slate-700">{dia.responsavel || "-"}</p>
-                                            </div>
-                                        ))}
-                                    </div>
-                                </div>
-                            )}
+                    <section className="mx-5 mt-3">
+                        <h2 className="mb-2 border-l-[5px] border-emerald-600 pl-2 text-[12px] font-black uppercase tracking-[0.24em] text-slate-800">
+                            Programação semanal de temas
+                        </h2>
 
-                            {(recadosSemanaDdsPublica || orientacoesDdsPublica.length || aniversariantesDdsPublica.length) && (
-                                <div className="grid gap-4 lg:grid-cols-3">
-                                    <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-                                        <h2 className="text-base font-black text-slate-950">Recados</h2>
-                                        <p className="mt-3 whitespace-pre-line text-sm font-bold leading-6 text-slate-700">
-                                            {recadosSemanaDdsPublica || "-"}
-                                        </p>
-                                    </div>
+                        <div className="grid grid-cols-7 overflow-hidden rounded-xl border border-slate-300 shadow-md shadow-slate-200/70">
+                            {diasRender.map((dia, indice) => {
+                                const data = dia?.data || dia?.dataDds || dia?.dia || "";
+                                const tema = textoSeguro(dia?.tema || dia?.assunto);
+                                const diaSemAtividade = ehDiaSemAtividadeDdsPublico(dia, tema);
+                                const responsavelDia = textoSeguro(dia?.responsavel || dia?.responsavelNome || responsavel);
 
-                                    <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-                                        <h2 className="text-base font-black text-slate-950">Orientações importantes</h2>
-                                        <div className="mt-3 space-y-2">
-                                            {orientacoesDdsPublica.length > 0 ? orientacoesDdsPublica.map((orientacao, indice) => (
-                                                <div key={`orientacao-publica-dds-${indice}`} className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-bold text-slate-700">
-                                                    {orientacao}
-                                                </div>
-                                            )) : (
-                                                <p className="text-sm font-bold text-slate-500">-</p>
-                                            )}
-                                        </div>
-                                    </div>
-
-                                    <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-                                        <h2 className="text-base font-black text-slate-950">Aniversariantes da semana</h2>
-                                        <div className="mt-3 space-y-2">
-                                            {aniversariantesDdsPublica.length > 0 ? aniversariantesDdsPublica.map((aniversariante, indice) => (
-                                                <div key={`aniversariante-publico-dds-${indice}`} className="flex items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-bold text-slate-700">
-                                                    <span className="font-black text-emerald-700">{aniversariante.data || "-"}</span>
-                                                    <span className="text-slate-400">—</span>
-                                                    <span>{aniversariante.nome || "-"}</span>
-                                                </div>
-                                            )) : (
-                                                <p className="text-sm font-bold text-slate-500">-</p>
-                                            )}
-                                        </div>
-                                    </div>
-                                </div>
-                            )}
-
-                            {participantesDdsPublica.length > 0 && (
-                                <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-                                    <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
-                                        <div>
-                                            <h2 className="text-lg font-black text-slate-950">Participantes registrados</h2>
-                                            <p className="mt-1 text-sm font-semibold text-slate-600">
-                                                Lista salva em ordem alfabética no snapshot do DDS.
+                                return (
+                                    <div key={`${data}-${indice}`} className="min-h-[154px] border-r border-slate-200 bg-white last:border-r-0">
+                                        <div className="border-b border-slate-300 bg-[#17233a] text-center text-white">
+                                            <p className="px-2 py-1.5 text-[10px] font-black uppercase tracking-[0.16em]">
+                                                {DIAS_SEMANA_DDS_PUBLICO[indice] || `Dia ${indice + 1}`}
+                                            </p>
+                                            <div className="border-t border-white/25" />
+                                            <p className="px-2 py-1.5 text-[11px] font-black text-emerald-100">
+                                                {formatarDataPublica(data)}
                                             </p>
                                         </div>
-                                        <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-black text-slate-700">
-                                            Total: {dados.totalParticipantes || dadosRegistroDdsPublica.totalParticipantes || participantesDdsPublica.length}
-                                        </span>
-                                    </div>
 
-                                    <div className="mt-4 overflow-hidden rounded-2xl border border-slate-200">
-                                        <div className="grid grid-cols-[56px_1.4fr_1fr_1fr] bg-slate-950 px-3 py-2 text-[11px] font-black uppercase tracking-wide text-white">
-                                            <span>Nº</span>
-                                            <span>Nome</span>
-                                            <span>Função</span>
-                                            <span>Empresa</span>
+                                        <div className="pb-2.5">
+                                            <p className="flex h-6 items-center justify-center border-b border-slate-200 bg-slate-50 text-center text-[9px] font-black uppercase tracking-[0.18em] text-slate-400">
+                                                Tema
+                                            </p>
+                                            <p className="mx-2.5 mt-1.5 flex min-h-[34px] items-center justify-center text-center text-[11px] font-black leading-[1.3] text-slate-900">
+                                                {diaSemAtividade ? "NÃO HOUVE ATIVIDADES" : (tema || "-")}
+                                            </p>
+
+                                            {diaSemAtividade ? null : (
+                                                <p className="mx-2.5 mt-2 flex items-center justify-center gap-1 border-t border-slate-200 pt-1 text-center text-[10px] font-bold leading-4 text-slate-700">
+                                                    <span className="text-[9px] font-black uppercase tracking-[0.12em] text-slate-400">
+                                                        Resp.
+                                                    </span>
+                                                    {responsavelDia || "-"}
+                                                </p>
+                                            )}
                                         </div>
-                                        {participantesDdsPublica.map((participante, indice) => (
-                                            <div key={`participante-publico-dds-${indice}`} className="grid grid-cols-[56px_1.4fr_1fr_1fr] border-t border-slate-200 px-3 py-2 text-xs font-bold text-slate-700">
-                                                <span className="font-black text-slate-950">{participante.numero || indice + 1}</span>
-                                                <span className="font-black text-slate-950">{participante.nome}</span>
-                                                <span>{participante.funcao || "-"}</span>
-                                                <span>{participante.empresa || "-"}</span>
-                                            </div>
-                                        ))}
                                     </div>
+                                );
+                            })}
+                        </div>
+                    </section>
+
+                    <section className="mx-5 mt-3 grid grid-cols-3 gap-3">
+                        <BlocoInferior titulo="Aniversariantes da semana">
+                            {aniversariantesSemana.length > 0 ? (
+                                <ul className="space-y-0">
+                                    {aniversariantesSemana.map((aniversariante, indice) => (
+                                        <li key={`${aniversariante}-${indice}`}>• {aniversariante}</li>
+                                    ))}
+                                </ul>
+                            ) : (
+                                <p className="text-slate-500">Nenhum aniversariante registrado neste QR.</p>
+                            )}
+                        </BlocoInferior>
+
+                        <BlocoInferior titulo="Recados">
+                            {recadosSemana ? (
+                                <p className="whitespace-pre-line">{recadosSemana}</p>
+                            ) : (
+                                <p className="text-slate-500">Nenhum recado registrado neste QR.</p>
+                            )}
+                        </BlocoInferior>
+
+                        <BlocoInferior titulo="Orientações importantes">
+                            {orientacoesImportantes.length > 0 ? (
+                                <ol className="space-y-0">
+                                    {orientacoesImportantes.slice(0, 6).map((orientacao, indice) => (
+                                        <li key={`${orientacao}-${indice}`}>
+                                            {indice + 1}. {orientacao}
+                                        </li>
+                                    ))}
+                                </ol>
+                            ) : (
+                                <p className="text-slate-500">Nenhuma orientação registrada neste QR.</p>
+                            )}
+                        </BlocoInferior>
+                    </section>
+
+                    <section className="mx-5 mt-3">
+                        <h2 className="mb-2 border-l-[5px] border-emerald-600 pl-2 text-[12px] font-black uppercase tracking-[0.24em] text-slate-800">
+                            Participantes registrados
+                        </h2>
+
+                        <div className="overflow-hidden rounded-xl border border-slate-300 shadow-sm shadow-slate-200/70">
+                            {participantes.length > 0 ? (
+                                <table className="w-full border-collapse text-left text-[12px]">
+                                    <thead className="bg-slate-900 text-[10px] font-black uppercase tracking-[0.16em] text-white">
+                                        <tr>
+                                            <th className="w-14 px-3 py-2">Nº</th>
+                                            <th className="px-3 py-2">Nome</th>
+                                            <th className="w-52 px-3 py-2">Função</th>
+                                            <th className="w-52 px-3 py-2">Empresa</th>
+                                            <th className="w-56 px-3 py-2">Código no SafeScan</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-slate-200 bg-white">
+                                        {participantes.map((participante, indice) => (
+                                            <tr key={participante.id}>
+                                                <td className="px-3 py-2 font-bold text-slate-500">{String(participante.numero || indice + 1).padStart(2, "0")}</td>
+                                                <td className="px-3 py-2 font-black text-slate-900">{participante.nome}</td>
+                                                <td className="px-3 py-2 font-semibold text-slate-700">{participante.funcao || "-"}</td>
+                                                <td className="px-3 py-2 font-semibold text-slate-700">{participante.empresa || "-"}</td>
+                                                <td className="px-3 py-2 font-bold text-slate-600">{participante.codigoSafescan || "-"}</td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            ) : (
+                                <div className="bg-slate-50 px-4 py-2.5 text-[11px] font-semibold text-slate-500">
+                                    Participantes não disponíveis neste QR. Gere um novo DDS para gravar o snapshot completo dos participantes.
                                 </div>
                             )}
                         </div>
-                    )}
-                    <p className="mt-6 text-center text-xs font-bold uppercase tracking-[0.18em] text-slate-500">
+                    </section>
+
+                    <footer className="mx-5 mb-4 mt-3 border-t border-slate-200 pt-2 text-center text-[9px] font-black uppercase tracking-[0.26em] text-slate-500">
                         Documento conferido por QR Code público. Assinaturas permanecem no documento físico arquivado.
-                    </p>
-                </div>
-            </section>
+                    </footer>
+                </article>
+            </div>
         </main>
     );
 }
+
+export default ConsultaDdsPublica;
