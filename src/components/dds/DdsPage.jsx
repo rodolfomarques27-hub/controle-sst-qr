@@ -2454,6 +2454,163 @@ export function DdsPage({
         registroScannerDds,
     ]);
 
+    const preConferenciaParticipantesScannerDds = useMemo(() => {
+        const normalizar = (valor = "") => String(valor || "")
+            .normalize("NFD")
+            .replace(/[\u0300-\u036f]/g, "")
+            .toLowerCase()
+            .replace(/[^a-z0-9]+/g, " ")
+            .replace(/\s+/g, " ")
+            .trim();
+
+        const textoLido = [
+            leituraArquivoScannerDds?.textoExtraido || "",
+            leituraArquivoScannerDds?.textoPrevia || "",
+            ...linhasLeituraArquivoScannerDds.map((linha) => linha?.texto || ""),
+        ].join(" ");
+
+        const textoNormalizado = normalizar(textoLido);
+        const leituraExecutada = Boolean(leituraArquivoScannerDds);
+        const leituraConfiavel = Boolean(qualidadeLeituraArquivoScannerDds?.confiavel);
+        const participantesBase = Array.isArray(participantesRegistroScannerDds) ? participantesRegistroScannerDds : [];
+
+        const palavrasIgnoradas = new Set(["de", "da", "do", "das", "dos", "e"]);
+        const contemTexto = (valor = "") => {
+            const termo = normalizar(valor);
+
+            if (!termo || termo.length < 3 || !textoNormalizado) return false;
+
+            return textoNormalizado.includes(termo);
+        };
+
+        const contemNomeParcial = (nome = "") => {
+            const termoNome = normalizar(nome);
+            const palavrasNome = termoNome
+                .split(" ")
+                .filter((palavra) => palavra.length >= 4 && !palavrasIgnoradas.has(palavra));
+
+            if (!textoNormalizado || palavrasNome.length === 0) return false;
+
+            const encontradas = palavrasNome.filter((palavra) => textoNormalizado.includes(palavra)).length;
+
+            if (palavrasNome.length === 1) {
+                return encontradas === 1;
+            }
+
+            return encontradas >= Math.min(2, palavrasNome.length);
+        };
+
+        const participantes = participantesBase.map((participante, indice) => {
+            const nome = participante?.nome || "";
+            const funcao = participante?.funcao || "";
+            const codigoSafescan =
+                participante?.codigoSafescan ||
+                participante?.codigoSafeScan ||
+                participante?.codigoFuncionario ||
+                participante?.codigo_funcionario ||
+                participante?.codigo ||
+                "";
+
+            const nomeLocalizado = leituraExecutada && leituraConfiavel && contemNomeParcial(nome);
+            const codigoLocalizado = leituraExecutada && leituraConfiavel && contemTexto(codigoSafescan);
+
+            if (!leituraExecutada) {
+                return {
+                    numero: participante?.numero || indice + 1,
+                    nome,
+                    funcao,
+                    codigoSafescan,
+                    status: "pendente",
+                    statusTexto: "Aguardando leitura",
+                    detalhe: "Execute a leitura inicial da folha assinada.",
+                };
+            }
+
+            if (!leituraConfiavel) {
+                return {
+                    numero: participante?.numero || indice + 1,
+                    nome,
+                    funcao,
+                    codigoSafescan,
+                    status: "manual",
+                    statusTexto: "Exige conferência manual",
+                    detalhe: "OCR parcial/não confiável. Não é seguro comparar presença automaticamente.",
+                };
+            }
+
+            if (nomeLocalizado || codigoLocalizado) {
+                return {
+                    numero: participante?.numero || indice + 1,
+                    nome,
+                    funcao,
+                    codigoSafescan,
+                    status: "localizado",
+                    statusTexto: "Localizado no texto",
+                    detalhe: codigoLocalizado
+                        ? "Código SafeScan localizado na leitura."
+                        : "Nome localizado na leitura.",
+                };
+            }
+
+            return {
+                numero: participante?.numero || indice + 1,
+                nome,
+                funcao,
+                codigoSafescan,
+                status: "nao_localizado",
+                statusTexto: "Não localizado",
+                detalhe: "Nome/código não localizado com segurança no texto lido.",
+            };
+        });
+
+        const total = participantes.length;
+        const localizados = participantes.filter((item) => item.status === "localizado").length;
+        const naoLocalizados = participantes.filter((item) => item.status === "nao_localizado").length;
+        const manuais = participantes.filter((item) => item.status === "manual").length;
+        const pendentes = participantes.filter((item) => item.status === "pendente").length;
+
+        let statusGeral = "Aguardando participantes";
+        let statusVisual = "pendente";
+
+        if (total === 0) {
+            statusGeral = "Carregue o gabarito DDS";
+            statusVisual = "pendente";
+        } else if (!leituraExecutada) {
+            statusGeral = "Execute a leitura inicial";
+            statusVisual = "pendente";
+        } else if (!leituraConfiavel) {
+            statusGeral = "Exige conferência manual";
+            statusVisual = "manual";
+        } else if (localizados === total) {
+            statusGeral = "Participantes localizados no texto";
+            statusVisual = "ok";
+        } else if (localizados > 0) {
+            statusGeral = "Conferência parcial de participantes";
+            statusVisual = "manual";
+        } else {
+            statusGeral = "Participantes não localizados com segurança";
+            statusVisual = "manual";
+        }
+
+        return {
+            statusGeral,
+            statusVisual,
+            total,
+            localizados,
+            naoLocalizados,
+            manuais,
+            pendentes,
+            leituraExecutada,
+            leituraConfiavel,
+            participantes,
+        };
+    }, [
+        leituraArquivoScannerDds,
+        linhasLeituraArquivoScannerDds,
+        participantesRegistroScannerDds,
+        qualidadeLeituraArquivoScannerDds,
+    ]);
+
 
     const obraSetorFoiSalvaParaEmpresaDds = empresaSelecionadaChaveDds
         ? Object.prototype.hasOwnProperty.call(obrasSetorPorEmpresaDds || {}, empresaSelecionadaChaveDds)
@@ -3476,7 +3633,109 @@ export function DdsPage({
                                 )}
                             </div>
 
-                            {registroScannerDds && (
+                            {preConferenciaParticipantesScannerDds.total > 0 && (
+<div className="rounded-2xl border border-violet-100 bg-white p-4 ring-1 ring-violet-50 lg:col-span-2">
+    <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+        <div>
+            <p className="text-[11px] font-black uppercase tracking-wide text-violet-700">
+                Pré-conferência de presença
+            </p>
+            <h4 className="mt-1 text-base font-black text-slate-950">
+                Participantes do gabarito x leitura da folha
+            </h4>
+            <p className="mt-1 text-xs font-bold text-slate-500">
+                Conferência técnica auxiliar. Não valida assinatura, biometria ou grafia; indica apenas localização provável por texto/código quando a leitura permite.
+            </p>
+        </div>
+
+        <span className={`rounded-xl border px-3 py-2 text-xs font-black ${
+            preConferenciaParticipantesScannerDds.statusVisual === "ok"
+                ? "border-emerald-200 bg-emerald-50 text-emerald-800"
+                : preConferenciaParticipantesScannerDds.statusVisual === "manual"
+                    ? "border-amber-200 bg-amber-50 text-amber-800"
+                    : "border-slate-200 bg-slate-50 text-slate-700"
+        }`}>
+            {preConferenciaParticipantesScannerDds.statusGeral}
+        </span>
+    </div>
+
+    <div className="mt-4 grid gap-2 sm:grid-cols-2 xl:grid-cols-5">
+        <div className="rounded-xl bg-slate-50 p-3 ring-1 ring-slate-100">
+            <p className="text-[10px] font-black uppercase tracking-wide text-slate-400">Participantes</p>
+            <p className="mt-1 text-lg font-black text-slate-950">{preConferenciaParticipantesScannerDds.total}</p>
+        </div>
+        <div className="rounded-xl bg-emerald-50 p-3 ring-1 ring-emerald-100">
+            <p className="text-[10px] font-black uppercase tracking-wide text-emerald-700">Localizados</p>
+            <p className="mt-1 text-lg font-black text-emerald-900">{preConferenciaParticipantesScannerDds.localizados}</p>
+        </div>
+        <div className="rounded-xl bg-amber-50 p-3 ring-1 ring-amber-100">
+            <p className="text-[10px] font-black uppercase tracking-wide text-amber-700">Conferência manual</p>
+            <p className="mt-1 text-lg font-black text-amber-900">{preConferenciaParticipantesScannerDds.manuais}</p>
+        </div>
+        <div className="rounded-xl bg-red-50 p-3 ring-1 ring-red-100">
+            <p className="text-[10px] font-black uppercase tracking-wide text-red-700">Não localizados</p>
+            <p className="mt-1 text-lg font-black text-red-900">{preConferenciaParticipantesScannerDds.naoLocalizados}</p>
+        </div>
+        <div className="rounded-xl bg-slate-50 p-3 ring-1 ring-slate-100">
+            <p className="text-[10px] font-black uppercase tracking-wide text-slate-400">Pendentes</p>
+            <p className="mt-1 text-lg font-black text-slate-950">{preConferenciaParticipantesScannerDds.pendentes}</p>
+        </div>
+    </div>
+
+    {!preConferenciaParticipantesScannerDds.leituraConfiavel && preConferenciaParticipantesScannerDds.leituraExecutada && (
+        <div className="mt-4 rounded-xl border border-amber-100 bg-amber-50 p-3 text-xs font-bold leading-5 text-amber-800">
+            A leitura atual não tem qualidade suficiente para localizar participantes com segurança. A tabela abaixo fica como apoio de conferência manual.
+        </div>
+    )}
+
+    <div className="mt-4 overflow-hidden rounded-xl border border-violet-100">
+        <div className="max-h-72 overflow-auto">
+            <table className="w-full border-collapse text-left text-xs">
+                <thead className="sticky top-0 bg-violet-50 text-[10px] uppercase tracking-wide text-violet-500">
+                    <tr>
+                        <th className="px-3 py-2">Nº</th>
+                        <th className="px-3 py-2">Nome</th>
+                        <th className="px-3 py-2">Função</th>
+                        <th className="px-3 py-2">Código SafeScan</th>
+                        <th className="px-3 py-2">Status provável</th>
+                        <th className="px-3 py-2">Evidência</th>
+                    </tr>
+                </thead>
+                <tbody className="divide-y divide-violet-50">
+                    {preConferenciaParticipantesScannerDds.participantes.slice(0, 80).map((participante, indice) => (
+                        <tr key={`pre-conferencia-dds-${participante.codigoSafescan || participante.nome || indice}`}>
+                            <td className="px-3 py-2 font-black text-slate-500">{participante.numero || indice + 1}</td>
+                            <td className="px-3 py-2 font-bold text-slate-800">{participante.nome || "-"}</td>
+                            <td className="px-3 py-2 text-slate-600">{participante.funcao || "-"}</td>
+                            <td className="px-3 py-2 font-mono text-[11px] font-bold text-slate-700">{participante.codigoSafescan || "-"}</td>
+                            <td className="px-3 py-2">
+                                <span className={`inline-flex rounded-full border px-2 py-1 text-[10px] font-black uppercase tracking-wide ${
+                                    participante.status === "localizado"
+                                        ? "border-emerald-200 bg-emerald-50 text-emerald-800"
+                                        : participante.status === "manual"
+                                            ? "border-amber-200 bg-amber-50 text-amber-800"
+                                            : participante.status === "nao_localizado"
+                                                ? "border-red-200 bg-red-50 text-red-700"
+                                                : "border-slate-200 bg-slate-50 text-slate-600"
+                                }`}>
+                                    {participante.statusTexto}
+                                </span>
+                            </td>
+                            <td className="px-3 py-2 text-slate-600">{participante.detalhe}</td>
+                        </tr>
+                    ))}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <p className="mt-3 text-[11px] font-bold leading-5 text-slate-500">
+        Observação: esta etapa não substitui conferência visual da assinatura. O status indica apenas localização textual provável ou necessidade de conferência manual.
+    </p>
+</div>
+)}
+
+{registroScannerDds && (
                                 <div className="rounded-2xl border border-emerald-100 bg-white p-4 ring-1 ring-emerald-50 lg:col-span-2">
                                     <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
                                         <div>
