@@ -2291,6 +2291,169 @@ export function DdsPage({
         };
     }, [avisosLeituraArquivoScannerDds, leituraArquivoScannerDds, linhasLeituraArquivoScannerDds, textoPreviaArquivoScannerDds]);
 
+    const diagnosticoEstruturalScannerDds = useMemo(() => {
+        const normalizar = (valor = "") => String(valor || "")
+            .normalize("NFD")
+            .replace(/[\u0300-\u036f]/g, "")
+            .toLowerCase()
+            .replace(/[^a-z0-9]+/g, " ")
+            .replace(/\s+/g, " ")
+            .trim();
+
+        const dataParaBr = (valor = "") => {
+            const texto = String(valor || "").trim();
+            const matchIso = texto.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+
+            if (matchIso) {
+                return `${matchIso[3]}/${matchIso[2]}/${matchIso[1]}`;
+            }
+
+            return texto;
+        };
+
+        const textoLido = [
+            leituraArquivoScannerDds?.textoExtraido || "",
+            leituraArquivoScannerDds?.textoPrevia || "",
+            ...linhasLeituraArquivoScannerDds.map((linha) => linha?.texto || ""),
+        ].join(" ");
+
+        const textoNormalizado = normalizar(textoLido);
+        const contem = (...valores) => valores
+            .map((valor) => normalizar(valor))
+            .filter((valor) => valor.length >= 3)
+            .some((valor) => textoNormalizado.includes(valor));
+
+        const codigoEsperado = registroScannerDds?.codigo || codigoConferenciaDds || dadosDds.codigo || "";
+        const empresaEsperada = registroScannerDds?.empresaNome || registroScannerDds?.dados?.empresaNome || "";
+        const obraEsperada = registroScannerDds?.obraNome || registroScannerDds?.dados?.obraNome || "";
+        const periodoInicio = registroScannerDds?.periodoInicio || registroScannerDds?.dados?.periodoInicio || "";
+        const periodoFim = registroScannerDds?.periodoFim || registroScannerDds?.dados?.periodoFim || "";
+        const participantesEsperados = participantesRegistroScannerDds.length;
+
+        const gabaritoCarregado = Boolean(registroScannerDds);
+        const folhaAnexada = Boolean(arquivoScannerDds);
+        const leituraExecutada = Boolean(leituraArquivoScannerDds);
+
+        const codigoLocalizado = leituraExecutada && contem(codigoEsperado);
+        const empresaLocalizada = leituraExecutada && contem(empresaEsperada);
+        const obraLocalizada = leituraExecutada && contem(obraEsperada);
+        const periodoLocalizado = leituraExecutada && (
+            contem(periodoInicio, dataParaBr(periodoInicio)) ||
+            contem(periodoFim, dataParaBr(periodoFim))
+        );
+
+        let statusGeral = "Aguardando gabarito e folha";
+        let statusVisual = "pendente";
+
+        if (!gabaritoCarregado) {
+            statusGeral = "Carregue o gabarito digital do DDS";
+            statusVisual = "pendente";
+        } else if (!folhaAnexada) {
+            statusGeral = "Anexe a folha assinada";
+            statusVisual = "pendente";
+        } else if (!leituraExecutada) {
+            statusGeral = "Execute a leitura inicial";
+            statusVisual = "pendente";
+        } else if (!qualidadeLeituraArquivoScannerDds.confiavel) {
+            statusGeral = "Exige conferência manual";
+            statusVisual = "manual";
+        } else if (codigoLocalizado || empresaLocalizada || obraLocalizada || periodoLocalizado) {
+            statusGeral = "Pré-conferência estrutural compatível";
+            statusVisual = "ok";
+        } else {
+            statusGeral = "Leitura parcial: conferir manualmente";
+            statusVisual = "manual";
+        }
+
+        const montarItem = ({ titulo, detalhe, status }) => ({ titulo, detalhe, status });
+
+        return {
+            statusGeral,
+            statusVisual,
+            codigoEsperado,
+            empresaEsperada,
+            obraEsperada,
+            periodoTexto: [periodoInicio, periodoFim].filter(Boolean).join(" a "),
+            participantesEsperados,
+            itens: [
+                montarItem({
+                    titulo: "Gabarito digital",
+                    detalhe: gabaritoCarregado ? "Registro DDS carregado pelo código." : "Busque o registro DDS antes da conferência.",
+                    status: gabaritoCarregado ? "ok" : "pendente",
+                }),
+                montarItem({
+                    titulo: "Folha anexada",
+                    detalhe: folhaAnexada ? "Arquivo recebido para análise local." : "Anexe PDF ou imagem da folha assinada.",
+                    status: folhaAnexada ? "ok" : "pendente",
+                }),
+                montarItem({
+                    titulo: "Leitura inicial",
+                    detalhe: leituraExecutada
+                        ? `${qualidadeLeituraArquivoScannerDds.textoStatus}; ${linhasLeituraArquivoScannerDds.length} linha(s) OCR.`
+                        : "Leitura ainda não executada.",
+                    status: leituraExecutada
+                        ? (qualidadeLeituraArquivoScannerDds.confiavel ? "ok" : "manual")
+                        : "pendente",
+                }),
+                montarItem({
+                    titulo: "Código DDS",
+                    detalhe: !leituraExecutada
+                        ? "Aguardando leitura."
+                        : codigoLocalizado
+                            ? `Código ${codigoEsperado} localizado no texto lido.`
+                            : `Código ${codigoEsperado || "-"} não localizado com segurança.`,
+                    status: !leituraExecutada ? "pendente" : (codigoLocalizado ? "ok" : "manual"),
+                }),
+                montarItem({
+                    titulo: "Empresa",
+                    detalhe: !empresaEsperada
+                        ? "Empresa não informada no gabarito."
+                        : empresaLocalizada
+                            ? `Empresa localizada: ${empresaEsperada}.`
+                            : `Empresa esperada: ${empresaEsperada}.`,
+                    status: !leituraExecutada || !empresaEsperada ? "pendente" : (empresaLocalizada ? "ok" : "manual"),
+                }),
+                montarItem({
+                    titulo: "Obra / setor",
+                    detalhe: !obraEsperada
+                        ? "Obra/setor não informado no gabarito."
+                        : obraLocalizada
+                            ? `Obra/setor localizado: ${obraEsperada}.`
+                            : `Obra/setor esperado: ${obraEsperada}.`,
+                    status: !leituraExecutada || !obraEsperada ? "pendente" : (obraLocalizada ? "ok" : "manual"),
+                }),
+                montarItem({
+                    titulo: "Período semanal",
+                    detalhe: !periodoInicio && !periodoFim
+                        ? "Período não informado no gabarito."
+                        : periodoLocalizado
+                            ? `Período localizado: ${[periodoInicio, periodoFim].filter(Boolean).join(" a ")}.`
+                            : `Período esperado: ${[periodoInicio, periodoFim].filter(Boolean).join(" a ")}.`,
+                    status: !leituraExecutada || (!periodoInicio && !periodoFim) ? "pendente" : (periodoLocalizado ? "ok" : "manual"),
+                }),
+                montarItem({
+                    titulo: "Participantes esperados",
+                    detalhe: `${participantesEsperados} participante(s) no gabarito digital.`,
+                    status: participantesEsperados > 0 ? "ok" : "pendente",
+                }),
+                montarItem({
+                    titulo: "Assinatura / presença",
+                    detalhe: "Não avaliada nesta etapa. Próxima fase fará análise provável por linha, sem validação grafológica.",
+                    status: "pendente",
+                }),
+            ],
+        };
+    }, [
+        arquivoScannerDds,
+        codigoConferenciaDds,
+        dadosDds.codigo,
+        leituraArquivoScannerDds,
+        linhasLeituraArquivoScannerDds,
+        participantesRegistroScannerDds.length,
+        qualidadeLeituraArquivoScannerDds,
+        registroScannerDds,
+    ]);
+
 
     const obraSetorFoiSalvaParaEmpresaDds = empresaSelecionadaChaveDds
         ? Object.prototype.hasOwnProperty.call(obrasSetorPorEmpresaDds || {}, empresaSelecionadaChaveDds)
@@ -3228,6 +3391,87 @@ export function DdsPage({
                                                 </div>
                                             </div>
                                         )}
+                                    </div>
+                                )}
+                                {diagnosticoEstruturalScannerDds && (
+                                    <div className="mt-4 rounded-2xl border border-cyan-100 bg-white p-4 ring-1 ring-cyan-50">
+                                        <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+                                            <div>
+                                                <p className="text-[11px] font-black uppercase tracking-wide text-cyan-700">
+                                                    Diagnóstico estrutural DDS
+                                                </p>
+                                                <h4 className="mt-1 text-base font-black text-slate-950">
+                                                    Pré-conferência da folha assinada
+                                                </h4>
+                                                <p className="mt-1 text-xs font-bold text-slate-500">
+                                                    Compara gabarito digital, arquivo anexado e leitura inicial. Ainda não valida assinatura nem presença.
+                                                </p>
+                                            </div>
+
+                                            <span className={`rounded-xl border px-3 py-2 text-xs font-black ${
+                                                diagnosticoEstruturalScannerDds.statusVisual === "ok"
+                                                    ? "border-emerald-200 bg-emerald-50 text-emerald-800"
+                                                    : diagnosticoEstruturalScannerDds.statusVisual === "manual"
+                                                        ? "border-amber-200 bg-amber-50 text-amber-800"
+                                                        : "border-slate-200 bg-slate-50 text-slate-700"
+                                            }`}>
+                                                {diagnosticoEstruturalScannerDds.statusGeral}
+                                            </span>
+                                        </div>
+
+                                        <div className="mt-4 grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
+                                            <div className="rounded-xl bg-slate-50 p-3 ring-1 ring-slate-100">
+                                                <p className="text-[10px] font-black uppercase tracking-wide text-slate-400">Código esperado</p>
+                                                <p className="mt-1 truncate text-sm font-black text-slate-900" title={diagnosticoEstruturalScannerDds.codigoEsperado}>
+                                                    {diagnosticoEstruturalScannerDds.codigoEsperado || "-"}
+                                                </p>
+                                            </div>
+                                            <div className="rounded-xl bg-slate-50 p-3 ring-1 ring-slate-100">
+                                                <p className="text-[10px] font-black uppercase tracking-wide text-slate-400">Empresa / obra</p>
+                                                <p className="mt-1 truncate text-sm font-black text-slate-900" title={`${diagnosticoEstruturalScannerDds.empresaEsperada || "-"} · ${diagnosticoEstruturalScannerDds.obraEsperada || "-"}`}>
+                                                    {diagnosticoEstruturalScannerDds.empresaEsperada || "-"} · {diagnosticoEstruturalScannerDds.obraEsperada || "-"}
+                                                </p>
+                                            </div>
+                                            <div className="rounded-xl bg-slate-50 p-3 ring-1 ring-slate-100">
+                                                <p className="text-[10px] font-black uppercase tracking-wide text-slate-400">Período</p>
+                                                <p className="mt-1 truncate text-sm font-black text-slate-900" title={diagnosticoEstruturalScannerDds.periodoTexto}>
+                                                    {diagnosticoEstruturalScannerDds.periodoTexto || "-"}
+                                                </p>
+                                            </div>
+                                            <div className="rounded-xl bg-slate-50 p-3 ring-1 ring-slate-100">
+                                                <p className="text-[10px] font-black uppercase tracking-wide text-slate-400">Participantes</p>
+                                                <p className="mt-1 text-sm font-black text-slate-900">
+                                                    {diagnosticoEstruturalScannerDds.participantesEsperados}
+                                                </p>
+                                            </div>
+                                        </div>
+
+                                        <div className="mt-4 grid gap-2 lg:grid-cols-3">
+                                            {diagnosticoEstruturalScannerDds.itens.map((item, indice) => (
+                                                <div
+                                                    key={`diagnostico-estrutural-dds-${indice}`}
+                                                    className={`rounded-xl border p-3 ${
+                                                        item.status === "ok"
+                                                            ? "border-emerald-100 bg-emerald-50"
+                                                            : item.status === "manual"
+                                                                ? "border-amber-100 bg-amber-50"
+                                                                : "border-slate-100 bg-slate-50"
+                                                    }`}
+                                                >
+                                                    <p className={`text-[10px] font-black uppercase tracking-wide ${
+                                                        item.status === "ok"
+                                                            ? "text-emerald-700"
+                                                            : item.status === "manual"
+                                                                ? "text-amber-700"
+                                                                : "text-slate-400"
+                                                    }`}>
+                                                        {item.status === "ok" ? "OK" : item.status === "manual" ? "Conferir" : "Pendente"}
+                                                    </p>
+                                                    <p className="mt-1 text-sm font-black text-slate-950">{item.titulo}</p>
+                                                    <p className="mt-1 text-xs font-bold leading-5 text-slate-600">{item.detalhe}</p>
+                                                </div>
+                                            ))}
+                                        </div>
                                     </div>
                                 )}
                             </div>
