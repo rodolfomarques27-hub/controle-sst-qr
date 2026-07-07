@@ -2148,6 +2148,8 @@ export function DdsPage({
     const [registroScannerDds, setRegistroScannerDds] = useState(null);
     const [carregandoScannerDds, setCarregandoScannerDds] = useState(false);
     const [erroScannerDds, setErroScannerDds] = useState("");
+    const [arquivoScannerDds, setArquivoScannerDds] = useState(null);
+    const [erroArquivoScannerDds, setErroArquivoScannerDds] = useState("");
 
 
     useEffect(() => {
@@ -2207,6 +2209,21 @@ export function DdsPage({
         () => Array.isArray(registroScannerDds?.dados?.diasSemana) ? registroScannerDds.dados.diasSemana : [],
         [registroScannerDds]
     );
+
+    const resumoArquivoScannerDds = useMemo(() => {
+        if (!arquivoScannerDds) return null;
+
+        const tamanhoMb = arquivoScannerDds.size / (1024 * 1024);
+        const tamanhoFormatado = tamanhoMb >= 1
+            ? `${tamanhoMb.toFixed(2)} MB`
+            : `${Math.max(1, Math.round(arquivoScannerDds.size / 1024))} KB`;
+
+        return {
+            nome: arquivoScannerDds.name || "Arquivo sem nome",
+            tipo: arquivoScannerDds.type || "Tipo não identificado",
+            tamanho: tamanhoFormatado,
+        };
+    }, [arquivoScannerDds]);
 
 
     const obraSetorFoiSalvaParaEmpresaDds = empresaSelecionadaChaveDds
@@ -2574,6 +2591,45 @@ export function DdsPage({
         }
     }
 
+    function selecionarArquivoScannerDds(evento) {
+        const arquivo = evento?.target?.files?.[0] || null;
+
+        setErroArquivoScannerDds("");
+
+        if (!arquivo) {
+            setArquivoScannerDds(null);
+            return;
+        }
+
+        const nomeArquivo = String(arquivo.name || "").toLowerCase();
+        const tipoArquivo = String(arquivo.type || "").toLowerCase();
+        const extensaoPermitida = /\.(pdf|png|jpg|jpeg|webp)$/i.test(nomeArquivo);
+        const tipoPermitido = tipoArquivo === "application/pdf" || tipoArquivo.startsWith("image/");
+
+        if (!extensaoPermitida || !tipoPermitido) {
+            setArquivoScannerDds(null);
+            setErroArquivoScannerDds("Anexe apenas PDF ou imagem nos formatos PNG, JPG, JPEG ou WEBP.");
+            evento.target.value = "";
+            return;
+        }
+
+        const limiteBytes = 25 * 1024 * 1024;
+
+        if (arquivo.size > limiteBytes) {
+            setArquivoScannerDds(null);
+            setErroArquivoScannerDds("O arquivo deve ter no máximo 25 MB.");
+            evento.target.value = "";
+            return;
+        }
+
+        setArquivoScannerDds(arquivo);
+    }
+
+    function limparArquivoScannerDds() {
+        setArquivoScannerDds(null);
+        setErroArquivoScannerDds("");
+    }
+
     return (
         <div className="space-y-6">
             <DdsPrintStyles />
@@ -2867,6 +2923,78 @@ export function DdsPage({
                                 <p className="mt-1">
                                     Nesta etapa o sistema carrega o gabarito digital salvo na impressão. Depois vamos anexar a folha assinada e comparar presença/assinaturas por linha.
                                 </p>
+                            </div>
+
+                            <div className="rounded-2xl border border-cyan-100 bg-white p-4 ring-1 ring-cyan-50 lg:col-span-2">
+                                <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+                                    <div>
+                                        <p className="text-[11px] font-black uppercase tracking-wide text-cyan-700">
+                                            Folha assinada
+                                        </p>
+                                        <h3 className="mt-1 text-lg font-black text-slate-950">
+                                            Upload da folha DDS assinada
+                                        </h3>
+                                        <p className="mt-1 text-sm font-semibold text-slate-500">
+                                            Anexe o PDF escaneado ou a foto da folha assinada. A leitura automática será adicionada na próxima etapa.
+                                        </p>
+                                    </div>
+
+                                    {arquivoScannerDds && (
+                                        <span className="rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs font-black text-emerald-800">
+                                            Folha anexada para conferência
+                                        </span>
+                                    )}
+                                </div>
+
+                                <div className="mt-4 grid gap-3 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-end">
+                                    <label className="block">
+                                        <span className="text-[11px] font-black uppercase tracking-wide text-cyan-700">
+                                            Selecionar arquivo
+                                        </span>
+                                        <input
+                                            type="file"
+                                            accept=".pdf,image/png,image/jpeg,image/webp"
+                                            onChange={selecionarArquivoScannerDds}
+                                            className="mt-2 block w-full cursor-pointer rounded-xl border border-cyan-100 bg-cyan-50/60 px-3 py-2 text-sm font-bold text-slate-700 outline-none transition file:mr-3 file:rounded-lg file:border-0 file:bg-cyan-600 file:px-3 file:py-2 file:text-xs file:font-black file:text-white hover:bg-cyan-50 focus:border-cyan-400 focus:ring-2 focus:ring-cyan-100"
+                                        />
+                                    </label>
+
+                                    <button
+                                        type="button"
+                                        onClick={limparArquivoScannerDds}
+                                        disabled={!arquivoScannerDds && !erroArquivoScannerDds}
+                                        className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-xs font-black text-slate-700 shadow-sm transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
+                                    >
+                                        Limpar arquivo
+                                    </button>
+                                </div>
+
+                                {erroArquivoScannerDds && (
+                                    <p className="mt-3 rounded-xl border border-red-100 bg-red-50 px-3 py-2 text-xs font-bold text-red-700">
+                                        {erroArquivoScannerDds}
+                                    </p>
+                                )}
+
+                                {resumoArquivoScannerDds && (
+                                    <div className="mt-4 grid gap-2 sm:grid-cols-3">
+                                        <div className="rounded-xl bg-slate-50 p-3 ring-1 ring-slate-100">
+                                            <p className="text-[10px] font-black uppercase tracking-wide text-slate-400">Arquivo</p>
+                                            <p className="mt-1 truncate text-sm font-black text-slate-900" title={resumoArquivoScannerDds.nome}>
+                                                {resumoArquivoScannerDds.nome}
+                                            </p>
+                                        </div>
+                                        <div className="rounded-xl bg-slate-50 p-3 ring-1 ring-slate-100">
+                                            <p className="text-[10px] font-black uppercase tracking-wide text-slate-400">Tamanho</p>
+                                            <p className="mt-1 text-sm font-black text-slate-900">{resumoArquivoScannerDds.tamanho}</p>
+                                        </div>
+                                        <div className="rounded-xl bg-slate-50 p-3 ring-1 ring-slate-100">
+                                            <p className="text-[10px] font-black uppercase tracking-wide text-slate-400">Tipo</p>
+                                            <p className="mt-1 truncate text-sm font-black text-slate-900" title={resumoArquivoScannerDds.tipo}>
+                                                {resumoArquivoScannerDds.tipo}
+                                            </p>
+                                        </div>
+                                    </div>
+                                )}
                             </div>
 
                             {registroScannerDds && (
