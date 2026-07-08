@@ -3921,6 +3921,50 @@ export function DdsPage({
         resultadoFinalScannerDds,
     ]);
 
+
+    const reciboConferenciaFinalDds = useMemo(() => {
+        if (!conferenciaOficialConcluidaDds || !fechamentoConferenciaAssistidaDds || !resultadoFinalApresentacaoDds?.modoAssistido) {
+            return null;
+        }
+
+        const dadosRegistro = registroScannerDds?.dados || {};
+        const resumoResultado = resultadoFinalApresentacaoDds?.resumo || {};
+        const resumoFechamento = fechamentoConferenciaAssistidaDds?.resumo || {};
+        const estatisticasFechamento = fechamentoConferenciaAssistidaDds?.estatisticas || {};
+
+        const codigo = registroScannerDds?.codigo || codigoConferenciaDds || dadosDds.codigo || fechamentoConferenciaAssistidaDds.codigo || "";
+        const empresa = registroScannerDds?.empresaNome || dadosRegistro.empresaNome || dadosRegistro.empresa || dadosDds.empresaNome || "Empresa não informada";
+        const obra = registroScannerDds?.obraNome || dadosRegistro.obraNome || dadosRegistro.obra || dadosDds.obraNome || "Obra não informada";
+        const periodoInicio = registroScannerDds?.periodoInicio || dadosRegistro.periodoInicio || dadosDds.periodoInicio || "-";
+        const periodoFim = registroScannerDds?.periodoFim || dadosRegistro.periodoFim || dadosDds.periodoFim || "-";
+        const urlConferencia = registroScannerDds?.urlConferencia || dadosRegistro.urlConferencia || dadosDds.qrConferenciaUrl || "";
+
+        return {
+            codigo,
+            empresa,
+            obra,
+            periodoInicio,
+            periodoFim,
+            urlConferencia,
+            concluidoEm: fechamentoConferenciaAssistidaDds.concluidoEm || "",
+            status: "Conferência concluída oficialmente",
+            participantes: Number(resumoFechamento.participantes ?? resumoResultado.participantesTotal ?? 0),
+            presencas: Number(resumoFechamento.presencas ?? resumoResultado.presencas ?? 0),
+            ausencias: Number(resumoFechamento.ausencias ?? resumoResultado.ausencias ?? 0),
+            manuais: Number(resumoFechamento.manuais ?? resumoResultado.manuais ?? 0),
+            homemDia: Number(resumoFechamento.homemDia ?? resumoResultado.homemDia ?? 0),
+            diasAtivos: Number(resumoFechamento.diasAtivos ?? resumoResultado.diasAtivos ?? estatisticasFechamento.diasAtivos ?? 0),
+            funcionariosSemanaCompleta: Number(resumoFechamento.funcionariosSemanaCompleta ?? resumoResultado.funcionariosSemanaCompleta ?? 0),
+        };
+    }, [
+        codigoConferenciaDds,
+        conferenciaOficialConcluidaDds,
+        dadosDds,
+        fechamentoConferenciaAssistidaDds,
+        registroScannerDds,
+        resultadoFinalApresentacaoDds,
+    ]);
+
     async function imprimirDdsComQrConferencia() {
         if (salvandoRegistroDds) return;
 
@@ -4885,41 +4929,46 @@ export function DdsPage({
                 Apuração oficial para estatísticas
             </h4>
             <p className="mt-1 max-w-4xl text-sm font-bold leading-6 text-slate-700">
-                Confirme P para presença, X para falta e ? para campo vazio/manual. O botão Semana completa marca presença em todos os dias com atividade.
+                Use P para confirmar presença, X para registrar ausência e ? para deixar o campo pendente de revisão. Em Semana completa, o sistema preenche automaticamente todos os dias com atividade.
             </p>
         </div>
 
-        <div className="flex flex-col items-stretch gap-2 lg:items-end">
-            {conferenciaAssistidaSalvaEmDds && (
-                <p className="text-[10px] font-black uppercase tracking-wide text-emerald-700">
-                    Salva em {new Date(conferenciaAssistidaSalvaEmDds).toLocaleString("pt-BR")}
-                </p>
-            )}
-            {fechamentoConferenciaAssistidaDds?.status === "concluida" && (
-                <p className="text-[10px] font-black uppercase tracking-wide text-emerald-800">
-                    Concluída oficialmente em {new Date(fechamentoConferenciaAssistidaDds.concluidoEm).toLocaleString("pt-BR")}
-                </p>
+        <div className="flex w-full flex-col gap-3 lg:max-w-[560px] lg:items-stretch">
+            {(conferenciaAssistidaSalvaEmDds || fechamentoConferenciaAssistidaDds?.status === "concluida") && (
+                <div className="grid gap-2 sm:grid-cols-2">
+                    {conferenciaAssistidaSalvaEmDds && (
+                        <div className="rounded-xl border border-emerald-200 bg-white px-3 py-2 text-center shadow-sm">
+                            <p className="text-[9px] font-black uppercase tracking-wide text-emerald-600">Salva em</p>
+                            <p className="mt-0.5 text-[11px] font-black text-emerald-900">
+                                {new Date(conferenciaAssistidaSalvaEmDds).toLocaleString("pt-BR")}
+                            </p>
+                        </div>
+                    )}
+
+                    {fechamentoConferenciaAssistidaDds?.status === "concluida" && (
+                        <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-center shadow-sm">
+                            <p className="text-[9px] font-black uppercase tracking-wide text-emerald-700">Concluída oficialmente em</p>
+                            <p className="mt-0.5 text-[11px] font-black text-emerald-950">
+                                {new Date(fechamentoConferenciaAssistidaDds.concluidoEm).toLocaleString("pt-BR")}
+                            </p>
+                        </div>
+                    )}
+                </div>
             )}
 
-            {erroFechamentoConferenciaDds && (
-                <p className="max-w-xs text-right text-[11px] font-bold text-red-700">
-                    {erroFechamentoConferenciaDds}
-                </p>
+            {(erroFechamentoConferenciaDds || erroConferenciaAssistidaDds) && (
+                <div className="rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-right text-[11px] font-bold text-red-700">
+                    {erroFechamentoConferenciaDds || erroConferenciaAssistidaDds}
+                </div>
             )}
 
-            {erroConferenciaAssistidaDds && (
-                <p className="max-w-xs text-right text-[11px] font-bold text-red-700">
-                    {erroConferenciaAssistidaDds}
-                </p>
-            )}
-
-            <div className="flex flex-wrap justify-end gap-2">
+            <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
                 {conferenciaOficialConcluidaDds && (
                     <button
                         type="button"
                         onClick={reabrirConferenciaAssistidaDds}
                         disabled={salvandoFechamentoConferenciaDds}
-                        className="rounded-xl border border-amber-300 bg-white px-4 py-2 text-xs font-black text-amber-800 shadow-sm transition hover:border-amber-400 hover:bg-amber-50 disabled:cursor-not-allowed disabled:opacity-60"
+                        className="w-full rounded-xl border border-amber-300 bg-white px-4 py-2 text-center text-xs font-black text-amber-800 shadow-sm transition hover:border-amber-400 hover:bg-amber-50 disabled:cursor-not-allowed disabled:opacity-60"
                     >
                         {salvandoFechamentoConferenciaDds ? "Reabrindo..." : "Reabrir conferência"}
                     </button>
@@ -4929,7 +4978,7 @@ export function DdsPage({
                     type="button"
                     onClick={concluirConferenciaAssistidaDds}
                     disabled={conferenciaOficialConcluidaDds || salvandoFechamentoConferenciaDds || estatisticasConferenciaAssistidaDds.manuais > 0 || estatisticasConferenciaAssistidaDds.participantes <= 0}
-                    className="rounded-xl border border-emerald-300 bg-white px-4 py-2 text-xs font-black text-emerald-800 shadow-sm transition hover:border-emerald-400 hover:bg-emerald-50 disabled:cursor-not-allowed disabled:opacity-60"
+                    className="w-full rounded-xl border border-emerald-300 bg-white px-4 py-2 text-center text-xs font-black text-emerald-800 shadow-sm transition hover:border-emerald-400 hover:bg-emerald-50 disabled:cursor-not-allowed disabled:opacity-60"
                     title={estatisticasConferenciaAssistidaDds.manuais > 0 ? "Troque todos os ? por P ou X antes de concluir." : "Registrar fechamento oficial da Conferência Assistida."}
                 >
                     {salvandoFechamentoConferenciaDds ? "Concluindo..." : "Concluir conferência oficial"}
@@ -4939,7 +4988,7 @@ export function DdsPage({
                     type="button"
                     onClick={salvarConferenciaAssistidaDds}
                     disabled={salvandoConferenciaAssistidaDds || conferenciaOficialConcluidaDds}
-                    className="rounded-xl border border-emerald-200 bg-emerald-600 px-4 py-2 text-xs font-black text-white shadow-sm transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-60"
+                    className="w-full rounded-xl border border-emerald-200 bg-emerald-600 px-4 py-2 text-center text-xs font-black text-white shadow-sm transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-60"
                 >
                     {salvandoConferenciaAssistidaDds ? "Salvando..." : "Salvar conferência"}
                 </button>
@@ -4948,7 +4997,7 @@ export function DdsPage({
                     type="button"
                     onClick={limparConferenciaAssistidaDds}
                     disabled={conferenciaOficialConcluidaDds}
-                    className="rounded-xl border border-cyan-200 bg-white px-4 py-2 text-xs font-black text-cyan-800 shadow-sm transition hover:border-cyan-300 hover:bg-cyan-50"
+                    className="w-full rounded-xl border border-cyan-200 bg-white px-4 py-2 text-center text-xs font-black text-cyan-800 shadow-sm transition hover:border-cyan-300 hover:bg-cyan-50 disabled:cursor-not-allowed disabled:opacity-60"
                 >
                     Limpar conferência
                 </button>
@@ -4957,23 +5006,23 @@ export function DdsPage({
     </div>
 
     <div className="mt-4 grid gap-2 sm:grid-cols-2 xl:grid-cols-5">
-        <div className="rounded-xl bg-white p-3 ring-1 ring-cyan-100">
+        <div className="rounded-xl bg-white p-3 text-center ring-1 ring-cyan-100">
             <p className="text-[10px] font-black uppercase tracking-wide text-slate-400">Participantes da página</p>
             <p className="mt-1 text-lg font-black text-slate-950">{estatisticasConferenciaAssistidaDds.participantes}</p>
         </div>
-        <div className="rounded-xl bg-white p-3 ring-1 ring-cyan-100">
+        <div className="rounded-xl bg-white p-3 text-center ring-1 ring-cyan-100">
             <p className="text-[10px] font-black uppercase tracking-wide text-emerald-700">Presenças</p>
             <p className="mt-1 text-lg font-black text-emerald-900">{estatisticasConferenciaAssistidaDds.presencas}</p>
         </div>
-        <div className="rounded-xl bg-white p-3 ring-1 ring-cyan-100">
+        <div className="rounded-xl bg-white p-3 text-center ring-1 ring-cyan-100">
             <p className="text-[10px] font-black uppercase tracking-wide text-red-700">Ausências</p>
             <p className="mt-1 text-lg font-black text-red-900">{estatisticasConferenciaAssistidaDds.ausencias}</p>
         </div>
-        <div className="rounded-xl bg-white p-3 ring-1 ring-cyan-100">
+        <div className="rounded-xl bg-white p-3 text-center ring-1 ring-cyan-100">
             <p className="text-[10px] font-black uppercase tracking-wide text-amber-700">Manual/vazio</p>
             <p className="mt-1 text-lg font-black text-amber-900">{estatisticasConferenciaAssistidaDds.manuais}</p>
         </div>
-        <div className="rounded-xl bg-white p-3 ring-1 ring-cyan-100">
+        <div className="rounded-xl bg-white p-3 text-center ring-1 ring-cyan-100">
             <p className="text-[10px] font-black uppercase tracking-wide text-violet-700">Semana completa</p>
             <p className="mt-1 text-lg font-black text-violet-900">{estatisticasConferenciaAssistidaDds.funcionariosSemanaCompleta}</p>
         </div>
@@ -5196,6 +5245,117 @@ export function DdsPage({
             ))}
         </ul>
     </div>
+</div>
+)}
+
+
+{reciboConferenciaFinalDds && (
+<div className="rounded-2xl border border-slate-200 bg-white p-5 ring-1 ring-slate-100 lg:col-span-2">
+    <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+        <div>
+            <p className="text-[11px] font-black uppercase tracking-wide text-slate-500">
+                Recibo da Conferência DDS
+            </p>
+            <h4 className="mt-1 text-xl font-black text-slate-950">
+                Fechamento oficial registrado
+            </h4>
+            <p className="mt-1 max-w-4xl text-sm font-bold leading-6 text-slate-600">
+                Resumo final da Conferência Assistida, com totais oficiais salvos no registro do DDS.
+            </p>
+        </div>
+
+        <span className="rounded-xl border border-emerald-300 bg-emerald-50 px-4 py-2 text-xs font-black uppercase tracking-wide text-emerald-800">
+            {reciboConferenciaFinalDds.status}
+        </span>
+    </div>
+
+    <div className="mt-4 grid gap-3 lg:grid-cols-[1fr_auto]">
+        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+            <div className="rounded-xl bg-slate-50 p-3 ring-1 ring-slate-100">
+                <p className="text-[10px] font-black uppercase tracking-wide text-slate-400">Código DDS</p>
+                <p className="mt-1 break-all text-sm font-black text-slate-950">{reciboConferenciaFinalDds.codigo || "-"}</p>
+            </div>
+
+            <div className="rounded-xl bg-slate-50 p-3 ring-1 ring-slate-100">
+                <p className="text-[10px] font-black uppercase tracking-wide text-slate-400">Empresa</p>
+                <p className="mt-1 text-sm font-black text-slate-950">{reciboConferenciaFinalDds.empresa}</p>
+            </div>
+
+            <div className="rounded-xl bg-slate-50 p-3 ring-1 ring-slate-100">
+                <p className="text-[10px] font-black uppercase tracking-wide text-slate-400">Obra / setor</p>
+                <p className="mt-1 text-sm font-black text-slate-950">{reciboConferenciaFinalDds.obra}</p>
+            </div>
+
+            <div className="rounded-xl bg-slate-50 p-3 ring-1 ring-slate-100">
+                <p className="text-[10px] font-black uppercase tracking-wide text-slate-400">Período</p>
+                <p className="mt-1 text-sm font-black text-slate-950">
+                    {reciboConferenciaFinalDds.periodoInicio} a {reciboConferenciaFinalDds.periodoFim}
+                </p>
+            </div>
+
+            <div className="rounded-xl bg-emerald-50 p-3 ring-1 ring-emerald-100">
+                <p className="text-[10px] font-black uppercase tracking-wide text-emerald-700">Participantes</p>
+                <p className="mt-1 text-lg font-black text-emerald-900">{reciboConferenciaFinalDds.participantes}</p>
+            </div>
+
+            <div className="rounded-xl bg-emerald-50 p-3 ring-1 ring-emerald-100">
+                <p className="text-[10px] font-black uppercase tracking-wide text-emerald-700">Presenças</p>
+                <p className="mt-1 text-lg font-black text-emerald-900">{reciboConferenciaFinalDds.presencas}</p>
+            </div>
+
+            <div className="rounded-xl bg-red-50 p-3 ring-1 ring-red-100">
+                <p className="text-[10px] font-black uppercase tracking-wide text-red-700">Ausências</p>
+                <p className="mt-1 text-lg font-black text-red-900">{reciboConferenciaFinalDds.ausencias}</p>
+            </div>
+
+            <div className="rounded-xl bg-orange-50 p-3 ring-1 ring-orange-100">
+                <p className="text-[10px] font-black uppercase tracking-wide text-orange-700">Homem-dia</p>
+                <p className="mt-1 text-lg font-black text-orange-900">{reciboConferenciaFinalDds.homemDia}</p>
+            </div>
+        </div>
+
+        <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 text-center">
+            {reciboConferenciaFinalDds.urlConferencia ? (
+                <DdsQrConferenciaImpresso
+                    url={reciboConferenciaFinalDds.urlConferencia}
+                    size={96}
+                    fallbackClassName="h-24 w-24"
+                />
+            ) : (
+                <div className="flex h-24 w-24 items-center justify-center rounded-xl border border-dashed border-slate-300 bg-white text-[10px] font-black uppercase text-slate-400">
+                    Sem QR
+                </div>
+            )}
+
+            <p className="mt-3 text-[10px] font-black uppercase tracking-wide text-slate-400">Conclusão oficial</p>
+            <p className="mt-1 text-xs font-black text-slate-950">
+                {reciboConferenciaFinalDds.concluidoEm
+                    ? new Date(reciboConferenciaFinalDds.concluidoEm).toLocaleString("pt-BR")
+                    : "-"}
+            </p>
+        </div>
+    </div>
+
+    <div className="mt-4 grid gap-2 sm:grid-cols-3">
+        <div className="rounded-xl bg-white p-3 ring-1 ring-slate-100">
+            <p className="text-[10px] font-black uppercase tracking-wide text-slate-400">Dias ativos</p>
+            <p className="mt-1 text-lg font-black text-slate-950">{reciboConferenciaFinalDds.diasAtivos}</p>
+        </div>
+
+        <div className="rounded-xl bg-white p-3 ring-1 ring-slate-100">
+            <p className="text-[10px] font-black uppercase tracking-wide text-slate-400">Semana completa</p>
+            <p className="mt-1 text-lg font-black text-slate-950">{reciboConferenciaFinalDds.funcionariosSemanaCompleta}</p>
+        </div>
+
+        <div className="rounded-xl bg-white p-3 ring-1 ring-slate-100">
+            <p className="text-[10px] font-black uppercase tracking-wide text-slate-400">Manual/vazio</p>
+            <p className="mt-1 text-lg font-black text-slate-950">{reciboConferenciaFinalDds.manuais}</p>
+        </div>
+    </div>
+
+    <p className="mt-4 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-[11px] font-bold leading-5 text-slate-600">
+        Este recibo resume a apuração oficial da Conferência Assistida DDS. O QR/código serve para conferência do registro digital vinculado.
+    </p>
 </div>
 )}
 
