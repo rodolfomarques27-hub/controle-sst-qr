@@ -2185,6 +2185,9 @@ export function DdsPage({
     const [salvandoConferenciaAssistidaDds, setSalvandoConferenciaAssistidaDds] = useState(false);
     const [erroConferenciaAssistidaDds, setErroConferenciaAssistidaDds] = useState("");
     const [conferenciaAssistidaSalvaEmDds, setConferenciaAssistidaSalvaEmDds] = useState("");
+    const [salvandoFechamentoConferenciaDds, setSalvandoFechamentoConferenciaDds] = useState(false);
+    const [erroFechamentoConferenciaDds, setErroFechamentoConferenciaDds] = useState("");
+    const [fechamentoConferenciaAssistidaDds, setFechamentoConferenciaAssistidaDds] = useState(null);
 
 
     useEffect(() => {
@@ -2886,6 +2889,8 @@ export function DdsPage({
 
     function limparConferenciaAssistidaDds() {
         setConferenciaAssistidaDds({});
+        setFechamentoConferenciaAssistidaDds(null);
+        setErroFechamentoConferenciaDds("");
     }
     async function salvarConferenciaAssistidaDds() {
         if (salvandoConferenciaAssistidaDds) return;
@@ -2929,6 +2934,7 @@ export function DdsPage({
                     funcao: participante.funcao,
                     codigoSafescan: participante.codigoSafescan,
                 })),
+                fechamento: dadosAtuais?.conferenciaAssistida?.fechamento || fechamentoConferenciaAssistidaDds || null,
             };
 
             const registroAtualizado = await salvarRegistroDds({
@@ -2959,6 +2965,110 @@ export function DdsPage({
         }
     }
 
+
+    async function concluirConferenciaAssistidaDds() {
+        if (salvandoFechamentoConferenciaDds) return;
+
+        if (!supabase) {
+            setErroFechamentoConferenciaDds("Cliente Supabase não disponível para concluir a conferência.");
+            return;
+        }
+
+        const codigo = registroScannerDds?.codigo || codigoConferenciaDds || dadosDds.codigo || "";
+
+        if (!codigo) {
+            setErroFechamentoConferenciaDds("Busque ou gere um DDS antes de concluir a Conferência Assistida.");
+            return;
+        }
+
+        if (estatisticasConferenciaAssistidaDds.participantes <= 0 || diasAtivosConferenciaAssistidaDds.length <= 0) {
+            setErroFechamentoConferenciaDds("Não há base suficiente para concluir a conferência oficial.");
+            return;
+        }
+
+        if (estatisticasConferenciaAssistidaDds.manuais > 0) {
+            setErroFechamentoConferenciaDds("Ainda existem campos Manual/vazio. Troque todos os ? por P ou X antes de concluir.");
+            return;
+        }
+
+        setSalvandoFechamentoConferenciaDds(true);
+        setErroFechamentoConferenciaDds("");
+
+        try {
+            const concluidoEm = new Date().toISOString();
+            const dadosAtuais = registroScannerDds?.dados || {};
+
+            const fechamento = {
+                versao: 1,
+                status: "concluida",
+                origem: "fechamento_conferencia_assistida_dds",
+                concluidoEm,
+                codigo,
+                estatisticas: estatisticasConferenciaAssistidaDds,
+                resumo: {
+                    participantes: estatisticasConferenciaAssistidaDds.participantes,
+                    presencas: estatisticasConferenciaAssistidaDds.presencas,
+                    ausencias: estatisticasConferenciaAssistidaDds.ausencias,
+                    manuais: estatisticasConferenciaAssistidaDds.manuais,
+                    homemDia: estatisticasConferenciaAssistidaDds.homemDia,
+                    diasAtivos: diasAtivosConferenciaAssistidaDds.length,
+                    funcionariosSemanaCompleta: estatisticasConferenciaAssistidaDds.funcionariosSemanaCompleta,
+                },
+            };
+
+            const conferenciaAssistida = {
+                ...(dadosAtuais.conferenciaAssistida || {}),
+                versao: 1,
+                origem: "conferencia_assistida_dds",
+                atualizadoEm: concluidoEm,
+                frequencia: conferenciaAssistidaDds,
+                estatisticas: estatisticasConferenciaAssistidaDds,
+                diasAtivos: diasAtivosConferenciaAssistidaDds.map((dia) => ({
+                    indice: dia.indice,
+                    chaveAssistida: dia.chaveAssistida,
+                    nome: dia.nome,
+                    curto: dia.curto,
+                    data: dia.data,
+                    tema: dia.tema,
+                })),
+                participantes: participantesConferenciaAssistidaDds.map((participante) => ({
+                    numero: participante.numero,
+                    nome: participante.nome,
+                    funcao: participante.funcao,
+                    codigoSafescan: participante.codigoSafescan,
+                })),
+                fechamento,
+            };
+
+            const registroAtualizado = await salvarRegistroDds({
+                supabase,
+                registro: {
+                    ...registroScannerDds,
+                    codigo,
+                    empresaId: registroScannerDds?.empresaId || registroScannerDds?.empresa_id || dadosAtuais.empresaId || dadosAtuais.empresa_id || "",
+                    obraId: registroScannerDds?.obraId || registroScannerDds?.obra_id || dadosAtuais.obraId || dadosAtuais.obra_id || "",
+                    empresaNome: registroScannerDds?.empresaNome || dadosAtuais.empresaNome || dadosAtuais.empresa || "",
+                    obraNome: registroScannerDds?.obraNome || dadosAtuais.obraNome || dadosAtuais.obra || "",
+                    periodoInicio: registroScannerDds?.periodoInicio || dadosAtuais.periodoInicio || "",
+                    periodoFim: registroScannerDds?.periodoFim || dadosAtuais.periodoFim || "",
+                    dados: {
+                        ...dadosAtuais,
+                        conferenciaAssistida,
+                    },
+                },
+            });
+
+            setRegistroScannerDds(registroAtualizado);
+            setConferenciaAssistidaDds(registroAtualizado?.dados?.conferenciaAssistida?.frequencia || conferenciaAssistidaDds);
+            setConferenciaAssistidaSalvaEmDds(registroAtualizado?.dados?.conferenciaAssistida?.atualizadoEm || concluidoEm);
+            setFechamentoConferenciaAssistidaDds(registroAtualizado?.dados?.conferenciaAssistida?.fechamento || fechamento);
+        } catch (error) {
+            setErroFechamentoConferenciaDds(error?.message || "Não foi possível concluir a Conferência Assistida DDS.");
+        } finally {
+            setSalvandoFechamentoConferenciaDds(false);
+        }
+    }
+
     // Restaurar Conferência Assistida salva no JSON dados.conferenciaAssistida.
     useEffect(() => {
         const conferenciaSalva = registroScannerDds?.dados?.conferenciaAssistida;
@@ -2966,13 +3076,17 @@ export function DdsPage({
         if (conferenciaSalva?.frequencia && typeof conferenciaSalva.frequencia === "object") {
             setConferenciaAssistidaDds(conferenciaSalva.frequencia);
             setConferenciaAssistidaSalvaEmDds(conferenciaSalva.atualizadoEm || "");
+            setFechamentoConferenciaAssistidaDds(conferenciaSalva.fechamento || null);
             setErroConferenciaAssistidaDds("");
+            setErroFechamentoConferenciaDds("");
             return;
         }
 
         setConferenciaAssistidaDds({});
         setConferenciaAssistidaSalvaEmDds("");
+        setFechamentoConferenciaAssistidaDds(null);
         setErroConferenciaAssistidaDds("");
+        setErroFechamentoConferenciaDds("");
     }, [registroScannerDds?.codigo]);
     const apuracaoDiariaScannerDds = useMemo(() => {
         const nomesDias = ["Domingo", "Segunda-feira", "Terça-feira", "Quarta-feira", "Quinta-feira", "Sexta-feira", "Sábado"];
@@ -3634,16 +3748,21 @@ export function DdsPage({
         const diasAtivos = Number(diasAtivosConferenciaAssistidaDds.length || 0);
         const funcionariosSemanaCompleta = Number(estatisticasConferenciaAssistidaDds.funcionariosSemanaCompleta || 0);
         const totalCampos = participantes * diasAtivos;
+        const conferenciaConcluidaOficialmente = fechamentoConferenciaAssistidaDds?.status === "concluida";
 
         const conferenciaFechada = totalCampos > 0 && manuais === 0;
         const statusVisual = conferenciaFechada ? "ok" : "parcial";
-        const statusFinal = conferenciaFechada ? "Conferido oficialmente" : "Conferência assistida parcial";
-        const titulo = conferenciaFechada
-            ? "Frequência oficial conferida"
-            : "Frequência oficial com campos pendentes";
-        const descricao = conferenciaFechada
-            ? "A frequência oficial do DDS foi confirmada pela Conferência Assistida. O OCR visual permanece apenas como apoio técnico."
-            : "A Conferência Assistida já possui dados oficiais, mas ainda existem campos marcados como manual/vazio para revisar.";
+        const statusFinal = conferenciaConcluidaOficialmente ? "Conferência concluída oficialmente" : conferenciaFechada ? "Conferido oficialmente" : "Conferência assistida parcial";
+        const titulo = conferenciaConcluidaOficialmente
+            ? "Conferência DDS concluída oficialmente"
+            : conferenciaFechada
+                ? "Frequência oficial conferida"
+                : "Frequência oficial com campos pendentes";
+        const descricao = conferenciaConcluidaOficialmente
+            ? "A Conferência Assistida foi concluída oficialmente e salva no registro DDS. O OCR visual permanece apenas como apoio técnico."
+            : conferenciaFechada
+                ? "A frequência oficial do DDS foi confirmada pela Conferência Assistida. O OCR visual permanece apenas como apoio técnico."
+                : "A Conferência Assistida já possui dados oficiais, mas ainda existem campos marcados como manual/vazio para revisar.";
 
         const itens = [
             {
@@ -3705,6 +3824,7 @@ export function DdsPage({
         conferenciaAssistidaDds,
         diasAtivosConferenciaAssistidaDds,
         estatisticasConferenciaAssistidaDds,
+        fechamentoConferenciaAssistidaDds,
         resultadoFinalScannerDds,
     ]);
 
@@ -4682,6 +4802,17 @@ export function DdsPage({
                     Salva em {new Date(conferenciaAssistidaSalvaEmDds).toLocaleString("pt-BR")}
                 </p>
             )}
+            {fechamentoConferenciaAssistidaDds?.status === "concluida" && (
+                <p className="text-[10px] font-black uppercase tracking-wide text-emerald-800">
+                    Concluída oficialmente em {new Date(fechamentoConferenciaAssistidaDds.concluidoEm).toLocaleString("pt-BR")}
+                </p>
+            )}
+
+            {erroFechamentoConferenciaDds && (
+                <p className="max-w-xs text-right text-[11px] font-bold text-red-700">
+                    {erroFechamentoConferenciaDds}
+                </p>
+            )}
 
             {erroConferenciaAssistidaDds && (
                 <p className="max-w-xs text-right text-[11px] font-bold text-red-700">
@@ -4690,6 +4821,16 @@ export function DdsPage({
             )}
 
             <div className="flex flex-wrap justify-end gap-2">
+                <button
+                    type="button"
+                    onClick={concluirConferenciaAssistidaDds}
+                    disabled={salvandoFechamentoConferenciaDds || estatisticasConferenciaAssistidaDds.manuais > 0 || estatisticasConferenciaAssistidaDds.participantes <= 0}
+                    className="rounded-xl border border-emerald-300 bg-white px-4 py-2 text-xs font-black text-emerald-800 shadow-sm transition hover:border-emerald-400 hover:bg-emerald-50 disabled:cursor-not-allowed disabled:opacity-60"
+                    title={estatisticasConferenciaAssistidaDds.manuais > 0 ? "Troque todos os ? por P ou X antes de concluir." : "Registrar fechamento oficial da Conferência Assistida."}
+                >
+                    {salvandoFechamentoConferenciaDds ? "Concluindo..." : "Concluir conferência oficial"}
+                </button>
+
                 <button
                     type="button"
                     onClick={salvarConferenciaAssistidaDds}
