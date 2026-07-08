@@ -1374,6 +1374,19 @@ function DdsCampoObra({ rotulo = "", valor = "" }) {
         </div>
     );
 }
+function obterUuidSeguroDds(valor = "") {
+    const texto = String(valor || "").trim();
+    const encontrado = texto.match(/[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}/i);
+
+    return encontrado ? encontrado[0].toLowerCase() : "";
+}
+function QuadradoPresenca() {
+    return (
+        <div className="flex h-full min-h-[18px] w-full items-center justify-center">
+            <span className="block h-[8px] w-[12px] border border-slate-300 bg-white" />
+        </div>
+    );
+}
 function DdsPreviewImpresso({ participantes = participantesDds, mostrarAssinaturas = true, dadosDds = dadosDdsPadrao, diasSemana = diasDds, aniversariantes = aniversariantesDds }) {
     return (
         <section className="dds-print-page overflow-hidden rounded-[28px] border border-slate-200 bg-white p-4 shadow-[0_18px_50px_rgba(15,23,42,0.08)]">
@@ -2494,6 +2507,11 @@ export function DdsPage({
         const leituraConfiavel = Boolean(qualidadeLeituraArquivoScannerDds?.confiavel);
         const participantesBase = Array.isArray(participantesRegistroScannerDds) ? participantesRegistroScannerDds : [];
         const totalPaginasArquivo = Number(leituraArquivoScannerDds?.totalPaginas || leituraArquivoScannerDds?.paginasLidas || 0);
+        const paginasMarcacoesArquivoDds = new Set(
+            (Array.isArray(leituraArquivoScannerDds?.marcacoesDdsDias) ? leituraArquivoScannerDds.marcacoesDdsDias : [])
+                .map((item) => Number(item?.pagina || 0))
+                .filter((pagina) => Number.isFinite(pagina) && pagina > 0)
+        );
 
         const palavrasIgnoradas = new Set(["de", "da", "do", "das", "dos", "e"]);
 
@@ -2581,9 +2599,11 @@ export function DdsPage({
                 participante?.codigo ||
                 "";
 
-            const paginaFoiAnalisada = totalPaginasArquivo >= paginaEsperada && (
+            const paginaFoiAnalisada = Boolean(
+                (totalPaginasArquivo >= paginaEsperada && paginaEsperada > 0) ||
                 textosPorPagina.has(paginaEsperada) ||
-                linhasLeituraArquivoScannerDds.some((linha) => Number(linha?.pagina || 0) === paginaEsperada)
+                linhasLeituraArquivoScannerDds.some((linha) => Number(linha?.pagina || 0) === paginaEsperada) ||
+                paginasMarcacoesArquivoDds.has(paginaEsperada)
             );
 
             if (!leituraExecutada) {
@@ -2599,6 +2619,19 @@ export function DdsPage({
                 };
             }
 
+            if (!paginaFoiAnalisada) {
+                return {
+                    numero,
+                    paginaEsperada,
+                    nome,
+                    funcao,
+                    codigoSafescan,
+                    status: "pagina_nao_analisada",
+                    statusTexto: "Página não anexada/lida",
+                    detalhe: `Participante esperado na página ${paginaEsperada}, mas essa página não foi anexada/lida no arquivo atual.`,
+                };
+            }
+
             if (!leituraConfiavel) {
                 return {
                     numero,
@@ -2608,23 +2641,9 @@ export function DdsPage({
                     codigoSafescan,
                     status: "manual",
                     statusTexto: "Exige conferência manual",
-                    detalhe: "OCR parcial/não confiável. Não é seguro comparar participante automaticamente.",
+                    detalhe: "OCR parcial/não confiável nesta página. Conferir participante manualmente.",
                 };
             }
-
-            if (!paginaFoiAnalisada) {
-                return {
-                    numero,
-                    paginaEsperada,
-                    nome,
-                    funcao,
-                    codigoSafescan,
-                    status: "pagina_nao_analisada",
-                    statusTexto: "Página não analisada",
-                    detalhe: `Participante esperado na página ${paginaEsperada}, mas o arquivo/leitura não trouxe essa página.`,
-                };
-            }
-
             const codigoLocalizado = contemTextoPagina(paginaEsperada, codigoSafescan);
             const nomeLocalizado = contemNomeParcialPagina(paginaEsperada, nome);
 
@@ -2660,7 +2679,7 @@ export function DdsPage({
         const naoLocalizados = participantes.filter((item) => item.status === "nao_localizado").length;
         const paginasNaoAnalisadas = participantes.filter((item) => item.status === "pagina_nao_analisada").length;
         const manuaisDiretos = participantes.filter((item) => item.status === "manual").length;
-        const manuais = manuaisDiretos + paginasNaoAnalisadas;
+        const manuais = manuaisDiretos;
         const pendentes = participantes.filter((item) => item.status === "pendente").length;
 
         let statusGeral = "Aguardando participantes";
@@ -2676,8 +2695,8 @@ export function DdsPage({
             statusGeral = "Exige conferência manual";
             statusVisual = "manual";
         } else if (paginasNaoAnalisadas > 0) {
-            statusGeral = "Conferência parcial: há páginas não analisadas";
-            statusVisual = "manual";
+            statusGeral = "Conferência parcial: há páginas não anexadas/lidas";
+            statusVisual = "parcial";
         } else if (localizados === total) {
             statusGeral = "Participantes localizados na página esperada";
             statusVisual = "ok";
@@ -2746,7 +2765,14 @@ export function DdsPage({
             : [];
 
         const leituraExecutada = Boolean(leituraArquivoScannerDds);
-        const leituraConfiavel = Boolean(qualidadeLeituraArquivoScannerDds?.confiavel);
+        const leituraTextoConfiavel = Boolean(qualidadeLeituraArquivoScannerDds?.confiavel);
+        const leituraVisualComMarcacoes = marcacoes.some((item) => (
+            item?.tipoMarcacao === "dia" ||
+            item?.tipoMarcacao === "semana_completa" ||
+            item?.assinatura_visual ||
+            item?.x_visual
+        ));
+        const leituraConfiavel = leituraTextoConfiavel || leituraVisualComMarcacoes;
         const participantes = Array.isArray(preConferenciaParticipantesScannerDds?.participantes)
             ? preConferenciaParticipantesScannerDds.participantes
             : [];
@@ -2965,7 +2991,14 @@ export function DdsPage({
         const gabaritoCarregado = Boolean(registroScannerDds);
         const folhaAnexada = Boolean(arquivoScannerDds);
         const leituraExecutada = Boolean(leituraArquivoScannerDds);
-        const leituraConfiavel = Boolean(qualidadeLeituraArquivoScannerDds?.confiavel);
+        const leituraTextoConfiavel = Boolean(qualidadeLeituraArquivoScannerDds?.confiavel);
+        const leituraVisualComMarcacoesResultadoDds = Array.isArray(leituraArquivoScannerDds?.marcacoesDdsDias) && leituraArquivoScannerDds.marcacoesDdsDias.some((item) => (
+            item?.tipoMarcacao === "dia" ||
+            item?.tipoMarcacao === "semana_completa" ||
+            item?.assinatura_visual ||
+            item?.x_visual
+        ));
+        const leituraConfiavel = leituraTextoConfiavel || leituraVisualComMarcacoesResultadoDds;
         const participantesTotal = Number(preConferenciaParticipantesScannerDds?.total || 0);
         const participantesLocalizados = Number(preConferenciaParticipantesScannerDds?.localizados || 0);
         const participantesManuais = Number(preConferenciaParticipantesScannerDds?.manuais || 0);
@@ -3001,7 +3034,7 @@ export function DdsPage({
             {
                 titulo: "Participantes",
                 ok: participantesTotal > 0 && participantesLocalizados === participantesTotal,
-                detalhe: `${participantesLocalizados}/${participantesTotal} participante(s) localizado(s); ${participantesManuais} em conferência manual/página não analisada.`,
+                detalhe: `${participantesLocalizados}/${participantesTotal} participante(s) localizado(s); ${participantesManuais} em conferência manual; ${participantesPaginasNaoAnalisadas} em página não anexada/lida.`,
                 manual: participantesTotal > 0 && (participantesManuais > 0 || participantesNaoLocalizados > 0 || participantesPendentes > 0),
             },
             {
@@ -3040,7 +3073,7 @@ export function DdsPage({
             statusFinal = "Parcial";
             statusVisual = "parcial";
             titulo = "Conferência parcial";
-            descricao = "Parte dos dados foi localizada, mas ainda existem participantes ou campos que exigem revisão manual.";
+            descricao = "Parte dos dados foi localizada, mas ainda existem páginas complementares não anexadas/lidas.";
         }
 
         const recomendacoes = [];
@@ -3062,7 +3095,7 @@ export function DdsPage({
         }
 
         if (participantesManuais > 0 || participantesNaoLocalizados > 0 || participantesPaginasNaoAnalisadas > 0) {
-            recomendacoes.push("Conferir manualmente as linhas dos participantes marcados como manual/não localizados.");
+            recomendacoes.push("Conferir manualmente as linhas dos participantes marcados como manual/não localizados e anexar as páginas complementares quando houver página não analisada.");
         }
 
         recomendacoes.push("Não usar o resultado como validação grafológica; manter conferência visual/documental.");
@@ -4188,7 +4221,7 @@ export function DdsPage({
                 Pré-conferência de participantes
             </p>
             <h4 className="mt-1 text-base font-black text-slate-950">
-                Participantes do gabarito x páginas lidas
+                Participantes do gabarito x páginas anexadas
             </h4>
             <p className="mt-1 text-xs font-bold text-slate-500">
                 Conferência técnica auxiliar. Não valida assinatura, biometria ou grafia; indica apenas se o participante foi localizado na página esperada da folha.
@@ -4216,7 +4249,7 @@ export function DdsPage({
             <p className="mt-1 text-lg font-black text-emerald-900">{preConferenciaParticipantesScannerDds.localizados}</p>
         </div>
         <div className="rounded-xl bg-amber-50 p-3 ring-1 ring-amber-100">
-            <p className="text-[10px] font-black uppercase tracking-wide text-amber-700">Manual / pág. não analisada</p>
+            <p className="text-[10px] font-black uppercase tracking-wide text-amber-700">Manual</p>
             <p className="mt-1 text-lg font-black text-amber-900">{preConferenciaParticipantesScannerDds.manuais}</p>
         </div>
         <div className="rounded-xl bg-red-50 p-3 ring-1 ring-red-100">
@@ -4224,8 +4257,8 @@ export function DdsPage({
             <p className="mt-1 text-lg font-black text-red-900">{preConferenciaParticipantesScannerDds.naoLocalizados}</p>
         </div>
         <div className="rounded-xl bg-slate-50 p-3 ring-1 ring-slate-100">
-            <p className="text-[10px] font-black uppercase tracking-wide text-slate-400">Pendentes</p>
-            <p className="mt-1 text-lg font-black text-slate-950">{preConferenciaParticipantesScannerDds.pendentes}</p>
+            <p className="text-[10px] font-black uppercase tracking-wide text-orange-700">Pág. não anexada</p>
+            <p className="mt-1 text-lg font-black text-orange-900">{preConferenciaParticipantesScannerDds.paginasNaoAnalisadas}</p>
         </div>
     </div>
 
@@ -4338,8 +4371,8 @@ export function DdsPage({
             <p className="mt-1 text-lg font-black text-red-900">{resultadoFinalScannerDds.resumo.participantesNaoLocalizados}</p>
         </div>
         <div className="rounded-xl bg-white/80 p-3 ring-1 ring-white">
-            <p className="text-[10px] font-black uppercase tracking-wide text-slate-400">Pendentes</p>
-            <p className="mt-1 text-lg font-black text-slate-950">{resultadoFinalScannerDds.resumo.participantesPendentes}</p>
+            <p className="text-[10px] font-black uppercase tracking-wide text-orange-700">Pág. não anexada</p>
+            <p className="mt-1 text-lg font-black text-orange-900">{resultadoFinalScannerDds.resumo.participantesPaginasNaoAnalisadas}</p>
         </div>
     </div>
 
