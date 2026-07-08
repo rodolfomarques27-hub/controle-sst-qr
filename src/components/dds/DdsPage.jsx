@@ -2182,6 +2182,9 @@ export function DdsPage({
     const [carregandoLeituraArquivoScannerDds, setCarregandoLeituraArquivoScannerDds] = useState(false);
     const [erroLeituraArquivoScannerDds, setErroLeituraArquivoScannerDds] = useState("");
     const [conferenciaAssistidaDds, setConferenciaAssistidaDds] = useState({});
+    const [salvandoConferenciaAssistidaDds, setSalvandoConferenciaAssistidaDds] = useState(false);
+    const [erroConferenciaAssistidaDds, setErroConferenciaAssistidaDds] = useState("");
+    const [conferenciaAssistidaSalvaEmDds, setConferenciaAssistidaSalvaEmDds] = useState("");
 
 
     useEffect(() => {
@@ -2884,6 +2887,93 @@ export function DdsPage({
     function limparConferenciaAssistidaDds() {
         setConferenciaAssistidaDds({});
     }
+    async function salvarConferenciaAssistidaDds() {
+        if (salvandoConferenciaAssistidaDds) return;
+
+        if (!supabase) {
+            setErroConferenciaAssistidaDds("Cliente Supabase não disponível para salvar a conferência.");
+            return;
+        }
+
+        const codigo = registroScannerDds?.codigo || codigoConferenciaDds || dadosDds.codigo || "";
+
+        if (!codigo) {
+            setErroConferenciaAssistidaDds("Busque ou gere um DDS antes de salvar a Conferência Assistida.");
+            return;
+        }
+
+        setSalvandoConferenciaAssistidaDds(true);
+        setErroConferenciaAssistidaDds("");
+
+        try {
+            const atualizadoEm = new Date().toISOString();
+            const dadosAtuais = registroScannerDds?.dados || {};
+
+            const conferenciaAssistida = {
+                versao: 1,
+                origem: "conferencia_assistida_dds",
+                atualizadoEm,
+                frequencia: conferenciaAssistidaDds,
+                estatisticas: estatisticasConferenciaAssistidaDds,
+                diasAtivos: diasAtivosConferenciaAssistidaDds.map((dia) => ({
+                    indice: dia.indice,
+                    chaveAssistida: dia.chaveAssistida,
+                    nome: dia.nome,
+                    curto: dia.curto,
+                    data: dia.data,
+                    tema: dia.tema,
+                })),
+                participantes: participantesConferenciaAssistidaDds.map((participante) => ({
+                    numero: participante.numero,
+                    nome: participante.nome,
+                    funcao: participante.funcao,
+                    codigoSafescan: participante.codigoSafescan,
+                })),
+            };
+
+            const registroAtualizado = await salvarRegistroDds({
+                supabase,
+                registro: {
+                    ...registroScannerDds,
+                    codigo,
+                    empresaId: registroScannerDds?.empresaId || registroScannerDds?.empresa_id || dadosAtuais.empresaId || dadosAtuais.empresa_id || "",
+                    obraId: registroScannerDds?.obraId || registroScannerDds?.obra_id || dadosAtuais.obraId || dadosAtuais.obra_id || "",
+                    empresaNome: registroScannerDds?.empresaNome || dadosAtuais.empresaNome || dadosAtuais.empresa || "",
+                    obraNome: registroScannerDds?.obraNome || dadosAtuais.obraNome || dadosAtuais.obra || "",
+                    periodoInicio: registroScannerDds?.periodoInicio || dadosAtuais.periodoInicio || "",
+                    periodoFim: registroScannerDds?.periodoFim || dadosAtuais.periodoFim || "",
+                    dados: {
+                        ...dadosAtuais,
+                        conferenciaAssistida,
+                    },
+                },
+            });
+
+            setRegistroScannerDds(registroAtualizado);
+            setConferenciaAssistidaDds(registroAtualizado?.dados?.conferenciaAssistida?.frequencia || conferenciaAssistidaDds);
+            setConferenciaAssistidaSalvaEmDds(registroAtualizado?.dados?.conferenciaAssistida?.atualizadoEm || atualizadoEm);
+        } catch (error) {
+            setErroConferenciaAssistidaDds(error?.message || "Não foi possível salvar a Conferência Assistida DDS.");
+        } finally {
+            setSalvandoConferenciaAssistidaDds(false);
+        }
+    }
+
+    // Restaurar Conferência Assistida salva no JSON dados.conferenciaAssistida.
+    useEffect(() => {
+        const conferenciaSalva = registroScannerDds?.dados?.conferenciaAssistida;
+
+        if (conferenciaSalva?.frequencia && typeof conferenciaSalva.frequencia === "object") {
+            setConferenciaAssistidaDds(conferenciaSalva.frequencia);
+            setConferenciaAssistidaSalvaEmDds(conferenciaSalva.atualizadoEm || "");
+            setErroConferenciaAssistidaDds("");
+            return;
+        }
+
+        setConferenciaAssistidaDds({});
+        setConferenciaAssistidaSalvaEmDds("");
+        setErroConferenciaAssistidaDds("");
+    }, [registroScannerDds?.codigo]);
     const apuracaoDiariaScannerDds = useMemo(() => {
         const nomesDias = ["Domingo", "Segunda-feira", "Terça-feira", "Quarta-feira", "Quinta-feira", "Sexta-feira", "Sábado"];
         const curtosDias = ["DOM", "SEG", "TER", "QUA", "QUI", "SEX", "SÁB"];
@@ -4487,13 +4577,38 @@ export function DdsPage({
             </p>
         </div>
 
-        <button
-            type="button"
-            onClick={limparConferenciaAssistidaDds}
-            className="rounded-xl border border-cyan-200 bg-white px-4 py-2 text-xs font-black text-cyan-800 shadow-sm transition hover:border-cyan-300 hover:bg-cyan-50"
-        >
-            Limpar conferência
-        </button>
+        <div className="flex flex-col items-stretch gap-2 lg:items-end">
+            {conferenciaAssistidaSalvaEmDds && (
+                <p className="text-[10px] font-black uppercase tracking-wide text-emerald-700">
+                    Salva em {new Date(conferenciaAssistidaSalvaEmDds).toLocaleString("pt-BR")}
+                </p>
+            )}
+
+            {erroConferenciaAssistidaDds && (
+                <p className="max-w-xs text-right text-[11px] font-bold text-red-700">
+                    {erroConferenciaAssistidaDds}
+                </p>
+            )}
+
+            <div className="flex flex-wrap justify-end gap-2">
+                <button
+                    type="button"
+                    onClick={salvarConferenciaAssistidaDds}
+                    disabled={salvandoConferenciaAssistidaDds}
+                    className="rounded-xl border border-emerald-200 bg-emerald-600 px-4 py-2 text-xs font-black text-white shadow-sm transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                    {salvandoConferenciaAssistidaDds ? "Salvando..." : "Salvar conferência"}
+                </button>
+
+                <button
+                    type="button"
+                    onClick={limparConferenciaAssistidaDds}
+                    className="rounded-xl border border-cyan-200 bg-white px-4 py-2 text-xs font-black text-cyan-800 shadow-sm transition hover:border-cyan-300 hover:bg-cyan-50"
+                >
+                    Limpar conferência
+                </button>
+            </div>
+        </div>
     </div>
 
     <div className="mt-4 grid gap-2 sm:grid-cols-2 xl:grid-cols-5">
