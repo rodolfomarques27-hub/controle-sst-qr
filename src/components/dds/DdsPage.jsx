@@ -2181,6 +2181,7 @@ export function DdsPage({
     const [leituraArquivoScannerDds, setLeituraArquivoScannerDds] = useState(null);
     const [carregandoLeituraArquivoScannerDds, setCarregandoLeituraArquivoScannerDds] = useState(false);
     const [erroLeituraArquivoScannerDds, setErroLeituraArquivoScannerDds] = useState("");
+    const [conferenciaAssistidaDds, setConferenciaAssistidaDds] = useState({});
 
 
     useEffect(() => {
@@ -2728,6 +2729,161 @@ export function DdsPage({
         qualidadeLeituraArquivoScannerDds,
     ]);
 
+
+    const diasAtivosConferenciaAssistidaDds = useMemo(() => {
+        const textoSemAtividade = (valor = "") => String(valor || "")
+            .normalize("NFD")
+            .replace(/[\u0300-\u036f]/g, "")
+            .toLowerCase();
+
+        return diasRegistroScannerDds
+            .map((dia, posicao) => {
+                const textoBase = [
+                    dia?.data,
+                    dia?.curto,
+                    dia?.nome,
+                    dia?.tema,
+                    dia?.titulo,
+                    dia?.descricao,
+                ].filter(Boolean).join("-");
+
+                return {
+                    ...dia,
+                    indiceAssistido: Number.isFinite(Number(dia?.indice)) ? Number(dia.indice) : posicao + 1,
+                    chaveAssistida: `${posicao + 1}-${textoBase || "dia"}`
+                        .normalize("NFD")
+                        .replace(/[\u0300-\u036f]/g, "")
+                        .replace(/[^a-zA-Z0-9_-]+/g, "-")
+                        .replace(/-+/g, "-")
+                        .replace(/^-|-$/g, ""),
+                };
+            })
+            .filter((dia) => {
+                const tema = textoSemAtividade(dia?.tema || dia?.titulo || dia?.descricao || "");
+                const semAtividadeTexto =
+                    tema.includes("nao houve atividade") ||
+                    tema.includes("sem atividade") ||
+                    tema.includes("nao teve atividade");
+
+                return !dia.semAtividade && !semAtividadeTexto;
+            });
+    }, [diasRegistroScannerDds]);
+
+    const participantesConferenciaAssistidaDds = useMemo(() => {
+        const participantes = Array.isArray(preConferenciaParticipantesScannerDds?.participantes)
+            ? preConferenciaParticipantesScannerDds.participantes
+            : [];
+
+        return participantes.filter((participante) => (
+            participante?.status !== "pagina_nao_analisada" &&
+            participante?.status !== "pendente"
+        ));
+    }, [preConferenciaParticipantesScannerDds]);
+
+    const obterChaveFrequenciaAssistidaDds = (numero, diaRef) => {
+        const chaveDia = typeof diaRef === "object" && diaRef !== null
+            ? (diaRef.chaveAssistida || diaRef.indiceAssistido || diaRef.indice || diaRef.data || diaRef.nome || diaRef.curto)
+            : diaRef;
+
+        return `${numero}-${chaveDia}`;
+    };
+
+    const obterStatusFrequenciaAssistidaDds = (numero, diaRef) => (
+        conferenciaAssistidaDds[obterChaveFrequenciaAssistidaDds(numero, diaRef)] || "manual"
+    );
+
+    const estatisticasConferenciaAssistidaDds = useMemo(() => {
+        const dias = diasAtivosConferenciaAssistidaDds.map((dia) => ({
+            ...dia,
+            presentes: 0,
+            ausentes: 0,
+            manuais: 0,
+            homemDia: 0,
+        }));
+
+        let presencas = 0;
+        let ausencias = 0;
+        let manuais = 0;
+        let homemDia = 0;
+        let funcionariosSemanaCompleta = 0;
+
+        for (const participante of participantesConferenciaAssistidaDds) {
+            const numero = Number(participante?.numero || 0);
+            if (!numero) continue;
+
+            let todosDiasPresentes = dias.length > 0;
+
+            dias.forEach((dia, indiceDia) => {
+                const status = conferenciaAssistidaDds[obterChaveFrequenciaAssistidaDds(numero, dia)] || "manual";
+
+                if (status === "presente") {
+                    dias[indiceDia].presentes += 1;
+                    dias[indiceDia].homemDia += 1;
+                    presencas += 1;
+                    homemDia += 1;
+                } else if (status === "ausente") {
+                    dias[indiceDia].ausentes += 1;
+                    ausencias += 1;
+                    todosDiasPresentes = false;
+                } else {
+                    dias[indiceDia].manuais += 1;
+                    manuais += 1;
+                    todosDiasPresentes = false;
+                }
+            });
+
+            if (todosDiasPresentes) {
+                funcionariosSemanaCompleta += 1;
+            }
+        }
+
+        return {
+            dias,
+            participantes: participantesConferenciaAssistidaDds.length,
+            presencas,
+            ausencias,
+            manuais,
+            homemDia,
+            funcionariosSemanaCompleta,
+        };
+    }, [conferenciaAssistidaDds, diasAtivosConferenciaAssistidaDds, participantesConferenciaAssistidaDds]);
+
+    function definirStatusFrequenciaAssistidaDds(numero, diaRef, status) {
+        const chave = obterChaveFrequenciaAssistidaDds(numero, diaRef);
+
+        setConferenciaAssistidaDds((atual) => ({
+            ...atual,
+            [chave]: status,
+        }));
+    }
+
+    function marcarSemanaCompletaAssistidaDds(numero) {
+        setConferenciaAssistidaDds((atual) => {
+            const proximo = { ...atual };
+
+            for (const dia of diasAtivosConferenciaAssistidaDds) {
+                proximo[obterChaveFrequenciaAssistidaDds(numero, dia)] = "presente";
+            }
+
+            return proximo;
+        });
+    }
+
+    function limparParticipanteConferenciaAssistidaDds(numero) {
+        setConferenciaAssistidaDds((atual) => {
+            const proximo = { ...atual };
+
+            for (const dia of diasAtivosConferenciaAssistidaDds) {
+                proximo[obterChaveFrequenciaAssistidaDds(numero, dia)] = "manual";
+            }
+
+            return proximo;
+        });
+    }
+
+    function limparConferenciaAssistidaDds() {
+        setConferenciaAssistidaDds({});
+    }
     const apuracaoDiariaScannerDds = useMemo(() => {
         const nomesDias = ["Domingo", "Segunda-feira", "Terça-feira", "Quarta-feira", "Quinta-feira", "Sexta-feira", "Sábado"];
         const curtosDias = ["DOM", "SEG", "TER", "QUA", "QUI", "SEX", "SÁB"];
@@ -4315,6 +4471,171 @@ export function DdsPage({
 </div>
 )}
 
+
+{participantesConferenciaAssistidaDds.length > 0 && diasAtivosConferenciaAssistidaDds.length > 0 && (
+<div className="rounded-2xl border border-cyan-200 bg-cyan-50/70 p-5 ring-1 ring-cyan-100 lg:col-span-2">
+    <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+        <div>
+            <p className="text-[11px] font-black uppercase tracking-wide text-cyan-700">
+                Conferência assistida de frequência DDS
+            </p>
+            <h4 className="mt-1 text-xl font-black text-slate-950">
+                Apuração oficial para estatísticas
+            </h4>
+            <p className="mt-1 max-w-4xl text-sm font-bold leading-6 text-slate-700">
+                Confirme P para presença, X para falta e ? para campo vazio/manual. O botão Semana completa marca presença em todos os dias com atividade.
+            </p>
+        </div>
+
+        <button
+            type="button"
+            onClick={limparConferenciaAssistidaDds}
+            className="rounded-xl border border-cyan-200 bg-white px-4 py-2 text-xs font-black text-cyan-800 shadow-sm transition hover:border-cyan-300 hover:bg-cyan-50"
+        >
+            Limpar conferência
+        </button>
+    </div>
+
+    <div className="mt-4 grid gap-2 sm:grid-cols-2 xl:grid-cols-5">
+        <div className="rounded-xl bg-white p-3 ring-1 ring-cyan-100">
+            <p className="text-[10px] font-black uppercase tracking-wide text-slate-400">Participantes da página</p>
+            <p className="mt-1 text-lg font-black text-slate-950">{estatisticasConferenciaAssistidaDds.participantes}</p>
+        </div>
+        <div className="rounded-xl bg-white p-3 ring-1 ring-cyan-100">
+            <p className="text-[10px] font-black uppercase tracking-wide text-emerald-700">Presenças</p>
+            <p className="mt-1 text-lg font-black text-emerald-900">{estatisticasConferenciaAssistidaDds.presencas}</p>
+        </div>
+        <div className="rounded-xl bg-white p-3 ring-1 ring-cyan-100">
+            <p className="text-[10px] font-black uppercase tracking-wide text-red-700">Ausências</p>
+            <p className="mt-1 text-lg font-black text-red-900">{estatisticasConferenciaAssistidaDds.ausencias}</p>
+        </div>
+        <div className="rounded-xl bg-white p-3 ring-1 ring-cyan-100">
+            <p className="text-[10px] font-black uppercase tracking-wide text-amber-700">Manual/vazio</p>
+            <p className="mt-1 text-lg font-black text-amber-900">{estatisticasConferenciaAssistidaDds.manuais}</p>
+        </div>
+        <div className="rounded-xl bg-white p-3 ring-1 ring-cyan-100">
+            <p className="text-[10px] font-black uppercase tracking-wide text-violet-700">Semana completa</p>
+            <p className="mt-1 text-lg font-black text-violet-900">{estatisticasConferenciaAssistidaDds.funcionariosSemanaCompleta}</p>
+        </div>
+    </div>
+
+    <div className="mt-4 overflow-x-auto rounded-2xl border border-cyan-100 bg-white">
+        <table className="min-w-full divide-y divide-slate-100 text-left text-xs">
+            <thead className="bg-slate-50 text-[10px] font-black uppercase tracking-wide text-slate-500">
+                <tr>
+                    <th className="px-3 py-2">Nº</th>
+                    <th className="px-3 py-2">Funcionário</th>
+                    {diasAtivosConferenciaAssistidaDds.map((dia) => (
+                        <th key={`dia-assistido-header-${dia.chaveAssistida}`} className="px-3 py-2 text-center">
+                            <span>{dia.curto || dia.nome}</span>
+                            <span className="block text-[9px] font-bold text-slate-400">{dia.data}</span>
+                        </th>
+                    ))}
+                    <th className="px-3 py-2 text-center">Ações</th>
+                </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100">
+                {participantesConferenciaAssistidaDds.map((participante) => {
+                    const numero = Number(participante?.numero || 0);
+
+                    return (
+                        <tr key={`participante-assistido-${numero}`} className="align-top">
+                            <td className="px-3 py-3 font-black text-slate-900">{numero}</td>
+                            <td className="px-3 py-3">
+                                <p className="font-black text-slate-900">{participante.nome}</p>
+                                <p className="mt-0.5 text-[11px] font-bold uppercase text-slate-400">{participante.funcao || "-"}</p>
+                            </td>
+
+                            {diasAtivosConferenciaAssistidaDds.map((dia) => {
+                                const status = obterStatusFrequenciaAssistidaDds(numero, dia);
+
+                                return (
+                                    <td key={`assistido-${numero}-${dia.chaveAssistida}`} className="px-3 py-2">
+                                        <div className="flex justify-center gap-1">
+                                            <button
+                                                type="button"
+                                                onClick={() => definirStatusFrequenciaAssistidaDds(numero, dia, "presente")}
+                                                className={`h-8 w-8 rounded-lg border text-xs font-black transition ${status === "presente" ? "border-emerald-400 bg-emerald-100 text-emerald-900" : "border-slate-200 bg-white text-slate-400 hover:border-emerald-300"}`}
+                                                title="Presente"
+                                            >
+                                                P
+                                            </button>
+                                            <button
+                                                type="button"
+                                                onClick={() => definirStatusFrequenciaAssistidaDds(numero, dia, "ausente")}
+                                                className={`h-8 w-8 rounded-lg border text-xs font-black transition ${status === "ausente" ? "border-red-400 bg-red-100 text-red-900" : "border-slate-200 bg-white text-slate-400 hover:border-red-300"}`}
+                                                title="Ausente / falta"
+                                            >
+                                                X
+                                            </button>
+                                            <button
+                                                type="button"
+                                                onClick={() => definirStatusFrequenciaAssistidaDds(numero, dia, "manual")}
+                                                className={`h-8 w-8 rounded-lg border text-xs font-black transition ${status === "manual" ? "border-amber-400 bg-amber-100 text-amber-900" : "border-slate-200 bg-white text-slate-400 hover:border-amber-300"}`}
+                                                title="Manual / vazio"
+                                            >
+                                                ?
+                                            </button>
+                                        </div>
+                                    </td>
+                                );
+                            })}
+
+                            <td className="px-3 py-2">
+                                <div className="flex flex-col gap-1">
+                                    <button
+                                        type="button"
+                                        onClick={() => marcarSemanaCompletaAssistidaDds(numero)}
+                                        className="rounded-lg border border-violet-200 bg-violet-50 px-3 py-1.5 text-[10px] font-black text-violet-800 transition hover:border-violet-300"
+                                    >
+                                        Semana completa
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={() => limparParticipanteConferenciaAssistidaDds(numero)}
+                                        className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-[10px] font-black text-slate-500 transition hover:border-slate-300"
+                                    >
+                                        Limpar linha
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                    );
+                })}
+            </tbody>
+        </table>
+    </div>
+
+    <div className="mt-4 overflow-x-auto rounded-2xl border border-cyan-100 bg-white">
+        <table className="min-w-full divide-y divide-slate-100 text-left text-xs">
+            <thead className="bg-cyan-50 text-[10px] font-black uppercase tracking-wide text-cyan-700">
+                <tr>
+                    <th className="px-3 py-2">Dia</th>
+                    <th className="px-3 py-2 text-center">Presentes</th>
+                    <th className="px-3 py-2 text-center">Ausentes</th>
+                    <th className="px-3 py-2 text-center">Manual/vazio</th>
+                    <th className="px-3 py-2 text-center">Homem-dia</th>
+                </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100">
+                {estatisticasConferenciaAssistidaDds.dias.map((dia) => (
+                    <tr key={`resumo-assistido-${dia.chaveAssistida}`}>
+                        <td className="px-3 py-2 font-black text-slate-900">{dia.curto || dia.nome} <span className="text-slate-400">{dia.data}</span></td>
+                        <td className="px-3 py-2 text-center font-black text-emerald-800">{dia.presentes}</td>
+                        <td className="px-3 py-2 text-center font-black text-red-800">{dia.ausentes}</td>
+                        <td className="px-3 py-2 text-center font-black text-amber-800">{dia.manuais}</td>
+                        <td className="px-3 py-2 text-center font-black text-slate-900">{dia.homemDia}</td>
+                    </tr>
+                ))}
+            </tbody>
+        </table>
+    </div>
+
+    <p className="mt-3 text-[11px] font-bold leading-5 text-cyan-900">
+        Esta é a base oficial para estatísticas do DDS. O OCR pode apoiar a conferência, mas a contagem final deve ser confirmada nesta tabela.
+    </p>
+</div>
+)}
 {resultadoFinalScannerDds && (
 <div className={`rounded-2xl border p-5 ring-1 lg:col-span-2 ${
     resultadoFinalScannerDds.statusVisual === "ok"
