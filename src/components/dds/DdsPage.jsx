@@ -2478,7 +2478,7 @@ export function DdsPage({
                     status: participantesEsperados > 0 ? "ok" : "pendente",
                 }),
                 montarItem({
-                    titulo: "Assinatura / presença",
+                    titulo: "OCR visual auxiliar",
                     detalhe: "Não avaliada automaticamente. Permanece como conferência visual provável/manual, sem validação grafológica.",
                     status: "pendente",
                 }),
@@ -3194,7 +3194,7 @@ export function DdsPage({
                 manual: participantesTotal > 0 && (participantesManuais > 0 || participantesNaoLocalizados > 0 || participantesPendentes > 0),
             },
             {
-                titulo: "Assinatura / presença",
+                titulo: "OCR visual auxiliar",
                 ok: false,
                 detalhe: "Não há validação grafológica automática. A assinatura permanece como conferência visual provável/manual.",
                 manual: true,
@@ -3220,7 +3220,7 @@ export function DdsPage({
             statusFinal = "Conferido";
             statusVisual = "ok";
             titulo = "DDS conferido tecnicamente";
-            descricao = "Gabarito, folha, leitura e participantes ficaram compatíveis. A assinatura ainda deve ser tratada como conferência visual provável, não como perícia grafotécnica.";
+            descricao = "Gabarito, folha, leitura e participantes ficaram compatíveis. O OCR visual é apenas apoio técnico; a frequência oficial deve ser confirmada na Conferência Assistida.";
         } else if (
             leituraConfiavel &&
             participantesLocalizados > 0 &&
@@ -4170,7 +4170,7 @@ export function DdsPage({
                                                     Leitura executada
                                                 </h4>
                                                 <p className="mt-1 text-xs font-bold text-slate-600">
-                                                    Resultado técnico de apoio. A assinatura/presença permanece como conferência visual provável ou manual.
+                                                    Resultado técnico de apoio. OCR visual mantido apenas como apoio; a estatística oficial vem da Conferência Assistida.
                                                 </p>
                                             </div>
                                             <span className="rounded-xl border border-indigo-200 bg-white px-3 py-2 text-xs font-black text-indigo-800">
