@@ -1896,6 +1896,7 @@ async function extrairTextoImagemComOcr({ arquivo = null, arquivoNome = "", mime
             linhasOcr: [],
             assinaturasTabela: [],
             assinaturasDocumento: [],
+            marcacoesDdsDias: [],
             confianca: 0,
             avisos: ["Imagem sem arquivo local para executar OCR."],
         };
@@ -1909,6 +1910,7 @@ async function extrairTextoImagemComOcr({ arquivo = null, arquivoNome = "", mime
             linhasOcr: [],
             assinaturasTabela: [],
             assinaturasDocumento: [],
+            marcacoesDdsDias: [],
             confianca: 0,
             avisos: ["OCR de imagem nÃ£o executado fora do navegador."],
         };
@@ -1989,6 +1991,7 @@ async function extrairTextoImagemComOcr({ arquivo = null, arquivoNome = "", mime
             linhasOcr: [],
             assinaturasTabela: [],
             assinaturasDocumento: [],
+            marcacoesDdsDias: [],
             confianca: 0,
             avisos: [`OCR local da imagem indisponÃ­vel: ${error?.message || "erro desconhecido"}.`],
         };
@@ -2005,6 +2008,7 @@ async function extrairTextoPrimeiraPaginaPdfComOcr(buffer) {
             linhasOcr: [],
             assinaturasTabela: [],
             assinaturasDocumento: [],
+            marcacoesDdsDias: [],
         };
     }
 
@@ -2017,6 +2021,7 @@ async function extrairTextoPrimeiraPaginaPdfComOcr(buffer) {
             linhasOcr: [],
             assinaturasTabela: [],
             assinaturasDocumento: [],
+            marcacoesDdsDias: [],
         };
     }
 
@@ -2041,6 +2046,7 @@ async function extrairTextoPrimeiraPaginaPdfComOcr(buffer) {
                 linhasOcr: [],
                 assinaturasTabela: [],
                 assinaturasDocumento: [],
+            marcacoesDdsDias: [],
             };
         }
 
@@ -2179,8 +2185,296 @@ async function extrairTextoPrimeiraPaginaPdfComOcr(buffer) {
             linhasOcr: [],
             assinaturasTabela: [],
             assinaturasDocumento: [],
+            marcacoesDdsDias: [],
         };
     }
+}
+
+function detectarXVisualFaixaDds(canvas, faixa = {}) {
+    if (!canvas || typeof canvas.getContext !== "function") {
+        return { xVisual: false, origem: "sem_canvas" };
+    }
+
+    const contexto = canvas.getContext("2d", { willReadFrequently: true });
+
+    if (!contexto) {
+        return { xVisual: false, origem: "sem_contexto_canvas" };
+    }
+
+    const largura = canvas.width || 1;
+    const altura = canvas.height || 1;
+    const xInicio = Math.max(0, Math.floor(Number(faixa.x0 || 0) * largura));
+    const xFim = Math.min(largura, Math.ceil(Number(faixa.x1 || 1) * largura));
+    const yInicio = Math.max(0, Math.floor(Number(faixa.y0 || 0) * altura));
+    const yFim = Math.min(altura, Math.ceil(Number(faixa.y1 || 1) * altura));
+    const larguraRecorte = Math.max(1, xFim - xInicio);
+    const alturaRecorte = Math.max(1, yFim - yInicio);
+
+    if (larguraRecorte < 10 || alturaRecorte < 8) {
+        return {
+            xVisual: false,
+            densidade: 0,
+            densidadeEscura: 0,
+            densidadeAzul: 0,
+            proporcaoPrincipal: 0,
+            proporcaoSecundaria: 0,
+            centroRatio: 0,
+            diagonaisBalanceadas: false,
+            quadrantesAtivos: 0,
+            origem: "recorte_insuficiente",
+        };
+    }
+
+    try {
+        const dados = contexto.getImageData(xInicio, yInicio, larguraRecorte, alturaRecorte).data;
+
+        let pixelsX = 0;
+        let pixelsAzuis = 0;
+        let total = 0;
+        let diagonalPrincipal = 0;
+        let diagonalSecundaria = 0;
+        let centro = 0;
+
+        const colunas = new Set();
+        const linhas = new Set();
+        const quadrantes = [0, 0, 0, 0];
+
+        for (let y = 2; y < alturaRecorte - 2; y += 1) {
+            for (let x = 2; x < larguraRecorte - 2; x += 1) {
+                const i = (y * larguraRecorte + x) * 4;
+                const r = dados[i];
+                const g = dados[i + 1];
+                const b = dados[i + 2];
+
+                total += 1;
+
+                const azulCaneta = b > 70 && b > r * 1.12 && b > g * 0.82 && r < 190 && g < 205;
+                if (azulCaneta) pixelsAzuis += 1;
+
+                const media = (r + g + b) / 3;
+                const diferencaCanais = Math.max(r, g, b) - Math.min(r, g, b);
+
+                // Padrão oficial: X de ausência deve ser escuro/preto/neutro.
+                // Marca azul é tratada como rubrica/presença, não como ausência.
+                const escuroNeutro = (
+                    media < 155 &&
+                    diferencaCanais <= 70 &&
+                    !(b > r * 1.18 && b > g * 0.92)
+                );
+
+                const escuroForte = r < 115 && g < 115 && b < 145;
+
+                if (!escuroNeutro && !escuroForte) continue;
+
+                pixelsX += 1;
+                colunas.add(x);
+                linhas.add(y);
+
+                const nx = larguraRecorte > 1 ? x / (larguraRecorte - 1) : 0;
+                const ny = alturaRecorte > 1 ? y / (alturaRecorte - 1) : 0;
+
+                if (Math.abs(ny - nx) <= 0.14) diagonalPrincipal += 1;
+                if (Math.abs(ny - (1 - nx)) <= 0.14) diagonalSecundaria += 1;
+                if (nx >= 0.30 && nx <= 0.70 && ny >= 0.30 && ny <= 0.70) centro += 1;
+
+                if (nx < 0.5 && ny < 0.5) quadrantes[0] += 1;
+                else if (nx >= 0.5 && ny < 0.5) quadrantes[1] += 1;
+                else if (nx < 0.5 && ny >= 0.5) quadrantes[2] += 1;
+                else quadrantes[3] += 1;
+            }
+        }
+
+        const densidade = total ? pixelsX / total : 0;
+        const densidadeEscura = densidade;
+        const densidadeAzul = total ? pixelsAzuis / total : 0;
+        const espalhamentoHorizontal = larguraRecorte ? colunas.size / larguraRecorte : 0;
+        const espalhamentoVertical = alturaRecorte ? linhas.size / alturaRecorte : 0;
+        const proporcaoPrincipal = pixelsX ? diagonalPrincipal / pixelsX : 0;
+        const proporcaoSecundaria = pixelsX ? diagonalSecundaria / pixelsX : 0;
+        const centroRatio = pixelsX ? centro / pixelsX : 0;
+        const diagonaisBalanceadas = Math.abs(proporcaoPrincipal - proporcaoSecundaria) <= 0.18;
+        const quadrantesAtivos = quadrantes.filter((valor) => valor >= 2).length;
+
+        const xVisual = Boolean(
+            pixelsX >= 8 &&
+            densidade >= 0.003 &&
+            densidade <= 0.18 &&
+            densidadeAzul <= 0.035 &&
+            espalhamentoHorizontal >= 0.11 &&
+            espalhamentoVertical >= 0.13 &&
+            proporcaoPrincipal >= 0.08 &&
+            proporcaoSecundaria >= 0.08 &&
+            (
+                centroRatio >= 0.035 ||
+                quadrantesAtivos >= 3
+            ) &&
+            diagonaisBalanceadas
+        );
+
+        return {
+            xVisual,
+            densidade,
+            densidadeEscura,
+            densidadeAzul,
+            espalhamentoHorizontal,
+            espalhamentoVertical,
+            proporcaoPrincipal,
+            proporcaoSecundaria,
+            centroRatio,
+            diagonaisBalanceadas,
+            quadrantesAtivos,
+            origem: "analise_visual_x_dds_preto_escuro",
+        };
+    } catch {
+        return {
+            xVisual: false,
+            densidade: 0,
+            densidadeEscura: 0,
+            densidadeAzul: 0,
+            proporcaoPrincipal: 0,
+            proporcaoSecundaria: 0,
+            centroRatio: 0,
+            diagonaisBalanceadas: false,
+            quadrantesAtivos: 0,
+            origem: "erro_analise_visual_x_dds",
+        };
+    }
+}
+
+function detectarMarcacoesDdsPorDia(canvas, opcoes = {}) {
+    const linhas = detectarLinhasHorizontaisTabelaPresenca(canvas, opcoes);
+    const altura = canvas?.height || 1;
+
+    if (!linhas.length || linhas.length < 4) return [];
+
+    const resultados = [];
+    const maxLinhas = Math.min(Number(opcoes?.maxLinhas || 65), linhas.length - 1);
+    const indiceInicial = Number.isInteger(Number(opcoes?.indiceInicial)) ? Number(opcoes.indiceInicial) : 1;
+    const x0Dias = Number.isFinite(Number(opcoes?.x0Dias)) ? Number(opcoes.x0Dias) : 0.49;
+    const x1Dias = Number.isFinite(Number(opcoes?.x1Dias)) ? Number(opcoes.x1Dias) : 0.913;
+    const x0Semanal = Number.isFinite(Number(opcoes?.x0Semanal)) ? Number(opcoes.x0Semanal) : 0.925;
+    const x1Semanal = Number.isFinite(Number(opcoes?.x1Semanal)) ? Number(opcoes.x1Semanal) : 0.965;
+    const quantidadeDias = Math.max(1, Number(opcoes?.quantidadeDias || 7));
+    const larguraDia = (x1Dias - x0Dias) / quantidadeDias;
+
+    const analisarCelula = ({ x0, x1, y0, y1, diaIndice, tipoMarcacao }) => {
+        const assinatura = calcularAssinaturaVisualFaixa(canvas, {
+            x0,
+            x1,
+            y0,
+            y1,
+            origem: `analise_visual_dds_${tipoMarcacao}`,
+        });
+
+        const analiseX = detectarXVisualFaixaDds(canvas, { x0, x1, y0, y1 });
+
+        const densidade = Number(assinatura.densidade || 0);
+        const densidadeAzul = Number(assinatura.densidadeAzul || 0);
+        const espalhamentoHorizontal = Number(assinatura.espalhamentoHorizontal || 0);
+        const espalhamentoVertical = Number(assinatura.espalhamentoVertical || 0);
+
+        const pareceTracoSimples =
+            espalhamentoHorizontal >= 0.22 &&
+            espalhamentoVertical <= 0.09 &&
+            densidadeAzul < 0.018;
+
+        const assinaturaVisualDds = tipoMarcacao === "semana_completa"
+            ? Boolean(assinatura.assinaturaVisual || densidade >= 0.020 || densidadeAzul >= 0.010)
+            : Boolean(
+                !analiseX.xVisual &&
+                (
+                    assinatura.assinaturaVisual ||
+                    (
+                        !pareceTracoSimples &&
+                        densidadeAzul >= 0.0035 &&
+                        espalhamentoHorizontal >= 0.045 &&
+                        espalhamentoVertical >= 0.055
+                    ) ||
+                    (
+                        !pareceTracoSimples &&
+                        densidade >= 0.006 &&
+                        espalhamentoHorizontal >= 0.04 &&
+                        espalhamentoVertical >= 0.06
+                    )
+                )
+            );
+
+        return {
+            diaIndice,
+            tipoMarcacao,
+            x0: Number(x0.toFixed(4)),
+            x1: Number(x1.toFixed(4)),
+            y0: Number(y0.toFixed(4)),
+            y1: Number(y1.toFixed(4)),
+            yCentro: Number(((y0 + y1) / 2).toFixed(4)),
+            assinatura_visual: assinaturaVisualDds,
+            assinatura_visual_base: assinatura.assinaturaVisual,
+            assinatura_densidade: densidade,
+            assinatura_densidade_azul: densidadeAzul,
+            assinatura_espalhamento_horizontal: espalhamentoHorizontal,
+            assinatura_espalhamento_vertical: espalhamentoVertical,
+            assinatura_parece_traco_simples: pareceTracoSimples,
+            x_visual: tipoMarcacao === "dia" ? Boolean(analiseX.xVisual) : false,
+            x_densidade: Number(analiseX.densidade || 0),
+            x_densidade_escura: Number(analiseX.densidadeEscura || 0),
+            x_densidade_azul: Number(analiseX.densidadeAzul || 0),
+            x_proporcao_diagonal_principal: Number(analiseX.proporcaoPrincipal || 0),
+            x_proporcao_diagonal_secundaria: Number(analiseX.proporcaoSecundaria || 0),
+            x_centro_ratio: Number(analiseX.centroRatio || 0),
+            x_diagonais_balanceadas: Boolean(analiseX.diagonaisBalanceadas),
+            x_quadrantes_ativos: Number(analiseX.quadrantesAtivos || 0),
+            x_escuro_forte: Boolean(analiseX.xEscuroForte),
+            x_azul_formato: Boolean(analiseX.xAzulFormato),
+            assinatura_origem: assinatura.origem,
+            grade_calibrada_dds: true,
+        };
+    };
+
+    for (let indice = indiceInicial; indice < maxLinhas; indice += 1) {
+        const superior = linhas[indice];
+        const inferior = linhas[indice + 1];
+
+        if (!superior || !inferior) continue;
+
+        const alturaLinhaPx = inferior.y - superior.y;
+
+        if (alturaLinhaPx < 12) continue;
+
+        const y0 = (superior.y + Math.max(2, alturaLinhaPx * 0.08)) / altura;
+        const y1 = (inferior.y - Math.max(2, alturaLinhaPx * 0.08)) / altura;
+
+        for (let diaIndice = 0; diaIndice < quantidadeDias; diaIndice += 1) {
+            const margemX = Math.max(0.002, larguraDia * 0.05);
+            const x0 = x0Dias + (larguraDia * diaIndice) + margemX;
+            const x1 = x0Dias + (larguraDia * (diaIndice + 1)) - margemX;
+
+            resultados.push({
+                numeroLinha: indice,
+                ...analisarCelula({
+                    x0,
+                    x1,
+                    y0,
+                    y1,
+                    diaIndice,
+                    tipoMarcacao: "dia",
+                }),
+            });
+        }
+
+        resultados.push({
+            numeroLinha: indice,
+            ...analisarCelula({
+                x0: x0Semanal,
+                x1: x1Semanal,
+                y0,
+                y1,
+                diaIndice: quantidadeDias,
+                tipoMarcacao: "semana_completa",
+            }),
+        });
+    }
+
+    return resultados;
 }
 
 function normalizarTextoDdsScanner(valor = "") {
@@ -2318,6 +2612,7 @@ async function extrairTextoPdfDdsComOcrDirecionado(buffer, contextoDds = {}) {
             totalPaginas: 0,
             assinaturasTabela: [],
             assinaturasDocumento: [],
+            marcacoesDdsDias: [],
             confianca: 0,
             diagnosticoDdsOcr: {
                 score: 0,
@@ -2347,6 +2642,7 @@ async function extrairTextoPdfDdsComOcrDirecionado(buffer, contextoDds = {}) {
                 totalPaginas: 0,
                 assinaturasTabela: [],
                 assinaturasDocumento: [],
+            marcacoesDdsDias: [],
                 confianca: 0,
                 diagnosticoDdsOcr: {
                     score: 0,
@@ -2405,6 +2701,16 @@ async function extrairTextoPdfDdsComOcrDirecionado(buffer, contextoDds = {}) {
                     .map((assinatura) => ({ ...assinatura, pagina: numeroPagina, rotacao: resultadoOcr?.rotacao || 0 }))
                 : [];
 
+            const marcacoesDdsDias = pareceDds
+                ? detectarMarcacoesDdsPorDia(canvasAnalise, {
+                    yInicio: 0.44,
+                    x0Dias: 0.49,
+                    x1Dias: 0.913,
+                    quantidadeDias: 7,
+                    maxLinhas: 65,
+                }).map((marcacao) => ({ ...marcacao, pagina: numeroPagina, rotacao: resultadoOcr?.rotacao || 0 }))
+                : [];
+
             const assinaturasDocumento = detectarAssinaturasDocumento(canvasAnalise, numeroPagina, textoNormalizadoOcr)
                 .map((assinatura) => ({ ...assinatura, rotacao: resultadoOcr?.rotacao || 0 }));
 
@@ -2413,6 +2719,7 @@ async function extrairTextoPdfDdsComOcrDirecionado(buffer, contextoDds = {}) {
                 texto,
                 linhasOcr,
                 assinaturasTabela,
+                marcacoesDdsDias,
                 assinaturasDocumento,
                 confianca: Number(resultadoOcr?.confianca || 0),
                 rotacao: resultadoOcr?.rotacao || 0,
@@ -2462,6 +2769,7 @@ async function extrairTextoPdfDdsComOcrDirecionado(buffer, contextoDds = {}) {
 
         const linhasOcr = ordenadas.flatMap((item) => item?.linhasOcr || []).slice(0, 120);
         const assinaturasTabela = ordenadas.flatMap((item) => item?.assinaturasTabela || []).slice(0, 60);
+        const marcacoesDdsDias = ordenadas.flatMap((item) => item?.marcacoesDdsDias || []).slice(0, 520);
         const assinaturasDocumento = ordenadas.flatMap((item) => item?.assinaturasDocumento || []).slice(0, 30);
         const score = Number(melhor?.score || 0);
 
@@ -2481,6 +2789,7 @@ async function extrairTextoPdfDdsComOcrDirecionado(buffer, contextoDds = {}) {
             paginasLidas: paginas.length,
             totalPaginas,
             assinaturasTabela,
+            marcacoesDdsDias,
             assinaturasDocumento,
             confianca: Number(melhor?.confianca || 0),
             diagnosticoDdsOcr: {
@@ -2503,6 +2812,7 @@ async function extrairTextoPdfDdsComOcrDirecionado(buffer, contextoDds = {}) {
             totalPaginas: 0,
             assinaturasTabela: [],
             assinaturasDocumento: [],
+            marcacoesDdsDias: [],
             confianca: 0,
             diagnosticoDdsOcr: {
                 score: 0,
@@ -3033,6 +3343,7 @@ export async function executarLeituraDdsLocal({
                 totalPaginas: leituraBase?.totalPaginas || 0,
                 assinaturasTabela: [],
                 assinaturasDocumento: [],
+            marcacoesDdsDias: [],
                 confianca: 0,
                 diagnosticoDdsOcr: {
                     score: 0,
@@ -3097,6 +3408,7 @@ export async function executarLeituraDdsLocal({
         textoPrevia: montarPreviaTextoDocumento(textoSeguro),
         linhasOcr: Array.isArray(leituraDirecionada?.linhasOcr) ? leituraDirecionada.linhasOcr.slice(0, 120) : [],
         assinaturasTabela: Array.isArray(leituraDirecionada?.assinaturasTabela) ? leituraDirecionada.assinaturasTabela.slice(0, 60) : [],
+        marcacoesDdsDias: Array.isArray(leituraDirecionada?.marcacoesDdsDias) ? leituraDirecionada.marcacoesDdsDias.slice(0, 520) : [],
         assinaturasDocumento: Array.isArray(leituraDirecionada?.assinaturasDocumento) ? leituraDirecionada.assinaturasDocumento.slice(0, 30) : [],
         paginasLidas: leituraDirecionada?.paginasLidas || leituraBase?.paginasLidas || 0,
         totalPaginas: leituraDirecionada?.totalPaginas || leituraBase?.totalPaginas || 0,

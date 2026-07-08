@@ -20,9 +20,13 @@ import {
     CalendarClock,
     ClipboardCheck,
     QrCode,
+    ListChecks,
+    MessageSquareText,
+    ClipboardList,
     ShieldCheck,
     Users,
 } from "lucide-react";
+import dashboardHeroSstDds from "../../assets/dashboard-hero-sst.png";
 
 const diasDds = [
     { curto: "DOM", nome: "Domingo", data: "14/06/2026", tema: "Trabalho seguro não tem dia de folga", responsavel: "Paulo Toledo" },
@@ -710,115 +714,89 @@ function completarParticipantesUltimaFolhaDds(participantes = [], quantidadeLinh
 
     return linhas;
 }
-function DdsResumoCard({ icone: Icone, titulo, valor, texto }) {
+function DdsResumoCard({ icone: Icone, titulo, valor, texto, cor = "emerald", onClick = null, destaque = false }) {
+    const estilos = {
+        emerald: {
+            topo: "border-t-4 border-t-emerald-500",
+            borda: "border-emerald-100 hover:border-emerald-200",
+            icone: "bg-emerald-50 text-emerald-700 ring-emerald-100 group-hover:bg-emerald-500 group-hover:text-white",
+            titulo: "text-emerald-700",
+            brilho: "bg-emerald-500/10",
+        },
+        sky: {
+            topo: "border-t-4 border-t-sky-500",
+            borda: "border-sky-100 hover:border-sky-200",
+            icone: "bg-sky-50 text-sky-700 ring-sky-100 group-hover:bg-sky-500 group-hover:text-white",
+            titulo: "text-sky-700",
+            brilho: "bg-sky-500/10",
+        },
+        violet: {
+            topo: "border-t-4 border-t-violet-500",
+            borda: "border-violet-100 hover:border-violet-200",
+            icone: "bg-violet-50 text-violet-700 ring-violet-100 group-hover:bg-violet-500 group-hover:text-white",
+            titulo: "text-violet-700",
+            brilho: "bg-violet-500/10",
+        },
+        amber: {
+            topo: "border-t-4 border-t-amber-500",
+            borda: "border-amber-100 hover:border-amber-200",
+            icone: "bg-amber-50 text-amber-700 ring-amber-100 group-hover:bg-amber-500 group-hover:text-white",
+            titulo: "text-amber-700",
+            brilho: "bg-amber-500/10",
+        },
+    };
+
+    const estilo = estilos[cor] || estilos.emerald;
+    const CardTag = onClick ? "button" : "div";
+
     return (
-        <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
-            <div className="flex items-start gap-3">
-                <span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-emerald-50 text-emerald-700 ring-1 ring-emerald-100">
-                    <Icone className="h-5 w-5" />
-                </span>
-                <div>
-                    <p className="text-xs font-black uppercase tracking-[0.18em] text-slate-400">{titulo}</p>
-                    <p className="mt-1 text-2xl font-black text-slate-950">{valor}</p>
-                    <p className="mt-1 text-sm font-semibold text-slate-500">{texto}</p>
+        <CardTag
+            type={onClick ? "button" : undefined}
+            onClick={onClick || undefined}
+            className={`group relative overflow-hidden rounded-[24px] border bg-white p-5 text-left shadow-sm ring-1 ring-slate-100/80 transition ${estilo.topo} ${estilo.borda} ${onClick ? "cursor-pointer hover:-translate-y-0.5 hover:shadow-xl focus:outline-none focus:ring-2 focus:ring-emerald-200" : "hover:-translate-y-0.5 hover:shadow-lg"}`}
+        >
+            <div className={`absolute -right-10 -top-10 h-24 w-24 rounded-full ${estilo.brilho} blur-2xl transition group-hover:scale-125`} />
+
+            <div className="relative flex h-full items-start justify-between gap-4">
+                <div className="flex min-w-0 items-start gap-3">
+                    <span className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl ring-1 transition ${estilo.icone}`}>
+                        <Icone className="h-5 w-5" />
+                    </span>
+
+                    <div className="min-w-0">
+                        <p className={`text-[10px] font-black uppercase tracking-[0.24em] ${estilo.titulo}`}>
+                            {titulo}
+                        </p>
+                        <p className="mt-1 text-2xl font-black leading-none text-slate-950">
+                            {valor}
+                        </p>
+                        {texto && (
+                            <p className="mt-2 text-xs font-semibold leading-5 text-slate-500">
+                                {texto}
+                            </p>
+                        )}
+                    </div>
                 </div>
+
+                {onClick && (
+                    <span className={`mt-1 rounded-full px-2.5 py-1 text-[10px] font-black uppercase tracking-wide transition ${destaque ? "bg-emerald-500 text-white" : "bg-slate-100 text-slate-500 group-hover:bg-emerald-500 group-hover:text-white"}`}>
+                        Abrir
+                    </span>
+                )}
             </div>
-        </div>
+        </CardTag>
     );
 }
-
-function DdsCampoObra({ rotulo, valor }) {
-    return (
-        <div className="border-b border-r border-slate-300 px-3 py-2">
-            <p className="text-[8px] font-black uppercase tracking-wide text-slate-500">{rotulo}</p>
-            <p className="mt-0.5 text-[11px] font-black uppercase text-slate-950">{valor}</p>
-        </div>
-    );
-}
-
-function QuadradoPresenca() {
-    return <span className="inline-block h-3.5 w-3.5 rounded-[2px] border border-slate-700 bg-white align-middle" />;
-}
-
-
-function obterUuidSeguroDds(valor = "") {
-    const texto = String(valor ?? "").trim();
-    return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(texto)
-        ? texto
-        : "";
-}
-
-function DdsQrConferenciaImpresso({ url = "", size = 56, fallbackClassName = "h-14 w-14" }) {
-    const urlSeguro = String(url || "").trim();
-
-    if (!urlSeguro) {
-        return <QrCode className={`${fallbackClassName} text-slate-950`} />;
-    }
-
-    return (
-        <QRCodeSVG
-            value={urlSeguro}
-            size={size}
-            level="H"
-            includeMargin
-            bgColor="#ffffff"
-            fgColor="#0f172a"
-        />
-    );
-}
-
-function obterIniciaisEmpresaDdsImpresso(nome = "") {
-    const texto = String(nome ?? "").trim();
-
-    if (!texto) return "EMP";
-
-    return texto
-        .split(/\s+/)
-        .filter(Boolean)
-        .slice(0, 3)
-        .map((parte) => parte.charAt(0))
-        .join("")
-        .toUpperCase() || "EMP";
-}
-
-function MarcaIdealizaDdsImpresso({ compacto = false }) {
-    return (
-        <div className="flex items-center gap-3">
-            <div className={compacto
-                ? "flex h-12 w-12 items-center justify-center rounded-2xl border border-amber-200 bg-amber-50 text-amber-700"
-                : "flex h-16 w-16 items-center justify-center rounded-2xl border border-amber-200 bg-amber-50 text-amber-700"}
-            >
-                <span className={compacto ? "text-xl font-black" : "text-2xl font-black"}>I</span>
-            </div>
-            <div>
-                <p className={compacto
-                    ? "text-2xl font-black leading-none text-slate-950"
-                    : "text-4xl font-black leading-none text-slate-950"}
-                >
-                    IDEALIZA
-                </p>
-                <p className={compacto
-                    ? "text-[10px] font-black uppercase tracking-[0.18em] text-amber-700"
-                    : "text-base font-black uppercase tracking-[0.18em] text-amber-700"}
-                >
-                    Segurança do Trabalho
-                </p>
-            </div>
-        </div>
-    );
-}
-
-
-
-
 const CHAVE_LOCAL_CARDS_DDS = "controle-sst-qr:dds:cards-recolhiveis:v1";
 
 const CARDS_DDS_PADRAO = {
     qr: true,
     novo: true,
     temas: true,
+    qrConferencia: true,
     recados: true,
     orientacoes: true,
+    preview: true,
 };
 
 function carregarCardsDdsLocal() {
@@ -1241,7 +1219,7 @@ function CelulaAssinaturaDiaDds({ dia = {}, compacto = false }) {
             ? "border border-slate-300 px-1 py-1.5 text-center"
             : "border border-slate-300 px-1 py-1 text-center"}
         >
-            {temaDdsSemAtividade(dia) ? <MarcacaoDiaSemAtividadeDds /> : null}
+            {(temaDdsSemAtividade(dia) || dia.curto === "DOM" || dia.dia === "DOM") ? <MarcacaoDiaSemAtividadeDds /> : null}
         </td>
     );
 }
@@ -1360,6 +1338,41 @@ function montarAniversariantesSemanaDds({ colaboradores = [], inicioSemana = new
         .sort((a, b) => a.ordem - b.ordem || a.nome.localeCompare(b.nome))
         .slice(0, 5)
         .map(({ data, nome }) => ({ data, nome }));
+}
+function DdsQrConferenciaImpresso({ url = "", size = 56, fallbackClassName = "h-14 w-14" }) {
+    const urlSeguro = String(url || "").trim();
+
+    if (!urlSeguro) {
+        return (
+            <div className={`flex items-center justify-center rounded-xl border border-slate-200 bg-slate-50 text-[9px] font-black uppercase text-slate-400 ${fallbackClassName}`}>
+                QR
+            </div>
+        );
+    }
+
+    return (
+        <QRCodeSVG
+            value={urlSeguro}
+            size={size}
+            level="M"
+            includeMargin
+            className="rounded-lg bg-white p-1"
+        />
+    );
+}
+function DdsCampoObra({ rotulo = "", valor = "" }) {
+    const valorSeguro = String(valor || "-").trim() || "-";
+
+    return (
+        <div className="border-b border-r border-slate-300 px-3 py-2 last:border-r-0">
+            <p className="text-[8px] font-black uppercase tracking-wide text-slate-500">
+                {rotulo}
+            </p>
+            <p className="mt-0.5 text-[11px] font-black uppercase leading-tight text-slate-950">
+                {valorSeguro}
+            </p>
+        </div>
+    );
 }
 function DdsPreviewImpresso({ participantes = participantesDds, mostrarAssinaturas = true, dadosDds = dadosDdsPadrao, diasSemana = diasDds, aniversariantes = aniversariantesDds }) {
     return (
@@ -1483,7 +1496,7 @@ function DdsPreviewImpresso({ participantes = participantesDds, mostrarAssinatur
                                             <span className="block text-[9px] text-emerald-300">{dia.data.slice(0, 5)}</span>
                                         </th>
                                     ))}
-                                    <th className="w-[74px] border border-slate-400 px-1 py-1.5">Presente</th>
+                                    <th className="w-[74px] border border-slate-400 px-1 py-1.5">Semana completa</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -1495,7 +1508,7 @@ function DdsPreviewImpresso({ participantes = participantesDds, mostrarAssinatur
                                         <td className="border border-slate-300 px-2 py-0.5 text-center font-semibold">{participante.empresa}</td>
                                         {diasSemana.map((dia) => (
                                             <td key={dia.curto} className="border border-slate-300 px-1 py-0.5 text-center align-middle">
-                                                {dia.semAtividade ? <MarcacaoDiaSemAtividadeDds /> : null}
+                                                {(dia.semAtividade || dia.curto === "DOM" || dia.dia === "DOM") ? <MarcacaoDiaSemAtividadeDds /> : null}
                                             </td>
                                         ))}
                                         <td className="border border-slate-300 px-1 py-0.5 text-center">
@@ -1667,7 +1680,7 @@ function DdsPreviewImpressoContinuacao({ participantes = participantesDdsContinu
                                             <span className="block text-[9px] text-emerald-300">{dia.data.slice(0, 5)}</span>
                                         </th>
                                     ))}
-                                    <th className="w-[78px] border border-slate-400 px-1 py-2">Presente</th>
+                                    <th className="w-[78px] border border-slate-400 px-1 py-2">Semana completa</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -1679,7 +1692,7 @@ function DdsPreviewImpressoContinuacao({ participantes = participantesDdsContinu
                                         <td className="border border-slate-300 px-2 py-1.5 text-center font-semibold">{participante.empresa}</td>
                                         {diasSemana.map((dia) => (
                                             <td key={dia.curto} className="border border-slate-300 px-1 py-1.5 text-center align-middle">
-                                                {dia.semAtividade ? <MarcacaoDiaSemAtividadeDds /> : null}
+                                                {(dia.semAtividade || dia.curto === "DOM" || dia.dia === "DOM") ? <MarcacaoDiaSemAtividadeDds /> : null}
                                             </td>
                                         ))}
                                         <td className="border border-slate-300 px-1 py-1.5 text-center">
@@ -2696,6 +2709,258 @@ export function DdsPage({
         qualidadeLeituraArquivoScannerDds,
     ]);
 
+    const apuracaoDiariaScannerDds = useMemo(() => {
+        const nomesDias = ["Domingo", "Segunda-feira", "Terça-feira", "Quarta-feira", "Quinta-feira", "Sexta-feira", "Sábado"];
+        const curtosDias = ["DOM", "SEG", "TER", "QUA", "QUI", "SEX", "SÁB"];
+
+        const normalizar = (valor = "") => String(valor || "")
+            .normalize("NFD")
+            .replace(/[\u0300-\u036f]/g, "")
+            .toUpperCase()
+            .trim();
+
+        const diasBase = Array.isArray(diasRegistroScannerDds) && diasRegistroScannerDds.length
+            ? diasRegistroScannerDds
+            : diasDds;
+
+        const dias = Array.from({ length: 7 }, (_, indice) => {
+            const dia = diasBase[indice] || {};
+            const tema = String(dia?.tema || "").trim();
+            const responsavel = String(dia?.responsavel || "").trim();
+            const domingo = indice === 0 || normalizar(dia?.curto || dia?.dia || "").includes("DOM");
+            const semAtividade = domingo || normalizar(tema).includes("NAO HOUVE ATIVIDADE");
+
+            return {
+                indice,
+                curto: dia?.curto || dia?.dia || curtosDias[indice],
+                nome: dia?.nome || nomesDias[indice],
+                data: dia?.data || "",
+                tema: tema || "-",
+                responsavel: responsavel || "-",
+                semAtividade,
+            };
+        });
+
+        const marcacoes = Array.isArray(leituraArquivoScannerDds?.marcacoesDdsDias)
+            ? leituraArquivoScannerDds.marcacoesDdsDias
+            : [];
+
+        const leituraExecutada = Boolean(leituraArquivoScannerDds);
+        const leituraConfiavel = Boolean(qualidadeLeituraArquivoScannerDds?.confiavel);
+        const participantes = Array.isArray(preConferenciaParticipantesScannerDds?.participantes)
+            ? preConferenciaParticipantesScannerDds.participantes
+            : [];
+
+        const obterMarcacao = ({ paginaEsperada, numeroLinha, diaIndice }) => marcacoes.find((item) => (
+            Number(item?.pagina || 0) === Number(paginaEsperada || 0) &&
+            Number(item?.numeroLinha || 0) === Number(numeroLinha || 0) &&
+            Number(item?.diaIndice || 0) === Number(diaIndice || 0)
+        ));
+
+        const obterMarcacaoSemanaCompleta = ({ paginaEsperada, numeroLinha }) => marcacoes.find((item) => (
+            Number(item?.pagina || 0) === Number(paginaEsperada || 0) &&
+            Number(item?.numeroLinha || 0) === Number(numeroLinha || 0) &&
+            (
+                item?.tipoMarcacao === "semana_completa" ||
+                Number(item?.diaIndice || 0) === 7
+            )
+        ));
+
+        const diasAtivosDebugScannerDds = dias.filter((dia) => !dia.semAtividade);
+
+        const debugLinhasScannerDds = participantes.map((participante) => {
+            const paginaEsperada = Number(participante?.paginaEsperada || 0);
+            const numero = Number(participante?.numero || 0);
+            const numeroLinha = paginaEsperada <= 1
+                ? numero
+                : numero - 10 - ((paginaEsperada - 2) * 20);
+
+            const linhaNaoAnalisada = participante?.status === "pagina_nao_analisada" || !paginaEsperada || numeroLinha <= 0;
+
+            const marcacaoSemanaCompleta = linhaNaoAnalisada
+                ? null
+                : obterMarcacaoSemanaCompleta({ paginaEsperada, numeroLinha });
+
+            const semanaCompleta = Boolean(marcacaoSemanaCompleta?.assinatura_visual);
+
+            return {
+                numero,
+                nome: participante?.nome || "-",
+                paginaEsperada,
+                numeroLinha,
+                linhaNaoAnalisada,
+                semanaCompleta,
+                semanaDensidade: Number(marcacaoSemanaCompleta?.assinatura_densidade || 0),
+                dias: diasAtivosDebugScannerDds.map((dia) => {
+                    const marcacao = linhaNaoAnalisada
+                        ? null
+                        : obterMarcacao({
+                            paginaEsperada,
+                            numeroLinha,
+                            diaIndice: dia.indice,
+                        });
+
+                    const xVisual = Boolean(marcacao?.x_visual);
+                    const presencaVisual = Boolean(marcacao?.assinatura_visual);
+
+                    let status = "vazio";
+
+                    if (linhaNaoAnalisada) {
+                        status = "nao_analisado";
+                    } else if (xVisual) {
+                        status = "x";
+                    } else if (presencaVisual) {
+                        status = "presenca";
+                    } else if (semanaCompleta) {
+                        status = "semana_completa";
+                    }
+
+                    return {
+                        indice: dia.indice,
+                        curto: dia.curto,
+                        status,
+                        xVisual,
+                        presencaVisual,
+                        semanaCompleta,
+                        densidade: Number(marcacao?.assinatura_densidade || 0),
+                        densidadeAzul: Number(marcacao?.assinatura_densidade_azul || 0),
+                        xDensidade: Number(marcacao?.x_densidade || 0),
+                        xDensidadeEscura: Number(marcacao?.x_densidade_escura || 0),
+                        xDensidadeAzul: Number(marcacao?.x_densidade_azul || 0),
+                        xDiagPrincipal: Number(marcacao?.x_proporcao_diagonal_principal || 0),
+                        xDiagSecundaria: Number(marcacao?.x_proporcao_diagonal_secundaria || 0),
+                    };
+                }),
+            };
+        }).filter((linha) => linha.numero > 0).slice(0, 30);
+
+        const diasApurados = dias.map((dia) => {
+            let presentesProvaveis = 0;
+            let ausentesProvaveis = 0;
+            let naoAnalisados = 0;
+            let conferenciaManual = 0;
+            let semanaCompletaMarcada = 0;
+
+            const amostra = [];
+
+            for (const participante of participantes) {
+                const paginaEsperada = Number(participante?.paginaEsperada || 0);
+                const numero = Number(participante?.numero || 0);
+                const numeroLinha = paginaEsperada <= 1
+                    ? numero
+                    : numero - 10 - ((paginaEsperada - 2) * 20);
+
+                if (dia.semAtividade) {
+                    continue;
+                }
+
+                if (!leituraExecutada || !leituraConfiavel) {
+                    conferenciaManual += 1;
+                    continue;
+                }
+
+                if (participante?.status === "pagina_nao_analisada" || !paginaEsperada || numeroLinha <= 0) {
+                    naoAnalisados += 1;
+                    continue;
+                }
+
+                const marcacao = obterMarcacao({
+                    paginaEsperada,
+                    numeroLinha,
+                    diaIndice: dia.indice,
+                });
+
+                const marcacaoSemanaCompleta = obterMarcacaoSemanaCompleta({
+                    paginaEsperada,
+                    numeroLinha,
+                });
+
+                const ausenciaMarcadaComX = Boolean(marcacao?.x_visual);
+                const presencaNoDia = Boolean(marcacao?.assinatura_visual);
+                const presencaSemanaCompleta = Boolean(marcacaoSemanaCompleta?.assinatura_visual);
+
+                if (ausenciaMarcadaComX) {
+                    ausentesProvaveis += 1;
+                } else if (presencaNoDia || presencaSemanaCompleta) {
+                    presentesProvaveis += 1;
+
+                    if (presencaSemanaCompleta && !presencaNoDia) {
+                        semanaCompletaMarcada += 1;
+                    }
+
+                    if (amostra.length < 5) {
+                        amostra.push({
+                            numero,
+                            nome: participante?.nome || "-",
+                            codigoSafescan: participante?.codigoSafescan || "-",
+                            densidade: Number((marcacao || marcacaoSemanaCompleta)?.assinatura_densidade || 0),
+                            origem: presencaSemanaCompleta && !presencaNoDia ? "semana_completa" : "dia",
+                        });
+                    }
+                } else {
+                    conferenciaManual += 1;
+                }
+            }
+
+            let status = "Aguardando leitura";
+
+            if (dia.semAtividade) {
+                status = "Sem atividade";
+            } else if (!leituraExecutada) {
+                status = "Aguardando leitura";
+            } else if (!leituraConfiavel) {
+                status = "Exige conferência manual";
+            } else if (naoAnalisados > 0) {
+                status = "Parcial";
+            } else {
+                status = "Apurado";
+            }
+
+            return {
+                ...dia,
+                status,
+                presentesProvaveis,
+                ausentesProvaveis,
+                naoAnalisados,
+                conferenciaManual,
+                semanaCompletaMarcada,
+                homemDia: presentesProvaveis,
+                amostra,
+            };
+        });
+
+        const totais = diasApurados.reduce((acc, dia) => {
+            acc.presentesProvaveis += dia.presentesProvaveis;
+            acc.ausentesProvaveis += dia.ausentesProvaveis;
+            acc.naoAnalisados += dia.naoAnalisados;
+            acc.conferenciaManual += dia.conferenciaManual;
+            acc.semanaCompletaMarcada += dia.semanaCompletaMarcada;
+            acc.homemDiaSemana += dia.homemDia;
+            return acc;
+        }, {
+            presentesProvaveis: 0,
+            ausentesProvaveis: 0,
+            naoAnalisados: 0,
+            conferenciaManual: 0,
+            semanaCompletaMarcada: 0,
+            homemDiaSemana: 0,
+        });
+
+        return {
+            dias: diasApurados,
+            totais,
+            debugLinhas: debugLinhasScannerDds,
+            marcacoesEncontradas: marcacoes.filter((item) => item?.assinatura_visual || item?.x_visual).length,
+            leituraExecutada,
+            leituraConfiavel,
+        };
+    }, [
+        diasRegistroScannerDds,
+        leituraArquivoScannerDds,
+        preConferenciaParticipantesScannerDds,
+        qualidadeLeituraArquivoScannerDds,
+    ]);
+
     const resultadoFinalScannerDds = useMemo(() => {
         const gabaritoCarregado = Boolean(registroScannerDds);
         const folhaAnexada = Boolean(arquivoScannerDds);
@@ -3282,67 +3547,74 @@ export function DdsPage({
     return (
         <div className="space-y-6">
             <DdsPrintStyles />
-            <section className="dds-no-print relative overflow-hidden rounded-[28px] border border-slate-200 bg-slate-950 p-6 text-white shadow-[0_18px_50px_rgba(15,23,42,0.18)]">
-                <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(16,185,129,0.32),transparent_34%),linear-gradient(135deg,rgba(15,23,42,0.98),rgba(30,41,59,0.94))]" />
-                <div className="relative flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
-                    <div>
-                        <p className="text-xs font-black uppercase tracking-[0.26em] text-emerald-300">SafeScan Brasil</p>
-                        <h1 className="mt-2 text-4xl font-black tracking-tight">DDS — Diálogo Diário de Segurança</h1>
-                        <p className="mt-2 max-w-3xl text-sm font-semibold leading-6 text-slate-200">
+            <section className="dds-no-print relative overflow-hidden rounded-[30px] border border-slate-200 bg-slate-950 p-6 text-white shadow-[0_22px_60px_rgba(15,23,42,0.20)] sm:p-7 lg:p-8">
+                <img
+                    src={dashboardHeroSstDds}
+                    alt=""
+                    aria-hidden="true"
+                    className="absolute inset-0 h-full w-full object-cover opacity-60"
+                />
+                <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(15,23,42,0.90),rgba(15,23,42,0.72),rgba(15,23,42,0.42)),radial-gradient(circle_at_top_left,rgba(16,185,129,0.26),transparent_32%)]" />
+                <div className="absolute inset-0 bg-slate-950/5" />
+
+                <div className="relative flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
+                    <div className="max-w-4xl">
+                        <div className="inline-flex items-center gap-2 rounded-full border border-emerald-300/25 bg-emerald-300/10 px-3 py-1 text-[10px] font-black uppercase tracking-[0.28em] text-emerald-200 backdrop-blur">
+                            <span className="h-1.5 w-1.5 rounded-full bg-emerald-300 shadow-[0_0_14px_rgba(110,231,183,0.8)]" />
+                            SafeScan Brasil
+                        </div>
+
+                        <h1 className="mt-4 text-3xl font-black leading-tight tracking-tight text-white drop-shadow-sm sm:text-4xl lg:text-[42px]">
+                            DDS — Diálogo Diário de Segurança
+                        </h1>
+
+                        <p className="mt-3 max-w-5xl text-sm font-semibold leading-6 text-slate-100 sm:text-[15px] xl:whitespace-nowrap">
                             Gere o DDS semanal de obra com assinatura manual, QR de conferência, temas por dia e controle visual para fiscalização.
                         </p>
                     </div>
-                    <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-                        <div className="rounded-2xl border border-white/10 bg-white/10 px-4 py-3 text-sm font-black text-white backdrop-blur">
-                            Modelo aprovado: A4 horizontal
-                        </div>
-                        <button
-                            type="button"
-                            onClick={imprimirDdsComQrConferencia}
-                            className="inline-flex items-center justify-center gap-2 rounded-2xl bg-emerald-500 px-4 py-3 text-sm font-black text-white shadow-lg shadow-emerald-950/20 transition hover:bg-emerald-400"
-                        >
-                            <Printer className="h-4 w-4" />
-                            Imprimir DDS
-                        </button>
-                    </div>
-                </div>
+</div>
             </section>
-
-            <section className="dds-no-print grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+            <section className="dds-no-print grid gap-3 md:grid-cols-2 xl:grid-cols-4">
                 <DdsResumoCard
                     icone={CalendarClock}
                     titulo="Semana atual"
                     valor={dadosDds.resumoSemana || "14 a 20/06"}
                     texto={dadosDds.periodo || "Domingo como primeiro dia da semana."}
+                    cor="emerald"
                 />
                 <DdsResumoCard
                     icone={BookOpen}
                     titulo="Temas"
                     valor="7 dias"
                     texto="Tema e responsável por dia."
+                    cor="sky"
                 />
                 <DdsResumoCard
                     icone={Users}
                     titulo="Participantes"
                     valor={String(participantesSistemaDds.length)}
                     texto="Todos os colaboradores carregados do sistema."
+                    cor="violet"
                 />
                 <DdsResumoCard
-                    icone={ClipboardCheck}
-                    titulo="Presença"
-                    valor="Manual"
-                    texto="Assinatura por dia e coluna Presente com marcação."
+                    icone={Printer}
+                    titulo="Impressão"
+                    valor="Imprimir DDS"
+                    texto=""
+                    cor="amber"
+                    destaque
+                    onClick={imprimirDdsComQrConferencia}
                 />
             </section>
 
             <section className="dds-no-print space-y-4">
-                <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
+                <div className="min-h-[92px] rounded-3xl border border-slate-200 border-t-4 border-t-blue-500 bg-white p-4 shadow-sm">
                     <div
                         onClick={() => alternarCardDds("novo")}
                         role="button"
                         tabIndex={0}
                         onKeyDown={(evento) => { if (evento.key === "Enter" || evento.key === " ") alternarCardDds("novo"); }}
-                        className="flex cursor-pointer items-center justify-between gap-3 rounded-2xl transition hover:bg-slate-50"
+                        className="flex min-h-[52px] cursor-pointer items-center justify-between gap-3 rounded-2xl transition hover:bg-slate-50"
                     >
                         <div className="flex items-center gap-3">
                         <span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-blue-50 text-blue-700 ring-1 ring-blue-100">
@@ -3481,28 +3753,56 @@ export function DdsPage({
                     )}
                 </div>
 
-                <div className="rounded-3xl border border-emerald-100 bg-emerald-50 p-5 shadow-sm">
-                    <div className="flex items-center gap-3">
-                        <span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-white text-emerald-700 ring-1 ring-emerald-100">
-                            <QrCode className="h-5 w-5" />
-                        </span>
-                        <div>
-                            <h2 className="text-lg font-black text-emerald-950">QR de conferência</h2>
-                            <p className="text-sm font-semibold text-emerald-800">O QR valida o documento. A assinatura continua manual.</p>
+                <div
+                    className="min-h-[92px] cursor-pointer rounded-3xl border border-slate-200 border-t-4 border-t-emerald-500 bg-white p-4 shadow-sm transition hover:-translate-y-0.5 hover:border-emerald-200 hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-emerald-200"
+                    role="button"
+                    tabIndex={0}
+                    onClick={() => alternarCardDds("qrConferencia")}
+                    onKeyDown={(evento) => {
+                        if (evento.key === "Enter" || evento.key === " ") {
+                            evento.preventDefault();
+                            alternarCardDds("qrConferencia");
+                        }
+                    }}
+                >
+                    <div className="flex min-h-[52px] flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                        <div className="flex items-center gap-3">
+                            <span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-white text-emerald-700 ring-1 ring-emerald-100">
+                                <QrCode className="h-5 w-5" />
+                            </span>
+                            <div>
+                                <h2 className="text-lg font-black text-emerald-950">QR de conferência</h2>
+                                <p className="text-sm font-semibold text-emerald-800">
+                                    O QR valida o documento. A assinatura continua manual.
+                                </p>
+                            </div>
                         </div>
-                    </div>
-                    <div className="mt-4 rounded-2xl bg-white p-4 text-sm font-bold leading-6 text-slate-600 ring-1 ring-emerald-100">
-                        A folha semanal terá domingo a sábado, assinatura/rubrica nos dias e uma coluna final Presente com quadrado para marcação.
-                    </div>
-                </div>
 
-                <div className="rounded-3xl border border-cyan-100 bg-cyan-50 p-5 shadow-sm">
+                        <button
+                            type="button"
+                            onClick={(evento) => {
+                                evento.stopPropagation();
+                                alternarCardDds("qrConferencia");
+                            }}
+                            className="shrink-0"
+                        >
+                            <BotaoAlternarCardDds aberto={cardDdsAberto("qrConferencia")} />
+                        </button>
+                    </div>
+
+                    {cardDdsAberto("qrConferencia") && (
+                        <div className="mt-4 rounded-2xl bg-white p-4 text-sm font-bold leading-6 text-slate-600 ring-1 ring-emerald-100">
+                            A folha semanal terá domingo a sábado, rubrica nos dias com atividade, X preto/escuro para ausência e coluna final Semana completa para marcar presença nos dias úteis/com atividade.
+                        </div>
+                    )}
+                </div>
+                <div className="min-h-[92px] rounded-3xl border border-slate-200 border-t-4 border-t-cyan-500 bg-white p-4 shadow-sm">
                     <div
                         onClick={() => alternarCardDds("conferencia")}
                         role="button"
                         tabIndex={0}
                         onKeyDown={(evento) => { if (evento.key === "Enter" || evento.key === " ") alternarCardDds("conferencia"); }}
-                        className="flex cursor-pointer items-center justify-between gap-3 rounded-2xl transition hover:bg-white/50"
+                        className="flex min-h-[52px] cursor-pointer items-center justify-between gap-3 rounded-2xl transition hover:bg-white/50"
                     >
                         <div className="flex items-center gap-3">
                             <span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-white text-cyan-700 ring-1 ring-cyan-100">
@@ -3737,8 +4037,8 @@ export function DdsPage({
                        <p className="text-[10px] font-black uppercase tracking-wide text-cyan-700">OCR direcionado DDS</p>
                        <p className="mt-1 text-xs font-bold text-cyan-900">
                            Score {leituraArquivoScannerDds.diagnosticoDdsOcr.score || 0}/100
-                           {leituraArquivoScannerDds.diagnosticoDdsOcr.pagina ? ` · página ${leituraArquivoScannerDds.diagnosticoDdsOcr.pagina}` : ""}
-                           {leituraArquivoScannerDds.diagnosticoDdsOcr.rotacao ? ` · rotação ${leituraArquivoScannerDds.diagnosticoDdsOcr.rotacao}°` : ""}
+                           {leituraArquivoScannerDds.diagnosticoDdsOcr.pagina ? ` • página ${leituraArquivoScannerDds.diagnosticoDdsOcr.pagina}` : ""}
+                           {leituraArquivoScannerDds.diagnosticoDdsOcr.rotacao ? ` • rotação ${leituraArquivoScannerDds.diagnosticoDdsOcr.rotacao}°` : ""}
                        </p>
                    </div>
                    <span className="rounded-xl border border-cyan-200 bg-white px-3 py-2 text-xs font-black text-cyan-800">
@@ -3767,7 +4067,7 @@ export function DdsPage({
                                                 <p className="text-[10px] font-black uppercase tracking-wide text-amber-700">Avisos da leitura</p>
                                                 <ul className="mt-2 space-y-1 text-xs font-bold text-amber-800">
                                                     {avisosLeituraArquivoScannerDds.slice(0, 6).map((aviso, indice) => (
-                                                        <li key={`aviso-leitura-dds-${indice}`}>• {aviso}</li>
+                                                        <li key={`aviso-leitura-dds-${indice}`}>ÔÇó {aviso}</li>
                                                     ))}
                                                 </ul>
                                             </div>
@@ -3832,8 +4132,8 @@ export function DdsPage({
                                             </div>
                                             <div className="rounded-xl bg-slate-50 p-3 ring-1 ring-slate-100">
                                                 <p className="text-[10px] font-black uppercase tracking-wide text-slate-400">Empresa / obra</p>
-                                                <p className="mt-1 truncate text-sm font-black text-slate-900" title={`${diagnosticoEstruturalScannerDds.empresaEsperada || "-"} · ${diagnosticoEstruturalScannerDds.obraEsperada || "-"}`}>
-                                                    {diagnosticoEstruturalScannerDds.empresaEsperada || "-"} · {diagnosticoEstruturalScannerDds.obraEsperada || "-"}
+                                                <p className="mt-1 truncate text-sm font-black text-slate-900" title={`${diagnosticoEstruturalScannerDds.empresaEsperada || "-"} • ${diagnosticoEstruturalScannerDds.obraEsperada || "-"}`}>
+                                                    {diagnosticoEstruturalScannerDds.empresaEsperada || "-"} • {diagnosticoEstruturalScannerDds.obraEsperada || "-"}
                                                 </p>
                                             </div>
                                             <div className="rounded-xl bg-slate-50 p-3 ring-1 ring-slate-100">
@@ -4068,7 +4368,7 @@ export function DdsPage({
         <p className="text-[10px] font-black uppercase tracking-wide text-slate-500">Recomendações</p>
         <ul className="mt-2 space-y-1 text-xs font-bold leading-5 text-slate-700">
             {resultadoFinalScannerDds.recomendacoes.map((item, indice) => (
-                <li key={`recomendacao-final-dds-${indice}`}>• {item}</li>
+                <li key={`recomendacao-final-dds-${indice}`}>ÔÇó {item}</li>
             ))}
         </ul>
     </div>
@@ -4086,7 +4386,7 @@ export function DdsPage({
                                                 {registroScannerDds.codigo}
                                             </h3>
                                             <p className="mt-1 text-sm font-semibold text-slate-600">
-                                                {registroScannerDds.empresaNome || "Empresa não informada"} · {registroScannerDds.obraNome || "Obra não informada"}
+                                                {registroScannerDds.empresaNome || "Empresa não informada"} • {registroScannerDds.obraNome || "Obra não informada"}
                                             </p>
                                             <p className="mt-1 text-xs font-bold text-slate-500">
                                                 Período: {registroScannerDds.periodoInicio || "-"} a {registroScannerDds.periodoFim || "-"}
@@ -4154,24 +4454,27 @@ export function DdsPage({
             </section>
 
 
-            <section className="dds-no-print rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
+
+            <section className="dds-no-print min-h-[92px] rounded-3xl border border-slate-200 border-t-4 border-t-sky-500 bg-white p-4 shadow-sm">
                 <div
                     onClick={() => alternarCardDds("temas")}
                     role="button"
                     tabIndex={0}
                     onKeyDown={(evento) => { if (evento.key === "Enter" || evento.key === " ") alternarCardDds("temas"); }}
-                    className="flex cursor-pointer flex-col gap-3 rounded-2xl transition hover:bg-slate-50 lg:flex-row lg:items-start lg:justify-between"
+                    className="flex min-h-[52px] cursor-pointer flex-col gap-3 rounded-2xl transition hover:bg-slate-50 lg:flex-row lg:items-center lg:justify-between"
                 >
-                    <div>
-                        <p className="text-[11px] font-black uppercase tracking-[0.22em] text-emerald-600">
-                            Editor dos temas do DDS
-                        </p>
-                        <h2 className="mt-1 text-lg font-black text-slate-950">
-                            Temas por dia da semana
-                        </h2>
-                        <p className="mt-1 text-sm font-semibold text-slate-500">
-                            Ajuste o tema e o responsável de cada dia antes de imprimir. A folha impressa será atualizada automaticamente.
-                        </p>
+                    <div className="flex items-start gap-3">
+                        <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-sky-50 text-sky-700 ring-1 ring-sky-100">
+                            <ClipboardList className="h-5 w-5" />
+                        </span>
+                        <div>
+                            <h2 className="text-lg font-black text-slate-950">
+                                Temas por dia da semana
+                            </h2>
+                            <p className="mt-1 text-sm font-semibold text-slate-500">
+                                Defina o tema e o responsável de cada dia antes de imprimir.
+                            </p>
+                        </div>
                     </div>
 
                     <div className="flex shrink-0 flex-wrap items-center gap-2" onClick={(evento) => evento.stopPropagation()}>
@@ -4237,24 +4540,26 @@ export function DdsPage({
                 )}
             </section>
 
-            <section className="dds-no-print rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
+            <section className="dds-no-print min-h-[92px] rounded-3xl border border-slate-200 border-t-4 border-t-amber-500 bg-white p-4 shadow-sm">
                 <div
                     onClick={() => alternarCardDds("recados")}
                     role="button"
                     tabIndex={0}
                     onKeyDown={(evento) => { if (evento.key === "Enter" || evento.key === " ") alternarCardDds("recados"); }}
-                    className="flex cursor-pointer flex-col gap-3 rounded-2xl transition hover:bg-slate-50 lg:flex-row lg:items-start lg:justify-between"
+                    className="flex min-h-[52px] cursor-pointer flex-col gap-3 rounded-2xl transition hover:bg-slate-50 lg:flex-row lg:items-center lg:justify-between"
                 >
-                    <div>
-                        <p className="text-[11px] font-black uppercase tracking-[0.22em] text-emerald-600">
-                            Editor de recados do DDS
-                        </p>
-                        <h2 className="mt-1 text-lg font-black text-slate-950">
-                            Recados e pontos reforçados da semana
-                        </h2>
-                        <p className="mt-1 text-sm font-semibold text-slate-500">
-                            O texto abaixo será impresso no rodapé do DDS. Se apagar, o campo fica em branco.
-                        </p>
+                    <div className="flex items-start gap-3">
+                        <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-amber-50 text-amber-700 ring-1 ring-amber-100">
+                            <MessageSquareText className="h-5 w-5" />
+                        </span>
+                        <div>
+                            <h2 className="text-lg font-black text-slate-950">
+                                Recados da semana
+                            </h2>
+                            <p className="mt-1 text-sm font-semibold text-slate-500">
+                                Mensagem opcional impressa no rodapé. Deixe em branco se não houver recado.
+                            </p>
+                        </div>
                     </div>
 
                     <div className="flex shrink-0 flex-wrap items-center gap-2" onClick={(evento) => evento.stopPropagation()}>
@@ -4286,24 +4591,26 @@ export function DdsPage({
                 )}
             </section>
 
-            <section className="dds-no-print rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
+            <section className="dds-no-print min-h-[92px] rounded-3xl border border-slate-200 border-t-4 border-t-violet-500 bg-white p-4 shadow-sm">
                 <div
                     onClick={() => alternarCardDds("orientacoes")}
                     role="button"
                     tabIndex={0}
                     onKeyDown={(evento) => { if (evento.key === "Enter" || evento.key === " ") alternarCardDds("orientacoes"); }}
-                    className="flex cursor-pointer flex-col gap-3 rounded-2xl transition hover:bg-slate-50 lg:flex-row lg:items-start lg:justify-between"
+                    className="flex min-h-[52px] cursor-pointer flex-col gap-3 rounded-2xl transition hover:bg-slate-50 lg:flex-row lg:items-center lg:justify-between"
                 >
-                    <div>
-                        <p className="text-[11px] font-black uppercase tracking-[0.22em] text-emerald-600">
-                            Editor de orientações importantes do DDS
-                        </p>
-                        <h2 className="mt-1 text-lg font-black text-slate-950">
-                            Orientações importantes
-                        </h2>
-                        <p className="mt-1 text-sm font-semibold text-slate-500">
-                            Ajuste as orientações que serão impressas no rodapé do DDS.
-                        </p>
+                    <div className="flex items-start gap-3">
+                        <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-violet-50 text-violet-700 ring-1 ring-violet-100">
+                            <ListChecks className="h-5 w-5" />
+                        </span>
+                        <div>
+                            <h2 className="text-lg font-black text-slate-950">
+                                Orientações importantes
+                            </h2>
+                            <p className="mt-1 text-sm font-semibold text-slate-500">
+                                Itens fixos de segurança exibidos no rodapé da folha.
+                            </p>
+                        </div>
                     </div>
 
                     <div className="flex shrink-0 flex-wrap items-center gap-2" onClick={(evento) => evento.stopPropagation()}>
@@ -4345,7 +4652,38 @@ export function DdsPage({
                 </div>
                 )}
             </section>
-            <div className="dds-print-area space-y-6">
+            <section className="dds-no-print min-h-[92px] rounded-3xl border border-slate-200 border-t-4 border-t-slate-500 bg-white p-4 shadow-sm">
+                <div
+                    onClick={() => alternarCardDds("preview")}
+                    role="button"
+                    tabIndex={0}
+                    onKeyDown={(evento) => { if (evento.key === "Enter" || evento.key === " ") alternarCardDds("preview"); }}
+                    className="flex min-h-[52px] cursor-pointer flex-col gap-3 rounded-2xl transition hover:bg-slate-50 lg:flex-row lg:items-center lg:justify-between"
+                >
+                    <div className="flex items-start gap-3">
+                        <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-slate-50 text-slate-700 ring-1 ring-slate-100">
+                            <Printer className="h-5 w-5" />
+                        </span>
+                        <div>
+                            <h2 className="text-lg font-black text-slate-950">
+                                DDS impresso
+                            </h2>
+                            <p className="mt-1 text-sm font-semibold text-slate-500">
+                                Prévia da folha semanal gerada para impressão.
+                            </p>
+                        </div>
+                    </div>
+
+                    <button
+                        type="button"
+                        onClick={(evento) => { evento.stopPropagation(); alternarCardDds("preview"); }}
+                        className="shrink-0"
+                    >
+                        <BotaoAlternarCardDds aberto={cardDdsAberto("preview")} />
+                    </button>
+                </div>
+            </section>
+            <div className={`dds-print-area space-y-6 ${cardDdsAberto("preview") ? "" : "hidden print:block"}`}>
                 <DdsPreviewImpresso
                     participantes={primeiraFolhaParticipantes}
                     mostrarAssinaturas={totalFolhasDds === 1}
