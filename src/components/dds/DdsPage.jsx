@@ -4237,7 +4237,7 @@ export function DdsPage({
                                                 disabled={!arquivoScannerDds || carregandoLeituraArquivoScannerDds}
                                                 className="rounded-xl bg-cyan-600 px-4 py-2 text-xs font-black text-white shadow-sm transition hover:bg-cyan-500 disabled:cursor-not-allowed disabled:opacity-60"
                                             >
-                                                {carregandoLeituraArquivoScannerDds ? "Lendo arquivo..." : "Ler arquivo anexado"}
+                                                {carregandoLeituraArquivoScannerDds ? "Lendo arquivo..." : leituraArquivoScannerDds ? "Analisar novamente" : "Ler arquivo anexado"}
                                             </button>
                                         </div>
                                     </>
