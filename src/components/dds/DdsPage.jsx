@@ -3609,6 +3609,105 @@ export function DdsPage({
         [participantesSistemaDds]
     );
     const totalFolhasDds = Math.max(1, 1 + folhasContinuacaoDds.length);
+
+    const resultadoFinalApresentacaoDds = useMemo(() => {
+        const valoresConferencia = Object.values(conferenciaAssistidaDds || {});
+        const temAlgumaConfirmacaoAssistida = valoresConferencia.some((status) =>
+            status === "presente" || status === "ausente" || status === "manual"
+        );
+
+        const temBaseAssistida = Boolean(
+            temAlgumaConfirmacaoAssistida &&
+            diasAtivosConferenciaAssistidaDds.length > 0 &&
+            estatisticasConferenciaAssistidaDds.participantes > 0
+        );
+
+        if (!temBaseAssistida) {
+            return resultadoFinalScannerDds;
+        }
+
+        const participantes = Number(estatisticasConferenciaAssistidaDds.participantes || 0);
+        const presencas = Number(estatisticasConferenciaAssistidaDds.presencas || 0);
+        const ausencias = Number(estatisticasConferenciaAssistidaDds.ausencias || 0);
+        const manuais = Number(estatisticasConferenciaAssistidaDds.manuais || 0);
+        const homemDia = Number(estatisticasConferenciaAssistidaDds.homemDia || 0);
+        const diasAtivos = Number(diasAtivosConferenciaAssistidaDds.length || 0);
+        const funcionariosSemanaCompleta = Number(estatisticasConferenciaAssistidaDds.funcionariosSemanaCompleta || 0);
+        const totalCampos = participantes * diasAtivos;
+
+        const conferenciaFechada = totalCampos > 0 && manuais === 0;
+        const statusVisual = conferenciaFechada ? "ok" : "parcial";
+        const statusFinal = conferenciaFechada ? "Conferido oficialmente" : "Conferência assistida parcial";
+        const titulo = conferenciaFechada
+            ? "Frequência oficial conferida"
+            : "Frequência oficial com campos pendentes";
+        const descricao = conferenciaFechada
+            ? "A frequência oficial do DDS foi confirmada pela Conferência Assistida. O OCR visual permanece apenas como apoio técnico."
+            : "A Conferência Assistida já possui dados oficiais, mas ainda existem campos marcados como manual/vazio para revisar.";
+
+        const itens = [
+            {
+                titulo: "Conferência Assistida",
+                ok: conferenciaFechada,
+                manual: !conferenciaFechada,
+                detalhe: `${presencas} presença(s), ${ausencias} ausência(s), ${manuais} manual/vazio e ${homemDia} homem-dia confirmado(s).`,
+            },
+            {
+                titulo: "Dias ativos",
+                ok: diasAtivos > 0,
+                detalhe: `${diasAtivos} dia(s) com atividade usado(s) no cálculo oficial.`,
+            },
+            {
+                titulo: "OCR visual auxiliar",
+                ok: false,
+                manual: true,
+                detalhe: "Leitura automática usada apenas como apoio; a estatística oficial vem da Conferência Assistida.",
+            },
+        ];
+
+        const recomendacoes = [];
+
+        if (manuais > 0) {
+            recomendacoes.push("Revisar os campos marcados como ? para fechar a frequência oficial sem pendências.");
+        } else {
+            recomendacoes.push("Manter a Conferência Assistida salva como base oficial da estatística DDS.");
+        }
+
+        recomendacoes.push("Usar o OCR visual apenas como apoio técnico, sem substituir a confirmação P / X / ?.");
+        recomendacoes.push("Não usar o resultado como validação grafológica; manter conferência visual/documental.");
+
+        return {
+            ...resultadoFinalScannerDds,
+            modoAssistido: true,
+            statusFinal,
+            statusVisual,
+            titulo,
+            descricao,
+            itens,
+            recomendacoes,
+            resumo: {
+                ...(resultadoFinalScannerDds?.resumo || {}),
+                participantesTotal: participantes,
+                participantesLocalizados: participantes,
+                participantesManuais: manuais,
+                participantesNaoLocalizados: ausencias,
+                participantesPaginasNaoAnalisadas: 0,
+                presencas,
+                ausencias,
+                manuais,
+                homemDia,
+                diasAtivos,
+                totalCampos,
+                funcionariosSemanaCompleta,
+            },
+        };
+    }, [
+        conferenciaAssistidaDds,
+        diasAtivosConferenciaAssistidaDds,
+        estatisticasConferenciaAssistidaDds,
+        resultadoFinalScannerDds,
+    ]);
+
     async function imprimirDdsComQrConferencia() {
         if (salvandoRegistroDds) return;
 
@@ -4751,69 +4850,69 @@ export function DdsPage({
     </p>
 </div>
 )}
-{resultadoFinalScannerDds && (
+{resultadoFinalApresentacaoDds && (
 <div className={`rounded-2xl border p-5 ring-1 lg:col-span-2 ${
-    resultadoFinalScannerDds.statusVisual === "ok"
+    resultadoFinalApresentacaoDds.statusVisual === "ok"
         ? "border-emerald-200 bg-emerald-50 ring-emerald-100"
-        : resultadoFinalScannerDds.statusVisual === "parcial"
+        : resultadoFinalApresentacaoDds.statusVisual === "parcial"
             ? "border-amber-200 bg-amber-50 ring-amber-100"
             : "border-red-200 bg-red-50 ring-red-100"
 }`}>
     <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
         <div>
             <p className={`text-[11px] font-black uppercase tracking-wide ${
-                resultadoFinalScannerDds.statusVisual === "ok"
+                resultadoFinalApresentacaoDds.statusVisual === "ok"
                     ? "text-emerald-700"
-                    : resultadoFinalScannerDds.statusVisual === "parcial"
+                    : resultadoFinalApresentacaoDds.statusVisual === "parcial"
                         ? "text-amber-700"
                         : "text-red-700"
             }`}>
-                Resultado final da conferência DDS
+                {resultadoFinalApresentacaoDds.modoAssistido ? "Resultado oficial da Conferência Assistida DDS" : "Resultado final da conferência DDS"}
             </p>
             <h4 className="mt-1 text-xl font-black text-slate-950">
-                {resultadoFinalScannerDds.titulo}
+                {resultadoFinalApresentacaoDds.titulo}
             </h4>
             <p className="mt-1 max-w-4xl text-sm font-bold leading-6 text-slate-700">
-                {resultadoFinalScannerDds.descricao}
+                {resultadoFinalApresentacaoDds.descricao}
             </p>
         </div>
 
         <span className={`rounded-xl border px-4 py-2 text-sm font-black ${
-            resultadoFinalScannerDds.statusVisual === "ok"
+            resultadoFinalApresentacaoDds.statusVisual === "ok"
                 ? "border-emerald-300 bg-white text-emerald-800"
-                : resultadoFinalScannerDds.statusVisual === "parcial"
+                : resultadoFinalApresentacaoDds.statusVisual === "parcial"
                     ? "border-amber-300 bg-white text-amber-800"
                     : "border-red-300 bg-white text-red-800"
         }`}>
-            {resultadoFinalScannerDds.statusFinal}
+            {resultadoFinalApresentacaoDds.statusFinal}
         </span>
     </div>
 
     <div className="mt-4 grid gap-2 sm:grid-cols-2 xl:grid-cols-5">
         <div className="rounded-xl bg-white/80 p-3 ring-1 ring-white">
             <p className="text-[10px] font-black uppercase tracking-wide text-slate-400">Participantes</p>
-            <p className="mt-1 text-lg font-black text-slate-950">{resultadoFinalScannerDds.resumo.participantesTotal}</p>
+            <p className="mt-1 text-lg font-black text-slate-950">{resultadoFinalApresentacaoDds.resumo.participantesTotal}</p>
         </div>
         <div className="rounded-xl bg-white/80 p-3 ring-1 ring-white">
-            <p className="text-[10px] font-black uppercase tracking-wide text-emerald-700">Localizados</p>
-            <p className="mt-1 text-lg font-black text-emerald-900">{resultadoFinalScannerDds.resumo.participantesLocalizados}</p>
+            <p className="text-[10px] font-black uppercase tracking-wide text-emerald-700">{resultadoFinalApresentacaoDds.modoAssistido ? "Presenças" : "Localizados"}</p>
+            <p className="mt-1 text-lg font-black text-emerald-900">{resultadoFinalApresentacaoDds.modoAssistido ? resultadoFinalApresentacaoDds.resumo.presencas : resultadoFinalApresentacaoDds.resumo.participantesLocalizados}</p>
         </div>
         <div className="rounded-xl bg-white/80 p-3 ring-1 ring-white">
-            <p className="text-[10px] font-black uppercase tracking-wide text-amber-700">Manual</p>
-            <p className="mt-1 text-lg font-black text-amber-900">{resultadoFinalScannerDds.resumo.participantesManuais}</p>
+            <p className="text-[10px] font-black uppercase tracking-wide text-amber-700">{resultadoFinalApresentacaoDds.modoAssistido ? "Ausências" : "Manual"}</p>
+            <p className="mt-1 text-lg font-black text-amber-900">{resultadoFinalApresentacaoDds.modoAssistido ? resultadoFinalApresentacaoDds.resumo.ausencias : resultadoFinalApresentacaoDds.resumo.participantesManuais}</p>
         </div>
         <div className="rounded-xl bg-white/80 p-3 ring-1 ring-white">
-            <p className="text-[10px] font-black uppercase tracking-wide text-red-700">Não localizados</p>
-            <p className="mt-1 text-lg font-black text-red-900">{resultadoFinalScannerDds.resumo.participantesNaoLocalizados}</p>
+            <p className="text-[10px] font-black uppercase tracking-wide text-red-700">{resultadoFinalApresentacaoDds.modoAssistido ? "Manual/vazio" : "Não localizados"}</p>
+            <p className="mt-1 text-lg font-black text-red-900">{resultadoFinalApresentacaoDds.modoAssistido ? resultadoFinalApresentacaoDds.resumo.manuais : resultadoFinalApresentacaoDds.resumo.participantesNaoLocalizados}</p>
         </div>
         <div className="rounded-xl bg-white/80 p-3 ring-1 ring-white">
-            <p className="text-[10px] font-black uppercase tracking-wide text-orange-700">Pág. não anexada</p>
-            <p className="mt-1 text-lg font-black text-orange-900">{resultadoFinalScannerDds.resumo.participantesPaginasNaoAnalisadas}</p>
+            <p className="text-[10px] font-black uppercase tracking-wide text-orange-700">{resultadoFinalApresentacaoDds.modoAssistido ? "Homem-dia" : "Pág. não anexada"}</p>
+            <p className="mt-1 text-lg font-black text-orange-900">{resultadoFinalApresentacaoDds.modoAssistido ? resultadoFinalApresentacaoDds.resumo.homemDia : resultadoFinalApresentacaoDds.resumo.participantesPaginasNaoAnalisadas}</p>
         </div>
     </div>
 
     <div className="mt-4 grid gap-2 lg:grid-cols-3">
-        {resultadoFinalScannerDds.itens.map((item, indice) => (
+        {resultadoFinalApresentacaoDds.itens.map((item, indice) => (
             <div
                 key={`resultado-final-dds-${indice}`}
                 className="rounded-xl bg-white/80 p-3 ring-1 ring-white"
@@ -4836,7 +4935,7 @@ export function DdsPage({
     <div className="mt-4 rounded-xl bg-white/80 p-3 ring-1 ring-white">
         <p className="text-[10px] font-black uppercase tracking-wide text-slate-500">Recomendações</p>
         <ul className="mt-2 space-y-1 text-xs font-bold leading-5 text-slate-700">
-            {resultadoFinalScannerDds.recomendacoes.map((item, indice) => (
+            {resultadoFinalApresentacaoDds.recomendacoes.map((item, indice) => (
                 <li key={`recomendacao-final-dds-${indice}`}>ÔÇó {item}</li>
             ))}
         </ul>
