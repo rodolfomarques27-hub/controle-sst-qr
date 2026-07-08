@@ -2854,7 +2854,11 @@ export function DdsPage({
         };
     }, [conferenciaAssistidaDds, diasAtivosConferenciaAssistidaDds, participantesConferenciaAssistidaDds]);
 
+    const conferenciaOficialConcluidaDds = fechamentoConferenciaAssistidaDds?.status === "concluida";
+
     function definirStatusFrequenciaAssistidaDds(numero, diaRef, status) {
+        if (conferenciaOficialConcluidaDds) return;
+
         const chave = obterChaveFrequenciaAssistidaDds(numero, diaRef);
 
         setConferenciaAssistidaDds((atual) => ({
@@ -2864,6 +2868,8 @@ export function DdsPage({
     }
 
     function marcarSemanaCompletaAssistidaDds(numero) {
+        if (conferenciaOficialConcluidaDds) return;
+
         setConferenciaAssistidaDds((atual) => {
             const proximo = { ...atual };
 
@@ -2876,6 +2882,8 @@ export function DdsPage({
     }
 
     function limparParticipanteConferenciaAssistidaDds(numero) {
+        if (conferenciaOficialConcluidaDds) return;
+
         setConferenciaAssistidaDds((atual) => {
             const proximo = { ...atual };
 
@@ -2888,12 +2896,19 @@ export function DdsPage({
     }
 
     function limparConferenciaAssistidaDds() {
+        if (conferenciaOficialConcluidaDds) return;
+
         setConferenciaAssistidaDds({});
         setFechamentoConferenciaAssistidaDds(null);
         setErroFechamentoConferenciaDds("");
     }
     async function salvarConferenciaAssistidaDds() {
         if (salvandoConferenciaAssistidaDds) return;
+
+        if (conferenciaOficialConcluidaDds) {
+            setErroConferenciaAssistidaDds("A conferência já foi concluída oficialmente. Reabra antes de editar ou salvar novamente.");
+            return;
+        }
 
         if (!supabase) {
             setErroConferenciaAssistidaDds("Cliente Supabase não disponível para salvar a conferência.");
@@ -3064,6 +3079,84 @@ export function DdsPage({
             setFechamentoConferenciaAssistidaDds(registroAtualizado?.dados?.conferenciaAssistida?.fechamento || fechamento);
         } catch (error) {
             setErroFechamentoConferenciaDds(error?.message || "Não foi possível concluir a Conferência Assistida DDS.");
+        } finally {
+            setSalvandoFechamentoConferenciaDds(false);
+        }
+    }
+
+
+    async function reabrirConferenciaAssistidaDds() {
+        if (salvandoFechamentoConferenciaDds || salvandoConferenciaAssistidaDds) return;
+
+        if (!supabase) {
+            setErroFechamentoConferenciaDds("Cliente Supabase não disponível para reabrir a conferência.");
+            return;
+        }
+
+        const codigo = registroScannerDds?.codigo || codigoConferenciaDds || dadosDds.codigo || "";
+
+        if (!codigo) {
+            setErroFechamentoConferenciaDds("Busque o DDS antes de reabrir a conferência.");
+            return;
+        }
+
+        setSalvandoFechamentoConferenciaDds(true);
+        setErroFechamentoConferenciaDds("");
+
+        try {
+            const reabertoEm = new Date().toISOString();
+            const dadosAtuais = registroScannerDds?.dados || {};
+            const conferenciaAtual = dadosAtuais.conferenciaAssistida || {};
+            const { fechamento, ...conferenciaSemFechamento } = conferenciaAtual;
+
+            const conferenciaAssistida = {
+                ...conferenciaSemFechamento,
+                versao: 1,
+                origem: "conferencia_assistida_dds",
+                atualizadoEm: reabertoEm,
+                reabertoEm,
+                frequencia: conferenciaAssistidaDds,
+                estatisticas: estatisticasConferenciaAssistidaDds,
+                diasAtivos: diasAtivosConferenciaAssistidaDds.map((dia) => ({
+                    indice: dia.indice,
+                    chaveAssistida: dia.chaveAssistida,
+                    nome: dia.nome,
+                    curto: dia.curto,
+                    data: dia.data,
+                    tema: dia.tema,
+                })),
+                participantes: participantesConferenciaAssistidaDds.map((participante) => ({
+                    numero: participante.numero,
+                    nome: participante.nome,
+                    funcao: participante.funcao,
+                    codigoSafescan: participante.codigoSafescan,
+                })),
+            };
+
+            const registroAtualizado = await salvarRegistroDds({
+                supabase,
+                registro: {
+                    ...registroScannerDds,
+                    codigo,
+                    empresaId: registroScannerDds?.empresaId || registroScannerDds?.empresa_id || dadosAtuais.empresaId || dadosAtuais.empresa_id || "",
+                    obraId: registroScannerDds?.obraId || registroScannerDds?.obra_id || dadosAtuais.obraId || dadosAtuais.obra_id || "",
+                    empresaNome: registroScannerDds?.empresaNome || dadosAtuais.empresaNome || dadosAtuais.empresa || "",
+                    obraNome: registroScannerDds?.obraNome || dadosAtuais.obraNome || dadosAtuais.obra || "",
+                    periodoInicio: registroScannerDds?.periodoInicio || dadosAtuais.periodoInicio || "",
+                    periodoFim: registroScannerDds?.periodoFim || dadosAtuais.periodoFim || "",
+                    dados: {
+                        ...dadosAtuais,
+                        conferenciaAssistida,
+                    },
+                },
+            });
+
+            setRegistroScannerDds(registroAtualizado);
+            setConferenciaAssistidaDds(registroAtualizado?.dados?.conferenciaAssistida?.frequencia || conferenciaAssistidaDds);
+            setConferenciaAssistidaSalvaEmDds(registroAtualizado?.dados?.conferenciaAssistida?.atualizadoEm || reabertoEm);
+            setFechamentoConferenciaAssistidaDds(null);
+        } catch (error) {
+            setErroFechamentoConferenciaDds(error?.message || "Não foi possível reabrir a Conferência Assistida DDS.");
         } finally {
             setSalvandoFechamentoConferenciaDds(false);
         }
@@ -4821,10 +4914,21 @@ export function DdsPage({
             )}
 
             <div className="flex flex-wrap justify-end gap-2">
+                {conferenciaOficialConcluidaDds && (
+                    <button
+                        type="button"
+                        onClick={reabrirConferenciaAssistidaDds}
+                        disabled={salvandoFechamentoConferenciaDds}
+                        className="rounded-xl border border-amber-300 bg-white px-4 py-2 text-xs font-black text-amber-800 shadow-sm transition hover:border-amber-400 hover:bg-amber-50 disabled:cursor-not-allowed disabled:opacity-60"
+                    >
+                        {salvandoFechamentoConferenciaDds ? "Reabrindo..." : "Reabrir conferência"}
+                    </button>
+                )}
+
                 <button
                     type="button"
                     onClick={concluirConferenciaAssistidaDds}
-                    disabled={salvandoFechamentoConferenciaDds || estatisticasConferenciaAssistidaDds.manuais > 0 || estatisticasConferenciaAssistidaDds.participantes <= 0}
+                    disabled={conferenciaOficialConcluidaDds || salvandoFechamentoConferenciaDds || estatisticasConferenciaAssistidaDds.manuais > 0 || estatisticasConferenciaAssistidaDds.participantes <= 0}
                     className="rounded-xl border border-emerald-300 bg-white px-4 py-2 text-xs font-black text-emerald-800 shadow-sm transition hover:border-emerald-400 hover:bg-emerald-50 disabled:cursor-not-allowed disabled:opacity-60"
                     title={estatisticasConferenciaAssistidaDds.manuais > 0 ? "Troque todos os ? por P ou X antes de concluir." : "Registrar fechamento oficial da Conferência Assistida."}
                 >
@@ -4834,7 +4938,7 @@ export function DdsPage({
                 <button
                     type="button"
                     onClick={salvarConferenciaAssistidaDds}
-                    disabled={salvandoConferenciaAssistidaDds}
+                    disabled={salvandoConferenciaAssistidaDds || conferenciaOficialConcluidaDds}
                     className="rounded-xl border border-emerald-200 bg-emerald-600 px-4 py-2 text-xs font-black text-white shadow-sm transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-60"
                 >
                     {salvandoConferenciaAssistidaDds ? "Salvando..." : "Salvar conferência"}
@@ -4843,6 +4947,7 @@ export function DdsPage({
                 <button
                     type="button"
                     onClick={limparConferenciaAssistidaDds}
+                    disabled={conferenciaOficialConcluidaDds}
                     className="rounded-xl border border-cyan-200 bg-white px-4 py-2 text-xs font-black text-cyan-800 shadow-sm transition hover:border-cyan-300 hover:bg-cyan-50"
                 >
                     Limpar conferência
@@ -4910,6 +5015,7 @@ export function DdsPage({
                                             <button
                                                 type="button"
                                                 onClick={() => definirStatusFrequenciaAssistidaDds(numero, dia, "presente")}
+                                                                            disabled={conferenciaOficialConcluidaDds}
                                                 className={`h-8 w-8 rounded-lg border text-xs font-black transition ${status === "presente" ? "border-emerald-400 bg-emerald-100 text-emerald-900" : "border-slate-200 bg-white text-slate-400 hover:border-emerald-300"}`}
                                                 title="Presente"
                                             >
@@ -4918,6 +5024,7 @@ export function DdsPage({
                                             <button
                                                 type="button"
                                                 onClick={() => definirStatusFrequenciaAssistidaDds(numero, dia, "ausente")}
+                                                                            disabled={conferenciaOficialConcluidaDds}
                                                 className={`h-8 w-8 rounded-lg border text-xs font-black transition ${status === "ausente" ? "border-red-400 bg-red-100 text-red-900" : "border-slate-200 bg-white text-slate-400 hover:border-red-300"}`}
                                                 title="Ausente / falta"
                                             >
@@ -4926,6 +5033,7 @@ export function DdsPage({
                                             <button
                                                 type="button"
                                                 onClick={() => definirStatusFrequenciaAssistidaDds(numero, dia, "manual")}
+                                                                            disabled={conferenciaOficialConcluidaDds}
                                                 className={`h-8 w-8 rounded-lg border text-xs font-black transition ${status === "manual" ? "border-amber-400 bg-amber-100 text-amber-900" : "border-slate-200 bg-white text-slate-400 hover:border-amber-300"}`}
                                                 title="Manual / vazio"
                                             >
@@ -4941,6 +5049,7 @@ export function DdsPage({
                                     <button
                                         type="button"
                                         onClick={() => marcarSemanaCompletaAssistidaDds(numero)}
+                                        disabled={conferenciaOficialConcluidaDds}
                                         className="rounded-lg border border-violet-200 bg-violet-50 px-3 py-1.5 text-[10px] font-black text-violet-800 transition hover:border-violet-300"
                                     >
                                         Semana completa
@@ -4948,6 +5057,7 @@ export function DdsPage({
                                     <button
                                         type="button"
                                         onClick={() => limparParticipanteConferenciaAssistidaDds(numero)}
+                                        disabled={conferenciaOficialConcluidaDds}
                                         className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-[10px] font-black text-slate-500 transition hover:border-slate-300"
                                     >
                                         Limpar linha
@@ -4988,6 +5098,11 @@ export function DdsPage({
 
     <p className="mt-3 text-[11px] font-bold leading-5 text-cyan-900">
         Esta é a base oficial para estatísticas do DDS. O OCR pode apoiar a conferência, mas a contagem final deve ser confirmada nesta tabela.
+        {conferenciaOficialConcluidaDds && (
+            <span className="mt-2 block rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-[11px] font-black uppercase tracking-wide text-emerald-800">
+                Edição bloqueada após conclusão oficial. Use Reabrir conferência para corrigir.
+            </span>
+        )}
     </p>
 </div>
 )}
