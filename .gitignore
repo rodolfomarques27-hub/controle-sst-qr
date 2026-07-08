@@ -29,3 +29,6 @@ dist-ssr
 supabase/.temp/
 .vercel
 .env*
+
+# Backups locais de testes
+backups-locais/
