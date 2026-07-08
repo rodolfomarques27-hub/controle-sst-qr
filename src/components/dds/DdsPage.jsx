@@ -4698,15 +4698,22 @@ export function DdsPage({
                                         )}
 
                                         {avisosLeituraArquivoScannerDds.length > 0 && (
-                                            <div className="mt-4 rounded-xl border border-amber-100 bg-amber-50 p-3">
-                                                <p className="text-[10px] font-black uppercase tracking-wide text-amber-700">Avisos da leitura</p>
-                                                <ul className="mt-2 space-y-1 text-xs font-bold text-amber-800">
-                                                    {avisosLeituraArquivoScannerDds.slice(0, 6).map((aviso, indice) => (
-                                                        <li key={`aviso-leitura-dds-${indice}`}>ÔÇó {aviso}</li>
-                                                    ))}
-                                                </ul>
-                                            </div>
-                                        )}
+    <details className="mt-4 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-[11px] font-bold leading-5 text-amber-800">
+        <summary className="cursor-pointer select-none text-[10px] font-black uppercase tracking-wide text-amber-700">
+            Detalhes técnicos da leitura
+        </summary>
+
+        <p className="mt-2 text-[11px] font-bold leading-5 text-amber-800">
+            Informações técnicas do OCR mantidas apenas para auditoria e suporte.
+        </p>
+
+        <ul className="mt-2 space-y-1">
+            {avisosLeituraArquivoScannerDds.slice(0, 6).map((aviso, indice) => (
+                <li key={`aviso-leitura-dds-${indice}`}>• {aviso}</li>
+            ))}
+        </ul>
+    </details>
+)}
 
                                         {linhasLeituraArquivoScannerDds.length > 0 && (
                                             <div className="mt-4 overflow-hidden rounded-xl border border-indigo-100 bg-white">
@@ -4842,23 +4849,23 @@ export function DdsPage({
     </div>
 
     <div className="mt-4 grid gap-2 sm:grid-cols-2 xl:grid-cols-5">
-        <div className="rounded-xl bg-slate-50 p-3 ring-1 ring-slate-100">
+        <div className="rounded-xl bg-slate-50 p-3 text-center ring-1 ring-slate-100">
             <p className="text-[10px] font-black uppercase tracking-wide text-slate-400">Participantes</p>
             <p className="mt-1 text-lg font-black text-slate-950">{preConferenciaParticipantesScannerDds.total}</p>
         </div>
-        <div className="rounded-xl bg-emerald-50 p-3 ring-1 ring-emerald-100">
+        <div className="rounded-xl bg-emerald-50 p-3 text-center ring-1 ring-emerald-100">
             <p className="text-[10px] font-black uppercase tracking-wide text-emerald-700">Localizados</p>
             <p className="mt-1 text-lg font-black text-emerald-900">{preConferenciaParticipantesScannerDds.localizados}</p>
         </div>
-        <div className="rounded-xl bg-amber-50 p-3 ring-1 ring-amber-100">
+        <div className="rounded-xl bg-amber-50 p-3 text-center ring-1 ring-amber-100">
             <p className="text-[10px] font-black uppercase tracking-wide text-amber-700">Manual</p>
             <p className="mt-1 text-lg font-black text-amber-900">{preConferenciaParticipantesScannerDds.manuais}</p>
         </div>
-        <div className="rounded-xl bg-red-50 p-3 ring-1 ring-red-100">
+        <div className="rounded-xl bg-red-50 p-3 text-center ring-1 ring-red-100">
             <p className="text-[10px] font-black uppercase tracking-wide text-red-700">Não localizados</p>
             <p className="mt-1 text-lg font-black text-red-900">{preConferenciaParticipantesScannerDds.naoLocalizados}</p>
         </div>
-        <div className="rounded-xl bg-slate-50 p-3 ring-1 ring-slate-100">
+        <div className="rounded-xl bg-slate-50 p-3 text-center ring-1 ring-slate-100">
             <p className="text-[10px] font-black uppercase tracking-wide text-orange-700">Pág. não anexada</p>
             <p className="mt-1 text-lg font-black text-orange-900">{preConferenciaParticipantesScannerDds.paginasNaoAnalisadas}</p>
         </div>
@@ -4929,15 +4936,17 @@ export function DdsPage({
                 Apuração oficial para estatísticas
             </h4>
             <p className="mt-1 max-w-4xl text-sm font-bold leading-6 text-slate-700">
-                Use P para confirmar presença, X para registrar ausência e ? para deixar o campo pendente de revisão. Em Semana completa, o sistema preenche automaticamente todos os dias com atividade.
+                Use P para confirmar presença, X para registrar ausência e ? para deixar o campo pendente de revisão.
+                <br />
+                Em Semana completa, o sistema preenche automaticamente todos os dias com atividade.
             </p>
         </div>
 
-        <div className="flex w-full flex-col gap-3 lg:max-w-[560px] lg:items-stretch">
+        <div className="flex w-full flex-col gap-3 lg:max-w-[500px] lg:items-stretch">
             {(conferenciaAssistidaSalvaEmDds || fechamentoConferenciaAssistidaDds?.status === "concluida") && (
                 <div className="grid gap-2 sm:grid-cols-2">
                     {conferenciaAssistidaSalvaEmDds && (
-                        <div className="rounded-xl border border-emerald-200 bg-white px-3 py-2 text-center shadow-sm">
+                        <div className="rounded-lg border border-emerald-200 bg-white px-2.5 py-1.5 text-center shadow-sm">
                             <p className="text-[9px] font-black uppercase tracking-wide text-emerald-600">Salva em</p>
                             <p className="mt-0.5 text-[11px] font-black text-emerald-900">
                                 {new Date(conferenciaAssistidaSalvaEmDds).toLocaleString("pt-BR")}
@@ -4946,7 +4955,7 @@ export function DdsPage({
                     )}
 
                     {fechamentoConferenciaAssistidaDds?.status === "concluida" && (
-                        <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-center shadow-sm">
+                        <div className="rounded-lg border border-emerald-200 bg-emerald-50 px-2.5 py-1.5 text-center shadow-sm">
                             <p className="text-[9px] font-black uppercase tracking-wide text-emerald-700">Concluída oficialmente em</p>
                             <p className="mt-0.5 text-[11px] font-black text-emerald-950">
                                 {new Date(fechamentoConferenciaAssistidaDds.concluidoEm).toLocaleString("pt-BR")}
@@ -4968,7 +4977,7 @@ export function DdsPage({
                         type="button"
                         onClick={reabrirConferenciaAssistidaDds}
                         disabled={salvandoFechamentoConferenciaDds}
-                        className="w-full rounded-xl border border-amber-300 bg-white px-4 py-2 text-center text-xs font-black text-amber-800 shadow-sm transition hover:border-amber-400 hover:bg-amber-50 disabled:cursor-not-allowed disabled:opacity-60"
+                        className="w-full rounded-lg border border-amber-300 bg-white px-3 py-1.5 text-center text-[11px] font-black leading-tight text-amber-800 shadow-sm transition hover:border-amber-400 hover:bg-amber-50 disabled:cursor-not-allowed disabled:opacity-60"
                     >
                         {salvandoFechamentoConferenciaDds ? "Reabrindo..." : "Reabrir conferência"}
                     </button>
@@ -4978,7 +4987,7 @@ export function DdsPage({
                     type="button"
                     onClick={concluirConferenciaAssistidaDds}
                     disabled={conferenciaOficialConcluidaDds || salvandoFechamentoConferenciaDds || estatisticasConferenciaAssistidaDds.manuais > 0 || estatisticasConferenciaAssistidaDds.participantes <= 0}
-                    className="w-full rounded-xl border border-emerald-300 bg-white px-4 py-2 text-center text-xs font-black text-emerald-800 shadow-sm transition hover:border-emerald-400 hover:bg-emerald-50 disabled:cursor-not-allowed disabled:opacity-60"
+                    className="w-full rounded-lg border border-emerald-300 bg-white px-3 py-1.5 text-center text-[11px] font-black leading-tight text-emerald-800 shadow-sm transition hover:border-emerald-400 hover:bg-emerald-50 disabled:cursor-not-allowed disabled:opacity-60"
                     title={estatisticasConferenciaAssistidaDds.manuais > 0 ? "Troque todos os ? por P ou X antes de concluir." : "Registrar fechamento oficial da Conferência Assistida."}
                 >
                     {salvandoFechamentoConferenciaDds ? "Concluindo..." : "Concluir conferência oficial"}
@@ -4988,7 +4997,7 @@ export function DdsPage({
                     type="button"
                     onClick={salvarConferenciaAssistidaDds}
                     disabled={salvandoConferenciaAssistidaDds || conferenciaOficialConcluidaDds}
-                    className="w-full rounded-xl border border-emerald-200 bg-emerald-600 px-4 py-2 text-center text-xs font-black text-white shadow-sm transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-60"
+                    className="w-full rounded-lg border border-emerald-200 bg-emerald-600 px-3 py-1.5 text-center text-[11px] font-black leading-tight text-white shadow-sm transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-60"
                 >
                     {salvandoConferenciaAssistidaDds ? "Salvando..." : "Salvar conferência"}
                 </button>
@@ -4997,7 +5006,7 @@ export function DdsPage({
                     type="button"
                     onClick={limparConferenciaAssistidaDds}
                     disabled={conferenciaOficialConcluidaDds}
-                    className="w-full rounded-xl border border-cyan-200 bg-white px-4 py-2 text-center text-xs font-black text-cyan-800 shadow-sm transition hover:border-cyan-300 hover:bg-cyan-50 disabled:cursor-not-allowed disabled:opacity-60"
+                    className="w-full rounded-lg border border-cyan-200 bg-white px-3 py-1.5 text-center text-[11px] font-black leading-tight text-cyan-800 shadow-sm transition hover:border-cyan-300 hover:bg-cyan-50 disabled:cursor-not-allowed disabled:opacity-60"
                 >
                     Limpar conferência
                 </button>
@@ -5194,23 +5203,23 @@ export function DdsPage({
     </div>
 
     <div className="mt-4 grid gap-2 sm:grid-cols-2 xl:grid-cols-5">
-        <div className="rounded-xl bg-white/80 p-3 ring-1 ring-white">
+        <div className="rounded-xl bg-white/80 p-3 text-center ring-1 ring-white">
             <p className="text-[10px] font-black uppercase tracking-wide text-slate-400">Participantes</p>
             <p className="mt-1 text-lg font-black text-slate-950">{resultadoFinalApresentacaoDds.resumo.participantesTotal}</p>
         </div>
-        <div className="rounded-xl bg-white/80 p-3 ring-1 ring-white">
+        <div className="rounded-xl bg-white/80 p-3 text-center ring-1 ring-white">
             <p className="text-[10px] font-black uppercase tracking-wide text-emerald-700">{resultadoFinalApresentacaoDds.modoAssistido ? "Presenças" : "Localizados"}</p>
             <p className="mt-1 text-lg font-black text-emerald-900">{resultadoFinalApresentacaoDds.modoAssistido ? resultadoFinalApresentacaoDds.resumo.presencas : resultadoFinalApresentacaoDds.resumo.participantesLocalizados}</p>
         </div>
-        <div className="rounded-xl bg-white/80 p-3 ring-1 ring-white">
+        <div className="rounded-xl bg-white/80 p-3 text-center ring-1 ring-white">
             <p className="text-[10px] font-black uppercase tracking-wide text-amber-700">{resultadoFinalApresentacaoDds.modoAssistido ? "Ausências" : "Manual"}</p>
             <p className="mt-1 text-lg font-black text-amber-900">{resultadoFinalApresentacaoDds.modoAssistido ? resultadoFinalApresentacaoDds.resumo.ausencias : resultadoFinalApresentacaoDds.resumo.participantesManuais}</p>
         </div>
-        <div className="rounded-xl bg-white/80 p-3 ring-1 ring-white">
+        <div className="rounded-xl bg-white/80 p-3 text-center ring-1 ring-white">
             <p className="text-[10px] font-black uppercase tracking-wide text-red-700">{resultadoFinalApresentacaoDds.modoAssistido ? "Manual/vazio" : "Não localizados"}</p>
             <p className="mt-1 text-lg font-black text-red-900">{resultadoFinalApresentacaoDds.modoAssistido ? resultadoFinalApresentacaoDds.resumo.manuais : resultadoFinalApresentacaoDds.resumo.participantesNaoLocalizados}</p>
         </div>
-        <div className="rounded-xl bg-white/80 p-3 ring-1 ring-white">
+        <div className="rounded-xl bg-white/80 p-3 text-center ring-1 ring-white">
             <p className="text-[10px] font-black uppercase tracking-wide text-orange-700">{resultadoFinalApresentacaoDds.modoAssistido ? "Homem-dia" : "Pág. não anexada"}</p>
             <p className="mt-1 text-lg font-black text-orange-900">{resultadoFinalApresentacaoDds.modoAssistido ? resultadoFinalApresentacaoDds.resumo.homemDia : resultadoFinalApresentacaoDds.resumo.participantesPaginasNaoAnalisadas}</p>
         </div>
@@ -5237,20 +5246,12 @@ export function DdsPage({
         ))}
     </div>
 
-    <div className="mt-4 rounded-xl bg-white/80 p-3 ring-1 ring-white">
-        <p className="text-[10px] font-black uppercase tracking-wide text-slate-500">Recomendações</p>
-        <ul className="mt-2 space-y-1 text-xs font-bold leading-5 text-slate-700">
-            {resultadoFinalApresentacaoDds.recomendacoes.map((item, indice) => (
-                <li key={`recomendacao-final-dds-${indice}`}>ÔÇó {item}</li>
-            ))}
-        </ul>
-    </div>
 </div>
 )}
 
 
 {reciboConferenciaFinalDds && (
-<div className="rounded-2xl border border-slate-200 bg-white p-5 ring-1 ring-slate-100 lg:col-span-2">
+<div className="rounded-2xl border border-slate-200 bg-white p-3 ring-1 ring-slate-100 lg:col-span-2">
     <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
         <div>
             <p className="text-[11px] font-black uppercase tracking-wide text-slate-500">
@@ -5269,66 +5270,66 @@ export function DdsPage({
         </span>
     </div>
 
-    <div className="mt-4 grid gap-3 lg:grid-cols-[1fr_auto]">
-        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-            <div className="rounded-xl bg-slate-50 p-3 ring-1 ring-slate-100">
+    <div className="mt-3 grid items-center gap-2 lg:grid-cols-[1fr_112px]">
+        <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
+            <div className="flex min-h-[62px] flex-col items-center justify-center rounded-xl bg-slate-50 px-2 py-2 text-center ring-1 ring-slate-100">
                 <p className="text-[10px] font-black uppercase tracking-wide text-slate-400">Código DDS</p>
-                <p className="mt-1 break-all text-sm font-black text-slate-950">{reciboConferenciaFinalDds.codigo || "-"}</p>
+                <p className="mt-0.5 break-all text-sm font-black leading-tight text-slate-950">{reciboConferenciaFinalDds.codigo || "-"}</p>
             </div>
 
-            <div className="rounded-xl bg-slate-50 p-3 ring-1 ring-slate-100">
+            <div className="flex min-h-[62px] flex-col items-center justify-center rounded-xl bg-slate-50 px-2 py-2 text-center ring-1 ring-slate-100">
                 <p className="text-[10px] font-black uppercase tracking-wide text-slate-400">Empresa</p>
-                <p className="mt-1 text-sm font-black text-slate-950">{reciboConferenciaFinalDds.empresa}</p>
+                <p className="mt-0.5 text-sm font-black leading-tight text-slate-950">{reciboConferenciaFinalDds.empresa}</p>
             </div>
 
-            <div className="rounded-xl bg-slate-50 p-3 ring-1 ring-slate-100">
+            <div className="flex min-h-[62px] flex-col items-center justify-center rounded-xl bg-slate-50 px-2 py-2 text-center ring-1 ring-slate-100">
                 <p className="text-[10px] font-black uppercase tracking-wide text-slate-400">Obra / setor</p>
-                <p className="mt-1 text-sm font-black text-slate-950">{reciboConferenciaFinalDds.obra}</p>
+                <p className="mt-0.5 text-sm font-black leading-tight text-slate-950">{reciboConferenciaFinalDds.obra}</p>
             </div>
 
-            <div className="rounded-xl bg-slate-50 p-3 ring-1 ring-slate-100">
+            <div className="flex min-h-[62px] flex-col items-center justify-center rounded-xl bg-slate-50 px-2 py-2 text-center ring-1 ring-slate-100">
                 <p className="text-[10px] font-black uppercase tracking-wide text-slate-400">Período</p>
-                <p className="mt-1 text-sm font-black text-slate-950">
+                <p className="mt-0.5 text-sm font-black leading-tight text-slate-950">
                     {reciboConferenciaFinalDds.periodoInicio} a {reciboConferenciaFinalDds.periodoFim}
                 </p>
             </div>
 
-            <div className="rounded-xl bg-emerald-50 p-3 ring-1 ring-emerald-100">
+            <div className="flex min-h-[62px] flex-col items-center justify-center rounded-xl bg-emerald-50 px-2 py-2 text-center ring-1 ring-emerald-100">
                 <p className="text-[10px] font-black uppercase tracking-wide text-emerald-700">Participantes</p>
-                <p className="mt-1 text-lg font-black text-emerald-900">{reciboConferenciaFinalDds.participantes}</p>
+                <p className="mt-0.5 text-lg font-black leading-none text-emerald-900">{reciboConferenciaFinalDds.participantes}</p>
             </div>
 
-            <div className="rounded-xl bg-emerald-50 p-3 ring-1 ring-emerald-100">
+            <div className="flex min-h-[62px] flex-col items-center justify-center rounded-xl bg-emerald-50 px-2 py-2 text-center ring-1 ring-emerald-100">
                 <p className="text-[10px] font-black uppercase tracking-wide text-emerald-700">Presenças</p>
-                <p className="mt-1 text-lg font-black text-emerald-900">{reciboConferenciaFinalDds.presencas}</p>
+                <p className="mt-0.5 text-lg font-black leading-none text-emerald-900">{reciboConferenciaFinalDds.presencas}</p>
             </div>
 
-            <div className="rounded-xl bg-red-50 p-3 ring-1 ring-red-100">
+            <div className="flex min-h-[62px] flex-col items-center justify-center rounded-xl bg-red-50 px-2 py-2 text-center ring-1 ring-red-100">
                 <p className="text-[10px] font-black uppercase tracking-wide text-red-700">Ausências</p>
-                <p className="mt-1 text-lg font-black text-red-900">{reciboConferenciaFinalDds.ausencias}</p>
+                <p className="mt-0.5 text-lg font-black leading-none text-red-900">{reciboConferenciaFinalDds.ausencias}</p>
             </div>
 
-            <div className="rounded-xl bg-orange-50 p-3 ring-1 ring-orange-100">
+            <div className="flex min-h-[62px] flex-col items-center justify-center rounded-xl bg-orange-50 px-2 py-2 text-center ring-1 ring-orange-100">
                 <p className="text-[10px] font-black uppercase tracking-wide text-orange-700">Homem-dia</p>
-                <p className="mt-1 text-lg font-black text-orange-900">{reciboConferenciaFinalDds.homemDia}</p>
+                <p className="mt-0.5 text-lg font-black leading-none text-orange-900">{reciboConferenciaFinalDds.homemDia}</p>
             </div>
         </div>
 
-        <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 text-center">
+        <div className="flex h-fit self-center flex-col items-center justify-center rounded-xl border border-slate-200 bg-slate-50 px-2 py-2 text-center">
             {reciboConferenciaFinalDds.urlConferencia ? (
                 <DdsQrConferenciaImpresso
                     url={reciboConferenciaFinalDds.urlConferencia}
-                    size={96}
-                    fallbackClassName="h-24 w-24"
+                    size={76}
+                    fallbackClassName="h-[76px] w-[76px]"
                 />
             ) : (
-                <div className="flex h-24 w-24 items-center justify-center rounded-xl border border-dashed border-slate-300 bg-white text-[10px] font-black uppercase text-slate-400">
+                <div className="flex h-[76px] w-[76px] items-center justify-center rounded-xl border border-dashed border-slate-300 bg-white text-[10px] font-black uppercase text-slate-400">
                     Sem QR
                 </div>
             )}
 
-            <p className="mt-3 text-[10px] font-black uppercase tracking-wide text-slate-400">Conclusão oficial</p>
-            <p className="mt-1 text-xs font-black text-slate-950">
+            <p className="mt-2 text-[9px] font-black uppercase tracking-wide text-slate-400">Conclusão oficial</p>
+            <p className="mt-0.5 text-[11px] font-black leading-tight text-slate-950">
                 {reciboConferenciaFinalDds.concluidoEm
                     ? new Date(reciboConferenciaFinalDds.concluidoEm).toLocaleString("pt-BR")
                     : "-"}
@@ -5336,20 +5337,20 @@ export function DdsPage({
         </div>
     </div>
 
-    <div className="mt-4 grid gap-2 sm:grid-cols-3">
-        <div className="rounded-xl bg-white p-3 ring-1 ring-slate-100">
+    <div className="mt-3 grid gap-2 sm:grid-cols-3">
+        <div className="flex min-h-[58px] flex-col items-center justify-center rounded-xl bg-white px-2 py-2 text-center ring-1 ring-slate-100">
             <p className="text-[10px] font-black uppercase tracking-wide text-slate-400">Dias ativos</p>
-            <p className="mt-1 text-lg font-black text-slate-950">{reciboConferenciaFinalDds.diasAtivos}</p>
+            <p className="mt-0.5 text-lg font-black leading-none text-slate-950">{reciboConferenciaFinalDds.diasAtivos}</p>
         </div>
 
-        <div className="rounded-xl bg-white p-3 ring-1 ring-slate-100">
+        <div className="flex min-h-[58px] flex-col items-center justify-center rounded-xl bg-white px-2 py-2 text-center ring-1 ring-slate-100">
             <p className="text-[10px] font-black uppercase tracking-wide text-slate-400">Semana completa</p>
-            <p className="mt-1 text-lg font-black text-slate-950">{reciboConferenciaFinalDds.funcionariosSemanaCompleta}</p>
+            <p className="mt-0.5 text-lg font-black leading-none text-slate-950">{reciboConferenciaFinalDds.funcionariosSemanaCompleta}</p>
         </div>
 
-        <div className="rounded-xl bg-white p-3 ring-1 ring-slate-100">
+        <div className="flex min-h-[58px] flex-col items-center justify-center rounded-xl bg-white px-2 py-2 text-center ring-1 ring-slate-100">
             <p className="text-[10px] font-black uppercase tracking-wide text-slate-400">Manual/vazio</p>
-            <p className="mt-1 text-lg font-black text-slate-950">{reciboConferenciaFinalDds.manuais}</p>
+            <p className="mt-0.5 text-lg font-black leading-none text-slate-950">{reciboConferenciaFinalDds.manuais}</p>
         </div>
     </div>
 
