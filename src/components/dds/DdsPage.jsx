@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { QRCodeSVG } from "qrcode.react";
 import {
     carregarRegistroDdsPorCodigo,
@@ -2188,6 +2188,7 @@ export function DdsPage({
     const [salvandoFechamentoConferenciaDds, setSalvandoFechamentoConferenciaDds] = useState(false);
     const [erroFechamentoConferenciaDds, setErroFechamentoConferenciaDds] = useState("");
     const [fechamentoConferenciaAssistidaDds, setFechamentoConferenciaAssistidaDds] = useState(null);
+    const reciboConferenciaFinalRef = useRef(null);
 
 
     useEffect(() => {
@@ -3965,6 +3966,193 @@ export function DdsPage({
         resultadoFinalApresentacaoDds,
     ]);
 
+
+    function imprimirReciboConferenciaDds() {
+        if (!reciboConferenciaFinalDds || !reciboConferenciaFinalRef.current) return;
+
+        const escaparHtml = (valor = "") => String(valor ?? "")
+            .replaceAll("&", "&amp;")
+            .replaceAll("<", "&lt;")
+            .replaceAll(">", "&gt;")
+            .replaceAll('"', "&quot;")
+            .replaceAll("'", "&#039;");
+
+        const formatarData = (valor = "") => {
+            if (!valor) return "-";
+            const data = new Date(valor);
+            if (Number.isNaN(data.getTime())) return escaparHtml(valor);
+            return data.toLocaleString("pt-BR");
+        };
+
+        const recibo = reciboConferenciaFinalDds;
+        const codigo = escaparHtml(recibo.codigo || "-");
+        const empresa = escaparHtml(recibo.empresa || "-");
+        const obra = escaparHtml(recibo.obra || "-");
+        const periodo = escaparHtml(recibo.periodoInicio || "-") + " a " + escaparHtml(recibo.periodoFim || "-");
+        const concluidoEm = formatarData(recibo.concluidoEm);
+        const status = escaparHtml(recibo.status || "Conferência concluída oficialmente");
+        const heroUrl = String(dashboardHeroSstDds || "");
+        const heroImgHtml = heroUrl ? '<img class="hero-img" src="' + escaparHtml(heroUrl) + '" alt="" />' : "";
+
+        const qrElemento = reciboConferenciaFinalRef.current.querySelector("svg, canvas, img");
+        let qrHtml = "";
+
+        if (qrElemento?.tagName?.toLowerCase() === "canvas") {
+            try {
+                qrHtml = '<img src="' + qrElemento.toDataURL("image/png") + '" alt="QR Code de conferência" />';
+            } catch {
+                qrHtml = "";
+            }
+        } else if (qrElemento) {
+            qrHtml = qrElemento.outerHTML;
+        }
+
+        const cardInfo = (rotulo, valor) =>
+            '<div class="info-card">' +
+                '<span class="label">' + escaparHtml(rotulo) + '</span>' +
+                '<strong>' + valor + '</strong>' +
+            '</div>';
+
+        const cardMetrica = (rotulo, valor, tom) =>
+            '<div class="metric metric-' + tom + '">' +
+                '<span>' + escaparHtml(rotulo) + '</span>' +
+                '<strong>' + escaparHtml(valor) + '</strong>' +
+            '</div>';
+
+        const cardsMetricas = [
+            cardMetrica("Participantes", recibo.participantes, "green"),
+            cardMetrica("Presenças", recibo.presencas, "green"),
+            cardMetrica("Ausências", recibo.ausencias, "red"),
+            cardMetrica("Homem-dia", recibo.homemDia, "orange"),
+            cardMetrica("Dias ativos", recibo.diasAtivos, "slate"),
+            cardMetrica("Semana completa", recibo.funcionariosSemanaCompleta, "slate"),
+            cardMetrica("Manual/vazio", recibo.manuais, "slate"),
+            cardMetrica("Status oficial", "OK", "blue"),
+        ].join("");
+
+        const janela = window.open("", "_blank", "width=1100,height=760");
+
+        if (!janela) {
+            alert("Não foi possível abrir a janela de impressão. Verifique o bloqueador de pop-up do navegador.");
+            return;
+        }
+
+        const html = [
+            "<!doctype html>",
+            "<html lang=\"pt-BR\">",
+            "<head>",
+            "<meta charset=\"utf-8\">",
+            "<meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">",
+            "<title>Recibo DDS - ", codigo, "</title>",
+            "<style>",
+            "@page{size:A4 portrait;margin:10mm;}",
+            "*{box-sizing:border-box;}",
+            "html,body{margin:0;background:#fff;color:#0f172a;font-family:Arial,Helvetica,sans-serif;}",
+            "body{-webkit-print-color-adjust:exact;print-color-adjust:exact;}",
+            ".page{min-height:277mm;border:1px solid #dbe3ef;background:#fff;display:flex;flex-direction:column;overflow:hidden;}",
+            ".header{position:relative;overflow:hidden;padding:14px 22px 15px;color:#fff;background:#0f172a;}",
+            ".hero-img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:.42;}",
+            ".header:after{content:\"\";position:absolute;inset:0;background:linear-gradient(90deg,rgba(15,23,42,.96),rgba(15,23,42,.84),rgba(15,23,42,.46));}",
+            ".header-content{position:relative;z-index:1;}",
+            ".header-top{display:block;}",
+            ".brand{margin:0 0 6px;font-size:9px;font-weight:900;text-transform:uppercase;letter-spacing:.18em;color:#86efac;}",
+            "h1{margin:0;font-size:24px;line-height:1.04;font-weight:900;letter-spacing:-.035em;}",
+            ".subtitle{margin:6px 0 0;max-width:none;font-size:10.5px;line-height:1.25;color:#e2e8f0;font-weight:700;white-space:nowrap;}",
+            ".status-strip{margin:0 0 14px;border:1px solid #dbe3ef;border-left:5px solid #10b981;background:#f8fafc;border-radius:13px;padding:10px 12px;color:#0f172a;}",
+            ".status-title{display:block;font-size:10px;font-weight:900;text-transform:uppercase;letter-spacing:.12em;color:#047857;margin-bottom:3px;}",
+            ".status-text{margin:0;font-size:11px;font-weight:700;line-height:1.35;color:#475569;}",
+            ".content{flex:1;display:flex;flex-direction:column;padding:20px 24px 18px;}",
+            ".section-title{margin:0 0 10px;font-size:11px;font-weight:900;text-transform:uppercase;letter-spacing:.14em;color:#475569;}",
+            ".info-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:9px;margin-bottom:16px;}",
+            ".info-card{border:1px solid #e2e8f0;border-radius:13px;padding:11px 12px;background:#f8fafc;min-height:58px;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;}",
+            ".label{display:block;font-size:8.5px;font-weight:900;text-transform:uppercase;letter-spacing:.11em;color:#64748b;margin-bottom:5px;}",
+            ".info-card strong{font-size:14px;font-weight:900;color:#0f172a;line-height:1.2;}",
+            ".main-grid{display:grid;grid-template-columns:1fr 148px;gap:12px;align-items:stretch;}",
+            ".metrics{display:grid;grid-template-columns:repeat(2,1fr);gap:9px;}",
+            ".metric{border:1px solid #e2e8f0;border-radius:13px;padding:10px 10px;background:#fff;min-height:61px;text-align:center;display:flex;flex-direction:column;align-items:center;justify-content:center;}",
+            ".metric span{font-size:8.3px;font-weight:900;text-transform:uppercase;letter-spacing:.1em;color:#64748b;margin-bottom:5px;}",
+            ".metric strong{font-size:22px;line-height:1;font-weight:900;color:#0f172a;}",
+            ".metric-green{border-color:#bbf7d0;background:#f0fdf4;}",
+            ".metric-green span,.metric-green strong{color:#047857;}",
+            ".metric-red{border-color:#fecaca;background:#fef2f2;}",
+            ".metric-red span,.metric-red strong{color:#b91c1c;}",
+            ".metric-orange{border-color:#fed7aa;background:#fff7ed;}",
+            ".metric-orange span,.metric-orange strong{color:#c2410c;}",
+            ".metric-blue{border-color:#bae6fd;background:#f0f9ff;}",
+            ".metric-blue span,.metric-blue strong{color:#0369a1;}",
+            ".qr-panel{border:1px solid #dbe3ef;border-radius:15px;background:#f8fafc;padding:12px 10px;text-align:center;display:flex;flex-direction:column;align-items:center;justify-content:center;}",
+            ".qr-box{width:110px;height:110px;border:1px solid #e2e8f0;border-radius:12px;background:#fff;display:flex;align-items:center;justify-content:center;padding:7px;margin:0 auto 9px;}",
+            ".qr-box svg,.qr-box img,.qr-box canvas{width:94px!important;height:94px!important;display:block;}",
+            ".qr-title{font-size:8.5px;font-weight:900;text-transform:uppercase;letter-spacing:.1em;color:#64748b;margin:0 0 4px;}",
+            ".qr-date{font-size:10.5px;font-weight:900;line-height:1.25;color:#0f172a;margin:0;}",
+            ".auth{margin-top:16px;display:grid;grid-template-columns:1fr 1fr;gap:10px;}",
+            ".auth-card{border:1px solid #bfdbfe;border-left:5px solid #0284c7;border-radius:13px;background:#f8fafc;padding:13px 14px;}",
+            ".auth-card p{margin:0;font-size:11.5px;font-weight:700;line-height:1.65;color:#334155;}",
+            ".auth-card strong{color:#0f172a;}",
+            ".signatures{margin-top:auto;padding-top:34px;display:grid;grid-template-columns:1fr 1fr;gap:22px;}",
+            ".signature{border-top:1px solid #94a3b8;padding-top:8px;text-align:center;font-size:9.5px;font-weight:900;text-transform:uppercase;letter-spacing:.08em;color:#475569;}",
+            ".footer{margin-top:18px;padding-top:10px;border-top:1px solid #e2e8f0;display:flex;justify-content:space-between;gap:12px;font-size:9.5px;font-weight:700;color:#64748b;}",
+            "@media print{body{background:#fff!important;}.page{border:0;min-height:277mm;}.header{color:#fff!important;background:#0f172a!important;}.hero-img{display:block!important;}.status-strip{background:#f8fafc!important;color:#0f172a!important;}.info-card,.metric,.qr-panel,.auth-card{break-inside:avoid;page-break-inside:avoid;}}",
+            "</style>",
+            "</head>",
+            "<body>",
+            "<article class=\"page\">",
+            "<header class=\"header\">",
+            heroImgHtml,
+            "<div class=\"header-content\">",
+            "<div class=\"header-top\">",
+            "<p class=\"brand\">SafeScan Brasil | DDS</p>",
+            "<h1>Recibo da Conferência DDS</h1>",
+            "<p class=\"subtitle\">Comprovante técnico da apuração oficial da Conferência Assistida do Diálogo Diário de Segurança.</p>",
+            "</div>",
+
+            "</div>",
+            "</header>",
+            "<main class=\"content\">",
+            "<section class=\"status-strip\">",
+            "<span class=\"status-title\">Registro final do DDS</span>",
+            "<p class=\"status-text\">Apuração salva no sistema e vinculada ao QR/código do documento.</p>",
+            "</section>",
+            "<p class=\"section-title\">Dados do registro</p>",
+            "<section class=\"info-grid\">",
+            cardInfo("Código DDS", codigo),
+            cardInfo("Empresa", empresa),
+            cardInfo("Obra / setor", obra),
+            cardInfo("Período", periodo),
+            "</section>",
+            "<p class=\"section-title\">Resumo oficial da apuração</p>",
+            "<section class=\"main-grid\">",
+            "<div class=\"metrics\">", cardsMetricas, "</div>",
+            "<aside class=\"qr-panel\">",
+            "<div class=\"qr-box\">", (qrHtml || "<span class=\"label\">Sem QR</span>"), "</div>",
+            "<p class=\"qr-title\">Conclusão oficial</p>",
+            "<p class=\"qr-date\">", concluidoEm, "</p>",
+            "</aside>",
+            "</section>",
+            "<section class=\"auth\">",
+            "<div class=\"auth-card\"><p><strong>Autenticidade:</strong> o QR/código vincula este comprovante ao registro digital do DDS para conferência e auditoria.</p></div>",
+            "<div class=\"auth-card\"><p><strong>Critério:</strong> a estatística oficial foi calculada pela Conferência Assistida confirmada e concluída no sistema.</p></div>",
+            "</section>",
+            "<section class=\"signatures\">",
+            "<div class=\"signature\">Responsável pela conferência</div>",
+            "<div class=\"signature\">Representante da obra / empresa</div>",
+            "</section>",
+            "<footer class=\"footer\">",
+            "<span>Gerado pelo SafeScan Brasil</span>",
+            "<span>Código: ", codigo, "</span>",
+            "</footer>",
+            "</main>",
+            "</article>",
+            "<script>window.onload=function(){setTimeout(function(){window.focus();window.print();},700);};<" + "/script>",
+            "</body>",
+            "</html>"
+        ].join("");
+
+        janela.document.open();
+        janela.document.write(html);
+        janela.document.close();
+    }
+
     async function imprimirDdsComQrConferencia() {
         if (salvandoRegistroDds) return;
 
@@ -5251,7 +5439,7 @@ export function DdsPage({
 
 
 {reciboConferenciaFinalDds && (
-<div className="rounded-2xl border border-slate-200 bg-white p-3 ring-1 ring-slate-100 lg:col-span-2">
+<div ref={reciboConferenciaFinalRef} className="rounded-2xl border border-slate-200 bg-white p-3 ring-1 ring-slate-100 lg:col-span-2">
     <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
         <div>
             <p className="text-[11px] font-black uppercase tracking-wide text-slate-500">
@@ -5265,9 +5453,19 @@ export function DdsPage({
             </p>
         </div>
 
-        <span className="rounded-xl border border-emerald-300 bg-emerald-50 px-4 py-2 text-xs font-black uppercase tracking-wide text-emerald-800">
-            {reciboConferenciaFinalDds.status}
-        </span>
+        <div className="flex flex-wrap items-center justify-end gap-2">
+            <button
+                type="button"
+                onClick={imprimirReciboConferenciaDds}
+                className="dds-recibo-no-print rounded-xl border border-slate-200 bg-white px-4 py-2 text-xs font-black text-slate-700 shadow-sm transition hover:border-slate-300 hover:bg-slate-50"
+            >
+                Imprimir recibo
+            </button>
+
+            <span className="rounded-xl border border-emerald-300 bg-emerald-50 px-4 py-2 text-xs font-black uppercase tracking-wide text-emerald-800">
+                {reciboConferenciaFinalDds.status}
+            </span>
+        </div>
     </div>
 
     <div className="mt-3 grid items-center gap-2 lg:grid-cols-[1fr_112px]">
