@@ -333,6 +333,17 @@ export function ConsultaDdsPublica({ dados = {} }) {
     const recadosSemana = textoSeguro(dados.recadosSemana ?? dadosRegistro.recadosSemana ?? dadosRegistro.recados);
     const totalParticipantes = Number(dados.totalParticipantes ?? dadosRegistro.totalParticipantes ?? participantes.length) || participantes.length;
     const totalFolhas = Number(dados.totalFolhas ?? dadosRegistro.totalFolhas ?? 1) || 1;
+    const conferenciaAssistidaPublica = dadosRegistro.conferenciaAssistida || dados.conferenciaAssistida || {};
+    const fechamentoPublico = conferenciaAssistidaPublica.fechamento || {};
+    const reciboFinalPublico = conferenciaAssistidaPublica.reciboFinal || {};
+    const resumoOficialPublico = fechamentoPublico.resumo || reciboFinalPublico.resumo || conferenciaAssistidaPublica.estatisticas || {};
+    const conferenciaConcluidaPublica = fechamentoPublico.status === "concluida" || Boolean(fechamentoPublico.concluidoEm);
+    const conclusaoOficialEmPublico = fechamentoPublico.concluidoEm || reciboFinalPublico.concluidoEm || "";
+    const reciboEmitidoEmPublico = reciboFinalPublico.emitidoEm || "";
+    const participantesOficiaisPublico = Number(resumoOficialPublico.participantes ?? resumoOficialPublico.participantesTotal ?? totalParticipantes ?? 0) || 0;
+    const presencasOficiaisPublico = Number(resumoOficialPublico.presencas ?? 0) || 0;
+    const ausenciasOficiaisPublico = Number(resumoOficialPublico.ausencias ?? 0) || 0;
+    const homemDiaOficialPublico = Number(resumoOficialPublico.homemDia ?? 0) || 0;
 
     const statusAutenticidade = textoSeguro(autenticidade.status || (ok ? "Documento localizado" : "Documento não localizado"));
     const mensagemAutenticidade = textoSeguro(autenticidade.mensagem || "DDS conferido na base SafeScan Brasil.");
@@ -391,6 +402,54 @@ export function ConsultaDdsPublica({ dados = {} }) {
                         <CelulaInfo rotulo="Total de participantes" valor={String(totalParticipantes)} />
                         <CelulaInfo rotulo="Total de folhas" valor={String(totalFolhas)} />
                     </section>
+
+                    {conferenciaConcluidaPublica && (
+                        <section className="mx-5 mt-3 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 shadow-sm">
+                            <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+                                <div>
+                                    <p className="text-[10px] font-black uppercase tracking-[0.26em] text-emerald-800">
+                                        Status oficial da conferência
+                                    </p>
+                                    <h2 className="mt-1 text-[20px] font-black text-emerald-950">
+                                        DDS conferido oficialmente
+                                    </h2>
+                                    <p className="mt-1 text-[12px] font-bold leading-5 text-emerald-900">
+                                        A apuração oficial foi registrada pela Conferência Assistida. As assinaturas permanecem no documento físico arquivado.
+                                    </p>
+                                </div>
+
+                                <div className="grid min-w-[360px] gap-2 text-center sm:grid-cols-2">
+                                    <div className="rounded-xl bg-white px-3 py-2 ring-1 ring-emerald-100">
+                                        <p className="text-[9px] font-black uppercase tracking-wide text-slate-400">Concluído em</p>
+                                        <p className="mt-1 text-[11px] font-black text-slate-950">{formatarDataHoraPublica(conclusaoOficialEmPublico)}</p>
+                                    </div>
+                                    <div className="rounded-xl bg-white px-3 py-2 ring-1 ring-emerald-100">
+                                        <p className="text-[9px] font-black uppercase tracking-wide text-slate-400">Recibo emitido em</p>
+                                        <p className="mt-1 text-[11px] font-black text-slate-950">{reciboEmitidoEmPublico ? formatarDataHoraPublica(reciboEmitidoEmPublico) : "Ainda não emitido"}</p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className="mt-3 grid grid-cols-4 gap-2">
+                                <div className="rounded-xl bg-white px-3 py-2 text-center ring-1 ring-emerald-100">
+                                    <p className="text-[9px] font-black uppercase tracking-wide text-slate-400">Participantes</p>
+                                    <p className="mt-1 text-[18px] font-black text-slate-950">{participantesOficiaisPublico}</p>
+                                </div>
+                                <div className="rounded-xl bg-white px-3 py-2 text-center ring-1 ring-emerald-100">
+                                    <p className="text-[9px] font-black uppercase tracking-wide text-emerald-700">Presenças</p>
+                                    <p className="mt-1 text-[18px] font-black text-emerald-900">{presencasOficiaisPublico}</p>
+                                </div>
+                                <div className="rounded-xl bg-white px-3 py-2 text-center ring-1 ring-emerald-100">
+                                    <p className="text-[9px] font-black uppercase tracking-wide text-red-700">Ausências</p>
+                                    <p className="mt-1 text-[18px] font-black text-red-900">{ausenciasOficiaisPublico}</p>
+                                </div>
+                                <div className="rounded-xl bg-white px-3 py-2 text-center ring-1 ring-emerald-100">
+                                    <p className="text-[9px] font-black uppercase tracking-wide text-orange-700">Homem-dia</p>
+                                    <p className="mt-1 text-[18px] font-black text-orange-900">{homemDiaOficialPublico}</p>
+                                </div>
+                            </div>
+                        </section>
+                    )}
 
                     <section className="mx-5 mt-3 rounded-xl border border-emerald-200 bg-gradient-to-r from-emerald-50 via-white to-emerald-50 px-4 py-2.5 shadow-sm">
                         <div className="flex items-center justify-between gap-4">

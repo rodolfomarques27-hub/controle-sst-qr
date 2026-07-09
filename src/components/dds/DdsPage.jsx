@@ -2191,6 +2191,7 @@ export function DdsPage({
     const [reciboFinalEmitidoEmDds, setReciboFinalEmitidoEmDds] = useState("");
     const [salvandoReciboFinalDds, setSalvandoReciboFinalDds] = useState(false);
     const [erroReciboFinalDds, setErroReciboFinalDds] = useState("");
+    const [codigoReciboCopiadoDds, setCodigoReciboCopiadoDds] = useState(false);
     const reciboConferenciaFinalRef = useRef(null);
 
 
@@ -3980,6 +3981,75 @@ export function DdsPage({
 
 
 
+
+    const historicoDds = useMemo(() => {
+        const eventos = [];
+        const dadosRegistro = registroScannerDds?.dados || {};
+
+        const codigo = registroScannerDds?.codigo || codigoConferenciaDds || dadosDds.codigo || "";
+        const geradoEm = registroScannerDds?.geradoEm || registroScannerDds?.created_at || dadosRegistro.geradoEm || dadosRegistro.created_at || dadosDds.geradoEm || "";
+
+        if (codigo || geradoEm) {
+            eventos.push({
+                titulo: "DDS gerado",
+                detalhe: codigo ? `Código ${codigo}` : "Registro inicial criado.",
+                data: geradoEm,
+                status: "ok",
+            });
+        }
+
+        if (leituraArquivoScannerDds) {
+            const linhas = Array.isArray(leituraArquivoScannerDds?.linhas) ? leituraArquivoScannerDds.linhas.length : 0;
+            const paginas = Number(leituraArquivoScannerDds?.paginas || leituraArquivoScannerDds?.totalPaginas || 0);
+
+            eventos.push({
+                titulo: "Arquivo analisado",
+                detalhe: linhas > 0 || paginas > 0
+                    ? `${paginas || "-"} página(s), ${linhas || "-"} linha(s) identificada(s).`
+                    : "Leitura técnica executada.",
+                data: "",
+                status: "ok",
+            });
+        }
+
+        if (conferenciaAssistidaSalvaEmDds) {
+            eventos.push({
+                titulo: "Conferência Assistida salva",
+                detalhe: "Frequência confirmada na tabela P / X / ?.",
+                data: conferenciaAssistidaSalvaEmDds,
+                status: "ok",
+            });
+        }
+
+        if (fechamentoConferenciaAssistidaDds?.concluidoEm) {
+            eventos.push({
+                titulo: "Conferência concluída oficialmente",
+                detalhe: "Resultado oficial travado para auditoria.",
+                data: fechamentoConferenciaAssistidaDds.concluidoEm,
+                status: "ok",
+            });
+        }
+
+        if (reciboFinalEmitidoEmDds) {
+            eventos.push({
+                titulo: "Recibo final emitido",
+                detalhe: "Recibo impresso/gerado para conferência do registro.",
+                data: reciboFinalEmitidoEmDds,
+                status: "ok",
+            });
+        }
+
+        return eventos;
+    }, [
+        codigoConferenciaDds,
+        dadosDds,
+        conferenciaAssistidaSalvaEmDds,
+        fechamentoConferenciaAssistidaDds,
+        leituraArquivoScannerDds,
+        reciboFinalEmitidoEmDds,
+        registroScannerDds,
+    ]);
+
     async function registrarEmissaoReciboFinalDds() {
         const recibo = reciboConferenciaFinalDds;
 
@@ -4051,6 +4121,42 @@ export function DdsPage({
             return emitidoEm;
         } finally {
             setSalvandoReciboFinalDds(false);
+        }
+    }
+
+
+    function abrirConsultaPublicaReciboDds() {
+        const url = reciboConferenciaFinalDds?.urlConferencia || registroScannerDds?.urlConferencia || "";
+
+        if (!url) return;
+
+        window.open(url, "_blank", "noopener,noreferrer");
+    }
+
+    async function copiarCodigoReciboDds() {
+        const codigo = reciboConferenciaFinalDds?.codigo || registroScannerDds?.codigo || codigoConferenciaDds || dadosDds.codigo || "";
+
+        if (!codigo) return;
+
+        try {
+            if (navigator?.clipboard?.writeText) {
+                await navigator.clipboard.writeText(codigo);
+            } else {
+                const area = document.createElement("textarea");
+                area.value = codigo;
+                area.setAttribute("readonly", "readonly");
+                area.style.position = "fixed";
+                area.style.opacity = "0";
+                document.body.appendChild(area);
+                area.select();
+                document.execCommand("copy");
+                document.body.removeChild(area);
+            }
+
+            setCodigoReciboCopiadoDds(true);
+            window.setTimeout(() => setCodigoReciboCopiadoDds(false), 1800);
+        } catch (error) {
+            setErroReciboFinalDds(error?.message || "Não foi possível copiar o código DDS.");
         }
     }
 
@@ -5600,6 +5706,24 @@ export function DdsPage({
                 {salvandoReciboFinalDds ? "Registrando..." : "Imprimir recibo"}
             </button>
 
+            {reciboConferenciaFinalDds.urlConferencia && (
+                <button
+                    type="button"
+                    onClick={abrirConsultaPublicaReciboDds}
+                    className="dds-recibo-no-print rounded-xl border border-cyan-200 bg-cyan-50 px-4 py-2 text-xs font-black text-cyan-800 shadow-sm transition hover:border-cyan-300 hover:bg-cyan-100"
+                >
+                    Abrir consulta pública
+                </button>
+            )}
+
+            <button
+                type="button"
+                onClick={copiarCodigoReciboDds}
+                className="dds-recibo-no-print rounded-xl border border-violet-200 bg-violet-50 px-4 py-2 text-xs font-black text-violet-800 shadow-sm transition hover:border-violet-300 hover:bg-violet-100"
+            >
+                {codigoReciboCopiadoDds ? "Código copiado" : "Copiar código"}
+            </button>
+
             <span className="rounded-xl border border-emerald-300 bg-emerald-50 px-4 py-2 text-xs font-black uppercase tracking-wide text-emerald-800">
                 {reciboConferenciaFinalDds.status}
             </span>
@@ -5707,6 +5831,58 @@ export function DdsPage({
     <p className="mt-4 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-[11px] font-bold leading-5 text-slate-600">
         Este recibo resume a apuração oficial da Conferência Assistida DDS. O QR/código serve para conferência do registro digital vinculado.
     </p>
+</div>
+)}
+
+
+{historicoDds.length > 0 && (
+<div className="rounded-2xl border border-slate-200 bg-white p-4 ring-1 ring-slate-100 lg:col-span-2">
+    <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+        <div>
+            <p className="text-[11px] font-black uppercase tracking-wide text-slate-500">
+                Histórico do DDS
+            </p>
+            <h4 className="mt-1 text-lg font-black text-slate-950">
+                Linha do tempo do registro
+            </h4>
+            <p className="mt-1 text-xs font-bold leading-5 text-slate-600">
+                Acompanhe as principais etapas registradas para conferência, auditoria e rastreabilidade.
+            </p>
+        </div>
+
+        <span className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-black text-slate-600">
+            {historicoDds.length} evento(s)
+        </span>
+    </div>
+
+    <div className="mt-4 grid gap-2 md:grid-cols-2 xl:grid-cols-5">
+        {historicoDds.map((evento, indice) => (
+            <div
+                key={`historico-dds-${indice}`}
+                className="rounded-2xl border border-emerald-100 bg-emerald-50/60 p-3 ring-1 ring-emerald-50"
+            >
+                <div className="flex items-start gap-2">
+                    <span className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-xl bg-white text-[11px] font-black text-emerald-700 ring-1 ring-emerald-100">
+                        {indice + 1}
+                    </span>
+
+                    <div className="min-w-0">
+                        <p className="text-[10px] font-black uppercase tracking-wide text-emerald-700">
+                            {evento.titulo}
+                        </p>
+                        <p className="mt-1 text-[11px] font-bold leading-4 text-slate-700">
+                            {evento.detalhe}
+                        </p>
+                        {evento.data && (
+                            <p className="mt-2 text-[10px] font-black text-slate-500">
+                                {new Date(evento.data).toLocaleString("pt-BR")}
+                            </p>
+                        )}
+                    </div>
+                </div>
+            </div>
+        ))}
+    </div>
 </div>
 )}
 
