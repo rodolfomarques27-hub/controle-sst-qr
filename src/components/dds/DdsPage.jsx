@@ -764,7 +764,7 @@ function DdsResumoCard({ icone: Icone, titulo, valor, texto, cor = "emerald", on
                         <Icone className="h-5 w-5" />
                     </span>
 
-                    <div className="min-w-0">
+                    <div className="min-w-0 xl:pr-8">
                         <p className={`text-[10px] font-black uppercase tracking-[0.24em] ${estilo.titulo}`}>
                             {titulo}
                         </p>
@@ -1433,7 +1433,7 @@ function DdsPreviewImpresso({ participantes = participantesDds, mostrarAssinatur
                     </section>
 
                     <section className="mt-2 overflow-hidden rounded-xl border border-slate-300">
-                        <div className="bg-slate-950 py-1 text-center text-[11px] font-black uppercase tracking-wide text-white">
+                        <div className="bg-slate-950 py-1 text-center text-[10px] font-black uppercase tracking-wide text-white">
                             Temas do DDS por dia da semana
                         </div>
                         <table className="dds-tabela-temas-semanal w-full table-fixed border-collapse text-center text-[11px]" style={{ tableLayout: "fixed", width: "100%" }}>
@@ -4619,6 +4619,492 @@ export function DdsPage({
     }
 
 
+
+    function montarDadosHistoricoMensalMaoDeObraDds() {
+        const registros = Array.isArray(historicoMensalMaoDeObraDds) ? historicoMensalMaoDeObraDds : [];
+        const periodo = obterPeriodoHistoricoMensalMaoDeObraDds();
+
+        if (!registros.length || !periodo) {
+            return null;
+        }
+
+        const dataBase = parseDataControleMaoDeObraDds(periodo.inicio) || new Date();
+        const mesBaseNumero = dataBase.getMonth();
+        const anoBase = dataBase.getFullYear();
+        const totalDiasMes = new Date(anoBase, mesBaseNumero + 1, 0).getDate();
+        const diasMes = Array.from({ length: totalDiasMes }, (_, indice) => indice + 1);
+        const diasComLancamento = new Set();
+        const porEmpresaFuncao = new Map();
+        const totaisDia = Object.fromEntries(diasMes.map((dia) => [dia, 0]));
+        const totaisPorEmpresa = new Map();
+
+        const empresaPrincipal =
+            registros[0]?.empresaNome ||
+            registros[0]?.dados?.empresaNome ||
+            dadosDds.empresaNome ||
+            dadosDds.empresa ||
+            "";
+
+        const obra =
+            dadosDds.obraSetor ||
+            registros[0]?.obraNome ||
+            registros[0]?.dados?.obraNome ||
+            dadosDds.obraNome ||
+            "";
+
+        const obterLinha = (empresa, funcao) => {
+            const empresaNome = normalizarNomeEmpresaMaoDeObraDds(empresa || empresaPrincipal || "Empresa não informada");
+            const funcaoNome = normalizarFuncaoMaoDeObraDds(funcao || "Sem função");
+            const chave = empresaNome + "||" + funcaoNome;
+
+            if (!porEmpresaFuncao.has(chave)) {
+                porEmpresaFuncao.set(chave, {
+                    empresa: empresaNome,
+                    funcao: funcaoNome,
+                    dias: Object.fromEntries(diasMes.map((dia) => [dia, 0])),
+                    total: 0,
+                });
+            }
+
+            return porEmpresaFuncao.get(chave);
+        };
+
+        registros.forEach((registro) => {
+            const dadosRegistro = registro?.dados || {};
+            const conferencia = dadosRegistro?.conferenciaAssistida || {};
+            const frequencia = conferencia?.frequencia || {};
+            const participantes = Array.isArray(conferencia?.participantes) ? conferencia.participantes : [];
+            const diasAtivos = Array.isArray(conferencia?.diasAtivos) ? conferencia.diasAtivos : [];
+            const empresaRegistro =
+                registro?.empresaNome ||
+                dadosRegistro?.empresaNome ||
+                dadosRegistro?.empresa ||
+                empresaPrincipal ||
+                "Empresa não informada";
+
+            participantes.forEach((participante) => {
+                const numero = participante?.numero || participante?.ordem || participante?.indice || "";
+                const empresaParticipante = participante?.empresa || participante?.empresaNome || empresaRegistro;
+                const funcao = participante?.funcao || participante?.cargo || "Sem função";
+                const linha = obterLinha(empresaParticipante, funcao);
+
+                diasAtivos.forEach((dia) => {
+                    const data = parseDataControleMaoDeObraDds(dia?.data || dia?.dataDds || dia?.dia || "");
+
+                    if (!data || data.getMonth() !== mesBaseNumero || data.getFullYear() !== anoBase) return;
+
+                    const chave = obterChaveFrequenciaAssistidaDds(numero, dia);
+                    const status = String(frequencia?.[chave] || "").trim().toLowerCase();
+
+                    if (status === "presente" || status === "p") {
+                        const diaMes = data.getDate();
+
+                        linha.dias[diaMes] += 1;
+                        linha.total += 1;
+                        totaisDia[diaMes] += 1;
+                        diasComLancamento.add(diaMes);
+
+                        const totalEmpresaAtual = totaisPorEmpresa.get(linha.empresa) || 0;
+                        totaisPorEmpresa.set(linha.empresa, totalEmpresaAtual + 1);
+                    }
+                });
+            });
+        });
+
+        const linhas = Array.from(porEmpresaFuncao.values())
+            .filter((linha) => Number(linha.total || 0) > 0)
+            .sort((a, b) => {
+                const empresaComparacao = a.empresa.localeCompare(b.empresa, "pt-BR");
+                if (empresaComparacao !== 0) return empresaComparacao;
+                return a.funcao.localeCompare(b.funcao, "pt-BR");
+            });
+
+        if (!linhas.length) {
+            return null;
+        }
+
+        const totalHomemDia = linhas.reduce((total, linha) => total + Number(linha.total || 0), 0);
+        const quantidadeDiasLancados = Math.max(diasComLancamento.size, 1);
+        const mediaMes = totalHomemDia / quantidadeDiasLancados;
+        const empresas = Array.from(totaisPorEmpresa.keys()).sort((a, b) => a.localeCompare(b, "pt-BR"));
+
+        return {
+            codigo: "HISTORICO-" + mesHistoricoMaoDeObraDds,
+            empresaPrincipal,
+            obra,
+            periodoInicio: periodo.inicio,
+            periodoFim: periodo.fim,
+            periodoInicioFormatado: formatarDataControleMaoDeObraDds(periodo.inicio),
+            periodoFimFormatado: formatarDataControleMaoDeObraDds(periodo.fim),
+            dataBase,
+            calendarioMaoDeObra: calendarioMaoDeObraSelecionadoDds,
+            calendarioRotulo: calendarioMaoDeObraSelecionadoDds.rotulo,
+            calendarioOrigem: calendarioMaoDeObraSelecionadoDds.origem,
+            mesBase: dataBase.toLocaleDateString("pt-BR", { month: "long", year: "numeric" }),
+            diasMes,
+            linhas,
+            totaisDia,
+            totalHomemDia,
+            quantidadeDiasLancados,
+            mediaMes,
+            empresas,
+            totaisPorEmpresa,
+            registrosOrigem: registros.length,
+            registrosConcluidos: resumoHistoricoMensalMaoDeObraDds.ddsConcluidos,
+            expediente: {
+                jornada: "07:00 às 17:00",
+                almoco: "12:00 às 13:00",
+                dds: "07:00 às 07:10",
+            },
+        };
+    }
+
+    function exportarHistoricoMensalMaoDeObraDds() {
+        const dadosControle = montarDadosHistoricoMensalMaoDeObraDds();
+
+        if (!dadosControle) {
+            alert("Busque um histórico mensal com DDS e presenças oficiais antes de exportar.");
+            return;
+        }
+
+        const {
+            codigo,
+            empresaPrincipal,
+            obra,
+            periodoInicioFormatado,
+            periodoFimFormatado,
+            mesBase,
+            diasMes,
+            linhas,
+            totaisDia,
+            totalHomemDia,
+            quantidadeDiasLancados,
+            mediaMes,
+            expediente,
+            empresas,
+            dataBase,
+            calendarioRotulo,
+            registrosOrigem,
+            registrosConcluidos,
+        } = dadosControle;
+
+        const grupos = agruparLinhasControleMaoDeObraDds(linhas);
+        const obraTitulo = String(obra || "NÃO INFORMADO").trim().toUpperCase() || "NÃO INFORMADO";
+        const margem = '<td class="margem"></td><td class="margem"></td>';
+        const colspanConteudoExcel = diasMes.length + 3;
+        const colspanTotalExcel = diasMes.length + 5;
+        const colunasDiasExcel = diasMes.map(() => '<col style="width:22px" />').join("");
+
+        const thDias = diasMes.map((dia) => {
+            const dataDia = new Date(dataBase.getFullYear(), dataBase.getMonth(), dia);
+            const classeDia = obterClasseCalendarioMaoDeObraDds(dataDia);
+            const corDia =
+                classeDia.includes("dia-feriado")
+                    ? "#60a5fa"
+                    : classeDia.includes("dia-domingo")
+                        ? "#ef4444"
+                        : classeDia.includes("dia-sabado")
+                            ? "#facc15"
+                            : "#ffffff";
+
+            return '<th class="dia' + classeDia + '" style="color:' + corDia + ';">' + String(dia).padStart(2, "0") + '</th>';
+        }).join("");
+
+        const linhasTabela = grupos.map((grupo) => {
+            const linhasGrupo = grupo.linhas.map((linha) => {
+                const tdsDias = diasMes.map((dia) => {
+                    const valor = linha.dias[dia] || 0;
+                    return '<td class="' + (valor > 0 ? "valor" : "zero") + '">' + valor + '</td>';
+                }).join("");
+
+                const mediaItem = linha.total / quantidadeDiasLancados;
+
+                return [
+                    '<tr>',
+                    margem,
+                    '<td class="funcao">', escaparHtmlControleMaoDeObraDds(linha.funcao), '</td>',
+                    tdsDias,
+                    '<td class="total">', linha.total, '</td>',
+                    '<td class="media">', formatarNumeroMaoDeObraDds(mediaItem), '</td>',
+                    '</tr>',
+                ].join("");
+            }).join("");
+
+            return [
+                '<tr class="grupo-empresa">',
+                margem,
+                '<td colspan="' + colspanConteudoExcel + '">Empresa / Contratada: ', escaparHtmlControleMaoDeObraDds(grupo.empresa), '</td>',
+                '</tr>',
+                '<tr class="cabecalho">',
+                margem,
+                '<th>Função</th>',
+                thDias,
+                '<th>Total</th>',
+                '<th>Média</th>',
+                '</tr>',
+                linhasGrupo,
+            ].join("");
+        }).join("");
+
+        const linhaTotalDia = diasMes.map((dia) => '<td class="total-dia">' + (totaisDia[dia] || 0) + '</td>').join("");
+        const nomeArquivo = "mao-de-obra-mensal-" + String(obraTitulo + "-" + mesHistoricoMaoDeObraDds).replace(/[^a-z0-9_-]+/gi, "-").toLowerCase() + ".xls";
+
+        const html = [
+            '<!doctype html>',
+            '<html>',
+            '<head>',
+            '<meta charset="utf-8" />',
+            '<style>',
+            'body { margin: 0; font-family: Arial, Helvetica, sans-serif; background: #ffffff; color: #0f172a; }',
+            'table { border-collapse: collapse; width: auto; table-layout: fixed; }',
+            'th, td { border: 1px solid #b7c7d8; padding: 3px 4px; text-align: center; font-size: 10px; }',
+            '.margem { width: 18px; min-width: 18px; background: #ffffff; border: 0 !important; }',
+            '.linha-vazia td { height: 10px; border: 0 !important; background: #ffffff; }',
+            '.titulo { background: #ffffff; color: #111827; font-size: 15px; font-weight: 900; text-align: center; border: 1px solid #94a3b8; }',
+            '.subtitulo { background: #ffffff; color: #111827; font-weight: 800; text-align: center; border-left: 1px solid #cbd5e1; border-right: 1px solid #cbd5e1; }',
+            '.jornada { background: #f8fafc; color: #334155; font-weight: 900; text-align: center; border: 1px solid #cbd5e1; }',
+            '.resumo-linha { background: #f8fafc; color: #0f172a; font-weight: 900; text-align: center; border: 1px solid #cbd5e1; }',
+            '.legenda { background: #ffffff; color: #64748b; font-weight: 700; text-align: center; border: 1px solid #e5e7eb; font-size: 9px; }',
+            '.grupo-empresa td:not(.margem) { background: #f1f5f9; color: #0f172a; font-weight: 900; text-align: center; border-top: 2px solid #94a3b8; border-bottom: 1px solid #cbd5e1; letter-spacing: .02em; }',
+            '.cabecalho th { background: #334155; color: #ffffff; font-weight: 900; text-transform: uppercase; }',
+            '.dia { background: #334155; color: #ffffff; width: 22px; }',
+            '.dia-domingo { color: #ef4444 !important; }',
+            '.dia-sabado { color: #facc15 !important; }',
+            '.dia-feriado { color: #60a5fa !important; }',
+            '.funcao { background: #ffffff; color: #0f172a; font-weight: 900; text-align: center; width: 120px; }',
+            '.valor { background: #ffffff; color: #047857; font-weight: 900; }',
+            '.zero { background: #ffffff; color: #94a3b8; }',
+            '.linha-total td:not(.margem) { background: #f8fafc; color: #0f172a; font-weight: 900; border-top: 2px solid #94a3b8; }',
+            '.total, .total-dia { background: #ffffff; color: #047857; font-weight: 900; }',
+            '.media { background: #ffffff; color: #0f172a; font-weight: 900; }',
+            '</style>',
+            '</head>',
+            '<body>',
+            '<table>',
+            '<colgroup>',
+            '<col style="width:18px" />',
+            '<col style="width:18px" />',
+            '<col style="width:120px" />',
+            colunasDiasExcel,
+            '<col style="width:64px" />',
+            '<col style="width:64px" />',
+            '</colgroup>',
+            '<tr class="linha-vazia"><td colspan="' + colspanTotalExcel + '"></td></tr>',
+            '<tr>',
+            margem,
+            '<td class="titulo" colspan="' + colspanConteudoExcel + '">CONTROLE MENSAL DE MÃO DE OBRA CONSOLIDADO (SAFESCAN BRASIL) - OBRA / SETOR: ', escaparHtmlControleMaoDeObraDds(obraTitulo), '</td>',
+            '</tr>',
+            '<tr>',
+            margem,
+            '<td class="subtitulo" colspan="' + colspanConteudoExcel + '">Empresa principal: ', escaparHtmlControleMaoDeObraDds(empresaPrincipal), ' | Obra/Setor: ', escaparHtmlControleMaoDeObraDds(obra), ' | DDS encontrados: ', registrosOrigem, ' | Concluídos: ', registrosConcluidos, '</td>',
+            '</tr>',
+            '<tr>',
+            margem,
+            '<td class="subtitulo" colspan="' + colspanConteudoExcel + '">Período consolidado: ', periodoInicioFormatado, ' a ', periodoFimFormatado, ' | Mês base: ', escaparHtmlControleMaoDeObraDds(mesBase), '</td>',
+            '</tr>',
+            '<tr>',
+            margem,
+            '<td class="jornada" colspan="' + colspanConteudoExcel + '">Expediente normal: ', expediente.jornada, ' | Almoço: ', expediente.almoco, ' | DDS: ', expediente.dds, '</td>',
+            '</tr>',
+            '<tr>',
+            margem,
+            '<td class="resumo-linha" colspan="' + colspanConteudoExcel + '">Resumo do período: Efetivo médio ', formatarNumeroMaoDeObraDds(mediaMes), ' | Acumulado do período ', totalHomemDia, ' | Dias apurados ', quantidadeDiasLancados, ' | Empresas ', empresas.length, ' | Calendário aplicado: ', escaparHtmlControleMaoDeObraDds(calendarioRotulo), '</td>',
+            '</tr>',
+            '<tr>',
+            margem,
+            '<td class="legenda" colspan="' + colspanConteudoExcel + '"><strong>Legenda:</strong> presença registrada · domingo · sábado · feriado conforme calendário</td>',
+            '</tr>',
+            '<tr class="linha-vazia"><td colspan="' + colspanTotalExcel + '"></td></tr>',
+            linhasTabela,
+            '<tr class="linha-total">',
+            margem,
+            '<td>Total diário</td>',
+            linhaTotalDia,
+            '<td>', totalHomemDia, '</td>',
+            '<td>', formatarNumeroMaoDeObraDds(mediaMes), '</td>',
+            '</tr>',
+            '</table>',
+            '</body>',
+            '</html>',
+        ].join("");
+
+        baixarHtmlExcelControleMaoDeObraDds(nomeArquivo, html);
+    }
+
+    function imprimirHistoricoMensalMaoDeObraDds() {
+        const dadosControle = montarDadosHistoricoMensalMaoDeObraDds();
+
+        if (!dadosControle) {
+            alert("Busque um histórico mensal com DDS e presenças oficiais antes de imprimir.");
+            return;
+        }
+
+        const {
+            empresaPrincipal,
+            obra,
+            periodoInicioFormatado,
+            periodoFimFormatado,
+            mesBase,
+            diasMes,
+            linhas,
+            totaisDia,
+            totalHomemDia,
+            quantidadeDiasLancados,
+            mediaMes,
+            expediente,
+            empresas,
+            dataBase,
+            calendarioRotulo,
+            registrosOrigem,
+            registrosConcluidos,
+        } = dadosControle;
+
+        const grupos = agruparLinhasControleMaoDeObraDds(linhas);
+        const obraTitulo = String(obra || "NÃO INFORMADO").trim().toUpperCase() || "NÃO INFORMADO";
+        const heroUrl = String(dashboardHeroSstDds || "");
+        const heroImgHtml = heroUrl ? '<img class="hero-img" src="' + escaparHtmlControleMaoDeObraDds(heroUrl) + '" alt="" />' : "";
+        const colunasDiasPdf = diasMes.map(() => '<col class="dia-col" />').join("");
+
+        const thDias = diasMes.map((dia) => {
+            const dataDia = new Date(dataBase.getFullYear(), dataBase.getMonth(), dia);
+            const classeDia = obterClasseCalendarioMaoDeObraDds(dataDia);
+            const corDia =
+                classeDia.includes("dia-feriado")
+                    ? "#60a5fa"
+                    : classeDia.includes("dia-domingo")
+                        ? "#ef4444"
+                        : classeDia.includes("dia-sabado")
+                            ? "#facc15"
+                            : "#ffffff";
+
+            return '<th class="dia' + classeDia + '" style="color:' + corDia + ';">' + String(dia).padStart(2, "0") + '</th>';
+        }).join("");
+
+        const linhasTabela = grupos.map((grupo) => {
+            const linhasGrupo = grupo.linhas.map((linha) => {
+                const tdsDias = diasMes.map((dia) => {
+                    const valor = linha.dias[dia] || 0;
+                    return '<td class="' + (valor > 0 ? "dia-valor" : "dia-zero") + '">' + valor + '</td>';
+                }).join("");
+
+                return [
+                    '<tr>',
+                    '<td class="funcao">', escaparHtmlControleMaoDeObraDds(linha.funcao), '</td>',
+                    tdsDias,
+                    '<td class="total">', linha.total, '</td>',
+                    '</tr>',
+                ].join("");
+            }).join("");
+
+            return [
+                '<section class="empresa-bloco">',
+                '<div class="empresa-faixa">Empresa / Contratada: ', escaparHtmlControleMaoDeObraDds(grupo.empresa), '</div>',
+                '<table>',
+                '<colgroup>',
+                '<col class="funcao-col" />',
+                colunasDiasPdf,
+                '<col class="total-col" />',
+                '</colgroup>',
+                '<thead>',
+                '<tr>',
+                '<th class="funcao">Função</th>',
+                thDias,
+                '<th>Total</th>',
+                '</tr>',
+                '</thead>',
+                '<tbody>',
+                linhasGrupo,
+                '<tr class="linha-total">',
+                '<td>Total diário</td>',
+                diasMes.map((dia) => '<td>' + (totaisDia[dia] || 0) + '</td>').join(""),
+                '<td>', totalHomemDia, '</td>',
+                '</tr>',
+                '</tbody>',
+                '</table>',
+                '</section>',
+            ].join("");
+        }).join("");
+
+        const janela = window.open("", "_blank", "width=1280,height=760");
+
+        if (!janela) {
+            alert("Não foi possível abrir a janela de impressão. Verifique o bloqueador de pop-up do navegador.");
+            return;
+        }
+
+        const html = [
+            '<!doctype html>',
+            '<html lang="pt-BR">',
+            '<head>',
+            '<meta charset="utf-8" />',
+            '<title>Controle mensal consolidado de mão de obra</title>',
+            '<style>',
+            '@page { size: A4 landscape; margin: 8mm; }',
+            '* { box-sizing: border-box; }',
+            'body { margin: 0; font-family: Arial, Helvetica, sans-serif; color: #0f172a; background: #fff; -webkit-print-color-adjust: exact; print-color-adjust: exact; }',
+            '.page { min-height: 190mm; border: 1px solid #dbe3ef; overflow: hidden; }',
+            '.hero { position: relative; overflow: hidden; min-height: 62px; padding: 11px 15px; color: #fff; background: #0f172a; }',
+            '.hero-img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; opacity: .36; }',
+            '.hero:after { content: ""; position: absolute; inset: 0; background: linear-gradient(90deg, rgba(15,23,42,.97), rgba(15,23,42,.84), rgba(15,23,42,.52)); }',
+            '.hero-content { position: relative; z-index: 1; }',
+            '.brand { margin: 0 0 3px; font-size: 9px; font-weight: 900; letter-spacing: .18em; text-transform: uppercase; color: #bbf7d0; }',
+            'h1 { margin: 0; font-size: 18px; line-height: 1.1; }',
+            '.subtitle { margin: 4px 0 0; font-size: 10px; font-weight: 700; color: #e2e8f0; }',
+            '.cards { display: grid; grid-template-columns: repeat(6, 1fr); gap: 5px; padding: 7px; background: #f8fafc; border-bottom: 1px solid #e2e8f0; }',
+            '.card { border: 1px solid #dbe3ef; border-radius: 8px; background: #fff; padding: 5px 7px; min-height: 38px; }',
+            '.card span { display: block; font-size: 7px; text-transform: uppercase; font-weight: 900; color: #64748b; letter-spacing: .08em; }',
+            '.card strong { display: block; margin-top: 2px; font-size: 10px; color: #0f172a; }',
+            '.jornada, .resumo-pdf { margin: 6px 7px 0; border: 1px solid #dbe3ef; border-radius: 8px; background: #f8fafc; padding: 5px 8px; font-size: 9px; font-weight: 900; text-align: center; }',
+            '.empresa-bloco { margin: 7px; page-break-inside: avoid; }',
+            '.empresa-faixa { background: #e2e8f0; color: #0f172a; border: 1px solid #cbd5e1; border-bottom: 0; border-radius: 8px 8px 0 0; padding: 5px 8px; text-align: center; font-size: 10px; font-weight: 900; }',
+            'table { width: 100%; border-collapse: collapse; table-layout: fixed; }',
+            'th, td { border: 1px solid #cbd5e1; padding: 2px 3px; text-align: center; font-size: 7px; line-height: 1.15; }',
+            'th { background: #334155; color: #fff; font-weight: 900; text-transform: uppercase; }',
+            '.funcao-col { width: 90px; }',
+            '.dia-col { width: 19px; }',
+            '.total-col { width: 38px; }',
+            '.funcao { text-align: center; font-weight: 900; color: #0f172a; background: #fff; }',
+            '.dia-domingo { color: #ef4444 !important; }',
+            '.dia-sabado { color: #facc15 !important; }',
+            '.dia-feriado { color: #60a5fa !important; }',
+            '.dia-valor { color: #047857; font-weight: 900; background: #fff; }',
+            '.dia-zero { color: #94a3b8; background: #fff; }',
+            '.total { color: #047857; font-weight: 900; background: #fff; }',
+            '.linha-total td { background: #f1f5f9; font-weight: 900; border-top: 2px solid #94a3b8; }',
+            '</style>',
+            '</head>',
+            '<body>',
+            '<main class="page">',
+            '<section class="hero">',
+            heroImgHtml,
+            '<div class="hero-content">',
+            '<p class="brand">SafeScan Brasil | DDS</p>',
+            '<h1>Controle mensal consolidado de mão de obra</h1>',
+            '<p class="subtitle">Obra / setor: ', escaparHtmlControleMaoDeObraDds(obraTitulo), ' — consolidado por empresa/contratada e função a partir do histórico mensal DDS.</p>',
+            '</div>',
+            '</section>',
+            '<section class="cards">',
+            '<div class="card"><span>Empresa principal</span><strong>', escaparHtmlControleMaoDeObraDds(empresaPrincipal || "-"), '</strong></div>',
+            '<div class="card"><span>Obra / setor</span><strong>', escaparHtmlControleMaoDeObraDds(obra || "-"), '</strong></div>',
+            '<div class="card"><span>Período</span><strong>', periodoInicioFormatado, ' a ', periodoFimFormatado, '</strong></div>',
+            '<div class="card"><span>Mês base</span><strong>', escaparHtmlControleMaoDeObraDds(mesBase), '</strong></div>',
+            '<div class="card"><span>DDS</span><strong>', registrosConcluidos, '/', registrosOrigem, '</strong></div>',
+            '<div class="card"><span>Efetivo médio</span><strong>', formatarNumeroMaoDeObraDds(mediaMes), '</strong></div>',
+            '</section>',
+            '<section class="jornada">Expediente normal: ', expediente.jornada, ' | Almoço: ', expediente.almoco, ' | DDS: ', expediente.dds, '</section>',
+            '<section class="resumo-pdf">Resumo do período: Efetivo médio ', formatarNumeroMaoDeObraDds(mediaMes), ' | Acumulado do período ', totalHomemDia, ' | Dias apurados ', quantidadeDiasLancados, ' | Empresas ', empresas.length, ' | Calendário aplicado: ', escaparHtmlControleMaoDeObraDds(calendarioRotulo), '</section>',
+            linhasTabela,
+            '</main>',
+            '<script>window.onload = function(){ window.focus(); window.print(); };</script>',
+            '</body>',
+            '</html>',
+        ].join("");
+
+        janela.document.open();
+        janela.document.write(html);
+        janela.document.close();
+    }
+
     function exportarControleMaoDeObraDds() {
         const dadosControle = montarDadosControleMaoDeObraDds();
 
@@ -5390,6 +5876,17 @@ export function DdsPage({
         };
     }
 
+
+
+    function normalizarBuscaObraHistoricoMensalDds(valor = "") {
+        return String(valor || "")
+            .normalize("NFD")
+            .replace(/[\u0300-\u036f]/g, "")
+            .trim()
+            .toLowerCase()
+            .replace(/\s+/g, " ");
+    }
+
     async function buscarHistoricoMensalMaoDeObraDds() {
         if (carregandoHistoricoMensalMaoDeObraDds) return;
 
@@ -5398,22 +5895,48 @@ export function DdsPage({
             return;
         }
 
-        const empresaId = obterUuidSeguroDds(obterIdEmpresaObjetoDds(empresaSelecionadaDds));
-        const obraId = obterUuidSeguroDds(obraSelecionadaIdDds);
+        const empresaId = obterUuidSeguroDds(
+            obterIdEmpresaObjetoDds(empresaSelecionadaDds) ||
+            registroScannerDds?.empresaId ||
+            registroScannerDds?.empresa_id ||
+            registroScannerDds?.dados?.empresaId ||
+            registroScannerDds?.dados?.empresa_id ||
+            dadosDds.empresaId ||
+            dadosDds.empresa_id ||
+            ""
+        );
+
+        const obraId = obterUuidSeguroDds(
+            obraSelecionadaIdDds ||
+            registroScannerDds?.obraId ||
+            registroScannerDds?.obra_id ||
+            registroScannerDds?.dados?.obraId ||
+            registroScannerDds?.dados?.obra_id ||
+            dadosDds.obraId ||
+            dadosDds.obra_id ||
+            ""
+        );
+
+        const obraNomeBase = String(
+            dadosDds.obraSetor ||
+            dadosDds.obraNome ||
+            dadosDds.obra ||
+            registroScannerDds?.obraNome ||
+            registroScannerDds?.dados?.obraNome ||
+            registroScannerDds?.dados?.obra ||
+            ""
+        ).trim();
+
+        const obraNomeComparacao = normalizarBuscaObraHistoricoMensalDds(obraNomeBase);
         const periodo = obterPeriodoHistoricoMensalMaoDeObraDds();
-
-        if (!empresaId) {
-            setErroHistoricoMensalMaoDeObraDds("Selecione uma empresa antes de buscar o histórico mensal.");
-            return;
-        }
-
-        if (!obraId) {
-            setErroHistoricoMensalMaoDeObraDds("Selecione uma obra cadastrada antes de buscar o histórico mensal.");
-            return;
-        }
 
         if (!periodo) {
             setErroHistoricoMensalMaoDeObraDds("Informe um mês/ano válido para buscar o histórico mensal.");
+            return;
+        }
+
+        if (!obraId && !obraNomeComparacao) {
+            setErroHistoricoMensalMaoDeObraDds("Informe uma obra no DDS ou selecione uma obra cadastrada antes de buscar o histórico mensal.");
             return;
         }
 
@@ -5421,20 +5944,39 @@ export function DdsPage({
         setErroHistoricoMensalMaoDeObraDds("");
 
         try {
-            const registros = await listarRegistrosDds({
+            const registrosBase = await listarRegistrosDds({
                 supabase,
                 empresaId,
                 obraId,
                 periodoInicio: periodo.inicio,
                 periodoFim: periodo.fim,
-                limite: 200,
+                limite: 300,
             });
+
+            const registros = obraId
+                ? registrosBase
+                : registrosBase.filter((registro) => {
+                    const nomeRegistro = normalizarBuscaObraHistoricoMensalDds(
+                        registro?.obraNome ||
+                        registro?.dados?.obraNome ||
+                        registro?.dados?.obra ||
+                        ""
+                    );
+
+                    if (!nomeRegistro || !obraNomeComparacao) return false;
+
+                    return (
+                        nomeRegistro === obraNomeComparacao ||
+                        nomeRegistro.includes(obraNomeComparacao) ||
+                        obraNomeComparacao.includes(nomeRegistro)
+                    );
+                });
 
             setHistoricoMensalMaoDeObraDds(registros);
             setHistoricoMensalConsultadoEmDds(new Date().toISOString());
 
             if (!registros.length) {
-                setErroHistoricoMensalMaoDeObraDds("Nenhum DDS localizado para a obra e mês selecionados.");
+                setErroHistoricoMensalMaoDeObraDds("Nenhum DDS localizado para a obra base e mês selecionados. Confirme se o DDS foi salvo/concluído nesse mês.");
             }
         } catch (error) {
             setHistoricoMensalMaoDeObraDds([]);
@@ -5667,7 +6209,7 @@ export function DdsPage({
                     {cardDdsAberto("novo") && (
                     <div className="mt-4 grid gap-2 md:grid-cols-2 xl:grid-cols-4">
                         <label className="rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2.5">
-                            <span className="text-[11px] font-black uppercase tracking-wide text-slate-400">Empresa cadastrada</span>
+                            <span className="text-[10px] font-black uppercase tracking-wide text-slate-400">Empresa cadastrada</span>
                             <select
                                 value={empresaSelecionadaChaveDds}
                                 onChange={(evento) => atualizarEmpresaSelecionadaDds(evento.target.value)}
@@ -5690,7 +6232,7 @@ export function DdsPage({
                         </label>
 
                         <label className="rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2.5">
-                            <span className="text-[11px] font-black uppercase tracking-wide text-slate-400">Obra cadastrada</span>
+                            <span className="text-[10px] font-black uppercase tracking-wide text-slate-400">Obra cadastrada</span>
                             <select
                                 value={obraSelecionadaIdDds}
                                 onChange={(evento) => aplicarObraCadastradaDds(evento.target.value)}
@@ -5717,7 +6259,7 @@ export function DdsPage({
 
                         {camposDadosDds.map((campo) => (
                             <label key={campo.chave} className="rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2.5">
-                                <span className="text-[11px] font-black uppercase tracking-wide text-slate-400">{campo.rotulo}</span>
+                                <span className="text-[10px] font-black uppercase tracking-wide text-slate-400">{campo.rotulo}</span>
                                 <input
                                     type="text"
                                     value={
@@ -5747,7 +6289,7 @@ export function DdsPage({
                         <div className="rounded-2xl border border-emerald-100 bg-emerald-50 px-4 py-3 md:col-span-2 xl:col-span-4">
                             <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
                                 <div>
-                                    <p className="text-[11px] font-black uppercase tracking-wide text-emerald-700">Semana do DDS</p>
+                                    <p className="text-[10px] font-black uppercase tracking-wide text-emerald-700">Semana do DDS</p>
                                     <p className="mt-1 text-sm font-black text-slate-800">{dadosDds.periodo}</p>
                                     <p className="mt-1 text-xs font-semibold text-slate-500">
                                         Código automático: <span className="font-black text-slate-800">{dadosDds.codigo}</span>
@@ -5860,8 +6402,8 @@ export function DdsPage({
                                 onSubmit={buscarRegistroScannerDds}
                                 className="rounded-2xl border border-cyan-100 bg-white p-4 ring-1 ring-cyan-50"
                             >
-                                <label className="block">
-                                    <span className="text-[11px] font-black uppercase tracking-wide text-cyan-700">
+                                <label className="block w-[132px] shrink-0">
+                                    <span className="text-[10px] font-black uppercase tracking-wide text-cyan-700">
                                         Código do DDS
                                     </span>
                                     <input
@@ -5907,10 +6449,10 @@ export function DdsPage({
                             <div className="rounded-2xl border border-cyan-100 bg-white p-4 ring-1 ring-cyan-50 lg:col-span-2">
                                 <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
                                     <div>
-                                        <p className="text-[11px] font-black uppercase tracking-wide text-cyan-700">
+                                        <p className="text-[10px] font-black uppercase tracking-wide text-cyan-700">
                                             Folha assinada
                                         </p>
-                                        <h3 className="mt-1 text-lg font-black text-slate-950">
+                                        <h3 className="mt-1 text-base font-black text-slate-950">
                                             Upload da folha DDS assinada
                                         </h3>
                                         <p className="mt-1 text-sm font-semibold text-slate-500">
@@ -5927,7 +6469,7 @@ export function DdsPage({
 
                                 <div className="mt-4 grid gap-3 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-end">
                                     <label className="block">
-                                        <span className="text-[11px] font-black uppercase tracking-wide text-cyan-700">
+                                        <span className="text-[10px] font-black uppercase tracking-wide text-cyan-700">
                                             Selecionar arquivo
                                         </span>
                                         <input
@@ -6049,7 +6591,7 @@ export function DdsPage({
                                     <div className="mt-4 rounded-2xl border border-indigo-100 bg-indigo-50/60 p-4 ring-1 ring-indigo-50">
                                         <div className="flex flex-col gap-2 lg:flex-row lg:items-start lg:justify-between">
                                             <div>
-                                                <p className="text-[11px] font-black uppercase tracking-wide text-indigo-700">
+                                                <p className="text-[10px] font-black uppercase tracking-wide text-indigo-700">
                                                     Diagnóstico inicial do arquivo
                                                 </p>
                                                 <h4 className="mt-1 text-base font-black text-slate-950">
@@ -6067,23 +6609,23 @@ export function DdsPage({
                                         <div className="mt-4 grid gap-2 sm:grid-cols-4">
                                             <div className="rounded-xl bg-white p-3 ring-1 ring-indigo-100">
                                                 <p className="text-[10px] font-black uppercase tracking-wide text-slate-400">Páginas lidas</p>
-                                                <p className="mt-1 text-lg font-black text-slate-950">
+                                                <p className="mt-1 text-base font-black text-slate-950">
                                                     {leituraArquivoScannerDds.paginasLidas || 0}/{leituraArquivoScannerDds.totalPaginas || 0}
                                                 </p>
                                             </div>
                                             <div className="rounded-xl bg-white p-3 ring-1 ring-indigo-100">
                                                 <p className="text-[10px] font-black uppercase tracking-wide text-slate-400">Linhas OCR</p>
-                                                <p className="mt-1 text-lg font-black text-slate-950">{linhasLeituraArquivoScannerDds.length}</p>
+                                                <p className="mt-1 text-base font-black text-slate-950">{linhasLeituraArquivoScannerDds.length}</p>
                                             </div>
                                             <div className="rounded-xl bg-white p-3 ring-1 ring-indigo-100">
                                                 <p className="text-[10px] font-black uppercase tracking-wide text-slate-400">Texto</p>
-                                                <p className="mt-1 text-lg font-black text-slate-950">
+                                                <p className="mt-1 text-base font-black text-slate-950">
                                                     {qualidadeLeituraArquivoScannerDds.textoStatus}
                                                 </p>
                                             </div>
                                             <div className="rounded-xl bg-white p-3 ring-1 ring-indigo-100">
                                                 <p className="text-[10px] font-black uppercase tracking-wide text-slate-400">Confiança</p>
-                                                <p className="mt-1 text-lg font-black text-slate-950">
+                                                <p className="mt-1 text-base font-black text-slate-950">
                                                     {Number.isFinite(Number(leituraArquivoScannerDds.confianca)) ? `${Math.round(Number(leituraArquivoScannerDds.confianca))}%` : "-"}
                                                 </p>
                                             </div>
@@ -6186,7 +6728,7 @@ export function DdsPage({
                                     <div className="mt-4 rounded-2xl border border-cyan-100 bg-white p-4 ring-1 ring-cyan-50">
                                         <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
                                             <div>
-                                                <p className="text-[11px] font-black uppercase tracking-wide text-cyan-700">
+                                                <p className="text-[10px] font-black uppercase tracking-wide text-cyan-700">
                                                     Diagnóstico estrutural DDS
                                                 </p>
                                                 <h4 className="mt-1 text-base font-black text-slate-950">
@@ -6269,7 +6811,7 @@ export function DdsPage({
 <div className="rounded-2xl border border-violet-100 bg-white p-4 ring-1 ring-violet-50 lg:col-span-2">
     <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
         <div>
-            <p className="text-[11px] font-black uppercase tracking-wide text-violet-700">
+            <p className="text-[10px] font-black uppercase tracking-wide text-violet-700">
                 Pré-conferência de participantes
             </p>
             <h4 className="mt-1 text-base font-black text-slate-950">
@@ -6294,23 +6836,23 @@ export function DdsPage({
     <div className="mt-4 grid gap-2 sm:grid-cols-2 xl:grid-cols-5">
         <div className="rounded-xl bg-slate-50 p-3 text-center ring-1 ring-slate-100">
             <p className="text-[10px] font-black uppercase tracking-wide text-slate-400">Participantes</p>
-            <p className="mt-1 text-lg font-black text-slate-950">{preConferenciaParticipantesScannerDds.total}</p>
+            <p className="mt-1 text-base font-black text-slate-950">{preConferenciaParticipantesScannerDds.total}</p>
         </div>
         <div className="rounded-xl bg-emerald-50 p-3 text-center ring-1 ring-emerald-100">
             <p className="text-[10px] font-black uppercase tracking-wide text-emerald-700">Localizados</p>
-            <p className="mt-1 text-lg font-black text-emerald-900">{preConferenciaParticipantesScannerDds.localizados}</p>
+            <p className="mt-1 text-base font-black text-emerald-900">{preConferenciaParticipantesScannerDds.localizados}</p>
         </div>
         <div className="rounded-xl bg-amber-50 p-3 text-center ring-1 ring-amber-100">
             <p className="text-[10px] font-black uppercase tracking-wide text-amber-700">Manual</p>
-            <p className="mt-1 text-lg font-black text-amber-900">{preConferenciaParticipantesScannerDds.manuais}</p>
+            <p className="mt-1 text-base font-black text-amber-900">{preConferenciaParticipantesScannerDds.manuais}</p>
         </div>
         <div className="rounded-xl bg-red-50 p-3 text-center ring-1 ring-red-100">
             <p className="text-[10px] font-black uppercase tracking-wide text-red-700">Não localizados</p>
-            <p className="mt-1 text-lg font-black text-red-900">{preConferenciaParticipantesScannerDds.naoLocalizados}</p>
+            <p className="mt-1 text-base font-black text-red-900">{preConferenciaParticipantesScannerDds.naoLocalizados}</p>
         </div>
         <div className="rounded-xl bg-slate-50 p-3 text-center ring-1 ring-slate-100">
             <p className="text-[10px] font-black uppercase tracking-wide text-orange-700">Pág. não anexada</p>
-            <p className="mt-1 text-lg font-black text-orange-900">{preConferenciaParticipantesScannerDds.paginasNaoAnalisadas}</p>
+            <p className="mt-1 text-base font-black text-orange-900">{preConferenciaParticipantesScannerDds.paginasNaoAnalisadas}</p>
         </div>
     </div>
 
@@ -6372,7 +6914,7 @@ export function DdsPage({
 <div className="rounded-2xl border border-cyan-200 bg-cyan-50/70 p-5 ring-1 ring-cyan-100 lg:col-span-2">
     <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
         <div>
-            <p className="text-[11px] font-black uppercase tracking-wide text-cyan-700">
+            <p className="text-[10px] font-black uppercase tracking-wide text-cyan-700">
                 Conferência assistida de frequência DDS
             </p>
             <h4 className="mt-1 text-xl font-black text-slate-950">
@@ -6460,23 +7002,23 @@ export function DdsPage({
     <div className="mt-4 grid gap-2 sm:grid-cols-2 xl:grid-cols-5">
         <div className="rounded-xl bg-white p-3 text-center ring-1 ring-cyan-100">
             <p className="text-[10px] font-black uppercase tracking-wide text-slate-400">Participantes da página</p>
-            <p className="mt-1 text-lg font-black text-slate-950">{estatisticasConferenciaAssistidaDds.participantes}</p>
+            <p className="mt-1 text-base font-black text-slate-950">{estatisticasConferenciaAssistidaDds.participantes}</p>
         </div>
         <div className="rounded-xl bg-white p-3 text-center ring-1 ring-cyan-100">
             <p className="text-[10px] font-black uppercase tracking-wide text-emerald-700">Presenças</p>
-            <p className="mt-1 text-lg font-black text-emerald-900">{estatisticasConferenciaAssistidaDds.presencas}</p>
+            <p className="mt-1 text-base font-black text-emerald-900">{estatisticasConferenciaAssistidaDds.presencas}</p>
         </div>
         <div className="rounded-xl bg-white p-3 text-center ring-1 ring-cyan-100">
             <p className="text-[10px] font-black uppercase tracking-wide text-red-700">Ausências</p>
-            <p className="mt-1 text-lg font-black text-red-900">{estatisticasConferenciaAssistidaDds.ausencias}</p>
+            <p className="mt-1 text-base font-black text-red-900">{estatisticasConferenciaAssistidaDds.ausencias}</p>
         </div>
         <div className="rounded-xl bg-white p-3 text-center ring-1 ring-cyan-100">
             <p className="text-[10px] font-black uppercase tracking-wide text-amber-700">Manual/vazio</p>
-            <p className="mt-1 text-lg font-black text-amber-900">{estatisticasConferenciaAssistidaDds.manuais}</p>
+            <p className="mt-1 text-base font-black text-amber-900">{estatisticasConferenciaAssistidaDds.manuais}</p>
         </div>
         <div className="rounded-xl bg-white p-3 text-center ring-1 ring-cyan-100">
             <p className="text-[10px] font-black uppercase tracking-wide text-violet-700">Semana completa</p>
-            <p className="mt-1 text-lg font-black text-violet-900">{estatisticasConferenciaAssistidaDds.funcionariosSemanaCompleta}</p>
+            <p className="mt-1 text-base font-black text-violet-900">{estatisticasConferenciaAssistidaDds.funcionariosSemanaCompleta}</p>
         </div>
     </div>
 
@@ -6600,7 +7142,7 @@ export function DdsPage({
     <p className="mt-3 text-[11px] font-bold leading-5 text-cyan-900">
         Esta é a base oficial para estatísticas do DDS. O OCR pode apoiar a conferência, mas a contagem final deve ser confirmada nesta tabela.
         {conferenciaOficialConcluidaDds && (
-            <span className="mt-2 block rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-[11px] font-black uppercase tracking-wide text-emerald-800">
+            <span className="mt-2 block rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-[10px] font-black uppercase tracking-wide text-emerald-800">
                 Edição bloqueada após conclusão oficial. Use Reabrir conferência para corrigir.
             </span>
         )}
@@ -6617,7 +7159,7 @@ export function DdsPage({
 }`}>
     <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
         <div>
-            <p className={`text-[11px] font-black uppercase tracking-wide ${
+            <p className={`text-[10px] font-black uppercase tracking-wide ${
                 resultadoFinalApresentacaoDds.statusVisual === "ok"
                     ? "text-emerald-700"
                     : resultadoFinalApresentacaoDds.statusVisual === "parcial"
@@ -6648,23 +7190,23 @@ export function DdsPage({
     <div className="mt-4 grid gap-2 sm:grid-cols-2 xl:grid-cols-5">
         <div className="rounded-xl bg-white/80 p-3 text-center ring-1 ring-white">
             <p className="text-[10px] font-black uppercase tracking-wide text-slate-400">Participantes</p>
-            <p className="mt-1 text-lg font-black text-slate-950">{resultadoFinalApresentacaoDds.resumo.participantesTotal}</p>
+            <p className="mt-1 text-base font-black text-slate-950">{resultadoFinalApresentacaoDds.resumo.participantesTotal}</p>
         </div>
         <div className="rounded-xl bg-white/80 p-3 text-center ring-1 ring-white">
             <p className="text-[10px] font-black uppercase tracking-wide text-emerald-700">{resultadoFinalApresentacaoDds.modoAssistido ? "Presenças" : "Localizados"}</p>
-            <p className="mt-1 text-lg font-black text-emerald-900">{resultadoFinalApresentacaoDds.modoAssistido ? resultadoFinalApresentacaoDds.resumo.presencas : resultadoFinalApresentacaoDds.resumo.participantesLocalizados}</p>
+            <p className="mt-1 text-base font-black text-emerald-900">{resultadoFinalApresentacaoDds.modoAssistido ? resultadoFinalApresentacaoDds.resumo.presencas : resultadoFinalApresentacaoDds.resumo.participantesLocalizados}</p>
         </div>
         <div className="rounded-xl bg-white/80 p-3 text-center ring-1 ring-white">
             <p className="text-[10px] font-black uppercase tracking-wide text-amber-700">{resultadoFinalApresentacaoDds.modoAssistido ? "Ausências" : "Manual"}</p>
-            <p className="mt-1 text-lg font-black text-amber-900">{resultadoFinalApresentacaoDds.modoAssistido ? resultadoFinalApresentacaoDds.resumo.ausencias : resultadoFinalApresentacaoDds.resumo.participantesManuais}</p>
+            <p className="mt-1 text-base font-black text-amber-900">{resultadoFinalApresentacaoDds.modoAssistido ? resultadoFinalApresentacaoDds.resumo.ausencias : resultadoFinalApresentacaoDds.resumo.participantesManuais}</p>
         </div>
         <div className="rounded-xl bg-white/80 p-3 text-center ring-1 ring-white">
             <p className="text-[10px] font-black uppercase tracking-wide text-red-700">{resultadoFinalApresentacaoDds.modoAssistido ? "Manual/vazio" : "Não localizados"}</p>
-            <p className="mt-1 text-lg font-black text-red-900">{resultadoFinalApresentacaoDds.modoAssistido ? resultadoFinalApresentacaoDds.resumo.manuais : resultadoFinalApresentacaoDds.resumo.participantesNaoLocalizados}</p>
+            <p className="mt-1 text-base font-black text-red-900">{resultadoFinalApresentacaoDds.modoAssistido ? resultadoFinalApresentacaoDds.resumo.manuais : resultadoFinalApresentacaoDds.resumo.participantesNaoLocalizados}</p>
         </div>
         <div className="rounded-xl bg-white/80 p-3 text-center ring-1 ring-white">
             <p className="text-[10px] font-black uppercase tracking-wide text-orange-700">{resultadoFinalApresentacaoDds.modoAssistido ? "Acumulado do período" : "Pág. não anexada"}</p>
-            <p className="mt-1 text-lg font-black text-orange-900">{resultadoFinalApresentacaoDds.modoAssistido ? resultadoFinalApresentacaoDds.resumo.homemDia : resultadoFinalApresentacaoDds.resumo.participantesPaginasNaoAnalisadas}</p>
+            <p className="mt-1 text-base font-black text-orange-900">{resultadoFinalApresentacaoDds.modoAssistido ? resultadoFinalApresentacaoDds.resumo.homemDia : resultadoFinalApresentacaoDds.resumo.participantesPaginasNaoAnalisadas}</p>
         </div>
     </div>
 
@@ -6695,9 +7237,9 @@ export function DdsPage({
 
 {reciboConferenciaFinalDds && (
 <div ref={reciboConferenciaFinalRef} className="rounded-2xl border border-slate-200 bg-white p-3 ring-1 ring-slate-100 lg:col-span-2">
-    <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+    <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_minmax(420px,540px)] xl:items-start">
         <div>
-            <p className="text-[11px] font-black uppercase tracking-wide text-slate-500">
+            <p className="text-[10px] font-black uppercase tracking-wide text-slate-500">
                 Recibo da Conferência DDS
             </p>
             <h4 className="mt-1 text-xl font-black text-slate-950">
@@ -6851,10 +7393,10 @@ export function DdsPage({
 <div className="rounded-2xl border border-slate-200 bg-white p-4 ring-1 ring-slate-100 lg:col-span-2">
     <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
         <div>
-            <p className="text-[11px] font-black uppercase tracking-wide text-slate-500">
+            <p className="text-[10px] font-black uppercase tracking-wide text-slate-500">
                 Histórico do DDS
             </p>
-            <h4 className="mt-1 text-lg font-black text-slate-950">
+            <h4 className="mt-1 text-base font-black text-slate-950">
                 Linha do tempo do registro
             </h4>
             <p className="mt-1 text-xs font-bold leading-5 text-slate-600">
@@ -6903,10 +7445,10 @@ export function DdsPage({
 <div className="rounded-2xl border border-sky-200 bg-sky-50/70 p-4 ring-1 ring-sky-100 lg:col-span-2">
     <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
         <div>
-            <p className="text-[11px] font-black uppercase tracking-wide text-sky-700">
+            <p className="text-[10px] font-black uppercase tracking-wide text-sky-700">
                 Implantação / obra
             </p>
-            <h4 className="mt-1 text-lg font-black text-slate-950">
+            <h4 className="mt-1 text-base font-black text-slate-950">
                 Controle mensal de mão de obra
             </h4>
             <p className="mt-1 max-w-4xl text-xs font-bold leading-5 text-slate-600">
@@ -6936,19 +7478,19 @@ export function DdsPage({
     <div className="mt-4 grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
         <div className="rounded-xl bg-white px-3 py-3 text-center ring-1 ring-sky-100">
             <p className="text-[10px] font-black uppercase tracking-wide text-slate-400">Funções</p>
-            <p className="mt-1 text-lg font-black text-slate-950">{resumoControleMaoDeObraDds.funcoes}</p>
+            <p className="mt-1 text-base font-black text-slate-950">{resumoControleMaoDeObraDds.funcoes}</p>
         </div>
         <div className="rounded-xl bg-white px-3 py-3 text-center ring-1 ring-sky-100">
             <p className="text-[10px] font-black uppercase tracking-wide text-sky-700">Dias apurados</p>
-            <p className="mt-1 text-lg font-black text-sky-900">{resumoControleMaoDeObraDds.diasLancados}</p>
+            <p className="mt-1 text-base font-black text-sky-900">{resumoControleMaoDeObraDds.diasLancados}</p>
         </div>
         <div className="rounded-xl bg-white px-3 py-3 text-center ring-1 ring-sky-100">
             <p className="text-[10px] font-black uppercase tracking-wide text-orange-700">Acumulado do período</p>
-            <p className="mt-1 text-lg font-black text-orange-900">{resumoControleMaoDeObraDds.homemDia}</p>
+            <p className="mt-1 text-base font-black text-orange-900">{resumoControleMaoDeObraDds.homemDia}</p>
         </div>
         <div className="rounded-xl bg-white px-3 py-3 text-center ring-1 ring-sky-100">
             <p className="text-[10px] font-black uppercase tracking-wide text-slate-400">Mês base</p>
-            <p className="mt-1 text-lg font-black text-slate-950">{resumoControleMaoDeObraDds.mesReferencia}</p>
+            <p className="mt-1 text-base font-black text-slate-950">{resumoControleMaoDeObraDds.mesReferencia}</p>
         </div>
     </div>
 
@@ -6982,48 +7524,63 @@ export function DdsPage({
 )}
 
 
-<section className="dds-no-print rounded-[28px] border border-slate-200 bg-white p-5 shadow-sm">
-    <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-        <div>
+<section className="dds-no-print col-span-full w-full rounded-[24px] border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
+    <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_auto] xl:items-center">
+        <div className="min-w-0">
             <p className="text-[11px] font-black uppercase tracking-[0.18em] text-slate-400">
                 Histórico mensal
             </p>
-            <h3 className="mt-1 text-xl font-black text-slate-950">
+            <h3 className="mt-1 whitespace-nowrap text-lg font-black text-slate-950">
                 Histórico mensal de mão de obra
             </h3>
-            <p className="mt-1 max-w-3xl text-sm font-semibold text-slate-500">
+            <p className="mt-1 max-w-[620px] whitespace-nowrap text-xs font-semibold text-slate-500">
                 Busca os DDS da obra selecionada no mês informado e resume a base oficial salva na Conferência Assistida.
             </p>
         </div>
 
-        <div className="grid w-full gap-3 sm:grid-cols-[minmax(180px,1fr)_auto] lg:max-w-xl">
+        <div className="flex flex-wrap items-end gap-2 xl:flex-nowrap xl:justify-end xl:min-w-[760px]">
             <label className="block">
-                <span className="mb-1 block text-[11px] font-black uppercase tracking-wide text-slate-500">
+                <span className="mb-1 block text-[10px] font-black uppercase tracking-wide text-slate-500">
                     Mês/Ano
                 </span>
                 <input
                     type="month"
                     value={mesHistoricoMaoDeObraDds}
                     onChange={(evento) => setMesHistoricoMaoDeObraDds(evento.target.value)}
-                    className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-bold text-slate-800 outline-none transition focus:border-emerald-300 focus:bg-white focus:ring-4 focus:ring-emerald-100"
+                    className="h-8 w-full rounded-xl border border-slate-200 bg-slate-50 px-2.5 py-1 text-[11px] font-bold text-slate-800 outline-none transition focus:border-emerald-300 focus:bg-white focus:ring-4 focus:ring-emerald-100"
                 />
             </label>
-
             <button
                 type="button"
                 onClick={buscarHistoricoMensalMaoDeObraDds}
-                disabled={carregandoHistoricoMensalMaoDeObraDds || !obraSelecionadaIdDds}
-                className="self-end rounded-2xl bg-slate-950 px-5 py-2.5 text-xs font-black uppercase tracking-wide text-white shadow-lg shadow-slate-900/15 transition hover:-translate-y-0.5 hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50"
+                disabled={carregandoHistoricoMensalMaoDeObraDds}
+                className="h-8 min-w-[170px] shrink-0 whitespace-nowrap rounded-xl bg-slate-950 px-4 text-xs font-black uppercase tracking-wide text-white shadow-lg shadow-slate-900/15 transition hover:-translate-y-0.5 hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50"
             >
                 {carregandoHistoricoMensalMaoDeObraDds ? "Buscando..." : "Buscar DDS do mês"}
+            </button>
+
+            <button
+                type="button"
+                onClick={imprimirHistoricoMensalMaoDeObraDds}
+                className="h-8 min-w-[180px] shrink-0 whitespace-nowrap rounded-xl border border-slate-200 bg-white px-4 text-xs font-black uppercase tracking-wide text-slate-700 transition hover:-translate-y-0.5 hover:border-slate-300 hover:bg-slate-50"
+            >
+                Imprimir PDF mensal
+            </button>
+
+            <button
+                type="button"
+                onClick={exportarHistoricoMensalMaoDeObraDds}
+                className="h-8 min-w-[190px] shrink-0 whitespace-nowrap rounded-xl bg-emerald-600 px-4 text-xs font-black uppercase tracking-wide text-white shadow-lg shadow-emerald-600/20 transition hover:-translate-y-0.5 hover:bg-emerald-700"
+            >
+                Exportar Excel mensal
             </button>
         </div>
     </div>
 
-    <div className="mt-4 rounded-2xl border border-slate-100 bg-slate-50 px-4 py-3 text-sm font-semibold text-slate-600">
+    <div className="mt-3 inline-flex max-w-full items-center gap-2 rounded-xl border border-slate-100 bg-slate-50 px-3 py-1.5 text-xs font-semibold text-slate-600">
         Obra base: <span className="font-black text-slate-900">{dadosDds.obraSetor || registroScannerDds?.obraNome || "Selecione uma obra cadastrada no DDS"}</span>
         {historicoMensalConsultadoEmDds && (
-            <span className="ml-2 text-xs font-bold text-slate-400">
+            <span className="text-[11px] font-bold text-slate-400">
                 Consulta: {new Date(historicoMensalConsultadoEmDds).toLocaleString("pt-BR")}
             </span>
         )}
@@ -7035,36 +7592,36 @@ export function DdsPage({
         </div>
     )}
 
-    <div className="mt-4 grid gap-3 md:grid-cols-3 xl:grid-cols-6">
-        <div className="rounded-2xl border border-slate-100 bg-white p-4">
-            <p className="text-[11px] font-black uppercase tracking-wide text-slate-400">DDS encontrados</p>
-            <p className="mt-1 text-lg font-black text-slate-950">{resumoHistoricoMensalMaoDeObraDds.ddsEncontrados}</p>
+    <div className="mt-3 grid gap-2.5 md:grid-cols-3 xl:grid-cols-6">
+        <div className="flex min-h-[58px] flex-col items-center justify-center rounded-2xl border border-slate-100 bg-white p-3 text-center">
+            <p className="text-[10px] font-black uppercase tracking-wide text-slate-400">DDS encontrados</p>
+            <p className="mt-1 text-base font-black text-slate-950">{resumoHistoricoMensalMaoDeObraDds.ddsEncontrados}</p>
         </div>
-        <div className="rounded-2xl border border-emerald-100 bg-emerald-50 p-4">
-            <p className="text-[11px] font-black uppercase tracking-wide text-emerald-700">Concluídos</p>
-            <p className="mt-1 text-lg font-black text-emerald-900">{resumoHistoricoMensalMaoDeObraDds.ddsConcluidos}</p>
+        <div className="flex min-h-[58px] flex-col items-center justify-center rounded-2xl border border-emerald-100 bg-emerald-50 p-3 text-center">
+            <p className="text-[10px] font-black uppercase tracking-wide text-emerald-700">Concluídos</p>
+            <p className="mt-1 text-base font-black text-emerald-900">{resumoHistoricoMensalMaoDeObraDds.ddsConcluidos}</p>
         </div>
-        <div className="rounded-2xl border border-sky-100 bg-sky-50 p-4">
-            <p className="text-[11px] font-black uppercase tracking-wide text-sky-700">Dias apurados</p>
-            <p className="mt-1 text-lg font-black text-sky-900">{resumoHistoricoMensalMaoDeObraDds.diasApurados}</p>
+        <div className="flex min-h-[58px] flex-col items-center justify-center rounded-2xl border border-sky-100 bg-sky-50 p-3 text-center">
+            <p className="text-[10px] font-black uppercase tracking-wide text-sky-700">Dias apurados</p>
+            <p className="mt-1 text-base font-black text-sky-900">{resumoHistoricoMensalMaoDeObraDds.diasApurados}</p>
         </div>
-        <div className="rounded-2xl border border-orange-100 bg-orange-50 p-4">
-            <p className="text-[11px] font-black uppercase tracking-wide text-orange-700">Acumulado</p>
-            <p className="mt-1 text-lg font-black text-orange-900">{formatarNumeroMaoDeObraDds(resumoHistoricoMensalMaoDeObraDds.acumuladoPeriodo)}</p>
+        <div className="flex min-h-[58px] flex-col items-center justify-center rounded-2xl border border-orange-100 bg-orange-50 p-3 text-center">
+            <p className="text-[10px] font-black uppercase tracking-wide text-orange-700">Acumulado</p>
+            <p className="mt-1 text-base font-black text-orange-900">{formatarNumeroMaoDeObraDds(resumoHistoricoMensalMaoDeObraDds.acumuladoPeriodo)}</p>
         </div>
-        <div className="rounded-2xl border border-violet-100 bg-violet-50 p-4">
-            <p className="text-[11px] font-black uppercase tracking-wide text-violet-700">Efetivo médio</p>
-            <p className="mt-1 text-lg font-black text-violet-900">{formatarNumeroMaoDeObraDds(resumoHistoricoMensalMaoDeObraDds.efetivoMedio)}</p>
+        <div className="flex min-h-[58px] flex-col items-center justify-center rounded-2xl border border-violet-100 bg-violet-50 p-3 text-center">
+            <p className="text-[10px] font-black uppercase tracking-wide text-violet-700">Efetivo médio</p>
+            <p className="mt-1 text-base font-black text-violet-900">{formatarNumeroMaoDeObraDds(resumoHistoricoMensalMaoDeObraDds.efetivoMedio)}</p>
         </div>
-        <div className="rounded-2xl border border-slate-100 bg-white p-4">
-            <p className="text-[11px] font-black uppercase tracking-wide text-slate-400">Funções</p>
-            <p className="mt-1 text-lg font-black text-slate-950">{resumoHistoricoMensalMaoDeObraDds.funcoes}</p>
+        <div className="flex min-h-[58px] flex-col items-center justify-center rounded-2xl border border-slate-100 bg-white p-3 text-center">
+            <p className="text-[10px] font-black uppercase tracking-wide text-slate-400">Funções</p>
+            <p className="mt-1 text-base font-black text-slate-950">{resumoHistoricoMensalMaoDeObraDds.funcoes}</p>
         </div>
     </div>
 
     {historicoMensalMaoDeObraDds.length > 0 && (
-        <div className="mt-4 overflow-hidden rounded-2xl border border-slate-100">
-            <div className="grid grid-cols-[1fr_auto_auto] gap-3 bg-slate-50 px-4 py-2 text-[11px] font-black uppercase tracking-wide text-slate-500">
+        <div className="mt-3 overflow-hidden rounded-2xl border border-slate-100">
+            <div className="grid grid-cols-[1fr_auto_auto] gap-3 bg-slate-50 px-4 py-2 text-[10px] font-black uppercase tracking-wide text-slate-500">
                 <span>DDS</span>
                 <span>Período</span>
                 <span>Status</span>
@@ -7074,7 +7631,7 @@ export function DdsPage({
                 const status = conferencia?.fechamento?.status === "concluida" ? "Concluído" : "Em aberto";
 
                 return (
-                    <div key={registro.id || registro.codigo} className="grid grid-cols-[1fr_auto_auto] gap-3 border-t border-slate-100 px-4 py-3 text-xs font-bold text-slate-600">
+                    <div key={registro.id || registro.codigo} className="grid grid-cols-[1fr_auto_auto] gap-3 border-t border-slate-100 px-3 py-2.5 text-xs font-bold text-slate-600">
                         <span className="truncate text-slate-900">{registro.codigo || "DDS sem código"}</span>
                         <span>{formatarDataControleMaoDeObraDds(registro.periodoInicio)} a {formatarDataControleMaoDeObraDds(registro.periodoFim)}</span>
                         <span className={status === "Concluído" ? "text-emerald-700" : "text-amber-700"}>{status}</span>
@@ -7089,7 +7646,7 @@ export function DdsPage({
                                 <div className="rounded-2xl border border-emerald-100 bg-white p-4 ring-1 ring-emerald-50 lg:col-span-2">
                                     <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
                                         <div>
-                                            <p className="text-[11px] font-black uppercase tracking-wide text-emerald-700">
+                                            <p className="text-[10px] font-black uppercase tracking-wide text-emerald-700">
                                                 Registro localizado
                                             </p>
                                             <h3 className="mt-1 text-xl font-black text-slate-950">
@@ -7118,15 +7675,15 @@ export function DdsPage({
                                     <div className="mt-4 grid gap-2 sm:grid-cols-3">
                                         <div className="rounded-xl bg-slate-50 p-3 ring-1 ring-slate-100">
                                             <p className="text-[10px] font-black uppercase tracking-wide text-slate-400">Participantes</p>
-                                            <p className="mt-1 text-lg font-black text-slate-950">{participantesRegistroScannerDds.length}</p>
+                                            <p className="mt-1 text-base font-black text-slate-950">{participantesRegistroScannerDds.length}</p>
                                         </div>
                                         <div className="rounded-xl bg-slate-50 p-3 ring-1 ring-slate-100">
                                             <p className="text-[10px] font-black uppercase tracking-wide text-slate-400">Dias DDS</p>
-                                            <p className="mt-1 text-lg font-black text-slate-950">{diasRegistroScannerDds.length || 7}</p>
+                                            <p className="mt-1 text-base font-black text-slate-950">{diasRegistroScannerDds.length || 7}</p>
                                         </div>
                                         <div className="rounded-xl bg-slate-50 p-3 ring-1 ring-slate-100">
                                             <p className="text-[10px] font-black uppercase tracking-wide text-slate-400">Status</p>
-                                            <p className="mt-1 text-lg font-black text-emerald-700">Gabarito carregado</p>
+                                            <p className="mt-1 text-base font-black text-emerald-700">Gabarito carregado</p>
                                         </div>
                                     </div>
 
@@ -7213,7 +7770,7 @@ export function DdsPage({
                             className="rounded-2xl border border-slate-200 bg-slate-50 p-3"
                         >
                             <div className="rounded-xl bg-slate-950 px-3 py-2 text-center text-white">
-                                <p className="text-[11px] font-black uppercase tracking-wide">
+                                <p className="text-[10px] font-black uppercase tracking-wide">
                                     {dia.nome}
                                 </p>
                                 <p className="mt-0.5 text-xs font-black text-emerald-200">

@@ -296,3 +296,77 @@ Microetapa 3B aplicada:
 - Criado resumo do histórico mensal com DDS encontrados, concluídos, dias apurados, acumulado do período, efetivo médio e funções.
 - Inserido bloco visual "Histórico mensal de mão de obra" antes do resumo do registro DDS carregado.
 - Nesta microetapa ainda não há exportação mensal consolidada; isso ficará para a etapa seguinte.
+
+## Exportação mensal consolidada de mão de obra
+
+Microetapa 3C aplicada:
+
+- Criada função montarDadosHistoricoMensalMaoDeObraDds.
+- O histórico mensal passa a consolidar os DDS encontrados por obra/mês.
+- A consolidação percorre dados.conferenciaAssistida.frequencia, participantes e diasAtivos.
+- Criada exportação Excel mensal consolidada.
+- Criada impressão/PDF mensal consolidada.
+- Inseridos botões no card "Histórico mensal de mão de obra":
+  - Imprimir PDF mensal.
+  - Exportar Excel mensal.
+- A exportação individual por DDS foi preservada.
+
+## Ajuste visual do card de histórico mensal
+
+Ajuste complementar da Microetapa 3C:
+
+- Card do histórico mensal ficou com largura total e bordas ligeiramente menores.
+- Área de mês/ano e busca foi compactada.
+- Botão Buscar DDS do mês não fica mais bloqueado por ausência de obraSelecionadaIdDds; a função passa a exibir a mensagem de validação.
+- Botões Imprimir PDF mensal e Exportar Excel mensal não ficam mais bloqueados visualmente; caso não exista histórico com presenças, a própria função exibe alerta.
+- Botões receberam largura mínima para melhorar alinhamento visual.
+
+## Correção de layout e busca por obra no histórico mensal
+
+Ajuste complementar da Microetapa 3C:
+
+- Card do histórico mensal passou a ocupar a largura total do grid.
+- Topo do card foi reorganizado em duas colunas no desktop.
+- Botões mensais foram alinhados em bloco compacto.
+- Busca mensal agora aceita obra por ID ou por nome da obra base.
+- Quando não há obraSelecionadaIdDds, a busca usa empresa/período e filtra os DDS pelo nome da obra.
+- Mensagem de validação deixou de exigir apenas obra cadastrada/selecionada e passou a aceitar obra carregada no DDS.
+
+## Ajuste final do card de histórico mensal DDS
+
+Ajuste complementar da Microetapa 3C:
+
+- Campo Mês/Ano reduzido.
+- Título e descrição do card mantidos em uma linha no desktop.
+- Botões Buscar DDS do mês, Imprimir PDF mensal e Exportar Excel mensal ficaram na mesma linha.
+- Busca mensal passou a aceitar obra por ID ou por nome da obra base.
+- Obra base textual, como "teste", pode ser usada para filtrar os DDS do mês quando não houver obraSelecionadaIdDds.
+- Botões PDF/Excel continuam clicáveis; se não houver histórico oficial, a função exibe alerta.
+
+## Harmonia visual do card de histórico mensal
+
+Ajuste complementar da Microetapa 3C:
+
+- Reduzido o título do card de histórico mensal.
+- Descrição mantida em uma linha com largura controlada.
+- Campo Mês/Ano ficou menor.
+- Botões Buscar, Imprimir PDF mensal e Exportar Excel mensal ficaram alinhados na mesma faixa.
+- Cards de indicadores ficaram menores, com padding reduzido.
+- Tabela de DDS localizada ficou mais compacta.
+
+## Ajuste de mês e pílula da obra no histórico mensal
+
+Ajuste complementar da Microetapa 3C:
+
+- Campo Mês/Ano reduzido.
+- Mês/Ano, Buscar DDS do mês, Imprimir PDF mensal e Exportar Excel mensal alinhados na mesma faixa.
+- Botões reduzidos para harmonizar com o campo de mês.
+- A obra base deixou de ocupar uma faixa larga e passou a ser exibida como pílula compacta.
+
+## Botões em linha e indicadores centralizados no histórico mensal
+
+Ajuste complementar da Microetapa 3C:
+
+- Mês/Ano, Buscar DDS do mês, Imprimir PDF mensal e Exportar Excel mensal ficam em uma única linha no desktop.
+- Botões receberam largura mínima e whitespace-nowrap para evitar quebra de texto.
+- Cards de indicadores do histórico mensal foram centralizados vertical e horizontalmente.
