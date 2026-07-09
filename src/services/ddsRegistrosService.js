@@ -270,6 +270,65 @@ export async function carregarRegistroDdsPorCodigo({ supabase, codigo = "" } = {
     return data ? normalizarRegistroDdsBanco(data) : null;
 }
 
+
+export async function listarRegistrosDds({
+    supabase,
+    empresaId = "",
+    obraId = "",
+    periodoInicio = "",
+    periodoFim = "",
+    status = "",
+    limite = 100,
+} = {}) {
+    if (!supabase) {
+        throw new Error("Cliente Supabase não informado para listar registros DDS.");
+    }
+
+    const empresaIdSeguro = textoSeguroDds(empresaId);
+    const obraIdSeguro = textoSeguroDds(obraId);
+    const periodoInicioSeguro = somenteDataIsoDds(periodoInicio);
+    const periodoFimSeguro = somenteDataIsoDds(periodoFim);
+    const statusSeguro = textoSeguroDds(status);
+    const limiteSeguro = Math.min(Math.max(Number(limite) || 100, 1), 500);
+
+    let query = supabase
+        .from("dds_registros")
+        .select("*")
+        .order("periodo_inicio", { ascending: false })
+        .order("created_at", { ascending: false })
+        .limit(limiteSeguro);
+
+    if (empresaIdSeguro) {
+        query = query.eq("empresa_id", empresaIdSeguro);
+    }
+
+    if (obraIdSeguro) {
+        query = query.eq("obra_id", obraIdSeguro);
+    }
+
+    if (periodoInicioSeguro) {
+        query = query.gte("periodo_fim", periodoInicioSeguro);
+    }
+
+    if (periodoFimSeguro) {
+        query = query.lte("periodo_inicio", periodoFimSeguro);
+    }
+
+    if (statusSeguro) {
+        query = query.eq("status", statusSeguro);
+    }
+
+    const { data, error } = await query;
+
+    if (error) {
+        throw new Error(error.message || "Não foi possível listar os registros DDS.");
+    }
+
+    return Array.isArray(data)
+        ? data.map((registro) => normalizarRegistroDdsBanco(registro))
+        : [];
+}
+
 export async function consultarDdsPublico({ supabase, token = "" } = {}) {
     if (!supabase) {
         throw new Error("Cliente Supabase não informado.");

@@ -274,3 +274,14 @@ Ajuste aplicado:
   - Fiscal Idealiza.
   - Líder / Encarregado.
   - Técnico de Segurança do Trabalho Idealiza.
+
+## Listagem mensal de registros DDS
+
+Microetapa 3A aplicada:
+
+- Criada função listarRegistrosDds em src/services/ddsRegistrosService.js.
+- A listagem permite filtrar por empresa, obra, período e status.
+- O filtro de período usa sobreposição mensal:
+  - periodo_fim >= início do mês.
+  - periodo_inicio <= fim do mês.
+- Esta base será usada na próxima microetapa para montar a tela de histórico mensal de mão de obra por obra.
