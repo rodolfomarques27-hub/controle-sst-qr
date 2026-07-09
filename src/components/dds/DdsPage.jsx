@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
 import { QRCodeSVG } from "qrcode.react";
 import {
     carregarRegistroDdsPorCodigo,
+    listarRegistrosDds,
     salvarRegistroDds,
 } from "../../services/ddsRegistrosService";
 import { executarLeituraDdsLocal } from "../../services/documentosOcrService";
@@ -2189,6 +2190,17 @@ export function DdsPage({
     const [erroFechamentoConferenciaDds, setErroFechamentoConferenciaDds] = useState("");
     const [fechamentoConferenciaAssistidaDds, setFechamentoConferenciaAssistidaDds] = useState(null);
     const [reciboFinalEmitidoEmDds, setReciboFinalEmitidoEmDds] = useState("");
+    const [mesHistoricoMaoDeObraDds, setMesHistoricoMaoDeObraDds] = useState(() => {
+        const data = new Date();
+        const ano = data.getFullYear();
+        const mes = String(data.getMonth() + 1).padStart(2, "0");
+        return ano + "-" + mes;
+    });
+    const [historicoMensalMaoDeObraDds, setHistoricoMensalMaoDeObraDds] = useState([]);
+    const [carregandoHistoricoMensalMaoDeObraDds, setCarregandoHistoricoMensalMaoDeObraDds] = useState(false);
+    const [erroHistoricoMensalMaoDeObraDds, setErroHistoricoMensalMaoDeObraDds] = useState("");
+    const [historicoMensalConsultadoEmDds, setHistoricoMensalConsultadoEmDds] = useState("");
+
     const [salvandoReciboFinalDds, setSalvandoReciboFinalDds] = useState(false);
     const [erroReciboFinalDds, setErroReciboFinalDds] = useState("");
     const [codigoReciboCopiadoDds, setCodigoReciboCopiadoDds] = useState(false);
@@ -3973,6 +3985,68 @@ export function DdsPage({
         registroScannerDds,
     ]);
 
+
+    const resumoHistoricoMensalMaoDeObraDds = useMemo(() => {
+        const registros = Array.isArray(historicoMensalMaoDeObraDds) ? historicoMensalMaoDeObraDds : [];
+        const diasApurados = new Set();
+        const empresas = new Set();
+        const funcoes = new Set();
+
+        let ddsConcluidos = 0;
+        let acumuladoPeriodo = 0;
+
+        registros.forEach((registro) => {
+            const dados = registro?.dados || {};
+            const conferencia = dados?.conferenciaAssistida || {};
+            const fechamento = conferencia?.fechamento || {};
+            const estatisticas = fechamento?.estatisticas || conferencia?.estatisticas || {};
+            const participantes = Array.isArray(conferencia?.participantes) ? conferencia.participantes : [];
+            const diasAtivos = Array.isArray(conferencia?.diasAtivos) ? conferencia.diasAtivos : [];
+
+            if (fechamento?.status === "concluida") {
+                ddsConcluidos += 1;
+            }
+
+            const presencasRegistro = Number(
+                estatisticas?.presencas ??
+                estatisticas?.homemDia ??
+                fechamento?.resumo?.presencas ??
+                0
+            );
+
+            if (Number.isFinite(presencasRegistro)) {
+                acumuladoPeriodo += presencasRegistro;
+            }
+
+            const empresaNome = String(registro?.empresaNome || dados?.empresaNome || dados?.empresa || "").trim();
+            if (empresaNome) empresas.add(empresaNome);
+
+            diasAtivos.forEach((dia) => {
+                const dataDia = String(dia?.data || dia?.dataDds || dia?.dia || "").trim();
+                if (dataDia) diasApurados.add(dataDia);
+            });
+
+            participantes.forEach((participante) => {
+                const funcao = String(participante?.funcao || participante?.cargo || "").trim();
+                if (funcao) funcoes.add(funcao);
+            });
+        });
+
+        const quantidadeDias = diasApurados.size;
+        const efetivoMedio = quantidadeDias > 0 ? acumuladoPeriodo / quantidadeDias : 0;
+
+        return {
+            ddsEncontrados: registros.length,
+            ddsConcluidos,
+            ddsPendentes: Math.max(registros.length - ddsConcluidos, 0),
+            diasApurados: quantidadeDias,
+            acumuladoPeriodo,
+            efetivoMedio,
+            empresas: empresas.size,
+            funcoes: funcoes.size,
+        };
+    }, [historicoMensalMaoDeObraDds]);
+
     const reciboConferenciaFinalDds = useMemo(() => {
         if (!conferenciaOficialConcluidaDds || !fechamentoConferenciaAssistidaDds || !resultadoFinalApresentacaoDds?.modoAssistido) {
             return null;
@@ -5289,6 +5363,84 @@ export function DdsPage({
             window.alert(mensagem);
         } finally {
             setSalvandoRegistroDds(false);
+        }
+    }
+
+
+    function obterPeriodoHistoricoMensalMaoDeObraDds() {
+        const mesBase = String(mesHistoricoMaoDeObraDds || "").trim();
+        const partes = mesBase.split("-");
+
+        if (partes.length !== 2) {
+            return null;
+        }
+
+        const ano = Number(partes[0]);
+        const mes = Number(partes[1]);
+
+        if (!ano || !mes || mes < 1 || mes > 12) {
+            return null;
+        }
+
+        const ultimoDia = new Date(ano, mes, 0).getDate();
+
+        return {
+            inicio: String(ano).padStart(4, "0") + "-" + String(mes).padStart(2, "0") + "-01",
+            fim: String(ano).padStart(4, "0") + "-" + String(mes).padStart(2, "0") + "-" + String(ultimoDia).padStart(2, "0"),
+        };
+    }
+
+    async function buscarHistoricoMensalMaoDeObraDds() {
+        if (carregandoHistoricoMensalMaoDeObraDds) return;
+
+        if (!supabase) {
+            setErroHistoricoMensalMaoDeObraDds("Supabase não disponível para buscar o histórico mensal DDS.");
+            return;
+        }
+
+        const empresaId = obterUuidSeguroDds(obterIdEmpresaObjetoDds(empresaSelecionadaDds));
+        const obraId = obterUuidSeguroDds(obraSelecionadaIdDds);
+        const periodo = obterPeriodoHistoricoMensalMaoDeObraDds();
+
+        if (!empresaId) {
+            setErroHistoricoMensalMaoDeObraDds("Selecione uma empresa antes de buscar o histórico mensal.");
+            return;
+        }
+
+        if (!obraId) {
+            setErroHistoricoMensalMaoDeObraDds("Selecione uma obra cadastrada antes de buscar o histórico mensal.");
+            return;
+        }
+
+        if (!periodo) {
+            setErroHistoricoMensalMaoDeObraDds("Informe um mês/ano válido para buscar o histórico mensal.");
+            return;
+        }
+
+        setCarregandoHistoricoMensalMaoDeObraDds(true);
+        setErroHistoricoMensalMaoDeObraDds("");
+
+        try {
+            const registros = await listarRegistrosDds({
+                supabase,
+                empresaId,
+                obraId,
+                periodoInicio: periodo.inicio,
+                periodoFim: periodo.fim,
+                limite: 200,
+            });
+
+            setHistoricoMensalMaoDeObraDds(registros);
+            setHistoricoMensalConsultadoEmDds(new Date().toISOString());
+
+            if (!registros.length) {
+                setErroHistoricoMensalMaoDeObraDds("Nenhum DDS localizado para a obra e mês selecionados.");
+            }
+        } catch (error) {
+            setHistoricoMensalMaoDeObraDds([]);
+            setErroHistoricoMensalMaoDeObraDds(error?.message || "Não foi possível buscar o histórico mensal DDS.");
+        } finally {
+            setCarregandoHistoricoMensalMaoDeObraDds(false);
         }
     }
 
@@ -6828,6 +6980,110 @@ export function DdsPage({
     </div>
 </div>
 )}
+
+
+<section className="dds-no-print rounded-[28px] border border-slate-200 bg-white p-5 shadow-sm">
+    <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+        <div>
+            <p className="text-[11px] font-black uppercase tracking-[0.18em] text-slate-400">
+                Histórico mensal
+            </p>
+            <h3 className="mt-1 text-xl font-black text-slate-950">
+                Histórico mensal de mão de obra
+            </h3>
+            <p className="mt-1 max-w-3xl text-sm font-semibold text-slate-500">
+                Busca os DDS da obra selecionada no mês informado e resume a base oficial salva na Conferência Assistida.
+            </p>
+        </div>
+
+        <div className="grid w-full gap-3 sm:grid-cols-[minmax(180px,1fr)_auto] lg:max-w-xl">
+            <label className="block">
+                <span className="mb-1 block text-[11px] font-black uppercase tracking-wide text-slate-500">
+                    Mês/Ano
+                </span>
+                <input
+                    type="month"
+                    value={mesHistoricoMaoDeObraDds}
+                    onChange={(evento) => setMesHistoricoMaoDeObraDds(evento.target.value)}
+                    className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-bold text-slate-800 outline-none transition focus:border-emerald-300 focus:bg-white focus:ring-4 focus:ring-emerald-100"
+                />
+            </label>
+
+            <button
+                type="button"
+                onClick={buscarHistoricoMensalMaoDeObraDds}
+                disabled={carregandoHistoricoMensalMaoDeObraDds || !obraSelecionadaIdDds}
+                className="self-end rounded-2xl bg-slate-950 px-5 py-2.5 text-xs font-black uppercase tracking-wide text-white shadow-lg shadow-slate-900/15 transition hover:-translate-y-0.5 hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+                {carregandoHistoricoMensalMaoDeObraDds ? "Buscando..." : "Buscar DDS do mês"}
+            </button>
+        </div>
+    </div>
+
+    <div className="mt-4 rounded-2xl border border-slate-100 bg-slate-50 px-4 py-3 text-sm font-semibold text-slate-600">
+        Obra base: <span className="font-black text-slate-900">{dadosDds.obraSetor || registroScannerDds?.obraNome || "Selecione uma obra cadastrada no DDS"}</span>
+        {historicoMensalConsultadoEmDds && (
+            <span className="ml-2 text-xs font-bold text-slate-400">
+                Consulta: {new Date(historicoMensalConsultadoEmDds).toLocaleString("pt-BR")}
+            </span>
+        )}
+    </div>
+
+    {erroHistoricoMensalMaoDeObraDds && (
+        <div className="mt-3 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-bold text-amber-800">
+            {erroHistoricoMensalMaoDeObraDds}
+        </div>
+    )}
+
+    <div className="mt-4 grid gap-3 md:grid-cols-3 xl:grid-cols-6">
+        <div className="rounded-2xl border border-slate-100 bg-white p-4">
+            <p className="text-[11px] font-black uppercase tracking-wide text-slate-400">DDS encontrados</p>
+            <p className="mt-1 text-lg font-black text-slate-950">{resumoHistoricoMensalMaoDeObraDds.ddsEncontrados}</p>
+        </div>
+        <div className="rounded-2xl border border-emerald-100 bg-emerald-50 p-4">
+            <p className="text-[11px] font-black uppercase tracking-wide text-emerald-700">Concluídos</p>
+            <p className="mt-1 text-lg font-black text-emerald-900">{resumoHistoricoMensalMaoDeObraDds.ddsConcluidos}</p>
+        </div>
+        <div className="rounded-2xl border border-sky-100 bg-sky-50 p-4">
+            <p className="text-[11px] font-black uppercase tracking-wide text-sky-700">Dias apurados</p>
+            <p className="mt-1 text-lg font-black text-sky-900">{resumoHistoricoMensalMaoDeObraDds.diasApurados}</p>
+        </div>
+        <div className="rounded-2xl border border-orange-100 bg-orange-50 p-4">
+            <p className="text-[11px] font-black uppercase tracking-wide text-orange-700">Acumulado</p>
+            <p className="mt-1 text-lg font-black text-orange-900">{formatarNumeroMaoDeObraDds(resumoHistoricoMensalMaoDeObraDds.acumuladoPeriodo)}</p>
+        </div>
+        <div className="rounded-2xl border border-violet-100 bg-violet-50 p-4">
+            <p className="text-[11px] font-black uppercase tracking-wide text-violet-700">Efetivo médio</p>
+            <p className="mt-1 text-lg font-black text-violet-900">{formatarNumeroMaoDeObraDds(resumoHistoricoMensalMaoDeObraDds.efetivoMedio)}</p>
+        </div>
+        <div className="rounded-2xl border border-slate-100 bg-white p-4">
+            <p className="text-[11px] font-black uppercase tracking-wide text-slate-400">Funções</p>
+            <p className="mt-1 text-lg font-black text-slate-950">{resumoHistoricoMensalMaoDeObraDds.funcoes}</p>
+        </div>
+    </div>
+
+    {historicoMensalMaoDeObraDds.length > 0 && (
+        <div className="mt-4 overflow-hidden rounded-2xl border border-slate-100">
+            <div className="grid grid-cols-[1fr_auto_auto] gap-3 bg-slate-50 px-4 py-2 text-[11px] font-black uppercase tracking-wide text-slate-500">
+                <span>DDS</span>
+                <span>Período</span>
+                <span>Status</span>
+            </div>
+            {historicoMensalMaoDeObraDds.slice(0, 8).map((registro) => {
+                const conferencia = registro?.dados?.conferenciaAssistida || {};
+                const status = conferencia?.fechamento?.status === "concluida" ? "Concluído" : "Em aberto";
+
+                return (
+                    <div key={registro.id || registro.codigo} className="grid grid-cols-[1fr_auto_auto] gap-3 border-t border-slate-100 px-4 py-3 text-xs font-bold text-slate-600">
+                        <span className="truncate text-slate-900">{registro.codigo || "DDS sem código"}</span>
+                        <span>{formatarDataControleMaoDeObraDds(registro.periodoInicio)} a {formatarDataControleMaoDeObraDds(registro.periodoFim)}</span>
+                        <span className={status === "Concluído" ? "text-emerald-700" : "text-amber-700"}>{status}</span>
+                    </div>
+                );
+            })}
+        </div>
+    )}
+</section>
 
 {registroScannerDds && (
                                 <div className="rounded-2xl border border-emerald-100 bg-white p-4 ring-1 ring-emerald-50 lg:col-span-2">

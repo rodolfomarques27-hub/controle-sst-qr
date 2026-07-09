@@ -285,3 +285,14 @@ Microetapa 3A aplicada:
   - periodo_fim >= início do mês.
   - periodo_inicio <= fim do mês.
 - Esta base será usada na próxima microetapa para montar a tela de histórico mensal de mão de obra por obra.
+
+## Bloco visual do histórico mensal de mão de obra
+
+Microetapa 3B aplicada:
+
+- DdsPage passou a importar listarRegistrosDds.
+- Criados estados para mês base, carregamento, erro, consulta e registros retornados.
+- Criada busca mensal por empresa, obra e período.
+- Criado resumo do histórico mensal com DDS encontrados, concluídos, dias apurados, acumulado do período, efetivo médio e funções.
+- Inserido bloco visual "Histórico mensal de mão de obra" antes do resumo do registro DDS carregado.
+- Nesta microetapa ainda não há exportação mensal consolidada; isso ficará para a etapa seguinte.
