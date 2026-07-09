@@ -4,6 +4,31 @@ function normalizarTextoObra(valor) {
     return String(valor || "").trim();
 }
 
+function normalizarCepObra(valor) {
+    return normalizarTextoObra(valor).replace(/\D/g, "").slice(0, 8);
+}
+
+function erroColunaCepObraNaoExiste(error = {}) {
+    const texto = String(error?.message || error?.details || error?.hint || "").toLowerCase();
+    const colunasComplementaresObra = ["cep", "numero_obra", "numero_endereco", "tecnico_seguranca_idealiza"];
+
+    return colunasComplementaresObra.some((coluna) => texto.includes(coluna)) && (
+        texto.includes("column") ||
+        texto.includes("coluna") ||
+        texto.includes("schema") ||
+        texto.includes("does not exist") ||
+        texto.includes("não existe") ||
+        texto.includes("nao existe") ||
+        texto.includes("could not find")
+    );
+}
+
+function removerCepPayloadObra(payload = {}) {
+    const { cep, numero_obra, numero_endereco, tecnico_seguranca_idealiza, ...restante } = payload;
+
+    return restante;
+}
+
 function normalizarStatusObra(status) {
     const texto = normalizarTextoObra(status);
     return texto === "Inativa" ? "Inativa" : "Ativa";
@@ -12,10 +37,14 @@ function normalizarStatusObra(status) {
 function montarPayloadObra(obra = {}) {
     return {
         nome: normalizarTextoObra(obra.nome),
+        cep: normalizarCepObra(obra.cep),
+        numero_obra: normalizarTextoObra(obra.numeroObra || obra.numero_obra),
         cidade: normalizarTextoObra(obra.cidade),
         uf: normalizarTextoObra(obra.uf).toUpperCase(),
         endereco: normalizarTextoObra(obra.endereco),
+        numero_endereco: normalizarTextoObra(obra.numeroEndereco || obra.numero_endereco),
         fiscal_idealiza: normalizarTextoObra(obra.fiscalIdealiza || obra.fiscal_idealiza),
+        tecnico_seguranca_idealiza: normalizarTextoObra(obra.tecnicoSegurancaIdealiza || obra.tecnico_seguranca_idealiza),
         lider_encarregado: normalizarTextoObra(obra.liderEncarregado || obra.lider_encarregado),
         status: normalizarStatusObra(obra.status),
         observacoes: normalizarTextoObra(obra.observacoes),
@@ -35,11 +64,18 @@ export function normalizarObraBanco(obra = {}) {
     return {
         id: obra.id || "",
         nome: obra.nome || "",
+        cep: obra.cep || "",
+        numeroObra: obra.numero_obra || obra.numeroObra || "",
+        numero_obra: obra.numero_obra || obra.numeroObra || "",
         cidade: obra.cidade || "",
         uf: obra.uf || "",
         endereco: obra.endereco || "",
+        numeroEndereco: obra.numero_endereco || obra.numeroEndereco || "",
+        numero_endereco: obra.numero_endereco || obra.numeroEndereco || "",
         fiscalIdealiza: obra.fiscal_idealiza || obra.fiscalIdealiza || "",
         fiscal_idealiza: obra.fiscal_idealiza || obra.fiscalIdealiza || "",
+        tecnicoSegurancaIdealiza: obra.tecnico_seguranca_idealiza || obra.tecnicoSegurancaIdealiza || "",
+        tecnico_seguranca_idealiza: obra.tecnico_seguranca_idealiza || obra.tecnicoSegurancaIdealiza || "",
         liderEncarregado: obra.lider_encarregado || obra.liderEncarregado || "",
         lider_encarregado: obra.lider_encarregado || obra.liderEncarregado || "",
         status: normalizarStatusObra(obra.status),
@@ -89,18 +125,25 @@ export async function listarObras() {
 export async function adicionarObra(obra = {}) {
     const payload = montarPayloadObra(obra);
 
-    if (!payload.nome) {
-        throw new Error("Nome da obra obrigatorio.");
-    }
-
-    const { data, error } = await supabase
+    let { data, error } = await supabase
         .from("obras")
         .insert(payload)
-        .select("*")
+        .select()
         .single();
 
+    if (error && erroColunaCepObraNaoExiste(error)) {
+        console.warn("Coluna cep ainda não existe em obras. Salvando obra sem cep até aplicar a migration.");
+        const payloadSemCep = removerCepPayloadObra(payload);
+
+        ({ data, error } = await supabase
+            .from("obras")
+            .insert(payloadSemCep)
+            .select()
+            .single());
+    }
+
     if (error) {
-        console.error("Erro ao cadastrar obra:", error);
+        console.error("Erro ao adicionar obra:", error);
         throw error;
     }
 
@@ -109,22 +152,29 @@ export async function adicionarObra(obra = {}) {
 
 export async function atualizarObra(obra = {}) {
     const id = normalizarTextoObra(obra.id);
+
+    if (!id) throw new Error("ID da obra não informado para atualização.");
+
     const payload = montarPayloadObra(obra);
 
-    if (!id) {
-        throw new Error("ID da obra obrigatorio para atualizar.");
-    }
-
-    if (!payload.nome) {
-        throw new Error("Nome da obra obrigatorio.");
-    }
-
-    const { data, error } = await supabase
+    let { data, error } = await supabase
         .from("obras")
         .update(payload)
         .eq("id", id)
-        .select("*")
+        .select()
         .single();
+
+    if (error && erroColunaCepObraNaoExiste(error)) {
+        console.warn("Coluna cep ainda não existe em obras. Atualizando obra sem cep até aplicar a migration.");
+        const payloadSemCep = removerCepPayloadObra(payload);
+
+        ({ data, error } = await supabase
+            .from("obras")
+            .update(payloadSemCep)
+            .eq("id", id)
+            .select()
+            .single());
+    }
 
     if (error) {
         console.error("Erro ao atualizar obra:", error);

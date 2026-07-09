@@ -89,23 +89,44 @@ const classNames = (...classes) => classes.filter(Boolean).join(" ");
 const FORMULARIO_OBRA_CONFIGURACOES_INICIAL = {
     id: "",
     nome: "",
+    cep: "",
+    numeroObra: "",
     cidade: "",
     uf: "",
     endereco: "",
+    numeroEndereco: "",
     fiscalIdealiza: "",
+    tecnicoSegurancaIdealiza: "",
     liderEncarregado: "",
     status: "Ativa",
     observacoes: "",
 };
 
+const UFS_OBRAS_CONFIGURACOES = [
+    "AC", "AL", "AP", "AM", "BA", "CE", "DF", "ES", "GO", "MA", "MT", "MS",
+    "MG", "PA", "PB", "PR", "PE", "PI", "RJ", "RN", "RS", "RO", "RR", "SC",
+    "SP", "SE", "TO",
+];
+
+function formatarCepObraConfiguracoes(valor = "") {
+    const digitos = String(valor || "").replace(/\D/g, "").slice(0, 8);
+
+    if (digitos.length > 5) return digitos.slice(0, 5) + "-" + digitos.slice(5);
+    return digitos;
+}
+
 function criarFormularioObraConfiguracoes(obra = {}) {
     return {
         id: obra.id || "",
         nome: obra.nome || "",
+        cep: obra.cep || "",
+        numeroObra: obra.numeroObra || obra.numero_obra || "",
         cidade: obra.cidade || "",
         uf: obra.uf || "",
         endereco: obra.endereco || "",
+        numeroEndereco: obra.numeroEndereco || obra.numero_endereco || "",
         fiscalIdealiza: obra.fiscalIdealiza || obra.fiscal_idealiza || "",
+        tecnicoSegurancaIdealiza: obra.tecnicoSegurancaIdealiza || obra.tecnico_seguranca_idealiza || "",
         liderEncarregado: obra.liderEncarregado || obra.lider_encarregado || "",
         status: obra.status === "Inativa" ? "Inativa" : "Ativa",
         observacoes: obra.observacoes || "",
@@ -537,6 +558,9 @@ export function ConfiguracoesSistema({
     const [carregandoObrasConfiguracoes, setCarregandoObrasConfiguracoes] = useState(false);
     const [mensagemObrasConfiguracoes, setMensagemObrasConfiguracoes] = useState("Obras ainda nao carregadas.");
     const [formObraConfiguracoes, setFormObraConfiguracoes] = useState(() => criarFormularioObraConfiguracoes(FORMULARIO_OBRA_CONFIGURACOES_INICIAL));
+    const [municipiosObraConfiguracoes, setMunicipiosObraConfiguracoes] = useState([]);
+    const [carregandoMunicipiosObraConfiguracoes, setCarregandoMunicipiosObraConfiguracoes] = useState(false);
+    const [carregandoCepObraConfiguracoes, setCarregandoCepObraConfiguracoes] = useState(false);
     const [formularioObraAbertoConfiguracoes, setFormularioObraAbertoConfiguracoes] = useState(false);
     const [editandoObraConfiguracoesId, setEditandoObraConfiguracoesId] = useState("");
     const [salvandoObraConfiguracoes, setSalvandoObraConfiguracoes] = useState(false);
@@ -1381,6 +1405,7 @@ export function ConfiguracoesSistema({
         setEditandoObraConfiguracoesId("");
         setFormObraConfiguracoes(criarFormularioObraConfiguracoes(FORMULARIO_OBRA_CONFIGURACOES_INICIAL));
         setFormularioObraAbertoConfiguracoes(true);
+        setMunicipiosObraConfiguracoes([]);
         setMensagemObrasConfiguracoes("Preencha os dados da nova obra.");
     };
 
@@ -1388,6 +1413,7 @@ export function ConfiguracoesSistema({
         setEditandoObraConfiguracoesId(obra.id || "");
         setFormObraConfiguracoes(criarFormularioObraConfiguracoes(obra));
         setFormularioObraAbertoConfiguracoes(true);
+        if (obra.uf) carregarMunicipiosObraConfiguracoes(obra.uf);
         setMensagemObrasConfiguracoes(`Editando obra: ${obra.nome || "obra sem nome"}.`);
     };
 
@@ -1405,16 +1431,120 @@ export function ConfiguracoesSistema({
         }));
     };
 
+    const carregarMunicipiosObraConfiguracoes = async (ufInformada = "") => {
+        const uf = String(ufInformada || "").trim().toUpperCase().slice(0, 2);
+
+        if (!uf) {
+            setMunicipiosObraConfiguracoes([]);
+            return [];
+        }
+
+        setCarregandoMunicipiosObraConfiguracoes(true);
+
+        try {
+            const resposta = await fetch("https://servicodados.ibge.gov.br/api/v1/localidades/estados/" + encodeURIComponent(uf) + "/municipios?orderBy=nome");
+
+            if (!resposta.ok) throw new Error("HTTP " + resposta.status);
+
+            const dados = await resposta.json();
+            const municipios = Array.isArray(dados)
+                ? dados.map((item) => ({
+                    id: item.id,
+                    nome: String(item.nome || "").trim(),
+                })).filter((item) => item.nome)
+                : [];
+
+            setMunicipiosObraConfiguracoes(municipios);
+
+            return municipios;
+        } catch (erro) {
+            console.error("Erro ao carregar municípios do IBGE:", erro);
+            setMunicipiosObraConfiguracoes([]);
+            setMensagemObrasConfiguracoes("Não foi possível carregar os municípios pelo IBGE. Cidade permanece com digitação manual.");
+            return [];
+        } finally {
+            setCarregandoMunicipiosObraConfiguracoes(false);
+        }
+    };
+
+    const atualizarUfObraConfiguracoes = (valor) => {
+        const uf = String(valor || "").trim().toUpperCase().slice(0, 2);
+
+        setFormObraConfiguracoes((atual) => ({
+            ...atual,
+            uf,
+            cidade: atual.uf === uf ? atual.cidade : "",
+        }));
+
+        carregarMunicipiosObraConfiguracoes(uf);
+    };
+
+    const atualizarCepObraConfiguracoes = (valor) => {
+        atualizarCampoObraConfiguracoes("cep", formatarCepObraConfiguracoes(valor));
+    };
+
+    const consultarCepObraConfiguracoes = async () => {
+        const cep = String(formObraConfiguracoes.cep || "").replace(/\D/g, "").slice(0, 8);
+
+        if (!cep) return;
+
+        if (cep.length !== 8) {
+            setMensagemObrasConfiguracoes("Informe um CEP com 8 dígitos para buscar o endereço.");
+            return;
+        }
+
+        setCarregandoCepObraConfiguracoes(true);
+        setMensagemObrasConfiguracoes("Consultando CEP...");
+
+        try {
+            const resposta = await fetch("https://viacep.com.br/ws/" + cep + "/json/");
+
+            if (!resposta.ok) throw new Error("HTTP " + resposta.status);
+
+            const dados = await resposta.json();
+
+            if (dados?.erro) {
+                setMensagemObrasConfiguracoes("CEP não localizado na base pública.");
+                return;
+            }
+
+            const uf = String(dados.uf || "").trim().toUpperCase().slice(0, 2);
+            const cidade = String(dados.localidade || "").trim();
+            const endereco = [dados.logradouro, dados.bairro].filter(Boolean).join(" - ");
+
+            setFormObraConfiguracoes((atual) => ({
+                ...atual,
+                cep: formatarCepObraConfiguracoes(cep),
+                uf: uf || atual.uf,
+                cidade: cidade || atual.cidade,
+                endereco: endereco || atual.endereco,
+            }));
+
+            if (uf) await carregarMunicipiosObraConfiguracoes(uf);
+
+            setMensagemObrasConfiguracoes("CEP localizado. Confira cidade, UF e endereço antes de salvar.");
+        } catch (erro) {
+            console.error("Erro ao consultar CEP:", erro);
+            setMensagemObrasConfiguracoes("Não foi possível consultar o CEP. Preencha cidade, UF e endereço manualmente.");
+        } finally {
+            setCarregandoCepObraConfiguracoes(false);
+        }
+    };
+
     const salvarObraConfiguracoes = async (evento) => {
         evento?.preventDefault?.();
 
         const payload = {
             ...formObraConfiguracoes,
             nome: String(formObraConfiguracoes.nome || "").trim(),
+            cep: String(formObraConfiguracoes.cep || "").replace(/\D/g, "").slice(0, 8),
+            numeroObra: String(formObraConfiguracoes.numeroObra || "").trim(),
             cidade: String(formObraConfiguracoes.cidade || "").trim(),
             uf: String(formObraConfiguracoes.uf || "").trim().toUpperCase(),
             endereco: String(formObraConfiguracoes.endereco || "").trim(),
+            numeroEndereco: String(formObraConfiguracoes.numeroEndereco || "").trim(),
             fiscalIdealiza: String(formObraConfiguracoes.fiscalIdealiza || "").trim(),
+            tecnicoSegurancaIdealiza: String(formObraConfiguracoes.tecnicoSegurancaIdealiza || "").trim(),
             liderEncarregado: String(formObraConfiguracoes.liderEncarregado || "").trim(),
             status: formObraConfiguracoes.status === "Inativa" ? "Inativa" : "Ativa",
             observacoes: String(formObraConfiguracoes.observacoes || "").trim(),
@@ -1443,6 +1573,10 @@ export function ConfiguracoesSistema({
             setFormularioObraAbertoConfiguracoes(false);
 
             await carregarObrasConfiguracoes();
+
+            setTimeout(() => {
+                document.getElementById("config-obras")?.scrollIntoView({ behavior: "smooth", block: "start" });
+            }, 0);
 
             setMensagemObrasConfiguracoes(editandoObraConfiguracoesId ? "Obra atualizada com sucesso." : "Obra cadastrada com sucesso.");
         } catch (erro) {
@@ -2233,7 +2367,7 @@ export function ConfiguracoesSistema({
                         )}
 
                         {formularioObraAbertoConfiguracoes && (
-                            <form onSubmit={salvarObraConfiguracoes} className="mt-4 rounded-3xl bg-slate-50 p-4 ring-1 ring-slate-100">
+                            <form onSubmit={salvarObraConfiguracoes} onClick={(evento) => evento.stopPropagation()} onMouseDown={(evento) => evento.stopPropagation()} className="mt-4 rounded-3xl bg-slate-50 p-4 ring-1 ring-slate-100">
                                 <div className="flex flex-col gap-2 md:flex-row md:items-start md:justify-between">
                                     <div>
                                         <h3 className="text-sm font-black text-slate-950">
@@ -2263,8 +2397,8 @@ export function ConfiguracoesSistema({
                                     </div>
                                 </div>
 
-                                <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-                                    <label className="block xl:col-span-2">
+                                <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-12">
+                                    <label className="block xl:col-span-5">
                                         <span className="mb-1 block text-[11px] font-black uppercase tracking-wide text-slate-500">Nome da obra</span>
                                         <input
                                             type="text"
@@ -2275,7 +2409,17 @@ export function ConfiguracoesSistema({
                                         />
                                     </label>
 
-                                    <label className="block">
+                                                                        <label className="block xl:col-span-2">
+                                        <span className="mb-1 block text-[11px] font-black uppercase tracking-wide text-slate-500">Nº da obra</span>
+                                        <input
+                                            type="text"
+                                            value={formObraConfiguracoes.numeroObra}
+                                            onChange={(evento) => atualizarCampoObraConfiguracoes("numeroObra", evento.target.value)}
+                                            className="w-full rounded-2xl border border-slate-200 bg-white px-3 py-2 text-sm font-bold text-slate-800 outline-none focus:border-slate-400 focus:ring-4 focus:ring-slate-100"
+                                            placeholder="Ex.: 001/2026"
+                                        />
+                                    </label>
+<label className="block xl:col-span-2">
                                         <span className="mb-1 block text-[11px] font-black uppercase tracking-wide text-slate-500">Status</span>
                                         <select
                                             value={formObraConfiguracoes.status}
@@ -2286,42 +2430,84 @@ export function ConfiguracoesSistema({
                                             <option value="Inativa">Inativa</option>
                                         </select>
                                     </label>
-
-                                    <label className="block">
-                                        <span className="mb-1 block text-[11px] font-black uppercase tracking-wide text-slate-500">UF</span>
-                                        <input
-                                            type="text"
-                                            value={formObraConfiguracoes.uf}
-                                            onChange={(evento) => atualizarCampoObraConfiguracoes("uf", evento.target.value.toUpperCase().slice(0, 2))}
-                                            className="w-full rounded-2xl border border-slate-200 bg-white px-3 py-2 text-sm font-bold text-slate-800 outline-none focus:border-slate-400 focus:ring-4 focus:ring-slate-100"
-                                            placeholder="SP"
-                                            maxLength={2}
-                                        />
+                                    <label className="block xl:col-span-3">
+                                        <span className="mb-1 block text-[11px] font-black uppercase tracking-wide text-slate-500">CEP</span>
+                                        <div className="flex gap-2">
+                                            <input
+                                                type="text"
+                                                value={formObraConfiguracoes.cep}
+                                                onChange={(evento) => atualizarCepObraConfiguracoes(evento.target.value)}
+                                                onBlur={consultarCepObraConfiguracoes}
+                                                className="w-full rounded-2xl border border-slate-200 bg-white px-3 py-2 text-sm font-bold text-slate-800 outline-none focus:border-slate-400 focus:ring-4 focus:ring-slate-100"
+                                                placeholder="00000-000"
+                                                inputMode="numeric"
+                                                maxLength={9}
+                                            />
+                                            <button
+                                                type="button"
+                                                onClick={consultarCepObraConfiguracoes}
+                                                disabled={carregandoCepObraConfiguracoes}
+                                                className="min-w-[64px] rounded-2xl border border-sky-200 bg-sky-50 px-3 py-2 text-xs font-black text-sky-800 transition hover:bg-sky-100 disabled:opacity-60"
+                                            >
+                                                {carregandoCepObraConfiguracoes ? "..." : "Buscar"}
+                                            </button>
+                                        </div>
                                     </label>
 
-                                    <label className="block">
-                                        <span className="mb-1 block text-[11px] font-black uppercase tracking-wide text-slate-500">Cidade</span>
-                                        <input
-                                            type="text"
-                                            value={formObraConfiguracoes.cidade}
-                                            onChange={(evento) => atualizarCampoObraConfiguracoes("cidade", evento.target.value)}
+                                    <label className="block xl:col-span-2">
+                                        <span className="mb-1 block text-[11px] font-black uppercase tracking-wide text-slate-500">UF</span>
+                                        <select
+                                            value={formObraConfiguracoes.uf}
+                                            onChange={(evento) => atualizarUfObraConfiguracoes(evento.target.value)}
                                             className="w-full rounded-2xl border border-slate-200 bg-white px-3 py-2 text-sm font-bold text-slate-800 outline-none focus:border-slate-400 focus:ring-4 focus:ring-slate-100"
-                                            placeholder="Sao Jose dos Campos"
-                                        />
+                                        >
+                                            <option value="">Selecionar UF</option>
+                                            {UFS_OBRAS_CONFIGURACOES.map((uf) => (
+                                                <option key={uf} value={uf}>{uf}</option>
+                                            ))}
+                                        </select>
                                     </label>
 
                                     <label className="block xl:col-span-3">
-                                        <span className="mb-1 block text-[11px] font-black uppercase tracking-wide text-slate-500">Endereco</span>
+                                        <span className="mb-1 block text-[11px] font-black uppercase tracking-wide text-slate-500">Cidade</span>
+                                        <input
+                                            type="text"
+                                            list="municipios-obra-configuracoes"
+                                            value={formObraConfiguracoes.cidade}
+                                            onChange={(evento) => atualizarCampoObraConfiguracoes("cidade", evento.target.value)}
+                                            className="w-full rounded-2xl border border-slate-200 bg-white px-3 py-2 text-sm font-bold text-slate-800 outline-none focus:border-slate-400 focus:ring-4 focus:ring-slate-100"
+                                            placeholder={carregandoMunicipiosObraConfiguracoes ? "Carregando municípios..." : "Selecione ou digite a cidade"}
+                                        />
+                                        <datalist id="municipios-obra-configuracoes">
+                                            {municipiosObraConfiguracoes.map((municipio) => (
+                                                <option key={municipio.id || municipio.nome} value={municipio.nome} />
+                                            ))}
+                                        </datalist>
+                                    </label>
+
+                                    <label className="block xl:col-span-5">
+                                        <span className="mb-1 block text-[11px] font-black uppercase tracking-wide text-slate-500">Endereço</span>
                                         <input
                                             type="text"
                                             value={formObraConfiguracoes.endereco}
                                             onChange={(evento) => atualizarCampoObraConfiguracoes("endereco", evento.target.value)}
                                             className="w-full rounded-2xl border border-slate-200 bg-white px-3 py-2 text-sm font-bold text-slate-800 outline-none focus:border-slate-400 focus:ring-4 focus:ring-slate-100"
-                                            placeholder="Rua, numero, bairro"
+                                            placeholder="Rua, número, bairro"
                                         />
                                     </label>
 
                                     <label className="block xl:col-span-2">
+                                        <span className="mb-1 block text-[11px] font-black uppercase tracking-wide text-slate-500">Nº endereço</span>
+                                        <input
+                                            type="text"
+                                            value={formObraConfiguracoes.numeroEndereco}
+                                            onChange={(evento) => atualizarCampoObraConfiguracoes("numeroEndereco", evento.target.value)}
+                                            className="w-full rounded-2xl border border-slate-200 bg-white px-3 py-2 text-sm font-bold text-slate-800 outline-none focus:border-slate-400 focus:ring-4 focus:ring-slate-100"
+                                            placeholder="Ex.: 120"
+                                        />
+                                    </label>
+
+<label className="block xl:col-span-4">
                                         <span className="mb-1 block text-[11px] font-black uppercase tracking-wide text-slate-500">Fiscal Idealiza</span>
                                         <input
                                             type="text"
@@ -2332,7 +2518,7 @@ export function ConfiguracoesSistema({
                                         />
                                     </label>
 
-                                    <label className="block xl:col-span-2">
+<label className="block xl:col-span-4">
                                         <span className="mb-1 block text-[11px] font-black uppercase tracking-wide text-slate-500">Lider / encarregado</span>
                                         <input
                                             type="text"
@@ -2343,7 +2529,24 @@ export function ConfiguracoesSistema({
                                         />
                                     </label>
 
-                                    <label className="block md:col-span-2 xl:col-span-4">
+<label className="block xl:col-span-4">
+                                        <span className="mb-1 block text-[11px] font-black uppercase tracking-wide text-slate-500">Técnico de Segurança do Trabalho Idealiza</span>
+                                        <input
+                                            type="text"
+                                            value={formObraConfiguracoes.tecnicoSegurancaIdealiza}
+                                            onChange={(evento) => atualizarCampoObraConfiguracoes("tecnicoSegurancaIdealiza", evento.target.value)}
+                                            className="w-full rounded-2xl border border-slate-200 bg-white px-3 py-2 text-sm font-bold text-slate-800 outline-none focus:border-slate-400 focus:ring-4 focus:ring-slate-100"
+                                            placeholder="Nome do Técnico de Segurança do Trabalho"
+                                        />
+                                    </label>
+
+
+
+
+
+
+
+                                    <label className="block xl:col-span-12">
                                         <span className="mb-1 block text-[11px] font-black uppercase tracking-wide text-slate-500">Observacoes</span>
                                         <textarea
                                             value={formObraConfiguracoes.observacoes}
@@ -2586,7 +2789,7 @@ export function ConfiguracoesSistema({
                             </div>
                         )}
 
-                        <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+                        <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-12">
                             <div className="rounded-2xl bg-slate-50 px-3 py-3 ring-1 ring-slate-100">
                                 <p className="text-[11px] font-black uppercase tracking-wide text-slate-400">Permissão técnica</p>
                                 <p className="mt-1 text-lg font-black text-slate-950">{formatarPerfilPermissaoSistema(resumoPermissaoSistemaAtual.perfil)}</p>
@@ -3706,13 +3909,3 @@ export function ConfiguracoesSistema({
         </div>
     );
 }
-
-
-
-
-
-
-
-
-
-
