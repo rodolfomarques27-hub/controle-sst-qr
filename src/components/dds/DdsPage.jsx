@@ -2188,6 +2188,9 @@ export function DdsPage({
     const [salvandoFechamentoConferenciaDds, setSalvandoFechamentoConferenciaDds] = useState(false);
     const [erroFechamentoConferenciaDds, setErroFechamentoConferenciaDds] = useState("");
     const [fechamentoConferenciaAssistidaDds, setFechamentoConferenciaAssistidaDds] = useState(null);
+    const [reciboFinalEmitidoEmDds, setReciboFinalEmitidoEmDds] = useState("");
+    const [salvandoReciboFinalDds, setSalvandoReciboFinalDds] = useState(false);
+    const [erroReciboFinalDds, setErroReciboFinalDds] = useState("");
     const reciboConferenciaFinalRef = useRef(null);
 
 
@@ -2901,7 +2904,9 @@ export function DdsPage({
 
         setConferenciaAssistidaDds({});
         setFechamentoConferenciaAssistidaDds(null);
+        setReciboFinalEmitidoEmDds("");
         setErroFechamentoConferenciaDds("");
+        setErroReciboFinalDds("");
     }
     async function salvarConferenciaAssistidaDds() {
         if (salvandoConferenciaAssistidaDds) return;
@@ -2951,6 +2956,7 @@ export function DdsPage({
                     codigoSafescan: participante.codigoSafescan,
                 })),
                 fechamento: dadosAtuais?.conferenciaAssistida?.fechamento || fechamentoConferenciaAssistidaDds || null,
+                reciboFinal: dadosAtuais?.conferenciaAssistida?.reciboFinal || null,
             };
 
             const registroAtualizado = await salvarRegistroDds({
@@ -3108,7 +3114,7 @@ export function DdsPage({
             const reabertoEm = new Date().toISOString();
             const dadosAtuais = registroScannerDds?.dados || {};
             const conferenciaAtual = dadosAtuais.conferenciaAssistida || {};
-            const { fechamento, ...conferenciaSemFechamento } = conferenciaAtual;
+            const { fechamento, reciboFinal, ...conferenciaSemFechamento } = conferenciaAtual;
 
             const conferenciaAssistida = {
                 ...conferenciaSemFechamento,
@@ -3156,6 +3162,8 @@ export function DdsPage({
             setConferenciaAssistidaDds(registroAtualizado?.dados?.conferenciaAssistida?.frequencia || conferenciaAssistidaDds);
             setConferenciaAssistidaSalvaEmDds(registroAtualizado?.dados?.conferenciaAssistida?.atualizadoEm || reabertoEm);
             setFechamentoConferenciaAssistidaDds(null);
+            setReciboFinalEmitidoEmDds("");
+            setErroReciboFinalDds("");
         } catch (error) {
             setErroFechamentoConferenciaDds(error?.message || "Não foi possível reabrir a Conferência Assistida DDS.");
         } finally {
@@ -3171,7 +3179,9 @@ export function DdsPage({
             setConferenciaAssistidaDds(conferenciaSalva.frequencia);
             setConferenciaAssistidaSalvaEmDds(conferenciaSalva.atualizadoEm || "");
             setFechamentoConferenciaAssistidaDds(conferenciaSalva.fechamento || null);
+            setReciboFinalEmitidoEmDds(conferenciaSalva.reciboFinal?.emitidoEm || "");
             setErroConferenciaAssistidaDds("");
+            setErroReciboFinalDds("");
             setErroFechamentoConferenciaDds("");
             return;
         }
@@ -3179,8 +3189,10 @@ export function DdsPage({
         setConferenciaAssistidaDds({});
         setConferenciaAssistidaSalvaEmDds("");
         setFechamentoConferenciaAssistidaDds(null);
+        setReciboFinalEmitidoEmDds("");
         setErroConferenciaAssistidaDds("");
         setErroFechamentoConferenciaDds("");
+        setErroReciboFinalDds("");
     }, [registroScannerDds?.codigo]);
     const apuracaoDiariaScannerDds = useMemo(() => {
         const nomesDias = ["Domingo", "Segunda-feira", "Terça-feira", "Quarta-feira", "Quinta-feira", "Sexta-feira", "Sábado"];
@@ -3967,8 +3979,85 @@ export function DdsPage({
     ]);
 
 
-    function imprimirReciboConferenciaDds() {
+
+    async function registrarEmissaoReciboFinalDds() {
+        const recibo = reciboConferenciaFinalDds;
+
+        if (!recibo) return "";
+
+        const emitidoEm = new Date().toISOString();
+        const codigo = registroScannerDds?.codigo || codigoConferenciaDds || dadosDds.codigo || recibo.codigo || "";
+
+        const reciboFinal = {
+            versao: 1,
+            origem: "recibo_final_dds",
+            emitidoEm,
+            codigo,
+            status: recibo.status || "Conferência concluída oficialmente",
+            concluidoEm: recibo.concluidoEm || "",
+            periodoInicio: recibo.periodoInicio || "",
+            periodoFim: recibo.periodoFim || "",
+            resumo: {
+                participantes: Number(recibo.participantes || 0),
+                presencas: Number(recibo.presencas || 0),
+                ausencias: Number(recibo.ausencias || 0),
+                manuais: Number(recibo.manuais || 0),
+                homemDia: Number(recibo.homemDia || 0),
+                diasAtivos: Number(recibo.diasAtivos || 0),
+                funcionariosSemanaCompleta: Number(recibo.funcionariosSemanaCompleta || 0),
+            },
+        };
+
+        setReciboFinalEmitidoEmDds(emitidoEm);
+        setErroReciboFinalDds("");
+
+        if (!supabase || !registroScannerDds || !codigo) {
+            return emitidoEm;
+        }
+
+        setSalvandoReciboFinalDds(true);
+
+        try {
+            const dadosAtuais = registroScannerDds?.dados || {};
+            const conferenciaAtual = dadosAtuais.conferenciaAssistida || {};
+
+            const registroAtualizado = await salvarRegistroDds({
+                supabase,
+                registro: {
+                    ...registroScannerDds,
+                    codigo,
+                    empresaId: registroScannerDds?.empresaId || registroScannerDds?.empresa_id || dadosAtuais.empresaId || dadosAtuais.empresa_id || "",
+                    obraId: registroScannerDds?.obraId || registroScannerDds?.obra_id || dadosAtuais.obraId || dadosAtuais.obra_id || "",
+                    empresaNome: registroScannerDds?.empresaNome || dadosAtuais.empresaNome || dadosAtuais.empresa || "",
+                    obraNome: registroScannerDds?.obraNome || dadosAtuais.obraNome || dadosAtuais.obra || "",
+                    periodoInicio: registroScannerDds?.periodoInicio || dadosAtuais.periodoInicio || "",
+                    periodoFim: registroScannerDds?.periodoFim || dadosAtuais.periodoFim || "",
+                    dados: {
+                        ...dadosAtuais,
+                        conferenciaAssistida: {
+                            ...conferenciaAtual,
+                            reciboFinal,
+                        },
+                    },
+                },
+            });
+
+            setRegistroScannerDds(registroAtualizado);
+            setReciboFinalEmitidoEmDds(registroAtualizado?.dados?.conferenciaAssistida?.reciboFinal?.emitidoEm || emitidoEm);
+
+            return emitidoEm;
+        } catch (error) {
+            setErroReciboFinalDds(error?.message || "Não foi possível registrar a emissão do recibo. A impressão foi liberada mesmo assim.");
+            return emitidoEm;
+        } finally {
+            setSalvandoReciboFinalDds(false);
+        }
+    }
+
+    async function imprimirReciboConferenciaDds() {
         if (!reciboConferenciaFinalDds || !reciboConferenciaFinalRef.current) return;
+
+        await registrarEmissaoReciboFinalDds();
 
         const escaparHtml = (valor = "") => String(valor ?? "")
             .replaceAll("&", "&amp;")
@@ -4773,6 +4862,51 @@ export function DdsPage({
                                                 <p className="text-xs font-black text-slate-900">Leitura inicial do arquivo</p>
                                                 <p className="mt-1 text-xs font-bold text-slate-500">
                                                     Executa leitura local do PDF/imagem para identificar texto, páginas e linhas. Ainda não valida assinatura nem presença.
+                                                        {carregandoLeituraArquivoScannerDds && (
+                                                            <div className="mt-3 rounded-xl border border-cyan-200 bg-cyan-50 px-3 py-2 ring-1 ring-cyan-100">
+                                                                <div className="flex items-center gap-3">
+                                                                    <div className="relative flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-white ring-1 ring-cyan-100">
+                                                                        <div className="absolute h-7 w-7 animate-ping rounded-full bg-cyan-200/60" />
+                                                                        <div className="relative h-5 w-5 animate-spin rounded-full border-4 border-cyan-100 border-t-cyan-600" />
+                                                                    </div>
+
+                                                                    <div className="min-w-0 flex-1">
+                                                                        <p className="text-[10px] font-black uppercase tracking-wide text-cyan-700">
+                                                                            Análise do documento em andamento
+                                                                        </p>
+                                                                        <p className="mt-0.5 text-[11px] font-bold leading-4 text-slate-600">
+                                                                            Identificando texto, páginas, linhas, código DDS e dados para a pré-conferência.
+                                                                        </p>
+                                                                    </div>
+
+                                                                    <div className="hidden min-w-[200px] overflow-hidden rounded-full bg-cyan-100 sm:block">
+                                                                        <style>
+                                                                            {`
+                                                                                @keyframes ddsScannerProgress {
+                                                                                    0% {
+                                                                                        transform: translateX(-105%);
+                                                                                        width: 35%;
+                                                                                    }
+                                                                                    45% {
+                                                                                        width: 70%;
+                                                                                    }
+                                                                                    100% {
+                                                                                        transform: translateX(285%);
+                                                                                        width: 35%;
+                                                                                    }
+                                                                                }
+                                                                            `}
+                                                                        </style>
+                                                                        <div className="relative h-2 overflow-hidden rounded-full bg-cyan-100">
+                                                                            <div
+                                                                                className="absolute left-0 top-0 h-full rounded-full bg-cyan-500 shadow-[0_0_12px_rgba(6,182,212,0.45)]"
+                                                                                style={{ animation: "ddsScannerProgress 1.35s ease-in-out infinite" }}
+                                                                            />
+                                                                        </div>
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                        )}
                                                 </p>
                                             </div>
                                             <button
@@ -4885,7 +5019,10 @@ export function DdsPage({
                                             </div>
                                         )}
 
-                                        {avisosLeituraArquivoScannerDds.length > 0 && (
+
+
+
+            {avisosLeituraArquivoScannerDds.length > 0 && (
     <details className="mt-4 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-[11px] font-bold leading-5 text-amber-800">
         <summary className="cursor-pointer select-none text-[10px] font-black uppercase tracking-wide text-amber-700">
             Detalhes técnicos da leitura
@@ -5457,9 +5594,10 @@ export function DdsPage({
             <button
                 type="button"
                 onClick={imprimirReciboConferenciaDds}
-                className="dds-recibo-no-print rounded-xl border border-slate-200 bg-white px-4 py-2 text-xs font-black text-slate-700 shadow-sm transition hover:border-slate-300 hover:bg-slate-50"
+                disabled={salvandoReciboFinalDds}
+                className="dds-recibo-no-print rounded-xl border border-slate-200 bg-white px-4 py-2 text-xs font-black text-slate-700 shadow-sm transition hover:border-slate-300 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
             >
-                Imprimir recibo
+                {salvandoReciboFinalDds ? "Registrando..." : "Imprimir recibo"}
             </button>
 
             <span className="rounded-xl border border-emerald-300 bg-emerald-50 px-4 py-2 text-xs font-black uppercase tracking-wide text-emerald-800">
@@ -5467,6 +5605,20 @@ export function DdsPage({
             </span>
         </div>
     </div>
+
+    {(reciboFinalEmitidoEmDds || erroReciboFinalDds) && (
+        <div className="dds-recibo-no-print mt-3 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-[11px] font-bold leading-5 text-slate-600">
+            {reciboFinalEmitidoEmDds && (
+                <p>
+                    <span className="font-black uppercase tracking-wide text-emerald-700">Recibo emitido em:</span>{" "}
+                    {new Date(reciboFinalEmitidoEmDds).toLocaleString("pt-BR")}
+                </p>
+            )}
+            {erroReciboFinalDds && (
+                <p className="mt-1 text-amber-700">{erroReciboFinalDds}</p>
+            )}
+        </div>
+    )}
 
     <div className="mt-3 grid items-center gap-2 lg:grid-cols-[1fr_112px]">
         <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
