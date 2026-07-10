@@ -766,6 +766,43 @@ function montarFolhasDdsComLinhasComplementares(
         folhasContinuacaoDds: folhasContinuacao,
     };
 }
+function criarParticipantesAdicionaisConferenciaDds(
+    participantesBase = []
+) {
+    const base = Array.isArray(participantesBase)
+        ? participantesBase
+        : [];
+
+    const maiorNumeroBase = base.reduce(
+        (maior, participante, indice) =>
+            Math.max(
+                maior,
+                Number(participante?.numero || indice + 1) || 0
+            ),
+        0
+    );
+
+    return Array.from(
+        { length: QUANTIDADE_LINHAS_COMPLEMENTARES_DDS },
+        (_, indice) => {
+            const numero = maiorNumeroBase + indice + 1;
+
+            return {
+                idAdicional: "adicional-dds-" + numero,
+                numero,
+                linhaImpressa: numero,
+                nome: "",
+                funcao: "",
+                empresa: "",
+                codigoSafescan: "",
+                origem: "adicional",
+                tipo: "visitante",
+                status: "manual",
+            };
+        }
+    );
+}
+
 function DdsResumoCard({ icone: Icone, titulo, valor, texto, cor = "emerald", onClick = null, destaque = false }) {
     const estilos = {
         emerald: {
@@ -2234,6 +2271,9 @@ export function DdsPage({
     const [carregandoLeituraArquivoScannerDds, setCarregandoLeituraArquivoScannerDds] = useState(false);
     const [erroLeituraArquivoScannerDds, setErroLeituraArquivoScannerDds] = useState("");
     const [conferenciaAssistidaDds, setConferenciaAssistidaDds] = useState({});
+    const [participantesAdicionaisConferenciaDds, setParticipantesAdicionaisConferenciaDds] = useState(() =>
+        criarParticipantesAdicionaisConferenciaDds()
+    );
     const [salvandoConferenciaAssistidaDds, setSalvandoConferenciaAssistidaDds] = useState(false);
     const [erroConferenciaAssistidaDds, setErroConferenciaAssistidaDds] = useState("");
     const [conferenciaAssistidaSalvaEmDds, setConferenciaAssistidaSalvaEmDds] = useState("");
@@ -2310,6 +2350,17 @@ export function DdsPage({
         () => Array.isArray(registroScannerDds?.dados?.participantes) ? registroScannerDds.dados.participantes : [],
         [registroScannerDds]
     );
+
+    useEffect(() => {
+        setParticipantesAdicionaisConferenciaDds(
+            criarParticipantesAdicionaisConferenciaDds(
+                participantesRegistroScannerDds
+            )
+        );
+    }, [
+        registroScannerDds?.codigo,
+        participantesRegistroScannerDds.length,
+    ]);
 
     const diasRegistroScannerDds = useMemo(
         () => Array.isArray(registroScannerDds?.dados?.diasSemana) ? registroScannerDds.dados.diasSemana : [],
@@ -2843,16 +2894,51 @@ export function DdsPage({
             });
     }, [diasRegistroScannerDds]);
 
-    const participantesConferenciaAssistidaDds = useMemo(() => {
+    const participantesCadastradosConferenciaAssistidaDds = useMemo(() => {
         const participantes = Array.isArray(preConferenciaParticipantesScannerDds?.participantes)
             ? preConferenciaParticipantesScannerDds.participantes
             : [];
 
-        return participantes.filter((participante) => (
-            participante?.status !== "pagina_nao_analisada" &&
-            participante?.status !== "pendente"
-        ));
+        return participantes
+            .filter((participante) => (
+                participante?.status !== "pagina_nao_analisada" &&
+                participante?.status !== "pendente"
+            ))
+            .map((participante) => ({
+                ...participante,
+                origem: participante?.origem || "cadastro",
+                tipo: participante?.tipo || "colaborador",
+            }));
     }, [preConferenciaParticipantesScannerDds]);
+
+    const participantesAdicionaisAtivosConferenciaDds = useMemo(
+        () =>
+            participantesAdicionaisConferenciaDds
+                .filter((participante) =>
+                    String(participante?.nome || "").trim()
+                )
+                .map((participante) => ({
+                    ...participante,
+                    nome: String(participante.nome || "").trim(),
+                    funcao: String(participante.funcao || "").trim(),
+                    empresa: String(participante.empresa || "").trim(),
+                    codigoSafescan: "",
+                    origem: "adicional",
+                    tipo: "visitante",
+                })),
+        [participantesAdicionaisConferenciaDds]
+    );
+
+    const participantesConferenciaAssistidaDds = useMemo(
+        () => [
+            ...participantesCadastradosConferenciaAssistidaDds,
+            ...participantesAdicionaisAtivosConferenciaDds,
+        ],
+        [
+            participantesCadastradosConferenciaAssistidaDds,
+            participantesAdicionaisAtivosConferenciaDds,
+        ]
+    );
 
     const obterChaveFrequenciaAssistidaDds = (numero, diaRef) => {
         const chaveDia = typeof diaRef === "object" && diaRef !== null
@@ -2924,6 +3010,84 @@ export function DdsPage({
 
     const conferenciaOficialConcluidaDds = fechamentoConferenciaAssistidaDds?.status === "concluida";
 
+    function limparFrequenciaParticipanteAdicionalDds(numero) {
+        const numeroSeguro = Number(numero || 0);
+
+        if (!numeroSeguro) return;
+
+        setConferenciaAssistidaDds((atual) => {
+            const proximo = { ...atual };
+
+            for (const dia of diasAtivosConferenciaAssistidaDds) {
+                delete proximo[
+                    obterChaveFrequenciaAssistidaDds(
+                        numeroSeguro,
+                        dia
+                    )
+                ];
+            }
+
+            return proximo;
+        });
+    }
+
+    function atualizarParticipanteAdicionalConferenciaDds(
+        indice,
+        campo,
+        valor
+    ) {
+        if (conferenciaOficialConcluidaDds) return;
+
+        const valorSeguro = String(valor ?? "");
+        const participanteAtual =
+            participantesAdicionaisConferenciaDds[indice];
+
+        if (
+            campo === "nome" &&
+            !valorSeguro.trim() &&
+            participanteAtual?.numero
+        ) {
+            limparFrequenciaParticipanteAdicionalDds(
+                participanteAtual.numero
+            );
+        }
+
+        setParticipantesAdicionaisConferenciaDds((atuais) =>
+            atuais.map((participante, indiceAtual) =>
+                indiceAtual === indice
+                    ? {
+                        ...participante,
+                        [campo]: valorSeguro,
+                    }
+                    : participante
+            )
+        );
+    }
+
+    function limparParticipanteAdicionalConferenciaDds(indice) {
+        if (conferenciaOficialConcluidaDds) return;
+
+        const participante =
+            participantesAdicionaisConferenciaDds[indice];
+
+        limparFrequenciaParticipanteAdicionalDds(
+            participante?.numero
+        );
+
+        setParticipantesAdicionaisConferenciaDds((atuais) =>
+            atuais.map((item, indiceAtual) =>
+                indiceAtual === indice
+                    ? {
+                        ...item,
+                        nome: "",
+                        funcao: "",
+                        empresa: "",
+                    }
+                    : item
+            )
+        );
+    }
+
     function definirStatusFrequenciaAssistidaDds(numero, diaRef, status) {
         if (conferenciaOficialConcluidaDds) return;
 
@@ -2967,6 +3131,11 @@ export function DdsPage({
         if (conferenciaOficialConcluidaDds) return;
 
         setConferenciaAssistidaDds({});
+        setParticipantesAdicionaisConferenciaDds(
+            criarParticipantesAdicionaisConferenciaDds(
+                participantesRegistroScannerDds
+            )
+        );
         setFechamentoConferenciaAssistidaDds(null);
         setReciboFinalEmitidoEmDds("");
         setErroFechamentoConferenciaDds("");
@@ -7243,7 +7412,15 @@ export function DdsPage({
                         <tr key={`participante-assistido-${numero}`} className="align-top">
                             <td className="px-3 py-3 font-black text-slate-900">{numero}</td>
                             <td className="px-3 py-3">
-                                <p className="font-black text-slate-900">{participante.nome}</p>
+                                <div className="flex flex-wrap items-center gap-1.5">
+                                    <p className="font-black text-slate-900">{participante.nome}</p>
+
+                                    {participante.origem === "adicional" && (
+                                        <span className="rounded-full bg-cyan-50 px-2 py-0.5 text-[8px] font-black uppercase tracking-wide text-cyan-700 ring-1 ring-cyan-200">
+                                            Adicional
+                                        </span>
+                                    )}
+                                </div>
                                 <p className="mt-0.5 text-[11px] font-bold uppercase text-slate-400">{participante.funcao || "-"}</p>
                             </td>
 
@@ -7311,6 +7488,131 @@ export function DdsPage({
             </tbody>
         </table>
     </div>
+
+    <details className="mt-4 overflow-hidden rounded-xl border border-cyan-200 bg-white shadow-sm">
+        <summary className="flex cursor-pointer list-none flex-col gap-3 px-4 py-3 transition hover:bg-cyan-50/60 sm:flex-row sm:items-center sm:justify-between">
+            <div className="min-w-0">
+                <p className="text-[10px] font-black uppercase tracking-wide text-cyan-700">
+                    Participantes adicionais / visitantes
+                </p>
+                <p className="mt-1 text-xs font-semibold text-slate-500">
+                    Abra somente quando houver visitante ou funcionário não cadastrado.
+                </p>
+            </div>
+
+            <div className="flex shrink-0 items-center gap-2">
+                <span className="rounded-full bg-cyan-50 px-3 py-1 text-[10px] font-black uppercase tracking-wide text-cyan-700 ring-1 ring-cyan-200">
+                    {participantesAdicionaisAtivosConferenciaDds.length}/{QUANTIDADE_LINHAS_COMPLEMENTARES_DDS} preenchidos
+                </span>
+
+                <span className="rounded-lg border border-cyan-200 bg-white px-3 py-1.5 text-[10px] font-black uppercase tracking-wide text-cyan-800">
+                    Abrir / recolher
+                </span>
+            </div>
+        </summary>
+
+        <div className="border-t border-cyan-100 bg-cyan-50/20 p-4">
+            <div className="space-y-2">
+                {participantesAdicionaisConferenciaDds.map(
+                    (participante, indice) => (
+                        <div
+                            key={participante.idAdicional}
+                            className="grid gap-2 rounded-xl bg-slate-50 p-2 ring-1 ring-slate-100 md:grid-cols-[70px_minmax(0,1.3fr)_minmax(0,.9fr)_minmax(0,.9fr)_auto] md:items-end"
+                        >
+                            <div>
+                                <span className="mb-1 block text-[9px] font-black uppercase tracking-wide text-slate-400">
+                                    Linha
+                                </span>
+                                <div className="flex h-9 items-center justify-center rounded-lg bg-white text-xs font-black text-slate-700 ring-1 ring-slate-200">
+                                    {participante.numero}
+                                </div>
+                            </div>
+
+                            <label className="block min-w-0">
+                                <span className="mb-1 block text-[9px] font-black uppercase tracking-wide text-slate-400">
+                                    Nome
+                                </span>
+                                <input
+                                    type="text"
+                                    value={participante.nome}
+                                    onChange={(evento) =>
+                                        atualizarParticipanteAdicionalConferenciaDds(
+                                            indice,
+                                            "nome",
+                                            evento.target.value
+                                        )
+                                    }
+                                    disabled={conferenciaOficialConcluidaDds}
+                                    placeholder="Visitante ou não cadastrado"
+                                    className="h-9 w-full rounded-lg border border-slate-200 bg-white px-3 text-xs font-bold text-slate-800 outline-none focus:border-cyan-300 focus:ring-4 focus:ring-cyan-100 disabled:bg-slate-100"
+                                />
+                            </label>
+
+                            <label className="block min-w-0">
+                                <span className="mb-1 block text-[9px] font-black uppercase tracking-wide text-slate-400">
+                                    Função
+                                </span>
+                                <input
+                                    type="text"
+                                    value={participante.funcao}
+                                    onChange={(evento) =>
+                                        atualizarParticipanteAdicionalConferenciaDds(
+                                            indice,
+                                            "funcao",
+                                            evento.target.value
+                                        )
+                                    }
+                                    disabled={conferenciaOficialConcluidaDds}
+                                    placeholder="Função"
+                                    className="h-9 w-full rounded-lg border border-slate-200 bg-white px-3 text-xs font-bold text-slate-800 outline-none focus:border-cyan-300 focus:ring-4 focus:ring-cyan-100 disabled:bg-slate-100"
+                                />
+                            </label>
+
+                            <label className="block min-w-0">
+                                <span className="mb-1 block text-[9px] font-black uppercase tracking-wide text-slate-400">
+                                    Empresa
+                                </span>
+                                <input
+                                    type="text"
+                                    value={participante.empresa}
+                                    onChange={(evento) =>
+                                        atualizarParticipanteAdicionalConferenciaDds(
+                                            indice,
+                                            "empresa",
+                                            evento.target.value
+                                        )
+                                    }
+                                    disabled={conferenciaOficialConcluidaDds}
+                                    placeholder="Empresa"
+                                    className="h-9 w-full rounded-lg border border-slate-200 bg-white px-3 text-xs font-bold text-slate-800 outline-none focus:border-cyan-300 focus:ring-4 focus:ring-cyan-100 disabled:bg-slate-100"
+                                />
+                            </label>
+
+                            <button
+                                type="button"
+                                onClick={() =>
+                                    limparParticipanteAdicionalConferenciaDds(
+                                        indice
+                                    )
+                                }
+                                disabled={
+                                    conferenciaOficialConcluidaDds ||
+                                    (
+                                        !participante.nome &&
+                                        !participante.funcao &&
+                                        !participante.empresa
+                                    )
+                                }
+                                className="h-9 rounded-lg border border-slate-200 bg-white px-3 text-[10px] font-black uppercase tracking-wide text-slate-500 transition hover:border-red-200 hover:bg-red-50 hover:text-red-700 disabled:cursor-not-allowed disabled:opacity-40"
+                            >
+                                Limpar
+                            </button>
+                        </div>
+                    )
+                )}
+            </div>
+        </div>
+    </details>
 
     <div className="mt-4 overflow-x-auto rounded-xl border border-cyan-100 bg-white">
         <table className="min-w-full divide-y divide-slate-100 text-left text-xs">
