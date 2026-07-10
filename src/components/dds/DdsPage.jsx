@@ -767,7 +767,8 @@ function montarFolhasDdsComLinhasComplementares(
     };
 }
 function criarParticipantesAdicionaisConferenciaDds(
-    participantesBase = []
+    participantesBase = [],
+    participantesSalvos = []
 ) {
     const base = Array.isArray(participantesBase)
         ? participantesBase
@@ -782,18 +783,82 @@ function criarParticipantesAdicionaisConferenciaDds(
         0
     );
 
+    const adicionaisSalvos = (
+        Array.isArray(participantesSalvos)
+            ? participantesSalvos
+            : []
+    ).filter((participante) => {
+        const origem = String(
+            participante?.origem || ""
+        )
+            .trim()
+            .toLowerCase();
+
+        const tipo = String(
+            participante?.tipo || ""
+        )
+            .trim()
+            .toLowerCase();
+
+        return (
+            origem === "adicional" ||
+            tipo === "visitante"
+        );
+    });
+
+    const adicionaisSemLinha = adicionaisSalvos.filter(
+        (participante) =>
+            !Number(
+                participante?.linhaImpressa ||
+                participante?.numero ||
+                0
+            )
+    );
+
     return Array.from(
         { length: QUANTIDADE_LINHAS_COMPLEMENTARES_DDS },
         (_, indice) => {
-            const numero = maiorNumeroBase + indice + 1;
+            const numeroPadrao =
+                maiorNumeroBase + indice + 1;
+
+            const salvoPorLinha = adicionaisSalvos.find(
+                (participante) =>
+                    Number(
+                        participante?.linhaImpressa ||
+                        participante?.numero ||
+                        0
+                    ) === numeroPadrao
+            );
+
+            const salvo =
+                salvoPorLinha ||
+                adicionaisSemLinha[indice] ||
+                {};
+
+            const linhaSalva = Number(
+                salvo?.linhaImpressa ||
+                salvo?.numero ||
+                0
+            );
+
+            const numero =
+                linhaSalva > maiorNumeroBase
+                    ? linhaSalva
+                    : numeroPadrao;
 
             return {
-                idAdicional: "adicional-dds-" + numero,
+                idAdicional:
+                    salvo?.idAdicional ||
+                    "adicional-dds-" + numero,
                 numero,
                 linhaImpressa: numero,
-                nome: "",
-                funcao: "",
-                empresa: "",
+                nome: String(salvo?.nome || ""),
+                funcao: String(salvo?.funcao || ""),
+                empresa: String(
+                    salvo?.empresa ||
+                    salvo?.empresaNome ||
+                    ""
+                ),
                 codigoSafescan: "",
                 origem: "adicional",
                 tipo: "visitante",
@@ -2351,17 +2416,6 @@ export function DdsPage({
         [registroScannerDds]
     );
 
-    useEffect(() => {
-        setParticipantesAdicionaisConferenciaDds(
-            criarParticipantesAdicionaisConferenciaDds(
-                participantesRegistroScannerDds
-            )
-        );
-    }, [
-        registroScannerDds?.codigo,
-        participantesRegistroScannerDds.length,
-    ]);
-
     const diasRegistroScannerDds = useMemo(
         () => Array.isArray(registroScannerDds?.dados?.diasSemana) ? registroScannerDds.dados.diasSemana : [],
         [registroScannerDds]
@@ -3184,9 +3238,18 @@ export function DdsPage({
                 })),
                 participantes: participantesConferenciaAssistidaDds.map((participante) => ({
                     numero: participante.numero,
+                    linhaImpressa: participante.linhaImpressa || participante.numero,
                     nome: participante.nome,
                     funcao: participante.funcao,
-                    codigoSafescan: participante.codigoSafescan,
+                    empresa: participante.empresa || participante.empresaNome || "",
+                    codigoSafescan: participante.codigoSafescan || "",
+                    origem: participante.origem || "cadastro",
+                    tipo: participante.tipo || (
+                        participante.origem === "adicional"
+                            ? "visitante"
+                            : "colaborador"
+                    ),
+                    idAdicional: participante.idAdicional || "",
                 })),
                 fechamento: dadosAtuais?.conferenciaAssistida?.fechamento || fechamentoConferenciaAssistidaDds || null,
                 reciboFinal: dadosAtuais?.conferenciaAssistida?.reciboFinal || null,
@@ -3288,9 +3351,18 @@ export function DdsPage({
                 })),
                 participantes: participantesConferenciaAssistidaDds.map((participante) => ({
                     numero: participante.numero,
+                    linhaImpressa: participante.linhaImpressa || participante.numero,
                     nome: participante.nome,
                     funcao: participante.funcao,
-                    codigoSafescan: participante.codigoSafescan,
+                    empresa: participante.empresa || participante.empresaNome || "",
+                    codigoSafescan: participante.codigoSafescan || "",
+                    origem: participante.origem || "cadastro",
+                    tipo: participante.tipo || (
+                        participante.origem === "adicional"
+                            ? "visitante"
+                            : "colaborador"
+                    ),
+                    idAdicional: participante.idAdicional || "",
                 })),
                 fechamento,
             };
@@ -3367,9 +3439,18 @@ export function DdsPage({
                 })),
                 participantes: participantesConferenciaAssistidaDds.map((participante) => ({
                     numero: participante.numero,
+                    linhaImpressa: participante.linhaImpressa || participante.numero,
                     nome: participante.nome,
                     funcao: participante.funcao,
-                    codigoSafescan: participante.codigoSafescan,
+                    empresa: participante.empresa || participante.empresaNome || "",
+                    codigoSafescan: participante.codigoSafescan || "",
+                    origem: participante.origem || "cadastro",
+                    tipo: participante.tipo || (
+                        participante.origem === "adicional"
+                            ? "visitante"
+                            : "colaborador"
+                    ),
+                    idAdicional: participante.idAdicional || "",
                 })),
             };
 
@@ -3406,13 +3487,38 @@ export function DdsPage({
 
     // Restaurar Conferência Assistida salva no JSON dados.conferenciaAssistida.
     useEffect(() => {
-        const conferenciaSalva = registroScannerDds?.dados?.conferenciaAssistida;
+        const conferenciaSalva =
+            registroScannerDds?.dados?.conferenciaAssistida;
 
-        if (conferenciaSalva?.frequencia && typeof conferenciaSalva.frequencia === "object") {
-            setConferenciaAssistidaDds(conferenciaSalva.frequencia);
-            setConferenciaAssistidaSalvaEmDds(conferenciaSalva.atualizadoEm || "");
-            setFechamentoConferenciaAssistidaDds(conferenciaSalva.fechamento || null);
-            setReciboFinalEmitidoEmDds(conferenciaSalva.reciboFinal?.emitidoEm || "");
+        const participantesSalvos = Array.isArray(
+            conferenciaSalva?.participantes
+        )
+            ? conferenciaSalva.participantes
+            : [];
+
+        setParticipantesAdicionaisConferenciaDds(
+            criarParticipantesAdicionaisConferenciaDds(
+                participantesRegistroScannerDds,
+                participantesSalvos
+            )
+        );
+
+        if (
+            conferenciaSalva?.frequencia &&
+            typeof conferenciaSalva.frequencia === "object"
+        ) {
+            setConferenciaAssistidaDds(
+                conferenciaSalva.frequencia
+            );
+            setConferenciaAssistidaSalvaEmDds(
+                conferenciaSalva.atualizadoEm || ""
+            );
+            setFechamentoConferenciaAssistidaDds(
+                conferenciaSalva.fechamento || null
+            );
+            setReciboFinalEmitidoEmDds(
+                conferenciaSalva.reciboFinal?.emitidoEm || ""
+            );
             setErroConferenciaAssistidaDds("");
             setErroReciboFinalDds("");
             setErroFechamentoConferenciaDds("");
@@ -3426,7 +3532,11 @@ export function DdsPage({
         setErroConferenciaAssistidaDds("");
         setErroFechamentoConferenciaDds("");
         setErroReciboFinalDds("");
-    }, [registroScannerDds?.codigo]);
+    }, [
+        registroScannerDds?.codigo,
+        registroScannerDds?.dados?.conferenciaAssistida?.atualizadoEm,
+        participantesRegistroScannerDds,
+    ]);
     const apuracaoDiariaScannerDds = useMemo(() => {
         const nomesDias = ["Domingo", "Segunda-feira", "Terça-feira", "Quarta-feira", "Quinta-feira", "Sexta-feira", "Sábado"];
         const curtosDias = ["DOM", "SEG", "TER", "QUA", "QUI", "SEX", "SÁB"];
