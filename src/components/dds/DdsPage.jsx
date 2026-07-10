@@ -3986,26 +3986,34 @@ export function DdsPage({
     ]);
 
 
+
+    const registroHistoricoMensalConcluidoDds = (registro) => {
+        const status = String(
+            registro?.dados?.conferenciaAssistida?.fechamento?.status ||
+            registro?.dados?.fechamento?.status ||
+            registro?.statusConferencia ||
+            ""
+        ).trim().toLowerCase();
+
+        return status === "concluida";
+    };
+
     const resumoHistoricoMensalMaoDeObraDds = useMemo(() => {
         const registros = Array.isArray(historicoMensalMaoDeObraDds) ? historicoMensalMaoDeObraDds : [];
+        const registrosConcluidos = registros.filter((registro) => registroHistoricoMensalConcluidoDds(registro));
         const diasApurados = new Set();
         const empresas = new Set();
         const funcoes = new Set();
 
-        let ddsConcluidos = 0;
         let acumuladoPeriodo = 0;
 
-        registros.forEach((registro) => {
+        registrosConcluidos.forEach((registro) => {
             const dados = registro?.dados || {};
             const conferencia = dados?.conferenciaAssistida || {};
             const fechamento = conferencia?.fechamento || {};
             const estatisticas = fechamento?.estatisticas || conferencia?.estatisticas || {};
             const participantes = Array.isArray(conferencia?.participantes) ? conferencia.participantes : [];
             const diasAtivos = Array.isArray(conferencia?.diasAtivos) ? conferencia.diasAtivos : [];
-
-            if (fechamento?.status === "concluida") {
-                ddsConcluidos += 1;
-            }
 
             const presencasRegistro = Number(
                 estatisticas?.presencas ??
@@ -4034,16 +4042,19 @@ export function DdsPage({
 
         const quantidadeDias = diasApurados.size;
         const efetivoMedio = quantidadeDias > 0 ? acumuladoPeriodo / quantidadeDias : 0;
+        const ddsConcluidos = registrosConcluidos.length;
+        const ddsPendentes = Math.max(registros.length - ddsConcluidos, 0);
 
         return {
             ddsEncontrados: registros.length,
             ddsConcluidos,
-            ddsPendentes: Math.max(registros.length - ddsConcluidos, 0),
+            ddsPendentes,
             diasApurados: quantidadeDias,
             acumuladoPeriodo,
             efetivoMedio,
             empresas: empresas.size,
             funcoes: funcoes.size,
+            possuiPendencias: ddsPendentes > 0,
         };
     }, [historicoMensalMaoDeObraDds]);
 
@@ -4621,7 +4632,8 @@ export function DdsPage({
 
 
     function montarDadosHistoricoMensalMaoDeObraDds() {
-        const registros = Array.isArray(historicoMensalMaoDeObraDds) ? historicoMensalMaoDeObraDds : [];
+        const registrosEncontrados = Array.isArray(historicoMensalMaoDeObraDds) ? historicoMensalMaoDeObraDds : [];
+        const registros = registrosEncontrados.filter((registro) => registroHistoricoMensalConcluidoDds(registro));
         const periodo = obterPeriodoHistoricoMensalMaoDeObraDds();
 
         if (!registros.length || !periodo) {
@@ -4749,8 +4761,9 @@ export function DdsPage({
             mediaMes,
             empresas,
             totaisPorEmpresa,
-            registrosOrigem: registros.length,
-            registrosConcluidos: resumoHistoricoMensalMaoDeObraDds.ddsConcluidos,
+            registrosOrigem: registrosEncontrados.length,
+            registrosConcluidos: registros.length,
+            registrosPendentes: Math.max(registrosEncontrados.length - registros.length, 0),
             expediente: {
                 jornada: "07:00 às 17:00",
                 almoco: "12:00 às 13:00",
@@ -4763,7 +4776,7 @@ export function DdsPage({
         const dadosControle = montarDadosHistoricoMensalMaoDeObraDds();
 
         if (!dadosControle) {
-            alert("Busque um histórico mensal com DDS e presenças oficiais antes de exportar.");
+            alert("Busque um histórico mensal com DDS concluídos e presenças oficiais antes de exportar. DDS em aberto não entram na consolidação oficial.");
             return;
         }
 
@@ -4935,7 +4948,7 @@ export function DdsPage({
         const dadosControle = montarDadosHistoricoMensalMaoDeObraDds();
 
         if (!dadosControle) {
-            alert("Busque um histórico mensal com DDS e presenças oficiais antes de imprimir.");
+            alert("Busque um histórico mensal com DDS concluídos e presenças oficiais antes de imprimir. DDS em aberto não entram na consolidação oficial.");
             return;
         }
 
@@ -7592,7 +7605,7 @@ export function DdsPage({
         </div>
     )}
 
-    <div className="mt-3 grid gap-2.5 md:grid-cols-3 xl:grid-cols-6">
+    <div className="mt-3 grid gap-2.5 md:grid-cols-3 xl:grid-cols-7">
         <div className="flex min-h-[58px] flex-col items-center justify-center rounded-2xl border border-slate-100 bg-white p-3 text-center">
             <p className="text-[10px] font-black uppercase tracking-wide text-slate-400">DDS encontrados</p>
             <p className="mt-1 text-base font-black text-slate-950">{resumoHistoricoMensalMaoDeObraDds.ddsEncontrados}</p>
@@ -7613,11 +7626,21 @@ export function DdsPage({
             <p className="text-[10px] font-black uppercase tracking-wide text-violet-700">Efetivo médio</p>
             <p className="mt-1 text-base font-black text-violet-900">{formatarNumeroMaoDeObraDds(resumoHistoricoMensalMaoDeObraDds.efetivoMedio)}</p>
         </div>
+        <div className="flex min-h-[58px] flex-col items-center justify-center rounded-2xl border border-amber-100 bg-amber-50 p-3 text-center">
+            <p className="text-[10px] font-black uppercase tracking-wide text-amber-700">Em aberto</p>
+            <p className="mt-1 text-base font-black text-amber-900">{resumoHistoricoMensalMaoDeObraDds.ddsPendentes}</p>
+        </div>
         <div className="flex min-h-[58px] flex-col items-center justify-center rounded-2xl border border-slate-100 bg-white p-3 text-center">
             <p className="text-[10px] font-black uppercase tracking-wide text-slate-400">Funções</p>
             <p className="mt-1 text-base font-black text-slate-950">{resumoHistoricoMensalMaoDeObraDds.funcoes}</p>
         </div>
     </div>
+
+    {resumoHistoricoMensalMaoDeObraDds.possuiPendencias && (
+        <div className="mt-3 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-2 text-xs font-bold text-amber-800">
+            Existem DDS em aberto fora da consolidação oficial. O PDF/Excel mensal considera somente DDS concluídos.
+        </div>
+    )}
 
     {historicoMensalMaoDeObraDds.length > 0 && (
         <div className="mt-3 overflow-hidden rounded-2xl border border-slate-100">
@@ -7628,7 +7651,7 @@ export function DdsPage({
             </div>
             {historicoMensalMaoDeObraDds.slice(0, 8).map((registro) => {
                 const conferencia = registro?.dados?.conferenciaAssistida || {};
-                const status = conferencia?.fechamento?.status === "concluida" ? "Concluído" : "Em aberto";
+                const status = registroHistoricoMensalConcluidoDds(registro) ? "Concluído" : "Em aberto";
 
                 return (
                     <div key={registro.id || registro.codigo} className="grid grid-cols-[1fr_auto_auto] gap-3 border-t border-slate-100 px-3 py-2.5 text-xs font-bold text-slate-600">

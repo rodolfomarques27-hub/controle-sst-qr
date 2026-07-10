@@ -370,3 +370,14 @@ Ajuste complementar da Microetapa 3C:
 - Mês/Ano, Buscar DDS do mês, Imprimir PDF mensal e Exportar Excel mensal ficam em uma única linha no desktop.
 - Botões receberam largura mínima e whitespace-nowrap para evitar quebra de texto.
 - Cards de indicadores do histórico mensal foram centralizados vertical e horizontalmente.
+
+## Fechamento mensal oficial DDS
+
+Microetapa 3D aplicada:
+
+- Criado helper registroHistoricoMensalConcluidoDds.
+- O histórico mensal continua exibindo todos os DDS encontrados.
+- DDS em aberto aparecem na lista e no contador "Em aberto".
+- Os indicadores de dias, acumulado, efetivo médio e funções usam somente DDS concluídos.
+- PDF/Excel mensal consolidado passam a considerar somente DDS concluídos.
+- Quando houver DDS em aberto, o card mostra aviso discreto informando que eles ficam fora da consolidação oficial.
