@@ -77,6 +77,7 @@ import { QrCodeComLogo, QrCodeLogoControls } from "../qr/QrCodeComLogo";
 import {
     adicionarObra,
     atualizarObra,
+    excluirObra,
     atualizarVinculoEmpresaObra,
     excluirVinculoEmpresaObra,
     listarObras,
@@ -564,6 +565,7 @@ export function ConfiguracoesSistema({
     const [formularioObraAbertoConfiguracoes, setFormularioObraAbertoConfiguracoes] = useState(false);
     const [editandoObraConfiguracoesId, setEditandoObraConfiguracoesId] = useState("");
     const [salvandoObraConfiguracoes, setSalvandoObraConfiguracoes] = useState(false);
+    const [excluindoObraConfiguracoesId, setExcluindoObraConfiguracoesId] = useState("");
     const [empresaVinculoObraConfiguracoesId, setEmpresaVinculoObraConfiguracoesId] = useState("");
     const [obraVinculoConfiguracoesId, setObraVinculoConfiguracoesId] = useState("");
     const [statusVinculoObraConfiguracoes, setStatusVinculoObraConfiguracoes] = useState("Ativa");
@@ -910,6 +912,20 @@ export function ConfiguracoesSistema({
     const renderizarCabecalhoComControleBlocoConfiguracao = (cabecalho, chave) => {
         const controle = botaoRecolherBlocoConfiguracao(chave, "shrink-0");
 
+        const alternarPeloCabecalho = (evento) => {
+            if (cliqueVeioDeControleInterativoConfiguracao(evento)) return;
+            alternarRecolhidoBlocoConfiguracao(chave);
+        };
+
+        const alternarPeloTecladoCabecalho = (evento) => {
+            if (evento.target !== evento.currentTarget) return;
+
+            if (evento.key === "Enter" || evento.key === " ") {
+                evento.preventDefault();
+                alternarRecolhidoBlocoConfiguracao(chave);
+            }
+        };
+
         if (!React.isValidElement(cabecalho)) {
             return (
                 <div className="flex items-center justify-end gap-2">
@@ -926,7 +942,14 @@ export function ConfiguracoesSistema({
 
         if (ultimoFilhoPareceAcoes) {
             return React.cloneElement(cabecalho, {
-                className: classNames(cabecalho.props.className || "", "items-start"),
+                role: "button",
+                tabIndex: 0,
+                onClick: alternarPeloCabecalho,
+                onKeyDown: alternarPeloTecladoCabecalho,
+                className: classNames(
+                    cabecalho.props.className || "",
+                    "rounded-xl items-start"
+                ),
                 children: (
                     <>
                         {filhosCabecalho.slice(0, indiceAcoes)}
@@ -945,7 +968,14 @@ export function ConfiguracoesSistema({
         }
 
         return React.cloneElement(cabecalho, {
-            className: classNames(cabecalho.props.className || "", "md:flex-row md:items-start md:justify-between"),
+            role: "button",
+            tabIndex: 0,
+            onClick: alternarPeloCabecalho,
+            onKeyDown: alternarPeloTecladoCabecalho,
+            className: classNames(
+                cabecalho.props.className || "",
+                "rounded-xl md:flex-row md:items-start md:justify-between"
+            ),
             children: (
                 <>
                     {cabecalho.props.children}
@@ -986,26 +1016,26 @@ export function ConfiguracoesSistema({
 
         if (blocoConfiguracaoRecolhido(chave)) {
             return (
-                <div
-                    className="h-full"
-                    role="button"
-                    tabIndex={0}
-                    aria-label={`Abrir ${titulo}`}
-                    onClickCapture={(evento) => {
-                        if (cliqueVeioDeControleInterativoConfiguracao(evento)) return;
-                        alternarRecolhidoBlocoConfiguracao(chave);
-                    }}
-                    onKeyDown={(evento) => {
-                        if (evento.target !== evento.currentTarget) return;
-
-                        if (evento.key === "Enter" || evento.key === " ") {
-                            evento.preventDefault();
+                <div className="h-full">
+                    <Card className="h-full py-3">
+                    <div
+                        role="button"
+                        tabIndex={0}
+                        aria-label={`Abrir ${titulo}`}
+                        onClick={(evento) => {
+                            if (cliqueVeioDeControleInterativoConfiguracao(evento)) return;
                             alternarRecolhidoBlocoConfiguracao(chave);
-                        }
-                    }}
-                >
-                    <Card className="h-full py-3 transition hover:-translate-y-0.5 hover:shadow-md">
-                    <div className="flex min-w-0 items-center justify-between gap-3">
+                        }}
+                        onKeyDown={(evento) => {
+                            if (evento.target !== evento.currentTarget) return;
+
+                            if (evento.key === "Enter" || evento.key === " ") {
+                                evento.preventDefault();
+                                alternarRecolhidoBlocoConfiguracao(chave);
+                            }
+                        }}
+                        className="flex min-w-0 items-center justify-between gap-3 rounded-xl"
+                    >
                         <div className="min-w-0">
                             <p className="text-[10px] font-black uppercase tracking-wide text-slate-400">Card recolhido</p>
                             <h2 className="mt-0.5 truncate text-sm font-black leading-tight text-slate-950">{titulo}</h2>
@@ -1022,14 +1052,7 @@ export function ConfiguracoesSistema({
 
         if (React.isValidElement(conteudo)) {
             return (
-                <div
-                    className="h-full"
-                    aria-label={`Recolher ${titulo}`}
-                    onClick={(evento) => {
-                        if (cliqueVeioDeControleInterativoConfiguracao(evento)) return;
-                        alternarRecolhidoBlocoConfiguracao(chave);
-                    }}
-                >
+                <div className="h-full">
                     {React.cloneElement(conteudo, {
                         className: classNames(conteudo.props.className || "", "h-full"),
                         children: renderizarConteudoAbertoComControleConfiguracao(conteudo, chave),
@@ -1039,14 +1062,7 @@ export function ConfiguracoesSistema({
         }
 
         return (
-            <div
-                className="h-full"
-                aria-label={`Recolher ${titulo}`}
-                onClick={(evento) => {
-                    if (cliqueVeioDeControleInterativoConfiguracao(evento)) return;
-                    alternarRecolhidoBlocoConfiguracao(chave);
-                }}
-            >
+            <div className="h-full">
                 <Card className="h-full">
                     <div className="flex flex-col gap-3 border-b border-slate-100 pb-4 md:flex-row md:items-start md:justify-between">
                         <div>
@@ -1584,6 +1600,89 @@ export function ConfiguracoesSistema({
             setMensagemObrasConfiguracoes(`Nao foi possivel salvar a obra. Supabase: ${erro?.message || "erro nao identificado"}`);
         } finally {
             setSalvandoObraConfiguracoes(false);
+        }
+    };
+
+    const excluirObraConfiguracoes = async (obra = {}) => {
+        const obraId = String(obra?.id || "").trim();
+
+        if (!obraId) {
+            setMensagemObrasConfiguracoes(
+                "Não foi possível identificar a obra para exclusão."
+            );
+            return;
+        }
+
+        const vinculosDaObra = vinculosObrasConfiguracoes.filter((vinculo) =>
+            String(vinculo?.obraId || vinculo?.obra?.id || "") === obraId
+        );
+
+        if (vinculosDaObra.length > 0) {
+            setMensagemObrasConfiguracoes(
+                "Exclusão bloqueada: remova primeiro os vínculos empresa/obra desta obra."
+            );
+            return;
+        }
+
+        setExcluindoObraConfiguracoesId(obraId);
+        setMensagemObrasConfiguracoes(
+            "Verificando registros históricos da obra..."
+        );
+
+        try {
+            const { count, error } = await supabase
+                .from("dds_registros")
+                .select("id", { count: "exact", head: true })
+                .eq("obra_id", obraId);
+
+            if (error) throw error;
+
+            if (Number(count || 0) > 0) {
+                setMensagemObrasConfiguracoes(
+                    "Exclusão bloqueada: esta obra possui DDS histórico. Altere o status para Inativa para preservar os registros."
+                );
+                return;
+            }
+
+            const confirmar = window.confirm(
+                `Excluir definitivamente a obra "${obra?.nome || "obra sem nome"}"? Esta ação não poderá ser desfeita.`
+            );
+
+            if (!confirmar) {
+                setMensagemObrasConfiguracoes(
+                    "Exclusão da obra cancelada."
+                );
+                return;
+            }
+
+            await excluirObra(obraId);
+
+            if (editandoObraConfiguracoesId === obraId) {
+                setEditandoObraConfiguracoesId("");
+                setFormObraConfiguracoes(
+                    criarFormularioObraConfiguracoes(
+                        FORMULARIO_OBRA_CONFIGURACOES_INICIAL
+                    )
+                );
+                setFormularioObraAbertoConfiguracoes(false);
+            }
+
+            await carregarObrasConfiguracoes();
+
+            setMensagemObrasConfiguracoes(
+                "Obra excluída com sucesso."
+            );
+        } catch (erro) {
+            console.error(
+                "Erro ao excluir obra nas Configurações:",
+                erro
+            );
+
+            setMensagemObrasConfiguracoes(
+                `Não foi possível excluir a obra. Supabase: ${erro?.message || "erro não identificado"}`
+            );
+        } finally {
+            setExcluindoObraConfiguracoesId("");
         }
     };
 
@@ -2559,190 +2658,340 @@ export function ConfiguracoesSistema({
                             </form>
                         )}
 
-                        <div className="mt-4 grid gap-4 xl:grid-cols-[minmax(0,1.1fr)_minmax(320px,0.9fr)]">
-                            <div className="rounded-2xl bg-slate-50 px-4 py-4 ring-1 ring-slate-100">
-                                <div className="flex items-center justify-between gap-3">
-                                    <h3 className="text-sm font-black text-slate-900">Obras cadastradas</h3>
+                        <div className="mt-4 space-y-4">
+                            <section className="rounded-2xl bg-slate-50 p-4 ring-1 ring-slate-100">
+                                <div className="flex flex-wrap items-center justify-between gap-3">
+                                    <div>
+                                        <h3 className="text-sm font-black text-slate-900">
+                                            Obras cadastradas
+                                        </h3>
+                                        <p className="mt-1 text-xs font-semibold text-slate-500">
+                                            Consulte os responsáveis e gerencie cada obra individualmente.
+                                        </p>
+                                    </div>
+
                                     <span className="rounded-full bg-white px-3 py-1 text-[11px] font-black uppercase tracking-wide text-slate-500 ring-1 ring-slate-200">
                                         {obrasConfiguracoes.length} registro(s)
                                     </span>
                                 </div>
 
-                                <div className="mt-3 space-y-2">
+                                <div className="mt-3 grid gap-3 lg:grid-cols-2">
                                     {obrasConfiguracoes.length === 0 ? (
-                                        <p className="rounded-2xl bg-white px-4 py-3 text-sm font-semibold text-slate-500 ring-1 ring-slate-100">
+                                        <p className="rounded-2xl bg-white px-4 py-3 text-sm font-semibold text-slate-500 ring-1 ring-slate-100 lg:col-span-2">
                                             Nenhuma obra carregada.
                                         </p>
                                     ) : (
                                         obrasConfiguracoes.slice(0, 12).map((obra) => (
-                                            <div key={obra.id} className="rounded-2xl bg-white px-4 py-3 ring-1 ring-slate-100">
-                                                <div className="flex flex-col gap-2 md:flex-row md:items-start md:justify-between">
-                                                    <div>
-                                                        <p className="text-sm font-black text-slate-950">{obra.nome || "Obra sem nome"}</p>
-                                                        <p className="mt-1 text-xs font-semibold text-slate-500">
-                                                            {[obra.cidade, obra.uf].filter(Boolean).join(" / ") || "Local nao informado"}
+                                            <article
+                                                key={obra.id}
+                                                className="rounded-2xl bg-white p-3 ring-1 ring-slate-100"
+                                            >
+                                                <div className="flex items-start justify-between gap-3">
+                                                    <div className="min-w-0">
+                                                        <p className="truncate text-sm font-black text-slate-950">
+                                                            {obra.nome || "Obra sem nome"}
+                                                        </p>
+
+                                                        <p className="mt-1 truncate text-xs font-semibold text-slate-500">
+                                                            {[obra.cidade, obra.uf]
+                                                                .filter(Boolean)
+                                                                .join(" / ") || "Local não informado"}
                                                         </p>
                                                     </div>
-                                                    <div className="flex shrink-0 items-center gap-2">
-                                                        <span className={classNames(
-                                                            "rounded-full px-3 py-1 text-[11px] font-black uppercase tracking-wide ring-1",
+                                                </div>
+
+                                                <div className="mt-3 grid grid-cols-2 gap-2">
+                                                    <div className="min-w-0 rounded-xl bg-slate-50 px-3 py-2">
+                                                        <p className="text-[9px] font-black uppercase tracking-wide text-slate-400">
+                                                            Fiscal Idealiza
+                                                        </p>
+                                                        <p className="mt-1 truncate text-xs font-semibold text-slate-700">
+                                                            {obra.fiscalIdealiza || "Não informado"}
+                                                        </p>
+                                                    </div>
+
+                                                    <div className="min-w-0 rounded-xl bg-slate-50 px-3 py-2">
+                                                        <p className="text-[9px] font-black uppercase tracking-wide text-slate-400">
+                                                            Líder / Encarregado
+                                                        </p>
+                                                        <p className="mt-1 truncate text-xs font-semibold text-slate-700">
+                                                            {obra.liderEncarregado || "Não informado"}
+                                                        </p>
+                                                    </div>
+                                                </div>
+
+                                                <div className="mt-3 flex items-center justify-end gap-2 border-t border-slate-100 pt-3">
+                                                    <span
+                                                        className={classNames(
+                                                            "shrink-0 rounded-full px-3 py-1 text-[11px] font-black uppercase tracking-wide ring-1",
                                                             obra.status === "Inativa"
                                                                 ? "bg-slate-100 text-slate-500 ring-slate-200"
                                                                 : "bg-emerald-50 text-emerald-700 ring-emerald-200"
-                                                        )}>
-                                                            {obra.status}
-                                                        </span>
+                                                        )}
+                                                    >
+                                                        {obra.status}
+                                                    </span>
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => editarObraConfiguracoes(obra)}
+                                                        disabled={Boolean(excluindoObraConfiguracoesId)}
+                                                        className="rounded-full bg-slate-950 px-3 py-1 text-[11px] font-black uppercase tracking-wide text-white hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50"
+                                                    >
+                                                        Editar
+                                                    </button>
 
-                                                        <button
-                                                            type="button"
-                                                            onClick={() => editarObraConfiguracoes(obra)}
-                                                            className="rounded-full bg-slate-950 px-3 py-1 text-[11px] font-black uppercase tracking-wide text-white hover:bg-slate-800"
-                                                        >
-                                                            Editar
-                                                        </button>
-                                                    </div>
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => excluirObraConfiguracoes(obra)}
+                                                        disabled={Boolean(excluindoObraConfiguracoesId)}
+                                                        className="rounded-full bg-red-50 px-3 py-1 text-[11px] font-black uppercase tracking-wide text-red-700 ring-1 ring-red-200 hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-50"
+                                                    >
+                                                        {excluindoObraConfiguracoesId === obra.id
+                                                            ? "Excluindo..."
+                                                            : "Excluir"}
+                                                    </button>
                                                 </div>
-
-                                                <div className="mt-3 grid gap-2 text-xs font-semibold text-slate-600 md:grid-cols-2">
-                                                    <p>Fiscal: {obra.fiscalIdealiza || "nao informado"}</p>
-                                                    <p>Lider: {obra.liderEncarregado || "nao informado"}</p>
-                                                </div>
-                                            </div>
+                                            </article>
                                         ))
                                     )}
                                 </div>
 
                                 {obrasConfiguracoes.length > 12 && (
                                     <p className="mt-3 text-xs font-semibold text-slate-500">
-                                        Mostrando as 12 primeiras obras. O cadastro completo entra na proxima microetapa.
+                                        Mostrando as 12 primeiras obras cadastradas.
                                     </p>
                                 )}
-                            </div>
+                            </section>
 
-                            <div className="rounded-2xl bg-slate-50 px-4 py-4 ring-1 ring-slate-100">
-                                <div className="flex items-center justify-between gap-3">
-                                    <h3 className="text-sm font-black text-slate-900">Vinculos empresa/obra</h3>
+                            <section className="rounded-2xl bg-slate-50 p-4 ring-1 ring-slate-100">
+                                <div className="flex flex-wrap items-center justify-between gap-3">
+                                    <div>
+                                        <h3 className="text-sm font-black text-slate-900">
+                                            Vínculos empresa/obra
+                                        </h3>
+                                        <p className="mt-1 text-xs font-semibold text-slate-500">
+                                            Defina quais empresas participam de cada obra.
+                                        </p>
+                                    </div>
+
                                     <span className="rounded-full bg-white px-3 py-1 text-[11px] font-black uppercase tracking-wide text-slate-500 ring-1 ring-slate-200">
-                                        {vinculosObrasConfiguracoes.length} vinculo(s)
+                                        {vinculosObrasConfiguracoes.length} vínculo(s)
                                     </span>
                                 </div>
 
-                                <form onSubmit={salvarVinculoObraConfiguracoes} className="mt-3 rounded-2xl bg-white p-3 ring-1 ring-slate-100">
-                                    <h4 className="text-xs font-black uppercase tracking-wide text-slate-500">Criar vinculo empresa/obra</h4>
+                                <div className="mt-3 grid gap-4 xl:grid-cols-[minmax(0,1.15fr)_minmax(360px,.85fr)] xl:items-start">
+                                    <form
+                                        onSubmit={salvarVinculoObraConfiguracoes}
+                                        className="rounded-2xl bg-white p-4 ring-1 ring-slate-100"
+                                    >
+                                        <div>
+                                            <p className="text-xs font-black uppercase tracking-wide text-slate-700">
+                                                Novo vínculo
+                                            </p>
+                                            <p className="mt-1 text-xs font-semibold text-slate-500">
+                                                Selecione a empresa, a obra e o status inicial.
+                                            </p>
+                                        </div>
 
-                                    <div className="mt-3 grid gap-2">
-                                        <label className="block">
-                                            <span className="mb-1 block text-[11px] font-black uppercase tracking-wide text-slate-400">Empresa</span>
-                                            <select
-                                                value={empresaVinculoObraConfiguracoesId}
-                                                onChange={(evento) => setEmpresaVinculoObraConfiguracoesId(evento.target.value)}
-                                                className="w-full rounded-2xl border border-slate-200 bg-white px-3 py-2 text-xs font-bold text-slate-800 outline-none focus:border-slate-400 focus:ring-4 focus:ring-slate-100"
-                                            >
-                                                {empresasVinculoObrasConfiguracoes.length === 0 ? (
-                                                    <option value="">Nenhuma empresa carregada</option>
-                                                ) : (
-                                                    empresasVinculoObrasConfiguracoes.map((empresa) => (
-                                                        <option key={obterIdEmpresaObrasConfiguracoes(empresa)} value={obterIdEmpresaObrasConfiguracoes(empresa)}>
-                                                            {obterNomeEmpresaObrasConfiguracoes(empresa)}
+                                        <div className="mt-3 grid gap-3 lg:grid-cols-2">
+                                            <label className="block lg:col-span-2">
+                                                <span className="mb-1 block text-[10px] font-black uppercase tracking-wide text-slate-400">
+                                                    Empresa
+                                                </span>
+
+                                                <select
+                                                    value={empresaVinculoObraConfiguracoesId}
+                                                    onChange={(evento) =>
+                                                        setEmpresaVinculoObraConfiguracoesId(
+                                                            evento.target.value
+                                                        )
+                                                    }
+                                                    className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-bold text-slate-800 outline-none focus:border-slate-400 focus:ring-4 focus:ring-slate-100"
+                                                >
+                                                    {empresasVinculoObrasConfiguracoes.length === 0 ? (
+                                                        <option value="">
+                                                            Nenhuma empresa carregada
                                                         </option>
-                                                    ))
-                                                )}
-                                            </select>
-                                        </label>
+                                                    ) : (
+                                                        empresasVinculoObrasConfiguracoes.map((empresa) => (
+                                                            <option
+                                                                key={obterIdEmpresaObrasConfiguracoes(empresa)}
+                                                                value={obterIdEmpresaObrasConfiguracoes(empresa)}
+                                                            >
+                                                                {obterNomeEmpresaObrasConfiguracoes(empresa)}
+                                                            </option>
+                                                        ))
+                                                    )}</select>
+                                            </label>
 
-                                        <label className="block">
-                                            <span className="mb-1 block text-[11px] font-black uppercase tracking-wide text-slate-400">Obra</span>
-                                            <select
-                                                value={obraVinculoConfiguracoesId}
-                                                onChange={(evento) => setObraVinculoConfiguracoesId(evento.target.value)}
-                                                className="w-full rounded-2xl border border-slate-200 bg-white px-3 py-2 text-xs font-bold text-slate-800 outline-none focus:border-slate-400 focus:ring-4 focus:ring-slate-100"
-                                            >
-                                                {obrasConfiguracoes.length === 0 ? (
-                                                    <option value="">Nenhuma obra cadastrada</option>
-                                                ) : (
-                                                    obrasConfiguracoes.map((obra) => (
-                                                        <option key={obra.id} value={obra.id}>
-                                                            {obra.nome} - {obra.status}
+                                            <label className="block">
+                                                <span className="mb-1 block text-[10px] font-black uppercase tracking-wide text-slate-400">
+                                                    Obra
+                                                </span>
+
+                                                <select
+                                                    value={obraVinculoConfiguracoesId}
+                                                    onChange={(evento) =>
+                                                        setObraVinculoConfiguracoesId(
+                                                            evento.target.value
+                                                        )
+                                                    }
+                                                    className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-bold text-slate-800 outline-none focus:border-slate-400 focus:ring-4 focus:ring-slate-100"
+                                                >
+                                                    {obrasConfiguracoes.length === 0 ? (
+                                                        <option value="">
+                                                            Nenhuma obra cadastrada
                                                         </option>
-                                                    ))
-                                                )}
-                                            </select>
-                                        </label>
+                                                    ) : (
+                                                        obrasConfiguracoes.map((obra) => (
+                                                            <option
+                                                                key={obra.id}
+                                                                value={obra.id}
+                                                            >
+                                                                {obra.nome} - {obra.status}
+                                                            </option>
+                                                        ))
+                                                    )}
+                                                </select>
+                                            </label>
 
-                                        <label className="block">
-                                            <span className="mb-1 block text-[11px] font-black uppercase tracking-wide text-slate-400">Status do vinculo</span>
-                                            <select
-                                                value={statusVinculoObraConfiguracoes}
-                                                onChange={(evento) => setStatusVinculoObraConfiguracoes(evento.target.value)}
-                                                className="w-full rounded-2xl border border-slate-200 bg-white px-3 py-2 text-xs font-bold text-slate-800 outline-none focus:border-slate-400 focus:ring-4 focus:ring-slate-100"
+                                            <label className="block">
+                                                <span className="mb-1 block text-[10px] font-black uppercase tracking-wide text-slate-400">
+                                                    Status inicial
+                                                </span>
+
+                                                <select
+                                                    value={statusVinculoObraConfiguracoes}
+                                                    onChange={(evento) =>
+                                                        setStatusVinculoObraConfiguracoes(
+                                                            evento.target.value
+                                                        )
+                                                    }
+                                                    className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-bold text-slate-800 outline-none focus:border-slate-400 focus:ring-4 focus:ring-slate-100"
+                                                >
+                                                    <option value="Ativa">Ativa</option>
+                                                    <option value="Inativa">Inativa</option>
+                                                </select>
+                                            </label>
+
+                                            <button
+                                                type="submit"
+                                                disabled={
+                                                    salvandoVinculoObraConfiguracoes ||
+                                                    !empresaVinculoObraConfiguracoesId ||
+                                                    !obraVinculoConfiguracoesId
+                                                }
+                                                className="rounded-xl bg-slate-950 px-3 py-2 text-xs font-black text-white hover:bg-slate-800 disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-500 lg:col-span-2"
                                             >
-                                                <option value="Ativa">Ativa</option>
-                                                <option value="Inativa">Inativa</option>
-                                            </select>
-                                        </label>
+                                                {salvandoVinculoObraConfiguracoes
+                                                    ? "Salvando vínculo..."
+                                                    : "Salvar vínculo"}
+                                            </button>
+                                        </div>
+                                    </form>
 
-                                        <button
-                                            type="submit"
-                                            disabled={salvandoVinculoObraConfiguracoes || !empresaVinculoObraConfiguracoesId || !obraVinculoConfiguracoesId}
-                                            className="rounded-2xl bg-slate-950 px-3 py-2 text-xs font-black text-white hover:bg-slate-800 disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-500"
-                                        >
-                                            {salvandoVinculoObraConfiguracoes ? "Salvando vinculo..." : "Salvar vinculo"}
-                                        </button>
-                                    </div>
-                                </form>
-
-                                <div className="mt-3 space-y-2">
-                                    {vinculosObrasConfiguracoes.length === 0 ? (
-                                        <p className="rounded-2xl bg-white px-4 py-3 text-sm font-semibold text-slate-500 ring-1 ring-slate-100">
-                                            Nenhum vinculo carregado.
-                                        </p>
-                                    ) : (
-                                        vinculosObrasConfiguracoes.slice(0, 10).map((vinculo) => (
-                                            <div key={vinculo.id} className="rounded-2xl bg-white px-4 py-3 ring-1 ring-slate-100">
-                                                <p className="text-sm font-black text-slate-950">
-                                                    {vinculo.empresa?.nome || "Empresa nao informada"}
+                                    <div className="rounded-2xl bg-white p-4 ring-1 ring-slate-100">
+                                        <div className="flex items-center justify-between gap-3">
+                                            <div>
+                                                <p className="text-xs font-black uppercase tracking-wide text-slate-700">
+                                                    Vínculos atuais
                                                 </p>
                                                 <p className="mt-1 text-xs font-semibold text-slate-500">
-                                                    {vinculo.obra?.nome || "Obra nao informada"}
+                                                    Empresas já associadas às obras.
                                                 </p>
-                                                <div className="mt-3 flex flex-wrap items-center gap-2">
-                                                    <span className={classNames(
-                                                        "rounded-full px-3 py-1 text-[11px] font-black uppercase tracking-wide ring-1",
-                                                        vinculo.status === "Inativa"
-                                                            ? "bg-slate-100 text-slate-500 ring-slate-200"
-                                                            : "bg-emerald-50 text-emerald-700 ring-emerald-200"
-                                                    )}>
-                                                        {vinculo.status}
-                                                    </span>
-
-                                                    <button
-                                                        type="button"
-                                                        onClick={() => alternarStatusVinculoObraConfiguracoes(vinculo)}
-                                                        disabled={salvandoVinculoObraConfiguracoes}
-                                                        className="rounded-full bg-white px-3 py-1 text-[11px] font-black uppercase tracking-wide text-slate-700 ring-1 ring-slate-200 hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-60"
-                                                    >
-                                                        {vinculo.status === "Inativa" ? "Ativar" : "Inativar"}
-                                                    </button>
-
-                                                    <button
-                                                        type="button"
-                                                        onClick={() => removerVinculoObraConfiguracoes(vinculo)}
-                                                        disabled={salvandoVinculoObraConfiguracoes}
-                                                        className="rounded-full bg-red-50 px-3 py-1 text-[11px] font-black uppercase tracking-wide text-red-700 ring-1 ring-red-200 hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-60"
-                                                    >
-                                                        Remover
-                                                    </button>
-                                                </div>
                                             </div>
-                                        ))
-                                    )}
+
+                                            <span className="rounded-full bg-slate-50 px-2.5 py-1 text-[10px] font-black uppercase tracking-wide text-slate-500 ring-1 ring-slate-200">
+                                                {vinculosObrasConfiguracoes.length}
+                                            </span>
+                                        </div>
+
+                                        <div className="mt-3 space-y-2">
+                                            {vinculosObrasConfiguracoes.length === 0 ? (
+                                                <p className="rounded-xl bg-slate-50 px-3 py-3 text-xs font-semibold text-slate-500">
+                                                    Nenhum vínculo carregado.
+                                                </p>
+                                            ) : (
+                                                vinculosObrasConfiguracoes
+                                                    .slice(0, 10)
+                                                    .map((vinculo) => (
+                                                        <article
+                                                            key={vinculo.id}
+                                                            className="grid gap-3 rounded-xl bg-slate-50 px-3 py-3 ring-1 ring-slate-100 md:grid-cols-[minmax(0,1fr)_auto] md:items-center"
+                                                        >
+                                                            <div className="min-w-0">
+                                                                <p className="truncate text-xs font-black text-slate-950">
+                                                                    {vinculo.empresa?.nome ||
+                                                                        "Empresa não informada"}
+                                                                </p>
+
+                                                                <p className="mt-1 truncate text-[11px] font-semibold text-slate-500">
+                                                                    →{" "}
+                                                                    {vinculo.obra?.nome ||
+                                                                        "Obra não informada"}
+                                                                </p>
+                                                            </div>
+
+                                                            <div className="flex flex-nowrap items-center justify-end gap-2">
+                                                                <span
+                                                                    className={classNames(
+                                                                        "shrink-0 rounded-full px-2.5 py-1 text-[10px] font-black uppercase tracking-wide ring-1",
+                                                                        vinculo.status === "Inativa"
+                                                                            ? "bg-slate-100 text-slate-500 ring-slate-200"
+                                                                            : "bg-emerald-50 text-emerald-700 ring-emerald-200"
+                                                                    )}
+                                                                >
+                                                                    {vinculo.status}
+                                                                </span>
+
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={() =>
+                                                                        alternarStatusVinculoObraConfiguracoes(
+                                                                            vinculo
+                                                                        )
+                                                                    }
+                                                                    disabled={
+                                                                        salvandoVinculoObraConfiguracoes
+                                                                    }
+                                                                    className="shrink-0 rounded-full bg-white px-3 py-1 text-[10px] font-black uppercase tracking-wide text-slate-700 ring-1 ring-slate-200 hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-60"
+                                                                >
+                                                                    {vinculo.status === "Inativa"
+                                                                        ? "Ativar"
+                                                                        : "Inativar"}
+                                                                </button>
+
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={() =>
+                                                                        removerVinculoObraConfiguracoes(
+                                                                            vinculo
+                                                                        )
+                                                                    }
+                                                                    disabled={
+                                                                        salvandoVinculoObraConfiguracoes
+                                                                    }
+                                                                    className="shrink-0 rounded-full bg-red-50 px-3 py-1 text-[10px] font-black uppercase tracking-wide text-red-700 ring-1 ring-red-200 hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-60"
+                                                                >
+                                                                    Remover
+                                                                </button>
+                                                            </div>
+                                                        </article>
+                                                    ))
+                                            )}
+                                        </div>
+
+                                        <div className="mt-3 rounded-xl bg-blue-50 px-3 py-2 text-[10px] font-semibold leading-4 text-blue-700 ring-1 ring-blue-100">
+                                            <strong>Ativa:</strong> disponível para uso no DDS.{" "}
+                                            <strong>Inativa:</strong> vínculo preservado, mas
+                                            indisponível para novos registros.
+                                        </div>
+                                    </div>
                                 </div>
-                            </div>
+                            </section>
                         </div>
 
-                        <p className="mt-4 rounded-2xl bg-amber-50 px-4 py-3 text-xs font-semibold leading-relaxed text-amber-800 ring-1 ring-amber-200">
-                            Cadastro, edicao e vinculo manual empresa/obra habilitados. O DDS sera migrado para usar estes vinculos na proxima etapa.
-                        </p>
+
                     </Card>
                 )
             );
@@ -2789,29 +3038,29 @@ export function ConfiguracoesSistema({
                             </div>
                         )}
 
-                        <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-12">
-                            <div className="rounded-2xl bg-slate-50 px-3 py-3 ring-1 ring-slate-100">
+                        <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+                            <div className="min-w-0 rounded-2xl bg-emerald-50 px-4 py-3 ring-1 ring-emerald-100">
                                 <p className="text-[11px] font-black uppercase tracking-wide text-slate-400">Permissão técnica</p>
                                 <p className="mt-1 text-lg font-black text-slate-950">{formatarPerfilPermissaoSistema(resumoPermissaoSistemaAtual.perfil)}</p>
                                 <p className="mt-1 text-xs font-semibold text-slate-500">
                                     {resumoPermissaoSistemaAtual.status} · {resumoPermissaoSistemaAtual.acessoGlobal ? "acesso global" : "sem acesso global"}
                                 </p>
                             </div>
-                            <div className="rounded-2xl bg-slate-50 px-3 py-3 ring-1 ring-slate-100">
+                            <div className="min-w-0 rounded-2xl bg-blue-50 px-4 py-3 ring-1 ring-blue-100">
                                 <p className="text-[11px] font-black uppercase tracking-wide text-slate-400">Ações críticas</p>
                                 <p className="mt-1 text-lg font-black text-slate-950">{resumoAcoesCriticasSistemaAtual.podeAlterarConfiguracoesCriticas ? "Liberadas" : "Bloqueadas"}</p>
                                 <p className="mt-1 text-xs font-semibold text-slate-500">
                                     Excluir {resumoAcoesCriticasSistemaAtual.podeExcluir ? "sim" : "não"} · Limpar Storage {resumoAcoesCriticasSistemaAtual.podeLimparArquivos ? "sim" : "não"}
                                 </p>
                             </div>
-                            <div className="rounded-2xl bg-slate-50 px-3 py-3 ring-1 ring-slate-100">
+                            <div className="min-w-0 rounded-2xl bg-cyan-50 px-4 py-3 ring-1 ring-cyan-100">
                                 <p className="text-[11px] font-black uppercase tracking-wide text-slate-400">Auditoria</p>
                                 <p className="mt-1 text-lg font-black text-slate-950">{totalEventosHabilitados}/{eventosAuditoria.length}</p>
                                 <p className="mt-1 text-xs font-semibold text-slate-500">
                                     eventos habilitados · origem {origemConfig === "supabase" ? "Supabase" : "Local"}
                                 </p>
                             </div>
-                            <div className="rounded-2xl bg-slate-50 px-3 py-3 ring-1 ring-slate-100">
+                            <div className="min-w-0 rounded-2xl bg-amber-50 px-4 py-3 ring-1 ring-amber-100">
                                 <p className="text-[11px] font-black uppercase tracking-wide text-slate-400">Segurança</p>
                                 <p className="mt-1 text-lg font-black text-slate-950">{resumoRevisaoSupabase.texto}</p>
                                 <p className="mt-1 text-xs font-semibold text-slate-500">
@@ -2820,8 +3069,30 @@ export function ConfiguracoesSistema({
                             </div>
                         </div>
 
-                        <div className="mt-4 rounded-2xl bg-orange-50 px-4 py-3 text-xs font-semibold leading-relaxed text-orange-800 ring-1 ring-orange-200">
-                            Esta etapa gera evidência simples em texto. O PDF das Configurações deve ficar para depois da tela estar totalmente estável, para evitar adicionar peso e complexidade agora.
+                                                <div className="mt-3 flex flex-wrap items-center gap-x-5 gap-y-2 rounded-2xl bg-white px-4 py-2.5 text-[11px] font-bold text-slate-600 ring-1 ring-slate-200">
+                            <span className="font-black text-slate-800">
+                                Legenda:
+                            </span>
+
+                            <span className="inline-flex items-center gap-2 whitespace-nowrap">
+                                <span className="h-2.5 w-2.5 rounded-full bg-emerald-500" />
+                                Permissão e acesso
+                            </span>
+
+                            <span className="inline-flex items-center gap-2 whitespace-nowrap">
+                                <span className="h-2.5 w-2.5 rounded-full bg-blue-500" />
+                                Ações administrativas
+                            </span>
+
+                            <span className="inline-flex items-center gap-2 whitespace-nowrap">
+                                <span className="h-2.5 w-2.5 rounded-full bg-cyan-500" />
+                                Auditoria e eventos
+                            </span>
+
+                            <span className="inline-flex items-center gap-2 whitespace-nowrap">
+                                <span className="h-2.5 w-2.5 rounded-full bg-amber-500" />
+                                Segurança e atenção
+                            </span>
                         </div>
                     </Card>
                 )
