@@ -88,7 +88,7 @@ const participantesDdsContinuacao = [
 ];
 const LIMITE_PARTICIPANTES_PRIMEIRA_FOLHA_DDS = 10;
 const LIMITE_PARTICIPANTES_FOLHA_CONTINUACAO_DDS = 20;
-const LINHAS_COMPLEMENTARES_ULTIMA_FOLHA_DDS = 16;
+const QUANTIDADE_LINHAS_COMPLEMENTARES_DDS = 6;
 const aniversariantesDds = [
     { data: "16/06", nome: "Anderson Augusto Pereira" },
     { data: "18/06", nome: "Alcir Pimenta dos Santos" },
@@ -700,20 +700,71 @@ function dividirParticipantesDds(participantes = [], inicio = 15, tamanho = 20) 
 
     return folhas;
 }
-function completarParticipantesUltimaFolhaDds(participantes = [], quantidadeLinhas = 20, numeroInicial = 1) {
-    const linhas = Array.isArray(participantes) ? [...participantes] : [];
+function criarLinhasComplementaresDds(quantidadeLinhas = 6, numeroInicial = 1) {
+    const quantidade = Math.max(0, Number(quantidadeLinhas) || 0);
 
-    while (linhas.length < quantidadeLinhas) {
-        linhas.push({
-            numero: numeroInicial + linhas.length,
-            nome: "",
-            funcao: "",
-            empresa: "",
-            linhaEmBranco: true,
-        });
+    return Array.from({ length: quantidade }, (_, indice) => ({
+        numero: numeroInicial + indice,
+        nome: "",
+        funcao: "",
+        empresa: "",
+        linhaEmBranco: true,
+    }));
+}
+
+function montarFolhasDdsComLinhasComplementares(
+    participantes = [],
+    limitePrimeiraFolha = 10,
+    limiteFolhaContinuacao = 20,
+    quantidadeLinhasComplementares = 6
+) {
+    const participantesValidos = Array.isArray(participantes)
+        ? participantes
+        : [];
+
+    const primeiraFolha = participantesValidos.slice(
+        0,
+        limitePrimeiraFolha
+    );
+
+    const folhasContinuacao = dividirParticipantesDds(
+        participantesValidos,
+        limitePrimeiraFolha,
+        limiteFolhaContinuacao
+    ).map((folha) => [...folha]);
+
+    const linhasComplementares = criarLinhasComplementaresDds(
+        quantidadeLinhasComplementares,
+        participantesValidos.length + 1
+    );
+
+    if (folhasContinuacao.length === 0) {
+        const vagasPrimeiraFolha =
+            limitePrimeiraFolha - primeiraFolha.length;
+
+        if (vagasPrimeiraFolha >= linhasComplementares.length) {
+            primeiraFolha.push(...linhasComplementares);
+        } else {
+            folhasContinuacao.push(linhasComplementares);
+        }
+    } else {
+        const ultimaFolha =
+            folhasContinuacao[folhasContinuacao.length - 1];
+
+        const vagasUltimaFolha =
+            limiteFolhaContinuacao - ultimaFolha.length;
+
+        if (vagasUltimaFolha >= linhasComplementares.length) {
+            ultimaFolha.push(...linhasComplementares);
+        } else {
+            folhasContinuacao.push(linhasComplementares);
+        }
     }
 
-    return linhas;
+    return {
+        primeiraFolhaParticipantes: primeiraFolha,
+        folhasContinuacaoDds: folhasContinuacao,
+    };
 }
 function DdsResumoCard({ icone: Icone, titulo, valor, texto, cor = "emerald", onClick = null, destaque = false }) {
     const estilos = {
@@ -1203,7 +1254,7 @@ function normalizarTextoTemaDds(valor = "") {
 function temaDdsSemAtividade(dia = {}) {
     const tema = normalizarTextoTemaDds(dia?.tema);
 
-    return tema.includes("NAO HOUVE ATIVIDADE");
+    return tema === "NAO HOUVE ATIVIDADES";
 }
 
 function MarcacaoDiaSemAtividadeDds() {
@@ -1220,7 +1271,7 @@ function CelulaAssinaturaDiaDds({ dia = {}, compacto = false }) {
             ? "border border-slate-300 px-1 py-1.5 text-center"
             : "border border-slate-300 px-1 py-1 text-center"}
         >
-            {(temaDdsSemAtividade(dia) || dia.curto === "DOM" || dia.dia === "DOM") ? <MarcacaoDiaSemAtividadeDds /> : null}
+            {temaDdsSemAtividade(dia) ? <MarcacaoDiaSemAtividadeDds /> : null}
         </td>
     );
 }
@@ -1522,7 +1573,7 @@ function DdsPreviewImpresso({ participantes = participantesDds, mostrarAssinatur
                                         <td className="border border-slate-300 px-2 py-0.5 text-center font-semibold">{participante.empresa}</td>
                                         {diasSemana.map((dia) => (
                                             <td key={dia.curto} className="border border-slate-300 px-1 py-0.5 text-center align-middle">
-                                                {(dia.semAtividade || dia.curto === "DOM" || dia.dia === "DOM") ? <MarcacaoDiaSemAtividadeDds /> : null}
+                                                {dia.semAtividade ? <MarcacaoDiaSemAtividadeDds /> : null}
                                             </td>
                                         ))}
                                         <td className="border border-slate-300 px-1 py-0.5 text-center">
@@ -1626,9 +1677,9 @@ function DdsPreviewImpresso({ participantes = participantesDds, mostrarAssinatur
 }
 
 function DdsPreviewImpressoContinuacao({ participantes = participantesDdsContinuacao, numeroPagina = 2, totalPaginas = 2, ultimaFolha = true, numeroInicial = 16, dadosDds = dadosDdsPadrao, diasSemana = diasDds }) {
-    const participantesFolha = ultimaFolha
-        ? completarParticipantesUltimaFolhaDds(participantes, LINHAS_COMPLEMENTARES_ULTIMA_FOLHA_DDS, numeroInicial)
-        : participantes;
+    const participantesFolha = Array.isArray(participantes)
+        ? participantes
+        : [];
     return (
         <section className="dds-print-page overflow-hidden rounded-[28px] border border-slate-200 bg-white p-4 shadow-[0_18px_50px_rgba(15,23,42,0.08)]">
             <div className="overflow-x-auto">
@@ -1706,7 +1757,7 @@ function DdsPreviewImpressoContinuacao({ participantes = participantesDdsContinu
                                         <td className="border border-slate-300 px-2 py-1.5 text-center font-semibold">{participante.empresa}</td>
                                         {diasSemana.map((dia) => (
                                             <td key={dia.curto} className="border border-slate-300 px-1 py-1.5 text-center align-middle">
-                                                {(dia.semAtividade || dia.curto === "DOM" || dia.dia === "DOM") ? <MarcacaoDiaSemAtividadeDds /> : null}
+                                                {dia.semAtividade ? <MarcacaoDiaSemAtividadeDds /> : null}
                                             </td>
                                         ))}
                                         <td className="border border-slate-300 px-1 py-1.5 text-center">
@@ -3226,7 +3277,7 @@ export function DdsPage({
             const tema = String(dia?.tema || "").trim();
             const responsavel = String(dia?.responsavel || "").trim();
             const domingo = indice === 0 || normalizar(dia?.curto || dia?.dia || "").includes("DOM");
-            const semAtividade = domingo || normalizar(tema).includes("NAO HOUVE ATIVIDADE");
+            const semAtividade = normalizar(tema) === "NAO HOUVE ATIVIDADES";
 
             return {
                 indice,
@@ -3798,7 +3849,7 @@ export function DdsPage({
             const temaFinal = String(temaEditavel.tema ?? "").trim();
             const responsavelFinal = String(temaEditavel.responsavel ?? "").trim();
             const temaNormalizado = normalizarTextoTemaDds(temaFinal);
-            const semAtividade = temaNormalizado.includes("NAO HOUVE ATIVIDADE");
+            const semAtividade = temaNormalizado === "NAO HOUVE ATIVIDADES";
 
             return {
                 ...dia,
@@ -3833,9 +3884,17 @@ export function DdsPage({
         () => normalizarParticipantesDdsSistema(colaboradoresEmpresaDds),
         [colaboradoresEmpresaDds]
     );
-    const primeiraFolhaParticipantes = participantesSistemaDds.slice(0, LIMITE_PARTICIPANTES_PRIMEIRA_FOLHA_DDS);
-    const folhasContinuacaoDds = useMemo(
-        () => dividirParticipantesDds(participantesSistemaDds, LIMITE_PARTICIPANTES_PRIMEIRA_FOLHA_DDS, LIMITE_PARTICIPANTES_FOLHA_CONTINUACAO_DDS),
+    const {
+        primeiraFolhaParticipantes,
+        folhasContinuacaoDds,
+    } = useMemo(
+        () =>
+            montarFolhasDdsComLinhasComplementares(
+                participantesSistemaDds,
+                LIMITE_PARTICIPANTES_PRIMEIRA_FOLHA_DDS,
+                LIMITE_PARTICIPANTES_FOLHA_CONTINUACAO_DDS,
+                QUANTIDADE_LINHAS_COMPLEMENTARES_DDS
+            ),
         [participantesSistemaDds]
     );
     const totalFolhasDds = Math.max(1, 1 + folhasContinuacaoDds.length);
