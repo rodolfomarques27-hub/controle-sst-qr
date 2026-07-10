@@ -381,3 +381,13 @@ Microetapa 3D aplicada:
 - Os indicadores de dias, acumulado, efetivo médio e funções usam somente DDS concluídos.
 - PDF/Excel mensal consolidado passam a considerar somente DDS concluídos.
 - Quando houver DDS em aberto, o card mostra aviso discreto informando que eles ficam fora da consolidação oficial.
+
+## Ações rápidas no histórico mensal DDS
+
+Microetapa 3E aplicada:
+
+- Incluída função carregarRegistroHistoricoMensalDds.
+- A lista do histórico mensal ganhou a coluna Ação.
+- DDS concluído exibe botão "Carregar DDS".
+- DDS em aberto exibe botão "Revisar DDS".
+- Ao carregar pela lista, o sistema busca o registro por código, atualiza o scanner DDS e rola até o card de registro localizado.
