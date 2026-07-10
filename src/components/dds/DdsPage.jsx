@@ -30,13 +30,13 @@ import {
 import dashboardHeroSstDds from "../../assets/dashboard-hero-sst.png";
 
 const diasDds = [
-    { curto: "DOM", nome: "Domingo", data: "14/06/2026", tema: "Trabalho seguro não tem dia de folga", responsavel: "Paulo Toledo" },
-    { curto: "SEG", nome: "Segunda-feira", data: "15/06/2026", tema: "Uso correto de EPIs", responsavel: "Paulo Toledo" },
-    { curto: "TER", nome: "Terça-feira", data: "16/06/2026", tema: "Acidentes que acontecem por distração", responsavel: "Paulo Toledo" },
-    { curto: "QUA", nome: "Quarta-feira", data: "17/06/2026", tema: "Reflexão: acidentes batem recordes", responsavel: "Paulo Toledo" },
-    { curto: "QUI", nome: "Quinta-feira", data: "18/06/2026", tema: "Excesso de ruído e suas consequências", responsavel: "Paulo Toledo" },
-    { curto: "SEX", nome: "Sexta-feira", data: "19/06/2026", tema: "Organização e limpeza no canteiro", responsavel: "Paulo Toledo" },
-    { curto: "SÁB", nome: "Sábado", data: "20/06/2026", tema: "Hidratação e calor", responsavel: "Paulo Toledo" },
+    { curto: "DOM", nome: "Domingo", data: "14/06/2026", tema: "", responsavel: "" },
+    { curto: "SEG", nome: "Segunda-feira", data: "15/06/2026", tema: "", responsavel: "" },
+    { curto: "TER", nome: "Terça-feira", data: "16/06/2026", tema: "", responsavel: "" },
+    { curto: "QUA", nome: "Quarta-feira", data: "17/06/2026", tema: "", responsavel: "" },
+    { curto: "QUI", nome: "Quinta-feira", data: "18/06/2026", tema: "", responsavel: "" },
+    { curto: "SEX", nome: "Sexta-feira", data: "19/06/2026", tema: "", responsavel: "" },
+    { curto: "SÁB", nome: "Sábado", data: "20/06/2026", tema: "", responsavel: "" },
 ];
 function criarTemasEditaveisDds() {
     return diasDds.map((dia) => ({
@@ -760,7 +760,7 @@ function DdsResumoCard({ icone: Icone, titulo, valor, texto, cor = "emerald", on
 
             <div className="relative flex h-full items-start justify-between gap-4">
                 <div className="flex min-w-0 items-start gap-3">
-                    <span className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl ring-1 transition ${estilo.icone}`}>
+                    <span className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl ring-1 transition ${estilo.icone}`}>
                         <Icone className="h-5 w-5" />
                     </span>
 
@@ -832,7 +832,7 @@ function BotaoAlternarCardDds({ aberto = true }) {
     const Icone = aberto ? ChevronUp : ChevronDown;
 
     return (
-        <span className="inline-flex items-center gap-2 rounded-2xl border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs font-black text-slate-700 shadow-sm transition hover:bg-white">
+        <span className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs font-black text-slate-700 shadow-sm transition hover:bg-white">
             {aberto ? "Fechar" : "Abrir"}
             <Icone className="h-4 w-4" />
         </span>
@@ -1175,8 +1175,8 @@ function MarcaEmpresaDdsImpresso({ logoUrl = "", compacto = false }) {
 
     return (
         <div className={compacto
-            ? "flex h-14 items-center justify-center rounded-2xl border border-slate-300 bg-white p-2"
-            : "flex h-20 items-center justify-center rounded-2xl border border-slate-300 bg-white p-3"}
+            ? "flex h-14 items-center justify-center rounded-xl border border-slate-300 bg-white p-2"
+            : "flex h-20 items-center justify-center rounded-xl border border-slate-300 bg-white p-3"}
         >
             {logoSeguro ? (
                 <img
@@ -1392,7 +1392,7 @@ function DdsPreviewImpresso({ participantes = participantesDds, mostrarAssinatur
     return (
         <section className="dds-print-page overflow-hidden rounded-[28px] border border-slate-200 bg-white p-4 shadow-[0_18px_50px_rgba(15,23,42,0.08)]">
             <div className="overflow-x-auto">
-                <div className="dds-print-sheet mx-auto min-w-[1180px] max-w-[1320px] rounded-2xl border border-slate-300 bg-white p-3 text-slate-950">
+                <div className="dds-print-sheet mx-auto min-w-[1180px] max-w-[1320px] rounded-xl border border-slate-300 bg-white p-3 text-slate-950">
                     <header className="grid grid-cols-[250px_minmax(0,1fr)_350px] items-center gap-3 border-b border-slate-300 pb-2">
                         <div className="space-y-2">
                             <MarcaLogosEmpresasDdsImpresso
@@ -1407,13 +1407,13 @@ function DdsPreviewImpresso({ participantes = participantesDds, mostrarAssinatur
                         </div>
 
                         <div className="grid grid-cols-[1fr_94px] gap-3">
-                            <div className="rounded-2xl border border-slate-300 p-2.5">
+                            <div className="rounded-xl border border-slate-300 p-2.5">
                                 <p className="text-[9px] font-black uppercase text-slate-500">Semana</p>
                                 <p className="text-base font-black text-slate-950">{dadosDds.periodo}</p>
                                 <p className="mt-2 text-[9px] font-black uppercase text-slate-500">Código do DDS</p>
                                 <p className="rounded-lg bg-slate-950 px-2 py-0.5 text-center text-xs font-black text-white">{dadosDds.codigo}</p>
                             </div>
-                            <div className="flex flex-col items-center justify-center rounded-2xl border border-slate-300 p-2 text-center">
+                            <div className="flex flex-col items-center justify-center rounded-xl border border-slate-300 p-2 text-center">
                                 <DdsQrConferenciaImpresso url={dadosDds.qrConferenciaUrl} size={72} fallbackClassName="h-[72px] w-[72px]" />
                                 <p className="mt-0.5 text-[5.5px] font-black uppercase leading-tight text-emerald-700">QR de conferência</p>
                             </div>
@@ -1632,7 +1632,7 @@ function DdsPreviewImpressoContinuacao({ participantes = participantesDdsContinu
     return (
         <section className="dds-print-page overflow-hidden rounded-[28px] border border-slate-200 bg-white p-4 shadow-[0_18px_50px_rgba(15,23,42,0.08)]">
             <div className="overflow-x-auto">
-                <div className="dds-print-sheet mx-auto min-w-[1180px] max-w-[1320px] rounded-2xl border border-slate-300 bg-white p-4 text-slate-950">
+                <div className="dds-print-sheet mx-auto min-w-[1180px] max-w-[1320px] rounded-xl border border-slate-300 bg-white p-4 text-slate-950">
                     <header className="grid grid-cols-[240px_minmax(0,1fr)_330px] items-center gap-4 border-b border-slate-300 pb-3">
                         <div className="space-y-2">
                             <MarcaLogosEmpresasDdsImpresso
@@ -1648,13 +1648,13 @@ function DdsPreviewImpressoContinuacao({ participantes = participantesDdsContinu
                         </div>
 
                         <div className="grid grid-cols-[1fr_82px] gap-3">
-                            <div className="rounded-2xl border border-slate-300 p-3">
+                            <div className="rounded-xl border border-slate-300 p-3">
                                 <p className="text-[9px] font-black uppercase text-slate-500">Código do DDS</p>
                                 <p className="rounded-lg bg-slate-950 px-2 py-1 text-center text-sm font-black text-white">{dadosDds.codigo}</p>
                                 <p className="mt-2 text-[9px] font-black uppercase text-slate-500">Obra / Setor</p>
                                 <p className="text-xs font-black uppercase text-slate-950">{dadosDds.obraSetor}</p>
                             </div>
-                            <div className="flex flex-col items-center justify-center rounded-2xl border border-slate-300 p-2 text-center">
+                            <div className="flex flex-col items-center justify-center rounded-xl border border-slate-300 p-2 text-center">
                                 <DdsQrConferenciaImpresso url={dadosDds.qrConferenciaUrl} size={64} fallbackClassName="h-16 w-16" />
                                 <p className="mt-0.5 text-[5px] font-black uppercase leading-tight text-emerald-700">QR de conferência</p>
                             </div>
@@ -3780,9 +3780,10 @@ export function DdsPage({
     }), [dadosDds.codigo]);
 
     useEffect(() => {
-        const temasSalvos = carregarTemasDdsLocal(chaveTemasDds);
+        if (!chaveTemasDds) return;
 
-        setTemasDdsEditaveis(temasSalvos || criarTemasEditaveisDds());
+        // Cada novo DDS inicia sem tema e sem responsável preenchidos.
+        setTemasDdsEditaveis(criarTemasEditaveisDds());
         setChaveTemasDdsCarregada(chaveTemasDds);
     }, [chaveTemasDds]);
 
@@ -3821,10 +3822,6 @@ export function DdsPage({
 
             return atualizados;
         });
-    }
-
-    function restaurarTemasPadraoDds() {
-        setTemasDdsEditaveis(criarTemasEditaveisDds());
     }
 
     const aniversariantesSemanaDds = useMemo(() => montarAniversariantesSemanaDds({
@@ -4873,11 +4870,11 @@ export function DdsPage({
             'th, td { border: 1px solid #b7c7d8; padding: 3px 4px; text-align: center; font-size: 10px; }',
             '.margem { width: 18px; min-width: 18px; background: #ffffff; border: 0 !important; }',
             '.linha-vazia td { height: 10px; border: 0 !important; background: #ffffff; }',
-            '.titulo { background: #ffffff; color: #111827; font-size: 15px; font-weight: 900; text-align: center; border: 1px solid #94a3b8; }',
-            '.subtitulo { background: #ffffff; color: #111827; font-weight: 800; text-align: center; border-left: 1px solid #cbd5e1; border-right: 1px solid #cbd5e1; }',
-            '.jornada { background: #f8fafc; color: #334155; font-weight: 900; text-align: center; border: 1px solid #cbd5e1; }',
-            '.resumo-linha { background: #f8fafc; color: #0f172a; font-weight: 900; text-align: center; border: 1px solid #cbd5e1; }',
-            '.legenda { background: #ffffff; color: #64748b; font-weight: 700; text-align: center; border: 1px solid #e5e7eb; font-size: 9px; }',
+            '.titulo { background: #ffffff; color: #111827; font-size: 15px; font-weight: 900; text-align: center; vertical-align: middle; border: 1px solid #94a3b8; }',
+            '.subtitulo { background: #ffffff; color: #111827; font-weight: 800; text-align: center; vertical-align: middle; border-left: 1px solid #cbd5e1; border-right: 1px solid #cbd5e1; }',
+            '.jornada { background: #f8fafc; color: #334155; font-weight: 900; text-align: center; vertical-align: middle; border: 1px solid #cbd5e1; }',
+            '.resumo-linha { background: #f8fafc; color: #0f172a; font-weight: 900; text-align: center; vertical-align: middle; border: 1px solid #cbd5e1; }',
+            '.legenda { background: #ffffff; color: #334155; font-weight: 700; text-align: center; vertical-align: middle; border: 1px solid #e5e7eb; font-size: 9px; height: 22px; }',
             '.grupo-empresa td:not(.margem) { background: #f1f5f9; color: #0f172a; font-weight: 900; text-align: center; border-top: 2px solid #94a3b8; border-bottom: 1px solid #cbd5e1; letter-spacing: .02em; }',
             '.cabecalho th { background: #334155; color: #ffffff; font-weight: 900; text-transform: uppercase; }',
             '.dia { background: #334155; color: #ffffff; width: 22px; }',
@@ -4925,7 +4922,7 @@ export function DdsPage({
             '</tr>',
             '<tr>',
             margem,
-            '<td class="legenda" colspan="' + colspanConteudoExcel + '"><strong>Legenda:</strong> presença registrada · domingo · sábado · feriado conforme calendário</td>',
+            '<td class="legenda" colspan="' + colspanConteudoExcel + '"><strong>Legenda:</strong> <span style="color:#16a34a;font-size:13px;font-weight:900;">&#9632;</span> Presença registrada &nbsp; <span style="color:#facc15;font-size:13px;font-weight:900;">&#9632;</span> Sábado &nbsp; <span style="color:#ef4444;font-size:13px;font-weight:900;">&#9632;</span> Domingo &nbsp; <span style="color:#60a5fa;font-size:13px;font-weight:900;">&#9632;</span> Feriado</td>',
             '</tr>',
             '<tr class="linha-vazia"><td colspan="' + colspanTotalExcel + '"></td></tr>',
             linhasTabela,
@@ -5064,10 +5061,17 @@ export function DdsPage({
             'h1 { margin: 0; font-size: 18px; line-height: 1.1; }',
             '.subtitle { margin: 4px 0 0; font-size: 10px; font-weight: 700; color: #e2e8f0; }',
             '.cards { display: grid; grid-template-columns: repeat(6, 1fr); gap: 5px; padding: 7px; background: #f8fafc; border-bottom: 1px solid #e2e8f0; }',
-            '.card { border: 1px solid #dbe3ef; border-radius: 8px; background: #fff; padding: 5px 7px; min-height: 38px; }',
-            '.card span { display: block; font-size: 7px; text-transform: uppercase; font-weight: 900; color: #64748b; letter-spacing: .08em; }',
-            '.card strong { display: block; margin-top: 2px; font-size: 10px; color: #0f172a; }',
+            '.card { border: 1px solid #dbe3ef; border-radius: 8px; background: #fff; padding: 5px 7px; min-height: 38px; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; }',
+            '.card span { display: block; width: 100%; font-size: 7px; line-height: 1.15; text-align: center; text-transform: uppercase; font-weight: 900; color: #64748b; letter-spacing: .08em; }',
+            '.card strong { display: block; width: 100%; margin-top: 2px; font-size: 10px; line-height: 1.15; font-weight: 900; text-align: center; color: #0f172a; overflow-wrap: anywhere; }',
             '.jornada, .resumo-pdf { margin: 6px 7px 0; border: 1px solid #dbe3ef; border-radius: 8px; background: #f8fafc; padding: 5px 8px; font-size: 9px; font-weight: 900; text-align: center; }',
+            '.legenda-pdf { margin: 6px 7px 0; display: flex; align-items: center; justify-content: center; gap: 12px; flex-wrap: wrap; border: 1px solid #dbe3ef; border-radius: 8px; background: #fff; padding: 5px 8px; font-size: 8px; font-weight: 800; color: #334155; text-align: center; }',
+            '.legenda-item { display: inline-flex; align-items: center; justify-content: center; gap: 4px; white-space: nowrap; }',
+            '.cor-legenda { display: inline-block; width: 9px; height: 9px; border-radius: 2px; border: 1px solid rgba(15,23,42,.25); }',
+            '.cor-presenca { background: #16a34a; }',
+            '.cor-sabado { background: #facc15; }',
+            '.cor-domingo { background: #ef4444; }',
+            '.cor-feriado { background: #60a5fa; }',
             '.empresa-bloco { margin: 7px; page-break-inside: avoid; }',
             '.empresa-faixa { background: #e2e8f0; color: #0f172a; border: 1px solid #cbd5e1; border-bottom: 0; border-radius: 8px 8px 0 0; padding: 5px 8px; text-align: center; font-size: 10px; font-weight: 900; }',
             'table { width: 100%; border-collapse: collapse; table-layout: fixed; }',
@@ -5106,6 +5110,13 @@ export function DdsPage({
             '</section>',
             '<section class="jornada">Expediente normal: ', expediente.jornada, ' | Almoço: ', expediente.almoco, ' | DDS: ', expediente.dds, '</section>',
             '<section class="resumo-pdf">Resumo do período: Efetivo médio ', formatarNumeroMaoDeObraDds(mediaMes), ' | Acumulado do período ', totalHomemDia, ' | Dias apurados ', quantidadeDiasLancados, ' | Empresas ', empresas.length, ' | Calendário aplicado: ', escaparHtmlControleMaoDeObraDds(calendarioRotulo), '</section>',
+            '<section class="legenda-pdf">',
+            '<strong>Legenda:</strong>',
+            '<span class="legenda-item"><i class="cor-legenda cor-presenca"></i>Presença registrada</span>',
+            '<span class="legenda-item"><i class="cor-legenda cor-sabado"></i>Sábado</span>',
+            '<span class="legenda-item"><i class="cor-legenda cor-domingo"></i>Domingo</span>',
+            '<span class="legenda-item"><i class="cor-legenda cor-feriado"></i>Feriado</span>',
+            '</section>',
             linhasTabela,
             '</main>',
             '<script>window.onload = function(){ window.focus(); window.print(); };</script>',
@@ -5274,7 +5285,7 @@ export function DdsPage({
             '</tr>',
             '<tr>',
             margem,
-            '<td class="legenda" colspan="' + colspanConteudoExcel + '"><strong>Legenda:</strong> <span class="legenda-verde">presença registrada</span> · <span class="legenda-domingo">domingo</span> · <span class="legenda-sabado">sábado</span> · <span class="legenda-feriado">feriado conforme calendário</span></td>',
+            '<td class="legenda" colspan="' + colspanConteudoExcel + '"><strong>Legenda:</strong> <span style="color:#16a34a;font-size:13px;font-weight:900;">&#9632;</span> Presença registrada &nbsp; <span style="color:#facc15;font-size:13px;font-weight:900;">&#9632;</span> Sábado &nbsp; <span style="color:#ef4444;font-size:13px;font-weight:900;">&#9632;</span> Domingo &nbsp; <span style="color:#60a5fa;font-size:13px;font-weight:900;">&#9632;</span> Feriado</td>',
             '</tr>',
             '<tr class="linha-vazia"><td colspan="' + colspanTotalExcel + '"></td></tr>',
             linhasTabela || '<tr><td colspan="' + colspanTotalExcel + '">Sem dados de mão de obra para exportar.</td></tr>',
@@ -5418,11 +5429,13 @@ export function DdsPage({
             '.card strong { display: block; margin-top: 1px; font-size: 10.2px; line-height: 1.1; font-weight: 900; max-width: 100%; overflow-wrap: anywhere; }',
             '.jornada { margin-bottom: 4px; border: 1px solid #fed7aa; border-left: 4px solid #f97316; border-radius: 7px; padding: 5px 7px; background: #fff7ed; color: #7c2d12; font-size: 9px; font-weight: 900; text-align: center; }',
             '.resumo-pdf { margin-bottom: 4px; border: 1px solid #cbd5e1; border-radius: 7px; padding: 5px 7px; background: #f8fafc; color: #0f172a; font-size: 8.8px; font-weight: 900; text-align: center; }',
-            '.legenda-pdf { margin-bottom: 5px; border: 1px solid #e5e7eb; border-radius: 7px; padding: 4px 6px; background: #ffffff; color: #64748b; font-size: 8px; font-weight: 700; text-align: center; }',
-            '.legenda-verde { color: #047857; font-weight: 800; }',
-            '.legenda-domingo { color: #dc2626; font-weight: 800; }',
-            '.legenda-sabado { color: #b7791f; font-weight: 800; }',
-            '.legenda-feriado { color: #2563eb; font-weight: 800; }',
+            '.legenda-pdf { margin-bottom: 5px; display: flex; align-items: center; justify-content: center; gap: 12px; flex-wrap: wrap; border: 1px solid #e5e7eb; border-radius: 7px; padding: 4px 6px; background: #ffffff; color: #334155; font-size: 8px; font-weight: 800; text-align: center; }',
+            '.legenda-item { display: inline-flex; align-items: center; justify-content: center; gap: 4px; white-space: nowrap; }',
+            '.cor-legenda { display: inline-block; width: 9px; height: 9px; border-radius: 2px; border: 1px solid rgba(15,23,42,.25); }',
+            '.cor-presenca { background: #16a34a; }',
+            '.cor-sabado { background: #facc15; }',
+            '.cor-domingo { background: #ef4444; }',
+            '.cor-feriado { background: #60a5fa; }',
             '.empresa-bloco { margin-top: 6px; }',
             '.empresa-faixa { background: #f1f5f9; border: 1px solid #cbd5e1; color: #0f172a; font-size: 8.1px; font-weight: 900; text-align: center; padding: 4px 6px; text-transform: uppercase; letter-spacing: .03em; }',
             'table { width: 100%; border-collapse: collapse; table-layout: fixed; }',
@@ -5469,7 +5482,13 @@ export function DdsPage({
             '</section>',
             '<section class="jornada">Expediente normal: ', expediente.jornada, ' | Almoço: ', expediente.almoco, ' | DDS: ', expediente.dds, '</section>',
             '<section class="resumo-pdf">Resumo do período: Efetivo médio ', formatarNumeroMaoDeObraDds(mediaMes), ' | Acumulado do período ', totalHomemDia, ' | Dias apurados ', quantidadeDiasLancados, ' | Empresas ', empresas.length, ' | Calendário aplicado: ', escaparHtmlControleMaoDeObraDds(calendarioRotulo), '</section>',
-            '<section class="legenda-pdf"><strong>Legenda:</strong> <span class="legenda-verde">presença registrada</span> · <span class="legenda-domingo">domingo</span> · <span class="legenda-sabado">sábado</span> · <span class="legenda-feriado">feriado conforme calendário</span></section>',
+            '<section class="legenda-pdf">',
+            '<strong>Legenda:</strong>',
+            '<span class="legenda-item"><i class="cor-legenda cor-presenca"></i>Presença registrada</span>',
+            '<span class="legenda-item"><i class="cor-legenda cor-sabado"></i>Sábado</span>',
+            '<span class="legenda-item"><i class="cor-legenda cor-domingo"></i>Domingo</span>',
+            '<span class="legenda-item"><i class="cor-legenda cor-feriado"></i>Feriado</span>',
+            '</section>',
             linhasTabela,
             '</main>',
             '</article>',
@@ -5892,13 +5911,77 @@ export function DdsPage({
 
 
     function normalizarBuscaObraHistoricoMensalDds(valor = "") {
-        return String(valor || "")
+        const textoNormalizado = String(valor || "")
             .normalize("NFD")
             .replace(/[\u0300-\u036f]/g, "")
-            .trim()
             .toLowerCase()
-            .replace(/\s+/g, " ");
+            .replace(/[^a-z0-9]+/g, " ")
+            .replace(/\s+/g, " ")
+            .trim();
+
+        const placeholdersInvalidos = new Set([
+            "obra setor nao definido",
+            "obra nao informada",
+            "setor nao definido",
+            "selecione uma obra cadastrada no dds",
+            "nao informado",
+            "nao informada",
+            "nao definido",
+            "nao definida"
+        ]);
+
+        return placeholdersInvalidos.has(textoNormalizado) ? "" : textoNormalizado;
     }
+
+
+    function registroAtualPertenceAoMesHistoricoDds(registro, periodo) {
+        if (!registro || !periodo?.inicio || !periodo?.fim) return false;
+
+        const inicio = parseDataControleMaoDeObraDds(periodo.inicio);
+        const fim = parseDataControleMaoDeObraDds(periodo.fim);
+
+        if (!inicio || !fim) return false;
+
+        const codigo = String(registro?.codigo || registro?.dados?.codigo || "").trim();
+        const codigoMes = codigo.match(/DDS-(\d{4})-(\d{2})/i);
+
+        if (codigoMes) {
+            const anoCodigo = Number(codigoMes[1]);
+            const mesCodigo = Number(codigoMes[2]) - 1;
+
+            if (anoCodigo === inicio.getFullYear() && mesCodigo === inicio.getMonth()) {
+                return true;
+            }
+        }
+
+        const datas = [
+            registro?.periodoInicio,
+            registro?.periodoFim,
+            registro?.dataInicio,
+            registro?.dataFim,
+            registro?.data,
+            registro?.criadoEm,
+            registro?.createdAt,
+            registro?.created_at,
+            registro?.updatedAt,
+            registro?.updated_at,
+            registro?.dados?.periodoInicio,
+            registro?.dados?.periodoFim,
+            registro?.dados?.dataInicio,
+            registro?.dados?.dataFim,
+            registro?.dados?.data,
+            registro?.dados?.salvoEm,
+            registro?.dados?.conferenciaAssistida?.salvoEm,
+            registro?.dados?.conferenciaAssistida?.fechamento?.concluidoEm,
+            registro?.dados?.conferenciaAssistida?.fechamento?.data,
+        ];
+
+        return datas.some((valor) => {
+            const data = parseDataControleMaoDeObraDds(valor);
+            return data && data >= inicio && data <= fim;
+        });
+    }
+
 
     async function buscarHistoricoMensalMaoDeObraDds() {
         if (carregandoHistoricoMensalMaoDeObraDds) return;
@@ -5948,10 +6031,7 @@ export function DdsPage({
             return;
         }
 
-        if (!obraId && !obraNomeComparacao) {
-            setErroHistoricoMensalMaoDeObraDds("Informe uma obra no DDS ou selecione uma obra cadastrada antes de buscar o histórico mensal.");
-            return;
-        }
+        // Obra indefinida não bloqueia o histórico mensal; nesse caso a busca usa empresa/período.
 
         setCarregandoHistoricoMensalMaoDeObraDds(true);
         setErroHistoricoMensalMaoDeObraDds("");
@@ -5966,7 +6046,7 @@ export function DdsPage({
                 limite: 300,
             });
 
-            const registros = obraId
+            let registros = obraId
                 ? registrosBase
                 : registrosBase.filter((registro) => {
                     const nomeRegistro = normalizarBuscaObraHistoricoMensalDds(
@@ -5985,11 +6065,16 @@ export function DdsPage({
                     );
                 });
 
+            // Fallback: incluir DDS carregado quando o histórico por consulta não retornar registros.
+            if (!registros.length && registroAtualPertenceAoMesHistoricoDds(registroScannerDds, periodo)) {
+                registros = [registroScannerDds];
+            }
+
             setHistoricoMensalMaoDeObraDds(registros);
             setHistoricoMensalConsultadoEmDds(new Date().toISOString());
 
             if (!registros.length) {
-                setErroHistoricoMensalMaoDeObraDds("Nenhum DDS localizado para a obra base e mês selecionados. Confirme se o DDS foi salvo/concluído nesse mês.");
+                setErroHistoricoMensalMaoDeObraDds("Nenhum DDS localizado para o mês selecionado. Confirme se o DDS foi salvo/concluído nesse mês ou se a obra está vinculada corretamente.");
             }
         } catch (error) {
             setHistoricoMensalMaoDeObraDds([]);
@@ -6245,10 +6330,10 @@ export function DdsPage({
                         role="button"
                         tabIndex={0}
                         onKeyDown={(evento) => { if (evento.key === "Enter" || evento.key === " ") alternarCardDds("novo"); }}
-                        className="flex min-h-[52px] cursor-pointer items-center justify-between gap-3 rounded-2xl transition hover:bg-slate-50"
+                        className="flex min-h-[52px] cursor-pointer items-center justify-between gap-3 rounded-xl transition hover:bg-slate-50"
                     >
                         <div className="flex items-center gap-3">
-                        <span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-blue-50 text-blue-700 ring-1 ring-blue-100">
+                        <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-blue-50 text-blue-700 ring-1 ring-blue-100">
                             <Building2 className="h-5 w-5" />
                         </span>
                         <div>
@@ -6267,7 +6352,7 @@ export function DdsPage({
 
                     {cardDdsAberto("novo") && (
                     <div className="mt-4 grid gap-2 md:grid-cols-2 xl:grid-cols-4">
-                        <label className="rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2.5">
+                        <label className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5">
                             <span className="text-[10px] font-black uppercase tracking-wide text-slate-400">Empresa cadastrada</span>
                             <select
                                 value={empresaSelecionadaChaveDds}
@@ -6290,7 +6375,7 @@ export function DdsPage({
                             </select>
                         </label>
 
-                        <label className="rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2.5">
+                        <label className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5">
                             <span className="text-[10px] font-black uppercase tracking-wide text-slate-400">Obra cadastrada</span>
                             <select
                                 value={obraSelecionadaIdDds}
@@ -6317,7 +6402,7 @@ export function DdsPage({
                         </label>
 
                         {camposDadosDds.map((campo) => (
-                            <label key={campo.chave} className="rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2.5">
+                            <label key={campo.chave} className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5">
                                 <span className="text-[10px] font-black uppercase tracking-wide text-slate-400">{campo.rotulo}</span>
                                 <input
                                     type="text"
@@ -6345,7 +6430,7 @@ export function DdsPage({
                             </label>
                         ))}
 
-                        <div className="rounded-2xl border border-emerald-100 bg-emerald-50 px-4 py-3 md:col-span-2 xl:col-span-4">
+                        <div className="rounded-xl border border-emerald-100 bg-emerald-50 px-4 py-3 md:col-span-2 xl:col-span-4">
                             <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
                                 <div>
                                     <p className="text-[10px] font-black uppercase tracking-wide text-emerald-700">Semana do DDS</p>
@@ -6398,7 +6483,7 @@ export function DdsPage({
                 >
                     <div className="flex min-h-[52px] flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                         <div className="flex items-center gap-3">
-                            <span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-white text-emerald-700 ring-1 ring-emerald-100">
+                            <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-white text-emerald-700 ring-1 ring-emerald-100">
                                 <QrCode className="h-5 w-5" />
                             </span>
                             <div>
@@ -6422,21 +6507,21 @@ export function DdsPage({
                     </div>
 
                     {cardDdsAberto("qrConferencia") && (
-                        <div className="mt-4 rounded-2xl bg-white p-4 text-sm font-bold leading-6 text-slate-600 ring-1 ring-emerald-100">
+                        <div className="mt-4 rounded-xl bg-white p-4 text-sm font-bold leading-6 text-slate-600 ring-1 ring-emerald-100">
                             A folha semanal terá domingo a sábado, rubrica nos dias com atividade, X preto/escuro para ausência e coluna final Semana completa para marcar presença nos dias úteis/com atividade.
                         </div>
                     )}
                 </div>
-                <div className="min-h-[92px] rounded-3xl border border-slate-200 border-t-4 border-t-cyan-500 bg-white p-4 shadow-sm">
+                <div className="self-start rounded-3xl border border-slate-200 border-t-4 border-t-cyan-500 bg-white p-4 shadow-sm">
                     <div
                         onClick={() => alternarCardDds("conferencia")}
                         role="button"
                         tabIndex={0}
                         onKeyDown={(evento) => { if (evento.key === "Enter" || evento.key === " ") alternarCardDds("conferencia"); }}
-                        className="flex min-h-[52px] cursor-pointer items-center justify-between gap-3 rounded-2xl transition hover:bg-white/50"
+                        className="flex cursor-pointer items-center justify-between gap-3 rounded-xl transition hover:bg-white/50"
                     >
                         <div className="flex items-center gap-3">
-                            <span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-white text-cyan-700 ring-1 ring-cyan-100">
+                            <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-white text-cyan-700 ring-1 ring-cyan-100">
                                 <ShieldCheck className="h-5 w-5" />
                             </span>
                             <div>
@@ -6456,12 +6541,12 @@ export function DdsPage({
                     </div>
 
                     {cardDdsAberto("conferencia") && (
-                        <div className="mt-4 grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(320px,420px)]">
+                        <div className="mt-3 grid grid-cols-1 gap-3">
                             <form
                                 onSubmit={buscarRegistroScannerDds}
-                                className="rounded-2xl border border-cyan-100 bg-white p-4 ring-1 ring-cyan-50"
+                                className="flex flex-nowrap items-end gap-2 overflow-x-auto pb-1 lg:max-w-[640px]"
                             >
-                                <label className="block w-[132px] shrink-0">
+                                <label className="block w-[200px] shrink-0">
                                     <span className="text-[10px] font-black uppercase tracking-wide text-cyan-700">
                                         Código do DDS
                                     </span>
@@ -6478,14 +6563,14 @@ export function DdsPage({
                                     <button
                                         type="submit"
                                         disabled={carregandoScannerDds}
-                                        className="rounded-xl bg-cyan-600 px-4 py-2 text-xs font-black text-white shadow-sm transition hover:bg-cyan-500 disabled:cursor-not-allowed disabled:opacity-60"
+                                        className="h-9 whitespace-nowrap shrink-0 rounded-xl bg-cyan-600 px-3 py-2 text-[11px] font-black text-white shadow-sm transition hover:bg-cyan-500 disabled:cursor-not-allowed disabled:opacity-60"
                                     >
                                         {carregandoScannerDds ? "Buscando..." : "Buscar registro"}
                                     </button>
                                     <button
                                         type="button"
                                         onClick={() => setCodigoConferenciaDds(dadosDds.codigo || "")}
-                                        className="rounded-xl border border-cyan-200 bg-white px-4 py-2 text-xs font-black text-cyan-800 shadow-sm transition hover:bg-cyan-50"
+                                        className="h-9 whitespace-nowrap shrink-0 rounded-xl border border-cyan-200 bg-white px-3 py-2 text-[11px] font-black text-cyan-800 shadow-sm transition hover:bg-cyan-50"
                                     >
                                         Usar código atual
                                     </button>
@@ -6498,14 +6583,9 @@ export function DdsPage({
                                 )}
                             </form>
 
-                            <div className="rounded-2xl border border-cyan-100 bg-white p-4 text-sm font-bold leading-6 text-slate-600 ring-1 ring-cyan-50">
-                                <p className="font-black text-cyan-900">Primeira etapa do scanner DDS</p>
-                                <p className="mt-1">
-                                    O scanner usa o gabarito digital salvo, a folha anexada e a leitura inicial para indicar status técnico e necessidade de conferência manual.
-                                </p>
-                            </div>
 
-                            <div className="rounded-2xl border border-cyan-100 bg-white p-4 ring-1 ring-cyan-50 lg:col-span-2">
+
+                            <div className="rounded-xl border border-cyan-100 bg-white p-4 ring-1 ring-cyan-50 lg:col-span-2">
                                 <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
                                     <div>
                                         <p className="text-[10px] font-black uppercase tracking-wide text-cyan-700">
@@ -6543,7 +6623,7 @@ export function DdsPage({
                                         type="button"
                                         onClick={limparArquivoScannerDds}
                                         disabled={!arquivoScannerDds && !erroArquivoScannerDds}
-                                        className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-xs font-black text-slate-700 shadow-sm transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
+                                        className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-[11px] font-black text-slate-700 shadow-sm transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
                                     >
                                         Limpar arquivo
                                     </button>
@@ -6576,7 +6656,7 @@ export function DdsPage({
                                             </div>
                                         </div>
 
-                                        <div className="mt-4 flex flex-col gap-3 rounded-2xl border border-slate-100 bg-slate-50 p-3 sm:flex-row sm:items-center sm:justify-between">
+                                        <div className="mt-4 flex flex-col gap-3 rounded-xl border border-slate-100 bg-slate-50 p-3 sm:flex-row sm:items-center sm:justify-between">
                                             <div>
                                                 <p className="text-xs font-black text-slate-900">Leitura inicial do arquivo</p>
                                                 <p className="mt-1 text-xs font-bold text-slate-500">
@@ -6632,7 +6712,7 @@ export function DdsPage({
                                                 type="button"
                                                 onClick={executarLeituraArquivoScannerDds}
                                                 disabled={!arquivoScannerDds || carregandoLeituraArquivoScannerDds}
-                                                className="rounded-xl bg-cyan-600 px-4 py-2 text-xs font-black text-white shadow-sm transition hover:bg-cyan-500 disabled:cursor-not-allowed disabled:opacity-60"
+                                                className="rounded-xl bg-cyan-600 px-3 py-2 text-[11px] font-black text-white shadow-sm transition hover:bg-cyan-500 disabled:cursor-not-allowed disabled:opacity-60"
                                             >
                                                 {carregandoLeituraArquivoScannerDds ? "Lendo arquivo..." : leituraArquivoScannerDds ? "Analisar novamente" : "Ler arquivo anexado"}
                                             </button>
@@ -6647,7 +6727,7 @@ export function DdsPage({
                                 )}
 
                                 {leituraArquivoScannerDds && (
-                                    <div className="mt-4 rounded-2xl border border-indigo-100 bg-indigo-50/60 p-4 ring-1 ring-indigo-50">
+                                    <div className="mt-4 rounded-xl border border-indigo-100 bg-indigo-50/60 p-4 ring-1 ring-indigo-50">
                                         <div className="flex flex-col gap-2 lg:flex-row lg:items-start lg:justify-between">
                                             <div>
                                                 <p className="text-[10px] font-black uppercase tracking-wide text-indigo-700">
@@ -6784,7 +6864,7 @@ export function DdsPage({
                                     </div>
                                 )}
                                 {diagnosticoEstruturalScannerDds && (
-                                    <div className="mt-4 rounded-2xl border border-cyan-100 bg-white p-4 ring-1 ring-cyan-50">
+                                    <div className="mt-4 rounded-xl border border-cyan-100 bg-white p-4 ring-1 ring-cyan-50">
                                         <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
                                             <div>
                                                 <p className="text-[10px] font-black uppercase tracking-wide text-cyan-700">
@@ -6867,7 +6947,7 @@ export function DdsPage({
                             </div>
 
                             {preConferenciaParticipantesScannerDds.total > 0 && (
-<div className="rounded-2xl border border-violet-100 bg-white p-4 ring-1 ring-violet-50 lg:col-span-2">
+<div className="rounded-xl border border-violet-100 bg-white p-4 ring-1 ring-violet-50 lg:col-span-2">
     <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
         <div>
             <p className="text-[10px] font-black uppercase tracking-wide text-violet-700">
@@ -6970,7 +7050,7 @@ export function DdsPage({
 
 
 {participantesConferenciaAssistidaDds.length > 0 && diasAtivosConferenciaAssistidaDds.length > 0 && (
-<div className="rounded-2xl border border-cyan-200 bg-cyan-50/70 p-5 ring-1 ring-cyan-100 lg:col-span-2">
+<div className="rounded-xl border border-cyan-200 bg-cyan-50/70 p-5 ring-1 ring-cyan-100 lg:col-span-2">
     <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
         <div>
             <p className="text-[10px] font-black uppercase tracking-wide text-cyan-700">
@@ -7081,7 +7161,7 @@ export function DdsPage({
         </div>
     </div>
 
-    <div className="mt-4 overflow-x-auto rounded-2xl border border-cyan-100 bg-white">
+    <div className="mt-4 overflow-x-auto rounded-xl border border-cyan-100 bg-white">
         <table className="min-w-full divide-y divide-slate-100 text-left text-xs">
             <thead className="bg-slate-50 text-[10px] font-black uppercase tracking-wide text-slate-500">
                 <tr>
@@ -7173,7 +7253,7 @@ export function DdsPage({
         </table>
     </div>
 
-    <div className="mt-4 overflow-x-auto rounded-2xl border border-cyan-100 bg-white">
+    <div className="mt-4 overflow-x-auto rounded-xl border border-cyan-100 bg-white">
         <table className="min-w-full divide-y divide-slate-100 text-left text-xs">
             <thead className="bg-cyan-50 text-[10px] font-black uppercase tracking-wide text-cyan-700">
                 <tr>
@@ -7209,7 +7289,7 @@ export function DdsPage({
 </div>
 )}
 {resultadoFinalApresentacaoDds && (
-<div className={`rounded-2xl border p-5 ring-1 lg:col-span-2 ${
+<div className={`rounded-xl border p-5 ring-1 lg:col-span-2 ${
     resultadoFinalApresentacaoDds.statusVisual === "ok"
         ? "border-emerald-200 bg-emerald-50 ring-emerald-100"
         : resultadoFinalApresentacaoDds.statusVisual === "parcial"
@@ -7295,7 +7375,7 @@ export function DdsPage({
 
 
 {reciboConferenciaFinalDds && (
-<div ref={reciboConferenciaFinalRef} className="rounded-2xl border border-slate-200 bg-white p-3 ring-1 ring-slate-100 lg:col-span-2">
+<div ref={reciboConferenciaFinalRef} className="rounded-xl border border-slate-200 bg-white p-3 ring-1 ring-slate-100 lg:col-span-2">
     <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_minmax(420px,540px)] xl:items-start">
         <div>
             <p className="text-[10px] font-black uppercase tracking-wide text-slate-500">
@@ -7314,7 +7394,7 @@ export function DdsPage({
                 type="button"
                 onClick={imprimirReciboConferenciaDds}
                 disabled={salvandoReciboFinalDds}
-                className="dds-recibo-no-print rounded-xl border border-slate-200 bg-white px-4 py-2 text-xs font-black text-slate-700 shadow-sm transition hover:border-slate-300 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
+                className="dds-recibo-no-print rounded-xl border border-slate-200 bg-white px-3 py-2 text-[11px] font-black text-slate-700 shadow-sm transition hover:border-slate-300 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
             >
                 {salvandoReciboFinalDds ? "Registrando..." : "Imprimir recibo"}
             </button>
@@ -7323,7 +7403,7 @@ export function DdsPage({
                 <button
                     type="button"
                     onClick={abrirConsultaPublicaReciboDds}
-                    className="dds-recibo-no-print rounded-xl border border-cyan-200 bg-cyan-50 px-4 py-2 text-xs font-black text-cyan-800 shadow-sm transition hover:border-cyan-300 hover:bg-cyan-100"
+                    className="dds-recibo-no-print rounded-xl border border-cyan-200 bg-cyan-50 px-3 py-2 text-[11px] font-black text-cyan-800 shadow-sm transition hover:border-cyan-300 hover:bg-cyan-100"
                 >
                     Abrir consulta pública
                 </button>
@@ -7332,12 +7412,12 @@ export function DdsPage({
             <button
                 type="button"
                 onClick={copiarCodigoReciboDds}
-                className="dds-recibo-no-print rounded-xl border border-violet-200 bg-violet-50 px-4 py-2 text-xs font-black text-violet-800 shadow-sm transition hover:border-violet-300 hover:bg-violet-100"
+                className="dds-recibo-no-print rounded-xl border border-violet-200 bg-violet-50 px-3 py-2 text-[11px] font-black text-violet-800 shadow-sm transition hover:border-violet-300 hover:bg-violet-100"
             >
                 {codigoReciboCopiadoDds ? "Código copiado" : "Copiar código"}
             </button>
 
-            <span className="rounded-xl border border-emerald-300 bg-emerald-50 px-4 py-2 text-xs font-black uppercase tracking-wide text-emerald-800">
+            <span className="rounded-xl border border-emerald-300 bg-emerald-50 px-3 py-2 text-[11px] font-black uppercase tracking-wide text-emerald-800">
                 {reciboConferenciaFinalDds.status}
             </span>
         </div>
@@ -7449,7 +7529,7 @@ export function DdsPage({
 
 
 {historicoDds.length > 0 && (
-<div className="rounded-2xl border border-slate-200 bg-white p-4 ring-1 ring-slate-100 lg:col-span-2">
+<div className="rounded-xl border border-slate-200 bg-white p-4 ring-1 ring-slate-100 lg:col-span-2">
     <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
         <div>
             <p className="text-[10px] font-black uppercase tracking-wide text-slate-500">
@@ -7472,7 +7552,7 @@ export function DdsPage({
         {historicoDds.map((evento, indice) => (
             <div
                 key={`historico-dds-${indice}`}
-                className="rounded-2xl border border-emerald-100 bg-emerald-50/60 p-3 ring-1 ring-emerald-50"
+                className="rounded-xl border border-emerald-100 bg-emerald-50/60 p-3 ring-1 ring-emerald-50"
             >
                 <div className="flex items-start gap-2">
                     <span className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-xl bg-white text-[11px] font-black text-emerald-700 ring-1 ring-emerald-100">
@@ -7501,7 +7581,7 @@ export function DdsPage({
 
 
 {reciboConferenciaFinalDds && (
-<div className="rounded-2xl border border-sky-200 bg-sky-50/70 p-4 ring-1 ring-sky-100 lg:col-span-2">
+<div className="rounded-xl border border-sky-200 bg-sky-50/70 p-4 ring-1 ring-sky-100 lg:col-span-2">
     <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
         <div>
             <p className="text-[10px] font-black uppercase tracking-wide text-sky-700">
@@ -7519,7 +7599,7 @@ export function DdsPage({
             <button
                 type="button"
                 onClick={imprimirControleMaoDeObraDds}
-                className="rounded-xl border border-emerald-300 bg-emerald-50 px-4 py-2 text-xs font-black text-emerald-800 shadow-sm transition hover:border-emerald-400 hover:bg-emerald-100"
+                className="rounded-xl border border-emerald-300 bg-emerald-50 px-3 py-2 text-[11px] font-black text-emerald-800 shadow-sm transition hover:border-emerald-400 hover:bg-emerald-100"
             >
                 Imprimir PDF
             </button>
@@ -7527,7 +7607,7 @@ export function DdsPage({
             <button
                 type="button"
                 onClick={exportarControleMaoDeObraDds}
-                className="rounded-xl border border-sky-300 bg-white px-4 py-2 text-xs font-black text-sky-800 shadow-sm transition hover:border-sky-400 hover:bg-sky-50"
+                className="rounded-xl border border-sky-300 bg-white px-3 py-2 text-[11px] font-black text-sky-800 shadow-sm transition hover:border-sky-400 hover:bg-sky-50"
             >
                 Exportar Excel
             </button>
@@ -7557,28 +7637,48 @@ export function DdsPage({
         <span className="font-black uppercase tracking-wide">Jornada padrão:</span>{" "}
         Expediente normal das 07:00 às 17:00, almoço das 12:00 às 13:00 e DDS das 07:00 às 07:10.
     </div>
-    <div className="mt-3 flex flex-col gap-3 rounded-xl border border-slate-200 bg-white px-3 py-3 text-xs font-bold text-slate-700 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-            <p className="text-[10px] font-black uppercase tracking-wide text-slate-500">
+                <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-xs font-semibold text-slate-600 xl:flex-nowrap">
+            <span className="shrink-0 whitespace-nowrap text-[10px] font-black uppercase tracking-[0.12em] text-slate-500">
                 Calendário do relatório
-            </p>
-            <p className="mt-1 text-xs font-bold text-slate-700">
-                Aplicado automaticamente a partir da cidade/UF cadastrada na obra.
-            </p>
-        </div>
+            </span>
 
-        <div className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-right">
-            <p className="text-[10px] font-black uppercase tracking-wide text-slate-500">
-                Calendário aplicado
-            </p>
-            <p className="mt-1 text-xs font-black text-slate-900">
+            <span
+                aria-hidden="true"
+                className="hidden h-4 w-px shrink-0 bg-slate-200 xl:block"
+            />
+
+            <span className="min-w-0 flex-1 xl:whitespace-nowrap">
+                Aplicado automaticamente a partir da cidade/UF cadastrada na obra.
+            </span>
+
+            <span
+                aria-hidden="true"
+                className="hidden h-4 w-px shrink-0 bg-slate-200 xl:block"
+            />
+
+            <span className="shrink-0 whitespace-nowrap text-slate-500">
+                Calendário aplicado:
+            </span>
+
+            <strong className="shrink-0 whitespace-nowrap text-slate-950">
                 {calendarioMaoDeObraSelecionadoDds.rotulo}
-            </p>
-            <p className="mt-0.5 text-[10px] font-bold text-slate-500">
-                Origem: {calendarioMaoDeObraSelecionadoDds.origem === "cadastro da obra" ? "cadastro da obra" : "padrão SafeScan"}
-            </p>
+            </strong>
+
+            <span
+                aria-hidden="true"
+                className="hidden h-4 w-px shrink-0 bg-slate-200 xl:block"
+            />
+
+            <span className="shrink-0 whitespace-nowrap text-slate-500">
+                Origem:
+            </span>
+
+            <strong className="shrink-0 whitespace-nowrap text-slate-950">
+                {calendarioMaoDeObraSelecionadoDds.origem === "cadastro da obra"
+                    ? "cadastro da obra"
+                    : "padrão SafeScan"}
+            </strong>
         </div>
-    </div>
 </div>
 )}
 
@@ -7646,50 +7746,50 @@ export function DdsPage({
     </div>
 
     {erroHistoricoMensalMaoDeObraDds && (
-        <div className="mt-3 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-bold text-amber-800">
+        <div className="mt-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-bold text-amber-800">
             {erroHistoricoMensalMaoDeObraDds}
         </div>
     )}
 
     <div className="mt-3 grid gap-2.5 md:grid-cols-3 xl:grid-cols-7">
-        <div className="flex min-h-[58px] flex-col items-center justify-center rounded-2xl border border-slate-100 bg-white p-3 text-center">
+        <div className="flex min-h-[58px] flex-col items-center justify-center rounded-xl border border-slate-100 bg-white p-3 text-center">
             <p className="text-[10px] font-black uppercase tracking-wide text-slate-400">DDS encontrados</p>
             <p className="mt-1 text-base font-black text-slate-950">{resumoHistoricoMensalMaoDeObraDds.ddsEncontrados}</p>
         </div>
-        <div className="flex min-h-[58px] flex-col items-center justify-center rounded-2xl border border-emerald-100 bg-emerald-50 p-3 text-center">
+        <div className="flex min-h-[58px] flex-col items-center justify-center rounded-xl border border-emerald-100 bg-emerald-50 p-3 text-center">
             <p className="text-[10px] font-black uppercase tracking-wide text-emerald-700">Concluídos</p>
             <p className="mt-1 text-base font-black text-emerald-900">{resumoHistoricoMensalMaoDeObraDds.ddsConcluidos}</p>
         </div>
-        <div className="flex min-h-[58px] flex-col items-center justify-center rounded-2xl border border-sky-100 bg-sky-50 p-3 text-center">
+        <div className="flex min-h-[58px] flex-col items-center justify-center rounded-xl border border-sky-100 bg-sky-50 p-3 text-center">
             <p className="text-[10px] font-black uppercase tracking-wide text-sky-700">Dias apurados</p>
             <p className="mt-1 text-base font-black text-sky-900">{resumoHistoricoMensalMaoDeObraDds.diasApurados}</p>
         </div>
-        <div className="flex min-h-[58px] flex-col items-center justify-center rounded-2xl border border-orange-100 bg-orange-50 p-3 text-center">
+        <div className="flex min-h-[58px] flex-col items-center justify-center rounded-xl border border-orange-100 bg-orange-50 p-3 text-center">
             <p className="text-[10px] font-black uppercase tracking-wide text-orange-700">Acumulado</p>
             <p className="mt-1 text-base font-black text-orange-900">{formatarNumeroMaoDeObraDds(resumoHistoricoMensalMaoDeObraDds.acumuladoPeriodo)}</p>
         </div>
-        <div className="flex min-h-[58px] flex-col items-center justify-center rounded-2xl border border-violet-100 bg-violet-50 p-3 text-center">
+        <div className="flex min-h-[58px] flex-col items-center justify-center rounded-xl border border-violet-100 bg-violet-50 p-3 text-center">
             <p className="text-[10px] font-black uppercase tracking-wide text-violet-700">Efetivo médio</p>
             <p className="mt-1 text-base font-black text-violet-900">{formatarNumeroMaoDeObraDds(resumoHistoricoMensalMaoDeObraDds.efetivoMedio)}</p>
         </div>
-        <div className="flex min-h-[58px] flex-col items-center justify-center rounded-2xl border border-amber-100 bg-amber-50 p-3 text-center">
+        <div className="flex min-h-[58px] flex-col items-center justify-center rounded-xl border border-amber-100 bg-amber-50 p-3 text-center">
             <p className="text-[10px] font-black uppercase tracking-wide text-amber-700">Em aberto</p>
             <p className="mt-1 text-base font-black text-amber-900">{resumoHistoricoMensalMaoDeObraDds.ddsPendentes}</p>
         </div>
-        <div className="flex min-h-[58px] flex-col items-center justify-center rounded-2xl border border-slate-100 bg-white p-3 text-center">
+        <div className="flex min-h-[58px] flex-col items-center justify-center rounded-xl border border-slate-100 bg-white p-3 text-center">
             <p className="text-[10px] font-black uppercase tracking-wide text-slate-400">Funções</p>
             <p className="mt-1 text-base font-black text-slate-950">{resumoHistoricoMensalMaoDeObraDds.funcoes}</p>
         </div>
     </div>
 
     {resumoHistoricoMensalMaoDeObraDds.possuiPendencias && (
-        <div className="mt-3 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-2 text-xs font-bold text-amber-800">
+        <div className="mt-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-2 text-xs font-bold text-amber-800">
             Existem DDS em aberto fora da consolidação oficial. O PDF/Excel mensal considera somente DDS concluídos.
         </div>
     )}
 
     {historicoMensalMaoDeObraDds.length > 0 && (
-        <div className="mt-3 overflow-hidden rounded-2xl border border-slate-100">
+        <div className="mt-3 overflow-hidden rounded-xl border border-slate-100">
             <div className="grid grid-cols-[minmax(0,1fr)_auto_auto_auto] items-center gap-3 bg-slate-50 px-4 py-2 text-[10px] font-black uppercase tracking-wide text-slate-500">
                 <span>DDS</span>
                 <span>Período</span>
@@ -7722,7 +7822,7 @@ export function DdsPage({
 </section>
 
 {registroScannerDds && (
-                                <div data-dds-registro-localizado className="rounded-2xl border border-emerald-100 bg-white p-4 ring-1 ring-emerald-50 lg:col-span-2">
+                                <div data-dds-registro-localizado className="rounded-xl border border-emerald-100 bg-white p-4 ring-1 ring-emerald-50 lg:col-span-2">
                                     <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
                                         <div>
                                             <p className="text-[10px] font-black uppercase tracking-wide text-emerald-700">
@@ -7807,10 +7907,10 @@ export function DdsPage({
                     role="button"
                     tabIndex={0}
                     onKeyDown={(evento) => { if (evento.key === "Enter" || evento.key === " ") alternarCardDds("temas"); }}
-                    className="flex min-h-[52px] cursor-pointer flex-col gap-3 rounded-2xl transition hover:bg-slate-50 lg:flex-row lg:items-center lg:justify-between"
+                    className="flex min-h-[52px] cursor-pointer flex-col gap-3 rounded-xl transition hover:bg-slate-50 lg:flex-row lg:items-center lg:justify-between"
                 >
                     <div className="flex items-start gap-3">
-                        <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-sky-50 text-sky-700 ring-1 ring-sky-100">
+                        <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-sky-50 text-sky-700 ring-1 ring-sky-100">
                             <ClipboardList className="h-5 w-5" />
                         </span>
                         <div>
@@ -7818,20 +7918,12 @@ export function DdsPage({
                                 Temas por dia da semana
                             </h2>
                             <p className="mt-1 text-sm font-semibold text-slate-500">
-                                Defina o tema e o responsável de cada dia antes de imprimir.
+                                Preencha o tema e o responsável de cada dia quando necessário.
                             </p>
                         </div>
                     </div>
 
                     <div className="flex shrink-0 flex-wrap items-center gap-2" onClick={(evento) => evento.stopPropagation()}>
-                        <button
-                            type="button"
-                            onClick={restaurarTemasPadraoDds}
-                            className="inline-flex items-center justify-center rounded-2xl border border-slate-200 bg-slate-50 px-4 py-2 text-xs font-black text-slate-700 shadow-sm transition hover:-translate-y-0.5 hover:bg-white"
-                        >
-                            Restaurar temas padrão
-                        </button>
-
                         <button
                             type="button"
                             onClick={() => alternarCardDds("temas")}
@@ -7846,7 +7938,7 @@ export function DdsPage({
                     {diasSemanaComTemasDds.map((dia, indice) => (
                         <div
                             key={`${dia.curto}-${dia.data}`}
-                            className="rounded-2xl border border-slate-200 bg-slate-50 p-3"
+                            className="rounded-xl border border-slate-200 bg-slate-50 p-3"
                         >
                             <div className="rounded-xl bg-slate-950 px-3 py-2 text-center text-white">
                                 <p className="text-[10px] font-black uppercase tracking-wide">
@@ -7892,10 +7984,10 @@ export function DdsPage({
                     role="button"
                     tabIndex={0}
                     onKeyDown={(evento) => { if (evento.key === "Enter" || evento.key === " ") alternarCardDds("recados"); }}
-                    className="flex min-h-[52px] cursor-pointer flex-col gap-3 rounded-2xl transition hover:bg-slate-50 lg:flex-row lg:items-center lg:justify-between"
+                    className="flex min-h-[52px] cursor-pointer flex-col gap-3 rounded-xl transition hover:bg-slate-50 lg:flex-row lg:items-center lg:justify-between"
                 >
                     <div className="flex items-start gap-3">
-                        <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-amber-50 text-amber-700 ring-1 ring-amber-100">
+                        <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-amber-50 text-amber-700 ring-1 ring-amber-100">
                             <MessageSquareText className="h-5 w-5" />
                         </span>
                         <div>
@@ -7912,7 +8004,7 @@ export function DdsPage({
                     <button
                         type="button"
                         onClick={() => setRecadosDdsEditaveis("")}
-                        className="inline-flex items-center justify-center rounded-2xl border border-slate-200 bg-slate-50 px-4 py-2 text-xs font-black text-slate-700 shadow-sm transition hover:-translate-y-0.5 hover:bg-white"
+                        className="inline-flex items-center justify-center rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-[11px] font-black text-slate-700 shadow-sm transition hover:-translate-y-0.5 hover:bg-white"
                     >
                         Limpar recados
                     </button>
@@ -7932,7 +8024,7 @@ export function DdsPage({
                     onChange={(evento) => setRecadosDdsEditaveis(evento.target.value)}
                     rows={4}
                     placeholder="Ex.: Reforçar uso de óculos de segurança, organização do canteiro, atenção em atividades com máquinas..."
-                    className="mt-4 w-full resize-none rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-bold leading-6 text-slate-800 outline-none transition focus:border-emerald-400 focus:bg-white focus:ring-2 focus:ring-emerald-100"
+                    className="mt-4 w-full resize-none rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-bold leading-6 text-slate-800 outline-none transition focus:border-emerald-400 focus:bg-white focus:ring-2 focus:ring-emerald-100"
                 />
                 )}
             </section>
@@ -7943,10 +8035,10 @@ export function DdsPage({
                     role="button"
                     tabIndex={0}
                     onKeyDown={(evento) => { if (evento.key === "Enter" || evento.key === " ") alternarCardDds("orientacoes"); }}
-                    className="flex min-h-[52px] cursor-pointer flex-col gap-3 rounded-2xl transition hover:bg-slate-50 lg:flex-row lg:items-center lg:justify-between"
+                    className="flex min-h-[52px] cursor-pointer flex-col gap-3 rounded-xl transition hover:bg-slate-50 lg:flex-row lg:items-center lg:justify-between"
                 >
                     <div className="flex items-start gap-3">
-                        <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-violet-50 text-violet-700 ring-1 ring-violet-100">
+                        <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-violet-50 text-violet-700 ring-1 ring-violet-100">
                             <ListChecks className="h-5 w-5" />
                         </span>
                         <div>
@@ -7963,7 +8055,7 @@ export function DdsPage({
                     <button
                         type="button"
                         onClick={restaurarOrientacoesPadraoDds}
-                        className="inline-flex items-center justify-center rounded-2xl border border-slate-200 bg-slate-50 px-4 py-2 text-xs font-black text-slate-700 shadow-sm transition hover:-translate-y-0.5 hover:bg-white"
+                        className="inline-flex items-center justify-center rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-[11px] font-black text-slate-700 shadow-sm transition hover:-translate-y-0.5 hover:bg-white"
                     >
                         Restaurar orientações padrão
                     </button>
@@ -7982,7 +8074,7 @@ export function DdsPage({
                     {orientacoesDdsEditaveis.map((orientacao, indice) => (
                         <label
                             key={`orientacao-dds-${indice}`}
-                            className="block rounded-2xl border border-slate-200 bg-slate-50 p-3"
+                            className="block rounded-xl border border-slate-200 bg-slate-50 p-3"
                         >
                             <span className="text-[10px] font-black uppercase tracking-wide text-slate-400">
                                 Orientação {indice + 1}
@@ -8004,10 +8096,10 @@ export function DdsPage({
                     role="button"
                     tabIndex={0}
                     onKeyDown={(evento) => { if (evento.key === "Enter" || evento.key === " ") alternarCardDds("preview"); }}
-                    className="flex min-h-[52px] cursor-pointer flex-col gap-3 rounded-2xl transition hover:bg-slate-50 lg:flex-row lg:items-center lg:justify-between"
+                    className="flex min-h-[52px] cursor-pointer flex-col gap-3 rounded-xl transition hover:bg-slate-50 lg:flex-row lg:items-center lg:justify-between"
                 >
                     <div className="flex items-start gap-3">
-                        <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-slate-50 text-slate-700 ring-1 ring-slate-100">
+                        <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-slate-50 text-slate-700 ring-1 ring-slate-100">
                             <Printer className="h-5 w-5" />
                         </span>
                         <div>

@@ -391,3 +391,67 @@ Microetapa 3E aplicada:
 - DDS concluído exibe botão "Carregar DDS".
 - DDS em aberto exibe botão "Revisar DDS".
 - Ao carregar pela lista, o sistema busca o registro por código, atualiza o scanner DDS e rola até o card de registro localizado.
+
+## Correção real de layout e busca com obra indefinida
+
+Ajuste corretivo antes da Microetapa 3F:
+
+- O normalizador normalizarBuscaObraHistoricoMensalDds passou a tratar placeholders como "Obra / Setor não definido" como vazio.
+- A busca mensal deixou de bloquear quando não há obra válida; nesses casos, usa empresa/período e não aplica filtro textual de obra.
+- O campo Código do DDS e os botões Buscar registro / Usar código atual foram forçados em linha única.
+- Botões do recibo, consulta pública, copiar código e status oficial foram ajustados para evitar quebra quando houver espaço.
+
+## Ajuste complementar de busca e compactação visual DDS
+
+Correção complementar antes da Microetapa 3F:
+
+- Incluído fallback para o Histórico Mensal usar o DDS atualmente carregado quando a consulta mensal não retornar registros, desde que o código/período/data pertença ao mês selecionado.
+- Mensagem de ausência de DDS ajustada para não culpar apenas a obra base.
+- Bloco Conferência DDS ajustado para remover alinhamento inferior que gerava área vazia.
+- Formulário Código do DDS mantido em linha compacta no desktop.
+- Ações do recibo foram compactadas para reduzir quebra visual.
+
+## Remoção do card auxiliar e legendas dos relatórios mensais
+
+Ajuste visual complementar:
+
+- Removido o card informativo "Primeira etapa do scanner DDS", pois não executava função operacional.
+- O grid superior da Conferência DDS passou a usar somente uma coluna.
+- Cards superiores do PDF mensal foram centralizados vertical e horizontalmente.
+- PDF mensal recebeu legenda colorida para presença, sábado, domingo e feriado.
+- Excel mensal recebeu legenda colorida equivalente.
+- Cabeçalhos e informações do Excel mensal receberam alinhamento vertical central.
+
+## Padronização final das legendas e campo Código do DDS
+
+Ajuste visual complementar:
+
+- Campo Código do DDS ampliado de 136 px para 200 px.
+- Limite do formulário do scanner ampliado para acomodar o código completo.
+- Excel mensal passou a usar o caractere quadrado colorido, compatível com arquivos XLS gerados por HTML.
+- Excel Implantação / Obra recebeu a mesma legenda compatível.
+- PDF Implantação / Obra passou a usar a mesma legenda visual aprovada no PDF mensal.
+- Cores mantidas: verde para presença, amarelo para sábado, vermelho para domingo e azul para feriado.
+
+## Calendário do relatório em faixa única
+
+Ajuste visual complementar:
+
+- O bloco Calendário do relatório deixou de usar duas áreas separadas.
+- Descrição, calendário aplicado e origem passaram a ser exibidos em uma única faixa horizontal.
+- No desktop, todas as informações permanecem na mesma linha.
+- Em telas menores, a faixa pode quebrar de forma controlada para preservar a leitura.
+- A altura total do bloco foi reduzida.
+
+## Temas DDS em branco e Conferência compactada
+
+Ajuste visual e funcional complementar:
+
+- Adicionado pequeno espaçamento entre Jornada padrão e Calendário do relatório.
+- Removidas as alturas mínimas desnecessárias do card Conferência DDS.
+- Reduzidos os espaçamentos internos da conferência.
+- Os sete temas e responsáveis fixos foram removidos.
+- Um novo DDS inicia com os campos de tema e responsável em branco.
+- Temas antigos do cache local deixam de ser preenchidos automaticamente.
+- Removidos a função e o botão Restaurar temas padrão.
+- O preenchimento futuro poderá ser definido por análise das auditorias.
