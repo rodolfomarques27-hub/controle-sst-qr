@@ -4508,6 +4508,92 @@ export function DdsPage({
         const periodoFim = registroScannerDds?.periodoFim || dadosRegistro.periodoFim || dadosDds.periodoFim || "-";
         const urlConferencia = registroScannerDds?.urlConferencia || dadosRegistro.urlConferencia || dadosDds.qrConferenciaUrl || "";
 
+        const obterNumeroReciboDds = (
+            valor,
+            fallback = 0
+        ) => {
+            const numero = Number(
+                valor ?? fallback ?? 0
+            );
+
+            return Number.isFinite(numero)
+                ? numero
+                : 0;
+        };
+
+        const participantes = obterNumeroReciboDds(
+            resumoFechamento.participantes ??
+            resumoResultado.participantesTotal
+        );
+
+        const presencas = obterNumeroReciboDds(
+            resumoFechamento.presencas ??
+            resumoResultado.presencas
+        );
+
+        const ausencias = obterNumeroReciboDds(
+            resumoFechamento.ausencias ??
+            resumoResultado.ausencias
+        );
+
+        const manuais = obterNumeroReciboDds(
+            resumoFechamento.manuais ??
+            resumoResultado.manuais
+        );
+
+        const homemDia = obterNumeroReciboDds(
+            resumoFechamento.homemDia ??
+            resumoResultado.homemDia
+        );
+
+        const funcionariosSemanaCompleta =
+            obterNumeroReciboDds(
+                resumoFechamento.funcionariosSemanaCompleta ??
+                resumoResultado.funcionariosSemanaCompleta
+            );
+
+        const participantesAdicionais =
+            obterNumeroReciboDds(
+                resumoFechamento.participantesAdicionais ??
+                resumoResultado.participantesAdicionais ??
+                estatisticasFechamento.participantesAdicionais ?? estatisticasConferenciaAssistidaDds.participantesAdicionais
+            );
+
+        const presencasAdicionais =
+            obterNumeroReciboDds(
+                resumoFechamento.presencasAdicionais ??
+                resumoResultado.presencasAdicionais ??
+                estatisticasFechamento.presencasAdicionais ?? estatisticasConferenciaAssistidaDds.presencasAdicionais
+            );
+
+        const ausenciasAdicionais =
+            obterNumeroReciboDds(
+                resumoFechamento.ausenciasAdicionais ??
+                resumoResultado.ausenciasAdicionais ??
+                estatisticasFechamento.ausenciasAdicionais ?? estatisticasConferenciaAssistidaDds.ausenciasAdicionais
+            );
+
+        const manuaisAdicionais =
+            obterNumeroReciboDds(
+                resumoFechamento.manuaisAdicionais ??
+                resumoResultado.manuaisAdicionais ??
+                estatisticasFechamento.manuaisAdicionais ?? estatisticasConferenciaAssistidaDds.manuaisAdicionais
+            );
+
+        const homemDiaAdicionais =
+            obterNumeroReciboDds(
+                resumoFechamento.homemDiaAdicionais ??
+                resumoResultado.homemDiaAdicionais ??
+                estatisticasFechamento.homemDiaAdicionais ?? estatisticasConferenciaAssistidaDds.homemDiaAdicionais
+            );
+
+        const semanaCompletaAdicionais =
+            obterNumeroReciboDds(
+                resumoFechamento.semanaCompletaAdicionais ??
+                resumoResultado.semanaCompletaAdicionais ??
+                estatisticasFechamento.semanaCompletaAdicionais ?? estatisticasConferenciaAssistidaDds.semanaCompletaAdicionais
+            );
+
         return {
             codigo,
             empresa,
@@ -4515,21 +4601,101 @@ export function DdsPage({
             periodoInicio,
             periodoFim,
             urlConferencia,
-            concluidoEm: fechamentoConferenciaAssistidaDds.concluidoEm || "",
-            status: "Conferência concluída oficialmente",
-            participantes: Number(resumoFechamento.participantes ?? resumoResultado.participantesTotal ?? 0),
-            presencas: Number(resumoFechamento.presencas ?? resumoResultado.presencas ?? 0),
-            ausencias: Number(resumoFechamento.ausencias ?? resumoResultado.ausencias ?? 0),
-            manuais: Number(resumoFechamento.manuais ?? resumoResultado.manuais ?? 0),
-            homemDia: Number(resumoFechamento.homemDia ?? resumoResultado.homemDia ?? 0),
-            diasAtivos: Number(resumoFechamento.diasAtivos ?? resumoResultado.diasAtivos ?? estatisticasFechamento.diasAtivos ?? 0),
-            funcionariosSemanaCompleta: Number(resumoFechamento.funcionariosSemanaCompleta ?? resumoResultado.funcionariosSemanaCompleta ?? 0),
+            concluidoEm:
+                fechamentoConferenciaAssistidaDds.concluidoEm ||
+                "",
+            status:
+                "Conferência concluída oficialmente",
+            participantes,
+            participantesCadastrados:
+                obterNumeroReciboDds(
+                    resumoFechamento.participantesCadastrados ??
+                    resumoResultado.participantesCadastrados ??
+                    estatisticasFechamento.participantesCadastrados ?? estatisticasConferenciaAssistidaDds.participantesCadastrados,
+                    Math.max(
+                        0,
+                        participantes -
+                        participantesAdicionais
+                    )
+                ),
+            participantesAdicionais,
+            presencas,
+            presencasCadastrados:
+                obterNumeroReciboDds(
+                    resumoFechamento.presencasCadastrados ??
+                    resumoResultado.presencasCadastrados ??
+                    estatisticasFechamento.presencasCadastrados ?? estatisticasConferenciaAssistidaDds.presencasCadastrados,
+                    Math.max(
+                        0,
+                        presencas -
+                        presencasAdicionais
+                    )
+                ),
+            presencasAdicionais,
+            ausencias,
+            ausenciasCadastrados:
+                obterNumeroReciboDds(
+                    resumoFechamento.ausenciasCadastrados ??
+                    resumoResultado.ausenciasCadastrados ??
+                    estatisticasFechamento.ausenciasCadastrados ?? estatisticasConferenciaAssistidaDds.ausenciasCadastrados,
+                    Math.max(
+                        0,
+                        ausencias -
+                        ausenciasAdicionais
+                    )
+                ),
+            ausenciasAdicionais,
+            manuais,
+            manuaisCadastrados:
+                obterNumeroReciboDds(
+                    resumoFechamento.manuaisCadastrados ??
+                    resumoResultado.manuaisCadastrados ??
+                    estatisticasFechamento.manuaisCadastrados ?? estatisticasConferenciaAssistidaDds.manuaisCadastrados,
+                    Math.max(
+                        0,
+                        manuais -
+                        manuaisAdicionais
+                    )
+                ),
+            manuaisAdicionais,
+            homemDia,
+            homemDiaCadastrados:
+                obterNumeroReciboDds(
+                    resumoFechamento.homemDiaCadastrados ??
+                    resumoResultado.homemDiaCadastrados ??
+                    estatisticasFechamento.homemDiaCadastrados ?? estatisticasConferenciaAssistidaDds.homemDiaCadastrados,
+                    Math.max(
+                        0,
+                        homemDia -
+                        homemDiaAdicionais
+                    )
+                ),
+            homemDiaAdicionais,
+            diasAtivos: obterNumeroReciboDds(
+                resumoFechamento.diasAtivos ??
+                resumoResultado.diasAtivos ??
+                estatisticasFechamento.diasAtivos
+            ),
+            funcionariosSemanaCompleta,
+            semanaCompletaCadastrados:
+                obterNumeroReciboDds(
+                    resumoFechamento.semanaCompletaCadastrados ??
+                    resumoResultado.semanaCompletaCadastrados ??
+                    estatisticasFechamento.semanaCompletaCadastrados ?? estatisticasConferenciaAssistidaDds.semanaCompletaCadastrados,
+                    Math.max(
+                        0,
+                        funcionariosSemanaCompleta -
+                        semanaCompletaAdicionais
+                    )
+                ),
+            semanaCompletaAdicionais,
         };
     }, [
         codigoConferenciaDds,
         conferenciaOficialConcluidaDds,
         dadosDds,
         fechamentoConferenciaAssistidaDds,
+        estatisticasConferenciaAssistidaDds,
         registroScannerDds,
         resultadoFinalApresentacaoDds,
     ]);
@@ -5957,12 +6123,24 @@ export function DdsPage({
             periodoFim: recibo.periodoFim || "",
             resumo: {
                 participantes: Number(recibo.participantes || 0),
+                participantesCadastrados: Number(recibo.participantesCadastrados || 0),
+                participantesAdicionais: Number(recibo.participantesAdicionais || 0),
                 presencas: Number(recibo.presencas || 0),
+                presencasCadastrados: Number(recibo.presencasCadastrados || 0),
+                presencasAdicionais: Number(recibo.presencasAdicionais || 0),
                 ausencias: Number(recibo.ausencias || 0),
+                ausenciasCadastrados: Number(recibo.ausenciasCadastrados || 0),
+                ausenciasAdicionais: Number(recibo.ausenciasAdicionais || 0),
                 manuais: Number(recibo.manuais || 0),
+                manuaisCadastrados: Number(recibo.manuaisCadastrados || 0),
+                manuaisAdicionais: Number(recibo.manuaisAdicionais || 0),
                 homemDia: Number(recibo.homemDia || 0),
+                homemDiaCadastrados: Number(recibo.homemDiaCadastrados || 0),
+                homemDiaAdicionais: Number(recibo.homemDiaAdicionais || 0),
                 diasAtivos: Number(recibo.diasAtivos || 0),
                 funcionariosSemanaCompleta: Number(recibo.funcionariosSemanaCompleta || 0),
+                semanaCompletaCadastrados: Number(recibo.semanaCompletaCadastrados || 0),
+                semanaCompletaAdicionais: Number(recibo.semanaCompletaAdicionais || 0),
             },
         };
 
@@ -6113,6 +6291,45 @@ export function DdsPage({
             cardMetrica("Status oficial", "OK", "blue"),
         ].join("");
 
+        const cardCategoriaRecibo = (
+            rotulo,
+            participantes,
+            presencas,
+            ausencias,
+            homemDia,
+            tom
+        ) =>
+            '<div class="category-card category-' + tom + '">' +
+                '<div class="category-head">' +
+                    '<span>' + escaparHtml(rotulo) + '</span>' +
+                    '<strong>' + escaparHtml(participantes) + '</strong>' +
+                '</div>' +
+                '<div class="category-metrics">' +
+                    '<div><span>Presenças</span><strong>' + escaparHtml(presencas) + '</strong></div>' +
+                    '<div><span>Ausências</span><strong>' + escaparHtml(ausencias) + '</strong></div>' +
+                    '<div><span>Homem-dia</span><strong>' + escaparHtml(homemDia) + '</strong></div>' +
+                '</div>' +
+            '</div>';
+
+        const cardsCategoriasRecibo = [
+            cardCategoriaRecibo(
+                "Colaboradores cadastrados",
+                recibo.participantesCadastrados,
+                recibo.presencasCadastrados,
+                recibo.ausenciasCadastrados,
+                recibo.homemDiaCadastrados,
+                "slate"
+            ),
+            cardCategoriaRecibo(
+                "Adicionais / visitantes",
+                recibo.participantesAdicionais,
+                recibo.presencasAdicionais,
+                recibo.ausenciasAdicionais,
+                recibo.homemDiaAdicionais,
+                "cyan"
+            ),
+        ].join("");
+
         const janela = window.open("", "_blank", "width=1100,height=760");
 
         if (!janela) {
@@ -6163,6 +6380,18 @@ export function DdsPage({
             ".metric-orange span,.metric-orange strong{color:#c2410c;}",
             ".metric-blue{border-color:#bae6fd;background:#f0f9ff;}",
             ".metric-blue span,.metric-blue strong{color:#0369a1;}",
+            ".category-section{margin-top:12px;}",
+            ".category-title{margin:0 0 7px;text-align:center;font-size:8.5px;font-weight:900;text-transform:uppercase;letter-spacing:.13em;color:#64748b;}",
+            ".category-grid{display:grid;grid-template-columns:1fr 1fr;gap:9px;}",
+            ".category-card{border:1px solid #e2e8f0;border-radius:13px;padding:8px;background:#f8fafc;break-inside:avoid;page-break-inside:avoid;}",
+            ".category-card.category-cyan{border-color:#a5f3fc;background:#ecfeff;}",
+            ".category-head{text-align:center;}",
+            ".category-head span{display:block;font-size:8px;font-weight:900;text-transform:uppercase;letter-spacing:.08em;color:#475569;}",
+            ".category-head strong{display:block;margin-top:2px;font-size:18px;line-height:1;font-weight:900;color:#0f172a;}",
+            ".category-metrics{display:grid;grid-template-columns:repeat(3,1fr);gap:5px;margin-top:7px;}",
+            ".category-metrics div{border:1px solid #e2e8f0;border-radius:8px;background:#fff;padding:5px 4px;text-align:center;}",
+            ".category-metrics span{display:block;font-size:6.8px;font-weight:900;text-transform:uppercase;letter-spacing:.06em;color:#64748b;}",
+            ".category-metrics strong{display:block;margin-top:2px;font-size:12px;line-height:1;font-weight:900;color:#0f172a;}",
             ".qr-panel{border:1px solid #dbe3ef;border-radius:15px;background:#f8fafc;padding:12px 10px;text-align:center;display:flex;flex-direction:column;align-items:center;justify-content:center;}",
             ".qr-box{width:110px;height:110px;border:1px solid #e2e8f0;border-radius:12px;background:#fff;display:flex;align-items:center;justify-content:center;padding:7px;margin:0 auto 9px;}",
             ".qr-box svg,.qr-box img,.qr-box canvas{width:94px!important;height:94px!important;display:block;}",
@@ -6211,6 +6440,12 @@ export function DdsPage({
             "<p class=\"qr-title\">Conclusão oficial</p>",
             "<p class=\"qr-date\">", concluidoEm, "</p>",
             "</aside>",
+            "</section>",
+            "<section class=\"category-section\">",
+            "<p class=\"category-title\">Composição dos participantes</p>",
+            "<div class=\"category-grid\">",
+            cardsCategoriasRecibo,
+            "</div>",
             "</section>",
             "<section class=\"auth\">",
             "<div class=\"auth-card\"><p><strong>Autenticidade:</strong> o QR/código vincula este comprovante ao registro digital do DDS para conferência e auditoria.</p></div>",
@@ -7598,24 +7833,22 @@ export function DdsPage({
     </div>
 
     <div className="mt-2">
-        <p className="mb-2 text-[9px] font-black uppercase tracking-wide text-slate-400">
+        <p className="mb-2 text-center text-[9px] font-black uppercase tracking-[0.14em] text-slate-400">
             Indicadores por categoria de participante
         </p>
 
         <div className="grid gap-2 lg:grid-cols-2">
             <div className="rounded-xl border border-slate-200 bg-white p-3 shadow-sm">
-                <div className="flex items-start justify-between gap-3">
-                    <div>
-                        <p className="text-[10px] font-black uppercase tracking-wide text-slate-500">
-                            Colaboradores cadastrados
-                        </p>
+                <div className="flex min-h-[76px] flex-col items-center justify-center text-center">
+                    <p className="text-[10px] font-black uppercase tracking-wide text-slate-500">
+                        Colaboradores cadastrados
+                    </p>
 
-                        <p className="mt-1 text-xl font-black text-slate-950">
-                            {estatisticasConferenciaAssistidaDds.participantesCadastrados}
-                        </p>
-                    </div>
+                    <p className="mt-1 text-2xl font-black leading-none text-slate-950">
+                        {estatisticasConferenciaAssistidaDds.participantesCadastrados}
+                    </p>
 
-                    <span className="rounded-full bg-slate-100 px-2.5 py-1 text-[9px] font-black uppercase tracking-wide text-slate-600">
+                    <span className="mt-2 inline-flex rounded-full bg-slate-100 px-3 py-1 text-[9px] font-black uppercase tracking-wide text-slate-600">
                         Cadastro SafeScan
                     </span>
                 </div>
@@ -7651,18 +7884,16 @@ export function DdsPage({
             </div>
 
             <div className="rounded-xl border border-cyan-200 bg-white p-3 shadow-sm">
-                <div className="flex items-start justify-between gap-3">
-                    <div>
-                        <p className="text-[10px] font-black uppercase tracking-wide text-cyan-700">
-                            Adicionais / visitantes
-                        </p>
+                <div className="flex min-h-[76px] flex-col items-center justify-center text-center">
+                    <p className="text-[10px] font-black uppercase tracking-wide text-cyan-700">
+                        Adicionais / visitantes
+                    </p>
 
-                        <p className="mt-1 text-xl font-black text-cyan-950">
-                            {estatisticasConferenciaAssistidaDds.participantesAdicionais}
-                        </p>
-                    </div>
+                    <p className="mt-1 text-2xl font-black leading-none text-cyan-950">
+                        {estatisticasConferenciaAssistidaDds.participantesAdicionais}
+                    </p>
 
-                    <span className="rounded-full bg-cyan-50 px-2.5 py-1 text-[9px] font-black uppercase tracking-wide text-cyan-700 ring-1 ring-cyan-200">
+                    <span className="mt-2 inline-flex rounded-full bg-cyan-50 px-3 py-1 text-[9px] font-black uppercase tracking-wide text-cyan-700 ring-1 ring-cyan-200">
                         Registro manual
                     </span>
                 </div>
@@ -8172,6 +8403,104 @@ export function DdsPage({
                     ? new Date(reciboConferenciaFinalDds.concluidoEm).toLocaleString("pt-BR")
                     : "-"}
             </p>
+        </div>
+    </div>
+
+    <div className="mt-3">
+        <p className="mb-2 text-center text-[9px] font-black uppercase tracking-[0.14em] text-slate-400">
+            Composição dos participantes
+        </p>
+
+        <div className="grid gap-2 lg:grid-cols-2">
+            <div className="h-full rounded-xl border border-slate-200 bg-slate-50/70 p-3">
+                <div className="flex min-h-[94px] flex-col items-center justify-center text-center">
+                    <p className="text-[10px] font-black uppercase tracking-wide text-slate-500">
+                        Colaboradores cadastrados
+                    </p>
+
+                    <p className="mt-1 text-2xl font-black leading-none text-slate-950">
+                        {reciboConferenciaFinalDds.participantesCadastrados}
+                    </p>
+
+                    <span className="mt-2 inline-flex rounded-full bg-white px-3 py-1 text-[9px] font-black uppercase tracking-wide text-slate-600 ring-1 ring-slate-200">
+                        Cadastro SafeScan
+                    </span>
+                </div>
+
+                <div className="mt-3 grid grid-cols-3 gap-2 text-center">
+                    <div className="rounded-lg bg-emerald-50 px-2 py-2">
+                        <p className="text-[8px] font-black uppercase text-emerald-700">
+                            Presenças
+                        </p>
+                        <p className="mt-0.5 text-sm font-black text-emerald-900">
+                            {reciboConferenciaFinalDds.presencasCadastrados}
+                        </p>
+                    </div>
+
+                    <div className="rounded-lg bg-red-50 px-2 py-2">
+                        <p className="text-[8px] font-black uppercase text-red-700">
+                            Ausências
+                        </p>
+                        <p className="mt-0.5 text-sm font-black text-red-900">
+                            {reciboConferenciaFinalDds.ausenciasCadastrados}
+                        </p>
+                    </div>
+
+                    <div className="rounded-lg bg-orange-50 px-2 py-2">
+                        <p className="text-[8px] font-black uppercase text-orange-700">
+                            Homem-dia
+                        </p>
+                        <p className="mt-0.5 text-sm font-black text-orange-900">
+                            {reciboConferenciaFinalDds.homemDiaCadastrados}
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            <div className="h-full rounded-xl border border-cyan-200 bg-cyan-50/40 p-3">
+                <div className="flex min-h-[94px] flex-col items-center justify-center text-center">
+                    <p className="text-[10px] font-black uppercase tracking-wide text-cyan-700">
+                        Adicionais / visitantes
+                    </p>
+
+                    <p className="mt-1 text-2xl font-black leading-none text-cyan-950">
+                        {reciboConferenciaFinalDds.participantesAdicionais}
+                    </p>
+
+                    <span className="mt-2 inline-flex rounded-full bg-white px-3 py-1 text-[9px] font-black uppercase tracking-wide text-cyan-700 ring-1 ring-cyan-200">
+                        Registro manual
+                    </span>
+                </div>
+
+                <div className="mt-3 grid grid-cols-3 gap-2 text-center">
+                    <div className="rounded-lg bg-emerald-50 px-2 py-2">
+                        <p className="text-[8px] font-black uppercase text-emerald-700">
+                            Presenças
+                        </p>
+                        <p className="mt-0.5 text-sm font-black text-emerald-900">
+                            {reciboConferenciaFinalDds.presencasAdicionais}
+                        </p>
+                    </div>
+
+                    <div className="rounded-lg bg-red-50 px-2 py-2">
+                        <p className="text-[8px] font-black uppercase text-red-700">
+                            Ausências
+                        </p>
+                        <p className="mt-0.5 text-sm font-black text-red-900">
+                            {reciboConferenciaFinalDds.ausenciasAdicionais}
+                        </p>
+                    </div>
+
+                    <div className="rounded-lg bg-orange-50 px-2 py-2">
+                        <p className="text-[8px] font-black uppercase text-orange-700">
+                            Homem-dia
+                        </p>
+                        <p className="mt-0.5 text-sm font-black text-orange-900">
+                            {reciboConferenciaFinalDds.homemDiaAdicionais}
+                        </p>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 
