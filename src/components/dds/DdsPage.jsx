@@ -962,6 +962,7 @@ function carregarCardsDdsLocal() {
         return {
             ...CARDS_DDS_PADRAO,
             ...(salvo && typeof salvo === "object" ? salvo : {}),
+            temas: true,
         };
     } catch {
         return { ...CARDS_DDS_PADRAO };
@@ -2336,6 +2337,7 @@ export function DdsPage({
     const [carregandoLeituraArquivoScannerDds, setCarregandoLeituraArquivoScannerDds] = useState(false);
     const [erroLeituraArquivoScannerDds, setErroLeituraArquivoScannerDds] = useState("");
     const [conferenciaAssistidaDds, setConferenciaAssistidaDds] = useState({});
+    const [temasConferenciaAssistidaDds, setTemasConferenciaAssistidaDds] = useState([]);
     const [participantesAdicionaisConferenciaDds, setParticipantesAdicionaisConferenciaDds] = useState(() =>
         criarParticipantesAdicionaisConferenciaDds()
     );
@@ -2909,44 +2911,146 @@ export function DdsPage({
     ]);
 
 
-    const diasAtivosConferenciaAssistidaDds = useMemo(() => {
-        const textoSemAtividade = (valor = "") => String(valor || "")
+    const diasConferenciaAssistidaDds = useMemo(() => {
+        const normalizarTexto = (valor = "") => String(valor || "")
             .normalize("NFD")
             .replace(/[\u0300-\u036f]/g, "")
+            .trim()
             .toLowerCase();
 
-        return diasRegistroScannerDds
-            .map((dia, posicao) => {
-                const textoBase = [
-                    dia?.data,
-                    dia?.curto,
-                    dia?.nome,
-                    dia?.tema,
-                    dia?.titulo,
-                    dia?.descricao,
-                ].filter(Boolean).join("-");
+        return diasRegistroScannerDds.map((dia, posicao) => {
+            const temaPlanejado = String(
+                dia?.tema || dia?.titulo || dia?.descricao || ""
+            ).trim();
 
-                return {
-                    ...dia,
-                    indiceAssistido: Number.isFinite(Number(dia?.indice)) ? Number(dia.indice) : posicao + 1,
-                    chaveAssistida: `${posicao + 1}-${textoBase || "dia"}`
-                        .normalize("NFD")
-                        .replace(/[\u0300-\u036f]/g, "")
-                        .replace(/[^a-zA-Z0-9_-]+/g, "-")
-                        .replace(/-+/g, "-")
-                        .replace(/^-|-$/g, ""),
-                };
-            })
-            .filter((dia) => {
-                const tema = textoSemAtividade(dia?.tema || dia?.titulo || dia?.descricao || "");
-                const semAtividadeTexto =
-                    tema.includes("nao houve atividade") ||
-                    tema.includes("sem atividade") ||
-                    tema.includes("nao teve atividade");
+            const responsavelPlanejado = String(
+                dia?.responsavel || dia?.aplicador || ""
+            ).trim();
 
-                return !dia.semAtividade && !semAtividadeTexto;
-            });
-    }, [diasRegistroScannerDds]);
+            const textoPlanejado =
+                normalizarTexto(temaPlanejado);
+
+            const semAtividadePlanejada = Boolean(
+                dia?.semAtividade ||
+                textoPlanejado.includes("nao houve atividade") ||
+                textoPlanejado.includes("sem atividade") ||
+                textoPlanejado.includes("nao teve atividade")
+            );
+
+            const textoBase = [
+                dia?.data,
+                dia?.curto,
+                dia?.nome,
+                temaPlanejado,
+            ].filter(Boolean).join("-");
+
+            const chaveAssistida =
+                `${posicao + 1}-${textoBase || "dia"}`
+                    .normalize("NFD")
+                    .replace(/[\u0300-\u036f]/g, "")
+                    .replace(/[^a-zA-Z0-9_-]+/g, "-")
+                    .replace(/-+/g, "-")
+                    .replace(/^-|-$/g, "");
+
+            const confirmado =
+                temasConferenciaAssistidaDds[posicao] &&
+                typeof temasConferenciaAssistidaDds[posicao] === "object"
+                    ? temasConferenciaAssistidaDds[posicao]
+                    : {};
+
+            const temaConfirmado = String(
+                confirmado?.temaConfirmado || ""
+            );
+
+            const responsavelConfirmado = String(
+                confirmado?.responsavelConfirmado || ""
+            );
+
+            const temaConfirmadoPreenchido =
+                temaConfirmado.trim();
+
+            const responsavelConfirmadoPreenchido =
+                responsavelConfirmado.trim();
+
+            const semAtividadeConfirmada =
+                confirmado?.semAtividadeConfirmada === true;
+
+            const statusTranscricao = semAtividadeConfirmada
+                ? "sem_atividade"
+                : temaConfirmadoPreenchido &&
+                  responsavelConfirmadoPreenchido
+                    ? "confirmado"
+                    : "pendente";
+
+            return {
+                ...dia,
+                posicaoSemana: posicao,
+                indice: posicao,
+                indiceAssistido: posicao + 1,
+                chaveAssistida,
+                temaPlanejado,
+                responsavelPlanejado,
+                semAtividadePlanejada,
+                temaConfirmado,
+                responsavelConfirmado,
+                origemTemaConfirmado: String(
+                    confirmado?.origemTemaConfirmado || ""
+                ).trim(),
+                semAtividadeConfirmada,
+                statusTranscricao,
+            };
+        });
+    }, [
+        diasRegistroScannerDds,
+        temasConferenciaAssistidaDds,
+    ]);
+
+    const diasAtivosConferenciaAssistidaDds = useMemo(
+        () => diasConferenciaAssistidaDds.filter(
+            (dia) => !dia.semAtividadeConfirmada
+        ),
+        [diasConferenciaAssistidaDds]
+    );
+
+    const estatisticasTemasConferenciaAssistidaDds =
+        useMemo(() => {
+            const ativos =
+                diasConferenciaAssistidaDds.filter(
+                    (dia) => !dia.semAtividadeConfirmada
+                );
+
+            const pendentes = ativos.filter(
+                (dia) =>
+                    !String(
+                        dia.temaConfirmado || ""
+                    ).trim() ||
+                    !String(
+                        dia.responsavelConfirmado || ""
+                    ).trim()
+            );
+
+            return {
+                temasConfirmados: ativos.filter(
+                    (dia) =>
+                        String(
+                            dia.temaConfirmado || ""
+                        ).trim()
+                ).length,
+                responsaveisIdentificados: ativos.filter(
+                    (dia) =>
+                        String(
+                            dia.responsavelConfirmado || ""
+                        ).trim()
+                ).length,
+                diasSemAtividade:
+                    diasConferenciaAssistidaDds.filter(
+                        (dia) =>
+                            dia.semAtividadeConfirmada
+                    ).length,
+                pendencias: pendentes.length,
+                diasPendentes: pendentes,
+            };
+        }, [diasConferenciaAssistidaDds]);
 
     const participantesCadastradosConferenciaAssistidaDds = useMemo(() => {
         const participantes = Array.isArray(preConferenciaParticipantesScannerDds?.participantes)
@@ -3150,6 +3254,153 @@ export function DdsPage({
 
     const conferenciaOficialConcluidaDds = fechamentoConferenciaAssistidaDds?.status === "concluida";
 
+    function atualizarTemaConferenciaAssistidaDds(
+        indiceDia,
+        campo,
+        valor
+    ) {
+        if (conferenciaOficialConcluidaDds) return;
+
+        setTemasConferenciaAssistidaDds((atuais) =>
+            diasRegistroScannerDds.map((_, indice) => {
+                const atual =
+                    atuais[indice] &&
+                    typeof atuais[indice] === "object"
+                        ? atuais[indice]
+                        : {};
+
+                if (indice !== indiceDia) return atual;
+
+                return {
+                    ...atual,
+                    [campo]: String(valor ?? ""),
+                    origemTemaConfirmado:
+                        "transcricao_manual",
+                    semAtividadeConfirmada: false,
+                };
+            })
+        );
+
+        setErroFechamentoConferenciaDds("");
+    }
+
+    function usarPlanejamentoTemaConferenciaAssistidaDds(
+        indiceDia
+    ) {
+        if (conferenciaOficialConcluidaDds) return;
+
+        const dia =
+            diasConferenciaAssistidaDds[indiceDia];
+
+        if (!dia) return;
+
+        setTemasConferenciaAssistidaDds((atuais) =>
+            diasRegistroScannerDds.map((_, indice) => {
+                const atual =
+                    atuais[indice] &&
+                    typeof atuais[indice] === "object"
+                        ? atuais[indice]
+                        : {};
+
+                if (indice !== indiceDia) return atual;
+
+                return {
+                    ...atual,
+                    temaConfirmado:
+                        dia.semAtividadePlanejada
+                            ? ""
+                            : dia.temaPlanejado,
+                    responsavelConfirmado:
+                        dia.semAtividadePlanejada
+                            ? ""
+                            : dia.responsavelPlanejado,
+                    origemTemaConfirmado:
+                        "planejamento_confirmado",
+                    semAtividadeConfirmada:
+                        Boolean(
+                            dia.semAtividadePlanejada
+                        ),
+                };
+            })
+        );
+
+        setErroFechamentoConferenciaDds("");
+    }
+
+    function alternarSemAtividadeConferenciaAssistidaDds(
+        indiceDia
+    ) {
+        if (conferenciaOficialConcluidaDds) return;
+
+        setTemasConferenciaAssistidaDds((atuais) =>
+            diasRegistroScannerDds.map((_, indice) => {
+                const atual =
+                    atuais[indice] &&
+                    typeof atuais[indice] === "object"
+                        ? atuais[indice]
+                        : {};
+
+                if (indice !== indiceDia) return atual;
+
+                const proximoSemAtividade =
+                    atual.semAtividadeConfirmada !== true;
+
+                return {
+                    ...atual,
+                    temaConfirmado:
+                        proximoSemAtividade
+                            ? ""
+                            : String(
+                                atual.temaConfirmado || ""
+                            ),
+                    responsavelConfirmado:
+                        proximoSemAtividade
+                            ? ""
+                            : String(
+                                atual.responsavelConfirmado || ""
+                            ),
+                    origemTemaConfirmado:
+                        "transcricao_manual",
+                    semAtividadeConfirmada:
+                        proximoSemAtividade,
+                };
+            })
+        );
+
+        setErroFechamentoConferenciaDds("");
+    }
+
+    function montarTemasDiasConferenciaAssistidaDds() {
+        return diasConferenciaAssistidaDds.map(
+            (dia) => ({
+                posicaoSemana: dia.posicaoSemana,
+                indice: dia.indice,
+                indiceAssistido: dia.indiceAssistido,
+                chaveAssistida: dia.chaveAssistida,
+                nome: dia.nome,
+                curto: dia.curto,
+                data: dia.data,
+                temaPlanejado: dia.temaPlanejado,
+                responsavelPlanejado:
+                    dia.responsavelPlanejado,
+                semAtividadePlanejada:
+                    Boolean(
+                        dia.semAtividadePlanejada
+                    ),
+                temaConfirmado: dia.temaConfirmado,
+                responsavelConfirmado:
+                    dia.responsavelConfirmado,
+                origemTemaConfirmado:
+                    dia.origemTemaConfirmado || "",
+                semAtividadeConfirmada:
+                    Boolean(
+                        dia.semAtividadeConfirmada
+                    ),
+                status: dia.statusTranscricao,
+            })
+        );
+    }
+
     function limparFrequenciaParticipanteAdicionalDds(numero) {
         const numeroSeguro = Number(numero || 0);
 
@@ -3271,6 +3522,14 @@ export function DdsPage({
         if (conferenciaOficialConcluidaDds) return;
 
         setConferenciaAssistidaDds({});
+        setTemasConferenciaAssistidaDds(
+            diasRegistroScannerDds.map(() => ({
+                temaConfirmado: "",
+                responsavelConfirmado: "",
+                origemTemaConfirmado: "",
+                semAtividadeConfirmada: false,
+            }))
+        );
         setParticipantesAdicionaisConferenciaDds(
             criarParticipantesAdicionaisConferenciaDds(
                 participantesRegistroScannerDds
@@ -3307,6 +3566,8 @@ export function DdsPage({
         try {
             const atualizadoEm = new Date().toISOString();
             const dadosAtuais = registroScannerDds?.dados || {};
+            const temasDiasParaSalvar =
+                montarTemasDiasConferenciaAssistidaDds();
 
             const conferenciaAssistida = {
                 versao: 1,
@@ -3314,8 +3575,11 @@ export function DdsPage({
                 atualizadoEm,
                 frequencia: conferenciaAssistidaDds,
                 estatisticas: estatisticasConferenciaAssistidaDds,
+                temasDias: temasDiasParaSalvar,
                 diasAtivos: diasAtivosConferenciaAssistidaDds.map((dia) => ({
+                    posicaoSemana: dia.posicaoSemana,
                     indice: dia.indice,
+                    indiceAssistido: dia.indiceAssistido,
                     chaveAssistida: dia.chaveAssistida,
                     nome: dia.nome,
                     curto: dia.curto,
@@ -3359,9 +3623,46 @@ export function DdsPage({
                 },
             });
 
-            setRegistroScannerDds(registroAtualizado);
-            setConferenciaAssistidaDds(registroAtualizado?.dados?.conferenciaAssistida?.frequencia || conferenciaAssistidaDds);
-            setConferenciaAssistidaSalvaEmDds(registroAtualizado?.dados?.conferenciaAssistida?.atualizadoEm || atualizadoEm);
+            const registroAtualizadoComDados = {
+                ...(registroAtualizado ||
+                    registroScannerDds ||
+                    {}),
+                dados: {
+                    ...dadosAtuais,
+                    ...(registroAtualizado?.dados || {}),
+                    conferenciaAssistida,
+                },
+            };
+
+            setRegistroScannerDds(
+                registroAtualizadoComDados
+            );
+
+            setConferenciaAssistidaDds(
+                conferenciaAssistida.frequencia ||
+                    conferenciaAssistidaDds
+            );
+
+            setTemasConferenciaAssistidaDds(
+                temasDiasParaSalvar.map((item) => ({
+                    temaConfirmado: String(
+                        item?.temaConfirmado || ""
+                    ),
+                    responsavelConfirmado: String(
+                        item?.responsavelConfirmado || ""
+                    ),
+                    origemTemaConfirmado: String(
+                        item?.origemTemaConfirmado || ""
+                    ),
+                    semAtividadeConfirmada:
+                        item?.semAtividadeConfirmada === true,
+                }))
+            );
+
+            setConferenciaAssistidaSalvaEmDds(
+                conferenciaAssistida.atualizadoEm ||
+                    atualizadoEm
+            );
         } catch (error) {
             setErroConferenciaAssistidaDds(error?.message || "Não foi possível salvar a Conferência Assistida DDS.");
         } finally {
@@ -3385,13 +3686,41 @@ export function DdsPage({
             return;
         }
 
-        if (estatisticasConferenciaAssistidaDds.participantes <= 0 || diasAtivosConferenciaAssistidaDds.length <= 0) {
-            setErroFechamentoConferenciaDds("Não há base suficiente para concluir a conferência oficial.");
+        if (
+            estatisticasConferenciaAssistidaDds.participantes <= 0 ||
+            diasConferenciaAssistidaDds.length <= 0
+        ) {
+            setErroFechamentoConferenciaDds(
+                "Não há base suficiente para concluir a conferência oficial."
+            );
             return;
         }
 
         if (estatisticasConferenciaAssistidaDds.manuais > 0) {
-            setErroFechamentoConferenciaDds("Ainda existem campos Manual/vazio. Troque todos os ? por P ou X antes de concluir.");
+            setErroFechamentoConferenciaDds(
+                "Ainda existem campos Manual/vazio. Troque todos os ? por P ou X antes de concluir."
+            );
+            return;
+        }
+
+        if (
+            estatisticasTemasConferenciaAssistidaDds.pendencias > 0
+        ) {
+            const nomesDias =
+                estatisticasTemasConferenciaAssistidaDds
+                    .diasPendentes
+                    .map(
+                        (dia) =>
+                            dia.nome ||
+                            dia.curto ||
+                            dia.data
+                    )
+                    .filter(Boolean)
+                    .join(", ");
+
+            setErroFechamentoConferenciaDds(
+                `Complete o tema e o responsável da folha assinada antes de concluir. Dias pendentes: ${nomesDias}.`
+            );
             return;
         }
 
@@ -3426,6 +3755,14 @@ export function DdsPage({
                     homemDiaCadastrados: estatisticasConferenciaAssistidaDds.homemDiaCadastrados,
                     homemDiaAdicionais: estatisticasConferenciaAssistidaDds.homemDiaAdicionais,
                     diasAtivos: diasAtivosConferenciaAssistidaDds.length,
+                    temasConfirmados:
+                        estatisticasTemasConferenciaAssistidaDds.temasConfirmados,
+                    responsaveisIdentificados:
+                        estatisticasTemasConferenciaAssistidaDds.responsaveisIdentificados,
+                    diasSemAtividade:
+                        estatisticasTemasConferenciaAssistidaDds.diasSemAtividade,
+                    pendenciasTemas:
+                        estatisticasTemasConferenciaAssistidaDds.pendencias,
                     funcionariosSemanaCompleta: estatisticasConferenciaAssistidaDds.funcionariosSemanaCompleta,
                     semanaCompletaCadastrados: estatisticasConferenciaAssistidaDds.semanaCompletaCadastrados,
                     semanaCompletaAdicionais: estatisticasConferenciaAssistidaDds.semanaCompletaAdicionais,
@@ -3439,8 +3776,11 @@ export function DdsPage({
                 atualizadoEm: concluidoEm,
                 frequencia: conferenciaAssistidaDds,
                 estatisticas: estatisticasConferenciaAssistidaDds,
+                temasDias: montarTemasDiasConferenciaAssistidaDds(),
                 diasAtivos: diasAtivosConferenciaAssistidaDds.map((dia) => ({
+                    posicaoSemana: dia.posicaoSemana,
                     indice: dia.indice,
+                    indiceAssistido: dia.indiceAssistido,
                     chaveAssistida: dia.chaveAssistida,
                     nome: dia.nome,
                     curto: dia.curto,
@@ -3485,6 +3825,13 @@ export function DdsPage({
 
             setRegistroScannerDds(registroAtualizado);
             setConferenciaAssistidaDds(registroAtualizado?.dados?.conferenciaAssistida?.frequencia || conferenciaAssistidaDds);
+            setTemasConferenciaAssistidaDds(
+                Array.isArray(
+                    registroAtualizado?.dados?.conferenciaAssistida?.temasDias
+                )
+                    ? registroAtualizado.dados.conferenciaAssistida.temasDias
+                    : temasConferenciaAssistidaDds
+            );
             setConferenciaAssistidaSalvaEmDds(registroAtualizado?.dados?.conferenciaAssistida?.atualizadoEm || concluidoEm);
             setFechamentoConferenciaAssistidaDds(registroAtualizado?.dados?.conferenciaAssistida?.fechamento || fechamento);
         } catch (error) {
@@ -3527,8 +3874,11 @@ export function DdsPage({
                 reabertoEm,
                 frequencia: conferenciaAssistidaDds,
                 estatisticas: estatisticasConferenciaAssistidaDds,
+                temasDias: montarTemasDiasConferenciaAssistidaDds(),
                 diasAtivos: diasAtivosConferenciaAssistidaDds.map((dia) => ({
+                    posicaoSemana: dia.posicaoSemana,
                     indice: dia.indice,
+                    indiceAssistido: dia.indiceAssistido,
                     chaveAssistida: dia.chaveAssistida,
                     nome: dia.nome,
                     curto: dia.curto,
@@ -3572,6 +3922,13 @@ export function DdsPage({
 
             setRegistroScannerDds(registroAtualizado);
             setConferenciaAssistidaDds(registroAtualizado?.dados?.conferenciaAssistida?.frequencia || conferenciaAssistidaDds);
+            setTemasConferenciaAssistidaDds(
+                Array.isArray(
+                    registroAtualizado?.dados?.conferenciaAssistida?.temasDias
+                )
+                    ? registroAtualizado.dados.conferenciaAssistida.temasDias
+                    : temasConferenciaAssistidaDds
+            );
             setConferenciaAssistidaSalvaEmDds(registroAtualizado?.dados?.conferenciaAssistida?.atualizadoEm || reabertoEm);
             setFechamentoConferenciaAssistidaDds(null);
             setReciboFinalEmitidoEmDds("");
@@ -3601,6 +3958,217 @@ export function DdsPage({
             )
         );
 
+        const temasDiasSalvos = Array.isArray(
+            conferenciaSalva?.temasDias
+        )
+            ? conferenciaSalva.temasDias
+            : [];
+
+        if (temasDiasSalvos.length > 0) {
+            setTemasConferenciaAssistidaDds(
+                diasRegistroScannerDds.map(
+                    (dia, indice) => {
+                        const salvoPorPosicao =
+                            temasDiasSalvos.find(
+                                (item) => {
+                                    const valor =
+                                        item?.posicaoSemana;
+
+                                    const valido =
+                                        valor !== null &&
+                                        valor !== undefined &&
+                                        String(valor).trim() !== "" &&
+                                        Number.isInteger(
+                                            Number(valor)
+                                        );
+
+                                    return (
+                                        valido &&
+                                        Number(valor) === indice
+                                    );
+                                }
+                            );
+
+                        const salvoPorDataOuDia =
+                            temasDiasSalvos.find(
+                                (item) =>
+                                    (
+                                        String(
+                                            item?.data || ""
+                                        ).trim() &&
+                                        String(
+                                            item?.data || ""
+                                        ) ===
+                                            String(
+                                                dia?.data || ""
+                                            )
+                                    ) ||
+                                    (
+                                        String(
+                                            item?.curto || ""
+                                        ).trim() &&
+                                        String(
+                                            item?.curto || ""
+                                        ) ===
+                                            String(
+                                                dia?.curto ||
+                                                dia?.dia ||
+                                                ""
+                                            )
+                                    )
+                            );
+
+                        const salvo =
+                            salvoPorPosicao ||
+                            temasDiasSalvos[indice] ||
+                            salvoPorDataOuDia ||
+                            {};
+                        return {
+                            temaConfirmado: String(
+                                salvo?.temaConfirmado || ""
+                            ),
+                            responsavelConfirmado:
+                                String(
+                                    salvo?.responsavelConfirmado ||
+                                        ""
+                                ),
+                            origemTemaConfirmado:
+                                String(
+                                    salvo?.origemTemaConfirmado ||
+                                        ""
+                                ),
+                            semAtividadeConfirmada:
+                                salvo?.semAtividadeConfirmada ===
+                                true,
+                        };
+                    }
+                )
+            );
+        } else {
+            const diasAtivosAntigos =
+                Array.isArray(
+                    conferenciaSalva?.diasAtivos
+                )
+                    ? conferenciaSalva.diasAtivos
+                    : [];
+
+            setTemasConferenciaAssistidaDds(
+                diasRegistroScannerDds.map(
+                    (dia, indice) => {
+                        const existeNosDiasAtivos =
+                            diasAtivosAntigos.some(
+                                (item) => {
+                                    const posicaoSalva =
+                                        item?.posicaoSemana;
+
+                                    const indiceSalvo =
+                                        item?.indice;
+
+                                    const indiceAssistidoSalvo =
+                                        item?.indiceAssistido;
+
+                                    const possuiPosicao =
+                                        posicaoSalva !== null &&
+                                        posicaoSalva !== undefined &&
+                                        String(
+                                            posicaoSalva
+                                        ).trim() !== "" &&
+                                        Number.isInteger(
+                                            Number(
+                                                posicaoSalva
+                                            )
+                                        );
+
+                                    const possuiIndice =
+                                        indiceSalvo !== null &&
+                                        indiceSalvo !== undefined &&
+                                        String(
+                                            indiceSalvo
+                                        ).trim() !== "" &&
+                                        Number.isInteger(
+                                            Number(
+                                                indiceSalvo
+                                            )
+                                        );
+
+                                    const possuiIndiceAssistido =
+                                        indiceAssistidoSalvo !== null &&
+                                        indiceAssistidoSalvo !== undefined &&
+                                        String(
+                                            indiceAssistidoSalvo
+                                        ).trim() !== "" &&
+                                        Number.isInteger(
+                                            Number(
+                                                indiceAssistidoSalvo
+                                            )
+                                        );
+
+                                    const mesmaData =
+                                        String(
+                                            item?.data || ""
+                                        ).trim() &&
+                                        String(
+                                            item?.data || ""
+                                        ) ===
+                                            String(
+                                                dia?.data || ""
+                                            );
+
+                                    const mesmoDia =
+                                        String(
+                                            item?.curto || ""
+                                        ).trim() &&
+                                        String(
+                                            item?.curto || ""
+                                        ) ===
+                                            String(
+                                                dia?.curto ||
+                                                dia?.dia ||
+                                                ""
+                                            );
+
+                                    return (
+                                        (
+                                            possuiPosicao &&
+                                            Number(
+                                                posicaoSalva
+                                            ) === indice
+                                        ) ||
+                                        (
+                                            possuiIndice &&
+                                            Number(
+                                                indiceSalvo
+                                            ) === indice
+                                        ) ||
+                                        (
+                                            possuiIndiceAssistido &&
+                                            Number(
+                                                indiceAssistidoSalvo
+                                            ) === indice + 1
+                                        ) ||
+                                        mesmaData ||
+                                        mesmoDia
+                                    );
+                                }
+                            );
+
+                        return {
+                            temaConfirmado: "",
+                            responsavelConfirmado: "",
+                            origemTemaConfirmado: "",
+                            semAtividadeConfirmada:
+                                Boolean(
+                                    conferenciaSalva &&
+                                    diasAtivosAntigos.length >
+                                        0 &&
+                                    !existeNosDiasAtivos
+                                ),
+                        };
+                    }
+                )
+            );
+        }
+
         if (
             conferenciaSalva?.frequencia &&
             typeof conferenciaSalva.frequencia === "object"
@@ -3624,6 +4192,14 @@ export function DdsPage({
         }
 
         setConferenciaAssistidaDds({});
+        setTemasConferenciaAssistidaDds(
+            diasRegistroScannerDds.map(() => ({
+                temaConfirmado: "",
+                responsavelConfirmado: "",
+                origemTemaConfirmado: "",
+                semAtividadeConfirmada: false,
+            }))
+        );
         setConferenciaAssistidaSalvaEmDds("");
         setFechamentoConferenciaAssistidaDds(null);
         setReciboFinalEmitidoEmDds("");
@@ -3634,6 +4210,7 @@ export function DdsPage({
         registroScannerDds?.codigo,
         registroScannerDds?.dados?.conferenciaAssistida?.atualizadoEm,
         participantesRegistroScannerDds,
+        diasRegistroScannerDds,
     ]);
     const apuracaoDiariaScannerDds = useMemo(() => {
         const nomesDias = ["Domingo", "Segunda-feira", "Terça-feira", "Quarta-feira", "Quinta-feira", "Sexta-feira", "Sábado"];
@@ -4207,13 +4784,46 @@ export function DdsPage({
         codigo: dadosDds.codigo,
     }), [dadosDds.codigo]);
 
+    const temasRegistroAtualDds = useMemo(() => {
+        const codigoAtual = String(dadosDds.codigo || "").trim();
+
+        if (!codigoAtual) return null;
+
+        const registroCompativel = [
+            registroDdsConferencia,
+            registroScannerDds,
+        ].find((registro) => (
+            String(registro?.codigo || "").trim() === codigoAtual
+        ));
+
+        const diasSalvos = registroCompativel?.dados?.diasSemana;
+
+        return Array.isArray(diasSalvos)
+            ? normalizarTemasDdsEditaveis(diasSalvos)
+            : null;
+    }, [
+        dadosDds.codigo,
+        registroDdsConferencia,
+        registroScannerDds,
+    ]);
+
     useEffect(() => {
         if (!chaveTemasDds) return;
 
-        // Cada novo DDS inicia sem tema e sem responsável preenchidos.
-        setTemasDdsEditaveis(criarTemasEditaveisDds());
+        const temasLocais = carregarTemasDdsLocal(chaveTemasDds);
+        const temasOrigem =
+            temasRegistroAtualDds ||
+            temasLocais ||
+            criarTemasEditaveisDds();
+
+        setTemasDdsEditaveis(
+            normalizarTemasDdsEditaveis(temasOrigem)
+        );
         setChaveTemasDdsCarregada(chaveTemasDds);
-    }, [chaveTemasDds]);
+    }, [
+        chaveTemasDds,
+        temasRegistroAtualDds,
+    ]);
 
     useEffect(() => {
         if (!chaveTemasDds || chaveTemasDdsCarregada !== chaveTemasDds) return;
@@ -4250,6 +4860,68 @@ export function DdsPage({
 
             return atualizados;
         });
+    }
+
+    function alternarDiaSemAtividadeDds(indiceDia) {
+        setTemasDdsEditaveis((temasAtuais) => {
+            const atualizados = normalizarTemasDdsEditaveis(temasAtuais);
+            const atual = atualizados[indiceDia] || {
+                tema: "",
+                responsavel: "",
+            };
+            const semAtividadeAtual =
+                normalizarTextoTemaDds(atual.tema) ===
+                "NAO HOUVE ATIVIDADES";
+
+            atualizados[indiceDia] = semAtividadeAtual
+                ? {
+                    tema: "",
+                    responsavel: "",
+                }
+                : {
+                    tema: "NÃO HOUVE ATIVIDADES",
+                    responsavel: "",
+                };
+
+            return atualizados;
+        });
+    }
+
+    function aplicarResponsavelGeralTemasDds() {
+        const responsavelGeral = String(
+            dadosDds.responsavel || ""
+        ).trim();
+
+        if (!responsavelGeral) {
+            window.alert(
+                "O responsável geral do DDS não está preenchido."
+            );
+            return;
+        }
+
+        setTemasDdsEditaveis((temasAtuais) =>
+            normalizarTemasDdsEditaveis(temasAtuais).map((item) => {
+                const semAtividade =
+                    normalizarTextoTemaDds(item.tema) ===
+                    "NAO HOUVE ATIVIDADES";
+
+                return semAtividade
+                    ? item
+                    : {
+                        ...item,
+                        responsavel: responsavelGeral,
+                    };
+            })
+        );
+    }
+
+    function limparResponsaveisTemasDds() {
+        setTemasDdsEditaveis((temasAtuais) =>
+            normalizarTemasDdsEditaveis(temasAtuais).map((item) => ({
+                ...item,
+                responsavel: "",
+            }))
+        );
     }
 
     const aniversariantesSemanaDds = useMemo(() => montarAniversariantesSemanaDds({
@@ -6474,6 +7146,32 @@ export function DdsPage({
     async function imprimirDdsComQrConferencia() {
         if (salvandoRegistroDds) return;
 
+        const diasPendentes = diasSemanaComTemasDds.filter((dia) => (
+            !dia.semAtividade &&
+            (
+                !String(dia.tema || "").trim() ||
+                !String(dia.responsavel || "").trim()
+            )
+        ));
+
+        if (diasPendentes.length > 0) {
+            const nomesDias = diasPendentes
+                .map((dia) => dia.nome || dia.curto)
+                .filter(Boolean)
+                .join(", ");
+
+            const mensagem =
+                "Preencha o tema e o responsável ou marque 'Não houve atividades' em: " +
+                nomesDias +
+                ".";
+
+            setErroRegistroDds(mensagem);
+            window.alert(mensagem);
+            return;
+        }
+
+        setErroRegistroDds("");
+
         if (!supabase) {
             window.print();
             return;
@@ -6538,6 +7236,7 @@ export function DdsPage({
                             data: dia.data,
                             tema: dia.tema,
                             responsavel: dia.responsavel,
+                            semAtividade: Boolean(dia.semAtividade),
                         })),
                     },
                     status: "Ativo",
@@ -7720,7 +8419,7 @@ export function DdsPage({
 )}
 
 
-{participantesConferenciaAssistidaDds.length > 0 && diasAtivosConferenciaAssistidaDds.length > 0 && (
+{participantesConferenciaAssistidaDds.length > 0 && diasConferenciaAssistidaDds.length > 0 && (
 <div className="rounded-xl border border-cyan-200 bg-cyan-50/70 p-5 ring-1 ring-cyan-100 lg:col-span-2">
     <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
         <div>
@@ -7781,7 +8480,7 @@ export function DdsPage({
                 <button
                     type="button"
                     onClick={concluirConferenciaAssistidaDds}
-                    disabled={conferenciaOficialConcluidaDds || salvandoFechamentoConferenciaDds || estatisticasConferenciaAssistidaDds.manuais > 0 || estatisticasConferenciaAssistidaDds.participantes <= 0}
+                    disabled={conferenciaOficialConcluidaDds || salvandoFechamentoConferenciaDds}
                     className="w-full rounded-lg border border-emerald-300 bg-white px-3 py-1.5 text-center text-[11px] font-black leading-tight text-emerald-800 shadow-sm transition hover:border-emerald-400 hover:bg-emerald-50 disabled:cursor-not-allowed disabled:opacity-60"
                     title={estatisticasConferenciaAssistidaDds.manuais > 0 ? "Troque todos os ? por P ou X antes de concluir." : "Registrar fechamento oficial da Conferência Assistida."}
                 >
@@ -7808,6 +8507,218 @@ export function DdsPage({
             </div>
         </div>
     </div>
+
+    <section className="mt-5 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+            <div>
+                <p className="text-[10px] font-black uppercase tracking-[0.16em] text-violet-700">
+                    Transcrição da folha assinada
+                </p>
+                <h5 className="mt-1 text-lg font-black text-slate-950">
+                    Temas e responsáveis registrados à mão
+                </h5>
+                <p className="mt-1 text-xs font-semibold leading-5 text-slate-500">
+                    O planejamento impresso permanece preservado. Confirme abaixo somente o que foi efetivamente registrado na folha assinada.
+                </p>
+            </div>
+
+            <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+                <div className="rounded-xl bg-violet-50 px-3 py-2 text-center ring-1 ring-violet-100">
+                    <p className="text-[8px] font-black uppercase text-violet-700">
+                        Temas
+                    </p>
+                    <p className="mt-0.5 text-base font-black text-violet-950">
+                        {estatisticasTemasConferenciaAssistidaDds.temasConfirmados}
+                    </p>
+                </div>
+
+                <div className="rounded-xl bg-cyan-50 px-3 py-2 text-center ring-1 ring-cyan-100">
+                    <p className="text-[8px] font-black uppercase text-cyan-700">
+                        Responsáveis
+                    </p>
+                    <p className="mt-0.5 text-base font-black text-cyan-950">
+                        {estatisticasTemasConferenciaAssistidaDds.responsaveisIdentificados}
+                    </p>
+                </div>
+
+                <div className="rounded-xl bg-amber-50 px-3 py-2 text-center ring-1 ring-amber-100">
+                    <p className="text-[8px] font-black uppercase text-amber-700">
+                        Sem atividade
+                    </p>
+                    <p className="mt-0.5 text-base font-black text-amber-950">
+                        {estatisticasTemasConferenciaAssistidaDds.diasSemAtividade}
+                    </p>
+                </div>
+
+                <div className="rounded-xl bg-red-50 px-3 py-2 text-center ring-1 ring-red-100">
+                    <p className="text-[8px] font-black uppercase text-red-700">
+                        Pendências
+                    </p>
+                    <p className="mt-0.5 text-base font-black text-red-950">
+                        {estatisticasTemasConferenciaAssistidaDds.pendencias}
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+            {diasConferenciaAssistidaDds.map((dia, indiceDia) => {
+                const semAtividade =
+                    dia.semAtividadeConfirmada;
+
+                const confirmado =
+                    dia.statusTranscricao === "confirmado";
+
+                const statusTexto = semAtividade
+                    ? "Sem atividade"
+                    : confirmado
+                        ? "Confirmado"
+                        : "Pendente";
+
+                return (
+                    <article
+                        key={`tema-confirmado-${dia.chaveAssistida}`}
+                        className={`rounded-xl border p-3 ${semAtividade
+                            ? "border-amber-200 bg-amber-50/70"
+                            : confirmado
+                                ? "border-emerald-200 bg-emerald-50/40"
+                                : "border-red-200 bg-red-50/30"}`}
+                    >
+                        <div className="flex items-start justify-between gap-2">
+                            <div>
+                                <p className="text-xs font-black text-slate-950">
+                                    {dia.nome || dia.curto}
+                                </p>
+                                <p className="text-[10px] font-bold text-slate-400">
+                                    {dia.data}
+                                </p>
+                            </div>
+
+                            <span
+                                className={`rounded-full px-2.5 py-1 text-[8px] font-black uppercase tracking-wide ${semAtividade
+                                    ? "bg-amber-100 text-amber-800"
+                                    : confirmado
+                                        ? "bg-emerald-100 text-emerald-800"
+                                        : "bg-red-100 text-red-800"}`}
+                            >
+                                {statusTexto}
+                            </span>
+                        </div>
+
+                        <div className="mt-3 rounded-lg border border-slate-200 bg-white px-3 py-2">
+                            <p className="text-[8px] font-black uppercase tracking-wide text-slate-400">
+                                Tema planejado / impresso
+                            </p>
+                            <p className="mt-1 min-h-5 text-[11px] font-bold leading-4 text-slate-700">
+                                {dia.semAtividadePlanejada
+                                    ? "Não houve atividades"
+                                    : dia.temaPlanejado ||
+                                      "Não preenchido"}
+                            </p>
+
+                            <p className="mt-2 text-[8px] font-black uppercase tracking-wide text-slate-400">
+                                Responsável planejado
+                            </p>
+                            <p className="mt-1 min-h-4 text-[11px] font-bold text-slate-700">
+                                {dia.semAtividadePlanejada
+                                    ? "Não se aplica"
+                                    : dia.responsavelPlanejado ||
+                                      "Não preenchido"}
+                            </p>
+                        </div>
+
+                        <label className="mt-3 block">
+                            <span className="text-[9px] font-black uppercase tracking-wide text-slate-500">
+                                Tema escrito à mão
+                            </span>
+                            <textarea
+                                value={dia.temaConfirmado}
+                                onChange={(evento) =>
+                                    atualizarTemaConferenciaAssistidaDds(
+                                        indiceDia,
+                                        "temaConfirmado",
+                                        evento.target.value
+                                    )
+                                }
+                                rows={2}
+                                disabled={
+                                    conferenciaOficialConcluidaDds ||
+                                    semAtividade
+                                }
+                                placeholder={
+                                    semAtividade
+                                        ? "Dia sem atividade"
+                                        : "Transcreva o tema registrado na folha"
+                                }
+                                className="mt-1 w-full resize-none rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-bold leading-5 text-slate-800 outline-none transition focus:border-violet-400 focus:ring-2 focus:ring-violet-100 disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-500"
+                            />
+                        </label>
+
+                        <label className="mt-2 block">
+                            <span className="text-[9px] font-black uppercase tracking-wide text-slate-500">
+                                Responsável / aplicador
+                            </span>
+                            <input
+                                type="text"
+                                value={dia.responsavelConfirmado}
+                                onChange={(evento) =>
+                                    atualizarTemaConferenciaAssistidaDds(
+                                        indiceDia,
+                                        "responsavelConfirmado",
+                                        evento.target.value
+                                    )
+                                }
+                                disabled={
+                                    conferenciaOficialConcluidaDds ||
+                                    semAtividade
+                                }
+                                placeholder={
+                                    semAtividade
+                                        ? "Não se aplica"
+                                        : "Transcreva o responsável registrado"
+                                }
+                                className="mt-1 h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-xs font-bold text-slate-800 outline-none transition focus:border-violet-400 focus:ring-2 focus:ring-violet-100 disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-500"
+                            />
+                        </label>
+
+                        <div className="mt-3 grid grid-cols-2 gap-2">
+                            <button
+                                type="button"
+                                onClick={() =>
+                                    usarPlanejamentoTemaConferenciaAssistidaDds(
+                                        indiceDia
+                                    )
+                                }
+                                disabled={
+                                    conferenciaOficialConcluidaDds
+                                }
+                                className="rounded-lg border border-violet-200 bg-white px-2 py-2 text-[9px] font-black uppercase tracking-wide text-violet-700 transition hover:bg-violet-50 disabled:cursor-not-allowed disabled:opacity-50"
+                            >
+                                Usar planejamento
+                            </button>
+
+                            <button
+                                type="button"
+                                onClick={() =>
+                                    alternarSemAtividadeConferenciaAssistidaDds(
+                                        indiceDia
+                                    )
+                                }
+                                disabled={
+                                    conferenciaOficialConcluidaDds
+                                }
+                                className="rounded-lg border border-amber-200 bg-amber-50 px-2 py-2 text-[9px] font-black uppercase tracking-wide text-amber-800 transition hover:bg-amber-100 disabled:cursor-not-allowed disabled:opacity-50"
+                            >
+                                {semAtividade
+                                    ? "Retomar atividade"
+                                    : "Não houve atividade"}
+                            </button>
+                        </div>
+                    </article>
+                );
+            })}
+        </div>
+    </section>
 
     <div className="mt-4 grid gap-2 sm:grid-cols-2 xl:grid-cols-5">
         <div className="rounded-xl bg-white p-3 text-center ring-1 ring-cyan-100">
@@ -8918,7 +9829,7 @@ export function DdsPage({
                                 Temas por dia da semana
                             </h2>
                             <p className="mt-1 text-sm font-semibold text-slate-500">
-                                Preencha o tema e o responsável de cada dia quando necessário.
+                                Informe o tema e o responsável de cada dia ou marque quando não houver atividades.
                             </p>
                         </div>
                     </div>
@@ -8933,48 +9844,98 @@ export function DdsPage({
                         </button>
                     </div>
                 </div>
+
                 {cardDdsAberto("temas") && (
-                <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-7">
-                    {diasSemanaComTemasDds.map((dia, indice) => (
-                        <div
-                            key={`${dia.curto}-${dia.data}`}
-                            className="rounded-xl border border-slate-200 bg-slate-50 p-3"
-                        >
-                            <div className="rounded-xl bg-slate-950 px-3 py-2 text-center text-white">
-                                <p className="text-[10px] font-black uppercase tracking-wide">
-                                    {dia.nome}
+                    <>
+                        <div className="mt-4 flex flex-col gap-2 rounded-xl border border-sky-100 bg-sky-50/60 p-3 sm:flex-row sm:items-center sm:justify-between">
+                            <div>
+                                <p className="text-[10px] font-black uppercase tracking-wide text-sky-700">
+                                    Preenchimento semanal
                                 </p>
-                                <p className="mt-0.5 text-xs font-black text-emerald-200">
-                                    {dia.data}
+                                <p className="mt-0.5 text-xs font-bold text-slate-600">
+                                    Responsável geral: {dadosDds.responsavel || "Não informado"}
                                 </p>
                             </div>
 
-                            <label className="mt-3 block">
-                                <span className="text-[10px] font-black uppercase tracking-wide text-slate-400">
-                                    Tema
-                                </span>
-                                <textarea
-                                    value={temasDdsEditaveis[indice]?.tema || ""}
-                                    onChange={(evento) => atualizarTemaDiaDds(indice, "tema", evento.target.value)}
-                                    rows={3}
-                                    className="mt-1 w-full resize-none rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-bold leading-5 text-slate-800 outline-none transition focus:border-emerald-400 focus:ring-2 focus:ring-emerald-100"
-                                />
-                            </label>
+                            <div className="flex flex-wrap gap-2">
+                                <button
+                                    type="button"
+                                    onClick={aplicarResponsavelGeralTemasDds}
+                                    className="rounded-xl border border-sky-200 bg-white px-3 py-2 text-[10px] font-black uppercase tracking-wide text-sky-700 shadow-sm transition hover:bg-sky-100"
+                                >
+                                    Aplicar responsável a todos
+                                </button>
 
-                            <label className="mt-2 block">
-                                <span className="text-[10px] font-black uppercase tracking-wide text-slate-400">
-                                    Responsável
-                                </span>
-                                <input
-                                    type="text"
-                                    value={temasDdsEditaveis[indice]?.responsavel || ""}
-                                    onChange={(evento) => atualizarTemaDiaDds(indice, "responsavel", evento.target.value)}
-                                    className="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-black text-slate-800 outline-none transition focus:border-emerald-400 focus:ring-2 focus:ring-emerald-100"
-                                />
-                            </label>
+                                <button
+                                    type="button"
+                                    onClick={limparResponsaveisTemasDds}
+                                    className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-[10px] font-black uppercase tracking-wide text-slate-600 shadow-sm transition hover:bg-slate-100"
+                                >
+                                    Limpar responsáveis
+                                </button>
+                            </div>
                         </div>
-                    ))}
-                </div>
+
+                        <div className="mt-3 grid gap-3 md:grid-cols-2 xl:grid-cols-7">
+                            {diasSemanaComTemasDds.map((dia, indice) => (
+                                <div
+                                    key={`${dia.curto}-${dia.data}`}
+                                    className={`rounded-xl border p-3 ${
+                                        dia.semAtividade
+                                            ? "border-amber-200 bg-amber-50/70"
+                                            : "border-slate-200 bg-slate-50"
+                                    }`}
+                                >
+                                    <div className="rounded-xl bg-slate-950 px-3 py-2 text-center text-white">
+                                        <p className="text-[10px] font-black uppercase tracking-wide">
+                                            {dia.nome}
+                                        </p>
+                                        <p className="mt-0.5 text-xs font-black text-emerald-200">
+                                            {dia.data}
+                                        </p>
+                                    </div>
+
+                                    <button
+                                        type="button"
+                                        onClick={() => alternarDiaSemAtividadeDds(indice)}
+                                        className="mt-3 w-full rounded-xl border border-amber-200 bg-amber-50 px-2 py-2 text-[9px] font-black uppercase tracking-wide text-amber-800 transition hover:bg-amber-100"
+                                    >
+                                        {dia.semAtividade
+                                            ? "Retomar preenchimento"
+                                            : "Não houve atividades"}
+                                    </button>
+
+                                    <label className="mt-3 block">
+                                        <span className="text-[10px] font-black uppercase tracking-wide text-slate-400">
+                                            Tema
+                                        </span>
+                                        <textarea
+                                            value={temasDdsEditaveis[indice]?.tema || ""}
+                                            onChange={(evento) => atualizarTemaDiaDds(indice, "tema", evento.target.value)}
+                                            rows={3}
+                                            disabled={dia.semAtividade}
+                                            placeholder={dia.semAtividade ? "Dia sem atividade" : "Digite o tema do DDS"}
+                                            className="mt-1 w-full resize-none rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-bold leading-5 text-slate-800 outline-none transition focus:border-emerald-400 focus:ring-2 focus:ring-emerald-100 disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-500"
+                                        />
+                                    </label>
+
+                                    <label className="mt-2 block">
+                                        <span className="text-[10px] font-black uppercase tracking-wide text-slate-400">
+                                            Responsável
+                                        </span>
+                                        <input
+                                            type="text"
+                                            value={temasDdsEditaveis[indice]?.responsavel || ""}
+                                            onChange={(evento) => atualizarTemaDiaDds(indice, "responsavel", evento.target.value)}
+                                            disabled={dia.semAtividade}
+                                            placeholder={dia.semAtividade ? "Não se aplica" : "Nome do responsável"}
+                                            className="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-black text-slate-800 outline-none transition focus:border-emerald-400 focus:ring-2 focus:ring-emerald-100 disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-500"
+                                        />
+                                    </label>
+                                </div>
+                            ))}
+                        </div>
+                    </>
                 )}
             </section>
 
