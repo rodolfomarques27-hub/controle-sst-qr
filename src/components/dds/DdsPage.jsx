@@ -5902,6 +5902,28 @@ export function DdsPage({
 
 
 
+    function obterNomeObraValidoMaoDeObraDds(...valores) {
+        const valoresIgnorados = new Set([
+            "",
+            "-",
+            "nao informado",
+            "obra nao informada",
+            "obra / setor nao definido",
+        ]);
+
+        return valores
+            .map((valor) => String(valor || "").replace(/\s+/g, " ").trim())
+            .find((valor) => {
+                const chave = valor
+                    .normalize("NFD")
+                    .replace(/[\u0300-\u036f]/g, "")
+                    .toLowerCase();
+
+                return !valoresIgnorados.has(chave);
+            }) || "";
+    }
+
+
     function montarDadosHistoricoMensalMaoDeObraDds() {
         const registrosEncontrados = Array.isArray(historicoMensalMaoDeObraDds) ? historicoMensalMaoDeObraDds : [];
         const registros = registrosEncontrados.filter((registro) => registroHistoricoMensalConcluidoDds(registro));
@@ -5928,12 +5950,15 @@ export function DdsPage({
             dadosDds.empresa ||
             "";
 
-        const obra =
-            dadosDds.obraSetor ||
-            registros[0]?.obraNome ||
-            registros[0]?.dados?.obraNome ||
-            dadosDds.obraNome ||
-            "";
+        const obra = obterNomeObraValidoMaoDeObraDds(
+            registros[0]?.obraNome,
+            registros[0]?.dados?.obraNome,
+            registros[0]?.dados?.obraSetor,
+            registros[0]?.dados?.obra,
+            dadosDds.obraSetor,
+            dadosDds.obraNome,
+            dadosDds.obra
+        );
 
         const obterLinha = (empresa, funcao) => {
             const empresaNome = normalizarNomeEmpresaMaoDeObraDds(empresa || empresaPrincipal || "Empresa não informada");
@@ -6271,11 +6296,16 @@ export function DdsPage({
                     return '<td class="' + (valor > 0 ? "dia-valor" : "dia-zero") + '">' + valor + '</td>';
                 }).join("");
 
+                const mediaItem = quantidadeDiasLancados > 0
+                    ? linha.total / quantidadeDiasLancados
+                    : 0;
+
                 return [
                     '<tr>',
                     '<td class="funcao">', escaparHtmlControleMaoDeObraDds(linha.funcao), '</td>',
                     tdsDias,
                     '<td class="total">', linha.total, '</td>',
+                    '<td class="media">', formatarNumeroMaoDeObraDds(mediaItem), '</td>',
                     '</tr>',
                 ].join("");
             }).join("");
@@ -6288,12 +6318,14 @@ export function DdsPage({
                 '<col class="funcao-col" />',
                 colunasDiasPdf,
                 '<col class="total-col" />',
+                '<col class="media-col" />',
                 '</colgroup>',
                 '<thead>',
                 '<tr>',
                 '<th class="funcao">Função</th>',
                 thDias,
                 '<th>Total</th>',
+                '<th>Média</th>',
                 '</tr>',
                 '</thead>',
                 '<tbody>',
@@ -6302,6 +6334,7 @@ export function DdsPage({
                 '<td>Total diário</td>',
                 diasMes.map((dia) => '<td>' + (totaisDia[dia] || 0) + '</td>').join(""),
                 '<td>', totalHomemDia, '</td>',
+                '<td>', formatarNumeroMaoDeObraDds(mediaMes), '</td>',
                 '</tr>',
                 '</tbody>',
                 '</table>',
@@ -6354,6 +6387,7 @@ export function DdsPage({
             '.funcao-col { width: 90px; }',
             '.dia-col { width: 19px; }',
             '.total-col { width: 38px; }',
+            '.media-col { width: 38px; }',
             '.funcao { text-align: center; font-weight: 900; color: #0f172a; background: #fff; }',
             '.dia-domingo { color: #ef4444 !important; }',
             '.dia-sabado { color: #facc15 !important; }',
@@ -6361,6 +6395,7 @@ export function DdsPage({
             '.dia-valor { color: #047857; font-weight: 900; background: #fff; }',
             '.dia-zero { color: #94a3b8; background: #fff; }',
             '.total { color: #047857; font-weight: 900; background: #fff; }',
+            '.media { color: #0f172a; font-weight: 900; background: #fff; }',
             '.linha-total td { background: #f1f5f9; font-weight: 900; border-top: 2px solid #94a3b8; }',
             '</style>',
             '</head>',
@@ -6632,11 +6667,16 @@ export function DdsPage({
                     return '<td class="' + (valor > 0 ? "dia-valor" : "dia-zero") + '">' + valor + '</td>';
                 }).join("");
 
+                const mediaItem = quantidadeDiasLancados > 0
+                    ? linha.total / quantidadeDiasLancados
+                    : 0;
+
                 return [
                     '<tr>',
                     '<td class="funcao">', escaparHtmlControleMaoDeObraDds(linha.funcao), '</td>',
                     tdsDias,
                     '<td class="total">', linha.total, '</td>',
+                    '<td class="media">', formatarNumeroMaoDeObraDds(mediaItem), '</td>',
                     '</tr>',
                 ].join("");
             }).join("");
@@ -6649,12 +6689,14 @@ export function DdsPage({
                 '<col class="funcao-col" />',
                 colunasDiasPdf,
                 '<col class="total-col" />',
+                '<col class="media-col" />',
                 '</colgroup>',
                 '<thead>',
                 '<tr>',
                 '<th class="funcao">Função</th>',
                 thDias,
                 '<th>Total</th>',
+                '<th>Média</th>',
                 '</tr>',
                 '</thead>',
                 '<tbody>',
@@ -6663,6 +6705,7 @@ export function DdsPage({
                 '<td>Total diário</td>',
                 diasMes.map((dia) => '<td>' + (totaisDia[dia] || 0) + '</td>').join(""),
                 '<td>', totalHomemDia, '</td>',
+                '<td>', formatarNumeroMaoDeObraDds(mediaMes), '</td>',
                 '</tr>',
                 '</tbody>',
                 '</table>',
@@ -6721,10 +6764,12 @@ export function DdsPage({
             '.funcao-col { width: 74px; }',
             '.dia-col { width: 15.5px; }',
             '.total-col { width: 28px; }',
+            '.media-col { width: 28px; }',
             '.funcao { text-align: center; font-weight: 900; background: #ffffff; color: #0f172a; overflow-wrap: anywhere; }',
             '.dia-valor { background: #ffffff; color: #047857; font-weight: 900; }',
             '.dia-zero { background: #ffffff; color: #94a3b8; }',
             '.total { font-weight: 900; background: #ffffff; color: #047857; }',
+            '.media { font-weight: 900; background: #ffffff; color: #0f172a; }',
             '.linha-total td { background: #f8fafc; color: #0f172a; font-weight: 900; border-top: 1.5px solid #94a3b8; }',
             '@media print { .page { border: 0; } .hero { background: #0f172a !important; } .hero-img { display: block !important; } }',
             '</style>',
@@ -7383,15 +7428,15 @@ export function DdsPage({
             ""
         );
 
-        const obraNomeBase = String(
-            dadosDds.obraSetor ||
-            dadosDds.obraNome ||
-            dadosDds.obra ||
-            registroScannerDds?.obraNome ||
-            registroScannerDds?.dados?.obraNome ||
-            registroScannerDds?.dados?.obra ||
-            ""
-        ).trim();
+        const obraNomeBase = obterNomeObraValidoMaoDeObraDds(
+            registroScannerDds?.obraNome,
+            registroScannerDds?.dados?.obraNome,
+            registroScannerDds?.dados?.obraSetor,
+            registroScannerDds?.dados?.obra,
+            dadosDds.obraSetor,
+            dadosDds.obraNome,
+            dadosDds.obra
+        );
 
         const obraNomeComparacao = normalizarBuscaObraHistoricoMensalDds(obraNomeBase);
         const periodo = obterPeriodoHistoricoMensalMaoDeObraDds();
@@ -7420,10 +7465,13 @@ export function DdsPage({
                 ? registrosBase
                 : registrosBase.filter((registro) => {
                     const nomeRegistro = normalizarBuscaObraHistoricoMensalDds(
-                        registro?.obraNome ||
-                        registro?.dados?.obraNome ||
-                        registro?.dados?.obra ||
-                        ""
+                        obterNomeObraValidoMaoDeObraDds(
+                            registro?.obraNome,
+                            registro?.dados?.obraNome,
+                            registro?.dados?.obraSetor,
+                            registro?.dados?.obra,
+                            registro?.obra
+                        )
                     );
 
                     if (!nomeRegistro || !obraNomeComparacao) return false;
