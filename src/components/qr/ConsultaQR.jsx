@@ -10,7 +10,7 @@ import { classNames, diasParaVencer, formatDate, normalizarTextoBusca } from "..
 import { montarUrlConsultaQrColaboradorPublica } from "../../constants/auditoriaPublicaConstants";
 import { carregarTokenAuditoriaPublicaAtivoPadrao } from "../../services/auditoriaPublicaTokenService";
 import { CrachaColaboradorPrint, CRACHA_COLABORADOR_PRINT_STYLES } from "./CrachaColaboradorPrint";
-import dashboardHeroBackground from "../../assets/dashboard-hero-sst.png";
+import dashboardHeroBackground from "../../assets/dashboard-hero-sst.webp";
 
 function CardIconSafe() {
     return (
@@ -347,7 +347,11 @@ export function ConsultaQR({ colaborador, colaboradores = [], onSelecionarColabo
         const idRecebido = obterIdColaboradorConsulta(colaborador);
         if (!idRecebido) return;
 
-        setIdColaboradorConsultaSelecionado(idRecebido);
+        const timer = window.setTimeout(() => {
+            setIdColaboradorConsultaSelecionado(idRecebido);
+        }, 0);
+
+        return () => window.clearTimeout(timer);
     }, [colaborador]);
 
     const colaboradoresPorEmpresa = useMemo(() => {
@@ -370,7 +374,11 @@ export function ConsultaQR({ colaborador, colaboradores = [], onSelecionarColabo
         if (filtroFuncaoQR === "Todas") return;
         if (funcoesConsultaQR.includes(filtroFuncaoQR)) return;
 
-        setFiltroFuncaoQR("Todas");
+        const timer = window.setTimeout(() => {
+            setFiltroFuncaoQR("Todas");
+        }, 0);
+
+        return () => window.clearTimeout(timer);
     }, [filtroFuncaoQR, funcoesConsultaQR]);
 
     const colaboradoresFiltrados = useMemo(() => {
@@ -418,7 +426,11 @@ export function ConsultaQR({ colaborador, colaboradores = [], onSelecionarColabo
 
         if (selecionadoAindaExiste) return;
 
-        setIdColaboradorConsultaSelecionado(obterIdColaboradorConsulta(colaboradoresFiltrados[0]));
+        const timer = window.setTimeout(() => {
+            setIdColaboradorConsultaSelecionado(obterIdColaboradorConsulta(colaboradoresFiltrados[0]));
+        }, 0);
+
+        return () => window.clearTimeout(timer);
     }, [colaboradoresFiltrados, idColaboradorConsultaSelecionado]);
 
     const colaboradoresBaseQrMassa = useMemo(() => {
@@ -449,7 +461,11 @@ export function ConsultaQR({ colaborador, colaboradores = [], onSelecionarColabo
         if (filtroFuncaoQrMassa === "Todas") return;
         if (funcoesQrMassa.includes(filtroFuncaoQrMassa)) return;
 
-        setFiltroFuncaoQrMassa("Todas");
+        const timer = window.setTimeout(() => {
+            setFiltroFuncaoQrMassa("Todas");
+        }, 0);
+
+        return () => window.clearTimeout(timer);
     }, [filtroFuncaoQrMassa, funcoesQrMassa]);
 
     const obterIdColaboradorQrMassa = (item = {}) =>
@@ -470,9 +486,13 @@ export function ConsultaQR({ colaborador, colaboradores = [], onSelecionarColabo
     }, [colaboradoresQrMassaFiltrados, idsColaboradoresQrMassaSelecionados]);
 
     useEffect(() => {
-        setIdsColaboradoresQrMassaSelecionados((idsAtuais) =>
-            idsAtuais.filter((id) => idsFiltradosQrMassa.has(id))
-        );
+        const timer = window.setTimeout(() => {
+            setIdsColaboradoresQrMassaSelecionados((idsAtuais) =>
+                idsAtuais.filter((id) => idsFiltradosQrMassa.has(id))
+            );
+        }, 0);
+
+        return () => window.clearTimeout(timer);
     }, [idsFiltradosQrMassa]);
 
     const selecionarTodosQrMassaFiltrados = () => {

@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { ChevronDown, ChevronUp, Eye, EyeOff, Lock, UserRound } from "lucide-react";
 import { supabase, SUPABASE_ANON_KEY, SUPABASE_URL } from "../lib/supabaseClient";
 import { useStorageUrl } from "../hooks/useStorageUrl";
@@ -104,7 +104,11 @@ export function FotoColaborador({ src, colaborador = null, colaboradorId = "", n
     const url = fonteExterna ? caminhoPreferencial : urlAssinada;
 
     useEffect(() => {
-        setErroImagem(false);
+        const timer = window.setTimeout(() => {
+            setErroImagem(false);
+        }, 0);
+
+        return () => window.clearTimeout(timer);
     }, [caminhoPreferencial]);
 
     useEffect(() => {
@@ -174,8 +178,7 @@ export function FotoAuditoriaPreview({ url, label }) {
                     src={urlAssinada}
                     alt={label}
                     className="h-44 w-full bg-slate-100 object-contain"
-                    style={imageStyle || undefined}
-            loading="lazy"
+                    loading="lazy"
                     onError={() => setErro(true)}
                 />
             ) : (

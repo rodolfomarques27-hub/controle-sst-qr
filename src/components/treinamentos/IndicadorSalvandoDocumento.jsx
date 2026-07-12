@@ -1,4 +1,3 @@
-import React from "react";
 
 export default function IndicadorSalvandoDocumento({
     titulo = "Salvando documento",

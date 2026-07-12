@@ -5195,7 +5195,7 @@
 
 /* ROTEIRO 7 ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ETAPA 5.8
    CorreÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â§ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â£o sobre a base 5.6: mantÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â©m o espaÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â§amento compacto jÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¡ aprovado
-   e corrige somente a quebra do bloco logo + Controle SST QR no mobile horizontal. */
+   e corrige somente a quebra do bloco logo + SafeScan Brasil no mobile horizontal. */
 @media (max-width: 1023.98px) and (orientation: landscape),
        (max-width: 1023.98px) and (max-height: 540px) {
     .app-mobile-header {
@@ -9097,7 +9097,7 @@
 
 .colaboradores-hero-banner__bg {
   z-index: -2;
-  background-image: url("../assets/dashboard-hero-sst.png");
+  background-image: url("../assets/dashboard-hero-sst.webp");
   background-position: center center;
   background-repeat: no-repeat;
   background-size: cover;

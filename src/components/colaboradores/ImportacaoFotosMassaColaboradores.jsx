@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { AlertTriangle, Camera, CheckCircle2, ImagePlus, Loader2, Trash2, Upload, XCircle } from "lucide-react";
 import { Card } from "../commonComponents";
 import { classNames } from "../../utils/sstUtils";

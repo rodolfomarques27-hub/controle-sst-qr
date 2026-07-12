@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useMemo, useRef, useState } from "react";
 import {
   AlertTriangle,
   CheckCircle2,
@@ -69,10 +69,6 @@ function gerarCsv(itens) {
   return linhas.join("\n");
 }
 
-function gerarCsvTextoLimpo(valor) {
-  return String(valor ?? "").replace(/\r\n?/g, "\n");
-}
-
 function formatarBboxCurto(bbox) {
   if (!bbox || typeof bbox !== "object") {
     return "-";
@@ -98,9 +94,8 @@ export default function VerificadorListaPresenca({
   const [arquivo, setArquivo] = useState(null);
   const [termoBusca, setTermoBusca] = useState("");
   const [modoLeituraPdf, setModoLeituraPdf] = useState("tabela_pdf");
-  const [resultadoTabelaPdf, setResultadoTabelaPdf] = useState(null);
   const [resultadoTabelaPdfComparada, setResultadoTabelaPdfComparada] = useState(null);
-  const [erroTabelaPdf, setErroTabelaPdf] = useState("");
+  const [erroManualTabelaPdf, setErroManualTabelaPdf] = useState("");
   const [erroComparacaoTabelaPdf, setErroComparacaoTabelaPdf] = useState("");
   const inputRef = useRef(null);
 
@@ -115,18 +110,8 @@ export default function VerificadorListaPresenca({
 
   const leitorTabelaPdf = usePdfTabelaListaPresenca({ ativo: false });
 
-  useEffect(() => {
-    setResultadoTabelaPdf(leitorTabelaPdf.resultado || null);
-  }, [leitorTabelaPdf.resultado]);
-
-  useEffect(() => {
-    setErroTabelaPdf(leitorTabelaPdf.erro || "");
-  }, [leitorTabelaPdf.erro]);
-
-  useEffect(() => {
-    setResultadoTabelaPdfComparada(null);
-    setErroComparacaoTabelaPdf("");
-  }, [resultadoTabelaPdf]);
+  const resultadoTabelaPdf = leitorTabelaPdf.resultado || null;
+  const erroTabelaPdf = erroManualTabelaPdf || leitorTabelaPdf.erro || "";
 
   const itensOcr = useMemo(() => {
     const lista = Array.isArray(resultadoOcr?.resultado) ? resultadoOcr.resultado : [];
@@ -157,14 +142,18 @@ export default function VerificadorListaPresenca({
   const validacaoTabela = resultadoTabelaPdf?.validacao || {};
   const diagnosticoComparativoAncoraNumerica = resumoTabela?.diagnosticoComparativoAncoraNumerica || null;
   const tabelaInternaConfiavel = Boolean(resumoTabela?.tabelaInternaConfiavel);
-  const participantesTabelaBase = tabelaInternaConfiavel && Array.isArray(resultadoTabelaPdf?.participantes) ? resultadoTabelaPdf.participantes : [];
+  const participantesTabelaBase = useMemo(
+    () => tabelaInternaConfiavel && Array.isArray(resultadoTabelaPdf?.participantes)
+      ? resultadoTabelaPdf.participantes
+      : [],
+    [resultadoTabelaPdf, tabelaInternaConfiavel],
+  );
   const totalParticipantesTabela = participantesTabelaBase.length;
   const diagnosticoOcr = resultadoOcr?.diagnosticoOcr || {};
   const amostraLinhasOcr = Array.isArray(diagnosticoOcr?.amostraLinhas) ? diagnosticoOcr.amostraLinhas : [];
   const totalLinhasOcr = Number(diagnosticoOcr?.totalLinhasOcr || 0);
   const totalLinhasComBbox = Number(diagnosticoOcr?.totalLinhasComBbox || 0);
   const totalLinhasSemBbox = Number(diagnosticoOcr?.totalLinhasSemBbox || 0);
-  const totalLinhasComConfianca = Number(diagnosticoOcr?.totalLinhasComConfianca || 0);
   const mediaConfiancaLinhas = Math.round(Number(diagnosticoOcr?.mediaConfiancaLinhas || 0));
   const totalLinhasComAssinaturaVisual = Number(diagnosticoOcr?.totalLinhasComAssinaturaVisual || 0);
   const tamanhoTextoCamada = Number(diagnosticoOcr?.tamanhoTextoCamada || 0);
@@ -181,7 +170,7 @@ export default function VerificadorListaPresenca({
   const diagnosticoOrigemOcr = diagnosticoOcr?.diagnosticoOrigem || {};
   const diagnosticoEstruturaBrutaOcr = diagnosticoOcr?.diagnosticoEstruturaBruta || {};
   const paginasEstruturaBrutaOcr = Array.isArray(diagnosticoEstruturaBrutaOcr?.paginas) ? diagnosticoEstruturaBrutaOcr.paginas : [];
-  const participantesTabelaConfiaveis = useMemo(() => participantesTabelaBase, [participantesTabelaBase]);
+  const participantesTabelaConfiaveis = participantesTabelaBase;
   const resultadoTabelaPdfComparadaValida = resultadoTabelaPdfComparada?.origem === "pdf_tabela_interna_comparada" ? resultadoTabelaPdfComparada : null;
   const resumoComparacaoTabela = resultadoTabelaPdfComparadaValida?.resumo || null;
   const itensComparacaoTabela = useMemo(() => {
@@ -274,13 +263,14 @@ export default function VerificadorListaPresenca({
 
   const executarLeituraTabela = useCallback(async () => {
     if (!arquivo) {
-      setErroTabelaPdf("Selecione um arquivo PDF para ler a tabela interna.");
+      setErroManualTabelaPdf("Selecione um arquivo PDF para ler a tabela interna.");
       return;
     }
 
     setModoLeituraPdf("tabela_pdf");
-    setErroTabelaPdf("");
-    setResultadoTabelaPdf(null);
+    setErroManualTabelaPdf("");
+    setErroComparacaoTabelaPdf("");
+    setResultadoTabelaPdfComparada(null);
     await leitorTabelaPdf.executar(arquivo);
   }, [arquivo, leitorTabelaPdf]);
 
@@ -1632,7 +1622,7 @@ export default function VerificadorListaPresenca({
                   </div>
 
                   <div className="rounded-lg border border-slate-200 bg-white p-3">
-                    <p className="text-xs uppercase tracking-wide text-slate-500">Âncora aceitos</p>
+                    <p className="text-xs uppercase tracking-wide text-slate-500">Âncoras aceitas</p>
                     <p className="mt-1 text-sm font-semibold text-slate-900">{Number(diagnosticoComparativoAncoraNumerica?.totalAncoraAceitos || 0)}</p>
                     <p className="mt-1 text-[11px] text-slate-500">Com número: {Number(diagnosticoComparativoAncoraNumerica?.totalAncoraAceitosComNumero || 0)}</p>
                   </div>

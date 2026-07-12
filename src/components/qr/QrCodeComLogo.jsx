@@ -1,4 +1,4 @@
-﻿import React, { useEffect, useRef, useState } from "react";
+﻿import { useEffect, useRef, useState } from "react";
 import { QRCodeSVG } from "qrcode.react";
 import { ImagePlus, RotateCcw } from "lucide-react";
 import { supabase } from "../../lib/supabaseClient";
@@ -120,7 +120,11 @@ export function QrCodeComLogo({
     const tamanhoFundoLogo = tamanhoLogo + respiroLogo * 2;
 
     useEffect(() => {
-        setLogoRenderizado(logoFinal);
+        const timer = window.setTimeout(() => {
+            setLogoRenderizado(logoFinal);
+        }, 0);
+
+        return () => window.clearTimeout(timer);
     }, [logoFinal]);
 
     return (

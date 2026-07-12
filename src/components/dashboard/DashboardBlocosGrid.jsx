@@ -1,4 +1,3 @@
-import React from "react";
 import { Card } from "../commonComponents";
 import { classNames } from "../../utils/sstUtils";
 

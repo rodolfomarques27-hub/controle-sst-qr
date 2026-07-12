@@ -1,7 +1,5 @@
 // Serviços de exportação CSV/PDF do sistema SST.
 import { supabase } from "../lib/supabaseClient";
-import html2canvas from "html2canvas";
-import jsPDF from "jspdf";
 // Funções puras de geração/download local no navegador.
 
 export function escaparCSV(valor) {
@@ -91,7 +89,7 @@ export function baixarPDF(nomeArquivo, titulo, linhas) {
 
     comandos.push(`BT /F2 16 Tf ${margem} ${y} Td (${limparTextoPDF(titulo)}) Tj ET`);
     y -= 20;
-    comandos.push(`BT /F1 9 Tf ${margem} ${y} Td (Gerado em ${limparTextoPDF(dataAtual)} pelo Controle SST QR) Tj ET`);
+    comandos.push(`BT /F1 9 Tf ${margem} ${y} Td (Gerado em ${limparTextoPDF(dataAtual)} pelo SafeScan Brasil) Tj ET`);
     y -= 26;
 
     const cabecalho = linhas[0] || [];
@@ -393,14 +391,6 @@ function montarListaHtmlRelatorio(lista = [], vazio = "Nenhum item.") {
     ].join("");
 }
 
-function montarLogoEmpresaHtml(empresa = {}) {
-    if (empresa.logoUrl) {
-        return `<img class="empresa-logo-img" src="${escaparHTML(empresa.logoUrl)}" alt="Logo ${escaparHTML(empresa.nome)}" />`;
-    }
-
-    return `<div class="empresa-logo-fallback">${escaparHTML(obterIniciaisEmpresa(empresa.nome))}</div>`;
-}
-
 function montarCartaoResumoRelatorio({ icone, titulo, valor, classe }) {
     return `
         <div class="kpi ${classe}">
@@ -457,7 +447,7 @@ function montarCabecalhoEmpresaTreinamentosRelatorio(empresa = {}, dataEmissao =
                 <div class="dados-empresa__item dados-empresa__item--cnpj"><span>${ICONES_CABECALHO_RELATORIO_COLABORADORES.cnpj}</span><strong>CNPJ:</strong><em>${escaparHTML(empresa.cnpj || "-")}</em></div>
                 <div class="dados-empresa__item dados-empresa__item--responsavel"><span>${ICONES_CABECALHO_RELATORIO_COLABORADORES.responsavel}</span><strong>Responsável:</strong><em>${escaparHTML(empresa.responsavel || "-")}</em></div>
                 <div class="dados-empresa__item dados-empresa__item--data"><span>${ICONES_CABECALHO_RELATORIO_COLABORADORES.data}</span><strong>Data de emissão:</strong><em>${escaparHTML(dataEmissao)}</em></div>
-                <div class="dados-empresa__item dados-empresa__item--sistema"><span>${ICONES_CABECALHO_RELATORIO_COLABORADORES.sistema}</span><strong>Sistema:</strong><em>Controle SST QR</em></div>
+                <div class="dados-empresa__item dados-empresa__item--sistema"><span>${ICONES_CABECALHO_RELATORIO_COLABORADORES.sistema}</span><strong>Sistema:</strong><em>SafeScan Brasil</em></div>
             </div>
         </header>
     `;
@@ -466,7 +456,7 @@ function montarCabecalhoEmpresaTreinamentosRelatorio(empresa = {}, dataEmissao =
 function montarRodapeTreinamentosRelatorio(texto = "Relatório visual por empresa") {
     return `
         <footer class="rodape-relatorio">
-            <span>🛡 Controle SST QR</span>
+            <span>🛡 SafeScan Brasil</span>
             <span>${escaparHTML(texto)}</span>
         </footer>
     `;
@@ -685,6 +675,21 @@ function canvasTemConteudoVisivelRelatorio(canvas, origemYPx, alturaPx) {
 }
 
 async function baixarRelatorioHtmlComoPdf({ html, nomeArquivo }) {
+    const [html2canvasModulo, jsPdfModulo] = await Promise.all([
+        import("html2canvas"),
+        import("jspdf"),
+    ]);
+    const html2canvas = typeof html2canvasModulo.default === "function"
+        ? html2canvasModulo.default
+        : html2canvasModulo;
+    const JsPdf = typeof jsPdfModulo.default === "function"
+        ? jsPdfModulo.default
+        : jsPdfModulo.jsPDF;
+
+    if (typeof html2canvas !== "function" || typeof JsPdf !== "function") {
+        throw new Error("Não foi possível carregar o gerador de PDF.");
+    }
+
     const iframe = document.createElement("iframe");
 
     iframe.style.position = "fixed";
@@ -698,6 +703,8 @@ async function baixarRelatorioHtmlComoPdf({ html, nomeArquivo }) {
     iframe.style.pointerEvents = "none";
     iframe.style.zIndex = "-1";
     iframe.setAttribute("aria-hidden", "true");
+    // O relatório precisa apenas renderizar HTML para captura; scripts e navegação ficam bloqueados.
+    iframe.setAttribute("sandbox", "allow-same-origin");
 
     document.body.appendChild(iframe);
 
@@ -730,7 +737,7 @@ async function baixarRelatorioHtmlComoPdf({ html, nomeArquivo }) {
         return;
     }
 
-    const pdf = new jsPDF("p", "mm", "a4");
+    const pdf = new JsPdf("p", "mm", "a4");
     let primeiraPagina = true;
 
     for (const paginaHtml of paginasHtml) {
@@ -1274,7 +1281,7 @@ export async function baixarRelatorioDashboardSstPDF({
 
     const rodapeRelatorio = (pagina, total = 3) => `
         <footer class="rodape-relatorio">
-            <span>Controle SST QR — Relatório gerado automaticamente pelo Dashboard SST.</span>
+            <span>SafeScan Brasil — Relatório gerado automaticamente pelo Dashboard SST.</span>
             <span>Página ${pagina} de ${total}</span>
         </footer>
     `;
@@ -1828,7 +1835,7 @@ function montarCabecalhoRelatorioEmpresas(titulo = "Relatório de empresas e doc
 function montarRodapeRelatorioEmpresas(pagina = 1, total = 1, rotulo = "Relatório visual de empresas e documentos") {
     return `
         <footer class="rodape-relatorio-empresas">
-            <span>© Controle SST QR</span>
+                <span>© SafeScan Brasil</span>
             <span>${escaparHTML(rotulo)} · Página ${pagina} de ${total}</span>
         </footer>
     `;
@@ -4013,17 +4020,6 @@ function obterIniciaisPessoaRelatorio(nome = "") {
         .toUpperCase();
 }
 
-function montarEscudoControleSstRelatorio() {
-    return `
-        <div class="escudo-controle-sst-relatorio" aria-hidden="true">
-            <svg viewBox="0 0 24 24" focusable="false">
-                <path d="M12 3.25 5.75 5.65v5.1c0 4.35 2.56 8.08 6.25 9.35 3.69-1.27 6.25-5 6.25-9.35v-5.1L12 3.25Z" />
-                <path d="m9.4 11.85 1.75 1.75 3.7-4" />
-            </svg>
-        </div>
-    `;
-}
-
 function calcularResumoAniversariantesRelatorio(aniversariantes = []) {
     const hoje = new Date();
     const mesAtual = hoje.getMonth() + 1;
@@ -4168,7 +4164,7 @@ function montarSecaoAniversariantesRelatorio({ aniversariantes = [], filtros = {
             </section>
 
             <footer class="rodape-relatorio">
-                <span>🛡 Controle SST QR</span>
+                <span>🛡 SafeScan Brasil</span>
                 <span>Relatório visual de aniversariantes</span>
             </footer>
         </section>
@@ -4996,7 +4992,7 @@ function montarTabelaAuditoriaSistemaRelatorio({ registros = [], indiceInicial =
 function montarRodapeAuditoriaSistemaRelatorio(pagina = 1, totalPaginas = 1) {
     return `
         <footer class="rodape-relatorio rodape-relatorio-auditoria">
-            <span>🛡 Controle SST QR</span>
+                <span>🛡 SafeScan Brasil</span>
             <span>Relatório visual da Auditoria do Sistema · Página ${escaparHTML(pagina)} de ${escaparHTML(totalPaginas)}</span>
         </footer>
     `;
@@ -5028,14 +5024,12 @@ function dividirRegistrosAuditoriaSistemaRelatorio(registros = [], limitePrimeir
     }
 
     const paginas = [];
-    let cursor = 0;
+    let cursor = limitePrimeiraPagina;
 
     paginas.push({
         registros: lista.slice(0, limitePrimeiraPagina),
         indiceInicial: 0,
     });
-    cursor = limitePrimeiraPagina;
-
     while (cursor < lista.length) {
         paginas.push({
             registros: lista.slice(cursor, cursor + limiteDemaisPaginas),
@@ -5047,7 +5041,7 @@ function dividirRegistrosAuditoriaSistemaRelatorio(registros = [], limitePrimeir
     return paginas;
 }
 
-function montarSecaoAuditoriaSistemaRelatorio({ registros = [], resumo = {}, filtros = {}, dataEmissao = "", titulo = "Relatório da Auditoria do Sistema" } = {}) {
+function montarSecaoAuditoriaSistemaRelatorio({ registros = [], resumo = {}, filtros = {}, titulo = "Relatório da Auditoria do Sistema" } = {}) {
     const resumoCalculado = calcularResumoAuditoriaSistemaRelatorio(registros, resumo);
     const paginasRegistros = dividirRegistrosAuditoriaSistemaRelatorio(registros);
     const totalPaginas = paginasRegistros.length;

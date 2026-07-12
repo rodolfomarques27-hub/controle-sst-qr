@@ -5,6 +5,7 @@ const PERMISSAO_SISTEMA_PADRAO_SEGURA = {
     nome: "",
     funcao: "",
     empresa: "",
+    empresa_id: null,
     foto_url: "",
     perfil: "consulta",
     ativo: false,
@@ -17,7 +18,6 @@ const PERMISSAO_SISTEMA_PADRAO_SEGURA = {
     login_criado_em: null,
     criado_por: null,
     atualizado_por: null,
-    empresa: "",
     excluido: false,
     excluido_em: null,
     excluido_por: null,
@@ -66,6 +66,7 @@ export function normalizarPermissaoSistema(permissao = null) {
         nome: permissao.nome || "",
         funcao: permissao.funcao || "",
         empresa: permissao.empresa || "",
+        empresa_id: permissao.empresa_id || permissao.empresaId || null,
         foto_url: permissao.foto_url || permissao.fotoUrl || permissao.avatar_url || permissao.avatarUrl || "",
         perfil: normalizarPerfilSistema(permissao.perfil),
         ativo: normalizarBooleano(permissao.ativo),
@@ -309,6 +310,7 @@ function validarDadosUsuarioPermissaoSistema(usuario = {}) {
     const nome = normalizarTexto(usuario.nome);
     const funcao = normalizarTexto(usuario.funcao);
     const empresa = normalizarTexto(usuario.empresa);
+    const empresaId = normalizarTexto(usuario.empresa_id || usuario.empresaId) || null;
     const fotoUrl = normalizarTexto(usuario.foto_url || usuario.fotoUrl);
     const perfil = normalizarPerfilSistema(usuario.perfil);
     const observacao = normalizarTexto(usuario.observacao);
@@ -326,6 +328,7 @@ function validarDadosUsuarioPermissaoSistema(usuario = {}) {
         nome,
         funcao,
         empresa,
+        empresaId,
         fotoUrl,
         perfil,
         ativo,
@@ -455,6 +458,7 @@ export async function salvarUsuarioPermissaoSistemaService({ supabase, usuario, 
         p_nome: dados.nome,
         p_funcao: dados.funcao,
         p_empresa: dados.empresa,
+        p_empresa_id: dados.empresaId,
         p_foto_url: dados.fotoUrl,
         p_perfil: dados.perfil,
         p_ativo: dados.ativo,

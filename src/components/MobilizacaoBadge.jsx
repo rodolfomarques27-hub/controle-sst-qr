@@ -1,4 +1,3 @@
-import React from "react";
 import { classNames, normalizarTextoBusca } from "../utils/sstUtils";
 import { obterStatusInicialColaborador } from "../services/colaboradorDocumentosService";
 

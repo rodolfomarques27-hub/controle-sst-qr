@@ -1,4 +1,3 @@
-import React from "react";
 import { DashboardBlocoRecolhivel } from "./DashboardBlocoRecolhivel";
 import { classNames } from "../../utils/sstUtils";
 

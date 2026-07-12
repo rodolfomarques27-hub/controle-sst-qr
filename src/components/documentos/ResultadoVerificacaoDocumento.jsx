@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import {
     AlertTriangle,
     CheckCircle2,
@@ -95,14 +95,6 @@ function normalizarObjeto(valor) {
     return null;
 }
 
-function limitarTextoPainel(valor = "", limite = 900) {
-    const texto = normalizarTexto(valor);
-
-    if (texto.length <= limite) return texto;
-
-    return `${texto.slice(0, limite)}...`;
-}
-
 function textoParecePdfBrutoPainel(valor = "") {
     const texto = String(valor || "");
     const amostra = texto.slice(0, 5000);
@@ -181,7 +173,7 @@ function obterEmpresaResumoPainel(texto = "") {
     return limitarTextoResumoPainel(
         obterPrimeiroGrupoPainel(
             texto,
-            /Empresa:\s*([\s\S]{3,180}?)(?:\s+CPF\s*\/\s*CNPJ|\s+CNPJ|\s+Endere[cÃ§]o|\s+Unidade:|\s+CPF\b|$)/i
+            /Empresa:\s*([\s\S]{3,180}?)(?:\s+CPF\s*\/\s*CNPJ|\s+CNPJ|\s+Endere[cç]o|\s+Unidade:|\s+CPF\b|$)/i
         ),
         120
     );
@@ -192,7 +184,7 @@ function obterCnpjResumoPainel(texto = "") {
 }
 
 function obterVigenciaResumoPainel(texto = "") {
-    const match = String(texto || "").match(/Vig[Ãªe]ncia:[^0-9]{0,180}([0-3]?\d[\/.-][01]?\d[\/.-](?:19|20)\d{2})\s+a\s+([0-3]?\d[\/.-][01]?\d[\/.-](?:19|20)\d{2})/i);
+    const match = String(texto || "").match(/Vig[êe]ncia:[^0-9]{0,180}([0-3]?\d[/.-][01]?\d[/.-](?:19|20)\d{2})\s+a\s+([0-3]?\d[/.-][01]?\d[/.-](?:19|20)\d{2})/i);
 
     if (!match) return "";
 
@@ -200,15 +192,15 @@ function obterVigenciaResumoPainel(texto = "") {
 }
 
 function obterDataAssinaturaResumoPainel(texto = "") {
-    return obterPrimeiroGrupoPainel(texto, /\bem:\s*([0-3]?\d[\/.-][01]?\d[\/.-](?:19|20)\d{2})\b/i);
+    return obterPrimeiroGrupoPainel(texto, /\bem:\s*([0-3]?\d[/.-][01]?\d[/.-](?:19|20)\d{2})\b/i);
 }
 
 function obterCodigoVerificacaoResumoPainel(texto = "") {
-    return obterPrimeiroGrupoPainel(texto, /C[oÃ³]digo de verifica[cÃ§][aÃ£]o de autenticidade:\s*([A-Z0-9._-]{6,80})/i);
+    return obterPrimeiroGrupoPainel(texto, /C[oó]digo de verifica[cç][aã]o de autenticidade:\s*([A-Z0-9._-]{6,80})/i);
 }
 
 function obterTotalFuncionariosResumoPainel(texto = "") {
-    return obterPrimeiroGrupoPainel(texto, /Total de funcion[aÃ¡]rios:\s*(\d{1,6})\b/i);
+    return obterPrimeiroGrupoPainel(texto, /Total de funcion[aá]rios:\s*(\d{1,6})\b/i);
 }
 
 function normalizarResumoTextualPainel(valor) {
@@ -492,7 +484,7 @@ function formatarData(data) {
 
 function obterResumoCurto(resumo, statusTexto, riscoTexto, scoreRisco, conformidade) {
     if (resumo) return resumo;
-    return `Status ${statusTexto.toLowerCase()}, risco ${riscoTexto.toLowerCase()}, risco tÃ©cnico ${scoreRisco}/100 e conformidade ${conformidade}/100.`;
+    return `Status ${statusTexto.toLowerCase()}, risco ${riscoTexto.toLowerCase()}, risco técnico ${scoreRisco}/100 e conformidade ${conformidade}/100.`;
 }
 
 function PainelAnaliseManual({
@@ -518,9 +510,9 @@ function PainelAnaliseManual({
             </p>
             <ul className="mt-3 grid gap-2 text-xs text-orange-900 sm:grid-cols-2">
                 <li className="rounded-lg bg-white/80 p-2 ring-1 ring-orange-100">1. Abrir o PDF original e conferir empresa/CNPJ.</li>
-                <li className="rounded-lg bg-white/80 p-2 ring-1 ring-orange-100">2. Conferir emissão, vigência, revisÃ£o ou assinatura tÃ©cnica.</li>
+                <li className="rounded-lg bg-white/80 p-2 ring-1 ring-orange-100">2. Conferir emissão, vigência, revisão ou assinatura técnica.</li>
                 <li className="rounded-lg bg-white/80 p-2 ring-1 ring-orange-100">3. Validar assinatura digital, QR Code ou código de autenticidade, quando houver.</li>
-                <li className="rounded-lg bg-white/80 p-2 ring-1 ring-orange-100">4. Registrar a decisão no campo de observaÃ§Ã£o antes de substituir/aprovar o documento.</li>
+                <li className="rounded-lg bg-white/80 p-2 ring-1 ring-orange-100">4. Registrar a decisão no campo de observação antes de substituir/aprovar o documento.</li>
             </ul>
 
             {onAprovarManual && (
@@ -529,7 +521,7 @@ function PainelAnaliseManual({
                         <div className="min-w-0 text-xs leading-relaxed text-orange-950">
                             <p className="font-bold text-orange-800">Aprovação manual definitiva</p>
                             <p className="mt-1">
-                                ApÃ³s a conferência humana, esta aÃ§Ã£o altera o documento para aprovado, com conformidade 100/100 e risco tÃ©cnico 0/100.
+                                Após a conferência humana, esta ação altera o documento para aprovado, com conformidade 100/100 e risco técnico 0/100.
                             </p>
                         </div>
                         <div className="flex shrink-0 flex-wrap gap-2 text-[11px] font-bold">
@@ -620,11 +612,11 @@ function DetalhesVerificacao({
                             <strong className="block text-blue-700">Busca ampliada no PDF</strong>
                             {dados.buscaAmpliadaOcr.encontrouDataPrincipal ? (
                                 <span>
-                                    Foram analisadas {dados.buscaAmpliadaOcr.paginasLidas} página(s) de {dados.buscaAmpliadaOcr.totalPaginas}. Data documental provável localizada na pÃ¡gina {dados.buscaAmpliadaOcr.paginaDataPrincipal}.
+                                    Foram analisadas {dados.buscaAmpliadaOcr.paginasLidas} página(s) de {dados.buscaAmpliadaOcr.totalPaginas}. Data documental provável localizada na página {dados.buscaAmpliadaOcr.paginaDataPrincipal}.
                                 </span>
                             ) : (
                                 <span>
-                                    Foram analisadas {dados.buscaAmpliadaOcr.paginasLidas} página(s) de {dados.buscaAmpliadaOcr.totalPaginas}, sem localizar vigência, emissão, revisÃ£o ou assinatura confiÃ¡vel.
+                                    Foram analisadas {dados.buscaAmpliadaOcr.paginasLidas} página(s) de {dados.buscaAmpliadaOcr.totalPaginas}, sem localizar vigência, emissão, revisão ou assinatura confiável.
                                 </span>
                             )}
                         </div>

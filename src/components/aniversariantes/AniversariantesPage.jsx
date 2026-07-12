@@ -1,11 +1,11 @@
-import React, { useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { CalendarDays, ChevronDown, Download, Search, Users } from "lucide-react";
 import { Card, FotoColaborador, Header, obterFotoColaboradorSrc } from "../commonComponents";
 import { STATUS_CLASSIFICACAO_COLABORADOR } from "../../constants/sstConstants";
 import { baixarRelatorioAniversariantesPDF } from "../../services/exportacaoService";
 import { classNames, formatarAniversario, normalizarTextoBusca } from "../../utils/sstUtils";
 import { obterUrlLogoEmpresa } from "../../services/supabaseServices";
-import aniversariantesHeroBackground from "../../assets/dashboard-hero-sst.png";
+import aniversariantesHeroBackground from "../../assets/dashboard-hero-sst.webp";
 import {
     obterDataAniversarioColaborador,
     mesAniversarioColaborador,
@@ -66,21 +66,6 @@ const calcularDiasAteAniversario = (colaborador) => {
 const obterNomeMes = (numeroMes) => {
     const mesEncontrado = MESES_ANIVERSARIO.find((item) => item.numero === Number(numeroMes));
     return mesEncontrado?.nome || "-";
-};
-
-const obterIniciais = (nome = "") => {
-    const partes = String(nome || "")
-        .split(/\s+/)
-        .map((item) => item.trim())
-        .filter(Boolean);
-
-    if (!partes.length) return "?";
-
-    return partes
-        .slice(0, 2)
-        .map((item) => item[0])
-        .join("")
-        .toUpperCase();
 };
 
 const CHAVE_FILTROS_ANIVERSARIANTES = "controle-sst-qr:aniversariantes:filtros-salvos:v1";
@@ -181,7 +166,7 @@ export function Aniversariantes({ colaboradores = [], empresasBanco = [] }) {
     const [status, setStatus] = useState("Todos");
     const [busca, setBusca] = useState("");
     const [exportandoPDF, setExportandoPDF] = useState(false);
-    const [versaoFiltroSalvo, setVersaoFiltroSalvo] = useState(0);
+    const [, setVersaoFiltroSalvo] = useState(0);
     const [layoutAniversariantes, setLayoutAniversariantes] = useState(() => carregarLayoutAniversariantes());
     const filtrosAniversariantesRecolhidos = layoutAniversariantes.filtrosRecolhidos;
     const listaAniversariantesRecolhida = layoutAniversariantes.listaRecolhida;
@@ -194,10 +179,7 @@ export function Aniversariantes({ colaboradores = [], empresasBanco = [] }) {
         });
     };
 
-    const filtrosSalvosDisponiveis = useMemo(
-        () => Boolean(carregarFiltrosSalvosAniversariantes()),
-        [versaoFiltroSalvo]
-    );
+    const filtrosSalvosDisponiveis = Boolean(carregarFiltrosSalvosAniversariantes());
 
     const colaboradoresElegiveis = useMemo(
         () => colaboradores.filter((colaborador) => deveMostrarAniversarioColaborador(colaborador)),
@@ -221,7 +203,7 @@ export function Aniversariantes({ colaboradores = [], empresasBanco = [] }) {
 
     const opcoesStatus = ["Todos", ...STATUS_CLASSIFICACAO_COLABORADOR];
 
-    const aplicarFiltrosBase = (colaborador, considerarMes = true) => {
+    const aplicarFiltrosBase = useCallback((colaborador, considerarMes = true) => {
         const dataAniversario = obterDataAniversarioColaborador(colaborador);
         const mesColaborador = mesAniversarioColaborador(colaborador);
         const statusColaborador = statusGeral(colaborador).texto;
@@ -237,7 +219,7 @@ export function Aniversariantes({ colaboradores = [], empresasBanco = [] }) {
             (status === "Todos" || statusColaborador === status) &&
             (!buscaNormalizada || textoBusca.includes(buscaNormalizada))
         );
-    };
+    }, [busca, mes, empresa, funcao, status]);
 
     const filtrados = useMemo(
         () => colaboradoresComAniversario
@@ -252,12 +234,12 @@ export function Aniversariantes({ colaboradores = [], empresasBanco = [] }) {
                 if (diaA !== diaB) return diaA - diaB;
                 return String(a.nome || "").localeCompare(String(b.nome || ""));
             }),
-        [colaboradoresComAniversario, mes, empresa, funcao, status, busca]
+        [colaboradoresComAniversario, mes, aplicarFiltrosBase]
     );
 
     const baseGrafico = useMemo(
         () => colaboradoresComAniversario.filter((colaborador) => aplicarFiltrosBase(colaborador, false)),
-        [colaboradoresComAniversario, empresa, funcao, status, busca]
+        [colaboradoresComAniversario, aplicarFiltrosBase]
     );
 
     const resumoMensal = useMemo(() => {

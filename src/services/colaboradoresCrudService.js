@@ -29,24 +29,6 @@ function normalizarDataColaboradorParaBancoTravada(valor = "") {
 
     return `${ano}-${mes}-${dia}`;
 }
-function normalizarDataColaboradorParaBanco(valor = "") {
-    const texto = String(valor || "").trim();
-
-    if (!texto) return null;
-
-    if (/^\d{4}-\d{2}-\d{2}$/.test(texto)) {
-        return texto;
-    }
-
-    const partes = texto.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
-
-    if (partes) {
-        const [, dia, mes, ano] = partes;
-        return `${ano}-${mes}-${dia}`;
-    }
-
-    return texto;
-}
 import {
     gerarCodigoFuncionario,
     normalizarColaborador,

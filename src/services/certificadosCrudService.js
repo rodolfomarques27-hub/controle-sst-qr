@@ -213,39 +213,6 @@ function identificarColaboradorProvavelNoNomeArquivo({ arquivo, colaboradores = 
 }
 
 
-function nomeProvavelEstaContidoNoColaboradorSelecionado({ nomeProvavel = "", colaboradorSelecionado = null } = {}) {
-    const normalizar = (valor = "") =>
-        normalizarTextoBusca(valor)
-            .replace(/[^a-z0-9]+/g, " ")
-            .replace(/\s+/g, " ")
-            .trim();
-
-    const provavel = normalizar(nomeProvavel);
-    const selecionado = normalizar(colaboradorSelecionado?.nome || "");
-
-    if (!provavel || !selecionado) return false;
-
-    const tokensProvavel = provavel
-        .split(" ")
-        .filter((token) => token.length >= 3);
-
-    const tokensSelecionado = selecionado
-        .split(" ")
-        .filter((token) => token.length >= 3);
-
-    if (!tokensProvavel.length || !tokensSelecionado.length) return false;
-
-    const todosTokensDentro = tokensProvavel.every((token) =>
-        tokensSelecionado.includes(token)
-    );
-
-    return Boolean(
-        todosTokensDentro ||
-        selecionado.includes(provavel) ||
-        provavel.includes(selecionado)
-    );
-}
-
 function validarCompatibilidadeArquivoColaborador({ arquivo, colaboradores = [], colaboradorSelecionado = null } = {}) {
     const nomeArquivoCompatibilidadeDocumentoGeral = arquivo?.name || arquivo?.nome || arquivo?.filename || "";
 

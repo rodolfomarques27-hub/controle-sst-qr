@@ -1,4 +1,3 @@
-import React from "react";
 import { DashboardBlocoRecolhivel } from "./DashboardBlocoRecolhivel";
 
 export function DashboardDocumentosTipo({

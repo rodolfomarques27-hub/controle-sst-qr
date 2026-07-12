@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { AppMobileHeader } from "./AppMobileHeader";
 import { AppSidebar } from "./AppSidebar";
 import { supabase } from "../../lib/supabaseClient";

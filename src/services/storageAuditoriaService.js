@@ -153,10 +153,10 @@ export async function listarArquivosCertificadosStorageService({
         await listarNivel(bucketInfo, "");
     }
 
-    let certificados = [];
-    let documentosEmpresaBanco = [];
-    let auditoriasCampoBanco = [];
-    let desviosAuditoriaBanco = [];
+    let certificados;
+    let documentosEmpresaBanco;
+    let auditoriasCampoBanco;
+    let desviosAuditoriaBanco;
 
     try {
         certificados = await buscarTodosRegistrosSupabase("certificados", "*");

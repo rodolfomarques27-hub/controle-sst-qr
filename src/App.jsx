@@ -1092,7 +1092,12 @@ export default function App() {
 
     useEffect(() => {
         if (!aguardandoTelaPermitidaApp || !primeiraTelaPermitidaApp || primeiraTelaPermitidaApp === tela) return;
-        setTela(primeiraTelaPermitidaApp);
+
+        const timer = window.setTimeout(() => {
+            setTela(primeiraTelaPermitidaApp);
+        }, 0);
+
+        return () => window.clearTimeout(timer);
     }, [aguardandoTelaPermitidaApp, primeiraTelaPermitidaApp, tela]);
 
     const selecionarColaborador = async (c) => {
@@ -1342,7 +1347,7 @@ export default function App() {
                 sair={sair}
                 onSelecionarTela={selecionarTelaSistema}
             >
-                <React.Suspense fallback={null}>
+                <React.Suspense fallback={<AppTransicaoInterna />}>
                     <AppContentRouter
                         tela={tela}
                         colaboradores={colaboradores}

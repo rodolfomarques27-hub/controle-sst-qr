@@ -1,7 +1,7 @@
-import React, { useCallback, useEffect, useState } from "react";
-import { ChevronDown, ClipboardCheck, PhoneCall, ShieldCheck } from "lucide-react";
+import { useCallback, useEffect, useState } from "react";
+import { ClipboardCheck, ShieldCheck } from "lucide-react";
 import { supabase } from "../../lib/supabaseClient";
-import { FotoColaborador, StatusPill, obterFotoColaboradorSrc } from "../commonComponents";
+import { FotoColaborador, StatusPill } from "../commonComponents";
 import { AuditoriaCampoQRCode, statusGeralConsultaPublica } from "./AuditoriaCampoQRCode";
 import {
     classeClassificacaoAuditoriaCampo,
@@ -70,7 +70,6 @@ export function ConsultaQRPublica({ dados }) {
     const treinamentos = dados?.treinamentos || [];
     const treinamentosOrdenados = [...treinamentos].sort(compararTreinamentosPorOrdemNumerica);
     const geral = statusGeralConsultaPublica(colaborador, treinamentos);
-    const [contatoEmergenciaAberto, setContatoEmergenciaAberto] = useState(false);
     const [senhaEmergenciaQr, setSenhaEmergenciaQr] = useState("");
     const [contatoEmergenciaLiberado, setContatoEmergenciaLiberado] = useState(null);
     const [erroContatoEmergencia, setErroContatoEmergencia] = useState("");

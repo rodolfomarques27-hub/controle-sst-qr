@@ -1485,7 +1485,6 @@ function validarResultadoTabelaPdf(resultado) {
       ? resultado.participantes.length
       : 0;
   const totalLinhas = Number.isFinite(resultado?.diagnostico?.totalLinhas) ? resultado.diagnostico.totalLinhas : 0;
-  const totalIgnorados = Number.isFinite(resultado?.diagnostico?.totalLinhasIgnoradas) ? resultado.diagnostico.totalLinhasIgnoradas : 0;
   const totalRejeitadosSemNome = Number.isFinite(resultado?.diagnostico?.totalRejeitadosSemNome)
     ? resultado.diagnostico.totalRejeitadosSemNome
     : 0;

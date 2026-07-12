@@ -10,7 +10,6 @@ import {
     FileText,
     History,
     LayoutDashboard,
-    QrCode,
     ShieldAlert,
     Users,
 } from "lucide-react";
@@ -104,7 +103,7 @@ export function DashboardBlocoRecolhivel({
 }) {
     const recolhido = Boolean(blocosRecolhidosDashboard?.[chaveBloco]);
     const tema = TEMAS_BLOCOS_RECOLHIVEIS[chaveBloco] || TEMAS_BLOCOS_RECOLHIVEIS.default;
-    const Icone = obterIconeBlocoRecolhivel(chaveBloco);
+    const iconeBloco = obterIconeBlocoRecolhivel(chaveBloco);
 
     const alternarBlocoRecolhivelPorArea = (evento) => {
         const alvoInterativo = evento.target.closest?.(
@@ -128,7 +127,7 @@ export function DashboardBlocoRecolhivel({
             <span className={classNames("absolute inset-x-0 top-0 h-1 bg-gradient-to-r", tema.acento)} />
                 <div data-dashboard-bloco-cabecalho="true" className={classNames("flex items-center gap-3 px-4 py-3.5 md:px-5", recolhido ? "border-b border-slate-100/80" : "border-b border-slate-100/80")}>
                 <div className={classNames("flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl ring-1", tema.icone)}>
-                    <Icone className="h-5 w-5" />
+                    {React.createElement(iconeBloco, { className: "h-5 w-5" })}
                 </div>
                 <div className="min-w-0 flex-1">
                     <h2 className="truncate text-[15px] font-black tracking-tight text-[#1A2332]">{titulo}</h2>

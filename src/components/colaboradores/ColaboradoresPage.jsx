@@ -59,6 +59,11 @@ const CHAVE_CADASTRO_MASSA_RECOLHIDO = "controleSstColaboradoresCadastroMassaRec
 const CHAVE_FILTROS_PENDENCIAS_TREINAMENTOS = "controle-sst-qr:pendencias-treinamentos:filtros-salvos:v1";
 const CHAVE_FILTROS_COLABORADORES_TREINAMENTOS = "controle-sst-qr:colaboradores-treinamentos:filtros-salvos:v1";
 
+function gerarChaveFuncaoPersonalizada(rotulo, totalExistente = 0) {
+    const base = normalizarTextoBusca(rotulo).replace(/[^a-z0-9]+/g, "-");
+    return `custom-${base}-${totalExistente}-${Date.now()}`;
+}
+
 function carregarPreferenciaPainelBoolean(chave, padrao = false) {
     try {
         const salvo = window.localStorage.getItem(chave);
@@ -168,18 +173,12 @@ export function Colaboradores({
     const [empresa, setEmpresa] = useState("Todas");
     const [filtroClassificacao, setFiltroClassificacao] = useState("Todos");
     const [ordenacaoFuncionarios, setOrdenacaoFuncionarios] = useState("nome_az");
-    const [versaoFiltroSalvoPendenciasTreinamentos, setVersaoFiltroSalvoPendenciasTreinamentos] = useState(0);
+    const [, setVersaoFiltroSalvoPendenciasTreinamentos] = useState(0);
 
-    const filtrosSalvosPendenciasTreinamentosDisponiveis = useMemo(
-        () => Boolean(carregarFiltrosSalvosPendenciasTreinamentos()),
-        [versaoFiltroSalvoPendenciasTreinamentos]
-    );
-    const [versaoFiltroSalvoColaboradoresTreinamentos, setVersaoFiltroSalvoColaboradoresTreinamentos] = useState(0);
+    const filtrosSalvosPendenciasTreinamentosDisponiveis = Boolean(carregarFiltrosSalvosPendenciasTreinamentos());
+    const [, setVersaoFiltroSalvoColaboradoresTreinamentos] = useState(0);
 
-    const filtrosSalvosColaboradoresTreinamentosDisponiveis = useMemo(
-        () => Boolean(carregarFiltrosSalvosColaboradoresTreinamentos()),
-        [versaoFiltroSalvoColaboradoresTreinamentos]
-    );
+    const filtrosSalvosColaboradoresTreinamentosDisponiveis = Boolean(carregarFiltrosSalvosColaboradoresTreinamentos());
     const [salvando, setSalvando] = useState(false);
     const [importandoMassa, setImportandoMassa] = useState(false);
     const [importandoFotosMassa, setImportandoFotosMassa] = useState(false);
@@ -781,7 +780,7 @@ ${erros.slice(0, 8).join("\n")}`
         }
 
         const listaAtual = obterFuncoesPersonalizadasSalvas();
-        const chave = `custom-${normalizarTextoBusca(novaFuncao.rotulo).replace(/[^a-z0-9]+/g, "-")}-${Date.now()}`;
+        const chave = gerarChaveFuncaoPersonalizada(novaFuncao.rotulo, listaAtual.length);
         const termos = novaFuncao.termos
             .split(",")
             .map((termo) => termo.trim())
@@ -865,25 +864,10 @@ ${erros.slice(0, 8).join("\n")}`
         [permissaoSistemaAtual]
     );
 
-    const podeCadastrarColaboradoresSistema = useMemo(
-        () => usuarioPodeExecutarAcaoSistema(permissaoSistemaAtual, MODULOS_PERMISSAO_SISTEMA.COLABORADORES, ACOES_PERMISSAO_SISTEMA.CADASTRAR),
-        [permissaoSistemaAtual]
-    );
-
-    const podeEditarColaboradoresSistema = useMemo(
-        () => usuarioPodeExecutarAcaoSistema(permissaoSistemaAtual, MODULOS_PERMISSAO_SISTEMA.COLABORADORES, ACOES_PERMISSAO_SISTEMA.EDITAR),
-        [permissaoSistemaAtual]
-    );
-
-    const podeUploadColaboradoresSistema = useMemo(
-        () => usuarioPodeExecutarAcaoSistema(permissaoSistemaAtual, MODULOS_PERMISSAO_SISTEMA.COLABORADORES, ACOES_PERMISSAO_SISTEMA.UPLOAD),
-        [permissaoSistemaAtual]
-    );
-
-    const podeExportarColaboradoresSistema = useMemo(
-        () => usuarioPodeExecutarAcaoSistema(permissaoSistemaAtual, MODULOS_PERMISSAO_SISTEMA.COLABORADORES, ACOES_PERMISSAO_SISTEMA.EXPORTAR),
-        [permissaoSistemaAtual]
-    );
+    const podeCadastrarColaboradoresSistema = usuarioPodeExecutarAcaoSistema(permissaoSistemaAtual, MODULOS_PERMISSAO_SISTEMA.COLABORADORES, ACOES_PERMISSAO_SISTEMA.CADASTRAR);
+    const podeEditarColaboradoresSistema = usuarioPodeExecutarAcaoSistema(permissaoSistemaAtual, MODULOS_PERMISSAO_SISTEMA.COLABORADORES, ACOES_PERMISSAO_SISTEMA.EDITAR);
+    const podeUploadColaboradoresSistema = usuarioPodeExecutarAcaoSistema(permissaoSistemaAtual, MODULOS_PERMISSAO_SISTEMA.COLABORADORES, ACOES_PERMISSAO_SISTEMA.UPLOAD);
+    const podeExportarColaboradoresSistema = usuarioPodeExecutarAcaoSistema(permissaoSistemaAtual, MODULOS_PERMISSAO_SISTEMA.COLABORADORES, ACOES_PERMISSAO_SISTEMA.EXPORTAR);
 
     const mensagemBloqueioCadastroColaboradores = "Sem permissão para cadastrar colaboradores.";
     const mensagemBloqueioEdicaoColaboradores = "Sem permissão para editar dados de colaboradores.";

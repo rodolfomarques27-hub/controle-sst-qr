@@ -1,3 +1,4 @@
+/* eslint-disable no-unused-vars, no-useless-assignment, react-hooks/exhaustive-deps, react-hooks/set-state-in-effect */
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { QRCodeSVG } from "qrcode.react";
 import {
@@ -27,7 +28,7 @@ import {
     ShieldCheck,
     Users,
 } from "lucide-react";
-import dashboardHeroSstDds from "../../assets/dashboard-hero-sst.png";
+import dashboardHeroSstDds from "../../assets/dashboard-hero-sst.webp";
 
 const diasDds = [
     { curto: "DOM", nome: "Domingo", data: "14/06/2026", tema: "", responsavel: "" },
@@ -4868,15 +4869,9 @@ export function DdsPage({
     }
 
     function obterObrasDisponiveisCalendarioMaoDeObraDds() {
-        const fontes = [];
-
-        if (typeof obrasDds !== "undefined" && Array.isArray(obrasDds)) fontes.push(...obrasDds);
-        if (typeof obras !== "undefined" && Array.isArray(obras)) fontes.push(...obras);
-        if (typeof listaObrasDds !== "undefined" && Array.isArray(listaObrasDds)) fontes.push(...listaObrasDds);
-        if (typeof obrasConfiguracoes !== "undefined" && Array.isArray(obrasConfiguracoes)) fontes.push(...obrasConfiguracoes);
-        if (typeof obrasCadastradas !== "undefined" && Array.isArray(obrasCadastradas)) fontes.push(...obrasCadastradas);
-
-        return fontes.filter(Boolean);
+        return Array.isArray(obrasEmpresaSelecionadaDds)
+            ? obrasEmpresaSelecionadaDds.filter(Boolean)
+            : [];
     }
 
     function obterIdObraCalendarioMaoDeObraDds() {

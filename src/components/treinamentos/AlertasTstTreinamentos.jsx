@@ -1,4 +1,3 @@
-import React from "react";
 import { CheckCircle2, ChevronDown, ChevronUp } from "lucide-react";
 import { Card } from "../commonComponents";
 import { classNames, formatDate } from "../../utils/sstUtils";

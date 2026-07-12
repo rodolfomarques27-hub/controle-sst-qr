@@ -171,10 +171,14 @@ export default function usePdfTabelaListaPresenca({ arquivo = null, ativo = true
 
   useEffect(() => {
     if (!ativo || !arquivo) {
-      return;
+      return undefined;
     }
 
-    void executar(arquivo);
+    const timer = window.setTimeout(() => {
+      void executar(arquivo);
+    }, 0);
+
+    return () => window.clearTimeout(timer);
   }, [ativo, arquivo, executar]);
 
   const estado = useMemo(

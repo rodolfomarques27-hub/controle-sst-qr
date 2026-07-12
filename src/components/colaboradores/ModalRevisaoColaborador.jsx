@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { Upload } from "lucide-react";
 import { FileUploadAviso, validarArquivoAntesUpload } from "../FileUploadAviso";
 import { STATUS_CLASSIFICACAO_COLABORADOR, treinamentosBase } from "../../constants/sstConstants";
@@ -82,11 +82,12 @@ export function ModalRevisaoColaborador({
     onAtualizarColaborador,
 }) {
     const [salvandoEdicaoColaborador, setSalvandoEdicaoColaborador] = useState(false);
+    const funcaoEdicao = colaboradorEdicao?.funcao || "";
 
     const idsBaseEdicao = useMemo(() => {
-        if (!colaboradorEdicao?.funcao) return [];
-        return treinamentosObrigatoriosFuncao(colaboradorEdicao.funcao).map((treinamento) => Number(treinamento.id));
-    }, [colaboradorEdicao?.funcao]);
+        if (!funcaoEdicao) return [];
+        return treinamentosObrigatoriosFuncao(funcaoEdicao).map((treinamento) => Number(treinamento.id));
+    }, [funcaoEdicao]);
 
     const idsRemovidosEdicao = useMemo(
         () => (colaboradorEdicao?.treinamentosRemovidos || []).map(Number),

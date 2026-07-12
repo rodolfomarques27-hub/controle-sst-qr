@@ -17,7 +17,7 @@ import {
     Search,
     XCircle,
 } from "lucide-react";
-import dashboardHeroBackground from "../../assets/dashboard-hero-sst.png";
+import dashboardHeroBackground from "../../assets/dashboard-hero-sst.webp";
 import { CardRecolhivel, Header } from "../commonComponents";
 import { LIMITE_STORAGE_MB } from "../../constants/sstConstants";
 import {
@@ -47,6 +47,7 @@ import {
 import { supabase } from "../../lib/supabaseClient";
 import { baixarCSV, baixarRelatorioAuditoriaSistemaPDF } from "../../services/exportacaoService";
 
+const STORAGE_AUDITORIA_EXIBICAO_HABILITADA = false;
 const hoje = new Date();
 const LIMITE_REGISTROS_DETALHADOS_INICIAL = 30;
 
@@ -160,6 +161,11 @@ const obterDataFiltroAuditoriaSistema = (valor) => {
 const obterModuloAuditoriaSistema = (item = {}) => obterModuloAuditoriaSistemaPorRegistro(item);
 
 const obterNivelAuditoriaSistema = (item = {}) => obterNivelAuditoriaSistemaPorRegistro(item);
+
+const obterCategoriaAuditoriaSistemaPorMapa = (item = {}, eventosPorChave = {}) => {
+    const chave = String(item.acao || "").trim().toUpperCase();
+    return eventosPorChave[chave]?.categoria || "Evento identificado";
+};
 
 const ROTULOS_NIVEIS_AUDITORIA_SISTEMA = Object.freeze({
     Todos: "Todos os níveis",
@@ -299,11 +305,10 @@ export function RelatorioAuditoria({
     const [filtroNivel, setFiltroNivel] = useState("Todos");
     const [filtroPeriodoInicio, setFiltroPeriodoInicio] = useState("");
     const [filtroPeriodoFim, setFiltroPeriodoFim] = useState("");
-    const [versaoFiltroSalvoRelatorioAuditoriaSistema, setVersaoFiltroSalvoRelatorioAuditoriaSistema] = useState(0);
+    const [, setVersaoFiltroSalvoRelatorioAuditoriaSistema] = useState(0);
 
-    const filtrosSalvosRelatorioAuditoriaSistemaDisponiveis = useMemo(
-        () => Boolean(carregarFiltrosSalvosRelatorioAuditoriaSistema()),
-        [versaoFiltroSalvoRelatorioAuditoriaSistema]
+    const filtrosSalvosRelatorioAuditoriaSistemaDisponiveis = Boolean(
+        carregarFiltrosSalvosRelatorioAuditoriaSistema()
     );
     const [filtrosStorage, setFiltrosStorage] = useState({
         empresa: "Todas",
@@ -588,23 +593,15 @@ export function RelatorioAuditoria({
         setOrdemBlocosAuditoria(BLOCOS_AUDITORIA_SISTEMA_PADRAO);
     };
 
-    const eventosAuditoriaSistema = useMemo(
-        () => montarEventosAuditoriaSistema(auditoria, configEventosAuditoria),
-        [auditoria, configEventosAuditoria]
-    );
+    const eventosAuditoriaSistema = montarEventosAuditoriaSistema(auditoria, configEventosAuditoria);
 
-    const eventosAuditoriaSistemaPorChave = useMemo(
-        () => eventosAuditoriaSistema.reduce((acc, evento) => {
+    const eventosAuditoriaSistemaPorChave = eventosAuditoriaSistema.reduce((acc, evento) => {
             acc[String(evento.chave || "").trim().toUpperCase()] = evento;
             return acc;
-        }, {}),
-        [eventosAuditoriaSistema]
-    );
+        }, {});
 
-    const obterCategoriaAuditoriaSistema = (item = {}) => {
-        const chave = String(item.acao || "").trim().toUpperCase();
-        return eventosAuditoriaSistemaPorChave[chave]?.categoria || "Evento identificado";
-    };
+    const obterCategoriaAuditoriaSistema = (item = {}) =>
+        obterCategoriaAuditoriaSistemaPorMapa(item, eventosAuditoriaSistemaPorChave);
 
     const auditoriaVerificada = useMemo(
         () => auditoria.filter((item) => auditoriaEventoHabilitado(item.acao, configEventosAuditoria)),
@@ -629,18 +626,21 @@ export function RelatorioAuditoria({
         [auditoriaVerificada]
     );
 
-    const categoriasAuditoriaFiltro = useMemo(
-        () => Array.from(new Set(auditoriaVerificada.map((item) => obterCategoriaAuditoriaSistema(item)).filter(Boolean))).sort(),
-        [auditoriaVerificada, eventosAuditoriaSistemaPorChave]
-    );
+    const categoriasAuditoriaFiltro = Array.from(
+        new Set(
+            auditoriaVerificada
+                .map((item) => obterCategoriaAuditoriaSistemaPorMapa(item, eventosAuditoriaSistemaPorChave))
+                .filter(Boolean)
+        )
+    ).sort();
 
-    const registrosFiltrados = useMemo(() => {
+    const registrosFiltrados = (() => {
         const termo = normalizarTextoBusca(busca);
 
         return auditoriaVerificada.filter((item) => {
             const origemAcesso = item.dados?.origemAcesso || {};
             const modulo = obterModuloAuditoriaSistema(item);
-            const categoria = obterCategoriaAuditoriaSistema(item);
+            const categoria = obterCategoriaAuditoriaSistemaPorMapa(item, eventosAuditoriaSistemaPorChave);
             const nivel = obterNivelAuditoriaSistema(item);
             const dataRegistro = obterDataFiltroAuditoriaSistema(item.created_at);
             const usuarioRegistro = item.usuario_email || "Sistema / consulta pública";
@@ -659,10 +659,14 @@ export function RelatorioAuditoria({
 
             return bateBusca && bateAcao && bateUsuario && bateModulo && bateCategoria && bateNivel && bateInicio && bateFim;
         });
-    }, [auditoriaVerificada, busca, filtroAcao, filtroUsuario, filtroModulo, filtroCategoria, filtroNivel, filtroPeriodoInicio, filtroPeriodoFim, eventosAuditoriaSistemaPorChave]);
+    })();
 
     useEffect(() => {
-        setLimiteRegistrosDetalhados(LIMITE_REGISTROS_DETALHADOS_INICIAL);
+        const timer = window.setTimeout(() => {
+            setLimiteRegistrosDetalhados(LIMITE_REGISTROS_DETALHADOS_INICIAL);
+        }, 0);
+
+        return () => window.clearTimeout(timer);
     }, [busca, filtroAcao, filtroUsuario, filtroModulo, filtroCategoria, filtroNivel, filtroPeriodoInicio, filtroPeriodoFim, auditoriaVerificada.length]);
 
     const registrosDetalhadosVisiveis = registrosFiltrados.slice(0, limiteRegistrosDetalhados);
@@ -2272,7 +2276,7 @@ Essa ação remove arquivos do Storage e não altera registros do banco.`;
                     </CardRecolhivel>
                 ))}
 
-                {false && renderBlocoAuditoriaPersonalizado("storage", (
+                {STORAGE_AUDITORIA_EXIBICAO_HABILITADA && renderBlocoAuditoriaPersonalizado("storage", (
                     <CardRecolhivel
                 className="mt-5"
                 titulo="Arquivos salvos no Storage"

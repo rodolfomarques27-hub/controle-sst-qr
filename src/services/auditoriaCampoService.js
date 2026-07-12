@@ -458,7 +458,7 @@ async function carregarAuditoriasCampoDiretoDashboard({ supabase, limite = 1000,
             auditorias,
             existeMais: auditorias.length >= tamanho,
         };
-    } catch (erroRelacao) {
+    } catch {
         const { data, error } = await montarConsulta("*");
         if (error) throw error;
 

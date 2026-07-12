@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import {
     AlertTriangle,
     ArrowRight,
@@ -403,7 +403,7 @@ export function Requisitos() {
 
     async function copiarPassoAPasso() {
         const texto = [
-            `Controle SST QR - ${assuntoSelecionado.titulo}`,
+            `SafeScan Brasil - ${assuntoSelecionado.titulo}`,
             `Para que serve: ${assuntoSelecionado.paraQueServe}`,
             `Quando usar: ${assuntoSelecionado.quandoUsar}`,
             "",
@@ -436,7 +436,7 @@ export function Requisitos() {
         <div>
             <Header
                 titulo="Manuais"
-                subtitulo="Central de ajuda simples para usar o Controle SST QR no dia a dia. Escolha o que precisa fazer e siga o passo a passo."
+                subtitulo="Central de ajuda simples para usar o SafeScan Brasil no dia a dia. Escolha o que precisa fazer e siga o passo a passo."
             />
 
             <div className="grid gap-6 xl:grid-cols-[0.9fr_1.1fr]">
