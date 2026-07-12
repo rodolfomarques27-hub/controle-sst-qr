@@ -1,4 +1,3 @@
-import React from "react";
 import { DashboardCardsGrid } from "./DashboardCardsGrid";
 import { DashboardAuditoriasCampo, DashboardTopDesviosCampo } from "./DashboardAuditoriasCampo";
 import { DashboardPendencias } from "./DashboardPendencias";

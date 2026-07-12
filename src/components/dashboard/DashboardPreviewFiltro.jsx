@@ -1,4 +1,3 @@
-import React from "react";
 import { classNames } from "../../utils/sstUtils";
 
 export function DashboardPreviewFiltro({ mostrarFiltroPainel, abaPersonalizacaoPainel }) {

@@ -3,7 +3,7 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "../../lib/supabaseClient";
 import { Card } from "../commonComponents";
 import { FileUploadAviso, validarArquivoAntesUpload } from "../FileUploadAviso";
-import dashboardHeroBackground from "../../assets/nova-auditoria-hero-bg.png";
+import dashboardHeroBackground from "../../assets/nova-auditoria-hero-bg.webp";
 import {
     obterCategoriaPadronizadaAuditoriaCampo,
     obterTipoAuditoriaCampoPorParametro,
@@ -139,7 +139,7 @@ function auditoriaConfereStatusEquipamentoQrCampo(auditoria = {}, parametros = {
 }
 
 function escaparFiltroIlikeAuditoriaCampo(valor = "") {
-    return String(valor || "").replace(/[\%_]/g, "").trim();
+    return String(valor || "").replace(/[%_]/g, "").trim();
 }
 
 function normalizarTokenAuditoriaCampoDireta(valor = "") {
@@ -399,16 +399,20 @@ export function NovaAuditoriaCampoDireta({ usuario = null, onAuditoriaSalva, emp
     }, [codigoQrCampoParametro]);
 
     useEffect(() => {
-        if (usuario) {
-            setAcessoAuditoriaValidado(true);
-            setMensagemAcessoAuditoria("");
-            return;
-        }
+        const timer = window.setTimeout(() => {
+            if (usuario) {
+                setAcessoAuditoriaValidado(true);
+                setMensagemAcessoAuditoria("");
+                return;
+            }
 
-        setAcessoAuditoriaValidado(false);
-        setSenhaAcessoAuditoria("");
-        setMensagemAcessoAuditoria("");
-        setTokenAuditoriaPublicaValidado("");
+            setAcessoAuditoriaValidado(false);
+            setSenhaAcessoAuditoria("");
+            setMensagemAcessoAuditoria("");
+            setTokenAuditoriaPublicaValidado("");
+        }, 0);
+
+        return () => window.clearTimeout(timer);
     }, [usuario, tokenParametro, codigoQrCampoParametro]);
 
     const validarSenhaAuditoriaPublica = async (evento) => {
@@ -519,6 +523,7 @@ export function NovaAuditoriaCampoDireta({ usuario = null, onAuditoriaSalva, emp
         tokenParametro,
         senhaAcessoAuditoria,
         empresaParametro,
+        formulario.empresaResponsavel,
     ]);
 
     const nomeEmpresaAtualAuditoria = String(formulario.empresaResponsavel || empresaParametro || "").trim();
@@ -727,7 +732,10 @@ export function NovaAuditoriaCampoDireta({ usuario = null, onAuditoriaSalva, emp
         formulario.empresaResponsavel,
         formulario.emailResponsavel,
         formulario.whatsappResponsavel,
+        formulario.responsavelTratativa,
+        formulario.nomeTstResponsavel,
         formulario.emailTstResponsavel,
+        formulario.whatsappTstResponsavel,
     ]);
 
     const alterarTipoAuditoria = (valor) => {

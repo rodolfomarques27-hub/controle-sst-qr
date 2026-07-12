@@ -63,15 +63,6 @@ function obterCamposExtraidosVerificacao(verificacao = {}) {
     return leitura?.campos_extraidos || leitura?.camposExtraidos || null;
 }
 
-function verificacaoPossuiDivergenciaEmpresa(verificacao = {}) {
-    const indicios = Array.isArray(verificacao?.indicios) ? verificacao.indicios : [];
-
-    return indicios.some((indicio = {}) => {
-        const codigo = String(indicio?.codigo || "").toLowerCase();
-        return codigo.includes("documento_diverge_empresa") || codigo.includes("empresa_documento_diverge");
-    });
-}
-
 function dataIsoValidaDocumentoEmpresa(valor = "") {
     const texto = String(valor || "").slice(0, 10);
     if (!/^\d{4}-\d{2}-\d{2}$/.test(texto)) return false;

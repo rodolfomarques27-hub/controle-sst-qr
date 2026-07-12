@@ -4,10 +4,7 @@ import {
 } from "../constants/documentosVerificacaoConstants";
 import {
     criarIndicioVerificacao,
-    diferencaDiasVerificacao,
-    formatarDataIsoVerificacao,
     normalizarTextoVerificacao,
-    obterDataSeguraVerificacao,
     obterExtensaoArquivoVerificacao,
 } from "../utils/documentosVerificacaoUtils";
 
@@ -18,7 +15,6 @@ const LIMITE_MAIOR_LADO_OCR_IMAGEM = 1800;
 const PAGINAS_MAXIMAS_PDFJS = 6;
 const PAGINAS_FINAIS_BUSCA_PDFJS = 10;
 const PAGINAS_MAXIMAS_BUSCA_PROFUNDA_PDFJS = 160;
-const TOLERANCIA_DIAS_COMPARACAO = 2;
 const CONFIANCA_MINIMA_COMPARACAO_DATAS = 58;
 const COMPARACAO_AUTOMATICA_DATAS_OCR_ATIVA = false;
 const ANO_MINIMO_DATA_DOCUMENTAL_RELEVANTE = 2022;
@@ -135,6 +131,8 @@ function limparTextoPossivelDocumento(texto = "") {
         .replace(/\\n/g, " ")
         .replace(/\\r/g, " ")
         .replace(/\\t/g, " ")
+        // O OCR pode retornar bytes de controle; removê-los é intencional.
+        // eslint-disable-next-line no-control-regex
         .replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F]/g, " ")
         .replace(/\s+/g, " ")
         .trim();
@@ -309,8 +307,8 @@ export function extrairDatasTextoDocumental(texto = "", origem = "texto") {
     const conteudo = limparTextoPossivelDocumento(texto);
     const mapa = new Map();
 
-    const regexDataBr = /\b([0-3]?\d)[\/.-]([01]?\d)[\/.-]((?:19|20)\d{2}|\d{2})\b/g;
-    const regexDataIso = /\b((?:19|20)\d{2})[\/.-]([01]?\d)[\/.-]([0-3]?\d)\b/g;
+    const regexDataBr = /\b([0-3]?\d)[/.-]([01]?\d)[/.-]((?:19|20)\d{2}|\d{2})\b/g;
+    const regexDataIso = /\b((?:19|20)\d{2})[/.-]([01]?\d)[/.-]([0-3]?\d)\b/g;
     const regexDataExtenso = /\b([0-3]?\d)\s+de\s+([a-zA-ZÀ-ÿçÇ]+)\s+de\s+((?:19|20)\d{2}|\d{2})\b/gi;
 
     for (const match of conteudo.matchAll(regexDataBr)) {
@@ -355,15 +353,11 @@ function filtrarDatasPorCategoria(datas = [], categoria = "") {
 }
 
 function dataIsoDeTextoDataBr(valor = "") {
-    const match = String(valor || "").match(/\b([0-3]?\d)[\/.-]([01]?\d)[\/.-]((?:19|20)\d{2}|\d{2})\b/);
+    const match = String(valor || "").match(/\b([0-3]?\d)[/.-]([01]?\d)[/.-]((?:19|20)\d{2}|\d{2})\b/);
 
     if (!match) return null;
 
     return montarDataIso(match[1], match[2], match[3]);
-}
-
-function normalizarChaveData(data = {}) {
-    return data?.iso || data?.br || "";
 }
 
 function formatarEntradaDataClassificada(data = {}, extras = {}) {
@@ -410,8 +404,8 @@ function contextoIndicaCodigoOuCadastroNaoData(contexto = "") {
 function extrairVigenciaPrincipalTexto(texto = "") {
     const conteudo = limparTextoPossivelDocumento(texto);
     const padroes = [
-        /Vig[êe]ncia:[^0-9]{0,220}([0-3]?\d[\/.-][01]?\d[\/.-](?:19|20)\d{2})\s+a\s+([0-3]?\d[\/.-][01]?\d[\/.-](?:19|20)\d{2})/i,
-        /(?:validade|per[ií]odo|vig[êe]ncia)[^0-9]{0,220}([0-3]?\d[\/.-][01]?\d[\/.-](?:19|20)\d{2})\s+(?:a|até|ate)\s+([0-3]?\d[\/.-][01]?\d[\/.-](?:19|20)\d{2})/i,
+        /Vig[êe]ncia:[^0-9]{0,220}([0-3]?\d[/.-][01]?\d[/.-](?:19|20)\d{2})\s+a\s+([0-3]?\d[/.-][01]?\d[/.-](?:19|20)\d{2})/i,
+        /(?:validade|per[ií]odo|vig[êe]ncia)[^0-9]{0,220}([0-3]?\d[/.-][01]?\d[/.-](?:19|20)\d{2})\s+(?:a|até|ate)\s+([0-3]?\d[/.-][01]?\d[/.-](?:19|20)\d{2})/i,
     ];
 
     for (const padrao of padroes) {
@@ -453,8 +447,8 @@ function extrairVigenciaPrincipalTexto(texto = "") {
 function extrairAssinaturaDigitalTexto(texto = "") {
     const conteudo = limparTextoPossivelDocumento(texto);
     const padroes = [
-        /(?:assinado digitalmente|assinatura digital|icp-brasil)[\s\S]{0,320}?\bem:\s*([0-3]?\d[\/.-][01]?\d[\/.-](?:19|20)\d{2})\b/i,
-        /\bem:\s*([0-3]?\d[\/.-][01]?\d[\/.-](?:19|20)\d{2})[\s\S]{0,220}?(?:assinado digitalmente|assinatura digital|icp-brasil)/i,
+        /(?:assinado digitalmente|assinatura digital|icp-brasil)[\s\S]{0,320}?\bem:\s*([0-3]?\d[/.-][01]?\d[/.-](?:19|20)\d{2})\b/i,
+        /\bem:\s*([0-3]?\d[/.-][01]?\d[/.-](?:19|20)\d{2})[\s\S]{0,220}?(?:assinado digitalmente|assinatura digital|icp-brasil)/i,
     ];
     const resultados = [];
 
@@ -712,7 +706,7 @@ function obterTipoDocumentoResumo(texto = "", arquivoNome = "") {
 function valorPareceSomenteDocumentoFiscal(valor = "") {
     const texto = limparTextoPossivelDocumento(valor);
     const digitos = texto.replace(/\D/g, "");
-    const semPontuacao = texto.replace(/[.\-/\s]/g, "");
+    const semPontuacao = texto.replace(/[.-/\s]/g, "");
 
     if (!texto) return false;
     if (/^\d{2}\.\d{3}\.\d{3}\/\d{4}-\d{2}$/.test(texto)) return true;
@@ -753,7 +747,7 @@ function obterCnpjResumo(texto = "") {
 }
 
 function obterVigenciaResumo(texto = "") {
-    const match = String(texto || "").match(/Vig[êe]ncia:[^0-9]{0,180}([0-3]?\d[\/.-][01]?\d[\/.-](?:19|20)\d{2})\s+a\s+([0-3]?\d[\/.-][01]?\d[\/.-](?:19|20)\d{2})/i);
+    const match = String(texto || "").match(/Vig[êe]ncia:[^0-9]{0,180}([0-3]?\d[/.-][01]?\d[/.-](?:19|20)\d{2})\s+a\s+([0-3]?\d[/.-][01]?\d[/.-](?:19|20)\d{2})/i);
 
     if (!match) return "";
 
@@ -772,7 +766,7 @@ function obterAssinaturaResumo(texto = "") {
 function obterDataAssinaturaResumo(texto = "") {
     return encontrarPrimeiroGrupo(
         texto,
-        /\bem:\s*([0-3]?\d[\/.-][01]?\d[\/.-](?:19|20)\d{2})\b/i
+        /\bem:\s*([0-3]?\d[/.-][01]?\d[/.-](?:19|20)\d{2})\b/i
     );
 }
 
@@ -801,7 +795,7 @@ function normalizarTextoDataAdmissaoRegistro(valor = "") {
 }
 
 function obterDatasBrTextoAdmissaoRegistro(valor = "") {
-    return Array.from(String(valor || "").matchAll(/\b([0-3]?\d[\/.-][01]?\d[\/.-](?:19|20)\d{2})\b/g))
+    return Array.from(String(valor || "").matchAll(/\b([0-3]?\d[/.-][01]?\d[/.-](?:19|20)\d{2})\b/g))
         .map((match) => match?.[1] || "")
         .filter(Boolean);
 }
@@ -931,12 +925,12 @@ function obterDataAdmissaoRegistroResumo(texto = "", linhasOcr = []) {
         .trim();
 
     const padroes = [
-        /\bdata\s+de\s+admiss[aã]o\b[^0-9]{0,260}([0-3]?\d[\/.-][01]?\d[\/.-](?:19|20)\d{2})/i,
-        /\badmiss[aã]o\b[^0-9]{0,260}([0-3]?\d[\/.-][01]?\d[\/.-](?:19|20)\d{2})/i,
-        /\bdata\s+do\s+registro\b[^0-9]{0,260}([0-3]?\d[\/.-][01]?\d[\/.-](?:19|20)\d{2})/i,
-        /\bin[ií]cio\s+do\s+contrato\b[^0-9]{0,260}([0-3]?\d[\/.-][01]?\d[\/.-](?:19|20)\d{2})/i,
-        /\bop[cç][aã]o\s+em\s+fgts\b[^0-9]{0,260}([0-3]?\d[\/.-][01]?\d[\/.-](?:19|20)\d{2})/i,
-        /\boptante\s+fgts\b[^0-9]{0,260}([0-3]?\d[\/.-][01]?\d[\/.-](?:19|20)\d{2})/i,
+        /\bdata\s+de\s+admiss[aã]o\b[^0-9]{0,260}([0-3]?\d[/.-][01]?\d[/.-](?:19|20)\d{2})/i,
+        /\badmiss[aã]o\b[^0-9]{0,260}([0-3]?\d[/.-][01]?\d[/.-](?:19|20)\d{2})/i,
+        /\bdata\s+do\s+registro\b[^0-9]{0,260}([0-3]?\d[/.-][01]?\d[/.-](?:19|20)\d{2})/i,
+        /\bin[ií]cio\s+do\s+contrato\b[^0-9]{0,260}([0-3]?\d[/.-][01]?\d[/.-](?:19|20)\d{2})/i,
+        /\bop[cç][aã]o\s+em\s+fgts\b[^0-9]{0,260}([0-3]?\d[/.-][01]?\d[/.-](?:19|20)\d{2})/i,
+        /\boptante\s+fgts\b[^0-9]{0,260}([0-3]?\d[/.-][01]?\d[/.-](?:19|20)\d{2})/i,
     ];
 
     for (const padrao of padroes) {
@@ -1149,7 +1143,7 @@ function extrairStringsLiteraisPdf(textoPdf = "") {
                 if (
                     limpo.length >= 2 &&
                     !textoParecePdfBrutoOuImagemEmbutida(limpo) &&
-                    (/[a-zA-ZÀ-ÿ]/.test(limpo) || /\d{1,2}[\/.-]\d{1,2}[\/.-]\d{2,4}/.test(limpo)) &&
+                    (/[a-zA-ZÀ-ÿ]/.test(limpo) || /\d{1,2}[/.-]\d{1,2}[/.-]\d{2,4}/.test(limpo)) &&
                     !/^[A-Za-z0-9+/=]{28,}$/.test(limpo)
                 ) {
                     resultados.push(limpo);
@@ -1185,17 +1179,13 @@ function extrairTextoLegivelPdf(bytes) {
 }
 
 async function carregarPdfJsDocumental() {
-    const pdfjsLib = await import("pdfjs-dist");
+    const [pdfjsLib, pdfWorkerUrl] = await Promise.all([
+        import("pdfjs-dist"),
+        import("pdfjs-dist/build/pdf.worker.min.mjs?url"),
+    ]);
 
-    try {
-        if (pdfjsLib?.GlobalWorkerOptions && !pdfjsLib.GlobalWorkerOptions.workerSrc) {
-            pdfjsLib.GlobalWorkerOptions.workerSrc = new URL(
-                "pdfjs-dist/build/pdf.worker.mjs",
-                import.meta.url
-            ).toString();
-        }
-    } catch {
-        // Se o worker não puder ser configurado, o PDF.js ainda pode tentar usar fallback.
+    if (pdfjsLib?.GlobalWorkerOptions && !pdfjsLib.GlobalWorkerOptions.workerSrc) {
+        pdfjsLib.GlobalWorkerOptions.workerSrc = pdfWorkerUrl.default || pdfWorkerUrl;
     }
 
     return pdfjsLib;
@@ -1221,7 +1211,7 @@ async function carregarTesseractDocumental() {
     try {
         return await import("tesseract.js");
     } catch (error) {
-        throw new Error(`OCR local indisponível: ${error?.message || "não foi possível carregar tesseract.js"}.`);
+        throw new Error(`OCR local indisponível: ${error?.message || "não foi possível carregar tesseract.js"}.`, { cause: error });
     }
 }
 
@@ -1307,92 +1297,6 @@ function agruparPalavrasOcrEmLinhas(palavras = [], canvas = null) {
         };
     }).filter((linha) => linha.texto);
 }
-
-function calcularAssinaturaVisualLinha(canvas, linha = {}) {
-    if (!canvas || typeof canvas.getContext !== "function" || !linha) {
-        return { assinaturaVisual: false, densidade: 0, origem: "sem_canvas_ou_linha" };
-    }
-
-    const contexto = canvas.getContext("2d", { willReadFrequently: true });
-
-    if (!contexto) {
-        return { assinaturaVisual: false, densidade: 0, origem: "sem_contexto_canvas" };
-    }
-
-    const largura = canvas.width || 1;
-    const altura = canvas.height || 1;
-    const y0Normalizado = Number(linha.y0 || linha.yCentro || 0);
-    const y1Normalizado = Number(linha.y1 || linha.yCentro || y0Normalizado);
-    const centroLinha = Number(linha.yCentro || ((y0Normalizado + y1Normalizado) / 2));
-    const alturaLinha = Math.max(0.018, Math.abs(y1Normalizado - y0Normalizado), 0.022);
-
-    // A coluna de assinatura costuma começar antes de 68% da página em listas escaneadas.
-    // Usar uma faixa um pouco mais ampla evita perder assinatura quando a tabela foi digitalizada torta.
-    const xInicio = Math.max(0, Math.floor(largura * 0.59));
-    const xFim = Math.min(largura, Math.floor(largura * 0.985));
-    const yInicio = Math.max(0, Math.floor((centroLinha - alturaLinha * 0.85) * altura));
-    const yFim = Math.min(altura, Math.ceil((centroLinha + alturaLinha * 1.05) * altura));
-    const larguraRecorte = Math.max(1, xFim - xInicio);
-    const alturaRecorte = Math.max(1, yFim - yInicio);
-
-    try {
-        const dados = contexto.getImageData(xInicio, yInicio, larguraRecorte, alturaRecorte).data;
-        let pixelsRelevantes = 0;
-        let pixelsTinta = 0;
-        let pixelsAzuis = 0;
-        const colunasComTinta = new Set();
-        const linhasComTinta = new Set();
-
-        for (let y = 0; y < alturaRecorte; y += 1) {
-            for (let x = 0; x < larguraRecorte; x += 1) {
-                const i = (y * larguraRecorte + x) * 4;
-                const r = dados[i];
-                const g = dados[i + 1];
-                const b = dados[i + 2];
-                const a = dados[i + 3];
-
-                if (a < 40) continue;
-
-                pixelsRelevantes += 1;
-
-                const luma = (0.299 * r) + (0.587 * g) + (0.114 * b);
-                const diferencaCanais = Math.max(r, g, b) - Math.min(r, g, b);
-                const azulCaneta = b > r + 14 && b > g + 4 && b < 245;
-                const tracoEscuro = luma < 150 && diferencaCanais > 7;
-                const tintaProvavel = azulCaneta || tracoEscuro;
-
-                if (tintaProvavel) {
-                    pixelsTinta += 1;
-                    if (azulCaneta) pixelsAzuis += 1;
-                    colunasComTinta.add(Math.floor(x / 4));
-                    linhasComTinta.add(Math.floor(y / 3));
-                }
-            }
-        }
-
-        const densidade = pixelsRelevantes ? pixelsTinta / pixelsRelevantes : 0;
-        const densidadeAzul = pixelsRelevantes ? pixelsAzuis / pixelsRelevantes : 0;
-        const espalhamentoHorizontal = colunasComTinta.size / Math.max(1, Math.ceil(larguraRecorte / 4));
-        const espalhamentoVertical = linhasComTinta.size / Math.max(1, Math.ceil(alturaRecorte / 3));
-        const assinaturaVisual = (
-            densidadeAzul > 0.0007 ||
-            (densidade > 0.0032 && espalhamentoHorizontal > 0.025 && espalhamentoVertical > 0.055) ||
-            (densidade > 0.0055 && espalhamentoHorizontal > 0.018)
-        );
-
-        return {
-            assinaturaVisual,
-            densidade: Number(densidade.toFixed(4)),
-            densidadeAzul: Number(densidadeAzul.toFixed(4)),
-            espalhamentoHorizontal: Number(espalhamentoHorizontal.toFixed(4)),
-            espalhamentoVertical: Number(espalhamentoVertical.toFixed(4)),
-            origem: "analise_visual_coluna_assinatura",
-        };
-    } catch {
-        return { assinaturaVisual: false, densidade: 0, origem: "erro_leitura_canvas" };
-    }
-}
-
 
 function calcularAssinaturaVisualFaixa(canvas, faixa = {}) {
     if (!canvas || typeof canvas.getContext !== "function") {
@@ -1825,7 +1729,7 @@ async function reconhecerTextoCanvasComOcr(canvas) {
 function carregarImagemParaOcr(arquivo) {
     return new Promise((resolve, reject) => {
         if (!arquivo || typeof URL === "undefined" || typeof Image === "undefined") {
-            reject(new Error("Imagem local indisponÃ­vel para OCR no navegador."));
+            reject(new Error("Imagem local indisponível para OCR no navegador."));
             return;
         }
 
@@ -1839,7 +1743,7 @@ function carregarImagemParaOcr(arquivo) {
 
         imagem.onerror = () => {
             URL.revokeObjectURL(url);
-            reject(new Error("NÃ£o foi possÃ­vel carregar a imagem para OCR local."));
+            reject(new Error("Não foi possível carregar a imagem para OCR local."));
         };
 
         imagem.src = url;
@@ -1848,14 +1752,14 @@ function carregarImagemParaOcr(arquivo) {
 
 function desenharImagemEmCanvasOcr(imagem) {
     if (!imagem || typeof document === "undefined") {
-        throw new Error("Canvas indisponÃ­vel para OCR local da imagem.");
+        throw new Error("Canvas indisponível para OCR local da imagem.");
     }
 
     const larguraOriginal = Number(imagem.naturalWidth || imagem.width || 0);
     const alturaOriginal = Number(imagem.naturalHeight || imagem.height || 0);
 
     if (!larguraOriginal || !alturaOriginal) {
-        throw new Error("Imagem sem dimensÃµes vÃ¡lidas para OCR local.");
+        throw new Error("Imagem sem dimensões válidas para OCR local.");
     }
 
     const maiorLado = Math.max(larguraOriginal, alturaOriginal);
@@ -1866,7 +1770,7 @@ function desenharImagemEmCanvasOcr(imagem) {
     const contexto = canvas.getContext("2d", { willReadFrequently: true, alpha: false });
 
     if (!contexto) {
-        throw new Error("NÃ£o foi possÃ­vel preparar o canvas para OCR local da imagem.");
+        throw new Error("Não foi possível preparar o canvas para OCR local da imagem.");
     }
 
     canvas.width = largura;
@@ -1912,7 +1816,7 @@ async function extrairTextoImagemComOcr({ arquivo = null, arquivoNome = "", mime
             assinaturasDocumento: [],
             marcacoesDdsDias: [],
             confianca: 0,
-            avisos: ["OCR de imagem nÃ£o executado fora do navegador."],
+            avisos: ["OCR de imagem não executado fora do navegador."],
         };
     }
 
@@ -1941,7 +1845,7 @@ async function extrairTextoImagemComOcr({ arquivo = null, arquivoNome = "", mime
             .map((assinatura) => ({ ...assinatura, rotacao: resultadoOcr?.rotacao || 0 }));
 
         if (resultadoOcr?.rotacao) {
-            avisos.push(`OCR local corrigiu orientaÃ§Ã£o da imagem em ${resultadoOcr.rotacao}Â°.`);
+            avisos.push(`OCR local corrigiu orientação da imagem em ${resultadoOcr.rotacao}°.`);
         }
 
         avisos.push("OCR local executado na imagem usando tesseract.js, sem API paga.");
@@ -1954,7 +1858,7 @@ async function extrairTextoImagemComOcr({ arquivo = null, arquivoNome = "", mime
             dadosCanvas.canvas.width = 1;
             dadosCanvas.canvas.height = 1;
         } catch {
-            // LiberaÃ§Ã£o de memÃ³ria sem bloquear o fluxo.
+            // Liberação de memória sem bloquear o fluxo.
         }
 
         if (textoPossuiConteudoDocumentoConfiavel(textoOcr)) {
@@ -1980,7 +1884,7 @@ async function extrairTextoImagemComOcr({ arquivo = null, arquivoNome = "", mime
             confianca: Number(resultadoOcr?.confianca || 0),
             avisos: [
                 ...avisos,
-                `OCR local executado, mas nÃ£o encontrou texto documental confiÃ¡vel na imagem ${arquivoNome || extensao || mimeType || ""}.`,
+                `OCR local executado, mas não encontrou texto documental confiável na imagem ${arquivoNome || extensao || mimeType || ""}.`,
             ],
         };
     } catch (error) {
@@ -1993,7 +1897,7 @@ async function extrairTextoImagemComOcr({ arquivo = null, arquivoNome = "", mime
             assinaturasDocumento: [],
             marcacoesDdsDias: [],
             confianca: 0,
-            avisos: [`OCR local da imagem indisponÃ­vel: ${error?.message || "erro desconhecido"}.`],
+            avisos: [`OCR local da imagem indisponível: ${error?.message || "erro desconhecido"}.`],
         };
     }
 }
@@ -3210,7 +3114,7 @@ export async function executarLeituraDocumentalLocal({ arquivo = null, arquivoNo
         });
     }
 
-    if (/^image\//i.test(mime) || ["jpg", "jpeg", "png", "webp"].includes(extensao)) {
+    if (/^image\/\//i.test(mime) || ["jpg", "jpeg", "png", "webp"].includes(extensao)) {
         const leituraImagem = await extrairTextoImagemComOcr({
             arquivo,
             arquivoNome: nome,
@@ -3221,7 +3125,7 @@ export async function executarLeituraDocumentalLocal({ arquivo = null, arquivoNo
         const avisos = [...(leituraImagem?.avisos || [])];
 
         if (!textoExtraido) {
-            avisos.push("NÃ£o foi encontrado texto confiÃ¡vel na imagem. Conferir manualmente qualidade, enquadramento, foco e iluminaÃ§Ã£o do documento.");
+            avisos.push("Não foi encontrado texto confiável na imagem. Conferir manualmente qualidade, enquadramento, foco e iluminação do documento.");
         }
 
         return montarRetornoLeituraBase({
@@ -3426,122 +3330,9 @@ export async function executarLeituraDdsLocal({
         ],
     };
 }
-function encontrarDataMaisProxima(dataCadastroIso, datas = []) {
-    const dataCadastro = obterDataSeguraVerificacao(dataCadastroIso);
-
-    if (!dataCadastro || !datas.length) return null;
-
-    return datas
-        .map((data) => {
-            const diferenca = Math.abs(diferencaDiasVerificacao(dataCadastro, data.iso) ?? 999999);
-            return { ...data, diferencaDias: diferenca };
-        })
-        .sort((a, b) => a.diferencaDias - b.diferencaDias)[0] || null;
-}
-
-function datasContemCadastro(dataCadastroIso, datas = []) {
-    const dataCadastro = obterDataSeguraVerificacao(dataCadastroIso);
-
-    if (!dataCadastro) return true;
-
-    return datas.some((data) => {
-        const diferenca = Math.abs(diferencaDiasVerificacao(dataCadastro, data.iso) ?? 999999);
-        return diferenca <= TOLERANCIA_DIAS_COMPARACAO;
-    });
-}
-
-function compararCampoDataCadastro({
-    leitura,
-    dataCadastro,
-    labelCampo,
-    codigo,
-    categoriaPreferencial = "",
-    pesoPadrao = DOCUMENTOS_VERIFICACAO_PESOS.DATA_CADASTRO_NAO_LOCALIZADA_DOCUMENTO,
-} = {}) {
-    const dataCadastroIso = formatarDataIsoVerificacao(dataCadastro);
-
-    if (!dataCadastroIso || !leitura?.comparacaoDatasPermitida) return null;
-
-    const datasConfiaveis = leitura.datasDocumentoConfiaveis || [];
-    if (!datasConfiaveis.length) return null;
-
-    const datasPreferenciais = categoriaPreferencial
-        ? filtrarDatasPorCategoria(datasConfiaveis, categoriaPreferencial)
-        : [];
-    const baseComparacao = datasPreferenciais.length ? datasPreferenciais : datasConfiaveis;
-
-    if (datasContemCadastro(dataCadastroIso, baseComparacao)) return null;
-
-    const maisProxima = encontrarDataMaisProxima(dataCadastroIso, baseComparacao);
-    const peso = maisProxima?.diferencaDias >= 30
-        ? pesoPadrao
-        : DOCUMENTOS_VERIFICACAO_PESOS.DATA_CADASTRO_NAO_LOCALIZADA_DOCUMENTO_LEVE;
-
-    return criarIndicioVerificacao({
-        codigo,
-        tipo: DOCUMENTOS_VERIFICACAO_TIPOS_INDICIO.OCR,
-        titulo: `${labelCampo} cadastrada não localizada na leitura do documento`,
-        detalhe: maisProxima
-            ? `${labelCampo} cadastrada: ${formatarDataBr(dataCadastroIso)}. Data mais próxima lida no texto do arquivo: ${maisProxima.br} (${maisProxima.diferencaDias} dia(s) de diferença).`
-            : `${labelCampo} cadastrada: ${formatarDataBr(dataCadastroIso)}. Datas lidas no texto do arquivo: ${baseComparacao.map((data) => data.br).join(", ")}.`,
-        peso,
-        recomendacao: "Conferir manualmente se a data cadastrada no sistema corresponde à data real do documento.",
-        dados: {
-            dataCadastro: dataCadastroIso,
-            dataMaisProximaDocumento: maisProxima?.iso || null,
-            diferencaDias: maisProxima?.diferencaDias ?? null,
-            datasEncontradas: baseComparacao.map((data) => data.iso),
-        },
-    });
-}
-
-function avaliarAssinaturaDigitalLeitura({ leitura, dataVencimento } = {}) {
-    const indicios = [];
-    const hoje = new Date();
-    const hojeMeioDia = new Date(hoje.getFullYear(), hoje.getMonth(), hoje.getDate(), 12, 0, 0);
-    const vencimento = obterDataSeguraVerificacao(dataVencimento);
-
-    if (!leitura?.comparacaoDatasPermitida) return indicios;
-
-    for (const dataAssinatura of leitura?.datasAssinaturaDigital || []) {
-        const assinatura = obterDataSeguraVerificacao(dataAssinatura.iso);
-
-        if (!assinatura) continue;
-
-        if (assinatura > hojeMeioDia) {
-            indicios.push(criarIndicioVerificacao({
-                codigo: "assinatura_digital_futura",
-                tipo: DOCUMENTOS_VERIFICACAO_TIPOS_INDICIO.OCR,
-                titulo: "Data de assinatura digital futura",
-                detalhe: `A leitura local identificou possível data de assinatura digital futura: ${dataAssinatura.br}.`,
-                peso: DOCUMENTOS_VERIFICACAO_PESOS.DATA_ASSINATURA_DIGITAL_FUTURA,
-                recomendacao: "Conferir o certificado digital, carimbo de tempo ou validade da assinatura.",
-                dados: { dataAssinatura: dataAssinatura.iso },
-            }));
-        }
-
-        if (vencimento && assinatura > vencimento) {
-            indicios.push(criarIndicioVerificacao({
-                codigo: "assinatura_digital_apos_vencimento",
-                tipo: DOCUMENTOS_VERIFICACAO_TIPOS_INDICIO.OCR,
-                titulo: "Assinatura digital posterior ao vencimento cadastrado",
-                detalhe: `Assinatura provável: ${dataAssinatura.br}. Vencimento cadastrado: ${formatarDataBr(formatarDataIsoVerificacao(vencimento))}.`,
-                peso: DOCUMENTOS_VERIFICACAO_PESOS.DATA_ASSINATURA_APOS_VENCIMENTO,
-                recomendacao: "Validar manualmente a assinatura digital e a vigência do documento.",
-                dados: {
-                    dataAssinatura: dataAssinatura.iso,
-                    dataVencimento: formatarDataIsoVerificacao(vencimento),
-                },
-            }));
-        }
-    }
-
-    return indicios;
-}
-
 function normalizarDocumentoTextoComparacao(valor = "") {
     return normalizarTextoVerificacao(valor)
-        .replace(/\b(ltda|me|epp|eireli|sa|s\/a|ss|s\/s|construtora|construcoes|construções|pavimentadora|pavimentacao|pavimentação|comercio|comércio|servicos|serviços|empresa|grupo)\b/g, " ")
+        .replace(/\b(ltda|me|epp|eireli|sa|s\/?a|ss|s\/?s|construtora|construcoes|construções|pavimentadora|pavimentacao|pavimentação|comercio|comércio|servicos|serviços|empresa|grupo)\b/g, " ")
         .replace(/[^a-z0-9]+/g, " ")
         .replace(/\s+/g, " ")
         .trim();

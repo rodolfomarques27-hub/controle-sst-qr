@@ -24,6 +24,7 @@ import {
     calcularVencimentoTreinamento,
     detectarDataEmissaoArquivo,
     inferirTreinamentoPorNomeArquivo,
+    obterStatusInicialColaborador,
 } from "../../services/colaboradorDocumentosService";
 import {
     prepararArquivosTreinamentoLote,
@@ -33,7 +34,7 @@ import {
 } from "../../services/treinamentosService";
 import { FUNCAO_EMAIL_ALERTA_TST } from "../../constants/sistemaConstants";
 import { treinamentosBase } from "../../constants/treinamentosConstants";
-import treinamentosHeroBackground from "../../assets/dashboard-hero-sst.png";
+import treinamentosHeroBackground from "../../assets/dashboard-hero-sst.webp";
 import {
     normalizarTextoBusca,
     diasParaVencer,
@@ -153,6 +154,7 @@ function emailTstDaEmpresa(colaborador) {
 
 export function Treinamentos({
     colaboradores,
+    empresasBanco = [],
     colaboradorInicialId,
     onSalvarCertificado,
     onVisualizarCertificado,
@@ -279,7 +281,7 @@ export function Treinamentos({
         if (alvoInterativo) return;
 
         if (!recolhido) {
-            let cabecalho = null;
+            let cabecalho;
 
             try {
                 cabecalho = evento.currentTarget.querySelector(":scope > * > div:first-child");
@@ -1013,7 +1015,7 @@ export function Treinamentos({
             "Solicitamos regularizar os documentos vencidos e programar a renovação dos próximos vencimentos para evitar bloqueio de atividade.",
             "",
             "Atenciosamente,",
-            "Sistema de Controle SST QR",
+            "Sistema SafeScan Brasil",
         ].join("\n");
 
         return { destinatario, assunto, corpo };

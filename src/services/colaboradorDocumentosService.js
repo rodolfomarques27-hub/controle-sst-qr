@@ -540,7 +540,7 @@ function normalizarDatasComErrosOcr(texto = "") {
     let conteudo = String(texto || "");
 
     conteudo = conteudo.replace(
-        /\b([0-3]?[0-9OoIl|])\s*[\/.-]\s*([0-1]?[0-9OoIl|])\s*[\/.-]\s*((?:[12][0-9OoIl|]{3})|[0-9OoIl|]{2})\b/g,
+        /\b([0-3]?[0-9OoIl|])\s*[/.-]\s*([0-1]?[0-9OoIl|])\s*[/.-]\s*((?:[12][0-9OoIl|]{3})|[0-9OoIl|]{2})\b/g,
         (_, dia, mes, ano) => `${normalizarDigitosOcrData(dia)}/${normalizarDigitosOcrData(mes)}/${normalizarDigitosOcrData(ano)}`
     );
 
@@ -931,7 +931,7 @@ export function extrairDatasComContexto(texto = "", opcoes = {}) {
             if (contextoBusca.includes(normalizarTextoBusca(palavra))) pontuacao -= 12;
         });
 
-        if (/data\s*[:\-]/i.test(contexto)) pontuacao += 14;
+        if (/data\s*[:-]/i.test(contexto)) pontuacao += 14;
         if (/nome\s+da\s+empresa|hor[aá]rio|respons[aá]vel\s+pelo\s+treinamento|assinatura\s+do\s+respons[aá]vel|instrutor/i.test(contexto)) pontuacao += 10;
         if (/treinamento\s+de|certificado\s+de|atestado\s+de\s+sa[uú]de\s+ocupacional/i.test(contexto)) pontuacao += 8;
 
@@ -964,7 +964,7 @@ export function extrairDatasComContexto(texto = "", opcoes = {}) {
         }
 
         if (/lista|nr\s*[-º]?\s*(?:11|12|17|18|21|25|26)|integra/.test(tipoDocumento)) {
-            if (/data\s*[:\-]|nome\s+da\s+empresa|hor[aá]rio|respons[aá]vel\s+pelo\s+treinamento|instrutor/i.test(contexto)) pontuacao += 24;
+            if (/data\s*[:-]|nome\s+da\s+empresa|hor[aá]rio|respons[aá]vel\s+pelo\s+treinamento|instrutor/i.test(contexto)) pontuacao += 24;
         }
 
         if (/exames?\s+realizados|data\s+de\s+nascimento|nascimento|acuidade|audiometria|eletrocardiograma|eletroencefalograma|espirometria|glicose|raio\s*x/i.test(contexto)) pontuacao -= 35;

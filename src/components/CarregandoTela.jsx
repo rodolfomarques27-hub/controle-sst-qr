@@ -1,5 +1,4 @@
-import React from "react";
-import { RefreshCw, ShieldCheck } from "lucide-react";
+import { RefreshCw } from "lucide-react";
 
 export function CarregandoTela({
     mensagem = "Carregando tela...",
@@ -13,12 +12,16 @@ export function CarregandoTela({
 
             <div className="relative flex items-center gap-4">
                 <div className="flex h-13 w-13 shrink-0 items-center justify-center rounded-2xl bg-white/10 ring-1 ring-white/15">
-                    <ShieldCheck className="h-6 w-6 text-cyan-200" />
+                    <img
+                        src="/favicon.png?v=1050"
+                        alt="SafeScan Brasil"
+                        className="h-9 w-9 object-contain"
+                    />
                 </div>
 
                 <div className="min-w-0 flex-1">
                     <p className="text-[11px] font-black uppercase tracking-[0.24em] text-cyan-100/80">
-                        Controle SST QR
+                        SafeScan Brasil
                     </p>
                     <h2 className="mt-1 text-base font-black text-white">
                         {mensagem}
@@ -48,7 +51,7 @@ export function CarregandoTela({
     }
 
     return (
-        <div className="flex min-h-[420px] items-center justify-center rounded-[2rem] bg-gradient-to-br from-slate-100 via-white to-slate-100 p-4 text-slate-900 ring-1 ring-slate-200/70">
+        <div className="flex min-h-[calc(100vh-8rem)] w-full items-center justify-center bg-transparent p-4 text-slate-900">
             <div className="w-full max-w-md">{conteudo}</div>
         </div>
     );

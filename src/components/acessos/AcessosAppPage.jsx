@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
     AlertTriangle,
     CalendarClock,
@@ -15,7 +15,7 @@ import {
     UsersRound,
     X,
 } from "lucide-react";
-import dashboardHeroBackground from "../../assets/dashboard-hero-sst.png";
+import dashboardHeroBackground from "../../assets/dashboard-hero-sst.webp";
 import { Card } from "../commonComponents";
 import {
     ACOES_USUARIOS_PERMISSOES,
@@ -134,19 +134,6 @@ function obterFotoPermissaoAcessoApp(usuario = {}) {
     ].find((valor) => String(valor || "").trim()) || "";
 }
 
-function montarUrlPublicaFotoAcessoApp(caminho = "") {
-    const valor = normalizarCaminhoFotoAcessoApp(caminho);
-
-    if (!valor) return "";
-    if (valorFotoAcessoEhUrlFinal(valor) && !valor.includes(`/storage/v1/object/`)) return valor;
-
-    const { data } = supabase.storage
-        .from(BUCKET_FOTOS_USUARIOS_ACESSO_APP)
-        .getPublicUrl(valor);
-
-    return data?.publicUrl || "";
-}
-
 async function resolverUrlFotoAcessoApp(caminho = "") {
     const valor = normalizarCaminhoFotoAcessoApp(caminho);
 
@@ -221,7 +208,9 @@ function FotoPessoaAcessoApp({
         let cancelado = false;
         const valor = normalizarCaminhoFotoAcessoApp(valorFoto);
 
-        setFotoComErro(false);
+        const resetarErroTimer = window.setTimeout(() => {
+            setFotoComErro(false);
+        }, 0);
 
         async function carregarUrl() {
             if (!valor) {
@@ -239,6 +228,7 @@ function FotoPessoaAcessoApp({
 
         return () => {
             cancelado = true;
+            window.clearTimeout(resetarErroTimer);
         };
     }, [valorFoto]);
 
@@ -458,6 +448,7 @@ const FORM_USUARIO_ACESSO_INICIAL = {
     email: "",
     funcao: "",
     empresa: "",
+    empresa_id: "",
     perfil: "consulta",
     ativo: true,
     bloqueado: false,
@@ -485,6 +476,7 @@ function montarFormularioUsuarioAcesso(usuario = null) {
         email: normalizarTextoAcesso(usuario.email).toLowerCase(),
         funcao: usuario.funcao || "",
         empresa: usuario.empresa || "",
+        empresa_id: usuario.empresa_id || usuario.empresaId || "",
         perfil,
         ativo,
         bloqueado,
@@ -684,7 +676,11 @@ function SolicitacoesAcessoApp({ onPrepararPermissao = null, usuario = null }) {
 
 
     useEffect(() => {
-        carregarSolicitacoes();
+        const timer = window.setTimeout(() => {
+            void carregarSolicitacoes();
+        }, 0);
+
+        return () => window.clearTimeout(timer);
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
@@ -950,7 +946,7 @@ function SolicitacoesAcessoApp({ onPrepararPermissao = null, usuario = null }) {
     );
 }
 
-function UsuariosCadastradosApp({ usuario = null, usuarioParaEditar = null, onEdicaoConsumida = null }) {
+function UsuariosCadastradosApp({ usuario = null, usuarioParaEditar = null, onEdicaoConsumida = null, empresasBanco = [] }) {
     const [usuarios, setUsuarios] = useState([]);
     const [carregando, setCarregando] = useState(false);
     const [mensagem, setMensagem] = useState("Usuários ainda não carregados.");
@@ -972,6 +968,12 @@ function UsuariosCadastradosApp({ usuario = null, usuarioParaEditar = null, onEd
         ativos: usuarios.filter((item) => item.ativo && !item.bloqueado).length,
         administradores: usuarios.filter((item) => item.perfil === "administrador").length,
         bloqueados: usuarios.filter((item) => item.bloqueado).length,
+        vinculosPendentes: usuarios.filter((item) => (
+            item.ativo
+            && !item.bloqueado
+            && item.perfil !== "administrador"
+            && !(item.empresa_id || item.empresaId)
+        )).length,
     }), [usuarios]);
 
     const emailsDuplicados = useMemo(() => {
@@ -1021,11 +1023,15 @@ function UsuariosCadastradosApp({ usuario = null, usuarioParaEditar = null, onEd
 
             const status = item.bloqueado ? "bloqueado" : item.ativo ? "ativo" : "inativo";
             const loginAuth = usuarioTemLoginAuthAcessoApp(item) ? "com_login" : "sem_login";
+            const vinculoEmpresa = item.empresa_id || item.empresaId ? "com_empresa" : "sem_empresa";
 
             const passaTexto = !busca || textoBase.includes(busca);
             const passaPerfil = filtroPerfil === "todos" || normalizarTextoAcesso(item.perfil).toLowerCase() === filtroPerfil;
             const passaEmpresa = filtroEmpresa === "todos" || normalizarTextoAcesso(item.empresa) === filtroEmpresa;
-            const passaStatus = filtroStatus === "todos" || status === filtroStatus || loginAuth === filtroStatus;
+            const passaStatus = filtroStatus === "todos"
+                || status === filtroStatus
+                || loginAuth === filtroStatus
+                || vinculoEmpresa === filtroStatus;
 
             return passaTexto && passaPerfil && passaEmpresa && passaStatus;
         });
@@ -1258,6 +1264,7 @@ function UsuariosCadastradosApp({ usuario = null, usuarioParaEditar = null, onEd
                     nome: permissaoSalva?.nome || formularioComFoto.nome,
                     funcao: permissaoSalva?.funcao || formularioComFoto.funcao,
                     empresa: permissaoSalva?.empresa || formularioComFoto.empresa,
+                    empresa_id: permissaoSalva?.empresa_id ?? formularioComFoto.empresa_id ?? "",
                     foto_url: obterFotoPermissaoAcessoApp(permissaoSalva) || formularioComFoto.foto_url,
                     perfil: permissaoSalva?.perfil || formularioComFoto.perfil,
                     ativo: permissaoSalva?.ativo ?? formularioComFoto.ativo,
@@ -1553,7 +1560,11 @@ function UsuariosCadastradosApp({ usuario = null, usuarioParaEditar = null, onEd
     }
 
     useEffect(() => {
-        carregarUsuarios();
+        const timer = window.setTimeout(() => {
+            void carregarUsuarios();
+        }, 0);
+
+        return () => window.clearTimeout(timer);
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
@@ -1561,6 +1572,7 @@ function UsuariosCadastradosApp({ usuario = null, usuarioParaEditar = null, onEd
         if (!usuarioParaEditar) return;
 
         const recuperacaoSenha = ehSolicitacaoRecuperacaoSenhaAcessoApp(usuarioParaEditar);
+        const timer = window.setTimeout(() => {
 
         setFormulario(montarFormularioUsuarioAcesso({
             nome: usuarioParaEditar.nome || "",
@@ -1584,6 +1596,9 @@ function UsuariosCadastradosApp({ usuario = null, usuarioParaEditar = null, onEd
             : `Preparando permissão para ${usuarioParaEditar.email || "solicitação aprovada"}. Revise o perfil antes de salvar.`
         );
         onEdicaoConsumida?.();
+        }, 0);
+
+        return () => window.clearTimeout(timer);
     }, [usuarioParaEditar, onEdicaoConsumida]);
 
     return (
@@ -1631,7 +1646,7 @@ function UsuariosCadastradosApp({ usuario = null, usuarioParaEditar = null, onEd
                 </div>
             </div>
 
-            <div className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+            <div className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
                 <div className="flex h-[78px] flex-col items-center justify-center rounded-2xl bg-slate-50 px-4 py-3 text-center ring-1 ring-slate-100">
                     <p className="text-[10px] font-black uppercase tracking-wide text-slate-400">Total</p>
                     <p className="mt-1 text-xl font-black text-slate-950">{resumo.total}</p>
@@ -1647,6 +1662,10 @@ function UsuariosCadastradosApp({ usuario = null, usuarioParaEditar = null, onEd
                 <div className="flex h-[78px] flex-col items-center justify-center rounded-2xl bg-rose-50 px-4 py-3 text-center ring-1 ring-rose-100">
                     <p className="text-[10px] font-black uppercase tracking-wide text-rose-700">Bloqueados</p>
                     <p className="mt-1 text-xl font-black text-rose-800">{resumo.bloqueados}</p>
+                </div>
+                <div className="flex h-[78px] flex-col items-center justify-center rounded-2xl bg-amber-50 px-4 py-3 text-center ring-1 ring-amber-100">
+                    <p className="text-[10px] font-black uppercase tracking-wide text-amber-700">Vínculos pendentes</p>
+                    <p className="mt-1 text-xl font-black text-amber-800">{resumo.vinculosPendentes}</p>
                 </div>
             </div>
 
@@ -1726,6 +1745,7 @@ function UsuariosCadastradosApp({ usuario = null, usuarioParaEditar = null, onEd
                                 <option value="inativo">Inativos</option>
                                 <option value="com_login">Com login Auth</option>
                                 <option value="sem_login">Sem vínculo Auth</option>
+                                <option value="sem_empresa">Vínculo empresarial pendente</option>
                             </select>
                         </label>
                     </div>
@@ -1879,6 +1899,37 @@ function UsuariosCadastradosApp({ usuario = null, usuarioParaEditar = null, onEd
                                     </select>
                                 </label>
                             </div>
+
+                            <label className="block max-w-xl">
+                                <span className="text-[10px] font-black uppercase tracking-wide text-slate-400">
+                                    Empresa vinculada ao acesso
+                                    {formulario.ativo && !formulario.bloqueado && formulario.perfil !== "administrador" ? " *" : ""}
+                                </span>
+                                <select
+                                    value={formulario.empresa_id}
+                                    required={formulario.ativo && !formulario.bloqueado && formulario.perfil !== "administrador"}
+                                    onChange={(evento) => {
+                                        const empresaId = evento.target.value;
+                                        const empresaSelecionada = empresasBanco.find((empresa) => String(empresa?.id || "") === empresaId);
+
+                                        atualizarCampoFormulario("empresa_id", empresaId);
+                                        atualizarCampoFormulario("empresa", empresaSelecionada?.nome || "");
+                                    }}
+                                    className="mt-1 w-full rounded-2xl border border-slate-200 bg-white px-3 py-2 text-xs font-black text-slate-700 outline-none focus:border-blue-400 focus:ring-4 focus:ring-blue-100"
+                                >
+                                    <option value="">Sem vínculo empresarial</option>
+                                    {empresasBanco
+                                        .filter((empresa) => empresa?.id && empresa?.nome)
+                                        .slice()
+                                        .sort((a, b) => String(a.nome).localeCompare(String(b.nome), "pt-BR"))
+                                        .map((empresa) => (
+                                            <option key={empresa.id} value={empresa.id}>{empresa.nome}</option>
+                                        ))}
+                                </select>
+                                <span className="mt-1 block text-[11px] font-semibold leading-4 text-slate-400">
+                                    Usuários sem vínculo continuam no modo atual até o isolamento por empresa ser ativado.
+                                </span>
+                            </label>
 
                             <div className="grid gap-3 md:grid-cols-3">
                                 <label className={`rounded-2xl bg-white p-3 ring-1 ${formulario.ativo ? "ring-emerald-100" : "ring-slate-200"}`}>
@@ -2043,6 +2094,11 @@ function UsuariosCadastradosApp({ usuario = null, usuarioParaEditar = null, onEd
                                     <span className={`rounded-full px-3 py-1.5 text-[11px] font-black ring-1 ${item.acesso_global ? "bg-blue-50 text-blue-700 ring-blue-100" : "bg-slate-100 text-slate-500 ring-slate-200"}`}>
                                         Acesso global: {item.acesso_global ? "Sim" : "Não"}
                                     </span>
+                                    {item.ativo && !item.bloqueado && item.perfil !== "administrador" && !item.empresa_id ? (
+                                        <span className="rounded-full bg-rose-50 px-3 py-1.5 text-[11px] font-black text-rose-700 ring-1 ring-rose-100">
+                                            Vínculo empresarial pendente
+                                        </span>
+                                    ) : null}
                                     <span className={`rounded-full px-3 py-1.5 text-[11px] font-black ring-1 ${usuarioTemLoginAuthAcessoApp(item) ? "bg-emerald-50 text-emerald-700 ring-emerald-100" : "bg-amber-50 text-amber-800 ring-amber-100"}`}>
                                         Login Auth: {usuarioTemLoginAuthAcessoApp(item) ? "Vinculado" : "Pendente"}
                                     </span>
@@ -2237,9 +2293,13 @@ function RevisaoPerfisPadrao({ usuario = null }) {
     }, []);
 
     useEffect(() => {
-        if (!modoEdicao && perfilSelecionado) {
+        if (modoEdicao || !perfilSelecionado) return undefined;
+
+        const timer = window.setTimeout(() => {
             setFormularioPerfil(montarFormularioPerfilAcesso(perfilSelecionado));
-        }
+        }, 0);
+
+        return () => window.clearTimeout(timer);
     }, [modoEdicao, perfilSelecionado]);
 
     function selecionarPerfil(chave) {
@@ -2751,7 +2811,7 @@ Digite ${codigoConfirmacao} para confirmar.`
     );
 }
 
-export function AcessosAppPage({ usuario = null }) {
+export function AcessosAppPage({ usuario = null, empresasBanco = [] }) {
     const [solicitacaoParaPermissao, setSolicitacaoParaPermissao] = useState(null);
     const [resumoCabecalho, setResumoCabecalho] = useState({
         ativos: null,
@@ -3012,6 +3072,7 @@ export function AcessosAppPage({ usuario = null }) {
                 <UsuariosCadastradosApp
                     usuario={usuario}
                     usuarioParaEditar={solicitacaoParaPermissao}
+                    empresasBanco={empresasBanco}
                     onEdicaoConsumida={() => setSolicitacaoParaPermissao(null)}
                 />
             </div>

@@ -1,4 +1,3 @@
-import React from "react";
 import { LogOut, ShieldCheck } from "lucide-react";
 
 export function AppMobileHeader({ nav = [], tela, usuario = null, sair = null, onSelecionarTela }) {
@@ -10,7 +9,7 @@ export function AppMobileHeader({ nav = [], tela, usuario = null, sair = null, o
                         <ShieldCheck className="h-5 w-5" />
                     </span>
                     <div className="min-w-0">
-                        <p className="app-mobile-header__nome">Controle SST QR</p>
+                        <p className="app-mobile-header__nome">SafeScan Brasil</p>
                         <p className="app-mobile-header__usuario" title={usuario?.email || "Operação mobile"}>
                             {usuario?.email || "Operação mobile"}
                         </p>

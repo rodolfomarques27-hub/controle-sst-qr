@@ -1,4 +1,4 @@
-﻿import React, { useEffect, useMemo, useState } from "react";
+﻿import { useEffect, useMemo, useState } from "react";
 import { Mail, QrCode } from "lucide-react";
 import { supabase } from "../../lib/supabaseClient";
 import { formatDate } from "../../utils/sstUtils";
@@ -314,8 +314,10 @@ function AvatarColaborador({ item, colaborador }) {
 
     useEffect(() => {
         let ativo = true;
-        setFotoComErro(false);
-        setFotoResolvida("");
+        const timer = window.setTimeout(() => {
+            setFotoComErro(false);
+            setFotoResolvida("");
+        }, 0);
 
         resolverFotoColaborador(candidatosFoto).then((url) => {
             if (ativo) setFotoResolvida(url || "");
@@ -323,6 +325,7 @@ function AvatarColaborador({ item, colaborador }) {
 
         return () => {
             ativo = false;
+            window.clearTimeout(timer);
         };
     }, [candidatosFoto]);
 
@@ -358,7 +361,11 @@ export function DashboardPendencias({
         : pendencias.slice(0, LIMITE_INICIAL_PENDENCIAS);
 
     useEffect(() => {
-        setMostrarTodasPendencias(false);
+        const timer = window.setTimeout(() => {
+            setMostrarTodasPendencias(false);
+        }, 0);
+
+        return () => window.clearTimeout(timer);
     }, [totalPendencias]);
 
     return (

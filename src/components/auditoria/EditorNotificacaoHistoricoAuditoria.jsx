@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { CheckCircle2, Eye, EyeOff, Lock, Mail, MessageCircle, Plus, ShieldCheck, Trash2 } from "lucide-react";
 import { supabase } from "../../lib/supabaseClient";
 import { FUNCAO_EMAIL_ALERTA_TST, statusDesvioAuditoriaCampo } from "../../constants/sstConstants";
@@ -52,9 +52,6 @@ export function EditorNotificacaoHistoricoAuditoria({ auditoria = {}, onAtualiza
     const whatsappResponsavelAuditoria = String(auditoria.whatsappResponsavel || notificacaoInicial.whatsappResponsavel || "").replace(/\D/g, "");
     const whatsappResponsavelFormatado = whatsappResponsavelAuditoria
         ? (whatsappResponsavelAuditoria.startsWith("55") ? whatsappResponsavelAuditoria : `55${whatsappResponsavelAuditoria}`)
-        : "";
-    const linkEmailAuditoria = emailResponsavelAuditoria
-        ? `mailto:${emailResponsavelAuditoria}?subject=${encodeURIComponent(notificacao.titulo || "Auditoria de campo")}&body=${encodeURIComponent(preview)}`
         : "";
     const linkWhatsappAuditoria = whatsappResponsavelFormatado
         ? `https://wa.me/${whatsappResponsavelFormatado}?text=${encodeURIComponent(preview)}`
@@ -222,7 +219,7 @@ export function EditorNotificacaoHistoricoAuditoria({ auditoria = {}, onAtualiza
                 throw new Error("Seu usuário não tem permissão para excluir auditorias.");
             }
         } catch (error) {
-            throw new Error(error?.message || "Não foi possível validar sua permissão para excluir auditorias.");
+            throw new Error(error?.message || "Não foi possível validar sua permissão para excluir auditorias.", { cause: error });
         }
 
         try {
@@ -241,7 +238,7 @@ export function EditorNotificacaoHistoricoAuditoria({ auditoria = {}, onAtualiza
                 throw new Error("Seu acesso à Auditoria de sistema está bloqueado.");
             }
         } catch (error) {
-            throw new Error(error?.message || "Não foi possível validar o usuário autorizado.");
+            throw new Error(error?.message || "Não foi possível validar o usuário autorizado.", { cause: error });
         }
     };
 

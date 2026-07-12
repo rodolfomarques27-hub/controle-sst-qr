@@ -20,7 +20,7 @@ import { CalendarClock,
     ShieldCheck,
     SlidersHorizontal,
 } from "lucide-react";
-import dashboardHeroBackground from "../../assets/dashboard-hero-sst.png";
+import dashboardHeroBackground from "../../assets/dashboard-hero-sst.webp";
 import { Header, Card } from "../commonComponents";
 import { ArquivosStorageConfiguracoes } from "./ArquivosStorageConfiguracoes";
 import {
@@ -86,6 +86,10 @@ import {
 } from "../../services/obrasService";
 
 const classNames = (...classes) => classes.filter(Boolean).join(" ");
+
+function obterVersaoPreviewFundoLoginConfiguracoes() {
+    return String(Date.now());
+}
 
 const FORMULARIO_OBRA_CONFIGURACOES_INICIAL = {
     id: "",
@@ -1090,9 +1094,13 @@ export function ConfiguracoesSistema({
     }, [limites]);
 
     useEffect(() => {
-        if (mensagemSenhaConfiguracoesSistemaApp) {
+        if (!mensagemSenhaConfiguracoesSistemaApp) return undefined;
+
+        const timer = window.setTimeout(() => {
             setMensagemSenhaConfiguracoes(mensagemSenhaConfiguracoesSistemaApp);
-        }
+        }, 0);
+
+        return () => window.clearTimeout(timer);
     }, [mensagemSenhaConfiguracoesSistemaApp]);
 
     const alterarLimite = (chave, valor) => {
@@ -1784,16 +1792,26 @@ export function ConfiguracoesSistema({
     }, []);
 
     useEffect(() => {
-        if (!empresaVinculoObraConfiguracoesId && empresasVinculoObrasConfiguracoes.length > 0) {
-            setEmpresaVinculoObraConfiguracoesId(obterIdEmpresaObrasConfiguracoes(empresasVinculoObrasConfiguracoes[0]));
+        if (empresaVinculoObraConfiguracoesId || empresasVinculoObrasConfiguracoes.length === 0) {
+            return undefined;
         }
+
+        const timer = window.setTimeout(() => {
+            setEmpresaVinculoObraConfiguracoesId(obterIdEmpresaObrasConfiguracoes(empresasVinculoObrasConfiguracoes[0]));
+        }, 0);
+
+        return () => window.clearTimeout(timer);
     }, [empresaVinculoObraConfiguracoesId, empresasVinculoObrasConfiguracoes]);
 
     useEffect(() => {
-        if (!obraVinculoConfiguracoesId && obrasConfiguracoes.length > 0) {
-            const primeiraObraAtiva = obrasConfiguracoes.find((obra) => obra.status !== "Inativa") || obrasConfiguracoes[0];
+        if (obraVinculoConfiguracoesId || obrasConfiguracoes.length === 0) return undefined;
+
+        const primeiraObraAtiva = obrasConfiguracoes.find((obra) => obra.status !== "Inativa") || obrasConfiguracoes[0];
+        const timer = window.setTimeout(() => {
             setObraVinculoConfiguracoesId(primeiraObraAtiva?.id || "");
-        }
+        }, 0);
+
+        return () => window.clearTimeout(timer);
     }, [obraVinculoConfiguracoesId, obrasConfiguracoes]);
     const carregarConfiguracaoAuditoriaPublicaSupabase = async () => {
         setCarregandoAuditoriaPublica(true);
@@ -1825,8 +1843,8 @@ export function ConfiguracoesSistema({
         }
     };
 
-    const atualizarPreviewFundoLoginConfiguracoes = (versao = Date.now()) => {
-        const versaoTexto = String(versao || Date.now());
+    const atualizarPreviewFundoLoginConfiguracoes = (versao = "") => {
+        const versaoTexto = String(versao || obterVersaoPreviewFundoLoginConfiguracoes());
 
         if (typeof window !== "undefined") {
             try {
@@ -1920,7 +1938,7 @@ export function ConfiguracoesSistema({
                 throw erroConfig;
             }
 
-            atualizarPreviewFundoLoginConfiguracoes(Date.now());
+            atualizarPreviewFundoLoginConfiguracoes(obterVersaoPreviewFundoLoginConfiguracoes());
             setArquivoFundoLogin(null);
             setAjusteFundoLoginAlterado(false);
             setMensagemFundoLogin("Fundo do login atualizado com imagem e pré-ajuste. Saia do sistema para conferir.");
@@ -3206,7 +3224,7 @@ export function ConfiguracoesSistema({
                                     style={montarEstiloFundoLoginConfiguracoes(previewFundoLoginUrl, ajusteFundoLogin)}
                                 >
                                     <div className="rounded-2xl bg-white/95 px-5 py-4 text-center text-slate-950 shadow-xl">
-                                        <p className="text-sm font-black">Controle SST QR</p>
+                                        <p className="text-sm font-black">SafeScan Brasil</p>
                                         <p className="mt-1 text-[11px] font-semibold text-slate-500">
                                             {previewFundoLoginUrl ? "Imagem personalizada ativa" : "Fundo azul padrão"}
                                         </p>

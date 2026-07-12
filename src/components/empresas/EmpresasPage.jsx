@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
     AlertTriangle,
     Building2,
@@ -10,10 +10,8 @@ import {
     Plus,
     RefreshCw,
     Search,
-    ShieldCheck,
     Trash2,
     Upload,
-    Users,
 } from "lucide-react";
 
 import { Card, Header } from "../commonComponents";
@@ -29,7 +27,7 @@ import {
     classeStatusEmpresa,
 } from "../../services/empresaDocumentosService";
 import { documentosEmpresaBase } from "../../constants/documentosEmpresaConstants";
-import dashboardHeroBackground from "../../assets/dashboard-hero-sst.png";
+import dashboardHeroBackground from "../../assets/dashboard-hero-sst.webp";
 import {
     baixarRelatorioDocumentosEmpresaPDF,
     baixarRelatorioEmpresasDocumentosPDF,
@@ -329,17 +327,14 @@ export function Empresas({
     const [empresaRevisao, setEmpresaRevisao] = useState(null);
     const [empresaEdicao, setEmpresaEdicao] = useState(null);
     const [permissaoSistemaAtual, setPermissaoSistemaAtual] = useState(null);
-    const [mensagemPermissaoSistema, setMensagemPermissaoSistema] = useState("Carregando permissões do sistema...");
+    const [, setMensagemPermissaoSistema] = useState("Carregando permissões do sistema...");
     const [salvandoEdicaoEmpresa, setSalvandoEdicaoEmpresa] = useState(false);
     const [buscaEmpresa, setBuscaEmpresa] = useState("");
     const [filtroStatusEmpresa, setFiltroStatusEmpresa] = useState("Todos");
     const [filtroTipoEmpresa, setFiltroTipoEmpresa] = useState("Todos");
-    const [versaoFiltroSalvoEmpresasDocumentos, setVersaoFiltroSalvoEmpresasDocumentos] = useState(0);
+    const [, setVersaoFiltroSalvoEmpresasDocumentos] = useState(0);
 
-    const filtrosSalvosEmpresasDocumentosDisponiveis = useMemo(
-        () => Boolean(carregarFiltrosSalvosEmpresasDocumentos()),
-        [versaoFiltroSalvoEmpresasDocumentos]
-    );
+    const filtrosSalvosEmpresasDocumentosDisponiveis = Boolean(carregarFiltrosSalvosEmpresasDocumentos());
     const [uploadRevisao, setUploadRevisao] = useState({});
     const [salvandoUploadRevisao, setSalvandoUploadRevisao] = useState("");
     const [escoposAbertos, setEscoposAbertos] = useState({});
@@ -745,25 +740,10 @@ export function Empresas({
         [permissaoSistemaAtual]
     );
 
-    const podeCadastrarEmpresasSistema = useMemo(
-        () => usuarioPodeExecutarAcaoSistema(permissaoSistemaAtual, MODULOS_PERMISSAO_SISTEMA.EMPRESAS, ACOES_PERMISSAO_SISTEMA.CADASTRAR),
-        [permissaoSistemaAtual]
-    );
-
-    const podeEditarEmpresasSistema = useMemo(
-        () => usuarioPodeExecutarAcaoSistema(permissaoSistemaAtual, MODULOS_PERMISSAO_SISTEMA.EMPRESAS, ACOES_PERMISSAO_SISTEMA.EDITAR),
-        [permissaoSistemaAtual]
-    );
-
-    const podeUploadEmpresasSistema = useMemo(
-        () => usuarioPodeExecutarAcaoSistema(permissaoSistemaAtual, MODULOS_PERMISSAO_SISTEMA.EMPRESAS, ACOES_PERMISSAO_SISTEMA.UPLOAD),
-        [permissaoSistemaAtual]
-    );
-
-    const podeExportarEmpresasSistema = useMemo(
-        () => usuarioPodeExecutarAcaoSistema(permissaoSistemaAtual, MODULOS_PERMISSAO_SISTEMA.EMPRESAS, ACOES_PERMISSAO_SISTEMA.EXPORTAR),
-        [permissaoSistemaAtual]
-    );
+    const podeCadastrarEmpresasSistema = usuarioPodeExecutarAcaoSistema(permissaoSistemaAtual, MODULOS_PERMISSAO_SISTEMA.EMPRESAS, ACOES_PERMISSAO_SISTEMA.CADASTRAR);
+    const podeEditarEmpresasSistema = usuarioPodeExecutarAcaoSistema(permissaoSistemaAtual, MODULOS_PERMISSAO_SISTEMA.EMPRESAS, ACOES_PERMISSAO_SISTEMA.EDITAR);
+    const podeUploadEmpresasSistema = usuarioPodeExecutarAcaoSistema(permissaoSistemaAtual, MODULOS_PERMISSAO_SISTEMA.EMPRESAS, ACOES_PERMISSAO_SISTEMA.UPLOAD);
+    const podeExportarEmpresasSistema = usuarioPodeExecutarAcaoSistema(permissaoSistemaAtual, MODULOS_PERMISSAO_SISTEMA.EMPRESAS, ACOES_PERMISSAO_SISTEMA.EXPORTAR);
 
     const mensagemBloqueioCadastroEmpresas = "Sem permissão para cadastrar empresas.";
     const mensagemBloqueioEdicaoEmpresas = "Sem permissão para editar empresas.";
@@ -1250,34 +1230,6 @@ export function Empresas({
 
         return atendeBusca && atendeStatus && atendeTipo;
     });
-
-    const empresasContratantes = empresasFiltradas.filter(
-        (empresa) => (empresa.tipo_empresa || "Terceirizada") === "Contratante - Idealiza Cidades"
-    );
-
-    const empresasTerceirizadas = empresasFiltradas.filter(
-        (empresa) => (empresa.tipo_empresa || "Terceirizada") === "Terceirizada"
-    );
-
-    const empresasSubcontratadas = empresasFiltradas.filter(
-        (empresa) => (empresa.tipo_empresa || "Terceirizada") === "Subcontratada"
-    );
-
-    const subcontratadasPorContratante = empresasSubcontratadas.reduce((acc, empresa) => {
-        const chave = empresa.empresa_pai_id || "sem-vinculo";
-
-        if (!acc[chave]) {
-            acc[chave] = {
-                contratante: empresasBanco.find((item) => item.id === empresa.empresa_pai_id) || null,
-                empresas: [],
-            };
-        }
-
-        acc[chave].empresas.push(empresa);
-        return acc;
-    }, {});
-
-    const gruposSubcontratadas = Object.values(subcontratadasPorContratante);
 
     const documentosFiltrados = documentosEmpresas.filter((doc) =>
         empresasFiltradas.some((empresa) => empresa.id === doc.empresa_id)

@@ -1,4 +1,3 @@
-import React from "react";
 import { DashboardBlocoRecolhivel } from "./DashboardBlocoRecolhivel";
 import { classNames, formatarDataHora } from "../../utils/sstUtils";
 import { classeClassificacaoAuditoriaCampo } from "../../services/auditoriaCampoService";

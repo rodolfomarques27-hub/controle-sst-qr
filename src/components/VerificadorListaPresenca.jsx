@@ -1,3 +1,1 @@
-export default function VerificadorListaPresenca() {
-  return null;
-}
+export { default } from "./VerificadorListaPresencaAtivo";

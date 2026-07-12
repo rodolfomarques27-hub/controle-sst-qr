@@ -1,4 +1,3 @@
-import { obterUrlLogoEmpresa } from "./supabaseServices";
 const textoSeguroDds = (valor = "") => String(valor ?? "").trim();
 
 const somenteDataIsoDds = (valor = "") => {

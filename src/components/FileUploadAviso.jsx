@@ -1,4 +1,3 @@
-import React from "react";
 import {
     UPLOAD_BLOQUEAR_ACIMA_5MB,
     UPLOAD_LIMITE_FORTE_MB,

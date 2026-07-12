@@ -1,4 +1,3 @@
-import React from "react";
 import { gerarCodigoFuncionario } from "../../services/colaboradorDocumentosService";
 
 const textoSeguro = (valor = "") => String(valor ?? "").trim();

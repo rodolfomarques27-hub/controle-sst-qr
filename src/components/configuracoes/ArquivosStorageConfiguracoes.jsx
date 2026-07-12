@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { AlertTriangle, Database, HardDrive, RefreshCw, Search, Trash2 } from "lucide-react";
 import { Card } from "../commonComponents";
 import {
@@ -130,7 +130,11 @@ export function ArquivosStorageConfiguracoes({
     }, []);
 
     useEffect(() => {
-        setQuantidadeArquivosVisiveis(QUANTIDADE_INICIAL_ARQUIVOS_STORAGE);
+        const timer = window.setTimeout(() => {
+            setQuantidadeArquivosVisiveis(QUANTIDADE_INICIAL_ARQUIVOS_STORAGE);
+        }, 0);
+
+        return () => window.clearTimeout(timer);
     }, [
         arquivosStorage.length,
         filtrosStorage.busca,
@@ -145,7 +149,11 @@ export function ArquivosStorageConfiguracoes({
     ]);
 
     useEffect(() => {
-        setConfirmacaoLimpezaStorage("");
+        const timer = window.setTimeout(() => {
+            setConfirmacaoLimpezaStorage("");
+        }, 0);
+
+        return () => window.clearTimeout(timer);
     }, [
         arquivosStorage.length,
         filtrosStorage.busca,

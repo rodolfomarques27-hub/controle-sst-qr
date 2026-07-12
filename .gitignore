@@ -7,10 +7,10 @@ yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
 
-node_modules
-dist
+node_modules/
+dist/
 .env
-dist-ssr
+dist-ssr/
 *.local
 
 # Editor directories and files
@@ -23,12 +23,12 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
-.vs/ 
-/.gitignore
-/eslint.config.js
+.vs/
 supabase/.temp/
-.vercel
+.vercel/
 .env*
 
-# Backups locais de testes
+# Artefatos locais e backups que podem conter dados sensíveis
+backups/
 backups-locais/
+.codex-*/

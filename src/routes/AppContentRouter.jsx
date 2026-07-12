@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { KeyRound, LayoutGrid, Lock, LockKeyhole, Send, UserRound } from "lucide-react";
 import { Card, PasswordInput } from "../components/commonComponents";
+import { CarregandoTela } from "../components/CarregandoTela";
 import { LIMITE_STORAGE_MB } from "../constants/sistemaConstants";
 import { supabase } from "../lib/supabaseClient";
 import {
@@ -144,6 +145,11 @@ function formatarRotuloAcessoBloqueado(valor, mapa, fallback = "Não informado")
 }
 
 function AcessoModuloSistemaBloqueado({ tela, bloqueio, permissao, erro, usuario }) {
+    const moduloExibicao = formatarRotuloAcessoBloqueado(
+        bloqueio?.modulo || obterModuloPermissaoSistemaPorTela(tela),
+        ROTULOS_MODULOS_ACESSO_BLOQUEADO,
+        "Módulo não informado"
+    );
     const resumo = obterResumoPermissaoSistema(permissao);
     const telaExibicao = formatarRotuloAcessoBloqueado(tela, ROTULOS_TELAS_ACESSO_BLOQUEADO, "Tela não informada");
     const perfilExibicao = formatarRotuloAcessoBloqueado(resumo.perfil, ROTULOS_PERFIS_ACESSO_BLOQUEADO, "Usuário sem perfil liberado");
@@ -184,7 +190,7 @@ function AcessoModuloSistemaBloqueado({ tela, bloqueio, permissao, erro, usuario
     }
 
     return (
-        <div className="flex min-h-[58vh] items-center justify-center px-4 py-10">
+                <div className="flex min-h-[58vh] items-center justify-center px-4 py-10" data-modulo-acesso={moduloExibicao}>
             <Card className="w-full max-w-5xl overflow-hidden border border-slate-200 bg-white p-0 shadow-[0_18px_55px_rgba(15,23,42,0.10)]">
                 <div className="grid min-h-[390px] md:grid-cols-[0.42fr_0.58fr]">
                     <aside className="relative flex flex-col items-center justify-center overflow-hidden border-b border-slate-200 bg-gradient-to-br from-slate-50 via-white to-slate-100 px-8 py-10 text-center md:border-b-0 md:border-r">
@@ -426,7 +432,6 @@ export function AppContentRouter({
     erroAuditoriasCampo,
     existeMaisAuditoriasCampo,
     limitesCarregamentoSistema,
-    verificandoAcessoAuditoria,
     podeAcessarAuditoria,
     carregandoAuditoria,
     carregandoMaisAuditoria,
@@ -489,7 +494,6 @@ export function AppContentRouter({
     const [carregandoPermissaoSistemaTela, setCarregandoPermissaoSistemaTela] = useState(() => Boolean(carregandoPermissaoSistemaUsuario || (usuario?.email && !permissaoSistemaUsuario)));
     const [erroPermissaoSistemaTela, setErroPermissaoSistemaTela] = useState(() => erroPermissaoSistemaUsuario || "");
     const [telaComModuloPronto, setTelaComModuloPronto] = useState("");
-    const [preparandoTelaPermitida, setPreparandoTelaPermitida] = useState(() => Boolean(usuario?.email));
     const ultimoRedirecionamentoAutomaticoRef = useRef("");
 
     useEffect(() => {
@@ -604,39 +608,28 @@ export function AppContentRouter({
 
     useEffect(() => {
         if (!usuario?.email) {
-            setTelaComModuloPronto("");
-            setPreparandoTelaPermitida(false);
             return undefined;
         }
 
         if (trocaSenhaTemporariaObrigatoria) {
-            setTelaComModuloPronto("");
-            setPreparandoTelaPermitida(false);
             return undefined;
         }
 
         if (erroPermissaoSistemaTela) {
-            setPreparandoTelaPermitida(false);
-            setTelaComModuloPronto(tela);
             return undefined;
         }
 
         if (!permissaoProntaParaDecisao) {
-            setPreparandoTelaPermitida(true);
             return undefined;
         }
 
         const telaDestino = deveRedirecionarParaTelaPermitida ? primeiraTelaPermitidaSistema : tela;
 
         if (!telaDestino) {
-            setPreparandoTelaPermitida(false);
-            setTelaComModuloPronto("");
             return undefined;
         }
 
         if (telaComModuloPronto === telaDestino) {
-            setPreparandoTelaPermitida(false);
-
             if (deveRedirecionarParaTelaPermitida) {
                 const chaveRedirecionamento = `${usuario?.email || "sem-usuario"}:${tela}:${telaDestino}`;
                 if (ultimoRedirecionamentoAutomaticoRef.current !== chaveRedirecionamento) {
@@ -649,7 +642,6 @@ export function AppContentRouter({
         }
 
         let ativo = true;
-        setPreparandoTelaPermitida(true);
 
         Promise.resolve(precarregarModuloTelaSistema(telaDestino))
             .catch(() => {
@@ -659,7 +651,6 @@ export function AppContentRouter({
                 if (!ativo) return;
 
                 setTelaComModuloPronto(telaDestino);
-                setPreparandoTelaPermitida(false);
 
                 if (deveRedirecionarParaTelaPermitida) {
                     const chaveRedirecionamento = `${usuario?.email || "sem-usuario"}:${tela}:${telaDestino}`;
@@ -688,9 +679,10 @@ export function AppContentRouter({
     const aguardandoTelaPermitida = Boolean(
         telaControladaPorPermissao
         && !trocaSenhaTemporariaObrigatoria
+        && !erroPermissaoSistemaTela
         && (
             carregandoPermissaoSistemaTela
-            || preparandoTelaPermitida
+            || !permissaoProntaParaDecisao
             || deveRedirecionarParaTelaPermitida
             || telaComModuloPronto !== tela
         )
@@ -700,7 +692,12 @@ export function AppContentRouter({
     // o redirecionamento automático e o preload do módulo final terminam. Assim a
     // atualização não mostra conteúdo parcial, loading duplicado ou flash de bloqueio.
     if (aguardandoTelaPermitida) {
-        return null;
+        return (
+            <CarregandoTela
+                mensagem="Carregando módulo..."
+                subtitulo="Validando o acesso e preparando a área selecionada."
+            />
+        );
     }
 
     if (trocaSenhaTemporariaObrigatoria) {
@@ -729,7 +726,14 @@ export function AppContentRouter({
     }
 
     return (
-        <React.Suspense fallback={null}>
+        <React.Suspense
+            fallback={(
+                <CarregandoTela
+                    mensagem="Carregando módulo..."
+                    subtitulo="Preparando a área selecionada."
+                />
+            )}
+        >
             {tela === "dashboard" && (
                 <Dashboard
                             usuario={usuario}
@@ -858,6 +862,7 @@ export function AppContentRouter({
             {tela === "acessosApp" && (
                 <AcessosAppPage
                     usuario={usuario}
+                    empresasBanco={empresasBanco}
                 />
             )}
 

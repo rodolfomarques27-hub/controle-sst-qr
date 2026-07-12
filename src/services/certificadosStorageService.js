@@ -31,7 +31,7 @@ function trocarExtensaoParaPdf(nome = "certificado.pdf") {
 function carregarImagemCertificado(arquivo) {
     return new Promise((resolve, reject) => {
         if (typeof Image === "undefined" || typeof URL === "undefined") {
-            reject(new Error("O navegador nÃ£o possui suporte para converter imagem em PDF antes do upload."));
+            reject(new Error("O navegador não possui suporte para converter imagem em PDF antes do upload."));
             return;
         }
 
@@ -45,7 +45,7 @@ function carregarImagemCertificado(arquivo) {
 
         imagem.onerror = () => {
             URL.revokeObjectURL(url);
-            reject(new Error("NÃ£o foi possÃ­vel carregar a imagem do certificado para envio."));
+            reject(new Error("Não foi possível carregar a imagem do certificado para envio."));
         };
 
         imagem.src = url;
@@ -57,7 +57,7 @@ function desenharImagemCertificadoEmCanvas(imagem) {
     const alturaOriginal = Number(imagem.naturalHeight || imagem.height || 0);
 
     if (!larguraOriginal || !alturaOriginal) {
-        throw new Error("Imagem do certificado sem dimensÃµes vÃ¡lidas.");
+        throw new Error("Imagem do certificado sem dimensões válidas.");
     }
 
     const maiorLado = Math.max(larguraOriginal, alturaOriginal);
@@ -73,7 +73,7 @@ function desenharImagemCertificadoEmCanvas(imagem) {
 
     const ctx = canvas.getContext("2d", { alpha: false });
     if (!ctx) {
-        throw new Error("NÃ£o foi possÃ­vel preparar a imagem do certificado para upload.");
+        throw new Error("Não foi possível preparar a imagem do certificado para upload.");
     }
 
     ctx.fillStyle = "#ffffff";
@@ -177,7 +177,7 @@ async function prepararArquivoCertificadoParaUpload(arquivo) {
         return converterImagemCertificadoParaPdf(arquivo);
     }
 
-    throw new Error("Formato de certificado nÃ£o suportado. Envie PDF, JPG, PNG ou WebP.");
+    throw new Error("Formato de certificado não suportado. Envie PDF, JPG, PNG ou WebP.");
 }
 
 export function codigoPastaCertificado(colaborador) {

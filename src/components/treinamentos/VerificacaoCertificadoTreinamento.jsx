@@ -168,7 +168,7 @@ async function baixarArquivoCertificadoParaAnalise({ certificado = {} } = {}) {
             arquivo: null,
             bucket,
             caminho,
-            aviso: `Não foi possível baixar o arquivo salvo para reanálise (${error.message}). A análise usarÃ¡ apenas os dados cadastrados.`,
+            aviso: `Não foi possível baixar o arquivo salvo para reanálise (${error.message}). A análise usará apenas os dados cadastrados.`,
         };
     }
 
@@ -227,7 +227,7 @@ function obterClassesStatus(status = "") {
         return "bg-emerald-50 text-emerald-700 ring-emerald-200";
     }
 
-    if (normalizado.includes("atenÃ§Ã£o") || normalizado.includes("atencao") || normalizado.includes("revisÃ£o") || normalizado.includes("revisao")) {
+    if (normalizado.includes("atenção") || normalizado.includes("atencao") || normalizado.includes("revisão") || normalizado.includes("revisao")) {
         return "bg-amber-50 text-amber-700 ring-amber-200";
     }
 
@@ -245,11 +245,11 @@ function obterClassesRisco(nivelRisco = "") {
         return "bg-emerald-50 text-emerald-700 ring-emerald-200";
     }
 
-    if (normalizado.includes("mÃ©dio") || normalizado.includes("medio") || normalizado.includes("moderado")) {
+    if (normalizado.includes("médio") || normalizado.includes("medio") || normalizado.includes("moderado")) {
         return "bg-amber-50 text-amber-700 ring-amber-200";
     }
 
-    if (normalizado.includes("alto") || normalizado.includes("crÃ­tico") || normalizado.includes("critico")) {
+    if (normalizado.includes("alto") || normalizado.includes("crítico") || normalizado.includes("critico")) {
         return "bg-red-50 text-red-700 ring-red-200";
     }
 
@@ -763,7 +763,7 @@ function PainelConferenciaDocumentalRobusta({ verificacao = null }) {
                     textoSim={statusColaborador.textoSim}
                     textoNao={statusColaborador.textoNao}
                     classeNao={statusColaborador.classeNao}
-                    detalhe={colaborador.encontrado ? `${colaborador.nomeCadastro || "Nome encontrado"}${colaborador.linhaOcr ? ` Â· Linha OCR: ${colaborador.linhaOcr}` : ""}` : colaborador.nomeCadastro || "Nome não informado no cadastro"}
+                    detalhe={colaborador.encontrado ? `${colaborador.nomeCadastro || "Nome encontrado"}${colaborador.linhaOcr ? ` · Linha OCR: ${colaborador.linhaOcr}` : ""}` : colaborador.nomeCadastro || "Nome não informado no cadastro"}
                 />
 
                 <LinhaConferenciaDocumental
@@ -785,7 +785,7 @@ function PainelConferenciaDocumentalRobusta({ verificacao = null }) {
                     titulo="Empresa"
                     valor={empresa.encontrada}
                     detalhe={empresa.origem === "vinculo_colaborador_cpf_documento"
-                        ? `${empresa.nomeCadastro || "Empresa do colaborador"} Â· confirmada pelo vínculo do colaborador e CPF no documento`
+                        ? `${empresa.nomeCadastro || "Empresa do colaborador"} · confirmada pelo vínculo do colaborador e CPF no documento`
                         : (empresa.nomeCadastro || empresa.nomeExtraido || "Empresa não informada")}
                 />
 
@@ -824,7 +824,11 @@ export function VerificacaoCertificadoTreinamento({ certificado = {} }) {
     const certificadoId = useMemo(() => obterIdCertificado(certificado), [certificado]);
 
     useEffect(() => {
-        setStatusAtualValidacao(obterStatusValidacaoCertificado(certificado));
+        const timer = window.setTimeout(() => {
+            setStatusAtualValidacao(obterStatusValidacaoCertificado(certificado));
+        }, 0);
+
+        return () => window.clearTimeout(timer);
     }, [certificado]);
 
     const carregarVerificacao = useCallback(async () => {
@@ -964,7 +968,12 @@ export function VerificacaoCertificadoTreinamento({ certificado = {} }) {
 
     useEffect(() => {
         if (!aberto) return;
-        carregarVerificacao();
+
+        const timer = window.setTimeout(() => {
+            void carregarVerificacao();
+        }, 0);
+
+        return () => window.clearTimeout(timer);
     }, [aberto, carregarVerificacao]);
 
     const alternarPainel = () => {
@@ -1091,7 +1100,7 @@ export function VerificacaoCertificadoTreinamento({ certificado = {} }) {
                                     )}
 
                                     <p className="mt-1 text-blue-700">
-                                        A data detectada serve como apoio para conferência. A aprovaÃ§Ã£o continua usando as datas cadastradas atÃ© que o TST revise e salve o cadastro.
+                                        A data detectada serve como apoio para conferência. A aprovação continua usando as datas cadastradas até que o TST revise e salve o cadastro.
                                     </p>
                                 </div>
                             )}

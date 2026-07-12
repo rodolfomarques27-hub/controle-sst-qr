@@ -1,25 +1,23 @@
-import React from "react";
-import { QrCode, ShieldCheck, XCircle } from "lucide-react";
+import { XCircle } from "lucide-react";
+import { CarregandoTela } from "../CarregandoTela";
 
 export function AppCarregandoSistema() {
     return (
-        <div className="flex min-h-screen items-center justify-center bg-slate-950 text-white">
-            <div className="rounded-3xl bg-white/10 p-6 text-center">
-                <ShieldCheck className="mx-auto mb-3 h-8 w-8" />
-                <p className="font-semibold">Carregando sistema...</p>
-            </div>
-        </div>
+        <CarregandoTela
+            mensagem="Carregando sistema..."
+            subtitulo="Validando sua sessão e preparando o ambiente."
+            telaCheia
+        />
     );
 }
 
 export function AppConsultaPublicaCarregando() {
     return (
-        <div className="flex min-h-screen items-center justify-center bg-slate-950 text-white">
-            <div className="rounded-3xl bg-white/10 p-6 text-center">
-                <QrCode className="mx-auto mb-3 h-8 w-8" />
-                <p className="font-semibold">Carregando consulta pública...</p>
-            </div>
-        </div>
+        <CarregandoTela
+            mensagem="Carregando consulta pública..."
+            subtitulo="Verificando os dados públicos com segurança."
+            telaCheia
+        />
     );
 }
 

@@ -50,7 +50,7 @@ export function normalizarDataDocumentoEmpresa(valor) {
     const iso = somenteData.match(/^(\d{4})-(\d{2})-(\d{2})$/);
     if (iso) return montarIsoSeguro(iso[1], iso[2], iso[3]);
 
-    const br = texto.match(/^(\d{1,2})[\/-](\d{1,2})[\/-](\d{4})$/);
+    const br = texto.match(/^(\d{1,2})(?:[/]|-)(\d{1,2})(?:[/]|-)(\d{4})$/);
     if (br) return montarIsoSeguro(br[3], br[2], br[1]);
 
     const data = new Date(texto);

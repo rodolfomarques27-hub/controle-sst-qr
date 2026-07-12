@@ -5195,7 +5195,7 @@
 
 /* ROTEIRO 7 ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ETAPA 5.8
    CorreÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â§ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â£o sobre a base 5.6: mantÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â©m o espaÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â§amento compacto jÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¡ aprovado
-   e corrige somente a quebra do bloco logo + Controle SST QR no mobile horizontal. */
+   e corrige somente a quebra do bloco logo + SafeScan Brasil no mobile horizontal. */
 @media (max-width: 1023.98px) and (orientation: landscape),
        (max-width: 1023.98px) and (max-height: 540px) {
     .app-mobile-header {
@@ -9097,7 +9097,7 @@
 
 .colaboradores-hero-banner__bg {
   z-index: -2;
-  background-image: url("../assets/dashboard-hero-sst.png");
+  background-image: url("../assets/dashboard-hero-sst.webp");
   background-position: center center;
   background-repeat: no-repeat;
   background-size: cover;
@@ -12724,5 +12724,293 @@
     width: 100% !important;
     min-width: 0 !important;
     max-width: none !important;
+  }
+}
+/* CONSULTA QR - cabecalho fluido pela largura real do card */
+.grid:has(> .consulta-qr-cabecalho-digital) {
+  container-type: inline-size;
+  display: grid !important;
+  grid-template-columns:
+    minmax(25.25rem, 1.15fr)
+    minmax(18rem, 1fr)
+    auto !important;
+  align-items: center !important;
+  column-gap: 0.75rem !important;
+  row-gap: 0.85rem !important;
+}
+
+.grid:has(> .consulta-qr-cabecalho-digital) > * {
+  min-width: 0 !important;
+}
+
+.grid:has(> .consulta-qr-cabecalho-digital) > :first-child {
+  grid-column: 1 !important;
+  grid-row: 1 !important;
+  width: auto !important;
+  min-width: 0 !important;
+  padding-right: 0.75rem !important;
+  border-right: 1px solid #e2e8f0;
+}
+
+.grid:has(> .consulta-qr-cabecalho-digital) > .consulta-qr-cabecalho-status {
+  grid-column: 2 !important;
+  grid-row: 1 !important;
+  width: 100% !important;
+  max-width: none !important;
+  min-width: 0 !important;
+  min-height: 2.5cm;
+  margin: 0 !important;
+}
+
+.consulta-qr-cabecalho-status > div {
+  min-width: 0;
+  gap: clamp(0.65rem, 1vw, 1rem) !important;
+}
+
+.consulta-qr-cabecalho-digital {
+  grid-column: 3 !important;
+  grid-row: 1 !important;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  width: auto;
+  min-width: 0;
+  margin: 0;
+  padding-left: 0.75rem;
+  border-left: 1px solid #e2e8f0;
+}
+
+.consulta-qr-cabecalho-qr,
+.consulta-qr-cabecalho-acoes {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  width: auto !important;
+  min-width: 0 !important;
+  padding: 0 !important;
+}
+
+.consulta-qr-cabecalho-qr-box svg {
+  display: block;
+  width: 104px !important;
+  height: 104px !important;
+}
+
+.consulta-qr-cabecalho-acoes-box {
+  width: 108px !important;
+  height: 106px !important;
+  gap: 0.5rem !important;
+}
+
+.consulta-qr-cabecalho-acoes-box button {
+  min-height: 2.75rem !important;
+  padding-left: 0.4rem !important;
+  padding-right: 0.4rem !important;
+  white-space: nowrap;
+}
+
+/*
+  A reorganizacao so acontece quando o card realmente
+  nao comportar as tres colunas.
+*/
+@container (max-width: 58rem) {
+  .grid:has(> .consulta-qr-cabecalho-digital) {
+    grid-template-columns: minmax(0, 1fr) auto !important;
+  }
+
+  .grid:has(> .consulta-qr-cabecalho-digital) > :first-child {
+    grid-column: 1 / -1 !important;
+    grid-row: 1 !important;
+    width: 100% !important;
+    padding-right: 0 !important;
+    border-right: 0;
+  }
+
+  .grid:has(> .consulta-qr-cabecalho-digital) > .consulta-qr-cabecalho-status {
+    grid-column: 1 !important;
+    grid-row: 2 !important;
+  }
+
+  .consulta-qr-cabecalho-digital {
+    grid-column: 2 !important;
+    grid-row: 2 !important;
+  }
+}
+
+@container (max-width: 44rem) {
+  .grid:has(> .consulta-qr-cabecalho-digital) {
+    grid-template-columns: minmax(0, 1fr) !important;
+  }
+
+  .grid:has(> .consulta-qr-cabecalho-digital) > :first-child {
+    grid-column: 1 !important;
+    grid-row: 1 !important;
+  }
+
+  .grid:has(> .consulta-qr-cabecalho-digital) > .consulta-qr-cabecalho-status {
+    grid-column: 1 !important;
+    grid-row: 2 !important;
+    width: 100% !important;
+  }
+
+  .consulta-qr-cabecalho-digital {
+    grid-column: 1 !important;
+    grid-row: 3 !important;
+    width: 100%;
+    justify-content: center;
+    padding-top: 0.85rem;
+    padding-left: 0;
+    border-top: 1px solid #e2e8f0;
+    border-left: 0;
+  }
+}
+
+@container (max-width: 31rem) {
+  .consulta-qr-cabecalho-digital {
+    gap: 0.4rem;
+  }
+
+  .consulta-qr-cabecalho-qr-box svg {
+    width: 94px !important;
+    height: 94px !important;
+  }
+
+  .consulta-qr-cabecalho-acoes-box {
+    width: 104px !important;
+    height: 100px !important;
+  }
+
+  .consulta-qr-cabecalho-acoes-box button {
+    min-height: 2.65rem !important;
+    font-size: 0.57rem !important;
+  }
+}
+/* CONSULTA QR - compactacao proporcional desktop */
+@media (min-width: 1024px) and (max-width: 1500px) {
+  .grid:has(> .consulta-qr-cabecalho-digital) {
+    grid-template-columns:
+      minmax(25.25rem, 1.08fr)
+      minmax(20.75rem, 1fr)
+      auto !important;
+    column-gap: 0.5rem !important;
+  }
+
+  .grid:has(> .consulta-qr-cabecalho-digital) > :first-child {
+    padding-right: 0.5rem !important;
+  }
+
+  .grid:has(> .consulta-qr-cabecalho-digital) > :first-child h2 {
+    font-size: 1.05rem !important;
+    line-height: 1.2 !important;
+  }
+
+  .grid:has(> .consulta-qr-cabecalho-digital) > :first-child button {
+    padding-left: 0.55rem !important;
+    padding-right: 0.55rem !important;
+  }
+
+  .consulta-qr-cabecalho-status {
+    padding-left: 0.85rem !important;
+    padding-right: 0.85rem !important;
+  }
+
+  .consulta-qr-cabecalho-status > div {
+    justify-content: space-between !important;
+    gap: 0.6rem !important;
+  }
+
+  .consulta-qr-cabecalho-status > div > :first-child {
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+
+  .consulta-qr-cabecalho-status > div > :last-child {
+    flex: 0 0 auto;
+    min-width: 5.5rem !important;
+    padding-left: 0.65rem !important;
+    padding-right: 0.65rem !important;
+  }
+
+  .consulta-qr-cabecalho-status h3 {
+    word-break: normal !important;
+    overflow-wrap: normal !important;
+  }
+
+  .consulta-qr-cabecalho-digital {
+    gap: 0.4rem !important;
+    padding-left: 0.5rem !important;
+  }
+
+  .consulta-qr-cabecalho-qr-box svg {
+    width: 88px !important;
+    height: 88px !important;
+  }
+
+  .consulta-qr-cabecalho-acoes-box {
+    width: 94px !important;
+    height: 96px !important;
+    gap: 0.4rem !important;
+  }
+
+  .consulta-qr-cabecalho-acoes-box button {
+    min-height: 2.55rem !important;
+    padding-left: 0.3rem !important;
+    padding-right: 0.3rem !important;
+    font-size: 0.56rem !important;
+  }
+
+  .consulta-qr-cabecalho-acoes-box button svg {
+    width: 0.75rem !important;
+    height: 0.75rem !important;
+  }
+}
+
+/* Zoom elevado ou largura realmente reduzida */
+@media (max-width: 1150px) {
+  .grid:has(> .consulta-qr-cabecalho-digital) {
+    grid-template-columns: minmax(0, 1fr) auto !important;
+  }
+
+  .grid:has(> .consulta-qr-cabecalho-digital) > :first-child {
+    grid-column: 1 / -1 !important;
+    grid-row: 1 !important;
+    width: 100% !important;
+    padding-right: 0 !important;
+    border-right: 0 !important;
+  }
+
+  .grid:has(> .consulta-qr-cabecalho-digital) > .consulta-qr-cabecalho-status {
+    grid-column: 1 !important;
+    grid-row: 2 !important;
+  }
+
+  .consulta-qr-cabecalho-digital {
+    grid-column: 2 !important;
+    grid-row: 2 !important;
+  }
+}
+
+@media (max-width: 900px) {
+  .grid:has(> .consulta-qr-cabecalho-digital) {
+    grid-template-columns: minmax(0, 1fr) !important;
+  }
+
+  .grid:has(> .consulta-qr-cabecalho-digital) > .consulta-qr-cabecalho-status {
+    grid-column: 1 !important;
+    grid-row: 2 !important;
+    width: 100% !important;
+  }
+
+  .consulta-qr-cabecalho-digital {
+    grid-column: 1 !important;
+    grid-row: 3 !important;
+    width: 100%;
+    justify-content: center;
+    padding-top: 0.75rem;
+    padding-left: 0 !important;
+    border-top: 1px solid #e2e8f0;
+    border-left: 0;
   }
 }

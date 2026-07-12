@@ -1,8 +1,8 @@
-import React, { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { ChevronDown, ChevronsLeft, LogOut, ShieldCheck } from "lucide-react";
 import { classNames } from "../../utils/sstUtils";
 import { supabase } from "../../lib/supabaseClient";
-import sidebarBackground from "../../assets/sidebar-construcao.png";
+import sidebarBackground from "../../assets/sidebar-construcao.webp";
 
 const BUCKET_FOTOS_USUARIOS_SIDEBAR = "fotos-colaboradores";
 
@@ -242,8 +242,9 @@ export function AppSidebar({
     useEffect(() => {
         let cancelado = false;
         let objectUrl = "";
-
-        setFotoUsuarioComErro(false);
+        const timer = window.setTimeout(() => {
+            setFotoUsuarioComErro(false);
+        }, 0);
 
         async function carregarFotoUsuario() {
             let fotoParaResolver = fotoUsuario;
@@ -276,6 +277,7 @@ export function AppSidebar({
 
         return () => {
             cancelado = true;
+            window.clearTimeout(timer);
             if (objectUrl && typeof URL !== "undefined") {
                 URL.revokeObjectURL(objectUrl);
             }
@@ -322,7 +324,7 @@ export function AppSidebar({
         setGruposFechados((valorAtual) => {
             const proximoEstado = {
                 ...(valorAtual && typeof valorAtual === "object" ? valorAtual : {}),
-                [titulo]: !Boolean(valorAtual?.[titulo]),
+                [titulo]: !valorAtual?.[titulo],
             };
 
             salvarGruposFechadosSidebar(proximoEstado);
@@ -346,27 +348,29 @@ export function AppSidebar({
             return undefined;
         }
 
-        setGruposFechados((estadoAtual) => {
-            const estadoBase = estadoAtual && typeof estadoAtual === "object" ? estadoAtual : {};
-            const proximoEstado = { ...estadoBase };
-            let alterado = false;
+        const timer = window.setTimeout(() => {
+            setGruposFechados((estadoAtual) => {
+                const estadoBase = estadoAtual && typeof estadoAtual === "object" ? estadoAtual : {};
+                const proximoEstado = { ...estadoBase };
+                let alterado = false;
 
-            gruposNavegacao.forEach((grupo) => {
-                if (typeof proximoEstado[grupo.titulo] !== "boolean") {
-                    proximoEstado[grupo.titulo] = true;
-                    alterado = true;
+                gruposNavegacao.forEach((grupo) => {
+                    if (typeof proximoEstado[grupo.titulo] !== "boolean") {
+                        proximoEstado[grupo.titulo] = true;
+                        alterado = true;
+                    }
+                });
+
+                if (!alterado) {
+                    return estadoAtual;
                 }
+
+                salvarGruposFechadosSidebar(proximoEstado);
+                return proximoEstado;
             });
+        }, 0);
 
-            if (!alterado) {
-                return estadoAtual;
-            }
-
-            salvarGruposFechadosSidebar(proximoEstado);
-            return proximoEstado;
-        });
-
-        return undefined;
+        return () => window.clearTimeout(timer);
     }, [gruposNavegacao]);
 
     return (

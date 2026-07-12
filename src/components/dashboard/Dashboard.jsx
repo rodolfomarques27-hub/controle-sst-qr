@@ -16,7 +16,7 @@ import {
 } from "lucide-react";
 import { supabase } from "../../lib/supabaseClient";
 import { Header } from "../commonComponents";
-import dashboardHeroBackground from "../../assets/dashboard-hero-sst.png";
+import dashboardHeroBackground from "../../assets/dashboard-hero-sst.webp";
 import { calcularUsoStorageRealSistema } from "../../services/storageSegurancaService";
 import { DashboardBlocosGrid } from "./DashboardBlocosGrid";
 import { DashboardHeaderAcoes } from "./DashboardHeaderAcoes";
@@ -394,7 +394,7 @@ export function Dashboard({
         }, 350);
 
         return () => window.clearTimeout(timer);
-    }, [carregarUsoStorageDashboard]);
+    }, [carregarUsoStorageDashboard, usoStorageDashboard?.arquivos, usoStorageDashboard?.origem, usoStorageDashboard?.totalBytes]);
 
     const atualizandoDashboardSstCompleto = Boolean(
         atualizandoInformacoes || atualizandoInformacoesLocais || carregandoStorageDashboard

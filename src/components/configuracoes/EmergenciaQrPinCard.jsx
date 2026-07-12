@@ -86,8 +86,13 @@ export function EmergenciaQrPinCard({ empresasBanco = [] }) {
 
     React.useEffect(() => {
         if (!empresaId && empresas.length > 0) {
-            setEmpresaId(obterIdEmpresa(empresas[0]));
+            const timer = window.setTimeout(() => {
+                setEmpresaId(obterIdEmpresa(empresas[0]));
+            }, 0);
+
+            return () => window.clearTimeout(timer);
         }
+        return undefined;
     }, [empresaId, empresas]);
 
     const salvarPinEmergencia = async () => {

@@ -1,4 +1,3 @@
-import React from "react";
 import { CheckCircle2, ClipboardCheck } from "lucide-react";
 import { formatDate, classNames } from "../../utils/sstUtils";
 

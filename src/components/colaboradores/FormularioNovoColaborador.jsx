@@ -1,4 +1,3 @@
-import React from "react";
 import { Camera, ChevronDown, Plus, Upload, UserPlus, X } from "lucide-react";
 import { classNames } from "../../utils/sstUtils";
 
@@ -94,15 +93,6 @@ function CampoFuncaoLivre({ label, value, onChange, funcoesDisponiveis = [], aju
             {ajuda && <p className="novo-colaborador-ajuda-anterior">{ajuda}</p>}
         </label>
     );
-}
-
-function resumoArquivos(arquivos = []) {
-    const lista = Array.from(arquivos || []);
-
-    if (lista.length === 0) return "Nenhum arquivo selecionado";
-    if (lista.length === 1) return lista[0]?.name || "1 arquivo selecionado";
-
-    return `${lista.length} arquivos selecionados`;
 }
 
 function apenasDigitosColaborador(valor = "") {

@@ -111,9 +111,10 @@ function FotoColaboradorBase({ colaborador = {} }) {
 
     React.useEffect(() => {
         let ativo = true;
-
-        setFotoComErro(false);
-        setFotoUrlResolvida("");
+        const timer = window.setTimeout(() => {
+            setFotoComErro(false);
+            setFotoUrlResolvida("");
+        }, 0);
 
         gerarUrlFotoColaboradorBase(fotoOrigem).then((url) => {
             if (ativo) setFotoUrlResolvida(url || "");
@@ -121,90 +122,9 @@ function FotoColaboradorBase({ colaborador = {} }) {
 
         return () => {
             ativo = false;
+            window.clearTimeout(timer);
         };
     }, [fotoOrigem]);
-
-    const obterValorDataRevisaoFormulario = (itemKey, campo, valorIso) => {
-        const chave = `${itemKey}:${campo}`;
-
-        if (Object.prototype.hasOwnProperty.call(datasDigitadasRevisao, chave)) {
-            return datasDigitadasRevisao[chave];
-        }
-
-        return formatarDataBrFormularioCertificado(valorIso);
-    };
-
-    const alterarDataRevisaoFormulario = (documento, itemKey, campo, valorDigitado) => {
-        const chave = `${itemKey}:${campo}`;
-        const valorMascarado = aplicarMascaraDataBrFormularioCertificado(valorDigitado);
-
-        setDatasDigitadasRevisao((atual) => ({
-            ...atual,
-            [chave]: valorMascarado,
-        }));
-
-        if (!valorMascarado) {
-            alterarDataRevisao(documento, campo, "");
-            return;
-        }
-
-        const valorIso = converterDataBrFormularioCertificadoParaIso(valorMascarado);
-
-        if (valorIso) {
-            alterarDataRevisao(documento, campo, valorIso);
-        }
-    };
-
-    const salvarDatasCertificadoFormulario = (documento, itemKey, valoresAtuais = {}) => {
-        const chaveRealizado = `${itemKey}:realizado`;
-        const chaveVencimento = `${itemKey}:vencimento`;
-
-        const realizadoDigitado = datasDigitadasRevisao[chaveRealizado] || "";
-        const vencimentoDigitado = datasDigitadasRevisao[chaveVencimento] || "";
-
-        const realizadoIso = realizadoDigitado
-            ? converterDataBrFormularioCertificadoParaIso(realizadoDigitado)
-            : valoresAtuais.realizado || "";
-
-        const vencimentoIso = vencimentoDigitado
-            ? converterDataBrFormularioCertificadoParaIso(vencimentoDigitado)
-            : valoresAtuais.vencimento || "";
-
-        if (realizadoDigitado && !realizadoIso) {
-            alert("Data de admissão/registro inválida. Use o formato dd/mm/aaaa.");
-            return;
-        }
-
-        if (vencimentoDigitado && !vencimentoIso) {
-            alert("Data de vencimento inválida. Use o formato dd/mm/aaaa.");
-            return;
-        }
-
-        const documentoAtualizado = {
-            ...documento,
-            realizado: realizadoIso,
-            dataRealizacao: realizadoIso,
-            data_realizacao: realizadoIso,
-            vencimento: vencimentoIso || "",
-            dataVencimento: vencimentoIso || "",
-            data_vencimento: vencimentoIso || "",
-        };
-
-        alterarDataRevisao(documento, "realizado", realizadoIso);
-        alterarDataRevisao(documento, "vencimento", vencimentoIso || "");
-
-        setDatasCertificadosAtualizadas((atual) => ({
-            ...atual,
-            [String(documento.id || "")]: {
-                realizado: realizadoIso,
-                vencimento: vencimentoIso || "",
-            },
-        }));
-
-        setTimeout(() => {
-            salvarDatasCertificado(documentoAtualizado);
-        }, 0);
-    };
 
     return (
         <div className="flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-full bg-slate-100 text-sm font-black uppercase text-slate-500 ring-1 ring-slate-200 sm:h-16 sm:w-16">

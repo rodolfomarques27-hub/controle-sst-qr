@@ -1111,7 +1111,7 @@ export default function usePdfOcr({ arquivo = null, ativo = true } = {}) {
     return () => {
       cancelado = true;
     };
-  }, [arquivoChave, ativo]);
+  }, [arquivo, arquivoChave, ativo]);
 
   return {
     resultado,

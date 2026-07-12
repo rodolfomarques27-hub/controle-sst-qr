@@ -1,5 +1,5 @@
 /* eslint-disable no-unused-vars */
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
     AlertTriangle,
     BadgeCheck,
@@ -12,7 +12,7 @@ import {
     Send,
     Trash2,
 } from "lucide-react";
-import dashboardHeroBackground from "../../assets/dashboard-hero-sst.png";
+import dashboardHeroBackground from "../../assets/dashboard-hero-sst.webp";
 import { supabase } from "../../lib/supabaseClient";
 import { Card, FotoAuditoriaPreview, Header } from "../commonComponents";
 import {
@@ -392,6 +392,29 @@ function carregarFiltrosSalvosAuditoriaCampo() {
     }
 }
 
+function montarDadosResumoVisualAuditoria(auditoriasNormalizadas = []) {
+    const total = auditoriasNormalizadas.length || 1;
+    const porStatus = Object.values(auditoriasNormalizadas.reduce((acc, item) => {
+        const chave = item.statusAuditoria || item.statusDesvio || "Sem status";
+        if (!acc[chave]) acc[chave] = { label: chave, total: 0 };
+        acc[chave].total += 1;
+        return acc;
+    }, {})).sort((a, b) => b.total - a.total).slice(0, 5);
+    const porTipo = Object.values(auditoriasNormalizadas.reduce((acc, item) => {
+        const alvo = identificarAlvoAuditoriaCampo(item);
+        const chave = item.categoriaDesvioPrincipal || item.tipoAuditoria || alvo.tipo || "Sem categoria";
+        if (!acc[chave]) acc[chave] = { label: chave, total: 0 };
+        acc[chave].total += 1;
+        return acc;
+    }, {})).sort((a, b) => b.total - a.total).slice(0, 5);
+    const porRisco = ["Baixo", "Médio", "Alto", "Crítico"].map((risco) => ({
+        label: risco,
+        total: auditoriasNormalizadas.filter((item) => normalizarTextoBusca(item.grauRisco) === normalizarTextoBusca(risco)).length,
+    })).filter((item) => item.total > 0);
+
+    return { total, porStatus, porTipo, porRisco };
+}
+
 export function DashboardAuditoriaCampo({
     auditoriasCampo = [],
     carregando = false,
@@ -613,10 +636,7 @@ export function DashboardAuditoriaCampo({
     const [quantidadeHistoricoVisivel, setQuantidadeHistoricoVisivel] = useState(30);
     const [versaoFiltroSalvoAuditoriaCampo, setVersaoFiltroSalvoAuditoriaCampo] = useState(0);
 
-    const filtrosSalvosAuditoriaCampoDisponiveis = useMemo(
-        () => Boolean(carregarFiltrosSalvosAuditoriaCampo()),
-        [versaoFiltroSalvoAuditoriaCampo]
-    );
+    const filtrosSalvosAuditoriaCampoDisponiveis = Boolean(carregarFiltrosSalvosAuditoriaCampo());
 
     useEffect(() => { if (typeof window !== "undefined") window.localStorage.setItem("dashboardAuditoriaCampoCartasVisiveis", JSON.stringify(cartasVisiveis)); }, [cartasVisiveis]);
     useEffect(() => { if (typeof window !== "undefined") window.localStorage.setItem("dashboardAuditoriaCampoTamanhosCartas", JSON.stringify(tamanhosCartas)); }, [tamanhosCartas]);
@@ -627,7 +647,10 @@ export function DashboardAuditoriaCampo({
     useEffect(() => { if (typeof window !== "undefined") window.localStorage.setItem("dashboardAuditoriaCampoBlocosRecolhidos", JSON.stringify(blocosRecolhidos)); }, [blocosRecolhidos]);
     useEffect(() => { if (typeof window !== "undefined") window.localStorage.setItem("dashboardAuditoriaCampoAuditoriasAbertas", JSON.stringify(auditoriasHistoricoAbertas)); }, [auditoriasHistoricoAbertas]);
     useEffect(() => { if (typeof window !== "undefined") window.localStorage.setItem("dashboardAuditoriaCampoBuscarRecolhido", String(buscarAuditoriaRecolhido)); }, [buscarAuditoriaRecolhido]);
-    useEffect(() => { setQuantidadeHistoricoVisivel(30); }, [filtrosAuditoriaCampo]);
+    useEffect(() => {
+        const timer = window.setTimeout(() => setQuantidadeHistoricoVisivel(30), 0);
+        return () => window.clearTimeout(timer);
+    }, [filtrosAuditoriaCampo]);
 
     const filtrosAtuaisAuditoriaCampo = useMemo(
         () => normalizarFiltrosSalvosAuditoriaCampo(filtrosAuditoriaCampo),
@@ -743,7 +766,11 @@ export function DashboardAuditoriaCampo({
     }, []);
 
     useEffect(() => {
-        carregarEmpresasCadastradasQrCampo();
+        const timer = window.setTimeout(() => {
+            carregarEmpresasCadastradasQrCampo();
+        }, 0);
+
+        return () => window.clearTimeout(timer);
     }, [carregarEmpresasCadastradasQrCampo]);
 
     const carregarAuditoriasCampoFallbackDashboard = useCallback(async () => {
@@ -787,24 +814,24 @@ export function DashboardAuditoriaCampo({
         carregarAuditoriasCampoFallbackDashboard,
     ]);
 
-    const [auditoriasCampoCargaInicialSolicitada, setAuditoriasCampoCargaInicialSolicitada] = useState(false);
+    const auditoriasCampoCargaInicialSolicitadaRef = useRef(false);
 
     useEffect(() => {
-        if (auditoriasCampoCargaInicialSolicitada) return;
+        if (auditoriasCampoCargaInicialSolicitadaRef.current) return;
         if (carregando) return;
         if (auditoriasCampoEfetivas.length > 0) {
-            setAuditoriasCampoCargaInicialSolicitada(true);
+            auditoriasCampoCargaInicialSolicitadaRef.current = true;
             return;
         }
         if (typeof onRecarregar !== "function") return;
 
-        setAuditoriasCampoCargaInicialSolicitada(true);
+        auditoriasCampoCargaInicialSolicitadaRef.current = true;
         const timer = window.setTimeout(() => {
             onRecarregar();
         }, 180);
 
         return () => window.clearTimeout(timer);
-    }, [auditoriasCampoEfetivas.length, auditoriasCampoCargaInicialSolicitada, carregando, onRecarregar]);
+    }, [auditoriasCampoEfetivas.length, carregando, onRecarregar]);
 
     const atualizarDadosDashboardAuditoriaCampo = useCallback(async () => {
         if (atualizacaoDadosEmAndamento) return;
@@ -1841,15 +1868,15 @@ const logoHtml = logoQr
         ""
     ).trim();
 
-    const camposCompativeisHistoricoQrCampo = (valorBase = "", valorComparacao = "") => {
-        const base = normalizarChaveHistoricoQrCampo(valorBase);
-        const comparacao = normalizarChaveHistoricoQrCampo(valorComparacao);
-
-        if (!base || !comparacao) return true;
-        return base === comparacao || base.includes(comparacao) || comparacao.includes(base);
-    };
-
     const obterHistoricoAuditoriasPorQrCampo = useCallback((qrCampo = {}) => {
+        const camposCompativeisHistoricoQrCampo = (valorBase = "", valorComparacao = "") => {
+            const base = normalizarChaveHistoricoQrCampo(valorBase);
+            const comparacao = normalizarChaveHistoricoQrCampo(valorComparacao);
+
+            if (!base || !comparacao) return true;
+            return base === comparacao || base.includes(comparacao) || comparacao.includes(base);
+        };
+
         const codigoQr = normalizarChaveHistoricoQrCampo(obterCodigoHistoricoQrCampo(qrCampo));
         const identificacaoQr = normalizarChaveHistoricoQrCampo(qrCampo.identificacao);
         const areaQr = qrCampo.area || "";
@@ -2163,7 +2190,7 @@ const logoHtml = logoQr
         <header class="cabecalho-pdf-padrao">
             <div class="marca-pdf-padrao">
                 <span class="marca-pdf-icone" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 3 5 6v5c0 4.6 2.9 8.8 7 10 4.1-1.2 7-5.4 7-10V6l-7-3Z"/><path d="m9.5 12 1.8 1.8 3.7-4"/></svg></span>
-                <div class="marca-pdf-textos"><h1>CONTROLE SST QR</h1><p>GESTÃO DE SEGURANÇA DO TRABALHO</p></div>
+                <div class="marca-pdf-textos"><h1>SafeScan Brasil</h1><p>GESTÃO DE SEGURANÇA DO TRABALHO</p></div>
             </div>
             <div class="linha-pdf-padrao"></div>
             <div class="titulo-pdf-padrao">
@@ -2179,7 +2206,7 @@ const logoHtml = logoQr
         </section>
         ${cards ? `<section class="cards">${cards}</section>` : ""}
         ${secoes}
-        <footer class="rodape"><span>© Controle SST QR</span><span>${escaparTextoImpressaoQr(rodape)}</span></footer>
+        <footer class="rodape"><span>© SafeScan Brasil</span><span>${escaparTextoImpressaoQr(rodape)}</span></footer>
     </main>
 </body>
 </html>`;
@@ -2370,27 +2397,7 @@ const logoHtml = logoQr
         setFiltroStatusQrCampoSalvo("todos");
     };
 
-    const dadosResumoVisualAuditoria = useMemo(() => {
-        const total = auditoriasNormalizadas.length || 1;
-        const porStatus = Object.values(auditoriasNormalizadas.reduce((acc, item) => {
-            const chave = item.statusAuditoria || item.statusDesvio || "Sem status";
-            if (!acc[chave]) acc[chave] = { label: chave, total: 0 };
-            acc[chave].total += 1;
-            return acc;
-        }, {})).sort((a, b) => b.total - a.total).slice(0, 5);
-        const porTipo = Object.values(auditoriasNormalizadas.reduce((acc, item) => {
-            const alvo = identificarAlvoAuditoriaCampo(item);
-            const chave = item.categoriaDesvioPrincipal || item.tipoAuditoria || alvo.tipo || "Sem categoria";
-            if (!acc[chave]) acc[chave] = { label: chave, total: 0 };
-            acc[chave].total += 1;
-            return acc;
-        }, {})).sort((a, b) => b.total - a.total).slice(0, 5);
-        const porRisco = ["Baixo", "Médio", "Alto", "Crítico"].map((risco) => ({
-            label: risco,
-            total: auditoriasNormalizadas.filter((item) => normalizarTextoBusca(item.grauRisco) === normalizarTextoBusca(risco)).length,
-        })).filter((item) => item.total > 0);
-        return { total, porStatus, porTipo, porRisco };
-    }, [auditoriasNormalizadas]);
+    const dadosResumoVisualAuditoria = montarDadosResumoVisualAuditoria(auditoriasNormalizadas);
 
     const renderBarraResumoAuditoria = (item, total, classe = "bg-blue-500") => {
         const percentual = total ? Math.round((item.total / total) * 100) : 0;

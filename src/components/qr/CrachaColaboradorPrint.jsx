@@ -1,5 +1,3 @@
-﻿import React from "react";
-import { QRCodeSVG } from "qrcode.react";
 import { QrCodeComLogo } from "./QrCodeComLogo";
 import { FotoColaborador } from "../commonComponents";
 

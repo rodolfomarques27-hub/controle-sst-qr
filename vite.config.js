@@ -36,6 +36,21 @@ export default defineConfig({
                             priority: 30,
                         },
                         {
+                            name: "vendor-html2canvas",
+                            test: /node_modules[\\/]html2canvas[\\/]/,
+                            priority: 35,
+                        },
+                        {
+                            name: "vendor-jspdf",
+                            test: /node_modules[\\/]jspdf[\\/]/,
+                            priority: 34,
+                        },
+                        {
+                            name: "vendor-ocr",
+                            test: /node_modules[\\/](tesseract\.js|tesseract\.js-core)[\\/]/,
+                            priority: 34,
+                        },
+                        {
                             name: "vendor-qrcode",
                             test: /node_modules[\\/]qrcode\.react[\\/]/,
                             priority: 25,

@@ -20,7 +20,7 @@ export function normalizarNome(nome) {
   return textoBase
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "")
-    .replace(/[\[\]|<>{}(),;:!?'"`´^~]/g, " ")
+    .replace(/\[|\]|\||[<>{}(),;:!?'"`´^~]/g, " ")
     .replace(/[^\p{L}\p{N}\s]/gu, " ")
     .replace(/\s+/g, " ")
     .trim()
@@ -122,7 +122,7 @@ export function compararNomesLista(nomeCadastro, nomeOcr) {
   const score = Math.round(similaridade * 100);
   const encontrado = similaridade >= 0.75;
 
-  let motivo = "Sem correspondência suficiente";
+  let motivo;
 
   if (!nomeCadastroNormalizado && !nomeOcrNormalizado) {
     motivo = "Nomes vazios ou não informados";
