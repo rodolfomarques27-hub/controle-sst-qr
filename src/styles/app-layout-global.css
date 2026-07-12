@@ -234,10 +234,10 @@
 
 
 
-  /* DEFINIÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¡ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢O FINAL DE GRID DE INDICADORES
-     PadrÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â£o aprovado: 5 cards por linha em desktop/notebook largo,
-     todos com mesma largura, mesma altura mÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â­nima e texto reduzido/controlado.
-     Usar em ConfiguraÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â§ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Âµes, Auditoria do sistema e Dashboard Auditoria de Campo. */
+  /* DEFINI├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├é┬ó├â┬ó├óÔé¼┼í├é┬¼├âÔÇÜ├é┬í├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┬á├â┬ó├óÔÇÜ┬¼├óÔÇ×┬óO FINAL DE GRID DE INDICADORES
+     Padr├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┼í├âÔÇÜ├é┬úo aprovado: 5 cards por linha em desktop/notebook largo,
+     todos com mesma largura, mesma altura m├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┼í├âÔÇÜ├é┬¡nima e texto reduzido/controlado.
+     Usar em Configura├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┼í├âÔÇÜ├é┬º├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┼í├âÔÇÜ├é┬Áes, Auditoria do sistema e Dashboard Auditoria de Campo. */
   .cards-grid--fixed-5,
   .summary-grid-fixed-5,
   .config-summary-grid,
@@ -765,8 +765,8 @@
 
 
 
-  /* ETAPA 8 ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â acabamento final de harmonia dos formulÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¡rios e personalizaÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â§ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â£o.
-     Objetivo: eliminar espaÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â§os vazios, manter campos em linhas equilibradas e permitir arrastar cards. */
+  /* ETAPA 8 ├âãÆ├åÔÇÖ├âÔÇÜ├é┬ó├âãÆ├é┬ó├â┬ó├óÔÇÜ┬¼├à┬í├âÔÇÜ├é┬¼├âãÆ├é┬ó├â┬ó├óÔé¼┼í├é┬¼├âÔÇÜ├é┬Ø acabamento final de harmonia dos formul├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┼í├âÔÇÜ├é┬írios e personaliza├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┼í├âÔÇÜ├é┬º├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┼í├âÔÇÜ├é┬úo.
+     Objetivo: eliminar espa├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┼í├âÔÇÜ├é┬ºos vazios, manter campos em linhas equilibradas e permitir arrastar cards. */
   .colaborador-formulario-unificado {
     overflow: hidden;
   }
@@ -1075,7 +1075,7 @@
   }
 
 
-  /* ETAPA 9 ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â formulÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¡rio do novo colaborador largo, sem buracos visuais, e estados recolhidos persistidos no navegador. */
+  /* ETAPA 9 ├âãÆ├åÔÇÖ├âÔÇÜ├é┬ó├âãÆ├é┬ó├â┬ó├óÔÇÜ┬¼├à┬í├âÔÇÜ├é┬¼├âãÆ├é┬ó├â┬ó├óÔé¼┼í├é┬¼├âÔÇÜ├é┬Ø formul├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┼í├âÔÇÜ├é┬írio do novo colaborador largo, sem buracos visuais, e estados recolhidos persistidos no navegador. */
   .colaborador-formulario-unificado {
     overflow: hidden;
   }
@@ -1236,7 +1236,7 @@
     }
   }
 
-  /* ETAPA 10 ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â Novo colaborador em 3 linhas: Nome/Data/Empresa, SituaÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â§ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â£o/MatrÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â­cula/FunÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â§ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â£o, Documentos/Foto. */
+  /* ETAPA 10 ├âãÆ├åÔÇÖ├âÔÇÜ├é┬ó├âãÆ├é┬ó├â┬ó├óÔÇÜ┬¼├à┬í├âÔÇÜ├é┬¼├âãÆ├é┬ó├â┬ó├óÔé¼┼í├é┬¼├âÔÇÜ├é┬Ø Novo colaborador em 3 linhas: Nome/Data/Empresa, Situa├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┼í├âÔÇÜ├é┬º├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┼í├âÔÇÜ├é┬úo/Matr├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┼í├âÔÇÜ├é┬¡cula/Fun├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┼í├âÔÇÜ├é┬º├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┼í├âÔÇÜ├é┬úo, Documentos/Foto. */
   .colaborador-formulario-unificado > :not(.colaborador-form-toggle) > :where(.space-y-3, .space-y-4):has(input),
   .colaborador-formulario-unificado > :not(.colaborador-form-toggle) > :where(.space-y-3, .space-y-4):has(select) {
     grid-template-columns: repeat(12, minmax(0, 1fr)) !important;
@@ -1269,7 +1269,7 @@
     grid-column: 9 / span 4 !important;
   }
 
-  /* Linha 2: SituaÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â§ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â£o na obra / MatrÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â­cula da empresa / FunÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â§ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â£o */
+  /* Linha 2: Situa├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┼í├âÔÇÜ├é┬º├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┼í├âÔÇÜ├é┬úo na obra / Matr├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┼í├âÔÇÜ├é┬¡cula da empresa / Fun├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┼í├âÔÇÜ├é┬º├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┼í├âÔÇÜ├é┬úo */
   .colaborador-formulario-unificado > :not(.colaborador-form-toggle) > :where(.space-y-3, .space-y-4):has(input) > :nth-child(3),
   .colaborador-formulario-unificado > :not(.colaborador-form-toggle) > :where(.space-y-3, .space-y-4):has(select) > :nth-child(3) {
     order: 4 !important;
@@ -1288,7 +1288,7 @@
     grid-column: 9 / span 4 !important;
   }
 
-  /* Remove da tela o check "Mostrar em aniversariantes" mantendo o valor salvo no estado do formulÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¡rio. */
+  /* Remove da tela o check "Mostrar em aniversariantes" mantendo o valor salvo no estado do formul├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┼í├âÔÇÜ├é┬írio. */
   .colaborador-formulario-unificado > :not(.colaborador-form-toggle) > :where(.space-y-3, .space-y-4):has(input) > :nth-child(5),
   .colaborador-formulario-unificado > :not(.colaborador-form-toggle) > :where(.space-y-3, .space-y-4):has(select) > :nth-child(5) {
     display: none !important;
@@ -1375,7 +1375,7 @@
 
 
 
-  /* ETAPA 11 ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â layout final do Novo colaborador em 4 linhas fixas e sem checkbox de aniversariante. */
+  /* ETAPA 11 ├âãÆ├åÔÇÖ├âÔÇÜ├é┬ó├âãÆ├é┬ó├â┬ó├óÔÇÜ┬¼├à┬í├âÔÇÜ├é┬¼├âãÆ├é┬ó├â┬ó├óÔé¼┼í├é┬¼├âÔÇÜ├é┬Ø layout final do Novo colaborador em 4 linhas fixas e sem checkbox de aniversariante. */
   .novo-colaborador-layout-final {
     display: grid;
     gap: 1rem;
@@ -1571,7 +1571,7 @@
     }
   }
 
-  /* ETAPA 12 ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â Novo colaborador no visual anterior, mantendo a disposiÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â§ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â£o final em 4 linhas. */
+  /* ETAPA 12 ├âãÆ├åÔÇÖ├âÔÇÜ├é┬ó├âãÆ├é┬ó├â┬ó├óÔÇÜ┬¼├à┬í├âÔÇÜ├é┬¼├âãÆ├é┬ó├â┬ó├óÔé¼┼í├é┬¼├âÔÇÜ├é┬Ø Novo colaborador no visual anterior, mantendo a disposi├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┼í├âÔÇÜ├é┬º├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┼í├âÔÇÜ├é┬úo final em 4 linhas. */
   .novo-colaborador-layout-anterior {
     display: grid;
     gap: 1rem;
@@ -1755,7 +1755,7 @@
     }
   }
 
-  /* ETAPA 13 ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â cabeÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â§alho do novo colaborador dentro do cartÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â£o branco, no padrÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â£o do site. */
+  /* ETAPA 13 ├âãÆ├åÔÇÖ├âÔÇÜ├é┬ó├âãÆ├é┬ó├â┬ó├óÔÇÜ┬¼├à┬í├âÔÇÜ├é┬¼├âãÆ├é┬ó├â┬ó├óÔé¼┼í├é┬¼├âÔÇÜ├é┬Ø cabe├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┼í├âÔÇÜ├é┬ºalho do novo colaborador dentro do cart├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┼í├âÔÇÜ├é┬úo branco, no padr├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┼í├âÔÇÜ├é┬úo do site. */
   .colaborador-formulario-unificado {
     background: #ffffff;
     border: 1px solid #dbe5f0;
@@ -1858,7 +1858,7 @@
     }
   }
 
-  /* ETAPA 14 ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â informaÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â§ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â£o dinÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢mica da situaÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â§ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â£o na obra e documentos aceitos centralizados. */
+  /* ETAPA 14 ├âãÆ├åÔÇÖ├âÔÇÜ├é┬ó├âãÆ├é┬ó├â┬ó├óÔÇÜ┬¼├à┬í├âÔÇÜ├é┬¼├âãÆ├é┬ó├â┬ó├óÔé¼┼í├é┬¼├âÔÇÜ├é┬Ø informa├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┼í├âÔÇÜ├é┬º├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┼í├âÔÇÜ├é┬úo din├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┼í├âÔÇÜ├é┬ómica da situa├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┼í├âÔÇÜ├é┬º├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┼í├âÔÇÜ├é┬úo na obra e documentos aceitos centralizados. */
   .novo-colaborador-ajuda-anterior {
     min-height: 2rem;
   }
@@ -1902,7 +1902,7 @@
   }
 
 
-  /* ETAPA 15 ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â cards de upload com a mesma altura visual. */
+  /* ETAPA 15 ├âãÆ├åÔÇÖ├âÔÇÜ├é┬ó├âãÆ├é┬ó├â┬ó├óÔÇÜ┬¼├à┬í├âÔÇÜ├é┬¼├âãÆ├é┬ó├â┬ó├óÔé¼┼í├é┬¼├âÔÇÜ├é┬Ø cards de upload com a mesma altura visual. */
   .novo-colaborador-uploads-anterior {
     align-items: stretch !important;
   }
@@ -1921,7 +1921,7 @@
   }
 
 
-  /* ETAPA 20 ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â Empresas e documentos: cadastro compacto e Base de empresas em grade fixa de 3 cards por linha. */
+  /* ETAPA 20 ├âãÆ├åÔÇÖ├âÔÇÜ├é┬ó├âãÆ├é┬ó├â┬ó├óÔÇÜ┬¼├à┬í├âÔÇÜ├é┬¼├âãÆ├é┬ó├â┬ó├óÔé¼┼í├é┬¼├âÔÇÜ├é┬Ø Empresas e documentos: cadastro compacto e Base de empresas em grade fixa de 3 cards por linha. */
   .empresas-cadastro-unificado {
     background: #ffffff !important;
     border-color: #dbe7f2 !important;
@@ -2201,7 +2201,7 @@
   }
 
 
-  /* ETAPA 21 ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â Empresas final: cadastro harmÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â´nico, documento preenchendo altura e base de empresas em 3 cards por linha. */
+  /* ETAPA 21 ├âãÆ├åÔÇÖ├âÔÇÜ├é┬ó├âãÆ├é┬ó├â┬ó├óÔÇÜ┬¼├à┬í├âÔÇÜ├é┬¼├âãÆ├é┬ó├â┬ó├óÔé¼┼í├é┬¼├âÔÇÜ├é┬Ø Empresas final: cadastro harm├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┼í├âÔÇÜ├é┬┤nico, documento preenchendo altura e base de empresas em 3 cards por linha. */
   .empresas-cadastro-unificado {
     padding: clamp(0.85rem, 1vw, 1.15rem) !important;
     background: #ffffff !important;
@@ -2569,7 +2569,7 @@
   }
 
 
-  /* ETAPA 22 ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â Empresas definitivo: cadastro compacto, sem sobreposiÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â§ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â£o e com contrato visÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â­vel. */
+  /* ETAPA 22 ├âãÆ├åÔÇÖ├âÔÇÜ├é┬ó├âãÆ├é┬ó├â┬ó├óÔÇÜ┬¼├à┬í├âÔÇÜ├é┬¼├âãÆ├é┬ó├â┬ó├óÔé¼┼í├é┬¼├âÔÇÜ├é┬Ø Empresas definitivo: cadastro compacto, sem sobreposi├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┼í├âÔÇÜ├é┬º├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┼í├âÔÇÜ├é┬úo e com contrato vis├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┼í├âÔÇÜ├é┬¡vel. */
   .empresas-cadastro-unificado .empresas-cadastro-grid {
     grid-template-columns: minmax(0, 1.12fr) minmax(0, 0.88fr) !important;
     align-items: start !important;
@@ -2794,7 +2794,7 @@
   }
 
 
-  /* ETAPA 24 ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â Documento da empresa em cards verticais grandes e base com 2 empresas por linha. */
+  /* ETAPA 24 ├âãÆ├åÔÇÖ├âÔÇÜ├é┬ó├âãÆ├é┬ó├â┬ó├óÔÇÜ┬¼├à┬í├âÔÇÜ├é┬¼├âãÆ├é┬ó├â┬ó├óÔé¼┼í├é┬¼├âÔÇÜ├é┬Ø Documento da empresa em cards verticais grandes e base com 2 empresas por linha. */
   .empresas-form-panel--documento .empresa-form-grid--documento {
     display: grid !important;
     grid-template-columns: 1fr !important;
@@ -2912,7 +2912,7 @@
   }
 
 
-  /* ETAPA 25 ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â Resumo dos documentos em 3 linhas sem reticÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Âªncias e sem esticar o cadastro lateral. */
+  /* ETAPA 25 ├âãÆ├åÔÇÖ├âÔÇÜ├é┬ó├âãÆ├é┬ó├â┬ó├óÔÇÜ┬¼├à┬í├âÔÇÜ├é┬¼├âãÆ├é┬ó├â┬ó├óÔé¼┼í├é┬¼├âÔÇÜ├é┬Ø Resumo dos documentos em 3 linhas sem retic├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┼í├âÔÇÜ├é┬¬ncias e sem esticar o cadastro lateral. */
   .empresas-cadastro-grid > .empresas-form-panel {
     min-height: auto !important;
     align-self: start !important;
@@ -2975,7 +2975,7 @@
   }
 
 
-  /* ETAPA 26 ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â usa o espaÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â§o lateral dos cards LTCAT/PCMSO/PGR para reduzir altura e eliminar sobra visual. */
+  /* ETAPA 26 ├âãÆ├åÔÇÖ├âÔÇÜ├é┬ó├âãÆ├é┬ó├â┬ó├óÔÇÜ┬¼├à┬í├âÔÇÜ├é┬¼├âãÆ├é┬ó├â┬ó├óÔé¼┼í├é┬¼├âÔÇÜ├é┬Ø usa o espa├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┼í├âÔÇÜ├é┬ºo lateral dos cards LTCAT/PCMSO/PGR para reduzir altura e eliminar sobra visual. */
   .empresa-doc-tipos-grid--vertical {
     gap: 0.52rem !important;
   }
@@ -3037,7 +3037,7 @@
   }
 
 
-  /* ETAPA 27 ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â cards de LTCAT/PCMSO/PGR mais alinhados ao bloco de datas e usando melhor a largura lateral. */
+  /* ETAPA 27 ├âãÆ├åÔÇÖ├âÔÇÜ├é┬ó├âãÆ├é┬ó├â┬ó├óÔÇÜ┬¼├à┬í├âÔÇÜ├é┬¼├âãÆ├é┬ó├â┬ó├óÔé¼┼í├é┬¼├âÔÇÜ├é┬Ø cards de LTCAT/PCMSO/PGR mais alinhados ao bloco de datas e usando melhor a largura lateral. */
   .empresas-form-panel--documento .empresa-form-grid--documento {
     gap: 0.5rem !important;
   }
@@ -3092,7 +3092,7 @@
   }
 
 
-  /* ETAPA 28 ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â faz LTCAT/PCMSO/PGR ocuparem toda a largura disponÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â­vel, eliminando a sobra lateral. */
+  /* ETAPA 28 ├âãÆ├åÔÇÖ├âÔÇÜ├é┬ó├âãÆ├é┬ó├â┬ó├óÔÇÜ┬¼├à┬í├âÔÇÜ├é┬¼├âãÆ├é┬ó├â┬ó├óÔé¼┼í├é┬¼├âÔÇÜ├é┬Ø faz LTCAT/PCMSO/PGR ocuparem toda a largura dispon├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┼í├âÔÇÜ├é┬¡vel, eliminando a sobra lateral. */
   .empresa-doc-tipos-grid--vertical {
     width: 100% !important;
     max-width: none !important;
@@ -3160,7 +3160,7 @@
   }
 
 
-  /* ETAPA 29 ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â forÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â§a LTCAT/PCMSO/PGR a terem a mesma largura do seletor "Selecione a empresa". */
+  /* ETAPA 29 ├âãÆ├åÔÇÖ├âÔÇÜ├é┬ó├âãÆ├é┬ó├â┬ó├óÔÇÜ┬¼├à┬í├âÔÇÜ├é┬¼├âãÆ├é┬ó├â┬ó├óÔé¼┼í├é┬¼├âÔÇÜ├é┬Ø for├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┼í├âÔÇÜ├é┬ºa LTCAT/PCMSO/PGR a terem a mesma largura do seletor "Selecione a empresa". */
   .empresas-form-panel--documento .empresa-form-grid--documento {
     width: 100% !important;
     max-width: none !important;
@@ -3218,7 +3218,7 @@
   }
 
 
-  /* ETAPA 30 ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â impede LTCAT/PCMSO/PGR de invadir a divisÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â³ria e simplifica o texto do LTCAT. */
+  /* ETAPA 30 ├âãÆ├åÔÇÖ├âÔÇÜ├é┬ó├âãÆ├é┬ó├â┬ó├óÔÇÜ┬¼├à┬í├âÔÇÜ├é┬¼├âãÆ├é┬ó├â┬ó├óÔé¼┼í├é┬¼├âÔÇÜ├é┬Ø impede LTCAT/PCMSO/PGR de invadir a divis├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┼í├âÔÇÜ├é┬│ria e simplifica o texto do LTCAT. */
   .empresas-form-panel--documento .empresa-doc-tipos-grid--vertical > .empresa-doc-tipo-card--grande {
     grid-template-columns: 6.35rem minmax(0, 1fr) !important;
     min-height: 4.85rem !important;
@@ -3284,7 +3284,7 @@
   }
 
 
-  /* ETAPA 31 ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â remove observaÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â§ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â£o do cadastro de documento e compacta o painel para alinhar os dois lados. */
+  /* ETAPA 31 ├âãÆ├åÔÇÖ├âÔÇÜ├é┬ó├âãÆ├é┬ó├â┬ó├óÔÇÜ┬¼├à┬í├âÔÇÜ├é┬¼├âãÆ├é┬ó├â┬ó├óÔé¼┼í├é┬¼├âÔÇÜ├é┬Ø remove observa├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┼í├âÔÇÜ├é┬º├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┼í├âÔÇÜ├é┬úo do cadastro de documento e compacta o painel para alinhar os dois lados. */
   .empresas-form-panel--documento .empresa-form-grid--documento {
     gap: 0.5rem !important;
   }
@@ -3302,13 +3302,13 @@
   }
 
 
-  /* ETAPA 32 ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â textos curtos nos botÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Âµes de upload de empresa. */
+  /* ETAPA 32 ├âãÆ├åÔÇÖ├âÔÇÜ├é┬ó├âãÆ├é┬ó├â┬ó├óÔÇÜ┬¼├à┬í├âÔÇÜ├é┬¼├âãÆ├é┬ó├â┬ó├óÔé¼┼í├é┬¼├âÔÇÜ├é┬Ø textos curtos nos bot├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┼í├âÔÇÜ├é┬Áes de upload de empresa. */
   .empresa-form-linha--uploads :where(label, button) {
     white-space: nowrap !important;
   }
 
 
-  /* ETAPA 33 ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â harmoniza largura dos painÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â©is e reduz o bloco de PDF para alinhar Cadastrar empresa e Salvar documento. */
+  /* ETAPA 33 ├âãÆ├åÔÇÖ├âÔÇÜ├é┬ó├âãÆ├é┬ó├â┬ó├óÔÇÜ┬¼├à┬í├âÔÇÜ├é┬¼├âãÆ├é┬ó├â┬ó├óÔé¼┼í├é┬¼├âÔÇÜ├é┬Ø harmoniza largura dos pain├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┼í├âÔÇÜ├é┬®is e reduz o bloco de PDF para alinhar Cadastrar empresa e Salvar documento. */
   .empresas-cadastro-unificado .empresas-cadastro-grid {
     grid-template-columns: minmax(0, 1.06fr) minmax(0, 0.94fr) !important;
     gap: 0.9rem !important;
@@ -3353,7 +3353,7 @@
   }
 
 
-  /* ETAPA 34 ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â largura final dos cards LTCAT/PCMSO/PGR igual ao seletor e alinhamento dos botÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Âµes finais. */
+  /* ETAPA 34 ├âãÆ├åÔÇÖ├âÔÇÜ├é┬ó├âãÆ├é┬ó├â┬ó├óÔÇÜ┬¼├à┬í├âÔÇÜ├é┬¼├âãÆ├é┬ó├â┬ó├óÔé¼┼í├é┬¼├âÔÇÜ├é┬Ø largura final dos cards LTCAT/PCMSO/PGR igual ao seletor e alinhamento dos bot├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┼í├âÔÇÜ├é┬Áes finais. */
   .empresas-cadastro-unificado .empresas-cadastro-grid {
     grid-template-columns: minmax(0, 1.02fr) minmax(0, 0.98fr) !important;
     gap: 0.82rem !important;
@@ -3477,7 +3477,7 @@
   }
 
 
-  /* ETAPA 35 ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â centraliza ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â­cone/texto dos botÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Âµes e aumenta um pouco o salvar documento para harmonizar com cadastrar empresa. */
+  /* ETAPA 35 ├âãÆ├åÔÇÖ├âÔÇÜ├é┬ó├âãÆ├é┬ó├â┬ó├óÔÇÜ┬¼├à┬í├âÔÇÜ├é┬¼├âãÆ├é┬ó├â┬ó├óÔé¼┼í├é┬¼├âÔÇÜ├é┬Ø centraliza ├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┼í├âÔÇÜ├é┬¡cone/texto dos bot├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┼í├âÔÇÜ├é┬Áes e aumenta um pouco o salvar documento para harmonizar com cadastrar empresa. */
   .empresa-form-linha--uploads .empresa-upload-card,
   .empresa-doc-upload-grande,
   .empresa-botao-cadastrar-final,
@@ -3520,7 +3520,7 @@
   }
 
 
-  /* ETAPA 36 ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â aproxima ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â­cone do texto no selecionar PDF, aumenta um pouco o painel direito e melhora a harmonia final dos botÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Âµes. */
+  /* ETAPA 36 ├âãÆ├åÔÇÖ├âÔÇÜ├é┬ó├âãÆ├é┬ó├â┬ó├óÔÇÜ┬¼├à┬í├âÔÇÜ├é┬¼├âãÆ├é┬ó├â┬ó├óÔé¼┼í├é┬¼├âÔÇÜ├é┬Ø aproxima ├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┼í├âÔÇÜ├é┬¡cone do texto no selecionar PDF, aumenta um pouco o painel direito e melhora a harmonia final dos bot├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┼í├âÔÇÜ├é┬Áes. */
   .empresas-cadastro-unificado .empresas-cadastro-grid {
     grid-template-columns: minmax(0, 0.99fr) minmax(0, 1.01fr) !important;
     gap: 0.86rem !important;
@@ -3578,7 +3578,7 @@
   }
 
 
-  /* ETAPA 37 ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â escopo saiu da linha das informaÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â§ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Âµes e virou aÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â§ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â£o prÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â³pria abaixo de Revisar documentos. */
+  /* ETAPA 37 ├âãÆ├åÔÇÖ├âÔÇÜ├é┬ó├âãÆ├é┬ó├â┬ó├óÔÇÜ┬¼├à┬í├âÔÇÜ├é┬¼├âãÆ├é┬ó├â┬ó├óÔé¼┼í├é┬¼├âÔÇÜ├é┬Ø escopo saiu da linha das informa├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┼í├âÔÇÜ├é┬º├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┼í├âÔÇÜ├é┬Áes e virou a├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┼í├âÔÇÜ├é┬º├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┼í├âÔÇÜ├é┬úo pr├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┼í├âÔÇÜ├é┬│pria abaixo de Revisar documentos. */
   .empresa-base-card__escopo-area {
     width: 100%;
     margin-top: 0.75rem;
@@ -3612,7 +3612,7 @@
   }
 
 
-  /* ETAPA 38 ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â alinha Cadastrar empresa com Salvar documento e amplia discretamente o painel de documentos. */
+  /* ETAPA 38 ├âãÆ├åÔÇÖ├âÔÇÜ├é┬ó├âãÆ├é┬ó├â┬ó├óÔÇÜ┬¼├à┬í├âÔÇÜ├é┬¼├âãÆ├é┬ó├â┬ó├óÔé¼┼í├é┬¼├âÔÇÜ├é┬Ø alinha Cadastrar empresa com Salvar documento e amplia discretamente o painel de documentos. */
   .empresas-cadastro-unificado .empresas-cadastro-grid {
     grid-template-columns: minmax(0, 0.97fr) minmax(0, 1.03fr) !important;
     align-items: stretch !important;
@@ -3684,9 +3684,9 @@
 
 
 /* Ajuste complementar do Dashboard SST
-   MantÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â©m o layout global original e garante que o Filtro 1 consiga alterar
+   Mant├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┼í├âÔÇÜ├é┬®m o layout global original e garante que o Filtro 1 consiga alterar
    o tamanho das cartas principais mesmo quando o CSS global do grid define
-   regras prÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â³prias para .dashboard-summary-card. */
+   regras pr├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┼í├âÔÇÜ├é┬│prias para .dashboard-summary-card. */
 .dashboard-summary-grid > .dashboard-summary-card[data-dashboard-card-tamanho="padrao"] {
     grid-column: span 1 / span 1 !important;
 }
@@ -3743,10 +3743,10 @@
 }
 
 
-/* ROTEIRO 6 ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ETAPA 13
-   PadrÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â£o visual mobile separado do desktop.
-   Desktop permanece com sidebar e grids largos. Celular vira experiÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Âªncia de campo:
-   cabeÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â§alho prÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â³prio, cards em uma coluna, botÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Âµes grandes e menos risco de estouro horizontal. */
+/* ROTEIRO 6 ├âãÆ├åÔÇÖ├âÔÇÜ├é┬ó├âãÆ├é┬ó├â┬ó├óÔÇÜ┬¼├à┬í├âÔÇÜ├é┬¼├âãÆ├é┬ó├â┬ó├óÔé¼┼í├é┬¼├âÔÇÜ├é┬Ø ETAPA 13
+   Padr├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┼í├âÔÇÜ├é┬úo visual mobile separado do desktop.
+   Desktop permanece com sidebar e grids largos. Celular vira experi├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┼í├âÔÇÜ├é┬¬ncia de campo:
+   cabe├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┼í├âÔÇÜ├é┬ºalho pr├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┼í├âÔÇÜ├é┬│prio, cards em uma coluna, bot├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┼í├âÔÇÜ├é┬Áes grandes e menos risco de estouro horizontal. */
 @media (max-width: 767.98px) {
     html,
     body,
@@ -4106,14 +4106,14 @@
 
 
 
-/* ROTEIRO 6 ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ETAPA 14
-   CorreÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â§ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â£o fina do mobile e sidebar:
-   - remove travamento/efeito pesado do cabeÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â§alho sticky no celular;
-   - compacta o cabeÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â§alho mobile;
+/* ROTEIRO 6 ├âãÆ├åÔÇÖ├âÔÇÜ├é┬ó├âãÆ├é┬ó├â┬ó├óÔÇÜ┬¼├à┬í├âÔÇÜ├é┬¼├âãÆ├é┬ó├â┬ó├óÔé¼┼í├é┬¼├âÔÇÜ├é┬Ø ETAPA 14
+   Corre├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┼í├âÔÇÜ├é┬º├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┼í├âÔÇÜ├é┬úo fina do mobile e sidebar:
+   - remove travamento/efeito pesado do cabe├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┼í├âÔÇÜ├é┬ºalho sticky no celular;
+   - compacta o cabe├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┼í├âÔÇÜ├é┬ºalho mobile;
    - deixa os cards do dashboard com altura menor no celular;
    - impede o card de armazenamento de estourar;
    - melhora o scroll interno da lateral;
-   - prepara a lateral para abrir temporariamente por aproximaÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â§ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â£o/hover. */
+   - prepara a lateral para abrir temporariamente por aproxima├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┼í├âÔÇÜ├é┬º├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┼í├âÔÇÜ├é┬úo/hover. */
 .app-sidebar {
     position: sticky;
     top: 0;
@@ -4398,9 +4398,9 @@
 }
 
 
-/* ROTEIRO 6 ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ETAPA 15
-   Ajuste do espaÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â§o em branco no mobile e melhoria do card de Armazenamento.
-   A identificaÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â§ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â£o do card ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â© feita no AppLayout para nÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â£o depender de alterar o App.jsx. */
+/* ROTEIRO 6 ├âãÆ├åÔÇÖ├âÔÇÜ├é┬ó├âãÆ├é┬ó├â┬ó├óÔÇÜ┬¼├à┬í├âÔÇÜ├é┬¼├âãÆ├é┬ó├â┬ó├óÔé¼┼í├é┬¼├âÔÇÜ├é┬Ø ETAPA 15
+   Ajuste do espa├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┼í├âÔÇÜ├é┬ºo em branco no mobile e melhoria do card de Armazenamento.
+   A identifica├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┼í├âÔÇÜ├é┬º├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┼í├âÔÇÜ├é┬úo do card ├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┼í├âÔÇÜ├é┬® feita no AppLayout para n├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┼í├âÔÇÜ├é┬úo depender de alterar o App.jsx. */
 .dashboard-summary-card[data-dashboard-storage-card="true"],
 .summary-card-fixed[data-dashboard-storage-card="true"],
 .info-card[data-dashboard-storage-card="true"] {
@@ -4535,9 +4535,9 @@
     }
 }
 
-/* ROTEIRO 6 ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ETAPA 16
-   Sidebar fixa no desktop para pÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¡ginas longas.
-   Objetivo: evitar coluna lateral vazia quando o conteÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Âºdo ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â© alto e manter a navegaÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â§ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â£o sempre acessÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â­vel. */
+/* ROTEIRO 6 ├âãÆ├åÔÇÖ├âÔÇÜ├é┬ó├âãÆ├é┬ó├â┬ó├óÔÇÜ┬¼├à┬í├âÔÇÜ├é┬¼├âãÆ├é┬ó├â┬ó├óÔé¼┼í├é┬¼├âÔÇÜ├é┬Ø ETAPA 16
+   Sidebar fixa no desktop para p├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┼í├âÔÇÜ├é┬íginas longas.
+   Objetivo: evitar coluna lateral vazia quando o conte├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┼í├âÔÇÜ├é┬║do ├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┼í├âÔÇÜ├é┬® alto e manter a navega├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┼í├âÔÇÜ├é┬º├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┼í├âÔÇÜ├é┬úo sempre acess├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┼í├âÔÇÜ├é┬¡vel. */
 @media (min-width: 1024px) {
     .app-shell {
         display: block !important;
@@ -4598,8 +4598,8 @@
 }
 
 
-/* ROTEIRO 6 ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ETAPA 17
-   Acabamento da sidebar recolhida: ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â­cones centralizados, alvo visual fixo e logo mais limpo. */
+/* ROTEIRO 6 ├âãÆ├åÔÇÖ├âÔÇÜ├é┬ó├âãÆ├é┬ó├â┬ó├óÔÇÜ┬¼├à┬í├âÔÇÜ├é┬¼├âãÆ├é┬ó├â┬ó├óÔé¼┼í├é┬¼├âÔÇÜ├é┬Ø ETAPA 17
+   Acabamento da sidebar recolhida: ├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┼í├âÔÇÜ├é┬¡cones centralizados, alvo visual fixo e logo mais limpo. */
 @media (min-width: 1024px) {
     .app-sidebar[data-sidebar-expanded="false"] {
         align-items: center !important;
@@ -4687,8 +4687,8 @@
 }
 
 
-/* ROTEIRO 6 ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ETAPA 19
-   CorreÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â§ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â£o mobile: fotos padronizadas, QR centralizado, auditoria com melhor leitura e tabelas sem corte visual. */
+/* ROTEIRO 6 ├âãÆ├åÔÇÖ├âÔÇÜ├é┬ó├âãÆ├é┬ó├â┬ó├óÔÇÜ┬¼├à┬í├âÔÇÜ├é┬¼├âãÆ├é┬ó├â┬ó├óÔé¼┼í├é┬¼├âÔÇÜ├é┬Ø ETAPA 19
+   Corre├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┼í├âÔÇÜ├é┬º├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┼í├âÔÇÜ├é┬úo mobile: fotos padronizadas, QR centralizado, auditoria com melhor leitura e tabelas sem corte visual. */
 @media (max-width: 767.98px) {
     .consulta-qr-page,
     .consulta-qr-publica-page {
@@ -4831,10 +4831,10 @@
 
 
 
-/* ROTEIRO 6 ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ETAPA 20
-   CorreÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â§ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â£o final do ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â­cone cortado na sidebar recolhida.
-   O ajuste deixa a coluna recolhida com centro ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â³ptico fixo, remove recortes do botÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â£o ativo
-   e simplifica o logo superior para nÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â£o parecer um quadrado dentro de outro. */
+/* ROTEIRO 6 ├âãÆ├åÔÇÖ├âÔÇÜ├é┬ó├âãÆ├é┬ó├â┬ó├óÔÇÜ┬¼├à┬í├âÔÇÜ├é┬¼├âãÆ├é┬ó├â┬ó├óÔé¼┼í├é┬¼├âÔÇÜ├é┬Ø ETAPA 20
+   Corre├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┼í├âÔÇÜ├é┬º├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┼í├âÔÇÜ├é┬úo final do ├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┼í├âÔÇÜ├é┬¡cone cortado na sidebar recolhida.
+   O ajuste deixa a coluna recolhida com centro ├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┼í├âÔÇÜ├é┬│ptico fixo, remove recortes do bot├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┼í├âÔÇÜ├é┬úo ativo
+   e simplifica o logo superior para n├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┼í├âÔÇÜ├é┬úo parecer um quadrado dentro de outro. */
 @media (min-width: 1024px) {
     .app-sidebar[data-sidebar-expanded="false"] {
         width: 5rem !important;
@@ -4974,11 +4974,11 @@
     }
 }
 
-/* ROTEIRO 7 ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ETAPA 5.6
+/* ROTEIRO 7 ├âãÆ├åÔÇÖ├âÔÇÜ├é┬ó├âãÆ├é┬ó├â┬ó├óÔÇÜ┬¼├à┬í├âÔÇÜ├é┬¼├âãÆ├é┬ó├â┬ó├óÔé¼┼í├é┬¼├âÔÇÜ├é┬Ø ETAPA 5.6
    Ajuste final do mobile horizontal:
-   - reduz espaÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â§o em branco entre cabeÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â§alho, tÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â­tulo, aÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â§ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Âµes e primeiros cards;
+   - reduz espa├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┼í├âÔÇÜ├é┬ºo em branco entre cabe├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┼í├âÔÇÜ├é┬ºalho, t├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┼í├âÔÇÜ├é┬¡tulo, a├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┼í├âÔÇÜ├é┬º├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┼í├âÔÇÜ├é┬Áes e primeiros cards;
    - compacta as abas Dashboard SST e Treinamentos em paisagem;
-   - harmoniza PendÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Âªncias crÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â­ticas, dando respiro ao QR na borda direita. */
+   - harmoniza Pend├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┼í├âÔÇÜ├é┬¬ncias cr├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┼í├âÔÇÜ├é┬¡ticas, dando respiro ao QR na borda direita. */
 @media (max-width: 1023.98px) and (orientation: landscape),
        (max-width: 1023.98px) and (max-height: 540px) {
     .app-main {
@@ -5193,8 +5193,8 @@
     }
 }
 
-/* ROTEIRO 7 ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ETAPA 5.8
-   CorreÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â§ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â£o sobre a base 5.6: mantÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â©m o espaÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â§amento compacto jÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¡ aprovado
+/* ROTEIRO 7 ├âãÆ├åÔÇÖ├âÔÇÜ├é┬ó├âãÆ├é┬ó├â┬ó├óÔÇÜ┬¼├à┬í├âÔÇÜ├é┬¼├âãÆ├é┬ó├â┬ó├óÔé¼┼í├é┬¼├âÔÇÜ├é┬Ø ETAPA 5.8
+   Corre├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┼í├âÔÇÜ├é┬º├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┼í├âÔÇÜ├é┬úo sobre a base 5.6: mant├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┼í├âÔÇÜ├é┬®m o espa├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┼í├âÔÇÜ├é┬ºamento compacto j├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┼í├âÔÇÜ├é┬í aprovado
    e corrige somente a quebra do bloco logo + Controle SST QR no mobile horizontal. */
 @media (max-width: 1023.98px) and (orientation: landscape),
        (max-width: 1023.98px) and (max-height: 540px) {
@@ -5307,10 +5307,10 @@
     }
 }
 
-/* ROTEIRO 7 ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ETAPA 5.9
-   Ajuste final dos botÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Âµes de aÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â§ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â£o no mobile horizontal.
-   Objetivo: evitar botÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Âµes quebrados em linhas soltas no Dashboard SST e demais painÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â©is,
-   mantendo pares lado a lado, com largura igual e alinhamento harmÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â´nico. */
+/* ROTEIRO 7 ├âãÆ├åÔÇÖ├âÔÇÜ├é┬ó├âãÆ├é┬ó├â┬ó├óÔÇÜ┬¼├à┬í├âÔÇÜ├é┬¼├âãÆ├é┬ó├â┬ó├óÔé¼┼í├é┬¼├âÔÇÜ├é┬Ø ETAPA 5.9
+   Ajuste final dos bot├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┼í├âÔÇÜ├é┬Áes de a├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┼í├âÔÇÜ├é┬º├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┼í├âÔÇÜ├é┬úo no mobile horizontal.
+   Objetivo: evitar bot├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┼í├âÔÇÜ├é┬Áes quebrados em linhas soltas no Dashboard SST e demais pain├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┼í├âÔÇÜ├é┬®is,
+   mantendo pares lado a lado, com largura igual e alinhamento harm├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┼í├âÔÇÜ├é┬┤nico. */
 @media (max-width: 1023.98px) and (orientation: landscape),
        (max-width: 1023.98px) and (max-height: 540px) {
     .page-actions,
@@ -5391,15 +5391,15 @@
     }
 }
 
-/* ROTEIRO 7 ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ETAPA 5.10
+/* ROTEIRO 7 ├âãÆ├åÔÇÖ├âÔÇÜ├é┬ó├âãÆ├é┬ó├â┬ó├óÔÇÜ┬¼├à┬í├âÔÇÜ├é┬¼├âãÆ├é┬ó├â┬ó├óÔé¼┼í├é┬¼├âÔÇÜ├é┬Ø ETAPA 5.10
    Arquivo completo consolidado.
    Ajuste final mobile:
-   - botÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Âµes de aÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â§ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â£o em uma ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Âºnica linha no modo horizontal;
-   - textos protegidos para nÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â£o estourar fora do botÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â£o/card;
-   - ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â­cone/logo do cabeÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â§alho padronizado no vertical e horizontal;
-   - sobrescreve o comportamento anterior da Etapa 5.9 que dividia os botÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Âµes em 2 linhas. */
+   - bot├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┼í├âÔÇÜ├é┬Áes de a├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┼í├âÔÇÜ├é┬º├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┼í├âÔÇÜ├é┬úo em uma ├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┼í├âÔÇÜ├é┬║nica linha no modo horizontal;
+   - textos protegidos para n├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┼í├âÔÇÜ├é┬úo estourar fora do bot├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┼í├âÔÇÜ├é┬úo/card;
+   - ├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┼í├âÔÇÜ├é┬¡cone/logo do cabe├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┼í├âÔÇÜ├é┬ºalho padronizado no vertical e horizontal;
+   - sobrescreve o comportamento anterior da Etapa 5.9 que dividia os bot├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┼í├âÔÇÜ├é┬Áes em 2 linhas. */
 
-/* PADRÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢O ÃƒÆ’Ã†â€™Ãƒâ€¦Ã‚Â¡NICO DO ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚ÂCONE/LOGO NO MOBILE */
+/* PADR├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┬á├â┬ó├óÔÇÜ┬¼├óÔÇ×┬óO ├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┬ª├âÔÇÜ├é┬íNICO DO ├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┼í├âÔÇÜ├é┬ìCONE/LOGO NO MOBILE */
 @media (max-width: 1023.98px) {
   .app-mobile-header__marca {
     display: flex !important;
@@ -5463,7 +5463,7 @@
   }
 }
 
-/* MOBILE HORIZONTAL ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â CABEÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¡ALHO COMPACTO E SEM QUEBRA */
+/* MOBILE HORIZONTAL ├âãÆ├åÔÇÖ├âÔÇÜ├é┬ó├âãÆ├é┬ó├â┬ó├óÔÇÜ┬¼├à┬í├âÔÇÜ├é┬¼├âãÆ├é┬ó├â┬ó├óÔé¼┼í├é┬¼├âÔÇÜ├é┬Ø CABE├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├é┬ó├â┬ó├óÔé¼┼í├é┬¼├âÔÇÜ├é┬íALHO COMPACTO E SEM QUEBRA */
 @media (max-width: 1023.98px) and (orientation: landscape),
        (max-width: 1023.98px) and (max-height: 540px) {
   .app-mobile-header {
@@ -5540,7 +5540,7 @@
   }
 }
 
-/* MOBILE HORIZONTAL ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â BOTÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢ES DO DASHBOARD EM UMA ÃƒÆ’Ã†â€™Ãƒâ€¦Ã‚Â¡NICA LINHA */
+/* MOBILE HORIZONTAL ├âãÆ├åÔÇÖ├âÔÇÜ├é┬ó├âãÆ├é┬ó├â┬ó├óÔÇÜ┬¼├à┬í├âÔÇÜ├é┬¼├âãÆ├é┬ó├â┬ó├óÔé¼┼í├é┬¼├âÔÇÜ├é┬Ø BOT├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├é┬ó├â┬ó├óÔé¼┼í├é┬¼├âÔÇÜ├é┬óES DO DASHBOARD EM UMA ├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┬ª├âÔÇÜ├é┬íNICA LINHA */
 @media (max-width: 1023.98px) and (orientation: landscape),
        (max-width: 1023.98px) and (max-height: 540px) {
   .page-actions,
@@ -5643,7 +5643,7 @@
   }
 }
 
-/* MOBILE HORIZONTAL MUITO ESTREITO ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â mantÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â©m uma linha, mas reduz texto para nÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â£o explodir. */
+/* MOBILE HORIZONTAL MUITO ESTREITO ├âãÆ├åÔÇÖ├âÔÇÜ├é┬ó├âãÆ├é┬ó├â┬ó├óÔÇÜ┬¼├à┬í├âÔÇÜ├é┬¼├âãÆ├é┬ó├â┬ó├óÔé¼┼í├é┬¼├âÔÇÜ├é┬Ø mant├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┼í├âÔÇÜ├é┬®m uma linha, mas reduz texto para n├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┼í├âÔÇÜ├é┬úo explodir. */
 @media (max-width: 760px) and (orientation: landscape),
        (max-height: 430px) and (max-width: 900px) {
   .page-actions,
@@ -5682,7 +5682,7 @@
   }
 }
 
-/* MOBILE HORIZONTAL ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â PROTEÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¡ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢O PARA TEXTOS NÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢O ESTOURAREM CARDS */
+/* MOBILE HORIZONTAL ├âãÆ├åÔÇÖ├âÔÇÜ├é┬ó├âãÆ├é┬ó├â┬ó├óÔÇÜ┬¼├à┬í├âÔÇÜ├é┬¼├âãÆ├é┬ó├â┬ó├óÔé¼┼í├é┬¼├âÔÇÜ├é┬Ø PROTE├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├é┬ó├â┬ó├óÔé¼┼í├é┬¼├âÔÇÜ├é┬í├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┬á├â┬ó├óÔÇÜ┬¼├óÔÇ×┬óO PARA TEXTOS N├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┬á├â┬ó├óÔÇÜ┬¼├óÔÇ×┬óO ESTOURAREM CARDS */
 @media (max-width: 1023.98px) and (orientation: landscape),
        (max-width: 1023.98px) and (max-height: 540px) {
   .dashboard-summary-card,
@@ -5741,7 +5741,7 @@
   }
 }
 
-/* MOBILE VERTICAL ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â mantÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â©m padrÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â£o aprovado e sÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â³ padroniza o ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â­cone. */
+/* MOBILE VERTICAL ├âãÆ├åÔÇÖ├âÔÇÜ├é┬ó├âãÆ├é┬ó├â┬ó├óÔÇÜ┬¼├à┬í├âÔÇÜ├é┬¼├âãÆ├é┬ó├â┬ó├óÔé¼┼í├é┬¼├âÔÇÜ├é┬Ø mant├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┼í├âÔÇÜ├é┬®m padr├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┼í├âÔÇÜ├é┬úo aprovado e s├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┼í├âÔÇÜ├é┬│ padroniza o ├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┼í├âÔÇÜ├é┬¡cone. */
 @media (max-width: 767.98px) and (orientation: portrait) {
   .page-actions,
   .page-actions > *,
@@ -5765,13 +5765,13 @@
   }
 }
 
-/* ROTEIRO 7 ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ETAPA 5.12
-   CorreÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â§ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â£o final mobile horizontal sem regressÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â£o:
-   - aplica botÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Âµes em linha nas abas com aÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â§ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Âµes;
-   - mantÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â©m classe exclusiva do Dashboard SST;
+/* ROTEIRO 7 ├âãÆ├åÔÇÖ├âÔÇÜ├é┬ó├âãÆ├é┬ó├â┬ó├óÔÇÜ┬¼├à┬í├âÔÇÜ├é┬¼├âãÆ├é┬ó├â┬ó├óÔé¼┼í├é┬¼├âÔÇÜ├é┬Ø ETAPA 5.12
+   Corre├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┼í├âÔÇÜ├é┬º├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┼í├âÔÇÜ├é┬úo final mobile horizontal sem regress├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┼í├âÔÇÜ├é┬úo:
+   - aplica bot├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┼í├âÔÇÜ├é┬Áes em linha nas abas com a├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┼í├âÔÇÜ├é┬º├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┼í├âÔÇÜ├é┬Áes;
+   - mant├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┼í├âÔÇÜ├é┬®m classe exclusiva do Dashboard SST;
    - corrige card Armazenamento no horizontal;
-   - restaura harmonia da tabela PendÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Âªncias crÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â­ticas;
-   - nÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â£o altera o padrÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â£o do ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â­cone mobile jÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¡ aprovado. */
+   - restaura harmonia da tabela Pend├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┼í├âÔÇÜ├é┬¬ncias cr├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┼í├âÔÇÜ├é┬¡ticas;
+   - n├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┼í├âÔÇÜ├é┬úo altera o padr├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┼í├âÔÇÜ├é┬úo do ├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┼í├âÔÇÜ├é┬¡cone mobile j├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┼í├âÔÇÜ├é┬í aprovado. */
 @media (max-width: 1023.98px) and (orientation: landscape),
        (max-width: 1023.98px) and (max-height: 540px) {
     .page-header {
@@ -6020,7 +6020,7 @@
     }
 }
 
-/* PendÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Âªncias crÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â­ticas no mobile horizontal: tabela com respiro para Status, E-mail e QR. */
+/* Pend├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┼í├âÔÇÜ├é┬¬ncias cr├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┼í├âÔÇÜ├é┬¡ticas no mobile horizontal: tabela com respiro para Status, E-mail e QR. */
 @media (max-width: 1023.98px) and (orientation: landscape),
        (max-width: 1023.98px) and (max-height: 540px) {
     .dashboard-blocos-grid .responsive-table,
@@ -6096,17 +6096,17 @@
 }
 
 
-/* ROTEIRO 7 ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ETAPA 5.13
-   CorreÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â§ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â£o final e isolada para mobile horizontal.
+/* ROTEIRO 7 ├âãÆ├åÔÇÖ├âÔÇÜ├é┬ó├âãÆ├é┬ó├â┬ó├óÔÇÜ┬¼├à┬í├âÔÇÜ├é┬¼├âãÆ├é┬ó├â┬ó├óÔé¼┼í├é┬¼├âÔÇÜ├é┬Ø ETAPA 5.13
+   Corre├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┼í├âÔÇÜ├é┬º├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┼í├âÔÇÜ├é┬úo final e isolada para mobile horizontal.
    Objetivos:
-   1) desfazer o efeito global que estava esmagando botÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Âµes em outras abas;
-   2) aplicar 2x2 somente nos botÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Âµes do Dashboard SST;
-   3) recuperar PendÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Âªncias crÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â­ticas em uma tela horizontal, sem textos sobrepostos;
+   1) desfazer o efeito global que estava esmagando bot├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┼í├âÔÇÜ├é┬Áes em outras abas;
+   2) aplicar 2x2 somente nos bot├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┼í├âÔÇÜ├é┬Áes do Dashboard SST;
+   3) recuperar Pend├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┼í├âÔÇÜ├é┬¬ncias cr├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┼í├âÔÇÜ├é┬¡ticas em uma tela horizontal, sem textos sobrepostos;
    4) deixar o card de Armazenamento sem corte de texto/barra.
 */
 @media (max-width: 1023.98px) and (orientation: landscape),
        (max-width: 1023.98px) and (max-height: 540px) {
-    /* Reset das aÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â§ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Âµes globais: outras abas voltam ao comportamento normal. */
+    /* Reset das a├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┼í├âÔÇÜ├é┬º├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┼í├âÔÇÜ├é┬Áes globais: outras abas voltam ao comportamento normal. */
     .page-actions,
     .page-actions > *,
     .page-actions > .flex,
@@ -6166,7 +6166,7 @@
         box-sizing: border-box !important;
     }
 
-    /* SoluÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â§ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â£o isolada: somente Dashboard SST fica em 2x2. */
+    /* Solu├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┼í├âÔÇÜ├é┬º├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┼í├âÔÇÜ├é┬úo isolada: somente Dashboard SST fica em 2x2. */
     .dashboard-sst-actions-horizontal {
         display: grid !important;
         width: min(100%, 44rem) !important;
@@ -6281,7 +6281,7 @@
     }
 }
 
-/* PendÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Âªncias crÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â­ticas: ajuste especÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â­fico do bloco, sem mexer nos demais blocos do Dashboard. */
+/* Pend├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┼í├âÔÇÜ├é┬¬ncias cr├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┼í├âÔÇÜ├é┬¡ticas: ajuste espec├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┼í├âÔÇÜ├é┬¡fico do bloco, sem mexer nos demais blocos do Dashboard. */
 @media (max-width: 1023.98px) and (orientation: landscape),
        (max-width: 1023.98px) and (max-height: 540px) {
     [data-dashboard-bloco="pendencias"] .responsive-table,
@@ -6409,11 +6409,11 @@
     }
 }
 
-/* ROTEIRO 7 ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ETAPA 5.14
-   Ajuste exclusivo do bloco PendÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Âªncias crÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â­ticas no mobile horizontal.
+/* ROTEIRO 7 ├âãÆ├åÔÇÖ├âÔÇÜ├é┬ó├âãÆ├é┬ó├â┬ó├óÔÇÜ┬¼├à┬í├âÔÇÜ├é┬¼├âãÆ├é┬ó├â┬ó├óÔé¼┼í├é┬¼├âÔÇÜ├é┬Ø ETAPA 5.14
+   Ajuste exclusivo do bloco Pend├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┼í├âÔÇÜ├é┬¬ncias cr├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┼í├âÔÇÜ├é┬¡ticas no mobile horizontal.
    Objetivo: manter a tabela completa dentro do card, com colunas em ordem,
-   texto sem sobreposiÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â§ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â£o, botÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Âµes E-mail/QR com respiro e sem estourar a borda.
-   NÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â£o altera o padrÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â£o do ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â­cone mobile nem os botÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Âµes 2x2 do Dashboard SST. */
+   texto sem sobreposi├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┼í├âÔÇÜ├é┬º├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┼í├âÔÇÜ├é┬úo, bot├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┼í├âÔÇÜ├é┬Áes E-mail/QR com respiro e sem estourar a borda.
+   N├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┼í├âÔÇÜ├é┬úo altera o padr├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┼í├âÔÇÜ├é┬úo do ├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┼í├âÔÇÜ├é┬¡cone mobile nem os bot├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┼í├âÔÇÜ├é┬Áes 2x2 do Dashboard SST. */
 @media (max-width: 1023.98px) and (orientation: landscape),
        (max-width: 1023.98px) and (max-height: 540px) {
     [data-dashboard-bloco="pendencias"] {
@@ -6709,15 +6709,15 @@
     }
 }
 
-/* ROTEIRO 7 ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ETAPA 5.15
-   CorreÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â§ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â£o restrita ao mobile horizontal:
+/* ROTEIRO 7 ├âãÆ├åÔÇÖ├âÔÇÜ├é┬ó├âãÆ├é┬ó├â┬ó├óÔÇÜ┬¼├à┬í├âÔÇÜ├é┬¼├âãÆ├é┬ó├â┬ó├óÔé¼┼í├é┬¼├âÔÇÜ├é┬Ø ETAPA 5.15
+   Corre├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┼í├âÔÇÜ├é┬º├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┼í├âÔÇÜ├é┬úo restrita ao mobile horizontal:
    1) A regra 2x2 fica SOMENTE no Dashboard SST (.dashboard-sst-actions-horizontal).
-   2) As aÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â§ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Âµes das outras abas voltam ao comportamento flex normal para nÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â£o esmagar botÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Âµes.
-   3) PendÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Âªncias crÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â­ticas volta a ficar em uma linha harmÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â´nica, sem texto espalhado e sem QR colado na borda.
-   4) NÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â£o altera o ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â­cone do cabeÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â§alho mobile, pois ele jÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¡ foi aprovado. */
+   2) As a├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┼í├âÔÇÜ├é┬º├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┼í├âÔÇÜ├é┬Áes das outras abas voltam ao comportamento flex normal para n├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┼í├âÔÇÜ├é┬úo esmagar bot├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┼í├âÔÇÜ├é┬Áes.
+   3) Pend├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┼í├âÔÇÜ├é┬¬ncias cr├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┼í├âÔÇÜ├é┬¡ticas volta a ficar em uma linha harm├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┼í├âÔÇÜ├é┬┤nica, sem texto espalhado e sem QR colado na borda.
+   4) N├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┼í├âÔÇÜ├é┬úo altera o ├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┼í├âÔÇÜ├é┬¡cone do cabe├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┼í├âÔÇÜ├é┬ºalho mobile, pois ele j├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┼í├âÔÇÜ├é┬í foi aprovado. */
 @media (max-width: 1023.98px) and (orientation: landscape),
        (max-width: 1023.98px) and (max-height: 540px) {
-    /* Volta o padrÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â£o das aÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â§ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Âµes gerais das demais abas. */
+    /* Volta o padr├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┼í├âÔÇÜ├é┬úo das a├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┼í├âÔÇÜ├é┬º├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┼í├âÔÇÜ├é┬Áes gerais das demais abas. */
     .page-actions,
     .page-actions > *:not(.dashboard-sst-actions-horizontal),
     .page-actions > .flex:not(.dashboard-sst-actions-horizontal),
@@ -6781,7 +6781,7 @@
         text-overflow: ellipsis !important;
     }
 
-    /* ExceÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â§ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â£o ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Âºnica: Dashboard SST em 2x2. */
+    /* Exce├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┼í├âÔÇÜ├é┬º├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┼í├âÔÇÜ├é┬úo ├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┼í├âÔÇÜ├é┬║nica: Dashboard SST em 2x2. */
     .page-actions > .dashboard-sst-actions-horizontal,
     .dashboard-sst-actions-horizontal {
         display: grid !important;
@@ -6847,7 +6847,7 @@
         white-space: nowrap !important;
     }
 
-    /* PendÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Âªncias crÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â­ticas: tabela em linha, colunas proporcionais e sem espalhar texto. */
+    /* Pend├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┼í├âÔÇÜ├é┬¬ncias cr├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┼í├âÔÇÜ├é┬¡ticas: tabela em linha, colunas proporcionais e sem espalhar texto. */
     [data-dashboard-bloco="pendencias"] {
         width: 100% !important;
         max-width: 100% !important;
@@ -7116,10 +7116,10 @@
 }
 
 
-/* ROTEIRO 7 ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ETAPA 5.16
-   CorreÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â§ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â£o final somente do bloco PendÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Âªncias crÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â­ticas no mobile horizontal.
+/* ROTEIRO 7 ├âãÆ├åÔÇÖ├âÔÇÜ├é┬ó├âãÆ├é┬ó├â┬ó├óÔÇÜ┬¼├à┬í├âÔÇÜ├é┬¼├âãÆ├é┬ó├â┬ó├óÔé¼┼í├é┬¼├âÔÇÜ├é┬Ø ETAPA 5.16
+   Corre├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┼í├âÔÇÜ├é┬º├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┼í├âÔÇÜ├é┬úo final somente do bloco Pend├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┼í├âÔÇÜ├é┬¬ncias cr├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┼í├âÔÇÜ├é┬¡ticas no mobile horizontal.
    Motivo: a tabela real usa 4 colunas visuais no Dashboard:
-   Colaborador | Treinamento | Vencimento | Status/AÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â§ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Âµes.
+   Colaborador | Treinamento | Vencimento | Status/A├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┼í├âÔÇÜ├é┬º├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┼í├âÔÇÜ├é┬Áes.
    As regras anteriores tratavam como 6 colunas e espremiam status, e-mail e QR.
    Esta regra sobrescreve apenas [data-dashboard-bloco="pendencias"]. */
 @media (max-width: 1023.98px) and (orientation: landscape),
@@ -7424,9 +7424,9 @@
     }
 }
 
-/* ROTEIRO 7 ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ETAPA 5.17
-   CorreÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â§ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â£o definitiva das PendÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Âªncias crÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â­ticas.
-   Troca a dependÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Âªncia visual da tabela por linhas em grid controlado,
+/* ROTEIRO 7 ├âãÆ├åÔÇÖ├âÔÇÜ├é┬ó├âãÆ├é┬ó├â┬ó├óÔÇÜ┬¼├à┬í├âÔÇÜ├é┬¼├âãÆ├é┬ó├â┬ó├óÔé¼┼í├é┬¼├âÔÇÜ├é┬Ø ETAPA 5.17
+   Corre├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┼í├âÔÇÜ├é┬º├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┼í├âÔÇÜ├é┬úo definitiva das Pend├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┼í├âÔÇÜ├é┬¬ncias cr├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┼í├âÔÇÜ├é┬¡ticas.
+   Troca a depend├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┼í├âÔÇÜ├é┬¬ncia visual da tabela por linhas em grid controlado,
    mantendo tudo em uma linha no mobile horizontal sem texto espalhado. */
 .dashboard-pendencias-final {
     width: 100%;
@@ -7923,12 +7923,12 @@
     }
 }
 
-/* ROTEIRO 7 ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ETAPA 5.18
-   Ajuste fino apenas de PendÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Âªncias crÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â­ticas no mobile horizontal.
+/* ROTEIRO 7 ├âãÆ├åÔÇÖ├âÔÇÜ├é┬ó├âãÆ├é┬ó├â┬ó├óÔÇÜ┬¼├à┬í├âÔÇÜ├é┬¼├âãÆ├é┬ó├â┬ó├óÔé¼┼í├é┬¼├âÔÇÜ├é┬Ø ETAPA 5.18
+   Ajuste fino apenas de Pend├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┼í├âÔÇÜ├é┬¬ncias cr├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┼í├âÔÇÜ├é┬¡ticas no mobile horizontal.
    Objetivos:
    - foto real do colaborador sem quebrar o layout;
-   - cabeÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â§alhos exatamente acima das informaÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â§ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Âµes;
-   - linha harmÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â´nica, sem texto espalhado e sem sobreposiÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â§ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â£o. */
+   - cabe├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┼í├âÔÇÜ├é┬ºalhos exatamente acima das informa├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┼í├âÔÇÜ├é┬º├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┼í├âÔÇÜ├é┬Áes;
+   - linha harm├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┼í├âÔÇÜ├é┬┤nica, sem texto espalhado e sem sobreposi├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┼í├âÔÇÜ├é┬º├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┼í├âÔÇÜ├é┬úo. */
 .dashboard-pendencias-final__foto {
     display: inline-flex;
     flex: 0 0 auto;
@@ -8216,7 +8216,7 @@
     }
 }
 
-/* Roteiro v1.0.4.9 ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â ajuste pontual da aba Colaboradores */
+/* Roteiro v1.0.4.9 ├âãÆ├é┬ó├â┬ó├óÔé¼┼í├é┬¼├â┬ó├óÔÇÜ┬¼├é┬Ø ajuste pontual da aba Colaboradores */
 .novo-colaborador-cabecalho-branco__icone {
   background: #020617 !important;
   color: #ffffff !important;
@@ -8233,7 +8233,7 @@
   color: #2563eb !important;
 }
 
-/* Apenas reduz o respiro inferior da base, sem esconder conteÃƒÆ’Ã‚Âºdo */
+/* Apenas reduz o respiro inferior da base, sem esconder conte├âãÆ├åÔÇÖ├âÔÇÜ├é┬║do */
 .colaboradores-section-destaque {
   padding-bottom: 1rem !important;
 }
@@ -8242,7 +8242,7 @@
   margin-top: 0.65rem !important;
 }
 
-/* Roteiro v1.0.4.9 Ã¢â‚¬â€ ajuste final controlado da Base de colaboradores */
+/* Roteiro v1.0.4.9 ├â┬ó├óÔÇÜ┬¼├óÔé¼┬Ø ajuste final controlado da Base de colaboradores */
 .novo-colaborador-cabecalho-branco__icone {
   background: #020617 !important;
   color: #ffffff !important;
@@ -8264,7 +8264,7 @@
   border-bottom: 0 !important;
 }
 
-/* Roteiro v1.0.4.9 Ã¢â‚¬â€ mÃƒÂ¡scaras visuais, datas centralizadas e foto redonda */
+/* Roteiro v1.0.4.9 ├â┬ó├óÔÇÜ┬¼├óÔé¼┬Ø m├âãÆ├é┬íscaras visuais, datas centralizadas e foto redonda */
 .colaborador-formulario-unificado input[type="date"],
 .colaborador-formulario-recolhido input[type="date"],
 .colaboradores-info-card input[type="date"] {
@@ -8278,7 +8278,7 @@
   overflow: hidden !important;
 }
 
-/* Roteiro v1.0.4.9 â€” ajuste final: datas centralizadas e moldura da foto do colaborador */
+/* Roteiro v1.0.4.9 ├óÔé¼ÔÇØ ajuste final: datas centralizadas e moldura da foto do colaborador */
 .colaborador-formulario-unificado input[type="date"],
 .colaborador-formulario-full input[type="date"],
 .novo-colaborador-layout-anterior input[type="date"],
@@ -8307,7 +8307,7 @@
   justify-content: center !important;
 }
 
-/* Foto/avatar do funcionÃ¡rio com moldura circular na Base de colaboradores */
+/* Foto/avatar do funcion├â┬írio com moldura circular na Base de colaboradores */
 .colaboradores-info-card img.h-20.w-20,
 .colaboradores-info-card .h-20.w-20 {
   border-radius: 9999px !important;
@@ -8319,7 +8319,7 @@
   box-shadow: 0 10px 24px rgba(15, 23, 42, 0.12) !important;
 }
 
-/* Roteiro v1.0.4.9 — moldura foto colaborador modelo 1: clean profissional */
+/* Roteiro v1.0.4.9 ÔÇö moldura foto colaborador modelo 1: clean profissional */
 .colaboradores-info-card img.h-20.w-20,
 .colaboradores-info-card .h-20.w-20,
 .colaboradores-info-card img.rounded-full,
@@ -8665,7 +8665,7 @@
     width: 100% !important;
   }
 }
-/* MICROETAPA 1I - cabeçalhos abertos empresas com classe explicita */
+/* MICROETAPA 1I - cabe├ºalhos abertos empresas com classe explicita */
 .empresas-card-aberto-padrao {
   position: relative !important;
   overflow: hidden !important;
@@ -10967,7 +10967,7 @@
 }
 
 .aniversariantes-resumo-unificado__grafico-subtitulo span + span::before {
-  content: "•" !important;
+  content: "ÔÇó" !important;
   color: #94a3b8 !important;
   font-weight: 900 !important;
   margin-right: 0.32rem !important;
@@ -13103,3 +13103,1109 @@
     grid-column: auto;
   }
 }
+
+/* MICROETAPA 4C - layout aprovado de cadastro e documentos */
+.empresas-cadastro-aprovado {
+  width: 100%;
+  overflow: hidden;
+  border: 1px solid #dce5ee !important;
+  border-radius: 1.1rem !important;
+  background: #ffffff !important;
+  padding: 0 !important;
+  box-shadow: 0 8px 22px rgba(15, 23, 42, 0.045) !important;
+}
+
+.empresas-cadastro-aprovado__cabecalho {
+  display: flex;
+  min-height: 4rem;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  border-bottom: 1px solid #e2e8f0;
+  padding: 0.68rem 0.9rem;
+}
+
+.empresas-cadastro-aprovado__cabecalho-info {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 0.7rem;
+}
+
+.empresas-cadastro-aprovado__cabecalho-icone {
+  display: flex;
+  width: 2.5rem;
+  height: 2.5rem;
+  flex: 0 0 2.5rem;
+  align-items: center;
+  justify-content: center;
+  border-radius: 0.78rem;
+  background: #dcfce7;
+  color: #059669;
+}
+
+.empresas-cadastro-aprovado__cabecalho h2 {
+  margin: 0;
+  color: #0f172a;
+  font-size: 0.92rem;
+  font-weight: 900;
+  line-height: 1.1rem;
+}
+
+.empresas-cadastro-aprovado__cabecalho p {
+  margin: 0.14rem 0 0;
+  color: #64748b;
+  font-size: 0.62rem;
+  font-weight: 600;
+  line-height: 0.84rem;
+}
+
+.empresas-cadastro-aprovado__recolher {
+  display: inline-flex;
+  min-height: 2.05rem;
+  align-items: center;
+  justify-content: center;
+  gap: 0.32rem;
+  border: 1px solid #dbe4ed;
+  border-radius: 999px;
+  background: #ffffff;
+  padding: 0.4rem 0.78rem;
+  color: #334155;
+  font-size: 0.64rem;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.empresas-cadastro-aprovado__grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-items: stretch;
+  gap: 0.65rem;
+  padding: 0.65rem;
+}
+
+.empresas-cadastro-aprovado__painel {
+  display: flex !important;
+  min-width: 0;
+  min-height: 100%;
+  flex-direction: column;
+  overflow: hidden;
+  border: 1px solid #dfe7ef !important;
+  border-radius: 0.9rem !important;
+  background: #ffffff !important;
+  padding: 0 !important;
+  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.035) !important;
+}
+
+.empresas-cadastro-aprovado__painel-cabecalho {
+  display: flex;
+  min-height: 3.5rem;
+  align-items: center;
+  gap: 0.58rem;
+  border-bottom: 1px solid #e6edf3;
+  padding: 0.58rem 0.66rem;
+}
+
+.empresas-cadastro-aprovado__painel-icone {
+  display: flex;
+  width: 2.05rem;
+  height: 2.05rem;
+  flex: 0 0 2.05rem;
+  align-items: center;
+  justify-content: center;
+  border-radius: 0.62rem;
+}
+
+.empresas-cadastro-aprovado__painel-icone--empresa {
+  background: #dbeafe;
+  color: #2563eb;
+}
+
+.empresas-cadastro-aprovado__painel-icone--documento {
+  background: #e0e7ff;
+  color: #4f46e5;
+}
+
+.empresas-cadastro-aprovado__painel-cabecalho h3 {
+  margin: 0;
+  color: #0f172a;
+  font-size: 0.76rem;
+  font-weight: 900;
+  line-height: 1rem;
+}
+
+.empresas-cadastro-aprovado__painel-cabecalho p {
+  margin: 0.08rem 0 0;
+  color: #64748b;
+  font-size: 0.54rem;
+  font-weight: 600;
+  line-height: 0.72rem;
+}
+
+.empresas-cadastro-aprovado__formulario {
+  display: grid;
+  min-width: 0;
+  flex: 1;
+  align-content: start;
+  gap: 0.38rem;
+  padding: 0.62rem;
+}
+
+.empresas-cadastro-aprovado__formulario--documento {
+  display: flex;
+  flex-direction: column;
+}
+
+.empresas-cadastro-aprovado__linha {
+  display: grid;
+  min-width: 0;
+  gap: 0.36rem;
+}
+
+.empresas-cadastro-aprovado__linha--2 {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.empresas-cadastro-aprovado__linha--3 {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.empresas-cadastro-aprovado__campo {
+  width: 100%;
+  min-width: 0;
+  min-height: 2.35rem;
+  border: 1px solid #dce5ee;
+  border-radius: 0.62rem;
+  background: #ffffff;
+  padding: 0.48rem 0.62rem;
+  color: #263548;
+  font-size: 0.63rem;
+  font-weight: 600;
+  line-height: 0.86rem;
+  outline: none;
+}
+
+.empresas-cadastro-aprovado__campo::placeholder {
+  color: #7c8ba1;
+  opacity: 1;
+}
+
+.empresas-cadastro-aprovado__campo:focus {
+  border-color: #60a5fa;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.empresas-cadastro-aprovado__grupo-campo {
+  display: grid;
+  min-width: 0;
+  gap: 0.18rem;
+}
+
+.empresas-cadastro-aprovado__grupo-campo label {
+  color: #526173;
+  font-size: 0.52rem;
+  font-weight: 850;
+  line-height: 0.68rem;
+}
+
+.empresas-cadastro-aprovado__textarea {
+  min-height: 2.35rem;
+  resize: none;
+}
+
+.empresas-cadastro-aprovado__textarea--escopo {
+  min-height: 3rem;
+}
+
+.empresas-cadastro-aprovado__auditoria {
+  border: 1px solid #b9eed1;
+  border-radius: 0.68rem;
+  background: #effcf5;
+  padding: 0.44rem;
+}
+
+.empresas-cadastro-aprovado__auditoria > p {
+  margin: 0 0 0.32rem;
+  color: #047857;
+  font-size: 0.54rem;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.empresas-cadastro-aprovado__auditoria .empresas-cadastro-aprovado__campo {
+  border-color: #c5ecd7;
+}
+
+.empresas-cadastro-aprovado__upload-wrapper {
+  display: grid;
+  min-width: 0;
+  align-content: start;
+  gap: 0.14rem;
+}
+
+.empresas-cadastro-aprovado__upload {
+  display: flex;
+  width: 100%;
+  min-width: 0;
+  min-height: 2.35rem;
+  align-items: center;
+  justify-content: center;
+  gap: 0.3rem;
+  overflow: hidden;
+  border: 1px solid #dce5ee;
+  border-radius: 0.62rem;
+  background: #ffffff;
+  padding: 0.46rem 0.52rem;
+  color: #526173;
+  cursor: pointer;
+  font-size: 0.61rem;
+  font-weight: 700;
+}
+
+.empresas-cadastro-aprovado__upload--contrato {
+  border-color: #bfdbfe;
+  color: #2563eb;
+}
+
+.empresas-cadastro-aprovado__upload span,
+.empresas-cadastro-aprovado__pdf span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.empresas-cadastro-aprovado__acao {
+  display: inline-flex;
+  width: 100%;
+  min-height: 2.55rem;
+  align-items: center;
+  justify-content: center;
+  gap: 0.36rem;
+  border: 0;
+  border-radius: 0.64rem;
+  padding: 0.56rem 0.7rem;
+  color: #ffffff;
+  font-size: 0.66rem;
+  font-weight: 850;
+}
+
+.empresas-cadastro-aprovado__acao:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.empresas-cadastro-aprovado__acao--empresa {
+  margin-top: 0.08rem;
+  background: #065f46;
+}
+
+.empresas-cadastro-aprovado__acao--documento {
+  margin-top: auto;
+  background: #0b1f4d;
+}
+
+.empresas-cadastro-aprovado__documentos {
+  display: grid;
+  gap: 0.32rem;
+}
+
+.empresas-cadastro-aprovado__documento {
+  display: grid;
+  width: 100%;
+  min-width: 0;
+  grid-template-columns: 1.9rem minmax(0, 1fr);
+  align-items: center;
+  gap: 0.5rem;
+  border: 1px solid #e1e8ef;
+  border-radius: 0.66rem;
+  background: #ffffff;
+  padding: 0.44rem 0.5rem;
+  text-align: left;
+}
+
+.empresas-cadastro-aprovado__documento--ativo {
+  border-color: #93c5fd;
+  background: #f8fbff;
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.07);
+}
+
+.empresas-cadastro-aprovado__documento-icone {
+  display: flex;
+  width: 1.9rem;
+  height: 1.9rem;
+  align-items: center;
+  justify-content: center;
+  border-radius: 0.52rem;
+}
+
+.empresas-cadastro-aprovado__documento-icone--ltcat {
+  background: #dcfce7;
+  color: #16a34a;
+}
+
+.empresas-cadastro-aprovado__documento-icone--pcmso {
+  background: #dbeafe;
+  color: #2563eb;
+}
+
+.empresas-cadastro-aprovado__documento-icone--pgr {
+  background: #f3e8ff;
+  color: #9333ea;
+}
+
+.empresas-cadastro-aprovado__documento-texto {
+  min-width: 0;
+}
+
+.empresas-cadastro-aprovado__documento-texto strong {
+  display: block;
+  color: #0f172a;
+  font-size: 0.65rem;
+  font-weight: 900;
+  line-height: 0.82rem;
+}
+
+.empresas-cadastro-aprovado__documento-texto p {
+  margin: 0.08rem 0 0;
+  color: #334155;
+  font-size: 0.53rem;
+  font-weight: 650;
+  line-height: 0.68rem;
+}
+
+.empresas-cadastro-aprovado__documento-texto span {
+  display: block;
+  margin-top: 0.04rem;
+  color: #64748b;
+  font-size: 0.49rem;
+  font-weight: 600;
+  line-height: 0.64rem;
+}
+
+.empresas-cadastro-aprovado__pdf {
+  display: flex;
+  width: 100%;
+  min-height: 2.7rem;
+  align-items: center;
+  justify-content: center;
+  gap: 0.34rem;
+  overflow: hidden;
+  border: 1px dashed #b7c8da;
+  border-radius: 0.64rem;
+  background: #ffffff;
+  padding: 0.52rem 0.66rem;
+  color: #405168;
+  cursor: pointer;
+  font-size: 0.62rem;
+  font-weight: 750;
+}
+
+@media (max-width: 1080px) {
+  .empresas-cadastro-aprovado__grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@media (max-width: 680px) {
+  .empresas-cadastro-aprovado__cabecalho {
+    align-items: flex-start;
+  }
+
+  .empresas-cadastro-aprovado__linha--2,
+  .empresas-cadastro-aprovado__linha--3 {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .empresas-cadastro-aprovado__grid {
+    padding: 0.5rem;
+  }
+}
+
+/* Mobile dashboard cards: fixed icon column keeps all text clear of the icon. */
+@media (max-width: 1023.98px) {
+  .dashboard-summary-grid > .dashboard-summary-card > div {
+    display: grid !important;
+    grid-template-columns: 2.1rem minmax(0, 1fr) !important;
+    align-items: start !important;
+    gap: 0.42rem !important;
+  }
+
+  .dashboard-summary-grid > .dashboard-summary-card > div > div:first-child {
+    grid-column: 1 !important;
+    align-self: start !important;
+    margin-top: 0.14rem !important;
+  }
+
+  .dashboard-summary-grid > .dashboard-summary-card > div > div:nth-child(2) {
+    grid-column: 2 !important;
+    min-width: 0 !important;
+    width: 100% !important;
+  }
+}
+/* Mobile dashboard cards: full divider and centered one-line detail. */
+@media (max-width: 1023.98px) {
+  .dashboard-summary-grid > .dashboard-summary-card:not([data-dashboard-card="armazenamentoUtilizado"]) {
+    position: relative;
+    min-height: 5.35rem !important;
+    padding-bottom: 0.45rem !important;
+  }
+
+  .dashboard-summary-grid > .dashboard-summary-card:not([data-dashboard-card="armazenamentoUtilizado"])::after {
+    content: "";
+    position: absolute;
+    top: 3.42rem;
+    right: 0.5rem;
+    left: 0.5rem;
+    z-index: 0;
+    border-top: 1px solid rgba(148, 163, 184, 0.24);
+    pointer-events: none;
+  }
+
+  .dashboard-summary-grid > .dashboard-summary-card:not([data-dashboard-card="armazenamentoUtilizado"]) > div {
+    position: relative;
+    z-index: 1;
+  }
+
+  .dashboard-summary-grid > .dashboard-summary-card:not([data-dashboard-card="armazenamentoUtilizado"]) > div > div:first-child {
+    position: relative;
+    z-index: 2;
+    background-color: #f8fafc;
+  }
+
+  .dashboard-summary-grid > .dashboard-summary-card:not([data-dashboard-card="armazenamentoUtilizado"]) p:nth-child(2) {
+    border-bottom: 0 !important;
+    padding-bottom: 0 !important;
+  }
+
+  .dashboard-summary-grid > .dashboard-summary-card:not([data-dashboard-card="armazenamentoUtilizado"]) p:last-child {
+    position: absolute;
+    right: 0.45rem;
+    bottom: 0.28rem;
+    left: 0.45rem;
+    overflow: hidden;
+    margin-top: 0 !important;
+    text-align: center;
+    text-overflow: ellipsis;
+    white-space: nowrap !important;
+    font-size: 0.53rem !important;
+    line-height: 1 !important;
+  }
+
+  .dashboard-summary-grid > .dashboard-summary-card[data-dashboard-card="armazenamentoUtilizado"] {
+    position: relative;
+    min-height: 5.35rem !important;
+    border-color: #99f6e4 !important;
+    background: linear-gradient(135deg, #f8fafc 0%, #ecfdf5 100%) !important;
+    box-shadow: 0 8px 18px rgba(13, 148, 136, 0.1) !important;
+  }
+
+  .dashboard-summary-grid > .dashboard-summary-card[data-dashboard-card="armazenamentoUtilizado"] > div {
+    align-items: center !important;
+  }
+
+  .dashboard-summary-grid > .dashboard-summary-card[data-dashboard-card="armazenamentoUtilizado"] > div > div:first-child {
+    width: 2.2rem !important;
+    height: 2.2rem !important;
+    border-radius: 0.8rem !important;
+    background: rgba(255, 255, 255, 0.8) !important;
+    box-shadow: 0 4px 10px rgba(15, 118, 110, 0.12) !important;
+  }
+
+  .dashboard-summary-grid > .dashboard-summary-card[data-dashboard-card="armazenamentoUtilizado"] h3 {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap !important;
+    font-size: 0.58rem !important;
+    letter-spacing: 0.035em !important;
+  }
+
+  .dashboard-summary-grid > .dashboard-summary-card[data-dashboard-card="armazenamentoUtilizado"] .mt-1\.5 {
+    margin-top: 0.3rem !important;
+  }
+
+  .dashboard-summary-grid > .dashboard-summary-card[data-dashboard-card="armazenamentoUtilizado"] .mt-1\.5 p {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap !important;
+    font-size: 0.55rem !important;
+  }
+}
+/* Mobile dashboard final polish: compact labels and cleaner storage card. */
+@media (max-width: 1023.98px) {
+  .dashboard-summary-grid > .dashboard-summary-card:not([data-dashboard-card="armazenamentoUtilizado"]) h3 {
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    white-space: nowrap !important;
+    font-size: 0.5rem !important;
+    letter-spacing: 0.02em !important;
+    line-height: 1 !important;
+  }
+
+  .dashboard-summary-grid > .dashboard-summary-card:not([data-dashboard-card="armazenamentoUtilizado"])::after {
+    top: 3.16rem;
+  }
+
+  .dashboard-summary-grid > .dashboard-summary-card:not([data-dashboard-card="armazenamentoUtilizado"]) p:nth-child(2) {
+    margin-top: 0.08rem !important;
+    line-height: 0.95 !important;
+  }
+
+  .dashboard-summary-grid > .dashboard-summary-card[data-dashboard-card="armazenamentoUtilizado"]::after {
+    display: none !important;
+  }
+
+  .dashboard-summary-grid > .dashboard-summary-card[data-dashboard-card="armazenamentoUtilizado"] h3 {
+    overflow: visible !important;
+    text-overflow: clip !important;
+    white-space: nowrap !important;
+    font-size: 0.48rem !important;
+    letter-spacing: 0.02em !important;
+  }
+
+  .dashboard-summary-grid > .dashboard-summary-card[data-dashboard-card="armazenamentoUtilizado"] .mt-1\.5 p {
+    font-size: 0.52rem !important;
+  }
+}
+
+/* MICROETAPA 4D - padronizar card cadastro aberto e fechado */
+
+/*
+ * Mantém o conteúdo da Microetapa 4C e padroniza somente:
+ * - altura dos cabeçalhos;
+ * - espaçamento;
+ * - botão Abrir/Recolher;
+ * - linha superior;
+ * - estados aberto e fechado.
+ */
+
+.empresas-cadastro-aprovado.empresas-card-aberto-padrao--cadastro,
+.empresas-cadastro-aprovado.empresas-card-recolhido-padrao--cadastro {
+  position: relative;
+  overflow: hidden;
+  border: 1px solid #dbe5ef !important;
+  border-radius: 1.25rem !important;
+  background: #ffffff !important;
+  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.055) !important;
+}
+
+.empresas-cadastro-aprovado.empresas-card-aberto-padrao--cadastro::before,
+.empresas-cadastro-aprovado.empresas-card-recolhido-padrao--cadastro::before {
+  content: "";
+  position: absolute;
+  z-index: 3;
+  top: 0;
+  right: 0;
+  left: 0;
+  height: 2px;
+  background: linear-gradient(
+    90deg,
+    #10b981 0%,
+    #06b6d4 48%,
+    #2563eb 100%
+  );
+  pointer-events: none;
+}
+
+/* Cabeçalho do card aberto */
+
+.empresas-cadastro-aprovado.empresas-card-aberto-padrao--cadastro
+  .empresas-cadastro-aprovado__cabecalho {
+  min-height: 4.8rem !important;
+  padding: 0.95rem 1.25rem !important;
+  border-bottom: 1px solid #e2e8f0 !important;
+  background: #ffffff !important;
+}
+
+/* Cabeçalho do card fechado */
+
+.empresas-cadastro-aprovado.empresas-card-recolhido-padrao--cadastro {
+  min-height: 5.75rem !important;
+}
+
+.empresas-cadastro-aprovado.empresas-card-recolhido-padrao--cadastro
+  .empresas-cadastro-aprovado__cabecalho {
+  min-height: 5.75rem !important;
+  padding: 1rem 1.5rem !important;
+  border-bottom: 0 !important;
+  background: #ffffff !important;
+}
+
+/* Ícone, título e subtítulo iguais nos dois estados */
+
+.empresas-cadastro-aprovado.empresas-card-aberto-padrao--cadastro
+  .empresas-cadastro-aprovado__cabecalho-info,
+.empresas-cadastro-aprovado.empresas-card-recolhido-padrao--cadastro
+  .empresas-cadastro-aprovado__cabecalho-info {
+  gap: 0.8rem !important;
+}
+
+.empresas-cadastro-aprovado.empresas-card-aberto-padrao--cadastro
+  .empresas-cadastro-aprovado__cabecalho-icone,
+.empresas-cadastro-aprovado.empresas-card-recolhido-padrao--cadastro
+  .empresas-cadastro-aprovado__cabecalho-icone {
+  width: 2.55rem !important;
+  height: 2.55rem !important;
+  flex-basis: 2.55rem !important;
+  border-radius: 0.82rem !important;
+  background: #d9fbeb !important;
+  color: #059669 !important;
+}
+
+.empresas-cadastro-aprovado.empresas-card-aberto-padrao--cadastro
+  .empresas-cadastro-aprovado__cabecalho h2,
+.empresas-cadastro-aprovado.empresas-card-recolhido-padrao--cadastro
+  .empresas-cadastro-aprovado__cabecalho h2 {
+  margin: 0 !important;
+  color: #0f172a !important;
+  font-size: 1rem !important;
+  font-weight: 900 !important;
+  line-height: 1.2rem !important;
+}
+
+.empresas-cadastro-aprovado.empresas-card-aberto-padrao--cadastro
+  .empresas-cadastro-aprovado__cabecalho p,
+.empresas-cadastro-aprovado.empresas-card-recolhido-padrao--cadastro
+  .empresas-cadastro-aprovado__cabecalho p {
+  margin-top: 0.18rem !important;
+  color: #64748b !important;
+  font-size: 0.68rem !important;
+  font-weight: 600 !important;
+  line-height: 0.9rem !important;
+}
+
+/* Botão preto igual ao card Informações das empresas */
+
+.empresas-cadastro-aprovado
+  .empresas-cadastro-aprovado__recolher {
+  min-width: 5.3rem !important;
+  min-height: 2.2rem !important;
+  gap: 0.36rem !important;
+  border: 1px solid #020617 !important;
+  border-radius: 999px !important;
+  background: #020617 !important;
+  padding: 0.45rem 0.85rem !important;
+  color: #ffffff !important;
+  font-size: 0.67rem !important;
+  font-weight: 850 !important;
+  line-height: 1 !important;
+  box-shadow: 0 7px 16px rgba(15, 23, 42, 0.16) !important;
+  transition:
+    background 0.15s ease,
+    border-color 0.15s ease,
+    transform 0.15s ease,
+    box-shadow 0.15s ease;
+}
+
+.empresas-cadastro-aprovado
+  .empresas-cadastro-aprovado__recolher:hover {
+  border-color: #172033 !important;
+  background: #172033 !important;
+  color: #ffffff !important;
+  transform: translateY(-1px);
+  box-shadow: 0 9px 20px rgba(15, 23, 42, 0.2) !important;
+}
+
+.empresas-cadastro-aprovado
+  .empresas-cadastro-aprovado__recolher:focus-visible {
+  outline: 3px solid rgba(37, 99, 235, 0.2);
+  outline-offset: 2px;
+}
+
+/* Mantém o conteúdo aberto separado do cabeçalho */
+
+.empresas-cadastro-aprovado.empresas-card-aberto-padrao--cadastro
+  .empresas-cadastro-aprovado__grid {
+  border-top: 0 !important;
+}
+
+/* Ajustes responsivos */
+
+@media (max-width: 680px) {
+  .empresas-cadastro-aprovado.empresas-card-aberto-padrao--cadastro
+    .empresas-cadastro-aprovado__cabecalho,
+  .empresas-cadastro-aprovado.empresas-card-recolhido-padrao--cadastro
+    .empresas-cadastro-aprovado__cabecalho {
+    min-height: auto !important;
+    align-items: center !important;
+    padding: 0.85rem !important;
+  }
+
+  .empresas-cadastro-aprovado
+    .empresas-cadastro-aprovado__recolher {
+    min-width: 4.8rem !important;
+  }
+}
+
+/* FIM MICROETAPA 4D */
+/* MICROETAPA 4D.4 - centralizar textos e alinhar botoes fechados */
+
+/*
+ * Os cabeçalhos possuem estruturas JSX diferentes.
+ * O botão passa a ter posição absoluta nos dois cards,
+ * garantindo exatamente o mesmo eixo direito.
+ */
+
+/* Estrutura externa compacta */
+
+.empresas-cadastro-aprovado.empresas-card-recolhido-padrao--cadastro,
+.empresas-info-card.empresas-card-recolhido-padrao--informacoes {
+  box-sizing: border-box !important;
+  width: 100% !important;
+  height: 4.75rem !important;
+  min-height: 4.75rem !important;
+  max-height: 4.75rem !important;
+  overflow: hidden !important;
+  padding: 0 !important;
+}
+
+/* Cabeçalhos com a mesma caixa */
+
+.empresas-card-recolhido-padrao--cadastro
+  [data-empresas-card-cabecalho="cadastro"],
+.empresas-card-recolhido-padrao--informacoes
+  [data-empresas-card-cabecalho="informacoes"] {
+  position: relative !important;
+  box-sizing: border-box !important;
+  display: flex !important;
+  width: 100% !important;
+  height: 100% !important;
+  min-height: 0 !important;
+  max-height: none !important;
+  margin: 0 !important;
+  padding: 0.6rem 1rem !important;
+  flex-direction: row !important;
+  align-items: center !important;
+  justify-content: flex-start !important;
+  gap: 0 !important;
+  overflow: hidden !important;
+  border-bottom: 0 !important;
+}
+
+/* Bloco esquerdo */
+
+.empresas-card-recolhido-padrao--cadastro
+  [data-empresas-card-cabecalho="cadastro"]
+  > :first-child,
+.empresas-card-recolhido-padrao--informacoes
+  [data-empresas-card-cabecalho="informacoes"]
+  > :first-child {
+  box-sizing: border-box !important;
+  display: flex !important;
+  width: calc(100% - 6rem) !important;
+  min-width: 0 !important;
+  height: 100% !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  flex: 0 1 calc(100% - 6rem) !important;
+  flex-direction: row !important;
+  align-items: center !important;
+  justify-content: flex-start !important;
+  gap: 0.8rem !important;
+  overflow: hidden !important;
+}
+
+/* Ícones com dimensão idêntica */
+
+.empresas-card-recolhido-padrao--cadastro
+  [data-empresas-card-cabecalho="cadastro"]
+  > :first-child
+  > :first-child,
+.empresas-card-recolhido-padrao--informacoes
+  [data-empresas-card-cabecalho="informacoes"]
+  > :first-child
+  > :first-child {
+  box-sizing: border-box !important;
+  display: flex !important;
+  width: 2.55rem !important;
+  height: 2.55rem !important;
+  min-width: 2.55rem !important;
+  min-height: 2.55rem !important;
+  max-width: 2.55rem !important;
+  max-height: 2.55rem !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  flex: 0 0 2.55rem !important;
+  align-items: center !important;
+  justify-content: center !important;
+  border-radius: 0.8rem !important;
+}
+
+/* Blocos de texto com a mesma altura e alinhamento */
+
+.empresas-card-recolhido-padrao--cadastro
+  [data-empresas-card-cabecalho="cadastro"]
+  > :first-child
+  > :nth-child(2),
+.empresas-card-recolhido-padrao--informacoes
+  [data-empresas-card-cabecalho="informacoes"]
+  > :first-child
+  > :nth-child(2) {
+  box-sizing: border-box !important;
+  display: grid !important;
+  grid-template-rows: auto auto !important;
+  align-content: center !important;
+  row-gap: 0.12rem !important;
+  width: 100% !important;
+  min-width: 0 !important;
+  height: 2.8rem !important;
+  min-height: 2.8rem !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  flex: 1 1 auto !important;
+  overflow: hidden !important;
+}
+
+/* Correção óptica específica do primeiro card */
+
+.empresas-card-recolhido-padrao--cadastro
+  [data-empresas-card-cabecalho="cadastro"]
+  > :first-child
+  > :nth-child(2) {
+  transform: translateY(-1px) !important;
+}
+
+/* Oculta a etiqueta adicional no card Informações */
+
+.empresas-card-recolhido-padrao--informacoes
+  [data-empresas-card-cabecalho="informacoes"]
+  > :first-child
+  > :nth-child(2)
+  > p:first-child {
+  display: none !important;
+}
+
+/* Títulos maiores e iguais */
+
+.empresas-card-recolhido-padrao--cadastro
+  [data-empresas-card-cabecalho="cadastro"]
+  h2,
+.empresas-card-recolhido-padrao--informacoes
+  [data-empresas-card-cabecalho="informacoes"]
+  h2 {
+  display: block !important;
+  width: 100% !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  color: #0f172a !important;
+  font-size: 1rem !important;
+  font-weight: 900 !important;
+  line-height: 1.15rem !important;
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+}
+
+/* Subtítulos maiores e iguais */
+
+.empresas-card-recolhido-padrao--cadastro
+  [data-empresas-card-cabecalho="cadastro"]
+  > :first-child
+  > :nth-child(2)
+  > p,
+.empresas-card-recolhido-padrao--informacoes
+  [data-empresas-card-cabecalho="informacoes"]
+  > :first-child
+  > :nth-child(2)
+  > p:last-child {
+  display: block !important;
+  width: 100% !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  color: #64748b !important;
+  font-size: 0.68rem !important;
+  font-weight: 600 !important;
+  line-height: 0.86rem !important;
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+}
+
+/* Contêiner direito do card Informações */
+
+.empresas-card-recolhido-padrao--informacoes
+  [data-empresas-card-cabecalho="informacoes"]
+  > :last-child {
+  position: absolute !important;
+  top: 50% !important;
+  right: 1rem !important;
+  box-sizing: border-box !important;
+  display: flex !important;
+  width: 4.85rem !important;
+  min-width: 4.85rem !important;
+  max-width: 4.85rem !important;
+  height: 2.1rem !important;
+  min-height: 2.1rem !important;
+  max-height: 2.1rem !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 0 !important;
+  transform: translateY(-50%) !important;
+}
+
+/* Contador oculto no estado fechado */
+
+.empresas-card-recolhido-padrao--informacoes
+  [data-empresas-card-cabecalho="informacoes"]
+  > :last-child
+  > span {
+  display: none !important;
+}
+
+/* Botão direto do Cadastro */
+
+.empresas-card-recolhido-padrao--cadastro
+  [data-empresas-card-cabecalho="cadastro"]
+  > button {
+  position: absolute !important;
+  top: 50% !important;
+  right: 1rem !important;
+  transform: translateY(-50%) !important;
+}
+
+/* Dimensão final dos dois botões */
+
+.empresas-card-recolhido-padrao--cadastro
+  [data-empresas-card-cabecalho="cadastro"]
+  > button,
+.empresas-card-recolhido-padrao--informacoes
+  [data-empresas-card-cabecalho="informacoes"]
+  > :last-child
+  > button {
+  box-sizing: border-box !important;
+  display: inline-flex !important;
+  width: 4.85rem !important;
+  min-width: 4.85rem !important;
+  max-width: 4.85rem !important;
+  height: 2.1rem !important;
+  min-height: 2.1rem !important;
+  max-height: 2.1rem !important;
+  margin: 0 !important;
+  padding: 0 0.65rem !important;
+  flex: 0 0 4.85rem !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 0.3rem !important;
+  font-size: 0.68rem !important;
+  line-height: 1 !important;
+  white-space: nowrap !important;
+}
+
+/* Evita que o hover altere o eixo do botão direto */
+
+.empresas-card-recolhido-padrao--cadastro
+  [data-empresas-card-cabecalho="cadastro"]
+  > button:hover {
+  transform: translateY(-50%) !important;
+}
+
+/* Responsividade */
+
+@media (max-width: 680px) {
+  .empresas-card-recolhido-padrao--cadastro
+    [data-empresas-card-cabecalho="cadastro"],
+  .empresas-card-recolhido-padrao--informacoes
+    [data-empresas-card-cabecalho="informacoes"] {
+    padding-right: 0.75rem !important;
+    padding-left: 0.75rem !important;
+  }
+
+  .empresas-card-recolhido-padrao--cadastro
+    [data-empresas-card-cabecalho="cadastro"]
+    > button,
+  .empresas-card-recolhido-padrao--informacoes
+    [data-empresas-card-cabecalho="informacoes"]
+    > :last-child {
+    right: 0.75rem !important;
+  }
+
+  .empresas-card-recolhido-padrao--cadastro
+    [data-empresas-card-cabecalho="cadastro"]
+    > :first-child,
+  .empresas-card-recolhido-padrao--informacoes
+    [data-empresas-card-cabecalho="informacoes"]
+    > :first-child {
+    width: calc(100% - 5.5rem) !important;
+    flex-basis: calc(100% - 5.5rem) !important;
+  }
+
+  .empresas-card-recolhido-padrao--cadastro
+    [data-empresas-card-cabecalho="cadastro"]
+    h2,
+  .empresas-card-recolhido-padrao--informacoes
+    [data-empresas-card-cabecalho="informacoes"]
+    h2 {
+    font-size: 0.9rem !important;
+  }
+
+  .empresas-card-recolhido-padrao--cadastro
+    [data-empresas-card-cabecalho="cadastro"]
+    > :first-child
+    > :nth-child(2)
+    > p,
+  .empresas-card-recolhido-padrao--informacoes
+    [data-empresas-card-cabecalho="informacoes"]
+    > :first-child
+    > :nth-child(2)
+    > p:last-child {
+    font-size: 0.6rem !important;
+  }
+}
+
+/* FIM MICROETAPA 4D.4 */
+/* MICROETAPA 4D.5 - centralizacao optica final dos cards fechados */
+
+/*
+ * O conjunto visual estava abaixo do centro geométrico.
+ * Ícone, textos e botão sobem juntos 4 px nos dois cards.
+ */
+
+/* Sobe o conjunto esquerdo completo: ícone + textos */
+
+.empresas-card-recolhido-padrao--cadastro
+  [data-empresas-card-cabecalho="cadastro"]
+  > :first-child,
+.empresas-card-recolhido-padrao--informacoes
+  [data-empresas-card-cabecalho="informacoes"]
+  > :first-child {
+  transform: translateY(-4px) !important;
+}
+
+/* Remove o deslocamento isolado anterior do texto de Cadastro */
+
+.empresas-card-recolhido-padrao--cadastro
+  [data-empresas-card-cabecalho="cadastro"]
+  > :first-child
+  > :nth-child(2) {
+  transform: none !important;
+}
+
+/* Sobe o botão direto do card Cadastro */
+
+.empresas-card-recolhido-padrao--cadastro
+  [data-empresas-card-cabecalho="cadastro"]
+  > button {
+  top: calc(50% - 4px) !important;
+  transform: translateY(-50%) !important;
+}
+
+/* Sobe o contêiner do botão de Informações */
+
+.empresas-card-recolhido-padrao--informacoes
+  [data-empresas-card-cabecalho="informacoes"]
+  > :last-child {
+  top: calc(50% - 4px) !important;
+  transform: translateY(-50%) !important;
+}
+
+/* Impede o hover de alterar a centralização */
+
+.empresas-card-recolhido-padrao--cadastro
+  [data-empresas-card-cabecalho="cadastro"]
+  > button:hover {
+  transform: translateY(-50%) !important;
+}
+
+/* FIM MICROETAPA 4D.5 */

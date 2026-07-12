@@ -1656,401 +1656,649 @@ export function Empresas({
 
             <div className="space-y-6">
                 <section className="empresas-section-destaque">
-                    <div onClick={(evento) => {
-                        const alvoInterativo = evento.target.closest?.(
-                            "button, a, input, select, textarea, label, table, [role='button'], [data-empresas-nao-alternar]"
-                        );
+                    <div
+                        onClick={(evento) => {
+                            const alvoInterativo = evento.target.closest?.(
+                                "button, a, input, select, textarea, label, table, [role='button'], [data-empresas-nao-alternar]"
+                            );
 
-                        if (alvoInterativo) return;
+                            if (alvoInterativo) return;
 
-                        if (!cadastroEmpresasRecolhido) {
-                            const cabecalho = evento.currentTarget.querySelector("[data-empresas-card-cabecalho='cadastro']");
-                            if (cabecalho && !cabecalho.contains(evento.target)) return;
-                        }
+                            if (!cadastroEmpresasRecolhido) {
+                                const cabecalho = evento.currentTarget.querySelector(
+                                    "[data-empresas-card-cabecalho='cadastro']"
+                                );
 
-                        atualizarCadastroEmpresasRecolhido((valor) => !valor);
-                    }}>
-                    <Card
+                                if (cabecalho && !cabecalho.contains(evento.target)) return;
+                            }
+
+                            atualizarCadastroEmpresasRecolhido((valor) => !valor);
+                        }}
+                    >
+                        <Card
                             className={classNames(
-                                "empresas-cadastro-unificado border-blue-100 bg-blue-50/40",
-                                cadastroEmpresasRecolhido && "empresas-card-recolhido-padrao empresas-card-recolhido-padrao--cadastro",
-                                !cadastroEmpresasRecolhido && "empresas-card-aberto-padrao empresas-card-aberto-padrao--cadastro"
+                                "empresas-cadastro-aprovado",
+                                cadastroEmpresasRecolhido &&
+                                    "empresas-card-recolhido-padrao empresas-card-recolhido-padrao--cadastro",
+                                !cadastroEmpresasRecolhido &&
+                                    "empresas-card-aberto-padrao empresas-card-aberto-padrao--cadastro"
                             )}
                         >
-                        <div data-empresas-card-cabecalho="cadastro" className="empresas-cadastro-header">
-                            <div className="empresas-cadastro-header__info">
-                                <div className="empresas-cadastro-header__icone">
-                                    <Building2 className="h-5 w-5" />
-                                </div>
-                                <div className="min-w-0">
-                                    <p className="empresas-cadastro-header__etiqueta">Cadastro</p>
-                                    <h2 className="empresas-cadastro-header__titulo">Empresas e documentos</h2>
-                                    <p className="empresas-cadastro-header__subtitulo">
-                                        Cadastro de empresas e lançamento de documentos em um único local, com campos organizados.
-                                    </p>
-                                </div>
-                            </div>
-                            <button
-                                type="button"
-                                onClick={(evento) => {
-                                    evento.stopPropagation();
-                                    atualizarCadastroEmpresasRecolhido((valor) => !valor);
-                                }}
-                                className="empresas-cadastro-header__acao"
+                            <div
+                                data-empresas-card-cabecalho="cadastro"
+                                className="empresas-cadastro-aprovado__cabecalho"
                             >
-                                {cadastroEmpresasRecolhido ? <ChevronDown className="h-4 w-4" /> : <ChevronUp className="h-4 w-4" />}
-                                {cadastroEmpresasRecolhido ? "Abrir" : "Recolher"}
-                            </button>
-                        </div>
+                                <div className="empresas-cadastro-aprovado__cabecalho-info">
+                                    <div className="empresas-cadastro-aprovado__cabecalho-icone">
+                                        <Building2 className="h-5 w-5" />
+                                    </div>
 
-                    {cadastroEmpresasRecolhido ? null : (
-                        <div className="empresas-cadastro-grid">
-                    <Card className="empresas-form-panel empresas-form-panel--empresa overflow-hidden">
-                        <div className="empresas-form-panel__titulo-escuro">
-                            <div className="flex items-center gap-3">
-                                <div className="rounded-2xl bg-white/10 p-3">
-                                    <Building2 className="h-6 w-6" />
-                                </div>
-                                <div>
-                                    <h2>Adicionar empresa</h2>
-                                    <p>Cadastro de empresas contratantes, terceirizadas ou subcontratadas</p>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div className="empresa-form-grid empresa-form-grid--empresa empresa-form-grid--empresa-definitivo">
-                            <div className="empresa-form-linha empresa-form-linha--2">
-                                <input
-                                    value={novaEmpresa.nome}
-                                    onChange={(e) => setNovaEmpresa({ ...novaEmpresa, nome: e.target.value })}
-                                    placeholder="Nome da empresa"
-                                    className="w-full rounded-2xl border border-slate-200 px-4 py-3 text-center text-sm outline-none focus:border-slate-400 focus:ring-4 focus:ring-slate-100"
-                                />
-                                <input
-                                    value={novaEmpresa.cnpj}
-                                    onChange={(e) => setNovaEmpresa({ ...novaEmpresa, cnpj: formatarCnpj(e.target.value) })}
-                                    placeholder="CNPJ"
-                                    className="w-full rounded-2xl border border-slate-200 px-4 py-3 text-center text-sm outline-none focus:border-slate-400 focus:ring-4 focus:ring-slate-100"
-                                />
-                            </div>
-
-                            <div className="empresa-form-linha empresa-form-linha--3">
-                                <input
-                                    value={novaEmpresa.responsavel}
-                                    onChange={(e) => setNovaEmpresa({ ...novaEmpresa, responsavel: e.target.value })}
-                                    placeholder="Responsável"
-                                    className="w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-slate-400 focus:ring-4 focus:ring-slate-100"
-                                />
-                                <input
-                                    value={novaEmpresa.email}
-                                    onChange={(e) => setNovaEmpresa({ ...novaEmpresa, email: e.target.value })}
-                                    placeholder="E-mail"
-                                    className="w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-slate-400 focus:ring-4 focus:ring-slate-100"
-                                />
-                                <input
-                                    value={novaEmpresa.telefone}
-                                    onChange={(e) => setNovaEmpresa({ ...novaEmpresa, telefone: formatarTelefone(e.target.value) })}
-                                    placeholder="Telefone"
-                                    className="w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-slate-400 focus:ring-4 focus:ring-slate-100"
-                                />
-                            </div>
-
-                            <div className="empresa-form-bloco-auditoria">
-                                <p>Contato para receber auditorias</p>
-                                <div className="empresa-form-bloco-auditoria__grid">
-                                    <input
-                                        value={novaEmpresa.responsavelAuditoria}
-                                        onChange={(e) => setNovaEmpresa({ ...novaEmpresa, responsavelAuditoria: e.target.value })}
-                                        placeholder="Responsável"
-                                        className="w-full rounded-2xl border border-emerald-100 px-4 py-3 text-center text-[13px] outline-none focus:border-emerald-400 focus:ring-4 focus:ring-emerald-100"
-                                    />
-                                    <input
-                                        type="email"
-                                        value={novaEmpresa.emailAuditoria}
-                                        onChange={(e) => setNovaEmpresa({ ...novaEmpresa, emailAuditoria: e.target.value })}
-                                        placeholder="E-mail"
-                                        className="w-full rounded-2xl border border-emerald-100 px-4 py-3 text-center text-[13px] outline-none focus:border-emerald-400 focus:ring-4 focus:ring-emerald-100"
-                                    />
-                                    <input
-                                        value={novaEmpresa.whatsappAuditoria}
-                                        onChange={(e) => setNovaEmpresa({ ...novaEmpresa, whatsappAuditoria: formatarTelefone(e.target.value) })}
-                                        placeholder="WhatsApp"
-                                        className="w-full rounded-2xl border border-emerald-100 px-4 py-3 text-center text-[13px] outline-none focus:border-emerald-400 focus:ring-4 focus:ring-emerald-100"
-                                    />
-                                </div>
-                            </div>
-
-                            <div className="empresa-form-linha empresa-form-linha--3">
-                                <input
-                                    value={novaEmpresa.tstResponsavel}
-                                    onChange={(e) => setNovaEmpresa({ ...novaEmpresa, tstResponsavel: e.target.value })}
-                                    placeholder="TST responsável"
-                                    className="w-full rounded-2xl border border-slate-200 px-4 py-3 text-center text-[13px] outline-none focus:border-slate-400 focus:ring-4 focus:ring-slate-100"
-                                />
-                                <input
-                                    type="email"
-                                    value={novaEmpresa.tstEmail}
-                                    onChange={(e) => setNovaEmpresa({ ...novaEmpresa, tstEmail: e.target.value })}
-                                    placeholder="E-mail TST"
-                                    className="w-full rounded-2xl border border-slate-200 px-4 py-3 text-center text-[13px] outline-none focus:border-slate-400 focus:ring-4 focus:ring-slate-100"
-                                />
-                                <input
-                                    value={novaEmpresa.tstWhatsapp}
-                                    onChange={(e) => setNovaEmpresa({ ...novaEmpresa, tstWhatsapp: formatarTelefone(e.target.value) })}
-                                    placeholder="WhatsApp TST"
-                                    className="w-full rounded-2xl border border-slate-200 px-4 py-3 text-center text-[13px] outline-none focus:border-slate-400 focus:ring-4 focus:ring-slate-100"
-                                />
-                            </div>
-
-                            <div className="empresa-form-linha empresa-form-linha--3 empresa-form-linha--uploads">
-                                <select
-                                    value={novaEmpresa.tipoEmpresa}
-                                    onChange={(e) => setNovaEmpresa({ ...novaEmpresa, tipoEmpresa: e.target.value })}
-                                    className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none focus:border-slate-400 focus:ring-4 focus:ring-slate-100"
-                                >
-                                    <option>Terceirizada</option>
-                                    <option>Subcontratada</option>
-                                    <option>Contratante - Idealiza Cidades</option>
-                                </select>
-
-                                <div className="empresa-upload-wrapper">
-                                    <label className="empresa-upload-card h-[52px] min-h-[52px]">
-                                        <Upload className="h-4 w-4" />
-                                        <span className="block min-w-0 truncate text-center text-[13px] leading-tight">{novaEmpresa.logo ? novaEmpresa.logo.name : "Adicionar logo"}</span>
-                                        <input
-                                            type="file"
-                                            accept="image/png,image/jpeg,image/webp,image/svg+xml"
-                                            className="hidden"
-                                            onChange={(e) => {
-                                                const arquivo = e.target.files?.[0] || null;
-                                                if (arquivo && !validarArquivoAntesUpload(arquivo, "fotoAuditoria")) {
-                                                    e.target.value = "";
-                                                    return;
-                                                }
-                                                setNovaEmpresa({ ...novaEmpresa, logo: arquivo });
-                                            }}
-                                        />
-                                    </label>
-                                    <div className="w-full min-w-0 [&>*]:w-full [&>*]:max-w-none">
-                                        <FileUploadAviso arquivo={novaEmpresa.logo} tipo="fotoAuditoria" />
+                                    <div className="min-w-0">
+                                        <h2>Cadastro e documentos</h2>
+                                        <p>Cadastre empresas e gerencie documentos obrigatórios.</p>
                                     </div>
                                 </div>
 
-                                <div className="empresa-upload-wrapper">
-                                    <label className="empresa-upload-card empresa-upload-card--contrato h-[52px] min-h-[52px]">
-                                        <Upload className="h-4 w-4" />
-                                        <span className="block min-w-0 truncate text-center text-[13px] leading-tight">{novaEmpresa.contratoArquivo ? novaEmpresa.contratoArquivo.name : "add. contrato"}</span>
-                                        <input
-                                            type="file"
-                                            accept="application/pdf,image/png,image/jpeg,image/webp"
-                                            className="hidden"
-                                            onChange={(e) => {
-                                                const arquivo = e.target.files?.[0] || null;
-                                                if (arquivo && !validarArquivoAntesUpload(arquivo, "documentoExtenso")) {
-                                                    e.target.value = "";
-                                                    return;
-                                                }
-                                                setNovaEmpresa({ ...novaEmpresa, contratoArquivo: arquivo });
-                                            }}
-                                        />
-                                    </label>
-                                    <div className="w-full min-w-0 [&>*]:w-full [&>*]:max-w-none">
-                                        <FileUploadAviso arquivo={novaEmpresa.contratoArquivo} tipo="documentoExtenso" />
-                                    </div>
-                                </div>
-                            </div>
-
-                            {novaEmpresa.tipoEmpresa === "Subcontratada" && (
-                                <select
-                                    value={novaEmpresa.empresaPaiId}
-                                    onChange={(e) => setNovaEmpresa({ ...novaEmpresa, empresaPaiId: e.target.value })}
-                                    className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none focus:border-slate-400 focus:ring-4 focus:ring-slate-100"
+                                <button
+                                    type="button"
+                                    onClick={(evento) => {
+                                        evento.stopPropagation();
+                                        atualizarCadastroEmpresasRecolhido((valor) => !valor);
+                                    }}
+                                    className="empresas-cadastro-aprovado__recolher"
                                 >
-                                    <option value="">Selecione a empresa terceirizada contratante direta</option>
-                                    {empresasBanco
-                                        .filter((empresa) => (empresa.tipo_empresa || "Terceirizada") !== "Subcontratada")
-                                        .map((empresa) => (
-                                            <option key={empresa.id} value={empresa.id}>
-                                                {empresa.nome}
-                                            </option>
-                                        ))}
-                                </select>
-                            )}
+                                    {cadastroEmpresasRecolhido ? (
+                                        <ChevronDown className="h-4 w-4" />
+                                    ) : (
+                                        <ChevronUp className="h-4 w-4" />
+                                    )}
 
-                            <div className="empresa-form-linha empresa-form-linha--2">
-                                <input
-                                    value={novaEmpresa.numeroContrato}
-                                    onChange={(e) => setNovaEmpresa({ ...novaEmpresa, numeroContrato: e.target.value })}
-                                    placeholder="Nº do contrato"
-                                    className="w-full rounded-2xl border border-slate-200 px-4 py-3 text-center text-sm outline-none focus:border-slate-400 focus:ring-4 focus:ring-slate-100"
-                                />
-                                <input
-                                    value={novaEmpresa.responsavelContratante}
-                                    onChange={(e) => setNovaEmpresa({ ...novaEmpresa, responsavelContratante: e.target.value })}
-                                    placeholder="Responsável da contratante"
-                                    className="w-full rounded-2xl border border-slate-200 px-4 py-3 text-center text-sm outline-none focus:border-slate-400 focus:ring-4 focus:ring-slate-100"
-                                />
+                                    {cadastroEmpresasRecolhido ? "Abrir" : "Recolher"}
+                                </button>
                             </div>
 
-                            <div className="empresa-form-linha empresa-form-linha--3 empresa-form-linha--contrato">
-                                <div className="empresa-campo-contrato">
-                                    <label className="block text-center text-xs font-bold uppercase tracking-wide text-slate-500">Início do contrato</label>
-                                    <input
-                                        type="date"
-                                        value={novaEmpresa.dataInicioContrato}
-                                        onChange={(e) => setNovaEmpresa({ ...novaEmpresa, dataInicioContrato: e.target.value })}
-                                        className="w-full rounded-2xl border border-slate-200 px-4 py-3 text-center text-sm outline-none focus:border-slate-400 focus:ring-4 focus:ring-slate-100"
-                                    />
-                                </div>
-                                <div className="empresa-campo-contrato">
-                                    <label className="block text-center text-xs font-bold uppercase tracking-wide text-slate-500">Fim do contrato</label>
-                                    <input
-                                        type="date"
-                                        value={novaEmpresa.dataFimContrato}
-                                        onChange={(e) => setNovaEmpresa({ ...novaEmpresa, dataFimContrato: e.target.value })}
-                                        className="w-full rounded-2xl border border-slate-200 px-4 py-3 text-center text-sm outline-none focus:border-slate-400 focus:ring-4 focus:ring-slate-100"
-                                    />
-                                </div>
-                                <textarea
-                                    value={novaEmpresa.observacaoStatus}
-                                    onChange={(e) => setNovaEmpresa({ ...novaEmpresa, observacaoStatus: e.target.value })}
-                                    placeholder="Observações"
-                                    rows={1}
-                                    className="empresa-campo-textarea w-full resize-none rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-slate-400 focus:ring-4 focus:ring-slate-100"
-                                />
-                            </div>
+                            {cadastroEmpresasRecolhido ? null : (
+                                <div className="empresas-cadastro-aprovado__grid">
+                                    <Card className="empresas-cadastro-aprovado__painel">
+                                        <div className="empresas-cadastro-aprovado__painel-cabecalho">
+                                            <div className="empresas-cadastro-aprovado__painel-icone empresas-cadastro-aprovado__painel-icone--empresa">
+                                                <Building2 className="h-5 w-5" />
+                                            </div>
 
-                            <textarea
-                                value={novaEmpresa.escopoServico}
-                                onChange={(e) => setNovaEmpresa({ ...novaEmpresa, escopoServico: e.target.value })}
-                                placeholder="Escopo do trabalho"
-                                rows={2}
-                                className="empresa-campo-textarea empresa-campo-textarea--observacao w-full resize-none rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-slate-400 focus:ring-4 focus:ring-slate-100"
-                            />
-
-                            <button
-                                onClick={adicionarEmpresa}
-                                disabled={salvandoEmpresa || !podeCadastrarEmpresasSistema}
-                                title={podeCadastrarEmpresasSistema ? "Cadastrar empresa" : mensagemBloqueioCadastroEmpresas}
-                                className="empresa-botao-cadastrar-final disabled:cursor-not-allowed disabled:opacity-50"
-                            >
-                                <Plus className="h-4 w-4" />
-                                {salvandoEmpresa ? "Salvando empresa..." : "Cadastrar empresa"}
-                            </button>
-                        </div>
-                    </Card>
-
-                    <Card className="empresas-form-panel empresas-form-panel--documento overflow-hidden">
-                        <div className="empresas-form-panel__titulo-escuro">
-                            <div className="flex items-center gap-3">
-                                <div className="rounded-2xl bg-white/10 p-3">
-                                    <FileText className="h-6 w-6" />
-                                </div>
-                                <div>
-                                    <h2>Adicionar documento da empresa</h2>
-                                    <p>Controle de validade/revisão de LTCAT, PCMSO e PGR.</p>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div className="empresa-form-grid empresa-form-grid--documento mt-5">
-                            <select
-                                value={novoDoc.empresaId}
-                                onChange={(e) => setNovoDoc({ ...novoDoc, empresaId: e.target.value })}
-                                className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none focus:border-slate-400 focus:ring-4 focus:ring-slate-100"
-                            >
-                                <option value="">Selecione a empresa</option>
-                                {empresasBanco.map((empresa) => (
-                                    <option key={empresa.id} value={empresa.id}>
-                                        {empresa.nome}
-                                    </option>
-                                ))}
-                            </select>
-
-                            <div className="empresa-doc-campos-datas">
-                                <div>
-                                    <label className="mb-1 block text-xs font-bold uppercase tracking-wide text-slate-500">Emissão</label>
-                                    <input
-                                        type="date"
-                                        value={novoDoc.dataEmissao}
-                                        onChange={(e) => alterarEmissaoDocumento(e.target.value)}
-                                        className="w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-slate-400 focus:ring-4 focus:ring-slate-100"
-                                    />
-                                </div>
-
-                                <div>
-                                    <label className="mb-1 block text-xs font-bold uppercase tracking-wide text-slate-500">Vencimento / revisão</label>
-                                    <input
-                                        type="date"
-                                        value={novoDoc.dataVencimento || ""}
-                                        onChange={(e) => setNovoDoc({ ...novoDoc, dataVencimento: e.target.value })}
-                                        className="w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-slate-400 focus:ring-4 focus:ring-slate-100"
-                                    />
-                                </div>
-                            </div>
-
-                            <div className="empresa-doc-tipos-grid empresa-doc-tipos-grid--vertical">
-                                {documentosEmpresaBase.map((doc, indice) => (
-                                    <button
-                                        key={doc.tipo}
-                                        type="button"
-                                        onClick={() => alterarTipoDocumento(doc.tipo)}
-                                        className={classNames(
-                                            "empresa-doc-tipo-card empresa-doc-tipo-card--grande",
-                                            novoDoc.tipo === doc.tipo && "empresa-doc-tipo-card--ativo"
-                                        )}
-                                    >
-                                        <div className="empresa-doc-tipo-card__header">
-                                            <div className="empresa-doc-tipo-card__indice">{indice + 1}</div>
-                                            <div className="empresa-doc-tipo-card__titulo-area">
-                                                <strong>{doc.nome}</strong>
-                                                <span>{doc.tipo}</span>
+                                            <div className="min-w-0">
+                                                <h3>Adicionar empresa</h3>
+                                                <p>Dados da empresa contratante ou terceirizada.</p>
                                             </div>
                                         </div>
-                                        <div className="empresa-doc-tipo-card__conteudo">
-                                            {obterResumoDocumentoEmpresa(doc.tipo).map((linha) => (
-                                                <p key={linha}>{linha}</p>
-                                            ))}
+
+                                        <div className="empresas-cadastro-aprovado__formulario">
+                                            <div className="empresas-cadastro-aprovado__linha empresas-cadastro-aprovado__linha--2">
+                                                <input
+                                                    value={novaEmpresa.nome}
+                                                    onChange={(e) =>
+                                                        setNovaEmpresa({
+                                                            ...novaEmpresa,
+                                                            nome: e.target.value,
+                                                        })
+                                                    }
+                                                    placeholder="Nome da empresa"
+                                                    className="empresas-cadastro-aprovado__campo"
+                                                />
+
+                                                <input
+                                                    value={novaEmpresa.cnpj}
+                                                    onChange={(e) =>
+                                                        setNovaEmpresa({
+                                                            ...novaEmpresa,
+                                                            cnpj: formatarCnpj(e.target.value),
+                                                        })
+                                                    }
+                                                    placeholder="CNPJ"
+                                                    className="empresas-cadastro-aprovado__campo"
+                                                />
+                                            </div>
+
+                                            <div className="empresas-cadastro-aprovado__linha empresas-cadastro-aprovado__linha--3">
+                                                <input
+                                                    value={novaEmpresa.responsavel}
+                                                    onChange={(e) =>
+                                                        setNovaEmpresa({
+                                                            ...novaEmpresa,
+                                                            responsavel: e.target.value,
+                                                        })
+                                                    }
+                                                    placeholder="Responsável"
+                                                    className="empresas-cadastro-aprovado__campo"
+                                                />
+
+                                                <input
+                                                    type="email"
+                                                    value={novaEmpresa.email}
+                                                    onChange={(e) =>
+                                                        setNovaEmpresa({
+                                                            ...novaEmpresa,
+                                                            email: e.target.value,
+                                                        })
+                                                    }
+                                                    placeholder="E-mail"
+                                                    className="empresas-cadastro-aprovado__campo"
+                                                />
+
+                                                <input
+                                                    value={novaEmpresa.telefone}
+                                                    onChange={(e) =>
+                                                        setNovaEmpresa({
+                                                            ...novaEmpresa,
+                                                            telefone: formatarTelefone(e.target.value),
+                                                        })
+                                                    }
+                                                    placeholder="Telefone"
+                                                    className="empresas-cadastro-aprovado__campo"
+                                                />
+                                            </div>
+
+                                            <div className="empresas-cadastro-aprovado__auditoria">
+                                                <p>Contato para auditorias (TST)</p>
+
+                                                <div className="empresas-cadastro-aprovado__linha empresas-cadastro-aprovado__linha--3">
+                                                    <input
+                                                        value={
+                                                            novaEmpresa.tstResponsavel ||
+                                                            novaEmpresa.responsavelAuditoria
+                                                        }
+                                                        onChange={(e) =>
+                                                            setNovaEmpresa({
+                                                                ...novaEmpresa,
+                                                                tstResponsavel: e.target.value,
+                                                                responsavelAuditoria: e.target.value,
+                                                            })
+                                                        }
+                                                        placeholder="Responsável TST"
+                                                        className="empresas-cadastro-aprovado__campo"
+                                                    />
+
+                                                    <input
+                                                        type="email"
+                                                        value={
+                                                            novaEmpresa.tstEmail ||
+                                                            novaEmpresa.emailAuditoria
+                                                        }
+                                                        onChange={(e) =>
+                                                            setNovaEmpresa({
+                                                                ...novaEmpresa,
+                                                                tstEmail: e.target.value,
+                                                                emailAuditoria: e.target.value,
+                                                            })
+                                                        }
+                                                        placeholder="E-mail TST"
+                                                        className="empresas-cadastro-aprovado__campo"
+                                                    />
+
+                                                    <input
+                                                        value={
+                                                            novaEmpresa.tstWhatsapp ||
+                                                            novaEmpresa.whatsappAuditoria
+                                                        }
+                                                        onChange={(e) => {
+                                                            const valor = formatarTelefone(
+                                                                e.target.value
+                                                            );
+
+                                                            setNovaEmpresa({
+                                                                ...novaEmpresa,
+                                                                tstWhatsapp: valor,
+                                                                whatsappAuditoria: valor,
+                                                            });
+                                                        }}
+                                                        placeholder="WhatsApp"
+                                                        className="empresas-cadastro-aprovado__campo"
+                                                    />
+                                                </div>
+                                            </div>
+
+                                            <div className="empresas-cadastro-aprovado__linha empresas-cadastro-aprovado__linha--3">
+                                                <select
+                                                    value={novaEmpresa.tipoEmpresa}
+                                                    onChange={(e) =>
+                                                        setNovaEmpresa({
+                                                            ...novaEmpresa,
+                                                            tipoEmpresa: e.target.value,
+                                                        })
+                                                    }
+                                                    className="empresas-cadastro-aprovado__campo"
+                                                >
+                                                    <option value="Terceirizada">
+                                                        Terceirizada
+                                                    </option>
+
+                                                    <option value="Subcontratada">
+                                                        Subcontratada
+                                                    </option>
+
+                                                    <option value="Contratante - Idealiza Cidades">
+                                                        Contratante
+                                                    </option>
+                                                </select>
+
+                                                <div className="empresas-cadastro-aprovado__upload-wrapper">
+                                                    <label className="empresas-cadastro-aprovado__upload">
+                                                        <Upload className="h-4 w-4" />
+
+                                                        <span>
+                                                            {novaEmpresa.logo
+                                                                ? novaEmpresa.logo.name
+                                                                : "Adicionar logo"}
+                                                        </span>
+
+                                                        <input
+                                                            type="file"
+                                                            accept="image/png,image/jpeg,image/webp,image/svg+xml"
+                                                            className="hidden"
+                                                            onChange={(e) => {
+                                                                const arquivo =
+                                                                    e.target.files?.[0] || null;
+
+                                                                if (
+                                                                    arquivo &&
+                                                                    !validarArquivoAntesUpload(
+                                                                        arquivo,
+                                                                        "fotoAuditoria"
+                                                                    )
+                                                                ) {
+                                                                    e.target.value = "";
+                                                                    return;
+                                                                }
+
+                                                                setNovaEmpresa({
+                                                                    ...novaEmpresa,
+                                                                    logo: arquivo,
+                                                                });
+                                                            }}
+                                                        />
+                                                    </label>
+
+                                                    <FileUploadAviso
+                                                        arquivo={novaEmpresa.logo}
+                                                        tipo="fotoAuditoria"
+                                                    />
+                                                </div>
+
+                                                <div className="empresas-cadastro-aprovado__upload-wrapper">
+                                                    <label className="empresas-cadastro-aprovado__upload empresas-cadastro-aprovado__upload--contrato">
+                                                        <Upload className="h-4 w-4" />
+
+                                                        <span>
+                                                            {novaEmpresa.contratoArquivo
+                                                                ? novaEmpresa.contratoArquivo.name
+                                                                : "Adicionar contrato"}
+                                                        </span>
+
+                                                        <input
+                                                            type="file"
+                                                            accept="application/pdf,image/png,image/jpeg,image/webp"
+                                                            className="hidden"
+                                                            onChange={(e) => {
+                                                                const arquivo =
+                                                                    e.target.files?.[0] || null;
+
+                                                                if (
+                                                                    arquivo &&
+                                                                    !validarArquivoAntesUpload(
+                                                                        arquivo,
+                                                                        "documentoExtenso"
+                                                                    )
+                                                                ) {
+                                                                    e.target.value = "";
+                                                                    return;
+                                                                }
+
+                                                                setNovaEmpresa({
+                                                                    ...novaEmpresa,
+                                                                    contratoArquivo: arquivo,
+                                                                });
+                                                            }}
+                                                        />
+                                                    </label>
+
+                                                    <FileUploadAviso
+                                                        arquivo={novaEmpresa.contratoArquivo}
+                                                        tipo="documentoExtenso"
+                                                    />
+                                                </div>
+                                            </div>
+
+                                            {novaEmpresa.tipoEmpresa === "Subcontratada" && (
+                                                <select
+                                                    value={novaEmpresa.empresaPaiId}
+                                                    onChange={(e) =>
+                                                        setNovaEmpresa({
+                                                            ...novaEmpresa,
+                                                            empresaPaiId: e.target.value,
+                                                        })
+                                                    }
+                                                    className="empresas-cadastro-aprovado__campo"
+                                                >
+                                                    <option value="">
+                                                        Selecione a empresa contratante direta
+                                                    </option>
+
+                                                    {empresasBanco
+                                                        .filter(
+                                                            (empresa) =>
+                                                                (
+                                                                    empresa.tipo_empresa ||
+                                                                    "Terceirizada"
+                                                                ) !== "Subcontratada"
+                                                        )
+                                                        .map((empresa) => (
+                                                            <option
+                                                                key={empresa.id}
+                                                                value={empresa.id}
+                                                            >
+                                                                {empresa.nome}
+                                                            </option>
+                                                        ))}
+                                                </select>
+                                            )}
+
+                                            <div className="empresas-cadastro-aprovado__linha empresas-cadastro-aprovado__linha--2">
+                                                <input
+                                                    value={novaEmpresa.numeroContrato}
+                                                    onChange={(e) =>
+                                                        setNovaEmpresa({
+                                                            ...novaEmpresa,
+                                                            numeroContrato: e.target.value,
+                                                        })
+                                                    }
+                                                    placeholder="Nº do contrato"
+                                                    className="empresas-cadastro-aprovado__campo"
+                                                />
+
+                                                <input
+                                                    value={novaEmpresa.responsavelContratante}
+                                                    onChange={(e) =>
+                                                        setNovaEmpresa({
+                                                            ...novaEmpresa,
+                                                            responsavelContratante:
+                                                                e.target.value,
+                                                        })
+                                                    }
+                                                    placeholder="Responsável da contratante"
+                                                    className="empresas-cadastro-aprovado__campo"
+                                                />
+                                            </div>
+
+                                            <div className="empresas-cadastro-aprovado__linha empresas-cadastro-aprovado__linha--3">
+                                                <div className="empresas-cadastro-aprovado__grupo-campo">
+                                                    <label>Início do contrato</label>
+
+                                                    <input
+                                                        type="date"
+                                                        value={novaEmpresa.dataInicioContrato}
+                                                        onChange={(e) =>
+                                                            setNovaEmpresa({
+                                                                ...novaEmpresa,
+                                                                dataInicioContrato:
+                                                                    e.target.value,
+                                                            })
+                                                        }
+                                                        className="empresas-cadastro-aprovado__campo"
+                                                    />
+                                                </div>
+
+                                                <div className="empresas-cadastro-aprovado__grupo-campo">
+                                                    <label>Fim do contrato</label>
+
+                                                    <input
+                                                        type="date"
+                                                        value={novaEmpresa.dataFimContrato}
+                                                        onChange={(e) =>
+                                                            setNovaEmpresa({
+                                                                ...novaEmpresa,
+                                                                dataFimContrato:
+                                                                    e.target.value,
+                                                            })
+                                                        }
+                                                        className="empresas-cadastro-aprovado__campo"
+                                                    />
+                                                </div>
+
+                                                <textarea
+                                                    value={novaEmpresa.observacaoStatus}
+                                                    onChange={(e) =>
+                                                        setNovaEmpresa({
+                                                            ...novaEmpresa,
+                                                            observacaoStatus: e.target.value,
+                                                        })
+                                                    }
+                                                    placeholder="Observações"
+                                                    rows={1}
+                                                    className="empresas-cadastro-aprovado__campo empresas-cadastro-aprovado__textarea"
+                                                />
+                                            </div>
+
+                                            <textarea
+                                                value={novaEmpresa.escopoServico}
+                                                onChange={(e) =>
+                                                    setNovaEmpresa({
+                                                        ...novaEmpresa,
+                                                        escopoServico: e.target.value,
+                                                    })
+                                                }
+                                                placeholder="Escopo do trabalho"
+                                                rows={2}
+                                                className="empresas-cadastro-aprovado__campo empresas-cadastro-aprovado__textarea empresas-cadastro-aprovado__textarea--escopo"
+                                            />
+
+                                            <button
+                                                type="button"
+                                                onClick={adicionarEmpresa}
+                                                disabled={
+                                                    salvandoEmpresa ||
+                                                    !podeCadastrarEmpresasSistema
+                                                }
+                                                title={
+                                                    podeCadastrarEmpresasSistema
+                                                        ? "Cadastrar empresa"
+                                                        : mensagemBloqueioCadastroEmpresas
+                                                }
+                                                className="empresas-cadastro-aprovado__acao empresas-cadastro-aprovado__acao--empresa"
+                                            >
+                                                <Plus className="h-4 w-4" />
+
+                                                {salvandoEmpresa
+                                                    ? "Salvando empresa..."
+                                                    : "Cadastrar empresa"}
+                                            </button>
                                         </div>
-                                    </button>
-                                ))}
-                            </div>
+                                    </Card>
 
-                            <label className="empresa-doc-upload-grande flex cursor-pointer items-center justify-center gap-2 rounded-2xl border border-dashed border-slate-300 bg-slate-50 px-4 py-5 text-sm font-medium text-slate-600 hover:bg-slate-100">
-                                <Upload className="h-4 w-4" />
-                                <span className="empresa-doc-upload-grande__texto">{novoDoc.arquivo ? novoDoc.arquivo.name : "Selecionar PDF do documento"}</span>
-                                <input
-                                    type="file"
-                                    accept="application/pdf,image/*"
-                                    className="hidden"
-                                    onChange={(e) => {
-                                        const arquivo = e.target.files?.[0] || null;
-                                        if (arquivo && !validarArquivoAntesUpload(arquivo, "documentoExtenso")) {
-                                            e.target.value = "";
-                                            return;
-                                        }
-                                        setNovoDoc({ ...novoDoc, arquivo });
-                                    }}
-                                />
-                            </label>
-                            <div className="w-full min-w-0 [&>*]:w-full [&>*]:max-w-none">
-                                <FileUploadAviso arquivo={novoDoc.arquivo} tipo="documentoExtenso" />
-                            </div>
+                                    <Card className="empresas-cadastro-aprovado__painel">
+                                        <div className="empresas-cadastro-aprovado__painel-cabecalho">
+                                            <div className="empresas-cadastro-aprovado__painel-icone empresas-cadastro-aprovado__painel-icone--documento">
+                                                <FileText className="h-5 w-5" />
+                                            </div>
 
-                            <button
-                                onClick={adicionarDocumento}
-                                disabled={salvandoDocumento || !podeUploadEmpresasSistema}
-                                title={podeUploadEmpresasSistema ? "Salvar documento da empresa" : mensagemBloqueioUploadEmpresas}
-                                className="flex w-full items-center justify-center gap-2 rounded-2xl bg-slate-950 px-4 py-3 text-sm font-semibold text-white hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
-                            >
-                                <FileText className="h-4 w-4" />
-                                <span className="empresa-doc-botao-salvar__texto">{salvandoDocumento ? "Salvando documento..." : "Salvar documento da empresa"}</span>
-                            </button>
-                        </div>
-                    </Card>
-                        </div>
-                    )}
-                    </Card>
+                                            <div className="min-w-0">
+                                                <h3>Adicionar documento da empresa</h3>
+                                                <p>
+                                                    Controle de validade e revisão de LTCAT,
+                                                    PCMSO e PGR.
+                                                </p>
+                                            </div>
+                                        </div>
+
+                                        <div className="empresas-cadastro-aprovado__formulario empresas-cadastro-aprovado__formulario--documento">
+                                            <select
+                                                value={novoDoc.empresaId}
+                                                onChange={(e) =>
+                                                    setNovoDoc({
+                                                        ...novoDoc,
+                                                        empresaId: e.target.value,
+                                                    })
+                                                }
+                                                className="empresas-cadastro-aprovado__campo"
+                                            >
+                                                <option value="">Selecione a empresa</option>
+
+                                                {empresasBanco.map((empresa) => (
+                                                    <option
+                                                        key={empresa.id}
+                                                        value={empresa.id}
+                                                    >
+                                                        {empresa.nome}
+                                                    </option>
+                                                ))}
+                                            </select>
+
+                                            <div className="empresas-cadastro-aprovado__linha empresas-cadastro-aprovado__linha--2">
+                                                <div className="empresas-cadastro-aprovado__grupo-campo">
+                                                    <label>Emissão</label>
+
+                                                    <input
+                                                        type="date"
+                                                        value={novoDoc.dataEmissao}
+                                                        onChange={(e) =>
+                                                            alterarEmissaoDocumento(
+                                                                e.target.value
+                                                            )
+                                                        }
+                                                        className="empresas-cadastro-aprovado__campo"
+                                                    />
+                                                </div>
+
+                                                <div className="empresas-cadastro-aprovado__grupo-campo">
+                                                    <label>Vencimento / revisão</label>
+
+                                                    <input
+                                                        type="date"
+                                                        value={novoDoc.dataVencimento || ""}
+                                                        onChange={(e) =>
+                                                            setNovoDoc({
+                                                                ...novoDoc,
+                                                                dataVencimento:
+                                                                    e.target.value,
+                                                            })
+                                                        }
+                                                        className="empresas-cadastro-aprovado__campo"
+                                                    />
+                                                </div>
+                                            </div>
+
+                                            <div className="empresas-cadastro-aprovado__documentos">
+                                                {documentosEmpresaBase.map((doc) => (
+                                                    <button
+                                                        key={doc.tipo}
+                                                        type="button"
+                                                        aria-pressed={
+                                                            novoDoc.tipo === doc.tipo
+                                                        }
+                                                        onClick={() =>
+                                                            alterarTipoDocumento(doc.tipo)
+                                                        }
+                                                        className={classNames(
+                                                            "empresas-cadastro-aprovado__documento",
+                                                            novoDoc.tipo === doc.tipo &&
+                                                                "empresas-cadastro-aprovado__documento--ativo"
+                                                        )}
+                                                    >
+                                                        <div
+                                                            className={`empresas-cadastro-aprovado__documento-icone empresas-cadastro-aprovado__documento-icone--${String(
+                                                                doc.tipo
+                                                            ).toLowerCase()}`}
+                                                        >
+                                                            <FileText className="h-4 w-4" />
+                                                        </div>
+
+                                                        <div className="empresas-cadastro-aprovado__documento-texto">
+                                                            <strong>{doc.tipo}</strong>
+
+                                                            <p>
+                                                                {doc.tipo === "LTCAT"
+                                                                    ? "Laudo Técnico das Condições Ambientais de Trabalho"
+                                                                    : doc.tipo === "PCMSO"
+                                                                      ? "Programa de Controle Médico de Saúde Ocupacional"
+                                                                      : "Programa de Gerenciamento de Riscos"}
+                                                            </p>
+
+                                                            <span>
+                                                                {doc.tipo === "LTCAT"
+                                                                    ? "Base legal: previdenciária / eSocial"
+                                                                    : doc.tipo === "PCMSO"
+                                                                      ? "Base normativa: NR-07 e PGR/NR-01"
+                                                                      : "Base normativa: NR-01 / GRO / PGR"}
+                                                            </span>
+                                                        </div>
+                                                    </button>
+                                                ))}
+                                            </div>
+
+                                            <label className="empresas-cadastro-aprovado__pdf">
+                                                <Upload className="h-4 w-4" />
+
+                                                <span>
+                                                    {novoDoc.arquivo
+                                                        ? novoDoc.arquivo.name
+                                                        : "Selecionar PDF do documento"}
+                                                </span>
+
+                                                <input
+                                                    type="file"
+                                                    accept="application/pdf,image/*"
+                                                    className="hidden"
+                                                    onChange={(e) => {
+                                                        const arquivo =
+                                                            e.target.files?.[0] || null;
+
+                                                        if (
+                                                            arquivo &&
+                                                            !validarArquivoAntesUpload(
+                                                                arquivo,
+                                                                "documentoExtenso"
+                                                            )
+                                                        ) {
+                                                            e.target.value = "";
+                                                            return;
+                                                        }
+
+                                                        setNovoDoc({
+                                                            ...novoDoc,
+                                                            arquivo,
+                                                        });
+                                                    }}
+                                                />
+                                            </label>
+
+                                            <FileUploadAviso
+                                                arquivo={novoDoc.arquivo}
+                                                tipo="documentoExtenso"
+                                            />
+
+                                            <button
+                                                type="button"
+                                                onClick={adicionarDocumento}
+                                                disabled={
+                                                    salvandoDocumento ||
+                                                    !podeUploadEmpresasSistema
+                                                }
+                                                title={
+                                                    podeUploadEmpresasSistema
+                                                        ? "Salvar documento da empresa"
+                                                        : mensagemBloqueioUploadEmpresas
+                                                }
+                                                className="empresas-cadastro-aprovado__acao empresas-cadastro-aprovado__acao--documento"
+                                            >
+                                                <FileText className="h-4 w-4" />
+
+                                                {salvandoDocumento
+                                                    ? "Salvando documento..."
+                                                    : "Salvar documento"}
+                                            </button>
+                                        </div>
+                                    </Card>
+                                </div>
+                            )}
+                        </Card>
                     </div>
                 </section>
 
