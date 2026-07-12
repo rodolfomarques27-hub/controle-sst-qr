@@ -2,7 +2,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { QRCodeSVG } from "qrcode.react";
 import { QrCodeComLogo } from "./QrCodeComLogo";
-import { Check, ClipboardCheck, Copy, Download, Link2, QrCode, Search, ShieldCheck, ChevronDown, PhoneCall } from "lucide-react";
+import { Camera, Check, ClipboardCheck, Copy, Download, Link2, QrCode, Search, ShieldCheck, ChevronDown, PhoneCall, X } from "lucide-react";
 import { Card, FotoColaborador, Header, QRCodeReal, StatusPill, obterFotoColaboradorSrc } from "../commonComponents";
 import { DAY } from "../../constants/sstConstants";
 import { obterTreinamento, statusDocumento, statusGeral, treinamentoSemValidade } from "../../services/colaboradorDocumentosService";
@@ -69,6 +69,75 @@ function compararTreinamentosPorOrdemNumerica(a, b) {
     return ordemA.nome.localeCompare(ordemB.nome, "pt-BR", { numeric: true, sensitivity: "base" });
 }
 
+function ScannerQrMobile() {
+    const videoRef = React.useRef(null);
+    const [ativo, setAtivo] = useState(false);
+    const [mensagem, setMensagem] = useState("Toque para abrir a câmera e ler um QR Code impresso.");
+
+    useEffect(() => () => {
+        const stream = videoRef.current?.srcObject;
+        stream?.getTracks?.().forEach((track) => track.stop());
+    }, []);
+
+    useEffect(() => {
+        if (!ativo || !window.BarcodeDetector) return undefined;
+        const detector = new window.BarcodeDetector({ formats: ["qr_code"] });
+        let cancelado = false;
+        const ler = async () => {
+            if (cancelado || !videoRef.current || videoRef.current.readyState < 2) return;
+            try {
+                const resultados = await detector.detect(videoRef.current);
+                const valor = resultados?.[0]?.rawValue;
+                if (valor && (String(valor).startsWith("http://") || String(valor).startsWith("https://"))) {
+                    window.location.href = valor;
+                    return;
+                }
+            } catch { /* continua tentando enquanto a câmera estiver aberta */ }
+            if (!cancelado) window.setTimeout(ler, 350);
+        };
+        ler();
+        return () => { cancelado = true; };
+    }, [ativo]);
+
+    const iniciarCamera = async () => {
+        if (!navigator.mediaDevices?.getUserMedia) {
+            setMensagem("A câmera não está disponível neste navegador.");
+            return;
+        }
+        try {
+            const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: "environment" } } });
+            videoRef.current.srcObject = stream;
+            await videoRef.current.play();
+            setAtivo(true);
+            setMensagem("Aponte a câmera para o QR Code impresso.");
+        } catch {
+            setMensagem("Não foi possível acessar a câmera. Verifique a permissão do navegador.");
+        }
+    };
+
+    const fecharCamera = () => {
+        const stream = videoRef.current?.srcObject;
+        stream?.getTracks?.().forEach((track) => track.stop());
+        videoRef.current.srcObject = null;
+        setAtivo(false);
+        setMensagem("Toque para abrir a câmera e ler um QR Code impresso.");
+    };
+
+    return (
+        <section className="mobile-qr-scanner">
+            <div className="mobile-qr-scanner__icon"><Camera className="h-7 w-7" /></div>
+            <h1>Escanear QR Code</h1>
+            <p>{mensagem}</p>
+            <video ref={videoRef} className={ativo ? "mobile-qr-scanner__video is-visible" : "mobile-qr-scanner__video"} playsInline muted />
+            {!ativo ? (
+                <button type="button" onClick={iniciarCamera}><Camera className="h-5 w-5" /> Abrir câmera</button>
+            ) : (
+                <button type="button" onClick={fecharCamera} className="mobile-qr-scanner__close"><X className="h-5 w-5" /> Fechar câmera</button>
+            )}
+            <small>O QR Code deve estar impresso e visível. Nenhuma lista de colaboradores é exibida no celular.</small>
+        </section>
+    );
+}
 function abreviarNomeEtiquetaQr(nome = "", limite = 24) {
     const partes = String(nome || "")
         .trim()
@@ -282,7 +351,7 @@ h1 {
     }
 }
 `;
-export function ConsultaQR({ colaborador, colaboradores = [], onSelecionarColaborador }) {
+function ConsultaQRDesktop({ colaborador, colaboradores = [], onSelecionarColaborador }) {
     const [busca, setBusca] = useState("");
     const [idColaboradorConsultaSelecionado, setIdColaboradorConsultaSelecionado] = useState("");
     const [filtrosConsultaQrAbertos, setFiltrosConsultaQrAbertos] = useState(() => {
@@ -1375,4 +1444,20 @@ export function ConsultaQR({ colaborador, colaboradores = [], onSelecionarColabo
             </Card>
         </div>
     );
+}
+
+export function ConsultaQR(props) {
+    const [modoMobile, setModoMobile] = useState(() => (
+        typeof window !== "undefined" && window.matchMedia("(max-width: 1023.98px)").matches
+    ));
+
+    useEffect(() => {
+        const mediaQuery = window.matchMedia("(max-width: 1023.98px)");
+        const atualizar = () => setModoMobile(mediaQuery.matches);
+        atualizar();
+        mediaQuery.addEventListener?.("change", atualizar);
+        return () => mediaQuery.removeEventListener?.("change", atualizar);
+    }, []);
+
+    return modoMobile ? <ScannerQrMobile /> : <ConsultaQRDesktop {...props} />;
 }

@@ -1,4 +1,3 @@
-import React from "react";
 import { Card } from "../commonComponents";
 import { classNames } from "../../utils/sstUtils";
 
@@ -12,7 +11,7 @@ export function DashboardBlocosGrid({
 }) {
     if (!blocosDashboardExibidos.length) {
         return (
-            <Card className={mostrarFiltroPainel ? "mt-3" : "mt-6"}>
+            <Card className={`dashboard-sst-blocos-grid ${mostrarFiltroPainel ? "mt-3" : "mt-6"}`}>
                 <div className="rounded-2xl border border-dashed border-slate-300 p-5 text-center text-sm text-slate-500">
                     {mensagemDashboardSemBlocos}
                 </div>
@@ -21,7 +20,7 @@ export function DashboardBlocosGrid({
     }
 
     return (
-        <div className={classNames("grid gap-6 md:grid-cols-2 xl:grid-cols-6", mostrarFiltroPainel ? "mt-3" : "mt-6")}>
+        <div className={classNames("dashboard-sst-blocos-grid grid gap-6 md:grid-cols-2 xl:grid-cols-6", mostrarFiltroPainel ? "mt-3" : "mt-6")}>
             {blocosDashboardExibidos.map((chave) => (
                 <div
                     key={chave}

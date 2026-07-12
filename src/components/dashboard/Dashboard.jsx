@@ -394,7 +394,7 @@ export function Dashboard({
         }, 350);
 
         return () => window.clearTimeout(timer);
-    }, [carregarUsoStorageDashboard]);
+    }, [carregarUsoStorageDashboard, usoStorageDashboard?.arquivos, usoStorageDashboard?.origem, usoStorageDashboard?.totalBytes]);
 
     const atualizandoDashboardSstCompleto = Boolean(
         atualizandoInformacoes || atualizandoInformacoesLocais || carregandoStorageDashboard
@@ -846,7 +846,7 @@ export function Dashboard({
                 const tituloCompacto = obterTituloCompactoCartaDashboard(item);
                 const detalheCompacto = obterDetalheCompactoCartaDashboard(item);
                 const storagePercentualRotulo = `${Number(storagePercentual || 0)}%`;
-                const tituloExibido = ehArmazenamento ? "ARMAZ\u200BENAMENTO" : tituloCompacto;
+                const tituloExibido = ehArmazenamento ? "ARMAZENAMENTO" : tituloCompacto;
                 const storagePercentualValor = Math.max(0, Math.min(100, Number(storagePercentual || 0)));
                 const storageAngulo = Math.round((storagePercentualValor / 100) * 360);
                 const storageFundoAnel = "conic-gradient(from 180deg, rgba(16,185,129,0.96) 0deg, rgba(16,185,129,0.96) var(--storage-angulo), rgba(226,232,240,0.95) var(--storage-angulo), rgba(226,232,240,0.95) 360deg)";
@@ -855,17 +855,22 @@ export function Dashboard({
                     <div
                         key={item.chave}
                         data-dashboard-card-tamanho={obterTamanhoCartaDashboard(item.chave)}
-                        className={`dashboard-summary-card group relative flex h-auto min-h-[6.25rem] overflow-hidden rounded-[22px] border bg-[linear-gradient(180deg,rgba(255,255,255,0.98)_0%,rgba(246,249,252,0.96)_100%)] px-3 pt-3 pb-2 shadow-[0_10px_26px_rgba(26,35,50,0.08)] transition duration-200 hover:-translate-y-0.5 hover:shadow-[0_16px_34px_rgba(26,35,50,0.13)] ${acento.borda} ${obterClasseTamanhoCartaDashboard(item.chave)}`}
+                        data-dashboard-card={item.chave}
+                        className={`dashboard-summary-card group relative flex h-auto min-h-[6.25rem] overflow-hidden rounded-[22px] border bg-[linear-gradient(180deg,rgba(255,255,255,0.98)_0%,rgba(246,249,252,0.96)_100%)] px-3 pt-3 pb-2 shadow-[0_10px_26px_rgba(26,35,50,0.08)] transition duration-200 hover:-translate-y-0.5 hover:shadow-[0_16px_34px_rgba(26,35,50,0.13)] ${acento.borda} ${obterClasseTamanhoCartaDashboard(item.chave)} ${ehArmazenamento ? "dashboard-storage-card--split" : ""}`}
                     >
                         <span className={`absolute inset-x-0 top-0 h-1 bg-gradient-to-r ${acento.faixa}`} />
                         <div className="flex min-h-0 flex-1 items-center justify-center gap-2">
-                            <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl shadow-sm ring-1 ${ehArmazenamento ? "bg-slate-50 ring-slate-200" : (acento.fundoIcone || estilos.icone || "bg-[#F4F6F9] text-[#1A2332] ring-[#E5E9EF]")}`}>
+                            <div
+                                data-dashboard-storage-mark={ehArmazenamento ? "true" : undefined}
+                                className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl shadow-sm ring-1 ${ehArmazenamento ? "bg-slate-50 ring-slate-200" : (acento.fundoIcone || estilos.icone || "bg-[#F4F6F9] text-[#1A2332] ring-[#E5E9EF]")}`}
+                            >
                                 {ehArmazenamento ? (
                                     <div
-                                        className="relative flex h-[2.85rem] w-[2.85rem] items-center justify-center rounded-full bg-white text-[11px] font-black text-slate-900 shadow-inner ring-1 ring-slate-200"
+                                        className="dashboard-storage-percent relative flex h-[2.85rem] w-[2.85rem] flex-col items-center justify-center rounded-full bg-white text-[11px] font-black text-slate-900 shadow-inner ring-1 ring-slate-200"
                                         style={{ background: storageFundoAnel, "--storage-angulo": `${storageAngulo}deg` }}
                                     >
-                                        <span className="relative z-10">{storagePercentualRotulo}</span>
+                                        <span className="relative z-10 dashboard-storage-percent-value">{storagePercentualRotulo}</span>
+                                        <span className="relative z-10 dashboard-storage-percent-label">utilizado</span>
                                     </div>
                                 ) : (
                                     <Icon className="h-5 w-5" />
@@ -885,19 +890,25 @@ export function Dashboard({
                                         <p className="whitespace-nowrap text-[10px] font-semibold leading-tight text-slate-500">
                                             {detalheCompacto}
                                         </p>
+                                        <p className="dashboard-storage-available whitespace-nowrap text-[10px] font-black leading-tight text-teal-700">
+                                            {`${Math.max(0, 100 - storagePercentualValor)}% disponível`}
+                                        </p>
                                     </div>
                                 ) : (
                                     <>
                                         <p className={`mt-1.5 border-b border-slate-200/80 pb-1 text-[1.8rem] font-black leading-none tracking-tight ${obterClasseValorCartaDashboard(item.chave)} ${estilos.valor || "text-slate-950"}`}>
                                             {item.valor}
                                         </p>
-                                        <p className="mt-1.25 text-[10px] font-semibold leading-tight text-slate-500 whitespace-nowrap break-normal hyphens-none">
-                                            {detalheCompacto}
-                                        </p>
                                     </>
                                 )}
                             </div>
                         </div>
+
+                        {!ehArmazenamento && (
+                            <p className="dashboard-summary-card-detail text-[10px] font-semibold leading-tight text-slate-500 whitespace-nowrap break-normal hyphens-none">
+                                {detalheCompacto}
+                            </p>
+                        )}
                     </div>
                 );
             })}
@@ -950,30 +961,32 @@ export function Dashboard({
             <Header
                 titulo="Dashboard SST"
                 acao={
-                    <div className="top-actions-nowrap dashboard-sst-actions-horizontal">
+                    <div className="top-actions-nowrap dashboard-sst-actions-horizontal dashboard-sst-header-actions">
                         <button
                             type="button"
                             onClick={atualizarInformacoesDashboard}
                             disabled={atualizandoDashboardSstCompleto}
-                            className="inline-flex items-center gap-2 rounded-2xl border border-[#E5E9EF] bg-white px-4 py-2.5 text-sm font-black text-[#1A2332] shadow-[0_6px_16px_rgba(26,35,50,0.06)] transition hover:-translate-y-0.5 hover:bg-[#F8FAFC] hover:shadow-[0_10px_22px_rgba(26,35,50,0.10)] disabled:cursor-not-allowed disabled:opacity-60"
+                            className="dashboard-sst-refresh-button inline-flex items-center gap-2 rounded-2xl border border-[#E5E9EF] bg-white px-4 py-2.5 text-sm font-black text-[#1A2332] shadow-[0_6px_16px_rgba(26,35,50,0.06)] transition hover:-translate-y-0.5 hover:bg-[#F8FAFC] hover:shadow-[0_10px_22px_rgba(26,35,50,0.10)] disabled:cursor-not-allowed disabled:opacity-60"
                             title="Atualizar colaboradores, empresas, documentos, auditorias e armazenamento do Dashboard SST"
                         >
                             <RefreshCw className={`h-4 w-4 ${atualizandoDashboardSstCompleto ? "animate-spin" : ""}`} />
                             {atualizandoDashboardSstCompleto ? "Atualizando..." : "Atualizar informações"}
                         </button>
 
-                        <DashboardHeaderAcoes
-                            setMostrarFiltroPainel={setMostrarFiltroPainel}
-                            enviarAlertasPendenciasCriticas={enviarAlertasPendenciasCriticas}
-                            baixarRelatorioDashboard={baixarRelatorioDashboard}
-                            enviandoEmail={enviandoEmail}
-                            pendencias={pendencias}
-                        />
+                        <div className="dashboard-sst-desktop-actions">
+                            <DashboardHeaderAcoes
+                                setMostrarFiltroPainel={setMostrarFiltroPainel}
+                                enviarAlertasPendenciasCriticas={enviarAlertasPendenciasCriticas}
+                                baixarRelatorioDashboard={baixarRelatorioDashboard}
+                                enviandoEmail={enviandoEmail}
+                                pendencias={pendencias}
+                            />
+                        </div>
                     </div>
                 }
             />
 
-            <section className="relative mb-6 overflow-hidden rounded-[22px] border border-[#E5E9EF] bg-[#111827] shadow-[0_10px_28px_rgba(26,35,50,0.12)]">
+            <section className="dashboard-hero-sst relative mb-6 overflow-hidden rounded-[22px] border border-[#E5E9EF] bg-[#111827] shadow-[0_10px_28px_rgba(26,35,50,0.12)]">
                 <div
                     className="absolute inset-0 bg-cover bg-center bg-no-repeat opacity-100"
                     style={{
@@ -998,7 +1011,7 @@ export function Dashboard({
                         <div className="mt-5 h-1 w-14 rounded-full bg-[#1E7C3A]" />
                     </div>
 
-                    <div className="rounded-2xl border border-white/10 bg-black/35 px-4 py-3 text-sm font-black text-white shadow-[0_8px_24px_rgba(0,0,0,0.22)] backdrop-blur">
+                    <div className="dashboard-hero-sst__date rounded-2xl border border-white/10 bg-black/35 px-4 py-3 text-sm font-black text-white shadow-[0_8px_24px_rgba(0,0,0,0.22)] backdrop-blur">
                         <div className="flex flex-wrap items-center gap-2">
                             <CalendarClock className="h-4 w-4 text-emerald-300" />
                             <span>{dataHeroDashboard}</span>
@@ -1010,6 +1023,7 @@ export function Dashboard({
                     </div>
                 </div>
             </section>
+            <div className="dashboard-sst-mobile-secondary">
             <DashboardControles
                 mostrarFiltroPainel={mostrarFiltroPainel}
                 abaPersonalizacaoPainel={abaPersonalizacaoPainel}
@@ -1046,6 +1060,8 @@ export function Dashboard({
                 mostrarFiltroPainel={mostrarFiltroPainel}
                 abaPersonalizacaoPainel={abaPersonalizacaoPainel}
             />
+
+            </div>
 
             <DashboardBlocosGrid
                 mostrarFiltroPainel={mostrarFiltroPainel}
