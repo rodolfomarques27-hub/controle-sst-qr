@@ -23,6 +23,8 @@ import { DashboardHeaderAcoes } from "./DashboardHeaderAcoes";
 import { DashboardPreviewFiltro } from "./DashboardPreviewFiltro";
 import { DashboardBlocoConteudo } from "./DashboardBlocoConteudo";
 import { DashboardControles } from "./DashboardControles";
+import { DashboardStorageDesktop } from "./DashboardStorageDesktop";
+import { DashboardStorageMobile } from "./DashboardStorageMobile";
 import {
     normalizarAuditoriaCampo,
     auditoriaCampoAberta,
@@ -851,30 +853,33 @@ export function Dashboard({
                 const storageAngulo = Math.round((storagePercentualValor / 100) * 360);
                 const storageFundoAnel = "conic-gradient(from 180deg, rgba(16,185,129,0.96) 0deg, rgba(16,185,129,0.96) var(--storage-angulo), rgba(226,232,240,0.95) var(--storage-angulo), rgba(226,232,240,0.95) 360deg)";
 
+                if (ehArmazenamento) {
+                    const propriedadesStorage = {
+                        titulo: tituloExibido,
+                        detalhe: detalheCompacto,
+                        percentual: storagePercentualValor,
+                        classeTamanho: obterClasseTamanhoCartaDashboard(item.chave),
+                    };
+
+                    return (
+                        <React.Fragment key={item.chave}>
+                            <DashboardStorageDesktop {...propriedadesStorage} />
+                            <DashboardStorageMobile {...propriedadesStorage} />
+                        </React.Fragment>
+                    );
+                }
                 return (
                     <div
                         key={item.chave}
                         data-dashboard-card-tamanho={obterTamanhoCartaDashboard(item.chave)}
                         data-dashboard-card={item.chave}
-                        className={`dashboard-summary-card group relative flex h-auto min-h-[6.25rem] overflow-hidden rounded-[22px] border bg-[linear-gradient(180deg,rgba(255,255,255,0.98)_0%,rgba(246,249,252,0.96)_100%)] px-3 pt-3 pb-2 shadow-[0_10px_26px_rgba(26,35,50,0.08)] transition duration-200 hover:-translate-y-0.5 hover:shadow-[0_16px_34px_rgba(26,35,50,0.13)] ${acento.borda} ${obterClasseTamanhoCartaDashboard(item.chave)} ${ehArmazenamento ? "dashboard-storage-card--split" : ""}`}
+                        className={`dashboard-summary-card group relative flex h-auto min-h-[6.25rem] overflow-hidden rounded-[22px] border bg-[linear-gradient(180deg,rgba(255,255,255,0.98)_0%,rgba(246,249,252,0.96)_100%)] px-3 pt-3 pb-2 shadow-[0_10px_26px_rgba(26,35,50,0.08)] transition duration-200 hover:-translate-y-0.5 hover:shadow-[0_16px_34px_rgba(26,35,50,0.13)] ${acento.borda} ${obterClasseTamanhoCartaDashboard(item.chave)}`}
                     >
                         <span className={`absolute inset-x-0 top-0 h-1 bg-gradient-to-r ${acento.faixa}`} />
+
                         <div className="flex min-h-0 flex-1 items-center justify-center gap-2">
-                            <div
-                                data-dashboard-storage-mark={ehArmazenamento ? "true" : undefined}
-                                className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl shadow-sm ring-1 ${ehArmazenamento ? "bg-slate-50 ring-slate-200" : (acento.fundoIcone || estilos.icone || "bg-[#F4F6F9] text-[#1A2332] ring-[#E5E9EF]")}`}
-                            >
-                                {ehArmazenamento ? (
-                                    <div
-                                        className="dashboard-storage-percent relative flex h-[2.85rem] w-[2.85rem] flex-col items-center justify-center rounded-full bg-white text-[11px] font-black text-slate-900 shadow-inner ring-1 ring-slate-200"
-                                        style={{ background: storageFundoAnel, "--storage-angulo": `${storageAngulo}deg` }}
-                                    >
-                                        <span className="relative z-10 dashboard-storage-percent-value">{storagePercentualRotulo}</span>
-                                        <span className="relative z-10 dashboard-storage-percent-label">utilizado</span>
-                                    </div>
-                                ) : (
-                                    <Icon className="h-5 w-5" />
-                                )}
+                            <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl shadow-sm ring-1 ${acento.fundoIcone || estilos.icone || "bg-[#F4F6F9] text-[#1A2332] ring-[#E5E9EF]"}`}>
+                                <Icon className="h-5 w-5" />
                             </div>
 
                             <div className="min-w-0 flex-1 text-center">
@@ -882,33 +887,17 @@ export function Dashboard({
                                     <h3 className="min-w-0 whitespace-nowrap break-normal hyphens-none text-[12px] font-black uppercase tracking-[0.08em] leading-tight text-slate-800">
                                         {tituloExibido}
                                     </h3>
-
                                 </div>
 
-                                {ehArmazenamento ? (
-                                    <div className="mt-1.5 min-w-0">
-                                        <p className="whitespace-nowrap text-[10px] font-semibold leading-tight text-slate-500">
-                                            {detalheCompacto}
-                                        </p>
-                                        <p className="dashboard-storage-available whitespace-nowrap text-[10px] font-black leading-tight text-teal-700">
-                                            {`${Math.max(0, 100 - storagePercentualValor)}% disponível`}
-                                        </p>
-                                    </div>
-                                ) : (
-                                    <>
-                                        <p className={`mt-1.5 border-b border-slate-200/80 pb-1 text-[1.8rem] font-black leading-none tracking-tight ${obterClasseValorCartaDashboard(item.chave)} ${estilos.valor || "text-slate-950"}`}>
-                                            {item.valor}
-                                        </p>
-                                    </>
-                                )}
+                                <p className={`mt-1.5 border-b border-slate-200/80 pb-1 text-[1.8rem] font-black leading-none tracking-tight ${obterClasseValorCartaDashboard(item.chave)} ${estilos.valor || "text-slate-950"}`}>
+                                    {item.valor}
+                                </p>
                             </div>
                         </div>
 
-                        {!ehArmazenamento && (
-                            <p className="dashboard-summary-card-detail text-[10px] font-semibold leading-tight text-slate-500 whitespace-nowrap break-normal hyphens-none">
-                                {detalheCompacto}
-                            </p>
-                        )}
+                        <p className="dashboard-summary-card-detail text-[10px] font-semibold leading-tight text-slate-500 whitespace-nowrap break-normal hyphens-none">
+                            {detalheCompacto}
+                        </p>
                     </div>
                 );
             })}

@@ -15309,36 +15309,232 @@
     }
   }
 
-/* MICROETAPA DASHBOARD STORAGE 4.1 - alinhar marcador por alvo exclusivo */
+/* MICROETAPA DASHBOARD CARDS DESKTOP 3 - altura linha e detalhe */
 
 /*
- * O atributo exclusivo elimina conflitos com seletores posicionais.
- * O contêiner completo do percentual desce 5 px.
- * O anel interno permanece centralizado dentro do contêiner.
+ * Desktop:
+ * - reduz a altura e o espaço vazio dos cards;
+ * - alinha o ícone visualmente ao número principal;
+ * - remove a linha curta existente abaixo do número;
+ * - cria uma linha cinza em toda a largura do card;
+ * - mantém o texto complementar imediatamente abaixo da linha;
+ * - neutraliza posicionamentos antigos do card Mobilizados.
+ *
+ * Os componentes independentes de armazenamento não utilizam
+ * .dashboard-summary-card e permanecem fora deste bloco.
  */
 
-.dashboard-summary-grid
-  > .dashboard-summary-card[data-dashboard-card="armazenamentoUtilizado"]
-  [data-dashboard-storage-mark="true"] {
-  position: relative !important;
-  top: 5px !important;
-  bottom: auto !important;
-  align-self: center !important;
-  margin-top: 0 !important;
-  margin-bottom: 0 !important;
-  transform: none !important;
+@media (min-width: 1024px) {
+  .dashboard-summary-grid
+    > .dashboard-summary-card {
+    position: relative !important;
+    display: grid !important;
+    grid-template-rows: minmax(0, 1fr) auto !important;
+    align-items: stretch !important;
+    justify-content: stretch !important;
+    height: 5.5rem !important;
+    min-height: 5.5rem !important;
+    padding: 0.48rem 0.62rem 0.3rem !important;
+  }
+
+  .dashboard-summary-grid
+    > .dashboard-summary-card::before,
+  .dashboard-summary-grid
+    > .dashboard-summary-card::after {
+    content: none !important;
+    display: none !important;
+  }
+
+  .dashboard-summary-grid
+    > .dashboard-summary-card
+    > div {
+    position: static !important;
+    display: grid !important;
+    grid-template-columns: 2.5rem minmax(0, 1fr) !important;
+    grid-template-rows: 1fr !important;
+    column-gap: 0.5rem !important;
+    align-items: center !important;
+    justify-content: stretch !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    min-height: 0 !important;
+    margin: 0 !important;
+    padding: 0.04rem 0 0 !important;
+    transform: none !important;
+  }
+
+  .dashboard-summary-grid
+    > .dashboard-summary-card
+    > div
+    > div:first-child {
+    position: static !important;
+    grid-column: 1 !important;
+    grid-row: 1 !important;
+    align-self: center !important;
+    justify-self: center !important;
+    flex: none !important;
+    width: 2.5rem !important;
+    height: 2.5rem !important;
+    margin: 0 !important;
+    transform: translateY(0.18rem) !important;
+  }
+
+  .dashboard-summary-grid
+    > .dashboard-summary-card
+    > div
+    > div:nth-child(2) {
+    position: static !important;
+    grid-column: 2 !important;
+    grid-row: 1 !important;
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    justify-content: center !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    min-height: 0 !important;
+    align-self: center !important;
+    justify-self: stretch !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    text-align: center !important;
+    transform: none !important;
+  }
+
+  .dashboard-summary-grid
+    > .dashboard-summary-card
+    h3 {
+    position: static !important;
+    display: block !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    text-align: center !important;
+    white-space: nowrap !important;
+    word-break: normal !important;
+    overflow-wrap: normal !important;
+    overflow: visible !important;
+    font-size: 0.66rem !important;
+    font-weight: 900 !important;
+    line-height: 1 !important;
+    letter-spacing: 0.03em !important;
+    transform: none !important;
+  }
+
+  .dashboard-summary-grid
+    > .dashboard-summary-card
+    > div
+    > div:nth-child(2)
+    > p {
+    position: static !important;
+    display: block !important;
+    width: 100% !important;
+    max-width: 5rem !important;
+    min-width: 0 !important;
+    margin: 0.18rem auto 0 !important;
+    padding: 0 !important;
+    border: 0 !important;
+    text-align: center !important;
+    white-space: nowrap !important;
+    word-break: normal !important;
+    overflow-wrap: normal !important;
+    overflow: visible !important;
+    text-overflow: clip !important;
+    font-size: 1.38rem !important;
+    font-weight: 900 !important;
+    line-height: 0.95 !important;
+    letter-spacing: -0.025em !important;
+    transform: none !important;
+  }
+
+  .dashboard-summary-grid
+    > .dashboard-summary-card
+    .dashboard-summary-card-detail {
+    position: static !important;
+    inset: auto !important;
+    display: block !important;
+    align-self: end !important;
+    width: 100% !important;
+    max-width: none !important;
+    min-height: 0 !important;
+    margin: 0.24rem 0 0 !important;
+    padding: 0.28rem 0.15rem 0 !important;
+    border-top: 1px solid rgba(203, 213, 225, 0.82) !important;
+    text-align: center !important;
+    white-space: nowrap !important;
+    word-break: normal !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    font-size: 0.5rem !important;
+    font-weight: 600 !important;
+    line-height: 1 !important;
+    color: #64748b !important;
+    transform: none !important;
+  }
+
+  .dashboard-summary-grid
+    > .dashboard-summary-card[data-dashboard-card="mobilizados"]
+    > div {
+    grid-template-columns: 2.5rem minmax(0, 1fr) !important;
+    align-items: center !important;
+  }
+
+  .dashboard-summary-grid
+    > .dashboard-summary-card[data-dashboard-card="mobilizados"]
+    > div
+    > div:first-child {
+    position: static !important;
+    left: auto !important;
+    right: auto !important;
+    top: auto !important;
+    bottom: auto !important;
+    align-self: center !important;
+    justify-self: center !important;
+    margin: 0 !important;
+    transform: translateY(0.18rem) !important;
+  }
+
+  .dashboard-summary-grid
+    > .dashboard-summary-card[data-dashboard-card="mobilizados"]
+    > div
+    > div:nth-child(2) {
+    position: static !important;
+    left: auto !important;
+    right: auto !important;
+    top: auto !important;
+    bottom: auto !important;
+    width: 100% !important;
+    align-items: center !important;
+    justify-content: center !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    transform: none !important;
+  }
+
+  .dashboard-summary-grid
+    > .dashboard-summary-card[data-dashboard-card="mobilizados"]
+    > div
+    > div:nth-child(2)
+    > p {
+    position: static !important;
+    left: auto !important;
+    right: auto !important;
+    top: auto !important;
+    bottom: auto !important;
+    display: block !important;
+    width: 100% !important;
+    max-width: 5rem !important;
+    min-width: 3rem !important;
+    margin: 0.18rem auto 0 !important;
+    padding: 0 !important;
+    border: 0 !important;
+    text-align: center !important;
+    white-space: nowrap !important;
+    overflow: visible !important;
+    letter-spacing: -0.025em !important;
+    transform: none !important;
+  }
 }
 
-.dashboard-summary-grid
-  > .dashboard-summary-card[data-dashboard-card="armazenamentoUtilizado"]
-  [data-dashboard-storage-mark="true"]
-  .dashboard-storage-percent {
-  position: relative !important;
-  top: auto !important;
-  bottom: auto !important;
-  margin-top: 0 !important;
-  margin-bottom: 0 !important;
-  transform: none !important;
-}
-
-/* FIM MICROETAPA DASHBOARD STORAGE 4.1 */
+/* FIM MICROETAPA DASHBOARD CARDS DESKTOP 3 */
