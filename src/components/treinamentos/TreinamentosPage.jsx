@@ -21,6 +21,7 @@ import {
     treinamentoSemValidade,
     statusDocumento,
     obterTreinamento,
+    obterStatusInicialColaborador,
     calcularVencimentoTreinamento,
     detectarDataEmissaoArquivo,
     inferirTreinamentoPorNomeArquivo,
@@ -153,6 +154,7 @@ function emailTstDaEmpresa(colaborador) {
 
 export function Treinamentos({
     colaboradores,
+    empresasBanco = [],
     colaboradorInicialId,
     onSalvarCertificado,
     onVisualizarCertificado,
@@ -1013,7 +1015,7 @@ export function Treinamentos({
             "Solicitamos regularizar os documentos vencidos e programar a renovação dos próximos vencimentos para evitar bloqueio de atividade.",
             "",
             "Atenciosamente,",
-            "Sistema de Controle SST QR",
+            "Sistema SafeScan Brasil",
         ].join("\n");
 
         return { destinatario, assunto, corpo };

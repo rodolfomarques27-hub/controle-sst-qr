@@ -461,7 +461,7 @@ function normalizarDataFichaEpiVerificacao(valor = "") {
     const iso = texto.match(/^((?:19|20)\d{2})-(\d{2})-(\d{2})$/);
     if (iso) return `${iso[1]}-${iso[2]}-${iso[3]}`;
 
-    const br = texto.match(/^([0-3]?\d)[\/.-]([01]?\d)[\/.-]((?:19|20)?\d{2})$/);
+    const br = texto.match(/^([0-3]?\d)[/.-]([01]?\d)[/.-]((?:19|20)?\d{2})$/);
     if (!br) return "";
 
     const dia = br[1].padStart(2, "0");
@@ -742,7 +742,6 @@ function empresaRibeiroAquinoConfirmadaPorModeloLista({
     nomeEmpresaNormalizado = "",
     perfilDocumental = "",
     listaPresenca = false,
-    documentoColetivo = false,
     nomeEncontrado = null,
     treinamentoEncontrado = null,
     textoDocumento = "",
@@ -785,7 +784,7 @@ function assinaturaCertificadoEscaneadoProvavel({
 function extrairCpfsDocumentoConferencia(texto = "") {
     const conteudo = String(texto || "");
     const formatados = Array.from(conteudo.matchAll(/\b\d{3}\.\d{3}\.\d{3}-\d{2}\b/g)).map((match) => match[0]);
-    const rotulados = Array.from(conteudo.matchAll(/cpf\s*[:\-]?\s*(\d{3}[.\s]?\d{3}[.\s]?\d{3}[-\s]?\d{2})/gi)).map((match) => match[1]);
+    const rotulados = Array.from(conteudo.matchAll(/cpf\s*[-:]?\s*(\d{3}[.\s]?\d{3}[.\s]?\d{3}[-\s]?\d{2})/gi)).map((match) => match[1]);
 
     return Array.from(new Set([...formatados, ...rotulados]
         .map(apenasDigitosConferencia)
@@ -800,7 +799,7 @@ function documentoPossuiCpfQualquer(texto = "") {
 function extrairCnpjsDocumentoConferencia(texto = "") {
     const conteudo = String(texto || "");
     const formatados = Array.from(conteudo.matchAll(/\b\d{2}\.\d{3}\.\d{3}\/\d{4}-\d{2}\b/g)).map((match) => match[0]);
-    const rotulados = Array.from(conteudo.matchAll(/cnpj\s*[:\-]?\s*(\d{2}[.\s]?\d{3}[.\s]?\d{3}[\/\s]?\d{4}[-\s]?\d{2})/gi)).map((match) => match[1]);
+    const rotulados = Array.from(conteudo.matchAll(/cnpj\s*[-:]?\s*(\d{2}[.\s]?\d{3}[.\s]?\d{3}[/\s]?\d{4}[-\s]?\d{2})/gi)).map((match) => match[1]);
 
     return Array.from(new Set([...formatados, ...rotulados]
         .map(apenasDigitosConferencia)
@@ -1289,10 +1288,6 @@ function obterPrimeiroNomeConferencia(nome = "") {
     return tokensNomeConferencia(nome)[0] || "";
 }
 
-function obterTextoCompactoConferencia(valor = "") {
-    return normalizarTextoConferencia(valor).replace(/\s+/g, "");
-}
-
 function obterCandidatosColaboradorConferencia({ certificado = {}, colaborador = {}, treinamento = {} } = {}) {
     const listas = [
         certificado?.colaboradores,
@@ -1345,7 +1340,6 @@ function analisarCorrespondenciaColaboradorLista({
     candidatos = [],
     colaborador = {},
 } = {}) {
-    const base = normalizarTextoConferencia(texto);
     const pontuacao = pontuarNomeColaboradorListaColetiva({
         texto,
         nome: nomeColaborador,
@@ -1708,20 +1702,18 @@ function montarConferenciaDocumentalCertificado({ leitura = {}, certificado = {}
         : null;
     const nomeEncontradoLinha = Boolean(linhaColaborador);
     const nomeEncontradoColetivoEtapa4 = Boolean(analiseColaboradorColetivoEtapa4?.localizado);
-    const documentoIndividualPorPerfil = typeof perfilDocumentalIndividualConferencia === "function"
-        ? perfilDocumentalIndividualConferencia(perfilDocumental)
-        : [
-            "aso",
-            "os",
-            "ordem_servico",
-            "ordem_servico_seguranca",
-            "ficha_epi",
-            "ficha_registro",
-            "registro",
-            "certificado",
-            "certificado_individual",
-            "documento_individual",
-        ].includes(String(perfilDocumental || "").toLowerCase());
+    const documentoIndividualPorPerfil = [
+        "aso",
+        "os",
+        "ordem_servico",
+        "ordem_servico_seguranca",
+        "ficha_epi",
+        "ficha_registro",
+        "registro",
+        "certificado",
+        "certificado_individual",
+        "documento_individual",
+    ].includes(String(perfilDocumental || "").toLowerCase());
 
     const nomeEncontradoPorArquivo = Boolean(
         nomeColaborador &&
@@ -1753,11 +1745,6 @@ function montarConferenciaDocumentalCertificado({ leitura = {}, certificado = {}
             : Boolean(nomeEncontradoTextoGeral || nomeEncontradoLinha || nomeEncontradoPorArquivo))
         : null;
 
-    const nomeLocalizadoApenasTextoGeral = Boolean(
-        listaPresenca &&
-        nomeEncontradoTextoGeral &&
-        !nomeEncontradoLinha
-    );
     const cpfDocumentoEncontrado = documentoPossuiCpfQualquer(textoDocumento);
     const cnpjDocumentoEncontrado = documentoPossuiCnpjQualquer(textoDocumento) || Boolean(campos?.cnpj);
     const cpfEncontrado = documentoContemCpf(textoDocumento, cpfColaborador);
@@ -1814,7 +1801,7 @@ function montarConferenciaDocumentalCertificado({ leitura = {}, certificado = {}
         leitura?.data_principal ||
         (Array.isArray(leitura?.datasEncontradas) && leitura.datasEncontradas.length) ||
         (Array.isArray(leitura?.datas_encontradas) && leitura.datas_encontradas.length) ||
-        /\b[0-3]?\d[\/.-][01]?\d[\/.-](?:19|20)\d{2}\b/.test(textoDocumento)
+        /\b[0-3]?\d[/.-][01]?\d[/.-](?:19|20)\d{2}\b/.test(textoDocumento)
     );
     const correspondenciaColaboradorLista = analisarCorrespondenciaColaboradorLista({
         texto: textoComArquivo,

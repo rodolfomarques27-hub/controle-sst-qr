@@ -18,7 +18,7 @@ export function CarregandoTela({
 
                 <div className="min-w-0 flex-1">
                     <p className="text-[11px] font-black uppercase tracking-[0.24em] text-cyan-100/80">
-                        Controle SST QR
+                        SafeScan Brasil
                     </p>
                     <h2 className="mt-1 text-base font-black text-white">
                         {mensagem}

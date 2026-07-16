@@ -921,13 +921,8 @@ Essa ação remove arquivos do Storage e não altera registros do banco.`;
 
         let excluidos = 0;
         let falhas = 0;
-        const confirmarOriginal = typeof window !== "undefined" ? window.confirm : null;
 
         try {
-            if (typeof window !== "undefined") {
-                window.confirm = () => true;
-            }
-
             for (const [indice, arquivo] of arquivosStorageFiltradosSemVinculo.entries()) {
                 if (!storageMontadoRef.current) break;
 
@@ -951,10 +946,6 @@ Essa ação remove arquivos do Storage e não altera registros do banco.`;
                 }
             }
         } finally {
-            if (typeof window !== "undefined" && confirmarOriginal) {
-                window.confirm = confirmarOriginal;
-            }
-
             if (storageMontadoRef.current) {
                 await carregarStorageAuditoria();
                 onAtualizar?.();

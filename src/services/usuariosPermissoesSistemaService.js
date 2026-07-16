@@ -17,7 +17,6 @@ const PERMISSAO_SISTEMA_PADRAO_SEGURA = {
     login_criado_em: null,
     criado_por: null,
     atualizado_por: null,
-    empresa: "",
     excluido: false,
     excluido_em: null,
     excluido_por: null,
@@ -543,6 +542,10 @@ export const MODULOS_PERMISSAO_SISTEMA = Object.freeze({
     CONFIGURACOES: "configuracoes",
     STORAGE: "storage",
     RELATORIOS: "relatorios",
+    VISTORIA_VISUALIZAR: "vistoria_visualizar",
+    VISTORIA_EDITAR: "vistoria_editar",
+    MAPA_OBRA_ADMINISTRACAO: "mapa_obra_administracao",
+    MAPA_OBRA_VISUALIZACAO: "mapa_obra_visualizacao",
 });
 
 export const ACOES_PERMISSAO_SISTEMA = Object.freeze({
@@ -632,6 +635,8 @@ const PERMISSOES_PADRAO_OPERACIONAIS_POR_PERFIL = Object.freeze({
             [MODULOS_PERMISSAO_SISTEMA.DASHBOARD_AUDITORIA]: [ACOES_PERMISSAO_SISTEMA.VISUALIZAR, ACOES_PERMISSAO_SISTEMA.EXPORTAR],
             [MODULOS_PERMISSAO_SISTEMA.NOVA_AUDITORIA]: [ACOES_PERMISSAO_SISTEMA.VISUALIZAR, ACOES_PERMISSAO_SISTEMA.CADASTRAR, ACOES_PERMISSAO_SISTEMA.EDITAR, ACOES_PERMISSAO_SISTEMA.UPLOAD, ACOES_PERMISSAO_SISTEMA.EXPORTAR],
             [MODULOS_PERMISSAO_SISTEMA.RELATORIOS]: [ACOES_PERMISSAO_SISTEMA.VISUALIZAR, ACOES_PERMISSAO_SISTEMA.EXPORTAR],
+            [MODULOS_PERMISSAO_SISTEMA.VISTORIA_VISUALIZAR]: [ACOES_PERMISSAO_SISTEMA.VISUALIZAR],
+            [MODULOS_PERMISSAO_SISTEMA.VISTORIA_EDITAR]: [ACOES_PERMISSAO_SISTEMA.VISUALIZAR, ACOES_PERMISSAO_SISTEMA.CADASTRAR, ACOES_PERMISSAO_SISTEMA.EDITAR, ACOES_PERMISSAO_SISTEMA.UPLOAD, ACOES_PERMISSAO_SISTEMA.EXPORTAR],
         },
     },
     auditor: {
@@ -640,6 +645,7 @@ const PERMISSOES_PADRAO_OPERACIONAIS_POR_PERFIL = Object.freeze({
             [MODULOS_PERMISSAO_SISTEMA.NOVA_AUDITORIA]: [ACOES_PERMISSAO_SISTEMA.VISUALIZAR, ACOES_PERMISSAO_SISTEMA.CADASTRAR, ACOES_PERMISSAO_SISTEMA.UPLOAD, ACOES_PERMISSAO_SISTEMA.EXPORTAR],
             [MODULOS_PERMISSAO_SISTEMA.QR_CODE]: [ACOES_PERMISSAO_SISTEMA.VISUALIZAR, ACOES_PERMISSAO_SISTEMA.EXPORTAR],
             [MODULOS_PERMISSAO_SISTEMA.RELATORIOS]: [ACOES_PERMISSAO_SISTEMA.VISUALIZAR, ACOES_PERMISSAO_SISTEMA.EXPORTAR],
+            [MODULOS_PERMISSAO_SISTEMA.VISTORIA_VISUALIZAR]: [ACOES_PERMISSAO_SISTEMA.VISUALIZAR],
         },
     },
     gestor: {
@@ -651,6 +657,7 @@ const PERMISSOES_PADRAO_OPERACIONAIS_POR_PERFIL = Object.freeze({
             [MODULOS_PERMISSAO_SISTEMA.TREINAMENTOS]: [ACOES_PERMISSAO_SISTEMA.VISUALIZAR, ACOES_PERMISSAO_SISTEMA.EXPORTAR],
             [MODULOS_PERMISSAO_SISTEMA.QR_CODE]: [ACOES_PERMISSAO_SISTEMA.VISUALIZAR],
             [MODULOS_PERMISSAO_SISTEMA.RELATORIOS]: [ACOES_PERMISSAO_SISTEMA.VISUALIZAR, ACOES_PERMISSAO_SISTEMA.EXPORTAR],
+            [MODULOS_PERMISSAO_SISTEMA.VISTORIA_VISUALIZAR]: [ACOES_PERMISSAO_SISTEMA.VISUALIZAR],
         },
     },
     consulta: {
@@ -661,11 +668,21 @@ const PERMISSOES_PADRAO_OPERACIONAIS_POR_PERFIL = Object.freeze({
             [MODULOS_PERMISSAO_SISTEMA.TREINAMENTOS]: [ACOES_PERMISSAO_SISTEMA.VISUALIZAR],
             [MODULOS_PERMISSAO_SISTEMA.QR_CODE]: [ACOES_PERMISSAO_SISTEMA.VISUALIZAR],
             [MODULOS_PERMISSAO_SISTEMA.RELATORIOS]: [ACOES_PERMISSAO_SISTEMA.VISUALIZAR],
+            [MODULOS_PERMISSAO_SISTEMA.VISTORIA_VISUALIZAR]: [ACOES_PERMISSAO_SISTEMA.VISUALIZAR],
         },
     },
     bloqueado: {
         modulos: {},
     },
+});
+
+const MODULOS_LEGADOS_EQUIVALENTES_PERMISSAO_SISTEMA = Object.freeze({
+    [MODULOS_PERMISSAO_SISTEMA.VISTORIA_VISUALIZAR]: [
+        MODULOS_PERMISSAO_SISTEMA.MAPA_OBRA_VISUALIZACAO,
+    ],
+    [MODULOS_PERMISSAO_SISTEMA.VISTORIA_EDITAR]: [
+        MODULOS_PERMISSAO_SISTEMA.MAPA_OBRA_ADMINISTRACAO,
+    ],
 });
 
 function usuarioTemPermissaoPadraoPorPerfil(permissao = null, modulo = "", acao = "") {
@@ -702,6 +719,23 @@ export function usuarioPodeExecutarAcaoSistema(permissao = null, modulo = "", ac
     const permissoesModulo = permissoes.modulos?.[moduloTratado];
 
     if (permissoesModulo && typeof permissoesModulo === "object" && obterValorPermissaoJson(permissoesModulo[acaoTratada])) {
+        return true;
+    }
+
+    const modulosLegadosEquivalentes =
+        MODULOS_LEGADOS_EQUIVALENTES_PERMISSAO_SISTEMA[moduloTratado] || [];
+
+    const possuiPermissaoLegada = modulosLegadosEquivalentes.some((moduloLegado) => {
+        const permissaoLegada = permissoes.modulos?.[moduloLegado];
+
+        return Boolean(
+            permissaoLegada
+            && typeof permissaoLegada === "object"
+            && obterValorPermissaoJson(permissaoLegada[acaoTratada])
+        );
+    });
+
+    if (possuiPermissaoLegada) {
         return true;
     }
 
@@ -778,6 +812,11 @@ export function obterResumoAcoesCriticasSistema(permissao = null) {
 export const TELAS_MODULOS_PERMISSAO_SISTEMA = Object.freeze({
     dashboard: MODULOS_PERMISSAO_SISTEMA.DASHBOARD_SST,
     dashboardSst: MODULOS_PERMISSAO_SISTEMA.DASHBOARD_SST,
+    plantasExtintores: MODULOS_PERMISSAO_SISTEMA.VISTORIA_EDITAR,
+    vistoriaExtintores: MODULOS_PERMISSAO_SISTEMA.VISTORIA_EDITAR,
+    extintores: MODULOS_PERMISSAO_SISTEMA.VISTORIA_EDITAR,
+    mapaObra: MODULOS_PERMISSAO_SISTEMA.VISTORIA_EDITAR,
+    mapaObraVisualizacao: MODULOS_PERMISSAO_SISTEMA.VISTORIA_VISUALIZAR,
     aniversariantes: MODULOS_PERMISSAO_SISTEMA.DASHBOARD_SST,
     empresas: MODULOS_PERMISSAO_SISTEMA.EMPRESAS,
     colaboradores: MODULOS_PERMISSAO_SISTEMA.COLABORADORES,

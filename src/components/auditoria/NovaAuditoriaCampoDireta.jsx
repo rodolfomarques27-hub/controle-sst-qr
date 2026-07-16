@@ -55,6 +55,7 @@ import {
 } from "../../services/auditoriaPublicaTokenService";
 import { QRCodeSVG } from "qrcode.react";
 import { QrCodeComLogo } from "../qr/QrCodeComLogo";
+import { lerMapaObraLocal } from "../../services/mapaObraLocalService";
 import {
     AlertTriangle,
     ClipboardCheck,
@@ -66,6 +67,7 @@ import {
     Mail,
     MessageCircle,
     QrCode,
+    MapPin,
     ShieldCheck,
     Upload,
 } from "lucide-react";
@@ -348,6 +350,10 @@ export function NovaAuditoriaCampoDireta({ usuario = null, onAuditoriaSalva, emp
         localParametro,
         empresaParametro,
     }));
+    const mapaObra = useMemo(() => lerMapaObraLocal(), []);
+    const pontosMapa = useMemo(() => (mapaObra.pontos || []).filter((ponto) => ponto.status !== "Inativo"), [mapaObra.pontos]);
+    const [pontoMapaSelecionado, setPontoMapaSelecionado] = useState("");
+    const pontoMapaAtual = pontosMapa.find((ponto) => String(ponto.id) === String(pontoMapaSelecionado)) || null;
     const [respostasChecklist, setRespostasChecklist] = useState(() => criarRespostasChecklistDinamico(tipoInicial.valor));
     const [historicoStatusEquipamentoQr, setHistoricoStatusEquipamentoQr] = useState([]);
     const [carregandoStatusEquipamentoQr, setCarregandoStatusEquipamentoQr] = useState(false);
@@ -808,6 +814,9 @@ export function NovaAuditoriaCampoDireta({ usuario = null, onAuditoriaSalva, emp
         setSalvando(true);
         setMensagem("");
 
+        const caminhosFotosNovasPendentes = [];
+        let auditoriaPersistida = false;
+
         try {
             const tokenAuditoriaCampo = tokenAuditoriaPublicaValidado || tokenAcessoAuditoriaCampo || obterParametroUrl("token") || obterParametroUrl("chave");
             const uploadPublicoAuditoria = Boolean(!usuario && tokenAuditoriaCampo);
@@ -821,6 +830,11 @@ export function NovaAuditoriaCampoDireta({ usuario = null, onAuditoriaSalva, emp
                 tokenPublico: tokenAuditoriaCampo,
                 publico: uploadPublicoAuditoria,
             });
+
+            if (fotoAntesUrl) {
+                caminhosFotosNovasPendentes.push(fotoAntesUrl);
+            }
+
             const fotoDepoisUrl = await uploadFotoAuditoriaCampoDireta({
                 supabaseClient: supabase,
                 arquivo: formulario.fotoDepois,
@@ -830,6 +844,10 @@ export function NovaAuditoriaCampoDireta({ usuario = null, onAuditoriaSalva, emp
                 tokenPublico: tokenAuditoriaCampo,
                 publico: uploadPublicoAuditoria,
             });
+
+            if (fotoDepoisUrl) {
+                caminhosFotosNovasPendentes.push(fotoDepoisUrl);
+            }
 
             const payload = montarPayloadAuditoriaCampoDireta({
                 formulario,
@@ -847,9 +865,11 @@ export function NovaAuditoriaCampoDireta({ usuario = null, onAuditoriaSalva, emp
                 fotoDepoisUrl,
                 codigoQrParametro: codigoQrCampoParametro,
                 linkOrigemQrCampo,
+                pontoMapa: pontoMapaAtual,
             });
 
             let data = null;
+            let avisoPersistenciaSecundaria = "";
 
             if (tokenAuditoriaCampo) {
                 const { data: dadosRpc, error } = await supabase.rpc("salvar_auditoria_campo_publica", {
@@ -861,6 +881,7 @@ export function NovaAuditoriaCampoDireta({ usuario = null, onAuditoriaSalva, emp
                     throw error;
                 }
 
+                auditoriaPersistida = true;
                 data = dadosRpc;
             } else if (usuario) {
                 const numeroAuditoriaInterna = await gerarNumeroAuditoriaCampoDireta(supabase);
@@ -883,6 +904,8 @@ export function NovaAuditoriaCampoDireta({ usuario = null, onAuditoriaSalva, emp
                     throw erroAuditoria;
                 }
 
+                auditoriaPersistida = true;
+
                 if (Number(payloadInterno.total_desvios || 0) > 0) {
                     const { error: erroDesvio } = await supabase
                         .from("auditoria_campo_desvios")
@@ -904,7 +927,13 @@ export function NovaAuditoriaCampoDireta({ usuario = null, onAuditoriaSalva, emp
                         });
 
                     if (erroDesvio) {
-                        throw erroDesvio;
+                        avisoPersistenciaSecundaria =
+                            `A auditoria principal e as fotos foram preservadas, mas o registro detalhado do desvio não pôde ser criado: ${erroDesvio.message || "erro desconhecido"}.`;
+
+                        console.warn(
+                            avisoPersistenciaSecundaria,
+                            erroDesvio
+                        );
                     }
                 }
 
@@ -942,12 +971,38 @@ export function NovaAuditoriaCampoDireta({ usuario = null, onAuditoriaSalva, emp
                 localParametro,
                 empresaParametro,
             }));
+            setPontoMapaSelecionado("");
             setRespostasChecklist(criarRespostasChecklistDinamico(tipoInicial.valor));
             setPreviewFotos({ antes: "", depois: "" });
             setAuditoriaSalva(normalizada);
-            setMensagem(`Auditoria ${numeroGerado} salva com sucesso. O formulário foi limpo para evitar registro duplicado.`);
+            setMensagem(
+                avisoPersistenciaSecundaria
+                    ? `Auditoria ${numeroGerado} salva com sucesso. ${avisoPersistenciaSecundaria} O formulário foi encerrado para evitar registro duplicado.`
+                    : `Auditoria ${numeroGerado} salva com sucesso. O formulário foi limpo para evitar registro duplicado.`
+            );
             if (onAuditoriaSalva) onAuditoriaSalva(normalizada);
         } catch (error) {
+            if (
+                !auditoriaPersistida
+                && caminhosFotosNovasPendentes.length > 0
+            ) {
+                try {
+                    const { error: erroRollbackStorage } =
+                        await supabase.storage
+                            .from("auditorias-campo")
+                            .remove(caminhosFotosNovasPendentes);
+
+                    if (erroRollbackStorage) {
+                        throw erroRollbackStorage;
+                    }
+                } catch (rollbackError) {
+                    console.warn(
+                        "A auditoria não foi persistida e os novos uploads não puderam ser removidos do Storage:",
+                        rollbackError?.message || rollbackError
+                    );
+                }
+            }
+
             setMensagem(error.message || "Erro ao salvar auditoria de campo.");
         } finally {
             salvandoRef.current = false;
@@ -1268,6 +1323,21 @@ export function NovaAuditoriaCampoDireta({ usuario = null, onAuditoriaSalva, emp
                                         placeholder="Descreva o local exato"
                                         className="mt-2 w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-slate-300"
                                     />
+                                </div>
+                                <div className="md:col-span-2 rounded-3xl bg-emerald-50 p-4 ring-1 ring-emerald-100">
+                                    <div className="flex items-start gap-3">
+                                        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-white text-emerald-700 ring-1 ring-emerald-200"><MapPin size={18} /></div>
+                                        <div className="min-w-0 flex-1">
+                                            <label className="text-xs font-black uppercase tracking-wide text-emerald-900">Ponto mais próximo</label>
+                                            <p className="mt-1 text-[11px] leading-relaxed text-emerald-700">Use um ponto cadastrado no mapa para indicar exatamente onde a auditoria aconteceu.</p>
+                                            <select value={pontoMapaSelecionado} onChange={(e) => setPontoMapaSelecionado(e.target.value)} className="mt-3 w-full rounded-2xl border border-emerald-200 bg-white px-4 py-3 text-sm font-semibold text-slate-800 outline-none focus:ring-2 focus:ring-emerald-200">
+                                                <option value="">Nenhum ponto selecionado</option>
+                                                {pontosMapa.map((ponto) => <option key={ponto.id} value={ponto.id}>{ponto.nome}{ponto.tipo ? ` · ${ponto.tipo}` : ""}</option>)}
+                                            </select>
+                                            {pontoMapaAtual && <p className="mt-2 text-[11px] font-semibold text-emerald-700">Referência: {pontoMapaAtual.nome}{pontoMapaAtual.empresaNome ? ` · ${pontoMapaAtual.empresaNome}` : ""}</p>}
+                                            {!pontosMapa.length && <p className="mt-2 text-[11px] font-semibold text-amber-700">Cadastre os pontos no Mapa da Obra para utilizá-los aqui.</p>}
+                                        </div>
+                                    </div>
                                 </div>
                                 <div>
                                     <div className="flex items-center justify-between gap-2">

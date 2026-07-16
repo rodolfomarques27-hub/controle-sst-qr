@@ -5,6 +5,19 @@ export function obterTokenQrPublicoApp() {
     return obterParametroUrl("qr") || "";
 }
 
+export function obterTokenVistoriaExtintorPublicoApp() {
+    if (typeof window === "undefined") return "";
+    return obterParametroUrl("vistoriaQr") || "";
+}
+
+export function obterTokenMapaPontoPublicoApp() {
+    if (typeof window === "undefined") return "";
+    const caminho = String(window.location.pathname || "");
+    const prefixo = "/consulta-ponto/";
+    if (!caminho.startsWith(prefixo)) return "";
+    return decodeURIComponent(caminho.slice(prefixo.length).split("/")[0] || "");
+}
+
 export function obterRotaAtualCompletaApp() {
     if (typeof window === "undefined") return "";
     return `${window.location.pathname}${window.location.hash}`;

@@ -17,6 +17,10 @@ const ConsultaQR = React.lazy(() => import("../components/qr/ConsultaQR").then((
 const Requisitos = React.lazy(() => import("../components/Requisitos").then((modulo) => ({ default: modulo.Requisitos })));
 const Aniversariantes = React.lazy(() => import("../components/aniversariantes/AniversariantesPage").then((modulo) => ({ default: modulo.Aniversariantes })));
 const Dashboard = React.lazy(() => import("../components/dashboard/Dashboard").then((modulo) => ({ default: modulo.Dashboard })));
+const Extintores = React.lazy(() => import("../components/extintores/ExtintoresPage").then((modulo) => ({ default: modulo.ExtintoresPage })));
+const VistoriaExtintores = React.lazy(() => import("../components/extintores/VistoriaExtintoresPage").then((modulo) => ({ default: modulo.VistoriaExtintoresPage })));
+const MapaObra = React.lazy(() => import("../components/mapa/MapaObraPage").then((modulo) => ({ default: modulo.MapaObraPage })));
+const MapaObraVisualizacao = React.lazy(() => import("../components/mapa/MapaObraVisualizacaoPage").then((modulo) => ({ default: modulo.MapaObraVisualizacaoPage })));
 const Empresas = React.lazy(() => import("../components/empresas/EmpresasPage").then((modulo) => ({ default: modulo.Empresas })));
 const Colaboradores = React.lazy(() => import("../components/colaboradores/ColaboradoresPage").then((modulo) => ({ default: modulo.Colaboradores })));
 const Treinamentos = React.lazy(() => import("../components/treinamentos/TreinamentosPage").then((modulo) => ({ default: modulo.Treinamentos })));
@@ -34,6 +38,14 @@ function precarregarModuloTelaSistema(tela = "") {
     switch (tela) {
         case "dashboard":
             return import("../components/dashboard/Dashboard");
+        case "extintores":
+            return import("../components/extintores/ExtintoresPage");
+        case "vistoriaExtintores":
+            return import("../components/extintores/VistoriaExtintoresPage");
+        case "mapaObra":
+            return import("../components/mapa/MapaObraPage");
+        case "mapaObraVisualizacao":
+            return import("../components/mapa/MapaObraVisualizacaoPage");
         case "auditoriaCampo":
             return import("../components/auditoria/DashboardAuditoriaCampo");
         case "novaAuditoriaCampo":
@@ -68,6 +80,10 @@ function precarregarModuloTelaSistema(tela = "") {
 
 const ORDEM_REDIRECIONAMENTO_TELAS_PERMITIDAS = [
     "dashboard",
+    "vistoriaExtintores",
+    "mapaObra",
+    "mapaObraVisualizacao",
+    "extintores",
     "auditoriaCampo",
     "novaAuditoriaCampo",
     "qr",
@@ -90,6 +106,10 @@ function obterPrimeiraTelaPermitidaParaUsuario(permissao = null) {
 
 const ROTULOS_TELAS_ACESSO_BLOQUEADO = Object.freeze({
     dashboard: "Dashboard SST",
+    vistoriaExtintores: "Vistoria de extintores",
+    mapaObra: "Mapa da Obra",
+    mapaObraVisualizacao: "Mapa da Obra - Consulta",
+    extintores: "Extintores",
     novaAuditoriaCampo: "Nova Auditoria",
     auditoriaCampo: "Dashboard Auditoria",
     empresas: "Empresas",
@@ -118,6 +138,8 @@ const ROTULOS_MODULOS_ACESSO_BLOQUEADO = Object.freeze({
     configuracoes: "Configurações",
     storage: "Storage",
     relatorios: "Relatórios",
+    mapa_obra_administracao: "Mapa da Obra - Administração",
+    mapa_obra_visualizacao: "Mapa da Obra - Visualização",
 });
 
 const ROTULOS_PERFIS_ACESSO_BLOQUEADO = Object.freeze({
@@ -745,6 +767,11 @@ export function AppContentRouter({
                 />
             )}
 
+            {tela === "vistoriaExtintores" && <VistoriaExtintores />}
+            {tela === "mapaObra" && <MapaObra empresasBanco={empresasBanco} obrasEmpresasBanco={obrasEmpresasBanco} auditoriasCampo={auditoriasCampo} />}
+            {tela === "mapaObraVisualizacao" && <MapaObraVisualizacao auditoriasCampo={auditoriasCampo} />}
+            {tela === "extintores" && <Extintores />}
+
             {tela === "novaAuditoriaCampo" && (
                 <NovaAuditoriaCampoDireta
                     usuario={usuario}
@@ -810,6 +837,7 @@ export function AppContentRouter({
                 <Treinamentos
                     key={colaboradorSelecionado?.id || "treinamentos"}
                     colaboradores={colaboradores}
+                    empresasBanco={empresasBanco}
                     colaboradorInicialId={colaboradorSelecionado?.id}
                     onSalvarCertificado={onSalvarCertificado}
                     onVisualizarCertificado={onVisualizarCertificado}

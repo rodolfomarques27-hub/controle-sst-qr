@@ -22,6 +22,8 @@ import { validarArquivoAntesUpload } from "./components/FileUploadAviso";
 import { CarregandoTela } from "./components/CarregandoTela";
 import {
     obterTokenQrPublicoApp,
+    obterTokenVistoriaExtintorPublicoApp,
+    obterTokenMapaPontoPublicoApp,
     verificarRotaNovaAuditoriaCampoApp,
 } from "./routes/appRoutesService";
 import { consultarDdsPublico, obterTokenDdsPublicoUrl } from "./services/ddsRegistrosService";
@@ -37,7 +39,11 @@ import {
     CalendarClock,
     ClipboardCheck,
     Database,
+    Eye,
     LayoutDashboard,
+    Map,
+    MapPinned,
+    ClipboardList,
     Plus,
     QrCode,
     Settings,
@@ -48,6 +54,8 @@ import {
 const LoginScreen = React.lazy(() => import("./components/LoginScreen").then((modulo) => ({ default: modulo.LoginScreen })));
 const ConsultaQRPublica = React.lazy(() => import("./components/qr/ConsultaQRPublica").then((modulo) => ({ default: modulo.ConsultaQRPublica })));
 const ConsultaDdsPublica = React.lazy(() => import("./components/dds/ConsultaDdsPublica").then((modulo) => ({ default: modulo.ConsultaDdsPublica })));
+const VistoriaExtintorPublica = React.lazy(() => import("./components/extintores/VistoriaExtintorPublica").then((modulo) => ({ default: modulo.VistoriaExtintorPublica })));
+const ConsultaPontoMapaPublica = React.lazy(() => import("./components/mapa/ConsultaPontoMapaPublica").then((modulo) => ({ default: modulo.ConsultaPontoMapaPublica })));
 const NovaAuditoriaCampoDireta = React.lazy(() => import("./components/auditoria/NovaAuditoriaCampoDireta").then((modulo) => ({ default: modulo.NovaAuditoriaCampoDireta })));
 const importarAppContentRouter = () => import("./routes/AppContentRouter");
 const importarAppLayout = () => import("./components/layout/AppLayout");
@@ -975,7 +983,7 @@ export default function App() {
         if (!usuario) return undefined;
 
         const timer = window.setTimeout(() => {
-            const telaAuditoriaCampoAberta = tela === "auditoriaCampo";
+            const telaAuditoriaCampoAberta = tela === "auditoriaCampo" || tela === "mapaObraVisualizacao" || tela === "mapaObra";
             const telaAuditoriaSistemaAberta = tela === "auditoria" && podeAcessarAuditoria && auditoriaLiberada;
 
             if (telaAuditoriaCampoAberta && !auditoriasCampoCarregadas && !carregandoAuditoriasCampo) {
@@ -1036,6 +1044,10 @@ export default function App() {
     const navCompleta = useMemo(() => [
         { id: "dashboard", label: "Dashboard SST", icon: LayoutDashboard, grupo: "VISÃO GERAL" },
 
+        { id: "vistoriaExtintores", label: "Vistoria", icon: ClipboardList, grupo: "VISTORIA" },
+        { id: "extintores", label: "Extintores", icon: Map, grupo: "VISTORIA" },
+        { id: "mapaObra", label: "Mapa da Obra - Edição", icon: MapPinned, grupo: "VISTORIA" },
+        { id: "mapaObraVisualizacao", label: "Mapa da Obra - Consulta", icon: Eye, grupo: "VISTORIA" },
         { id: "auditoriaCampo", label: "Dashboard Auditoria", icon: ClipboardCheck, grupo: "AUDITORIA" },
         { id: "novaAuditoriaCampo", label: "Nova Auditoria", icon: Plus, grupo: "AUDITORIA" },
 
@@ -1161,8 +1173,26 @@ export default function App() {
     }
 
     const tokenQrPublico = obterTokenQrPublicoApp();
+    const tokenVistoriaExtintor = obterTokenVistoriaExtintorPublicoApp();
+    const tokenMapaPonto = obterTokenMapaPontoPublicoApp();
     const tokenDdsPublico = obterTokenDdsPublicoUrl();
     const rotaNovaAuditoriaCampo = verificarRotaNovaAuditoriaCampoApp();
+
+    if (tokenVistoriaExtintor) {
+        return (
+            <React.Suspense fallback={<CarregandoTela mensagem="Carregando vistoria..." />}>
+                <VistoriaExtintorPublica token={tokenVistoriaExtintor} />
+            </React.Suspense>
+        );
+    }
+
+    if (tokenMapaPonto) {
+        return (
+            <React.Suspense fallback={<CarregandoTela mensagem="Carregando ponto do mapa..." />}>
+                <ConsultaPontoMapaPublica token={tokenMapaPonto} />
+            </React.Suspense>
+        );
+    }
 
     if (rotaNovaAuditoriaCampo) {
         return (

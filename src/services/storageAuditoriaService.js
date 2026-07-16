@@ -109,8 +109,8 @@ export async function listarArquivosCertificadosStorageService({
         },
         {
             bucket: "fotos-colaboradores",
-            origemTipo: "Colaborador / Foto",
-            tabelaOrigem: "colaboradores.foto_url",
+            origemTipo: "Colaborador ou usuário do App / Foto",
+            tabelaOrigem: "colaboradores.foto_url ou usuarios_permissoes_sistema.foto_url",
         },
         {
             bucket: "auditorias-campo",
@@ -155,6 +155,7 @@ export async function listarArquivosCertificadosStorageService({
 
     let certificados = [];
     let documentosEmpresaBanco = [];
+    let usuariosPermissoesBanco = [];
     let auditoriasCampoBanco = [];
     let desviosAuditoriaBanco = [];
 
@@ -168,6 +169,18 @@ export async function listarArquivosCertificadosStorageService({
         documentosEmpresaBanco = await buscarTodosRegistrosSupabase("documentos_empresas", "*");
     } catch (documentosEmpresaError) {
         throw new Error(`Erro ao consultar documentos de empresas: ${documentosEmpresaError.message}`, { cause: documentosEmpresaError });
+    }
+
+    try {
+        usuariosPermissoesBanco = await buscarTodosRegistrosSupabase(
+            "usuarios_permissoes_sistema",
+            "*"
+        );
+    } catch (usuariosPermissoesStorageError) {
+        throw new Error(
+            `Erro ao consultar fotos dos usuários do App: ${usuariosPermissoesStorageError.message}`,
+            { cause: usuariosPermissoesStorageError }
+        );
     }
 
     try {
@@ -211,31 +224,87 @@ export async function listarArquivosCertificadosStorageService({
     }, {});
 
     const certificadosPorCaminho = (certificados || []).reduce((acc, item) => {
-        const caminhoArquivo = item.url_do_arquivo || item.arquivo_url;
-        if (caminhoArquivo) acc[`certificados-treinamentos:${caminhoArquivo}`] = item;
+        const caminhoArquivo = extrairCaminhoStorage(
+            "certificados-treinamentos",
+            item.url_do_arquivo || item.arquivo_url
+        );
+
+        if (caminhoArquivo) {
+            acc[`certificados-treinamentos:${caminhoArquivo}`] = item;
+        }
+
         return acc;
     }, {});
 
     const documentosEmpresaPorCaminho = (documentosEmpresaBanco || []).reduce((acc, item) => {
-        const caminhoArquivo = item.url_do_arquivo || item.arquivo_url;
-        if (caminhoArquivo) acc[`documentos-empresas:${caminhoArquivo}`] = item;
+        const caminhoArquivo = extrairCaminhoStorage(
+            "documentos-empresas",
+            item.url_do_arquivo || item.arquivo_url
+        );
+
+        if (caminhoArquivo) {
+            acc[`documentos-empresas:${caminhoArquivo}`] = item;
+        }
+
         return acc;
     }, {});
 
     const contratosPorCaminho = (empresasBanco || []).reduce((acc, empresa) => {
-        if (empresa.contrato_url) acc[`contratos-empresas:${empresa.contrato_url}`] = empresa;
+        const caminhoContrato = extrairCaminhoStorage(
+            "contratos-empresas",
+            empresa.contrato_url
+        );
+
+        if (caminhoContrato) {
+            acc[`contratos-empresas:${caminhoContrato}`] = empresa;
+        }
+
         return acc;
     }, {});
 
     const logosPorCaminho = (empresasBanco || []).reduce((acc, empresa) => {
-        if (empresa.logo_url) acc[`logos-empresas:${empresa.logo_url}`] = empresa;
+        const caminhoLogo = extrairCaminhoStorage(
+            "logos-empresas",
+            empresa.logo_url
+        );
+
+        if (caminhoLogo) {
+            acc[`logos-empresas:${caminhoLogo}`] = empresa;
+        }
+
         return acc;
     }, {});
 
     const fotosPorCaminho = (colaboradores || []).reduce((acc, colaborador) => {
-        if (colaborador.fotoUrl) acc[`fotos-colaboradores:${colaborador.fotoUrl}`] = colaborador;
+        const caminhoFoto = extrairCaminhoStorage(
+            "fotos-colaboradores",
+            colaborador.fotoUrl || colaborador.foto_url
+        );
+
+        if (caminhoFoto) {
+            acc[`fotos-colaboradores:${caminhoFoto}`] = colaborador;
+        }
+
         return acc;
     }, {});
+
+    const fotosUsuariosAcessoPorCaminho =
+        (usuariosPermissoesBanco || []).reduce(
+            (acc, usuarioAcesso) => {
+                const caminhoFoto = extrairCaminhoStorage(
+                    "fotos-colaboradores",
+                    usuarioAcesso.foto_url
+                );
+
+                if (caminhoFoto) {
+                    acc[`fotos-colaboradores:${caminhoFoto}`] =
+                        usuarioAcesso;
+                }
+
+                return acc;
+            },
+            {}
+        );
 
     const registrarCaminhoAuditoria = (acc, valor, registro, origem) => {
         const caminho = extrairCaminhoStorage("auditorias-campo", valor);
@@ -336,14 +405,61 @@ export async function listarArquivosCertificadosStorageService({
             }
 
             if (arquivo.bucket === "fotos-colaboradores") {
-                const colaboradorFoto = fotosPorCaminho[chave] || colaboradoresPorId[primeiraPasta];
+                const colaboradorVinculado =
+                    fotosPorCaminho[chave] || null;
 
-                emUso = Boolean(fotosPorCaminho[chave]);
-                origemRegistro = fotosPorCaminho[chave] ? "Cadastro do colaborador" : colaboradorFoto ? "Pasta do Storage" : "";
-                registroId = colaboradorFoto?.id || "";
-                colaboradorNome = colaboradorFoto?.nome || "";
-                colaboradorCodigo = colaboradorFoto?.codigoFuncionario || "";
-                colaboradorEmpresa = colaboradorFoto?.empresaExibicao || colaboradorFoto?.empresa || "";
+                const usuarioAcessoVinculado =
+                    fotosUsuariosAcessoPorCaminho[chave] || null;
+
+                const colaboradorPelaPasta =
+                    colaboradoresPorId[primeiraPasta] || null;
+
+                const registroFotoVinculado =
+                    usuarioAcessoVinculado ||
+                    colaboradorVinculado ||
+                    null;
+
+                const colaboradorFoto =
+                    colaboradorVinculado ||
+                    colaboradorPelaPasta ||
+                    null;
+
+                emUso = Boolean(registroFotoVinculado);
+
+                origemRegistro = usuarioAcessoVinculado
+                    ? "Cadastro do usuário do App"
+                    : colaboradorVinculado
+                        ? "Cadastro do colaborador"
+                        : colaboradorPelaPasta
+                            ? "Pasta do Storage"
+                            : "";
+
+                registroId =
+                    registroFotoVinculado?.id ||
+                    registroFotoVinculado?.user_id ||
+                    colaboradorFoto?.id ||
+                    "";
+
+                colaboradorNome =
+                    usuarioAcessoVinculado?.nome ||
+                    usuarioAcessoVinculado?.email ||
+                    colaboradorFoto?.nome ||
+                    "";
+
+                colaboradorCodigo =
+                    colaboradorFoto?.codigoFuncionario ||
+                    "";
+
+                colaboradorEmpresa =
+                    usuarioAcessoVinculado?.empresa ||
+                    colaboradorFoto?.empresaExibicao ||
+                    colaboradorFoto?.empresa ||
+                    "";
+
+                tipoDocumentoEmpresa = usuarioAcessoVinculado
+                    ? "Foto de usuário do App"
+                    : "Foto de colaborador";
+
                 origemIdentificacao = origemRegistro;
             }
 

@@ -831,11 +831,19 @@ export async function excluirArquivoCertificadoStorageAppService({
         return false;
     }
 
-    const confirmado = window.confirm(
-        `Excluir definitivamente este arquivo do Storage?\n\nBucket: ${arquivo.bucket || "certificados-treinamentos"}\nArquivo: ${arquivo.nome}\nPasta: ${arquivo.pasta || "raiz"}`
+    const ignorarConfirmacaoIndividual = Boolean(
+        arquivo?.ignorarConfirmacaoIndividual
+        || arquivo?.ignorarConfirmacao
+        || arquivo?.limpezaEmLote
     );
 
-    if (!confirmado) return false;
+    if (!ignorarConfirmacaoIndividual) {
+        const confirmado = window.confirm(
+            `Excluir definitivamente este arquivo do Storage?\n\nBucket: ${arquivo.bucket || "certificados-treinamentos"}\nArquivo: ${arquivo.nome}\nPasta: ${arquivo.pasta || "raiz"}`
+        );
+
+        if (!confirmado) return false;
+    }
 
     try {
         await excluirArquivoStorageAuditoriaService({

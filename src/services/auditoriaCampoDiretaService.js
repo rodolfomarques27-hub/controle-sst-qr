@@ -538,6 +538,7 @@ export function montarPayloadAuditoriaCampoDireta({
     fotoDepoisUrl = "",
     codigoQrParametro = "",
     linkOrigemQrCampo = "",
+    pontoMapa = null,
 } = {}) {
     const checklistDinamico = montarChecklistDinamicoAuditoriaCampoDireta(resultado);
     const codigoQrCampo = String(codigoQrParametro || "").trim();
@@ -603,6 +604,12 @@ export function montarPayloadAuditoriaCampoDireta({
             emailTstResponsavel: emailTstAuditoria || null,
             whatsappTstResponsavel: whatsappTstFormatado || null,
             textoEnvio: textoNotificacaoResponsavel,
+            pontoMapa: pontoMapa ? {
+                id: pontoMapa.id || null,
+                nome: pontoMapa.nome || null,
+                tipo: pontoMapa.tipo || null,
+                empresaNome: pontoMapa.empresaNome || null,
+            } : null,
             complementos: formulario.acaoRecomendada ? [formulario.acaoRecomendada.trim()] : [],
             qrCodeCampo: codigoQrCampo ? {
                 codigo: codigoQrCampo,

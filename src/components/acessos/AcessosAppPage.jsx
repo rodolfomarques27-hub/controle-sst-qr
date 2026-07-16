@@ -44,6 +44,69 @@ const BUCKET_FOTOS_USUARIOS_ACESSO_APP = "fotos-colaboradores";
 const FOTO_ACESSO_URL_CACHE = new Map();
 const FOTO_ACESSO_PROMISE_CACHE = new Map();
 
+const MODULO_VISTORIA_VISUALIZAR_ACESSO = "Vistoria - Visualizar";
+const MODULO_VISTORIA_EDITAR_ACESSO = "Vistoria - Editar";
+
+const MODULOS_LEGADOS_VISTORIA_ACESSO = Object.freeze([
+    "Mapa da Obra - Administração",
+    "Mapa da Obra - Visualização",
+]);
+
+function moduloEhPermissaoVistoriaAcesso(modulo = "") {
+    return [
+        MODULO_VISTORIA_VISUALIZAR_ACESSO,
+        MODULO_VISTORIA_EDITAR_ACESSO,
+    ].includes(String(modulo || "").trim());
+}
+
+function normalizarModulosLiberadosPerfilAcesso(modulos = [], fallback = []) {
+    const originais = Array.isArray(modulos) ? modulos : [];
+    const padrao = Array.isArray(fallback) ? fallback : [];
+    const selecionados = new Set(
+        originais.filter(
+            (modulo) => !MODULOS_LEGADOS_VISTORIA_ACESSO.includes(modulo)
+        )
+    );
+
+    if (originais.includes("Mapa da Obra - Visualização")) {
+        selecionados.add(MODULO_VISTORIA_VISUALIZAR_ACESSO);
+    }
+
+    if (originais.includes("Mapa da Obra - Administração")) {
+        selecionados.add(MODULO_VISTORIA_VISUALIZAR_ACESSO);
+        selecionados.add(MODULO_VISTORIA_EDITAR_ACESSO);
+    }
+
+    const possuiPermissaoVistoria =
+        selecionados.has(MODULO_VISTORIA_VISUALIZAR_ACESSO)
+        || selecionados.has(MODULO_VISTORIA_EDITAR_ACESSO);
+
+    if (!possuiPermissaoVistoria) {
+        padrao
+            .filter(moduloEhPermissaoVistoriaAcesso)
+            .forEach((modulo) => selecionados.add(modulo));
+    }
+
+    if (selecionados.has(MODULO_VISTORIA_EDITAR_ACESSO)) {
+        selecionados.add(MODULO_VISTORIA_VISUALIZAR_ACESSO);
+    }
+
+    return Array.from(selecionados);
+}
+
+function contarModulosLiberadosPerfilAcesso(modulos = []) {
+    const selecionados = new Set(Array.isArray(modulos) ? modulos : []);
+    const possuiVistoria =
+        selecionados.has(MODULO_VISTORIA_VISUALIZAR_ACESSO)
+        || selecionados.has(MODULO_VISTORIA_EDITAR_ACESSO);
+
+    const demaisModulos = Array.from(selecionados).filter(
+        (modulo) => !moduloEhPermissaoVistoriaAcesso(modulo)
+    );
+
+    return demaisModulos.length + (possuiVistoria ? 1 : 0);
+}
+
 function obterNomeUsuario(usuario) {
     const nome = String(usuario?.nome || usuario?.user_metadata?.nome || "").trim();
     const email = String(usuario?.email || "").trim();
@@ -290,6 +353,49 @@ async function enviarFotoUsuarioAcessoApp({ supabaseClient, arquivo, email }) {
     }
 
     return caminho;
+}
+
+async function removerFotoUsuarioAcessoApp({
+    supabaseClient,
+    caminho,
+}) {
+    const caminhoTratado =
+        normalizarCaminhoFotoAcessoApp(caminho);
+
+    if (!caminhoTratado) return false;
+
+    if (!caminhoTratado.startsWith("acessos-app/")) {
+        return false;
+    }
+
+    const { error } = await supabaseClient.storage
+        .from(BUCKET_FOTOS_USUARIOS_ACESSO_APP)
+        .remove([caminhoTratado]);
+
+    if (error) {
+        throw new Error(
+            error.message ||
+            "Não foi possível remover a foto do usuário do Storage."
+        );
+    }
+
+    const chaveCache =
+        `${BUCKET_FOTOS_USUARIOS_ACESSO_APP}/${caminhoTratado}`;
+
+    const urlCache =
+        FOTO_ACESSO_URL_CACHE.get(chaveCache);
+
+    if (
+        typeof URL !== "undefined" &&
+        urlCache?.startsWith("blob:")
+    ) {
+        URL.revokeObjectURL(urlCache);
+    }
+
+    FOTO_ACESSO_URL_CACHE.delete(chaveCache);
+    FOTO_ACESSO_PROMISE_CACHE.delete(chaveCache);
+
+    return true;
 }
 
 function scrollParaSecaoAcessoApp(id) {
@@ -1235,8 +1341,29 @@ function UsuariosCadastradosApp({ usuario = null, usuarioParaEditar = null, onEd
         setErro("");
         setMensagem(`Criando login real de ${emailTratado} no Supabase Auth...`);
 
+        const usuarioAnterior = usuarios.find((item) => (
+            normalizarTextoAcesso(item.email).toLowerCase() === emailTratado
+            || (formulario.id && item.id === formulario.id)
+        )) || null;
+
+        const caminhoFotoAnterior =
+            normalizarCaminhoFotoAcessoApp(
+                obterFotoPermissaoAcessoApp(usuarioAnterior || {})
+            );
+
+        let caminhoFotoNovo = "";
+        let salvamentoConfirmado = false;
+
         try {
-            const formularioComFoto = await prepararFormularioComFotoUpload(emailTratado);
+            const formularioComFoto =
+                await prepararFormularioComFotoUpload(emailTratado);
+
+            caminhoFotoNovo = formularioComFoto.fotoAlterada
+                ? normalizarCaminhoFotoAcessoApp(
+                    formularioComFoto.foto_url
+                )
+                : "";
+
             const resultado = await criarLoginAppComSenhaTemporariaService({
                 supabase,
                 dados: {
@@ -1248,7 +1375,35 @@ function UsuariosCadastradosApp({ usuario = null, usuarioParaEditar = null, onEd
                 },
             });
 
-            const permissaoSalva = resultado?.permissao || resultado?.usuario || null;
+            const permissaoSalva =
+                resultado?.permissao ||
+                resultado?.usuario ||
+                null;
+
+            salvamentoConfirmado = true;
+
+            const caminhoFotoSalvo =
+                normalizarCaminhoFotoAcessoApp(
+                    obterFotoPermissaoAcessoApp(permissaoSalva || {}) ||
+                    formularioComFoto.foto_url
+                );
+
+            if (
+                caminhoFotoAnterior &&
+                caminhoFotoAnterior !== caminhoFotoSalvo
+            ) {
+                try {
+                    await removerFotoUsuarioAcessoApp({
+                        supabaseClient: supabase,
+                        caminho: caminhoFotoAnterior,
+                    });
+                } catch (remocaoError) {
+                    console.warn(
+                        "Login salvo, mas não foi possível remover a foto anterior:",
+                        remocaoError?.message || remocaoError
+                    );
+                }
+            }
 
             if (permissaoSalva?.email || emailTratado) {
                 const registro = {
@@ -1325,6 +1480,20 @@ function UsuariosCadastradosApp({ usuario = null, usuarioParaEditar = null, onEd
 
             setMensagem(resultado?.mensagem || "Login criado/atualizado com sucesso. O perfil editável foi aplicado e o usuário deve trocar a senha temporária no primeiro acesso.");
         } catch (error) {
+            if (!salvamentoConfirmado && caminhoFotoNovo) {
+                try {
+                    await removerFotoUsuarioAcessoApp({
+                        supabaseClient: supabase,
+                        caminho: caminhoFotoNovo,
+                    });
+                } catch (rollbackError) {
+                    console.warn(
+                        "Falha ao remover o upload da foto após erro no login:",
+                        rollbackError?.message || rollbackError
+                    );
+                }
+            }
+
             setErro(error?.message || "Não foi possível criar o login do app.");
             setMensagem("O login não foi criado.");
         } finally {
@@ -1352,12 +1521,29 @@ function UsuariosCadastradosApp({ usuario = null, usuarioParaEditar = null, onEd
         setErro("");
         setMensagem(`Salvando permissão de ${emailTratado}...`);
 
+        let caminhoFotoNovo = "";
+        let salvamentoConfirmado = false;
+
         try {
             const usuarioAnterior = usuarios.find((item) => (
                 normalizarTextoAcesso(item.email).toLowerCase() === emailTratado
                 || (formulario.id && item.id === formulario.id)
             )) || null;
-            const formularioComFoto = await prepararFormularioComFotoUpload(emailTratado);
+
+            const caminhoFotoAnterior =
+                normalizarCaminhoFotoAcessoApp(
+                    obterFotoPermissaoAcessoApp(usuarioAnterior || {})
+                );
+
+            const formularioComFoto =
+                await prepararFormularioComFotoUpload(emailTratado);
+
+            caminhoFotoNovo = formularioComFoto.fotoAlterada
+                ? normalizarCaminhoFotoAcessoApp(
+                    formularioComFoto.foto_url
+                )
+                : "";
+
             const salvo = await salvarUsuarioPermissaoSistemaService({
                 supabase,
                 usuario: {
@@ -1366,6 +1552,31 @@ function UsuariosCadastradosApp({ usuario = null, usuarioParaEditar = null, onEd
                 },
                 usuarioAtual: usuario,
             });
+
+            salvamentoConfirmado = true;
+
+            const caminhoFotoSalvo =
+                normalizarCaminhoFotoAcessoApp(
+                    obterFotoPermissaoAcessoApp(salvo || {}) ||
+                    formularioComFoto.foto_url
+                );
+
+            if (
+                caminhoFotoAnterior &&
+                caminhoFotoAnterior !== caminhoFotoSalvo
+            ) {
+                try {
+                    await removerFotoUsuarioAcessoApp({
+                        supabaseClient: supabase,
+                        caminho: caminhoFotoAnterior,
+                    });
+                } catch (remocaoError) {
+                    console.warn(
+                        "Permissão salva, mas não foi possível remover a foto anterior:",
+                        remocaoError?.message || remocaoError
+                    );
+                }
+            }
 
             if (salvo?.email) {
                 setUsuarios((listaAtual) => {
@@ -1485,6 +1696,20 @@ function UsuariosCadastradosApp({ usuario = null, usuarioParaEditar = null, onEd
 
             setMensagem("Permissão salva com o padrão editável do perfil selecionado. Para criar ou redefinir login real, use o botão Criar login do app com senha temporária.");
         } catch (error) {
+            if (!salvamentoConfirmado && caminhoFotoNovo) {
+                try {
+                    await removerFotoUsuarioAcessoApp({
+                        supabaseClient: supabase,
+                        caminho: caminhoFotoNovo,
+                    });
+                } catch (rollbackError) {
+                    console.warn(
+                        "Falha ao remover o upload da foto após erro na permissão:",
+                        rollbackError?.message || rollbackError
+                    );
+                }
+            }
+
             setErro(error?.message || "Não foi possível salvar a permissão do usuário.");
             setMensagem("A permissão não foi salva.");
         } finally {
@@ -1509,43 +1734,104 @@ function UsuariosCadastradosApp({ usuario = null, usuarioParaEditar = null, onEd
         if (!confirmar) return;
 
         const idProcesso = item.id || item.email;
+        const caminhoFotoUsuarioExcluido =
+            normalizarCaminhoFotoAcessoApp(
+                obterFotoPermissaoAcessoApp(item)
+            );
+
         setExcluindoId(idProcesso);
         setErro("");
         setMensagem(`Excluindo acesso de ${item.email}...`);
 
         try {
-            const excluido = await excluirUsuarioPermissaoSistemaService({
-                supabase,
-                usuario: item,
-                usuarioAtual: usuario,
-                observacao: "Acesso removido definitivamente pela aba Acessos do App.",
-            });
+            const excluido =
+                await excluirUsuarioPermissaoSistemaService({
+                    supabase,
+                    usuario: item,
+                    usuarioAtual: usuario,
+                    observacao: "Acesso removido definitivamente pela aba Acessos do App.",
+                });
 
-            const emailRemovido = normalizarTextoAcesso(excluido?.email || item.email).toLowerCase();
-            const idRemovido = excluido?.id || item.id;
+            const emailRemovido =
+                normalizarTextoAcesso(
+                    excluido?.email || item.email
+                ).toLowerCase();
 
-            setUsuarios((listaAtual) => listaAtual.filter((usuarioLista) => {
-                const mesmoId = idRemovido && usuarioLista.id === idRemovido;
-                const mesmoEmail = emailRemovido && normalizarTextoAcesso(usuarioLista.email).toLowerCase() === emailRemovido;
-                return !(mesmoId || mesmoEmail);
-            }));
+            const idRemovido =
+                excluido?.id || item.id;
+
+            let fotoStorageRemovida = false;
+            let falhaRemocaoFotoStorage = false;
+
+            if (caminhoFotoUsuarioExcluido) {
+                try {
+                    fotoStorageRemovida =
+                        await removerFotoUsuarioAcessoApp({
+                            supabaseClient: supabase,
+                            caminho: caminhoFotoUsuarioExcluido,
+                        });
+                } catch (remocaoError) {
+                    falhaRemocaoFotoStorage = true;
+
+                    console.warn(
+                        "Acesso excluído, mas não foi possível remover a foto do Storage:",
+                        remocaoError?.message || remocaoError
+                    );
+                }
+            }
+
+            setUsuarios((listaAtual) =>
+                listaAtual.filter((usuarioLista) => {
+                    const mesmoId =
+                        idRemovido &&
+                        usuarioLista.id === idRemovido;
+
+                    const mesmoEmail =
+                        emailRemovido &&
+                        normalizarTextoAcesso(
+                            usuarioLista.email
+                        ).toLowerCase() === emailRemovido;
+
+                    return !(mesmoId || mesmoEmail);
+                })
+            );
+
             await registrarLogAcessoApp({
                 usuario,
                 acao: "ACESSO_APP_EXCLUIDO",
                 tabela: "usuarios_permissoes_sistema",
-                registroId: idRemovido || emailRemovido || item.email,
-                descricao: `Acesso do app excluído para ${emailRemovido || item.email}.`,
+                registroId:
+                    idRemovido ||
+                    emailRemovido ||
+                    item.email,
+                descricao:
+                    `Acesso do app excluído para ${emailRemovido || item.email}.`,
                 dados: {
                     email: emailRemovido || item.email,
                     nome: item.nome || "",
                     perfil: item.perfil || "",
+                    foto_url: caminhoFotoUsuarioExcluido,
+                    fotoStorageRemovida,
+                    falhaRemocaoFotoStorage,
                     observacao: "Acesso removido definitivamente pela aba Acessos do App.",
                 },
             });
 
-            setMensagem("Acesso excluído definitivamente da lista do app. Colaboradores, empresas e documentos não foram apagados.");
+            if (falhaRemocaoFotoStorage) {
+                setMensagem(
+                    "Acesso excluído definitivamente da lista do app, porém a foto não pôde ser removida do Storage. Revise Arquivos salvos no Storage."
+                );
+            } else {
+                setMensagem(
+                    "Acesso e foto vinculada excluídos. Colaboradores, empresas e documentos não foram apagados."
+                );
+            }
         } catch (error) {
-            setErro(error?.message || "Não foi possível excluir o acesso.");
+            setErro(
+                error?.message ||
+                "Não foi possível excluir o acesso."
+            );
+
             setMensagem("O acesso não foi excluído.");
         } finally {
             setExcluindoId("");
@@ -2128,7 +2414,11 @@ function normalizarPerfilEditavelParaTela(perfil = null) {
     if (!perfil) return null;
 
     const fallback = PERMISSOES_PADRAO_USUARIOS_POR_PERFIL.find((item) => item.chave === perfil.chave) || {};
-    const modulosLiberados = Array.isArray(perfil.modulosLiberados) ? perfil.modulosLiberados : fallback.modulosLiberados || [];
+    const modulosLiberadosOriginais = Array.isArray(perfil.modulosLiberados) ? perfil.modulosLiberados : fallback.modulosLiberados || [];
+    const modulosLiberados = normalizarModulosLiberadosPerfilAcesso(
+        modulosLiberadosOriginais,
+        fallback.modulosLiberados || []
+    );
     const acoesLiberadas = Array.isArray(perfil.acoesLiberadas) ? perfil.acoesLiberadas : fallback.acoesLiberadas || [];
     const acoesRestritas = Array.isArray(perfil.acoesRestritas) && perfil.acoesRestritas.length > 0
         ? perfil.acoesRestritas
@@ -2257,10 +2547,45 @@ function RevisaoPerfisPadrao({ usuario = null }) {
     }
 
     function alternarModuloPerfil(modulo) {
-        setFormularioPerfil((atual) => ({
-            ...atual,
-            modulosLiberados: alternarItemListaAcesso(atual.modulosLiberados, modulo),
-        }));
+        setFormularioPerfil((atual) => {
+            const selecionados = new Set(atual.modulosLiberados || []);
+
+            if (modulo === MODULO_VISTORIA_EDITAR_ACESSO) {
+                if (selecionados.has(MODULO_VISTORIA_EDITAR_ACESSO)) {
+                    selecionados.delete(MODULO_VISTORIA_EDITAR_ACESSO);
+                } else {
+                    selecionados.add(MODULO_VISTORIA_VISUALIZAR_ACESSO);
+                    selecionados.add(MODULO_VISTORIA_EDITAR_ACESSO);
+                }
+
+                return {
+                    ...atual,
+                    modulosLiberados: Array.from(selecionados),
+                };
+            }
+
+            if (modulo === MODULO_VISTORIA_VISUALIZAR_ACESSO) {
+                if (selecionados.has(MODULO_VISTORIA_VISUALIZAR_ACESSO)) {
+                    selecionados.delete(MODULO_VISTORIA_VISUALIZAR_ACESSO);
+                    selecionados.delete(MODULO_VISTORIA_EDITAR_ACESSO);
+                } else {
+                    selecionados.add(MODULO_VISTORIA_VISUALIZAR_ACESSO);
+                }
+
+                return {
+                    ...atual,
+                    modulosLiberados: Array.from(selecionados),
+                };
+            }
+
+            return {
+                ...atual,
+                modulosLiberados: alternarItemListaAcesso(
+                    atual.modulosLiberados,
+                    modulo
+                ),
+            };
+        });
     }
 
     function alternarAcaoPerfil(acao) {
@@ -2543,7 +2868,7 @@ Digite ${codigoConfirmacao} para confirmar.`
                         </div>
                         <div className="grid grid-cols-3 gap-2 text-center sm:min-w-[330px]">
                             <div className="rounded-2xl bg-white px-3 py-3 ring-1 ring-slate-100">
-                                <p className="text-xl font-black text-slate-950">{perfilParaExibir.modulosLiberados.length}</p>
+                                <p className="text-xl font-black text-slate-950">{contarModulosLiberadosPerfilAcesso(perfilParaExibir.modulosLiberados)}</p>
                                 <p className="text-[10px] font-black uppercase tracking-wide text-slate-400">módulos</p>
                             </div>
                             <div className="rounded-2xl bg-emerald-50 px-3 py-3 ring-1 ring-emerald-100">
@@ -2568,20 +2893,55 @@ Digite ${codigoConfirmacao} para confirmar.`
                             <div className="rounded-3xl bg-white p-4 ring-1 ring-slate-100">
                                 <p className="text-xs font-black uppercase tracking-wide text-slate-500">Módulos liberados</p>
                                 <div className="mt-3 grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
-                                    {MODULOS_USUARIOS_PERMISSOES.map((modulo) => {
-                                        const marcado = formularioPerfil.modulosLiberados.includes(modulo.modulo);
-                                        return (
-                                            <label key={modulo.chave} className={`flex cursor-pointer items-center gap-2 rounded-2xl px-3 py-2 text-xs font-black ring-1 ${marcado ? "bg-blue-50 text-blue-700 ring-blue-100" : "bg-white text-slate-500 ring-slate-200"}`}>
-                                                <input
-                                                    type="checkbox"
-                                                    checked={marcado}
-                                                    onChange={() => alternarModuloPerfil(modulo.modulo)}
-                                                    className="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
-                                                />
-                                                {modulo.modulo}
-                                            </label>
-                                        );
-                                    })}
+                                    {MODULOS_USUARIOS_PERMISSOES
+                                        .filter((modulo) => !moduloEhPermissaoVistoriaAcesso(modulo.modulo))
+                                        .map((modulo) => {
+                                            const marcado = formularioPerfil.modulosLiberados.includes(modulo.modulo);
+
+                                            return (
+                                                <label key={modulo.chave} className={`flex cursor-pointer items-center gap-2 rounded-2xl px-3 py-2 text-xs font-black ring-1 ${marcado ? "bg-blue-50 text-blue-700 ring-blue-100" : "bg-white text-slate-500 ring-slate-200"}`}>
+                                                    <input
+                                                        type="checkbox"
+                                                        checked={marcado}
+                                                        onChange={() => alternarModuloPerfil(modulo.modulo)}
+                                                        className="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                                                    />
+                                                    {modulo.modulo}
+                                                </label>
+                                            );
+                                        })}
+
+                                    <div className="rounded-2xl bg-slate-50 p-3 ring-1 ring-slate-200 sm:col-span-2 xl:col-span-3">
+                                        <div>
+                                            <p className="text-xs font-black text-slate-900">Vistoria</p>
+                                            <p className="mt-1 text-[11px] font-semibold leading-5 text-slate-500">
+                                                Defina separadamente quem pode consultar e quem pode alterar os dados operacionais da vistoria.
+                                            </p>
+                                        </div>
+
+                                        <div className="mt-3 grid gap-2 sm:grid-cols-2">
+                                            {MODULOS_USUARIOS_PERMISSOES
+                                                .filter((modulo) => moduloEhPermissaoVistoriaAcesso(modulo.modulo))
+                                                .map((modulo) => {
+                                                    const marcado = formularioPerfil.modulosLiberados.includes(modulo.modulo);
+                                                    const rotulo = modulo.modulo === MODULO_VISTORIA_EDITAR_ACESSO
+                                                        ? "Editar"
+                                                        : "Visualizar";
+
+                                                    return (
+                                                        <label key={modulo.chave} className={`flex cursor-pointer items-center gap-2 rounded-2xl px-3 py-2 text-xs font-black ring-1 ${marcado ? "bg-blue-50 text-blue-700 ring-blue-100" : "bg-white text-slate-500 ring-slate-200"}`}>
+                                                            <input
+                                                                type="checkbox"
+                                                                checked={marcado}
+                                                                onChange={() => alternarModuloPerfil(modulo.modulo)}
+                                                                className="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                                                            />
+                                                            {rotulo}
+                                                        </label>
+                                                    );
+                                                })}
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
                             <div className="rounded-3xl bg-white p-4 ring-1 ring-slate-100">
@@ -2639,11 +2999,36 @@ Digite ${codigoConfirmacao} para confirmar.`
                                     <p className="text-xs font-black uppercase tracking-wide text-slate-500">Pode acessar estes módulos</p>
                                 </div>
                                 <div className="mt-3 flex flex-wrap gap-2">
-                                    {perfilParaExibir.modulosLiberados.length > 0 ? perfilParaExibir.modulosLiberados.map((modulo) => (
-                                        <span key={modulo} className="rounded-full bg-slate-50 px-3 py-1.5 text-[11px] font-black text-slate-700 ring-1 ring-slate-200">
-                                            {modulo}
-                                        </span>
-                                    )) : (
+                                    {perfilParaExibir.modulosLiberados.length > 0 ? (
+                                        <>
+                                            {perfilParaExibir.modulosLiberados
+                                                .filter((modulo) => !moduloEhPermissaoVistoriaAcesso(modulo))
+                                                .map((modulo) => (
+                                                    <span key={modulo} className="rounded-full bg-slate-50 px-3 py-1.5 text-[11px] font-black text-slate-700 ring-1 ring-slate-200">
+                                                        {modulo}
+                                                    </span>
+                                                ))}
+
+                                            {(perfilParaExibir.modulosLiberados.includes(MODULO_VISTORIA_VISUALIZAR_ACESSO)
+                                                || perfilParaExibir.modulosLiberados.includes(MODULO_VISTORIA_EDITAR_ACESSO)) ? (
+                                                <span className="inline-flex flex-wrap items-center gap-1.5 rounded-2xl bg-blue-50 px-3 py-1.5 text-[11px] font-black text-blue-800 ring-1 ring-blue-100">
+                                                    <span>Vistoria</span>
+
+                                                    {perfilParaExibir.modulosLiberados.includes(MODULO_VISTORIA_VISUALIZAR_ACESSO) ? (
+                                                        <span className="rounded-full bg-white px-2 py-0.5 text-[10px] text-blue-700 ring-1 ring-blue-100">
+                                                            Visualizar
+                                                        </span>
+                                                    ) : null}
+
+                                                    {perfilParaExibir.modulosLiberados.includes(MODULO_VISTORIA_EDITAR_ACESSO) ? (
+                                                        <span className="rounded-full bg-white px-2 py-0.5 text-[10px] text-blue-700 ring-1 ring-blue-100">
+                                                            Editar
+                                                        </span>
+                                                    ) : null}
+                                                </span>
+                                            ) : null}
+                                        </>
+                                    ) : (
                                         <span className="rounded-full bg-slate-50 px-3 py-1.5 text-[11px] font-black text-slate-400 ring-1 ring-slate-200">
                                             Nenhum módulo operacional liberado
                                         </span>
@@ -2729,7 +3114,7 @@ Digite ${codigoConfirmacao} para confirmar.`
                             </div>
                             <div className="mt-3 grid grid-cols-3 gap-1.5 text-center">
                                 <div className="rounded-xl bg-slate-50 px-2 py-2 ring-1 ring-slate-100">
-                                    <p className="text-sm font-black text-slate-800">{perfil.modulosLiberados.length}</p>
+                                    <p className="text-sm font-black text-slate-800">{contarModulosLiberadosPerfilAcesso(perfil.modulosLiberados)}</p>
                                     <p className="text-[9px] font-black uppercase tracking-wide text-slate-400">módulos</p>
                                 </div>
                                 <div className="rounded-xl bg-emerald-50 px-2 py-2 ring-1 ring-emerald-100">

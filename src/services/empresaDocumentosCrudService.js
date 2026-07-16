@@ -15,6 +15,33 @@ async function otimizarImagemDocumentoEmpresa(arquivo) {
     });
 }
 
+async function removerArquivoDocumentoEmpresaSemBloquear({
+    supabase,
+    caminhoArquivo,
+    contexto,
+}) {
+    if (!caminhoArquivo) return true;
+
+    try {
+        const { error } = await supabase.storage
+            .from("documentos-empresas")
+            .remove([caminhoArquivo]);
+
+        if (error) {
+            throw error;
+        }
+
+        return true;
+    } catch (error) {
+        console.warn(
+            contexto,
+            error?.message || error
+        );
+
+        return false;
+    }
+}
+
 export async function salvarDocumentoEmpresaCrud({
     supabase,
     novoDoc,
@@ -22,75 +49,189 @@ export async function salvarDocumentoEmpresaCrud({
     sanitizarNomeArquivo,
     normalizarDocumentoEmpresa,
 }) {
-    let arquivoUrl = null;
-    let arquivoNome = novoDoc.arquivo?.name || null;
+    const {
+        data: documentoAnterior,
+        error: erroConsultaDocumentoAnterior,
+    } = await supabase
+        .from("documentos_empresas")
+        .select("id, url_do_arquivo, nome_do_arquivo")
+        .eq("empresa_id", novoDoc.empresaId)
+        .eq("tipo_documento", novoDoc.tipo)
+        .maybeSingle();
+
+    if (erroConsultaDocumentoAnterior) {
+        throw new Error(
+            `Erro ao consultar documento existente: ${erroConsultaDocumentoAnterior.message}`
+        );
+    }
+
+    const caminhoArquivoAnterior =
+        documentoAnterior?.url_do_arquivo || "";
+
+    let arquivoUrl =
+        caminhoArquivoAnterior || null;
+
+    let arquivoNome =
+        documentoAnterior?.nome_do_arquivo || null;
+
+    let caminhoArquivoNovoPendente = "";
 
     if (novoDoc.arquivo) {
-        const arquivoFinal = await otimizarImagemDocumentoEmpresa(novoDoc.arquivo);
+        const arquivoFinal =
+            await otimizarImagemDocumentoEmpresa(
+                novoDoc.arquivo
+            );
 
-        if (!validarArquivoAntesUpload(arquivoFinal, "documentoExtenso")) {
-            throw new Error("Documento empresarial fora do limite configurado.");
+        if (
+            !validarArquivoAntesUpload(
+                arquivoFinal,
+                "documentoExtenso"
+            )
+        ) {
+            throw new Error(
+                "Documento empresarial fora do limite configurado."
+            );
         }
 
-        const nomeSeguro = sanitizarNomeArquivo(arquivoFinal.name);
-        const tipoSeguro = sanitizarNomeArquivo(novoDoc.tipo);
-        const caminho = `${novoDoc.empresaId}/${tipoSeguro}-${Date.now()}-${nomeSeguro}`;
+        const nomeSeguro =
+            sanitizarNomeArquivo(arquivoFinal.name);
 
-        const { error: uploadError } = await supabase.storage
-            .from("documentos-empresas")
-            .upload(caminho, arquivoFinal, {
-                cacheControl: "3600",
-                upsert: true,
-                contentType: arquivoFinal.type || "application/pdf",
-            });
+        const tipoSeguro =
+            sanitizarNomeArquivo(novoDoc.tipo);
+
+        const caminho =
+            `${novoDoc.empresaId}/${tipoSeguro}-${Date.now()}-${nomeSeguro}`;
+
+        const { error: uploadError } =
+            await supabase.storage
+                .from("documentos-empresas")
+                .upload(caminho, arquivoFinal, {
+                    cacheControl: "3600",
+                    upsert: true,
+                    contentType:
+                        arquivoFinal.type ||
+                        "application/pdf",
+                });
 
         if (uploadError) {
-            throw new Error(`Erro no upload do documento: ${uploadError.message}`);
+            throw new Error(
+                `Erro no upload do documento: ${uploadError.message}`
+            );
         }
 
+        caminhoArquivoNovoPendente = caminho;
         arquivoUrl = caminho;
         arquivoNome = nomeSeguro;
     }
 
-    const { data, error } = await supabase
-        .from("documentos_empresas")
-        .upsert(
+    let resultadoPersistencia;
+
+    try {
+        resultadoPersistencia = await supabase
+            .from("documentos_empresas")
+            .upsert(
+                {
+                    empresa_id: novoDoc.empresaId,
+                    tipo_documento: novoDoc.tipo,
+                    data_emissao: novoDoc.dataEmissao,
+                    data_vencimento: novoDoc.dataVencimento,
+                    url_do_arquivo: arquivoUrl,
+                    nome_do_arquivo: arquivoNome,
+                    observacao:
+                        novoDoc.observacao || null,
+                    status_validacao: "Validado",
+                },
+                {
+                    onConflict:
+                        "empresa_id,tipo_documento",
+                }
+            )
+            .select("*")
+            .single();
+    } catch (erroPersistencia) {
+        if (caminhoArquivoNovoPendente) {
+            await removerArquivoDocumentoEmpresaSemBloquear({
+                supabase,
+                caminhoArquivo:
+                    caminhoArquivoNovoPendente,
+                contexto:
+                    "Falha ao remover do Storage o novo upload após erro inesperado no salvamento do documento:",
+            });
+        }
+
+        throw new Error(
+            `Erro ao salvar documento: ${
+                erroPersistencia?.message ||
+                erroPersistencia
+            }`,
             {
-                empresa_id: novoDoc.empresaId,
-                tipo_documento: novoDoc.tipo,
-                data_emissao: novoDoc.dataEmissao,
-                data_vencimento: novoDoc.dataVencimento,
-                url_do_arquivo: arquivoUrl,
-                nome_do_arquivo: arquivoNome,
-                observacao: novoDoc.observacao || null,
-                status_validacao: "Validado",
-            },
-            { onConflict: "empresa_id,tipo_documento" }
-        )
-        .select("*")
-        .single();
+                cause: erroPersistencia,
+            }
+        );
+    }
+
+    const { data, error } =
+        resultadoPersistencia;
 
     if (error) {
-        throw new Error(`Erro ao salvar documento: ${error.message}`);
+        if (caminhoArquivoNovoPendente) {
+            await removerArquivoDocumentoEmpresaSemBloquear({
+                supabase,
+                caminhoArquivo:
+                    caminhoArquivoNovoPendente,
+                contexto:
+                    "Falha ao remover do Storage o novo upload rejeitado pelo banco:",
+            });
+        }
+
+        throw new Error(
+            `Erro ao salvar documento: ${error.message}`
+        );
+    }
+
+    if (
+        caminhoArquivoNovoPendente &&
+        caminhoArquivoAnterior &&
+        caminhoArquivoAnterior !==
+            caminhoArquivoNovoPendente
+    ) {
+        await removerArquivoDocumentoEmpresaSemBloquear({
+            supabase,
+            caminhoArquivo: caminhoArquivoAnterior,
+            contexto:
+                "Documento atualizado, mas o arquivo anterior não pôde ser removido do Storage:",
+        });
     }
 
     return normalizarDocumentoEmpresa(data);
 }
 
-export async function excluirDocumentoEmpresaCrud({ supabase, documento }) {
+export async function excluirDocumentoEmpresaCrud({
+    supabase,
+    documento,
+}) {
     const { error } = await supabase
         .from("documentos_empresas")
         .delete()
         .eq("id", documento.id);
 
     if (error) {
-        throw new Error(`Erro ao remover documento: ${error.message}`);
+        throw new Error(
+            `Erro ao remover documento: ${error.message}`
+        );
     }
 
-    const caminhoArquivo = documento.url_do_arquivo || documento.arquivo_url;
+    const caminhoArquivo =
+        documento.url_do_arquivo ||
+        documento.arquivo_url;
 
     if (caminhoArquivo) {
-        await supabase.storage.from("documentos-empresas").remove([caminhoArquivo]);
+        await removerArquivoDocumentoEmpresaSemBloquear({
+            supabase,
+            caminhoArquivo,
+            contexto:
+                "O registro do documento foi excluído, mas o arquivo não pôde ser removido do Storage:",
+        });
     }
 
     return true;

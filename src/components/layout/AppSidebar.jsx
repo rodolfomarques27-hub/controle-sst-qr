@@ -331,7 +331,7 @@ export function AppSidebar({
     };
 
     const gruposNavegacao = useMemo(() => {
-        const ordemGrupos = ["VIS\u00c3O GERAL", "AUDITORIA", "CADASTROS", "DDS", "SISTEMA"];
+        const ordemGrupos = ["VIS\u00c3O GERAL", "AUDITORIA", "CADASTROS", "DDS", "VISTORIA", "SISTEMA"];
 
         return ordemGrupos
             .map((titulo) => ({
@@ -468,7 +468,7 @@ export function AppSidebar({
                                                 title={!menuExpandido ? `${grupo.titulo} - ${item.label}` : undefined}
                                             >
                                                 <Icon className="app-sidebar-nav-icon h-4 w-4 shrink-0" />
-                                                {menuExpandido && <span className="truncate">{item.label}</span>}
+                                                {menuExpandido && <span className="whitespace-nowrap text-[0.78rem] leading-tight">{item.label}</span>}
                                             </button>
                                         );
                                     })}

@@ -195,7 +195,7 @@ export function LoginScreen({ onLogin }) {
                         <ShieldCheck className="h-7 w-7" />
                     </div>
                     <div>
-                        <h1 className="text-2xl font-bold text-slate-950">Controle SST QR</h1>
+                        <h1 className="text-2xl font-bold text-slate-950">SafeScan Brasil</h1>
                         <p className="text-sm text-slate-500">Acesso restrito ao sistema</p>
                     </div>
                 </div>

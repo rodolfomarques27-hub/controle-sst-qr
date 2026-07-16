@@ -1494,6 +1494,8 @@ export function DashboardAuditoriaCampo({
         setSalvandoEvidenciaCorrecaoQrCampoId(idAuditoria);
         setMensagemEvidenciaCorrecaoQrCampo({ id: idAuditoria, texto: "", erro: false });
 
+        let caminhoFotoNovaPendente = "";
+
         try {
             let fotoDepoisUrl = auditoria.fotoDepoisUrl || auditoria.foto_depois_url || "";
 
@@ -1508,6 +1510,8 @@ export function DashboardAuditoriaCampo({
                 });
 
                 if (erroUpload) throw erroUpload;
+
+                caminhoFotoNovaPendente = caminho;
                 fotoDepoisUrl = caminho;
             }
 
@@ -1544,6 +1548,8 @@ export function DashboardAuditoriaCampo({
 
             if (error) throw error;
 
+            caminhoFotoNovaPendente = "";
+
             setSobrescritasStatusAuditoriaQrCampo((atual) => ({
                 ...atual,
                 [idAuditoria]: {
@@ -1577,6 +1583,24 @@ export function DashboardAuditoriaCampo({
                 await onRecarregar();
             }
         } catch (error) {
+            if (caminhoFotoNovaPendente) {
+                try {
+                    const { error: erroRollbackStorage } =
+                        await supabase.storage
+                            .from("auditorias-campo")
+                            .remove([caminhoFotoNovaPendente]);
+
+                    if (erroRollbackStorage) {
+                        throw erroRollbackStorage;
+                    }
+                } catch (rollbackError) {
+                    console.warn(
+                        "A persistência da evidência falhou e a nova foto não pôde ser removida do Storage:",
+                        rollbackError?.message || rollbackError
+                    );
+                }
+            }
+
             setMensagemEvidenciaCorrecaoQrCampo({ id: idAuditoria, texto: `Erro ao registrar correção: ${error.message}`, erro: true });
         } finally {
             setSalvandoEvidenciaCorrecaoQrCampoId("");
@@ -2163,7 +2187,7 @@ const logoHtml = logoQr
         <header class="cabecalho-pdf-padrao">
             <div class="marca-pdf-padrao">
                 <span class="marca-pdf-icone" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 3 5 6v5c0 4.6 2.9 8.8 7 10 4.1-1.2 7-5.4 7-10V6l-7-3Z"/><path d="m9.5 12 1.8 1.8 3.7-4"/></svg></span>
-                <div class="marca-pdf-textos"><h1>CONTROLE SST QR</h1><p>GESTÃO DE SEGURANÇA DO TRABALHO</p></div>
+                <div class="marca-pdf-textos"><h1>SAFESCAN BRASIL</h1><p>GESTÃO DE SEGURANÇA DO TRABALHO</p></div>
             </div>
             <div class="linha-pdf-padrao"></div>
             <div class="titulo-pdf-padrao">
@@ -2179,7 +2203,7 @@ const logoHtml = logoQr
         </section>
         ${cards ? `<section class="cards">${cards}</section>` : ""}
         ${secoes}
-        <footer class="rodape"><span>© Controle SST QR</span><span>${escaparTextoImpressaoQr(rodape)}</span></footer>
+        <footer class="rodape"><span>© SafeScan Brasil</span><span>${escaparTextoImpressaoQr(rodape)}</span></footer>
     </main>
 </body>
 </html>`;

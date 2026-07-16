@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { QRCodeSVG } from "qrcode.react";
 import {
     carregarRegistroDdsPorCodigo,
@@ -19,7 +19,6 @@ import {
     CheckCircle2,
     Building2,
     CalendarClock,
-    ClipboardCheck,
     QrCode,
     ListChecks,
     MessageSquareText,
@@ -1332,27 +1331,6 @@ function MarcaLogosEmpresasDdsImpresso({ logos = [], compacto = false }) {
         </div>
     );
 }
-function MarcaEmpresaDdsImpresso({ logoUrl = "", compacto = false }) {
-    const logoSeguro = resolverLogoEmpresaDds(logoUrl);
-
-    return (
-        <div className={compacto
-            ? "flex h-14 items-center justify-center rounded-xl border border-slate-300 bg-white p-2"
-            : "flex h-20 items-center justify-center rounded-xl border border-slate-300 bg-white p-3"}
-        >
-            {logoSeguro ? (
-                <img
-                    src={logoSeguro}
-                    alt="Logo da empresa"
-                    className={compacto
-                        ? "h-11 max-w-[180px] object-contain"
-                        : "h-16 max-w-[240px] object-contain"}
-                />
-            ) : null}
-        </div>
-    );
-}
-
 function normalizarTextoTemaDds(valor = "") {
     return String(valor ?? "")
         .normalize("NFD")
@@ -1373,17 +1351,6 @@ function MarcacaoDiaSemAtividadeDds() {
         <span className="inline-flex h-5 min-w-8 items-center justify-center text-base font-black text-slate-500">
             {"\u2014"}
         </span>
-    );
-}
-
-function CelulaAssinaturaDiaDds({ dia = {}, compacto = false }) {
-    return (
-        <td className={compacto
-            ? "border border-slate-300 px-1 py-1.5 text-center"
-            : "border border-slate-300 px-1 py-1 text-center"}
-        >
-            {temaDdsSemAtividade(dia) ? <MarcacaoDiaSemAtividadeDds /> : null}
-        </td>
     );
 }
 
@@ -1787,7 +1754,7 @@ function DdsPreviewImpresso({ participantes = participantesDds, mostrarAssinatur
     );
 }
 
-function DdsPreviewImpressoContinuacao({ participantes = participantesDdsContinuacao, numeroPagina = 2, totalPaginas = 2, ultimaFolha = true, numeroInicial = 16, dadosDds = dadosDdsPadrao, diasSemana = diasDds }) {
+function DdsPreviewImpressoContinuacao({ participantes = participantesDdsContinuacao, numeroPagina = 2, totalPaginas = 2, ultimaFolha = true, dadosDds = dadosDdsPadrao, diasSemana = diasDds }) {
     const participantesFolha = Array.isArray(participantes)
         ? participantes
         : [];
@@ -2334,7 +2301,7 @@ export function DdsPage({
     const [cardsDdsAbertos, setCardsDdsAbertos] = useState(() => carregarCardsDdsLocal());
     const [registroDdsConferencia, setRegistroDdsConferencia] = useState(null);
     const [salvandoRegistroDds, setSalvandoRegistroDds] = useState(false);
-    const [erroRegistroDds, setErroRegistroDds] = useState("");
+    const [, setErroRegistroDds] = useState("");
     const [codigoConferenciaDds, setCodigoConferenciaDds] = useState("");
     const [registroScannerDds, setRegistroScannerDds] = useState(null);
     const [carregandoScannerDds, setCarregandoScannerDds] = useState(false);
@@ -4238,7 +4205,6 @@ export function DdsPage({
             const dia = diasBase[indice] || {};
             const tema = String(dia?.tema || "").trim();
             const responsavel = String(dia?.responsavel || "").trim();
-            const domingo = indice === 0 || normalizar(dia?.curto || dia?.dia || "").includes("DOM");
             const semAtividade = normalizar(tema) === "NAO HOUVE ATIVIDADES";
 
             return {
@@ -5548,15 +5514,7 @@ export function DdsPage({
     }
 
     function obterObrasDisponiveisCalendarioMaoDeObraDds() {
-        const fontes = [];
-
-        if (typeof obrasDds !== "undefined" && Array.isArray(obrasDds)) fontes.push(...obrasDds);
-        if (typeof obras !== "undefined" && Array.isArray(obras)) fontes.push(...obras);
-        if (typeof listaObrasDds !== "undefined" && Array.isArray(listaObrasDds)) fontes.push(...listaObrasDds);
-        if (typeof obrasConfiguracoes !== "undefined" && Array.isArray(obrasConfiguracoes)) fontes.push(...obrasConfiguracoes);
-        if (typeof obrasCadastradas !== "undefined" && Array.isArray(obrasCadastradas)) fontes.push(...obrasCadastradas);
-
-        return fontes.filter(Boolean);
+        return obrasEmpresasDds.filter(Boolean);
     }
 
     function obterIdObraCalendarioMaoDeObraDds() {
@@ -5711,7 +5669,6 @@ export function DdsPage({
             return null;
         }
 
-        const codigo = reciboConferenciaFinalDds?.codigo || registroScannerDds?.codigo || codigoConferenciaDds || dadosDds.codigo || "DDS";
         const empresaPrincipal = reciboConferenciaFinalDds?.empresa || registroScannerDds?.empresaNome || dadosDds.empresaNome || "";
         const obra = reciboConferenciaFinalDds?.obra || registroScannerDds?.obraNome || dadosDds.obraNome || "";
         const periodoInicio = reciboConferenciaFinalDds?.periodoInicio || registroScannerDds?.periodoInicio || dadosDds.periodoInicio || "";
@@ -5782,7 +5739,6 @@ export function DdsPage({
         const empresas = Array.from(totaisPorEmpresa.keys()).sort((a, b) => a.localeCompare(b, "pt-BR"));
 
         return {
-            codigo,
             empresaPrincipal,
             obra,
             periodoInicio,
@@ -6085,7 +6041,6 @@ export function DdsPage({
         }
 
         const {
-            codigo,
             empresaPrincipal,
             obra,
             periodoInicioFormatado,
@@ -6976,7 +6931,6 @@ export function DdsPage({
         const obra = escaparHtml(recibo.obra || "-");
         const periodo = escaparHtml(recibo.periodoInicio || "-") + " a " + escaparHtml(recibo.periodoFim || "-");
         const concluidoEm = formatarData(recibo.concluidoEm);
-        const status = escaparHtml(recibo.status || "Conferência concluída oficialmente");
         const heroUrl = String(dashboardHeroSstDds || "");
         const heroImgHtml = heroUrl ? '<img class="hero-img" src="' + escaparHtml(heroUrl) + '" alt="" />' : "";
 

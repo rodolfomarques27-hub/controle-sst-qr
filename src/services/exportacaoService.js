@@ -91,7 +91,7 @@ export function baixarPDF(nomeArquivo, titulo, linhas) {
 
     comandos.push(`BT /F2 16 Tf ${margem} ${y} Td (${limparTextoPDF(titulo)}) Tj ET`);
     y -= 20;
-    comandos.push(`BT /F1 9 Tf ${margem} ${y} Td (Gerado em ${limparTextoPDF(dataAtual)} pelo Controle SST QR) Tj ET`);
+    comandos.push(`BT /F1 9 Tf ${margem} ${y} Td (Gerado em ${limparTextoPDF(dataAtual)} pelo SafeScan Brasil) Tj ET`);
     y -= 26;
 
     const cabecalho = linhas[0] || [];
@@ -440,7 +440,7 @@ function montarCabecalhoEmpresaTreinamentosRelatorio(empresa = {}, dataEmissao =
             <div class="marca-pdf-padrao">
                 <span class="marca-pdf-icone" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 3 5 6v5c0 4.6 2.9 8.8 7 10 4.1-1.2 7-5.4 7-10V6l-7-3Z"/><path d="m9.5 12 1.8 1.8 3.7-4"/></svg></span>
                 <div class="marca-pdf-textos">
-                    <h1>CONTROLE SST QR</h1>
+                    <h1>SAFESCAN BRASIL</h1>
                     <p>GESTÃO DE SEGURANÇA DO TRABALHO</p>
                 </div>
             </div>
@@ -457,7 +457,7 @@ function montarCabecalhoEmpresaTreinamentosRelatorio(empresa = {}, dataEmissao =
                 <div class="dados-empresa__item dados-empresa__item--cnpj"><span>${ICONES_CABECALHO_RELATORIO_COLABORADORES.cnpj}</span><strong>CNPJ:</strong><em>${escaparHTML(empresa.cnpj || "-")}</em></div>
                 <div class="dados-empresa__item dados-empresa__item--responsavel"><span>${ICONES_CABECALHO_RELATORIO_COLABORADORES.responsavel}</span><strong>Responsável:</strong><em>${escaparHTML(empresa.responsavel || "-")}</em></div>
                 <div class="dados-empresa__item dados-empresa__item--data"><span>${ICONES_CABECALHO_RELATORIO_COLABORADORES.data}</span><strong>Data de emissão:</strong><em>${escaparHTML(dataEmissao)}</em></div>
-                <div class="dados-empresa__item dados-empresa__item--sistema"><span>${ICONES_CABECALHO_RELATORIO_COLABORADORES.sistema}</span><strong>Sistema:</strong><em>Controle SST QR</em></div>
+                <div class="dados-empresa__item dados-empresa__item--sistema"><span>${ICONES_CABECALHO_RELATORIO_COLABORADORES.sistema}</span><strong>Sistema:</strong><em>SafeScan Brasil</em></div>
             </div>
         </header>
     `;
@@ -466,7 +466,7 @@ function montarCabecalhoEmpresaTreinamentosRelatorio(empresa = {}, dataEmissao =
 function montarRodapeTreinamentosRelatorio(texto = "Relatório visual por empresa") {
     return `
         <footer class="rodape-relatorio">
-            <span>🛡 Controle SST QR</span>
+            <span>🛡 SafeScan Brasil</span>
             <span>${escaparHTML(texto)}</span>
         </footer>
     `;
@@ -1260,7 +1260,7 @@ export async function baixarRelatorioDashboardSstPDF({
             <div class="marca-pdf-padrao">
                 <span class="marca-pdf-icone" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 3 5 6v5c0 4.6 2.9 8.8 7 10 4.1-1.2 7-5.4 7-10V6l-7-3Z"/><path d="m9.5 12 1.8 1.8 3.7-4"/></svg></span>
                 <div class="marca-pdf-textos">
-                    <h1>CONTROLE SST QR</h1>
+                    <h1>SAFESCAN BRASIL</h1>
                     <p>GESTÃO DE SEGURANÇA DO TRABALHO</p>
                 </div>
             </div>
@@ -1274,7 +1274,7 @@ export async function baixarRelatorioDashboardSstPDF({
 
     const rodapeRelatorio = (pagina, total = 3) => `
         <footer class="rodape-relatorio">
-            <span>Controle SST QR — Relatório gerado automaticamente pelo Dashboard SST.</span>
+            <span>SafeScan Brasil — Relatório gerado automaticamente pelo Dashboard SST.</span>
             <span>Página ${pagina} de ${total}</span>
         </footer>
     `;
@@ -1812,7 +1812,7 @@ function montarCabecalhoRelatorioEmpresas(titulo = "Relatório de empresas e doc
             <div class="marca-pdf-padrao">
                 <span class="marca-pdf-icone" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 3 5 6v5c0 4.6 2.9 8.8 7 10 4.1-1.2 7-5.4 7-10V6l-7-3Z"/><path d="m9.5 12 1.8 1.8 3.7-4"/></svg></span>
                 <div class="marca-pdf-textos">
-                    <h1>CONTROLE SST QR</h1>
+                    <h1>SAFESCAN BRASIL</h1>
                     <p>GESTÃO DE SEGURANÇA DO TRABALHO</p>
                 </div>
             </div>
@@ -1828,7 +1828,7 @@ function montarCabecalhoRelatorioEmpresas(titulo = "Relatório de empresas e doc
 function montarRodapeRelatorioEmpresas(pagina = 1, total = 1, rotulo = "Relatório visual de empresas e documentos") {
     return `
         <footer class="rodape-relatorio-empresas">
-            <span>© Controle SST QR</span>
+            <span>© SafeScan Brasil</span>
             <span>${escaparHTML(rotulo)} · Página ${pagina} de ${total}</span>
         </footer>
     `;
@@ -4109,7 +4109,7 @@ function montarSecaoAniversariantesRelatorio({ aniversariantes = [], filtros = {
         <section class="pagina-relatorio pagina-relatorio-aniversariantes">
             <header class="cabecalho-relatorio cabecalho-relatorio--modelo-aprovado cabecalho-relatorio--aniversariantes">
                 <svg class="cabecalho-aniversariantes-svg" viewBox="0 0 1000 145" role="img" aria-label="Cabeçalho do relatório de aniversariantes">
-                    <text x="500" y="42" text-anchor="middle" dominant-baseline="middle" class="cabecalho-svg-titulo">CONTROLE SST QR</text>
+                    <text x="500" y="42" text-anchor="middle" dominant-baseline="middle" class="cabecalho-svg-titulo">SAFESCAN BRASIL</text>
 
                     <line x1="0" y1="93" x2="288" y2="93" class="cabecalho-svg-linha" />
                     <rect x="288" y="78" width="424" height="30" rx="4" class="cabecalho-svg-fundo-subtitulo" />
@@ -4168,7 +4168,7 @@ function montarSecaoAniversariantesRelatorio({ aniversariantes = [], filtros = {
             </section>
 
             <footer class="rodape-relatorio">
-                <span>🛡 Controle SST QR</span>
+                <span>🛡 SafeScan Brasil</span>
                 <span>Relatório visual de aniversariantes</span>
             </footer>
         </section>
@@ -4996,7 +4996,7 @@ function montarTabelaAuditoriaSistemaRelatorio({ registros = [], indiceInicial =
 function montarRodapeAuditoriaSistemaRelatorio(pagina = 1, totalPaginas = 1) {
     return `
         <footer class="rodape-relatorio rodape-relatorio-auditoria">
-            <span>🛡 Controle SST QR</span>
+            <span>🛡 SafeScan Brasil</span>
             <span>Relatório visual da Auditoria do Sistema · Página ${escaparHTML(pagina)} de ${escaparHTML(totalPaginas)}</span>
         </footer>
     `;
@@ -5007,7 +5007,7 @@ function montarCabecalhoAuditoriaSistemaRelatorio(titulo = "Relatório da Audito
         <header class="cabecalho-relatorio cabecalho-relatorio--modelo-aprovado cabecalho-relatorio--auditoria-sistema">
             <div class="marca-relatorio-controle marca-relatorio-controle--somente-texto">
                 <div class="marca-relatorio-controle__textos">
-                    <h1>CONTROLE SST QR</h1>
+                    <h1>SAFESCAN BRASIL</h1>
                 </div>
             </div>
 

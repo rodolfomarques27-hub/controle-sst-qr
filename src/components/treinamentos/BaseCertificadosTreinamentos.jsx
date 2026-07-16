@@ -124,6 +124,7 @@ function FotoColaboradorBase({ colaborador = {} }) {
         };
     }, [fotoOrigem]);
 
+    /*
     const obterValorDataRevisaoFormulario = (itemKey, campo, valorIso) => {
         const chave = `${itemKey}:${campo}`;
 
@@ -206,6 +207,7 @@ function FotoColaboradorBase({ colaborador = {} }) {
         }, 0);
     };
 
+    */
     return (
         <div className="flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-full bg-slate-100 text-sm font-black uppercase text-slate-500 ring-1 ring-slate-200 sm:h-16 sm:w-16">
             {fotoUrlResolvida && !fotoComErro ? (

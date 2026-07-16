@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
     AlertTriangle,
     Building2,
@@ -10,7 +10,6 @@ import {
     Plus,
     RefreshCw,
     Search,
-    ShieldCheck,
     Trash2,
     Upload,
     Users,
@@ -1398,34 +1397,6 @@ export function Empresas({
             { sensitivity: "base" }
         );
     });
-    const empresasContratantes = empresasFiltradas.filter(
-        (empresa) => (empresa.tipo_empresa || "Terceirizada") === "Contratante - Idealiza Cidades"
-    );
-
-    const empresasTerceirizadas = empresasFiltradas.filter(
-        (empresa) => (empresa.tipo_empresa || "Terceirizada") === "Terceirizada"
-    );
-
-    const empresasSubcontratadas = empresasFiltradas.filter(
-        (empresa) => (empresa.tipo_empresa || "Terceirizada") === "Subcontratada"
-    );
-
-    const subcontratadasPorContratante = empresasSubcontratadas.reduce((acc, empresa) => {
-        const chave = empresa.empresa_pai_id || "sem-vinculo";
-
-        if (!acc[chave]) {
-            acc[chave] = {
-                contratante: empresasBanco.find((item) => item.id === empresa.empresa_pai_id) || null,
-                empresas: [],
-            };
-        }
-
-        acc[chave].empresas.push(empresa);
-        return acc;
-    }, {});
-
-    const gruposSubcontratadas = Object.values(subcontratadasPorContratante);
-
     const documentosFiltrados = documentosEmpresas.filter((doc) =>
         empresasFiltradas.some((empresa) => empresa.id === doc.empresa_id)
     );

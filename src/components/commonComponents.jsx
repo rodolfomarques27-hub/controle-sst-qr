@@ -174,8 +174,7 @@ export function FotoAuditoriaPreview({ url, label }) {
                     src={urlAssinada}
                     alt={label}
                     className="h-44 w-full bg-slate-100 object-contain"
-                    style={imageStyle || undefined}
-            loading="lazy"
+                    loading="lazy"
                     onError={() => setErro(true)}
                 />
             ) : (

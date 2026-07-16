@@ -24,7 +24,11 @@ function erroColunaCepObraNaoExiste(error = {}) {
 }
 
 function removerCepPayloadObra(payload = {}) {
-    const { cep, numero_obra, numero_endereco, tecnico_seguranca_idealiza, ...restante } = payload;
+    const restante = { ...payload };
+    delete restante.cep;
+    delete restante.numero_obra;
+    delete restante.numero_endereco;
+    delete restante.tecnico_seguranca_idealiza;
 
     return restante;
 }

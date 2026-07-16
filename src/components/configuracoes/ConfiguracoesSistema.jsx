@@ -3206,7 +3206,7 @@ export function ConfiguracoesSistema({
                                     style={montarEstiloFundoLoginConfiguracoes(previewFundoLoginUrl, ajusteFundoLogin)}
                                 >
                                     <div className="rounded-2xl bg-white/95 px-5 py-4 text-center text-slate-950 shadow-xl">
-                                        <p className="text-sm font-black">Controle SST QR</p>
+                                        <p className="text-sm font-black">SafeScan Brasil</p>
                                         <p className="mt-1 text-[11px] font-semibold text-slate-500">
                                             {previewFundoLoginUrl ? "Imagem personalizada ativa" : "Fundo azul padrão"}
                                         </p>
@@ -3648,6 +3648,7 @@ export function ConfiguracoesSistema({
                     </Card>
                 )
             );
+
 
 
         case "config-arquivos-storage":
