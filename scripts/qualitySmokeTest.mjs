@@ -243,7 +243,7 @@ const codigoFundoLoginPublicoService = readFileSync(
     "utf8"
 );
 const migracaoFundoLoginPublico = readFileSync(
-    new URL("../supabase/migrations/20260717153000_obter_estado_fundo_login_publico.sql", import.meta.url),
+    new URL("../supabase/migrations/20260717115604_obter_estado_fundo_login_publico.sql", import.meta.url),
     "utf8"
 );
 const regraTrabalho = readFileSync(
