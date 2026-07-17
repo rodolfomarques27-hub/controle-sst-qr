@@ -3,10 +3,7 @@ import { ClipboardList, Loader2, LogIn, Mail, ShieldCheck } from "lucide-react";
 import { supabase } from "../lib/supabaseClient";
 import { PasswordInput } from "./commonComponents";
 import { registrarSolicitacaoRecuperacaoSenhaLoginService } from "../services/acessosAppService";
-
-const BUCKET_FUNDO_LOGIN = "logos-empresas";
-const CAMINHO_FUNDO_LOGIN = "configuracoes/login/fundo-login.jpg";
-const CAMINHO_CONFIG_FUNDO_LOGIN = "configuracoes/login/fundo-login-config.json";
+import { carregarFundoLoginPublicoService } from "../services/fundoLoginPublicoService";
 
 const AJUSTE_FUNDO_LOGIN_PADRAO = {
     size: "cover",
@@ -26,26 +23,6 @@ function normalizarAjusteFundoLogin(valor = {}) {
     };
 }
 
-function montarUrlPublicaFundoLogin(caminho) {
-    try {
-        const { data } = supabase.storage.from(BUCKET_FUNDO_LOGIN).getPublicUrl(caminho);
-        const url = data?.publicUrl || "";
-
-        if (!url) return "";
-
-        return `${url}?v=${Date.now()}`;
-    } catch {
-        return "";
-    }
-}
-
-function montarUrlFundoLoginPersonalizado() {
-    return montarUrlPublicaFundoLogin(CAMINHO_FUNDO_LOGIN);
-}
-
-function montarUrlConfigFundoLoginPersonalizado() {
-    return montarUrlPublicaFundoLogin(CAMINHO_CONFIG_FUNDO_LOGIN);
-}
 
 function montarEstiloFundoLogin(url, ajuste = AJUSTE_FUNDO_LOGIN_PADRAO) {
     if (!url) return undefined;
@@ -73,39 +50,52 @@ export function LoginScreen({ onLogin }) {
     const [ajusteFundoLogin, setAjusteFundoLogin] = useState(() => AJUSTE_FUNDO_LOGIN_PADRAO);
 
     useEffect(() => {
-        const url = montarUrlFundoLoginPersonalizado();
-
-        if (!url) return;
-
         let cancelado = false;
-        const imagem = new Image();
 
-        async function carregarAjuste() {
-            const urlConfig = montarUrlConfigFundoLoginPersonalizado();
+        async function carregarFundoLogin() {
+            const resultado =
+                await carregarFundoLoginPublicoService({
+                    supabase,
+                });
 
-            if (!urlConfig) return;
+            if (cancelado || !resultado.imagemUrl) {
+                if (!cancelado) {
+                    setFundoLoginUrl("");
+                    setAjusteFundoLogin(
+                        AJUSTE_FUNDO_LOGIN_PADRAO
+                    );
+                }
+                return;
+            }
 
-            try {
-                const resposta = await fetch(urlConfig, { cache: "no-store" });
-                if (!resposta.ok) return;
+            const imagem = new Image();
 
-                const dados = await resposta.json();
-                if (!cancelado) setAjusteFundoLogin(normalizarAjusteFundoLogin(dados));
-            } catch {
-                if (!cancelado) setAjusteFundoLogin(AJUSTE_FUNDO_LOGIN_PADRAO);
+            imagem.onload = () => {
+                if (!cancelado) {
+                    setFundoLoginUrl(
+                        resultado.imagemUrl
+                    );
+                }
+            };
+
+            imagem.onerror = () => {
+                if (!cancelado) {
+                    setFundoLoginUrl("");
+                }
+            };
+
+            imagem.src = resultado.imagemUrl;
+
+            if (resultado.ajuste && !cancelado) {
+                setAjusteFundoLogin(
+                    normalizarAjusteFundoLogin(
+                        resultado.ajuste
+                    )
+                );
             }
         }
 
-        imagem.onload = () => {
-            if (!cancelado) setFundoLoginUrl(url);
-        };
-
-        imagem.onerror = () => {
-            if (!cancelado) setFundoLoginUrl("");
-        };
-
-        imagem.src = url;
-        carregarAjuste();
+        carregarFundoLogin();
 
         return () => {
             cancelado = true;

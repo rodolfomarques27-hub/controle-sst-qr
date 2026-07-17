@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 
 const arquivosVersionados = execFileSync("git", ["ls-files"], { encoding: "utf8" })
     .split(/\r?\n/)
@@ -16,13 +16,24 @@ assert.deepEqual(
 );
 
 const arquivosFonte = arquivosVersionados.filter((arquivo) =>
-    /^(src|scripts)\//.test(arquivo) && /\.(js|jsx|mjs|css|html)$/.test(arquivo)
+    /^(src|scripts)\//.test(arquivo) &&
+    /\.(js|jsx|mjs|css|html)$/.test(arquivo) &&
+    existsSync(arquivo)
 );
 
 const padroesCriticos = [
     { nome: "chave service_role do Supabase", regex: /service_role\s*[:=]\s*["'][^"']{20,}/i },
     { nome: "chave privada", regex: /-----BEGIN (RSA |EC |OPENSSH )?PRIVATE KEY-----/ },
     { nome: "token pessoal do GitHub", regex: /\bgh[pousr]_[A-Za-z0-9_]{30,}\b/ },
+    {
+        nome: "senha secundaria das Configuracoes",
+        regex: new RegExp(
+            [
+                ["SENHA", "CONFIGURACOES", "PADRAO"].join("_"),
+                ["CHAVE", "SUPABASE", "SENHA", "CONFIGURACOES"].join("_"),
+            ].join("|")
+        ),
+    },
 ];
 
 const ocorrencias = [];

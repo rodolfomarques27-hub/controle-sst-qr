@@ -6,18 +6,9 @@ import {
     AppConsultaPublicaCarregando,
     AppConsultaPublicaErro,
 } from "./components/layout/AppSystemStates";
-import {
-    atualizarLimitesCarregamentoSistemaAppService,
-    validarSenhaConfiguracoesAppService,
-    bloquearConfiguracoesSistemaAppService,
-    atualizarSenhaConfiguracoesSistemaAppService,
-} from "./services/appConfiguracoesHandlersService";
+import { atualizarLimitesCarregamentoSistemaAppService } from "./services/appConfiguracoesHandlersService";
 import { carregarLimitesCarregamentoSistema } from "./constants/sistemaLimitesConstants";
-import {
-    SENHA_CONFIGURACOES_PADRAO,
-    carregarSenhaConfiguracoesSistema,
-    carregarSenhaConfiguracoesSistemaSupabase,
-} from "./constants/configuracoesSegurancaConstants";
+
 import { validarArquivoAntesUpload } from "./components/FileUploadAviso";
 import { CarregandoTela } from "./components/CarregandoTela";
 import {
@@ -74,6 +65,7 @@ const carregarObrasEmpresasService = () => import("./services/obrasService");
 const hoje = new Date();
 const CHAVE_SIDEBAR_COLAPSADA = "safescan:sidebar:collapsed";
 const CHAVE_SIDEBAR_ANTIGA = "menuLateralAbertoSST";
+const CHAVE_SENHA_CONFIGURACOES_LEGADA = "senhaConfiguracoesSistema";
 
 function obterEstadoInicialMenuLateral() {
     if (typeof window === "undefined") return true;
@@ -141,13 +133,7 @@ export default function App() {
     const [usuario, setUsuario] = useState(null);
     const [carregandoSessao, setCarregandoSessao] = useState(() => SUPABASE_CONFIGURADO);
     const [tela, setTela] = useState("dashboard");
-    const [configuracoesDesbloqueadas, setConfiguracoesDesbloqueadas] = useState(false);
-    const [senhaConfiguracoesSistema, setSenhaConfiguracoesSistema] = useState(() => carregarSenhaConfiguracoesSistema());
-    const [origemSenhaConfiguracoesSistema, setOrigemSenhaConfiguracoesSistema] = useState("local");
-    const [mensagemSenhaConfiguracoesSistema, setMensagemSenhaConfiguracoesSistema] = useState("Senha carregada localmente.");
-    const [senhaConfiguracoes, setSenhaConfiguracoes] = useState("");
-    const [mostrarSenhaConfiguracoes, setMostrarSenhaConfiguracoes] = useState(false);
-    const [erroSenhaConfiguracoes, setErroSenhaConfiguracoes] = useState("");
+
     const [menuLateralAberto, setMenuLateralAberto] = useState(() => obterEstadoInicialMenuLateral());
     const [colaboradores, setColaboradores] = useState([]);
     const [empresasBanco, setEmpresasBanco] = useState([]);
@@ -206,24 +192,14 @@ export default function App() {
     }, []);
 
     useEffect(() => {
-        if (!usuario || !SUPABASE_CONFIGURADO) return;
+        if (typeof window === "undefined") return;
 
-        let ativo = true;
-        const timer = window.setTimeout(async () => {
-            const resultado = await carregarSenhaConfiguracoesSistemaSupabase(supabase);
-
-            if (!ativo) return;
-
-            setSenhaConfiguracoesSistema(resultado.senha);
-            setOrigemSenhaConfiguracoesSistema(resultado.origem || "local");
-            setMensagemSenhaConfiguracoesSistema(resultado.mensagem || "Senha das Configurações carregada.");
-        }, 0);
-
-        return () => {
-            ativo = false;
-            window.clearTimeout(timer);
-        };
-    }, [usuario]);
+        try {
+            window.localStorage.removeItem(CHAVE_SENHA_CONFIGURACOES_LEGADA);
+        } catch {
+            // Ignora indisponibilidade do localStorage.
+        }
+    }, []);
 
     const atualizarLimitesCarregamentoSistema = useCallback((novosLimites) => {
         return atualizarLimitesCarregamentoSistemaAppService({
@@ -1275,91 +1251,6 @@ export default function App() {
         return <AppTransicaoInterna />;
     }
 
-    const validarSenhaConfiguracoes = (evento) => {
-        const desbloqueada = validarSenhaConfiguracoesAppService({
-            evento,
-            senhaConfiguracoes,
-            senhaConfiguracoesSistema,
-            setConfiguracoesDesbloqueadas,
-            setSenhaConfiguracoes,
-            setErroSenhaConfiguracoes,
-        });
-
-        registrarAuditoria(
-            desbloqueada ? "CONFIGURACOES_DESBLOQUEADAS" : "TENTATIVA_ACESSO_BLOQUEADO",
-            "configuracoes_sistema",
-            desbloqueada
-                ? "Desbloqueou a aba Configurações com senha operacional."
-                : "Tentativa de desbloqueio da aba Configurações com senha incorreta.",
-            "senha_configuracoes_sistema",
-            {
-                resultado: desbloqueada ? "desbloqueado" : "bloqueado",
-                senhaRegistrada: false,
-                tokenCompletoRegistrado: false,
-            }
-        ).catch((error) => {
-            console.warn("Erro ao registrar log de desbloqueio da aba Configurações:", error?.message || error);
-        });
-
-        return desbloqueada;
-    };
-
-    const bloquearConfiguracoesSistema = () => {
-        bloquearConfiguracoesSistemaAppService({
-            setConfiguracoesDesbloqueadas,
-            setSenhaConfiguracoes,
-            setErroSenhaConfiguracoes,
-            setMostrarSenhaConfiguracoes,
-        });
-
-        registrarAuditoria(
-            "CONFIGURACOES_BLOQUEADAS",
-            "configuracoes_sistema",
-            "Bloqueou manualmente a aba Configurações.",
-            "senha_configuracoes_sistema",
-            {
-                resultado: "bloqueado",
-                senhaRegistrada: false,
-                tokenCompletoRegistrado: false,
-            }
-        ).catch((error) => {
-            console.warn("Erro ao registrar log de bloqueio da aba Configurações:", error?.message || error);
-        });
-    };
-
-    const atualizarSenhaConfiguracoesSistema = async (novaSenha, opcoes = {}) => {
-        const resultado = await atualizarSenhaConfiguracoesSistemaAppService({
-            supabase,
-            usuario,
-            novaSenha,
-            setSenhaConfiguracoesSistema,
-            setOrigemSenhaConfiguracoesSistema,
-            setMensagemSenhaConfiguracoesSistema,
-        });
-
-        try {
-            await registrarAuditoria(
-                "SENHA_CONFIGURACOES_ALTERADA",
-                "configuracoes_sistema",
-                opcoes?.tipo === "restauracao"
-                    ? "Restaurou a senha padrão da aba Configurações."
-                    : "Alterou a senha de desbloqueio da aba Configurações.",
-                "senha_configuracoes_sistema",
-                {
-                    tipo: opcoes?.tipo || "alteracao",
-                    origem: resultado?.origem || "local",
-                    sincronizadoSupabase: Boolean(resultado?.ok),
-                    senhaPadrao: String(novaSenha || "") === SENHA_CONFIGURACOES_PADRAO,
-                    senhaRegistrada: false,
-                    tokenCompletoRegistrado: false,
-                }
-            );
-        } catch (error) {
-            console.warn("Erro ao registrar log de senha da aba Configurações:", error?.message || error);
-        }
-
-        return resultado;
-    };
 
     return (
         <React.Suspense fallback={<AppTransicaoInterna />}>
@@ -1397,18 +1288,7 @@ export default function App() {
                         carregandoAuditoria={carregandoAuditoria}
                         carregandoMaisAuditoria={carregandoMaisAuditoria}
                         existeMaisAuditoria={existeMaisAuditoria}
-                        configuracoesDesbloqueadas={configuracoesDesbloqueadas}
-                        senhaConfiguracoesSistema={senhaConfiguracoesSistema}
-                        origemSenhaConfiguracoesSistema={origemSenhaConfiguracoesSistema}
-                        mensagemSenhaConfiguracoesSistema={mensagemSenhaConfiguracoesSistema}
                         atualizandoDashboardSst={atualizandoDashboardSst}
-                        senhaConfiguracoes={senhaConfiguracoes}
-                        mostrarSenhaConfiguracoes={mostrarSenhaConfiguracoes}
-                        erroSenhaConfiguracoes={erroSenhaConfiguracoes}
-                        setSenhaConfiguracoes={setSenhaConfiguracoes}
-                        setErroSenhaConfiguracoes={setErroSenhaConfiguracoes}
-                        setMostrarSenhaConfiguracoes={setMostrarSenhaConfiguracoes}
-                        onValidarSenhaConfiguracoes={validarSenhaConfiguracoes}
                         onSelectColab={selecionarColaborador}
                         onRegistrarEmailEnviado={registrarEmailEnviado}
                         onAtualizarInformacoesDashboardSst={atualizarInformacoesDashboardSst}
@@ -1455,9 +1335,7 @@ export default function App() {
                         onSalvarUsuarioAuditoria={salvarUsuarioAutorizadoAuditoria}
                         onAlternarUsuarioAuditoria={alternarUsuarioAutorizadoAuditoria}
                         onBloquearAuditoria={bloquearAuditoria}
-                        onBloquearConfiguracoes={bloquearConfiguracoesSistema}
                         onSalvarLimites={atualizarLimitesCarregamentoSistema}
-                        onSalvarSenhaConfiguracoes={atualizarSenhaConfiguracoesSistema}
                         onRegistrarAuditoria={registrarAuditoria}
                         permissaoSistemaUsuario={permissaoSistemaUsuario}
                         carregandoPermissaoSistemaUsuario={carregandoPermissaoSistemaUsuario}

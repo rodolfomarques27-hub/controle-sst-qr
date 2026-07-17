@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
-import { KeyRound, LayoutGrid, Lock, LockKeyhole, Send, UserRound } from "lucide-react";
+import { KeyRound, LayoutGrid, LockKeyhole, Send, UserRound } from "lucide-react";
 import { Card, PasswordInput } from "../components/commonComponents";
 import { LIMITE_STORAGE_MB } from "../constants/sistemaConstants";
 import { supabase } from "../lib/supabaseClient";
@@ -29,7 +29,7 @@ const RelatorioAuditoria = React.lazy(() => import("../components/auditoria/Rela
 const DashboardAuditoriaCampo = React.lazy(() => import("../components/auditoria/DashboardAuditoriaCampo").then((modulo) => ({ default: modulo.DashboardAuditoriaCampo })));
 const NovaAuditoriaCampoDireta = React.lazy(() => import("../components/auditoria/NovaAuditoriaCampoDireta").then((modulo) => ({ default: modulo.NovaAuditoriaCampoDireta })));
 const ConfiguracoesSistema = React.lazy(() => import("../components/configuracoes/ConfiguracoesSistema").then((modulo) => ({ default: modulo.ConfiguracoesSistema })));
-const ConfiguracoesBloqueio = React.lazy(() => import("../components/configuracoes/ConfiguracoesBloqueio").then((modulo) => ({ default: modulo.ConfiguracoesBloqueio })));
+
 const EmergenciaQrPinCard = React.lazy(() => import("../components/configuracoes/EmergenciaQrPinCard").then((modulo) => ({ default: modulo.EmergenciaQrPinCard })));
 const AcessosAppPage = React.lazy(() => import("../components/acessos/AcessosAppPage").then((modulo) => ({ default: modulo.AcessosAppPage })));
 
@@ -67,10 +67,7 @@ function precarregarModuloTelaSistema(tela = "") {
         case "acessosApp":
             return import("../components/acessos/AcessosAppPage");
         case "configuracoes":
-            return Promise.all([
-                import("../components/configuracoes/ConfiguracoesSistema"),
-                import("../components/configuracoes/ConfiguracoesBloqueio"),
-            ]);
+            return import("../components/configuracoes/ConfiguracoesSistema");
         case "roteiro":
             return import("../components/Requisitos");
         default:
@@ -453,18 +450,7 @@ export function AppContentRouter({
     carregandoAuditoria,
     carregandoMaisAuditoria,
     existeMaisAuditoria,
-    configuracoesDesbloqueadas,
-    senhaConfiguracoesSistema,
-    origemSenhaConfiguracoesSistema,
-    mensagemSenhaConfiguracoesSistema,
     atualizandoDashboardSst,
-    senhaConfiguracoes,
-    mostrarSenhaConfiguracoes,
-    erroSenhaConfiguracoes,
-    setSenhaConfiguracoes,
-    setErroSenhaConfiguracoes,
-    setMostrarSenhaConfiguracoes,
-    onValidarSenhaConfiguracoes,
     onSelectColab,
     onRegistrarEmailEnviado,
     onAtualizarInformacoesDashboardSst,
@@ -497,9 +483,7 @@ export function AppContentRouter({
     onSalvarUsuarioAuditoria,
     onAlternarUsuarioAuditoria,
     onBloquearAuditoria,
-    onBloquearConfiguracoes,
     onSalvarLimites,
-    onSalvarSenhaConfiguracoes,
     onRegistrarAuditoria,
     permissaoSistemaUsuario = null,
     carregandoPermissaoSistemaUsuario = false,
@@ -890,54 +874,26 @@ export function AppContentRouter({
             )}
 
             {tela === "configuracoes" && (
-                configuracoesDesbloqueadas ? (
-                    <div className="page-shell space-y-4">
-                        <ConfiguracoesSistema
-                            empresasBanco={empresasBanco}
-                            acaoTopo={(
-                                <button
-                                    type="button"
-                                    onClick={onBloquearConfiguracoes}
-                                    className="inline-flex items-center gap-2 rounded-2xl bg-white px-4 py-2 text-sm font-black text-slate-700 shadow-sm ring-1 ring-slate-200 hover:bg-slate-50"
-                                >
-                                    <Lock className="h-4 w-4" />
-                                    Bloquear Configurações
-                                </button>
-                            )}
-                            usuario={usuario}
-                            podeAcessarAuditoria={podeAcessarAuditoria}
-                            limites={{
-                                ...limitesCarregamentoSistema,
-                                storageMb: LIMITE_STORAGE_MB,
-                            }}
-                            onSalvarLimites={onSalvarLimites}
-                            onListarArquivosStorage={onListarArquivosStorage}
-                            onExcluirArquivoStorage={onExcluirArquivoStorage}
-                            onAtualizarAuditoria={onAtualizarAuditoria}
-                            senhaConfiguracoesSistema={senhaConfiguracoesSistema}
-                            origemSenhaConfiguracoesSistema={origemSenhaConfiguracoesSistema}
-                            mensagemSenhaConfiguracoesSistema={mensagemSenhaConfiguracoesSistema}
-                            onSalvarSenhaConfiguracoes={onSalvarSenhaConfiguracoes}
-                            onRegistrarAuditoria={onRegistrarAuditoria}
-                        />
-
-                        <EmergenciaQrPinCard
-                            empresasBanco={empresasBanco}
-                        />
-
-                    </div>
-                ) : (
-                    <ConfiguracoesBloqueio
-                        senhaConfiguracoes={senhaConfiguracoes}
-                        senhaConfiguracoesSistema={senhaConfiguracoesSistema}
-                        mostrarSenhaConfiguracoes={mostrarSenhaConfiguracoes}
-                        erroSenhaConfiguracoes={erroSenhaConfiguracoes}
-                        onValidarSenha={onValidarSenhaConfiguracoes}
-                        setSenhaConfiguracoes={setSenhaConfiguracoes}
-                        setErroSenhaConfiguracoes={setErroSenhaConfiguracoes}
-                        setMostrarSenhaConfiguracoes={setMostrarSenhaConfiguracoes}
+                <div className="page-shell space-y-4">
+                    <ConfiguracoesSistema
+                        empresasBanco={empresasBanco}
+                        usuario={usuario}
+                        podeAcessarAuditoria={podeAcessarAuditoria}
+                        limites={{
+                            ...limitesCarregamentoSistema,
+                            storageMb: LIMITE_STORAGE_MB,
+                        }}
+                        onSalvarLimites={onSalvarLimites}
+                        onListarArquivosStorage={onListarArquivosStorage}
+                        onExcluirArquivoStorage={onExcluirArquivoStorage}
+                        onAtualizarAuditoria={onAtualizarAuditoria}
+                        onRegistrarAuditoria={onRegistrarAuditoria}
                     />
-                )
+
+                    <EmergenciaQrPinCard
+                        empresasBanco={empresasBanco}
+                    />
+                </div>
             )}
 
             {tela === "roteiro" && <Requisitos />}

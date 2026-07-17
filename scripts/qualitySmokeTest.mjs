@@ -222,6 +222,30 @@ const codigoAppLayout = readFileSync(
     new URL("../src/components/layout/AppLayout.jsx", import.meta.url),
     "utf8"
 );
+const codigoApp = readFileSync(
+    new URL("../src/App.jsx", import.meta.url),
+    "utf8"
+);
+const codigoAppContentRouter = readFileSync(
+    new URL("../src/routes/AppContentRouter.jsx", import.meta.url),
+    "utf8"
+);
+const codigoConfiguracoesSistema = readFileSync(
+    new URL("../src/components/configuracoes/ConfiguracoesSistema.jsx", import.meta.url),
+    "utf8"
+);
+const codigoLoginScreen = readFileSync(
+    new URL("../src/components/LoginScreen.jsx", import.meta.url),
+    "utf8"
+);
+const codigoFundoLoginPublicoService = readFileSync(
+    new URL("../src/services/fundoLoginPublicoService.js", import.meta.url),
+    "utf8"
+);
+const migracaoFundoLoginPublico = readFileSync(
+    new URL("../supabase/migrations/20260717153000_obter_estado_fundo_login_publico.sql", import.meta.url),
+    "utf8"
+);
 const regraTrabalho = readFileSync(
     new URL("../docs/regra-de-trabalho-e-publicacao.md", import.meta.url),
     "utf8"
@@ -236,6 +260,73 @@ assert.match(
     regraTrabalho,
     /PROTECAO PERMANENTE: TELA DE CARREGAMENTO/,
     "A regra permanente da tela de carregamento deve permanecer documentada."
+);
+const padraoSenhaConfiguracoesLegada = new RegExp(
+    [
+        ["SENHA", "CONFIGURACOES", "PADRAO"].join("_"),
+        "carregarSenhaConfiguracoesSistemaSupabase",
+        "validarSenhaConfiguracoesAppService",
+    ].join("|")
+);
+assert.doesNotMatch(
+    codigoApp,
+    padraoSenhaConfiguracoesLegada,
+    "O App nao pode voltar a carregar ou comparar a senha secundaria das Configuracoes."
+);
+assert.doesNotMatch(
+    codigoAppContentRouter,
+    /ConfiguracoesBloqueio|configuracoesDesbloqueadas|onValidarSenhaConfiguracoes/,
+    "O router nao pode voltar a bloquear Configuracoes com senha no navegador."
+);
+assert.match(
+    codigoApp,
+    /localStorage\.removeItem\(CHAVE_SENHA_CONFIGURACOES_LEGADA\)/,
+    "O segredo legado deve ser removido do localStorage dos navegadores."
+);
+assert.match(
+    codigoConfiguracoesSistema,
+    /ultimoFilhoEhInterativo/,
+    "Cabecalhos de Configuracoes devem identificar controles interativos antes de inserir o botao Recolher."
+);
+assert.match(
+    codigoConfiguracoesSistema,
+    /!ultimoFilhoEhInterativo/,
+    "Botoes e links nao podem ser usados como conteineres para outro botao."
+);
+assert.match(
+    codigoLoginScreen,
+    /carregarFundoLoginPublicoService/,
+    "A tela de login deve verificar o estado público antes de solicitar arquivos do Storage."
+);
+assert.match(
+    codigoConfiguracoesSistema,
+    /carregarFundoLoginPublicoService/,
+    "Configurações deve verificar o estado público antes de solicitar arquivos do Storage."
+);
+assert.match(
+    codigoFundoLoginPublicoService,
+    /obter_estado_fundo_login_publico/,
+    "O serviço deve consultar a RPC mínima de estado do fundo do login."
+);
+assert.doesNotMatch(
+    codigoLoginScreen,
+    /montarUrlFundoLoginPersonalizado|montarUrlConfigFundoLoginPersonalizado/,
+    "A tela de login não pode voltar a montar URLs de arquivos opcionais sem verificar existência."
+);
+assert.match(
+    migracaoFundoLoginPublico,
+    /security definer/,
+    "A RPC deve consultar os metadados fixos do Storage com privilégios controlados."
+);
+assert.match(
+    migracaoFundoLoginPublico,
+    /revoke all[\s\S]*from public/,
+    "A RPC deve revogar a permissão implícita de PUBLIC."
+);
+assert.match(
+    migracaoFundoLoginPublico,
+    /grant execute[\s\S]*to anon, authenticated, service_role/,
+    "A RPC deve conceder apenas execução explícita aos papéis necessários."
 );
 
 function criarArmazenamentoLocalSimulado() {
