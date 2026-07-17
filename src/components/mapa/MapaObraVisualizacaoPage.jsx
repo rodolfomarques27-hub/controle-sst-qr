@@ -8,7 +8,7 @@ import {
   ShieldCheck,
   X,
 } from "lucide-react";
-import dashboardHeroBackground from "../../assets/dashboard-hero-sst.png";
+import dashboardHeroBackground from "../../assets/dashboard-hero-sst.webp";
 import { lerMapaObraLocal } from "../../services/mapaObraLocalService";
 import { listarExtintoresVistoria } from "../../services/extintoresVistoriaService";
 import { PlantaInterativa } from "./PlantaInterativa";

@@ -9,6 +9,7 @@ lerna-debug.log*
 
 node_modules
 dist
+.verify-dist
 .env
 dist-ssr
 *.local
@@ -24,8 +25,6 @@ dist-ssr
 *.sln
 *.sw?
 .vs/ 
-/.gitignore
-/eslint.config.js
 supabase/.temp/
 .vercel
 .env*

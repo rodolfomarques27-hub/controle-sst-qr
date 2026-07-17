@@ -1,4 +1,15 @@
-# React + Vite
+# SafeScan Brasil
+
+## Regra obrigatória de trabalho
+
+Toda modificação deve ser implementada e testada localmente antes de qualquer publicação.
+A publicação em produção somente pode ocorrer após validação visual e autorização explícita do responsável.
+
+Fluxo oficial: `alterar -> validar localmente -> apresentar -> aprovar -> publicar -> conferir produção`.
+
+Consulte [docs/regra-de-trabalho-e-publicacao.md](docs/regra-de-trabalho-e-publicacao.md) para o checklist completo.
+
+## Base técnica
 
 This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
 

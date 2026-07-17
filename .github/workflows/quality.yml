@@ -1,0 +1,28 @@
+name: Qualidade
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+      - review-empresas-fluxo-interface
+
+permissions:
+  contents: read
+
+jobs:
+  verificar:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Baixar codigo
+        uses: actions/checkout@v4
+      - name: Preparar Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - name: Instalar dependencias
+        run: npm ci
+      - name: Verificar qualidade, seguranca e build
+        run: npm run verify

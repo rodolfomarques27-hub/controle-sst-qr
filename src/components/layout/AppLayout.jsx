@@ -1,6 +1,7 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { AppMobileHeader } from "./AppMobileHeader";
 import { AppSidebar } from "./AppSidebar";
+import { CarregandoTela } from "../CarregandoTela";
 import { supabase } from "../../lib/supabaseClient";
 import {
     carregarPermissaoSistemaAtualService,
@@ -125,6 +126,21 @@ export function AppLayout({
     const [permissaoSistemaMenu, setPermissaoSistemaMenu] = useState(null);
     const [carregandoPermissaoSistemaMenu, setCarregandoPermissaoSistemaMenu] = useState(() => Boolean(usuario?.email));
     const [erroPermissaoSistemaMenu, setErroPermissaoSistemaMenu] = useState("");
+    const [telaEmTransicao, setTelaEmTransicao] = useState(false);
+    const temporizadorTransicaoRef = useRef(null);
+
+    const iniciarTransicaoTela = useCallback(() => {
+        setTelaEmTransicao(true);
+        window.clearTimeout(temporizadorTransicaoRef.current);
+        temporizadorTransicaoRef.current = window.setTimeout(() => {
+            setTelaEmTransicao(false);
+        }, 650);
+    }, []);
+
+    useEffect(() => {
+        iniciarTransicaoTela();
+        return () => window.clearTimeout(temporizadorTransicaoRef.current);
+    }, [tela, iniciarTransicaoTela]);
 
     useEffect(() => {
         let componenteAtivo = true;
@@ -186,6 +202,7 @@ export function AppLayout({
             return;
         }
 
+        iniciarTransicaoTela();
         onSelecionarTela(id, label);
     };
 
@@ -272,6 +289,20 @@ export function AppLayout({
     }, [tela]);
 return (
         <div className="min-h-screen bg-[#F4F6F9] text-slate-900">
+            {telaEmTransicao && (
+                <div
+                    className="fixed inset-0 z-[9999]"
+                    data-testid="app-tab-loading-overlay"
+                    role="status"
+                    aria-live="polite"
+                >
+                    <CarregandoTela
+                        mensagem="Carregando área..."
+                        subtitulo="Preparando as informações desta seção."
+                        telaCheia
+                    />
+                </div>
+            )}
             <div
                 className="app-shell flex min-h-screen w-full bg-[#F4F6F9]"
                 data-sidebar-open={menuLateralAberto ? "true" : "false"}

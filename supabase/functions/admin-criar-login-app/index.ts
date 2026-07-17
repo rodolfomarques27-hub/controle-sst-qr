@@ -325,7 +325,7 @@ Deno.serve(async (req) => {
     let permissaoAtualizada = Array.isArray(permissaoSalva) ? permissaoSalva[0] : permissaoSalva;
 
     if ((loginCriado || senhaAtualizada) && usuarioAuth?.id) {
-      const { data: permissaoLogin, error: marcarLoginError } = await userClient.rpc("admin_marcar_login_app_criado_sistema", {
+      const { data: permissaoLogin, error: marcarLoginError } = await adminClient.rpc("admin_marcar_login_app_criado_sistema", {
         p_email: email,
         p_user_id: usuarioAuth.id,
         p_precisa_trocar_senha: true,

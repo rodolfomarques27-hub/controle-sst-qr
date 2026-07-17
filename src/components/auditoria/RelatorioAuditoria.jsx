@@ -17,7 +17,7 @@ import {
     Search,
     XCircle,
 } from "lucide-react";
-import dashboardHeroBackground from "../../assets/dashboard-hero-sst.png";
+import dashboardHeroBackground from "../../assets/dashboard-hero-sst.webp";
 import { CardRecolhivel, Header } from "../commonComponents";
 import { LIMITE_STORAGE_MB } from "../../constants/sstConstants";
 import {

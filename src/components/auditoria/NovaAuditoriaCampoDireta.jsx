@@ -3,7 +3,7 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "../../lib/supabaseClient";
 import { Card } from "../commonComponents";
 import { FileUploadAviso, validarArquivoAntesUpload } from "../FileUploadAviso";
-import dashboardHeroBackground from "../../assets/nova-auditoria-hero-bg.png";
+import dashboardHeroBackground from "../../assets/nova-auditoria-hero-bg.webp";
 import {
     obterCategoriaPadronizadaAuditoriaCampo,
     obterTipoAuditoriaCampoPorParametro,

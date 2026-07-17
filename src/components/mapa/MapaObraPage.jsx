@@ -17,8 +17,8 @@ import {
 } from "../../services/mapaObraLocalService";
 import { listarExtintoresVistoria } from "../../services/extintoresVistoriaService";
 import { AmbientesControleTabela } from "./AmbientesControleTabela";
-import dashboardHeroBackground from "../../assets/dashboard-hero-sst.png";
-import mapaAlertaHero from "../../assets/mapa-alerta-hero.png";
+import dashboardHeroBackground from "../../assets/dashboard-hero-sst.webp";
+import mapaAlertaHero from "../../assets/mapa-alerta-hero.webp";
 
 const TIPOS_PONTO = [
   "Escritório",

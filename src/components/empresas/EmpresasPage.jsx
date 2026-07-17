@@ -28,7 +28,7 @@ import {
     classeStatusEmpresa,
 } from "../../services/empresaDocumentosService";
 import { documentosEmpresaBase } from "../../constants/documentosEmpresaConstants";
-import dashboardHeroBackground from "../../assets/dashboard-hero-sst.png";
+import dashboardHeroBackground from "../../assets/dashboard-hero-sst.webp";
 import {
     baixarRelatorioDocumentosEmpresaPDF,
     baixarRelatorioEmpresasDocumentosPDF,

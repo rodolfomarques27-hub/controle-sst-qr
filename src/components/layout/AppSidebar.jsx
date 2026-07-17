@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import { ChevronDown, ChevronsLeft, LogOut, ShieldCheck } from "lucide-react";
 import { classNames } from "../../utils/sstUtils";
 import { supabase } from "../../lib/supabaseClient";
-import sidebarBackground from "../../assets/sidebar-construcao.png";
+import sidebarBackground from "../../assets/sidebar-construcao.webp";
 
 const BUCKET_FOTOS_USUARIOS_SIDEBAR = "fotos-colaboradores";
 

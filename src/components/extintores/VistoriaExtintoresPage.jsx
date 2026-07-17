@@ -1,7 +1,7 @@
 import React, { useMemo, useState } from "react";
 import { AlertTriangle, CalendarClock, CheckCircle2, ClipboardCheck, History, Save, ShieldCheck } from "lucide-react";
 import { ITENS_CHECKLIST_EXTINTOR_MENSAL, listarExtintoresVistoria, listarInspecoesExtintores, salvarInspecaoExtintor } from "../../services/extintoresVistoriaService";
-import dashboardHeroBackground from "../../assets/dashboard-hero-sst.png";
+import dashboardHeroBackground from "../../assets/dashboard-hero-sst.webp";
 
 export function VistoriaExtintoresPage() {
     const extintores = useMemo(() => listarExtintoresVistoria(), []);

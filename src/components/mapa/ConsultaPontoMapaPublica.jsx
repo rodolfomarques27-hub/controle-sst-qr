@@ -4,7 +4,7 @@ import { supabase, SUPABASE_CONFIGURADO } from "../../lib/supabaseClient";
 import { lerMapaObraLocal } from "../../services/mapaObraLocalService";
 import { listarExtintoresVistoria } from "../../services/extintoresVistoriaService";
 import { consultarPontoMapaEdgeService } from "../../services/mapaObraService";
-import dashboardHeroBackground from "../../assets/dashboard-hero-sst.png";
+import dashboardHeroBackground from "../../assets/dashboard-hero-sst.webp";
 
 function formatarCodigoExtintor(codigo) {
     const numero = String(codigo || "").replace(/^E-?/i, "");

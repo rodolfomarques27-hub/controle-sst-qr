@@ -26,7 +26,7 @@ import {
     ShieldCheck,
     Users,
 } from "lucide-react";
-import dashboardHeroSstDds from "../../assets/dashboard-hero-sst.png";
+import dashboardHeroSstDds from "../../assets/dashboard-hero-sst.webp";
 
 const diasDds = [
     { curto: "DOM", nome: "Domingo", data: "14/06/2026", tema: "", responsavel: "" },

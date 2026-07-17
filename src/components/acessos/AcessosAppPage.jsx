@@ -15,7 +15,7 @@ import {
     UsersRound,
     X,
 } from "lucide-react";
-import dashboardHeroBackground from "../../assets/dashboard-hero-sst.png";
+import dashboardHeroBackground from "../../assets/dashboard-hero-sst.webp";
 import { Card } from "../commonComponents";
 import {
     ACOES_USUARIOS_PERMISSOES,

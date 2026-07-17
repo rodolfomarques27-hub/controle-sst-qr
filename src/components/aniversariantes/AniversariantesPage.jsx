@@ -5,7 +5,7 @@ import { STATUS_CLASSIFICACAO_COLABORADOR } from "../../constants/sstConstants";
 import { baixarRelatorioAniversariantesPDF } from "../../services/exportacaoService";
 import { classNames, formatarAniversario, normalizarTextoBusca } from "../../utils/sstUtils";
 import { obterUrlLogoEmpresa } from "../../services/supabaseServices";
-import aniversariantesHeroBackground from "../../assets/dashboard-hero-sst.png";
+import aniversariantesHeroBackground from "../../assets/dashboard-hero-sst.webp";
 import {
     obterDataAniversarioColaborador,
     mesAniversarioColaborador,

@@ -15,7 +15,7 @@ import {
 import { gerarRelatorioExtintoresPDF } from "../../services/relatorioExtintoresService";
 import { QrCodeComLogo } from "../qr/QrCodeComLogo";
 import { listarMapasObraLocal, salvarMapaObraLocal } from "../../services/mapaObraLocalService";
-import extintoresHeroBackground from "../../assets/extintores-hero.png";
+import extintoresHeroBackground from "../../assets/extintores-hero.webp";
 
 const VAZIO = { id: "", pontoId: "", ponto: "", localizacao: "", tipo: "PQS ABC", capacidade: "6 kg", status: "Ativo", situacaoOperacional: "Em operação", dataAquisicao: "" };
 const MANUTENCAO_VAZIA = { tipoServico: "Manutenção de 2º nível / recarga", motivo: "Programada", empresaNome: "", empresaCnpj: "", registroInmetro: "", ordemServico: "", dataSaida: new Date().toISOString().slice(0, 10), previsaoRetorno: "", observacoes: "" };

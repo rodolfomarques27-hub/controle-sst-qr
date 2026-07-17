@@ -33,7 +33,32 @@ export default defineConfig({
                         {
                             name: "vendor-pdf",
                             test: /node_modules[\\/]pdfjs-dist[\\/]/,
-                            priority: 30,
+                            priority: 45,
+                        },
+                        {
+                            name: "vendor-jspdf",
+                            test: /node_modules[\\/]jspdf[\\/]/,
+                            priority: 46,
+                        },
+                        {
+                            name: "vendor-html2canvas",
+                            test: /node_modules[\\/]html2canvas[\\/]/,
+                            priority: 45,
+                        },
+                        {
+                            name: "vendor-export-support",
+                            test: /node_modules[\\/](canvg|dompurify|fflate)[\\/]/,
+                            priority: 44,
+                        },
+                        {
+                            name: "vendor-ocr",
+                            test: /node_modules[\\/](tesseract\.js|tesseract\.js-core|bmp-js|idb-keyval|zlibjs)[\\/]/,
+                            priority: 43,
+                        },
+                        {
+                            name: "vendor-map",
+                            test: /node_modules[\\/](@react-leaflet|react-leaflet|leaflet)[\\/]/,
+                            priority: 42,
                         },
                         {
                             name: "vendor-qrcode",
