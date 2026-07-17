@@ -9,6 +9,67 @@ export const SUPABASE_CONFIGURADO = Boolean(SUPABASE_URL && SUPABASE_ANON_KEY);
 export const MENSAGEM_SUPABASE_NAO_CONFIGURADO =
     "Supabase não configurado. Preencha VITE_SUPABASE_URL e VITE_SUPABASE_ANON_KEY no arquivo .env da raiz do projeto e reinicie o servidor.";
 
+function obterPrefixoSessaoSupabaseAtual() {
+    if (!SUPABASE_URL) return "";
+
+    try {
+        const referenciaProjeto = new URL(SUPABASE_URL).hostname.split(".")[0];
+        return referenciaProjeto ? `sb-${referenciaProjeto}-auth-token` : "";
+    } catch {
+        return "";
+    }
+}
+
+function removerChavesSessaoSupabase(armazenamento, prefixo) {
+    if (!armazenamento || !prefixo) return 0;
+
+    const chaves = [];
+
+    for (let indice = 0; indice < armazenamento.length; indice += 1) {
+        const chave = armazenamento.key(indice);
+
+        if (chave === prefixo || chave?.startsWith(`${prefixo}-`)) {
+            chaves.push(chave);
+        }
+    }
+
+    chaves.forEach((chave) => armazenamento.removeItem(chave));
+    return chaves.length;
+}
+
+export function erroSessaoSupabaseInvalida(error = null) {
+    const codigo = String(error?.code || "").trim().toLowerCase();
+    const mensagem = String(error?.message || error || "").trim().toLowerCase();
+
+    return (
+        codigo === "refresh_token_not_found"
+        || codigo === "invalid_refresh_token"
+        || mensagem.includes("invalid refresh token")
+        || mensagem.includes("refresh token not found")
+    );
+}
+
+export function limparSessaoSupabaseLocalInvalida() {
+    if (typeof window === "undefined") return 0;
+
+    const prefixo = obterPrefixoSessaoSupabaseAtual();
+    let removidas = 0;
+
+    try {
+        removidas += removerChavesSessaoSupabase(window.localStorage, prefixo);
+    } catch {
+        // Ignora armazenamento local indisponível.
+    }
+
+    try {
+        removidas += removerChavesSessaoSupabase(window.sessionStorage, prefixo);
+    } catch {
+        // Ignora armazenamento de sessão indisponível.
+    }
+
+    return removidas;
+}
+
 function criarConsultaSupabaseDesabilitada() {
     const resposta = {
         data: null,

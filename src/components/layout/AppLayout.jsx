@@ -2,9 +2,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { AppMobileHeader } from "./AppMobileHeader";
 import { AppSidebar } from "./AppSidebar";
 import { CarregandoTela } from "../CarregandoTela";
-import { supabase } from "../../lib/supabaseClient";
 import {
-    carregarPermissaoSistemaAtualService,
     obterModuloPermissaoSistemaPorTela,
     obterResumoPermissaoSistema,
     usuarioPodeAcessarTelaSistema,
@@ -119,13 +117,16 @@ export function AppLayout({
     menuLateralAberto,
     setMenuLateralAberto,
     usuario,
+    permissaoSistemaUsuario = null,
+    carregandoPermissaoSistemaUsuario = false,
+    erroPermissaoSistemaUsuario = "",
     sair,
     onSelecionarTela,
     children,
 }) {
-    const [permissaoSistemaMenu, setPermissaoSistemaMenu] = useState(null);
-    const [carregandoPermissaoSistemaMenu, setCarregandoPermissaoSistemaMenu] = useState(() => Boolean(usuario?.email));
-    const [erroPermissaoSistemaMenu, setErroPermissaoSistemaMenu] = useState("");
+    const permissaoSistemaMenu = permissaoSistemaUsuario;
+    const carregandoPermissaoSistemaMenu = carregandoPermissaoSistemaUsuario;
+    const erroPermissaoSistemaMenu = erroPermissaoSistemaUsuario;
     const [telaEmTransicao, setTelaEmTransicao] = useState(false);
     const temporizadorTransicaoRef = useRef(null);
 
@@ -142,43 +143,6 @@ export function AppLayout({
         return () => window.clearTimeout(temporizadorTransicaoRef.current);
     }, [tela, iniciarTransicaoTela]);
 
-    useEffect(() => {
-        let componenteAtivo = true;
-
-        async function carregarPermissaoMenu() {
-            if (!usuario?.email) {
-                setPermissaoSistemaMenu(null);
-                setErroPermissaoSistemaMenu("");
-                setCarregandoPermissaoSistemaMenu(false);
-                return;
-            }
-
-            try {
-                setCarregandoPermissaoSistemaMenu(true);
-                setErroPermissaoSistemaMenu("");
-                const permissao = await carregarPermissaoSistemaAtualService({ supabase });
-
-                if (componenteAtivo) {
-                    setPermissaoSistemaMenu(permissao);
-                }
-            } catch (error) {
-                if (componenteAtivo) {
-                    setPermissaoSistemaMenu(null);
-                    setErroPermissaoSistemaMenu(error?.message || "Não foi possível carregar permissões do menu.");
-                }
-            } finally {
-                if (componenteAtivo) {
-                    setCarregandoPermissaoSistemaMenu(false);
-                }
-            }
-        }
-
-        carregarPermissaoMenu();
-
-        return () => {
-            componenteAtivo = false;
-        };
-    }, [usuario?.email]);
 
     const navPermitida = useMemo(() => {
         if (!usuario?.email || carregandoPermissaoSistemaMenu || erroPermissaoSistemaMenu || !permissaoSistemaMenu) {

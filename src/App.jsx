@@ -1,5 +1,10 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
-import { supabase, SUPABASE_CONFIGURADO } from "./lib/supabaseClient";
+import {
+    supabase,
+    SUPABASE_CONFIGURADO,
+    erroSessaoSupabaseInvalida,
+    limparSessaoSupabaseLocalInvalida,
+} from "./lib/supabaseClient";
 import { SupabaseConfiguracaoPendente } from "./components/commonComponents";
 import {
     AppCarregandoSistema,
@@ -66,6 +71,7 @@ const hoje = new Date();
 const CHAVE_SIDEBAR_COLAPSADA = "safescan:sidebar:collapsed";
 const CHAVE_SIDEBAR_ANTIGA = "menuLateralAbertoSST";
 const CHAVE_SENHA_CONFIGURACOES_LEGADA = "senhaConfiguracoesSistema";
+const CHAVE_RECUPERACAO_SESSAO_SUPABASE = "safescan:supabase:recuperacao-sessao";
 
 function obterEstadoInicialMenuLateral() {
     if (typeof window === "undefined") return true;
@@ -728,18 +734,68 @@ export default function App() {
         let componenteAtivo = true;
 
         async function carregarSessao() {
-            const { data } = await supabase.auth.getSession();
-            if (!componenteAtivo) return;
+            try {
+                const { data, error } = await supabase.auth.getSession();
 
-            if (data.session?.user) {
-                setUsuario({
-                    id: data.session.user.id,
-                    email: data.session.user.email,
-                    perfil: "",
-                });
+                if (error) {
+                    throw error;
+                }
+
+                if (!componenteAtivo) return;
+
+                try {
+                    window.sessionStorage.removeItem(CHAVE_RECUPERACAO_SESSAO_SUPABASE);
+                } catch {
+                    // Ignora armazenamento de sessão indisponível.
+                }
+
+                if (data.session?.user) {
+                    setUsuario({
+                        id: data.session.user.id,
+                        email: data.session.user.email,
+                        perfil: "",
+                    });
+                }
+            } catch (error) {
+                if (!componenteAtivo) return;
+
+                if (erroSessaoSupabaseInvalida(error)) {
+                    limparSessaoSupabaseLocalInvalida();
+                    setUsuario(null);
+
+                    let recarregarUmaVez = false;
+
+                    try {
+                        const recuperacaoAnterior =
+                            window.sessionStorage.getItem(CHAVE_RECUPERACAO_SESSAO_SUPABASE);
+
+                        if (recuperacaoAnterior !== "executada") {
+                            window.sessionStorage.setItem(
+                                CHAVE_RECUPERACAO_SESSAO_SUPABASE,
+                                "executada"
+                            );
+                            recarregarUmaVez = true;
+                        }
+                    } catch {
+                        // Sem sessionStorage, segue para a tela de login sem recarregar.
+                    }
+
+                    if (recarregarUmaVez) {
+                        window.location.reload();
+                        return;
+                    }
+                } else {
+                    console.error(
+                        "Não foi possível restaurar a sessão do Supabase:",
+                        error
+                    );
+                    setUsuario(null);
+                }
+            } finally {
+                if (componenteAtivo) {
+                    setCarregandoSessao(false);
+                }
             }
-
-            setCarregandoSessao(false);
         }
 
         carregarSessao();
@@ -1260,6 +1316,9 @@ export default function App() {
                 menuLateralAberto={menuLateralAberto}
                 setMenuLateralAberto={setMenuLateralAberto}
                 usuario={usuario}
+                permissaoSistemaUsuario={permissaoSistemaUsuario}
+                carregandoPermissaoSistemaUsuario={carregandoPermissaoSistemaUsuario}
+                erroPermissaoSistemaUsuario={erroPermissaoSistemaUsuario}
                 sair={sair}
                 onSelecionarTela={selecionarTelaSistema}
             >

@@ -242,6 +242,10 @@ const codigoFundoLoginPublicoService = readFileSync(
     new URL("../src/services/fundoLoginPublicoService.js", import.meta.url),
     "utf8"
 );
+const codigoSupabaseClient = readFileSync(
+    new URL("../src/lib/supabaseClient.js", import.meta.url),
+    "utf8"
+);
 const codigoAppColaboradoresHandlersService = readFileSync(
     new URL("../src/services/appColaboradoresHandlersService.js", import.meta.url),
     "utf8"
@@ -259,6 +263,21 @@ assert.match(
     codigoAppLayout,
     /data-testid="app-tab-loading-overlay"/,
     "A tela de carregamento obrigatoria das trocas de aba nao pode ser removida."
+);
+assert.match(
+    codigoApp,
+    /permissaoSistemaUsuario=\{permissaoSistemaUsuario\}[\s\S]*carregandoPermissaoSistemaUsuario=\{carregandoPermissaoSistemaUsuario\}[\s\S]*erroPermissaoSistemaUsuario=\{erroPermissaoSistemaUsuario\}/,
+    "O App deve entregar ao layout o estado central de permissões."
+);
+assert.match(
+    codigoAppLayout,
+    /const permissaoSistemaMenu = permissaoSistemaUsuario;/,
+    "O layout deve consumir a permissão já carregada pelo App."
+);
+assert.doesNotMatch(
+    codigoAppLayout,
+    /carregarPermissaoSistemaAtualService|setPermissaoSistemaMenu|setCarregandoPermissaoSistemaMenu|setErroPermissaoSistemaMenu/,
+    "O layout não pode voltar a carregar permissões em uma RPC própria."
 );
 assert.match(
     regraTrabalho,
@@ -311,6 +330,26 @@ assert.match(
     codigoFundoLoginPublicoService,
     /obter_estado_fundo_login_publico/,
     "O serviço deve consultar a RPC mínima de estado do fundo do login."
+);
+assert.match(
+    codigoSupabaseClient,
+    /export function erroSessaoSupabaseInvalida/,
+    "O cliente Supabase deve reconhecer refresh token inválido."
+);
+assert.match(
+    codigoSupabaseClient,
+    /export function limparSessaoSupabaseLocalInvalida/,
+    "O cliente Supabase deve remover a sessão inválida do projeto atual."
+);
+assert.match(
+    codigoApp,
+    /erroSessaoSupabaseInvalida\(error\)[\s\S]*limparSessaoSupabaseLocalInvalida\(\)[\s\S]*window\.location\.reload\(\)/,
+    "O App deve recuperar automaticamente uma sessão Supabase inválida."
+);
+assert.match(
+    codigoApp,
+    /finally\s*\{[\s\S]*setCarregandoSessao\(false\)/,
+    "Falhas na sessão não podem deixar o carregamento inicial travado."
 );
 assert.doesNotMatch(
     codigoLoginScreen,
