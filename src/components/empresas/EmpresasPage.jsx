@@ -42,7 +42,6 @@ import {
     sanitizarNomeArquivo,
 } from "../../utils/sstUtils";
 import {
-    carregarPermissaoSistemaAtualService,
     ACOES_PERMISSAO_SISTEMA,
     MODULOS_PERMISSAO_SISTEMA,
     usuarioPodeExecutarAcaoSistema,
@@ -281,6 +280,7 @@ export function Empresas({
     colaboradores,
     carregandoBanco,
     erroBanco,
+    permissaoSistemaUsuario = null,
     onAtualizarBanco,
     onAdicionarEmpresa,
     onAtualizarEmpresa,
@@ -327,8 +327,10 @@ export function Empresas({
     const [salvandoDocumento, setSalvandoDocumento] = useState(false);
     const [empresaRevisao, setEmpresaRevisao] = useState(null);
     const [empresaEdicao, setEmpresaEdicao] = useState(null);
-    const [permissaoSistemaAtual, setPermissaoSistemaAtual] = useState(null);
-    const [mensagemPermissaoSistema, setMensagemPermissaoSistema] = useState("Carregando permissões do sistema...");
+    const permissaoSistemaAtual = permissaoSistemaUsuario;
+    const mensagemPermissaoSistema = permissaoSistemaAtual
+        ? "Permissões do sistema carregadas para ações críticas."
+        : "Nenhuma permissão do sistema cadastrada para o usuário atual.";
     const [salvandoEdicaoEmpresa, setSalvandoEdicaoEmpresa] = useState(false);
     const [buscaEmpresa, setBuscaEmpresa] = useState("");
     const [filtroStatusEmpresa, setFiltroStatusEmpresa] = useState("Todos");
@@ -710,34 +712,6 @@ export function Empresas({
         }
     };
 
-    useEffect(() => {
-        let montado = true;
-
-        async function carregarPermissaoSistemaEmpresas() {
-            try {
-                const permissao = await carregarPermissaoSistemaAtualService({ supabase });
-                if (!montado) return;
-                setPermissaoSistemaAtual(permissao);
-                setMensagemPermissaoSistema(
-                    permissao
-                        ? "Permissões do sistema carregadas para ações críticas."
-                        : "Nenhuma permissão do sistema cadastrada para o usuário atual."
-                );
-            } catch (erro) {
-                if (!montado) return;
-                setPermissaoSistemaAtual(null);
-                setMensagemPermissaoSistema(
-                    `Não foi possível carregar permissões do sistema: ${erro?.message || "erro não identificado"}`
-                );
-            }
-        }
-
-        carregarPermissaoSistemaEmpresas();
-
-        return () => {
-            montado = false;
-        };
-    }, []);
 
     const podeExcluirEmpresasSistema = useMemo(
         () => usuarioPodeExcluirSistema(permissaoSistemaAtual, MODULOS_PERMISSAO_SISTEMA.EMPRESAS),

@@ -234,6 +234,10 @@ const codigoConfiguracoesSistema = readFileSync(
     new URL("../src/components/configuracoes/ConfiguracoesSistema.jsx", import.meta.url),
     "utf8"
 );
+const codigoEmpresasPage = readFileSync(
+    new URL("../src/components/empresas/EmpresasPage.jsx", import.meta.url),
+    "utf8"
+);
 const codigoLoginScreen = readFileSync(
     new URL("../src/components/LoginScreen.jsx", import.meta.url),
     "utf8"
@@ -278,6 +282,21 @@ assert.doesNotMatch(
     codigoAppLayout,
     /carregarPermissaoSistemaAtualService|setPermissaoSistemaMenu|setCarregandoPermissaoSistemaMenu|setErroPermissaoSistemaMenu/,
     "O layout não pode voltar a carregar permissões em uma RPC própria."
+);
+assert.match(
+    codigoAppContentRouter,
+    /<Empresas[\s\S]*permissaoSistemaUsuario=\{permissaoSistemaTela\}/,
+    "O roteador deve repassar a permissão central para a página de Empresas."
+);
+assert.match(
+    codigoEmpresasPage,
+    /const permissaoSistemaAtual = permissaoSistemaUsuario;/,
+    "Empresas deve consumir a permissão central já validada."
+);
+assert.doesNotMatch(
+    codigoEmpresasPage,
+    /carregarPermissaoSistemaAtualService|setPermissaoSistemaAtual|setMensagemPermissaoSistema/,
+    "Empresas não pode voltar a carregar permissões em uma consulta própria."
 );
 assert.match(
     regraTrabalho,
