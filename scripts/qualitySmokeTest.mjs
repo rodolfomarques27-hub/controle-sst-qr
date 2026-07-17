@@ -242,6 +242,10 @@ const codigoColaboradoresPage = readFileSync(
     new URL("../src/components/colaboradores/ColaboradoresPage.jsx", import.meta.url),
     "utf8"
 );
+const codigoTreinamentosPage = readFileSync(
+    new URL("../src/components/treinamentos/TreinamentosPage.jsx", import.meta.url),
+    "utf8"
+);
 const codigoLoginScreen = readFileSync(
     new URL("../src/components/LoginScreen.jsx", import.meta.url),
     "utf8"
@@ -316,6 +320,26 @@ assert.doesNotMatch(
     codigoColaboradoresPage,
     /carregarPermissaoSistemaAtualService|setPermissaoSistemaAtual|setMensagemPermissaoSistema|from "\.\.\/\.\.\/lib\/supabaseClient"/,
     "Colaboradores não pode voltar a carregar permissões em uma consulta própria."
+);
+assert.match(
+    codigoAppContentRouter,
+    /<Treinamentos[\s\S]*permissaoSistemaUsuario=\{permissaoSistemaTela\}/,
+    "O roteador deve repassar a permissão central para a página de Treinamentos."
+);
+assert.match(
+    codigoTreinamentosPage,
+    /const permissaoSistemaAtual = permissaoSistemaUsuario;/,
+    "Treinamentos deve consumir a permissão central já validada."
+);
+assert.doesNotMatch(
+    codigoTreinamentosPage,
+    /carregarPermissaoSistemaAtualService|setPermissaoSistemaAtual|setMensagemPermissaoSistema/,
+    "Treinamentos não pode voltar a carregar permissões em uma consulta própria."
+);
+assert.match(
+    codigoTreinamentosPage,
+    /supabase\.functions\.invoke\(FUNCAO_EMAIL_ALERTA_TST/,
+    "Treinamentos deve preservar o envio de alertas TST pela Edge Function."
 );
 assert.match(
     regraTrabalho,

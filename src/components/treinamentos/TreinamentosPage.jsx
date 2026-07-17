@@ -3,7 +3,6 @@ import React, { useEffect, useMemo, useState } from "react";
 import { Eye, EyeOff, GripVertical, RotateCcw, Search, SlidersHorizontal, Upload } from "lucide-react";
 import { supabase } from "../../lib/supabaseClient";
 import {
-    carregarPermissaoSistemaAtualService,
     ACOES_PERMISSAO_SISTEMA,
     MODULOS_PERMISSAO_SISTEMA,
     usuarioPodeExecutarAcaoSistema,
@@ -156,6 +155,7 @@ export function Treinamentos({
     colaboradores,
     empresasBanco = [],
     colaboradorInicialId,
+    permissaoSistemaUsuario = null,
     onSalvarCertificado,
     onVisualizarCertificado,
     onExcluirCertificado,
@@ -193,37 +193,10 @@ export function Treinamentos({
     const [mostrarPersonalizarTreinamentos, setMostrarPersonalizarTreinamentos] = useState(false);
     const [cardArrastandoTreinamento, setCardArrastandoTreinamento] = useState("");
     const [cardDestinoTreinamento, setCardDestinoTreinamento] = useState("");
-    const [permissaoSistemaAtual, setPermissaoSistemaAtual] = useState(null);
-    const [mensagemPermissaoSistema, setMensagemPermissaoSistema] = useState("Carregando permissões do sistema...");
-
-    useEffect(() => {
-        let montado = true;
-
-        async function carregarPermissaoSistemaTreinamentos() {
-            try {
-                const permissao = await carregarPermissaoSistemaAtualService({ supabase });
-                if (!montado) return;
-                setPermissaoSistemaAtual(permissao);
-                setMensagemPermissaoSistema(
-                    permissao
-                        ? "Permissões do sistema carregadas para Treinamentos."
-                        : "Nenhuma permissão do sistema cadastrada para o usuário atual."
-                );
-            } catch (erro) {
-                if (!montado) return;
-                setPermissaoSistemaAtual(null);
-                setMensagemPermissaoSistema(
-                    `Não foi possível carregar permissões do sistema: ${erro?.message || "erro não identificado"}`
-                );
-            }
-        }
-
-        carregarPermissaoSistemaTreinamentos();
-
-        return () => {
-            montado = false;
-        };
-    }, []);
+    const permissaoSistemaAtual = permissaoSistemaUsuario;
+    const mensagemPermissaoSistema = permissaoSistemaAtual
+        ? "Permissões do sistema carregadas para Treinamentos."
+        : "Nenhuma permissão do sistema cadastrada para o usuário atual.";
 
     const podeCadastrarTreinamentosSistema = useMemo(
         () => usuarioPodeExecutarAcaoSistema(permissaoSistemaAtual, MODULOS_PERMISSAO_SISTEMA.TREINAMENTOS, ACOES_PERMISSAO_SISTEMA.CADASTRAR),

@@ -825,6 +825,7 @@ export function AppContentRouter({
                     colaboradores={colaboradores}
                     empresasBanco={empresasBanco}
                     colaboradorInicialId={colaboradorSelecionado?.id}
+                    permissaoSistemaUsuario={permissaoSistemaTela}
                     onSalvarCertificado={onSalvarCertificado}
                     onVisualizarCertificado={onVisualizarCertificado}
                     onExcluirCertificado={onExcluirCertificado}
