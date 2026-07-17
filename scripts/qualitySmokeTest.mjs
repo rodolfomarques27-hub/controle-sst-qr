@@ -264,6 +264,10 @@ const codigoConfiguracoesSistema = readFileSync(
     new URL("../src/components/configuracoes/ConfiguracoesSistema.jsx", import.meta.url),
     "utf8"
 );
+const codigoArquivosStorageConfiguracoes = readFileSync(
+    new URL("../src/components/configuracoes/ArquivosStorageConfiguracoes.jsx", import.meta.url),
+    "utf8"
+);
 const codigoEmpresasPage = readFileSync(
     new URL("../src/components/empresas/EmpresasPage.jsx", import.meta.url),
     "utf8"
@@ -421,6 +425,41 @@ assert.match(
     codigoConfiguracoesSistema,
     /<ArquivosStorageConfiguracoes/,
     "O módulo interno de arquivos do Storage deve permanecer montado."
+);
+assert.match(
+    codigoConfiguracoesSistema,
+    /<ArquivosStorageConfiguracoes[\s\S]*permissaoSistemaUsuario=\{permissaoSistemaAtual\}/,
+    "Configurações deve repassar a permissão central ao módulo interno de Storage."
+);
+assert.match(
+    codigoArquivosStorageConfiguracoes,
+    /const permissaoSistemaAtual = permissaoSistemaUsuario;/,
+    "O módulo de Storage deve consumir a permissão central já validada."
+);
+assert.doesNotMatch(
+    codigoArquivosStorageConfiguracoes,
+    /carregarPermissaoSistemaAtualService|setPermissaoSistemaAtual|setMensagemPermissao|async function carregarPermissaoSistema|from "\.\.\/\.\.\/lib\/supabaseClient"/,
+    "O módulo de Storage não pode voltar a carregar permissões em uma consulta própria."
+);
+assert.match(
+    codigoArquivosStorageConfiguracoes,
+    /obterBloqueioVisualAcaoCriticaSistema[\s\S]*ACOES_CRITICAS_PERMISSAO_SISTEMA\.LIMPAR_ARQUIVOS/,
+    "A proteção crítica para limpeza do Storage deve permanecer ativa."
+);
+assert.match(
+    codigoArquivosStorageConfiguracoes,
+    /const carregarStorage = async[\s\S]*onListarArquivosStorage/,
+    "A listagem do Storage deve permanecer conectada ao callback funcional."
+);
+assert.match(
+    codigoArquivosStorageConfiguracoes,
+    /const excluirArquivoStorage = async[\s\S]*onExcluirArquivoStorage/,
+    "A exclusão individual do Storage deve permanecer conectada ao callback funcional."
+);
+assert.match(
+    codigoArquivosStorageConfiguracoes,
+    /const limparArquivosStorageSemVinculoFiltrados = async[\s\S]*ignorarConfirmacaoIndividual[\s\S]*limpezaEmLote/,
+    "A limpeza em lote protegida deve permanecer funcional."
 );
 assert.match(
     regraTrabalho,

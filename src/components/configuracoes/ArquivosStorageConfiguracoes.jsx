@@ -3,10 +3,8 @@ import { AlertTriangle, Database, HardDrive, RefreshCw, Search, Trash2 } from "l
 import { Card } from "../commonComponents";
 import {
     ACOES_CRITICAS_PERMISSAO_SISTEMA,
-    carregarPermissaoSistemaAtualService,
     obterBloqueioVisualAcaoCriticaSistema,
 } from "../../services/usuariosPermissoesSistemaService";
-import { supabase } from "../../lib/supabaseClient";
 import { classNames, formatarBytes } from "../../utils/sstUtils";
 
 const FILTROS_STORAGE_PADRAO = Object.freeze({
@@ -103,6 +101,7 @@ function agruparArquivosStorage(lista, obterChave) {
 
 export function ArquivosStorageConfiguracoes({
     limiteStorageMb = 1024,
+    permissaoSistemaUsuario = null,
     onListarArquivosStorage,
     onExcluirArquivoStorage,
     onAtualizarAuditoria,
@@ -117,8 +116,10 @@ export function ArquivosStorageConfiguracoes({
     const [confirmacaoLimpezaStorage, setConfirmacaoLimpezaStorage] = useState("");
     const [mostrarPainelLimpezaStorage, setMostrarPainelLimpezaStorage] = useState(false);
     const [quantidadeArquivosVisiveis, setQuantidadeArquivosVisiveis] = useState(QUANTIDADE_INICIAL_ARQUIVOS_STORAGE);
-    const [permissaoSistemaAtual, setPermissaoSistemaAtual] = useState(null);
-    const [mensagemPermissao, setMensagemPermissao] = useState("Carregando permissões para limpeza do Storage...");
+    const permissaoSistemaAtual = permissaoSistemaUsuario;
+    const mensagemPermissao = permissaoSistemaAtual
+        ? "Permissão central carregada. A limpeza só fica disponível para perfil autorizado."
+        : "Nenhuma permissão central disponível para o usuário autenticado.";
     const storageMontadoRef = useRef(false);
 
     useEffect(() => {
@@ -159,34 +160,6 @@ export function ArquivosStorageConfiguracoes({
         filtrosStorage.vinculo,
     ]);
 
-    useEffect(() => {
-        let montado = true;
-
-        async function carregarPermissaoSistema() {
-            try {
-                const permissao = await carregarPermissaoSistemaAtualService({ supabase });
-
-                if (!montado) return;
-
-                setPermissaoSistemaAtual(permissao);
-                setMensagemPermissao(
-                    permissao
-                        ? "Permissões carregadas. A limpeza só fica disponível para perfil autorizado."
-                        : "Nenhuma permissão do sistema cadastrada para o usuário atual."
-                );
-            } catch (erro) {
-                if (!montado) return;
-                setPermissaoSistemaAtual(null);
-                setMensagemPermissao(`Não foi possível carregar permissões: ${erro?.message || "erro não identificado"}`);
-            }
-        }
-
-        carregarPermissaoSistema();
-
-        return () => {
-            montado = false;
-        };
-    }, []);
 
     const bloqueioLimparArquivosStorageSistema = useMemo(
         () => obterBloqueioVisualAcaoCriticaSistema(

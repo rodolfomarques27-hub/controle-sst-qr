@@ -3446,6 +3446,7 @@ export function ConfiguracoesSistema({
                 >
                     <ArquivosStorageConfiguracoes
                         limiteStorageMb={limitesEditaveis.storageMb || limites.storageMb || 1024}
+                        permissaoSistemaUsuario={permissaoSistemaAtual}
                         onListarArquivosStorage={onListarArquivosStorage}
                         onExcluirArquivoStorage={onExcluirArquivoStorage}
                         onAtualizarAuditoria={onAtualizarAuditoria}
