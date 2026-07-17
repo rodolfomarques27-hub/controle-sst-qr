@@ -14,6 +14,53 @@ import {
     normalizarCertificado,
 } from "./colaboradorDocumentosService";
 
+const TAMANHO_LOTE_IDS_CERTIFICADOS = 50;
+
+const CAMPOS_CERTIFICADOS_CARREGAMENTO = [
+    "id",
+    "colaborador_id",
+    "treinamento_id",
+    "treinamento_codigo",
+    "tipo_treinamento",
+    "nome_treinamento",
+    "data_realizacao",
+    "data_vencimento",
+    "arquivo_nome",
+    "nome_do_arquivo",
+    "arquivo_url",
+    "url_do_arquivo",
+    "observacao",
+    "status_validacao",
+    "created_at",
+].join(",");
+
+function dividirIdsCertificadosEmLotes(
+    ids = [],
+    tamanho = TAMANHO_LOTE_IDS_CERTIFICADOS
+) {
+    const tamanhoNumerico = Number(tamanho);
+    const tamanhoSeguro =
+        Number.isFinite(tamanhoNumerico) && tamanhoNumerico > 0
+            ? Math.floor(tamanhoNumerico)
+            : TAMANHO_LOTE_IDS_CERTIFICADOS;
+    const lotes = [];
+
+    for (
+        let indice = 0;
+        indice < ids.length;
+        indice += tamanhoSeguro
+    ) {
+        lotes.push(
+            ids.slice(
+                indice,
+                indice + tamanhoSeguro
+            )
+        );
+    }
+
+    return lotes;
+}
+
 function obterFotoUrlColaboradorAppService(colaborador = {}, origem = {}) {
     return String(
         colaborador.fotoUrl ||
@@ -156,26 +203,58 @@ export async function carregarColaboradoresAppService({
             };
         });
 
-        const idsColaboradores = normalizados.map((colaborador) => colaborador.id);
+        const idsColaboradores = normalizados
+            .map((colaborador) => colaborador.id)
+            .filter(Boolean);
         let certificadosPorColaborador = {};
 
         if (idsColaboradores.length > 0) {
-            const { data: certificadosData, error: certificadosError } = await supabase
-                .from("certificados")
-                .select("*")
-                .in("colaborador_id", idsColaboradores)
-                .order("created_at", { ascending: false });
+            const certificadosData = [];
+            const lotesIdsCertificados =
+                dividirIdsCertificadosEmLotes(
+                    idsColaboradores
+                );
 
-            if (certificadosError) {
-                throw new Error(`Erro ao carregar certificados: ${certificadosError.message}`);
+            for (const loteIds of lotesIdsCertificados) {
+                const {
+                    data: certificadosLote,
+                    error: certificadosError,
+                } = await supabase
+                    .from("certificados")
+                    .select(
+                        CAMPOS_CERTIFICADOS_CARREGAMENTO
+                    )
+                    .in("colaborador_id", loteIds)
+                    .order("created_at", {
+                        ascending: false,
+                    });
+
+                if (certificadosError) {
+                    throw new Error(
+                        `Erro ao carregar certificados: ${certificadosError.message}`
+                    );
+                }
+
+                certificadosData.push(
+                    ...(certificadosLote || [])
+                );
             }
 
-            certificadosPorColaborador = (certificadosData || []).reduce((acc, item) => {
-                const certificado = normalizarCertificado(item);
-                if (!acc[certificado.colaboradorId]) acc[certificado.colaboradorId] = [];
-                acc[certificado.colaboradorId].push(certificado);
-                return acc;
-            }, {});
+            certificadosPorColaborador =
+                certificadosData.reduce((acc, item) => {
+                    const certificado =
+                        normalizarCertificado(item);
+
+                    if (!acc[certificado.colaboradorId]) {
+                        acc[certificado.colaboradorId] = [];
+                    }
+
+                    acc[certificado.colaboradorId].push(
+                        certificado
+                    );
+
+                    return acc;
+                }, {});
         }
 
         const colaboradoresComCertificados = normalizados.map((colaborador) => ({

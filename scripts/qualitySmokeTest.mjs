@@ -242,6 +242,10 @@ const codigoFundoLoginPublicoService = readFileSync(
     new URL("../src/services/fundoLoginPublicoService.js", import.meta.url),
     "utf8"
 );
+const codigoAppColaboradoresHandlersService = readFileSync(
+    new URL("../src/services/appColaboradoresHandlersService.js", import.meta.url),
+    "utf8"
+);
 const migracaoFundoLoginPublico = readFileSync(
     new URL("../supabase/migrations/20260717115604_obter_estado_fundo_login_publico.sql", import.meta.url),
     "utf8"
@@ -327,6 +331,26 @@ assert.match(
     migracaoFundoLoginPublico,
     /grant execute[\s\S]*to anon, authenticated, service_role/,
     "A RPC deve conceder apenas execução explícita aos papéis necessários."
+);
+assert.match(
+    codigoAppColaboradoresHandlersService,
+    /TAMANHO_LOTE_IDS_CERTIFICADOS = 50/,
+    "A consulta de certificados deve limitar cada lote a 50 colaboradores."
+);
+assert.match(
+    codigoAppColaboradoresHandlersService,
+    /dividirIdsCertificadosEmLotes/,
+    "O carregamento de certificados deve dividir listas extensas de colaboradores."
+);
+assert.match(
+    codigoAppColaboradoresHandlersService,
+    /\.select\(\s*CAMPOS_CERTIFICADOS_CARREGAMENTO\s*\)/,
+    "A consulta de certificados deve selecionar apenas os campos utilizados."
+);
+assert.doesNotMatch(
+    codigoAppColaboradoresHandlersService,
+    /\.from\("certificados"\)\s*\.select\("\*"\)\s*\.in\("colaborador_id", idsColaboradores\)/,
+    "A consulta única com select estrela e todos os IDs não pode retornar."
 );
 
 function criarArmazenamentoLocalSimulado() {
