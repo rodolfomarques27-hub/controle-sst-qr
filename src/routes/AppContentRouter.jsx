@@ -802,6 +802,7 @@ export function AppContentRouter({
                     empresasBanco={empresasBanco}
                     carregandoBanco={carregandoBanco}
                     erroBanco={erroBanco}
+                    permissaoSistemaUsuario={permissaoSistemaTela}
                     onAtualizarBanco={onAtualizarBanco}
                     onAdicionarColaborador={onAdicionarColaborador}
                     onAtualizarColaborador={onAtualizarColaborador}

@@ -238,6 +238,10 @@ const codigoEmpresasPage = readFileSync(
     new URL("../src/components/empresas/EmpresasPage.jsx", import.meta.url),
     "utf8"
 );
+const codigoColaboradoresPage = readFileSync(
+    new URL("../src/components/colaboradores/ColaboradoresPage.jsx", import.meta.url),
+    "utf8"
+);
 const codigoLoginScreen = readFileSync(
     new URL("../src/components/LoginScreen.jsx", import.meta.url),
     "utf8"
@@ -297,6 +301,21 @@ assert.doesNotMatch(
     codigoEmpresasPage,
     /carregarPermissaoSistemaAtualService|setPermissaoSistemaAtual|setMensagemPermissaoSistema/,
     "Empresas não pode voltar a carregar permissões em uma consulta própria."
+);
+assert.match(
+    codigoAppContentRouter,
+    /<Colaboradores[\s\S]*permissaoSistemaUsuario=\{permissaoSistemaTela\}/,
+    "O roteador deve repassar a permissão central para a página de Colaboradores."
+);
+assert.match(
+    codigoColaboradoresPage,
+    /const permissaoSistemaAtual = permissaoSistemaUsuario;/,
+    "Colaboradores deve consumir a permissão central já validada."
+);
+assert.doesNotMatch(
+    codigoColaboradoresPage,
+    /carregarPermissaoSistemaAtualService|setPermissaoSistemaAtual|setMensagemPermissaoSistema|from "\.\.\/\.\.\/lib\/supabaseClient"/,
+    "Colaboradores não pode voltar a carregar permissões em uma consulta própria."
 );
 assert.match(
     regraTrabalho,

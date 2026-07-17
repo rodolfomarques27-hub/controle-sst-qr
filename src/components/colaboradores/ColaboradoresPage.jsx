@@ -44,9 +44,7 @@ import {
 import { baixarRelatorioColaboradoresTreinamentosPDF, baixarRelatorioPendenciasTreinamentosPDF } from "../../services/exportacaoService";
 import { obterUrlLogoEmpresa } from "../../services/supabaseServices";
 import { normalizarTextoBusca, formatDate, classNames } from "../../utils/sstUtils";
-import { supabase } from "../../lib/supabaseClient";
 import {
-    carregarPermissaoSistemaAtualService,
     ACOES_PERMISSAO_SISTEMA,
     MODULOS_PERMISSAO_SISTEMA,
     usuarioPodeExecutarAcaoSistema,
@@ -157,6 +155,7 @@ export function Colaboradores({
     empresasBanco,
     carregandoBanco,
     erroBanco,
+    permissaoSistemaUsuario = null,
     onAtualizarBanco,
     onAdicionarColaborador,
     onAtualizarColaborador,
@@ -185,8 +184,10 @@ export function Colaboradores({
     const [importandoFotosMassa, setImportandoFotosMassa] = useState(false);
     const [colaboradorEdicao, setColaboradorEdicao] = useState(null);
     const [colaboradorExclusao, setColaboradorExclusao] = useState(null);
-    const [permissaoSistemaAtual, setPermissaoSistemaAtual] = useState(null);
-    const [mensagemPermissaoSistema, setMensagemPermissaoSistema] = useState("Carregando permissões do sistema...");
+    const permissaoSistemaAtual = permissaoSistemaUsuario;
+    const mensagemPermissaoSistema = permissaoSistemaAtual
+        ? "Permissões do sistema carregadas para ações críticas."
+        : "Nenhuma permissão do sistema cadastrada para o usuário atual.";
     const [pendenciasAbertas, setPendenciasAbertas] = useState(null);
     const [novoColaboradorRecolhido, setNovoColaboradorRecolhido] = useState(() => carregarPreferenciaPainelBoolean(CHAVE_NOVO_COLABORADOR_RECOLHIDO, false));
     const [cadastroMassaRecolhido, setCadastroMassaRecolhido] = useState(() => carregarPreferenciaPainelBoolean(CHAVE_CADASTRO_MASSA_RECOLHIDO, false));
@@ -831,34 +832,6 @@ ${erros.slice(0, 8).join("\n")}`
         });
     };
 
-    useEffect(() => {
-        let montado = true;
-
-        async function carregarPermissaoSistemaColaboradores() {
-            try {
-                const permissao = await carregarPermissaoSistemaAtualService({ supabase });
-                if (!montado) return;
-                setPermissaoSistemaAtual(permissao);
-                setMensagemPermissaoSistema(
-                    permissao
-                        ? "Permissões do sistema carregadas para ações críticas."
-                        : "Nenhuma permissão do sistema cadastrada para o usuário atual."
-                );
-            } catch (erro) {
-                if (!montado) return;
-                setPermissaoSistemaAtual(null);
-                setMensagemPermissaoSistema(
-                    `Não foi possível carregar permissões do sistema: ${erro?.message || "erro não identificado"}`
-                );
-            }
-        }
-
-        carregarPermissaoSistemaColaboradores();
-
-        return () => {
-            montado = false;
-        };
-    }, []);
 
     const podeExcluirColaboradoresSistema = useMemo(
         () => usuarioPodeExcluirSistema(permissaoSistemaAtual, MODULOS_PERMISSAO_SISTEMA.COLABORADORES),
