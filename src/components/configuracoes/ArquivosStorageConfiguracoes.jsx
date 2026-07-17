@@ -24,7 +24,11 @@ const QUANTIDADE_INCREMENTO_ARQUIVOS_STORAGE = 40;
 
 const arquivoStorageTemDestinoValido = (arquivo) => Boolean(arquivo?.bucket && arquivo?.caminho);
 
-const arquivoStoragePodeSerExcluido = (arquivo) => !arquivo?.emUso && arquivoStorageTemDestinoValido(arquivo);
+const arquivoStoragePodeSerExcluido = (arquivo) =>
+    !arquivo?.emUso &&
+    !arquivo?.ativoSistema &&
+    !arquivo?.protegidoSistema &&
+    arquivoStorageTemDestinoValido(arquivo);
 
 const obterEmpresaArquivoStorage = (arquivo) =>
     arquivo?.empresaNome || arquivo?.colaboradorEmpresa || "Sem empresa vinculada";
@@ -48,6 +52,8 @@ const obterTextoBuscaArquivoStorage = (arquivo) => normalizarBuscaStorage([
     arquivo?.caminho,
     arquivo?.origemTipo,
     arquivo?.tabelaOrigem,
+    arquivo?.origemRegistro,
+    arquivo?.ativoSistema ? "ativo do sistema protegido" : "",
     arquivo?.registroId,
     obterEmpresaArquivoStorage(arquivo),
     obterColaboradorArquivoStorage(arquivo),
@@ -83,6 +89,7 @@ function agruparArquivosStorage(lista, obterChave) {
                     nome: chave,
                     arquivos: 0,
                     bytes: 0,
+                    ativosSistema: 0,
                     emUso: 0,
                     semRegistro: 0,
                 };
@@ -91,7 +98,8 @@ function agruparArquivosStorage(lista, obterChave) {
             acc[chave].arquivos += 1;
             acc[chave].bytes += Number(arquivo?.tamanho || 0);
 
-            if (arquivo?.emUso) acc[chave].emUso += 1;
+            if (arquivo?.ativoSistema) acc[chave].ativosSistema += 1;
+            else if (arquivo?.emUso) acc[chave].emUso += 1;
             else acc[chave].semRegistro += 1;
 
             return acc;
@@ -169,10 +177,12 @@ export function ArquivosStorageConfiguracoes({
         [permissaoSistemaAtual]
     );
 
-    const arquivosSemRegistro = arquivosStorage.filter((arquivo) => !arquivo.emUso);
+    const arquivosAtivosSistema = arquivosStorage.filter((arquivo) => arquivo.ativoSistema);
+    const arquivosSemRegistro = arquivosStorage.filter((arquivo) => !arquivo.emUso && !arquivo.ativoSistema);
     const arquivosSemRegistroExcluiveis = arquivosStorage.filter(arquivoStoragePodeSerExcluido);
-    const arquivosEmUso = arquivosStorage.filter((arquivo) => arquivo.emUso);
+    const arquivosEmUso = arquivosStorage.filter((arquivo) => arquivo.emUso && !arquivo.ativoSistema);
     const storageTotalBytes = arquivosStorage.reduce((total, arquivo) => total + Number(arquivo?.tamanho || 0), 0);
+    const storageAtivosSistemaBytes = arquivosAtivosSistema.reduce((total, arquivo) => total + Number(arquivo?.tamanho || 0), 0);
     const storageEmUsoBytes = arquivosEmUso.reduce((total, arquivo) => total + Number(arquivo?.tamanho || 0), 0);
     const storageSemRegistroBytes = arquivosSemRegistro.reduce((total, arquivo) => total + Number(arquivo?.tamanho || 0), 0);
     const storageLimiteBytes = Math.max(1, Number(limiteStorageMb || 1024) * 1024 * 1024);
@@ -217,8 +227,9 @@ export function ArquivosStorageConfiguracoes({
             const bateFim = !filtrosStorage.dataFim || (dataArquivo && dataArquivo <= filtrosStorage.dataFim);
             const bateTamanho = tamanhoArquivoDentroDoFiltro(arquivo, filtrosStorage.tamanho);
             const bateVinculo = filtrosStorage.vinculo === "Todos"
-                || (filtrosStorage.vinculo === "Com vínculo" && arquivo.emUso)
-                || (filtrosStorage.vinculo === "Sem vínculo" && !arquivo.emUso);
+                || (filtrosStorage.vinculo === "Ativos do sistema" && arquivo.ativoSistema)
+                || (filtrosStorage.vinculo === "Com vínculo" && arquivo.emUso && !arquivo.ativoSistema)
+                || (filtrosStorage.vinculo === "Sem vínculo" && !arquivo.emUso && !arquivo.ativoSistema);
 
             return bateBusca && bateBucket && bateEmpresa && bateColaborador && bateTipo && bateInicio && bateFim && bateTamanho && bateVinculo;
         })
@@ -548,11 +559,16 @@ Essa ação remove apenas o arquivo físico sem vínculo no banco e não pode se
                 </div>
             </div>
 
-            <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+            <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-5">
                 <div className="rounded-3xl bg-slate-50 p-4 ring-1 ring-slate-200">
                     <p className="text-xs font-black uppercase tracking-wide text-slate-500">Total no Storage</p>
                     <p className="mt-2 text-2xl font-black text-slate-950">{formatarBytes(storageTotalBytes)}</p>
                     <p className="mt-1 text-xs text-slate-500">Limite administrativo: {formatarBytes(storageLimiteBytes)}</p>
+                </div>
+                <div className="rounded-3xl bg-blue-50 p-4 ring-1 ring-blue-100">
+                    <p className="text-xs font-black uppercase tracking-wide text-blue-700">Ativos do sistema</p>
+                    <p className="mt-2 text-2xl font-black text-blue-900">{arquivosAtivosSistema.length}</p>
+                    <p className="mt-1 text-xs text-blue-700">{formatarBytes(storageAtivosSistemaBytes)} protegidos e fora da limpeza</p>
                 </div>
                 <div className="rounded-3xl bg-emerald-50 p-4 ring-1 ring-emerald-100">
                     <p className="text-xs font-black uppercase tracking-wide text-emerald-700">Com vínculo</p>
@@ -629,7 +645,8 @@ Essa ação remove apenas o arquivo físico sem vínculo no banco e não pode se
                     </select>
 
                     <select value={filtrosStorage.vinculo} onChange={(e) => setFiltrosStorage((atual) => ({ ...atual, vinculo: e.target.value }))} className="rounded-2xl border border-slate-200 bg-white px-3 py-3 text-sm outline-none focus:border-slate-400 focus:ring-4 focus:ring-slate-100">
-                        <option value="Todos">Com e sem vínculo</option>
+                        <option value="Todos">Todos os vínculos</option>
+                        <option value="Ativos do sistema">Ativos do sistema</option>
                         <option value="Com vínculo">Somente vinculados</option>
                         <option value="Sem vínculo">Somente sem vínculo</option>
                     </select>
@@ -641,6 +658,9 @@ Essa ação remove apenas o arquivo físico sem vínculo no banco e não pode se
                 </div>
 
                 <div className="mt-3 flex flex-wrap gap-2">
+                    <button type="button" onClick={() => setFiltrosStorage((atual) => ({ ...atual, vinculo: "Ativos do sistema" }))} className={classNames("rounded-full px-3 py-2 text-xs font-black ring-1", filtrosStorage.vinculo === "Ativos do sistema" ? "bg-blue-100 text-blue-700 ring-blue-200" : "bg-white text-slate-600 ring-slate-200 hover:bg-slate-100")}>
+                        Ver ativos do sistema
+                    </button>
                     <button type="button" onClick={() => setFiltrosStorage((atual) => ({ ...atual, vinculo: "Sem vínculo" }))} className={classNames("rounded-full px-3 py-2 text-xs font-black ring-1", filtroLimpezaSemVinculoAtivo ? "bg-red-100 text-red-700 ring-red-200" : "bg-white text-slate-600 ring-slate-200 hover:bg-slate-100")}>
                         Ver somente sem vínculo
                     </button>
@@ -661,7 +681,7 @@ Essa ação remove apenas o arquivo físico sem vínculo no banco e não pode se
                             <div key={bucketInfo.bucket} className="rounded-2xl bg-slate-50 p-3 text-xs ring-1 ring-slate-200">
                                 <p className="break-words font-bold text-slate-700">{bucketInfo.bucket}</p>
                                 <p className="mt-1 text-slate-500">{bucketInfo.arquivos} arquivo(s) · {formatarBytes(bucketInfo.bytes)}</p>
-                                <p className="mt-1 text-slate-400">{bucketInfo.emUso} em uso · {bucketInfo.semRegistro} sem vínculo</p>
+                                <p className="mt-1 text-slate-400">{bucketInfo.ativosSistema} ativo(s) do sistema · {bucketInfo.emUso} em uso · {bucketInfo.semRegistro} sem vínculo</p>
                             </div>
                         ))}
                     </div>
@@ -704,17 +724,28 @@ Essa ação remove apenas o arquivo físico sem vínculo no banco e não pode se
                     {arquivosFiltrados.length > 0 && (
                         <div className="max-h-[32rem] space-y-2 overflow-y-auto pr-1 scrollbar-discreta">
                             {arquivosFiltradosVisiveis.map((arquivo) => (
-                                <div key={`${arquivo.bucket}-${arquivo.caminho}`} className={classNames("rounded-2xl px-3 py-2 text-sm ring-1", arquivo.emUso ? "bg-emerald-50 text-emerald-900 ring-emerald-100" : "bg-red-50 text-red-900 ring-red-100")}>
+                                <div key={`${arquivo.bucket}-${arquivo.caminho}`} className={classNames(
+                                    "rounded-2xl px-3 py-2 text-sm ring-1",
+                                    arquivo.ativoSistema
+                                        ? "bg-blue-50 text-blue-900 ring-blue-100"
+                                        : arquivo.emUso
+                                            ? "bg-emerald-50 text-emerald-900 ring-emerald-100"
+                                            : "bg-red-50 text-red-900 ring-red-100"
+                                )}>
                                     <div className="flex flex-col justify-between gap-3 lg:flex-row lg:items-center">
                                         <div className="min-w-0">
                                             <div className="flex flex-wrap items-center gap-2">
                                                 <p className="break-words font-bold">{arquivo.nome}</p>
-                                                <span className="rounded-full bg-white/70 px-3 py-1 text-xs font-bold">{arquivo.emUso ? "Em uso" : "Sem vínculo"}</span>
+                                                <span className="rounded-full bg-white/70 px-3 py-1 text-xs font-bold">
+                                                    {arquivo.ativoSistema ? "Ativo do sistema" : arquivo.emUso ? "Em uso" : "Sem vínculo"}
+                                                </span>
                                                 <span className="rounded-full bg-white/70 px-3 py-1 text-xs font-bold">{formatarBytes(arquivo.tamanho || 0)}</span>
                                             </div>
                                             <p className="mt-1 break-words text-xs opacity-80">{arquivo.bucket}/{arquivo.caminho}</p>
                                             <p className="mt-1 text-xs opacity-70">
-                                                {obterEmpresaArquivoStorage(arquivo)} · {obterColaboradorArquivoStorage(arquivo)} · {obterTipoArquivoStorage(arquivo)}
+                                                {arquivo.ativoSistema
+                                                    ? `${arquivo.origemRegistro || "Configuração global do sistema"} · ${obterTipoArquivoStorage(arquivo)}`
+                                                    : `${obterEmpresaArquivoStorage(arquivo)} · ${obterColaboradorArquivoStorage(arquivo)} · ${obterTipoArquivoStorage(arquivo)}`}
                                             </p>
                                             {arquivo.atualizadoEm && (
                                                 <p className="mt-1 text-xs opacity-70">Atualizado em {new Date(arquivo.atualizadoEm).toLocaleString("pt-BR")}</p>

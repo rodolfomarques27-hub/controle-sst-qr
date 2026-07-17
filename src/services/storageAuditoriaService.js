@@ -10,6 +10,27 @@ import {
 import { treinamentosBase } from "../constants/treinamentosConstants";
 import { extrairCaminhoStorage } from "../utils/sstUtils";
 
+const ATIVOS_SISTEMA_STORAGE = Object.freeze({
+    "logos-empresas:configuracoes/login/fundo-login.jpg": Object.freeze({
+        id: "fundo-login-global",
+        tipo: "Fundo da tela de login",
+        origemRegistro: "Configuração global do sistema",
+        origemTipo: "Sistema / Aparência do login",
+        tabelaOrigem: "configuracoes_publicas_sistema",
+    }),
+    "logos-empresas:configuracoes/qrcode/logo-qrcode.png": Object.freeze({
+        id: "logo-qrcode-global",
+        tipo: "Logo global dos QR Codes",
+        origemRegistro: "Configuração global do sistema",
+        origemTipo: "Sistema / Logo dos QR Codes",
+        tabelaOrigem: "configuração global do QR Code",
+    }),
+});
+
+function obterAtivoSistemaStorage(bucket = "", caminho = "") {
+    return ATIVOS_SISTEMA_STORAGE[`${String(bucket || "").trim()}:${String(caminho || "").trim()}`] || null;
+}
+
 export async function sincronizarCertificadosDoStorageService({
     supabase,
     colaboradores = [],
@@ -333,6 +354,11 @@ export async function listarArquivosCertificadosStorageService({
             const primeiraPasta = partes[0] || "";
             const segundaPasta = partes[1] || "";
             const chave = `${arquivo.bucket}:${arquivo.caminho}`;
+            const ativoSistemaStorage = obterAtivoSistemaStorage(
+                arquivo.bucket,
+                arquivo.caminho
+            );
+            const ativoSistema = Boolean(ativoSistemaStorage);
 
             let emUso = false;
             let origemRegistro = "";
@@ -393,15 +419,25 @@ export async function listarArquivosCertificadosStorageService({
             }
 
             if (arquivo.bucket === "logos-empresas") {
-                const empresaLogo = logosPorCaminho[chave] || empresasPorId[primeiraPasta];
+                if (ativoSistemaStorage) {
+                    emUso = true;
+                    origemRegistro = ativoSistemaStorage.origemRegistro;
+                    registroId = ativoSistemaStorage.id;
+                    empresaNome = "SafeScan Brasil";
+                    empresaCnpj = "";
+                    tipoDocumentoEmpresa = ativoSistemaStorage.tipo;
+                    origemIdentificacao = origemRegistro;
+                } else {
+                    const empresaLogo = logosPorCaminho[chave] || empresasPorId[primeiraPasta];
 
-                emUso = Boolean(logosPorCaminho[chave]);
-                origemRegistro = logosPorCaminho[chave] ? "Cadastro da empresa" : empresaLogo ? "Pasta do Storage" : "";
-                registroId = empresaLogo?.id || "";
-                empresaNome = empresaLogo?.nome || "";
-                empresaCnpj = empresaLogo?.cnpj || "";
-                tipoDocumentoEmpresa = "Logo da empresa";
-                origemIdentificacao = origemRegistro;
+                    emUso = Boolean(logosPorCaminho[chave]);
+                    origemRegistro = logosPorCaminho[chave] ? "Cadastro da empresa" : empresaLogo ? "Pasta do Storage" : "";
+                    registroId = empresaLogo?.id || "";
+                    empresaNome = empresaLogo?.nome || "";
+                    empresaCnpj = empresaLogo?.cnpj || "";
+                    tipoDocumentoEmpresa = "Logo da empresa";
+                    origemIdentificacao = origemRegistro;
+                }
             }
 
             if (arquivo.bucket === "fotos-colaboradores") {
@@ -480,6 +516,10 @@ export async function listarArquivosCertificadosStorageService({
 
             return {
                 ...arquivo,
+                origemTipo: ativoSistemaStorage?.origemTipo || arquivo.origemTipo,
+                tabelaOrigem: ativoSistemaStorage?.tabelaOrigem || arquivo.tabelaOrigem,
+                ativoSistema,
+                protegidoSistema: ativoSistema,
                 pasta,
                 pastaColaborador: primeiraPasta,
                 pastaTreinamento: segundaPasta,
@@ -510,6 +550,15 @@ export async function excluirArquivoStorageAuditoriaService({ supabase, arquivo 
 
     if (!arquivo?.caminho) {
         throw new Error("Arquivo inválido para exclusão.");
+    }
+
+    const ativoSistemaStorage = obterAtivoSistemaStorage(
+        arquivo.bucket,
+        arquivo.caminho
+    );
+
+    if (ativoSistemaStorage) {
+        throw new Error(`Exclusão bloqueada: ${ativoSistemaStorage.tipo} é um ativo global protegido do sistema.`);
     }
 
     if (arquivo.emUso) {

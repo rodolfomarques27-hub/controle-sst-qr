@@ -268,6 +268,14 @@ const codigoArquivosStorageConfiguracoes = readFileSync(
     new URL("../src/components/configuracoes/ArquivosStorageConfiguracoes.jsx", import.meta.url),
     "utf8"
 );
+const codigoStorageAuditoriaService = readFileSync(
+    new URL("../src/services/storageAuditoriaService.js", import.meta.url),
+    "utf8"
+);
+const codigoQrCodeComLogo = readFileSync(
+    new URL("../src/components/qr/QrCodeComLogo.jsx", import.meta.url),
+    "utf8"
+);
 const codigoEmpresasPage = readFileSync(
     new URL("../src/components/empresas/EmpresasPage.jsx", import.meta.url),
     "utf8"
@@ -460,6 +468,41 @@ assert.match(
     codigoArquivosStorageConfiguracoes,
     /const limparArquivosStorageSemVinculoFiltrados = async[\s\S]*ignorarConfirmacaoIndividual[\s\S]*limpezaEmLote/,
     "A limpeza em lote protegida deve permanecer funcional."
+);
+assert.match(
+    codigoFundoLoginPublicoService,
+    /configuracoes\/login\/fundo-login\.jpg/,
+    "O fundo global do login deve permanecer no caminho reservado de Configurações."
+);
+assert.match(
+    codigoQrCodeComLogo,
+    /configuracoes\/qrcode\/logo-qrcode\.png/,
+    "O logo global dos QR Codes deve permanecer no caminho reservado de Configurações."
+);
+assert.match(
+    codigoStorageAuditoriaService,
+    /ATIVOS_SISTEMA_STORAGE[\s\S]*logos-empresas:configuracoes\/login\/fundo-login\.jpg[\s\S]*logos-empresas:configuracoes\/qrcode\/logo-qrcode\.png/,
+    "O inventário deve registrar os dois ativos globais do sistema."
+);
+assert.match(
+    codigoStorageAuditoriaService,
+    /const ativoSistemaStorage = obterAtivoSistemaStorage[\s\S]*const ativoSistema = Boolean\(ativoSistemaStorage\)/,
+    "O inventário deve classificar caminhos globais antes de calcular vínculos."
+);
+assert.match(
+    codigoStorageAuditoriaService,
+    /if \(ativoSistemaStorage\)[\s\S]*Exclusão bloqueada:[\s\S]*ativo global protegido do sistema/,
+    "O serviço deve bloquear independentemente a exclusão de ativos globais."
+);
+assert.match(
+    codigoArquivosStorageConfiguracoes,
+    /!arquivo\?\.ativoSistema[\s\S]*!arquivo\?\.protegidoSistema/,
+    "A interface não pode oferecer ativos globais para exclusão."
+);
+assert.match(
+    codigoArquivosStorageConfiguracoes,
+    /Ativos do sistema[\s\S]*Ver ativos do sistema[\s\S]*Ativo do sistema/,
+    "O painel deve exibir resumo, filtro e identificação visual dos ativos globais."
 );
 assert.match(
     regraTrabalho,
