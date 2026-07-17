@@ -10,6 +10,7 @@ import {
     deveMostrarAniversarioColaborador,
     obterFuncaoCargoColaborador,
     colaboradorContaComoMobilizado,
+    colaboradorForaControleDocumentalOperacional,
     itemDocumentoCriticoColaborador,
     statusGeral,
 } from "./colaboradorDocumentosService";
@@ -27,7 +28,11 @@ import {
 } from "../utils/sstUtils";
 
 export function calcularIndicadoresTreinamentosDashboard(colaboradores = []) {
-    const avaliacoes = colaboradores.map((colaborador) => {
+    const colaboradoresOperacionais = colaboradores.filter(
+        (colaborador) => !colaboradorForaControleDocumentalOperacional(colaborador)
+    );
+
+    const avaliacoes = colaboradoresOperacionais.map((colaborador) => {
         const avaliacao = avaliarTreinamentosColaborador(colaborador);
 
         return avaliacao.itens.map((item) => ({
@@ -42,7 +47,7 @@ export function calcularIndicadoresTreinamentosDashboard(colaboradores = []) {
     const vencendo = itens.filter((item) => item.status.chave === "vencendo").length;
     const pendentes = itens.filter((item) => item.status.chave === "pendente").length;
     const emDia = itens.filter((item) => ["emdia", "semvalidade"].includes(item.status.chave)).length;
-    const empresas = new Set(colaboradores.map((colaborador) => colaborador.empresa).filter(Boolean)).size;
+    const empresas = new Set(colaboradoresOperacionais.map((colaborador) => colaborador.empresa).filter(Boolean)).size;
 
     return { itens, vencidos, vencendo, pendentes, emDia, empresas };
 }

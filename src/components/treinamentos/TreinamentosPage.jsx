@@ -16,6 +16,7 @@ import { FormularioLancamentoCertificado } from "./FormularioLancamentoCertifica
 import VerificadorListaPresenca from "../VerificadorListaPresenca";
 import {
     avaliarTreinamentosColaborador,
+    colaboradorForaControleDocumentalOperacional,
     statusGeral,
     treinamentoSemValidade,
     statusDocumento,
@@ -761,6 +762,7 @@ export function Treinamentos({
     const documentosFiltrados = documentos.filter((documento) => {
         const vencimentoFiltro = datasRevisao[documento.id]?.vencimento ?? documento.vencimento ?? "";
         const status = statusDocumento(vencimentoFiltro, treinamentoSemValidade(documento.treinamentoId));
+        const foraControleOperacional = colaboradorForaControleDocumentalOperacional(documento.colaborador);
         const termo = normalizarTextoBusca(buscaCertificados);
 
         const textoBusca = normalizarTextoBusca(
@@ -770,9 +772,14 @@ export function Treinamentos({
         const bateBusca = !termo || textoBusca.includes(termo);
         const bateStatus =
             filtroStatusCertificados === "Todos" ||
-            (filtroStatusCertificados === "Em dia" && ["emdia", "semvalidade"].includes(status.chave)) ||
-            (filtroStatusCertificados === "A vencer" && status.chave === "vencendo") ||
-            (filtroStatusCertificados === "Vencido" && status.chave === "vencido");
+            (
+                !foraControleOperacional &&
+                (
+                    (filtroStatusCertificados === "Em dia" && ["emdia", "semvalidade"].includes(status.chave)) ||
+                    (filtroStatusCertificados === "A vencer" && status.chave === "vencendo") ||
+                    (filtroStatusCertificados === "Vencido" && status.chave === "vencido")
+                )
+            );
 
         return bateBusca && bateStatus;
     });
@@ -785,8 +792,7 @@ export function Treinamentos({
                 .filter((documento) => String(documento.colaborador?.id) === String(colaborador.id))
                 .sort(ordenarCertificadosPorTreinamento);
 
-            const pendentesDoColaborador = avaliacao.itens
-                .filter((item) => item.status.chave === "pendente")
+            const pendentesDoColaborador = avaliacao.pendentes
                 .filter((item) => {
                     const textoBusca = normalizarTextoBusca(
                         `${colaborador.nome || ""} ${colaborador.empresaExibicao || colaborador.empresa || ""} ${colaborador.codigoFuncionario || ""} ${item.treinamento?.nome || ""} pendente faltando`
@@ -879,6 +885,10 @@ export function Treinamentos({
 
     const totalPorStatusCertificados = documentos.reduce(
         (acc, documento) => {
+            if (colaboradorForaControleDocumentalOperacional(documento.colaborador)) {
+                return acc;
+            }
+
             const status = statusDocumento(documento.vencimento, treinamentoSemValidade(documento.treinamentoId));
 
             if (status.chave === "vencido") acc.vencidos += 1;
@@ -903,6 +913,8 @@ export function Treinamentos({
         const grupos = {};
 
         colaboradores.forEach((colaborador) => {
+            if (colaboradorForaControleDocumentalOperacional(colaborador)) return;
+
             (colaborador.treinamentos || []).forEach((certificado) => {
                 const dias = diasParaVencer(certificado.vencimento);
 

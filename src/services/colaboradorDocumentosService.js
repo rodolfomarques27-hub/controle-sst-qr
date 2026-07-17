@@ -20,7 +20,25 @@ export function obterStatusInicialColaborador() {
     return "Em análise";
 }
 
+export function obterSituacaoHistoricaTreinamentosColaborador(colaborador = {}) {
+    const textoSituacao = normalizarTextoBusca(
+        `${colaborador?.status || ""} ${colaborador?.statusMobilizacao || ""} ${colaborador?.status_mobilizacao || ""}`
+    );
 
+    if (textoSituacao.includes("desmobilizado") || textoSituacao.includes("desmobilizada")) {
+        return "Desmobilizado";
+    }
+
+    if (textoSituacao.includes("inativo") || textoSituacao.includes("inativa")) {
+        return "Inativo";
+    }
+
+    return "";
+}
+
+export function colaboradorForaControleDocumentalOperacional(colaborador = {}) {
+    return Boolean(obterSituacaoHistoricaTreinamentosColaborador(colaborador));
+}
 
 export function obterFuncoesPersonalizadasSalvas() {
     if (typeof window === "undefined") return [];
@@ -99,6 +117,8 @@ function ordenarItensTreinamentoColaborador(itens = []) {
 }
 
 export function avaliarTreinamentosColaborador(colaborador) {
+    const situacaoHistorica = obterSituacaoHistoricaTreinamentosColaborador(colaborador);
+    const foraControleOperacional = Boolean(situacaoHistorica);
     const removidos = (colaborador.treinamentosRemovidos || []).map(Number);
     const adicionais = (colaborador.treinamentosAdicionais || []).map(Number);
     const realizados = colaborador.treinamentos || [];
@@ -155,13 +175,20 @@ export function avaliarTreinamentosColaborador(colaborador) {
     const itensObrigatoriosMatriz = itens.filter((item) => item.obrigatorioMatriz);
     const itensAdicionaisEnviados = itens.filter((item) => !item.obrigatorioMatriz && item.realizado);
 
-    const pendentes = itensObrigatoriosMatriz.filter((item) => item.status.chave === "pendente");
-    const vencidos = itensObrigatoriosMatriz.filter((item) => item.status.chave === "vencido");
-    const vencendo = itensObrigatoriosMatriz.filter((item) => item.status.chave === "vencendo");
-    const emDia = itensObrigatoriosMatriz.filter((item) => ["emdia", "semvalidade"].includes(item.status.chave));
+    const pendentesCalculados = itensObrigatoriosMatriz.filter((item) => item.status.chave === "pendente");
+    const vencidosCalculados = itensObrigatoriosMatriz.filter((item) => item.status.chave === "vencido");
+    const vencendoCalculados = itensObrigatoriosMatriz.filter((item) => item.status.chave === "vencendo");
+    const emDiaCalculados = itensObrigatoriosMatriz.filter((item) => ["emdia", "semvalidade"].includes(item.status.chave));
+
+    const pendentes = foraControleOperacional ? [] : pendentesCalculados;
+    const vencidos = foraControleOperacional ? [] : vencidosCalculados;
+    const vencendo = foraControleOperacional ? [] : vencendoCalculados;
+    const emDia = foraControleOperacional ? [] : emDiaCalculados;
 
     return {
         matriz: obterMatrizFuncao(colaborador.funcao),
+        situacaoHistorica,
+        foraControleOperacional,
         itens,
         itensObrigatoriosMatriz,
         itensAdicionaisEnviados,

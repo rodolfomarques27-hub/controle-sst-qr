@@ -288,6 +288,18 @@ const codigoTreinamentosPage = readFileSync(
     new URL("../src/components/treinamentos/TreinamentosPage.jsx", import.meta.url),
     "utf8"
 );
+const codigoBaseCertificadosTreinamentos = readFileSync(
+    new URL("../src/components/treinamentos/BaseCertificadosTreinamentos.jsx", import.meta.url),
+    "utf8"
+);
+const codigoDashboardResumoService = readFileSync(
+    new URL("../src/services/dashboardResumoService.js", import.meta.url),
+    "utf8"
+);
+const codigoColaboradorDocumentosService = readFileSync(
+    new URL("../src/services/colaboradorDocumentosService.js", import.meta.url),
+    "utf8"
+);
 const codigoLoginScreen = readFileSync(
     new URL("../src/components/LoginScreen.jsx", import.meta.url),
     "utf8"
@@ -398,6 +410,56 @@ assert.match(
     codigoTreinamentosPage,
     /supabase\.functions\.invoke\(FUNCAO_EMAIL_ALERTA_TST/,
     "Treinamentos deve preservar o envio de alertas TST pela Edge Function."
+);
+assert.match(
+    codigoTreinamentosPage,
+    /colaboradorForaControleDocumentalOperacional\(documento\.colaborador\)[\s\S]*filtroStatusCertificados === "Todos"[\s\S]*!foraControleOperacional/,
+    "A Base deve manter o histórico apenas no filtro Todos e removê-lo dos filtros operacionais."
+);
+assert.match(
+    codigoTreinamentosPage,
+    /if \(colaboradorForaControleDocumentalOperacional\(documento\.colaborador\)\) \{[\s\S]*return acc;/,
+    "Os totais de certificados não podem contabilizar históricos desmobilizados ou inativos."
+);
+assert.match(
+    codigoTreinamentosPage,
+    /colaboradores\.forEach\(\(colaborador\) => \{[\s\S]*if \(colaboradorForaControleDocumentalOperacional\(colaborador\)\) return;[\s\S]*colaborador\.treinamentos/,
+    "Alertas ao TST não podem incluir colaboradores desmobilizados ou inativos."
+);
+assert.match(
+    codigoBaseCertificadosTreinamentos,
+    /Histórico · \{situacaoHistorica\}/,
+    "A Base de Certificados deve identificar visualmente o grupo mantido apenas como histórico."
+);
+assert.match(
+    codigoBaseCertificadosTreinamentos,
+    /const resumoStatus = foraControleOperacional[\s\S]*\? \{ emDia: 0, aVencer: 0, vencidos: 0 \}/,
+    "O grupo histórico não pode exibir badges operacionais de vencimento."
+);
+assert.match(
+    codigoDashboardResumoService,
+    /const colaboradoresOperacionais = colaboradores\.filter[\s\S]*!colaboradorForaControleDocumentalOperacional\(colaborador\)/,
+    "O Dashboard SST deve calcular indicadores somente com colaboradores em controle operacional."
+);
+assert.match(
+    codigoColaboradorDocumentosService,
+    /export function obterSituacaoHistoricaTreinamentosColaborador[\s\S]*desmobilizado[\s\S]*return "Desmobilizado"[\s\S]*inativo[\s\S]*return "Inativo"/,
+    "O serviço deve reconhecer Desmobilizado e Inativo como situações históricas."
+);
+assert.match(
+    codigoColaboradorDocumentosService,
+    /export function colaboradorForaControleDocumentalOperacional[\s\S]*obterSituacaoHistoricaTreinamentosColaborador/,
+    "A decisão de retirar o colaborador do controle operacional deve permanecer centralizada."
+);
+assert.match(
+    codigoColaboradorDocumentosService,
+    /const pendentes = foraControleOperacional \? \[\] : pendentesCalculados[\s\S]*const vencidos = foraControleOperacional \? \[\] : vencidosCalculados[\s\S]*const vencendo = foraControleOperacional \? \[\] : vencendoCalculados[\s\S]*const emDia = foraControleOperacional \? \[\] : emDiaCalculados/,
+    "A avaliação deve zerar somente os indicadores operacionais e preservar os itens históricos."
+);
+assert.match(
+    codigoColaboradorDocumentosService,
+    /situacaoHistorica,[\s\S]*foraControleOperacional,[\s\S]*itens,/,
+    "A avaliação deve expor a situação histórica sem apagar os itens documentais."
 );
 assert.match(
     codigoAppContentRouter,

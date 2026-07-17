@@ -9,6 +9,7 @@ import {
 } from "lucide-react";
 import { Card, StatusPill } from "../commonComponents";
 import {
+    obterSituacaoHistoricaTreinamentosColaborador,
     statusDocumento,
     treinamentoSemValidade,
 } from "../../services/colaboradorDocumentosService";
@@ -427,6 +428,10 @@ export function BaseCertificadosTreinamentos({
                     const colaborador = grupo.colaborador;
                     const certificados = grupo.certificados || [];
                     const pendentes = grupo.pendentes || [];
+                    const situacaoHistorica =
+                        grupo.avaliacao?.situacaoHistorica ||
+                        obterSituacaoHistoricaTreinamentosColaborador(colaborador);
+                    const foraControleOperacional = Boolean(situacaoHistorica);
                     const grupoKey = String(colaborador?.id || colaborador?.codigoFuncionario || "sem-colaborador");
                     const grupoAberto = Boolean(gruposCertificadosAbertos[grupoKey]);
                     const indiceParGrupo = indiceGrupo % 2 === 0 ? indiceGrupo + 1 : indiceGrupo - 1;
@@ -448,22 +453,24 @@ export function BaseCertificadosTreinamentos({
                         });
                     };
 
-                    const resumoStatus = certificados.reduce(
-                        (acc, certificado) => {
-                            const valores = valoresRevisao(certificado);
-                            const status = statusDocumento(
-                                valores.vencimento || certificado.vencimento,
-                                treinamentoSemValidade(certificado.treinamentoId)
-                            );
+                    const resumoStatus = foraControleOperacional
+                        ? { emDia: 0, aVencer: 0, vencidos: 0 }
+                        : certificados.reduce(
+                            (acc, certificado) => {
+                                const valores = valoresRevisao(certificado);
+                                const status = statusDocumento(
+                                    valores.vencimento || certificado.vencimento,
+                                    treinamentoSemValidade(certificado.treinamentoId)
+                                );
 
-                            if (status.chave === "vencido") acc.vencidos += 1;
-                            else if (status.chave === "vencendo") acc.aVencer += 1;
-                            else acc.emDia += 1;
+                                if (status.chave === "vencido") acc.vencidos += 1;
+                                else if (status.chave === "vencendo") acc.aVencer += 1;
+                                else acc.emDia += 1;
 
-                            return acc;
-                        },
-                        { emDia: 0, aVencer: 0, vencidos: 0 }
-                    );
+                                return acc;
+                            },
+                            { emDia: 0, aVencer: 0, vencidos: 0 }
+                        );
 
                     const obterValorDataRevisaoFormulario = (itemKey, campo, valorIso) => {
         const chave = `${itemKey}:${campo}`;
@@ -547,6 +554,15 @@ export function BaseCertificadosTreinamentos({
                                         <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-600">
                                             {certificados.length} certificado(s)
                                         </span>
+
+                                        {foraControleOperacional && (
+                                            <span
+                                                className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-700 ring-1 ring-slate-300"
+                                                title="Certificados mantidos para consulta histórica, fora de pendências, vencimentos e alertas operacionais."
+                                            >
+                                                Histórico · {situacaoHistorica}
+                                            </span>
+                                        )}
 
                                         {pendentes.length > 0 && (
                                             <span className="rounded-full bg-blue-50 px-3 py-1 text-xs font-semibold text-blue-700 ring-1 ring-blue-200">
