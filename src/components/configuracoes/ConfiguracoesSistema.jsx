@@ -64,7 +64,6 @@ import {
     montarChecklistRevisaoSupabaseSistemaTexto,
 } from "../../services/supabaseRevisaoService";
 import {
-    carregarPermissaoSistemaAtualService,
     obterResumoAcoesCriticasSistema,
     obterResumoPermissaoSistema,
 } from "../../services/usuariosPermissoesSistemaService";
@@ -466,6 +465,7 @@ export function ConfiguracoesSistema({
     empresasBanco = [],
     usuario = null,
     podeAcessarAuditoria = false,
+    permissaoSistemaUsuario = null,
     limites = {},
     onSalvarLimites,
     onRegistrarAuditoria,
@@ -516,8 +516,8 @@ export function ConfiguracoesSistema({
     );
     const [blocoArrastandoConfiguracoes, setBlocoArrastandoConfiguracoes] = useState("");
 
-    const [permissaoSistemaAtual, setPermissaoSistemaAtual] = useState(null);
-    const [carregandoPermissaoSistema, setCarregandoPermissaoSistema] = useState(false);
+    const permissaoSistemaAtual = permissaoSistemaUsuario;
+    const carregandoPermissaoSistema = false;
     const [obrasConfiguracoes, setObrasConfiguracoes] = useState([]);
     const [vinculosObrasConfiguracoes, setVinculosObrasConfiguracoes] = useState([]);
     const [carregandoObrasConfiguracoes, setCarregandoObrasConfiguracoes] = useState(false);
@@ -539,9 +539,9 @@ export function ConfiguracoesSistema({
         () => ordenarEmpresasObrasConfiguracoes(empresasBanco),
         [empresasBanco]
     );
-    const [mensagemPermissaoSistema, setMensagemPermissaoSistema] = useState(
-        "Permissão geral ainda não carregada do Supabase."
-    );
+    const mensagemPermissaoSistema = permissaoSistemaAtual
+        ? "Permissão geral carregada pelo estado central do sistema."
+        : "Nenhuma permissão geral disponível para o usuário autenticado.";
 
     const eventosAuditoria = useMemo(() => {
         const normalizada = normalizarConfiguracaoEventosAuditoriaSistema(configEventos);
@@ -1303,27 +1303,6 @@ export function ConfiguracoesSistema({
         }
     };
 
-    const carregarPermissaoSistemaAtual = async () => {
-        setCarregandoPermissaoSistema(true);
-        setMensagemPermissaoSistema("Carregando permissão geral do usuário no Supabase...");
-
-        try {
-            const permissao = await carregarPermissaoSistemaAtualService({ supabase });
-            setPermissaoSistemaAtual(permissao);
-
-            if (permissao) {
-                setMensagemPermissaoSistema("Permissão geral carregada do Supabase. Esta leitura protege a rota de Configurações e os botões críticos.");
-            } else {
-                setMensagemPermissaoSistema("Nenhuma permissão geral encontrada para o usuário autenticado. As ações administrativas permanecem bloqueadas.");
-            }
-        } catch (erro) {
-            setPermissaoSistemaAtual(null);
-            setMensagemPermissaoSistema(`Não foi possível carregar a permissão geral. Supabase: ${erro?.message || "erro não identificado"}`);
-        } finally {
-            setCarregandoPermissaoSistema(false);
-        }
-    };
-
 
 
     const carregarObrasConfiguracoes = async () => {
@@ -1968,15 +1947,6 @@ export function ConfiguracoesSistema({
 
         return () => window.clearTimeout(timer);
     }, []);
-
-    useEffect(() => {
-        const timer = window.setTimeout(() => {
-            carregarPermissaoSistemaAtual();
-        }, 0);
-
-        return () => window.clearTimeout(timer);
-    }, []);
-
 
 
     const persistirConfiguracao = async (proximaConfiguracao, mensagemSucesso = "Configuração salva.", metadadosLog = {}) => {

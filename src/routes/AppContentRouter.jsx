@@ -882,6 +882,7 @@ export function AppContentRouter({
                         empresasBanco={empresasBanco}
                         usuario={usuario}
                         podeAcessarAuditoria={podeAcessarAuditoria}
+                        permissaoSistemaUsuario={permissaoSistemaTela}
                         limites={{
                             ...limitesCarregamentoSistema,
                             storageMb: LIMITE_STORAGE_MB,

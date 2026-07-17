@@ -342,6 +342,41 @@ assert.match(
     "Treinamentos deve preservar o envio de alertas TST pela Edge Function."
 );
 assert.match(
+    codigoAppContentRouter,
+    /<ConfiguracoesSistema[\s\S]*permissaoSistemaUsuario=\{permissaoSistemaTela\}/,
+    "O roteador deve repassar a permissão central para Configurações."
+);
+assert.match(
+    codigoConfiguracoesSistema,
+    /const permissaoSistemaAtual = permissaoSistemaUsuario;/,
+    "Configurações deve consumir a permissão central já validada."
+);
+assert.doesNotMatch(
+    codigoConfiguracoesSistema,
+    /carregarPermissaoSistemaAtualService|setPermissaoSistemaAtual|setCarregandoPermissaoSistema|setMensagemPermissaoSistema/,
+    "Configurações não pode voltar a carregar permissões em uma consulta própria."
+);
+assert.match(
+    codigoConfiguracoesSistema,
+    /carregarFundoLoginPublicoService\(\{[\s\S]*supabase/,
+    "Configurações deve preservar o carregamento seguro do fundo do login."
+);
+assert.match(
+    codigoConfiguracoesSistema,
+    /supabase\.storage/,
+    "Configurações deve preservar as operações administrativas de Storage."
+);
+assert.match(
+    codigoConfiguracoesSistema,
+    /supabase[\s\S]*\.from\("dds_registros"\)/,
+    "Configurações deve preservar a verificação histórica de DDS antes de excluir uma obra."
+);
+assert.match(
+    codigoConfiguracoesSistema,
+    /<ArquivosStorageConfiguracoes/,
+    "O módulo interno de arquivos do Storage deve permanecer montado."
+);
+assert.match(
     regraTrabalho,
     /PROTECAO PERMANENTE: TELA DE CARREGAMENTO/,
     "A regra permanente da tela de carregamento deve permanecer documentada."
