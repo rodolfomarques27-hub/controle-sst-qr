@@ -1,13 +1,54 @@
 const BUCKET_FUNDO_LOGIN = "logos-empresas";
 const CAMINHO_FUNDO_LOGIN = "configuracoes/login/fundo-login.jpg";
-const CAMINHO_CONFIG_FUNDO_LOGIN = "configuracoes/login/fundo-login-config.json";
+
+const AJUSTE_FUNDO_LOGIN_PADRAO = Object.freeze({
+    size: "cover",
+    position: "center center",
+    overlay: 0.62,
+});
+
+const TAMANHOS_FUNDO_LOGIN_VALIDOS = new Set([
+    "cover",
+    "contain",
+    "115% auto",
+]);
+
+const POSICOES_FUNDO_LOGIN_VALIDAS = new Set([
+    "center center",
+    "center 30%",
+    "center 70%",
+    "30% center",
+    "70% center",
+]);
+
+export function normalizarAjusteFundoLoginService(valor = {}) {
+    const size = String(valor?.size || "").trim().toLowerCase();
+    const position = String(valor?.position || "").trim().toLowerCase().replace(/\s+/g, " ");
+    const overlayNumerico = Number(valor?.overlay);
+
+    return {
+        size: TAMANHOS_FUNDO_LOGIN_VALIDOS.has(size)
+            ? size
+            : AJUSTE_FUNDO_LOGIN_PADRAO.size,
+        position: POSICOES_FUNDO_LOGIN_VALIDAS.has(position)
+            ? position
+            : AJUSTE_FUNDO_LOGIN_PADRAO.position,
+        overlay: Number.isFinite(overlayNumerico)
+            ? Math.min(0.82, Math.max(0.28, overlayNumerico))
+            : AJUSTE_FUNDO_LOGIN_PADRAO.overlay,
+    };
+}
 
 function normalizarEstadoFundoLoginPublico(data) {
     const estado = Array.isArray(data) ? data[0] : data;
+    const ajusteRecebido = estado?.ajuste;
 
     return {
         imagemDisponivel: Boolean(estado?.imagem_disponivel),
         configuracaoDisponivel: Boolean(estado?.configuracao_disponivel),
+        ajuste: ajusteRecebido && typeof ajusteRecebido === "object" && !Array.isArray(ajusteRecebido)
+            ? normalizarAjusteFundoLoginService(ajusteRecebido)
+            : null,
         versao: String(estado?.versao || "").trim(),
     };
 }
@@ -45,8 +86,7 @@ export async function carregarFundoLoginPublicoService({ supabase }) {
             };
         }
 
-        const estado =
-            normalizarEstadoFundoLoginPublico(data);
+        const estado = normalizarEstadoFundoLoginPublico(data);
 
         if (!estado.imagemDisponivel) {
             return {
@@ -57,45 +97,16 @@ export async function carregarFundoLoginPublicoService({ supabase }) {
             };
         }
 
-        const versao =
-            estado.versao || String(Date.now());
-
-        const imagemUrl =
-            montarUrlPublicaStorage(
-                supabase,
-                CAMINHO_FUNDO_LOGIN,
-                versao
-            );
-
-        let ajuste = null;
-
-        if (estado.configuracaoDisponivel) {
-            const configUrl =
-                montarUrlPublicaStorage(
-                    supabase,
-                    CAMINHO_CONFIG_FUNDO_LOGIN,
-                    versao
-                );
-
-            if (configUrl) {
-                try {
-                    const resposta =
-                        await fetch(configUrl, {
-                            cache: "no-store",
-                        });
-
-                    if (resposta.ok) {
-                        ajuste = await resposta.json();
-                    }
-                } catch {
-                    ajuste = null;
-                }
-            }
-        }
+        const versao = estado.versao || String(Date.now());
+        const imagemUrl = montarUrlPublicaStorage(
+            supabase,
+            CAMINHO_FUNDO_LOGIN,
+            versao
+        );
 
         return {
             imagemUrl,
-            ajuste,
+            ajuste: estado.ajuste,
             origem: imagemUrl ? "storage" : "padrao",
             erro: "",
         };
@@ -107,4 +118,56 @@ export async function carregarFundoLoginPublicoService({ supabase }) {
             erro: error?.message || "Não foi possível verificar o fundo do login.",
         };
     }
+}
+
+export async function salvarAjusteFundoLoginService({ supabase, ajuste }) {
+    if (!supabase) {
+        throw new Error("Cliente Supabase não informado para salvar o ajuste do fundo do login.");
+    }
+
+    const ajusteNormalizado = normalizarAjusteFundoLoginService(ajuste);
+    const { data, error } = await supabase.rpc(
+        "salvar_ajuste_fundo_login_sistema",
+        {
+            p_size: ajusteNormalizado.size,
+            p_position: ajusteNormalizado.position,
+            p_overlay: ajusteNormalizado.overlay,
+        }
+    );
+
+    if (error) {
+        throw new Error(error.message || "Não foi possível salvar o ajuste do fundo do login.");
+    }
+
+    const resultado = Array.isArray(data) ? data[0] : data;
+
+    return {
+        ajuste: normalizarAjusteFundoLoginService(
+            resultado?.ajuste || ajusteNormalizado
+        ),
+        versao: String(resultado?.versao || "").trim(),
+    };
+}
+
+export async function restaurarAjusteFundoLoginService({ supabase }) {
+    if (!supabase) {
+        throw new Error("Cliente Supabase não informado para restaurar o ajuste do fundo do login.");
+    }
+
+    const { data, error } = await supabase.rpc(
+        "restaurar_ajuste_fundo_login_sistema"
+    );
+
+    if (error) {
+        throw new Error(error.message || "Não foi possível restaurar o ajuste do fundo do login.");
+    }
+
+    const resultado = Array.isArray(data) ? data[0] : data;
+
+    return {
+        ajuste: normalizarAjusteFundoLoginService(
+            resultado?.ajuste || AJUSTE_FUNDO_LOGIN_PADRAO
+        ),
+        versao: String(resultado?.versao || "").trim(),
+    };
 }

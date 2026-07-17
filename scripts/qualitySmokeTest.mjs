@@ -24,6 +24,9 @@ import {
     usuarioPodeGerenciarPermissoesSistema,
     usuarioPodeLimparArquivosSistema,
 } from "../src/services/usuariosPermissoesSistemaService.js";
+import {
+    normalizarAjusteFundoLoginService,
+} from "../src/services/fundoLoginPublicoService.js";
 
 assert.equal(
     proximoCodigoExtintor([{ codigo: "E-001" }, { codigo: "E-002" }, { codigo: "E-004" }]),
@@ -35,6 +38,33 @@ assert.equal(proximoCodigoExtintor([{ codigo: "E-01" }, { codigo: "E-03" }]), "E
 assert.equal(proximoCodigoExtintor([{ codigo: "extintor 1" }, { codigo: "E-02" }]), "E-03");
 assert.ok(TIPOS_EXTINTORES_BRASIL.some((tipo) => tipo.valor === "CO2"));
 assert.ok(TIPOS_EXTINTORES_BRASIL.some((tipo) => tipo.valor === "PQS ABC"));
+
+assert.deepEqual(
+    normalizarAjusteFundoLoginService({
+        size: "115% auto",
+        position: "center 30%",
+        overlay: 0.9,
+    }),
+    {
+        size: "115% auto",
+        position: "center 30%",
+        overlay: 0.82,
+    },
+    "O ajuste do fundo deve preservar opções válidas e limitar o contraste."
+);
+assert.deepEqual(
+    normalizarAjusteFundoLoginService({
+        size: "valor-invalido",
+        position: "posição-inválida",
+        overlay: "inválido",
+    }),
+    {
+        size: "cover",
+        position: "center center",
+        overlay: 0.62,
+    },
+    "Valores inválidos do fundo devem retornar ao padrão seguro."
+);
 
 const usuarioConsulta = { perfil: "consulta", ativo: true, bloqueado: false };
 const usuarioTecnico = { perfil: "tecnico_sst", ativo: true, bloqueado: false };
@@ -266,6 +296,22 @@ const migracaoFundoLoginPublico = readFileSync(
     new URL("../supabase/migrations/20260717115604_obter_estado_fundo_login_publico.sql", import.meta.url),
     "utf8"
 );
+const migracaoFundoLoginConfiguracaoBanco = readFileSync(
+    new URL("../supabase/migrations/20260717202022_configuracao_fundo_login_banco.sql", import.meta.url),
+    "utf8"
+);
+const roteiroFundoLoginConfiguracaoBanco = readFileSync(
+    new URL("../supabase/sql/etapa104_configuracao_fundo_login_banco.sql", import.meta.url),
+    "utf8"
+);
+const migracaoFundoLoginRestricaoAnon = readFileSync(
+    new URL("../supabase/migrations/20260717202931_restringir_rpcs_fundo_login_anon.sql", import.meta.url),
+    "utf8"
+);
+const roteiroFundoLoginRestricaoAnon = readFileSync(
+    new URL("../supabase/sql/etapa104b_restringir_rpcs_fundo_login_anon.sql", import.meta.url),
+    "utf8"
+);
 const regraTrabalho = readFileSync(
     new URL("../docs/regra-de-trabalho-e-publicacao.md", import.meta.url),
     "utf8"
@@ -429,6 +475,36 @@ assert.match(
     "O serviço deve consultar a RPC mínima de estado do fundo do login."
 );
 assert.match(
+    codigoFundoLoginPublicoService,
+    /salvar_ajuste_fundo_login_sistema/,
+    "O ajuste do fundo deve ser salvo por RPC administrativa."
+);
+assert.match(
+    codigoFundoLoginPublicoService,
+    /restaurar_ajuste_fundo_login_sistema/,
+    "O ajuste padrão do fundo deve ser restaurado por RPC administrativa."
+);
+assert.doesNotMatch(
+    codigoFundoLoginPublicoService,
+    /fundo-login-config\.json|application\/json|fetch\(configUrl/,
+    "O serviço não pode voltar a buscar um JSON no bucket restrito a imagens."
+);
+assert.match(
+    codigoConfiguracoesSistema,
+    /salvarAjusteFundoLoginService/,
+    "Configurações deve salvar o pré-ajuste do fundo no banco."
+);
+assert.match(
+    codigoConfiguracoesSistema,
+    /restaurarAjusteFundoLoginService/,
+    "Configurações deve restaurar o pré-ajuste do fundo no banco."
+);
+assert.doesNotMatch(
+    codigoConfiguracoesSistema,
+    /CAMINHO_CONFIG_FUNDO_LOGIN_CONFIGURACOES|configuracaoBlob|contentType:\s*"application\/json"/,
+    "Configurações não pode voltar a enviar JSON para o bucket de imagens."
+);
+assert.match(
     codigoSupabaseClient,
     /export function erroSessaoSupabaseInvalida/,
     "O cliente Supabase deve reconhecer refresh token inválido."
@@ -467,6 +543,66 @@ assert.match(
     migracaoFundoLoginPublico,
     /grant execute[\s\S]*to anon, authenticated, service_role/,
     "A RPC deve conceder apenas execução explícita aos papéis necessários."
+);
+assert.equal(
+    migracaoFundoLoginConfiguracaoBanco,
+    roteiroFundoLoginConfiguracaoBanco,
+    "A migration e o roteiro revisável do fundo do login devem permanecer idênticos."
+);
+assert.match(
+    migracaoFundoLoginConfiguracaoBanco,
+    /create table if not exists public\.configuracoes_publicas_sistema/,
+    "O ajuste público deve usar uma tabela dedicada no banco."
+);
+assert.match(
+    migracaoFundoLoginConfiguracaoBanco,
+    /alter table public\.configuracoes_publicas_sistema enable row level security/,
+    "A tabela do ajuste público deve manter RLS habilitada."
+);
+assert.match(
+    migracaoFundoLoginConfiguracaoBanco,
+    /revoke all on table public\.configuracoes_publicas_sistema from anon, authenticated/,
+    "Anon e authenticated não podem acessar diretamente a tabela do ajuste."
+);
+assert.match(
+    migracaoFundoLoginConfiguracaoBanco,
+    /'ajuste',[\s\S]*configuracao\.valor/,
+    "A RPC pública deve devolver o ajuste visual armazenado no banco."
+);
+assert.match(
+    migracaoFundoLoginConfiguracaoBanco,
+    /salvar_ajuste_fundo_login_sistema[\s\S]*usuario_permissao_sistema_atual/,
+    "A RPC de salvamento deve validar a permissão central do usuário."
+);
+assert.match(
+    migracaoFundoLoginConfiguracaoBanco,
+    /grant execute on function public\.salvar_ajuste_fundo_login_sistema\(text, text, numeric\)[\s\S]*to authenticated, service_role/,
+    "Somente usuários autenticados e service role podem executar a gravação do ajuste."
+);
+assert.equal(
+    migracaoFundoLoginRestricaoAnon,
+    roteiroFundoLoginRestricaoAnon,
+    "A migration complementar e o roteiro revisável devem permanecer idênticos."
+);
+assert.match(
+    migracaoFundoLoginRestricaoAnon,
+    /revoke execute on function public\.salvar_ajuste_fundo_login_sistema\(text, text, numeric\)[\s\S]*from anon/,
+    "Anon não pode executar a RPC de salvamento do ajuste."
+);
+assert.match(
+    migracaoFundoLoginRestricaoAnon,
+    /revoke execute on function public\.restaurar_ajuste_fundo_login_sistema\(\)[\s\S]*from anon/,
+    "Anon não pode executar a RPC de restauração do ajuste."
+);
+assert.match(
+    migracaoFundoLoginRestricaoAnon,
+    /grant execute on function public\.obter_estado_fundo_login_publico\(\)[\s\S]*to anon, authenticated, service_role/,
+    "A leitura pública do estado do fundo deve permanecer disponível."
+);
+assert.doesNotMatch(
+    migracaoFundoLoginRestricaoAnon,
+    /grant execute on function public\.(?:salvar|restaurar)_ajuste_fundo_login_sistema[\s\S]*to anon/,
+    "As RPCs de escrita não podem voltar a ser concedidas ao papel anon."
 );
 assert.match(
     codigoAppColaboradoresHandlersService,

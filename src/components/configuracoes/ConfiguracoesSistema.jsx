@@ -80,7 +80,11 @@ import {
     listarVinculosEmpresasObras,
     vincularEmpresaObra,
 } from "../../services/obrasService";
-import { carregarFundoLoginPublicoService } from "../../services/fundoLoginPublicoService";
+import {
+    carregarFundoLoginPublicoService,
+    restaurarAjusteFundoLoginService,
+    salvarAjusteFundoLoginService,
+} from "../../services/fundoLoginPublicoService";
 
 const classNames = (...classes) => classes.filter(Boolean).join(" ");
 
@@ -197,7 +201,7 @@ const CHAVE_ORDEM_BLOCOS_CONFIGURACOES = "configuracoesSistemaOrdemBlocos";
 const CHAVE_TAMANHOS_BLOCOS_CONFIGURACOES = "configuracoesSistemaTamanhosBlocos";
 const BUCKET_FUNDO_LOGIN_CONFIGURACOES = "logos-empresas";
 const CAMINHO_FUNDO_LOGIN_CONFIGURACOES = "configuracoes/login/fundo-login.jpg";
-const CAMINHO_CONFIG_FUNDO_LOGIN_CONFIGURACOES = "configuracoes/login/fundo-login-config.json";
+
 const CHAVE_VERSAO_FUNDO_LOGIN_CONFIGURACOES = "controleSstQrFundoLoginVersao";
 
 const AJUSTE_FUNDO_LOGIN_PADRAO_CONFIGURACOES = {
@@ -1786,9 +1790,11 @@ export function ConfiguracoesSistema({
 
         setSalvandoFundoLogin(true);
         setMensagemFundoLogin(arquivoFundoLogin
-            ? "Otimizando imagem e salvando pré-ajuste no Storage público controlado..."
-            : "Salvando pré-ajuste da imagem de fundo do login..."
+            ? "Otimizando imagem no Storage e salvando pré-ajuste no banco..."
+            : "Salvando pré-ajuste da imagem de fundo no banco..."
         );
+
+        let imagemAtualizada = false;
 
         try {
             if (arquivoFundoLogin) {
@@ -1812,29 +1818,27 @@ export function ConfiguracoesSistema({
                 if (error) {
                     throw error;
                 }
+
+                imagemAtualizada = true;
             }
 
             const ajusteFinal = normalizarAjusteFundoLoginConfiguracoes(ajusteFundoLogin);
-            const configuracaoBlob = new Blob([JSON.stringify(ajusteFinal, null, 2)], {
-                type: "application/json",
+            const resultadoAjuste = await salvarAjusteFundoLoginService({
+                supabase,
+                ajuste: ajusteFinal,
             });
 
-            const { error: erroConfig } = await supabase.storage
-                .from(BUCKET_FUNDO_LOGIN_CONFIGURACOES)
-                .upload(CAMINHO_CONFIG_FUNDO_LOGIN_CONFIGURACOES, configuracaoBlob, {
-                    upsert: true,
-                    cacheControl: "60",
-                    contentType: "application/json",
-                });
-
-            if (erroConfig) {
-                throw erroConfig;
-            }
-
-            atualizarPreviewFundoLoginConfiguracoes(Date.now());
+            atualizarPreviewFundoLoginConfiguracoes(
+                resultadoAjuste?.versao || Date.now()
+            );
+            setAjusteFundoLogin(
+                normalizarAjusteFundoLoginConfiguracoes(
+                    resultadoAjuste?.ajuste || ajusteFinal
+                )
+            );
             setArquivoFundoLogin(null);
             setAjusteFundoLoginAlterado(false);
-            setMensagemFundoLogin("Fundo do login atualizado com imagem e pré-ajuste. Saia do sistema para conferir.");
+            setMensagemFundoLogin("Fundo do login atualizado. A imagem permanece no Storage e o pré-ajuste foi salvo no banco.");
 
             await registrarLogConfiguracoesSistema(
                 "CONFIGURACAO_RESTAURADA",
@@ -1843,14 +1847,19 @@ export function ConfiguracoesSistema({
                     tipo: "aparencia_login",
                     bucket: BUCKET_FUNDO_LOGIN_CONFIGURACOES,
                     caminho: CAMINHO_FUNDO_LOGIN_CONFIGURACOES,
-                    caminhoConfig: CAMINHO_CONFIG_FUNDO_LOGIN_CONFIGURACOES,
                     imagemPublica: true,
-                    ajuste: normalizarAjusteFundoLoginConfiguracoes(ajusteFundoLogin),
+                    configuracaoBanco: true,
+                    ajuste: ajusteFinal,
                 },
                 "aparencia-login"
             );
         } catch (error) {
-            setMensagemFundoLogin(error?.message || "Não foi possível salvar a imagem de fundo do login.");
+            const detalhe = error?.message || "Não foi possível salvar a imagem de fundo do login.";
+            setMensagemFundoLogin(
+                imagemAtualizada
+                    ? `A imagem foi salva, mas o pré-ajuste não foi gravado no banco: ${detalhe}`
+                    : detalhe
+            );
         } finally {
             setSalvandoFundoLogin(false);
         }
@@ -1867,12 +1876,14 @@ export function ConfiguracoesSistema({
         }
 
         setSalvandoFundoLogin(true);
-        setMensagemFundoLogin("Removendo imagem personalizada do fundo do login...");
+        setMensagemFundoLogin("Restaurando o pré-ajuste e removendo a imagem personalizada...");
 
         try {
+            await restaurarAjusteFundoLoginService({ supabase });
+
             const { error } = await supabase.storage
                 .from(BUCKET_FUNDO_LOGIN_CONFIGURACOES)
-                .remove([CAMINHO_FUNDO_LOGIN_CONFIGURACOES, CAMINHO_CONFIG_FUNDO_LOGIN_CONFIGURACOES]);
+                .remove([CAMINHO_FUNDO_LOGIN_CONFIGURACOES]);
 
             if (error) {
                 throw error;
@@ -1890,7 +1901,7 @@ export function ConfiguracoesSistema({
             setPreviewFundoLoginUrl("");
             setAjusteFundoLogin(AJUSTE_FUNDO_LOGIN_PADRAO_CONFIGURACOES);
             setAjusteFundoLoginAlterado(false);
-            setMensagemFundoLogin("Imagem personalizada e pré-ajustes removidos. O login voltará a usar o fundo azul padrão.");
+            setMensagemFundoLogin("Imagem personalizada removida e pré-ajuste padrão restaurado no banco. O login voltará a usar o fundo azul padrão.");
 
             await registrarLogConfiguracoesSistema(
                 "CONFIGURACAO_RESTAURADA",
@@ -1899,7 +1910,7 @@ export function ConfiguracoesSistema({
                     tipo: "aparencia_login",
                     bucket: BUCKET_FUNDO_LOGIN_CONFIGURACOES,
                     caminho: CAMINHO_FUNDO_LOGIN_CONFIGURACOES,
-                    caminhoConfig: CAMINHO_CONFIG_FUNDO_LOGIN_CONFIGURACOES,
+                    configuracaoBanco: true,
                     restauradoPadrao: true,
                 },
                 "aparencia-login"
