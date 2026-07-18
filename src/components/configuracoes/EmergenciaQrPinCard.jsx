@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from "react";
-import { Building2, ChevronDown, ChevronUp, Eye, EyeOff, KeyRound, Save, ShieldCheck } from "lucide-react";
+import { Building2, Eye, EyeOff, KeyRound, Save, ShieldCheck } from "lucide-react";
 import { supabase } from "../../lib/supabaseClient";
 import { Card } from "../commonComponents";
 
@@ -21,22 +21,14 @@ function ordenarEmpresasEmergenciaQr(empresas = []) {
         .sort((a, b) => obterNomeEmpresa(a).localeCompare(obterNomeEmpresa(b), "pt-BR"));
 }
 
-const CHAVE_STORAGE_RECOLHIDO_EMERGENCIA_QR = "safescan:configuracoes:emergencia-qr-card-recolhido";
-
-export function EmergenciaQrPinCard({ empresasBanco = [] }) {
+export function EmergenciaQrPinCard({
+    empresasBanco = [],
+    controleCard = null,
+    onAlternarRecolhido = null,
+}) {
     const empresas = useMemo(() => ordenarEmpresasEmergenciaQr(empresasBanco), [empresasBanco]);
     const [empresaId, setEmpresaId] = useState(() => obterIdEmpresa(empresas[0] || ""));
     const [ativo, setAtivo] = useState(true);
-    const [recolhido, setRecolhido] = useState(() => {
-        if (typeof window === "undefined") return false;
-
-        try {
-            const salvo = window.localStorage.getItem(CHAVE_STORAGE_RECOLHIDO_EMERGENCIA_QR);
-            return salvo === null ? false : salvo === "true";
-        } catch {
-            return false;
-        }
-    });
     const [pin, setPin] = useState("");
     const [confirmarPin, setConfirmarPin] = useState("");
     const [mostrarPin, setMostrarPin] = useState(false);
@@ -45,44 +37,6 @@ export function EmergenciaQrPinCard({ empresasBanco = [] }) {
     const [erro, setErro] = useState("");
 
     const empresaSelecionada = empresas.find((item) => obterIdEmpresa(item) === empresaId) || null;
-    React.useEffect(() => {
-        if (typeof window === "undefined") return;
-
-        try {
-            window.localStorage.setItem(CHAVE_STORAGE_RECOLHIDO_EMERGENCIA_QR, String(recolhido));
-        } catch {
-            // Ignora localStorage indisponivel.
-        }
-    }, [recolhido]);
-    const alternarRecolhidoCardEmergenciaQr = () => {
-        setRecolhido((valor) => !valor);
-    };
-
-    const cliqueVeioDeControleInterativoEmergenciaQr = (evento) => {
-        const alvo = evento?.target;
-
-        if (!alvo || typeof alvo.closest !== "function") return false;
-
-        const controleInterativo = alvo.closest(
-            "button, input, textarea, select, option, a, label, summary, [role='button'], [role='checkbox'], [role='switch'], [contenteditable='true']"
-        );
-
-        return Boolean(controleInterativo && controleInterativo !== evento.currentTarget);
-    };
-
-    const botaoControleCardEmergenciaQr = (
-        <button
-            type="button"
-            onClick={(evento) => {
-                evento.stopPropagation();
-                alternarRecolhidoCardEmergenciaQr();
-            }}
-            className="inline-flex min-h-[34px] shrink-0 items-center justify-center gap-2 whitespace-nowrap rounded-2xl bg-slate-950 px-3.5 py-2 text-xs font-black text-white shadow-sm ring-1 ring-slate-950 transition hover:-translate-y-0.5 hover:bg-slate-800"
-        >
-            {recolhido ? <ChevronDown className="h-3.5 w-3.5" /> : <ChevronUp className="h-3.5 w-3.5" />}
-            {recolhido ? "Abrir card" : "Recolher"}
-        </button>
-    );
 
     React.useEffect(() => {
         if (!empresaId && empresas.length > 0) {
@@ -141,56 +95,17 @@ export function EmergenciaQrPinCard({ empresasBanco = [] }) {
         }
     };
 
-    if (recolhido) {
-        return (
-            <div
-                className="h-full"
-                role="button"
-                tabIndex={0}
-                aria-label="Abrir Senha/PIN do contato de emergência"
-                onClick={(evento) => {
-                    if (cliqueVeioDeControleInterativoEmergenciaQr(evento)) return;
-                    setRecolhido(false);
-                }}
-                onKeyDown={(evento) => {
-                    if (evento.target !== evento.currentTarget) return;
-
-                    if (evento.key === "Enter" || evento.key === " ") {
-                        evento.preventDefault();
-                        setRecolhido(false);
-                    }
-                }}
-            >
-                <Card className="h-full py-3 transition hover:-translate-y-0.5 hover:shadow-md">
-                    <div className="flex min-w-0 items-center justify-between gap-3">
-                        <div className="min-w-0">
-                            <p className="text-[10px] font-black uppercase tracking-wide text-red-500">Emergência QR</p>
-                            <h2 className="mt-0.5 truncate text-sm font-black leading-tight text-slate-950">Senha/PIN do contato de emergência</h2>
-                            <p className="mt-0.5 line-clamp-1 text-xs leading-relaxed text-slate-500">
-                                Configure ou atualize o PIN usado para liberar o contato de emergência no QR público.
-                            </p>
-                        </div>
-                        <div className="shrink-0">
-                            {botaoControleCardEmergenciaQr}
-                        </div>
-                    </div>
-                </Card>
-            </div>
-        );
-    }
 
     return (
-        <div
-            className="h-full"
-            aria-label="Recolher Senha/PIN do contato de emergência"
-            onClick={(evento) => {
-                if (cliqueVeioDeControleInterativoEmergenciaQr(evento)) return;
-                setRecolhido(true);
-            }}
-        >
+        <div className="h-full">
             <Card>
                 <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-                <div>
+                    <button
+                        type="button"
+                        onClick={() => onAlternarRecolhido?.()}
+                        className="min-w-0 rounded-2xl text-left outline-none transition hover:bg-slate-50/70 focus-visible:ring-4 focus-visible:ring-slate-100"
+                        aria-label="Recolher Senha/PIN do contato de emergência"
+                    >
                     <div className="flex items-center gap-2">
                         <span className="inline-flex h-10 w-10 items-center justify-center rounded-2xl bg-red-50 text-red-700 ring-1 ring-red-100">
                             <ShieldCheck className="h-5 w-5" />
@@ -205,17 +120,17 @@ export function EmergenciaQrPinCard({ empresasBanco = [] }) {
                         </div>
                     </div>
 
-                    <p className="mt-3 max-w-3xl text-sm font-semibold leading-relaxed text-slate-600">
-                        Configure ou atualize a senha/PIN usada no QR público para liberar o telefone de emergência do colaborador. Por segurança, o PIN atual não fica visível no sistema; ao salvar, o novo PIN substitui o anterior e é armazenado como hash no Supabase.
-                    </p>
-                </div>
+                        <p className="mt-3 max-w-3xl text-sm font-semibold leading-relaxed text-slate-600">
+                            Configure ou atualize a senha/PIN usada no QR público para liberar o telefone de emergência do colaborador. Por segurança, o PIN atual não fica visível no sistema; ao salvar, o novo PIN substitui o anterior e é armazenado como hash no Supabase.
+                        </p>
+                    </button>
 
-                <div className="flex shrink-0 flex-wrap items-center justify-end gap-2">
+                    <div className="flex shrink-0 flex-wrap items-center justify-end gap-2">
                         <span className="inline-flex w-fit items-center gap-2 rounded-2xl bg-slate-50 px-4 py-2 text-xs font-black uppercase tracking-wide text-slate-600 ring-1 ring-slate-100">
                             <KeyRound className="h-4 w-4" />
                             Protegido por RPC
                         </span>
-                        {botaoControleCardEmergenciaQr}
+                        {controleCard}
                     </div>
             </div>
 

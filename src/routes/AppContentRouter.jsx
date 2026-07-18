@@ -30,7 +30,7 @@ const DashboardAuditoriaCampo = React.lazy(() => import("../components/auditoria
 const NovaAuditoriaCampoDireta = React.lazy(() => import("../components/auditoria/NovaAuditoriaCampoDireta").then((modulo) => ({ default: modulo.NovaAuditoriaCampoDireta })));
 const ConfiguracoesSistema = React.lazy(() => import("../components/configuracoes/ConfiguracoesSistema").then((modulo) => ({ default: modulo.ConfiguracoesSistema })));
 
-const EmergenciaQrPinCard = React.lazy(() => import("../components/configuracoes/EmergenciaQrPinCard").then((modulo) => ({ default: modulo.EmergenciaQrPinCard })));
+
 const AcessosAppPage = React.lazy(() => import("../components/acessos/AcessosAppPage").then((modulo) => ({ default: modulo.AcessosAppPage })));
 
 
@@ -877,27 +877,21 @@ export function AppContentRouter({
             )}
 
             {tela === "configuracoes" && (
-                <div className="page-shell space-y-4">
-                    <ConfiguracoesSistema
-                        empresasBanco={empresasBanco}
-                        usuario={usuario}
-                        podeAcessarAuditoria={podeAcessarAuditoria}
-                        permissaoSistemaUsuario={permissaoSistemaTela}
-                        limites={{
-                            ...limitesCarregamentoSistema,
-                            storageMb: LIMITE_STORAGE_MB,
-                        }}
-                        onSalvarLimites={onSalvarLimites}
-                        onListarArquivosStorage={onListarArquivosStorage}
-                        onExcluirArquivoStorage={onExcluirArquivoStorage}
-                        onAtualizarAuditoria={onAtualizarAuditoria}
-                        onRegistrarAuditoria={onRegistrarAuditoria}
-                    />
-
-                    <EmergenciaQrPinCard
-                        empresasBanco={empresasBanco}
-                    />
-                </div>
+                <ConfiguracoesSistema
+                    empresasBanco={empresasBanco}
+                    usuario={usuario}
+                    podeAcessarAuditoria={podeAcessarAuditoria}
+                    permissaoSistemaUsuario={permissaoSistemaTela}
+                    limites={{
+                        ...limitesCarregamentoSistema,
+                        storageMb: LIMITE_STORAGE_MB,
+                    }}
+                    onSalvarLimites={onSalvarLimites}
+                    onListarArquivosStorage={onListarArquivosStorage}
+                    onExcluirArquivoStorage={onExcluirArquivoStorage}
+                    onAtualizarAuditoria={onAtualizarAuditoria}
+                    onRegistrarAuditoria={onRegistrarAuditoria}
+                />
             )}
 
             {tela === "roteiro" && <Requisitos />}

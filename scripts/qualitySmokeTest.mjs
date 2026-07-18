@@ -270,6 +270,10 @@ const codigoConfiguracoesSistema = readFileSync(
     new URL("../src/components/configuracoes/ConfiguracoesSistema.jsx", import.meta.url),
     "utf8"
 );
+const codigoEmergenciaQrPinCard = readFileSync(
+    new URL("../src/components/configuracoes/EmergenciaQrPinCard.jsx", import.meta.url),
+    "utf8"
+);
 const codigoArquivosStorageConfiguracoes = readFileSync(
     new URL("../src/components/configuracoes/ArquivosStorageConfiguracoes.jsx", import.meta.url),
     "utf8"
@@ -710,6 +714,51 @@ assert.match(
     codigoConfiguracoesSistema,
     /const permissaoSistemaAtual = permissaoSistemaUsuario;/,
     "Configurações deve consumir a permissão central já validada."
+);
+assert.match(
+    codigoConfiguracoesSistema,
+    /CHAVES_BLOCOS_CONFIGURACOES_PADRAO[\s\S]*config-emergencia-qr[\s\S]*CHAVES_BLOCOS_CONFIGURACOES_CRITICOS[\s\S]*config-emergencia-qr/,
+    "O PIN de emergência deve participar do painel e do filtro de configurações críticas."
+);
+assert.match(
+    codigoConfiguracoesSistema,
+    /chave: "config-emergencia-qr"[\s\S]*Senha\/PIN de emergência QR[\s\S]*case "config-emergencia-qr"[\s\S]*<EmergenciaQrPinCard/,
+    "O card de emergência deve possuir metadados e renderização dentro da grade."
+);
+assert.match(
+    codigoConfiguracoesSistema,
+    /<EmergenciaQrPinCard[\s\S]*controleCard=\{botaoRecolherBlocoConfiguracao/,
+    "O card de emergência deve usar o controle padrão de recolhimento de Configurações."
+);
+assert.doesNotMatch(
+    codigoAppContentRouter,
+    /<EmergenciaQrPinCard|page-shell space-y-4[\s\S]*<ConfiguracoesSistema/,
+    "O roteador não pode manter o PIN solto abaixo da grade de Configurações."
+);
+assert.doesNotMatch(
+    codigoEmergenciaQrPinCard,
+    /CHAVE_STORAGE_RECOLHIDO_EMERGENCIA_QR|setRecolhido|botaoControleCardEmergenciaQr/,
+    "O card PIN não pode manter um segundo estado de recolhimento."
+);
+assert.match(
+    codigoEmergenciaQrPinCard,
+    /controleCard[\s\S]*definir_senha_emergencia_empresa[\s\S]*Protegido por RPC/,
+    "O card PIN deve preservar a RPC e receber o controle visual do painel."
+);
+assert.match(
+    codigoConfiguracoesSistema,
+    /<EmergenciaQrPinCard[\s\S]*onAlternarRecolhido=\{\(\) =>[\s\S]*alternarRecolhidoBlocoConfiguracao[\s\S]*config-emergencia-qr/,
+    "Configurações deve entregar ao PIN a ação exclusiva do cabeçalho."
+);
+assert.match(
+    codigoEmergenciaQrPinCard,
+    /onAlternarRecolhido = null[\s\S]*<button[\s\S]*type="button"[\s\S]*onClick=\{\(\) => onAlternarRecolhido\?\.\(\)\}[\s\S]*aria-label="Recolher Senha\/PIN do contato de emergência"[\s\S]*Senha\/PIN do contato de emergência/,
+    "Título e descrição do PIN devem formar o controle clicável do cabeçalho."
+);
+assert.doesNotMatch(
+    codigoEmergenciaQrPinCard,
+    /<div className="h-full"[^>]*onClick=|<Card[^>]*onClick=|mt-5 grid[^>]*onClick=/,
+    "A raiz, o Card e o corpo do PIN não podem alternar o recolhimento."
 );
 assert.doesNotMatch(
     codigoConfiguracoesSistema,

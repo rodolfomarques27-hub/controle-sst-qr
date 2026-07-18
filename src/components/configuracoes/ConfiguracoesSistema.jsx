@@ -23,6 +23,7 @@ import { CalendarClock,
 import dashboardHeroBackground from "../../assets/dashboard-hero-sst.webp";
 import { Header, Card } from "../commonComponents";
 import { ArquivosStorageConfiguracoes } from "./ArquivosStorageConfiguracoes";
+import { EmergenciaQrPinCard } from "./EmergenciaQrPinCard";
 import {
     carregarConfiguracaoEventosAuditoriaSistemaSupabase,
     configuracaoPadraoEventosAuditoriaSistema,
@@ -183,7 +184,9 @@ function formatarPerfilPermissaoSistema(perfil = "") {
 
 const CHAVES_BLOCOS_CONFIGURACOES_PADRAO = [
     "config-limites-carregamento",
-    "config-auditoria-publica",    "config-arquivos-storage",
+    "config-auditoria-publica",
+    "config-emergencia-qr",
+    "config-arquivos-storage",
     "config-obras",
     "config-relatorios-evidencias",
     "config-login-visual",
@@ -326,13 +329,16 @@ function carregarVersaoFundoLoginConfiguracoes() {
 
 const BLOCOS_CONFIGURACOES_ABERTOS_PADRAO = new Set([
     "config-limites-carregamento",
-    "config-auditoria-publica",    "config-arquivos-storage",
+    "config-auditoria-publica",
+    "config-emergencia-qr",
+    "config-arquivos-storage",
     "config-obras",
     "config-relatorios-evidencias",
 ]);
 
 const CHAVES_BLOCOS_CONFIGURACOES_CRITICOS = new Set([
     "config-auditoria-publica",
+    "config-emergencia-qr",
     "config-arquivos-storage",
     "config-login-visual",
     "config-eventos-auditoria",
@@ -2091,6 +2097,7 @@ export function ConfiguracoesSistema({
     const secoesConfiguracoes = [
         { chave: "config-limites-carregamento", titulo: "Limites e armazenamento", descricao: "Registros por carga e limite administrativo do Storage.", icon: SlidersHorizontal },
         { chave: "config-auditoria-publica", titulo: "Auditoria pública, tokens e QR", descricao: "Token ativo, QR colaborador e QR de campo.", icon: KeyRound },
+        { chave: "config-emergencia-qr", titulo: "Senha/PIN de emergência QR", descricao: "Proteção do contato de emergência por empresa.", icon: KeyRound },
         { chave: "config-arquivos-storage", titulo: "Arquivos salvos no Storage", descricao: "Capacidade, vínculos, filtros e limpeza protegida.", icon: Database },
         { chave: "config-obras", titulo: "Obras", descricao: "Cadastro mestre de obras e vinculos com empresas.", icon: Database },
         { chave: "config-relatorios-evidencias", titulo: "Relatórios e evidências", descricao: "Resumo copiável e TXT das configurações atuais.", icon: FileText },
@@ -3351,6 +3358,35 @@ export function ConfiguracoesSistema({
                         </div>
                     </Card>
                 )
+            );
+
+        case "config-emergencia-qr":
+            if (!blocoConfiguracaoVisivel("config-emergencia-qr")) return null;
+
+            if (blocoConfiguracaoRecolhido("config-emergencia-qr")) {
+                return renderBlocoConfiguracaoComControle(
+                    "config-emergencia-qr",
+                    "Senha/PIN de emergência QR",
+                    "Proteção do contato de emergência por empresa.",
+                    null
+                );
+            }
+
+            return (
+                <div id="config-emergencia-qr" className="h-full scroll-mt-24">
+                    <EmergenciaQrPinCard
+                        empresasBanco={empresasBanco}
+                        controleCard={botaoRecolherBlocoConfiguracao(
+                            "config-emergencia-qr",
+                            "shrink-0 whitespace-nowrap"
+                        )}
+                        onAlternarRecolhido={() =>
+                            alternarRecolhidoBlocoConfiguracao(
+                                "config-emergencia-qr"
+                            )
+                        }
+                    />
+                </div>
             );
 
         case "config-storage-privado":
