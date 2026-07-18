@@ -917,6 +917,7 @@ export function Empresas({
         const situacaoDocumental = calcularSituacaoDocumentalEmpresa(docs);
         const escopoAberto = Boolean(escoposAbertos[empresa.id]);
         const empresaAberta = Boolean(empresasAbertas[empresa.id]);
+        const empresaDetalhesId = `empresa-detalhes-${empresa.id}`;
 
         const tipoEmpresa = (empresa.tipo_empresa || "Terceirizada").replace(" - Idealiza Cidades", "");
         const responsavelEmpresa = empresa.responsavel || "Não informado";
@@ -952,7 +953,8 @@ export function Empresas({
                 key={empresa.id}
                 role={empresaAberta ? undefined : "button"}
                 tabIndex={empresaAberta ? undefined : 0}
-                aria-expanded={empresaAberta}
+                aria-expanded={empresaAberta ? undefined : false}
+                aria-controls={empresaAberta ? undefined : empresaDetalhesId}
                 onClick={abrirPeloCorpoDoCard}
                 onKeyDown={abrirPeloTeclado}
                 className={classNames(
@@ -1067,6 +1069,8 @@ export function Empresas({
                         <button
                             type="button"
                             onClick={() => alternarEmpresaAberta(empresa.id)}
+                            aria-expanded={empresaAberta}
+                            aria-controls={empresaDetalhesId}
                             className="empresa-premium-row__abrir"
                         >
                             {empresaAberta ? (
@@ -1150,7 +1154,10 @@ export function Empresas({
                 </div>
 
                 {empresaAberta && (
-                    <div className="empresa-premium-row__detalhes">
+                    <div
+                        id={empresaDetalhesId}
+                        className="empresa-premium-row__detalhes"
+                    >
                         <div className="grid gap-3">
                             {documentosEmpresaBase.map((tipoDoc) => {
                                 const doc = docs.find((item) => item.tipo_documento === tipoDoc.tipo);
@@ -1652,6 +1659,7 @@ export function Empresas({
                                         atualizarCadastroEmpresasRecolhido((valor) => !valor);
                                     }}
                                     aria-expanded={!cadastroEmpresasRecolhido}
+                                    aria-controls="empresas-cadastro-conteudo"
                                     className="empresas-cadastro-aprovado__recolher"
                                 >
                                     {cadastroEmpresasRecolhido ? (
@@ -1665,7 +1673,10 @@ export function Empresas({
                             </div>
 
                             {cadastroEmpresasRecolhido ? null : (
-                                <div className="empresas-cadastro-aprovado__grid">
+                                <div
+                                    id="empresas-cadastro-conteudo"
+                                    className="empresas-cadastro-aprovado__grid"
+                                >
                                     <Card className="empresas-cadastro-aprovado__painel">
                                         <div className="empresas-cadastro-aprovado__painel-cabecalho">
                                             <div className="empresas-cadastro-aprovado__painel-icone empresas-cadastro-aprovado__painel-icone--empresa">
@@ -2292,6 +2303,7 @@ export function Empresas({
                                     atualizarInformacoesEmpresasRecolhidas((valor) => !valor);
                                 }}
                                 aria-expanded={!informacoesEmpresasRecolhidas}
+                                aria-controls="empresas-informacoes-conteudo"
                                 className="empresas-cadastro-header__acao"
                             >
                                 {informacoesEmpresasRecolhidas ? <ChevronDown className="h-4 w-4" /> : <ChevronUp className="h-4 w-4" />}
@@ -2301,7 +2313,10 @@ export function Empresas({
                     </div>
 
                     {informacoesEmpresasRecolhidas ? null : (
-                        <>
+                        <div
+                            id="empresas-informacoes-conteudo"
+                            className="contents"
+                        >
                     <div className="empresas-filtros-salvos-card mb-4 rounded-2xl border border-slate-200 bg-white p-3">
                         <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
                             <div>
@@ -2443,7 +2458,7 @@ export function Empresas({
                             </div>
                         </div>
                     )}
-                        </>
+                        </div>
                     )}
 
                 </Card>
