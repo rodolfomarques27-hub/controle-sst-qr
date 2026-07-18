@@ -23,6 +23,7 @@ import { ImportacaoMassaColaboradores } from "./ImportacaoMassaColaboradores";
 import { ImportacaoFotosMassaColaboradores } from "./ImportacaoFotosMassaColaboradores";
 import { ModalNovaFuncaoColaborador } from "./ModalNovaFuncaoColaborador";
 import { ModalRevisaoColaborador } from "./ModalRevisaoColaborador";
+import { ColaboradorIdentificacoesSeguranca } from "./ColaboradorIdentificacoesSeguranca";
 import {
     obterStatusInicialColaborador,
     obterFuncoesPersonalizadasSalvas,
@@ -56,6 +57,7 @@ const CHAVE_INFO_COLABORADORES_RECOLHIDA = "controleSstColaboradoresInformacoesR
 const CHAVE_CADASTRO_MASSA_RECOLHIDO = "controleSstColaboradoresCadastroMassaRecolhido";
 const CHAVE_FILTROS_PENDENCIAS_TREINAMENTOS = "controle-sst-qr:pendencias-treinamentos:filtros-salvos:v1";
 const CHAVE_FILTROS_COLABORADORES_TREINAMENTOS = "controle-sst-qr:colaboradores-treinamentos:filtros-salvos:v1";
+
 
 function carregarPreferenciaPainelBoolean(chave, padrao = false) {
     try {
@@ -1483,6 +1485,12 @@ ${erros.slice(0, 8).join("\n")}`
                                                             <p className="colaborador-lista-card__funcao">{c.funcao}</p>
                                                             <p className="colaborador-lista-card__empresa">{c.empresaExibicao || c.empresa}</p>
                                                             <p className="colaborador-lista-card__codigo">Código: {c.codigoFuncionario}</p>
+                                                            <ColaboradorIdentificacoesSeguranca
+                                                                colaborador={c}
+                                                                avaliacao={avaliacao}
+                                                                compacto
+                                                                className="mt-2"
+                                                            />
                                                         </div>
                                                     </div>
                                                 </div>

@@ -1,7 +1,11 @@
 import React, { useMemo, useState } from "react";
 import { Upload } from "lucide-react";
 import { FileUploadAviso, validarArquivoAntesUpload } from "../FileUploadAviso";
-import { STATUS_CLASSIFICACAO_COLABORADOR, treinamentosBase } from "../../constants/sstConstants";
+import {
+    STATUS_CLASSIFICACAO_COLABORADOR,
+    treinamentosBase,
+    treinamentoExclusivamenteManual,
+} from "../../constants/sstConstants";
 import {
     obterStatusInicialColaborador,
     obterMatrizFuncao,
@@ -384,6 +388,7 @@ export function ModalRevisaoColaborador({
                             <div className="mt-2 flex flex-wrap gap-1.5">
                                 {treinamentosAplicadosEdicao.map((treinamento) => {
                                     const extra = idsAdicionaisEdicao.includes(Number(treinamento.id));
+                                    const somenteManual = treinamentoExclusivamenteManual(treinamento);
 
                                     return (
                                         <span
@@ -404,6 +409,7 @@ export function ModalRevisaoColaborador({
                                                 ×
                                             </button>
                                             {treinamento.nome}
+                                            {somenteManual ? " · Manual" : ""}
                                         </span>
                                     );
                                 })}
@@ -416,6 +422,9 @@ export function ModalRevisaoColaborador({
                             </div>
 
                             <div className="mt-3">
+                                <p className="mb-2 rounded-xl bg-blue-50 px-3 py-2 text-[11px] font-semibold leading-relaxed text-blue-700 ring-1 ring-blue-100">
+                                    CIPA, NR-20 e Brigadista são exigências individuais e devem ser adicionadas manualmente ao colaborador.
+                                </p>
                                 <select
                                     value=""
                                     onChange={(e) => {
@@ -428,6 +437,7 @@ export function ModalRevisaoColaborador({
                                     {treinamentosParaAdicionarEdicao.map((treinamento) => (
                                         <option key={treinamento.id} value={treinamento.id}>
                                             {treinamento.nome}
+                                            {treinamentoExclusivamenteManual(treinamento) ? " — inclusão manual" : ""}
                                         </option>
                                     ))}
                                 </select>

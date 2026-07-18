@@ -463,6 +463,43 @@ export function inferirTreinamentoPorNomeArquivo(nomeArquivo = "") {
     const ehFichaRegistro = contem("ficha reg", "ficha registro", "ficha de registro", "registro de empregado", "clt", "esocial");
     const ehFichaEpi = contem("ficha epi", "ficha de epi", "epis atualizada", "controle de entrega de epi", "entrega de epi", "equipamento de protecao individual", "equipamento de proteção individual");
     const ehNr06 = contem("nr6", "nr 6", "nr06", "nr 06", "nr-6", "nr-06", "uso correto de epi", "uso correto de epis", "certif nr6", "certificado nr6", "certificado nr 6");
+    const ehNr20 = contem("nr20", "nr 20", "nr-20");
+    const classeI = contem("classe i", "classe 1");
+    const classeII = contem("classe ii", "classe 2");
+    const classeIII = contem("classe iii", "classe 3");
+    const carga = (...valores) => valores.some((valor) => contem(`${valor}h`, `${valor} h`, `${valor} horas`));
+
+    if (contem("cipa", "nr 05", "nr05", "nr-05")) return obterTreinamento(23);
+    if (contem("brigadista", "brigada de incendio", "brigada de incêndio", "equipe de resposta a emergencias", "equipe de resposta a emergências")) return obterTreinamento(35);
+
+    if (ehNr20) {
+        if (contem("iniciacao", "iniciação")) return obterTreinamento(24);
+
+        if (contem("avancado ii", "avançado ii") || carga(32)) return obterTreinamento(32);
+        if (contem("avancado i", "avançado i") || carga(20)) return obterTreinamento(31);
+
+        if (contem("especifico", "específico")) {
+            if (classeIII || carga(16)) return obterTreinamento(34);
+            if (classeII || carga(14)) return obterTreinamento(33);
+            return null;
+        }
+
+        if (contem("intermediario", "intermediário")) {
+            if (classeIII || carga(16)) return obterTreinamento(30);
+            if (classeII || carga(14)) return obterTreinamento(29);
+            if (classeI || carga(12)) return obterTreinamento(28);
+            return null;
+        }
+
+        if (contem("basico", "básico")) {
+            if (classeIII || carga(8)) return obterTreinamento(27);
+            if (classeII || carga(6)) return obterTreinamento(26);
+            if (classeI || carga(4)) return obterTreinamento(25);
+            return null;
+        }
+
+        return null;
+    }
 
     if (contem("aso", "atestado de saude", "atestado saúde")) return obterTreinamento(22);
     if (ehOs) return obterTreinamento(15);

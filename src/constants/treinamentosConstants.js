@@ -23,7 +23,97 @@ export const treinamentosBase = [
     { id: 19, nome: "NR-26 Sinalização de Segurança / Vias", validadePadrao: 365, categoria: "Sinalização", base: "NR-26" },
     { id: 10, nome: "NR-33 Espaço Confinado", validadePadrao: 365, categoria: "Alto Risco", base: "NR-33" },
     { id: 2, nome: "NR-35 Trabalho em Altura", validadePadrao: 730, categoria: "Alto Risco", base: "NR-35" },
+
+    { id: 23, nome: "NR-05 Treinamento de Membro / Representante da CIPA", validadePadrao: null, categoria: "Atribuição manual", base: "NR-05", atribuicao: "manual" },
+
+    { id: 24, nome: "NR-20 Iniciação sobre Inflamáveis e Combustíveis - 3 h", validadePadrao: null, categoria: "Atribuição manual", base: "NR-20 / Iniciação", atribuicao: "manual" },
+    { id: 25, nome: "NR-20 Curso Básico - Classe I - 4 h", validadePadrao: 1095, categoria: "Atribuição manual", base: "NR-20 / Básico / Classe I", atribuicao: "manual" },
+    { id: 26, nome: "NR-20 Curso Básico - Classe II - 6 h", validadePadrao: 1095, categoria: "Atribuição manual", base: "NR-20 / Básico / Classe II", atribuicao: "manual" },
+    { id: 27, nome: "NR-20 Curso Básico - Classe III - 8 h", validadePadrao: 1095, categoria: "Atribuição manual", base: "NR-20 / Básico / Classe III", atribuicao: "manual" },
+    { id: 28, nome: "NR-20 Curso Intermediário - Classe I - 12 h", validadePadrao: 1095, categoria: "Atribuição manual", base: "NR-20 / Intermediário / Classe I", atribuicao: "manual" },
+    { id: 29, nome: "NR-20 Curso Intermediário - Classe II - 14 h", validadePadrao: 730, categoria: "Atribuição manual", base: "NR-20 / Intermediário / Classe II", atribuicao: "manual" },
+    { id: 30, nome: "NR-20 Curso Intermediário - Classe III - 16 h", validadePadrao: 730, categoria: "Atribuição manual", base: "NR-20 / Intermediário / Classe III", atribuicao: "manual" },
+    { id: 31, nome: "NR-20 Curso Avançado I - Classe II - 20 h", validadePadrao: 730, categoria: "Atribuição manual", base: "NR-20 / Avançado I / Classe II", atribuicao: "manual" },
+    { id: 32, nome: "NR-20 Curso Avançado II - Classe III - 32 h", validadePadrao: 365, categoria: "Atribuição manual", base: "NR-20 / Avançado II / Classe III", atribuicao: "manual" },
+    { id: 33, nome: "NR-20 Curso Específico - Classe II - 14 h", validadePadrao: null, categoria: "Atribuição manual", base: "NR-20 / Específico / Classe II", atribuicao: "manual" },
+    { id: 34, nome: "NR-20 Curso Específico - Classe III - 16 h", validadePadrao: null, categoria: "Atribuição manual", base: "NR-20 / Específico / Classe III", atribuicao: "manual" },
+
+    { id: 35, nome: "Brigadista / Equipe de Resposta a Emergências", validadePadrao: null, categoria: "Atribuição manual", base: "NR-23 / legislação e norma técnica aplicável", atribuicao: "manual" },
 ];
+
+export const IDS_TREINAMENTOS_EXCLUSIVAMENTE_MANUAIS = Object.freeze([
+    23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35,
+]);
+
+export function treinamentoExclusivamenteManual(treinamentoOuId) {
+    const id = Number(
+        typeof treinamentoOuId === "object"
+            ? treinamentoOuId?.id
+            : treinamentoOuId
+    );
+
+    return IDS_TREINAMENTOS_EXCLUSIVAMENTE_MANUAIS.includes(id);
+}
+
+function adicionarIdTreinamentoIdentificacao(conjunto, valor) {
+    const id = Number(valor);
+    if (Number.isInteger(id) && id > 0) conjunto.add(id);
+}
+
+export function obterIdentificacoesSegurancaColaborador({
+    colaborador = {},
+    avaliacao = {},
+    treinamentos = [],
+} = {}) {
+    const ids = new Set();
+
+    const itensAvaliacao = Array.isArray(avaliacao?.itens)
+        ? avaliacao.itens
+        : [];
+
+    itensAvaliacao.forEach((item) => {
+        adicionarIdTreinamentoIdentificacao(
+            ids,
+            item?.treinamento?.id ??
+            item?.treinamentoId ??
+            item?.treinamento_id
+        );
+    });
+
+    const adicionais = [
+        colaborador?.treinamentosAdicionais,
+        colaborador?.treinamentos_adicionais,
+    ].flatMap((lista) => Array.isArray(lista) ? lista : []);
+
+    adicionais.forEach((item) => {
+        adicionarIdTreinamentoIdentificacao(
+            ids,
+            typeof item === "object"
+                ? item?.id ?? item?.treinamentoId ?? item?.treinamento_id
+                : item
+        );
+    });
+
+    const documentos = Array.isArray(treinamentos)
+        ? treinamentos
+        : [];
+
+    documentos.forEach((item) => {
+        adicionarIdTreinamentoIdentificacao(
+            ids,
+            item?.treinamento?.id ??
+            item?.treinamentoId ??
+            item?.treinamento_id ??
+            item?.idTreinamento
+        );
+    });
+
+    return {
+        membroCipa: ids.has(23),
+        brigadista: ids.has(35),
+    };
+}
+
 export const STATUS_CLASSIFICACAO_COLABORADOR = [
     "Liberado",
     "Com pendência",
@@ -118,11 +208,6 @@ export const matrizTreinamentosPorFuncao = [
         rotulo: "ELETRICISTA",
         termos: ["eletricista", "eletrica", "elétrica", "eletrico", "elétrico"],
         treinamentos: [...treinamentosBaseObra, 2, 3, 4],
-    },    {
-        chave: "brigada-incendio",
-        rotulo: "BRIGADA / EMERGÊNCIA",
-        termos: ["brigadista", "brigada", "bombeiro civil", "emergencia", "emergência", "incendio", "incêndio", "combate a incendio", "combate a incêndio"],
-        treinamentos: [...treinamentosBaseObra, 20],
     },
 
     {

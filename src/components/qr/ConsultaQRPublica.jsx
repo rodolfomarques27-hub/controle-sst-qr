@@ -16,6 +16,7 @@ import { DAY } from "../../constants/sstConstants";
 import { obterTokenAuditoriaPublicaUrl } from "../../constants/auditoriaPublicaConstants";
 import { carregarTokenAuditoriaPublicaAtivoPadrao } from "../../services/auditoriaPublicaTokenService";
 import { validarContatoEmergenciaQrService } from "../../services/consultaPublicaQrService";
+import { ColaboradorIdentificacoesSeguranca } from "../colaboradores/ColaboradorIdentificacoesSeguranca";
 import {
     classNames,
     diasParaVencer,
@@ -238,6 +239,11 @@ export function ConsultaQRPublica({ dados }) {
                             Código: {colaborador.codigoFuncionario}
                         </p>
 
+                        <ColaboradorIdentificacoesSeguranca
+                            colaborador={colaborador}
+                            treinamentos={treinamentos}
+                            className="mt-3 justify-center"
+                        />
                     </div>
 
                     <div className="mt-4 grid gap-3 sm:grid-cols-2">

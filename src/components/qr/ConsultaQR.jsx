@@ -10,6 +10,7 @@ import { classNames, diasParaVencer, formatDate, normalizarTextoBusca } from "..
 import { montarUrlConsultaQrColaboradorPublica } from "../../constants/auditoriaPublicaConstants";
 import { carregarTokenAuditoriaPublicaAtivoPadrao } from "../../services/auditoriaPublicaTokenService";
 import { CrachaColaboradorPrint, CRACHA_COLABORADOR_PRINT_STYLES } from "./CrachaColaboradorPrint";
+import { ColaboradorIdentificacoesSeguranca } from "../colaboradores/ColaboradorIdentificacoesSeguranca";
 import dashboardHeroBackground from "../../assets/dashboard-hero-sst.webp";
 
 function CardIconSafe() {
@@ -1055,7 +1056,11 @@ function ConsultaQRDesktop({ colaborador, colaboradores = [], onSelecionarColabo
                                     </p>
                                 </div>
 
-
+                                <ColaboradorIdentificacoesSeguranca
+                                    colaborador={colaboradorAtual}
+                                    treinamentos={treinamentos}
+                                    className="mt-2.5"
+                                />
                             </div>
                         </div>
 

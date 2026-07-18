@@ -1,6 +1,12 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import {
+    IDS_TREINAMENTOS_EXCLUSIVAMENTE_MANUAIS,
+    matrizTreinamentosPorFuncao,
+    treinamentoExclusivamenteManual,
+    treinamentosBase,
+} from "../src/constants/treinamentosConstants.js";
+import {
     listarExtintoresVistoria,
     proximoCodigoExtintor,
     salvarExtintoresVistoria,
@@ -316,6 +322,26 @@ const codigoColaboradorDocumentosService = readFileSync(
     new URL("../src/services/colaboradorDocumentosService.js", import.meta.url),
     "utf8"
 );
+const codigoModalRevisaoColaborador = readFileSync(
+    new URL("../src/components/colaboradores/ModalRevisaoColaborador.jsx", import.meta.url),
+    "utf8"
+);
+const codigoModalNovaFuncaoColaborador = readFileSync(
+    new URL("../src/components/colaboradores/ModalNovaFuncaoColaborador.jsx", import.meta.url),
+    "utf8"
+);
+const codigoColaboradorIdentificacoesSeguranca = readFileSync(
+    new URL("../src/components/colaboradores/ColaboradorIdentificacoesSeguranca.jsx", import.meta.url),
+    "utf8"
+);
+const codigoConsultaQrInterna = readFileSync(
+    new URL("../src/components/qr/ConsultaQR.jsx", import.meta.url),
+    "utf8"
+);
+const codigoConsultaQrPublica = readFileSync(
+    new URL("../src/components/qr/ConsultaQRPublica.jsx", import.meta.url),
+    "utf8"
+);
 const codigoLoginScreen = readFileSync(
     new URL("../src/components/LoginScreen.jsx", import.meta.url),
     "utf8"
@@ -567,6 +593,94 @@ assert.match(
     /horasTrabalhadasMes: true[\s\S]*horasTrabalhadasMes: "padrao"[\s\S]*"horasTrabalhadasMes"/,
     "O card futuro de horas trabalhadas deve permanecer personalizável."
 );
+assert.deepEqual(
+    IDS_TREINAMENTOS_EXCLUSIVAMENTE_MANUAIS,
+    [23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35],
+    "Os IDs de CIPA, NR-20 e Brigadista devem permanecer reservados à atribuição manual."
+);
+
+const treinamentosManuais = treinamentosBase.filter((treinamento) =>
+    treinamentoExclusivamenteManual(treinamento)
+);
+assert.equal(treinamentosManuais.length, 13);
+assert.equal(new Set(treinamentosBase.map((treinamento) => treinamento.id)).size, treinamentosBase.length);
+assert.ok(treinamentosManuais.every((treinamento) => treinamento.atribuicao === "manual"));
+
+const idsMatrizesFixas = matrizTreinamentosPorFuncao.flatMap((matriz) => matriz.treinamentos || []);
+IDS_TREINAMENTOS_EXCLUSIVAMENTE_MANUAIS.forEach((id) => {
+    assert.equal(
+        idsMatrizesFixas.includes(id),
+        false,
+        `Treinamento manual ${id} não pode entrar em matriz fixa de função.`
+    );
+});
+assert.equal(
+    matrizTreinamentosPorFuncao.some((matriz) => matriz.chave === "brigada-incendio"),
+    false,
+    "A função Brigada não pode ser inferida automaticamente pelo cargo."
+);
+
+assert.match(
+    codigoModalRevisaoColaborador,
+    /treinamentoExclusivamenteManual[\s\S]*CIPA, NR-20 e Brigadista são exigências individuais[\s\S]*inclusão manual/,
+    "O cadastro individual deve identificar e permitir a inclusão manual."
+);
+assert.match(
+    codigoModalNovaFuncaoColaborador,
+    /treinamentosDisponiveisMatriz = treinamentosBase\.filter[\s\S]*!treinamentoExclusivamenteManual[\s\S]*não podem compor matriz de função/,
+    "Funções personalizadas não podem oferecer CIPA, NR-20 ou Brigadista."
+);
+assert.match(
+    codigoModalNovaFuncaoColaborador,
+    /if \(treinamentoExclusivamenteManual\(treinamentoId\)\) return;/,
+    "O bloqueio de treinamentos manuais na matriz deve existir também no manipulador."
+);
+assert.match(
+    codigoColaboradorIdentificacoesSeguranca,
+    /obterIdentificacoesSegurancaColaborador[\s\S]*Membro CIPA[\s\S]*Brigadista[\s\S]*data-colaborador-identificacao/,
+    "O componente compartilhado deve renderizar as duas identificações."
+);
+assert.match(
+    codigoColaboradoresPage,
+    /ColaboradorIdentificacoesSeguranca[\s\S]*colaborador=\{c\}[\s\S]*avaliacao=\{avaliacao\}[\s\S]*className="mt-2"/,
+    "O cartão de colaboradores deve exibir as identificações junto aos dados."
+);
+assert.doesNotMatch(
+    codigoColaboradoresPage,
+    /pointer-events-none absolute inset-0|absolute -bottom-1|foto-wrap relative h-20 w-20/,
+    "A foto do colaborador deve permanecer limpa, sem ícones sobrepostos."
+);
+assert.match(
+    codigoConsultaQrInterna,
+    /ColaboradorIdentificacoesSeguranca[\s\S]*colaborador=\{colaboradorAtual\}[\s\S]*treinamentos=\{treinamentos\}/,
+    "A Consulta QR interna deve exibir CIPA e Brigadista."
+);
+assert.match(
+    codigoConsultaQrPublica,
+    /ColaboradorIdentificacoesSeguranca[\s\S]*colaborador=\{colaborador\}[\s\S]*treinamentos=\{treinamentos\}[\s\S]*justify-center/,
+    "A Consulta QR pública deve exibir CIPA e Brigadista."
+);
+assert.doesNotMatch(
+    codigoColaboradoresPage,
+    /funcao[\s\S]{0,120}Membro CIPA|funcao[\s\S]{0,120}Brigadista/,
+    "As identificações não podem ser inferidas apenas pelo texto da função."
+);
+assert.match(
+    codigoColaboradorDocumentosService,
+    /if \(contem\("cipa"[\s\S]*obterTreinamento\(23\)[\s\S]*brigadista[\s\S]*obterTreinamento\(35\)/,
+    "CIPA e Brigadista devem possuir identificação controlada por nome."
+);
+assert.match(
+    codigoColaboradorDocumentosService,
+    /if \(ehNr20\) \{[\s\S]*contem\("iniciacao", "iniciação"\)[\s\S]*contem\("avancado ii", "avançado ii"\)[\s\S]*contem\("especifico", "específico"\)[\s\S]*contem\("intermediario", "intermediário"\)[\s\S]*contem\("basico", "básico"\)/,
+    "NR-20 deve manter identificação controlada por nível e modalidade."
+);
+assert.match(
+    codigoColaboradorDocumentosService,
+    /if \(ehNr20\) \{[\s\S]*return null;\s*\}\s*if \(contem\("aso"/,
+    "NR-20 genérica deve exigir conferência manual quando o nível não estiver claro."
+);
+
 assert.match(
     codigoColaboradorDocumentosService,
     /export function obterSituacaoHistoricaTreinamentosColaborador[\s\S]*desmobilizado[\s\S]*return "Desmobilizado"[\s\S]*inativo[\s\S]*return "Inativo"/,

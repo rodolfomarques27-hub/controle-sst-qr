@@ -15,6 +15,8 @@ export {
 } from "./sistemaConstants";
 export {
     treinamentosBase,
+    IDS_TREINAMENTOS_EXCLUSIVAMENTE_MANUAIS,
+    treinamentoExclusivamenteManual,
     STATUS_CLASSIFICACAO_COLABORADOR,
     IDS_DOCUMENTOS_CRITICOS_COLABORADOR,
     treinamentosBaseObra,

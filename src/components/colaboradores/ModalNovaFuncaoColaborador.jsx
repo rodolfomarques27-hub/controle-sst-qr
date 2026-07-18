@@ -1,3 +1,5 @@
+import { treinamentoExclusivamenteManual } from "../../constants/treinamentosConstants";
+
 export function ModalNovaFuncaoColaborador({
     aberto = false,
     novaFuncao,
@@ -9,6 +11,9 @@ export function ModalNovaFuncaoColaborador({
     if (!aberto) return null;
 
     const treinamentosSelecionados = Array.isArray(novaFuncao?.treinamentos) ? novaFuncao.treinamentos : [];
+    const treinamentosDisponiveisMatriz = treinamentosBase.filter(
+        (treinamento) => !treinamentoExclusivamenteManual(treinamento)
+    );
 
     const alterarCampo = (campo, valor) => {
         setNovaFuncao({
@@ -18,6 +23,8 @@ export function ModalNovaFuncaoColaborador({
     };
 
     const alternarTreinamento = (treinamentoId, marcado) => {
+        if (treinamentoExclusivamenteManual(treinamentoId)) return;
+
         const atualizados = marcado
             ? [...treinamentosSelecionados, treinamentoId]
             : treinamentosSelecionados.filter((id) => id !== treinamentoId);
@@ -78,8 +85,12 @@ export function ModalNovaFuncaoColaborador({
                             Treinamentos/documentos obrigatórios
                         </p>
 
+                        <p className="mb-3 rounded-2xl bg-blue-50 px-4 py-3 text-xs font-semibold leading-relaxed text-blue-700 ring-1 ring-blue-100">
+                            CIPA, NR-20 e Brigadista não podem compor matriz de função. Esses itens são atribuídos somente no cadastro individual do colaborador.
+                        </p>
+
                         <div className="grid gap-2 md:grid-cols-2">
-                            {treinamentosBase.map((treinamento) => (
+                            {treinamentosDisponiveisMatriz.map((treinamento) => (
                                 <label
                                     key={treinamento.id}
                                     className="flex cursor-pointer items-start gap-2 rounded-2xl border border-slate-200 bg-white p-3 text-sm hover:bg-slate-50"
