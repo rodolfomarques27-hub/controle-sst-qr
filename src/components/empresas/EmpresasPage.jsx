@@ -1651,6 +1651,7 @@ export function Empresas({
                                         evento.stopPropagation();
                                         atualizarCadastroEmpresasRecolhido((valor) => !valor);
                                     }}
+                                    aria-expanded={!cadastroEmpresasRecolhido}
                                     className="empresas-cadastro-aprovado__recolher"
                                 >
                                     {cadastroEmpresasRecolhido ? (
@@ -2290,6 +2291,7 @@ export function Empresas({
                                     evento.stopPropagation();
                                     atualizarInformacoesEmpresasRecolhidas((valor) => !valor);
                                 }}
+                                aria-expanded={!informacoesEmpresasRecolhidas}
                                 className="empresas-cadastro-header__acao"
                             >
                                 {informacoesEmpresasRecolhidas ? <ChevronDown className="h-4 w-4" /> : <ChevronUp className="h-4 w-4" />}
