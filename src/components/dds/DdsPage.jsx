@@ -1263,7 +1263,6 @@ function adicionarLogoEmpresaCabecalhoDds(lista = [], empresa = null) {
 
 function obterLogosEmpresasCabecalhoDds({ empresaSelecionada = null, empresasDds = [] } = {}) {
     const empresas = Array.isArray(empresasDds) ? empresasDds.filter(Boolean) : [];
-    const empresaIdealiza = empresas.find(empresaEhIdealizarCidadesDds) || null;
     const paiDireto = obterEmpresaPorIdDds(
         empresas,
         empresaSelecionada?.empresa_pai_id || empresaSelecionada?.empresaPaiId || ""
@@ -1272,29 +1271,42 @@ function obterLogosEmpresasCabecalhoDds({ empresaSelecionada = null, empresasDds
         empresas,
         paiDireto?.empresa_pai_id || paiDireto?.empresaPaiId || ""
     );
+    const empresaIdealiza = [
+        empresaSelecionada,
+        paiDireto,
+        avo,
+        ...empresas,
+    ]
+        .filter(Boolean)
+        .find(empresaEhIdealizarCidadesDds) || null;
 
     let logos = [];
 
-    if (empresaEhIdealizarCidadesDds(avo)) {
-        logos = adicionarLogoEmpresaCabecalhoDds(logos, avo);
-    } else if (empresaIdealiza) {
-        logos = adicionarLogoEmpresaCabecalhoDds(logos, empresaIdealiza);
-    }
+    logos = adicionarLogoEmpresaCabecalhoDds(
+        logos,
+        empresaIdealiza
+    );
 
-    if (paiDireto && !empresaEhIdealizarCidadesDds(paiDireto)) {
-        logos = adicionarLogoEmpresaCabecalhoDds(logos, paiDireto);
-    }
-
-    if (empresaSelecionada && !empresaEhIdealizarCidadesDds(empresaSelecionada)) {
-        logos = adicionarLogoEmpresaCabecalhoDds(logos, empresaSelecionada);
+    if (
+        empresaSelecionada &&
+        !empresaEhIdealizarCidadesDds(empresaSelecionada)
+    ) {
+        logos = adicionarLogoEmpresaCabecalhoDds(
+            logos,
+            empresaSelecionada
+        );
     }
 
     if (logos.length === 0 && empresaSelecionada) {
-        logos = adicionarLogoEmpresaCabecalhoDds(logos, empresaSelecionada);
+        logos = adicionarLogoEmpresaCabecalhoDds(
+            logos,
+            empresaSelecionada
+        );
     }
 
-    return logos;
+    return logos.slice(0, 2);
 }
+
 function MarcaLogosEmpresasDdsImpresso({ logos = [], compacto = false }) {
     const logosNormalizados = (Array.isArray(logos) ? logos : [])
         .map((item) => ({
@@ -1746,7 +1758,7 @@ function DdsPreviewImpresso({ participantes = participantesDds, mostrarAssinatur
                         <span>Segurança é valor.</span>
                         <span>Prevenção é atitude.</span>
                         <span>Todos juntos, nenhum acidente.</span>
-                        <span>Documento gerado pelo SafeScan Brasil.</span>
+                        <span>Documento vinculado ao QR de conferência.</span>
                     </div>
                 </div>
             </div>

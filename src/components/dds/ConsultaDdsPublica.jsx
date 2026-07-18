@@ -167,6 +167,44 @@ function normalizarLogoDdsPublico(item) {
 }
 
 function obterLogosCabecalhoDdsPublico(dados = {}, dadosRegistro = {}) {
+    const logos = [];
+
+    const adicionarLogo = (item) => {
+        const logo = normalizarLogoDdsPublico(item);
+        if (!logo) return;
+
+        const jaExiste = logos.some(
+            (existente) => existente.logoUrl === logo.logoUrl
+        );
+
+        if (!jaExiste) {
+            logos.push(logo);
+        }
+    };
+
+    [
+        {
+            logoUrl:
+                dados.contratanteLogoUrl ||
+                dadosRegistro.contratanteLogoUrl,
+            nome:
+                dados.contratanteLogoNome ||
+                dadosRegistro.contratanteLogoNome ||
+                "Idealiza",
+        },
+        {
+            logoUrl:
+                dados.empresaLogoUrl ||
+                dadosRegistro.empresaLogoUrl,
+            nome:
+                dados.empresaLogoNome ||
+                dadosRegistro.empresaLogoNome ||
+                dados.empresa ||
+                dadosRegistro.empresa ||
+                "Empresa vinculada",
+        },
+    ].forEach(adicionarLogo);
+
     const listas = [
         dados.logosEmpresasCabecalho,
         dadosRegistro.logosEmpresasCabecalho,
@@ -176,36 +214,16 @@ function obterLogosCabecalhoDdsPublico(dados = {}, dadosRegistro = {}) {
         dadosRegistro.logos,
     ];
 
-    const logos = [];
-
     listas.forEach((lista) => {
-        normalizarArray(lista).forEach((item) => {
-            const logo = normalizarLogoDdsPublico(item);
-            if (!logo) return;
+        if (logos.length >= 2) return;
 
-            const jaExiste = logos.some((existente) => existente.logoUrl === logo.logoUrl);
-            if (!jaExiste) logos.push(logo);
+        normalizarArray(lista).forEach((item) => {
+            if (logos.length >= 2) return;
+            adicionarLogo(item);
         });
     });
 
-    [
-        {
-            logoUrl: dados.contratanteLogoUrl || dadosRegistro.contratanteLogoUrl,
-            nome: dados.contratanteLogoNome || dadosRegistro.contratanteLogoNome || "Contratante",
-        },
-        {
-            logoUrl: dados.empresaLogoUrl || dadosRegistro.empresaLogoUrl,
-            nome: dados.empresaLogoNome || dadosRegistro.empresaLogoNome || dados.empresa || dadosRegistro.empresa || "Empresa",
-        },
-    ].forEach((item) => {
-        const logo = normalizarLogoDdsPublico(item);
-        if (!logo) return;
-
-        const jaExiste = logos.some((existente) => existente.logoUrl === logo.logoUrl);
-        if (!jaExiste) logos.push(logo);
-    });
-
-    return logos.slice(0, 4);
+    return logos.slice(0, 2);
 }
 
 function LogosCabecalhoDdsPublico({ logos = [], empresa = "" }) {
@@ -346,7 +364,7 @@ export function ConsultaDdsPublica({ dados = {} }) {
     const homemDiaOficialPublico = Number(resumoOficialPublico.homemDia ?? 0) || 0;
 
     const statusAutenticidade = textoSeguro(autenticidade.status || (ok ? "Documento localizado" : "Documento não localizado"));
-    const mensagemAutenticidade = textoSeguro(autenticidade.mensagem || "DDS conferido na base SafeScan Brasil.");
+    const mensagemAutenticidade = textoSeguro(autenticidade.mensagem || "DDS conferido pelo QR Code e pelo registro digital.");
     const logosCabecalho = obterLogosCabecalhoDdsPublico(dados, dadosRegistro);
 
     const diasRender = Array.from({ length: 7 }, (_, indice) => diasSemana[indice] || {});
@@ -369,7 +387,7 @@ export function ConsultaDdsPublica({ dados = {} }) {
                                 DDS semanal
                             </h1>
                             <p className="mt-1 text-[11px] font-bold text-slate-500">
-                                Documento registrado digitalmente no SafeScan Brasil
+                                Documento registrado digitalmente e vinculado ao QR de conferência
                             </p>
                         </div>
 
