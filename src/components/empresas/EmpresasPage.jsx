@@ -940,6 +940,7 @@ export function Empresas({
 
         const abrirPeloTeclado = (evento) => {
             if (empresaAberta) return;
+            if (evento.target !== evento.currentTarget) return;
             if (evento.key !== "Enter" && evento.key !== " ") return;
 
             evento.preventDefault();
