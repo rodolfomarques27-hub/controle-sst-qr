@@ -486,7 +486,7 @@ export function Dashboard({
     };
 
     const cards = [
-        { chave: "colaboradoresMobilizados", label: "Colaboradores mobilizados", valor: colaboradoresMobilizados.length, icon: HardHat, detalhe: "Liberados ou com pendência" },
+        { chave: "colaboradoresMobilizados", label: "Colaboradores mobilizados", valor: colaboradoresMobilizados.length, icon: HardHat, detalhe: "Liberados, com pendência ou a vencer" },
         { chave: "colaboradoresLiberados", label: "Colaboradores liberados", valor: colaboradoresLiberados, icon: BadgeCheck, detalhe: "Documentos em dia" },
         { chave: "comPendencia", label: "Com pendência", valor: colaboradoresComPendencia, icon: AlertTriangle, detalhe: "Sem bloqueio" },
         { chave: "emAnalise", label: "Em análise", valor: colaboradoresEmAnalise, icon: Eye, detalhe: "Aguardando conferência" },
@@ -498,7 +498,7 @@ export function Dashboard({
         { chave: "horasTrabalhadasMes", label: "Total de horas trabalhadas no mês", valor: "—", icon: Timer, detalhe: "Integração futura com DDS" },
         { chave: "colaboradoresBloqueados", label: "Colaboradores bloqueados", valor: colaboradoresBloqueados, icon: Lock, detalhe: "Pendência bloqueante" },
         { chave: "desviosAbertos", label: "Desvios abertos", valor: desviosAbertos, icon: AlertTriangle, detalhe: "Registros não concluídos" },
-        { chave: "aniversariantesMes", label: "Aniversariantes do mês", valor: aniversariantesMes.length, icon: UserRound, detalhe: aniversariantesMes.length > 0 ? "Quantidade no mês atual" : "Nenhum aniversariante no mês" },
+        { chave: "aniversariantesMes", label: "Aniversariantes do mês", valor: aniversariantesMes.length, icon: UserRound, detalhe: aniversariantesMes.length > 0 ? `${aniversariantesMes.length} no mês atual` : "Nenhum no mês atual" },
         { chave: "armazenamentoUtilizado", label: "Armazenamento", valor: `${storagePercentual}%`, icon: Upload, detalhe: `${totalStorageLabel} / ${storageLimiteLabelDashboard}` },
     ];
 
@@ -718,7 +718,7 @@ export function Dashboard({
 
     const obterDetalheCompactoCartaDashboard = (item) => {
         const mapa = {
-            colaboradoresMobilizados: "Liberados ou com pendência",
+            colaboradoresMobilizados: "Liberados, com pendência ou a vencer",
             colaboradoresLiberados: "Em dia",
             comPendencia: "Sem bloqueio",
             emAnalise: "Aguardando conferência",
@@ -730,7 +730,7 @@ export function Dashboard({
             horasTrabalhadasMes: "Integração futura com DDS",
             colaboradoresBloqueados: "Pendência bloqueante",
             desviosAbertos: "Registros não concluídos",
-            aniversariantesMes: "Nenhum no mês",
+            aniversariantesMes: item.detalhe,
             armazenamentoUtilizado: `${totalStorageLabel} / ${storageLimiteLabelDashboard}`,
         };
 

@@ -503,6 +503,26 @@ assert.match(
     "O novo card de documentos de funcionários a vencer deve permanecer visível."
 );
 assert.match(
+    codigoDashboard,
+    /colaboradoresMobilizados[\s\S]*Liberados, com pendência ou a vencer/,
+    "O card Mobilizados deve representar Liberados, Com pendência e A vencer."
+);
+assert.match(
+    codigoDashboard,
+    /aniversariantesMes\.length > 0 \? `\$\{aniversariantesMes\.length\} no mês atual` : "Nenhum no mês atual"/,
+    "O detalhe de aniversariantes deve acompanhar o total real do mês."
+);
+assert.match(
+    codigoDashboard,
+    /aniversariantesMes: item\.detalhe/,
+    "O card compacto de aniversariantes deve usar o detalhe dinâmico."
+);
+assert.doesNotMatch(
+    codigoDashboard,
+    /aniversariantesMes: "Nenhum no mês"/,
+    "O card de aniversariantes não pode voltar ao texto fixo incorreto."
+);
+assert.match(
     codigoDashboardService,
     /documentosFuncionariosAVencer: true[\s\S]*documentosFuncionariosAVencer: "padrao"[\s\S]*"documentosFuncionariosAVencer"/,
     "A personalização do Dashboard deve registrar o novo card."
