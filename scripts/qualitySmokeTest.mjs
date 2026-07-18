@@ -296,6 +296,22 @@ const codigoDashboardResumoService = readFileSync(
     new URL("../src/services/dashboardResumoService.js", import.meta.url),
     "utf8"
 );
+const codigoDashboard = readFileSync(
+    new URL("../src/components/dashboard/Dashboard.jsx", import.meta.url),
+    "utf8"
+);
+const codigoDashboardAlertas = readFileSync(
+    new URL("../src/components/dashboard/DashboardAlertas.jsx", import.meta.url),
+    "utf8"
+);
+const codigoDashboardCartaResumoModal = readFileSync(
+    new URL("../src/components/dashboard/DashboardCartaResumoModal.jsx", import.meta.url),
+    "utf8"
+);
+const codigoDashboardService = readFileSync(
+    new URL("../src/services/dashboardService.js", import.meta.url),
+    "utf8"
+);
 const codigoColaboradorDocumentosService = readFileSync(
     new URL("../src/services/colaboradorDocumentosService.js", import.meta.url),
     "utf8"
@@ -440,6 +456,96 @@ assert.match(
     codigoDashboardResumoService,
     /const colaboradoresOperacionais = colaboradores\.filter[\s\S]*!colaboradorForaControleDocumentalOperacional\(colaborador\)/,
     "O Dashboard SST deve calcular indicadores somente com colaboradores em controle operacional."
+);
+assert.match(
+    codigoDashboardResumoService,
+    /function colaboradorElegivelAniversarioDashboard[\s\S]*deveMostrarAniversarioColaborador\(colaborador\)[\s\S]*extrairDataNascimentoColaborador\(colaborador\)[\s\S]*!situacaoCadastro\.includes\("inativo"\)[\s\S]*!situacaoCadastro\.includes\("desmobilizado"\)/,
+    "Aniversariantes devem considerar o cadastro ativo, independentemente do bloqueio documental."
+);
+assert.match(
+    codigoDashboardResumoService,
+    /const aniversariantesElegiveis = colaboradores[\s\S]*\.filter\(colaboradorElegivelAniversarioDashboard\)/,
+    "O resumo deve usar a regra de cadastro ativo para aniversariantes."
+);
+assert.match(
+    codigoDashboardResumoService,
+    /normalizarStatusEmpresa\(empresa\.status\) === "Ativa"/,
+    "O card Empresas ativas deve comparar com a classificação normalizada correta."
+);
+assert.match(
+    codigoDashboardResumoService,
+    /const proximoAniversarioCalculado = proximoAniversariante\(aniversariantesElegiveis\);[\s\S]*proximoAniversarioCalculado\?\.colaborador \|\| null/,
+    "O próximo aniversariante deve expor o colaborador e não o objeto intermediário."
+);
+assert.match(
+    codigoDashboardResumoService,
+    /const documentosFuncionariosVencidos = pendencias\.filter[\s\S]*item\.status\.chave === "vencido"/,
+    "O Dashboard deve separar documentos vencidos de funcionários."
+);
+assert.match(
+    codigoDashboardResumoService,
+    /const documentosFuncionariosAVencer30Dias = pendencias\.filter[\s\S]*dias >= 0 && dias <= 30/,
+    "Documentos de funcionários a vencer devem usar a janela de trinta dias."
+);
+assert.match(
+    codigoDashboardResumoService,
+    /tipo: "Documento de funcionário vencido"[\s\S]*data: `Vencimento: \$\{formatDate\(item\.vencimento\)\}`/,
+    "Alertas vencidos de funcionários devem exibir a data do documento."
+);
+assert.match(
+    codigoDashboardResumoService,
+    /tipo: "Documento de funcionário a vencer"[\s\S]*faltam \$\{dias\} dia\(s\)/,
+    "Alertas a vencer devem exibir data e dias restantes."
+);
+assert.match(
+    codigoDashboard,
+    /documentosFuncionariosAVencer30Dias\.length[\s\S]*Docs func\. a vencer[\s\S]*Próximos 30 dias/,
+    "O novo card de documentos de funcionários a vencer deve permanecer visível."
+);
+assert.match(
+    codigoDashboardService,
+    /documentosFuncionariosAVencer: true[\s\S]*documentosFuncionariosAVencer: "padrao"[\s\S]*"documentosFuncionariosAVencer"/,
+    "A personalização do Dashboard deve registrar o novo card."
+);
+assert.match(
+    codigoDashboardAlertas,
+    /\{item\.data && \([\s\S]*\{item\.data\}/,
+    "O bloco de alertas deve renderizar a data em linha própria."
+);
+assert.match(
+    codigoDashboard,
+    /CHAVES_CARTAS_COM_RESUMO[\s\S]*"documentosVencidos"[\s\S]*"documentosAVencer"[\s\S]*"treinamentosVencidos"[\s\S]*"documentosFuncionariosAVencer"[\s\S]*"aniversariantesMes"/,
+    "Cards documentais e aniversariantes devem permanecer registrados para resumo."
+);
+assert.match(
+    codigoDashboard,
+    /onClick=\{podeAbrirResumo[\s\S]*abrirResumoCartaDashboard\(item\.chave\)[\s\S]*role=\{podeAbrirResumo \? "button"/,
+    "Os cards com resumo devem funcionar por clique e manter acessibilidade."
+);
+assert.match(
+    codigoDashboard,
+    /<DashboardCartaResumoModal[\s\S]*resumo=\{resumoCartaDashboard\}[\s\S]*setResumoCartaDashboard\(null\)/,
+    "O Dashboard deve montar e fechar o resumo dos cards."
+);
+assert.match(
+    codigoDashboardCartaResumoModal,
+    /role="dialog"[\s\S]*aria-modal="true"[\s\S]*Nenhum item encontrado[\s\S]*item\.dataValor/,
+    "O modal deve possuir diálogo acessível, estado vazio e dados detalhados."
+);
+assert.match(
+    codigoDashboardCartaResumoModal,
+    /nova-auditoria-hero-bg\.webp[\s\S]*backgroundImage: `url\(\$\{resumoDashboardHero\}\)`[\s\S]*linear-gradient/,
+    "O resumo deve manter um hero fotográfico próprio com overlay de contraste."
+);
+assert.match(
+    codigoDashboard,
+    /horasTrabalhadasMes[\s\S]*Total de horas trabalhadas no mês[\s\S]*valor: "—"[\s\S]*Integração futura com DDS/,
+    "O card futuro de horas trabalhadas não pode apresentar um total inventado."
+);
+assert.match(
+    codigoDashboardService,
+    /horasTrabalhadasMes: true[\s\S]*horasTrabalhadasMes: "padrao"[\s\S]*"horasTrabalhadasMes"/,
+    "O card futuro de horas trabalhadas deve permanecer personalizável."
 );
 assert.match(
     codigoColaboradorDocumentosService,

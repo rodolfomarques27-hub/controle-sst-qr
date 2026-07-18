@@ -18,6 +18,8 @@ export const cartasPadraoDashboard = {
     documentosVencidos: true,
     documentosAVencer: true,
     treinamentosVencidos: true,
+    documentosFuncionariosAVencer: true,
+    horasTrabalhadasMes: true,
     colaboradoresBloqueados: true,
     desviosAbertos: true,
     aniversariantesMes: true,
@@ -33,6 +35,8 @@ export const tamanhosPadraoCartasDashboard = {
     documentosVencidos: "padrao",
     documentosAVencer: "padrao",
     treinamentosVencidos: "padrao",
+    documentosFuncionariosAVencer: "padrao",
+    horasTrabalhadasMes: "padrao",
     colaboradoresBloqueados: "padrao",
     desviosAbertos: "padrao",
     aniversariantesMes: "padrao",
@@ -70,6 +74,8 @@ export const ordemPadraoCartasDashboard = [
     "documentosVencidos",
     "documentosAVencer",
     "treinamentosVencidos",
+    "documentosFuncionariosAVencer",
+    "horasTrabalhadasMes",
     "colaboradoresBloqueados",
     "desviosAbertos",
     "aniversariantesMes",
@@ -213,6 +219,14 @@ export function estiloCartaDashboard(chave, storageStatusDashboard = {}) {
         },
         treinamentosVencidos: {
             icone: "bg-purple-50 text-purple-600 ring-purple-100",
+            valor: "text-slate-950",
+        },
+        documentosFuncionariosAVencer: {
+            icone: "bg-orange-50 text-orange-600 ring-orange-100",
+            valor: "text-slate-950",
+        },
+        horasTrabalhadasMes: {
+            icone: "bg-indigo-50 text-indigo-600 ring-indigo-100",
             valor: "text-slate-950",
         },
         colaboradoresBloqueados: {

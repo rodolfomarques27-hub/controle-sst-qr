@@ -29,6 +29,9 @@ export function DashboardAlertas({
                         <div key={`${item.tipo}-${index}`} className={classNames("rounded-2xl p-3 text-sm ring-1", item.classe)}>
                             <p className="font-bold">{item.tipo}</p>
                             <p className="mt-1 text-xs">{item.texto}</p>
+                            {item.data && (
+                                <p className="mt-1 text-[11px] font-bold opacity-80">{item.data}</p>
+                            )}
                         </div>
                     ))
                 )}

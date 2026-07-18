@@ -162,6 +162,20 @@ function ajustarProximoAniversarioParaAnoAtual(colaborador, dataReferencia = new
     };
 }
 
+function colaboradorElegivelAniversarioDashboard(colaborador = {}) {
+    if (!deveMostrarAniversarioColaborador(colaborador)) return false;
+    if (!extrairDataNascimentoColaborador(colaborador)) return false;
+
+    const situacaoCadastro = normalizarTextoBusca(
+        `${colaborador?.status || ""} ${colaborador?.statusMobilizacao || ""} ${colaborador?.status_mobilizacao || ""}`
+    );
+
+    return (
+        !situacaoCadastro.includes("inativo") &&
+        !situacaoCadastro.includes("desmobilizado")
+    );
+}
+
 export function calcularResumoDashboardSst({
     colaboradores = [],
     empresasBanco = [],
@@ -184,7 +198,7 @@ export function calcularResumoDashboardSst({
 
     const documentosVencidos = documentosComStatus.filter((documento) => documento.status.chave === "vencido");
     const documentosAVencer = documentosComStatus.filter((documento) => documento.status.chave === "vencendo");
-    const empresasAtivas = empresasBanco.filter((empresa) => normalizarStatusEmpresa(empresa.status) === "Empresa ativa");
+    const empresasAtivas = empresasBanco.filter((empresa) => normalizarStatusEmpresa(empresa.status) === "Ativa");
     const colaboradoresMobilizados = colaboradores.filter(colaboradorContaComoMobilizado);
     const colaboradoresBloqueados = colaboradores.filter((colaborador) => statusGeral(colaborador).texto === "Bloqueado").length;
     const colaboradoresEmAnalise = colaboradores.filter((colaborador) => statusGeral(colaborador).texto === "Em análise").length;
@@ -226,18 +240,29 @@ export function calcularResumoDashboardSst({
     ).sort((a, b) => b.total - a.total || b.graves - a.graves).slice(0, 5);
 
     const aniversariantesElegiveis = colaboradores
-        .filter((colaborador) => deveMostrarAniversarioColaborador(colaborador) && statusGeral(colaborador).texto === "Liberado")
+        .filter(colaboradorElegivelAniversarioDashboard)
         .map((colaborador) => ajustarProximoAniversarioParaAnoAtual(colaborador, dataReferencia));
     const aniversariantesMes = aniversariantesElegiveis
         .filter((colaborador) => mesAniversarioColaborador(colaborador) === mesAtual + 1)
         .sort((a, b) => (diaAniversarioColaborador(a) || 99) - (diaAniversarioColaborador(b) || 99));
-    const proximoAniversarioDashboard = ajustarProximoAniversarioParaAnoAtual(proximoAniversariante(aniversariantesElegiveis), dataReferencia);
+    const proximoAniversarioCalculado = proximoAniversariante(aniversariantesElegiveis);
+    const proximoAniversarioDashboard = proximoAniversarioCalculado?.colaborador || null;
 
     const storage = calcularResumoStorageDashboard({ usoStorageDashboard, carregandoStorageDashboard });
 
     const pendencias = indicadores.itens
         .filter((item) => possuiDocumentoEnviadoPendencia(item))
         .sort(compararPendenciasCriticas);
+
+    const documentosFuncionariosVencidos = pendencias.filter(
+        (item) => item.status.chave === "vencido"
+    );
+    const documentosFuncionariosAVencer30Dias = pendencias.filter((item) => {
+        if (item.status.chave !== "vencendo") return false;
+
+        const dias = diasParaVencer(item.vencimento);
+        return dias !== null && dias >= 0 && dias <= 30;
+    });
 
     const colaboradoresPorFuncao = Object.values(
         colaboradoresMobilizados.reduce((acc, colaborador) => {
@@ -317,20 +342,27 @@ export function calcularResumoDashboardSst({
 
     const alertasImportantes = [
         ...documentosVencidos.slice(0, 4).map((doc) => ({
-            tipo: "Documento vencido",
-            texto: `${doc.tipo_documento || "Documento"} venceu em ${formatDate(doc.data_vencimento)}`,
+            tipo: "Documento empresarial vencido",
+            texto: doc.tipo_documento || "Documento empresarial",
+            data: `Vencimento: ${formatDate(doc.data_vencimento)}`,
             classe: "bg-red-50 text-red-700 ring-red-100",
         })),
-        ...pendencias.filter((item) => item.status.chave === "vencido").slice(0, 4).map((item) => ({
-            tipo: "Treinamento vencido",
+        ...documentosFuncionariosVencidos.slice(0, 4).map((item) => ({
+            tipo: "Documento de funcionário vencido",
             texto: `${item.colaborador.nome} · ${item.treinamento.nome}`,
+            data: `Vencimento: ${formatDate(item.vencimento)}`,
             classe: "bg-red-50 text-red-700 ring-red-100",
         })),
-        ...pendencias.filter((item) => item.status.chave === "vencendo").slice(0, 4).map((item) => ({
-            tipo: "A vencer",
-            texto: `${item.colaborador.nome} · ${item.treinamento.nome} · ${formatDate(item.vencimento)}`,
-            classe: "bg-orange-50 text-orange-700 ring-orange-100",
-        })),
+        ...documentosFuncionariosAVencer30Dias.slice(0, 4).map((item) => {
+            const dias = diasParaVencer(item.vencimento);
+
+            return {
+                tipo: "Documento de funcionário a vencer",
+                texto: `${item.colaborador.nome} · ${item.treinamento.nome}`,
+                data: `Vencimento: ${formatDate(item.vencimento)} · faltam ${dias} dia(s)`,
+                classe: "bg-orange-50 text-orange-700 ring-orange-100",
+            };
+        }),
         ...(storage.storagePercentual >= 80
             ? [{
                 tipo: "Armazenamento",
@@ -348,6 +380,8 @@ export function calcularResumoDashboardSst({
         documentosComStatus,
         documentosVencidos,
         documentosAVencer,
+        documentosFuncionariosVencidos,
+        documentosFuncionariosAVencer30Dias,
         empresasAtivas,
         colaboradoresMobilizados,
         colaboradoresBloqueados,

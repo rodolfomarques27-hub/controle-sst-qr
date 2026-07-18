@@ -10,6 +10,7 @@ import {
     HardHat,
     Lock,
     RefreshCw,
+    Timer,
     Upload,
     UserRound,
     XCircle,
@@ -25,6 +26,7 @@ import { DashboardBlocoConteudo } from "./DashboardBlocoConteudo";
 import { DashboardControles } from "./DashboardControles";
 import { DashboardStorageDesktop } from "./DashboardStorageDesktop";
 import { DashboardStorageMobile } from "./DashboardStorageMobile";
+import { DashboardCartaResumoModal } from "./DashboardCartaResumoModal";
 import {
     normalizarAuditoriaCampo,
     auditoriaCampoAberta,
@@ -79,6 +81,14 @@ import {
 } from "../../utils/sstUtils";
 
 const CACHE_USO_STORAGE_DASHBOARD = "dashboardSstUsoStorageResumo";
+
+const CHAVES_CARTAS_COM_RESUMO = new Set([
+    "documentosVencidos",
+    "documentosAVencer",
+    "treinamentosVencidos",
+    "documentosFuncionariosAVencer",
+    "aniversariantesMes",
+]);
 
 function obterDataHeroDashboard(data = new Date()) {
     return new Intl.DateTimeFormat("pt-BR", {
@@ -183,6 +193,7 @@ export function Dashboard({
     const [carregandoStorageDashboard, setCarregandoStorageDashboard] = useState(false);
     const storageAutoCarregadoDashboardRef = useRef(false);
     const [mostrarFiltroPainel, setMostrarFiltroPainel] = useState(false);
+    const [resumoCartaDashboard, setResumoCartaDashboard] = useState(null);
     const [abaPersonalizacaoPainel, setAbaPersonalizacaoPainel] = useState("cartas");
     const [cartaArrastandoDashboard, setCartaArrastandoDashboard] = useState(null);
     const [blocoArrastandoDashboard, setBlocoArrastandoDashboard] = useState(null);
@@ -440,6 +451,8 @@ export function Dashboard({
         totalItens,
         documentosVencidos,
         documentosAVencer,
+        documentosFuncionariosVencidos,
+        documentosFuncionariosAVencer30Dias,
         empresasAtivas,
         colaboradoresMobilizados,
         colaboradoresBloqueados,
@@ -478,9 +491,11 @@ export function Dashboard({
         { chave: "comPendencia", label: "Com pendência", valor: colaboradoresComPendencia, icon: AlertTriangle, detalhe: "Sem bloqueio" },
         { chave: "emAnalise", label: "Em análise", valor: colaboradoresEmAnalise, icon: Eye, detalhe: "Aguardando conferência" },
         { chave: "empresasAtivas", label: "Empresas ativas", valor: empresasAtivas.length, icon: Building2, detalhe: "Contratadas liberadas" },
-        { chave: "documentosVencidos", label: "Documentos vencidos", valor: documentosVencidos.length, icon: XCircle, detalhe: "Empresas / contratos" },
-        { chave: "documentosAVencer", label: "Documentos a vencer", valor: documentosAVencer.length, icon: CalendarClock, detalhe: "Próximos 30 dias" },
-        { chave: "treinamentosVencidos", label: "Treinamentos vencidos", valor: indicadores.vencidos, icon: AlertTriangle, detalhe: "Colaboradores" },
+        { chave: "documentosVencidos", label: "Documentos de empresas vencidos", valor: documentosVencidos.length, icon: XCircle, detalhe: "Documentos e contratos" },
+        { chave: "documentosAVencer", label: "Documentos de empresas a vencer", valor: documentosAVencer.length, icon: CalendarClock, detalhe: "Próximos 30 dias" },
+        { chave: "treinamentosVencidos", label: "Documentos de funcionários vencidos", valor: documentosFuncionariosVencidos.length, icon: XCircle, detalhe: "Certificados e documentos" },
+        { chave: "documentosFuncionariosAVencer", label: "Documentos de funcionários a vencer", valor: documentosFuncionariosAVencer30Dias.length, icon: CalendarClock, detalhe: "Próximos 30 dias" },
+        { chave: "horasTrabalhadasMes", label: "Total de horas trabalhadas no mês", valor: "—", icon: Timer, detalhe: "Integração futura com DDS" },
         { chave: "colaboradoresBloqueados", label: "Colaboradores bloqueados", valor: colaboradoresBloqueados, icon: Lock, detalhe: "Pendência bloqueante" },
         { chave: "desviosAbertos", label: "Desvios abertos", valor: desviosAbertos, icon: AlertTriangle, detalhe: "Registros não concluídos" },
         { chave: "aniversariantesMes", label: "Aniversariantes do mês", valor: aniversariantesMes.length, icon: UserRound, detalhe: aniversariantesMes.length > 0 ? "Quantidade no mês atual" : "Nenhum aniversariante no mês" },
@@ -495,6 +510,109 @@ export function Dashboard({
     ];
 
     const cardsVisiveis = cardsOrdenados.filter((item) => cartasVisiveisDashboard[item.chave] !== false);
+
+    const obterEmpresaDocumentoDashboard = (documento = {}) => {
+        const empresa = empresasBanco.find(
+            (item) => String(item.id) === String(documento.empresa_id || documento.empresaId || "")
+        );
+
+        return empresa?.nome || "Empresa não informada";
+    };
+
+    const montarResumoDocumentoEmpresa = (chave, titulo, subtitulo, documentos = []) => ({
+        chave,
+        titulo,
+        subtitulo,
+        itens: documentos.map((documento) => ({
+            id: documento.id,
+            principal: obterEmpresaDocumentoDashboard(documento),
+            titulo: documento.tipo_documento || "Documento empresarial",
+            apoio: documento.arquivo_nome || documento.nome_do_arquivo || "",
+            dataRotulo: "Vencimento",
+            dataValor: formatDate(documento.data_vencimento),
+            status: documento.status?.texto || "Documento",
+            detalhe: documento.status?.detalhe || "",
+        })),
+    });
+
+    const montarResumoDocumentoFuncionario = (chave, titulo, subtitulo, documentos = []) => ({
+        chave,
+        titulo,
+        subtitulo,
+        itens: documentos.map((item) => {
+            const dias = diasParaVencer(item.vencimento);
+
+            return {
+                id: item.realizado?.id || `${item.colaborador?.id || "colaborador"}-${item.treinamento?.id || "documento"}`,
+                principal: item.colaborador?.nome || "Colaborador não informado",
+                titulo: item.treinamento?.nome || "Documento não informado",
+                apoio: item.colaborador?.empresaExibicao || item.colaborador?.empresa || "",
+                dataRotulo: "Vencimento",
+                dataValor: formatDate(item.vencimento),
+                status: item.status?.texto || "Documento",
+                detalhe:
+                    dias === null
+                        ? ""
+                        : dias < 0
+                            ? `Vencido há ${Math.abs(dias)} dia(s)`
+                            : `Faltam ${dias} dia(s)`,
+            };
+        }),
+    });
+
+    const abrirResumoCartaDashboard = (chave) => {
+        const resumos = {
+            documentosVencidos: montarResumoDocumentoEmpresa(
+                "documentosVencidos",
+                "Documentos de empresas vencidos",
+                "Documentos e contratos empresariais fora da validade.",
+                documentosVencidos
+            ),
+            documentosAVencer: montarResumoDocumentoEmpresa(
+                "documentosAVencer",
+                "Documentos de empresas a vencer",
+                "Documentos e contratos com vencimento nos próximos 30 dias.",
+                documentosAVencer
+            ),
+            treinamentosVencidos: montarResumoDocumentoFuncionario(
+                "treinamentosVencidos",
+                "Documentos de funcionários vencidos",
+                "Certificados e documentos de colaboradores fora da validade.",
+                documentosFuncionariosVencidos
+            ),
+            documentosFuncionariosAVencer: montarResumoDocumentoFuncionario(
+                "documentosFuncionariosAVencer",
+                "Documentos de funcionários a vencer",
+                "Certificados e documentos com vencimento nos próximos 30 dias.",
+                documentosFuncionariosAVencer30Dias
+            ),
+            aniversariantesMes: {
+                chave: "aniversariantesMes",
+                titulo: "Aniversariantes do mês",
+                subtitulo: "Colaboradores ativos com exibição de aniversário habilitada.",
+                itens: aniversariantesMes.map((colaborador) => ({
+                    id: colaborador.id,
+                    principal: colaborador.nome || "Colaborador não informado",
+                    titulo: colaborador.funcao || colaborador.cargo || "Função não informada",
+                    apoio: colaborador.empresaExibicao || colaborador.empresa || "",
+                    dataRotulo: "Nascimento",
+                    dataValor: formatDate(
+                        colaborador.dataNascimentoOriginal ||
+                        colaborador.dataNascimento ||
+                        colaborador.data_nascimento
+                    ),
+                    status: "Aniversariante",
+                    detalhe: "",
+                })),
+            },
+        };
+
+        const resumo = resumos[chave];
+
+        if (resumo) {
+            setResumoCartaDashboard(resumo);
+        }
+    };
 
     const obterAcentoCartaDashboard = (chave) => {
         const mapa = {
@@ -538,6 +656,16 @@ export function Dashboard({
                 faixa: "from-purple-500 to-violet-400",
                 fundoIcone: "bg-purple-50 text-purple-700 ring-purple-100",
             },
+            documentosFuncionariosAVencer: {
+                borda: "border-orange-200/80",
+                faixa: "from-orange-500 to-amber-400",
+                fundoIcone: "bg-orange-50 text-orange-700 ring-orange-100",
+            },
+            horasTrabalhadasMes: {
+                borda: "border-indigo-200/80",
+                faixa: "from-indigo-500 to-blue-400",
+                fundoIcone: "bg-indigo-50 text-indigo-700 ring-indigo-100",
+            },
             colaboradoresBloqueados: {
                 borda: "border-teal-200/80",
                 faixa: "from-teal-500 to-emerald-400",
@@ -574,9 +702,11 @@ export function Dashboard({
             comPendencia: "Com pendência",
             emAnalise: "Em análise",
             empresasAtivas: "Empresas ativas",
-            documentosVencidos: "Docs vencidos",
-            documentosAVencer: "Docs a vencer",
-            treinamentosVencidos: "Trein. vencidos",
+            documentosVencidos: "Docs emp. vencidos",
+            documentosAVencer: "Docs emp. a vencer",
+            treinamentosVencidos: "Docs func. vencidos",
+            documentosFuncionariosAVencer: "Docs func. a vencer",
+            horasTrabalhadasMes: "Horas trab. mês",
             colaboradoresBloqueados: "Bloqueados",
             desviosAbertos: "Desvios abertos",
             aniversariantesMes: "Aniversariantes",
@@ -593,9 +723,11 @@ export function Dashboard({
             comPendencia: "Sem bloqueio",
             emAnalise: "Aguardando conferência",
             empresasAtivas: "Liberadas",
-            documentosVencidos: "Contratos",
+            documentosVencidos: "Documentos e contratos",
             documentosAVencer: "Próximos 30 dias",
-            treinamentosVencidos: "Colaboradores",
+            treinamentosVencidos: "Certificados",
+            documentosFuncionariosAVencer: "Próximos 30 dias",
+            horasTrabalhadasMes: "Integração futura com DDS",
             colaboradoresBloqueados: "Pendência bloqueante",
             desviosAbertos: "Registros não concluídos",
             aniversariantesMes: "Nenhum no mês",
@@ -849,6 +981,9 @@ export function Dashboard({
                 const detalheCompacto = obterDetalheCompactoCartaDashboard(item);
                 const storagePercentualRotulo = `${Number(storagePercentual || 0)}%`;
                 const tituloExibido = ehArmazenamento ? "ARMAZENAMENTO" : tituloCompacto;
+                const podeAbrirResumo =
+                    !mostrarFiltroPainel &&
+                    CHAVES_CARTAS_COM_RESUMO.has(item.chave);
                 const storagePercentualValor = Math.max(0, Math.min(100, Number(storagePercentual || 0)));
                 const storageAngulo = Math.round((storagePercentualValor / 100) * 360);
                 const storageFundoAnel = "conic-gradient(from 180deg, rgba(16,185,129,0.96) 0deg, rgba(16,185,129,0.96) var(--storage-angulo), rgba(226,232,240,0.95) var(--storage-angulo), rgba(226,232,240,0.95) 360deg)";
@@ -873,7 +1008,17 @@ export function Dashboard({
                         key={item.chave}
                         data-dashboard-card-tamanho={obterTamanhoCartaDashboard(item.chave)}
                         data-dashboard-card={item.chave}
-                        className={`dashboard-summary-card group relative flex h-auto min-h-[6.25rem] overflow-hidden rounded-[22px] border bg-[linear-gradient(180deg,rgba(255,255,255,0.98)_0%,rgba(246,249,252,0.96)_100%)] px-3 pt-3 pb-2 shadow-[0_10px_26px_rgba(26,35,50,0.08)] transition duration-200 hover:-translate-y-0.5 hover:shadow-[0_16px_34px_rgba(26,35,50,0.13)] ${acento.borda} ${obterClasseTamanhoCartaDashboard(item.chave)}`}
+                        onClick={podeAbrirResumo ? () => abrirResumoCartaDashboard(item.chave) : undefined}
+                        onKeyDown={podeAbrirResumo ? (evento) => {
+                            if (evento.key === "Enter" || evento.key === " ") {
+                                evento.preventDefault();
+                                abrirResumoCartaDashboard(item.chave);
+                            }
+                        } : undefined}
+                        role={podeAbrirResumo ? "button" : undefined}
+                        tabIndex={podeAbrirResumo ? 0 : undefined}
+                        title={podeAbrirResumo ? "Clique para ver os itens deste card" : undefined}
+                        className={`dashboard-summary-card group relative flex h-auto min-h-[6.25rem] overflow-hidden rounded-[22px] border bg-[linear-gradient(180deg,rgba(255,255,255,0.98)_0%,rgba(246,249,252,0.96)_100%)] px-3 pt-3 pb-2 shadow-[0_10px_26px_rgba(26,35,50,0.08)] transition duration-200 hover:-translate-y-0.5 hover:shadow-[0_16px_34px_rgba(26,35,50,0.13)] ${podeAbrirResumo ? "cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2" : ""} ${acento.borda} ${obterClasseTamanhoCartaDashboard(item.chave)}`}
                     >
                         <span className={`absolute inset-x-0 top-0 h-1 bg-gradient-to-r ${acento.faixa}`} />
 
@@ -1061,7 +1206,10 @@ export function Dashboard({
                 renderBlocoDashboard={renderBlocoDashboard}
             />
 
-
+            <DashboardCartaResumoModal
+                resumo={resumoCartaDashboard}
+                onClose={() => setResumoCartaDashboard(null)}
+            />
         </div>
     );
 }
