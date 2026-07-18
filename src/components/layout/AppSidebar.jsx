@@ -221,6 +221,7 @@ export function AppSidebar({
     usuario,
     sair,
     onSelecionarTela,
+    dispositivoMobile = false,
 }) {
     const [expandidoPorHover, setExpandidoPorHover] = useState(false);
     const [hoverLiberado, setHoverLiberado] = useState(() => Boolean(menuLateralAberto));
@@ -375,7 +376,8 @@ export function AppSidebar({
             onMouseEnter={abrirTemporariamente}
             onMouseLeave={fecharTemporariamente}
             className={classNames(
-                "app-sidebar hidden h-screen max-h-screen overflow-hidden border-r border-[#253247] bg-[#1A2332] bg-cover bg-center text-[#A8B8C8] transition-all duration-300 lg:flex lg:flex-col",
+                "app-sidebar h-screen max-h-screen overflow-hidden border-r border-[#253247] bg-[#1A2332] bg-cover bg-center text-[#A8B8C8] transition-all duration-300",
+                dispositivoMobile ? "hidden" : "flex flex-col",
                 menuExpandido ? "w-[264px] p-4" : "w-16 p-3"
             )}
             style={{
@@ -479,6 +481,8 @@ export function AppSidebar({
                 })}
             </nav>
 
+            <div className="app-sidebar-bottom-section">
+                <div className="app-sidebar-user-section">
             {menuExpandido ? (
                 <div className="app-sidebar-user mt-3 rounded-3xl bg-[#101827]/90 p-3 text-white ring-1 ring-white/10">
                     <button
@@ -541,31 +545,36 @@ export function AppSidebar({
                 </div>
             ) : (
                 <div className="app-sidebar-user-compact mt-4 flex justify-center">
-                    {mostrarFotoUsuario ? (
-                        <img
-                            src={fotoUsuarioUrl}
-                            alt={nomeUsuario}
-                            onError={() => setFotoUsuarioComErro(true)}
-                            className="h-10 w-10 rounded-full object-cover ring-2 ring-white/15"
-                            title={`${nomeUsuario} - ${perfilUsuario} - ${emailUsuario}`}
-                        />
-                    ) : (
-                        <span
-                            className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-white/5 text-[0.6rem] font-bold uppercase tracking-wide text-[#A8B8C8] ring-1 ring-white/10"
-                            title={`${nomeUsuario} - ${perfilUsuario} - ${emailUsuario}`}
-                        >
-                            {iniciaisUsuario}
-                        </span>
-                    )}
+                    <div
+                        className="app-sidebar-user-avatar-clip"
+                        title={`${nomeUsuario} - ${perfilUsuario} - ${emailUsuario}`}
+                        style={{ clipPath: "circle(50% at 50% 50%)" }}
+                    >
+                        {mostrarFotoUsuario ? (
+                            <img
+                                src={fotoUsuarioUrl}
+                                alt={nomeUsuario}
+                                onError={() => setFotoUsuarioComErro(true)}
+                                className="block h-full w-full object-cover"
+                                style={{ clipPath: "circle(50% at 50% 50%)" }}
+                            />
+                        ) : (
+                            <span className="inline-flex h-full w-full items-center justify-center bg-white/5 text-[0.6rem] font-bold uppercase tracking-wide text-[#A8B8C8]">
+                                {iniciaisUsuario}
+                            </span>
+                        )}
+                    </div>
                 </div>
             )}
+                </div>
 
-            <div
-                className={classNames(
-                    "mt-3 grid shrink-0 gap-2",
-                    menuExpandido ? "grid-cols-2" : "grid-cols-1"
-                )}
-            >
+                <div className="app-sidebar-controls-section">
+                    <div
+                        className={classNames(
+                            "app-sidebar-footer-actions grid shrink-0 gap-2",
+                            menuExpandido ? "grid-cols-2" : "grid-cols-1"
+                        )}
+                    >
                 <button
                     onClick={sair}
                     className={classNames(
@@ -573,6 +582,7 @@ export function AppSidebar({
                         menuExpandido ? "px-2 py-2" : "mx-auto h-10 w-10 px-0"
                     )}
                     title={`Sair de ${nomeUsuario}`}
+                    aria-label="Sair"
                 >
                     <LogOut className="h-4 w-4 shrink-0" />
                     {menuExpandido && <span>Sair</span>}
@@ -586,6 +596,7 @@ export function AppSidebar({
                         menuExpandido ? "px-2 py-2" : "mx-auto h-10 w-10 px-0"
                     )}
                     title={menuLateralAberto ? "Recolher menu" : "Fixar menu"}
+                    aria-label={menuLateralAberto ? "Recolher menu" : "Fixar menu"}
                 >
                     <ChevronsLeft
                         className={classNames(
@@ -595,6 +606,8 @@ export function AppSidebar({
                     />
                     {menuExpandido && <span>{menuLateralAberto ? "Recolher" : "Fixar"}</span>}
                 </button>
+                    </div>
+                </div>
             </div>
         </aside>
     );

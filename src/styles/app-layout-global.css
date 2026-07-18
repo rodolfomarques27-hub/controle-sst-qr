@@ -15538,3 +15538,319 @@
 }
 
 /* FIM MICROETAPA DASHBOARD CARDS DESKTOP 3 */
+
+/* Limite estrutural do rodape da lateral. Mantem a aparencia original e
+   impede que itens rolaveis aparecam por tras do perfil e dos controles. */
+.app-shell[data-device-mobile="false"] .app-sidebar-bottom-section {
+  position: relative !important;
+  z-index: 20 !important;
+  display: flex !important;
+  width: 100% !important;
+  flex: 0 0 auto !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  isolation: isolate !important;
+  margin: 0.45rem 0 0 !important;
+  padding: 0 !important;
+  border: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+.app-shell[data-device-mobile="false"] .app-sidebar-user-section {
+  position: relative !important;
+  z-index: 5 !important;
+  display: flex !important;
+  width: 100% !important;
+  flex: 0 0 auto !important;
+  justify-content: center !important;
+  overflow: hidden !important;
+  isolation: isolate !important;
+  padding: 0.15rem 0 0.55rem !important;
+  background: transparent !important;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1) !important;
+}
+
+.app-shell[data-device-mobile="false"] .app-sidebar-user-section .app-sidebar-user-compact {
+  position: relative !important;
+  z-index: 2 !important;
+  margin: 0 !important;
+  overflow: hidden !important;
+}
+
+.app-shell[data-device-mobile="false"] .app-sidebar-user-avatar-clip {
+  position: relative !important;
+  z-index: 5 !important;
+  display: flex !important;
+  width: 2.5rem !important;
+  min-width: 2.5rem !important;
+  max-width: 2.5rem !important;
+  height: 2.5rem !important;
+  min-height: 2.5rem !important;
+  max-height: 2.5rem !important;
+  flex: 0 0 2.5rem !important;
+  align-items: center !important;
+  justify-content: center !important;
+  overflow: hidden !important;
+  isolation: isolate !important;
+  border-radius: 9999px !important;
+  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.15) !important;
+}
+
+.app-shell[data-device-mobile="false"] .app-sidebar-user-avatar-clip img {
+  display: block !important;
+  width: 100% !important;
+  height: 100% !important;
+  max-width: 100% !important;
+  object-fit: cover !important;
+  pointer-events: none !important;
+}
+
+.app-shell[data-device-mobile="false"] .app-sidebar-controls-section {
+  position: relative !important;
+  z-index: 6 !important;
+  display: flex !important;
+  width: 100% !important;
+  flex: 0 0 auto !important;
+  justify-content: center !important;
+  overflow: hidden !important;
+  padding: 0.65rem 0 0.2rem !important;
+  background: transparent !important;
+}
+
+.app-shell[data-device-mobile="false"] .app-sidebar-footer-actions {
+  position: relative !important;
+  width: 100% !important;
+  margin: 0 !important;
+}
+
+.app-shell[data-device-mobile="false"] .app-sidebar-nav {
+  position: relative !important;
+  z-index: 1 !important;
+  min-height: 0 !important;
+  overflow-x: hidden !important;
+  overflow-y: auto !important;
+  clip-path: inset(0) !important;
+  contain: paint !important;
+}
+
+@media (max-width: 1023.98px) {
+  .app-shell[data-device-mobile="false"] .app-sidebar[data-sidebar-expanded="false"] .app-sidebar-footer-actions {
+    display: grid !important;
+    width: 100% !important;
+    grid-template-columns: 1fr !important;
+    justify-items: center !important;
+  }
+}
+
+/* Janela estreita em computador continua usando o layout desktop.
+   O modo de aplicativo fica reservado a celulares reais. */
+@media (max-width: 1023.98px) {
+  .app-shell[data-device-mobile="false"] {
+    display: block !important;
+  }
+
+  .app-shell[data-device-mobile="false"] .app-sidebar {
+    position: fixed !important;
+    inset: 0 auto 0 0 !important;
+    z-index: 60 !important;
+    display: flex !important;
+    width: 5rem !important;
+    min-width: 5rem !important;
+    max-width: 5rem !important;
+    height: 100dvh !important;
+    max-height: 100dvh !important;
+    padding: 0.65rem 0.55rem !important;
+    align-items: center !important;
+    overflow: hidden !important;
+  }
+
+  .app-shell[data-device-mobile="false"] .app-sidebar[data-sidebar-expanded="true"] {
+    width: 16rem !important;
+    min-width: 16rem !important;
+    max-width: 16rem !important;
+    padding: 0.8rem 0.9rem !important;
+    align-items: stretch !important;
+  }
+
+  .app-shell[data-device-mobile="false"] .app-main {
+    width: calc(100% - 5rem) !important;
+    margin-left: 5rem !important;
+  }
+
+  .app-shell[data-device-mobile="false"][data-sidebar-open="true"] .app-main {
+    width: calc(100% - 16rem) !important;
+    margin-left: 16rem !important;
+  }
+
+  .app-shell[data-device-mobile="false"] .app-sidebar[data-sidebar-expanded="false"] .app-sidebar-brand,
+  .app-shell[data-device-mobile="false"] .app-sidebar[data-sidebar-expanded="false"] .app-sidebar-nav,
+  .app-shell[data-device-mobile="false"] .app-sidebar[data-sidebar-expanded="false"] .app-sidebar-user-compact,
+  .app-shell[data-device-mobile="false"] .app-sidebar[data-sidebar-expanded="false"] .app-sidebar-toggle,
+  .app-shell[data-device-mobile="false"] .app-sidebar[data-sidebar-expanded="false"] .app-sidebar-logout {
+    width: 100% !important;
+    max-width: 100% !important;
+    margin-left: auto !important;
+    margin-right: auto !important;
+    justify-content: center !important;
+  }
+
+  .app-shell[data-device-mobile="false"] .app-sidebar[data-sidebar-expanded="false"] .app-sidebar-nav {
+    display: grid !important;
+    grid-template-columns: 1fr !important;
+    justify-items: center !important;
+    align-content: start !important;
+    padding: 0 0 0.3rem !important;
+    overflow-x: hidden !important;
+    overflow-y: auto !important;
+  }
+
+  .app-shell[data-device-mobile="false"] .app-sidebar[data-sidebar-expanded="false"] .app-sidebar-nav-group,
+  .app-shell[data-device-mobile="false"] .app-sidebar[data-sidebar-expanded="false"] .app-sidebar-nav-group > div {
+    width: 100% !important;
+    justify-items: center !important;
+  }
+
+  .app-shell[data-device-mobile="false"] .app-sidebar[data-sidebar-expanded="false"] .app-sidebar-nav-button {
+    width: 2.55rem !important;
+    min-width: 2.55rem !important;
+    max-width: 2.55rem !important;
+    height: 2.55rem !important;
+    min-height: 2.55rem !important;
+    margin-inline: auto !important;
+    padding: 0 !important;
+    justify-content: center !important;
+    border-radius: 0.95rem !important;
+  }
+
+  .app-shell[data-device-mobile="false"] .app-sidebar[data-sidebar-expanded="false"] .app-sidebar-controls-section {
+    min-height: 6rem !important;
+  }
+
+  .app-shell[data-device-mobile="false"] .app-sidebar[data-sidebar-expanded="false"] .app-sidebar-footer-actions .app-sidebar-logout,
+  .app-shell[data-device-mobile="false"] .app-sidebar[data-sidebar-expanded="false"] .app-sidebar-footer-actions .app-sidebar-toggle {
+    width: 2.55rem !important;
+    min-width: 2.55rem !important;
+    max-width: 2.55rem !important;
+    height: 2.55rem !important;
+    min-height: 2.55rem !important;
+    max-height: 2.55rem !important;
+    margin-inline: auto !important;
+    padding: 0 !important;
+    border-radius: 0.95rem !important;
+  }
+}
+
+/* MICROETAPA DASHBOARD TELA DIVIDIDA - INICIO */
+@media (max-width: 1023.98px) {
+  .app-shell[data-device-mobile="false"] .page-header {
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: stretch !important;
+    justify-content: flex-start !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    min-height: 0 !important;
+    height: auto !important;
+    gap: 0.55rem !important;
+    margin: 0 0 0.8rem !important;
+    padding: 0 !important;
+  }
+
+  .app-shell[data-device-mobile="false"] .page-header .page-header-text {
+    width: 100% !important;
+    max-width: 100% !important;
+    min-height: 0 !important;
+    height: auto !important;
+    flex: 0 0 auto !important;
+    margin: 0 !important;
+  }
+
+  .app-shell[data-device-mobile="false"] .page-header .page-actions {
+    display: block !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    min-height: 0 !important;
+    height: auto !important;
+    flex: 0 0 auto !important;
+    margin: 0 !important;
+  }
+
+  .app-shell[data-device-mobile="false"] .dashboard-sst-page-header .dashboard-sst-header-actions {
+    display: grid !important;
+    grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+    align-items: stretch !important;
+    justify-items: stretch !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+    gap: 0.55rem !important;
+    margin: 0 !important;
+  }
+
+  .app-shell[data-device-mobile="false"] .dashboard-sst-page-header .dashboard-sst-desktop-actions,
+  .app-shell[data-device-mobile="false"] .dashboard-sst-page-header .dashboard-sst-desktop-actions > div {
+    display: contents !important;
+  }
+
+  .app-shell[data-device-mobile="false"] .dashboard-sst-page-header .dashboard-sst-header-actions button {
+    display: inline-flex !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+    align-items: center !important;
+    justify-content: center !important;
+    margin: 0 !important;
+  }
+
+  .app-shell[data-device-mobile="false"] .dashboard-hero-sst > .relative {
+    display: grid !important;
+    grid-template-columns: minmax(0, 1fr) auto !important;
+    grid-template-areas:
+      "marca marca"
+      "saudacao saudacao"
+      "boas-vindas data"
+      "linha linha";
+    align-items: center !important;
+    justify-content: stretch !important;
+    gap: 0.45rem 1rem !important;
+  }
+
+  .app-shell[data-device-mobile="false"] .dashboard-hero-sst > .relative > :first-child {
+    display: contents !important;
+  }
+
+  .app-shell[data-device-mobile="false"] .dashboard-hero-sst > .relative > :first-child > p:first-child {
+    grid-area: marca;
+    margin: 0 !important;
+  }
+
+  .app-shell[data-device-mobile="false"] .dashboard-hero-sst > .relative > :first-child > h2 {
+    grid-area: saudacao;
+    margin: 0 !important;
+  }
+
+  .app-shell[data-device-mobile="false"] .dashboard-hero-sst > .relative > :first-child > p:last-of-type {
+    grid-area: boas-vindas;
+    margin: 0 !important;
+  }
+
+  .app-shell[data-device-mobile="false"] .dashboard-hero-sst > .relative > :first-child > div {
+    grid-area: linha;
+    margin: 0.1rem 0 0 !important;
+  }
+
+  .app-shell[data-device-mobile="false"] .dashboard-hero-sst__date {
+    grid-area: data;
+    align-self: center !important;
+    justify-self: end !important;
+    margin: 0 !important;
+  }
+}
+
+@media (max-width: 720px) {
+  .app-shell[data-device-mobile="false"] .dashboard-sst-page-header .dashboard-sst-header-actions {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
+}
+/* MICROETAPA DASHBOARD TELA DIVIDIDA - FIM */

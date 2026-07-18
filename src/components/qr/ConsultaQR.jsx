@@ -12,6 +12,7 @@ import { carregarTokenAuditoriaPublicaAtivoPadrao } from "../../services/auditor
 import { CrachaColaboradorPrint, CRACHA_COLABORADOR_PRINT_STYLES } from "./CrachaColaboradorPrint";
 import { ColaboradorIdentificacoesSeguranca } from "../colaboradores/ColaboradorIdentificacoesSeguranca";
 import dashboardHeroBackground from "../../assets/dashboard-hero-sst.webp";
+import { useDispositivoMobile } from "../../hooks/useDispositivoMobile";
 
 function CardIconSafe() {
     return (
@@ -1452,17 +1453,7 @@ function ConsultaQRDesktop({ colaborador, colaboradores = [], onSelecionarColabo
 }
 
 export function ConsultaQR(props) {
-    const [modoMobile, setModoMobile] = useState(() => (
-        typeof window !== "undefined" && window.matchMedia("(max-width: 1023.98px)").matches
-    ));
-
-    useEffect(() => {
-        const mediaQuery = window.matchMedia("(max-width: 1023.98px)");
-        const atualizar = () => setModoMobile(mediaQuery.matches);
-        atualizar();
-        mediaQuery.addEventListener?.("change", atualizar);
-        return () => mediaQuery.removeEventListener?.("change", atualizar);
-    }, []);
+    const modoMobile = useDispositivoMobile();
 
     return modoMobile ? <ScannerQrMobile /> : <ConsultaQRDesktop {...props} />;
 }

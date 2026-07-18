@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { AppMobileHeader } from "./AppMobileHeader";
 import { AppSidebar } from "./AppSidebar";
 import { CarregandoTela } from "../CarregandoTela";
+import { useDispositivoMobile } from "../../hooks/useDispositivoMobile";
 import {
     obterModuloPermissaoSistemaPorTela,
     obterResumoPermissaoSistema,
@@ -124,6 +125,7 @@ export function AppLayout({
     onSelecionarTela,
     children,
 }) {
+    const dispositivoMobile = useDispositivoMobile();
     const permissaoSistemaMenu = permissaoSistemaUsuario;
     const carregandoPermissaoSistemaMenu = carregandoPermissaoSistemaUsuario;
     const erroPermissaoSistemaMenu = erroPermissaoSistemaUsuario;
@@ -270,6 +272,7 @@ return (
             <div
                 className="app-shell flex min-h-screen w-full bg-[#F4F6F9]"
                 data-sidebar-open={menuLateralAberto ? "true" : "false"}
+                data-device-mobile={dispositivoMobile ? "true" : "false"}
             >
                 <AppSidebar
                     nav={navPermitida}
@@ -279,6 +282,7 @@ return (
                     usuario={usuarioComPerfilSistema}
                     sair={sair}
                     onSelecionarTela={selecionarTelaComPermissao}
+                    dispositivoMobile={dispositivoMobile}
                 />
 
                 <main className="app-main flex min-w-0 flex-1 bg-[#F4F6F9]">
@@ -289,6 +293,7 @@ return (
                             usuario={usuarioComPerfilSistema}
                             sair={sair}
                             onSelecionarTela={selecionarTelaComPermissao}
+                            dispositivoMobile={dispositivoMobile}
                         />
 
                         {children}

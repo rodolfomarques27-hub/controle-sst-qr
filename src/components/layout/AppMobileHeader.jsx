@@ -3,7 +3,14 @@ import { LogOut, ShieldCheck } from "lucide-react";
 
 const TELAS_ESSENCIAIS_MOBILE = ["dashboard", "auditoriaCampo", "novaAuditoriaCampo", "qr"];
 
-export function AppMobileHeader({ nav = [], tela, usuario = null, sair = null, onSelecionarTela }) {
+export function AppMobileHeader({
+    nav = [],
+    tela,
+    usuario = null,
+    sair = null,
+    onSelecionarTela,
+    dispositivoMobile = false,
+}) {
     const navMobile = useMemo(() => TELAS_ESSENCIAIS_MOBILE
         .map((id) => nav.find((item) => item.id === id))
         .filter(Boolean), [nav]);
@@ -11,23 +18,15 @@ export function AppMobileHeader({ nav = [], tela, usuario = null, sair = null, o
     const primeiraTelaMobile = atalhoPrincipal[0]?.id;
 
     useEffect(() => {
-        if (typeof window === "undefined") return undefined;
+        if (dispositivoMobile && primeiraTelaMobile && !atalhoPrincipal.some((item) => item.id === tela)) {
+            onSelecionarTela(primeiraTelaMobile, atalhoPrincipal[0]?.label || primeiraTelaMobile);
+        }
+    }, [atalhoPrincipal, dispositivoMobile, primeiraTelaMobile, tela, onSelecionarTela]);
 
-        const mediaQuery = window.matchMedia("(max-width: 1023.98px)");
-        const redirecionarSeMobile = () => {
-            if (mediaQuery.matches && primeiraTelaMobile && !atalhoPrincipal.some((item) => item.id === tela)) {
-                onSelecionarTela(primeiraTelaMobile, atalhoPrincipal[0]?.label || primeiraTelaMobile);
-            }
-        };
-
-        redirecionarSeMobile();
-        mediaQuery.addEventListener?.("change", redirecionarSeMobile);
-
-        return () => mediaQuery.removeEventListener?.("change", redirecionarSeMobile);
-    }, [atalhoPrincipal, primeiraTelaMobile, tela, onSelecionarTela]);
+    if (!dispositivoMobile) return null;
 
     return (
-        <header className="app-mobile-header lg:hidden">
+        <header className="app-mobile-header">
             <div className="app-mobile-header__topo">
                 <div className="app-mobile-header__marca">
                     <span className="app-mobile-header__logo" aria-hidden="true">

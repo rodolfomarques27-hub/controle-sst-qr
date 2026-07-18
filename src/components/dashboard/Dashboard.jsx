@@ -1093,6 +1093,7 @@ export function Dashboard({
     return (
         <div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
             <Header
+                className="dashboard-sst-page-header"
                 titulo="Dashboard SST"
                 acao={
                     <div className="top-actions-nowrap dashboard-sst-actions-horizontal dashboard-sst-header-actions">
