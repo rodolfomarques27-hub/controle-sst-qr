@@ -8687,7 +8687,6 @@
   background: linear-gradient(90deg, #22c55e 0%, #06b6d4 62%, #2563eb 100%);
 }
 
-.empresas-card-aberto-padrao .empresas-cadastro-header,
 .empresas-card-aberto-padrao.empresas-info-card > .mb-5 {
   position: relative !important;
   margin: 0 0 0.85rem !important;
@@ -8697,12 +8696,10 @@
   padding: 0.75rem 0.95rem 0.85rem !important;
 }
 
-.empresas-card-aberto-padrao .empresas-cadastro-header__etiqueta,
 .empresas-card-aberto-padrao.empresas-info-card > .mb-5 .text-slate-400 {
   display: none !important;
 }
 
-.empresas-card-aberto-padrao .empresas-cadastro-header__icone,
 .empresas-card-aberto-padrao.empresas-info-card > .mb-5 .rounded-2xl.bg-slate-950 {
   height: 2.85rem !important;
   width: 2.85rem !important;
@@ -8717,7 +8714,6 @@
   color: #059669 !important;
 }
 
-.empresas-card-aberto-padrao .empresas-cadastro-header__titulo,
 .empresas-card-aberto-padrao.empresas-info-card h2 {
   margin-top: 0 !important;
   color: #020617 !important;
@@ -8726,7 +8722,6 @@
   line-height: 1.15 !important;
 }
 
-.empresas-card-aberto-padrao .empresas-cadastro-header__subtitulo,
 .empresas-card-aberto-padrao.empresas-info-card p.mt-1 {
   margin-top: 0.28rem !important;
   color: #475569 !important;
@@ -8757,7 +8752,6 @@
 }
 
 @media (max-width: 760px) {
-  .empresas-card-aberto-padrao .empresas-cadastro-header,
   .empresas-card-aberto-padrao.empresas-info-card > .mb-5 {
     flex-direction: column !important;
     align-items: stretch !important;
