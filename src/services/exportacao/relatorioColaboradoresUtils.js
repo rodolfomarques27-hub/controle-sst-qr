@@ -108,3 +108,60 @@ export function montarCartaoResumoRelatorio({ icone, titulo, valor, classe }) {
         </div>
     `;
 }
+
+const ICONES_CABECALHO_RELATORIO_COLABORADORES = {
+    empresa: `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 21h18"/><path d="M8 21V9.2c0-.8.46-1.52 1.18-1.86L14 5l4.82 2.34C19.54 7.68 20 8.4 20 9.2V21"/><path d="M4.5 21v-7.4c0-.73.39-1.4 1.02-1.76L8 10.45"/><path d="M20 12.05l2.48 1.39c.63.36 1.02 1.03 1.02 1.76V21"/><path d="M11 10.5h1.2"/><path d="M15 10.5h1.2"/><path d="M11 13.5h1.2"/><path d="M15 13.5h1.2"/><path d="M11 16.5h1.2"/><path d="M15 16.5h1.2"/><path d="M13 21v-3.2h3V21"/></svg>`,
+    cnpj: `<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="3" width="14" height="18" rx="2"/><path d="M9 8h6"/><path d="M9 12h6"/><path d="M9 16h3"/></svg>`,
+    responsavel: `<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21c1.8-4 5-6 8-6s6.2 2 8 6"/></svg>`,
+    data: `<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="5" width="16" height="16" rx="2"/><path d="M16 3v4"/><path d="M8 3v4"/><path d="M4 10h16"/><path d="M8 14h3"/><path d="M13 14h3"/><path d="M8 17h3"/></svg>`,
+    sistema: `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3 5 6v5c0 4.6 2.9 8.8 7 10 4.1-1.2 7-5.4 7-10V6l-7-3Z"/><path d="m9.5 12 1.8 1.8 3.7-4"/></svg>`,
+};
+
+export function montarCabecalhoEmpresaTreinamentosRelatorio(empresa = {}, dataEmissao = "", titulo = "Relatório de colaboradores e treinamentos") {
+    return `
+        <header class="cabecalho-relatorio cabecalho-relatorio--modelo-aprovado cabecalho-relatorio--padrao-institucional">
+            <div class="marca-pdf-padrao">
+                <span class="marca-pdf-icone" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 3 5 6v5c0 4.6 2.9 8.8 7 10 4.1-1.2 7-5.4 7-10V6l-7-3Z"/><path d="m9.5 12 1.8 1.8 3.7-4"/></svg></span>
+                <div class="marca-pdf-textos">
+                    <h1>SAFESCAN BRASIL</h1>
+                    <p>GESTÃO DE SEGURANÇA DO TRABALHO</p>
+                </div>
+            </div>
+
+            <div class="linha-pdf-padrao"></div>
+
+            <div class="titulo-pdf-padrao titulo-pdf-padrao--treinamentos">
+                <h2>${escaparHTML(String(titulo || "Relatório de treinamentos").toUpperCase())}</h2>
+                <p>Relatório visual por empresa, colaboradores e treinamentos.</p>
+            </div>
+
+            <div class="dados-empresa dados-empresa--padrao-pdf">
+                <div class="dados-empresa__item dados-empresa__item--empresa"><span>${ICONES_CABECALHO_RELATORIO_COLABORADORES.empresa}</span><strong>Empresa:</strong><em>${escaparHTML(empresa.nome || "-")}</em></div>
+                <div class="dados-empresa__item dados-empresa__item--cnpj"><span>${ICONES_CABECALHO_RELATORIO_COLABORADORES.cnpj}</span><strong>CNPJ:</strong><em>${escaparHTML(empresa.cnpj || "-")}</em></div>
+                <div class="dados-empresa__item dados-empresa__item--responsavel"><span>${ICONES_CABECALHO_RELATORIO_COLABORADORES.responsavel}</span><strong>Responsável:</strong><em>${escaparHTML(empresa.responsavel || "-")}</em></div>
+                <div class="dados-empresa__item dados-empresa__item--data"><span>${ICONES_CABECALHO_RELATORIO_COLABORADORES.data}</span><strong>Data de emissão:</strong><em>${escaparHTML(dataEmissao)}</em></div>
+                <div class="dados-empresa__item dados-empresa__item--sistema"><span>${ICONES_CABECALHO_RELATORIO_COLABORADORES.sistema}</span><strong>Sistema:</strong><em>SafeScan Brasil</em></div>
+            </div>
+        </header>
+    `;
+}
+
+export function montarRodapeTreinamentosRelatorio(texto = "Relatório visual por empresa") {
+    return `
+        <footer class="rodape-relatorio">
+            <span>🛡 SafeScan Brasil</span>
+            <span>${escaparHTML(texto)}</span>
+        </footer>
+    `;
+}
+
+export function dividirEmLotesRelatorioEmpresas(lista = [], tamanho = 8) {
+    const itens = Array.isArray(lista) ? lista : [];
+    const lotes = [];
+
+    for (let i = 0; i < itens.length; i += tamanho) {
+        lotes.push(itens.slice(i, i + tamanho));
+    }
+
+    return lotes.length ? lotes : [[]];
+}
