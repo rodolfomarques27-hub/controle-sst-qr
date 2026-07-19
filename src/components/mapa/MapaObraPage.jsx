@@ -1,4 +1,4 @@
-import React, { useMemo, useRef, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
   Edit3,
   ImagePlus,
@@ -15,6 +15,17 @@ import {
   lerMapaObraLocal,
   salvarMapaObraLocal,
 } from "../../services/mapaObraLocalService";
+import { supabase } from "../../lib/supabaseClient";
+import {
+  listarMapasObraService,
+  salvarMapaObraService,
+} from "../../services/mapaObraService";
+import {
+  enviarPlantaMapaStorage,
+  obterUrlAssinadaPlantaMapa,
+  removerPlantaMapaStorage,
+  validarArquivoPlantaMapa,
+} from "../../services/mapaObraStorageService";
 import { listarExtintoresVistoria } from "../../services/extintoresVistoriaService";
 import { AmbientesControleTabela } from "./AmbientesControleTabela";
 import dashboardHeroBackground from "../../assets/dashboard-hero-sst.webp";
@@ -31,6 +42,27 @@ const TIPOS_PONTO = [
   "Outro ponto",
 ];
 
+function normalizarChaveTipoPonto(valor) {
+  return String(valor || "")
+    .trim()
+    .toLocaleLowerCase("pt-BR");
+}
+
+function catalogoTiposPontoUnicos(valores = []) {
+  const catalogo = new Map();
+
+  valores.forEach((valor) => {
+    const nome = String(valor || "").trim();
+    const chave = normalizarChaveTipoPonto(nome);
+
+    if (nome && chave && !catalogo.has(chave)) {
+      catalogo.set(chave, nome);
+    }
+  });
+
+  return Array.from(catalogo.values());
+}
+
 const TIPOS_ALERTA = [
   "Buraco ou escavação",
   "Área sem isolamento",
@@ -45,32 +77,128 @@ const TIPOS_ALERTA = [
   "Outro alerta",
 ];
 
-function compactarImagem(arquivo) {
-  return new Promise((resolve, reject) => {
-    const leitor = new FileReader();
-    leitor.onerror = reject;
-    leitor.onload = () => {
-      const imagem = new Image();
-      imagem.onerror = reject;
-      imagem.onload = () => {
-        const escala = Math.min(
-          1,
-          1800 / Math.max(imagem.naturalWidth, imagem.naturalHeight),
-        );
-        const canvas = document.createElement("canvas");
-        canvas.width = Math.max(1, Math.round(imagem.naturalWidth * escala));
-        canvas.height = Math.max(1, Math.round(imagem.naturalHeight * escala));
-        canvas
-          .getContext("2d")
-          .drawImage(imagem, 0, 0, canvas.width, canvas.height);
-        resolve(canvas.toDataURL("image/jpeg", 0.78));
-      };
-      imagem.src = leitor.result;
-    };
-    leitor.readAsDataURL(arquivo);
-  });
+function valorEhDataUrl(valor) {
+  return (
+    typeof valor === "string" &&
+    /^data:/i.test(valor.trim())
+  );
 }
 
+function converterDataUrlEmArquivo(dataUrl, nomeOriginal = "planta") {
+  const valor = String(dataUrl || "");
+  const separador = valor.indexOf(",");
+
+  if (separador < 0) {
+    throw new Error("A imagem local possui formato inválido.");
+  }
+
+  const cabecalho = valor.slice(0, separador);
+  const conteudo = valor.slice(separador + 1);
+
+  const correspondencia =
+    /^data:([^;,]+)(;base64)?$/i.exec(cabecalho);
+
+  if (!correspondencia) {
+    throw new Error("Não foi possível identificar o tipo da imagem local.");
+  }
+
+  const mime = String(
+    correspondencia[1] || "image/jpeg",
+  ).toLowerCase();
+
+  const binario = correspondencia[2]
+    ? globalThis.atob(conteudo)
+    : decodeURIComponent(conteudo);
+
+  const bytes = correspondencia[2]
+    ? Uint8Array.from(
+        binario,
+        (caractere) => caractere.charCodeAt(0),
+      )
+    : new TextEncoder().encode(binario);
+
+  const extensao =
+    mime === "image/png"
+      ? "png"
+      : "jpg";
+
+  const nomeInformado =
+    String(nomeOriginal || "planta")
+      .trim()
+      .replace(/\.[^.]+$/, "");
+
+  const nome =
+    `${nomeInformado || "planta"}.${extensao}`;
+
+  return new File(
+    [bytes],
+    nome,
+    {
+      type: mime,
+      lastModified: Date.now(),
+    },
+  );
+}
+
+async function hidratarReferenciaImagemMapa(
+  clienteSupabase,
+  referencia,
+  obraId,
+) {
+  if (!referencia || typeof referencia !== "object") {
+    return null;
+  }
+
+  if (!referencia.path) {
+    return referencia;
+  }
+
+  const url = await obterUrlAssinadaPlantaMapa({
+    supabase: clienteSupabase,
+    caminho: referencia.path,
+    obraId,
+  });
+
+  return {
+    ...referencia,
+    url,
+  };
+}
+
+async function hidratarMapaObraComUrls(
+  clienteSupabase,
+  mapa,
+) {
+  const obraId = String(mapa?.obraId || "");
+
+  const planta =
+    await hidratarReferenciaImagemMapa(
+      clienteSupabase,
+      mapa?.planta,
+      obraId,
+    );
+
+  const pontos = await Promise.all(
+    (Array.isArray(mapa?.pontos)
+      ? mapa.pontos
+      : []
+    ).map(async (ponto) => ({
+      ...ponto,
+      plantaDetalhada:
+        await hidratarReferenciaImagemMapa(
+          clienteSupabase,
+          ponto?.plantaDetalhada,
+          obraId,
+        ),
+    })),
+  );
+
+  return {
+    ...mapa,
+    planta,
+    pontos,
+  };
+}
 function ResumoMapaCard({ label, value, detail, tone = "sky" }) {
   const tones = {
     sky: "border-sky-100 bg-sky-50/70 text-sky-700",
@@ -99,10 +227,71 @@ export function MapaObraPage({ empresasBanco = [], obrasEmpresasBanco = [], audi
   const plantaRef = useRef(null);
   const [mensagem, setMensagem] = useState("");
   const [alteracoesPendentes, setAlteracoesPendentes] = useState(false);
+  const [carregandoMapaRemoto, setCarregandoMapaRemoto] = useState(false);
+  const [salvandoMapaRemoto, setSalvandoMapaRemoto] = useState(false);
+  const [salvandoPonto, setSalvandoPonto] = useState(false);
+  const [enviandoPlanta, setEnviandoPlanta] = useState(false);
   const [obraId, setObraId] = useState(() => lerMapaObraLocal().obraId || "");
+  const sequenciaCarregamentoRef = useRef(0);
   const extintores = useMemo(() => listarExtintoresVistoria(), []);
   const pontos = mapa.pontos || [];
   const alertas = mapa.alertas || [];
+
+  const tiposPontoPersonalizados = useMemo(() => {
+    const tiposPadrao = new Set(
+      TIPOS_PONTO.map(normalizarChaveTipoPonto),
+    );
+
+    const informados = Array.isArray(
+      mapa.tiposPontoPersonalizados,
+    )
+      ? mapa.tiposPontoPersonalizados
+      : pontos.map((ponto) => ponto?.tipo);
+
+    return catalogoTiposPontoUnicos(
+      informados,
+    ).filter(
+      (tipo) =>
+        !tiposPadrao.has(
+          normalizarChaveTipoPonto(tipo),
+        ),
+    );
+  }, [
+    mapa.tiposPontoPersonalizados,
+    pontos,
+  ]);
+
+  const tiposPontoDisponiveis = useMemo(
+    () =>
+      catalogoTiposPontoUnicos([
+        ...TIPOS_PONTO.slice(0, -1),
+        ...tiposPontoPersonalizados,
+        "Outro ponto",
+      ]),
+    [tiposPontoPersonalizados],
+  );
+
+  const tiposPontoFormulario = useMemo(
+    () =>
+      catalogoTiposPontoUnicos([
+        ...tiposPontoDisponiveis.slice(0, -1),
+        pontoEditando?.tipo &&
+        pontoEditando.tipo !== "Outro ponto"
+          ? pontoEditando.tipo
+          : "",
+        "Outro ponto",
+      ]),
+    [
+      tiposPontoDisponiveis,
+      pontoEditando?.tipo,
+    ],
+  );
+
+  const operacaoMapaEmAndamento =
+    carregandoMapaRemoto ||
+    salvandoMapaRemoto ||
+    salvandoPonto ||
+    enviandoPlanta;
 
 
   const tiposAlertaPersonalizados = useMemo(
@@ -219,68 +408,538 @@ export function MapaObraPage({ empresasBanco = [], obrasEmpresasBanco = [], audi
     };
   }, [auditoriasCampo, extintores, pontos]);
 
+  useEffect(() => {
+    const obraSelecionadaId =
+      String(obraId || "").trim();
+
+    const sequencia =
+      ++sequenciaCarregamentoRef.current;
+
+    if (!obraSelecionadaId) {
+      setCarregandoMapaRemoto(false);
+      return undefined;
+    }
+
+    let ativo = true;
+
+    async function carregarMapaSelecionado() {
+      setCarregandoMapaRemoto(true);
+      setMensagem("Carregando o mapa da obra...");
+
+      const obraSelecionada =
+        obrasDisponiveis.find(
+          (obra) =>
+            String(obra.id) ===
+            obraSelecionadaId,
+        );
+
+      try {
+        const mapasRemotos =
+          await listarMapasObraService({
+            supabase,
+            obraId: obraSelecionadaId,
+          });
+
+        if (
+          !ativo ||
+          sequencia !==
+            sequenciaCarregamentoRef.current
+        ) {
+          return;
+        }
+
+        const mapaRemoto =
+          Array.isArray(mapasRemotos)
+            ? mapasRemotos[0]
+            : null;
+
+        if (mapaRemoto) {
+          const hidratado =
+            await hidratarMapaObraComUrls(
+              supabase,
+              {
+                ...mapaRemoto,
+                obraId: obraSelecionadaId,
+                obraNome:
+                  mapaRemoto.obraNome ||
+                  obraSelecionada?.nome ||
+                  "",
+              },
+            );
+
+          if (
+            !ativo ||
+            sequencia !==
+              sequenciaCarregamentoRef.current
+          ) {
+            return;
+          }
+
+          setMapa(hidratado);
+          salvarMapaObraLocal(hidratado);
+          setAlteracoesPendentes(false);
+          setMensagem(
+            "Mapa carregado do banco de dados.",
+          );
+
+          return;
+        }
+
+        const mapaLocal =
+          lerMapaObraLocal(
+            obraSelecionadaId,
+          );
+
+        const proximoMapa = {
+          ...mapaLocal,
+          obraId: obraSelecionadaId,
+          obraNome:
+            mapaLocal.obraNome ||
+            obraSelecionada?.nome ||
+            "",
+        };
+
+        const possuiDadosLocais = Boolean(
+          proximoMapa.planta ||
+          proximoMapa.pontos?.length ||
+          proximoMapa.alertas?.length,
+        );
+
+        setMapa(proximoMapa);
+        salvarMapaObraLocal(proximoMapa);
+        setAlteracoesPendentes(
+          possuiDadosLocais,
+        );
+
+        setMensagem(
+          possuiDadosLocais
+            ? "Mapa local recuperado. Salve para enviá-lo ao banco de dados."
+            : "Nenhum mapa cadastrado para esta obra.",
+        );
+      } catch (error) {
+        if (
+          !ativo ||
+          sequencia !==
+            sequenciaCarregamentoRef.current
+        ) {
+          return;
+        }
+
+        const mapaLocal =
+          lerMapaObraLocal(
+            obraSelecionadaId,
+          );
+
+        const proximoMapa = {
+          ...mapaLocal,
+          obraId: obraSelecionadaId,
+          obraNome:
+            mapaLocal.obraNome ||
+            obraSelecionada?.nome ||
+            "",
+        };
+
+        const possuiDadosLocais = Boolean(
+          proximoMapa.planta ||
+          proximoMapa.pontos?.length ||
+          proximoMapa.alertas?.length,
+        );
+
+        setMapa(proximoMapa);
+        setAlteracoesPendentes(
+          possuiDadosLocais,
+        );
+
+        setMensagem(
+          `Não foi possível carregar o mapa remoto. Recuperação local utilizada: ${
+            error?.message ||
+            "erro não identificado"
+          }`,
+        );
+      } finally {
+        if (
+          ativo &&
+          sequencia ===
+            sequenciaCarregamentoRef.current
+        ) {
+          setCarregandoMapaRemoto(false);
+        }
+      }
+    }
+
+    carregarMapaSelecionado();
+
+    return () => {
+      ativo = false;
+    };
+  }, [obraId, obrasDisponiveis]);
+
   function atualizarMapa(proximo) {
     if (
       proximo?.obraId &&
-      String(proximo.obraId) !== String(mapa.obraId || "")
+      String(proximo.obraId) !==
+        String(mapa.obraId || "")
     ) {
-      const mapaDaObra = lerMapaObraLocal(proximo.obraId);
+      const mapaDaObra =
+        lerMapaObraLocal(
+          proximo.obraId,
+        );
+
       const selecionado = {
         ...mapaDaObra,
         obraId: proximo.obraId,
-        obraNome: proximo.obraNome || mapaDaObra.obraNome,
+        obraNome:
+          proximo.obraNome ||
+          mapaDaObra.obraNome,
       };
+
       setMapa(selecionado);
       setAlteracoesPendentes(false);
+
       return;
     }
+
     setMapa(proximo);
     setAlteracoesPendentes(true);
-    // Persiste cada operação para evitar perda após recarregar a página.
+
+    // Cópia de recuperação local até a confirmação no Supabase.
     salvarMapaObraLocal(proximo);
   }
 
-  function salvarAlteracoes() {
-    if (!mapa.obraId) {
-      setMensagem("Selecione uma obra antes de salvar.");
-      return;
-    }
-    salvarMapaObraLocal(mapa);
-    setAlteracoesPendentes(false);
-    setMensagem("Alterações salvas com sucesso.");
+  async function removerUploadsNovos(
+    caminhos,
+    obraDoMapa,
+  ) {
+    await Promise.allSettled(
+      Array.from(new Set(caminhos))
+        .filter(Boolean)
+        .map((caminho) =>
+          removerPlantaMapaStorage({
+            supabase,
+            caminho,
+            obraId: obraDoMapa,
+          }),
+        ),
+    );
   }
 
-  function carregarPlanta(evento) {
-    const arquivo = evento.target.files?.[0];
-    if (
-      !arquivo ||
-      !["image/png", "image/jpeg", "image/jpg"].includes(arquivo.type)
-    ) {
-      setMensagem("Envie a planta em PNG, JPG ou JPEG.");
-      return;
-    }
-    if (arquivo.size > 0) {
-      compactarImagem(arquivo)
-        .then((url) => {
-          atualizarMapa({ ...mapa, planta: { nome: arquivo.name, url } });
-          setMensagem("Planta compactada e salva localmente para validação.");
-        })
-        .catch(() =>
-          setMensagem("Não foi possível preparar a planta para armazenamento."),
-        );
-      return;
-    }
-    const leitor = new FileReader();
-    leitor.onload = () => {
-      atualizarMapa({
-        ...mapa,
-        planta: { nome: arquivo.name, url: leitor.result },
-      });
-      setMensagem("Planta salva localmente para validação.");
+  async function materializarImagensLocais(
+    mapaBase,
+    caminhosNovosIniciais = [],
+  ) {
+    const caminhosNovos = [
+      ...caminhosNovosIniciais,
+    ];
+
+    const proximoMapa = {
+      ...mapaBase,
+      pontos: Array.isArray(mapaBase.pontos)
+        ? mapaBase.pontos.map((ponto) => ({
+            ...ponto,
+          }))
+        : [],
     };
-    leitor.readAsDataURL(arquivo);
+
+    try {
+      if (
+        valorEhDataUrl(
+          proximoMapa.planta?.url,
+        )
+      ) {
+        const arquivo =
+          converterDataUrlEmArquivo(
+            proximoMapa.planta.url,
+            proximoMapa.planta.nome ||
+              "planta-geral",
+          );
+
+        const referencia =
+          await enviarPlantaMapaStorage({
+            supabase,
+            arquivo,
+            obraId: proximoMapa.obraId,
+            tipo: "geral",
+          });
+
+        caminhosNovos.push(
+          referencia.path,
+        );
+
+        proximoMapa.planta =
+          referencia;
+      }
+
+      const pontosConvertidos = [];
+
+      for (
+        const ponto of proximoMapa.pontos
+      ) {
+        if (
+          valorEhDataUrl(
+            ponto.plantaDetalhada?.url,
+          )
+        ) {
+          const arquivo =
+            converterDataUrlEmArquivo(
+              ponto.plantaDetalhada.url,
+              ponto.plantaDetalhada.nome ||
+                `planta-${ponto.id}`,
+            );
+
+          const referencia =
+            await enviarPlantaMapaStorage({
+              supabase,
+              arquivo,
+              obraId: proximoMapa.obraId,
+              tipo: "detalhada",
+              pontoId: ponto.id,
+            });
+
+          caminhosNovos.push(
+            referencia.path,
+          );
+
+          pontosConvertidos.push({
+            ...ponto,
+            plantaDetalhada:
+              referencia,
+          });
+        } else {
+          pontosConvertidos.push(
+            ponto,
+          );
+        }
+      }
+
+      proximoMapa.pontos =
+        pontosConvertidos;
+
+      return {
+        mapa: proximoMapa,
+        caminhosNovos,
+      };
+    } catch (error) {
+      await removerUploadsNovos(
+        caminhosNovos,
+        proximoMapa.obraId,
+      );
+
+      throw error;
+    }
   }
 
+  async function salvarMapaCompleto(
+    mapaBase,
+    {
+      caminhosNovosIniciais = [],
+      caminhosAntigos = [],
+    } = {},
+  ) {
+    const preparado =
+      await materializarImagensLocais(
+        mapaBase,
+        caminhosNovosIniciais,
+      );
+
+    let mapaBanco;
+
+    try {
+      mapaBanco =
+        await salvarMapaObraService({
+          supabase,
+          mapa: preparado.mapa,
+        });
+    } catch (error) {
+      await removerUploadsNovos(
+        preparado.caminhosNovos,
+        preparado.mapa.obraId,
+      );
+
+      throw error;
+    }
+
+    let mapaHidratado;
+    let avisoUrl = "";
+
+    try {
+      mapaHidratado =
+        await hidratarMapaObraComUrls(
+          supabase,
+          mapaBanco,
+        );
+    } catch (error) {
+      mapaHidratado = {
+        ...preparado.mapa,
+        id: mapaBanco.id,
+        mapaId: mapaBanco.mapaId,
+        snapshotVersao:
+          mapaBanco.snapshotVersao,
+      };
+
+      avisoUrl =
+        " O mapa foi salvo, mas algumas URLs temporárias não puderam ser renovadas.";
+    }
+
+    setMapa(mapaHidratado);
+    salvarMapaObraLocal(
+      mapaHidratado,
+    );
+    setAlteracoesPendentes(false);
+
+    const caminhosParaRemover =
+      Array.from(
+        new Set(caminhosAntigos),
+      ).filter(
+        (caminho) =>
+          caminho &&
+          !preparado.caminhosNovos.includes(
+            caminho,
+          ),
+      );
+
+    const resultadosRemocao =
+      await Promise.allSettled(
+        caminhosParaRemover.map(
+          (caminho) =>
+            removerPlantaMapaStorage({
+              supabase,
+              caminho,
+              obraId:
+                preparado.mapa.obraId,
+            }),
+        ),
+      );
+
+    const limpezaPendente =
+      resultadosRemocao.some(
+        (resultado) =>
+          resultado.status ===
+          "rejected",
+      );
+
+    return {
+      mapa: mapaHidratado,
+      avisoUrl,
+      limpezaPendente,
+    };
+  }
+
+  async function salvarAlteracoes() {
+    if (!mapa.obraId) {
+      setMensagem(
+        "Selecione uma obra antes de salvar.",
+      );
+
+      return;
+    }
+
+    setSalvandoMapaRemoto(true);
+    setMensagem(
+      "Salvando o mapa no banco de dados...",
+    );
+
+    try {
+      const resultado =
+        await salvarMapaCompleto(mapa);
+
+      setMensagem(
+        `Alterações salvas no banco de dados.${resultado.avisoUrl}`,
+      );
+    } catch (error) {
+      salvarMapaObraLocal(mapa);
+      setAlteracoesPendentes(true);
+
+      setMensagem(
+        `Não foi possível salvar o mapa: ${
+          error?.message ||
+          "erro não identificado"
+        }`,
+      );
+    } finally {
+      setSalvandoMapaRemoto(false);
+    }
+  }
+
+  async function carregarPlanta(evento) {
+    const input = evento.currentTarget;
+    const arquivo = input.files?.[0];
+
+    if (!arquivo) {
+      return;
+    }
+
+    if (!obraId) {
+      setMensagem(
+        "Selecione a obra antes de enviar a planta.",
+      );
+
+      input.value = "";
+
+      return;
+    }
+
+    setEnviandoPlanta(true);
+    setMensagem(
+      "Enviando e salvando a planta geral...",
+    );
+
+    try {
+      validarArquivoPlantaMapa(
+        arquivo,
+      );
+
+      const referencia =
+        await enviarPlantaMapaStorage({
+          supabase,
+          arquivo,
+          obraId,
+          tipo: "geral",
+        });
+
+      const caminhoAnterior =
+        mapa.planta?.path || "";
+
+      const proximoMapa = {
+        ...mapa,
+        obraId,
+        planta: referencia,
+        atualizadoEm:
+          new Date().toISOString(),
+      };
+
+      const resultado =
+        await salvarMapaCompleto(
+          proximoMapa,
+          {
+            caminhosNovosIniciais: [
+              referencia.path,
+            ],
+            caminhosAntigos:
+              caminhoAnterior &&
+              caminhoAnterior !==
+                referencia.path
+                ? [caminhoAnterior]
+                : [],
+          },
+        );
+
+      setMensagem(
+        resultado.limpezaPendente
+          ? "Planta geral salva. A limpeza do arquivo anterior ficou pendente."
+          : `Planta geral enviada e salva no banco de dados.${resultado.avisoUrl}`,
+      );
+    } catch (error) {
+      setMensagem(
+        `Não foi possível enviar a planta geral: ${
+          error?.message ||
+          "erro não identificado"
+        }`,
+      );
+    } finally {
+      setEnviandoPlanta(false);
+      input.value = "";
+    }
+  }
   function criarPonto(evento) {
     if ((!modoAdicionar && !modoAdicionarAlerta) || !mapa.planta) return;
     if (!obraId) {
@@ -669,68 +1328,448 @@ export function MapaObraPage({ empresasBanco = [], obrasEmpresasBanco = [], audi
     });
   }
 
-  function salvarPonto(evento) {
+  async function salvarPonto(evento) {
     evento.preventDefault();
-    const dados = new FormData(evento.currentTarget);
-    const empresaId = String(
-      dados.get("empresaId") || pontoEditando.empresaId || "",
-    );
-    const empresaSelecionada = empresasDaObra.find(
-      (empresa) => String(empresa.id) === empresaId,
-    );
-    const proximo = {
-      ...pontoEditando,
-      nome: String(dados.get("nome") || "").trim() || "Ponto sem nome",
-      tipo: String(dados.get("tipo") || "Outro ponto"),
-      descricao: String(dados.get("descricao") || "").trim(),
-      status: String(dados.get("status") || "Ativo"),
-      empresaId,
-      empresaNome: empresaSelecionada?.nome || "Ponto compartilhado",
-      atualizadoEm: new Date().toISOString(),
-    };
-    atualizarMapa({
-      ...mapa,
-      pontos: pontos.map((item) => (item.id === proximo.id ? proximo : item)),
-    });
-    setPontoEditando(null);
-    setMensagem("Ponto salvo localmente.");
-  }
 
-  function excluirPonto() {
-    if (!pontoAtual || !window.confirm(`Excluir ${pontoAtual.nome}?`)) return;
-    atualizarMapa({
-      ...mapa,
-      pontos: pontos.filter((item) => item.id !== pontoAtual.id),
-    });
-    setPontoSelecionado(null);
-  }
-
-  function carregarPlantaDetalhada(evento) {
-    if (!pontoAtual) return;
-    const arquivo = evento.target.files?.[0];
-    if (!arquivo || !arquivo.type.startsWith("image/")) {
-      setMensagem("Envie a planta detalhada como imagem.");
+    if (!pontoEditando || salvandoPonto) {
       return;
     }
-    compactarImagem(arquivo)
-      .then((url) => {
-        atualizarMapa({
-          ...mapa,
-          pontos: pontos.map((item) =>
-            item.id === pontoAtual.id
-              ? { ...item, plantaDetalhada: { nome: arquivo.name, url } }
-              : item,
-          ),
-        });
-        setMensagem("Planta detalhada compactada e vinculada localmente.");
-      })
-      .catch(() =>
-        setMensagem(
-          "Não foi possível preparar a planta detalhada para armazenamento.",
-        ),
+
+    const dados = new FormData(
+      evento.currentTarget,
+    );
+
+    const empresaId = String(
+      dados.get("empresaId") ||
+        pontoEditando.empresaId ||
+        "",
+    );
+
+    const empresaSelecionada =
+      empresasDaObra.find(
+        (empresa) =>
+          String(empresa.id) ===
+          empresaId,
       );
+
+    const tipoOpcao = String(
+      dados.get("tipo") ||
+        pontoEditando.tipoOpcao ||
+        pontoEditando.tipo ||
+        "Outro ponto",
+    ).trim();
+
+    const tipoPersonalizadoDigitado =
+      String(
+        dados.get("tipoPersonalizado") ||
+          pontoEditando.tipoPersonalizado ||
+          "",
+      ).trim();
+
+    let tipoFinal = tipoOpcao;
+    let tipoPersonalizadoNovo = false;
+
+    if (tipoOpcao === "Outro ponto") {
+      if (!tipoPersonalizadoDigitado) {
+        setMensagem(
+          "Informe o novo tipo de ponto antes de salvar.",
+        );
+
+        return;
+      }
+
+      const tipoJaExistente =
+        tiposPontoDisponiveis.find(
+          (tipo) =>
+            tipo !== "Outro ponto" &&
+            normalizarChaveTipoPonto(tipo) ===
+              normalizarChaveTipoPonto(
+                tipoPersonalizadoDigitado,
+              ),
+        );
+
+      tipoFinal =
+        tipoJaExistente ||
+        tipoPersonalizadoDigitado;
+
+      const tipoPadrao = TIPOS_PONTO.some(
+        (tipo) =>
+          normalizarChaveTipoPonto(tipo) ===
+          normalizarChaveTipoPonto(
+            tipoFinal,
+          ),
+      );
+
+      const tipoJaCatalogado =
+        tiposPontoPersonalizados.some(
+          (tipo) =>
+            normalizarChaveTipoPonto(tipo) ===
+            normalizarChaveTipoPonto(
+              tipoFinal,
+            ),
+        );
+
+      tipoPersonalizadoNovo =
+        !tipoPadrao &&
+        !tipoJaCatalogado;
+    }
+
+    const proximo = {
+      ...pontoEditando,
+      nome:
+        String(
+          dados.get("nome") || "",
+        ).trim() ||
+        "Ponto sem nome",
+      tipo: tipoFinal,
+      descricao: String(
+        dados.get("descricao") || "",
+      ).trim(),
+      status: String(
+        dados.get("status") ||
+          "Ativo",
+      ),
+      empresaId,
+      empresaNome:
+        empresaSelecionada?.nome ||
+        "Ponto compartilhado",
+      atualizadoEm:
+        new Date().toISOString(),
+    };
+
+    delete proximo.tipoOpcao;
+    delete proximo.tipoPersonalizado;
+
+    const existe = pontos.some(
+      (item) =>
+        item.id === proximo.id,
+    );
+
+    const catalogoAtualizado =
+      tipoPersonalizadoNovo
+        ? catalogoTiposPontoUnicos([
+            ...tiposPontoPersonalizados,
+            tipoFinal,
+          ])
+        : tiposPontoPersonalizados;
+
+    const proximoMapa = {
+      ...mapa,
+      tiposPontoPersonalizados:
+        catalogoAtualizado,
+      pontos: existe
+        ? pontos.map((item) =>
+            item.id === proximo.id
+              ? proximo
+              : item,
+          )
+        : [...pontos, proximo],
+    };
+
+    setSalvandoPonto(true);
+    setMensagem(
+      "Salvando ponto no banco de dados...",
+    );
+
+    try {
+      const resultado =
+        await salvarMapaCompleto(
+          proximoMapa,
+        );
+
+      setPontoSelecionado(
+        proximo.id,
+      );
+
+      setPontoEditando(null);
+
+      setMensagem(
+        tipoPersonalizadoNovo
+          ? `Novo tipo "${tipoFinal}" criado e ponto salvo no banco de dados.${resultado.avisoUrl}`
+          : `Ponto salvo no banco de dados.${resultado.avisoUrl}`,
+      );
+    } catch (error) {
+      setMensagem(
+        `Não foi possível salvar o ponto: ${
+          error?.message ||
+          "erro não identificado"
+        }`,
+      );
+    } finally {
+      setSalvandoPonto(false);
+    }
   }
 
+  async function removerTipoPontoPersonalizado(
+    tipo,
+  ) {
+    const nome = String(tipo || "").trim();
+
+    const tipoExistente =
+      tiposPontoPersonalizados.find(
+        (item) =>
+          normalizarChaveTipoPonto(item) ===
+          normalizarChaveTipoPonto(nome),
+      );
+
+    if (!tipoExistente || salvandoPonto) {
+      return;
+    }
+
+    const totalEmUso = pontos.filter(
+      (ponto) =>
+        normalizarChaveTipoPonto(
+          ponto?.tipo,
+        ) ===
+        normalizarChaveTipoPonto(
+          tipoExistente,
+        ),
+    ).length;
+
+    const textoEmUso =
+      totalEmUso > 0
+        ? ` ${totalEmUso} ponto(s) existente(s) continuarão com esse tipo.`
+        : "";
+
+    const confirmado = window.confirm(
+      `Excluir o tipo personalizado "${tipoExistente}" da lista?${textoEmUso}`,
+    );
+
+    if (!confirmado) {
+      return;
+    }
+
+    const proximoMapa = {
+      ...mapa,
+      tiposPontoPersonalizados:
+        tiposPontoPersonalizados.filter(
+          (item) =>
+            normalizarChaveTipoPonto(item) !==
+            normalizarChaveTipoPonto(
+              tipoExistente,
+            ),
+        ),
+    };
+
+    setSalvandoPonto(true);
+    setMensagem(
+      "Excluindo tipo personalizado...",
+    );
+
+    try {
+      const resultado =
+        await salvarMapaCompleto(
+          proximoMapa,
+        );
+
+      setPontoEditando((atual) => {
+        if (!atual) {
+          return atual;
+        }
+
+        const tipoAtual =
+          atual.tipoOpcao ||
+          atual.tipo ||
+          "";
+
+        if (
+          normalizarChaveTipoPonto(
+            tipoAtual,
+          ) !==
+          normalizarChaveTipoPonto(
+            tipoExistente,
+          )
+        ) {
+          return atual;
+        }
+
+        return {
+          ...atual,
+          tipo: "Outro ponto",
+          tipoOpcao: "Outro ponto",
+          tipoPersonalizado: "",
+        };
+      });
+
+      setMensagem(
+        totalEmUso > 0
+          ? `Tipo removido da lista. Os ${totalEmUso} ponto(s) existentes foram preservados.${resultado.avisoUrl}`
+          : `Tipo personalizado removido da lista.${resultado.avisoUrl}`,
+      );
+    } catch (error) {
+      setMensagem(
+        `Não foi possível excluir o tipo personalizado: ${
+          error?.message ||
+          "erro não identificado"
+        }`,
+      );
+    } finally {
+      setSalvandoPonto(false);
+    }
+  }
+  async function excluirPonto() {
+    const ponto =
+      pontoEditando &&
+      pontos.some(
+        (item) =>
+          item.id ===
+          pontoEditando.id,
+      )
+        ? pontoEditando
+        : pontoAtual;
+
+    if (!ponto || salvandoPonto) {
+      return;
+    }
+
+    const confirmado =
+      window.confirm(
+        `Excluir ${ponto.nome}?`,
+      );
+
+    if (!confirmado) {
+      return;
+    }
+
+    const caminhoPlanta =
+      ponto.plantaDetalhada?.path ||
+      "";
+
+    const proximoMapa = {
+      ...mapa,
+      pontos: pontos.filter(
+        (item) =>
+          item.id !== ponto.id,
+      ),
+    };
+
+    setSalvandoPonto(true);
+    setMensagem(
+      "Excluindo ponto do banco de dados...",
+    );
+
+    try {
+      const resultado =
+        await salvarMapaCompleto(
+          proximoMapa,
+          {
+            caminhosAntigos:
+              caminhoPlanta
+                ? [caminhoPlanta]
+                : [],
+          },
+        );
+
+      setPontoSelecionado(null);
+      setPontoEditando(null);
+
+      setMensagem(
+        resultado.limpezaPendente
+          ? "Ponto excluído do banco. A remoção da planta detalhada ficou pendente."
+          : `Ponto excluído do banco de dados.${resultado.avisoUrl}`,
+      );
+    } catch (error) {
+      setMensagem(
+        `Não foi possível excluir o ponto: ${
+          error?.message ||
+          "erro não identificado"
+        }`,
+      );
+    } finally {
+      setSalvandoPonto(false);
+    }
+  }
+  async function carregarPlantaDetalhada(evento) {
+    const input = evento.currentTarget;
+    const arquivo = input.files?.[0];
+    const ponto = pontoAtual;
+
+    if (!ponto || !arquivo) {
+      input.value = "";
+      return;
+    }
+
+    if (!obraId) {
+      setMensagem(
+        "Selecione a obra antes de enviar a planta detalhada.",
+      );
+
+      input.value = "";
+
+      return;
+    }
+
+    setEnviandoPlanta(true);
+    setMensagem(
+      "Enviando e salvando a planta detalhada...",
+    );
+
+    try {
+      validarArquivoPlantaMapa(
+        arquivo,
+      );
+
+      const referencia =
+        await enviarPlantaMapaStorage({
+          supabase,
+          arquivo,
+          obraId,
+          tipo: "detalhada",
+          pontoId: ponto.id,
+        });
+
+      const caminhoAnterior =
+        ponto.plantaDetalhada?.path ||
+        "";
+
+      const proximoMapa = {
+        ...mapa,
+        pontos: pontos.map((item) =>
+          item.id === ponto.id
+            ? {
+                ...item,
+                plantaDetalhada:
+                  referencia,
+                atualizadoEm:
+                  new Date().toISOString(),
+              }
+            : item,
+        ),
+      };
+
+      const resultado =
+        await salvarMapaCompleto(
+          proximoMapa,
+          {
+            caminhosNovosIniciais: [
+              referencia.path,
+            ],
+            caminhosAntigos:
+              caminhoAnterior &&
+              caminhoAnterior !==
+                referencia.path
+                ? [caminhoAnterior]
+                : [],
+          },
+        );
+
+      setMensagem(
+        resultado.limpezaPendente
+          ? "Planta detalhada salva. A limpeza do arquivo anterior ficou pendente."
+          : `Planta detalhada enviada e salva no banco de dados.${resultado.avisoUrl}`,
+      );
+    } catch (error) {
+      setMensagem(
+        `Não foi possível enviar a planta detalhada: ${
+          error?.message ||
+          "erro não identificado"
+        }`,
+      );
+    } finally {
+      setEnviandoPlanta(false);
+      input.value = "";
+    }
+  }
   function alternarExtintor(extintorId) {
     if (!pontoAtual) return;
     const vinculados = Array.isArray(pontoAtual.extintores)
@@ -845,6 +1884,7 @@ export function MapaObraPage({ empresasBanco = [], obrasEmpresasBanco = [], audi
                 <input
                   type="file"
                   accept="image/png,image/jpeg,image/jpg"
+                  disabled={operacaoMapaEmAndamento}
                   className="sr-only"
                   onChange={carregarPlanta}
                 />
@@ -852,11 +1892,11 @@ export function MapaObraPage({ empresasBanco = [], obrasEmpresasBanco = [], audi
               <button
                 type="button"
                 onClick={salvarAlteracoes}
-                disabled={!alteracoesPendentes}
+                disabled={!alteracoesPendentes || operacaoMapaEmAndamento}
                 className="inline-flex items-center gap-2 rounded-lg bg-emerald-400 px-3 py-2 text-xs font-bold text-slate-950 shadow-sm hover:bg-emerald-300 disabled:cursor-not-allowed disabled:bg-white/20 disabled:text-white/60"
               >
                 <Save size={16} />{" "}
-                {alteracoesPendentes ? "Salvar alterações" : "Tudo salvo"}
+                {salvandoMapaRemoto ? "Salvando..." : alteracoesPendentes ? "Salvar alterações" : "Tudo salvo"}
               </button>
             </div>
           </div>
@@ -879,6 +1919,7 @@ export function MapaObraPage({ empresasBanco = [], obrasEmpresasBanco = [], audi
             <input
               type="file"
               accept="image/png,image/jpeg,image/jpg"
+              disabled={operacaoMapaEmAndamento}
               className="sr-only"
               onChange={carregarPlanta}
             />
@@ -893,11 +1934,11 @@ export function MapaObraPage({ empresasBanco = [], obrasEmpresasBanco = [], audi
           <button
             type="button"
             onClick={salvarAlteracoes}
-            disabled={!alteracoesPendentes}
+            disabled={!alteracoesPendentes || operacaoMapaEmAndamento}
             className="inline-flex items-center gap-2 rounded-lg bg-sky-600 px-4 py-2.5 text-sm font-bold text-white shadow-sm transition hover:bg-sky-700 disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-400"
           >
             <Save size={16} />{" "}
-            {alteracoesPendentes ? "Salvar alterações" : "Tudo salvo"}
+            {salvandoMapaRemoto ? "Salvando..." : alteracoesPendentes ? "Salvar alterações" : "Tudo salvo"}
           </button>
         </div>
 
@@ -1170,6 +2211,7 @@ export function MapaObraPage({ empresasBanco = [], obrasEmpresasBanco = [], audi
                   <input
                     type="file"
                     accept="image/png,image/jpeg,image/jpg"
+                    disabled={operacaoMapaEmAndamento}
                     className="sr-only"
                     onChange={carregarPlantaDetalhada}
                   />
@@ -1235,23 +2277,48 @@ export function MapaObraPage({ empresasBanco = [], obrasEmpresasBanco = [], audi
           </div>
         )}
         {pontoEditando && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/40 p-4">
+          <div className="fixed inset-0 z-[2100] flex items-center justify-center bg-slate-950/55 p-4">
             <form
               onSubmit={salvarPonto}
-              className="w-full max-w-md rounded-xl bg-white p-5 shadow-xl"
+              className="flex max-h-[calc(100vh-2rem)] w-full max-w-md flex-col overflow-hidden rounded-xl bg-white shadow-2xl"
             >
-              <div className="flex items-center justify-between">
-                <h2 className="text-lg font-black text-slate-950">
-                  Dados do ponto
-                </h2>
+              <div className="relative flex min-h-[104px] shrink-0 items-center justify-between overflow-hidden px-5 py-3 text-white">
+                <div
+                  className="absolute inset-0 bg-cover bg-center"
+                  style={{
+                    backgroundImage: `url(${dashboardHeroBackground})`,
+                  }}
+                />
+
+                <div className="absolute inset-0 bg-gradient-to-r from-slate-950/95 via-slate-950/72 to-slate-950/25" />
+
+                <div className="relative flex items-center gap-3">
+                  <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-sky-500 text-white shadow-lg shadow-slate-950/20">
+                    <MapPinned size={18} />
+                  </span>
+
+                  <div>
+                    <p className="text-[10px] font-black uppercase tracking-[0.18em] text-sky-200">
+                      Mapa da obra
+                    </p>
+
+                    <h2 className="text-lg font-black">
+                      Dados do ponto
+                    </h2>
+                  </div>
+                </div>
+
                 <button
                   type="button"
                   onClick={() => setPontoEditando(null)}
-                  className="rounded-md p-2 text-slate-500 hover:bg-slate-100"
+                  aria-label="Fechar dados do ponto"
+                  className="relative rounded-md p-2 text-white transition hover:bg-white/10"
                 >
                   <X size={18} />
                 </button>
               </div>
+
+              <div className="overflow-y-auto p-4 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
               <label className="mt-4 block text-xs font-bold text-slate-600">
                 Nome
                 <input
@@ -1260,18 +2327,135 @@ export function MapaObraPage({ empresasBanco = [], obrasEmpresasBanco = [], audi
                   className="mt-1.5 w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm"
                 />
               </label>
-              <label className="mt-3 block text-xs font-bold text-slate-600">
-                Tipo
-                <select
-                  name="tipo"
-                  defaultValue={pontoEditando.tipo}
-                  className="mt-1.5 w-full rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm"
-                >
-                  {TIPOS_PONTO.map((tipo) => (
-                    <option key={tipo}>{tipo}</option>
-                  ))}
-                </select>
-              </label>
+              <fieldset className="mt-3">
+                <legend className="text-xs font-bold text-slate-600">
+                  Tipo
+                </legend>
+
+                <p className="mt-1 text-[11px] font-medium text-slate-500">
+                  Selecione um tipo para este ponto.
+                </p>
+
+                <div className="mt-2 max-h-44 overflow-y-auto rounded-lg border border-slate-200 bg-white p-2">
+                  {tiposPontoFormulario.map(
+                    (tipo) => {
+                      const tipoSelecionado =
+                        (pontoEditando.tipoOpcao ||
+                          pontoEditando.tipo ||
+                          "Outro ponto") === tipo;
+
+                      const tipoPersonalizado =
+                        tiposPontoPersonalizados.some(
+                          (item) =>
+                            normalizarChaveTipoPonto(
+                              item,
+                            ) ===
+                            normalizarChaveTipoPonto(
+                              tipo,
+                            ),
+                        );
+
+                      return (
+                        <div
+                          key={tipo}
+                          className={`flex min-h-10 items-center justify-between gap-3 rounded-md px-2.5 py-1.5 transition ${
+                            tipoSelecionado
+                              ? "bg-sky-50"
+                              : "bg-white hover:bg-slate-50"
+                          }`}
+                        >
+                          <label className="flex min-w-0 flex-1 cursor-pointer items-center gap-2.5">
+                            <input
+                              type="radio"
+                              name="tipo"
+                              value={tipo}
+                              checked={tipoSelecionado}
+                              onChange={() =>
+                                setPontoEditando(
+                                  (atual) => ({
+                                    ...atual,
+                                    tipo,
+                                    tipoOpcao:
+                                      tipo,
+                                    tipoPersonalizado:
+                                      tipo ===
+                                      "Outro ponto"
+                                        ? atual
+                                            ?.tipoPersonalizado ||
+                                          ""
+                                        : "",
+                                  }),
+                                )
+                              }
+                              disabled={
+                                operacaoMapaEmAndamento
+                              }
+                              className="h-4 w-4 shrink-0 border-slate-300 text-sky-600 focus:ring-sky-500"
+                            />
+
+                            <span className="min-w-0 truncate text-sm font-bold text-slate-700">
+                              {tipo}
+                            </span>
+                          </label>
+
+                          {tipoPersonalizado && (
+                            <button
+                              type="button"
+                              onClick={(evento) => {
+                                evento.stopPropagation();
+
+                                removerTipoPontoPersonalizado(
+                                  tipo,
+                                );
+                              }}
+                              disabled={
+                                operacaoMapaEmAndamento
+                              }
+                              title={`Excluir o tipo ${tipo}`}
+                              aria-label={`Excluir o tipo personalizado ${tipo}`}
+                              className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-red-500 transition hover:bg-red-50 hover:text-red-700 disabled:cursor-not-allowed disabled:opacity-40"
+                            >
+                              <Trash2 size={15} />
+                            </button>
+                          )}
+                        </div>
+                      );
+                    },
+                  )}
+                </div>
+
+                {(pontoEditando.tipoOpcao ||
+                  pontoEditando.tipo) ===
+                  "Outro ponto" && (
+                  <label className="mt-3 block text-xs font-bold text-slate-600">
+                    Novo tipo de ponto
+
+                    <input
+                      name="tipoPersonalizado"
+                      value={
+                        pontoEditando.tipoPersonalizado ||
+                        ""
+                      }
+                      onChange={(evento) =>
+                        setPontoEditando(
+                          (atual) => ({
+                            ...atual,
+                            tipoPersonalizado:
+                              evento.target.value,
+                          }),
+                        )
+                      }
+                      maxLength={60}
+                      required
+                      disabled={
+                        operacaoMapaEmAndamento
+                      }
+                      placeholder="Ex.: Portaria"
+                      className="mt-1.5 w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm disabled:cursor-not-allowed disabled:bg-slate-100"
+                    />
+                  </label>
+                )}
+              </fieldset>
               <label className="mt-3 block text-xs font-bold text-slate-600">
                 Empresa responsável
                 <select
@@ -1307,12 +2491,37 @@ export function MapaObraPage({ empresasBanco = [], obrasEmpresasBanco = [], audi
                   <option>Inativo</option>
                 </select>
               </label>
-              <button
-                type="submit"
-                className="mt-5 inline-flex w-full items-center justify-center gap-2 rounded-lg bg-sky-600 px-4 py-3 text-sm font-bold text-white"
-              >
-                <Save size={16} /> Salvar ponto
-              </button>
+              <div className="mt-5 flex items-center justify-between gap-3 border-t border-slate-100 pt-4">
+                {pontos.some(
+                  (item) =>
+                    item.id ===
+                    pontoEditando.id,
+                ) ? (
+                  <button
+                    type="button"
+                    onClick={excluirPonto}
+                    disabled={operacaoMapaEmAndamento}
+                    className="inline-flex items-center gap-2 rounded-lg bg-red-50 px-3 py-2.5 text-xs font-bold text-red-700 transition hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    <Trash2 size={15} />
+                    Excluir
+                  </button>
+                ) : (
+                  <span />
+                )}
+
+                <button
+                  type="submit"
+                  disabled={operacaoMapaEmAndamento}
+                  className="inline-flex items-center justify-center gap-2 rounded-lg bg-sky-600 px-4 py-2.5 text-sm font-black text-white transition hover:bg-sky-700 disabled:cursor-not-allowed disabled:bg-slate-300"
+                >
+                  <Save size={16} />
+                  {salvandoPonto
+                    ? "Salvando..."
+                    : "Salvar ponto"}
+                </button>
+              </div>
+              </div>
             </form>
           </div>
         )}

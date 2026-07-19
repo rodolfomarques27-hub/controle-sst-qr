@@ -2,6 +2,39 @@ const CHAVE_MAPA_OBRA_LOCAL = "safescan:mapa-obra:mvp:v2";
 const CHAVE_MAPA_OBRA_LEGACY = "safescan:mapa-obra:mvp:v1";
 const CHAVE_MAPA_OBRA_ATIVA = "safescan:mapa-obra:obra-ativa";
 
+function obterTiposPontoPersonalizados(valor = {}, pontos = []) {
+    const informados = Array.isArray(valor.tiposPontoPersonalizados)
+        ? valor.tiposPontoPersonalizados
+        : pontos.map((item) => String(item?.tipo || "").trim());
+
+    const tiposPadrao = new Set(
+        [
+            "Escritório",
+            "Canteiro",
+            "Almoxarifado",
+            "Vestiário",
+            "Área de refeição",
+            "Central de vendas",
+            "Placa de sinalização",
+            "Outro ponto",
+        ].map((tipo) => tipo.toLocaleLowerCase("pt-BR")),
+    );
+
+    const catalogo = new Map();
+
+    informados
+        .map((tipo) => String(tipo || "").trim())
+        .filter(Boolean)
+        .forEach((tipo) => {
+            const chave = tipo.toLocaleLowerCase("pt-BR");
+
+            if (!tiposPadrao.has(chave) && !catalogo.has(chave)) {
+                catalogo.set(chave, tipo);
+            }
+        });
+
+    return Array.from(catalogo.values());
+}
 function obterTiposAlertaPersonalizados(valor = {}, alertas = []) {
     const informados = Array.isArray(valor.tiposAlertaPersonalizados)
         ? valor.tiposAlertaPersonalizados
@@ -34,20 +67,27 @@ function mapaVazio() {
         obraNome: "",
         planta: null,
         pontos: [],
+        tiposPontoPersonalizados: [],
         alertas: [],
         tiposAlertaPersonalizados: [],
     };
 }
 
 function normalizarMapa(valor = {}) {
+    const pontos = Array.isArray(valor.pontos) ? valor.pontos : [];
     const alertas = Array.isArray(valor.alertas) ? valor.alertas : [];
+
     return {
         empresaId: String(valor.empresaId || ""),
         empresaNome: String(valor.empresaNome || ""),
         obraId: String(valor.obraId || ""),
         obraNome: String(valor.obraNome || ""),
         planta: valor.planta || null,
-        pontos: Array.isArray(valor.pontos) ? valor.pontos : [],
+        pontos,
+        tiposPontoPersonalizados: obterTiposPontoPersonalizados(
+            valor,
+            pontos,
+        ),
         alertas,
         tiposAlertaPersonalizados: obterTiposAlertaPersonalizados(
             valor,
