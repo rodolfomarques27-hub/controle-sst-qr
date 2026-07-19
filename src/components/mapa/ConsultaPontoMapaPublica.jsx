@@ -34,8 +34,42 @@ export function ConsultaPontoMapaPublica({ token }) {
         return () => { window.removeEventListener("storage", atualizar); window.removeEventListener("safescan-mapa-atualizado", atualizar); };
     }, []);
 
-    const mapa = dadosRemotos ? { ...mapaLocal, obraNome: dadosRemotos.mapa?.nome || "", planta: dadosRemotos.mapa?.plantaGeralUrl ? { url: dadosRemotos.mapa.plantaGeralUrl, nome: "Planta geral da obra" } : mapaLocal.planta } : mapaLocal;
-    const pontoRemoto = dadosRemotos ? { ...dadosRemotos.ponto, plantaDetalhada: dadosRemotos.ponto?.plantaDetalhadaUrl ? { url: dadosRemotos.ponto.plantaDetalhadaUrl } : null } : null;
+    const mapa = dadosRemotos
+        ? {
+            ...mapaLocal,
+            ...dadosRemotos.mapa,
+            obraNome:
+                dadosRemotos.mapa?.obraNome ||
+                dadosRemotos.mapa?.nome ||
+                mapaLocal.obraNome ||
+                "",
+            planta:
+                dadosRemotos.mapa?.plantaGeralUrl
+                    ? {
+                        ...(dadosRemotos.mapa?.planta || {}),
+                        url: dadosRemotos.mapa.plantaGeralUrl,
+                        nome:
+                            dadosRemotos.mapa?.planta?.nome ||
+                            "Planta geral da obra",
+                    }
+                    : mapaLocal.planta,
+        }
+        : mapaLocal;
+
+    const pontoRemoto = dadosRemotos
+        ? {
+            ...dadosRemotos.ponto,
+            plantaDetalhada:
+                dadosRemotos.ponto?.plantaDetalhadaUrl
+                    ? {
+                        ...(dadosRemotos.ponto?.plantaDetalhada || {}),
+                        url:
+                            dadosRemotos.ponto
+                                .plantaDetalhadaUrl,
+                    }
+                    : null,
+        }
+        : null;
     const ponto = pontoRemoto || mapaLocal.pontos?.find((item) => item.token === token);
     const pontoLocal = mapaLocal.pontos?.find((item) => item.token === token);
     if (pontoRemoto && pontoLocal) Object.assign(pontoRemoto, pontoLocal);

@@ -10,6 +10,16 @@ import {
 } from "lucide-react";
 import dashboardHeroBackground from "../../assets/dashboard-hero-sst.webp";
 import { lerMapaObraLocal } from "../../services/mapaObraLocalService";
+import {
+  supabase,
+  SUPABASE_CONFIGURADO,
+} from "../../lib/supabaseClient";
+import {
+  listarMapasObraService,
+} from "../../services/mapaObraService";
+import {
+  obterUrlAssinadaPlantaMapa,
+} from "../../services/mapaObraStorageService";
 import { listarExtintoresVistoria } from "../../services/extintoresVistoriaService";
 import { PlantaInterativa } from "./PlantaInterativa";
 import { GoogleMapaSatelite } from "./GoogleMapaSatelite";
@@ -467,6 +477,70 @@ function PlantaDetalhadaModal({ ponto, extintores, auditorias, onClose }) {
   );
 }
 
+async function hidratarReferenciaImagemVisualizacao(
+  referencia,
+  obraId,
+) {
+  if (
+    !referencia ||
+    typeof referencia !== "object"
+  ) {
+    return null;
+  }
+
+  if (!referencia.path) {
+    return referencia;
+  }
+
+  const url =
+    await obterUrlAssinadaPlantaMapa({
+      supabase,
+      caminho: referencia.path,
+      obraId,
+    });
+
+  return {
+    ...referencia,
+    url,
+  };
+}
+
+async function hidratarMapaVisualizacao(
+  mapa,
+) {
+  const obraId = String(
+    mapa?.obraId ||
+      mapa?.obra_id ||
+      "",
+  );
+
+  const planta =
+    await hidratarReferenciaImagemVisualizacao(
+      mapa?.planta,
+      obraId,
+    );
+
+  const pontos = await Promise.all(
+    (
+      Array.isArray(mapa?.pontos)
+        ? mapa.pontos
+        : []
+    ).map(async (ponto) => ({
+      ...ponto,
+      plantaDetalhada:
+        await hidratarReferenciaImagemVisualizacao(
+          ponto?.plantaDetalhada,
+          obraId,
+        ),
+    })),
+  );
+
+  return {
+    ...mapa,
+    planta,
+    pontos,
+  };
+}
 export function MapaObraVisualizacaoPage({ auditoriasCampo = [] }) {
   const googleMapsConfig = useMemo(() => ({
     apiKey: import.meta.env.VITE_GOOGLE_MAPS_API_KEY || "",
@@ -475,7 +549,77 @@ export function MapaObraVisualizacaoPage({ auditoriasCampo = [] }) {
   }), []);
   const googleMapsDisponivel = Boolean(googleMapsConfig.apiKey && Number.isFinite(googleMapsConfig.latitude) && Number.isFinite(googleMapsConfig.longitude));
   const [fonteMapa, setFonteMapa] = useState("planta");
-  const mapa = useMemo(() => lerMapaObraLocal(), []);
+  const mapaLocalInicial = useMemo(
+    () => lerMapaObraLocal(),
+    [],
+  );
+
+  const [mapa, setMapa] = useState(
+    mapaLocalInicial,
+  );
+
+  useEffect(() => {
+    if (!SUPABASE_CONFIGURADO) {
+      return undefined;
+    }
+
+    let ativo = true;
+
+    async function carregarMapaRemoto() {
+      try {
+        const obraPreferida = String(
+          mapaLocalInicial?.obraId ||
+            "",
+        );
+
+        let mapas =
+          await listarMapasObraService({
+            supabase,
+            obraId: obraPreferida,
+          });
+
+        if (
+          (!Array.isArray(mapas) ||
+            mapas.length === 0) &&
+          obraPreferida
+        ) {
+          mapas =
+            await listarMapasObraService({
+              supabase,
+            });
+        }
+
+        const mapaRemoto =
+          Array.isArray(mapas)
+            ? mapas[0]
+            : null;
+
+        if (!ativo || !mapaRemoto) {
+          return;
+        }
+
+        const mapaHidratado =
+          await hidratarMapaVisualizacao(
+            mapaRemoto,
+          );
+
+        if (ativo) {
+          setMapa(mapaHidratado);
+        }
+      } catch (error) {
+        console.warn(
+          "Visualização remota do mapa indisponível; usando recuperação local.",
+          error?.message || error,
+        );
+      }
+    }
+
+    carregarMapaRemoto();
+
+    return () => {
+      ativo = false;
+    };
+  }, [mapaLocalInicial?.obraId]);
   const extintores = useMemo(() => listarExtintoresVistoria(), []);
   const [pontoSelecionado, setPontoSelecionado] = useState(null);
   const [nivelZoomPonto, setNivelZoomPonto] = useState(0);
