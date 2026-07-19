@@ -5,7 +5,7 @@ import {
   converterTabelaPdfParaTextoPlanilha,
   extrairParticipantesTabelaPdf,
   validarResultadoTabelaPdf,
-} from "../utils/listaPresencaPdfTabelaUtils";
+} from "./listaPresencaPdfTabelaUtils";
 
 if (pdfjsLib?.GlobalWorkerOptions) {
   pdfjsLib.GlobalWorkerOptions.workerSrc = pdfWorkerSrc;

@@ -1,5 +1,5 @@
 import { useCallback, useMemo, useState } from "react";
-import { compararNomesLista, normalizarNome } from "../utils/normalizarNome";
+import { compararNomesLista, normalizarNome } from "../../utils/normalizarNome";
 import { executarPdfOcrArquivo } from "./usePdfOcr";
 
 function formatarErro(erro, padrao) {

@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { normalizarNome } from "../utils/normalizarNome";
+import { normalizarNome } from "../../utils/normalizarNome";
 
 function criarCanvas(largura, altura) {
   const canvas = document.createElement("canvas");

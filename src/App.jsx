@@ -22,6 +22,9 @@ import {
     obterTokenMapaPontoPublicoApp,
     verificarRotaNovaAuditoriaCampoApp,
 } from "./routes/appRoutesService";
+import {
+    ORDEM_TELAS_INICIAIS_PERMITIDAS_APP,
+} from "./routes/appScreensConfig";
 import { consultarDdsPublico, obterTokenDdsPublicoUrl } from "./services/ddsRegistrosService";
 import { sanitizarNomeArquivo } from "./utils/sstUtils";
 import {
@@ -102,22 +105,6 @@ function obterEstadoInicialMenuLateral() {
 
     return true;
 }
-
-const ORDEM_TELAS_INICIAIS_PERMITIDAS_APP = [
-    "dashboard",
-    "auditoriaCampo",
-    "novaAuditoriaCampo",
-    "qr",
-    "empresas",
-    "colaboradores",
-    "treinamentos",
-    "dds",
-    "aniversariantes",
-    "auditoria",
-    "acessosApp",
-    "configuracoes",
-    "roteiro",
-];
 
 function obterPrimeiraTelaPermitidaApp(permissao = null) {
     return ORDEM_TELAS_INICIAIS_PERMITIDAS_APP.find((telaCandidata) =>

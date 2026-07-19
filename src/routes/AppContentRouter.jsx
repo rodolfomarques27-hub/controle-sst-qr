@@ -4,6 +4,11 @@ import { Card, PasswordInput } from "../components/commonComponents";
 import { LIMITE_STORAGE_MB } from "../constants/sistemaConstants";
 import { supabase } from "../lib/supabaseClient";
 import {
+    ORDEM_REDIRECIONAMENTO_TELAS_PERMITIDAS,
+    ROTULOS_TELAS_ACESSO_BLOQUEADO,
+    precarregarModuloTelaSistema,
+} from "./appScreensConfig";
+import {
     carregarPermissaoSistemaAtualService,
     normalizarPermissaoSistema,
     registrarSolicitacaoAcessoSistemaService,
@@ -34,92 +39,11 @@ const ConfiguracoesSistema = React.lazy(() => import("../components/configuracoe
 const AcessosAppPage = React.lazy(() => import("../components/acessos/AcessosAppPage").then((modulo) => ({ default: modulo.AcessosAppPage })));
 
 
-function precarregarModuloTelaSistema(tela = "") {
-    switch (tela) {
-        case "dashboard":
-            return import("../components/dashboard/Dashboard");
-        case "extintores":
-            return import("../components/extintores/ExtintoresPage");
-        case "vistoriaExtintores":
-            return import("../components/extintores/VistoriaExtintoresPage");
-        case "mapaObra":
-            return import("../components/mapa/MapaObraPage");
-        case "mapaObraVisualizacao":
-            return import("../components/mapa/MapaObraVisualizacaoPage");
-        case "auditoriaCampo":
-            return import("../components/auditoria/DashboardAuditoriaCampo");
-        case "novaAuditoriaCampo":
-            return import("../components/auditoria/NovaAuditoriaCampoDireta");
-        case "empresas":
-            return import("../components/empresas/EmpresasPage");
-        case "colaboradores":
-            return import("../components/colaboradores/ColaboradoresPage");
-        case "aniversariantes":
-            return import("../components/aniversariantes/AniversariantesPage");
-        case "treinamentos":
-            return import("../components/treinamentos/TreinamentosPage");
-        case "dds":
-            return import("../components/dds/DdsPage");
-        case "qr":
-            return import("../components/qr/ConsultaQR");
-        case "auditoria":
-            return import("../components/auditoria/RelatorioAuditoria");
-        case "acessosApp":
-            return import("../components/acessos/AcessosAppPage");
-        case "configuracoes":
-            return import("../components/configuracoes/ConfiguracoesSistema");
-        case "roteiro":
-            return import("../components/Requisitos");
-        default:
-            return Promise.resolve();
-    }
-}
-
-const ORDEM_REDIRECIONAMENTO_TELAS_PERMITIDAS = [
-    "dashboard",
-    "vistoriaExtintores",
-    "mapaObra",
-    "mapaObraVisualizacao",
-    "extintores",
-    "auditoriaCampo",
-    "novaAuditoriaCampo",
-    "qr",
-    "empresas",
-    "colaboradores",
-    "treinamentos",
-    "dds",
-    "aniversariantes",
-    "auditoria",
-    "acessosApp",
-    "configuracoes",
-    "roteiro",
-];
-
 function obterPrimeiraTelaPermitidaParaUsuario(permissao = null) {
     return ORDEM_REDIRECIONAMENTO_TELAS_PERMITIDAS.find((telaCandidata) =>
         usuarioPodeAcessarTelaSistema(permissao, telaCandidata)
     ) || "";
 }
-
-const ROTULOS_TELAS_ACESSO_BLOQUEADO = Object.freeze({
-    dashboard: "Dashboard SST",
-    vistoriaExtintores: "Vistoria de extintores",
-    mapaObra: "Mapa da Obra",
-    mapaObraVisualizacao: "Mapa da Obra - Consulta",
-    extintores: "Extintores",
-    novaAuditoriaCampo: "Nova Auditoria",
-    auditoriaCampo: "Dashboard Auditoria",
-    empresas: "Empresas",
-    colaboradores: "Colaboradores",
-    aniversariantes: "Aniversariantes",
-    treinamentos: "Treinamentos",
-    dds: "DDS",
-    qr: "QR Code",
-    auditoria: "Auditoria do Sistema",
-    acessosApp: "Acessos do App",
-    configuracoes: "Configurações",
-    roteiro: "Manuais",
-});
 
 const ROTULOS_MODULOS_ACESSO_BLOQUEADO = Object.freeze({
     dashboard_sst: "Dashboard SST",

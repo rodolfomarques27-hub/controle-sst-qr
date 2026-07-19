@@ -10,9 +10,9 @@ import {
   Upload,
   XCircle,
 } from "lucide-react";
-import usePdfTabelaListaPresenca from "../hooks/usePdfTabelaListaPresenca";
-import useVerificarListaPresenca, { compararTabelaPdfComColaboradores } from "../hooks/useVerificarListaPresenca";
-import { normalizarNome } from "../utils/normalizarNome";
+import usePdfTabelaListaPresenca from "./usePdfTabelaListaPresenca";
+import useVerificarListaPresenca, { compararTabelaPdfComColaboradores } from "./useVerificarListaPresenca";
+import { normalizarNome } from "../../utils/normalizarNome";
 
 function formatarPercentual(valor) {
   const numero = Number(valor);
@@ -90,7 +90,7 @@ function formatarBboxCurto(bbox) {
   return `x0:${Math.round(x0)} y0:${Math.round(y0)} x1:${Math.round(x1)} y1:${Math.round(y1)}`;
 }
 
-export default function VerificadorListaPresenca({
+export default function VerificadorListaPresencaExperimental({
   colaboradores = [],
   colaboradorId = null,
   onConcluido = null,
