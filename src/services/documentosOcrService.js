@@ -10,6 +10,12 @@ import {
     obterDataSeguraVerificacao,
     obterExtensaoArquivoVerificacao,
 } from "../utils/documentosVerificacaoUtils";
+import {
+    filtrarDatasPorCategoria,
+    formatarDataBr,
+    limparTextoPossivelDocumento,
+    valorPareceSomenteDocumentoFiscal,
+} from "./documentosOcrUtils";
 
 const LIMITE_BYTES_LEITURA_LOCAL = 8 * 1024 * 1024;
 const LIMITE_TEXTO_OCR_SALVAR = 6000;
@@ -128,18 +134,6 @@ function decodificarBytes(bytes, codificacao) {
     }
 }
 
-function limparTextoPossivelDocumento(texto = "") {
-    return String(texto || "")
-        .replace(/\\\(/g, "(")
-        .replace(/\\\)/g, ")")
-        .replace(/\\n/g, " ")
-        .replace(/\\r/g, " ")
-        .replace(/\\t/g, " ")
-        .replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F]/g, " ")
-        .replace(/\s+/g, " ")
-        .trim();
-}
-
 function proporcaoCaracteresEstranhos(texto = "") {
     const valor = String(texto || "");
     if (!valor) return 0;
@@ -222,14 +216,6 @@ function montarDataIso(diaValor, mesValor, anoValor) {
     }
 
     return `${ano}-${String(mes).padStart(2, "0")}-${String(dia).padStart(2, "0")}`;
-}
-
-function formatarDataBr(iso = "") {
-    const partes = String(iso || "").slice(0, 10).split("-");
-
-    if (partes.length !== 3) return iso;
-
-    return `${partes[2]}/${partes[1]}/${partes[0]}`;
 }
 
 function obterAnoDataIso(iso = "") {
@@ -348,10 +334,6 @@ export function extrairDatasTextoDocumental(texto = "", origem = "texto") {
         const porData = a.iso.localeCompare(b.iso);
         return porData !== 0 ? porData : String(a.origem || "").localeCompare(String(b.origem || ""));
     });
-}
-
-function filtrarDatasPorCategoria(datas = [], categoria = "") {
-    return datas.filter((data) => Array.isArray(data.categorias) && data.categorias.includes(categoria));
 }
 
 function dataIsoDeTextoDataBr(valor = "") {
@@ -707,19 +689,6 @@ function obterTipoDocumentoResumo(texto = "", arquivoNome = "") {
     }
 
     return "";
-}
-
-function valorPareceSomenteDocumentoFiscal(valor = "") {
-    const texto = limparTextoPossivelDocumento(valor);
-    const digitos = texto.replace(/\D/g, "");
-    const semPontuacao = texto.replace(/[.\-/\s]/g, "");
-
-    if (!texto) return false;
-    if (/^\d{2}\.\d{3}\.\d{3}\/\d{4}-\d{2}$/.test(texto)) return true;
-    if (/^\d{3}\.\d{3}\.\d{3}-\d{2}$/.test(texto)) return true;
-    if ((digitos.length === 14 || digitos.length === 11) && semPontuacao === digitos) return true;
-
-    return false;
 }
 
 function obterEmpresaResumo(texto = "") {
