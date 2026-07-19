@@ -1,5 +1,5 @@
 // Serviços de exportação CSV/PDF do sistema SST.
-import { supabase } from "../lib/supabaseClient";
+import { criarUrlAssinadaStorage } from "./supabaseServices";
 import html2canvas from "html2canvas";
 import jsPDF from "jspdf";
 // Funções puras de geração/download local no navegador.
@@ -249,13 +249,11 @@ async function resolverFotoColaboradorRelatorio(valor = "") {
     if (!caminho) return "";
 
     try {
-        const { data, error } = await supabase.storage
-            .from("fotos-colaboradores")
-            .createSignedUrl(caminho, 60 * 60);
-
-        if (!error && data?.signedUrl) {
-            return data.signedUrl;
-        }
+        return await criarUrlAssinadaStorage(
+            "fotos-colaboradores",
+            caminho,
+            60 * 60,
+        );
     } catch (error) {
         console.warn("Não foi possível assinar foto do colaborador para o relatório:", error?.message || error);
     }

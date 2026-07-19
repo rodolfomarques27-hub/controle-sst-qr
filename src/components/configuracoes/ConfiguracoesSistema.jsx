@@ -70,6 +70,7 @@ import {
 } from "../../services/usuariosPermissoesSistemaService";
 import { supabase } from "../../lib/supabaseClient";
 import { reduzirFotoParaAuditoria } from "../../services/imagemService";
+import { obterUrlPublicaStorage } from "../../services/supabaseServices";
 import { QrCodeComLogo, QrCodeLogoControls } from "../qr/QrCodeComLogo";
 import {
     adicionarObra,
@@ -271,16 +272,11 @@ const PRE_AJUSTES_FUNDO_LOGIN_CONFIGURACOES = [
 ];
 
 function montarUrlPublicaConfiguracoesStorage(caminho, versao = "") {
-    try {
-        const { data } = supabase.storage.from(BUCKET_FUNDO_LOGIN_CONFIGURACOES).getPublicUrl(caminho);
-        const url = data?.publicUrl || "";
-
-        if (!url) return "";
-
-        return versao ? `${url}?v=${encodeURIComponent(String(versao))}` : url;
-    } catch {
-        return "";
-    }
+    return obterUrlPublicaStorage(
+        BUCKET_FUNDO_LOGIN_CONFIGURACOES,
+        caminho,
+        versao,
+    );
 }
 
 function montarUrlFundoLoginConfiguracoes(versao = "") {

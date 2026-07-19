@@ -76,6 +76,44 @@ export async function listarTodosArquivosStorage(bucket, prefixo = "", opcoes = 
     return todos;
 }
 
+export function obterUrlPublicaStorage(bucket, caminhoOuUrl, versao = "") {
+    if (!bucket || !caminhoOuUrl) return "";
+
+    const caminho = extrairCaminhoStorage(bucket, caminhoOuUrl);
+
+    if (!caminho) return "";
+
+    const valor = String(caminho).trim();
+
+    if (/^(blob:|data:)/i.test(valor)) {
+        return valor;
+    }
+
+    let url = valor;
+
+    if (!/^https?:\/\//i.test(valor)) {
+        try {
+            const { data } = supabase.storage
+                .from(bucket)
+                .getPublicUrl(valor);
+
+            url = data?.publicUrl || "";
+        } catch {
+            return "";
+        }
+    }
+
+    if (!url) return "";
+
+    const versaoTratada = String(versao || "").trim();
+
+    if (!versaoTratada) return url;
+
+    const separador = url.includes("?") ? "&" : "?";
+
+    return `${url}${separador}v=${encodeURIComponent(versaoTratada)}`;
+}
+
 export async function criarUrlAssinadaStorage(bucket, caminhoOuUrl, validadeSegundos = 600) {
     if (!bucket || !caminhoOuUrl) return "";
 
@@ -88,8 +126,7 @@ export async function criarUrlAssinadaStorage(bucket, caminhoOuUrl, validadeSegu
     }
 
     if (bucket === "logos-empresas") {
-        const { data } = supabase.storage.from(bucket).getPublicUrl(caminho);
-        return data?.publicUrl || "";
+        return obterUrlPublicaStorage(bucket, caminho);
     }
 
     const { data, error } = await supabase.storage
@@ -105,13 +142,7 @@ export async function criarUrlAssinadaStorage(bucket, caminhoOuUrl, validadeSegu
 }
 
 export function obterUrlLogoEmpresa(caminho) {
-    if (!caminho) return "";
-
-    const { data } = supabase.storage
-        .from("logos-empresas")
-        .getPublicUrl(caminho);
-
-    return data?.publicUrl || "";
+    return obterUrlPublicaStorage("logos-empresas", caminho);
 }
 
 export async function abrirArquivoStorage(bucket, caminhoOuUrl) {

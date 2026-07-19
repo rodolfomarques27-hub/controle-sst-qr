@@ -15,7 +15,7 @@ import {
 } from "../../services/colaboradorDocumentosService";
 import { formatDate, classNames } from "../../utils/sstUtils";
 import { VerificacaoCertificadoTreinamento } from "./VerificacaoCertificadoTreinamento";
-import { supabase } from "../../lib/supabaseClient";
+import { criarUrlAssinadaStorage } from "../../services/supabaseServices";
 
 function obterFotoColaboradorBase(colaborador = {}) {
     return String(
@@ -77,13 +77,11 @@ async function gerarUrlFotoColaboradorBase(valor = "") {
     if (!caminhoStorage) return "";
 
     try {
-        const { data, error } = await supabase.storage
-            .from("fotos-colaboradores")
-            .createSignedUrl(caminhoStorage, 60 * 60);
-
-        if (error) return "";
-
-        return data?.signedUrl || "";
+        return await criarUrlAssinadaStorage(
+            "fotos-colaboradores",
+            caminhoStorage,
+            60 * 60,
+        );
     } catch {
         return "";
     }

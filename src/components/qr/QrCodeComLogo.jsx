@@ -2,6 +2,7 @@
 import { QRCodeSVG } from "qrcode.react";
 import { ImagePlus, RotateCcw } from "lucide-react";
 import { supabase } from "../../lib/supabaseClient";
+import { obterUrlPublicaStorage } from "../../services/supabaseServices";
 import { classNames } from "../../utils/sstUtils";
 
 const BUCKET_LOGO_QR_CODE = "logos-empresas";
@@ -62,16 +63,11 @@ function salvarVersaoLogoQrCodeGlobal(versao = "") {
 }
 
 function montarUrlLogoQrCodeGlobal(versao = "") {
-    try {
-        const { data } = supabase.storage.from(BUCKET_LOGO_QR_CODE).getPublicUrl(CAMINHO_LOGO_QR_CODE);
-        const url = data?.publicUrl || "";
-
-        if (!url) return "";
-
-        return versao ? `${url}?v=${encodeURIComponent(String(versao))}` : url;
-    } catch {
-        return "";
-    }
+    return obterUrlPublicaStorage(
+        BUCKET_LOGO_QR_CODE,
+        CAMINHO_LOGO_QR_CODE,
+        versao,
+    );
 }
 
 function useLogoQrCodeGlobal() {

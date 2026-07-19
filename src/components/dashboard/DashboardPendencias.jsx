@@ -1,6 +1,6 @@
 ﻿import React, { useEffect, useMemo, useState } from "react";
 import { Mail, QrCode } from "lucide-react";
-import { supabase } from "../../lib/supabaseClient";
+import { criarUrlAssinadaStorage } from "../../services/supabaseServices";
 import { formatDate } from "../../utils/sstUtils";
 import { DashboardBlocoRecolhivel } from "./DashboardBlocoRecolhivel";
 
@@ -285,13 +285,15 @@ async function resolverFotoColaborador(candidatos = []) {
             return CACHE_FOTOS_ASSINADAS.get(chaveCache);
         }
 
-        const { data, error } = await supabase.storage
-            .from(FOTO_BUCKET_COLABORADORES)
-            .createSignedUrl(caminhoStorage, 60 * 60);
+        const urlAssinada = await criarUrlAssinadaStorage(
+            FOTO_BUCKET_COLABORADORES,
+            caminhoStorage,
+            60 * 60,
+        );
 
-        if (!error && data?.signedUrl) {
-            CACHE_FOTOS_ASSINADAS.set(chaveCache, data.signedUrl);
-            return data.signedUrl;
+        if (urlAssinada) {
+            CACHE_FOTOS_ASSINADAS.set(chaveCache, urlAssinada);
+            return urlAssinada;
         }
     }
 
