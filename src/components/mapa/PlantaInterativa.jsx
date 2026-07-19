@@ -209,7 +209,6 @@ export function PlantaInterativa({
   onSelecionarPonto,
   onAbrirPlantaDetalhada,
   onAbrirResumoAuditoria,
-  testeLocal = false,
   className = "",
 }) {
   const [zoom, setZoom] = useState(-1);
@@ -369,11 +368,6 @@ export function PlantaInterativa({
         {mostrarFilhos ? "Itens da área liberados" : <span className="inline-flex items-center gap-2"><ZoomIn size={13} /> Aproxime ou clique em uma área</span>}
       </div>
 
-      {testeLocal && (
-        <div className="absolute right-3 top-14 z-[800] rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-[10px] font-black uppercase tracking-wide text-amber-800 shadow-sm">
-          Teste local
-        </div>
-      )}
 
       {detalhe && (
         <aside className="absolute bottom-3 right-3 z-[900] max-h-[calc(100%-64px)] w-[min(270px,calc(100%-24px))] overflow-y-auto rounded-xl border border-slate-200 bg-white p-3 shadow-xl">

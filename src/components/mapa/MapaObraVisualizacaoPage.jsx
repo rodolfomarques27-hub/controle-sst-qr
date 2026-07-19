@@ -23,47 +23,21 @@ import {
 import { listarExtintoresVistoria } from "../../services/extintoresVistoriaService";
 import { PlantaInterativa } from "./PlantaInterativa";
 import { GoogleMapaSatelite } from "./GoogleMapaSatelite";
-import plantaInterativaMock from "./plantaInterativaMock.json";
 
-const DESLOCAMENTOS_FILHOS = [
-  { x: -3.4, y: 3.6 },
-  { x: 3.2, y: 4.2 },
-  { x: -4.1, y: -3.2 },
-  { x: 4.2, y: -2.6 },
-];
-
-function limitarPercentual(valor) {
-  return Math.max(3, Math.min(97, Number(valor) || 0));
-}
-
-function prepararPontosInterativos(pontos = [], usarDemonstracao = false) {
-  return pontos.map((ponto, indice) => {
+function prepararPontosInterativos(pontos = []) {
+  return pontos.map((ponto) => {
     const coordenadas = ponto.coordenadas || { x: ponto.x, y: ponto.y };
-    const filhosExistentes = Array.isArray(ponto.pontosFilhos)
+    const pontosFilhos = Array.isArray(ponto.pontosFilhos)
       ? ponto.pontosFilhos
       : [];
-    const filhosDemonstrativos =
-      usarDemonstracao && indice === 0 && !filhosExistentes.length
-        ? plantaInterativaMock.pontosFilhos.map((filho, filhoIndice) => ({
-            ...filho,
-            id: `teste-${ponto.id}-${filho.id}`,
-            coordenadas: {
-              x: limitarPercentual(
-                coordenadas.x + DESLOCAMENTOS_FILHOS[filhoIndice].x,
-              ),
-              y: limitarPercentual(
-                coordenadas.y + DESLOCAMENTOS_FILHOS[filhoIndice].y,
-              ),
-            },
-          }))
-        : filhosExistentes;
+
     return {
       ...ponto,
       coordenadas,
       zoomMinimoFilhos: Number(ponto.zoomMinimoFilhos ?? 2),
-      pontosFilhos: filhosDemonstrativos,
+      pontosFilhos,
       status: ponto.status || "Ativo",
-      ultimaInspecao: ponto.ultimaInspecao || "10/06/2026",
+      ultimaInspecao: ponto.ultimaInspecao || "",
     };
   });
 }
@@ -650,14 +624,11 @@ export function MapaObraVisualizacaoPage({ auditoriasCampo = [] }) {
   );
   const pontosInterativos = useMemo(
     () =>
-      prepararPontosInterativos(
-        mapa.pontos || [],
-        Boolean(mapa.demonstracao),
-      ).map((ponto) => ({
+      prepararPontosInterativos(mapa.pontos || []).map((ponto) => ({
         ...ponto,
         auditoriasCount: (resumos.get(ponto.id) || []).length,
       })),
-    [mapa.pontos, mapa.demonstracao, resumos],
+    [mapa.pontos, resumos],
   );
   const itensInterativos = useMemo(
     () => [
@@ -890,7 +861,6 @@ export function MapaObraVisualizacaoPage({ auditoriasCampo = [] }) {
                   setPlantaDetalhadaAberta(false);
                   setResumoAuditoriaAberto(true);
                 }}
-                testeLocal={Boolean(mapa.demonstracao)}
                 className="xl:!h-auto xl:!min-h-0 xl:flex-1"
               />
             )}
