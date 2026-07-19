@@ -16,6 +16,7 @@ import {
     limparTextoPossivelDocumento,
     valorPareceSomenteDocumentoFiscal,
 } from "./documentosOcrUtils";
+import { carregarPdfJsDocumental } from "./documentosOcrPdfJsService";
 
 const LIMITE_BYTES_LEITURA_LOCAL = 8 * 1024 * 1024;
 const LIMITE_TEXTO_OCR_SALVAR = 6000;
@@ -1150,23 +1151,6 @@ function extrairTextoLegivelPdf(bytes) {
     }
 
     return "";
-}
-
-async function carregarPdfJsDocumental() {
-    const pdfjsLib = await import("pdfjs-dist");
-
-    try {
-        if (pdfjsLib?.GlobalWorkerOptions && !pdfjsLib.GlobalWorkerOptions.workerSrc) {
-            pdfjsLib.GlobalWorkerOptions.workerSrc = new URL(
-                "pdfjs-dist/build/pdf.worker.mjs",
-                import.meta.url
-            ).toString();
-        }
-    } catch {
-        // Se o worker não puder ser configurado, o PDF.js ainda pode tentar usar fallback.
-    }
-
-    return pdfjsLib;
 }
 
 async function lerTextoPaginaPdfJs(pdf, numeroPagina) {
