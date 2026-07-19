@@ -31,14 +31,13 @@ Os seguintes arquivos do repositório ainda apontam diretamente para caminhos de
 - `docs/auditoria-supabase-2026-07-16.md`
 - `docs/checklist_etapa103_senha_configuracoes_supabase.txt`
 - `docs/checklist_etapa97_qrcodes_campo.txt`
-- `scripts/qualitySmokeTest.mjs`
 
-O arquivo `scripts/qualitySmokeTest.mjs` utiliza diretamente:
+O teste `scripts/qualitySmokeTest.mjs` valida diretamente as migrations oficiais:
 
-- `etapa104_configuracao_fundo_login_banco.sql`
-- `etapa104b_restringir_rpcs_fundo_login_anon.sql`
+- `supabase/migrations/20260717202022_configuracao_fundo_login_banco.sql`
+- `supabase/migrations/20260717202931_restringir_rpcs_fundo_login_anon.sql`
 
-Esses arquivos não devem ser movidos enquanto as referências e os testes não forem atualizados e validados.
+As antigas cópias idênticas desses dois arquivos foram removidas de `supabase/sql` para eliminar redundância e evitar manutenção duplicada.
 
 ## Plano de organização
 

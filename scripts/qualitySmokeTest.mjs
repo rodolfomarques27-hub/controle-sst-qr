@@ -370,16 +370,8 @@ const migracaoFundoLoginConfiguracaoBanco = readFileSync(
     new URL("../supabase/migrations/20260717202022_configuracao_fundo_login_banco.sql", import.meta.url),
     "utf8"
 );
-const roteiroFundoLoginConfiguracaoBanco = readFileSync(
-    new URL("../supabase/sql/etapa104_configuracao_fundo_login_banco.sql", import.meta.url),
-    "utf8"
-);
 const migracaoFundoLoginRestricaoAnon = readFileSync(
     new URL("../supabase/migrations/20260717202931_restringir_rpcs_fundo_login_anon.sql", import.meta.url),
-    "utf8"
-);
-const roteiroFundoLoginRestricaoAnon = readFileSync(
-    new URL("../supabase/sql/etapa104b_restringir_rpcs_fundo_login_anon.sql", import.meta.url),
     "utf8"
 );
 const regraTrabalho = readFileSync(
@@ -977,11 +969,6 @@ assert.match(
     /grant execute[\s\S]*to anon, authenticated, service_role/,
     "A RPC deve conceder apenas execução explícita aos papéis necessários."
 );
-assert.equal(
-    migracaoFundoLoginConfiguracaoBanco,
-    roteiroFundoLoginConfiguracaoBanco,
-    "A migration e o roteiro revisável do fundo do login devem permanecer idênticos."
-);
 assert.match(
     migracaoFundoLoginConfiguracaoBanco,
     /create table if not exists public\.configuracoes_publicas_sistema/,
@@ -1011,11 +998,6 @@ assert.match(
     migracaoFundoLoginConfiguracaoBanco,
     /grant execute on function public\.salvar_ajuste_fundo_login_sistema\(text, text, numeric\)[\s\S]*to authenticated, service_role/,
     "Somente usuários autenticados e service role podem executar a gravação do ajuste."
-);
-assert.equal(
-    migracaoFundoLoginRestricaoAnon,
-    roteiroFundoLoginRestricaoAnon,
-    "A migration complementar e o roteiro revisável devem permanecer idênticos."
 );
 assert.match(
     migracaoFundoLoginRestricaoAnon,
