@@ -370,6 +370,18 @@ function montarMensagemBloqueioAntesSalvar({ indicios = [] } = {}) {
     const detalheOriginal = principal.detalhe || principal.titulo || "A verificacao documental encontrou divergencia."; 
     const detalheLimpo = limparMensagemBloqueioDocumento(detalheOriginal);
 
+    if (
+        codigo === "cnpj_empresa_nao_confere_documento" ||
+        codigo === "cnpj_documento_diverge_empresa_selecionada"
+    ) {
+        return [
+            "Não foi possível confirmar o CNPJ deste documento.",
+            "O PDF pode possuir uma camada de texto corrompida ou incompatível, ou pode pertencer a outra empresa.",
+            "Abra o arquivo em um editor de PDF e utilize Comprimir/Otimizar ou Imprimir como PDF. Salve uma nova cópia e envie novamente.",
+            "Antes de reenviar, confirme se o CNPJ da empresa selecionada está correto.",
+        ].join("\n");
+    }
+
     if (codigo === "colaborador_nao_localizado_no_documento" ||
         codigo === "colaborador_nao_confirmado_documento_coletivo" ||
         codigo === "colaborador_confirmado_apenas_no_texto_ocr" ||
