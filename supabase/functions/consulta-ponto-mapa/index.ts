@@ -62,6 +62,199 @@ function numeroSeguro(
         : padrao;
 }
 
+function identificadorEhUuid(
+    valor: unknown,
+) {
+    return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
+        texto(valor),
+    );
+}
+
+function normalizarExtintorPublico(
+    registro: JsonObject,
+) {
+    return {
+        id: texto(registro.id),
+        referenciaLocal:
+            texto(registro.referencia_local),
+        codigo: texto(registro.codigo),
+        localizacao:
+            texto(registro.localizacao),
+        tipo: texto(registro.tipo),
+        capacidade:
+            texto(registro.capacidade),
+        status:
+            texto(registro.status) ||
+            "Ativo",
+        situacaoOperacional:
+            texto(
+                registro.situacao_operacional,
+            ) || "Em operação",
+        pontoId:
+            texto(registro.ponto_id),
+        pontoReferenciaLocal:
+            texto(
+                registro.ponto_referencia_local,
+            ),
+        atualizadoEm:
+            texto(registro.atualizado_em),
+    };
+}
+
+async function consultarExtintoresDoPonto(
+    supabaseAdmin: ReturnType<typeof createClient>,
+    {
+        obraId,
+        pontoId = "",
+        pontoReferenciaLocal = "",
+        referencias = [],
+    }: {
+        obraId: string;
+        pontoId?: string;
+        pontoReferenciaLocal?: string;
+        referencias?: string[];
+    },
+) {
+    const idObra = texto(obraId);
+
+    if (!idObra) {
+        return [];
+    }
+
+    const referenciasSeguras =
+        Array.from(
+            new Set(
+                referencias
+                    .map(texto)
+                    .filter(Boolean),
+            ),
+        ).slice(0, 200);
+
+    const idsRemotos =
+        referenciasSeguras.filter(
+            identificadorEhUuid,
+        );
+
+    const referenciasLocais =
+        referenciasSeguras.filter(
+            (referencia) =>
+                !identificadorEhUuid(
+                    referencia,
+                ),
+        );
+
+    const campos =
+        "id, referencia_local, codigo, localizacao, tipo, capacidade, status, situacao_operacional, ponto_id, ponto_referencia_local, atualizado_em";
+
+    const consultas: Array<
+        PromiseLike<{
+            data: unknown;
+            error: unknown;
+        }>
+    > = [];
+
+    const criarConsulta = () =>
+        supabaseAdmin
+            .from("extintores")
+            .select(campos)
+            .eq("obra_id", idObra);
+
+    const idPonto = texto(pontoId);
+
+    if (identificadorEhUuid(idPonto)) {
+        consultas.push(
+            criarConsulta().eq(
+                "ponto_id",
+                idPonto,
+            ),
+        );
+    }
+
+    const referenciaPonto =
+        texto(pontoReferenciaLocal) ||
+        (
+            idPonto &&
+            !identificadorEhUuid(idPonto)
+                ? idPonto
+                : ""
+        );
+
+    if (referenciaPonto) {
+        consultas.push(
+            criarConsulta().eq(
+                "ponto_referencia_local",
+                referenciaPonto,
+            ),
+        );
+    }
+
+    if (idsRemotos.length) {
+        consultas.push(
+            criarConsulta().in(
+                "id",
+                idsRemotos,
+            ),
+        );
+    }
+
+    if (referenciasLocais.length) {
+        consultas.push(
+            criarConsulta().in(
+                "referencia_local",
+                referenciasLocais,
+            ),
+        );
+    }
+
+    if (!consultas.length) {
+        return [];
+    }
+
+    const registrosPorId =
+        new Map<string, JsonObject>();
+
+    for (const consulta of consultas) {
+        const {
+            data,
+            error,
+        } = await consulta;
+
+        if (error) {
+            throw error;
+        }
+
+        listaObjetos(data).forEach(
+            (registro) => {
+                const id = texto(
+                    registro.id,
+                );
+
+                if (id) {
+                    registrosPorId.set(
+                        id,
+                        registro,
+                    );
+                }
+            },
+        );
+    }
+
+    return Array.from(
+        registrosPorId.values(),
+    )
+        .map(normalizarExtintorPublico)
+        .sort((a, b) =>
+            a.codigo.localeCompare(
+                b.codigo,
+                "pt-BR",
+                {
+                    numeric: true,
+                    sensitivity: "base",
+                },
+            )
+        );
+}
+
 async function urlAssinada(
     supabaseAdmin: ReturnType<typeof createClient>,
     caminho: string,
@@ -95,7 +288,7 @@ async function consultarSnapshot(
         await supabaseAdmin
             .from("mapas_obras")
             .select(
-                "id, nome, descricao, imagem_path, status, atualizado_em, snapshot, snapshot_versao",
+                "id, obra_id, nome, descricao, imagem_path, status, atualizado_em, snapshot, snapshot_versao",
             )
             .eq("status", "Ativo")
             .contains(
@@ -197,6 +390,7 @@ async function consultarSnapshot(
     const pontoPublico: JsonObject = {
         ...ponto,
         token: undefined,
+        extintores: undefined,
         x: numeroSeguro(
             ponto.x ??
             ponto.posicao_x,
@@ -218,6 +412,55 @@ async function consultarSnapshot(
             )
                 ? ponto.pontosInternosPlanta
                 : [];
+
+    const referenciasExtintores =
+        Array.from(
+            new Set(
+                [
+                    ...(
+                        Array.isArray(
+                            ponto.extintores,
+                        )
+                            ? ponto.extintores
+                            : []
+                    ),
+                    ...Object.keys(
+                        objeto(
+                            ponto.extintorPosicoes,
+                        ),
+                    ),
+                ]
+                    .map(texto)
+                    .filter(Boolean),
+            ),
+        );
+
+    const extintores =
+        await consultarExtintoresDoPonto(
+            supabaseAdmin,
+            {
+                obraId:
+                    texto(registro.obra_id),
+                pontoId:
+                    texto(ponto.id),
+                pontoReferenciaLocal:
+                    texto(
+                        ponto.referenciaLocal ||
+                        ponto.referencia_local,
+                    ),
+                referencias:
+                    referenciasExtintores,
+            },
+        );
+
+    const itensPublicos =
+        listaObjetos(itens).filter(
+            (item) =>
+                !texto(
+                    item.extintorId ||
+                    item.extintor_id,
+                ),
+        );
 
     return {
         ponto: pontoPublico,
@@ -243,7 +486,8 @@ async function consultarSnapshot(
                 registro.snapshot_versao ||
                 1,
         },
-        itens,
+        itens: itensPublicos,
+        extintores,
         origem: "snapshot",
     };
 }
@@ -258,7 +502,7 @@ async function consultarLegado(
     } = await supabaseAdmin
         .from("mapas_pontos")
         .select(
-            "id, nome, tipo, descricao, posicao_x, posicao_y, icone, cor, status, token_publico, planta_detalhada_path, atualizado_em, mapas_obras!inner(nome, descricao, imagem_path, status, atualizado_em)",
+            "id, nome, tipo, descricao, posicao_x, posicao_y, icone, cor, status, token_publico, planta_detalhada_path, atualizado_em, mapas_obras!inner(obra_id, nome, descricao, imagem_path, status, atualizado_em)",
         )
         .eq("token_publico", token)
         .eq("status", "Ativo")
@@ -282,7 +526,7 @@ async function consultarLegado(
     } = await supabaseAdmin
         .from("mapas_itens")
         .select(
-            "nome, tipo, descricao, posicao_x, posicao_y, icone, cor, status, numero_identificacao, data_inspecao, proxima_inspecao, data_validade, observacao",
+            "nome, tipo, descricao, posicao_x, posicao_y, icone, cor, status, numero_identificacao, extintor_id, data_inspecao, proxima_inspecao, data_validade, observacao",
         )
         .eq("ponto_id", ponto.id)
         .eq("status", "Ativo");
@@ -295,6 +539,54 @@ async function consultarLegado(
         Array.isArray(ponto.mapas_obras)
             ? ponto.mapas_obras[0]
             : ponto.mapas_obras;
+
+    const itensNormalizados =
+        listaObjetos(itens);
+
+    const referenciasExtintores =
+        itensNormalizados
+            .map((item) =>
+                texto(item.extintor_id),
+            )
+            .filter(Boolean);
+
+    const extintores =
+        await consultarExtintoresDoPonto(
+            supabaseAdmin,
+            {
+                obraId:
+                    texto(obra?.obra_id),
+                pontoId:
+                    texto(ponto.id),
+                referencias:
+                    referenciasExtintores,
+            },
+        );
+
+    const extintorPosicoes =
+        Object.fromEntries(
+            itensNormalizados
+                .filter((item) =>
+                    texto(item.extintor_id)
+                )
+                .map((item) => [
+                    texto(item.extintor_id),
+                    {
+                        x: numeroSeguro(
+                            item.posicao_x,
+                        ),
+                        y: numeroSeguro(
+                            item.posicao_y,
+                        ),
+                    },
+                ]),
+        );
+
+    const itensPublicos =
+        itensNormalizados.filter(
+            (item) =>
+                !texto(item.extintor_id),
+        );
 
     const [
         plantaGeralUrl,
@@ -323,6 +615,7 @@ async function consultarLegado(
             atualizadoEm:
                 ponto.atualizado_em,
             plantaDetalhadaUrl,
+            extintorPosicoes,
         },
         mapa: {
             nome:
@@ -339,7 +632,8 @@ async function consultarLegado(
                 "",
             plantaGeralUrl,
         },
-        itens: itens || [],
+        itens: itensPublicos,
+        extintores,
         origem: "legado",
     };
 }

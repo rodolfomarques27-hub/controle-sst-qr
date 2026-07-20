@@ -1,89 +1,828 @@
-import React, { useEffect, useMemo, useState } from "react";
-import { AlertCircle, LoaderCircle, MapPin as MapPinned, RefreshCw, ShieldCheck } from "lucide-react";
-import { supabase, SUPABASE_CONFIGURADO } from "../../lib/supabaseClient";
-import { lerMapaObraLocal } from "../../services/mapaObraLocalService";
-import { listarExtintoresVistoria } from "../../services/extintoresVistoriaService";
-import { consultarPontoMapaEdgeService } from "../../services/mapaObraService";
+import React, {
+  useEffect,
+  useMemo,
+  useState,
+} from "react";
+import {
+  AlertCircle,
+  LoaderCircle,
+  MapPin as MapPinned,
+  RefreshCw,
+  ShieldCheck,
+} from "lucide-react";
+import {
+  supabase,
+  SUPABASE_CONFIGURADO,
+} from "../../lib/supabaseClient";
+import {
+  lerMapaObraLocal,
+} from "../../services/mapaObraLocalService";
+import {
+  consultarPontoMapaEdgeService,
+} from "../../services/mapaObraService";
 import dashboardHeroBackground from "../../assets/dashboard-hero-sst.webp";
 
 function formatarCodigoExtintor(codigo) {
-    const numero = String(codigo || "").replace(/^E-?/i, "");
-    return /^\d+$/.test(numero) ? String(Number(numero)).padStart(2, "0") : numero;
+  const numero = String(codigo || "")
+    .replace(/^E-?/i, "");
+
+  return /^\d+$/.test(numero)
+    ? String(Number(numero)).padStart(2, "0")
+    : numero;
 }
 
-export function ConsultaPontoMapaPublica({ token }) {
-    const [versaoLocal, setVersaoLocal] = useState(0);
-    const mapaLocal = useMemo(() => lerMapaObraLocal(), [versaoLocal]);
-    const [dadosRemotos, setDadosRemotos] = useState(null);
-    const [carregando, setCarregando] = useState(SUPABASE_CONFIGURADO);
-    const ambienteToken = useMemo(() => typeof window === "undefined" ? "" : new URLSearchParams(window.location.search).get("ambiente") || "", []);
-    const [plantaSelecionada, setPlantaSelecionada] = useState(ambienteToken ? "detalhada" : "geral");
-    const extintores = useMemo(() => listarExtintoresVistoria(), []);
+function obterReferenciasExtintor(
+  extintor = {},
+) {
+  return [
+    extintor.id,
+    extintor.referenciaLocal,
+    extintor.referencia_local,
+  ]
+    .map((referencia) =>
+      String(referencia || ""),
+    )
+    .filter(Boolean);
+}
 
-    useEffect(() => {
-        let ativo = true;
-        if (!SUPABASE_CONFIGURADO) return undefined;
-        consultarPontoMapaEdgeService({ supabase, token }).then((dados) => { if (ativo && dados?.ok) setDadosRemotos(dados); }).catch((erro) => console.warn("Consulta remota indisponível; usando dados locais.", erro?.message || erro)).finally(() => { if (ativo) setCarregando(false); });
-        return () => { ativo = false; };
-    }, [token]);
+function obterPosicaoExtintor(
+  posicoes = {},
+  extintor = {},
+) {
+  const referencia =
+    obterReferenciasExtintor(
+      extintor,
+    ).find(
+      (item) =>
+        posicoes[item],
+    );
 
-    useEffect(() => {
-        const atualizar = () => setVersaoLocal((valor) => valor + 1);
-        window.addEventListener("storage", atualizar);
-        window.addEventListener("safescan-mapa-atualizado", atualizar);
-        return () => { window.removeEventListener("storage", atualizar); window.removeEventListener("safescan-mapa-atualizado", atualizar); };
-    }, []);
+  return referencia
+    ? posicoes[referencia]
+    : null;
+}
 
-    const mapa = dadosRemotos
-        ? {
-            ...mapaLocal,
-            ...dadosRemotos.mapa,
-            obraNome:
-                dadosRemotos.mapa?.obraNome ||
-                dadosRemotos.mapa?.nome ||
-                mapaLocal.obraNome ||
-                "",
-            planta:
-                dadosRemotos.mapa?.plantaGeralUrl
-                    ? {
-                        ...(dadosRemotos.mapa?.planta || {}),
-                        url: dadosRemotos.mapa.plantaGeralUrl,
-                        nome:
-                            dadosRemotos.mapa?.planta?.nome ||
-                            "Planta geral da obra",
-                    }
-                    : mapaLocal.planta,
+function formatarOrigem(origem) {
+  return {
+    snapshot: "Snapshot remoto",
+    legado: "Banco remoto",
+    local: "Recuperação local",
+  }[origem] || "Consulta remota";
+}
+
+export function ConsultaPontoMapaPublica({
+  token,
+}) {
+  const [
+    versaoLocal,
+    setVersaoLocal,
+  ] = useState(0);
+
+  const mapaLocal = useMemo(
+    () => lerMapaObraLocal(),
+    [versaoLocal],
+  );
+
+  const [
+    dadosRemotos,
+    setDadosRemotos,
+  ] = useState(null);
+
+  const [
+    carregando,
+    setCarregando,
+  ] = useState(
+    SUPABASE_CONFIGURADO,
+  );
+
+  const [
+    erroRemoto,
+    setErroRemoto,
+  ] = useState("");
+
+  const ambienteToken = useMemo(
+    () =>
+      typeof window === "undefined"
+        ? ""
+        : new URLSearchParams(
+            window.location.search,
+          ).get("ambiente") || "",
+    [],
+  );
+
+  const [
+    plantaSelecionada,
+    setPlantaSelecionada,
+  ] = useState(
+    ambienteToken
+      ? "detalhada"
+      : "geral",
+  );
+
+  useEffect(() => {
+    let ativo = true;
+
+    setDadosRemotos(null);
+    setErroRemoto("");
+
+    if (!SUPABASE_CONFIGURADO) {
+      setCarregando(false);
+      setErroRemoto(
+        "A consulta remota não está configurada.",
+      );
+
+      return undefined;
+    }
+
+    setCarregando(true);
+
+    async function carregarConsulta() {
+      try {
+        const dados =
+          await consultarPontoMapaEdgeService({
+            supabase,
+            token,
+          });
+
+        if (!ativo) {
+          return;
         }
-        : mapaLocal;
 
-    const pontoRemoto = dadosRemotos
-        ? {
-            ...dadosRemotos.ponto,
-            plantaDetalhada:
-                dadosRemotos.ponto?.plantaDetalhadaUrl
-                    ? {
-                        ...(dadosRemotos.ponto?.plantaDetalhada || {}),
-                        url:
-                            dadosRemotos.ponto
-                                .plantaDetalhadaUrl,
-                    }
-                    : null,
+        if (!dados?.ok) {
+          throw new Error(
+            dados?.erro ||
+            "A consulta pública não retornou um resultado válido.",
+          );
         }
-        : null;
-    const ponto = pontoRemoto || mapaLocal.pontos?.find((item) => item.token === token);
-    const pontoLocal = mapaLocal.pontos?.find((item) => item.token === token);
-    if (pontoRemoto && pontoLocal) Object.assign(pontoRemoto, pontoLocal);
-    const ambientes = Array.isArray(ponto?.pontosInternosPlanta) ? ponto.pontosInternosPlanta : [];
-    const ambienteSelecionado = ambientes.find((item) => String(item.token || item.id) === String(ambienteToken));
-    if (ambienteSelecionado && ponto) Object.assign(ponto, { nome: ambienteSelecionado.nome, tipo: ambienteSelecionado.tipo, descricao: ambienteSelecionado.descricao || ponto.descricao });
-    const vinculados = extintores.filter((item) => ponto?.extintores?.includes(item.id)).map((item) => ({ ...item, codigo: formatarCodigoExtintor(item.codigo) }));
-    const itensRemotos = Array.isArray(dadosRemotos?.itens) ? dadosRemotos.itens : [];
-    const plantaDetalhada = ponto?.plantaDetalhada?.url;
-    const posicoes = ponto?.extintorPosicoes || {};
-    const imagemAtual = plantaSelecionada === "detalhada" && plantaDetalhada ? plantaDetalhada : mapa.planta?.url;
 
-    if (carregando) return <main className="flex min-h-screen items-center justify-center bg-slate-50 p-5"><div className="rounded-xl border border-slate-200 bg-white px-6 py-5 text-center shadow-sm"><LoaderCircle className="mx-auto animate-spin text-sky-600" size={28} /><p className="mt-3 text-sm font-semibold text-slate-600">Carregando o ponto da obra...</p></div></main>;
-    if (!ponto) return <main className="flex min-h-screen items-center justify-center bg-slate-50 p-5"><div className="max-w-md rounded-xl border border-red-100 bg-white p-6 text-center shadow-sm"><AlertCircle className="mx-auto text-red-500" size={32} /><h1 className="mt-3 text-xl font-black text-slate-950">Ponto não encontrado</h1><p className="mt-2 text-sm text-slate-500">Este QR Code pode estar inválido ou ainda não foi sincronizado.</p></div></main>;
+        setDadosRemotos(dados);
+      } catch (erro) {
+        if (!ativo) {
+          return;
+        }
 
-    return <main className="min-h-screen bg-slate-50 px-4 py-6 md:px-8"><div className="mx-auto max-w-7xl space-y-5"><header className="relative min-h-[155px] overflow-hidden rounded-[22px] border border-slate-700 bg-slate-900 shadow-[0_10px_28px_rgba(26,35,50,0.12)]"><div className="absolute inset-0 bg-cover bg-center" style={{ backgroundImage: `url(${dashboardHeroBackground})` }} /><div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(15,23,42,0.84)_0%,rgba(15,23,42,0.56)_48%,rgba(15,23,42,0.2)_100%)]" /><div className="relative flex min-h-[155px] flex-col justify-center gap-3 px-6 py-6 text-white"><div><p className="flex items-center gap-2 text-xs font-black uppercase tracking-[0.22em] text-emerald-300"><MapPinned size={15} /> SafeScan Brasil · Consulta pública</p><h1 className="mt-2 text-2xl font-black leading-tight md:text-3xl">{ponto.nome}</h1><p className="mt-1 text-sm font-semibold text-slate-200">{ponto.tipo} · localização na planta da obra</p>{ambienteSelecionado?.descricao && <p className="mt-3 border-t border-white/10 pt-3 text-sm font-semibold text-slate-200">{ambienteSelecionado.descricao}</p>}{mapa.obraNome && !ambienteSelecionado && <p className="mt-3 border-t border-white/10 pt-3 text-sm font-semibold text-slate-200">{mapa.obraNome}</p>}</div><button type="button" onClick={() => window.location.reload()} className="absolute right-4 top-4 inline-flex items-center gap-2 rounded-lg bg-white/10 px-3 py-2 text-xs font-bold text-white hover:bg-white/20"><RefreshCw size={14} /> Atualizar consulta</button></div></header><div className="grid items-start gap-5 lg:grid-cols-[minmax(0,1fr)_280px]"><section className="flex flex-col rounded-xl border border-slate-200 bg-white p-4 shadow-sm"><div className="mb-3 flex flex-wrap items-center justify-between gap-2"><div className="flex items-center gap-2"><MapPinned className="text-sky-600" size={17} /><h2 className="font-black text-slate-950">{plantaSelecionada === "detalhada" ? "Planta detalhada" : "Planta geral da obra"}</h2></div>{plantaDetalhada && <div className="flex rounded-lg bg-slate-100 p-1 text-xs font-bold"><button type="button" onClick={() => setPlantaSelecionada("geral")} className={`rounded-md px-3 py-1.5 ${plantaSelecionada === "geral" ? "bg-white text-slate-950 shadow-sm" : "text-slate-500"}`}>Geral</button><button type="button" onClick={() => setPlantaSelecionada("detalhada")} className={`rounded-md px-3 py-1.5 ${plantaSelecionada === "detalhada" ? "bg-white text-slate-950 shadow-sm" : "text-slate-500"}`}>Detalhada</button></div>}</div><div className="relative aspect-[4/3] min-h-0 overflow-hidden rounded-lg bg-white">{imagemAtual && <img src={imagemAtual} alt={plantaSelecionada === "detalhada" ? `Planta detalhada de ${ponto.nome}` : "Planta geral da obra"} className="absolute inset-0 h-full w-full object-contain" />}{plantaSelecionada === "geral" && <span style={{ left: `${ponto.x}%`, top: `${ponto.y}%` }} className="absolute flex h-6 w-6 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full border-2 border-white bg-sky-600 text-white shadow-md"><MapPinned size={12} /></span>}{plantaSelecionada === "detalhada" && vinculados.map((item) => { const posicao = posicoes[item.id]; return posicao ? <span key={item.id} title={item.codigo} style={{ left: `${posicao.x}%`, top: `${posicao.y}%` }} className="absolute flex h-6 w-6 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full border-2 border-white bg-emerald-600 text-[8px] font-black text-white shadow-md">{item.codigo}</span> : null; })}{plantaSelecionada === "detalhada" && ambientes.map((ambiente, indice) => <span key={ambiente.id} title={ambiente.nome} style={{ left: `${ambiente.x}%`, top: `${ambiente.y}%` }} className={`absolute flex h-7 w-7 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full border-2 border-white text-[9px] font-black text-white shadow-md ${ambienteToken && String(ambiente.token || ambiente.id) === String(ambienteToken) ? "bg-amber-500 ring-4 ring-amber-200" : "bg-sky-600"}`}>{String(indice + 1).padStart(2, "0")}</span>)}</div></section><aside className="self-start space-y-5 lg:flex lg:h-[calc(58vh+80px)] lg:min-h-[480px] lg:max-h-[600px] lg:flex-col lg:gap-5 lg:space-y-0"><div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm"><div className="flex items-center justify-between gap-3"><p className="text-xs font-black uppercase tracking-wide text-slate-400">Resumo do local</p><span className="inline-flex shrink-0 items-center gap-1.5 text-xs font-bold text-emerald-700"><ShieldCheck size={15} /> {ponto.status}</span></div><p className="mt-3 text-sm leading-relaxed text-slate-600">{ponto.descricao || "Nenhuma descrição cadastrada."}</p></div><div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm lg:flex lg:min-h-0 lg:flex-1 lg:flex-col"><h2 className="font-black text-slate-950">Equipamentos vinculados</h2><div className="mt-3 max-h-[320px] space-y-2 overflow-y-auto pr-1 lg:min-h-0 lg:max-h-none lg:flex-1">{vinculados.map((item) => <div key={item.id} className="rounded-lg bg-slate-50 px-3 py-2 text-sm"><b className="text-slate-900">{item.codigo}</b><span className="ml-2 text-slate-500">{item.tipo} · {item.capacidade}</span></div>)}{itensRemotos.map((item) => <div key={`${item.nome}-${item.numero_identificacao || item.tipo}`} className="rounded-lg bg-slate-50 px-3 py-2 text-sm"><b className="text-slate-900">{item.nome}</b><span className="ml-2 text-slate-500">{item.tipo}</span></div>)}{!vinculados.length && !itensRemotos.length && <p className="text-sm text-slate-500">Nenhum equipamento vinculado.</p>}</div></div>{ambientes.length > 0 && <div className="rounded-xl border border-sky-100 bg-white p-5 shadow-sm"><h2 className="font-black text-slate-950">Ambientes da planta</h2><div className="mt-3 space-y-2">{ambientes.map((ambiente, indice) => <div key={ambiente.id} className={`flex items-center justify-between gap-2 rounded-lg border px-3 py-2 text-sm ${ambienteSelecionado?.id === ambiente.id ? "border-amber-300 bg-amber-50" : "border-slate-100 bg-slate-50"}`}><span className="min-w-0"><b className="block truncate">{String(indice + 1).padStart(2, "0")} · {ambiente.nome}</b><small className="mt-0.5 block truncate text-[10px] lowercase text-slate-500">{ambiente.tipo}</small></span><MapPinned size={15} className="shrink-0 text-sky-600" /></div>)}</div></div>}{plantaDetalhada && <button type="button" onClick={() => setPlantaSelecionada("detalhada")} className="w-full rounded-xl border border-sky-200 bg-sky-50 p-4 text-left shadow-sm"><p className="text-xs font-black uppercase tracking-wide text-sky-700">{plantaSelecionada === "detalhada" ? "Visualização atual" : "Planta detalhada disponível"}</p><p className="mt-1 text-sm font-bold text-slate-900">{plantaSelecionada === "detalhada" ? "Extintores e ambientes exibidos na planta" : "Ver localização dos extintores e ambientes"}</p></button>}</aside></div><p className="text-center text-xs text-slate-400">Consulta pública · última atualização: {ponto.atualizadoEm ? new Date(ponto.atualizadoEm).toLocaleString("pt-BR") : "não informada"}</p></div></main>;
+        setErroRemoto(
+          erro?.message ||
+          "Não foi possível consultar o ponto da obra.",
+        );
+
+        console.warn(
+          "Consulta remota do mapa indisponível.",
+          erro?.message || erro,
+        );
+      } finally {
+        if (ativo) {
+          setCarregando(false);
+        }
+      }
+    }
+
+    void carregarConsulta();
+
+    return () => {
+      ativo = false;
+    };
+  }, [token]);
+
+  useEffect(() => {
+    const atualizar = () =>
+      setVersaoLocal(
+        (valor) => valor + 1,
+      );
+
+    window.addEventListener(
+      "storage",
+      atualizar,
+    );
+
+    window.addEventListener(
+      "safescan-mapa-atualizado",
+      atualizar,
+    );
+
+    return () => {
+      window.removeEventListener(
+        "storage",
+        atualizar,
+      );
+
+      window.removeEventListener(
+        "safescan-mapa-atualizado",
+        atualizar,
+      );
+    };
+  }, []);
+
+  const mapa = dadosRemotos
+    ? {
+        ...mapaLocal,
+        ...dadosRemotos.mapa,
+        obraNome:
+          dadosRemotos.mapa?.obraNome ||
+          dadosRemotos.mapa?.nome ||
+          mapaLocal.obraNome ||
+          "",
+        planta:
+          dadosRemotos.mapa
+            ?.plantaGeralUrl
+            ? {
+                ...(
+                  dadosRemotos.mapa
+                    ?.planta || {}
+                ),
+                url:
+                  dadosRemotos.mapa
+                    .plantaGeralUrl,
+                nome:
+                  dadosRemotos.mapa
+                    ?.planta?.nome ||
+                  "Planta geral da obra",
+              }
+            : (
+                dadosRemotos.mapa
+                  ?.planta ||
+                mapaLocal.planta
+              ),
+      }
+    : mapaLocal;
+
+  const pontoLocal =
+    mapaLocal.pontos?.find(
+      (item) =>
+        item.token === token,
+    ) || null;
+
+  const pontoRemoto = dadosRemotos
+    ? {
+        ...dadosRemotos.ponto,
+        plantaDetalhada:
+          dadosRemotos.ponto
+            ?.plantaDetalhadaUrl
+            ? {
+                ...(
+                  dadosRemotos.ponto
+                    ?.plantaDetalhada ||
+                  {}
+                ),
+                url:
+                  dadosRemotos.ponto
+                    .plantaDetalhadaUrl,
+              }
+            : (
+                dadosRemotos.ponto
+                  ?.plantaDetalhada ||
+                null
+              ),
+      }
+    : null;
+
+  const pontoBase =
+    pontoRemoto ||
+    pontoLocal;
+
+  const ambientes =
+    Array.isArray(
+      pontoBase?.pontosInternosPlanta,
+    )
+      ? pontoBase.pontosInternosPlanta
+      : [];
+
+  const ambienteSelecionado =
+    ambientes.find(
+      (item) =>
+        String(
+          item.token ||
+          item.id,
+        ) ===
+        String(ambienteToken),
+    );
+
+  const ponto = pontoBase
+    ? {
+        ...pontoBase,
+        ...(
+          ambienteSelecionado
+            ? {
+                nome:
+                  ambienteSelecionado.nome,
+                tipo:
+                  ambienteSelecionado.tipo,
+                descricao:
+                  ambienteSelecionado
+                    .descricao ||
+                  pontoBase.descricao,
+              }
+            : {}
+        ),
+      }
+    : null;
+
+  const extintores =
+    Array.isArray(
+      dadosRemotos?.extintores,
+    )
+      ? dadosRemotos.extintores.map(
+          (item) => ({
+            ...item,
+            codigo:
+              formatarCodigoExtintor(
+                item.codigo,
+              ),
+          }),
+        )
+      : [];
+
+  const itensRemotos =
+    Array.isArray(
+      dadosRemotos?.itens,
+    )
+      ? dadosRemotos.itens
+      : [];
+
+  const plantaDetalhada =
+    pontoBase?.plantaDetalhada?.url;
+
+  const posicoes =
+    pontoBase?.extintorPosicoes ||
+    {};
+
+  const imagemAtual =
+    plantaSelecionada ===
+      "detalhada" &&
+    plantaDetalhada
+      ? plantaDetalhada
+      : mapa.planta?.url;
+
+  const origemConsulta =
+    dadosRemotos
+      ? formatarOrigem(
+          dadosRemotos.origem,
+        )
+      : "Recuperação local";
+
+  if (carregando) {
+    return (
+      <main className="flex min-h-screen items-center justify-center bg-slate-50 p-5">
+        <div className="rounded-xl border border-slate-200 bg-white px-6 py-5 text-center shadow-sm">
+          <LoaderCircle
+            className="mx-auto animate-spin text-sky-600"
+            size={28}
+          />
+
+          <p className="mt-3 text-sm font-semibold text-slate-600">
+            Carregando o ponto da obra...
+          </p>
+        </div>
+      </main>
+    );
+  }
+
+  if (!ponto && erroRemoto) {
+    return (
+      <main className="flex min-h-screen items-center justify-center bg-slate-50 p-5">
+        <div className="max-w-md rounded-xl border border-amber-200 bg-white p-6 text-center shadow-sm">
+          <AlertCircle
+            className="mx-auto text-amber-500"
+            size={32}
+          />
+
+          <h1 className="mt-3 text-xl font-black text-slate-950">
+            Consulta temporariamente indisponível
+          </h1>
+
+          <p className="mt-2 text-sm text-slate-500">
+            {erroRemoto}
+          </p>
+
+          <button
+            type="button"
+            onClick={() =>
+              window.location.reload()
+            }
+            className="mt-5 inline-flex items-center gap-2 rounded-lg bg-slate-900 px-4 py-2 text-sm font-bold text-white"
+          >
+            <RefreshCw size={15} />
+            Tentar novamente
+          </button>
+        </div>
+      </main>
+    );
+  }
+
+  if (!ponto) {
+    return (
+      <main className="flex min-h-screen items-center justify-center bg-slate-50 p-5">
+        <div className="max-w-md rounded-xl border border-red-100 bg-white p-6 text-center shadow-sm">
+          <AlertCircle
+            className="mx-auto text-red-500"
+            size={32}
+          />
+
+          <h1 className="mt-3 text-xl font-black text-slate-950">
+            Ponto não encontrado
+          </h1>
+
+          <p className="mt-2 text-sm text-slate-500">
+            Este QR Code pode estar inválido ou ainda não foi sincronizado.
+          </p>
+        </div>
+      </main>
+    );
+  }
+
+  return (
+    <main className="min-h-screen bg-slate-50 px-4 py-6 md:px-8">
+      <div className="mx-auto max-w-7xl space-y-5">
+        <header className="relative min-h-[155px] overflow-hidden rounded-[22px] border border-slate-700 bg-slate-900 shadow-[0_10px_28px_rgba(26,35,50,0.12)]">
+          <div
+            className="absolute inset-0 bg-cover bg-center"
+            style={{
+              backgroundImage:
+                `url(${dashboardHeroBackground})`,
+            }}
+          />
+
+          <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(15,23,42,0.84)_0%,rgba(15,23,42,0.56)_48%,rgba(15,23,42,0.2)_100%)]" />
+
+          <div className="relative flex min-h-[155px] flex-col justify-center gap-3 px-6 py-6 text-white">
+            <div>
+              <p className="flex items-center gap-2 text-xs font-black uppercase tracking-[0.22em] text-emerald-300">
+                <MapPinned size={15} />
+                SafeScan Brasil · Consulta pública
+              </p>
+
+              <h1 className="mt-2 text-2xl font-black leading-tight md:text-3xl">
+                {ponto.nome}
+              </h1>
+
+              <p className="mt-1 text-sm font-semibold text-slate-200">
+                {ponto.tipo} · localização na planta da obra
+              </p>
+
+              {ambienteSelecionado?.descricao && (
+                <p className="mt-3 border-t border-white/10 pt-3 text-sm font-semibold text-slate-200">
+                  {ambienteSelecionado.descricao}
+                </p>
+              )}
+
+              {mapa.obraNome &&
+                !ambienteSelecionado && (
+                  <p className="mt-3 border-t border-white/10 pt-3 text-sm font-semibold text-slate-200">
+                    {mapa.obraNome}
+                  </p>
+                )}
+            </div>
+
+            <button
+              type="button"
+              onClick={() =>
+                window.location.reload()
+              }
+              className="absolute right-4 top-4 inline-flex items-center gap-2 rounded-lg bg-white/10 px-3 py-2 text-xs font-bold text-white hover:bg-white/20"
+            >
+              <RefreshCw size={14} />
+              Atualizar consulta
+            </button>
+          </div>
+        </header>
+
+        {erroRemoto && pontoLocal && (
+          <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-semibold text-amber-800">
+            A consulta remota está indisponível. Os dados exibidos foram recuperados somente deste dispositivo.
+          </div>
+        )}
+
+        <div className="grid items-start gap-5 lg:grid-cols-[minmax(0,1fr)_280px]">
+          <section className="flex flex-col rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+            <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+              <div className="flex items-center gap-2">
+                <MapPinned
+                  className="text-sky-600"
+                  size={17}
+                />
+
+                <h2 className="font-black text-slate-950">
+                  {plantaSelecionada ===
+                  "detalhada"
+                    ? "Planta detalhada"
+                    : "Planta geral da obra"}
+                </h2>
+              </div>
+
+              {plantaDetalhada && (
+                <div className="flex rounded-lg bg-slate-100 p-1 text-xs font-bold">
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setPlantaSelecionada(
+                        "geral",
+                      )
+                    }
+                    className={`rounded-md px-3 py-1.5 ${
+                      plantaSelecionada ===
+                      "geral"
+                        ? "bg-white text-slate-950 shadow-sm"
+                        : "text-slate-500"
+                    }`}
+                  >
+                    Geral
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setPlantaSelecionada(
+                        "detalhada",
+                      )
+                    }
+                    className={`rounded-md px-3 py-1.5 ${
+                      plantaSelecionada ===
+                      "detalhada"
+                        ? "bg-white text-slate-950 shadow-sm"
+                        : "text-slate-500"
+                    }`}
+                  >
+                    Detalhada
+                  </button>
+                </div>
+              )}
+            </div>
+
+            <div className="relative aspect-[4/3] min-h-0 overflow-hidden rounded-lg bg-white">
+              {imagemAtual && (
+                <img
+                  src={imagemAtual}
+                  alt={
+                    plantaSelecionada ===
+                    "detalhada"
+                      ? `Planta detalhada de ${ponto.nome}`
+                      : "Planta geral da obra"
+                  }
+                  className="absolute inset-0 h-full w-full object-contain"
+                />
+              )}
+
+              {plantaSelecionada ===
+                "geral" && (
+                <span
+                  style={{
+                    left: `${pontoBase.x}%`,
+                    top: `${pontoBase.y}%`,
+                  }}
+                  className="absolute flex h-6 w-6 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full border-2 border-white bg-sky-600 text-white shadow-md"
+                >
+                  <MapPinned size={12} />
+                </span>
+              )}
+
+              {plantaSelecionada ===
+                "detalhada" &&
+                extintores.map(
+                  (item) => {
+                    const posicao =
+                      obterPosicaoExtintor(
+                        posicoes,
+                        item,
+                      );
+
+                    return posicao ? (
+                      <span
+                        key={item.id}
+                        title={item.codigo}
+                        style={{
+                          left:
+                            `${posicao.x}%`,
+                          top:
+                            `${posicao.y}%`,
+                        }}
+                        className="absolute flex h-6 w-6 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full border-2 border-white bg-emerald-600 text-[8px] font-black text-white shadow-md"
+                      >
+                        {item.codigo}
+                      </span>
+                    ) : null;
+                  },
+                )}
+
+              {plantaSelecionada ===
+                "detalhada" &&
+                ambientes.map(
+                  (
+                    ambiente,
+                    indice,
+                  ) => (
+                    <span
+                      key={ambiente.id}
+                      title={ambiente.nome}
+                      style={{
+                        left:
+                          `${ambiente.x}%`,
+                        top:
+                          `${ambiente.y}%`,
+                      }}
+                      className={`absolute flex h-7 w-7 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full border-2 border-white text-[9px] font-black text-white shadow-md ${
+                        ambienteToken &&
+                        String(
+                          ambiente.token ||
+                          ambiente.id,
+                        ) ===
+                          String(
+                            ambienteToken,
+                          )
+                          ? "bg-amber-500 ring-4 ring-amber-200"
+                          : "bg-sky-600"
+                      }`}
+                    >
+                      {String(
+                        indice + 1,
+                      ).padStart(
+                        2,
+                        "0",
+                      )}
+                    </span>
+                  ),
+                )}
+            </div>
+          </section>
+
+          <aside className="self-start space-y-5 lg:flex lg:h-[calc(58vh+80px)] lg:min-h-[480px] lg:max-h-[600px] lg:flex-col lg:gap-5 lg:space-y-0">
+            <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+              <div className="flex items-center justify-between gap-3">
+                <p className="text-xs font-black uppercase tracking-wide text-slate-400">
+                  Resumo do local
+                </p>
+
+                <span className="inline-flex shrink-0 items-center gap-1.5 text-xs font-bold text-emerald-700">
+                  <ShieldCheck size={15} />
+                  {ponto.status}
+                </span>
+              </div>
+
+              <p className="mt-3 text-sm leading-relaxed text-slate-600">
+                {ponto.descricao ||
+                  "Nenhuma descrição cadastrada."}
+              </p>
+
+              <p className="mt-3 border-t border-slate-100 pt-3 text-[10px] font-black uppercase tracking-wide text-slate-400">
+                Fonte: {origemConsulta}
+              </p>
+            </div>
+
+            <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm lg:flex lg:min-h-0 lg:flex-1 lg:flex-col">
+              <h2 className="font-black text-slate-950">
+                Equipamentos vinculados
+              </h2>
+
+              <div className="mt-3 max-h-[320px] space-y-2 overflow-y-auto pr-1 lg:min-h-0 lg:max-h-none lg:flex-1">
+                {extintores.map(
+                  (item) => (
+                    <div
+                      key={item.id}
+                      className="rounded-lg bg-slate-50 px-3 py-2 text-sm"
+                    >
+                      <div className="flex items-center justify-between gap-2">
+                        <b className="text-slate-900">
+                          {item.codigo}
+                        </b>
+
+                        <span className="text-[9px] font-black uppercase text-emerald-700">
+                          {item.status}
+                        </span>
+                      </div>
+
+                      <span className="mt-1 block text-xs text-slate-500">
+                        {item.tipo} · {item.capacidade}
+                      </span>
+
+                      <span className="mt-1 block text-[10px] font-semibold text-slate-400">
+                        {item.situacaoOperacional}
+                      </span>
+                    </div>
+                  ),
+                )}
+
+                {itensRemotos.map(
+                  (item) => (
+                    <div
+                      key={
+                        item.id ||
+                        `${item.nome}-${item.numero_identificacao || item.tipo}`
+                      }
+                      className="rounded-lg bg-slate-50 px-3 py-2 text-sm"
+                    >
+                      <b className="text-slate-900">
+                        {item.nome}
+                      </b>
+
+                      <span className="ml-2 text-slate-500">
+                        {item.tipo}
+                      </span>
+                    </div>
+                  ),
+                )}
+
+                {!extintores.length &&
+                  !itensRemotos.length && (
+                    <p className="text-sm text-slate-500">
+                      Nenhum equipamento vinculado.
+                    </p>
+                  )}
+              </div>
+            </div>
+
+            {ambientes.length > 0 && (
+              <div className="rounded-xl border border-sky-100 bg-white p-5 shadow-sm">
+                <h2 className="font-black text-slate-950">
+                  Ambientes da planta
+                </h2>
+
+                <div className="mt-3 space-y-2">
+                  {ambientes.map(
+                    (
+                      ambiente,
+                      indice,
+                    ) => (
+                      <div
+                        key={ambiente.id}
+                        className={`flex items-center justify-between gap-2 rounded-lg border px-3 py-2 text-sm ${
+                          ambienteSelecionado
+                            ?.id ===
+                          ambiente.id
+                            ? "border-amber-300 bg-amber-50"
+                            : "border-slate-100 bg-slate-50"
+                        }`}
+                      >
+                        <span className="min-w-0">
+                          <b className="block truncate">
+                            {String(
+                              indice + 1,
+                            ).padStart(
+                              2,
+                              "0",
+                            )}{" "}
+                            · {ambiente.nome}
+                          </b>
+
+                          <small className="mt-0.5 block truncate text-[10px] lowercase text-slate-500">
+                            {ambiente.tipo}
+                          </small>
+                        </span>
+
+                        <MapPinned
+                          size={15}
+                          className="shrink-0 text-sky-600"
+                        />
+                      </div>
+                    ),
+                  )}
+                </div>
+              </div>
+            )}
+
+            {plantaDetalhada && (
+              <button
+                type="button"
+                onClick={() =>
+                  setPlantaSelecionada(
+                    "detalhada",
+                  )
+                }
+                className="w-full rounded-xl border border-sky-200 bg-sky-50 p-4 text-left shadow-sm"
+              >
+                <p className="text-xs font-black uppercase tracking-wide text-sky-700">
+                  {plantaSelecionada ===
+                  "detalhada"
+                    ? "Visualização atual"
+                    : "Planta detalhada disponível"}
+                </p>
+
+                <p className="mt-1 text-sm font-bold text-slate-900">
+                  {plantaSelecionada ===
+                  "detalhada"
+                    ? "Extintores e ambientes exibidos na planta"
+                    : "Ver localização dos extintores e ambientes"}
+                </p>
+              </button>
+            )}
+          </aside>
+        </div>
+
+        <p className="text-center text-xs text-slate-400">
+          Consulta pública · última atualização:{" "}
+          {pontoBase.atualizadoEm
+            ? new Date(
+                pontoBase.atualizadoEm,
+              ).toLocaleString(
+                "pt-BR",
+              )
+            : mapa.atualizadoEm
+              ? new Date(
+                  mapa.atualizadoEm,
+                ).toLocaleString(
+                  "pt-BR",
+                )
+              : "não informada"}
+        </p>
+      </div>
+    </main>
+  );
 }
