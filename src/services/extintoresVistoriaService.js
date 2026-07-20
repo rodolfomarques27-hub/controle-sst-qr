@@ -187,3 +187,859 @@ export function gerarUrlQrExtintor(extintor) {
     if (typeof window === "undefined") return extintor?.tokenQr || "";
     return `${window.location.origin}/?vistoriaQr=${encodeURIComponent(extintor?.tokenQr || "")}`;
 }
+
+let clienteSupabaseExtintoresPromise = null;
+
+async function obterSupabaseExtintores() {
+    if (!clienteSupabaseExtintoresPromise) {
+        clienteSupabaseExtintoresPromise = import(
+            "../lib/supabaseClient.js"
+        )
+            .then((modulo) => modulo.supabase)
+            .catch((erro) => {
+                clienteSupabaseExtintoresPromise = null;
+                throw erro;
+            });
+    }
+
+    return clienteSupabaseExtintoresPromise;
+}
+
+function textoSeguroExtintorRemoto(valor) {
+    return String(valor || "").trim();
+}
+
+function textoOuNuloExtintorRemoto(valor) {
+    const texto = textoSeguroExtintorRemoto(valor);
+    return texto || null;
+}
+
+function dataOuNuloExtintorRemoto(valor) {
+    const texto = textoSeguroExtintorRemoto(valor);
+
+    return /^\d{4}-\d{2}-\d{2}$/.test(texto)
+        ? texto
+        : null;
+}
+
+function objetoSeguroExtintorRemoto(valor) {
+    return valor && typeof valor === "object" && !Array.isArray(valor)
+        ? valor
+        : {};
+}
+
+export function identificadorEhUuidExtintor(valor) {
+    return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
+        textoSeguroExtintorRemoto(valor),
+    );
+}
+
+function exigirUuidExtintorRemoto(valor, mensagem) {
+    const id = textoSeguroExtintorRemoto(valor);
+
+    if (!identificadorEhUuidExtintor(id)) {
+        throw new Error(mensagem);
+    }
+
+    return id;
+}
+
+function normalizarCompetenciaExtintorBanco(valor) {
+    const texto = textoSeguroExtintorRemoto(valor);
+
+    if (/^\d{4}-\d{2}$/.test(texto)) {
+        return `${texto}-01`;
+    }
+
+    if (/^\d{4}-\d{2}-\d{2}$/.test(texto)) {
+        return `${texto.slice(0, 7)}-01`;
+    }
+
+    return `${new Date().toISOString().slice(0, 7)}-01`;
+}
+
+function normalizarCompetenciaExtintorTela(valor) {
+    const texto = textoSeguroExtintorRemoto(valor);
+
+    return /^\d{4}-\d{2}/.test(texto)
+        ? texto.slice(0, 7)
+        : "";
+}
+
+function normalizarPosicaoExtintorRemota(valor) {
+    const posicao = objetoSeguroExtintorRemoto(valor);
+    const top = Number(posicao.top);
+    const left = Number(posicao.left);
+
+    return {
+        top: Number.isFinite(top) ? top : 50,
+        left: Number.isFinite(left) ? left : 50,
+    };
+}
+
+export function normalizarExtintorRemoto(registro = {}) {
+    const metadados = objetoSeguroExtintorRemoto(
+        registro.metadados,
+    );
+
+    return {
+        id: registro.id || "",
+        referenciaLocal: registro.referencia_local || "",
+        empresaId: registro.empresa_id || "",
+        obraId: registro.obra_id || "",
+        pontoId:
+            registro.ponto_id ||
+            registro.ponto_referencia_local ||
+            "",
+        pontoIdRemoto: registro.ponto_id || "",
+        pontoReferenciaLocal:
+            registro.ponto_referencia_local || "",
+        codigo: normalizarCodigoExtintor(registro.codigo),
+        tokenQr: registro.token_publico || "",
+        ponto: registro.ponto_nome || "",
+        localizacao: registro.localizacao || "",
+        tipo: registro.tipo || "",
+        capacidade: registro.capacidade || "",
+        status: registro.status || "Ativo",
+        situacaoOperacional:
+            registro.situacao_operacional ||
+            "Em operação",
+        dataAquisicao: registro.data_aquisicao || "",
+        fabricante: registro.fabricante || "",
+        numeroSerie: registro.numero_serie || "",
+        ultimaManutencao:
+            registro.ultima_manutencao || "",
+        proximaManutencao:
+            registro.proxima_manutencao || "",
+        proximoEnsaioHidrostatico:
+            registro.proximo_ensaio_hidrostatico || "",
+        posicao: normalizarPosicaoExtintorRemota(
+            metadados.posicao,
+        ),
+        metadados,
+        criadoEm: registro.criado_em || "",
+        atualizadoEm: registro.atualizado_em || "",
+    };
+}
+
+export function prepararExtintorRemoto({
+    extintor = {},
+    obraId = "",
+    empresaId = "",
+    pontoId = "",
+} = {}) {
+    const idObra = exigirUuidExtintorRemoto(
+        obraId ||
+        extintor.obraId ||
+        extintor.obra_id,
+        "Obra válida não informada para salvar o extintor.",
+    );
+
+    const idEmpresaInformado =
+        textoSeguroExtintorRemoto(
+            empresaId ||
+            extintor.empresaId ||
+            extintor.empresa_id,
+        );
+
+    if (
+        idEmpresaInformado &&
+        !identificadorEhUuidExtintor(
+            idEmpresaInformado,
+        )
+    ) {
+        throw new Error(
+            "Empresa inválida para salvar o extintor.",
+        );
+    }
+
+    const idPontoInformado =
+        textoSeguroExtintorRemoto(
+            pontoId ||
+            extintor.pontoIdRemoto ||
+            extintor.pontoId ||
+            extintor.ponto_id,
+        );
+
+    const pontoRemotoId =
+        identificadorEhUuidExtintor(
+            idPontoInformado,
+        )
+            ? idPontoInformado
+            : null;
+
+    const pontoReferenciaLocal = pontoRemotoId
+        ? textoOuNuloExtintorRemoto(
+            extintor.pontoReferenciaLocal ||
+            extintor.ponto_referencia_local,
+        )
+        : textoOuNuloExtintorRemoto(
+            idPontoInformado ||
+            extintor.pontoReferenciaLocal ||
+            extintor.ponto_referencia_local,
+        );
+
+    const idAtual = textoSeguroExtintorRemoto(
+        extintor.id,
+    );
+
+    const referenciaLocal =
+        textoOuNuloExtintorRemoto(
+            extintor.referenciaLocal ||
+            extintor.referencia_local ||
+            (
+                !identificadorEhUuidExtintor(idAtual)
+                    ? idAtual
+                    : ""
+            ),
+        );
+
+    const codigo = normalizarCodigoExtintor(
+        extintor.codigo,
+    );
+
+    const localizacao =
+        textoSeguroExtintorRemoto(
+            extintor.localizacao,
+        );
+
+    const tipo = textoSeguroExtintorRemoto(
+        extintor.tipo,
+    );
+
+    const capacidade =
+        textoSeguroExtintorRemoto(
+            extintor.capacidade,
+        );
+
+    if (!codigo) {
+        throw new Error(
+            "Código não informado para salvar o extintor.",
+        );
+    }
+
+    if (!localizacao) {
+        throw new Error(
+            "Localização não informada para salvar o extintor.",
+        );
+    }
+
+    if (!tipo) {
+        throw new Error(
+            "Tipo não informado para salvar o extintor.",
+        );
+    }
+
+    if (!capacidade) {
+        throw new Error(
+            "Capacidade não informada para salvar o extintor.",
+        );
+    }
+
+    const metadadosAtuais =
+        objetoSeguroExtintorRemoto(
+            extintor.metadados,
+        );
+
+    const payload = {
+        empresa_id: idEmpresaInformado || null,
+        obra_id: idObra,
+        ponto_id: pontoRemotoId,
+        codigo,
+        localizacao,
+        ponto_nome: textoOuNuloExtintorRemoto(
+            extintor.ponto ||
+            extintor.pontoNome ||
+            extintor.ponto_nome,
+        ),
+        ponto_referencia_local:
+            pontoReferenciaLocal,
+        tipo,
+        capacidade,
+        status:
+            textoSeguroExtintorRemoto(
+                extintor.status,
+            ) || "Ativo",
+        situacao_operacional:
+            textoSeguroExtintorRemoto(
+                extintor.situacaoOperacional ||
+                extintor.situacao_operacional,
+            ) || "Em operação",
+        data_aquisicao:
+            dataOuNuloExtintorRemoto(
+                extintor.dataAquisicao ||
+                extintor.data_aquisicao,
+            ),
+        fabricante:
+            textoOuNuloExtintorRemoto(
+                extintor.fabricante,
+            ),
+        numero_serie:
+            textoOuNuloExtintorRemoto(
+                extintor.numeroSerie ||
+                extintor.numero_serie,
+            ),
+        ultima_manutencao:
+            dataOuNuloExtintorRemoto(
+                extintor.ultimaManutencao ||
+                extintor.ultima_manutencao,
+            ),
+        proxima_manutencao:
+            dataOuNuloExtintorRemoto(
+                extintor.proximaManutencao ||
+                extintor.proxima_manutencao,
+            ),
+        proximo_ensaio_hidrostatico:
+            dataOuNuloExtintorRemoto(
+                extintor.proximoEnsaioHidrostatico ||
+                extintor.proximo_ensaio_hidrostatico,
+            ),
+        referencia_local: referenciaLocal,
+        metadados: {
+            ...metadadosAtuais,
+            posicao:
+                normalizarPosicaoExtintorRemota(
+                    extintor.posicao ||
+                    metadadosAtuais.posicao,
+                ),
+        },
+    };
+
+    const tokenQr = textoSeguroExtintorRemoto(
+        extintor.tokenQr ||
+        extintor.token_publico,
+    );
+
+    if (tokenQr) {
+        payload.token_publico = tokenQr;
+    }
+
+    return payload;
+}
+
+export async function listarExtintoresRemotos({
+    obraId = "",
+    empresaId = "",
+} = {}) {
+    let consulta = (await obterSupabaseExtintores())
+        .from("extintores")
+        .select("*")
+        .order("codigo", {
+            ascending: true,
+        });
+
+    const idObra =
+        textoSeguroExtintorRemoto(obraId);
+
+    const idEmpresa =
+        textoSeguroExtintorRemoto(empresaId);
+
+    if (idObra) {
+        exigirUuidExtintorRemoto(
+            idObra,
+            "Obra inválida para listar extintores.",
+        );
+
+        consulta = consulta.eq(
+            "obra_id",
+            idObra,
+        );
+    }
+
+    if (idEmpresa) {
+        exigirUuidExtintorRemoto(
+            idEmpresa,
+            "Empresa inválida para listar extintores.",
+        );
+
+        consulta = consulta.eq(
+            "empresa_id",
+            idEmpresa,
+        );
+    }
+
+    const { data, error } = await consulta;
+
+    if (error) {
+        throw error;
+    }
+
+    return Array.isArray(data)
+        ? data.map(normalizarExtintorRemoto)
+        : [];
+}
+
+export async function salvarExtintorRemoto({
+    extintor = {},
+    obraId = "",
+    empresaId = "",
+    pontoId = "",
+} = {}) {
+    const payload = prepararExtintorRemoto({
+        extintor,
+        obraId,
+        empresaId,
+        pontoId,
+    });
+
+    const idRemoto =
+        identificadorEhUuidExtintor(extintor.id)
+            ? extintor.id
+            : "";
+
+    let registroExistenteId = idRemoto;
+
+    if (
+        !registroExistenteId &&
+        payload.referencia_local
+    ) {
+        const {
+            data: existente,
+            error: erroBusca,
+        } = await (await obterSupabaseExtintores())
+            .from("extintores")
+            .select("id")
+            .eq("obra_id", payload.obra_id)
+            .eq(
+                "referencia_local",
+                payload.referencia_local,
+            )
+            .maybeSingle();
+
+        if (erroBusca) {
+            throw erroBusca;
+        }
+
+        registroExistenteId =
+            existente?.id || "";
+    }
+
+    const consulta = registroExistenteId
+        ? (await obterSupabaseExtintores())
+            .from("extintores")
+            .update(payload)
+            .eq("id", registroExistenteId)
+            .select()
+            .single()
+        : (await obterSupabaseExtintores())
+            .from("extintores")
+            .insert(payload)
+            .select()
+            .single();
+
+    const { data, error } = await consulta;
+
+    if (error) {
+        throw error;
+    }
+
+    return normalizarExtintorRemoto(data);
+}
+
+export async function excluirExtintorRemoto(id) {
+    const extintorId = exigirUuidExtintorRemoto(
+        id,
+        "Extintor remoto inválido para exclusão.",
+    );
+
+    const { error } = await (await obterSupabaseExtintores())
+        .from("extintores")
+        .delete()
+        .eq("id", extintorId);
+
+    if (error) {
+        throw error;
+    }
+
+    return true;
+}
+
+export function normalizarInspecaoExtintorRemota(
+    registro = {},
+) {
+    return {
+        id: registro.id || "",
+        extintorId: registro.extintor_id || "",
+        codigo:
+            registro.extintor?.codigo ||
+            registro.codigo ||
+            "",
+        competencia:
+            normalizarCompetenciaExtintorTela(
+                registro.competencia,
+            ),
+        respostas:
+            objetoSeguroExtintorRemoto(
+                registro.respostas,
+            ),
+        observacoes: registro.observacoes || "",
+        responsavel: registro.responsavel || "",
+        status:
+            registro.status || "Em andamento",
+        origem: registro.origem || "sistema",
+        criadoEm: registro.criado_em || "",
+        atualizadoEm:
+            registro.atualizado_em || "",
+    };
+}
+
+export async function listarInspecoesExtintoresRemotas({
+    extintorId = "",
+} = {}) {
+    let consulta = (await obterSupabaseExtintores())
+        .from("extintores_inspecoes")
+        .select(
+            "*, extintor:extintores(codigo)",
+        )
+        .order("atualizado_em", {
+            ascending: false,
+        });
+
+    const idExtintor =
+        textoSeguroExtintorRemoto(extintorId);
+
+    if (idExtintor) {
+        exigirUuidExtintorRemoto(
+            idExtintor,
+            "Extintor inválido para listar inspeções.",
+        );
+
+        consulta = consulta.eq(
+            "extintor_id",
+            idExtintor,
+        );
+    }
+
+    const { data, error } = await consulta;
+
+    if (error) {
+        throw error;
+    }
+
+    return Array.isArray(data)
+        ? data.map(
+            normalizarInspecaoExtintorRemota,
+        )
+        : [];
+}
+
+export async function salvarInspecaoExtintorRemota(
+    inspecao = {},
+) {
+    const extintorId =
+        exigirUuidExtintorRemoto(
+            inspecao.extintorId ||
+            inspecao.extintor_id,
+            "Extintor remoto inválido para salvar a inspeção.",
+        );
+
+    const payload = {
+        extintor_id: extintorId,
+        competencia:
+            normalizarCompetenciaExtintorBanco(
+                inspecao.competencia,
+            ),
+        respostas:
+            objetoSeguroExtintorRemoto(
+                inspecao.respostas,
+            ),
+        observacoes:
+            textoOuNuloExtintorRemoto(
+                inspecao.observacoes,
+            ),
+        responsavel:
+            textoOuNuloExtintorRemoto(
+                inspecao.responsavel,
+            ),
+        status:
+            textoSeguroExtintorRemoto(
+                inspecao.status,
+            ) || "Em andamento",
+        origem:
+            textoSeguroExtintorRemoto(
+                inspecao.origem,
+            ) || "sistema",
+    };
+
+    const idRemoto =
+        identificadorEhUuidExtintor(inspecao.id)
+            ? inspecao.id
+            : "";
+
+    const consulta = idRemoto
+        ? (await obterSupabaseExtintores())
+            .from("extintores_inspecoes")
+            .update(payload)
+            .eq("id", idRemoto)
+            .select(
+                "*, extintor:extintores(codigo)",
+            )
+            .single()
+        : (await obterSupabaseExtintores())
+            .from("extintores_inspecoes")
+            .insert(payload)
+            .select(
+                "*, extintor:extintores(codigo)",
+            )
+            .single();
+
+    const { data, error } = await consulta;
+
+    if (error) {
+        throw error;
+    }
+
+    return normalizarInspecaoExtintorRemota(
+        data,
+    );
+}
+
+export function normalizarManutencaoExtintorRemota(
+    registro = {},
+) {
+    return {
+        id: registro.id || "",
+        extintorId: registro.extintor_id || "",
+        codigo: registro.extintor?.codigo || "",
+        tipoServico: registro.tipo_servico || "",
+        motivo: registro.motivo || "Programada",
+        empresaNome: registro.empresa_nome || "",
+        empresaCnpj: registro.empresa_cnpj || "",
+        registroInmetro:
+            registro.registro_inmetro || "",
+        ordemServico:
+            registro.ordem_servico || "",
+        dataSaida: registro.data_saida || "",
+        previsaoRetorno:
+            registro.previsao_retorno || "",
+        dataRetorno: registro.data_retorno || "",
+        seloConformidade:
+            registro.selo_conformidade || "",
+        observacoes: registro.observacoes || "",
+        observacoesRetorno:
+            registro.observacoes_retorno || "",
+        proximaManutencao:
+            registro.proxima_manutencao || "",
+        proximoEnsaioHidrostatico:
+            registro.proximo_ensaio_hidrostatico ||
+            "",
+        status:
+            registro.status || "Em andamento",
+        criadoEm: registro.criado_em || "",
+        atualizadoEm:
+            registro.atualizado_em || "",
+    };
+}
+
+export async function listarManutencoesExtintoresRemotas({
+    extintorId = "",
+} = {}) {
+    let consulta = (await obterSupabaseExtintores())
+        .from("extintores_manutencoes")
+        .select(
+            "*, extintor:extintores(codigo)",
+        )
+        .order("atualizado_em", {
+            ascending: false,
+        });
+
+    const idExtintor =
+        textoSeguroExtintorRemoto(extintorId);
+
+    if (idExtintor) {
+        exigirUuidExtintorRemoto(
+            idExtintor,
+            "Extintor inválido para listar manutenções.",
+        );
+
+        consulta = consulta.eq(
+            "extintor_id",
+            idExtintor,
+        );
+    }
+
+    const { data, error } = await consulta;
+
+    if (error) {
+        throw error;
+    }
+
+    return Array.isArray(data)
+        ? data.map(
+            normalizarManutencaoExtintorRemota,
+        )
+        : [];
+}
+
+export async function registrarEnvioManutencaoExtintorRemota(
+    dados = {},
+) {
+    const extintorId =
+        exigirUuidExtintorRemoto(
+            dados.extintorId ||
+            dados.extintor_id,
+            "Extintor remoto inválido para registrar manutenção.",
+        );
+
+    const payload = {
+        extintor_id: extintorId,
+        tipo_servico:
+            textoSeguroExtintorRemoto(
+                dados.tipoServico ||
+                dados.tipo_servico,
+            ),
+        motivo:
+            textoSeguroExtintorRemoto(
+                dados.motivo,
+            ) || "Programada",
+        empresa_nome:
+            textoOuNuloExtintorRemoto(
+                dados.empresaNome ||
+                dados.empresa_nome,
+            ),
+        empresa_cnpj:
+            textoOuNuloExtintorRemoto(
+                dados.empresaCnpj ||
+                dados.empresa_cnpj,
+            ),
+        registro_inmetro:
+            textoOuNuloExtintorRemoto(
+                dados.registroInmetro ||
+                dados.registro_inmetro,
+            ),
+        ordem_servico:
+            textoOuNuloExtintorRemoto(
+                dados.ordemServico ||
+                dados.ordem_servico,
+            ),
+        data_saida:
+            dataOuNuloExtintorRemoto(
+                dados.dataSaida ||
+                dados.data_saida,
+            ) ||
+            new Date().toISOString().slice(0, 10),
+        previsao_retorno:
+            dataOuNuloExtintorRemoto(
+                dados.previsaoRetorno ||
+                dados.previsao_retorno,
+            ),
+        observacoes:
+            textoOuNuloExtintorRemoto(
+                dados.observacoes,
+            ),
+        status: "Em andamento",
+    };
+
+    if (!payload.tipo_servico) {
+        throw new Error(
+            "Tipo de serviço não informado para a manutenção.",
+        );
+    }
+
+    const { data, error } = await (await obterSupabaseExtintores())
+        .from("extintores_manutencoes")
+        .insert(payload)
+        .select(
+            "*, extintor:extintores(codigo)",
+        )
+        .single();
+
+    if (error) {
+        throw error;
+    }
+
+    return normalizarManutencaoExtintorRemota(
+        data,
+    );
+}
+
+export async function obterManutencaoAbertaExtintorRemota(
+    extintorId,
+) {
+    const idExtintor =
+        exigirUuidExtintorRemoto(
+            extintorId,
+            "Extintor remoto inválido para consultar manutenção.",
+        );
+
+    const { data, error } = await (await obterSupabaseExtintores())
+        .from("extintores_manutencoes")
+        .select(
+            "*, extintor:extintores(codigo)",
+        )
+        .eq("extintor_id", idExtintor)
+        .eq("status", "Em andamento")
+        .order("atualizado_em", {
+            ascending: false,
+        })
+        .limit(1)
+        .maybeSingle();
+
+    if (error) {
+        throw error;
+    }
+
+    return data
+        ? normalizarManutencaoExtintorRemota(
+            data,
+        )
+        : null;
+}
+
+export async function concluirManutencaoExtintorRemota(
+    id,
+    dados = {},
+) {
+    const manutencaoId =
+        exigirUuidExtintorRemoto(
+            id,
+            "Manutenção remota inválida para conclusão.",
+        );
+
+    const payload = {
+        data_retorno:
+            dataOuNuloExtintorRemoto(
+                dados.dataRetorno ||
+                dados.data_retorno,
+            ) ||
+            new Date().toISOString().slice(0, 10),
+        selo_conformidade:
+            textoOuNuloExtintorRemoto(
+                dados.seloConformidade ||
+                dados.selo_conformidade,
+            ),
+        observacoes_retorno:
+            textoOuNuloExtintorRemoto(
+                dados.observacoesRetorno ||
+                dados.observacoes_retorno,
+            ),
+        proxima_manutencao:
+            dataOuNuloExtintorRemoto(
+                dados.proximaManutencao ||
+                dados.proxima_manutencao,
+            ),
+        proximo_ensaio_hidrostatico:
+            dataOuNuloExtintorRemoto(
+                dados.proximoEnsaioHidrostatico ||
+                dados.proximo_ensaio_hidrostatico,
+            ),
+        status: "Concluído",
+    };
+
+    const { data, error } = await (await obterSupabaseExtintores())
+        .from("extintores_manutencoes")
+        .update(payload)
+        .eq("id", manutencaoId)
+        .select(
+            "*, extintor:extintores(codigo)",
+        )
+        .single();
+
+    if (error) {
+        throw error;
+    }
+
+    return normalizarManutencaoExtintorRemota(
+        data,
+    );
+}
