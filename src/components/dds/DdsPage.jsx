@@ -13,6 +13,9 @@ import useDdsScannerConferenciaDerivados from "./useDdsScannerConferenciaDerivad
 import useDdsScannerResultadoFinal from "./useDdsScannerResultadoFinal";
 import useDdsReciboHistoricoDerivados from "./useDdsReciboHistoricoDerivados";
 import useDdsResultadoApresentacaoDerivados from "./useDdsResultadoApresentacaoDerivados";
+import criarControladorCalendarioMaoDeObraDds from "./DdsPageCalendarioMaoDeObraController";
+import criarControladorTemasDds from "./DdsPageTemasController";
+import criarControladorImpressaoDds from "./DdsPageImpressaoController";
 import DdsConferenciaAssistidaSection from "./DdsConferenciaAssistidaSection";
 import DdsLeituraArquivoScannerSection from "./DdsLeituraArquivoScannerSection";
 import DdsReciboFinalSection from "./DdsReciboFinalSection";
@@ -922,83 +925,18 @@ export function DdsPage({
             };
         })
     ), [diasSemanaDds, temasDdsEditaveis]);
-    function atualizarTemaDiaDds(indiceDia, campo, valor) {
-        setTemasDdsEditaveis((temasAtuais) => {
-            const atualizados = criarTemasEditaveisDds().map((temaPadrao, indice) => ({
-                ...temaPadrao,
-                ...(temasAtuais[indice] || {}),
-            }));
-
-            atualizados[indiceDia] = {
-                ...(atualizados[indiceDia] || {}),
-                [campo]: valor,
-            };
-
-            return atualizados;
-        });
-    }
-
-    function alternarDiaSemAtividadeDds(indiceDia) {
-        setTemasDdsEditaveis((temasAtuais) => {
-            const atualizados = normalizarTemasDdsEditaveis(temasAtuais);
-            const atual = atualizados[indiceDia] || {
-                tema: "",
-                responsavel: "",
-            };
-            const semAtividadeAtual =
-                normalizarTextoTemaDds(atual.tema) ===
-                "NAO HOUVE ATIVIDADES";
-
-            atualizados[indiceDia] = semAtividadeAtual
-                ? {
-                    tema: "",
-                    responsavel: "",
-                }
-                : {
-                    tema: "NÃO HOUVE ATIVIDADES",
-                    responsavel: "",
-                };
-
-            return atualizados;
-        });
-    }
-
-    function aplicarResponsavelGeralTemasDds() {
-        const responsavelGeral = String(
-            dadosDds.responsavel || ""
-        ).trim();
-
-        if (!responsavelGeral) {
-            window.alert(
-                "O responsável geral do DDS não está preenchido."
-            );
-            return;
-        }
-
-        setTemasDdsEditaveis((temasAtuais) =>
-            normalizarTemasDdsEditaveis(temasAtuais).map((item) => {
-                const semAtividade =
-                    normalizarTextoTemaDds(item.tema) ===
-                    "NAO HOUVE ATIVIDADES";
-
-                return semAtividade
-                    ? item
-                    : {
-                        ...item,
-                        responsavel: responsavelGeral,
-                    };
-            })
-        );
-    }
-
-    function limparResponsaveisTemasDds() {
-        setTemasDdsEditaveis((temasAtuais) =>
-            normalizarTemasDdsEditaveis(temasAtuais).map((item) => ({
-                ...item,
-                responsavel: "",
-            }))
-        );
-    }
+    const {
+        alternarDiaSemAtividadeDds,
+        aplicarResponsavelGeralTemasDds,
+        atualizarTemaDiaDds,
+        limparResponsaveisTemasDds,
+    } = criarControladorTemasDds({
+        criarTemasEditaveisDds,
+        dadosDds,
+        normalizarTemasDdsEditaveis,
+        normalizarTextoTemaDds,
+        setTemasDdsEditaveis,
+    });
 
     const aniversariantesSemanaDds = useMemo(() => montarAniversariantesSemanaDds({
         colaboradores: colaboradoresEmpresaDds,
@@ -1235,147 +1173,17 @@ export function DdsPage({
         },
     ];
 
-    function normalizarChaveCalendarioMaoDeObraDds(valor = "") {
-        return String(valor || "")
-            .normalize("NFD")
-            .replace(/[\u0300-\u036f]/g, "")
-            .toLowerCase()
-            .replace(/[^a-z0-9]+/g, " ")
-            .trim();
-    }
-
-    function obterObrasDisponiveisCalendarioMaoDeObraDds() {
-        return obrasEmpresasDds.filter(Boolean);
-    }
-
-    function obterIdObraCalendarioMaoDeObraDds() {
-        return String(
-            reciboConferenciaFinalDds?.obraId ||
-            reciboConferenciaFinalDds?.obra_id ||
-            registroScannerDds?.obraId ||
-            registroScannerDds?.obra_id ||
-            registroScannerDds?.dados?.obraId ||
-            registroScannerDds?.dados?.obra_id ||
-            dadosDds?.obraId ||
-            dadosDds?.obra_id ||
-            obraSelecionadaIdDds ||
-            ""
-        ).trim();
-    }
-
-    function obterNomeObraCalendarioMaoDeObraDds() {
-        return String(
-            reciboConferenciaFinalDds?.obra ||
-            reciboConferenciaFinalDds?.obraNome ||
-            registroScannerDds?.obraNome ||
-            registroScannerDds?.dados?.obraNome ||
-            dadosDds?.obraNome ||
-            dadosDds?.obraSetor ||
-            dadosDds?.obra ||
-            ""
-        ).trim();
-    }
-
-    function obterObraReferenciaCalendarioMaoDeObraDds() {
-        const obraId = obterIdObraCalendarioMaoDeObraDds();
-        const obraNome = obterNomeObraCalendarioMaoDeObraDds();
-        const obraIdBusca = normalizarChaveCalendarioMaoDeObraDds(obraId);
-        const obraNomeBusca = normalizarChaveCalendarioMaoDeObraDds(obraNome);
-        const obrasDisponiveis = obterObrasDisponiveisCalendarioMaoDeObraDds();
-
-        const obraEncontrada = obrasDisponiveis.find((obra) => {
-            const id = normalizarChaveCalendarioMaoDeObraDds(obra?.id || obra?.obraId || obra?.obra_id);
-            const nome = normalizarChaveCalendarioMaoDeObraDds(obra?.nome || obra?.obraNome || obra?.obra_nome || obra?.obra || obra?.descricao);
-
-            return (obraIdBusca && id && id === obraIdBusca) || (obraNomeBusca && nome && nome === obraNomeBusca);
-        });
-
-        if (obraEncontrada) return obraEncontrada;
-
-        return {
-            id: obraId,
-            nome: obraNome,
-            cidade:
-                reciboConferenciaFinalDds?.cidade ||
-                reciboConferenciaFinalDds?.obraCidade ||
-                registroScannerDds?.cidade ||
-                registroScannerDds?.obraCidade ||
-                registroScannerDds?.dados?.cidade ||
-                registroScannerDds?.dados?.obraCidade ||
-                dadosDds?.cidade ||
-                dadosDds?.obraCidade ||
-                "",
-            uf:
-                reciboConferenciaFinalDds?.uf ||
-                reciboConferenciaFinalDds?.obraUf ||
-                registroScannerDds?.uf ||
-                registroScannerDds?.obraUf ||
-                registroScannerDds?.dados?.uf ||
-                registroScannerDds?.dados?.obraUf ||
-                dadosDds?.uf ||
-                dadosDds?.obraUf ||
-                "",
-        };
-    }
-
-    function resolverCalendarioMaoDeObraDds(obraReferencia = null) {
-        const cidade = String(
-            obraReferencia?.cidade ||
-            obraReferencia?.municipio ||
-            obraReferencia?.município ||
-            obraReferencia?.cidade_nome ||
-            obraReferencia?.obraCidade ||
-            ""
-        ).trim();
-
-        const uf = String(
-            obraReferencia?.uf ||
-            obraReferencia?.estado ||
-            obraReferencia?.obraUf ||
-            obraReferencia?.obraEstado ||
-            ""
-        ).trim().toUpperCase().slice(0, 2);
-
-        const cidadeBusca = normalizarChaveCalendarioMaoDeObraDds(cidade);
-        const ufBusca = normalizarChaveCalendarioMaoDeObraDds(uf);
-
-        if (!cidadeBusca && !ufBusca) {
-            return {
-                ...calendariosMaoDeObraDds[0],
-                origem: "fallback padrão",
-            };
-        }
-
-        const preset = calendariosMaoDeObraDds.find((calendario) =>
-            normalizarChaveCalendarioMaoDeObraDds(calendario.cidade) === cidadeBusca &&
-            normalizarChaveCalendarioMaoDeObraDds(calendario.uf) === ufBusca
-        );
-
-        if (preset) {
-            return {
-                ...preset,
-                origem: "cadastro da obra",
-            };
-        }
-
-        const feriadosEstaduaisFixos =
-            uf === "SP"
-                ? [{ mes: 7, dia: 9, nome: "Revolução Constitucionalista" }]
-                : [];
-
-        const cidadeRotulo = cidade || "Município não informado";
-        const ufRotulo = uf || "UF não informada";
-
-        return {
-            id: "obra-" + normalizarChaveCalendarioMaoDeObraDds(cidadeRotulo + "-" + ufRotulo).replace(/\s+/g, "-"),
-            cidade: cidadeRotulo,
-            uf: ufRotulo,
-            rotulo: cidadeRotulo + " / " + ufRotulo,
-            feriadosMunicipaisFixos: [],
-            feriadosEstaduaisFixos,
-            origem: "cadastro da obra",
-        };
-    }
+    const {
+        obterObraReferenciaCalendarioMaoDeObraDds,
+        resolverCalendarioMaoDeObraDds,
+    } = criarControladorCalendarioMaoDeObraDds({
+        calendariosMaoDeObraDds,
+        dadosDds,
+        obraSelecionadaIdDds,
+        obrasEmpresasDds,
+        reciboConferenciaFinalDds,
+        registroScannerDds,
+    });
 
     const obraReferenciaCalendarioMaoDeObraDds = obterObraReferenciaCalendarioMaoDeObraDds();
     const calendarioMaoDeObraSelecionadoDds = resolverCalendarioMaoDeObraDds(obraReferenciaCalendarioMaoDeObraDds);
@@ -1445,116 +1253,30 @@ export function DdsPage({
 
 
 
-    async function imprimirDdsComQrConferencia() {
-        if (salvandoRegistroDds) return;
-
-        const diasPendentes = diasSemanaComTemasDds.filter((dia) => (
-            !dia.semAtividade &&
-            (
-                !String(dia.tema || "").trim() ||
-                !String(dia.responsavel || "").trim()
-            )
-        ));
-
-        if (diasPendentes.length > 0) {
-            const nomesDias = diasPendentes
-                .map((dia) => dia.nome || dia.curto)
-                .filter(Boolean)
-                .join(", ");
-
-            const mensagem =
-                "Preencha o tema e o responsável ou marque 'Não houve atividades' em: " +
-                nomesDias +
-                ".";
-
-            setErroRegistroDds(mensagem);
-            window.alert(mensagem);
-            return;
-        }
-
-        setErroRegistroDds("");
-
-        if (!supabase) {
-            window.print();
-            return;
-        }
-
-        setSalvandoRegistroDds(true);
-        setErroRegistroDds("");
-
-        try {
-            const registro = await salvarRegistroDds({
-                supabase,
-                registro: {
-                    codigo: dadosDds.codigo,
-                    empresaId: obterUuidSeguroDds(obterIdEmpresaObjetoDds(empresaSelecionadaDds)),
-                    obraId: obterUuidSeguroDds(obraSelecionadaIdDds),
-                    empresaNome: dadosDds.empresa,
-                    obraNome: dadosDds.obraSetor,
-                    periodoInicio: inicioSemanaDds,
-                    periodoFim: fimSemanaDds,
-                    responsavelNome: dadosDds.responsavel,
-                    fiscalIdealiza: dadosDds.fiscalIdealiza,
-                    liderEncarregado: dadosDds.encarregado,
-                    dados: {
-                        periodo: dadosDds.periodo,
-                        resumoSemana: dadosDds.resumoSemana,
-                        turno: dadosDds.turno,
-                        funcaoResponsavel: dadosDds.funcaoResponsavel,
-                        totalParticipantes: participantesSistemaDds.length,
-                        totalFolhas: folhasContinuacaoDds.length + 1,
-                        recadosSemana: recadosDdsEditaveis,
-                        orientacoesImportantes: orientacoesDdsEditaveis,
-                        aniversariantesSemana: aniversariantesSemanaDds,
-                        logosEmpresasCabecalho: dadosDdsComRegistro.logosEmpresasCabecalho || [],
-                        empresaLogoUrl: dadosDdsComRegistro.empresaLogoUrl || "" ,
-                        empresaLogoNome: dadosDdsComRegistro.empresaLogoNome || "" ,
-                        contratanteLogoUrl: dadosDdsComRegistro.contratanteLogoUrl || "" ,
-                        contratanteLogoNome: dadosDdsComRegistro.contratanteLogoNome || "" ,
-                        participantes: participantesSistemaDds.map((participante, indice) => ({
-                            numero: participante.numero || indice + 1,
-                            codigoSafescan:
-                                participante.codigoFuncionario ||
-                                participante.codigo_funcionario ||
-                                participante.codigoSafescan ||
-                                participante.codigoSafeScan ||
-                                participante.codigo_safescan ||
-                                participante.codigo ||
-                                participante.codigo_colaborador ||
-                                participante.codigoColaborador ||
-                                participante.codigo_qr ||
-                                participante.qr_codigo ||
-                                participante.codigoQr ||
-                                participante.matricula_esocial ||
-                                participante.matriculaEsocial ||
-                                participante.matricula ||
-                                "",
-                            nome: participante.nome,
-                            funcao: participante.funcao,
-                            empresa: participante.empresa,
-                        })),
-                        diasSemana: diasSemanaComTemasDds.map((dia) => ({
-                            dia: dia.dia,
-                            data: dia.data,
-                            tema: dia.tema,
-                            responsavel: dia.responsavel,
-                            semAtividade: Boolean(dia.semAtividade),
-                        })),
-                    },
-                    status: "Ativo",
-                },
-            });
-
-            setRegistroDdsConferencia(registro);
-            window.setTimeout(() => window.print(), 150);
-        } catch (error) {
-            const mensagem = error?.message || "Não foi possível gerar o QR de conferência do DDS.";
-            setErroRegistroDds(mensagem);
-            window.alert(mensagem);
-        } finally {
-            setSalvandoRegistroDds(false);
-        }
-    }
+    const {
+        imprimirDdsComQrConferencia,
+    } = criarControladorImpressaoDds({
+        aniversariantesSemanaDds,
+        dadosDds,
+        dadosDdsComRegistro,
+        diasSemanaComTemasDds,
+        empresaSelecionadaDds,
+        fimSemanaDds,
+        folhasContinuacaoDds,
+        inicioSemanaDds,
+        obraSelecionadaIdDds,
+        obterIdEmpresaObjetoDds,
+        obterUuidSeguroDds,
+        orientacoesDdsEditaveis,
+        participantesSistemaDds,
+        recadosDdsEditaveis,
+        salvandoRegistroDds,
+        salvarRegistroDds,
+        setErroRegistroDds,
+        setRegistroDdsConferencia,
+        setSalvandoRegistroDds,
+        supabase,
+    });
 
 
 
