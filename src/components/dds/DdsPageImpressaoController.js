@@ -23,30 +23,6 @@ export default function criarControladorImpressaoDds({
     async function imprimirDdsComQrConferencia() {
         if (salvandoRegistroDds) return;
 
-        const diasPendentes = diasSemanaComTemasDds.filter((dia) => (
-            !dia.semAtividade &&
-            (
-                !String(dia.tema || "").trim() ||
-                !String(dia.responsavel || "").trim()
-            )
-        ));
-
-        if (diasPendentes.length > 0) {
-            const nomesDias = diasPendentes
-                .map((dia) => dia.nome || dia.curto)
-                .filter(Boolean)
-                .join(", ");
-
-            const mensagem =
-                "Preencha o tema e o responsável ou marque 'Não houve atividades' em: " +
-                nomesDias +
-                ".";
-
-            setErroRegistroDds(mensagem);
-            window.alert(mensagem);
-            return;
-        }
-
         setErroRegistroDds("");
 
         if (!supabase) {
