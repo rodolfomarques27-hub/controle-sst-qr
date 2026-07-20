@@ -3,15 +3,23 @@ import { Activity, Building2, CalendarClock, Edit3, FileDown, MapPin, Plus, QrCo
 import {
     concluirManutencaoExtintor,
     gerarUrlQrExtintor,
-    listarExtintoresVistoria,
+    identificadorEhUuidExtintor,
     listarManutencoesExtintores,
     obterManutencaoAbertaExtintor,
     proximoCodigoExtintor,
     registrarEnvioManutencaoExtintor,
-    salvarExtintoresVistoria,
     TIPOS_SERVICO_EXTINTOR,
     TIPOS_EXTINTORES_BRASIL,
 } from "../../services/extintoresVistoriaService";
+import {
+    carregarExtintoresCadastro,
+    carregarMapasCadastroExtintores,
+    excluirExtintorCadastro,
+    migrarExtintoresLocaisCadastro,
+    salvarExtintorCadastro,
+    selecionarMapaCadastroExtintores,
+} from "../../services/extintoresCadastroSyncService";
+import { supabase } from "../../lib/supabaseClient";
 import { gerarRelatorioExtintoresPDF } from "../../services/relatorioExtintoresService";
 import { QrCodeComLogo } from "../qr/QrCodeComLogo";
 import { listarMapasObraLocal, salvarMapaObraLocal } from "../../services/mapaObraLocalService";
@@ -29,13 +37,22 @@ function capacidadesPorTipo(tipo) {
 }
 
 export function ExtintoresPage() {
-    const [itens, setItens] = useState(() => listarExtintoresVistoria());
+    const [itens, setItens] = useState([]);
     const [form, setForm] = useState(VAZIO);
     const [busca, setBusca] = useState("");
     const [filtro, setFiltro] = useState("Todos");
     const [qr, setQr] = useState(null);
     const [mensagem, setMensagem] = useState("");
     const [mapasObra, setMapasObra] = useState(() => listarMapasObraLocal());
+    const [obraSelecionadaId, setObraSelecionadaId] = useState(
+        () => listarMapasObraLocal()[0]?.obraId || "",
+    );
+    const [carregandoDados, setCarregandoDados] = useState(true);
+    const [salvandoDados, setSalvandoDados] = useState(false);
+    const [origemDados, setOrigemDados] = useState("inicial");
+    const [erroDados, setErroDados] = useState("");
+    const [locaisPendentes, setLocaisPendentes] = useState(0);
+    const [recarregarVersao, setRecarregarVersao] = useState(0);
     const [manutencoes, setManutencoes] = useState(() => listarManutencoesExtintores());
     const [manutencaoAlvo, setManutencaoAlvo] = useState(null);
     const [formManutencao, setFormManutencao] = useState(MANUTENCAO_VAZIA);
@@ -44,44 +61,273 @@ export function ExtintoresPage() {
     const diaHero = new Date().toLocaleDateString("pt-BR", { weekday: "long" });
     const horaHero = new Date().toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
     const capacidades = capacidadesPorTipo(form.tipo);
-    const pontosDisponiveis = useMemo(() => mapasObra.flatMap((mapa) =>
-        (mapa.pontos || []).map((ponto) => ({ ...ponto, obraId: mapa.obraId })),
-    ), [mapasObra]);
-    const pontosComEquipamentos = useMemo(() => {
-        const idsCadastrados = new Set(itens.map((item) => String(item.id)));
-        return pontosDisponiveis.filter((ponto) =>
-            (ponto.extintores || []).some((id) => idsCadastrados.has(String(id))),
+
+    const mapasObraDisponiveis = useMemo(() => {
+        const unicos = new Map();
+
+        mapasObra.forEach((mapa) => {
+            const obraId = String(
+                mapa?.obraId ||
+                mapa?.obra_id ||
+                "",
+            );
+
+            if (obraId && !unicos.has(obraId)) {
+                unicos.set(obraId, mapa);
+            }
+        });
+
+        return Array.from(unicos.values());
+    }, [mapasObra]);
+
+    const mapaSelecionado = useMemo(
+        () => selecionarMapaCadastroExtintores({
+            mapas: mapasObraDisponiveis,
+            obraIdPreferida: obraSelecionadaId,
+        }),
+        [mapasObraDisponiveis, obraSelecionadaId],
+    );
+
+    const pontosDisponiveis = useMemo(
+        () => (
+            Array.isArray(mapaSelecionado?.pontos)
+                ? mapaSelecionado.pontos
+                : []
+        ).map((ponto) => ({
+            ...ponto,
+            obraId: mapaSelecionado?.obraId || "",
+            empresaId: mapaSelecionado?.empresaId || "",
+        })),
+        [mapaSelecionado],
+    );
+
+    const extintoresPorPonto = useMemo(() => {
+        const idAtualPorReferencia = new Map();
+
+        itens.forEach((item) => {
+            const idAtual = String(item?.id || "");
+
+            [
+                item?.id,
+                item?.referenciaLocal,
+                item?.referencia_local,
+            ]
+                .map((referencia) =>
+                    String(referencia || ""),
+                )
+                .filter(Boolean)
+                .forEach((referencia) => {
+                    idAtualPorReferencia.set(
+                        referencia,
+                        idAtual,
+                    );
+                });
+        });
+
+        return new Map(
+            pontosDisponiveis.map((ponto) => {
+                const referenciasMapa = [
+                    ...(Array.isArray(ponto.extintores)
+                        ? ponto.extintores
+                        : []),
+                    ...(Array.isArray(ponto.itens)
+                        ? ponto.itens.map(
+                            (item) =>
+                                item?.extintorId ||
+                                item?.extintor_id ||
+                                "",
+                        )
+                        : []),
+                ];
+
+                const ids = new Set(
+                    referenciasMapa
+                        .map((referencia) =>
+                            idAtualPorReferencia.get(
+                                String(referencia || ""),
+                            ),
+                        )
+                        .filter(Boolean),
+                );
+
+                itens
+                    .filter(
+                        (item) =>
+                            String(item?.pontoId || "") ===
+                            String(ponto?.id || ""),
+                    )
+                    .forEach((item) => {
+                        if (item?.id) {
+                            ids.add(String(item.id));
+                        }
+                    });
+
+                return [
+                    String(ponto.id),
+                    ids,
+                ];
+            }),
         );
     }, [itens, pontosDisponiveis]);
+
+    const pontosComEquipamentos = useMemo(
+        () => pontosDisponiveis.filter(
+            (ponto) =>
+                (
+                    extintoresPorPonto.get(
+                        String(ponto.id),
+                    )?.size || 0
+                ) > 0,
+        ),
+        [extintoresPorPonto, pontosDisponiveis],
+    );
+
     const pontoNomePorId = useMemo(() => new Map(
-        pontosDisponiveis.map((ponto) => [String(ponto.id), ponto.nome || "Ponto sem nome"]),
+        pontosDisponiveis.map(
+            (ponto) => [
+                String(ponto.id),
+                ponto.nome || "Ponto sem nome",
+            ],
+        ),
     ), [pontosDisponiveis]);
+
     const idsExtintoresVinculados = useMemo(() => new Set(
-        pontosComEquipamentos.flatMap((ponto) => (ponto.extintores || []).map(String)),
-    ), [pontosComEquipamentos]);
-    const extintoresPorPonto = useMemo(() => new Map(
-        pontosComEquipamentos.map((ponto) => [
-            String(ponto.id),
-            new Set((ponto.extintores || []).map(String)),
-        ]),
-    ), [pontosComEquipamentos]);
+        Array.from(
+            extintoresPorPonto.values(),
+        ).flatMap((ids) => Array.from(ids)),
+    ), [extintoresPorPonto]);
+
     const pontoAtualPorExtintor = useMemo(() => {
         const nomes = new Map();
+
         pontosComEquipamentos.forEach((ponto) => {
-            (ponto.extintores || []).forEach((extintorId) => nomes.set(String(extintorId), ponto.nome || "Ponto sem nome"));
+            const ids = extintoresPorPonto.get(
+                String(ponto.id),
+            ) || new Set();
+
+            ids.forEach((extintorId) => {
+                nomes.set(
+                    String(extintorId),
+                    ponto.nome || "Ponto sem nome",
+                );
+            });
         });
+
         return nomes;
-    }, [pontosComEquipamentos]);
+    }, [extintoresPorPonto, pontosComEquipamentos]);
+
+    const origemDadosTexto = {
+        remoto: "Supabase",
+        cache: "cache do dispositivo",
+        local: "dados locais",
+        vazio: "sem registros",
+        erro: "indisponível",
+        inicial: "inicializando",
+    }[origemDados] || origemDados;
 
     useEffect(() => {
-        const atualizarMapa = () => setMapasObra(listarMapasObraLocal());
-        window.addEventListener("safescan-mapa-atualizado", atualizarMapa);
-        window.addEventListener("storage", atualizarMapa);
+        let ativo = true;
+
+        const atualizarMapas = async () => {
+            const resultado =
+                await carregarMapasCadastroExtintores({
+                    supabase,
+                    mapasLocais: listarMapasObraLocal(),
+                });
+
+            if (!ativo) {
+                return;
+            }
+
+            setMapasObra(resultado.mapas);
+            setErroDados(resultado.erro || "");
+            setObraSelecionadaId((atual) =>
+                selecionarMapaCadastroExtintores({
+                    mapas: resultado.mapas,
+                    obraIdPreferida: atual,
+                })?.obraId || "",
+            );
+        };
+
+        const solicitarAtualizacao = () => {
+            void atualizarMapas();
+        };
+
+        void atualizarMapas();
+
+        window.addEventListener(
+            "safescan-mapa-atualizado",
+            solicitarAtualizacao,
+        );
+
+        window.addEventListener(
+            "storage",
+            solicitarAtualizacao,
+        );
+
         return () => {
-            window.removeEventListener("safescan-mapa-atualizado", atualizarMapa);
-            window.removeEventListener("storage", atualizarMapa);
+            ativo = false;
+
+            window.removeEventListener(
+                "safescan-mapa-atualizado",
+                solicitarAtualizacao,
+            );
+
+            window.removeEventListener(
+                "storage",
+                solicitarAtualizacao,
+            );
         };
     }, []);
+
+    useEffect(() => {
+        let ativo = true;
+
+        const carregar = async () => {
+            if (!mapaSelecionado) {
+                setItens([]);
+                setLocaisPendentes(0);
+                setOrigemDados("vazio");
+                setCarregandoDados(false);
+                return;
+            }
+
+            setCarregandoDados(true);
+            setErroDados("");
+
+            const empresaId =
+                identificadorEhUuidExtintor(
+                    mapaSelecionado.empresaId,
+                )
+                    ? mapaSelecionado.empresaId
+                    : "";
+
+            const resultado =
+                await carregarExtintoresCadastro({
+                    obraId: mapaSelecionado.obraId,
+                    empresaId,
+                    mapa: mapaSelecionado,
+                });
+
+            if (!ativo) {
+                return;
+            }
+
+            setItens(resultado.itens);
+            setOrigemDados(resultado.origem);
+            setErroDados(resultado.erro || "");
+            setLocaisPendentes(
+                resultado.locaisPendentes || 0,
+            );
+            setCarregandoDados(false);
+        };
+
+        void carregar();
+
+        return () => {
+            ativo = false;
+        };
+    }, [mapaSelecionado, recarregarVersao]);
 
     useEffect(() => {
         if (!filtro.startsWith("ponto:")) return;
@@ -105,57 +351,383 @@ export function ExtintoresPage() {
         }
         return { ...atual, [campo]: valor };
     });
-    const novo = () => { setForm(VAZIO); setMensagem(""); };
+
+    const novo = () => {
+        setForm(VAZIO);
+        setMensagem("");
+    };
+
     const editar = (item) => {
         const opcoes = capacidadesPorTipo(item.tipo);
-        const pontoVinculado = pontosDisponiveis.find((ponto) =>
-            (ponto.extintores || []).some((id) => String(id) === String(item.id)),
-        ) || pontosDisponiveis.find((ponto) => String(ponto.id) === String(item.pontoId || ""));
+
+        const pontoVinculado =
+            pontosDisponiveis.find(
+                (ponto) =>
+                    extintoresPorPonto.get(
+                        String(ponto.id),
+                    )?.has(String(item.id)),
+            ) ||
+            pontosDisponiveis.find(
+                (ponto) =>
+                    String(ponto.id) ===
+                    String(item.pontoId || ""),
+            );
+
         setForm({
             ...VAZIO,
             ...item,
             pontoId: pontoVinculado?.id || "",
             ponto: pontoVinculado?.nome || "",
-            capacidade: opcoes.includes(item.capacidade) ? item.capacidade : opcoes[0],
+            capacidade:
+                opcoes.includes(item.capacidade)
+                    ? item.capacidade
+                    : opcoes[0],
         });
     };
 
-    function sincronizarPontoDoExtintor(extintorId, pontoId = "") {
+    function sincronizarPontoDoExtintor(
+        extintorId,
+        pontoId = "",
+        extintorIdAnterior = "",
+    ) {
+        const idsParaRemover = new Set(
+            [
+                extintorId,
+                extintorIdAnterior,
+            ]
+                .map(String)
+                .filter(Boolean),
+        );
+
         mapasObra.forEach((mapa) => {
             let alterado = false;
-            const pontosAtualizados = (mapa.pontos || []).map((ponto) => {
-                const idsAtuais = (ponto.extintores || []).map(String);
-                const deveVincular = String(ponto.id) === String(pontoId);
-                const semExtintor = idsAtuais.filter((id) => id !== String(extintorId));
-                const proximosIds = deveVincular ? [...semExtintor, String(extintorId)] : semExtintor;
-                if (proximosIds.length === idsAtuais.length && proximosIds.every((id, indice) => id === idsAtuais[indice])) return ponto;
-                alterado = true;
-                const proximasPosicoes = { ...(ponto.extintorPosicoes || {}) };
-                if (!deveVincular) delete proximasPosicoes[extintorId];
-                return { ...ponto, extintores: proximosIds, extintorPosicoes: proximasPosicoes };
-            });
-            if (alterado) salvarMapaObraLocal({ ...mapa, pontos: pontosAtualizados });
+
+            const pontosAtualizados =
+                (mapa.pontos || []).map((ponto) => {
+                    const idsAtuais =
+                        (ponto.extintores || []).map(String);
+
+                    const deveVincular =
+                        String(ponto.id) ===
+                        String(pontoId);
+
+                    const semExtintor =
+                        idsAtuais.filter(
+                            (id) =>
+                                !idsParaRemover.has(id),
+                        );
+
+                    const proximosIds = deveVincular
+                        ? [
+                            ...semExtintor,
+                            String(extintorId),
+                        ]
+                        : semExtintor;
+
+                    if (
+                        proximosIds.length ===
+                            idsAtuais.length &&
+                        proximosIds.every(
+                            (id, indice) =>
+                                id === idsAtuais[indice],
+                        )
+                    ) {
+                        return ponto;
+                    }
+
+                    alterado = true;
+
+                    const proximasPosicoes = {
+                        ...(ponto.extintorPosicoes || {}),
+                    };
+
+                    const posicaoAnterior =
+                        proximasPosicoes[
+                            extintorIdAnterior
+                        ] ||
+                        proximasPosicoes[extintorId];
+
+                    idsParaRemover.forEach((id) => {
+                        delete proximasPosicoes[id];
+                    });
+
+                    if (
+                        deveVincular &&
+                        posicaoAnterior
+                    ) {
+                        proximasPosicoes[extintorId] =
+                            posicaoAnterior;
+                    }
+
+                    return {
+                        ...ponto,
+                        extintores: proximosIds,
+                        extintorPosicoes:
+                            proximasPosicoes,
+                    };
+                });
+
+            if (alterado) {
+                salvarMapaObraLocal({
+                    ...mapa,
+                    pontos: pontosAtualizados,
+                });
+            }
         });
     }
 
-    function salvar(evento) {
+    async function salvar(evento) {
         evento.preventDefault();
-        if (!form.localizacao.trim()) { setMensagem("Informe a localização do extintor."); return; }
-        if (!form.pontoId) { setMensagem("Selecione um ponto cadastrado no Mapa da Obra."); return; }
-        const pontoSelecionado = pontosDisponiveis.find((ponto) => String(ponto.id) === String(form.pontoId));
-        if (!pontoSelecionado) { setMensagem("O ponto selecionado não está mais disponível."); return; }
-        const itemNovo = { ...form, id: `extintor-${Date.now()}`, codigo: proximoCodigoExtintor(itens), tokenQr: `ext-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`, criadoEm: new Date().toISOString(), posicao: { top: 50, left: 50 } };
-        const registro = form.id ? { ...form, ponto: pontoSelecionado.nome } : { ...itemNovo, ponto: pontoSelecionado.nome };
-        const atualizados = form.id ? itens.map((item) => item.id === form.id ? registro : item) : [...itens, registro];
-        setItens(salvarExtintoresVistoria(atualizados));
-        sincronizarPontoDoExtintor(registro.id, pontoSelecionado.id);
-        setForm(VAZIO); setMensagem("Cadastro salvo e vinculado ao ponto selecionado.");
+
+        if (salvandoDados) {
+            return;
+        }
+
+        if (!mapaSelecionado) {
+            setMensagem(
+                "Selecione uma obra com mapa cadastrado.",
+            );
+            return;
+        }
+
+        if (!form.localizacao.trim()) {
+            setMensagem(
+                "Informe a localização do extintor.",
+            );
+            return;
+        }
+
+        if (!form.pontoId) {
+            setMensagem(
+                "Selecione um ponto cadastrado no Mapa da Obra.",
+            );
+            return;
+        }
+
+        const pontoSelecionado =
+            pontosDisponiveis.find(
+                (ponto) =>
+                    String(ponto.id) ===
+                    String(form.pontoId),
+            );
+
+        if (!pontoSelecionado) {
+            setMensagem(
+                "O ponto selecionado não está mais disponível.",
+            );
+            return;
+        }
+
+        const idAnterior = form.id;
+
+        const itemNovo = {
+            ...form,
+            id: `extintor-${Date.now()}`,
+            codigo: proximoCodigoExtintor(itens),
+            tokenQr:
+                `ext-${Date.now()}-${Math.random()
+                    .toString(36)
+                    .slice(2, 8)}`,
+            criadoEm: new Date().toISOString(),
+            posicao: {
+                top: 50,
+                left: 50,
+            },
+        };
+
+        const registro = form.id
+            ? {
+                ...form,
+                ponto: pontoSelecionado.nome,
+            }
+            : {
+                ...itemNovo,
+                ponto: pontoSelecionado.nome,
+            };
+
+        const empresaId =
+            identificadorEhUuidExtintor(
+                mapaSelecionado.empresaId,
+            )
+                ? mapaSelecionado.empresaId
+                : "";
+
+        setSalvandoDados(true);
+        setMensagem("");
+        setErroDados("");
+
+        try {
+            const resultado =
+                await salvarExtintorCadastro({
+                    extintor: registro,
+                    obraId: mapaSelecionado.obraId,
+                    empresaId,
+                    pontoId: pontoSelecionado.id,
+                });
+
+            setItens(resultado.itens);
+
+            sincronizarPontoDoExtintor(
+                resultado.registro.id,
+                pontoSelecionado.id,
+                idAnterior,
+            );
+
+            if (
+                idAnterior &&
+                !identificadorEhUuidExtintor(
+                    idAnterior,
+                )
+            ) {
+                setLocaisPendentes((atual) =>
+                    Math.max(0, atual - 1),
+                );
+            }
+
+            setOrigemDados("remoto");
+            setForm(VAZIO);
+            setMensagem(
+                "Cadastro salvo no Supabase e vinculado ao ponto selecionado.",
+            );
+        }
+        catch (erro) {
+            setMensagem(
+                erro?.message ||
+                "Não foi possível salvar o extintor.",
+            );
+        }
+        finally {
+            setSalvandoDados(false);
+        }
     }
 
-    function excluir(item) {
-        if (!window.confirm(`Excluir ${item.codigo}?`)) return;
-        setItens(salvarExtintoresVistoria(itens.filter((atual) => atual.id !== item.id)));
-        sincronizarPontoDoExtintor(item.id, "");
+    async function excluir(item) {
+        if (salvandoDados) {
+            return;
+        }
+
+        if (
+            !window.confirm(
+                `Excluir ${item.codigo}?`,
+            )
+        ) {
+            return;
+        }
+
+        if (!mapaSelecionado) {
+            setMensagem(
+                "A obra do extintor não está disponível.",
+            );
+            return;
+        }
+
+        setSalvandoDados(true);
+        setMensagem("");
+
+        try {
+            const resultado =
+                await excluirExtintorCadastro({
+                    extintor: item,
+                    obraId: mapaSelecionado.obraId,
+                });
+
+            setItens(resultado.itens);
+
+            sincronizarPontoDoExtintor(
+                item.id,
+                "",
+            );
+
+            if (
+                !identificadorEhUuidExtintor(
+                    item.id,
+                )
+            ) {
+                setLocaisPendentes((atual) =>
+                    Math.max(0, atual - 1),
+                );
+            }
+
+            setMensagem(
+                `${item.codigo} excluído com sucesso.`,
+            );
+        }
+        catch (erro) {
+            setMensagem(
+                erro?.message ||
+                "Não foi possível excluir o extintor.",
+            );
+        }
+        finally {
+            setSalvandoDados(false);
+        }
+    }
+
+    async function migrarRegistrosLocais() {
+        if (
+            salvandoDados ||
+            !mapaSelecionado ||
+            locaisPendentes <= 0
+        ) {
+            return;
+        }
+
+        if (
+            !window.confirm(
+                `Migrar ${locaisPendentes} registro(s) local(is) desta obra para o Supabase?`,
+            )
+        ) {
+            return;
+        }
+
+        const empresaId =
+            identificadorEhUuidExtintor(
+                mapaSelecionado.empresaId,
+            )
+                ? mapaSelecionado.empresaId
+                : "";
+
+        setSalvandoDados(true);
+        setMensagem("");
+
+        try {
+            const resultado =
+                await migrarExtintoresLocaisCadastro({
+                    obraId: mapaSelecionado.obraId,
+                    empresaId,
+                    mapa: mapaSelecionado,
+                });
+
+            setItens(resultado.itens);
+
+            resultado.itens.forEach((item) => {
+                if (
+                    item.referenciaLocal &&
+                    item.referenciaLocal !== item.id
+                ) {
+                    sincronizarPontoDoExtintor(
+                        item.id,
+                        item.pontoId,
+                        item.referenciaLocal,
+                    );
+                }
+            });
+
+            setLocaisPendentes(0);
+            setOrigemDados("remoto");
+            setMensagem(
+                `${resultado.migrados} registro(s) local(is) migrado(s) para o Supabase.`,
+            );
+        }
+        catch (erro) {
+            setMensagem(
+                erro?.message ||
+                "Não foi possível migrar os registros locais.",
+            );
+        }
+        finally {
+            setSalvandoDados(false);
+        }
     }
 
     function abrirManutencao(item) {
@@ -164,39 +736,182 @@ export function ExtintoresPage() {
         setFormRetorno({ ...RETORNO_VAZIO, dataRetorno: new Date().toISOString().slice(0, 10) });
     }
 
-    function atualizarExtintor(id, alteracoes) {
-        const atualizados = itens.map((item) => item.id === id ? { ...item, ...alteracoes } : item);
-        setItens(salvarExtintoresVistoria(atualizados));
-        return atualizados.find((item) => item.id === id);
+    async function atualizarExtintor(
+        id,
+        alteracoes,
+    ) {
+        const atual = itens.find(
+            (item) => item.id === id,
+        );
+
+        if (!atual || !mapaSelecionado) {
+            throw new Error(
+                "Extintor ou obra não disponível para atualização.",
+            );
+        }
+
+        const pontoVinculado =
+            pontosDisponiveis.find(
+                (ponto) =>
+                    extintoresPorPonto.get(
+                        String(ponto.id),
+                    )?.has(String(atual.id)),
+            );
+
+        const pontoId =
+            atual.pontoId ||
+            pontoVinculado?.id ||
+            "";
+
+        const empresaId =
+            identificadorEhUuidExtintor(
+                mapaSelecionado.empresaId,
+            )
+                ? mapaSelecionado.empresaId
+                : "";
+
+        const resultado =
+            await salvarExtintorCadastro({
+                extintor: {
+                    ...atual,
+                    ...alteracoes,
+                },
+                obraId: mapaSelecionado.obraId,
+                empresaId,
+                pontoId,
+            });
+
+        setItens(resultado.itens);
+
+        return resultado.registro;
     }
 
-    function enviarParaManutencao(evento) {
+    async function enviarParaManutencao(evento) {
         evento.preventDefault();
-        if (!formManutencao.empresaNome.trim()) { setMensagem("Informe a empresa responsável pelo serviço."); return; }
-        if (!formManutencao.registroInmetro.trim()) { setMensagem("Informe o número de registro da empresa no Inmetro."); return; }
-        const tipo = TIPOS_SERVICO_EXTINTOR.find((item) => item.valor === formManutencao.tipoServico);
-        registrarEnvioManutencaoExtintor({ ...formManutencao, extintorId: manutencaoAlvo.id });
-        atualizarExtintor(manutencaoAlvo.id, { status: "Inativo", situacaoOperacional: tipo?.situacao || "Em manutenção" });
-        setManutencoes(listarManutencoesExtintores());
-        setManutencaoAlvo(null);
-        setMensagem(`${manutencaoAlvo.codigo} enviado para ${formManutencao.tipoServico.toLowerCase()}.`);
+
+        if (salvandoDados) {
+            return;
+        }
+
+        if (!formManutencao.empresaNome.trim()) {
+            setMensagem(
+                "Informe a empresa responsável pelo serviço.",
+            );
+            return;
+        }
+
+        if (!formManutencao.registroInmetro.trim()) {
+            setMensagem(
+                "Informe o número de registro da empresa no Inmetro.",
+            );
+            return;
+        }
+
+        const tipo = TIPOS_SERVICO_EXTINTOR.find(
+            (item) =>
+                item.valor ===
+                formManutencao.tipoServico,
+        );
+
+        setSalvandoDados(true);
+        setMensagem("");
+
+        try {
+            await atualizarExtintor(
+                manutencaoAlvo.id,
+                {
+                    status: "Inativo",
+                    situacaoOperacional:
+                        tipo?.situacao ||
+                        "Em manutenção",
+                },
+            );
+
+            registrarEnvioManutencaoExtintor({
+                ...formManutencao,
+                extintorId: manutencaoAlvo.id,
+            });
+
+            setManutencoes(
+                listarManutencoesExtintores(),
+            );
+
+            setManutencaoAlvo(null);
+
+            setMensagem(
+                `${manutencaoAlvo.codigo} enviado para ${formManutencao.tipoServico.toLowerCase()}.`,
+            );
+        }
+        catch (erro) {
+            setMensagem(
+                erro?.message ||
+                "Não foi possível registrar a manutenção.",
+            );
+        }
+        finally {
+            setSalvandoDados(false);
+        }
     }
 
-    function registrarRetorno(evento) {
+    async function registrarRetorno(evento) {
         evento.preventDefault();
-        const aberta = obterManutencaoAbertaExtintor(manutencaoAlvo.id);
-        if (!aberta) return;
-        concluirManutencaoExtintor(aberta.id, formRetorno);
-        atualizarExtintor(manutencaoAlvo.id, {
-            status: "Ativo",
-            situacaoOperacional: "Em operação",
-            ultimaManutencao: formRetorno.dataRetorno,
-            proximaManutencao: formRetorno.proximaManutencao,
-            proximoEnsaioHidrostatico: formRetorno.proximoEnsaioHidrostatico,
-        });
-        setManutencoes(listarManutencoesExtintores());
-        setManutencaoAlvo(null);
-        setMensagem(`${manutencaoAlvo.codigo} retornou ao serviço e está em operação.`);
+
+        if (salvandoDados) {
+            return;
+        }
+
+        const aberta =
+            obterManutencaoAbertaExtintor(
+                manutencaoAlvo.id,
+            );
+
+        if (!aberta) {
+            return;
+        }
+
+        setSalvandoDados(true);
+        setMensagem("");
+
+        try {
+            await atualizarExtintor(
+                manutencaoAlvo.id,
+                {
+                    status: "Ativo",
+                    situacaoOperacional:
+                        "Em operação",
+                    ultimaManutencao:
+                        formRetorno.dataRetorno,
+                    proximaManutencao:
+                        formRetorno.proximaManutencao,
+                    proximoEnsaioHidrostatico:
+                        formRetorno.proximoEnsaioHidrostatico,
+                },
+            );
+
+            concluirManutencaoExtintor(
+                aberta.id,
+                formRetorno,
+            );
+
+            setManutencoes(
+                listarManutencoesExtintores(),
+            );
+
+            setManutencaoAlvo(null);
+
+            setMensagem(
+                `${manutencaoAlvo.codigo} retornou ao serviço e está em operação.`,
+            );
+        }
+        catch (erro) {
+            setMensagem(
+                erro?.message ||
+                "Não foi possível registrar o retorno.",
+            );
+        }
+        finally {
+            setSalvandoDados(false);
+        }
     }
 
     function imprimir(item) {
@@ -242,6 +957,77 @@ export function ExtintoresPage() {
                     </div>
                 </section>
 
+                <section className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+                    <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
+                        <div className="min-w-0 flex-1">
+                            <label className="mb-1.5 flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.15em] text-slate-500">
+                                <Building2 size={14} />
+                                Obra ativa
+                            </label>
+                            <select
+                                value={mapaSelecionado?.obraId || ""}
+                                onChange={(evento) => {
+                                    setObraSelecionadaId(evento.target.value);
+                                    setForm(VAZIO);
+                                    setFiltro("Todos");
+                                    setMensagem("");
+                                }}
+                                className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm font-bold text-slate-900 outline-none transition focus:border-sky-400 focus:ring-2 focus:ring-sky-100"
+                            >
+                                {!mapasObraDisponiveis.length && (
+                                    <option value="">
+                                        Nenhuma obra com mapa disponível
+                                    </option>
+                                )}
+                                {mapasObraDisponiveis.map((mapa) => (
+                                    <option
+                                        key={mapa.id || mapa.mapaId || mapa.obraId}
+                                        value={mapa.obraId}
+                                    >
+                                        {mapa.obraNome || mapa.nome || "Obra sem nome"}
+                                    </option>
+                                ))}
+                            </select>
+                        </div>
+
+                        <div className="flex flex-wrap items-center gap-2">
+                            <span className="rounded-full border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-black text-slate-600">
+                                Fonte: {origemDadosTexto}
+                            </span>
+
+                            <button
+                                type="button"
+                                onClick={() => setRecarregarVersao((atual) => atual + 1)}
+                                disabled={carregandoDados || salvandoDados}
+                                className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-black text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
+                            >
+                                <RotateCcw
+                                    size={15}
+                                    className={carregandoDados ? "animate-spin" : ""}
+                                />
+                                Atualizar
+                            </button>
+
+                            {locaisPendentes > 0 && (
+                                <button
+                                    type="button"
+                                    onClick={migrarRegistrosLocais}
+                                    disabled={salvandoDados}
+                                    className="rounded-lg bg-amber-500 px-3 py-2 text-xs font-black text-white transition hover:bg-amber-600 disabled:cursor-not-allowed disabled:opacity-50"
+                                >
+                                    Migrar {locaisPendentes} registro(s) local(is)
+                                </button>
+                            )}
+                        </div>
+                    </div>
+
+                    {erroDados && (
+                        <p className="mt-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-semibold text-amber-800">
+                            {erroDados} A tela está utilizando a melhor fonte disponível.
+                        </p>
+                    )}
+                </section>
+
                 {mensagem && <div className="rounded-lg border border-sky-200 bg-sky-50 px-4 py-3 text-sm font-semibold text-sky-800">{mensagem}</div>}
 
                 <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
@@ -273,7 +1059,19 @@ export function ExtintoresPage() {
                             <SelectCampo label="Tipo de extintor" value={form.tipo} onChange={(valor) => alterar("tipo", valor)} opcoes={TIPOS_EXTINTORES_BRASIL.map((item) => item.valor)} />
                             <SelectCampo label="Capacidade nominal" value={form.capacidade} onChange={(valor) => alterar("capacidade", valor)} opcoes={capacidades} />
                             <Campo label="Data da aquisição" value={form.dataAquisicao} onChange={(valor) => alterar("dataAquisicao", valor)} tipo="date" />
-                            <button type="submit" className="mb-2 mt-2 w-full rounded-lg bg-sky-600 px-4 py-2.5 text-sm font-bold text-white shadow-sm transition hover:bg-sky-700">Salvar equipamento</button>
+                            <button
+                                type="submit"
+                                disabled={
+                                    carregandoDados ||
+                                    salvandoDados ||
+                                    !mapaSelecionado
+                                }
+                                className="mb-2 mt-2 w-full rounded-lg bg-sky-600 px-4 py-2.5 text-sm font-bold text-white shadow-sm transition hover:bg-sky-700 disabled:cursor-not-allowed disabled:bg-slate-300"
+                            >
+                                {salvandoDados
+                                    ? "Salvando..."
+                                    : "Salvar equipamento"}
+                            </button>
                         </div>
                     </form>
 
@@ -292,7 +1090,17 @@ export function ExtintoresPage() {
                                 <div className="sticky top-0 z-10 grid grid-cols-[64px_repeat(5,minmax(0,1fr))] border-b border-slate-200 bg-slate-50 px-2 py-2.5 text-[9px] font-black uppercase tracking-[0.06em] text-slate-500">
                                     <span className="flex items-center justify-center whitespace-nowrap">Código</span><span className="flex items-center justify-center whitespace-nowrap border-l border-slate-200 px-2 text-center">Localização</span><span className="flex items-center justify-center whitespace-nowrap border-l border-slate-200 px-2 text-center">Ponto</span><span className="flex items-center justify-center whitespace-nowrap border-l border-slate-200 px-2 text-center">Tipo e capacidade</span><span className="flex items-center justify-center whitespace-nowrap border-l border-slate-200 px-2 text-center">Situação</span><span className="flex items-center justify-center whitespace-nowrap border-l border-slate-200 px-2 text-center">Ações</span>
                                 </div>
-                                {filtrados.map((item) => <div key={item.id} className="grid min-h-[50px] grid-cols-[64px_repeat(5,minmax(0,1fr))] items-stretch border-t border-slate-100 px-2 text-sm transition hover:bg-slate-50/70">
+                                {carregandoDados && (
+                                    <div className="px-4 py-10 text-center text-sm font-semibold text-slate-500">
+                                        Carregando extintores da obra...
+                                    </div>
+                                )}
+                                {!carregandoDados && !filtrados.length && (
+                                    <div className="px-4 py-10 text-center text-sm font-semibold text-slate-500">
+                                        Nenhum extintor cadastrado para esta obra.
+                                    </div>
+                                )}
+                                {!carregandoDados && filtrados.map((item) => <div key={item.id} className="grid min-h-[50px] grid-cols-[64px_repeat(5,minmax(0,1fr))] items-stretch border-t border-slate-100 px-2 text-sm transition hover:bg-slate-50/70">
                                     <div className="flex items-center justify-center font-black text-slate-950">{item.codigo}</div>
                                     <span className="flex min-w-0 items-center truncate border-l border-slate-100 px-3 text-slate-700">{item.localizacao}</span>
                                     <span className="flex min-w-0 items-center justify-center truncate border-l border-slate-100 px-3 text-xs font-semibold text-slate-500">{pontoAtualPorExtintor.get(String(item.id)) || pontoNomePorId.get(String(item.pontoId || "")) || "Não vinculado"}</span>
