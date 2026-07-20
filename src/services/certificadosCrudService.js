@@ -154,8 +154,41 @@ function nomeArquivoEhTituloGeralDeTreinamento(nomeArquivo = "") {
     );
 }
 
+function nomeArquivoComecaComNomeColaborador({
+    nomeArquivo = "",
+    nomeColaborador = "",
+} = {}) {
+    const baseArquivo = normalizarNomeColaboradorSeguro(
+        String(nomeArquivo || "").replace(/\.[^.]+$/, "")
+    );
+
+    const baseColaborador = normalizarNomeColaboradorSeguro(
+        nomeColaborador
+    );
+
+    if (!baseArquivo || !baseColaborador) return false;
+    if (baseArquivo === baseColaborador) return true;
+    if (!baseArquivo.startsWith(`${baseColaborador} `)) return false;
+
+    const sufixoDocumento = baseArquivo
+        .slice(baseColaborador.length)
+        .trim();
+
+    return /^(certificado|nr\b|ficha\b|aso\b|atestado\b|treinamento\b|integracao\b|ordem\b|documento\b)/.test(
+        sufixoDocumento
+    );
+}
+
 function validarNomeArquivoContraColaboradorSelecionado({ arquivo, colaboradorSelecionado = null } = {}) {
     const nomeArquivo = arquivo?.name || arquivo?.nome || arquivo?.filename || "";
+
+    if (nomeArquivoComecaComNomeColaborador({
+        nomeArquivo,
+        nomeColaborador: colaboradorSelecionado?.nome || "",
+    })) {
+        return;
+    }
+
     const nomeExtraido = extrairNomePessoaDoNomeArquivo(nomeArquivo);
 
     if (nomeArquivoEhTituloGeralDeTreinamento(nomeArquivo)) {
@@ -250,6 +283,13 @@ function validarCompatibilidadeArquivoColaborador({ arquivo, colaboradores = [],
     const nomeArquivoCompatibilidadeDocumentoGeral = arquivo?.name || arquivo?.nome || arquivo?.filename || "";
 
     if (nomeArquivoEhDocumentoGeralTreinamento(nomeArquivoCompatibilidadeDocumentoGeral)) {
+        return;
+    }
+
+    if (nomeArquivoComecaComNomeColaborador({
+        nomeArquivo: nomeArquivoCompatibilidadeDocumentoGeral,
+        nomeColaborador: colaboradorSelecionado?.nome || "",
+    })) {
         return;
     }
 

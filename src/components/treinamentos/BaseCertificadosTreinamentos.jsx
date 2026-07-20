@@ -305,6 +305,26 @@ export function BaseCertificadosTreinamentos({
 }) {
     const [datasCertificadosAtualizadas, setDatasCertificadosAtualizadas] = React.useState({});
     const [datasDigitadasRevisao, setDatasDigitadasRevisao] = React.useState({});
+    const [ordemColaboradoresBase, setOrdemColaboradoresBase] = React.useState("atual");
+
+    const documentosPorColaboradorOrdenados = React.useMemo(() => {
+        if (ordemColaboradoresBase === "atual") {
+            return documentosPorColaborador;
+        }
+
+        const gruposOrdenados = [...documentosPorColaborador].sort(
+            (grupoA, grupoB) =>
+                String(grupoA?.colaborador?.nome || "").localeCompare(
+                    String(grupoB?.colaborador?.nome || ""),
+                    "pt-BR",
+                    { sensitivity: "base" }
+                )
+        );
+
+        return ordemColaboradoresBase === "za"
+            ? gruposOrdenados.reverse()
+            : gruposOrdenados;
+    }, [documentosPorColaborador, ordemColaboradoresBase]);
 
     React.useEffect(() => {
         if (typeof window === "undefined") return undefined;
@@ -376,6 +396,25 @@ export function BaseCertificadosTreinamentos({
 
                 <div className="flex flex-wrap gap-2 md:justify-end">
                     {!recolhido && (
+                        <label
+                            className="inline-flex items-center gap-2 rounded-full bg-white px-3 py-1 text-xs font-bold text-slate-600 ring-1 ring-slate-200"
+                            data-base-certificados-acao
+                        >
+                            <span>Ordenar</span>
+                            <select
+                                value={ordemColaboradoresBase}
+                                onChange={(evento) => setOrdemColaboradoresBase(evento.target.value)}
+                                className="bg-transparent font-bold text-slate-700 outline-none"
+                                aria-label="Ordenar colaboradores da base de certificados"
+                            >
+                                <option value="atual">Ordem atual</option>
+                                <option value="az">A–Z</option>
+                                <option value="za">Z–A</option>
+                            </select>
+                        </label>
+                    )}
+
+                    {!recolhido && (
                         <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-600">
                             {documentosFiltrados.length} certificado(s) · {totalPorStatusCertificados.pendentes} pendente(s)
                         </span>
@@ -412,7 +451,7 @@ export function BaseCertificadosTreinamentos({
                     </div>
                 )}
 
-                {documentos.length > 0 && documentosPorColaborador.length === 0 && (
+                {documentos.length > 0 && documentosPorColaboradorOrdenados.length === 0 && (
                     <div className="treinamentos-base-certificados-card__vazio rounded-3xl border border-dashed border-slate-300 p-8 text-center">
                         <Filter className="mx-auto h-10 w-10 text-slate-300" />
                         <h3 className="mt-3 font-bold text-slate-900">Nenhum certificado encontrado</h3>
@@ -422,7 +461,7 @@ export function BaseCertificadosTreinamentos({
                     </div>
                 )}
 
-                {documentosPorColaborador.map((grupo, indiceGrupo) => {
+                {documentosPorColaboradorOrdenados.map((grupo, indiceGrupo) => {
                     const colaborador = grupo.colaborador;
                     const certificados = grupo.certificados || [];
                     const pendentes = grupo.pendentes || [];
@@ -433,7 +472,7 @@ export function BaseCertificadosTreinamentos({
                     const grupoKey = String(colaborador?.id || colaborador?.codigoFuncionario || "sem-colaborador");
                     const grupoAberto = Boolean(gruposCertificadosAbertos[grupoKey]);
                     const indiceParGrupo = indiceGrupo % 2 === 0 ? indiceGrupo + 1 : indiceGrupo - 1;
-                    const grupoPar = documentosPorColaborador[indiceParGrupo];
+                    const grupoPar = documentosPorColaboradorOrdenados[indiceParGrupo];
                     const colaboradorPar = grupoPar?.colaborador || {};
                     const grupoParKey = grupoPar
                         ? String(colaboradorPar?.id || colaboradorPar?.codigoFuncionario || "sem-colaborador")
