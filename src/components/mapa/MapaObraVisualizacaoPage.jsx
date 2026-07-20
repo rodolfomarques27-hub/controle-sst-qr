@@ -376,7 +376,7 @@ function PlantaDetalhadaModal({ ponto, extintores, auditorias, onClose }) {
         <div className="grid gap-5 p-5 md:p-7 lg:grid-cols-[minmax(0,1fr)_290px]">
           <div>
             <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
-              <div className="relative mx-auto aspect-square max-h-[68vh] w-full max-w-[760px] overflow-hidden rounded-lg border border-slate-200 bg-white">
+              <div className="relative mx-auto aspect-[4/3] max-h-[68vh] w-full max-w-[760px] overflow-hidden rounded-lg border border-slate-200 bg-white">
                 <img
                   src={ponto.plantaDetalhada.url}
                   alt={`Planta detalhada de ${ponto.nome}`}
