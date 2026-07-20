@@ -20,7 +20,9 @@ import {
 import {
   obterUrlAssinadaPlantaMapa,
 } from "../../services/mapaObraStorageService";
-import { listarExtintoresVistoria } from "../../services/extintoresVistoriaService";
+import {
+  carregarExtintoresCadastro,
+} from "../../services/extintoresCadastroSyncService";
 import { PlantaInterativa } from "./PlantaInterativa";
 import { GoogleMapaSatelite } from "./GoogleMapaSatelite";
 
@@ -58,10 +60,79 @@ function normalizarTexto(valor) {
     .trim();
 }
 
-function obterExtintoresDoPonto(ponto, extintores) {
-  return (ponto?.extintores || [])
-    .map((id) => extintores.find((item) => String(item.id) === String(id)))
+function obterReferenciasExtintor(extintor = {}) {
+  return [
+    extintor?.id,
+    extintor?.referenciaLocal,
+    extintor?.referencia_local,
+  ]
+    .map((referencia) =>
+      String(referencia || ""),
+    )
     .filter(Boolean);
+}
+
+function obterExtintoresDoPonto(
+  ponto,
+  extintores,
+) {
+  const pontoId =
+    String(ponto?.id || "");
+
+  const referenciasMapa = new Set(
+    (
+      Array.isArray(ponto?.extintores)
+        ? ponto.extintores
+        : []
+    )
+      .map((referencia) =>
+        String(referencia || ""),
+      )
+      .filter(Boolean),
+  );
+
+  return (
+    Array.isArray(extintores)
+      ? extintores
+      : []
+  ).filter((extintor) => {
+    const vinculoDireto =
+      pontoId &&
+      String(extintor?.pontoId || "") ===
+        pontoId;
+
+    const vinculoPorReferencia =
+      obterReferenciasExtintor(
+        extintor,
+      ).some((referencia) =>
+        referenciasMapa.has(referencia),
+      );
+
+    return (
+      vinculoDireto ||
+      vinculoPorReferencia
+    );
+  });
+}
+
+function obterPosicaoExtintorNoPonto(
+  ponto,
+  extintor,
+) {
+  const posicoes =
+    ponto?.extintorPosicoes || {};
+
+  const referenciaComPosicao =
+    obterReferenciasExtintor(
+      extintor,
+    ).find(
+      (referencia) =>
+        posicoes[referencia],
+    );
+
+  return referenciaComPosicao
+    ? posicoes[referenciaComPosicao]
+    : null;
 }
 
 function obterAuditoriasDoPonto(ponto, auditorias = []) {
@@ -330,14 +401,28 @@ function ResumoAuditoriasModal({ ponto, auditorias, auditoriasDiretas = null, on
   );
 }
 
-function MarcadoresPlanta({ ponto, extintores }) {
-  return obterExtintoresDoPonto(ponto, extintores).map((item) => {
-    const posicao = ponto.extintorPosicoes?.[item.id];
+function MarcadoresPlanta({
+  ponto,
+  extintores,
+}) {
+  return obterExtintoresDoPonto(
+    ponto,
+    extintores,
+  ).map((item) => {
+    const posicao =
+      obterPosicaoExtintorNoPonto(
+        ponto,
+        item,
+      );
+
     return posicao ? (
       <span
         key={item.id}
         title={`Extintor ${formatarCodigoExtintor(item.codigo)}`}
-        style={{ left: `${posicao.x}%`, top: `${posicao.y}%` }}
+        style={{
+          left: `${posicao.x}%`,
+          top: `${posicao.y}%`,
+        }}
         className="absolute flex h-6 w-6 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full border-2 border-white bg-emerald-600 text-[8px] font-black text-white shadow-lg"
       >
         {formatarCodigoExtintor(item.codigo)}
@@ -346,7 +431,15 @@ function MarcadoresPlanta({ ponto, extintores }) {
   });
 }
 
-function PlantaDetalhadaModal({ ponto, extintores, auditorias, onClose }) {
+function PlantaDetalhadaModal({
+  ponto,
+  extintores,
+  auditorias,
+  carregandoExtintores,
+  origemExtintores,
+  erroExtintores,
+  onClose,
+}) {
   const vinculados = obterExtintoresDoPonto(ponto, extintores);
   const registros = obterAuditoriasDoPonto(ponto, auditorias);
   return (
@@ -425,23 +518,49 @@ function PlantaDetalhadaModal({ ponto, extintores, auditorias, onClose }) {
               )}
             </div>
             <div className="rounded-xl border border-slate-200 bg-white p-4">
-              <p className="text-xs font-black uppercase tracking-wide text-slate-400">
-                Equipamentos
-              </p>
+              <div className="flex items-center justify-between gap-2">
+                <p className="text-xs font-black uppercase tracking-wide text-slate-400">
+                  Equipamentos
+                </p>
+                <span className="rounded-full bg-slate-100 px-2 py-1 text-[9px] font-black uppercase text-slate-500">
+                  {origemExtintores}
+                </span>
+              </div>
+
               <div className="mt-3 max-h-64 space-y-2 overflow-auto">
-                {vinculados.map((item) => (
-                  <div
-                    key={item.id}
-                    className="flex items-center justify-between rounded-lg border border-emerald-100 bg-emerald-50/70 px-3 py-2"
-                  >
-                    <b className="text-sm text-slate-900">
-                      {formatarCodigoExtintor(item.codigo)}
-                    </b>
-                    <span className="text-[10px] font-black uppercase text-emerald-700">
-                      Na planta
-                    </span>
-                  </div>
-                ))}
+                {carregandoExtintores && (
+                  <p className="rounded-lg bg-slate-50 px-3 py-3 text-center text-xs font-semibold text-slate-500">
+                    Carregando extintores da obra...
+                  </p>
+                )}
+
+                {!carregandoExtintores &&
+                  vinculados.map((item) => (
+                    <div
+                      key={item.id}
+                      className="flex items-center justify-between rounded-lg border border-emerald-100 bg-emerald-50/70 px-3 py-2"
+                    >
+                      <b className="text-sm text-slate-900">
+                        {formatarCodigoExtintor(item.codigo)}
+                      </b>
+                      <span className="text-[10px] font-black uppercase text-emerald-700">
+                        Na planta
+                      </span>
+                    </div>
+                  ))}
+
+                {!carregandoExtintores &&
+                  !vinculados.length && (
+                    <p className="rounded-lg bg-slate-50 px-3 py-3 text-center text-xs font-semibold text-slate-500">
+                      Nenhum extintor vinculado a este ponto.
+                    </p>
+                  )}
+
+                {erroExtintores && (
+                  <p className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-[10px] font-semibold text-amber-800">
+                    {erroExtintores}
+                  </p>
+                )}
               </div>
             </div>
           </aside>
@@ -532,6 +651,24 @@ export function MapaObraVisualizacaoPage({ auditoriasCampo = [] }) {
     mapaLocalInicial,
   );
 
+  const [extintores, setExtintores] =
+    useState([]);
+
+  const [
+    carregandoExtintores,
+    setCarregandoExtintores,
+  ] = useState(false);
+
+  const [
+    origemExtintores,
+    setOrigemExtintores,
+  ] = useState("inicial");
+
+  const [
+    erroExtintores,
+    setErroExtintores,
+  ] = useState("");
+
   useEffect(() => {
     if (!SUPABASE_CONFIGURADO) {
       return undefined;
@@ -594,7 +731,93 @@ export function MapaObraVisualizacaoPage({ auditoriasCampo = [] }) {
       ativo = false;
     };
   }, [mapaLocalInicial?.obraId]);
-  const extintores = useMemo(() => listarExtintoresVistoria(), []);
+
+  useEffect(() => {
+    const obraSelecionadaId =
+      String(
+        mapa?.obraId ||
+        mapaLocalInicial?.obraId ||
+        "",
+      ).trim();
+
+    if (!obraSelecionadaId) {
+      setExtintores([]);
+      setOrigemExtintores("vazio");
+      setErroExtintores("");
+      setCarregandoExtintores(false);
+
+      return undefined;
+    }
+
+    let ativo = true;
+
+    async function carregarExtintoresDaObra() {
+      setExtintores([]);
+      setCarregandoExtintores(true);
+      setOrigemExtintores("inicial");
+      setErroExtintores("");
+
+      try {
+        const resultado =
+          await carregarExtintoresCadastro({
+            obraId: obraSelecionadaId,
+            mapa,
+          });
+
+        if (!ativo) {
+          return;
+        }
+
+        setExtintores(
+          Array.isArray(resultado.itens)
+            ? resultado.itens
+            : [],
+        );
+
+        setOrigemExtintores(
+          resultado.origem || "vazio",
+        );
+
+        setErroExtintores(
+          resultado.erro || "",
+        );
+      } catch (error) {
+        if (!ativo) {
+          return;
+        }
+
+        setExtintores([]);
+        setOrigemExtintores("erro");
+        setErroExtintores(
+          error?.message ||
+          "Não foi possível carregar os extintores da obra.",
+        );
+      } finally {
+        if (ativo) {
+          setCarregandoExtintores(false);
+        }
+      }
+    }
+
+    void carregarExtintoresDaObra();
+
+    return () => {
+      ativo = false;
+    };
+  }, [
+    mapa,
+    mapaLocalInicial?.obraId,
+  ]);
+
+  const origemExtintoresTexto = {
+    remoto: "Supabase",
+    cache: "Cache",
+    local: "Local",
+    vazio: "Sem registros",
+    erro: "Indisponível",
+    inicial: "Carregando",
+  }[origemExtintores] || origemExtintores;
+
   const [pontoSelecionado, setPontoSelecionado] = useState(null);
   const [nivelZoomPonto, setNivelZoomPonto] = useState(0);
   const [resetZoomPontoToken, setResetZoomPontoToken] = useState(0);
@@ -963,7 +1186,18 @@ export function MapaObraVisualizacaoPage({ auditoriasCampo = [] }) {
             ponto={pontoAtual}
             extintores={extintores}
             auditorias={auditoriasCampo}
-            onClose={() => setPlantaDetalhadaAberta(false)}
+            carregandoExtintores={
+              carregandoExtintores
+            }
+            origemExtintores={
+              origemExtintoresTexto
+            }
+            erroExtintores={
+              erroExtintores
+            }
+            onClose={() =>
+              setPlantaDetalhadaAberta(false)
+            }
           />
         )}
         {resumoAuditoriaAberto &&

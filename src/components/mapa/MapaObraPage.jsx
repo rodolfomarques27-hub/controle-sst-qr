@@ -26,7 +26,10 @@ import {
   removerPlantaMapaStorage,
   validarArquivoPlantaMapa,
 } from "../../services/mapaObraStorageService";
-import { listarExtintoresVistoria } from "../../services/extintoresVistoriaService";
+import {
+  carregarExtintoresCadastro,
+  salvarExtintorCadastro,
+} from "../../services/extintoresCadastroSyncService";
 import { AmbientesControleTabela } from "./AmbientesControleTabela";
 import dashboardHeroBackground from "../../assets/dashboard-hero-sst.webp";
 import mapaAlertaHero from "../../assets/mapa-alerta-hero.webp";
@@ -233,7 +236,12 @@ export function MapaObraPage({ empresasBanco = [], obrasEmpresasBanco = [], audi
   const [enviandoPlanta, setEnviandoPlanta] = useState(false);
   const [obraId, setObraId] = useState(() => lerMapaObraLocal().obraId || "");
   const sequenciaCarregamentoRef = useRef(0);
-  const extintores = useMemo(() => listarExtintoresVistoria(), []);
+  const sequenciaExtintoresRef = useRef(0);
+  const [extintores, setExtintores] = useState([]);
+  const [carregandoExtintores, setCarregandoExtintores] = useState(false);
+  const [salvandoVinculoExtintor, setSalvandoVinculoExtintor] = useState(false);
+  const [origemExtintores, setOrigemExtintores] = useState("inicial");
+  const [erroExtintores, setErroExtintores] = useState("");
   const pontos = mapa.pontos || [];
   const alertas = mapa.alertas || [];
 
@@ -291,7 +299,8 @@ export function MapaObraPage({ empresasBanco = [], obrasEmpresasBanco = [], audi
     carregandoMapaRemoto ||
     salvandoMapaRemoto ||
     salvandoPonto ||
-    enviandoPlanta;
+    enviandoPlanta ||
+    salvandoVinculoExtintor;
 
 
   const tiposAlertaPersonalizados = useMemo(
@@ -350,6 +359,164 @@ export function MapaObraPage({ empresasBanco = [], obrasEmpresasBanco = [], audi
     () => pontos.find((item) => item.id === pontoSelecionado),
     [pontos, pontoSelecionado],
   );
+
+  const extintoresPorReferencia = useMemo(() => {
+    const indice = new Map();
+
+    extintores.forEach((extintor) => {
+      [
+        extintor?.id,
+        extintor?.referenciaLocal,
+        extintor?.referencia_local,
+      ]
+        .map((referencia) =>
+          String(referencia || ""),
+        )
+        .filter(Boolean)
+        .forEach((referencia) => {
+          indice.set(referencia, extintor);
+        });
+    });
+
+    return indice;
+  }, [extintores]);
+
+  const vinculosExtintoresPorPonto = useMemo(() => {
+    const idsPorPonto = new Map();
+    const posicoesPorPonto = new Map();
+
+    pontos.forEach((ponto) => {
+      const chavePonto = String(ponto?.id || "");
+      const ids = new Set();
+      const posicoes = {
+        ...(ponto?.extintorPosicoes || {}),
+      };
+
+      const referenciasMapa =
+        Array.isArray(ponto?.extintores)
+          ? ponto.extintores
+          : [];
+
+      referenciasMapa.forEach((referencia) => {
+        const chaveReferencia =
+          String(referencia || "");
+
+        const extintor =
+          extintoresPorReferencia.get(
+            chaveReferencia,
+          );
+
+        if (!extintor?.id) {
+          return;
+        }
+
+        const idAtual = String(extintor.id);
+
+        ids.add(idAtual);
+
+        if (
+          !posicoes[idAtual] &&
+          posicoes[chaveReferencia]
+        ) {
+          posicoes[idAtual] =
+            posicoes[chaveReferencia];
+        }
+      });
+
+      extintores.forEach((extintor) => {
+        if (
+          String(extintor?.pontoId || "") !==
+          chavePonto
+        ) {
+          return;
+        }
+
+        const idAtual =
+          String(extintor?.id || "");
+
+        if (!idAtual) {
+          return;
+        }
+
+        ids.add(idAtual);
+
+        if (!posicoes[idAtual]) {
+          const referenciaComPosicao = [
+            extintor?.referenciaLocal,
+            extintor?.referencia_local,
+          ]
+            .map((referencia) =>
+              String(referencia || ""),
+            )
+            .find(
+              (referencia) =>
+                referencia &&
+                posicoes[referencia],
+            );
+
+          if (referenciaComPosicao) {
+            posicoes[idAtual] =
+              posicoes[referenciaComPosicao];
+          }
+        }
+      });
+
+      idsPorPonto.set(chavePonto, ids);
+      posicoesPorPonto.set(
+        chavePonto,
+        posicoes,
+      );
+    });
+
+    return {
+      idsPorPonto,
+      posicoesPorPonto,
+    };
+  }, [
+    extintores,
+    extintoresPorReferencia,
+    pontos,
+  ]);
+
+  const pontoAtualApresentacao = useMemo(() => {
+    if (!pontoAtual) {
+      return null;
+    }
+
+    const chavePonto =
+      String(pontoAtual.id || "");
+
+    return {
+      ...pontoAtual,
+      extintores: Array.from(
+        vinculosExtintoresPorPonto
+          .idsPorPonto
+          .get(chavePonto) ||
+        [],
+      ),
+      extintorPosicoes: {
+        ...(
+          vinculosExtintoresPorPonto
+            .posicoesPorPonto
+            .get(chavePonto) ||
+          {}
+        ),
+      },
+    };
+  }, [
+    pontoAtual,
+    vinculosExtintoresPorPonto,
+  ]);
+
+  const origemExtintoresTexto = {
+    remoto: "Supabase",
+    cache: "cache",
+    local: "dados locais",
+    vazio: "sem registros",
+    erro: "indisponível",
+    inicial: "inicializando",
+  }[origemExtintores] || origemExtintores;
+
   const obrasDisponiveis = useMemo(
     () =>
       Array.from(
@@ -377,9 +544,16 @@ export function MapaObraPage({ empresasBanco = [], obrasEmpresasBanco = [], audi
   }, [empresasBanco, obrasEmpresasBanco, obraId]);
   const podeAdicionarPonto = Boolean(mapa.planta && obraId);
   const resumoLocal = useMemo(() => {
-    const extintoresPosicionados = Array.from(
-      new Set(pontos.flatMap((ponto) => ponto.extintores || []).map(String)),
+    const extintoresPosicionados = new Set(
+      Array.from(
+        vinculosExtintoresPorPonto
+          .idsPorPonto
+          .values(),
+      ).flatMap((ids) =>
+        Array.from(ids),
+      ),
     );
+
     const ambientes = pontos.reduce(
       (total, ponto) => total + (Array.isArray(ponto.pontosInternosPlanta) ? ponto.pontosInternosPlanta.length : 0),
       0,
@@ -401,12 +575,17 @@ export function MapaObraPage({ empresasBanco = [], obrasEmpresasBanco = [], audi
       pontos: pontos.length,
       auditoriasAbertas: auditoriasAbertas.length,
       auditoriasCriticas: auditoriasCriticas.length,
-      extintoresPosicionados: extintoresPosicionados.length,
+      extintoresPosicionados: extintoresPosicionados.size,
       extintoresAtivos,
       ambientes,
       alertaExtintor,
     };
-  }, [auditoriasCampo, extintores, pontos]);
+  }, [
+    auditoriasCampo,
+    extintores,
+    pontos,
+    vinculosExtintoresPorPonto,
+  ]);
 
   useEffect(() => {
     const obraSelecionadaId =
@@ -573,6 +752,97 @@ export function MapaObraPage({ empresasBanco = [], obrasEmpresasBanco = [], audi
       ativo = false;
     };
   }, [obraId, obrasDisponiveis]);
+
+  useEffect(() => {
+    const obraSelecionadaId =
+      String(
+        obraId ||
+        mapa?.obraId ||
+        "",
+      ).trim();
+
+    const sequencia =
+      ++sequenciaExtintoresRef.current;
+
+    if (!obraSelecionadaId) {
+      setExtintores([]);
+      setOrigemExtintores("vazio");
+      setErroExtintores("");
+      setCarregandoExtintores(false);
+
+      return undefined;
+    }
+
+    let ativo = true;
+
+    async function carregarExtintoresDaObra() {
+      setCarregandoExtintores(true);
+      setErroExtintores("");
+
+      try {
+        const resultado =
+          await carregarExtintoresCadastro({
+            obraId: obraSelecionadaId,
+            mapa,
+          });
+
+        if (
+          !ativo ||
+          sequencia !==
+            sequenciaExtintoresRef.current
+        ) {
+          return;
+        }
+
+        setExtintores(
+          Array.isArray(resultado.itens)
+            ? resultado.itens
+            : [],
+        );
+
+        setOrigemExtintores(
+          resultado.origem || "vazio",
+        );
+
+        setErroExtintores(
+          resultado.erro || "",
+        );
+      } catch (error) {
+        if (
+          !ativo ||
+          sequencia !==
+            sequenciaExtintoresRef.current
+        ) {
+          return;
+        }
+
+        setExtintores([]);
+        setOrigemExtintores("erro");
+        setErroExtintores(
+          error?.message ||
+          "Não foi possível carregar os extintores da obra.",
+        );
+      } finally {
+        if (
+          ativo &&
+          sequencia ===
+            sequenciaExtintoresRef.current
+        ) {
+          setCarregandoExtintores(false);
+        }
+      }
+    }
+
+    void carregarExtintoresDaObra();
+
+    return () => {
+      ativo = false;
+    };
+  }, [
+    obraId,
+    mapa.id,
+    mapa.mapaId,
+  ]);
 
   function atualizarMapa(proximo) {
     if (
@@ -1770,45 +2040,203 @@ export function MapaObraPage({ empresasBanco = [], obrasEmpresasBanco = [], audi
       input.value = "";
     }
   }
-  function alternarExtintor(extintorId) {
-    if (!pontoAtual) return;
-    const vinculados = Array.isArray(pontoAtual.extintores)
-      ? pontoAtual.extintores
-      : [];
-    const alocadoEmOutroPonto = pontos.some(
-      (item) =>
-        item.id !== pontoAtual.id &&
-        (item.extintores || []).some((id) => String(id) === String(extintorId)),
+  function obterReferenciasExtintor(
+    extintorId,
+  ) {
+    const extintor =
+      extintoresPorReferencia.get(
+        String(extintorId || ""),
+      );
+
+    return new Set(
+      [
+        extintorId,
+        extintor?.id,
+        extintor?.referenciaLocal,
+        extintor?.referencia_local,
+      ]
+        .map((referencia) =>
+          String(referencia || ""),
+        )
+        .filter(Boolean),
     );
+  }
+
+  async function alternarExtintor(extintorId) {
     if (
-      alocadoEmOutroPonto &&
-      !vinculados.some((id) => String(id) === String(extintorId))
+      !pontoAtual ||
+      carregandoExtintores ||
+      salvandoVinculoExtintor
     ) {
-      setMensagem("Este extintor já está alocado em outro ponto da obra.");
       return;
     }
-    const proximo = vinculados.includes(extintorId)
-      ? vinculados.filter((id) => id !== extintorId)
-      : [...vinculados, extintorId];
-    atualizarMapa({
-      ...mapa,
-      pontos: pontos.map((item) =>
-        item.id === pontoAtual.id ? { ...item, extintores: proximo } : item,
-      ),
-    });
+
+    const chavePontoAtual =
+      String(pontoAtual.id || "");
+
+    const idsPontoAtual =
+      vinculosExtintoresPorPonto
+        .idsPorPonto
+        .get(chavePontoAtual) ||
+      new Set();
+
+    const estaVinculado =
+      idsPontoAtual.has(
+        String(extintorId),
+      );
+
+    const alocadoEmOutroPonto =
+      Array.from(
+        vinculosExtintoresPorPonto
+          .idsPorPonto
+          .entries(),
+      ).some(
+        ([pontoId, ids]) =>
+          pontoId !== chavePontoAtual &&
+          ids.has(String(extintorId)),
+      );
+
+    if (
+      alocadoEmOutroPonto &&
+      !estaVinculado
+    ) {
+      setMensagem(
+        "Este extintor já está alocado em outro ponto da obra.",
+      );
+
+      return;
+    }
+
+    const extintor =
+      extintoresPorReferencia.get(
+        String(extintorId),
+      );
+
+    if (!extintor) {
+      setMensagem(
+        "O extintor selecionado não está mais disponível.",
+      );
+
+      return;
+    }
+
+    const referencias =
+      obterReferenciasExtintor(
+        extintorId,
+      );
+
+    const vinculados =
+      Array.isArray(pontoAtual.extintores)
+        ? pontoAtual.extintores
+        : [];
+
+    setSalvandoVinculoExtintor(true);
+    setErroExtintores("");
+
+    try {
+      const extintorParaSalvar =
+        estaVinculado
+          ? {
+              ...extintor,
+              pontoId: "",
+              pontoIdRemoto: "",
+              pontoReferenciaLocal: "",
+              ponto_referencia_local: "",
+              ponto: "",
+            }
+          : {
+              ...extintor,
+              pontoId: pontoAtual.id,
+              ponto: pontoAtual.nome,
+            };
+
+      const resultado =
+        await salvarExtintorCadastro({
+          extintor: extintorParaSalvar,
+          obraId,
+          empresaId:
+            extintor.empresaId || "",
+          pontoId:
+            estaVinculado
+              ? ""
+              : pontoAtual.id,
+        });
+
+      setExtintores(resultado.itens);
+      setOrigemExtintores("remoto");
+
+      const semReferenciasAntigas =
+        vinculados.filter(
+          (id) =>
+            !referencias.has(
+              String(id),
+            ),
+        );
+
+      const proximosVinculos =
+        estaVinculado
+          ? semReferenciasAntigas
+          : [
+              ...semReferenciasAntigas,
+              String(resultado.registro.id),
+            ];
+
+      atualizarMapa({
+        ...mapa,
+        pontos: pontos.map((item) =>
+          item.id === pontoAtual.id
+            ? {
+                ...item,
+                extintores:
+                  proximosVinculos,
+              }
+            : item,
+        ),
+      });
+
+      setMensagem(
+        estaVinculado
+          ? `${extintor.codigo} desvinculado do ponto. Salve o mapa para consolidar o snapshot.`
+          : `${extintor.codigo} vinculado ao ponto. Salve o mapa para consolidar o snapshot.`,
+      );
+    } catch (error) {
+      setMensagem(
+        error?.message ||
+        "Não foi possível atualizar o vínculo do extintor.",
+      );
+    } finally {
+      setSalvandoVinculoExtintor(false);
+    }
   }
 
-  function estaAlocadoEmOutroPonto(extintorId) {
-    if (!pontoAtual) return false;
-    return pontos.some(
-      (item) =>
-        item.id !== pontoAtual.id &&
-        (item.extintores || []).some((id) => String(id) === String(extintorId)),
+  function estaAlocadoEmOutroPonto(
+    extintorId,
+  ) {
+    if (!pontoAtual) {
+      return false;
+    }
+
+    const chavePontoAtual =
+      String(pontoAtual.id || "");
+
+    return Array.from(
+      vinculosExtintoresPorPonto
+        .idsPorPonto
+        .entries(),
+    ).some(
+      ([pontoId, ids]) =>
+        pontoId !== chavePontoAtual &&
+        ids.has(String(extintorId)),
     );
   }
 
-  function salvarPosicaoExtintor(extintorId, x, y) {
+  function salvarPosicaoExtintor(
+    extintorId,
+    x,
+    y,
+  ) {
     if (!pontoAtual) return;
+
     atualizarMapa({
       ...mapa,
       pontos: pontos.map((item) =>
@@ -1825,15 +2253,38 @@ export function MapaObraPage({ empresasBanco = [], obrasEmpresasBanco = [], audi
     });
   }
 
-  function removerPosicaoExtintor(extintorId) {
+  function removerPosicaoExtintor(
+    extintorId,
+  ) {
     if (!pontoAtual) return;
+
+    const referencias =
+      obterReferenciasExtintor(
+        extintorId,
+      );
+
     atualizarMapa({
       ...mapa,
       pontos: pontos.map((item) => {
-        if (item.id !== pontoAtual.id) return item;
-        const proximasPosicoes = { ...(item.extintorPosicoes || {}) };
-        delete proximasPosicoes[extintorId];
-        return { ...item, extintorPosicoes: proximasPosicoes };
+        if (item.id !== pontoAtual.id) {
+          return item;
+        }
+
+        const proximasPosicoes = {
+          ...(item.extintorPosicoes || {}),
+        };
+
+        referencias.forEach((referencia) => {
+          delete proximasPosicoes[
+            referencia
+          ];
+        });
+
+        return {
+          ...item,
+          extintorPosicoes:
+            proximasPosicoes,
+        };
       }),
     });
   }
@@ -2123,7 +2574,16 @@ export function MapaObraPage({ empresasBanco = [], obrasEmpresasBanco = [], audi
               <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
                 <ResumoMapaCard label="Pontos cadastrados" value={resumoLocal.pontos} detail={resumoLocal.pontos ? "100% mapeados" : "Nenhum ponto"} tone="sky" />
                 <ResumoMapaCard label="Auditorias abertas" value={resumoLocal.auditoriasAbertas} detail={`${resumoLocal.auditoriasCriticas} crítica(s)`} tone="amber" />
-                <ResumoMapaCard label="Extintores posicionados" value={resumoLocal.extintoresPosicionados} detail={`${extintores.length} cadastrados`} tone="emerald" />
+                <ResumoMapaCard
+                  label="Extintores posicionados"
+                  value={resumoLocal.extintoresPosicionados}
+                  detail={
+                    carregandoExtintores
+                      ? "Carregando cadastros"
+                      : `${extintores.length} cadastrados · ${origemExtintoresTexto}`
+                  }
+                  tone="emerald"
+                />
                 <ResumoMapaCard label="Ambientes com QR" value={resumoLocal.ambientes} detail={resumoLocal.ambientes ? "Cadastrados na planta" : "Nenhum ambiente"} tone="violet" />
               </div>
               {resumoLocal.alertaExtintor && (
@@ -2223,26 +2683,65 @@ export function MapaObraPage({ empresasBanco = [], obrasEmpresasBanco = [], audi
                     Extintores vinculados
                   </p>
                   <div className="mt-2 max-h-[160px] space-y-1 overflow-auto pr-1">
-                    {extintores
-                      .filter(
-                        (extintor) =>
-                          !estaAlocadoEmOutroPonto(extintor.id),
-                      )
-                      .map((extintor) => (
-                        <label
-                          key={extintor.id}
-                          className="flex items-center gap-2 rounded-md px-2 py-1.5 text-xs text-slate-700 hover:bg-slate-50"
-                        >
-                          <input
-                            type="checkbox"
-                            checked={(pontoAtual.extintores || []).some(
-                              (id) => String(id) === String(extintor.id),
-                            )}
-                            onChange={() => alternarExtintor(extintor.id)}
-                          />
-                          {extintor.codigo} · {extintor.localizacao}
-                        </label>
-                      ))}
+                    {carregandoExtintores && (
+                      <p className="rounded-md bg-slate-50 px-2 py-2 text-xs font-semibold text-slate-500">
+                        Carregando extintores da obra...
+                      </p>
+                    )}
+
+                    {!carregandoExtintores &&
+                      !extintores.length && (
+                        <p className="rounded-md bg-slate-50 px-2 py-2 text-xs font-semibold text-slate-500">
+                          Nenhum extintor cadastrado para esta obra.
+                        </p>
+                      )}
+
+                    {!carregandoExtintores &&
+                      extintores
+                        .filter(
+                          (extintor) =>
+                            !estaAlocadoEmOutroPonto(extintor.id),
+                        )
+                        .map((extintor) => (
+                          <label
+                            key={extintor.id}
+                            className="flex items-center gap-2 rounded-md px-2 py-1.5 text-xs text-slate-700 hover:bg-slate-50"
+                          >
+                            <input
+                              type="checkbox"
+                              disabled={
+                                salvandoVinculoExtintor
+                              }
+                              checked={
+                                vinculosExtintoresPorPonto
+                                  .idsPorPonto
+                                  .get(
+                                    String(
+                                      pontoAtual.id,
+                                    ),
+                                  )
+                                  ?.has(
+                                    String(
+                                      extintor.id,
+                                    ),
+                                  ) ||
+                                false
+                              }
+                              onChange={() =>
+                                void alternarExtintor(
+                                  extintor.id,
+                                )
+                              }
+                            />
+                            {extintor.codigo} · {extintor.localizacao}
+                          </label>
+                        ))}
+
+                    {erroExtintores && (
+                      <p className="rounded-md border border-amber-200 bg-amber-50 px-2 py-2 text-[10px] font-semibold text-amber-800">
+                        {erroExtintores}
+                      </p>
+                    )}
                   </div>
                 </div>
                 <div className="mt-4 flex gap-2">
@@ -2268,7 +2767,7 @@ export function MapaObraPage({ empresasBanco = [], obrasEmpresasBanco = [], audi
         {pontoAtual && (
           <div className="scroll-mt-3">
             <AmbientesControleTabela
-              ponto={pontoAtual}
+              ponto={pontoAtualApresentacao}
               extintores={extintores}
               onPositionChange={salvarPosicaoExtintor}
               onPositionRemove={removerPosicaoExtintor}
