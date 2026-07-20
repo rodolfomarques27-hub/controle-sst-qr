@@ -77,7 +77,16 @@ export function obterMatrizFuncao(funcao) {
 
 export function treinamentosObrigatoriosFuncao(funcao) {
     const matriz = obterMatrizFuncao(funcao);
-    return Array.from(new Set(matriz.treinamentos)).map((id) => obterTreinamento(id)).filter(Boolean);
+    const idsTreinamentos = Array.isArray(matriz?.treinamentos)
+        ? matriz.treinamentos
+        : [];
+
+    return Array.from(new Set(idsTreinamentos))
+        .map((id) => obterTreinamento(id))
+        .filter((treinamento) => {
+            const id = Number(treinamento?.id);
+            return Number.isFinite(id) && id > 0;
+        });
 }
 
 export function gerarCodigoFuncionario(nome = "") {
