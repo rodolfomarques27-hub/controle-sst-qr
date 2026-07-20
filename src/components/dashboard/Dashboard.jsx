@@ -1018,7 +1018,7 @@ export function Dashboard({
                         role={podeAbrirResumo ? "button" : undefined}
                         tabIndex={podeAbrirResumo ? 0 : undefined}
                         title={podeAbrirResumo ? "Clique para ver os itens deste card" : undefined}
-                        className={`dashboard-summary-card group relative flex h-auto min-h-[6.25rem] overflow-hidden rounded-[22px] border bg-[linear-gradient(180deg,rgba(255,255,255,0.98)_0%,rgba(246,249,252,0.96)_100%)] px-3 pt-3 pb-2 shadow-[0_10px_26px_rgba(26,35,50,0.08)] transition duration-200 hover:-translate-y-0.5 hover:shadow-[0_16px_34px_rgba(26,35,50,0.13)] ${podeAbrirResumo ? "cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2" : ""} ${acento.borda} ${obterClasseTamanhoCartaDashboard(item.chave)}`}
+                        className={`dashboard-summary-card group relative flex flex-col h-auto min-h-[6.25rem] overflow-hidden rounded-[22px] border bg-[linear-gradient(180deg,rgba(255,255,255,0.98)_0%,rgba(246,249,252,0.96)_100%)] px-3 pt-3 pb-2 shadow-[0_10px_26px_rgba(26,35,50,0.08)] transition duration-200 hover:-translate-y-0.5 hover:shadow-[0_16px_34px_rgba(26,35,50,0.13)] ${podeAbrirResumo ? "cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2" : ""} ${acento.borda} ${obterClasseTamanhoCartaDashboard(item.chave)}`}
                     >
                         <span className={`absolute inset-x-0 top-0 h-1 bg-gradient-to-r ${acento.faixa}`} />
 
@@ -1040,7 +1040,7 @@ export function Dashboard({
                             </div>
                         </div>
 
-                        <p className="dashboard-summary-card-detail text-[10px] font-semibold leading-tight text-slate-500 whitespace-nowrap break-normal hyphens-none">
+                        <p className="dashboard-summary-card-detail mt-auto w-full shrink-0 overflow-hidden text-ellipsis whitespace-nowrap text-center text-[10px] font-semibold leading-tight text-slate-500 break-normal hyphens-none">
                             {detalheCompacto}
                         </p>
                     </div>
@@ -1093,7 +1093,7 @@ export function Dashboard({
     return (
         <div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
             <Header
-                className="dashboard-sst-page-header"
+                className="dashboard-sst-page-header max-xl:!flex-col max-xl:!items-stretch max-xl:[&_.page-header-text]:!max-w-none max-xl:[&_.page-header-text]:!flex-none max-xl:[&_.page-actions]:!w-full max-xl:[&_.page-actions]:!justify-start"
                 titulo="Dashboard SST"
                 acao={
                     <div className="top-actions-nowrap dashboard-sst-actions-horizontal dashboard-sst-header-actions">
