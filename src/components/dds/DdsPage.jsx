@@ -1,6 +1,10 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { carregarRegistroDdsPorCodigo, listarRegistrosDds, salvarRegistroDds } from "../../services/ddsRegistrosService";
 import { executarLeituraDdsLocal } from "../../services/documentosOcrService";
+import {
+    registrarDocumentoDdsAssinado,
+    sincronizarConferenciaEstruturadaDds,
+} from "../../services/ddsDocumentosService";
 import { BookOpen, Printer, Building2, CalendarClock, QrCode, ListChecks, MessageSquareText, ClipboardList, ShieldCheck, Users } from "lucide-react";
 import dashboardHeroSstDds from "../../assets/dashboard-hero-sst.webp";
 import criarComponentesApresentacaoDds from "./DdsPagePresentation";
@@ -29,6 +33,8 @@ import {
 import DdsConferenciaAssistidaSection from "./DdsConferenciaAssistidaSection";
 import DdsLeituraArquivoScannerSection from "./DdsLeituraArquivoScannerSection";
 import DdsReciboFinalSection from "./DdsReciboFinalSection";
+import { montarSugestoesFrequenciaDds } from "../../utils/ddsSugestaoFrequenciaUtils";
+import { extrairSugestoesTemaResponsavelDds } from "../../utils/ddsExtracaoTextoUtils";
 
 const {
     diasDds,
@@ -471,6 +477,20 @@ export function DdsPage({
         conferenciaAssistidaDds[obterChaveFrequenciaAssistidaDds(numero, diaRef)] || "manual"
     );
 
+    const sugestoesFrequenciaDds = useMemo(() => montarSugestoesFrequenciaDds({
+        participantes: participantesConferenciaAssistidaDds,
+        dias: diasAtivosConferenciaAssistidaDds,
+        marcacoes: Array.isArray(leituraArquivoScannerDds?.marcacoesDdsDias)
+            ? leituraArquivoScannerDds.marcacoesDdsDias
+            : [],
+    }), [diasAtivosConferenciaAssistidaDds, leituraArquivoScannerDds, participantesConferenciaAssistidaDds]);
+
+    const sugestoesTemaResponsavelDds = useMemo(() => extrairSugestoesTemaResponsavelDds({
+        linhasOcr: Array.isArray(leituraArquivoScannerDds?.linhasOcr) ? leituraArquivoScannerDds.linhasOcr : [],
+        texto: leituraArquivoScannerDds?.textoExtraido || leituraArquivoScannerDds?.textoPrevia || "",
+        dias: diasConferenciaAssistidaDds,
+    }), [diasConferenciaAssistidaDds, leituraArquivoScannerDds]);
+
     const estatisticasConferenciaAssistidaDds = useMemo(() => {
         const dias = diasAtivosConferenciaAssistidaDds.map((dia) => ({
             ...dia,
@@ -649,6 +669,10 @@ export function DdsPage({
         salvandoConferenciaAssistidaDds,
         salvandoFechamentoConferenciaDds,
         salvarRegistroDds,
+        arquivoScannerDds,
+        leituraArquivoScannerDds,
+        registrarDocumentoDdsAssinado,
+        sincronizarConferenciaEstruturadaDds,
         setConferenciaAssistidaDds,
         setConferenciaAssistidaSalvaEmDds,
         setErroConferenciaAssistidaDds,
@@ -1691,6 +1715,8 @@ export function DdsPage({
      salvandoConferenciaAssistidaDds={salvandoConferenciaAssistidaDds}
      salvandoFechamentoConferenciaDds={salvandoFechamentoConferenciaDds}
      salvarConferenciaAssistidaDds={salvarConferenciaAssistidaDds}
+     sugestoesFrequenciaDds={sugestoesFrequenciaDds}
+     sugestoesTemaResponsavelDds={sugestoesTemaResponsavelDds}
      usarPlanejamentoTemaConferenciaAssistidaDds={usarPlanejamentoTemaConferenciaAssistidaDds}
  />}
 {resultadoFinalApresentacaoDds && (

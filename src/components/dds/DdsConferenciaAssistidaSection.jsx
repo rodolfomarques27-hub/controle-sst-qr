@@ -1,3 +1,5 @@
+import { obterChaveSugestaoFrequenciaDds } from "../../utils/ddsSugestaoFrequenciaUtils";
+
 export default function DdsConferenciaAssistidaSection({
     BotaoAlternarCardDds,
     QUANTIDADE_LINHAS_COMPLEMENTARES_DDS,
@@ -29,8 +31,34 @@ export default function DdsConferenciaAssistidaSection({
     salvandoConferenciaAssistidaDds,
     salvandoFechamentoConferenciaDds,
     salvarConferenciaAssistidaDds,
+    sugestoesFrequenciaDds,
+    sugestoesTemaResponsavelDds,
     usarPlanejamentoTemaConferenciaAssistidaDds,
 }) {
+    const resumoLeituraHibridaDds = participantesConferenciaAssistidaDds.reduce((resumo, participante) => {
+        const numero = Number(participante?.numero || 0);
+
+        diasAtivosConferenciaAssistidaDds.forEach((dia) => {
+            const sugestao = sugestoesFrequenciaDds?.[obterChaveSugestaoFrequenciaDds(numero, dia)];
+            const statusManual = obterStatusFrequenciaAssistidaDds(numero, dia);
+            const objetiva = sugestao?.sugestao === "presente" || sugestao?.sugestao === "ausente";
+
+            resumo.total += 1;
+            if (objetiva) resumo.sugestoesObjetivas += 1;
+            if (sugestao?.requerConferenciaManual || !objetiva) resumo.pendentes += 1;
+            if (sugestao?.prioridade === "alta") resumo.prioridadeAlta += 1;
+            if (statusManual !== "manual" && objetiva && statusManual !== sugestao.sugestao) resumo.divergencias += 1;
+        });
+
+        return resumo;
+    }, {
+        total: 0,
+        sugestoesObjetivas: 0,
+        pendentes: 0,
+        prioridadeAlta: 0,
+        divergencias: 0,
+    });
+
     return (
         participantesConferenciaAssistidaDds.length > 0 && diasConferenciaAssistidaDds.length > 0 && (
         <div className="min-h-[92px] rounded-3xl border border-slate-200 border-t-4 border-t-cyan-500 bg-white p-4 shadow-sm lg:col-span-2">
@@ -254,11 +282,15 @@ export default function DdsConferenciaAssistidaSection({
                                 const confirmado =
                                     dia.statusTranscricao === "confirmado";
 
-                                const statusTexto = semAtividade
+                                    const statusTexto = semAtividade
                                     ? "Sem atividade"
                                     : confirmado
                                         ? "Confirmado"
-                                        : "Pendente";
+                                            : "Pendente";
+                                    const sugestaoOcrTema = sugestoesTemaResponsavelDds?.[indiceDia] || {};
+                                    const possuiSugestaoOcrTema = Boolean(
+                                        sugestaoOcrTema.temaSugerido || sugestaoOcrTema.responsavelSugerido
+                                    );
 
                                 return (
                                     <article
@@ -311,6 +343,39 @@ export default function DdsConferenciaAssistidaSection({
                                                       "Não preenchido"}
                                             </p>
                                         </div>
+
+                                        {possuiSugestaoOcrTema && !semAtividade && (
+                                            <div className="mt-3 rounded-lg border border-cyan-200 bg-cyan-50 p-3">
+                                                <p className="text-[8px] font-black uppercase tracking-wide text-cyan-700">
+                                                    Sugestão do OCR local · {Math.round(Number(sugestaoOcrTema.confianca || 0) * 100)}%
+                                                </p>
+                                                {sugestaoOcrTema.temaSugerido && (
+                                                    <p className="mt-1 text-[10px] font-bold text-cyan-950">
+                                                        Tema: {sugestaoOcrTema.temaSugerido}
+                                                    </p>
+                                                )}
+                                                {sugestaoOcrTema.responsavelSugerido && (
+                                                    <p className="mt-1 text-[10px] font-bold text-cyan-950">
+                                                        Responsável: {sugestaoOcrTema.responsavelSugerido}
+                                                    </p>
+                                                )}
+                                                <button
+                                                    type="button"
+                                                    disabled={conferenciaOficialConcluidaDds}
+                                                    onClick={() => {
+                                                        if (sugestaoOcrTema.temaSugerido) {
+                                                            atualizarTemaConferenciaAssistidaDds(indiceDia, "temaConfirmado", sugestaoOcrTema.temaSugerido);
+                                                        }
+                                                        if (sugestaoOcrTema.responsavelSugerido) {
+                                                            atualizarTemaConferenciaAssistidaDds(indiceDia, "responsavelConfirmado", sugestaoOcrTema.responsavelSugerido);
+                                                        }
+                                                    }}
+                                                    className="mt-2 rounded-lg border border-cyan-300 bg-white px-3 py-1.5 text-[9px] font-black text-cyan-800 transition hover:bg-cyan-100 disabled:cursor-not-allowed disabled:opacity-60"
+                                                >
+                                                    Usar sugestão nos campos editáveis
+                                                </button>
+                                            </div>
+                                        )}
 
                                         <label className="mt-3 block">
                                             <span className="text-[9px] font-black uppercase tracking-wide text-slate-500">
@@ -528,6 +593,31 @@ export default function DdsConferenciaAssistidaSection({
                         </div>
                     </div>
 
+                    <div className="mt-4 grid gap-2 sm:grid-cols-4">
+                        <div className="rounded-xl border border-cyan-200 bg-cyan-50 p-3">
+                            <p className="text-[9px] font-black uppercase text-cyan-700">Sugestões do sistema</p>
+                            <p className="mt-1 text-xl font-black text-cyan-950">
+                                {resumoLeituraHibridaDds.sugestoesObjetivas}/{resumoLeituraHibridaDds.total}
+                            </p>
+                        </div>
+                        <div className="rounded-xl border border-amber-200 bg-amber-50 p-3">
+                            <p className="text-[9px] font-black uppercase text-amber-700">Revisão manual</p>
+                            <p className="mt-1 text-xl font-black text-amber-950">{resumoLeituraHibridaDds.pendentes}</p>
+                        </div>
+                        <div className="rounded-xl border border-red-200 bg-red-50 p-3">
+                            <p className="text-[9px] font-black uppercase text-red-700">Prioridade alta</p>
+                            <p className="mt-1 text-xl font-black text-red-950">{resumoLeituraHibridaDds.prioridadeAlta}</p>
+                        </div>
+                        <div className="rounded-xl border border-violet-200 bg-violet-50 p-3">
+                            <p className="text-[9px] font-black uppercase text-violet-700">Manual diferente</p>
+                            <p className="mt-1 text-xl font-black text-violet-950">{resumoLeituraHibridaDds.divergencias}</p>
+                        </div>
+                    </div>
+
+                    <p className="mt-2 text-[10px] font-bold leading-4 text-slate-500">
+                        O sistema apenas sugere. Os botões P, X e ? continuam definindo o resultado oficial após sua conferência.
+                    </p>
+
                     <div className="mt-4 overflow-x-auto rounded-xl border border-cyan-100 bg-white">
                         <table className="min-w-full divide-y divide-slate-100 text-left text-xs">
                             <thead className="bg-slate-50 text-[10px] font-black uppercase tracking-wide text-slate-500">
@@ -565,6 +655,13 @@ export default function DdsConferenciaAssistidaSection({
 
                                             {diasAtivosConferenciaAssistidaDds.map((dia) => {
                                                 const status = obterStatusFrequenciaAssistidaDds(numero, dia);
+                                                const sugestaoSistema = sugestoesFrequenciaDds?.[
+                                                    obterChaveSugestaoFrequenciaDds(numero, dia)
+                                                ];
+                                                const statusSugerido = sugestaoSistema?.sugestao;
+                                                const temSugestaoObjetiva = statusSugerido === "presente" || statusSugerido === "ausente";
+                                                const manualDiverge = status !== "manual" && temSugestaoObjetiva && status !== statusSugerido;
+                                                const percentualConfianca = Math.round(Number(sugestaoSistema?.confianca || 0) * 100);
 
                                                 return (
                                                     <td key={`assistido-${numero}-${dia.chaveAssistida}`} className="px-3 py-2">
@@ -596,6 +693,24 @@ export default function DdsConferenciaAssistidaSection({
                                                             >
                                                                 ?
                                                             </button>
+                                                        </div>
+                                                        <div
+                                                            className={`mx-auto mt-1 w-fit max-w-[112px] rounded-md px-1.5 py-1 text-center text-[8px] font-black leading-tight ${
+                                                                manualDiverge || sugestaoSistema?.prioridade === "alta"
+                                                                    ? "bg-red-50 text-red-700 ring-1 ring-red-200"
+                                                                    : statusSugerido === "presente"
+                                                                        ? "bg-emerald-50 text-emerald-700"
+                                                                        : statusSugerido === "ausente"
+                                                                            ? "bg-red-50 text-red-700"
+                                                                            : "bg-amber-50 text-amber-700"
+                                                            }`}
+                                                            title={sugestaoSistema?.motivo || "Aguardando análise do sistema."}
+                                                        >
+                                                            {temSugestaoObjetiva
+                                                                ? `Sistema: ${statusSugerido === "presente" ? "P" : "X"}${percentualConfianca ? ` · ${percentualConfianca}%` : ""}`
+                                                                : "Sistema: revisar"}
+                                                            {sugestaoSistema?.origem === "semana_completa" && " · semana"}
+                                                            {manualDiverge && " · divergência"}
                                                         </div>
                                                     </td>
                                                 );

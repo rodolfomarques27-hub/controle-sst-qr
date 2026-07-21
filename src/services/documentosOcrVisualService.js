@@ -127,6 +127,8 @@ export function calcularAssinaturaVisualFaixa(canvas, faixa = {}) {
         let pixelsRelevantes = 0;
         let pixelsTinta = 0;
         let pixelsAzuis = 0;
+        let pixelsRelevantesCentro = 0;
+        let pixelsTintaCentro = 0;
         const colunasComTinta = new Set();
         const linhasComTinta = new Set();
 
@@ -145,6 +147,15 @@ export function calcularAssinaturaVisualFaixa(canvas, faixa = {}) {
 
                 pixelsRelevantes += 1;
 
+                const pixelNoCentro = (
+                    x >= larguraRecorte * 0.16 &&
+                    x <= larguraRecorte * 0.84 &&
+                    y >= alturaRecorte * 0.14 &&
+                    y <= alturaRecorte * 0.86
+                );
+
+                if (pixelNoCentro) pixelsRelevantesCentro += 1;
+
                 const luma = (0.299 * r) + (0.587 * g) + (0.114 * b);
                 const diferencaCanais = Math.max(r, g, b) - Math.min(r, g, b);
                 const azulCaneta = b > r + 10 && b > g + 2 && b < 248;
@@ -153,6 +164,7 @@ export function calcularAssinaturaVisualFaixa(canvas, faixa = {}) {
 
                 if (tintaProvavel) {
                     pixelsTinta += 1;
+                    if (pixelNoCentro) pixelsTintaCentro += 1;
                     if (azulCaneta) pixelsAzuis += 1;
                     colunasComTinta.add(Math.floor(x / 4));
                     linhasComTinta.add(Math.floor(y / 3));
@@ -162,6 +174,8 @@ export function calcularAssinaturaVisualFaixa(canvas, faixa = {}) {
 
         const densidade = pixelsRelevantes ? pixelsTinta / pixelsRelevantes : 0;
         const densidadeAzul = pixelsRelevantes ? pixelsAzuis / pixelsRelevantes : 0;
+        const densidadeCentro = pixelsRelevantesCentro ? pixelsTintaCentro / pixelsRelevantesCentro : 0;
+        const proporcaoTintaCentro = pixelsTinta ? pixelsTintaCentro / pixelsTinta : 0;
         const espalhamentoHorizontal = colunasComTinta.size / Math.max(1, Math.ceil(larguraRecorte / 4));
         const espalhamentoVertical = linhasComTinta.size / Math.max(1, Math.ceil(alturaRecorte / 3));
         const assinaturaVisual = (
@@ -174,6 +188,8 @@ export function calcularAssinaturaVisualFaixa(canvas, faixa = {}) {
             assinaturaVisual,
             densidade: Number(densidade.toFixed(4)),
             densidadeAzul: Number(densidadeAzul.toFixed(4)),
+            densidadeCentro: Number(densidadeCentro.toFixed(4)),
+            proporcaoTintaCentro: Number(proporcaoTintaCentro.toFixed(4)),
             espalhamentoHorizontal: Number(espalhamentoHorizontal.toFixed(4)),
             espalhamentoVertical: Number(espalhamentoVertical.toFixed(4)),
             larguraRecorte,
@@ -439,7 +455,7 @@ function criarCanvasRotacionado(canvas, graus = 0) {
     return rotacionado;
 }
 
-export async function reconhecerTextoCanvasComOcrComOrientacao(canvas, extrairDatas = null) {
+export async function reconhecerTextoCanvasComOcrComOrientacao(canvas, extrairDatas = null, opcoes = {}) {
     const tentativas = [];
     const primeira = await reconhecerTextoCanvasComOcr(canvas);
 
@@ -450,7 +466,9 @@ export async function reconhecerTextoCanvasComOcrComOrientacao(canvas, extrairDa
         scoreOrientacao: calcularScoreTextoOcrOrientacao(primeira?.texto || "", extrairDatas),
     });
 
-    if (tentativas[0].scoreOrientacao >= 34) {
+    const forcarBuscaOrientacao = Boolean(opcoes?.forcarBuscaOrientacao);
+
+    if (tentativas[0].scoreOrientacao >= 34 && !forcarBuscaOrientacao) {
         return tentativas[0];
     }
 
@@ -476,7 +494,20 @@ export async function reconhecerTextoCanvasComOcrComOrientacao(canvas, extrairDa
         }
     }
 
-    return tentativas.sort((a, b) => Number(b.scoreOrientacao || 0) - Number(a.scoreOrientacao || 0))[0] || tentativas[0];
+    const melhor = tentativas.sort((a, b) => Number(b.scoreOrientacao || 0) - Number(a.scoreOrientacao || 0))[0] || tentativas[0];
+
+    for (const tentativa of tentativas) {
+        if (tentativa === melhor || tentativa?.canvasAnalise === canvas) continue;
+
+        try {
+            tentativa.canvasAnalise.width = 1;
+            tentativa.canvasAnalise.height = 1;
+        } catch {
+            // Liberação de memória sem bloquear o resultado do OCR.
+        }
+    }
+
+    return melhor;
 }
 
 async function reconhecerTextoCanvasComOcr(canvas) {

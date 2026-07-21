@@ -199,8 +199,16 @@ export function criarFluxoLeituraDds({
 
             const densidade = Number(assinatura.densidade || 0);
             const densidadeAzul = Number(assinatura.densidadeAzul || 0);
+            const densidadeCentro = Number(assinatura.densidadeCentro || 0);
+            const proporcaoTintaCentro = Number(assinatura.proporcaoTintaCentro || 0);
             const espalhamentoHorizontal = Number(assinatura.espalhamentoHorizontal || 0);
             const espalhamentoVertical = Number(assinatura.espalhamentoVertical || 0);
+
+            const possivelInvasaoCelula = Boolean(
+                densidade > 0 &&
+                proporcaoTintaCentro < 0.16 &&
+                densidadeCentro < 0.0018
+            );
 
             const pareceTracoSimples =
                 espalhamentoHorizontal >= 0.22 &&
@@ -211,6 +219,7 @@ export function criarFluxoLeituraDds({
                 ? Boolean(assinatura.assinaturaVisual || densidade >= 0.020 || densidadeAzul >= 0.010)
                 : Boolean(
                     !analiseX.xVisual &&
+                    !possivelInvasaoCelula &&
                     (
                         assinatura.assinaturaVisual ||
                         (
@@ -240,6 +249,9 @@ export function criarFluxoLeituraDds({
                 assinatura_visual_base: assinatura.assinaturaVisual,
                 assinatura_densidade: densidade,
                 assinatura_densidade_azul: densidadeAzul,
+                assinatura_densidade_centro: densidadeCentro,
+                assinatura_proporcao_tinta_centro: proporcaoTintaCentro,
+                assinatura_possivel_invasao_celula: possivelInvasaoCelula,
                 assinatura_espalhamento_horizontal: espalhamentoHorizontal,
                 assinatura_espalhamento_vertical: espalhamentoVertical,
                 assinatura_parece_traco_simples: pareceTracoSimples,
@@ -510,7 +522,11 @@ export function criarFluxoLeituraDds({
                 await pagina.render({ canvasContext: contexto, viewport }).promise;
                 await new Promise((resolve) => setTimeout(resolve, 0));
 
-                const resultadoOcr = await reconhecerTextoCanvasComOcrComOrientacao(canvas, extrairDatasTextoDocumental);
+                const resultadoOcr = await reconhecerTextoCanvasComOcrComOrientacao(
+                    canvas,
+                    extrairDatasTextoDocumental,
+                    { forcarBuscaOrientacao: canvas.height > canvas.width }
+                );
                 const canvasAnalise = resultadoOcr?.canvasAnalise || canvas;
                 const texto = limparTextoPossivelDocumento(resultadoOcr?.texto || "");
                 const pontuacao = pontuarTextoDdsScanner(texto, contextoDds);

@@ -18,6 +18,10 @@ export default function criarControladorConferenciaAssistidaDds({
     salvandoConferenciaAssistidaDds,
     salvandoFechamentoConferenciaDds,
     salvarRegistroDds,
+    arquivoScannerDds,
+    leituraArquivoScannerDds,
+    registrarDocumentoDdsAssinado,
+    sincronizarConferenciaEstruturadaDds,
     setConferenciaAssistidaDds,
     setConferenciaAssistidaSalvaEmDds,
     setErroConferenciaAssistidaDds,
@@ -320,6 +324,277 @@ export default function criarControladorConferenciaAssistidaDds({
         setErroReciboFinalDds("");
     }
 
+    function obterQuantidadePaginasLeituraDds() {
+        const candidatos = [
+            leituraArquivoScannerDds?.quantidadePaginas,
+            leituraArquivoScannerDds?.totalPaginas,
+            leituraArquivoScannerDds?.paginas,
+            leituraArquivoScannerDds?.paginasDocumento,
+        ];
+
+        for (const candidato of candidatos) {
+            const quantidade = Number(candidato);
+
+            if (
+                Number.isFinite(quantidade) &&
+                quantidade > 0
+            ) {
+                return Math.floor(quantidade);
+            }
+        }
+
+        const paginasAnalisadas =
+            Array.isArray(
+                leituraArquivoScannerDds?.paginasAnalisadas
+            )
+                ? leituraArquivoScannerDds.paginasAnalisadas
+                : [];
+
+        if (paginasAnalisadas.length > 0) {
+            return Math.max(
+                ...paginasAnalisadas
+                    .map((pagina) =>
+                        Number(
+                            pagina?.pagina ??
+                            pagina?.numero ??
+                            pagina
+                        )
+                    )
+                    .filter((pagina) =>
+                        Number.isFinite(pagina)
+                    )
+            );
+        }
+
+        return null;
+    }
+
+    function normalizarDocumentoConferenciaDds(
+        documento,
+        hashSha256 = ""
+    ) {
+        if (!documento?.id) {
+            return null;
+        }
+
+        return {
+            id: documento.id,
+            bucketId:
+                documento.bucket_id ||
+                documento.bucketId ||
+                "dds-assinados",
+            caminhoStorage:
+                documento.caminho_storage ||
+                documento.caminhoStorage ||
+                "",
+            nomeOriginal:
+                documento.nome_original ||
+                documento.nomeOriginal ||
+                "",
+            mimeType:
+                documento.mime_type ||
+                documento.mimeType ||
+                "",
+            tamanhoBytes:
+                Number(
+                    documento.tamanho_bytes ||
+                    documento.tamanhoBytes ||
+                    0
+                ),
+            hashSha256:
+                documento.hash_sha256 ||
+                documento.hashSha256 ||
+                hashSha256 ||
+                "",
+            quantidadePaginas:
+                documento.quantidade_paginas ??
+                documento.quantidadePaginas ??
+                null,
+            registradoEm:
+                documento.created_at ||
+                documento.registradoEm ||
+                "",
+        };
+    }
+
+    async function persistirConferenciaEstruturadaDds({
+        registroAtualizado,
+        conferenciaAssistida,
+        status,
+        acao,
+        motivo = null,
+    }) {
+        const registroId =
+            registroAtualizado?.id ||
+            registroScannerDds?.id ||
+            "";
+
+        if (!registroId) {
+            throw new Error(
+                "O registro DDS não possui identificador para a persistência estruturada."
+            );
+        }
+
+        let documentoNormalizado =
+            normalizarDocumentoConferenciaDds(
+                conferenciaAssistida?.documento ||
+                registroAtualizado?.dados
+                    ?.conferenciaAssistida
+                    ?.documento ||
+                registroScannerDds?.dados
+                    ?.conferenciaAssistida
+                    ?.documento
+            );
+
+        if (arquivoScannerDds) {
+            const resultadoDocumento =
+                await registrarDocumentoDdsAssinado({
+                    supabase,
+                    registro: {
+                        ...registroAtualizado,
+                        id: registroId,
+                        codigo:
+                            registroAtualizado?.codigo ||
+                            registroScannerDds?.codigo ||
+                            codigoConferenciaDds ||
+                            dadosDds.codigo ||
+                            "",
+                    },
+                    arquivo: arquivoScannerDds,
+                    leitura:
+                        leituraArquivoScannerDds,
+                    quantidadePaginas:
+                        obterQuantidadePaginasLeituraDds(),
+                });
+
+            documentoNormalizado =
+                normalizarDocumentoConferenciaDds(
+                    resultadoDocumento?.documento,
+                    resultadoDocumento?.hashSha256
+                );
+        }
+
+        const conferenciaComDocumento = {
+            ...conferenciaAssistida,
+            documento:
+                documentoNormalizado ||
+                conferenciaAssistida?.documento ||
+                null,
+            persistenciaEstruturada: {
+                versao: 1,
+                status:
+                    status ||
+                    "em_conferencia",
+                sincronizadaEm:
+                    new Date().toISOString(),
+            },
+        };
+
+        let registroFinal =
+            registroAtualizado;
+
+        if (
+            JSON.stringify(
+                registroAtualizado?.dados
+                    ?.conferenciaAssistida ||
+                {}
+            ) !==
+            JSON.stringify(
+                conferenciaComDocumento
+            )
+        ) {
+            registroFinal =
+                await salvarRegistroDds({
+                    supabase,
+                    registro: {
+                        ...registroAtualizado,
+                        dados: {
+                            ...(
+                                registroAtualizado?.dados ||
+                                registroScannerDds?.dados ||
+                                {}
+                            ),
+                            conferenciaAssistida:
+                                conferenciaComDocumento,
+                        },
+                    },
+                });
+        }
+
+        const sincronizacao =
+            await sincronizarConferenciaEstruturadaDds({
+                supabase,
+                registroId:
+                    registroFinal?.id ||
+                    registroId,
+                documentoId:
+                    documentoNormalizado?.id ||
+                    null,
+                status:
+                    status ||
+                    "em_conferencia",
+                estatisticas:
+                    conferenciaComDocumento
+                        ?.estatisticas ||
+                    {},
+                leitura:
+                    leituraArquivoScannerDds,
+                snapshot:
+                    conferenciaComDocumento,
+                participantes:
+                    participantesConferenciaAssistidaDds,
+                dias:
+                    diasConferenciaAssistidaDds,
+                frequencia:
+                    conferenciaComDocumento
+                        ?.frequencia ||
+                    conferenciaAssistidaDds,
+                temasDias:
+                    conferenciaComDocumento
+                        ?.temasDias ||
+                    [],
+                acao,
+                motivo,
+            });
+
+        return {
+            registro: {
+                ...registroFinal,
+                dados: {
+                    ...(
+                        registroFinal?.dados ||
+                        registroAtualizado?.dados ||
+                        {}
+                    ),
+                    conferenciaAssistida: {
+                        ...conferenciaComDocumento,
+                        persistenciaEstruturada: {
+                            ...conferenciaComDocumento
+                                .persistenciaEstruturada,
+                            conferenciaId:
+                                sincronizacao
+                                    ?.conferenciaId ||
+                                "",
+                            frequencias:
+                                sincronizacao
+                                    ?.frequencias
+                                    ?.length ||
+                                0,
+                            temasDias:
+                                sincronizacao
+                                    ?.temasDias
+                                    ?.length ||
+                                0,
+                        },
+                    },
+                },
+            },
+            conferenciaAssistida:
+                conferenciaComDocumento,
+            sincronizacao,
+        };
+    }
+
     async function salvarConferenciaAssistidaDds() {
         if (salvandoConferenciaAssistidaDds) return;
 
@@ -385,7 +660,7 @@ export default function criarControladorConferenciaAssistidaDds({
                 reciboFinal: dadosAtuais?.conferenciaAssistida?.reciboFinal || null,
             };
 
-            const registroAtualizado = await salvarRegistroDds({
+            let registroAtualizado = await salvarRegistroDds({
                 supabase,
                 registro: {
                     ...registroScannerDds,
@@ -403,6 +678,24 @@ export default function criarControladorConferenciaAssistidaDds({
                 },
             });
 
+            const persistenciaEstruturada =
+                await persistirConferenciaEstruturadaDds({
+                    registroAtualizado,
+                    conferenciaAssistida,
+                    status: "em_conferencia",
+                    acao: "salvar_conferencia",
+                });
+
+            registroAtualizado =
+                persistenciaEstruturada.registro;
+
+            const conferenciaAssistidaPersistida =
+                registroAtualizado?.dados
+                    ?.conferenciaAssistida ||
+                persistenciaEstruturada
+                    .conferenciaAssistida ||
+                conferenciaAssistida;
+
             const registroAtualizadoComDados = {
                 ...(registroAtualizado ||
                     registroScannerDds ||
@@ -410,7 +703,8 @@ export default function criarControladorConferenciaAssistidaDds({
                 dados: {
                     ...dadosAtuais,
                     ...(registroAtualizado?.dados || {}),
-                    conferenciaAssistida,
+                    conferenciaAssistida:
+                        conferenciaAssistidaPersistida,
                 },
             };
 
@@ -419,7 +713,7 @@ export default function criarControladorConferenciaAssistidaDds({
             );
 
             setConferenciaAssistidaDds(
-                conferenciaAssistida.frequencia ||
+                conferenciaAssistidaPersistida.frequencia ||
                     conferenciaAssistidaDds
             );
 
@@ -440,7 +734,7 @@ export default function criarControladorConferenciaAssistidaDds({
             );
 
             setConferenciaAssistidaSalvaEmDds(
-                conferenciaAssistida.atualizadoEm ||
+                conferenciaAssistidaPersistida.atualizadoEm ||
                     atualizadoEm
             );
         } catch (error) {
@@ -584,7 +878,7 @@ export default function criarControladorConferenciaAssistidaDds({
                 fechamento,
             };
 
-            const registroAtualizado = await salvarRegistroDds({
+            let registroAtualizado = await salvarRegistroDds({
                 supabase,
                 registro: {
                     ...registroScannerDds,
@@ -601,6 +895,17 @@ export default function criarControladorConferenciaAssistidaDds({
                     },
                 },
             });
+
+            const persistenciaEstruturada =
+                await persistirConferenciaEstruturadaDds({
+                    registroAtualizado,
+                    conferenciaAssistida,
+                    status: "concluida",
+                    acao: "concluir_conferencia",
+                });
+
+            registroAtualizado =
+                persistenciaEstruturada.registro;
 
             setRegistroScannerDds(registroAtualizado);
             setConferenciaAssistidaDds(registroAtualizado?.dados?.conferenciaAssistida?.frequencia || conferenciaAssistidaDds);
@@ -680,7 +985,7 @@ export default function criarControladorConferenciaAssistidaDds({
                 })),
             };
 
-            const registroAtualizado = await salvarRegistroDds({
+            let registroAtualizado = await salvarRegistroDds({
                 supabase,
                 registro: {
                     ...registroScannerDds,
@@ -697,6 +1002,25 @@ export default function criarControladorConferenciaAssistidaDds({
                     },
                 },
             });
+
+            const conferenciaReaberta =
+                registroAtualizado?.dados
+                    ?.conferenciaAssistida ||
+                conferenciaAssistidaDds;
+
+            const persistenciaEstruturada =
+                await persistirConferenciaEstruturadaDds({
+                    registroAtualizado,
+                    conferenciaAssistida:
+                        conferenciaReaberta,
+                    status: "reaberta",
+                    acao: "reabrir_conferencia",
+                    motivo:
+                        "Conferência DDS reaberta para correção.",
+                });
+
+            registroAtualizado =
+                persistenciaEstruturada.registro;
 
             setRegistroScannerDds(registroAtualizado);
             setConferenciaAssistidaDds(registroAtualizado?.dados?.conferenciaAssistida?.frequencia || conferenciaAssistidaDds);
