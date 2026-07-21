@@ -466,6 +466,10 @@ const codigoDashboardResumoService = readFileSync(
     new URL("../src/services/dashboardResumoService.js", import.meta.url),
     "utf8"
 );
+const codigoRelatorioDashboardSstService = readFileSync(
+    new URL("../src/services/exportacao/relatorioDashboardSstService.js", import.meta.url),
+    "utf8"
+);
 const codigoDashboard = readFileSync(
     new URL("../src/components/dashboard/Dashboard.jsx", import.meta.url),
     "utf8"
@@ -634,6 +638,48 @@ assert.match(
     /const resumoStatus = foraControleOperacional[\s\S]*\? \{ emDia: 0, aVencer: 0, vencidos: 0 \}/,
     "O grupo histórico não pode exibir badges operacionais de vencimento."
 );
+
+assert.match(
+    codigoTreinamentosPage,
+    /const \[filtroEmpresaCertificados, setFiltroEmpresaCertificados\] = useState\("Todas"\)/,
+    "A Base de Certificados deve manter o filtro por empresa."
+);
+
+assert.match(
+    codigoTreinamentosPage,
+    /const empresasFiltroCertificados = useMemo\(\(\) => \{[\s\S]*obterChaveEmpresaFiltroCertificados\(colaborador\)[\s\S]*empresaA\.nome\.localeCompare/,
+    "As empresas do filtro devem ser derivadas dos colaboradores."
+);
+
+assert.equal(
+    (codigoTreinamentosPage.match(/const bateEmpresa =/g) || []).length,
+    2,
+    "O filtro por empresa deve atuar em certificados e documentos faltantes."
+);
+
+assert.match(
+    codigoTreinamentosPage,
+    /aria-label="Filtrar certificados por empresa"/,
+    "O seletor de empresas deve permanecer acessível."
+);
+
+assert.match(
+    codigoTreinamentosPage,
+    /<option value="Todas">Todas as empresas<\/option>[\s\S]*empresasFiltroCertificados\.map/,
+    "O seletor deve listar todas as empresas disponíveis."
+);
+
+assert.match(
+    codigoBaseCertificadosTreinamentos,
+    /Função: \{colaborador\.funcao \|\| colaborador\.cargo \|\| "Não informada"\}/,
+    "O cartão da Base deve exibir a função do colaborador."
+);
+
+assert.match(
+    codigoBaseCertificadosTreinamentos,
+    /const totalPendentesFiltradosBase = React\.useMemo[\s\S]*\{totalPendentesFiltradosBase\} pendente\(s\)/,
+    "A contagem de pendências deve respeitar os filtros ativos."
+);
 assert.match(
     codigoDashboardResumoService,
     /const colaboradoresOperacionais = colaboradores\.filter[\s\S]*!colaboradorForaControleDocumentalOperacional\(colaborador\)/,
@@ -661,12 +707,12 @@ assert.match(
 );
 assert.match(
     codigoDashboardResumoService,
-    /const documentosFuncionariosVencidos = pendencias\.filter[\s\S]*item\.status\.chave === "vencido"/,
+    /const documentosFuncionariosVencidos = itensDocumentaisMonitorados\.filter[\s\S]*item\.status\.chave === "vencido"/,
     "O Dashboard deve separar documentos vencidos de funcionários."
 );
 assert.match(
     codigoDashboardResumoService,
-    /const documentosFuncionariosAVencer30Dias = pendencias\.filter[\s\S]*dias >= 0 && dias <= 30/,
+    /const documentosFuncionariosAVencer30Dias = itensDocumentaisMonitorados\.filter[\s\S]*dias >= 0 && dias <= 30/,
     "Documentos de funcionários a vencer devem usar a janela de trinta dias."
 );
 assert.match(
@@ -851,6 +897,78 @@ assert.match(
     codigoColaboradorDocumentosService,
     /const pendentes = foraControleOperacional \? \[\] : pendentesCalculados[\s\S]*const vencidos = foraControleOperacional \? \[\] : vencidosCalculados[\s\S]*const vencendo = foraControleOperacional \? \[\] : vencendoCalculados[\s\S]*const emDia = foraControleOperacional \? \[\] : emDiaCalculados/,
     "A avaliação deve zerar somente os indicadores operacionais e preservar os itens históricos."
+);
+assert.match(
+    codigoColaboradorDocumentosService,
+    /const concluidosCalculados = itensObrigatoriosMatriz\.filter\(\(item\) => \["emdia", "semvalidade", "vencendo"\]\.includes\(item\.status\.chave\)\)/,
+    "A vencer deve integrar os treinamentos concluídos enquanto estiver válido."
+);
+
+assert.match(
+    codigoColaboradorDocumentosService,
+    /const emDiaCalculados = itensObrigatoriosMatriz\.filter\(\(item\) => \["emdia", "semvalidade"\]\.includes\(item\.status\.chave\)\)/,
+    "O contador exclusivo Em dia não deve incorporar itens a vencer."
+);
+
+assert.match(
+    codigoColaboradorDocumentosService,
+    /const concluidos = foraControleOperacional \? \[\] : concluidosCalculados/,
+    "Colaboradores históricos devem ter o indicador concluídos zerado."
+);
+
+assert.match(
+    codigoColaboradoresPage,
+    /const percentualTreinamentos = avaliacao\.total > 0 \? Math\.round\(\(avaliacao\.concluidos\.length \/ avaliacao\.total\) \* 100\) : 100/,
+    "O percentual deve considerar todos os treinamentos válidos concluídos."
+);
+
+assert.match(
+    codigoColaboradoresPage,
+    /const treinamentosEmDia = avaliacao\.emDia\.length/,
+    "O contador Em dia deve continuar exclusivo."
+);
+
+assert.match(
+    codigoColaboradoresPage,
+    /const treinamentosPendentes = avaliacao\.pendentes\.length/,
+    "O contador Pendentes não deve incorporar itens a vencer."
+);
+
+assert.match(
+    codigoColaboradoresPage,
+    /\.filter\(\(item\) => \["pendente", "vencido"\]\.includes\(item\.status\.chave\)\)/,
+    "O relatório de pendências deve considerar somente ausentes e vencidos."
+);
+
+assert.doesNotMatch(
+    codigoColaboradoresPage,
+    /\.filter\(\(item\) => \["pendente", "vencido", "vencendo"\]\.includes\(item\.status\.chave\)\)/,
+    "Itens a vencer não podem voltar ao relatório de pendências."
+);
+
+assert.match(
+    codigoDashboardResumoService,
+    /const concluidos = itens\.filter\(\(item\) => \["emdia", "semvalidade", "vencendo"\]\.includes\(item\.status\.chave\)\)\.length/,
+    "O Dashboard deve incluir documentos válidos a vencer no total concluído."
+);
+
+assert.match(
+    codigoDashboardResumoService,
+    /const pendencias = itensDocumentaisMonitorados\.filter\([\s\S]*\["pendente", "vencido"\]/,
+    "O Dashboard deve separar pendências reais dos alertas preventivos."
+);
+
+assert.match(
+    codigoRelatorioDashboardSstService,
+    /const totalConcluidos = numeroSeguroRelatorioDashboard\(indicadores\.concluidos \?\? indicadores\.emDia\)/,
+    "O relatório deve calcular conformidade usando o total concluído."
+);
+
+assert.ok(
+    codigoRelatorioDashboardSstService.includes(
+        "${escaparHTML(percentualConformidade)}% concluídos"
+    ),
+    "O relatório deve identificar o percentual como concluído."
 );
 assert.match(
     codigoColaboradorDocumentosService,

@@ -326,6 +326,17 @@ export function BaseCertificadosTreinamentos({
             : gruposOrdenados;
     }, [documentosPorColaborador, ordemColaboradoresBase]);
 
+    const totalPendentesFiltradosBase = React.useMemo(
+        () =>
+            documentosPorColaboradorOrdenados.reduce(
+                (total, grupo) =>
+                    total +
+                    Number(grupo?.pendentes?.length || 0),
+                0
+            ),
+        [documentosPorColaboradorOrdenados]
+    );
+
     React.useEffect(() => {
         if (typeof window === "undefined") return undefined;
 
@@ -416,7 +427,7 @@ export function BaseCertificadosTreinamentos({
 
                     {!recolhido && (
                         <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-600">
-                            {documentosFiltrados.length} certificado(s) · {totalPorStatusCertificados.pendentes} pendente(s)
+                            {documentosFiltrados.length} certificado(s) · {totalPendentesFiltradosBase} pendente(s)
                         </span>
                     )}
                     <button
@@ -456,7 +467,7 @@ export function BaseCertificadosTreinamentos({
                         <Filter className="mx-auto h-10 w-10 text-slate-300" />
                         <h3 className="mt-3 font-bold text-slate-900">Nenhum certificado encontrado</h3>
                         <p className="mt-1 text-sm text-slate-500">
-                            Ajuste a busca ou o filtro de status para localizar os certificados.
+                            Ajuste a busca, a empresa ou o filtro de status para localizar os certificados.
                         </p>
                     </div>
                 )}
@@ -579,6 +590,9 @@ export function BaseCertificadosTreinamentos({
                                         </p>
                                         <p className="mt-1 break-words text-sm text-slate-500">
                                             {colaborador.empresaExibicao || colaborador.empresa}
+                                        </p>
+                                        <p className="mt-1 break-words text-xs font-semibold text-slate-600">
+                                            Função: {colaborador.funcao || colaborador.cargo || "Não informada"}
                                         </p>
                                         <p className="mt-1 text-xs font-semibold text-slate-500">
                                             Código: {colaborador.codigoFuncionario}

@@ -443,7 +443,7 @@ export function Colaboradores({
             const logoUrl = logoRaw ? obterUrlLogoEmpresa(logoRaw) : "";
 
             avaliacao.itens
-                .filter((item) => ["pendente", "vencido", "vencendo"].includes(item.status.chave))
+                .filter((item) => ["pendente", "vencido"].includes(item.status.chave))
                 .forEach((item) => {
                     pendencias.push({
                         colaboradorId: c.id,
@@ -1505,10 +1505,10 @@ ${erros.slice(0, 8).join("\n")}`
                                 const geral = statusGeral(c);
                                 const avaliacao = avaliarTreinamentosColaborador(c);
                                 const totalTreinamentos = Number(avaliacao.total || avaliacao.itens?.length || 0);
-                                const treinamentosEmDia = Array.isArray(avaliacao.emDia) ? avaliacao.emDia.length : 0;
-                                const treinamentosPendentes = Array.isArray(avaliacao.pendentes) ? avaliacao.pendentes.length : 0;
-                                const treinamentosVencidos = Array.isArray(avaliacao.vencidos) ? avaliacao.vencidos.length : 0;
-                                const percentualTreinamentos = totalTreinamentos ? Math.round((treinamentosEmDia / totalTreinamentos) * 100) : 0;
+                                const treinamentosEmDia = avaliacao.emDia.length;
+                                const treinamentosPendentes = avaliacao.pendentes.length;
+                                const treinamentosVencidos = avaliacao.vencidos.length;
+                                const percentualTreinamentos = avaliacao.total > 0 ? Math.round((avaliacao.concluidos.length / avaliacao.total) * 100) : 100;
                                 const grupoPendenciasLinha = `linha-${Math.floor(index / 2)}`;
                                 const pendenciasLinhaAberta = pendenciasAbertas === grupoPendenciasLinha;
 

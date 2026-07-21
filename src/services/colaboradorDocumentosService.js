@@ -231,11 +231,13 @@ export function avaliarTreinamentosColaborador(colaborador) {
     const vencidosCalculados = itensObrigatoriosMatriz.filter((item) => item.status.chave === "vencido");
     const vencendoCalculados = itensObrigatoriosMatriz.filter((item) => item.status.chave === "vencendo");
     const emDiaCalculados = itensObrigatoriosMatriz.filter((item) => ["emdia", "semvalidade"].includes(item.status.chave));
+    const concluidosCalculados = itensObrigatoriosMatriz.filter((item) => ["emdia", "semvalidade", "vencendo"].includes(item.status.chave));
 
     const pendentes = foraControleOperacional ? [] : pendentesCalculados;
     const vencidos = foraControleOperacional ? [] : vencidosCalculados;
     const vencendo = foraControleOperacional ? [] : vencendoCalculados;
     const emDia = foraControleOperacional ? [] : emDiaCalculados;
+    const concluidos = foraControleOperacional ? [] : concluidosCalculados;
 
     return {
         matriz: obterMatrizFuncao(colaborador.funcao),
@@ -248,6 +250,7 @@ export function avaliarTreinamentosColaborador(colaborador) {
         vencidos,
         vencendo,
         emDia,
+        concluidos,
         total: itensObrigatoriosMatriz.length,
         totalExibido: itens.length,
     };

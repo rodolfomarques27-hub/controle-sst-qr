@@ -138,7 +138,8 @@ export async function baixarRelatorioDashboardSstPDF({
     const horaEmissao = new Date().toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
     const cardsRelatorio = Array.isArray(cards) ? cards.filter(Boolean) : [];
     const totalDocumentosEmpresaCriticos = numeroSeguroRelatorioDashboard(documentosVencidos.length) + numeroSeguroRelatorioDashboard(documentosAVencer.length);
-    const percentualConformidade = totalItens ? Math.round((numeroSeguroRelatorioDashboard(indicadores.emDia) / totalItens) * 100) : 0;
+    const totalConcluidos = numeroSeguroRelatorioDashboard(indicadores.concluidos ?? indicadores.emDia);
+    const percentualConformidade = totalItens ? Math.round((totalConcluidos / totalItens) * 100) : 0;
 
     const cardsHtml = cardsRelatorio.map((card) => `
         <article class="card-dashboard-relatorio">
@@ -667,7 +668,7 @@ export async function baixarRelatorioDashboardSstPDF({
             <section class="faixa-info">
                 <div><span>Emissão</span><strong>${escaparHTML(dataEmissao)} às ${escaparHTML(horaEmissao)}</strong></div>
                 <div><span>Base do relatório</span><strong>${escaparHTML(valorSeguroRelatorioDashboard(totalItens, "0"))} itens avaliados</strong></div>
-                <div><span>Conformidade</span><strong>${escaparHTML(percentualConformidade)}% em dia</strong></div>
+                <div><span>Conformidade</span><strong>${escaparHTML(percentualConformidade)}% concluídos</strong></div>
                 <div><span>Storage</span><strong>${escaparHTML(storagePercentual)}% — ${escaparHTML(totalStorageLabel)} / ${escaparHTML(storageLimiteLabelDashboard)}</strong></div>
             </section>
 

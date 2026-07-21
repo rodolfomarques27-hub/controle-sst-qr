@@ -153,6 +153,35 @@ function emailTstDaEmpresa(colaborador) {
     return normalizarEmailDestinatario(colaborador?.empresaTstEmail || "");
 }
 
+function obterNomeEmpresaFiltroCertificados(colaborador = {}) {
+    return (
+        String(
+            colaborador?.empresaExibicao ||
+            colaborador?.empresa ||
+            "Empresa não informada"
+        ).trim() ||
+        "Empresa não informada"
+    );
+}
+
+function obterChaveEmpresaFiltroCertificados(colaborador = {}) {
+    const empresaId = String(
+        colaborador?.empresaId ||
+        colaborador?.empresa_id ||
+        ""
+    ).trim();
+
+    if (empresaId) {
+        return `id:${empresaId}`;
+    }
+
+    const empresaNome = normalizarTextoBusca(
+        obterNomeEmpresaFiltroCertificados(colaborador)
+    );
+
+    return `nome:${empresaNome || "empresa-nao-informada"}`;
+}
+
 export function Treinamentos({
     colaboradores,
     empresasBanco = [],
@@ -190,6 +219,7 @@ export function Treinamentos({
     const [certificadosAbertos, setCertificadosAbertos] = useState({});
     const [gruposCertificadosAbertos, setGruposCertificadosAbertos] = useState({});
     const [buscaCertificados, setBuscaCertificados] = useState("");
+    const [filtroEmpresaCertificados, setFiltroEmpresaCertificados] = useState("Todas");
     const [filtroStatusCertificados, setFiltroStatusCertificados] = useState("Todos");
     const [exigenciasAbertas, setExigenciasAbertas] = useState(false);
     const [enviandoAlertaTst, setEnviandoAlertaTst] = useState(false);
@@ -202,6 +232,110 @@ export function Treinamentos({
     const mensagemPermissaoSistema = permissaoSistemaAtual
         ? "Permissões do sistema carregadas para Treinamentos."
         : "Nenhuma permissão do sistema cadastrada para o usuário atual.";
+
+    const empresasFiltroCertificados = useMemo(() => {
+        const empresasPorChave = new Map();
+
+        colaboradores.forEach((colaborador) => {
+            const valor =
+                obterChaveEmpresaFiltroCertificados(colaborador);
+
+            const nome =
+                obterNomeEmpresaFiltroCertificados(colaborador);
+
+            if (!empresasPorChave.has(valor)) {
+                empresasPorChave.set(valor, {
+                    valor,
+                    nome,
+                });
+            }
+        });
+
+        return Array.from(empresasPorChave.values()).sort(
+            (empresaA, empresaB) =>
+                empresaA.nome.localeCompare(
+                    empresaB.nome,
+                    "pt-BR"
+                )
+        );
+    }, [colaboradores]);
+
+    useEffect(() => {
+        if (filtroEmpresaCertificados === "Todas") return;
+
+        const empresaContinuaDisponivel =
+            empresasFiltroCertificados.some(
+                (empresa) =>
+                    empresa.valor ===
+                    filtroEmpresaCertificados
+            );
+
+        if (!empresaContinuaDisponivel) {
+            setFiltroEmpresaCertificados("Todas");
+        }
+    }, [
+        empresasFiltroCertificados,
+        filtroEmpresaCertificados,
+    ]);
+
+    const colaboradoresFiltradosEmpresa = useMemo(() => {
+        if (filtroEmpresaCertificados === "Todas") {
+            return colaboradores;
+        }
+
+        return colaboradores.filter(
+            (colaborador) =>
+                obterChaveEmpresaFiltroCertificados(
+                    colaborador
+                ) === filtroEmpresaCertificados
+        );
+    }, [
+        colaboradores,
+        filtroEmpresaCertificados,
+    ]);
+
+    useEffect(() => {
+        setArquivosLote([]);
+        setResultadoLote("");
+    }, [filtroEmpresaCertificados]);
+
+    useEffect(() => {
+        if (!colaboradoresFiltradosEmpresa.length) {
+            if (colabId) {
+                setColabId("");
+            }
+
+            return;
+        }
+
+        const colaboradorSelecionadoContinuaDisponivel =
+            colaboradoresFiltradosEmpresa.some(
+                (colaborador) =>
+                    String(colaborador.codigoFuncionario) ===
+                    String(colabId)
+            );
+
+        if (colaboradorSelecionadoContinuaDisponivel) return;
+
+        const colaboradorInicialFiltrado =
+            colaboradoresFiltradosEmpresa.find(
+                (colaborador) =>
+                    String(colaborador.id) ===
+                    String(colaboradorInicialId)
+            ) ||
+            colaboradoresFiltradosEmpresa[0];
+
+        setColabId(
+            String(
+                colaboradorInicialFiltrado?.codigoFuncionario ||
+                ""
+            )
+        );
+    }, [
+        colabId,
+        colaboradorInicialId,
+        colaboradoresFiltradosEmpresa,
+    ]);
 
     const podeCadastrarTreinamentosSistema = useMemo(
         () => usuarioPodeExecutarAcaoSistema(permissaoSistemaAtual, MODULOS_PERMISSAO_SISTEMA.TREINAMENTOS, ACOES_PERMISSAO_SISTEMA.CADASTRAR),
@@ -345,9 +479,17 @@ export function Treinamentos({
     };
 
     const colabSelecionado =
-        colaboradores.find((c) => String(c.codigoFuncionario) === String(colabId)) ||
-        colaboradores.find((c) => String(c.id) === String(colaboradorInicialId)) ||
-        colaboradores[0] ||
+        colaboradoresFiltradosEmpresa.find(
+            (colaborador) =>
+                String(colaborador.codigoFuncionario) ===
+                String(colabId)
+        ) ||
+        colaboradoresFiltradosEmpresa.find(
+            (colaborador) =>
+                String(colaborador.id) ===
+                String(colaboradorInicialId)
+        ) ||
+        colaboradoresFiltradosEmpresa[0] ||
         null;
 
     const colabSelecionadoId = colabSelecionado?.id || "";
@@ -374,7 +516,12 @@ export function Treinamentos({
     );
 
     const alterarColaboradorCertificado = (novoColaboradorCodigo) => {
-        const novoColaborador = colaboradores.find((c) => String(c.codigoFuncionario) === String(novoColaboradorCodigo));
+        const novoColaborador =
+            colaboradoresFiltradosEmpresa.find(
+                (colaborador) =>
+                    String(colaborador.codigoFuncionario) ===
+                    String(novoColaboradorCodigo)
+            );
         const novaAvaliacao = novoColaborador ? avaliarTreinamentosColaborador(novoColaborador) : null;
         const primeiroTreinamento = novaAvaliacao?.itens?.[0]?.treinamento?.id || treinamentosBase[0].id;
 
@@ -577,7 +724,7 @@ export function Treinamentos({
         try {
             const preparados = await prepararArquivosTreinamentoLote({
                 listaArquivos: arquivos,
-                colaboradores,
+                colaboradores: colaboradoresFiltradosEmpresa,
                 colabSelecionado,
                 dataRealizacao: dataBaseLote,
             });
@@ -894,10 +1041,15 @@ export function Treinamentos({
         const termo = normalizarTextoBusca(buscaCertificados);
 
         const textoBusca = normalizarTextoBusca(
-            `${documento.colaborador?.nome || ""} ${documento.colaborador?.empresaExibicao || documento.colaborador?.empresa || ""} ${documento.colaborador?.codigoFuncionario || ""} ${documento.treinamento?.nome || ""} ${documento.arquivo || ""} ${status.texto || ""}`
+            `${documento.colaborador?.nome || ""} ${documento.colaborador?.empresaExibicao || documento.colaborador?.empresa || ""} ${documento.colaborador?.funcao || documento.colaborador?.cargo || ""} ${documento.colaborador?.codigoFuncionario || ""} ${documento.treinamento?.nome || ""} ${documento.arquivo || ""} ${status.texto || ""}`
         );
 
         const bateBusca = !termo || textoBusca.includes(termo);
+        const bateEmpresa =
+            filtroEmpresaCertificados === "Todas" ||
+            obterChaveEmpresaFiltroCertificados(
+                documento.colaborador
+            ) === filtroEmpresaCertificados;
         const bateStatus =
             filtroStatusCertificados === "Todos" ||
             (
@@ -909,7 +1061,7 @@ export function Treinamentos({
                 )
             );
 
-        return bateBusca && bateStatus;
+        return bateBusca && bateEmpresa && bateStatus;
     });
 
     const documentosPorColaborador = colaboradores
@@ -923,13 +1075,18 @@ export function Treinamentos({
             const pendentesDoColaborador = avaliacao.pendentes
                 .filter((item) => {
                     const textoBusca = normalizarTextoBusca(
-                        `${colaborador.nome || ""} ${colaborador.empresaExibicao || colaborador.empresa || ""} ${colaborador.codigoFuncionario || ""} ${item.treinamento?.nome || ""} pendente faltando`
+                        `${colaborador.nome || ""} ${colaborador.empresaExibicao || colaborador.empresa || ""} ${colaborador.funcao || colaborador.cargo || ""} ${colaborador.codigoFuncionario || ""} ${item.treinamento?.nome || ""} pendente faltando`
                     );
 
                     const bateBusca = !termo || textoBusca.includes(termo);
+                    const bateEmpresa =
+                        filtroEmpresaCertificados === "Todas" ||
+                        obterChaveEmpresaFiltroCertificados(
+                            colaborador
+                        ) === filtroEmpresaCertificados;
                     const bateStatus = filtroStatusCertificados === "Todos" || filtroStatusCertificados === "Pendentes";
 
-                    return bateBusca && bateStatus;
+                    return bateBusca && bateEmpresa && bateStatus;
                 });
 
             return {
@@ -1041,6 +1198,15 @@ export function Treinamentos({
         const grupos = {};
 
         colaboradores.forEach((colaborador) => {
+            if (
+                filtroEmpresaCertificados !== "Todas" &&
+                obterChaveEmpresaFiltroCertificados(
+                    colaborador
+                ) !== filtroEmpresaCertificados
+            ) {
+                return;
+            }
+
             if (colaboradorForaControleDocumentalOperacional(colaborador)) return;
 
             (colaborador.treinamentos || []).forEach((certificado) => {
@@ -1080,7 +1246,10 @@ export function Treinamentos({
         });
 
         return Object.values(grupos).sort((a, b) => a.empresa.localeCompare(b.empresa));
-    }, [colaboradores]);
+    }, [
+        colaboradores,
+        filtroEmpresaCertificados,
+    ]);
 
     const montarAvisoAlertaTst = (grupo) => {
         const destinatario = normalizarEmailDestinatario(grupo.tstEmail);
@@ -1541,20 +1710,38 @@ export function Treinamentos({
                                     </div>
 
                                     {!cardsTreinamentosRecolhidos.filtros && (
-                                        <div className="mt-4 grid gap-3 xl:grid-cols-[1fr_220px]">
+                                        <div className="mt-4 grid gap-3 xl:grid-cols-[minmax(0,1fr)_260px_220px]">
                                             <div className="relative">
                                                 <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
                                                 <input
                                                     value={buscaCertificados}
                                                     onChange={(e) => setBuscaCertificados(e.target.value)}
-                                                    placeholder="Pesquisar certificados por colaborador, empresa, código, treinamento ou arquivo"
+                                                    placeholder="Pesquisar por colaborador, empresa, função, código, treinamento ou arquivo"
                                                     className="treinamentos-filtros-certificados-card__input w-full rounded-2xl border border-slate-200 bg-white py-3 pl-11 pr-4 text-sm outline-none focus:border-slate-400 focus:ring-4 focus:ring-slate-100"
                                                 />
                                             </div>
 
                                             <select
+                                                value={filtroEmpresaCertificados}
+                                                onChange={(e) => setFiltroEmpresaCertificados(e.target.value)}
+                                                aria-label="Filtrar certificados por empresa"
+                                                className="treinamentos-filtros-certificados-card__select w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 outline-none focus:border-slate-400 focus:ring-4 focus:ring-slate-100"
+                                            >
+                                                <option value="Todas">Todas as empresas</option>
+                                                {empresasFiltroCertificados.map((empresa) => (
+                                                    <option
+                                                        key={empresa.valor}
+                                                        value={empresa.valor}
+                                                    >
+                                                        {empresa.nome}
+                                                    </option>
+                                                ))}
+                                            </select>
+
+                                            <select
                                                 value={filtroStatusCertificados}
                                                 onChange={(e) => setFiltroStatusCertificados(e.target.value)}
+                                                aria-label="Filtrar certificados por status"
                                                 className="treinamentos-filtros-certificados-card__select w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 outline-none focus:border-slate-400 focus:ring-4 focus:ring-slate-100"
                                             >
                                                 <option value="Todos">Todos os status</option>
@@ -1581,7 +1768,7 @@ export function Treinamentos({
                 onClick={(evento) => alternarCardTreinamentoPorArea(chave, cardsTreinamentosRecolhidos.lancamento, evento)}
             >
                                 <FormularioLancamentoCertificado
-                                    colaboradores={colaboradores}
+                                    colaboradores={colaboradoresFiltradosEmpresa}
                                     colabSelecionadoCodigo={colabSelecionadoCodigo}
                                     onAlterarColaboradorCertificado={alterarColaboradorCertificado}
                                     treinamentosDisponiveis={treinamentosDisponiveis}

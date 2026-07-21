@@ -47,9 +47,10 @@ export function calcularIndicadoresTreinamentosDashboard(colaboradores = []) {
     const vencendo = itens.filter((item) => item.status.chave === "vencendo").length;
     const pendentes = itens.filter((item) => item.status.chave === "pendente").length;
     const emDia = itens.filter((item) => ["emdia", "semvalidade"].includes(item.status.chave)).length;
+    const concluidos = itens.filter((item) => ["emdia", "semvalidade", "vencendo"].includes(item.status.chave)).length;
     const empresas = new Set(colaboradoresOperacionais.map((colaborador) => colaborador.empresa).filter(Boolean)).size;
 
-    return { itens, vencidos, vencendo, pendentes, emDia, empresas };
+    return { itens, vencidos, vencendo, pendentes, emDia, concluidos, empresas };
 }
 
 export function calcularResumoStorageDashboard({ usoStorageDashboard = {}, carregandoStorageDashboard = false } = {}) {
@@ -250,14 +251,18 @@ export function calcularResumoDashboardSst({
 
     const storage = calcularResumoStorageDashboard({ usoStorageDashboard, carregandoStorageDashboard });
 
-    const pendencias = indicadores.itens
+    const itensDocumentaisMonitorados = indicadores.itens
         .filter((item) => possuiDocumentoEnviadoPendencia(item))
         .sort(compararPendenciasCriticas);
 
-    const documentosFuncionariosVencidos = pendencias.filter(
+    const pendencias = itensDocumentaisMonitorados.filter(
+        (item) => ["pendente", "vencido"].includes(item.status.chave)
+    );
+
+    const documentosFuncionariosVencidos = itensDocumentaisMonitorados.filter(
         (item) => item.status.chave === "vencido"
     );
-    const documentosFuncionariosAVencer30Dias = pendencias.filter((item) => {
+    const documentosFuncionariosAVencer30Dias = itensDocumentaisMonitorados.filter((item) => {
         if (item.status.chave !== "vencendo") return false;
 
         const dias = diasParaVencer(item.vencimento);
