@@ -234,10 +234,10 @@
 
 
 
-  /* DEFINIÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¡ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢O FINAL DE GRID DE INDICADORES
-     PadrÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â£o aprovado: 5 cards por linha em desktop/notebook largo,
-     todos com mesma largura, mesma altura mÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â­nima e texto reduzido/controlado.
-     Usar em ConfiguraÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â§ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Âµes, Auditoria do sistema e Dashboard Auditoria de Campo. */
+  /* DEFINI├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├é┬ó├â┬ó├óÔé¼┼í├é┬¼├âÔÇÜ├é┬í├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┬á├â┬ó├óÔÇÜ┬¼├óÔÇ×┬óO FINAL DE GRID DE INDICADORES
+     Padr├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┼í├âÔÇÜ├é┬úo aprovado: 5 cards por linha em desktop/notebook largo,
+     todos com mesma largura, mesma altura m├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┼í├âÔÇÜ├é┬¡nima e texto reduzido/controlado.
+     Usar em Configura├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┼í├âÔÇÜ├é┬º├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┼í├âÔÇÜ├é┬Áes, Auditoria do sistema e Dashboard Auditoria de Campo. */
   .cards-grid--fixed-5,
   .summary-grid-fixed-5,
   .config-summary-grid,
@@ -765,8 +765,8 @@
 
 
 
-  /* ETAPA 8 ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â acabamento final de harmonia dos formulÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¡rios e personalizaÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â§ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â£o.
-     Objetivo: eliminar espaÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â§os vazios, manter campos em linhas equilibradas e permitir arrastar cards. */
+  /* ETAPA 8 ├âãÆ├åÔÇÖ├âÔÇÜ├é┬ó├âãÆ├é┬ó├â┬ó├óÔÇÜ┬¼├à┬í├âÔÇÜ├é┬¼├âãÆ├é┬ó├â┬ó├óÔé¼┼í├é┬¼├âÔÇÜ├é┬Ø acabamento final de harmonia dos formul├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┼í├âÔÇÜ├é┬írios e personaliza├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┼í├âÔÇÜ├é┬º├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┼í├âÔÇÜ├é┬úo.
+     Objetivo: eliminar espa├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┼í├âÔÇÜ├é┬ºos vazios, manter campos em linhas equilibradas e permitir arrastar cards. */
   .colaborador-formulario-unificado {
     overflow: hidden;
   }
@@ -1075,7 +1075,7 @@
   }
 
 
-  /* ETAPA 9 ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â formulÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¡rio do novo colaborador largo, sem buracos visuais, e estados recolhidos persistidos no navegador. */
+  /* ETAPA 9 ├âãÆ├åÔÇÖ├âÔÇÜ├é┬ó├âãÆ├é┬ó├â┬ó├óÔÇÜ┬¼├à┬í├âÔÇÜ├é┬¼├âãÆ├é┬ó├â┬ó├óÔé¼┼í├é┬¼├âÔÇÜ├é┬Ø formul├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┼í├âÔÇÜ├é┬írio do novo colaborador largo, sem buracos visuais, e estados recolhidos persistidos no navegador. */
   .colaborador-formulario-unificado {
     overflow: hidden;
   }
@@ -1236,7 +1236,7 @@
     }
   }
 
-  /* ETAPA 10 ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â Novo colaborador em 3 linhas: Nome/Data/Empresa, SituaÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â§ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â£o/MatrÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â­cula/FunÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â§ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â£o, Documentos/Foto. */
+  /* ETAPA 10 ├âãÆ├åÔÇÖ├âÔÇÜ├é┬ó├âãÆ├é┬ó├â┬ó├óÔÇÜ┬¼├à┬í├âÔÇÜ├é┬¼├âãÆ├é┬ó├â┬ó├óÔé¼┼í├é┬¼├âÔÇÜ├é┬Ø Novo colaborador em 3 linhas: Nome/Data/Empresa, Situa├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┼í├âÔÇÜ├é┬º├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┼í├âÔÇÜ├é┬úo/Matr├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┼í├âÔÇÜ├é┬¡cula/Fun├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┼í├âÔÇÜ├é┬º├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┼í├âÔÇÜ├é┬úo, Documentos/Foto. */
   .colaborador-formulario-unificado > :not(.colaborador-form-toggle) > :where(.space-y-3, .space-y-4):has(input),
   .colaborador-formulario-unificado > :not(.colaborador-form-toggle) > :where(.space-y-3, .space-y-4):has(select) {
     grid-template-columns: repeat(12, minmax(0, 1fr)) !important;
@@ -1269,7 +1269,7 @@
     grid-column: 9 / span 4 !important;
   }
 
-  /* Linha 2: SituaÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â§ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â£o na obra / MatrÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â­cula da empresa / FunÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â§ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â£o */
+  /* Linha 2: Situa├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┼í├âÔÇÜ├é┬º├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┼í├âÔÇÜ├é┬úo na obra / Matr├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┼í├âÔÇÜ├é┬¡cula da empresa / Fun├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┼í├âÔÇÜ├é┬º├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┼í├âÔÇÜ├é┬úo */
   .colaborador-formulario-unificado > :not(.colaborador-form-toggle) > :where(.space-y-3, .space-y-4):has(input) > :nth-child(3),
   .colaborador-formulario-unificado > :not(.colaborador-form-toggle) > :where(.space-y-3, .space-y-4):has(select) > :nth-child(3) {
     order: 4 !important;
@@ -1288,7 +1288,7 @@
     grid-column: 9 / span 4 !important;
   }
 
-  /* Remove da tela o check "Mostrar em aniversariantes" mantendo o valor salvo no estado do formulÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¡rio. */
+  /* Remove da tela o check "Mostrar em aniversariantes" mantendo o valor salvo no estado do formul├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┼í├âÔÇÜ├é┬írio. */
   .colaborador-formulario-unificado > :not(.colaborador-form-toggle) > :where(.space-y-3, .space-y-4):has(input) > :nth-child(5),
   .colaborador-formulario-unificado > :not(.colaborador-form-toggle) > :where(.space-y-3, .space-y-4):has(select) > :nth-child(5) {
     display: none !important;
@@ -1375,7 +1375,7 @@
 
 
 
-  /* ETAPA 11 ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â layout final do Novo colaborador em 4 linhas fixas e sem checkbox de aniversariante. */
+  /* ETAPA 11 ├âãÆ├åÔÇÖ├âÔÇÜ├é┬ó├âãÆ├é┬ó├â┬ó├óÔÇÜ┬¼├à┬í├âÔÇÜ├é┬¼├âãÆ├é┬ó├â┬ó├óÔé¼┼í├é┬¼├âÔÇÜ├é┬Ø layout final do Novo colaborador em 4 linhas fixas e sem checkbox de aniversariante. */
   .novo-colaborador-layout-final {
     display: grid;
     gap: 1rem;
@@ -1571,7 +1571,7 @@
     }
   }
 
-  /* ETAPA 12 ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â Novo colaborador no visual anterior, mantendo a disposiÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â§ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â£o final em 4 linhas. */
+  /* ETAPA 12 ├âãÆ├åÔÇÖ├âÔÇÜ├é┬ó├âãÆ├é┬ó├â┬ó├óÔÇÜ┬¼├à┬í├âÔÇÜ├é┬¼├âãÆ├é┬ó├â┬ó├óÔé¼┼í├é┬¼├âÔÇÜ├é┬Ø Novo colaborador no visual anterior, mantendo a disposi├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┼í├âÔÇÜ├é┬º├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┼í├âÔÇÜ├é┬úo final em 4 linhas. */
   .novo-colaborador-layout-anterior {
     display: grid;
     gap: 1rem;
@@ -1755,7 +1755,7 @@
     }
   }
 
-  /* ETAPA 13 ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â cabeÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â§alho do novo colaborador dentro do cartÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â£o branco, no padrÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â£o do site. */
+  /* ETAPA 13 ├âãÆ├åÔÇÖ├âÔÇÜ├é┬ó├âãÆ├é┬ó├â┬ó├óÔÇÜ┬¼├à┬í├âÔÇÜ├é┬¼├âãÆ├é┬ó├â┬ó├óÔé¼┼í├é┬¼├âÔÇÜ├é┬Ø cabe├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┼í├âÔÇÜ├é┬ºalho do novo colaborador dentro do cart├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┼í├âÔÇÜ├é┬úo branco, no padr├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┼í├âÔÇÜ├é┬úo do site. */
   .colaborador-formulario-unificado {
     background: #ffffff;
     border: 1px solid #dbe5f0;
@@ -1858,7 +1858,7 @@
     }
   }
 
-  /* ETAPA 14 ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â informaÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â§ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â£o dinÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢mica da situaÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â§ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â£o na obra e documentos aceitos centralizados. */
+  /* ETAPA 14 ├âãÆ├åÔÇÖ├âÔÇÜ├é┬ó├âãÆ├é┬ó├â┬ó├óÔÇÜ┬¼├à┬í├âÔÇÜ├é┬¼├âãÆ├é┬ó├â┬ó├óÔé¼┼í├é┬¼├âÔÇÜ├é┬Ø informa├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┼í├âÔÇÜ├é┬º├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┼í├âÔÇÜ├é┬úo din├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┼í├âÔÇÜ├é┬ómica da situa├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┼í├âÔÇÜ├é┬º├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┼í├âÔÇÜ├é┬úo na obra e documentos aceitos centralizados. */
   .novo-colaborador-ajuda-anterior {
     min-height: 2rem;
   }
@@ -1902,7 +1902,7 @@
   }
 
 
-  /* ETAPA 15 ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â cards de upload com a mesma altura visual. */
+  /* ETAPA 15 ├âãÆ├åÔÇÖ├âÔÇÜ├é┬ó├âãÆ├é┬ó├â┬ó├óÔÇÜ┬¼├à┬í├âÔÇÜ├é┬¼├âãÆ├é┬ó├â┬ó├óÔé¼┼í├é┬¼├âÔÇÜ├é┬Ø cards de upload com a mesma altura visual. */
   .novo-colaborador-uploads-anterior {
     align-items: stretch !important;
   }
@@ -1921,7 +1921,7 @@
   }
 
 
-  /* ETAPA 20 ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â Empresas e documentos: cadastro compacto e Base de empresas em grade fixa de 3 cards por linha. */
+  /* ETAPA 20 ├âãÆ├åÔÇÖ├âÔÇÜ├é┬ó├âãÆ├é┬ó├â┬ó├óÔÇÜ┬¼├à┬í├âÔÇÜ├é┬¼├âãÆ├é┬ó├â┬ó├óÔé¼┼í├é┬¼├âÔÇÜ├é┬Ø Empresas e documentos: cadastro compacto e Base de empresas em grade fixa de 3 cards por linha. */
   .empresas-cadastro-unificado {
     background: #ffffff !important;
     border-color: #dbe7f2 !important;
@@ -2201,7 +2201,7 @@
   }
 
 
-  /* ETAPA 21 ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â Empresas final: cadastro harmÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â´nico, documento preenchendo altura e base de empresas em 3 cards por linha. */
+  /* ETAPA 21 ├âãÆ├åÔÇÖ├âÔÇÜ├é┬ó├âãÆ├é┬ó├â┬ó├óÔÇÜ┬¼├à┬í├âÔÇÜ├é┬¼├âãÆ├é┬ó├â┬ó├óÔé¼┼í├é┬¼├âÔÇÜ├é┬Ø Empresas final: cadastro harm├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┼í├âÔÇÜ├é┬┤nico, documento preenchendo altura e base de empresas em 3 cards por linha. */
   .empresas-cadastro-unificado {
     padding: clamp(0.85rem, 1vw, 1.15rem) !important;
     background: #ffffff !important;
@@ -2569,7 +2569,7 @@
   }
 
 
-  /* ETAPA 22 ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â Empresas definitivo: cadastro compacto, sem sobreposiÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â§ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â£o e com contrato visÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â­vel. */
+  /* ETAPA 22 ├âãÆ├åÔÇÖ├âÔÇÜ├é┬ó├âãÆ├é┬ó├â┬ó├óÔÇÜ┬¼├à┬í├âÔÇÜ├é┬¼├âãÆ├é┬ó├â┬ó├óÔé¼┼í├é┬¼├âÔÇÜ├é┬Ø Empresas definitivo: cadastro compacto, sem sobreposi├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┼í├âÔÇÜ├é┬º├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┼í├âÔÇÜ├é┬úo e com contrato vis├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┼í├âÔÇÜ├é┬¡vel. */
   .empresas-cadastro-unificado .empresas-cadastro-grid {
     grid-template-columns: minmax(0, 1.12fr) minmax(0, 0.88fr) !important;
     align-items: start !important;
@@ -2794,7 +2794,7 @@
   }
 
 
-  /* ETAPA 24 ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â Documento da empresa em cards verticais grandes e base com 2 empresas por linha. */
+  /* ETAPA 24 ├âãÆ├åÔÇÖ├âÔÇÜ├é┬ó├âãÆ├é┬ó├â┬ó├óÔÇÜ┬¼├à┬í├âÔÇÜ├é┬¼├âãÆ├é┬ó├â┬ó├óÔé¼┼í├é┬¼├âÔÇÜ├é┬Ø Documento da empresa em cards verticais grandes e base com 2 empresas por linha. */
   .empresas-form-panel--documento .empresa-form-grid--documento {
     display: grid !important;
     grid-template-columns: 1fr !important;
@@ -2912,7 +2912,7 @@
   }
 
 
-  /* ETAPA 25 ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â Resumo dos documentos em 3 linhas sem reticÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Âªncias e sem esticar o cadastro lateral. */
+  /* ETAPA 25 ├âãÆ├åÔÇÖ├âÔÇÜ├é┬ó├âãÆ├é┬ó├â┬ó├óÔÇÜ┬¼├à┬í├âÔÇÜ├é┬¼├âãÆ├é┬ó├â┬ó├óÔé¼┼í├é┬¼├âÔÇÜ├é┬Ø Resumo dos documentos em 3 linhas sem retic├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┼í├âÔÇÜ├é┬¬ncias e sem esticar o cadastro lateral. */
   .empresas-cadastro-grid > .empresas-form-panel {
     min-height: auto !important;
     align-self: start !important;
@@ -2975,7 +2975,7 @@
   }
 
 
-  /* ETAPA 26 ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â usa o espaÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â§o lateral dos cards LTCAT/PCMSO/PGR para reduzir altura e eliminar sobra visual. */
+  /* ETAPA 26 ├âãÆ├åÔÇÖ├âÔÇÜ├é┬ó├âãÆ├é┬ó├â┬ó├óÔÇÜ┬¼├à┬í├âÔÇÜ├é┬¼├âãÆ├é┬ó├â┬ó├óÔé¼┼í├é┬¼├âÔÇÜ├é┬Ø usa o espa├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┼í├âÔÇÜ├é┬ºo lateral dos cards LTCAT/PCMSO/PGR para reduzir altura e eliminar sobra visual. */
   .empresa-doc-tipos-grid--vertical {
     gap: 0.52rem !important;
   }
@@ -3037,7 +3037,7 @@
   }
 
 
-  /* ETAPA 27 ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â cards de LTCAT/PCMSO/PGR mais alinhados ao bloco de datas e usando melhor a largura lateral. */
+  /* ETAPA 27 ├âãÆ├åÔÇÖ├âÔÇÜ├é┬ó├âãÆ├é┬ó├â┬ó├óÔÇÜ┬¼├à┬í├âÔÇÜ├é┬¼├âãÆ├é┬ó├â┬ó├óÔé¼┼í├é┬¼├âÔÇÜ├é┬Ø cards de LTCAT/PCMSO/PGR mais alinhados ao bloco de datas e usando melhor a largura lateral. */
   .empresas-form-panel--documento .empresa-form-grid--documento {
     gap: 0.5rem !important;
   }
@@ -3092,7 +3092,7 @@
   }
 
 
-  /* ETAPA 28 ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â faz LTCAT/PCMSO/PGR ocuparem toda a largura disponÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â­vel, eliminando a sobra lateral. */
+  /* ETAPA 28 ├âãÆ├åÔÇÖ├âÔÇÜ├é┬ó├âãÆ├é┬ó├â┬ó├óÔÇÜ┬¼├à┬í├âÔÇÜ├é┬¼├âãÆ├é┬ó├â┬ó├óÔé¼┼í├é┬¼├âÔÇÜ├é┬Ø faz LTCAT/PCMSO/PGR ocuparem toda a largura dispon├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┼í├âÔÇÜ├é┬¡vel, eliminando a sobra lateral. */
   .empresa-doc-tipos-grid--vertical {
     width: 100% !important;
     max-width: none !important;
@@ -3160,7 +3160,7 @@
   }
 
 
-  /* ETAPA 29 ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â forÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â§a LTCAT/PCMSO/PGR a terem a mesma largura do seletor "Selecione a empresa". */
+  /* ETAPA 29 ├âãÆ├åÔÇÖ├âÔÇÜ├é┬ó├âãÆ├é┬ó├â┬ó├óÔÇÜ┬¼├à┬í├âÔÇÜ├é┬¼├âãÆ├é┬ó├â┬ó├óÔé¼┼í├é┬¼├âÔÇÜ├é┬Ø for├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┼í├âÔÇÜ├é┬ºa LTCAT/PCMSO/PGR a terem a mesma largura do seletor "Selecione a empresa". */
   .empresas-form-panel--documento .empresa-form-grid--documento {
     width: 100% !important;
     max-width: none !important;
@@ -3218,7 +3218,7 @@
   }
 
 
-  /* ETAPA 30 ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â impede LTCAT/PCMSO/PGR de invadir a divisÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â³ria e simplifica o texto do LTCAT. */
+  /* ETAPA 30 ├âãÆ├åÔÇÖ├âÔÇÜ├é┬ó├âãÆ├é┬ó├â┬ó├óÔÇÜ┬¼├à┬í├âÔÇÜ├é┬¼├âãÆ├é┬ó├â┬ó├óÔé¼┼í├é┬¼├âÔÇÜ├é┬Ø impede LTCAT/PCMSO/PGR de invadir a divis├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┼í├âÔÇÜ├é┬│ria e simplifica o texto do LTCAT. */
   .empresas-form-panel--documento .empresa-doc-tipos-grid--vertical > .empresa-doc-tipo-card--grande {
     grid-template-columns: 6.35rem minmax(0, 1fr) !important;
     min-height: 4.85rem !important;
@@ -3284,7 +3284,7 @@
   }
 
 
-  /* ETAPA 31 ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â remove observaÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â§ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â£o do cadastro de documento e compacta o painel para alinhar os dois lados. */
+  /* ETAPA 31 ├âãÆ├åÔÇÖ├âÔÇÜ├é┬ó├âãÆ├é┬ó├â┬ó├óÔÇÜ┬¼├à┬í├âÔÇÜ├é┬¼├âãÆ├é┬ó├â┬ó├óÔé¼┼í├é┬¼├âÔÇÜ├é┬Ø remove observa├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┼í├âÔÇÜ├é┬º├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┼í├âÔÇÜ├é┬úo do cadastro de documento e compacta o painel para alinhar os dois lados. */
   .empresas-form-panel--documento .empresa-form-grid--documento {
     gap: 0.5rem !important;
   }
@@ -3302,13 +3302,13 @@
   }
 
 
-  /* ETAPA 32 ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â textos curtos nos botÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Âµes de upload de empresa. */
+  /* ETAPA 32 ├âãÆ├åÔÇÖ├âÔÇÜ├é┬ó├âãÆ├é┬ó├â┬ó├óÔÇÜ┬¼├à┬í├âÔÇÜ├é┬¼├âãÆ├é┬ó├â┬ó├óÔé¼┼í├é┬¼├âÔÇÜ├é┬Ø textos curtos nos bot├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┼í├âÔÇÜ├é┬Áes de upload de empresa. */
   .empresa-form-linha--uploads :where(label, button) {
     white-space: nowrap !important;
   }
 
 
-  /* ETAPA 33 ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â harmoniza largura dos painÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â©is e reduz o bloco de PDF para alinhar Cadastrar empresa e Salvar documento. */
+  /* ETAPA 33 ├âãÆ├åÔÇÖ├âÔÇÜ├é┬ó├âãÆ├é┬ó├â┬ó├óÔÇÜ┬¼├à┬í├âÔÇÜ├é┬¼├âãÆ├é┬ó├â┬ó├óÔé¼┼í├é┬¼├âÔÇÜ├é┬Ø harmoniza largura dos pain├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┼í├âÔÇÜ├é┬®is e reduz o bloco de PDF para alinhar Cadastrar empresa e Salvar documento. */
   .empresas-cadastro-unificado .empresas-cadastro-grid {
     grid-template-columns: minmax(0, 1.06fr) minmax(0, 0.94fr) !important;
     gap: 0.9rem !important;
@@ -3353,7 +3353,7 @@
   }
 
 
-  /* ETAPA 34 ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â largura final dos cards LTCAT/PCMSO/PGR igual ao seletor e alinhamento dos botÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Âµes finais. */
+  /* ETAPA 34 ├âãÆ├åÔÇÖ├âÔÇÜ├é┬ó├âãÆ├é┬ó├â┬ó├óÔÇÜ┬¼├à┬í├âÔÇÜ├é┬¼├âãÆ├é┬ó├â┬ó├óÔé¼┼í├é┬¼├âÔÇÜ├é┬Ø largura final dos cards LTCAT/PCMSO/PGR igual ao seletor e alinhamento dos bot├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┼í├âÔÇÜ├é┬Áes finais. */
   .empresas-cadastro-unificado .empresas-cadastro-grid {
     grid-template-columns: minmax(0, 1.02fr) minmax(0, 0.98fr) !important;
     gap: 0.82rem !important;
@@ -3477,7 +3477,7 @@
   }
 
 
-  /* ETAPA 35 ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â centraliza ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â­cone/texto dos botÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Âµes e aumenta um pouco o salvar documento para harmonizar com cadastrar empresa. */
+  /* ETAPA 35 ├âãÆ├åÔÇÖ├âÔÇÜ├é┬ó├âãÆ├é┬ó├â┬ó├óÔÇÜ┬¼├à┬í├âÔÇÜ├é┬¼├âãÆ├é┬ó├â┬ó├óÔé¼┼í├é┬¼├âÔÇÜ├é┬Ø centraliza ├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┼í├âÔÇÜ├é┬¡cone/texto dos bot├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┼í├âÔÇÜ├é┬Áes e aumenta um pouco o salvar documento para harmonizar com cadastrar empresa. */
   .empresa-form-linha--uploads .empresa-upload-card,
   .empresa-doc-upload-grande,
   .empresa-botao-cadastrar-final,
@@ -3520,7 +3520,7 @@
   }
 
 
-  /* ETAPA 36 ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â aproxima ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â­cone do texto no selecionar PDF, aumenta um pouco o painel direito e melhora a harmonia final dos botÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Âµes. */
+  /* ETAPA 36 ├âãÆ├åÔÇÖ├âÔÇÜ├é┬ó├âãÆ├é┬ó├â┬ó├óÔÇÜ┬¼├à┬í├âÔÇÜ├é┬¼├âãÆ├é┬ó├â┬ó├óÔé¼┼í├é┬¼├âÔÇÜ├é┬Ø aproxima ├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┼í├âÔÇÜ├é┬¡cone do texto no selecionar PDF, aumenta um pouco o painel direito e melhora a harmonia final dos bot├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┼í├âÔÇÜ├é┬Áes. */
   .empresas-cadastro-unificado .empresas-cadastro-grid {
     grid-template-columns: minmax(0, 0.99fr) minmax(0, 1.01fr) !important;
     gap: 0.86rem !important;
@@ -3578,7 +3578,7 @@
   }
 
 
-  /* ETAPA 37 ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â escopo saiu da linha das informaÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â§ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Âµes e virou aÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â§ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â£o prÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â³pria abaixo de Revisar documentos. */
+  /* ETAPA 37 ├âãÆ├åÔÇÖ├âÔÇÜ├é┬ó├âãÆ├é┬ó├â┬ó├óÔÇÜ┬¼├à┬í├âÔÇÜ├é┬¼├âãÆ├é┬ó├â┬ó├óÔé¼┼í├é┬¼├âÔÇÜ├é┬Ø escopo saiu da linha das informa├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┼í├âÔÇÜ├é┬º├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┼í├âÔÇÜ├é┬Áes e virou a├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┼í├âÔÇÜ├é┬º├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┼í├âÔÇÜ├é┬úo pr├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┼í├âÔÇÜ├é┬│pria abaixo de Revisar documentos. */
   .empresa-base-card__escopo-area {
     width: 100%;
     margin-top: 0.75rem;
@@ -3612,7 +3612,7 @@
   }
 
 
-  /* ETAPA 38 ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â alinha Cadastrar empresa com Salvar documento e amplia discretamente o painel de documentos. */
+  /* ETAPA 38 ├âãÆ├åÔÇÖ├âÔÇÜ├é┬ó├âãÆ├é┬ó├â┬ó├óÔÇÜ┬¼├à┬í├âÔÇÜ├é┬¼├âãÆ├é┬ó├â┬ó├óÔé¼┼í├é┬¼├âÔÇÜ├é┬Ø alinha Cadastrar empresa com Salvar documento e amplia discretamente o painel de documentos. */
   .empresas-cadastro-unificado .empresas-cadastro-grid {
     grid-template-columns: minmax(0, 0.97fr) minmax(0, 1.03fr) !important;
     align-items: stretch !important;
@@ -3684,9 +3684,9 @@
 
 
 /* Ajuste complementar do Dashboard SST
-   MantÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â©m o layout global original e garante que o Filtro 1 consiga alterar
+   Mant├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┼í├âÔÇÜ├é┬®m o layout global original e garante que o Filtro 1 consiga alterar
    o tamanho das cartas principais mesmo quando o CSS global do grid define
-   regras prÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â³prias para .dashboard-summary-card. */
+   regras pr├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┼í├âÔÇÜ├é┬│prias para .dashboard-summary-card. */
 .dashboard-summary-grid > .dashboard-summary-card[data-dashboard-card-tamanho="padrao"] {
     grid-column: span 1 / span 1 !important;
 }
@@ -3743,10 +3743,10 @@
 }
 
 
-/* ROTEIRO 6 ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ETAPA 13
-   PadrÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â£o visual mobile separado do desktop.
-   Desktop permanece com sidebar e grids largos. Celular vira experiÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Âªncia de campo:
-   cabeÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â§alho prÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â³prio, cards em uma coluna, botÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Âµes grandes e menos risco de estouro horizontal. */
+/* ROTEIRO 6 ├âãÆ├åÔÇÖ├âÔÇÜ├é┬ó├âãÆ├é┬ó├â┬ó├óÔÇÜ┬¼├à┬í├âÔÇÜ├é┬¼├âãÆ├é┬ó├â┬ó├óÔé¼┼í├é┬¼├âÔÇÜ├é┬Ø ETAPA 13
+   Padr├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┼í├âÔÇÜ├é┬úo visual mobile separado do desktop.
+   Desktop permanece com sidebar e grids largos. Celular vira experi├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┼í├âÔÇÜ├é┬¬ncia de campo:
+   cabe├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┼í├âÔÇÜ├é┬ºalho pr├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┼í├âÔÇÜ├é┬│prio, cards em uma coluna, bot├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┼í├âÔÇÜ├é┬Áes grandes e menos risco de estouro horizontal. */
 @media (max-width: 767.98px) {
     html,
     body,
@@ -4106,14 +4106,14 @@
 
 
 
-/* ROTEIRO 6 ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ETAPA 14
-   CorreÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â§ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â£o fina do mobile e sidebar:
-   - remove travamento/efeito pesado do cabeÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â§alho sticky no celular;
-   - compacta o cabeÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â§alho mobile;
+/* ROTEIRO 6 ├âãÆ├åÔÇÖ├âÔÇÜ├é┬ó├âãÆ├é┬ó├â┬ó├óÔÇÜ┬¼├à┬í├âÔÇÜ├é┬¼├âãÆ├é┬ó├â┬ó├óÔé¼┼í├é┬¼├âÔÇÜ├é┬Ø ETAPA 14
+   Corre├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┼í├âÔÇÜ├é┬º├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┼í├âÔÇÜ├é┬úo fina do mobile e sidebar:
+   - remove travamento/efeito pesado do cabe├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┼í├âÔÇÜ├é┬ºalho sticky no celular;
+   - compacta o cabe├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┼í├âÔÇÜ├é┬ºalho mobile;
    - deixa os cards do dashboard com altura menor no celular;
    - impede o card de armazenamento de estourar;
    - melhora o scroll interno da lateral;
-   - prepara a lateral para abrir temporariamente por aproximaÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â§ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â£o/hover. */
+   - prepara a lateral para abrir temporariamente por aproxima├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┼í├âÔÇÜ├é┬º├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┼í├âÔÇÜ├é┬úo/hover. */
 .app-sidebar {
     position: sticky;
     top: 0;
@@ -4398,9 +4398,9 @@
 }
 
 
-/* ROTEIRO 6 ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ETAPA 15
-   Ajuste do espaÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â§o em branco no mobile e melhoria do card de Armazenamento.
-   A identificaÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â§ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â£o do card ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â© feita no AppLayout para nÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â£o depender de alterar o App.jsx. */
+/* ROTEIRO 6 ├âãÆ├åÔÇÖ├âÔÇÜ├é┬ó├âãÆ├é┬ó├â┬ó├óÔÇÜ┬¼├à┬í├âÔÇÜ├é┬¼├âãÆ├é┬ó├â┬ó├óÔé¼┼í├é┬¼├âÔÇÜ├é┬Ø ETAPA 15
+   Ajuste do espa├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┼í├âÔÇÜ├é┬ºo em branco no mobile e melhoria do card de Armazenamento.
+   A identifica├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┼í├âÔÇÜ├é┬º├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┼í├âÔÇÜ├é┬úo do card ├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┼í├âÔÇÜ├é┬® feita no AppLayout para n├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┼í├âÔÇÜ├é┬úo depender de alterar o App.jsx. */
 .dashboard-summary-card[data-dashboard-storage-card="true"],
 .summary-card-fixed[data-dashboard-storage-card="true"],
 .info-card[data-dashboard-storage-card="true"] {
@@ -4535,9 +4535,9 @@
     }
 }
 
-/* ROTEIRO 6 ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ETAPA 16
-   Sidebar fixa no desktop para pÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¡ginas longas.
-   Objetivo: evitar coluna lateral vazia quando o conteÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Âºdo ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â© alto e manter a navegaÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â§ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â£o sempre acessÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â­vel. */
+/* ROTEIRO 6 ├âãÆ├åÔÇÖ├âÔÇÜ├é┬ó├âãÆ├é┬ó├â┬ó├óÔÇÜ┬¼├à┬í├âÔÇÜ├é┬¼├âãÆ├é┬ó├â┬ó├óÔé¼┼í├é┬¼├âÔÇÜ├é┬Ø ETAPA 16
+   Sidebar fixa no desktop para p├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┼í├âÔÇÜ├é┬íginas longas.
+   Objetivo: evitar coluna lateral vazia quando o conte├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┼í├âÔÇÜ├é┬║do ├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┼í├âÔÇÜ├é┬® alto e manter a navega├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┼í├âÔÇÜ├é┬º├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┼í├âÔÇÜ├é┬úo sempre acess├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┼í├âÔÇÜ├é┬¡vel. */
 @media (min-width: 1024px) {
     .app-shell {
         display: block !important;
@@ -4598,8 +4598,8 @@
 }
 
 
-/* ROTEIRO 6 ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ETAPA 17
-   Acabamento da sidebar recolhida: ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â­cones centralizados, alvo visual fixo e logo mais limpo. */
+/* ROTEIRO 6 ├âãÆ├åÔÇÖ├âÔÇÜ├é┬ó├âãÆ├é┬ó├â┬ó├óÔÇÜ┬¼├à┬í├âÔÇÜ├é┬¼├âãÆ├é┬ó├â┬ó├óÔé¼┼í├é┬¼├âÔÇÜ├é┬Ø ETAPA 17
+   Acabamento da sidebar recolhida: ├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┼í├âÔÇÜ├é┬¡cones centralizados, alvo visual fixo e logo mais limpo. */
 @media (min-width: 1024px) {
     .app-sidebar[data-sidebar-expanded="false"] {
         align-items: center !important;
@@ -4687,8 +4687,8 @@
 }
 
 
-/* ROTEIRO 6 ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ETAPA 19
-   CorreÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â§ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â£o mobile: fotos padronizadas, QR centralizado, auditoria com melhor leitura e tabelas sem corte visual. */
+/* ROTEIRO 6 ├âãÆ├åÔÇÖ├âÔÇÜ├é┬ó├âãÆ├é┬ó├â┬ó├óÔÇÜ┬¼├à┬í├âÔÇÜ├é┬¼├âãÆ├é┬ó├â┬ó├óÔé¼┼í├é┬¼├âÔÇÜ├é┬Ø ETAPA 19
+   Corre├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┼í├âÔÇÜ├é┬º├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┼í├âÔÇÜ├é┬úo mobile: fotos padronizadas, QR centralizado, auditoria com melhor leitura e tabelas sem corte visual. */
 @media (max-width: 767.98px) {
     .consulta-qr-page,
     .consulta-qr-publica-page {
@@ -4831,10 +4831,10 @@
 
 
 
-/* ROTEIRO 6 ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ETAPA 20
-   CorreÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â§ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â£o final do ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â­cone cortado na sidebar recolhida.
-   O ajuste deixa a coluna recolhida com centro ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â³ptico fixo, remove recortes do botÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â£o ativo
-   e simplifica o logo superior para nÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â£o parecer um quadrado dentro de outro. */
+/* ROTEIRO 6 ├âãÆ├åÔÇÖ├âÔÇÜ├é┬ó├âãÆ├é┬ó├â┬ó├óÔÇÜ┬¼├à┬í├âÔÇÜ├é┬¼├âãÆ├é┬ó├â┬ó├óÔé¼┼í├é┬¼├âÔÇÜ├é┬Ø ETAPA 20
+   Corre├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┼í├âÔÇÜ├é┬º├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┼í├âÔÇÜ├é┬úo final do ├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┼í├âÔÇÜ├é┬¡cone cortado na sidebar recolhida.
+   O ajuste deixa a coluna recolhida com centro ├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┼í├âÔÇÜ├é┬│ptico fixo, remove recortes do bot├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┼í├âÔÇÜ├é┬úo ativo
+   e simplifica o logo superior para n├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┼í├âÔÇÜ├é┬úo parecer um quadrado dentro de outro. */
 @media (min-width: 1024px) {
     .app-sidebar[data-sidebar-expanded="false"] {
         width: 5rem !important;
@@ -4974,11 +4974,11 @@
     }
 }
 
-/* ROTEIRO 7 ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ETAPA 5.6
+/* ROTEIRO 7 ├âãÆ├åÔÇÖ├âÔÇÜ├é┬ó├âãÆ├é┬ó├â┬ó├óÔÇÜ┬¼├à┬í├âÔÇÜ├é┬¼├âãÆ├é┬ó├â┬ó├óÔé¼┼í├é┬¼├âÔÇÜ├é┬Ø ETAPA 5.6
    Ajuste final do mobile horizontal:
-   - reduz espaÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â§o em branco entre cabeÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â§alho, tÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â­tulo, aÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â§ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Âµes e primeiros cards;
+   - reduz espa├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┼í├âÔÇÜ├é┬ºo em branco entre cabe├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┼í├âÔÇÜ├é┬ºalho, t├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┼í├âÔÇÜ├é┬¡tulo, a├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┼í├âÔÇÜ├é┬º├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┼í├âÔÇÜ├é┬Áes e primeiros cards;
    - compacta as abas Dashboard SST e Treinamentos em paisagem;
-   - harmoniza PendÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Âªncias crÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â­ticas, dando respiro ao QR na borda direita. */
+   - harmoniza Pend├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┼í├âÔÇÜ├é┬¬ncias cr├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┼í├âÔÇÜ├é┬¡ticas, dando respiro ao QR na borda direita. */
 @media (max-width: 1023.98px) and (orientation: landscape),
        (max-width: 1023.98px) and (max-height: 540px) {
     .app-main {
@@ -5193,8 +5193,8 @@
     }
 }
 
-/* ROTEIRO 7 ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ETAPA 5.8
-   CorreÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â§ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â£o sobre a base 5.6: mantÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â©m o espaÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â§amento compacto jÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¡ aprovado
+/* ROTEIRO 7 ├âãÆ├åÔÇÖ├âÔÇÜ├é┬ó├âãÆ├é┬ó├â┬ó├óÔÇÜ┬¼├à┬í├âÔÇÜ├é┬¼├âãÆ├é┬ó├â┬ó├óÔé¼┼í├é┬¼├âÔÇÜ├é┬Ø ETAPA 5.8
+   Corre├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┼í├âÔÇÜ├é┬º├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┼í├âÔÇÜ├é┬úo sobre a base 5.6: mant├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┼í├âÔÇÜ├é┬®m o espa├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┼í├âÔÇÜ├é┬ºamento compacto j├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┼í├âÔÇÜ├é┬í aprovado
    e corrige somente a quebra do bloco logo + SafeScan Brasil no mobile horizontal. */
 @media (max-width: 1023.98px) and (orientation: landscape),
        (max-width: 1023.98px) and (max-height: 540px) {
@@ -5307,10 +5307,10 @@
     }
 }
 
-/* ROTEIRO 7 ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ETAPA 5.9
-   Ajuste final dos botÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Âµes de aÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â§ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â£o no mobile horizontal.
-   Objetivo: evitar botÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Âµes quebrados em linhas soltas no Dashboard SST e demais painÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â©is,
-   mantendo pares lado a lado, com largura igual e alinhamento harmÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â´nico. */
+/* ROTEIRO 7 ├âãÆ├åÔÇÖ├âÔÇÜ├é┬ó├âãÆ├é┬ó├â┬ó├óÔÇÜ┬¼├à┬í├âÔÇÜ├é┬¼├âãÆ├é┬ó├â┬ó├óÔé¼┼í├é┬¼├âÔÇÜ├é┬Ø ETAPA 5.9
+   Ajuste final dos bot├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┼í├âÔÇÜ├é┬Áes de a├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┼í├âÔÇÜ├é┬º├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┼í├âÔÇÜ├é┬úo no mobile horizontal.
+   Objetivo: evitar bot├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┼í├âÔÇÜ├é┬Áes quebrados em linhas soltas no Dashboard SST e demais pain├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┼í├âÔÇÜ├é┬®is,
+   mantendo pares lado a lado, com largura igual e alinhamento harm├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┼í├âÔÇÜ├é┬┤nico. */
 @media (max-width: 1023.98px) and (orientation: landscape),
        (max-width: 1023.98px) and (max-height: 540px) {
     .page-actions,
@@ -5391,15 +5391,15 @@
     }
 }
 
-/* ROTEIRO 7 ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ETAPA 5.10
+/* ROTEIRO 7 ├âãÆ├åÔÇÖ├âÔÇÜ├é┬ó├âãÆ├é┬ó├â┬ó├óÔÇÜ┬¼├à┬í├âÔÇÜ├é┬¼├âãÆ├é┬ó├â┬ó├óÔé¼┼í├é┬¼├âÔÇÜ├é┬Ø ETAPA 5.10
    Arquivo completo consolidado.
    Ajuste final mobile:
-   - botÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Âµes de aÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â§ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â£o em uma ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Âºnica linha no modo horizontal;
-   - textos protegidos para nÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â£o estourar fora do botÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â£o/card;
-   - ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â­cone/logo do cabeÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â§alho padronizado no vertical e horizontal;
-   - sobrescreve o comportamento anterior da Etapa 5.9 que dividia os botÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Âµes em 2 linhas. */
+   - bot├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┼í├âÔÇÜ├é┬Áes de a├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┼í├âÔÇÜ├é┬º├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┼í├âÔÇÜ├é┬úo em uma ├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┼í├âÔÇÜ├é┬║nica linha no modo horizontal;
+   - textos protegidos para n├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┼í├âÔÇÜ├é┬úo estourar fora do bot├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┼í├âÔÇÜ├é┬úo/card;
+   - ├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┼í├âÔÇÜ├é┬¡cone/logo do cabe├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┼í├âÔÇÜ├é┬ºalho padronizado no vertical e horizontal;
+   - sobrescreve o comportamento anterior da Etapa 5.9 que dividia os bot├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┼í├âÔÇÜ├é┬Áes em 2 linhas. */
 
-/* PADRÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢O ÃƒÆ’Ã†â€™Ãƒâ€¦Ã‚Â¡NICO DO ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚ÂCONE/LOGO NO MOBILE */
+/* PADR├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┬á├â┬ó├óÔÇÜ┬¼├óÔÇ×┬óO ├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┬ª├âÔÇÜ├é┬íNICO DO ├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┼í├âÔÇÜ├é┬ìCONE/LOGO NO MOBILE */
 @media (max-width: 1023.98px) {
   .app-mobile-header__marca {
     display: flex !important;
@@ -5463,7 +5463,7 @@
   }
 }
 
-/* MOBILE HORIZONTAL ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â CABEÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¡ALHO COMPACTO E SEM QUEBRA */
+/* MOBILE HORIZONTAL ├âãÆ├åÔÇÖ├âÔÇÜ├é┬ó├âãÆ├é┬ó├â┬ó├óÔÇÜ┬¼├à┬í├âÔÇÜ├é┬¼├âãÆ├é┬ó├â┬ó├óÔé¼┼í├é┬¼├âÔÇÜ├é┬Ø CABE├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├é┬ó├â┬ó├óÔé¼┼í├é┬¼├âÔÇÜ├é┬íALHO COMPACTO E SEM QUEBRA */
 @media (max-width: 1023.98px) and (orientation: landscape),
        (max-width: 1023.98px) and (max-height: 540px) {
   .app-mobile-header {
@@ -5540,7 +5540,7 @@
   }
 }
 
-/* MOBILE HORIZONTAL ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â BOTÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢ES DO DASHBOARD EM UMA ÃƒÆ’Ã†â€™Ãƒâ€¦Ã‚Â¡NICA LINHA */
+/* MOBILE HORIZONTAL ├âãÆ├åÔÇÖ├âÔÇÜ├é┬ó├âãÆ├é┬ó├â┬ó├óÔÇÜ┬¼├à┬í├âÔÇÜ├é┬¼├âãÆ├é┬ó├â┬ó├óÔé¼┼í├é┬¼├âÔÇÜ├é┬Ø BOT├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├é┬ó├â┬ó├óÔé¼┼í├é┬¼├âÔÇÜ├é┬óES DO DASHBOARD EM UMA ├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┬ª├âÔÇÜ├é┬íNICA LINHA */
 @media (max-width: 1023.98px) and (orientation: landscape),
        (max-width: 1023.98px) and (max-height: 540px) {
   .page-actions,
@@ -5643,7 +5643,7 @@
   }
 }
 
-/* MOBILE HORIZONTAL MUITO ESTREITO ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â mantÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â©m uma linha, mas reduz texto para nÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â£o explodir. */
+/* MOBILE HORIZONTAL MUITO ESTREITO ├âãÆ├åÔÇÖ├âÔÇÜ├é┬ó├âãÆ├é┬ó├â┬ó├óÔÇÜ┬¼├à┬í├âÔÇÜ├é┬¼├âãÆ├é┬ó├â┬ó├óÔé¼┼í├é┬¼├âÔÇÜ├é┬Ø mant├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┼í├âÔÇÜ├é┬®m uma linha, mas reduz texto para n├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┼í├âÔÇÜ├é┬úo explodir. */
 @media (max-width: 760px) and (orientation: landscape),
        (max-height: 430px) and (max-width: 900px) {
   .page-actions,
@@ -5682,7 +5682,7 @@
   }
 }
 
-/* MOBILE HORIZONTAL ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â PROTEÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¡ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢O PARA TEXTOS NÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢O ESTOURAREM CARDS */
+/* MOBILE HORIZONTAL ├âãÆ├åÔÇÖ├âÔÇÜ├é┬ó├âãÆ├é┬ó├â┬ó├óÔÇÜ┬¼├à┬í├âÔÇÜ├é┬¼├âãÆ├é┬ó├â┬ó├óÔé¼┼í├é┬¼├âÔÇÜ├é┬Ø PROTE├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├é┬ó├â┬ó├óÔé¼┼í├é┬¼├âÔÇÜ├é┬í├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┬á├â┬ó├óÔÇÜ┬¼├óÔÇ×┬óO PARA TEXTOS N├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┬á├â┬ó├óÔÇÜ┬¼├óÔÇ×┬óO ESTOURAREM CARDS */
 @media (max-width: 1023.98px) and (orientation: landscape),
        (max-width: 1023.98px) and (max-height: 540px) {
   .dashboard-summary-card,
@@ -5741,7 +5741,7 @@
   }
 }
 
-/* MOBILE VERTICAL ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â mantÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â©m padrÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â£o aprovado e sÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â³ padroniza o ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â­cone. */
+/* MOBILE VERTICAL ├âãÆ├åÔÇÖ├âÔÇÜ├é┬ó├âãÆ├é┬ó├â┬ó├óÔÇÜ┬¼├à┬í├âÔÇÜ├é┬¼├âãÆ├é┬ó├â┬ó├óÔé¼┼í├é┬¼├âÔÇÜ├é┬Ø mant├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┼í├âÔÇÜ├é┬®m padr├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┼í├âÔÇÜ├é┬úo aprovado e s├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┼í├âÔÇÜ├é┬│ padroniza o ├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┼í├âÔÇÜ├é┬¡cone. */
 @media (max-width: 767.98px) and (orientation: portrait) {
   .page-actions,
   .page-actions > *,
@@ -5765,13 +5765,13 @@
   }
 }
 
-/* ROTEIRO 7 ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ETAPA 5.12
-   CorreÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â§ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â£o final mobile horizontal sem regressÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â£o:
-   - aplica botÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Âµes em linha nas abas com aÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â§ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Âµes;
-   - mantÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â©m classe exclusiva do Dashboard SST;
+/* ROTEIRO 7 ├âãÆ├åÔÇÖ├âÔÇÜ├é┬ó├âãÆ├é┬ó├â┬ó├óÔÇÜ┬¼├à┬í├âÔÇÜ├é┬¼├âãÆ├é┬ó├â┬ó├óÔé¼┼í├é┬¼├âÔÇÜ├é┬Ø ETAPA 5.12
+   Corre├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┼í├âÔÇÜ├é┬º├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┼í├âÔÇÜ├é┬úo final mobile horizontal sem regress├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┼í├âÔÇÜ├é┬úo:
+   - aplica bot├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┼í├âÔÇÜ├é┬Áes em linha nas abas com a├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┼í├âÔÇÜ├é┬º├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┼í├âÔÇÜ├é┬Áes;
+   - mant├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┼í├âÔÇÜ├é┬®m classe exclusiva do Dashboard SST;
    - corrige card Armazenamento no horizontal;
-   - restaura harmonia da tabela PendÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Âªncias crÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â­ticas;
-   - nÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â£o altera o padrÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â£o do ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â­cone mobile jÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¡ aprovado. */
+   - restaura harmonia da tabela Pend├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┼í├âÔÇÜ├é┬¬ncias cr├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┼í├âÔÇÜ├é┬¡ticas;
+   - n├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┼í├âÔÇÜ├é┬úo altera o padr├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┼í├âÔÇÜ├é┬úo do ├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┼í├âÔÇÜ├é┬¡cone mobile j├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┼í├âÔÇÜ├é┬í aprovado. */
 @media (max-width: 1023.98px) and (orientation: landscape),
        (max-width: 1023.98px) and (max-height: 540px) {
     .page-header {
@@ -6020,7 +6020,7 @@
     }
 }
 
-/* PendÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Âªncias crÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â­ticas no mobile horizontal: tabela com respiro para Status, E-mail e QR. */
+/* Pend├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┼í├âÔÇÜ├é┬¬ncias cr├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┼í├âÔÇÜ├é┬¡ticas no mobile horizontal: tabela com respiro para Status, E-mail e QR. */
 @media (max-width: 1023.98px) and (orientation: landscape),
        (max-width: 1023.98px) and (max-height: 540px) {
     .dashboard-blocos-grid .responsive-table,
@@ -6096,17 +6096,17 @@
 }
 
 
-/* ROTEIRO 7 ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ETAPA 5.13
-   CorreÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â§ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â£o final e isolada para mobile horizontal.
+/* ROTEIRO 7 ├âãÆ├åÔÇÖ├âÔÇÜ├é┬ó├âãÆ├é┬ó├â┬ó├óÔÇÜ┬¼├à┬í├âÔÇÜ├é┬¼├âãÆ├é┬ó├â┬ó├óÔé¼┼í├é┬¼├âÔÇÜ├é┬Ø ETAPA 5.13
+   Corre├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┼í├âÔÇÜ├é┬º├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┼í├âÔÇÜ├é┬úo final e isolada para mobile horizontal.
    Objetivos:
-   1) desfazer o efeito global que estava esmagando botÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Âµes em outras abas;
-   2) aplicar 2x2 somente nos botÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Âµes do Dashboard SST;
-   3) recuperar PendÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Âªncias crÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â­ticas em uma tela horizontal, sem textos sobrepostos;
+   1) desfazer o efeito global que estava esmagando bot├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┼í├âÔÇÜ├é┬Áes em outras abas;
+   2) aplicar 2x2 somente nos bot├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┼í├âÔÇÜ├é┬Áes do Dashboard SST;
+   3) recuperar Pend├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┼í├âÔÇÜ├é┬¬ncias cr├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┼í├âÔÇÜ├é┬¡ticas em uma tela horizontal, sem textos sobrepostos;
    4) deixar o card de Armazenamento sem corte de texto/barra.
 */
 @media (max-width: 1023.98px) and (orientation: landscape),
        (max-width: 1023.98px) and (max-height: 540px) {
-    /* Reset das aÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â§ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Âµes globais: outras abas voltam ao comportamento normal. */
+    /* Reset das a├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┼í├âÔÇÜ├é┬º├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┼í├âÔÇÜ├é┬Áes globais: outras abas voltam ao comportamento normal. */
     .page-actions,
     .page-actions > *,
     .page-actions > .flex,
@@ -6166,7 +6166,7 @@
         box-sizing: border-box !important;
     }
 
-    /* SoluÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â§ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â£o isolada: somente Dashboard SST fica em 2x2. */
+    /* Solu├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┼í├âÔÇÜ├é┬º├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┼í├âÔÇÜ├é┬úo isolada: somente Dashboard SST fica em 2x2. */
     .dashboard-sst-actions-horizontal {
         display: grid !important;
         width: min(100%, 44rem) !important;
@@ -6281,7 +6281,7 @@
     }
 }
 
-/* PendÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Âªncias crÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â­ticas: ajuste especÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â­fico do bloco, sem mexer nos demais blocos do Dashboard. */
+/* Pend├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┼í├âÔÇÜ├é┬¬ncias cr├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┼í├âÔÇÜ├é┬¡ticas: ajuste espec├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┼í├âÔÇÜ├é┬¡fico do bloco, sem mexer nos demais blocos do Dashboard. */
 @media (max-width: 1023.98px) and (orientation: landscape),
        (max-width: 1023.98px) and (max-height: 540px) {
     [data-dashboard-bloco="pendencias"] .responsive-table,
@@ -6409,11 +6409,11 @@
     }
 }
 
-/* ROTEIRO 7 ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ETAPA 5.14
-   Ajuste exclusivo do bloco PendÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Âªncias crÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â­ticas no mobile horizontal.
+/* ROTEIRO 7 ├âãÆ├åÔÇÖ├âÔÇÜ├é┬ó├âãÆ├é┬ó├â┬ó├óÔÇÜ┬¼├à┬í├âÔÇÜ├é┬¼├âãÆ├é┬ó├â┬ó├óÔé¼┼í├é┬¼├âÔÇÜ├é┬Ø ETAPA 5.14
+   Ajuste exclusivo do bloco Pend├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┼í├âÔÇÜ├é┬¬ncias cr├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┼í├âÔÇÜ├é┬¡ticas no mobile horizontal.
    Objetivo: manter a tabela completa dentro do card, com colunas em ordem,
-   texto sem sobreposiÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â§ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â£o, botÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Âµes E-mail/QR com respiro e sem estourar a borda.
-   NÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â£o altera o padrÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â£o do ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â­cone mobile nem os botÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Âµes 2x2 do Dashboard SST. */
+   texto sem sobreposi├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┼í├âÔÇÜ├é┬º├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┼í├âÔÇÜ├é┬úo, bot├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┼í├âÔÇÜ├é┬Áes E-mail/QR com respiro e sem estourar a borda.
+   N├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┼í├âÔÇÜ├é┬úo altera o padr├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┼í├âÔÇÜ├é┬úo do ├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┼í├âÔÇÜ├é┬¡cone mobile nem os bot├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┼í├âÔÇÜ├é┬Áes 2x2 do Dashboard SST. */
 @media (max-width: 1023.98px) and (orientation: landscape),
        (max-width: 1023.98px) and (max-height: 540px) {
     [data-dashboard-bloco="pendencias"] {
@@ -6709,15 +6709,15 @@
     }
 }
 
-/* ROTEIRO 7 ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ETAPA 5.15
-   CorreÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â§ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â£o restrita ao mobile horizontal:
+/* ROTEIRO 7 ├âãÆ├åÔÇÖ├âÔÇÜ├é┬ó├âãÆ├é┬ó├â┬ó├óÔÇÜ┬¼├à┬í├âÔÇÜ├é┬¼├âãÆ├é┬ó├â┬ó├óÔé¼┼í├é┬¼├âÔÇÜ├é┬Ø ETAPA 5.15
+   Corre├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┼í├âÔÇÜ├é┬º├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┼í├âÔÇÜ├é┬úo restrita ao mobile horizontal:
    1) A regra 2x2 fica SOMENTE no Dashboard SST (.dashboard-sst-actions-horizontal).
-   2) As aÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â§ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Âµes das outras abas voltam ao comportamento flex normal para nÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â£o esmagar botÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Âµes.
-   3) PendÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Âªncias crÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â­ticas volta a ficar em uma linha harmÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â´nica, sem texto espalhado e sem QR colado na borda.
-   4) NÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â£o altera o ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â­cone do cabeÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â§alho mobile, pois ele jÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¡ foi aprovado. */
+   2) As a├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┼í├âÔÇÜ├é┬º├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┼í├âÔÇÜ├é┬Áes das outras abas voltam ao comportamento flex normal para n├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┼í├âÔÇÜ├é┬úo esmagar bot├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┼í├âÔÇÜ├é┬Áes.
+   3) Pend├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┼í├âÔÇÜ├é┬¬ncias cr├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┼í├âÔÇÜ├é┬¡ticas volta a ficar em uma linha harm├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┼í├âÔÇÜ├é┬┤nica, sem texto espalhado e sem QR colado na borda.
+   4) N├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┼í├âÔÇÜ├é┬úo altera o ├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┼í├âÔÇÜ├é┬¡cone do cabe├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┼í├âÔÇÜ├é┬ºalho mobile, pois ele j├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┼í├âÔÇÜ├é┬í foi aprovado. */
 @media (max-width: 1023.98px) and (orientation: landscape),
        (max-width: 1023.98px) and (max-height: 540px) {
-    /* Volta o padrÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â£o das aÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â§ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Âµes gerais das demais abas. */
+    /* Volta o padr├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┼í├âÔÇÜ├é┬úo das a├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┼í├âÔÇÜ├é┬º├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┼í├âÔÇÜ├é┬Áes gerais das demais abas. */
     .page-actions,
     .page-actions > *:not(.dashboard-sst-actions-horizontal),
     .page-actions > .flex:not(.dashboard-sst-actions-horizontal),
@@ -6781,7 +6781,7 @@
         text-overflow: ellipsis !important;
     }
 
-    /* ExceÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â§ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â£o ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Âºnica: Dashboard SST em 2x2. */
+    /* Exce├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┼í├âÔÇÜ├é┬º├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┼í├âÔÇÜ├é┬úo ├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┼í├âÔÇÜ├é┬║nica: Dashboard SST em 2x2. */
     .page-actions > .dashboard-sst-actions-horizontal,
     .dashboard-sst-actions-horizontal {
         display: grid !important;
@@ -6847,7 +6847,7 @@
         white-space: nowrap !important;
     }
 
-    /* PendÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Âªncias crÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â­ticas: tabela em linha, colunas proporcionais e sem espalhar texto. */
+    /* Pend├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┼í├âÔÇÜ├é┬¬ncias cr├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┼í├âÔÇÜ├é┬¡ticas: tabela em linha, colunas proporcionais e sem espalhar texto. */
     [data-dashboard-bloco="pendencias"] {
         width: 100% !important;
         max-width: 100% !important;
@@ -7116,10 +7116,10 @@
 }
 
 
-/* ROTEIRO 7 ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ETAPA 5.16
-   CorreÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â§ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â£o final somente do bloco PendÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Âªncias crÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â­ticas no mobile horizontal.
+/* ROTEIRO 7 ├âãÆ├åÔÇÖ├âÔÇÜ├é┬ó├âãÆ├é┬ó├â┬ó├óÔÇÜ┬¼├à┬í├âÔÇÜ├é┬¼├âãÆ├é┬ó├â┬ó├óÔé¼┼í├é┬¼├âÔÇÜ├é┬Ø ETAPA 5.16
+   Corre├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┼í├âÔÇÜ├é┬º├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┼í├âÔÇÜ├é┬úo final somente do bloco Pend├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┼í├âÔÇÜ├é┬¬ncias cr├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┼í├âÔÇÜ├é┬¡ticas no mobile horizontal.
    Motivo: a tabela real usa 4 colunas visuais no Dashboard:
-   Colaborador | Treinamento | Vencimento | Status/AÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â§ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Âµes.
+   Colaborador | Treinamento | Vencimento | Status/A├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┼í├âÔÇÜ├é┬º├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┼í├âÔÇÜ├é┬Áes.
    As regras anteriores tratavam como 6 colunas e espremiam status, e-mail e QR.
    Esta regra sobrescreve apenas [data-dashboard-bloco="pendencias"]. */
 @media (max-width: 1023.98px) and (orientation: landscape),
@@ -7424,9 +7424,9 @@
     }
 }
 
-/* ROTEIRO 7 ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ETAPA 5.17
-   CorreÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â§ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â£o definitiva das PendÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Âªncias crÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â­ticas.
-   Troca a dependÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Âªncia visual da tabela por linhas em grid controlado,
+/* ROTEIRO 7 ├âãÆ├åÔÇÖ├âÔÇÜ├é┬ó├âãÆ├é┬ó├â┬ó├óÔÇÜ┬¼├à┬í├âÔÇÜ├é┬¼├âãÆ├é┬ó├â┬ó├óÔé¼┼í├é┬¼├âÔÇÜ├é┬Ø ETAPA 5.17
+   Corre├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┼í├âÔÇÜ├é┬º├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┼í├âÔÇÜ├é┬úo definitiva das Pend├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┼í├âÔÇÜ├é┬¬ncias cr├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┼í├âÔÇÜ├é┬¡ticas.
+   Troca a depend├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┼í├âÔÇÜ├é┬¬ncia visual da tabela por linhas em grid controlado,
    mantendo tudo em uma linha no mobile horizontal sem texto espalhado. */
 .dashboard-pendencias-final {
     width: 100%;
@@ -7923,12 +7923,12 @@
     }
 }
 
-/* ROTEIRO 7 ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ETAPA 5.18
-   Ajuste fino apenas de PendÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Âªncias crÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â­ticas no mobile horizontal.
+/* ROTEIRO 7 ├âãÆ├åÔÇÖ├âÔÇÜ├é┬ó├âãÆ├é┬ó├â┬ó├óÔÇÜ┬¼├à┬í├âÔÇÜ├é┬¼├âãÆ├é┬ó├â┬ó├óÔé¼┼í├é┬¼├âÔÇÜ├é┬Ø ETAPA 5.18
+   Ajuste fino apenas de Pend├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┼í├âÔÇÜ├é┬¬ncias cr├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┼í├âÔÇÜ├é┬¡ticas no mobile horizontal.
    Objetivos:
    - foto real do colaborador sem quebrar o layout;
-   - cabeÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â§alhos exatamente acima das informaÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â§ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Âµes;
-   - linha harmÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â´nica, sem texto espalhado e sem sobreposiÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â§ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â£o. */
+   - cabe├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┼í├âÔÇÜ├é┬ºalhos exatamente acima das informa├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┼í├âÔÇÜ├é┬º├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┼í├âÔÇÜ├é┬Áes;
+   - linha harm├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┼í├âÔÇÜ├é┬┤nica, sem texto espalhado e sem sobreposi├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┼í├âÔÇÜ├é┬º├âãÆ├åÔÇÖ├âÔÇá├óÔé¼Ôäó├âãÆ├óÔé¼┼í├âÔÇÜ├é┬úo. */
 .dashboard-pendencias-final__foto {
     display: inline-flex;
     flex: 0 0 auto;
@@ -8216,7 +8216,7 @@
     }
 }
 
-/* Roteiro v1.0.4.9 ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â ajuste pontual da aba Colaboradores */
+/* Roteiro v1.0.4.9 ├âãÆ├é┬ó├â┬ó├óÔé¼┼í├é┬¼├â┬ó├óÔÇÜ┬¼├é┬Ø ajuste pontual da aba Colaboradores */
 .novo-colaborador-cabecalho-branco__icone {
   background: #020617 !important;
   color: #ffffff !important;
@@ -8233,7 +8233,7 @@
   color: #2563eb !important;
 }
 
-/* Apenas reduz o respiro inferior da base, sem esconder conteÃƒÆ’Ã‚Âºdo */
+/* Apenas reduz o respiro inferior da base, sem esconder conte├âãÆ├åÔÇÖ├âÔÇÜ├é┬║do */
 .colaboradores-section-destaque {
   padding-bottom: 1rem !important;
 }
@@ -8242,7 +8242,7 @@
   margin-top: 0.65rem !important;
 }
 
-/* Roteiro v1.0.4.9 Ã¢â‚¬â€ ajuste final controlado da Base de colaboradores */
+/* Roteiro v1.0.4.9 ├â┬ó├óÔÇÜ┬¼├óÔé¼┬Ø ajuste final controlado da Base de colaboradores */
 .novo-colaborador-cabecalho-branco__icone {
   background: #020617 !important;
   color: #ffffff !important;
@@ -8264,7 +8264,7 @@
   border-bottom: 0 !important;
 }
 
-/* Roteiro v1.0.4.9 Ã¢â‚¬â€ mÃƒÂ¡scaras visuais, datas centralizadas e foto redonda */
+/* Roteiro v1.0.4.9 ├â┬ó├óÔÇÜ┬¼├óÔé¼┬Ø m├âãÆ├é┬íscaras visuais, datas centralizadas e foto redonda */
 .colaborador-formulario-unificado input[type="date"],
 .colaborador-formulario-recolhido input[type="date"],
 .colaboradores-info-card input[type="date"] {
@@ -8278,7 +8278,7 @@
   overflow: hidden !important;
 }
 
-/* Roteiro v1.0.4.9 â€” ajuste final: datas centralizadas e moldura da foto do colaborador */
+/* Roteiro v1.0.4.9 ├óÔé¼ÔÇØ ajuste final: datas centralizadas e moldura da foto do colaborador */
 .colaborador-formulario-unificado input[type="date"],
 .colaborador-formulario-full input[type="date"],
 .novo-colaborador-layout-anterior input[type="date"],
@@ -8307,7 +8307,7 @@
   justify-content: center !important;
 }
 
-/* Foto/avatar do funcionÃ¡rio com moldura circular na Base de colaboradores */
+/* Foto/avatar do funcion├â┬írio com moldura circular na Base de colaboradores */
 .colaboradores-info-card img.h-20.w-20,
 .colaboradores-info-card .h-20.w-20 {
   border-radius: 9999px !important;
@@ -8319,7 +8319,7 @@
   box-shadow: 0 10px 24px rgba(15, 23, 42, 0.12) !important;
 }
 
-/* Roteiro v1.0.4.9 — moldura foto colaborador modelo 1: clean profissional */
+/* Roteiro v1.0.4.9 ÔÇö moldura foto colaborador modelo 1: clean profissional */
 .colaboradores-info-card img.h-20.w-20,
 .colaboradores-info-card .h-20.w-20,
 .colaboradores-info-card img.rounded-full,
@@ -8665,7 +8665,7 @@
     width: 100% !important;
   }
 }
-/* MICROETAPA 1I - cabeçalhos abertos empresas com classe explicita */
+/* MICROETAPA 1I - cabe├ºalhos abertos empresas com classe explicita */
 .empresas-card-aberto-padrao {
   position: relative !important;
   overflow: hidden !important;
@@ -10961,7 +10961,7 @@
 }
 
 .aniversariantes-resumo-unificado__grafico-subtitulo span + span::before {
-  content: "•" !important;
+  content: "ÔÇó" !important;
   color: #94a3b8 !important;
   font-weight: 900 !important;
   margin-right: 0.32rem !important;
@@ -14141,10 +14141,10 @@
 /* MICROETAPA 4D - padronizar card cadastro aberto e fechado */
 
 /*
- * Mantém o conteúdo da Microetapa 4C e padroniza somente:
- * - altura dos cabeçalhos;
- * - espaçamento;
- * - botão Abrir/Recolher;
+ * Mant├®m o conte├║do da Microetapa 4C e padroniza somente:
+ * - altura dos cabe├ºalhos;
+ * - espa├ºamento;
+ * - bot├úo Abrir/Recolher;
  * - linha superior;
  * - estados aberto e fechado.
  */
@@ -14177,7 +14177,7 @@
   pointer-events: none;
 }
 
-/* Cabeçalho do card aberto */
+/* Cabe├ºalho do card aberto */
 
 .empresas-cadastro-aprovado.empresas-card-aberto-padrao--cadastro
   .empresas-cadastro-aprovado__cabecalho {
@@ -14187,7 +14187,7 @@
   background: #ffffff !important;
 }
 
-/* Cabeçalho do card fechado */
+/* Cabe├ºalho do card fechado */
 
 .empresas-cadastro-aprovado.empresas-card-recolhido-padrao--cadastro {
   min-height: 5.75rem !important;
@@ -14201,7 +14201,7 @@
   background: #ffffff !important;
 }
 
-/* Ícone, título e subtítulo iguais nos dois estados */
+/* ├ìcone, t├¡tulo e subt├¡tulo iguais nos dois estados */
 
 .empresas-cadastro-aprovado.empresas-card-aberto-padrao--cadastro
   .empresas-cadastro-aprovado__cabecalho-info,
@@ -14244,7 +14244,7 @@
   line-height: 0.9rem !important;
 }
 
-/* Botão preto igual ao card Informações das empresas */
+/* Bot├úo preto igual ao card Informa├º├Áes das empresas */
 
 .empresas-cadastro-aprovado
   .empresas-cadastro-aprovado__recolher {
@@ -14282,7 +14282,7 @@
   outline-offset: 2px;
 }
 
-/* Mantém o conteúdo aberto separado do cabeçalho */
+/* Mant├®m o conte├║do aberto separado do cabe├ºalho */
 
 .empresas-cadastro-aprovado.empresas-card-aberto-padrao--cadastro
   .empresas-cadastro-aprovado__grid {
@@ -14547,8 +14547,8 @@
 /* MICROETAPA 4D.4 - centralizar textos e alinhar botoes fechados */
 
 /*
- * Os cabeçalhos possuem estruturas JSX diferentes.
- * O botão passa a ter posição absoluta nos dois cards,
+ * Os cabe├ºalhos possuem estruturas JSX diferentes.
+ * O bot├úo passa a ter posi├º├úo absoluta nos dois cards,
  * garantindo exatamente o mesmo eixo direito.
  */
 
@@ -14565,7 +14565,7 @@
   padding: 0 !important;
 }
 
-/* Cabeçalhos com a mesma caixa */
+/* Cabe├ºalhos com a mesma caixa */
 
 .empresas-card-recolhido-padrao--cadastro
   [data-empresas-card-cabecalho="cadastro"],
@@ -14611,7 +14611,7 @@
   overflow: hidden !important;
 }
 
-/* Ícones com dimensão idêntica */
+/* ├ìcones com dimens├úo id├¬ntica */
 
 .empresas-card-recolhido-padrao--cadastro
   [data-empresas-card-cabecalho="cadastro"]
@@ -14662,7 +14662,7 @@
   overflow: hidden !important;
 }
 
-/* Correção óptica específica do primeiro card */
+/* Corre├º├úo ├│ptica espec├¡fica do primeiro card */
 
 .empresas-card-recolhido-padrao--cadastro
   [data-empresas-card-cabecalho="cadastro"]
@@ -14671,7 +14671,7 @@
   transform: translateY(-1px) !important;
 }
 
-/* Oculta a etiqueta adicional no card Informações */
+/* Oculta a etiqueta adicional no card Informa├º├Áes */
 
 .empresas-card-recolhido-padrao--informacoes
   [data-empresas-card-cabecalho="informacoes"]
@@ -14681,7 +14681,7 @@
   display: none !important;
 }
 
-/* Títulos maiores e iguais */
+/* T├¡tulos maiores e iguais */
 
 .empresas-card-recolhido-padrao--cadastro
   [data-empresas-card-cabecalho="cadastro"]
@@ -14702,7 +14702,7 @@
   text-overflow: ellipsis !important;
 }
 
-/* Subtítulos maiores e iguais */
+/* Subt├¡tulos maiores e iguais */
 
 .empresas-card-recolhido-padrao--cadastro
   [data-empresas-card-cabecalho="cadastro"]
@@ -14727,7 +14727,7 @@
   text-overflow: ellipsis !important;
 }
 
-/* Contêiner direito do card Informações */
+/* Cont├¬iner direito do card Informa├º├Áes */
 
 .empresas-card-recolhido-padrao--informacoes
   [data-empresas-card-cabecalho="informacoes"]
@@ -14760,7 +14760,7 @@
   display: none !important;
 }
 
-/* Botão direto do Cadastro */
+/* Bot├úo direto do Cadastro */
 
 .empresas-card-recolhido-padrao--cadastro
   [data-empresas-card-cabecalho="cadastro"]
@@ -14771,7 +14771,7 @@
   transform: translateY(-50%) !important;
 }
 
-/* Dimensão final dos dois botões */
+/* Dimens├úo final dos dois bot├Áes */
 
 .empresas-card-recolhido-padrao--cadastro
   [data-empresas-card-cabecalho="cadastro"]
@@ -14799,7 +14799,7 @@
   white-space: nowrap !important;
 }
 
-/* Evita que o hover altere o eixo do botão direto */
+/* Evita que o hover altere o eixo do bot├úo direto */
 
 .empresas-card-recolhido-padrao--cadastro
   [data-empresas-card-cabecalho="cadastro"]
@@ -14864,11 +14864,11 @@
 /* MICROETAPA 4D.5 - centralizacao optica final dos cards fechados */
 
 /*
- * O conjunto visual estava abaixo do centro geométrico.
- * Ícone, textos e botão sobem juntos 4 px nos dois cards.
+ * O conjunto visual estava abaixo do centro geom├®trico.
+ * ├ìcone, textos e bot├úo sobem juntos 4 px nos dois cards.
  */
 
-/* Sobe o conjunto esquerdo completo: ícone + textos */
+/* Sobe o conjunto esquerdo completo: ├¡cone + textos */
 
 .empresas-card-recolhido-padrao--cadastro
   [data-empresas-card-cabecalho="cadastro"]
@@ -14888,7 +14888,7 @@
   transform: none !important;
 }
 
-/* Sobe o botão direto do card Cadastro */
+/* Sobe o bot├úo direto do card Cadastro */
 
 .empresas-card-recolhido-padrao--cadastro
   [data-empresas-card-cabecalho="cadastro"]
@@ -14897,7 +14897,7 @@
   transform: translateY(-50%) !important;
 }
 
-/* Sobe o contêiner do botão de Informações */
+/* Sobe o cont├¬iner do bot├úo de Informa├º├Áes */
 
 .empresas-card-recolhido-padrao--informacoes
   [data-empresas-card-cabecalho="informacoes"]
@@ -14906,7 +14906,7 @@
   transform: translateY(-50%) !important;
 }
 
-/* Impede o hover de alterar a centralização */
+/* Impede o hover de alterar a centraliza├º├úo */
 
 .empresas-card-recolhido-padrao--cadastro
   [data-empresas-card-cabecalho="cadastro"]
@@ -15307,14 +15307,14 @@
 
 /*
  * Desktop:
- * - reduz a altura e o espaço vazio dos cards;
- * - alinha o ícone visualmente ao número principal;
- * - remove a linha curta existente abaixo do número;
+ * - reduz a altura e o espa├ºo vazio dos cards;
+ * - alinha o ├¡cone visualmente ao n├║mero principal;
+ * - remove a linha curta existente abaixo do n├║mero;
  * - cria uma linha cinza em toda a largura do card;
- * - mantém o texto complementar imediatamente abaixo da linha;
+ * - mant├®m o texto complementar imediatamente abaixo da linha;
  * - neutraliza posicionamentos antigos do card Mobilizados.
  *
- * Os componentes independentes de armazenamento não utilizam
+ * Os componentes independentes de armazenamento n├úo utilizam
  * .dashboard-summary-card e permanecem fora deste bloco.
  */
 
@@ -15736,69 +15736,152 @@
 }
 
 /* MICROETAPA DASHBOARD TELA DIVIDIDA - INICIO */
+/*
+ * Computador real com a janela estreita:
+ * - continua usando sidebar e estrutura desktop;
+ * - mantém todos os dados da janela completa;
+ * - utiliza quatro indicadores por linha;
+ * - neutraliza somente as regras mobile que comprimiam o Dashboard SST;
+ * - não altera celular, tablet mobile ou APK.
+ */
 @media (max-width: 1023.98px) {
-  .app-shell[data-device-mobile="false"] .page-header {
+  .app-shell[data-device-mobile="false"] .dashboard-sst-page-header {
     display: flex !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+    min-height: 0 !important;
+    height: auto !important;
     flex-direction: column !important;
     align-items: stretch !important;
     justify-content: flex-start !important;
-    width: 100% !important;
-    max-width: 100% !important;
-    min-height: 0 !important;
-    height: auto !important;
     gap: 0.55rem !important;
-    margin: 0 0 0.8rem !important;
+    margin: 0 0 0.75rem !important;
     padding: 0 !important;
   }
 
-  .app-shell[data-device-mobile="false"] .page-header .page-header-text {
-    width: 100% !important;
-    max-width: 100% !important;
-    min-height: 0 !important;
-    height: auto !important;
-    flex: 0 0 auto !important;
-    margin: 0 !important;
-  }
-
-  .app-shell[data-device-mobile="false"] .page-header .page-actions {
+  .app-shell[data-device-mobile="false"]
+    .dashboard-sst-page-header
+    .page-header-text {
     display: block !important;
     width: 100% !important;
     max-width: 100% !important;
+    min-width: 0 !important;
     min-height: 0 !important;
     height: auto !important;
     flex: 0 0 auto !important;
     margin: 0 !important;
   }
 
-  .app-shell[data-device-mobile="false"] .dashboard-sst-page-header .dashboard-sst-header-actions {
-    display: grid !important;
-    grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
-    align-items: stretch !important;
-    justify-items: stretch !important;
+  .app-shell[data-device-mobile="false"]
+    .dashboard-sst-page-header
+    .page-header-text h1 {
+    display: block !important;
+    width: 100% !important;
+    margin: 0 !important;
+    color: #020617 !important;
+    font-size: 1rem !important;
+    font-weight: 900 !important;
+    line-height: 1.15 !important;
+    white-space: nowrap !important;
+    word-break: normal !important;
+    overflow-wrap: normal !important;
+  }
+
+  .app-shell[data-device-mobile="false"]
+    .dashboard-sst-page-header
+    .page-actions {
+    display: block !important;
     width: 100% !important;
     max-width: 100% !important;
     min-width: 0 !important;
+    min-height: 0 !important;
+    height: auto !important;
+    flex: 0 0 auto !important;
+    margin: 0 !important;
+  }
+
+  .app-shell[data-device-mobile="false"]
+    .dashboard-sst-page-header
+    .dashboard-sst-header-actions {
+    display: grid !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+    grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+    grid-auto-flow: row !important;
+    align-items: stretch !important;
+    justify-items: stretch !important;
     gap: 0.55rem !important;
     margin: 0 !important;
   }
 
-  .app-shell[data-device-mobile="false"] .dashboard-sst-page-header .dashboard-sst-desktop-actions,
-  .app-shell[data-device-mobile="false"] .dashboard-sst-page-header .dashboard-sst-desktop-actions > div {
+  .app-shell[data-device-mobile="false"]
+    .dashboard-sst-page-header
+    .dashboard-sst-desktop-actions,
+  .app-shell[data-device-mobile="false"]
+    .dashboard-sst-page-header
+    .dashboard-sst-desktop-actions > div {
     display: contents !important;
   }
 
-  .app-shell[data-device-mobile="false"] .dashboard-sst-page-header .dashboard-sst-header-actions button {
-    display: inline-flex !important;
+  .app-shell[data-device-mobile="false"]
+    .dashboard-sst-page-header
+    .dashboard-sst-header-actions > *,
+  .app-shell[data-device-mobile="false"]
+    .dashboard-sst-page-header
+    .dashboard-sst-header-actions button,
+  .app-shell[data-device-mobile="false"]
+    .dashboard-sst-page-header
+    .dashboard-sst-header-actions a {
     width: 100% !important;
     max-width: 100% !important;
     min-width: 0 !important;
-    align-items: center !important;
-    justify-content: center !important;
-    margin: 0 !important;
   }
 
-  .app-shell[data-device-mobile="false"] .dashboard-hero-sst > .relative {
+  .app-shell[data-device-mobile="false"]
+    .dashboard-sst-page-header
+    .dashboard-sst-header-actions button,
+  .app-shell[data-device-mobile="false"]
+    .dashboard-sst-page-header
+    .dashboard-sst-header-actions a {
+    display: inline-flex !important;
+    min-height: 2.45rem !important;
+    height: 2.45rem !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 0.35rem !important;
+    margin: 0 !important;
+    border-radius: 0.95rem !important;
+    padding: 0.48rem 0.55rem !important;
+    font-size: clamp(0.58rem, 1.2vw, 0.74rem) !important;
+    line-height: 0.9rem !important;
+    font-weight: 900 !important;
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+  }
+
+  .app-shell[data-device-mobile="false"]
+    .dashboard-sst-page-header
+    .dashboard-sst-header-actions svg {
+    width: 0.88rem !important;
+    height: 0.88rem !important;
+    min-width: 0.88rem !important;
+    flex: 0 0 0.88rem !important;
+  }
+
+  .app-shell[data-device-mobile="false"] .dashboard-hero-sst {
+    width: 100% !important;
+    min-height: 0 !important;
+    height: auto !important;
+    margin-bottom: 0.8rem !important;
+  }
+
+  .app-shell[data-device-mobile="false"]
+    .dashboard-hero-sst > .relative {
     display: grid !important;
+    min-height: 9.4rem !important;
     grid-template-columns: minmax(0, 1fr) auto !important;
     grid-template-areas:
       "marca marca"
@@ -15807,44 +15890,736 @@
       "linha linha";
     align-items: center !important;
     justify-content: stretch !important;
-    gap: 0.45rem 1rem !important;
+    gap: 0.42rem 0.8rem !important;
+    padding: 1.15rem !important;
   }
 
-  .app-shell[data-device-mobile="false"] .dashboard-hero-sst > .relative > :first-child {
+  .app-shell[data-device-mobile="false"]
+    .dashboard-hero-sst > .relative > :first-child {
     display: contents !important;
   }
 
-  .app-shell[data-device-mobile="false"] .dashboard-hero-sst > .relative > :first-child > p:first-child {
-    grid-area: marca;
+  .app-shell[data-device-mobile="false"]
+    .dashboard-hero-sst > .relative > :first-child > p:first-child {
+    grid-area: marca !important;
     margin: 0 !important;
   }
 
-  .app-shell[data-device-mobile="false"] .dashboard-hero-sst > .relative > :first-child > h2 {
-    grid-area: saudacao;
+  .app-shell[data-device-mobile="false"]
+    .dashboard-hero-sst > .relative > :first-child > h2 {
+    grid-area: saudacao !important;
     margin: 0 !important;
   }
 
-  .app-shell[data-device-mobile="false"] .dashboard-hero-sst > .relative > :first-child > p:last-of-type {
-    grid-area: boas-vindas;
+  .app-shell[data-device-mobile="false"]
+    .dashboard-hero-sst > .relative > :first-child > p:last-of-type {
+    grid-area: boas-vindas !important;
     margin: 0 !important;
   }
 
-  .app-shell[data-device-mobile="false"] .dashboard-hero-sst > .relative > :first-child > div {
-    grid-area: linha;
+  .app-shell[data-device-mobile="false"]
+    .dashboard-hero-sst > .relative > :first-child > div {
+    grid-area: linha !important;
     margin: 0.1rem 0 0 !important;
   }
 
-  .app-shell[data-device-mobile="false"] .dashboard-hero-sst__date {
-    grid-area: data;
+  .app-shell[data-device-mobile="false"]
+    .dashboard-hero-sst__date {
+    grid-area: data !important;
     align-self: center !important;
     justify-self: end !important;
+    min-width: 0 !important;
     margin: 0 !important;
+    padding: 0.65rem 0.8rem !important;
+    font-size: 0.68rem !important;
+    white-space: nowrap !important;
+  }
+
+  .app-shell[data-device-mobile="false"]
+    .dashboard-sst-mobile-secondary {
+    display: block !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    min-height: 0 !important;
+    height: auto !important;
+    max-height: none !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    overflow: visible !important;
+  }
+
+  .app-shell[data-device-mobile="false"]
+    .dashboard-sst-mobile-secondary:empty {
+    display: none !important;
+  }
+
+  /*
+   * A grade externa passa a seguir fluxo vertical.
+   * Nenhum quadro é ocultado ou retirado do fluxo.
+   */
+  .app-shell[data-device-mobile="false"]
+    .dashboard-sst-blocos-grid {
+    display: grid !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+    min-height: 0 !important;
+    height: auto !important;
+    grid-template-columns: minmax(0, 1fr) !important;
+    grid-auto-flow: row !important;
+    grid-auto-rows: max-content !important;
+    align-items: start !important;
+    align-content: start !important;
+    gap: 1rem !important;
+    margin-top: 0 !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+    overflow: visible !important;
+  }
+
+  .app-shell[data-device-mobile="false"]
+    .dashboard-sst-blocos-grid > [data-dashboard-bloco] {
+    position: relative !important;
+    inset: auto !important;
+    display: block !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+    min-height: 0 !important;
+    height: auto !important;
+    max-height: none !important;
+    grid-column: 1 / -1 !important;
+    align-self: start !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+    transform: none !important;
+    overflow: visible !important;
+  }
+
+  .app-shell[data-device-mobile="false"]
+    .dashboard-sst-blocos-grid
+    > [data-dashboard-bloco]
+    > .h-full,
+  .app-shell[data-device-mobile="false"]
+    .dashboard-sst-blocos-grid
+    > [data-dashboard-bloco]
+    > .h-full
+    > * {
+    min-height: 0 !important;
+    height: auto !important;
+    max-height: none !important;
+  }
+
+  /*
+   * Indicadores: quatro colunas na janela dividida.
+   * O conteúdo permanece no fluxo; somente a descrição fica no rodapé.
+   */
+  .app-shell[data-device-mobile="false"]
+    .dashboard-summary-grid {
+    display: grid !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+    grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+    grid-auto-flow: row !important;
+    grid-auto-rows: 5.65rem !important;
+    align-items: stretch !important;
+    gap: 0.55rem !important;
+  }
+
+  .app-shell[data-device-mobile="false"]
+    .dashboard-summary-grid > .dashboard-summary-card {
+    position: relative !important;
+    display: flex !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+    min-height: 5.65rem !important;
+    height: 5.65rem !important;
+    max-height: 5.65rem !important;
+    flex-direction: column !important;
+    align-items: stretch !important;
+    justify-content: flex-start !important;
+    grid-column: auto !important;
+    margin: 0 !important;
+    padding: 0.5rem 0.48rem 0.36rem !important;
+    border-radius: 1rem !important;
+    overflow: hidden !important;
+    transform: none !important;
+  }
+
+  .app-shell[data-device-mobile="false"]
+    .dashboard-summary-grid
+    > .dashboard-summary-card
+    *,
+  .app-shell[data-device-mobile="false"]
+    .dashboard-summary-grid
+    > .dashboard-summary-card
+    :where(h3, p, span, strong, div) {
+    min-width: 0 !important;
+    word-break: normal !important;
+    overflow-wrap: normal !important;
+  }
+
+  .app-shell[data-device-mobile="false"]
+    .dashboard-summary-grid
+    > .dashboard-summary-card:not(
+      [data-dashboard-card="armazenamentoUtilizado"]
+    )::after {
+    display: none !important;
+    content: none !important;
+  }
+
+  .app-shell[data-device-mobile="false"]
+    .dashboard-summary-grid
+    > .dashboard-summary-card:not(
+      [data-dashboard-card="armazenamentoUtilizado"]
+    )
+    > div {
+    position: static !important;
+    display: grid !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    min-height: 0 !important;
+    height: auto !important;
+    flex: 1 1 auto !important;
+    grid-template-columns: 2.05rem minmax(0, 1fr) !important;
+    align-items: center !important;
+    align-content: center !important;
+    gap: 0.32rem !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    transform: none !important;
+  }
+
+  .app-shell[data-device-mobile="false"]
+    .dashboard-summary-grid
+    > .dashboard-summary-card:not(
+      [data-dashboard-card="armazenamentoUtilizado"]
+    )
+    > div
+    > div:first-child {
+    position: static !important;
+    display: inline-flex !important;
+    width: 2rem !important;
+    min-width: 2rem !important;
+    max-width: 2rem !important;
+    height: 2rem !important;
+    min-height: 2rem !important;
+    max-height: 2rem !important;
+    align-items: center !important;
+    justify-content: center !important;
+    align-self: center !important;
+    justify-self: center !important;
+    margin: 0 !important;
+    border-radius: 0.72rem !important;
+    transform: none !important;
+  }
+
+  .app-shell[data-device-mobile="false"]
+    .dashboard-summary-grid
+    > .dashboard-summary-card:not(
+      [data-dashboard-card="armazenamentoUtilizado"]
+    )
+    > div
+    > div:first-child
+    svg {
+    width: 1rem !important;
+    height: 1rem !important;
+  }
+
+  .app-shell[data-device-mobile="false"]
+    .dashboard-summary-grid
+    > .dashboard-summary-card:not(
+      [data-dashboard-card="armazenamentoUtilizado"]
+    )
+    > div
+    > div:nth-child(2) {
+    position: static !important;
+    display: flex !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+    min-height: 0 !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    justify-content: center !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    text-align: center !important;
+    transform: none !important;
+    overflow: hidden !important;
+  }
+
+  .app-shell[data-device-mobile="false"]
+    .dashboard-summary-grid
+    > .dashboard-summary-card:not(
+      [data-dashboard-card="armazenamentoUtilizado"]
+    )
+    h3 {
+    position: static !important;
+    display: block !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    color: #020617 !important;
+    font-size: 0.54rem !important;
+    font-weight: 950 !important;
+    line-height: 0.68rem !important;
+    letter-spacing: 0.015em !important;
+    text-align: center !important;
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    transform: none !important;
+  }
+
+  .app-shell[data-device-mobile="false"]
+    .dashboard-summary-grid
+    > .dashboard-summary-card:not(
+      [data-dashboard-card="armazenamentoUtilizado"]
+    )
+    > div
+    > div:nth-child(2)
+    > p {
+    position: static !important;
+    display: block !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+    max-height: none !important;
+    margin: 0.12rem 0 0 !important;
+    padding: 0 !important;
+    border: 0 !important;
+    color: #020617 !important;
+    font-size: 1.35rem !important;
+    font-weight: 950 !important;
+    line-height: 1 !important;
+    letter-spacing: -0.025em !important;
+    text-align: center !important;
+    white-space: nowrap !important;
+    overflow: visible !important;
+    text-overflow: clip !important;
+    transform: none !important;
+  }
+
+  .app-shell[data-device-mobile="false"]
+    .dashboard-summary-grid
+    > .dashboard-summary-card:not(
+      [data-dashboard-card="armazenamentoUtilizado"]
+    )
+    > .dashboard-summary-card-detail {
+    position: static !important;
+    inset: auto !important;
+    display: block !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+    min-height: 0 !important;
+    height: auto !important;
+    align-self: stretch !important;
+    margin: auto 0 0 !important;
+    padding: 0.26rem 0.08rem 0 !important;
+    border-top: 1px solid rgba(203, 213, 225, 0.88) !important;
+    color: #64748b !important;
+    font-size: 0.47rem !important;
+    font-weight: 600 !important;
+    line-height: 0.62rem !important;
+    text-align: center !important;
+    white-space: nowrap !important;
+    word-break: normal !important;
+    overflow-wrap: normal !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    transform: none !important;
+  }
+
+  /*
+   * Armazenamento usa a mesma altura dos demais,
+   * mas conserva o medidor circular e as duas informações.
+   */
+  .app-shell[data-device-mobile="false"]
+    .dashboard-summary-grid
+    > .dashboard-summary-card[
+      data-dashboard-card="armazenamentoUtilizado"
+    ] {
+    min-height: 5.65rem !important;
+    height: 5.65rem !important;
+    max-height: 5.65rem !important;
+    padding: 0.5rem !important;
+  }
+
+  .app-shell[data-device-mobile="false"]
+    .dashboard-summary-grid
+    > .dashboard-summary-card[
+      data-dashboard-card="armazenamentoUtilizado"
+    ]::after {
+    display: none !important;
+    content: none !important;
+  }
+
+  .app-shell[data-device-mobile="false"]
+    .dashboard-summary-grid
+    > .dashboard-summary-card[
+      data-dashboard-card="armazenamentoUtilizado"
+    ]
+    > div {
+    position: static !important;
+    display: grid !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    height: 100% !important;
+    grid-template-columns: 2.45rem minmax(0, 1fr) !important;
+    align-items: center !important;
+    gap: 0.35rem !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    transform: none !important;
+  }
+
+  .app-shell[data-device-mobile="false"]
+    .dashboard-summary-grid
+    > .dashboard-summary-card[
+      data-dashboard-card="armazenamentoUtilizado"
+    ]
+    > div
+    > div:first-child {
+    position: static !important;
+    display: flex !important;
+    width: 2.35rem !important;
+    min-width: 2.35rem !important;
+    max-width: 2.35rem !important;
+    height: 2.35rem !important;
+    min-height: 2.35rem !important;
+    max-height: 2.35rem !important;
+    align-items: center !important;
+    justify-content: center !important;
+    margin: 0 !important;
+    border-radius: 999px !important;
+    transform: none !important;
+  }
+
+  .app-shell[data-device-mobile="false"]
+    .dashboard-summary-grid
+    > .dashboard-summary-card[
+      data-dashboard-card="armazenamentoUtilizado"
+    ]
+    > div
+    > div:first-child
+    > div {
+    width: 1.85rem !important;
+    height: 1.85rem !important;
+    font-size: 0.52rem !important;
+  }
+
+  .app-shell[data-device-mobile="false"]
+    .dashboard-summary-grid
+    > .dashboard-summary-card[
+      data-dashboard-card="armazenamentoUtilizado"
+    ]
+    > div
+    > div:nth-child(2) {
+    position: static !important;
+    display: flex !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    justify-content: center !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    text-align: center !important;
+    transform: none !important;
+  }
+
+  .app-shell[data-device-mobile="false"]
+    .dashboard-summary-grid
+    > .dashboard-summary-card[
+      data-dashboard-card="armazenamentoUtilizado"
+    ]
+    h3 {
+    position: static !important;
+    display: block !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    color: #020617 !important;
+    font-size: 0.52rem !important;
+    font-weight: 950 !important;
+    line-height: 0.68rem !important;
+    letter-spacing: 0.015em !important;
+    text-align: center !important;
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    transform: none !important;
+  }
+
+  .app-shell[data-device-mobile="false"]
+    .dashboard-summary-grid
+    > .dashboard-summary-card[
+      data-dashboard-card="armazenamentoUtilizado"
+    ]
+    .mt-1\.5 {
+    display: grid !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    gap: 0.12rem !important;
+    margin: 0.18rem 0 0 !important;
+    padding: 0 !important;
+  }
+
+  .app-shell[data-device-mobile="false"]
+    .dashboard-summary-grid
+    > .dashboard-summary-card[
+      data-dashboard-card="armazenamentoUtilizado"
+    ]
+    .mt-1\.5
+    p {
+    position: static !important;
+    display: block !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+    max-height: none !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    color: #475569 !important;
+    font-size: 0.47rem !important;
+    font-weight: 650 !important;
+    line-height: 0.62rem !important;
+    text-align: center !important;
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    transform: none !important;
+  }
+
+  /*
+   * Quadros analíticos inferiores:
+   * todos permanecem no documento e ocupam a linha inteira.
+   */
+  .app-shell[data-device-mobile="false"]
+    .dashboard-sst-blocos-grid
+    > [data-dashboard-bloco]:not([data-dashboard-bloco="cards"]) {
+    display: block !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    min-height: 0 !important;
+    height: auto !important;
+    max-height: none !important;
+    margin: 0 !important;
+    overflow: visible !important;
+  }
+
+  .app-shell[data-device-mobile="false"]
+    .dashboard-sst-blocos-grid
+    > [data-dashboard-bloco]:not([data-dashboard-bloco="cards"])
+    [data-dashboard-bloco-cabecalho="true"] {
+    display: grid !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    min-height: 5rem !important;
+    height: auto !important;
+    grid-template-columns: 2.7rem minmax(0, 1fr) auto !important;
+    align-items: center !important;
+    gap: 0.75rem !important;
+    padding: 0.85rem 1rem !important;
+  }
+
+  .app-shell[data-device-mobile="false"]
+    .dashboard-sst-blocos-grid
+    > [data-dashboard-bloco]:not([data-dashboard-bloco="cards"])
+    [data-dashboard-bloco-cabecalho="true"]
+    > div:first-child {
+    width: 2.55rem !important;
+    min-width: 2.55rem !important;
+    max-width: 2.55rem !important;
+    height: 2.55rem !important;
+    min-height: 2.55rem !important;
+    max-height: 2.55rem !important;
+    margin: 0 !important;
+  }
+
+  .app-shell[data-device-mobile="false"]
+    .dashboard-sst-blocos-grid
+    > [data-dashboard-bloco]:not([data-dashboard-bloco="cards"])
+    [data-dashboard-bloco-cabecalho="true"]
+    > div:nth-child(2) {
+    display: block !important;
+    min-width: 0 !important;
+    margin: 0 !important;
+  }
+
+  .app-shell[data-device-mobile="false"]
+    .dashboard-sst-blocos-grid
+    > [data-dashboard-bloco]:not([data-dashboard-bloco="cards"])
+    [data-dashboard-bloco-cabecalho="true"]
+    h2 {
+    display: block !important;
+    width: 100% !important;
+    margin: 0 !important;
+    color: #1a2332 !important;
+    font-size: 0.86rem !important;
+    font-weight: 950 !important;
+    line-height: 1.08rem !important;
+    white-space: normal !important;
+    overflow: visible !important;
+    text-overflow: clip !important;
+  }
+
+  .app-shell[data-device-mobile="false"]
+    .dashboard-sst-blocos-grid
+    > [data-dashboard-bloco]:not([data-dashboard-bloco="cards"])
+    [data-dashboard-bloco-cabecalho="true"]
+    p {
+    display: block !important;
+    max-width: 100% !important;
+    max-height: none !important;
+    margin: 0.18rem 0 0 !important;
+    color: #6b7a8d !important;
+    font-size: 0.65rem !important;
+    font-weight: 600 !important;
+    line-height: 0.9rem !important;
+    white-space: normal !important;
+    overflow: visible !important;
+    text-overflow: clip !important;
+  }
+
+  .app-shell[data-device-mobile="false"]
+    .dashboard-sst-blocos-grid
+    > [data-dashboard-bloco]:not([data-dashboard-bloco="cards"])
+    [data-dashboard-bloco-cabecalho="true"]
+    > div:last-child {
+    display: flex !important;
+    min-width: max-content !important;
+    flex-wrap: nowrap !important;
+    align-items: center !important;
+    justify-content: flex-end !important;
+    gap: 0.45rem !important;
+    margin: 0 !important;
+  }
+
+  .app-shell[data-device-mobile="false"]
+    .dashboard-sst-blocos-grid
+    > [data-dashboard-bloco]:not([data-dashboard-bloco="cards"])
+    [data-dashboard-bloco-cabecalho="true"]
+    button {
+    width: auto !important;
+    min-width: max-content !important;
+    min-height: 1.9rem !important;
+    height: 1.9rem !important;
+    margin: 0 !important;
+    padding: 0.36rem 0.75rem !important;
+    font-size: 0.66rem !important;
+    line-height: 0.8rem !important;
+    white-space: nowrap !important;
+  }
+
+  .app-shell[data-device-mobile="false"]
+    .dashboard-sst-blocos-grid
+    > [data-dashboard-bloco]:not([data-dashboard-bloco="cards"])
+    [data-dashboard-bloco-cabecalho="true"]
+    + div {
+    display: block !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+    min-height: 0 !important;
+    height: auto !important;
+    max-height: none !important;
+    overflow: visible !important;
   }
 }
 
-@media (max-width: 720px) {
-  .app-shell[data-device-mobile="false"] .dashboard-sst-page-header .dashboard-sst-header-actions {
+/*
+ * Somente uma janela desktop menor que 620px reduz para duas colunas.
+ * Celulares reais continuam seguindo o CSS mobile original.
+ */
+@media (max-width: 620px) {
+  .app-shell[data-device-mobile="false"]
+    .dashboard-sst-page-header
+    .dashboard-sst-header-actions {
     grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
   }
+
+  .app-shell[data-device-mobile="false"]
+    .dashboard-summary-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
+
+  .app-shell[data-device-mobile="false"]
+    .dashboard-sst-blocos-grid
+    > [data-dashboard-bloco]:not([data-dashboard-bloco="cards"])
+    [data-dashboard-bloco-cabecalho="true"] {
+    grid-template-columns: 2.55rem minmax(0, 1fr) !important;
+  }
+
+  .app-shell[data-device-mobile="false"]
+    .dashboard-sst-blocos-grid
+    > [data-dashboard-bloco]:not([data-dashboard-bloco="cards"])
+    [data-dashboard-bloco-cabecalho="true"]
+    > div:last-child {
+    grid-column: 1 / -1 !important;
+    justify-content: flex-end !important;
+  }
 }
+/* AJUSTE FINAL ALTURA ARMAZENAMENTO - INICIO */
+@media (max-width: 1023.98px) {
+  /*
+   * Computador com janela dividida:
+   * mantém somente a versão desktop do armazenamento.
+   */
+  .app-shell[data-device-mobile="false"]
+    .dashboard-summary-grid
+    > .safescan-storage-desktop-card {
+    display: flex !important;
+    box-sizing: border-box !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+    min-height: 5.65rem !important;
+    height: 5.65rem !important;
+    max-height: 5.65rem !important;
+    align-self: stretch !important;
+    grid-column: auto !important;
+    margin: 0 !important;
+  }
+
+  /*
+   * AJUSTE TITULO ARMAZENAMENTO:
+   * reduz apenas o título na janela dividida para mantê-lo dentro do card.
+   */
+  .app-shell[data-device-mobile="false"]
+    .dashboard-summary-grid
+    > .safescan-storage-desktop-card
+    h3 {
+    display: block !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    font-size: 7px !important;
+    line-height: 9px !important;
+    letter-spacing: 0 !important;
+    text-align: center !important;
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: clip !important;
+  }
+
+  /*
+   * Oculta somente a versão mobile no computador.
+   * Celulares e APK usam data-device-mobile="true" e não são afetados.
+   */
+  .app-shell[data-device-mobile="false"]
+    .dashboard-summary-grid
+    > .safescan-storage-mobile-card {
+    display: none !important;
+  }
+}
+/* AJUSTE FINAL ALTURA ARMAZENAMENTO - FIM */
 /* MICROETAPA DASHBOARD TELA DIVIDIDA - FIM */

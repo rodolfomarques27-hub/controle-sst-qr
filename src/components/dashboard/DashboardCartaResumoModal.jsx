@@ -40,9 +40,9 @@ export function DashboardCartaResumoModal({
                 role="dialog"
                 aria-modal="true"
                 aria-labelledby="dashboard-carta-resumo-titulo"
-                className="flex max-h-[86vh] w-full max-w-3xl flex-col overflow-hidden rounded-[26px] border border-slate-200 bg-white shadow-[0_30px_90px_rgba(15,23,42,0.30)]"
+                className="flex min-h-0 max-h-[86vh] w-full max-w-3xl flex-col overflow-hidden rounded-[26px] border border-slate-200 bg-white shadow-[0_30px_90px_rgba(15,23,42,0.30)]"
             >
-                <header className="relative overflow-hidden border-b border-slate-200 px-5 py-5 text-white">
+                <header className="relative shrink-0 overflow-hidden border-b border-slate-200 px-5 py-5 text-white">
                     <div
                         className="absolute inset-0 bg-cover bg-center"
                         style={{ backgroundImage: `url(${resumoDashboardHero})` }}
@@ -82,7 +82,7 @@ export function DashboardCartaResumoModal({
                     </div>
                 </header>
 
-                <div className="overflow-y-auto px-5 py-4">
+                <div className="min-h-0 flex-1 overflow-y-auto px-5 py-4">
                     {itens.length === 0 ? (
                         <div className="rounded-3xl border border-dashed border-slate-300 bg-slate-50 px-5 py-10 text-center">
                             <FileText className="mx-auto h-8 w-8 text-slate-400" />
