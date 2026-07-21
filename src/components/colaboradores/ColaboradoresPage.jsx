@@ -10,6 +10,7 @@ import {
     Plus,
     QrCode,
     RefreshCw,
+    Settings2,
     Search,
     ShieldCheck,
     Trash2,
@@ -22,10 +23,12 @@ import { FormularioNovoColaborador } from "./FormularioNovoColaborador";
 import { ImportacaoMassaColaboradores } from "./ImportacaoMassaColaboradores";
 import { ImportacaoFotosMassaColaboradores } from "./ImportacaoFotosMassaColaboradores";
 import { ModalNovaFuncaoColaborador } from "./ModalNovaFuncaoColaborador";
+import { ModalAjustarFuncoesColaborador } from "./ModalAjustarFuncoesColaborador";
 import { ModalRevisaoColaborador } from "./ModalRevisaoColaborador";
 import { ColaboradorIdentificacoesSeguranca } from "./ColaboradorIdentificacoesSeguranca";
 import {
     obterStatusInicialColaborador,
+    definirFuncoesTreinamentosRemotas,
     obterFuncoesPersonalizadasSalvas,
     salvarFuncoesPersonalizadas,
     obterTodasMatrizesFuncao,
@@ -37,6 +40,10 @@ import {
     obterTreinamento,
     statusGeral,
 } from "../../services/colaboradorDocumentosService";
+import {
+    carregarFuncoesTreinamentosRemotas,
+    salvarFuncaoTreinamentosRemota,
+} from "../../services/funcoesTreinamentosService.js";
 import {
     treinamentosBase,
     treinamentosBaseObra,
@@ -195,6 +202,7 @@ export function Colaboradores({
     const [cadastroMassaRecolhido, setCadastroMassaRecolhido] = useState(() => carregarPreferenciaPainelBoolean(CHAVE_CADASTRO_MASSA_RECOLHIDO, false));
     const [informacoesColaboradoresRecolhidas, setInformacoesColaboradoresRecolhidas] = useState(() => carregarPreferenciaPainelBoolean(CHAVE_INFO_COLABORADORES_RECOLHIDA, false));
     const [modalFuncaoAberto, setModalFuncaoAberto] = useState(false);
+    const [modalAjustarFuncoesAberto, setModalAjustarFuncoesAberto] = useState(false);
     const [versaoFuncoes, setVersaoFuncoes] = useState(0);
     const [novaFuncao, setNovaFuncao] = useState({
         rotulo: "",
@@ -767,13 +775,15 @@ ${erros.slice(0, 8).join("\n")}`
         });
     };
 
-    const salvarNovaFuncao = () => {
+    const salvarNovaFuncao = async () => {
         if (!podeEditarColaboradoresSistema) {
             if (typeof window !== "undefined") window.alert(mensagemBloqueioEdicaoColaboradores);
             return;
         }
 
-        if (!novaFuncao.rotulo.trim()) {
+        const rotulo = novaFuncao.rotulo.trim().toUpperCase();
+
+        if (!rotulo) {
             alert("Informe o nome da função.");
             return;
         }
@@ -783,21 +793,67 @@ ${erros.slice(0, 8).join("\n")}`
             return;
         }
 
+        const funcaoJaExiste = obterTodasMatrizesFuncao().some(
+            (item) =>
+                item.chave !== "geral" &&
+                normalizarTextoBusca(item.rotulo || "") === normalizarTextoBusca(rotulo)
+        );
+
+        if (funcaoJaExiste) {
+            alert("Já existe uma função com esse nome. Use o botão Ajustar funções.");
+            return;
+        }
+
         const listaAtual = obterFuncoesPersonalizadasSalvas();
-        const chave = `custom-${normalizarTextoBusca(novaFuncao.rotulo).replace(/[^a-z0-9]+/g, "-")}-${Date.now()}`;
-        const termos = novaFuncao.termos
+        const chave = `custom-${normalizarTextoBusca(rotulo).replace(/[^a-z0-9]+/g, "-")}-${Date.now()}`;
+        const termosInformados = novaFuncao.termos
             .split(",")
             .map((termo) => termo.trim())
             .filter(Boolean);
 
         const nova = {
             chave,
-            rotulo: novaFuncao.rotulo.trim().toUpperCase(),
-            termos: Array.from(new Set([novaFuncao.rotulo.trim(), ...termos])),
+            rotulo,
+            termos: Array.from(new Set([rotulo, ...termosInformados])),
             treinamentos: novaFuncao.treinamentos.map(Number),
+            tipo: "personalizada",
+            ativa: true,
         };
 
-        salvarFuncoesPersonalizadas([...listaAtual, nova]);
+        try {
+            await salvarFuncaoTreinamentosRemota({
+                funcao: nova,
+            });
+
+            const resultadoRemoto = await carregarFuncoesTreinamentosRemotas();
+
+            definirFuncoesTreinamentosRemotas(
+                resultadoRemoto.funcoes
+            );
+
+            salvarFuncoesPersonalizadas(
+                listaAtual.filter(
+                    (item) =>
+                        item?.chave !== chave &&
+                        normalizarTextoBusca(item?.rotulo || "") !== normalizarTextoBusca(rotulo)
+                )
+            );
+
+            alert("Função criada e salva para todos os computadores.");
+        } catch (error) {
+            salvarFuncoesPersonalizadas([
+                ...listaAtual.filter(
+                    (item) =>
+                        normalizarTextoBusca(item?.rotulo || "") !== normalizarTextoBusca(rotulo)
+                ),
+                nova,
+            ]);
+
+            alert(
+                `A função foi salva somente neste computador porque a estrutura remota ainda não está disponível. ${error?.message || ""}`.trim()
+            );
+        }
+
         setVersaoFuncoes((valor) => valor + 1);
         setNovaFuncao({ rotulo: "", termos: "", treinamentos: [...treinamentosBaseObra, 13] });
         setModalFuncaoAberto(false);
@@ -933,6 +989,24 @@ ${erros.slice(0, 8).join("\n")}`
                         >
                             <Plus className="h-4 w-4" />
                             Nova função
+                        </button>
+
+                        <button
+                            type="button"
+                            onClick={() => {
+                                if (!podeEditarColaboradoresSistema) {
+                                    if (typeof window !== "undefined") window.alert(mensagemBloqueioEdicaoColaboradores);
+                                    return;
+                                }
+
+                                setModalAjustarFuncoesAberto(true);
+                            }}
+                            disabled={!podeEditarColaboradoresSistema}
+                            title={podeEditarColaboradoresSistema ? "Ajustar funções" : mensagemBloqueioEdicaoColaboradores}
+                            className="colaboradores-header-acao colaboradores-header-acao--secundaria inline-flex items-center gap-2 rounded-2xl bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 shadow-sm ring-1 ring-slate-200 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
+                        >
+                            <Settings2 className="h-4 w-4" />
+                            Ajustar funções
                         </button>
 
                         <button
@@ -1682,6 +1756,15 @@ ${erros.slice(0, 8).join("\n")}`
                 treinamentosBase={treinamentosBase}
                 onSalvar={salvarNovaFuncao}
                 onFechar={() => setModalFuncaoAberto(false)}
+            />
+
+            <ModalAjustarFuncoesColaborador
+                aberto={modalAjustarFuncoesAberto}
+                colaboradores={colaboradores}
+                podeEditar={podeEditarColaboradoresSistema}
+                podeExcluir={podeExcluirColaboradoresSistema}
+                onFechar={() => setModalAjustarFuncoesAberto(false)}
+                onAtualizado={() => setVersaoFuncoes((valor) => valor + 1)}
             />
 
             <ModalRevisaoColaborador

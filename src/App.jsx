@@ -663,6 +663,7 @@ export default function App() {
             setErroBanco,
             setColaboradores,
             setColaboradorSelecionado,
+            registrarAuditoria,
         });
     }
 

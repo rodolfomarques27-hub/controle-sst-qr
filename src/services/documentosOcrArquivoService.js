@@ -370,11 +370,34 @@ export function criarInfraestruturaLeituraDocumental({
             async function executarOcrPagina(numeroPagina) {
                 const pagina = await pdf.getPage(numeroPagina);
                 const viewportBase = pagina.getViewport({ scale: 1 });
-                const escalaBase = numeroPagina === 1 ? 1.55 : 1.45;
-                const escalaMaximaPorLargura = viewportBase.width ? 1260 / viewportBase.width : escalaBase;
-                const escalaMaximaPorAltura = viewportBase.height ? 1780 / viewportBase.height : escalaBase;
-                const escalaSegura = Math.max(1.18, Math.min(escalaBase, escalaMaximaPorLargura, escalaMaximaPorAltura));
-                const viewport = pagina.getViewport({ scale: escalaSegura });
+
+                /*
+                 * PDFs escaneados de ASO possuem campos pequenos na parte
+                 * superior da pagina. Uma renderizacao proxima de 110 DPI
+                 * nao oferece definicao suficiente para o Tesseract localizar
+                 * campos como Funcao, Setor e Resultado.
+                 *
+                 * A resolucao ampliada e usada somente no fallback de OCR,
+                 * quando o PDF nao possui camada de texto pesquisavel.
+                 */
+                const escalaBase = numeroPagina === 1 ? 2.35 : 2.0;
+                const escalaMaximaPorLargura = viewportBase.width
+                    ? 1900 / viewportBase.width
+                    : escalaBase;
+                const escalaMaximaPorAltura = viewportBase.height
+                    ? 2700 / viewportBase.height
+                    : escalaBase;
+                const escalaSegura = Math.max(
+                    1.65,
+                    Math.min(
+                        escalaBase,
+                        escalaMaximaPorLargura,
+                        escalaMaximaPorAltura
+                    )
+                );
+                const viewport = pagina.getViewport({
+                    scale: escalaSegura,
+                });
                 const canvas = document.createElement("canvas");
                 const contexto = canvas.getContext("2d", { willReadFrequently: true });
 

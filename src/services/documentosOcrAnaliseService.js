@@ -16,6 +16,7 @@ import {
     limparTextoPossivelDocumento,
     valorPareceSomenteDocumentoFiscal,
 } from "./documentosOcrUtils";
+import { extrairFuncaoAsoDocumento } from "./asoFuncaoService";
 
 export function criarAnaliseDocumental() {
     const LIMITE_BYTES_LEITURA_LOCAL = 8 * 1024 * 1024;
@@ -667,6 +668,34 @@ export function criarAnaliseDocumental() {
 
     function obterTipoDocumentoResumo(texto = "", arquivoNome = "") {
         const base = normalizarTextoVerificacao(`${arquivoNome} ${texto.slice(0, 1500)}`);
+        const textoInicialNormalizado = normalizarTextoVerificacao(
+            String(texto || "").slice(0, 1500)
+        );
+        const arquivoNomeNormalizado = normalizarTextoVerificacao(
+            arquivoNome
+        );
+
+        /*
+         * O ASO normalmente cita o PCMSO no corpo do documento.
+         * O titulo explicito do documento e o nome do arquivo possuem
+         * prioridade sobre essas referencias secundarias.
+         */
+        const possuiTituloAsoExplicito =
+            textoInicialNormalizado.includes(
+                "atestado de saude ocupacional"
+            );
+
+        const arquivoNomeIndicaAso =
+            /\baso\b/.test(
+                arquivoNomeNormalizado
+            );
+
+        if (
+            possuiTituloAsoExplicito ||
+            arquivoNomeIndicaAso
+        ) {
+            return "ASO - Atestado de Sa\u00fade Ocupacional";
+        }
 
         if (base.includes("programa de controle medico de saude ocupacional") || base.includes("pcmso")) {
             return "PCMSO - Programa de Controle Médico de Saúde Ocupacional";
@@ -680,7 +709,7 @@ export function criarAnaliseDocumental() {
             return "LTCAT - Laudo Técnico das Condições Ambientais do Trabalho";
         }
 
-        if (base.includes("atestado de saude ocupacional") || /\baso\b/.test(base)) {
+        if (/\baso\b/.test(base)) {
             return "ASO - Atestado de Saúde Ocupacional";
         }
 
@@ -928,6 +957,11 @@ export function criarAnaliseDocumental() {
         const totalFuncionarios = obterTotalFuncionariosResumo(texto);
         const dataAssinaturaTexto = obterDataAssinaturaResumo(texto);
         const dataAdmissaoRegistroTexto = obterDataAdmissaoRegistroResumo(texto, linhasOcr);
+        const funcaoDocumentoAso = extrairFuncaoAsoDocumento({
+            tipoDocumento,
+            texto,
+            linhasOcr,
+        });
         const vigenciaClassificada = Array.isArray(datasClassificadas?.vigencia) ? datasClassificadas.vigencia : [];
         const inicioVigencia = vigenciaClassificada.find((data) => data?.tipo === "inicio_vigencia") || vigenciaClassificada[0] || null;
         const fimVigencia = vigenciaClassificada.find((data) => data?.tipo === "fim_vigencia") || vigenciaClassificada[1] || null;
@@ -939,6 +973,10 @@ export function criarAnaliseDocumental() {
         return {
             tipo_documento: tipoDocumento || "",
             empresa_nome: empresaNome || "",
+            funcao_documento: funcaoDocumentoAso.funcaoOriginal || "",
+            funcao_documento_normalizada: funcaoDocumentoAso.funcaoNormalizada || "",
+            funcao_documento_confianca: funcaoDocumentoAso.confianca || "",
+            funcao_documento_origem: funcaoDocumentoAso.origem || "",
             cnpj: cnpj || "",
             vigencia_inicio: inicioVigencia?.iso || "",
             vigencia_inicio_br: inicioVigencia?.br || "",

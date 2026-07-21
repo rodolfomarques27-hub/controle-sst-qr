@@ -28,7 +28,7 @@ export function DashboardColaboradoresFuncao({
                 {listaColaboradoresPorFuncao.length === 0 ? (
                     mensagemVaziaDashboard("Nenhum colaborador mobilizado encontrado.")
                 ) : (
-                    listaColaboradoresPorFuncao.slice(0, 8).map((item) => (
+                    listaColaboradoresPorFuncao.map((item) => (
                         <div key={item.funcao} className="rounded-2xl bg-slate-50 p-3 text-sm ring-1 ring-slate-100">
                             <div className="flex justify-between gap-3">
                                 <span className="font-semibold text-slate-900">{item.funcao}</span>

@@ -29,6 +29,7 @@ import {
     analisarColaboradorDocumentoColetivoEtapa4,
     classificarTipoDocumentoTreinamentoEtapa2,
 } from "./classificadorDocumentoTreinamentoService";
+import { compararFuncaoAsoComCadastro } from "./asoFuncaoService";
 
 let moduloOcrDocumentalPromise = null;
 
@@ -2832,7 +2833,92 @@ export async function analisarCertificadoLocal({
         mimeType: metadadosArquivo.mimeType,
     });
     const retornoLeituraDocumental = montarRetornoLeituraParaPersistencia(leituraDocumental);
+    const camposExtraidosFuncaoAso = leituraDocumental?.camposExtraidos || {};
 
+    const tipoDocumentoDetectadoFuncaoAso = String(
+        camposExtraidosFuncaoAso.tipo_documento ||
+        ""
+    ).trim();
+
+    const tipoDocumentoSelecionadoFuncaoAso = String(
+        obterTipoCertificado(
+            certificado,
+            treinamento
+        ) ||
+        ""
+    ).trim();
+
+    const tipoDocumentoSelecionadoNormalizadoFuncaoAso =
+        normalizarTextoVerificacao(
+            tipoDocumentoSelecionadoFuncaoAso
+        );
+
+    const funcaoDocumentoNormalizadaFuncaoAso = String(
+        camposExtraidosFuncaoAso.funcao_documento_normalizada ||
+        normalizarTextoVerificacao(
+            camposExtraidosFuncaoAso.funcao_documento ||
+            ""
+        )
+    ).trim();
+
+    /*
+     * A classificacao OCR nao pode cancelar a conferencia quando:
+     * - o usuario selecionou NR-07 ASO; e
+     * - a funcao foi efetivamente extraida do documento.
+     *
+     * Isso protege o fluxo contra ASOs que citam PCMSO no corpo.
+     */
+    const selecaoIndicaAso = Boolean(
+        tipoDocumentoSelecionadoNormalizadoFuncaoAso.includes(
+            "atestado de saude ocupacional"
+        ) ||
+        /\baso\b/.test(
+            tipoDocumentoSelecionadoNormalizadoFuncaoAso
+        )
+    );
+
+    const tipoDocumentoComparacaoFuncaoAso =
+        selecaoIndicaAso &&
+        funcaoDocumentoNormalizadaFuncaoAso
+            ? tipoDocumentoSelecionadoFuncaoAso
+            : (
+                tipoDocumentoDetectadoFuncaoAso ||
+                tipoDocumentoSelecionadoFuncaoAso
+            );
+
+    const comparacaoFuncaoAsoBase =
+        compararFuncaoAsoComCadastro({
+            tipoDocumento:
+                tipoDocumentoComparacaoFuncaoAso,
+            funcaoDocumento:
+                camposExtraidosFuncaoAso.funcao_documento ||
+                "",
+            funcaoDocumentoNormalizada:
+                funcaoDocumentoNormalizadaFuncaoAso,
+            funcaoDocumentoConfianca:
+                camposExtraidosFuncaoAso.funcao_documento_confianca ||
+                "",
+            funcaoDocumentoOrigem:
+                camposExtraidosFuncaoAso.funcao_documento_origem ||
+                "",
+            funcaoCadastro:
+                colaborador.funcao ||
+                colaborador.cargo ||
+                colaborador.cargo_funcao ||
+                "",
+        });
+
+    const comparacaoFuncaoAso = {
+        ...comparacaoFuncaoAsoBase,
+        tipoDocumentoDetectado:
+            tipoDocumentoDetectadoFuncaoAso,
+        tipoDocumentoSelecionado:
+            tipoDocumentoSelecionadoFuncaoAso,
+        tipoDocumentoUsado:
+            tipoDocumentoComparacaoFuncaoAso,
+        selecaoIndicavaAso:
+            selecaoIndicaAso,
+    };
     const indiciosArquivo = filtrarIndiciosArquivoSemArquivoLocal({
         arquivo: arquivoValidoParaHash,
         documento: documentoNormalizado,
@@ -2967,6 +3053,7 @@ export async function analisarCertificadoLocal({
             : DOCUMENTOS_VERIFICACAO_ORIGEM_ANALISE.REGRAS_LOCAIS,
         retorno_ia: retornoLeituraDocumental ? {
             leitura_documental_local: retornoLeituraDocumental,
+            comparacao_funcao_aso: comparacaoFuncaoAso,
             conferencia_documental: conferenciaDocumentalFinal,
             aprovacao_controlada: consolidadoAutomatico.aprovacaoControlada,
             conferencia_visual: consolidadoAutomatico.conferenciaVisual,

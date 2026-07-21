@@ -33,6 +33,11 @@ import {
 import {
     normalizarAjusteFundoLoginService,
 } from "../src/services/fundoLoginPublicoService.js";
+import {
+    compararFuncaoAsoComCadastro,
+    extrairFuncaoAsoDocumento,
+    normalizarFuncaoAso,
+} from "../src/services/asoFuncaoService.js";
 
 assert.equal(
     proximoCodigoExtintor([{ codigo: "E-001" }, { codigo: "E-002" }, { codigo: "E-004" }]),
@@ -71,6 +76,161 @@ assert.deepEqual(
     },
     "Valores inválidos do fundo devem retornar ao padrão seguro."
 );
+
+assert.equal(
+    normalizarFuncaoAso("ADM. DE OBRA"),
+    "administrativo de obra",
+    "ADM de obra deve ser normalizado."
+);
+
+const funcaoAsoExtraida = extrairFuncaoAsoDocumento({
+    tipoDocumento: "ASO - Atestado de Saúde Ocupacional",
+    texto: [
+        "ATESTADO DE SAÚDE OCUPACIONAL",
+        "Colaborador: João da Silva",
+        "Função: ADM. DE OBRA",
+        "Setor: Canteiro",
+    ].join("\n"),
+});
+
+assert.equal(funcaoAsoExtraida.aplicavel, true);
+assert.equal(funcaoAsoExtraida.localizado, true);
+assert.equal(
+    funcaoAsoExtraida.funcaoNormalizada,
+    "administrativo de obra"
+);
+assert.equal(funcaoAsoExtraida.confianca, "alta");
+
+const funcaoAsoLinhaSeguinte = extrairFuncaoAsoDocumento({
+    tipoDocumento: "ASO",
+    linhasOcr: [
+        { texto: "Função:", yCentro: 10, x0: 10 },
+        { texto: "Administrativo de Obra", yCentro: 20, x0: 10 },
+        { texto: "Setor: Canteiro", yCentro: 30, x0: 10 },
+    ],
+});
+
+assert.equal(funcaoAsoLinhaSeguinte.localizado, true);
+assert.equal(
+    funcaoAsoLinhaSeguinte.funcaoNormalizada,
+    "administrativo de obra"
+);
+assert.equal(funcaoAsoLinhaSeguinte.confianca, "media");
+
+const funcaoAsoSemSeparador = extrairFuncaoAsoDocumento({
+    tipoDocumento: "NR-07 ASO - Atestado de Saúde Ocupacional",
+    texto: [
+        "ATESTADO DE SAÚDE OCUPACIONAL",
+        "Funcionário ALAN JOSE RIBEIRO DOS SANTOS",
+        "Setor GHE 10",
+        "Função AJUDANTE / GERAL Resultado ( X ) APTO",
+        "Tipo de atendimento ADMISSIONAL",
+    ].join("\n"),
+});
+
+assert.equal(
+    funcaoAsoSemSeparador.localizado,
+    true,
+    "ASO escaneado sem dois-pontos deve localizar AJUDANTE / GERAL."
+);
+
+assert.equal(
+    funcaoAsoSemSeparador.funcaoOriginal,
+    "AJUDANTE / GERAL"
+);
+
+assert.equal(
+    funcaoAsoSemSeparador.funcaoNormalizada,
+    "ajudante geral"
+);
+
+assert.equal(
+    funcaoAsoSemSeparador.origem,
+    "texto_campo_sem_separador"
+);
+
+const funcaoAsoLinhaSemSeparador = extrairFuncaoAsoDocumento({
+    tipoDocumento: "ASO",
+    linhasOcr: [
+        {
+            texto: "Função AJUDANTE / GERAL",
+            yCentro: 10,
+            x0: 10,
+        },
+        {
+            texto: "Resultado ( X ) APTO",
+            yCentro: 20,
+            x0: 10,
+        },
+    ],
+});
+
+assert.equal(
+    funcaoAsoLinhaSemSeparador.localizado,
+    true
+);
+
+assert.equal(
+    funcaoAsoLinhaSemSeparador.funcaoNormalizada,
+    "ajudante geral"
+);
+
+const comparacaoAlanAso = compararFuncaoAsoComCadastro({
+    tipoDocumento: "ASO",
+    funcaoDocumento:
+        funcaoAsoSemSeparador.funcaoOriginal,
+    funcaoDocumentoNormalizada:
+        funcaoAsoSemSeparador.funcaoNormalizada,
+    funcaoDocumentoConfianca:
+        funcaoAsoSemSeparador.confianca,
+    funcaoDocumentoOrigem:
+        funcaoAsoSemSeparador.origem,
+    funcaoCadastro: "PEDREIRO",
+});
+
+assert.equal(
+    comparacaoAlanAso.status,
+    "divergente"
+);
+
+assert.equal(
+    comparacaoAlanAso.requerConfirmacao,
+    true
+);
+
+const comparacaoAsoDivergente = compararFuncaoAsoComCadastro({
+    tipoDocumento: "ASO",
+    funcaoDocumento: "ADM. DE OBRA",
+    funcaoCadastro: "Apontador",
+});
+
+assert.equal(comparacaoAsoDivergente.status, "divergente");
+assert.equal(comparacaoAsoDivergente.divergencia, true);
+assert.equal(
+    comparacaoAsoDivergente.requerConfirmacao,
+    true
+);
+
+const comparacaoAsoEquivalente = compararFuncaoAsoComCadastro({
+    tipoDocumento: "ASO",
+    funcaoDocumento: "ADM. DE OBRA",
+    funcaoCadastro: "Administrativo de Obra",
+});
+
+assert.equal(comparacaoAsoEquivalente.status, "equivalente");
+assert.equal(comparacaoAsoEquivalente.equivalente, true);
+assert.equal(
+    comparacaoAsoEquivalente.requerConfirmacao,
+    false
+);
+
+const documentoNaoAso = extrairFuncaoAsoDocumento({
+    tipoDocumento: "NR-06 - Ficha de EPI",
+    texto: "Função: Administrativo de Obra",
+});
+
+assert.equal(documentoNaoAso.aplicavel, false);
+assert.equal(documentoNaoAso.localizado, false);
 
 const usuarioConsulta = { perfil: "consulta", ativo: true, bloqueado: false };
 const usuarioTecnico = { perfil: "tecnico_sst", ativo: true, bloqueado: false };
@@ -1098,4 +1258,754 @@ try {
     else globalThis.CustomEvent = customEventOriginal;
 }
 
+/*
+ * FUNCAO_BASE_SERVICO_PURO_VALIDADA
+ *
+ * O teste importa apenas o serviço puro. Ele não importa o serviço
+ * principal do Vite e, portanto, não depende da resolução de imports
+ * sem extensão feita pelo bundler.
+ */
+const {
+    resolverFuncaoBasePorMatrizes:
+        resolverFuncaoBasePorMatrizesSmoke,
+} = await import(
+    "../src/services/funcaoBaseService.js"
+);
+
+const matrizesFuncaoBaseSmoke = [
+    {
+        chave: "ajudante",
+        rotulo: "AJUDANTE",
+        termos: [
+            "ajudante",
+            "servente",
+            "auxiliar",
+        ],
+        treinamentos: [1, 2],
+    },
+    {
+        chave: "geral",
+        rotulo: "GERAL",
+        termos: [],
+        treinamentos: [1],
+    },
+];
+
+const funcaoAjudanteGeralSmoke =
+    resolverFuncaoBasePorMatrizesSmoke({
+        funcao: "AJUDANTE GERAL",
+        matrizes:
+            matrizesFuncaoBaseSmoke,
+    });
+
+assert.equal(
+    funcaoAjudanteGeralSmoke.localizada,
+    true,
+    "AJUDANTE GERAL deve localizar uma função-base."
+);
+
+assert.equal(
+    funcaoAjudanteGeralSmoke.funcaoBase,
+    "AJUDANTE",
+    "AJUDANTE GERAL deve ser agrupado em AJUDANTE."
+);
+
+assert.equal(
+    funcaoAjudanteGeralSmoke.chaveFuncaoBase,
+    "ajudante"
+);
+
+const funcaoServenteSmoke =
+    resolverFuncaoBasePorMatrizesSmoke({
+        funcao: "SERVENTE",
+        matrizes:
+            matrizesFuncaoBaseSmoke,
+    });
+
+assert.equal(
+    funcaoServenteSmoke.funcaoBase,
+    "AJUDANTE",
+    "SERVENTE deve usar a matriz AJUDANTE."
+);
+
+const funcaoDesconhecidaSmoke =
+    resolverFuncaoBasePorMatrizesSmoke({
+        funcao:
+            "MONTADOR DE PAINEL SOLAR",
+        matrizes:
+            matrizesFuncaoBaseSmoke,
+    });
+
+assert.equal(
+    funcaoDesconhecidaSmoke.localizada,
+    false,
+    "Função desconhecida não deve ser descartada."
+);
+
+assert.equal(
+    funcaoDesconhecidaSmoke.funcaoBase,
+    "MONTADOR DE PAINEL SOLAR",
+    "Função desconhecida deve permanecer visível com o nome original."
+);
+
+const codigoColaboradorFuncaoBaseSmoke =
+    readFileSync(
+        new URL(
+            "../src/services/colaboradorDocumentosService.js",
+            import.meta.url
+        ),
+        "utf8"
+    );
+
+assert.match(
+    codigoColaboradorFuncaoBaseSmoke,
+    /resolverFuncaoBasePorMatrizes/,
+    "Serviço documental deve usar o serviço puro de função-base."
+);
+
+assert.match(
+    codigoColaboradorFuncaoBaseSmoke,
+    /export function obterFuncaoBaseColaborador/,
+    "Serviço deve expor a função-base do colaborador."
+);
+
+const codigoDashboardFuncaoBaseSmoke =
+    readFileSync(
+        new URL(
+            "../src/services/dashboardResumoService.js",
+            import.meta.url
+        ),
+        "utf8"
+    );
+
+assert.match(
+    codigoDashboardFuncaoBaseSmoke,
+    /obterFuncaoBaseColaborador/,
+    "Dashboard deve agrupar colaboradores pela função-base."
+);
+
+const codigoComponenteFuncaoBaseSmoke =
+    readFileSync(
+        new URL(
+            "../src/components/dashboard/DashboardColaboradoresFuncao.jsx",
+            import.meta.url
+        ),
+        "utf8"
+    );
+
+assert.doesNotMatch(
+    codigoComponenteFuncaoBaseSmoke,
+    /listaColaboradoresPorFuncao\.slice\(\s*0\s*,\s*8\s*\)/,
+    "Dashboard não deve esconder funções depois da oitava posição."
+);
+/*
+ * FUNCOES_TREINAMENTOS_REMOTAS_FUNDACAO
+ *
+ * Garante a mesclagem segura das matrizes fixas,
+ * ajustes remotos e funções personalizadas legadas.
+ */
+const moduloFuncoesTreinamentosRemotas = await import(
+    "../src/services/funcoesTreinamentosService.js"
+);
+
+const matrizesBaseFuncoesRemotas = [
+    {
+        chave: "ajudante",
+        rotulo: "AJUDANTE",
+        termos: [
+            "ajudante",
+            "servente",
+            "auxiliar",
+        ],
+        treinamentos: [1, 2],
+    },
+    {
+        chave: "pedreiro",
+        rotulo: "PEDREIRO",
+        termos: ["pedreiro"],
+        treinamentos: [1, 3],
+    },
+    {
+        chave: "geral",
+        rotulo: "GERAL",
+        termos: [],
+        treinamentos: [1],
+    },
+];
+
+const matrizesMescladasFuncoesRemotas =
+    moduloFuncoesTreinamentosRemotas
+        .mesclarMatrizesFuncaoRemotas({
+            matrizesBase:
+                matrizesBaseFuncoesRemotas,
+            funcoesRemotas: [
+                {
+                    chave: "ajudante",
+                    rotulo: "AJUDANTE",
+                    termos: [
+                        "ajudante",
+                        "ajudante geral",
+                        "servente",
+                    ],
+                    treinamentos: [1, 2, 7],
+                    tipo: "ajuste_fixa",
+                    ativa: true,
+                },
+                {
+                    chave:
+                        "custom-montador-painel-solar",
+                    rotulo:
+                        "MONTADOR DE PAINEL SOLAR",
+                    termos: [
+                        "montador solar",
+                        "painel solar",
+                    ],
+                    treinamentos: [1, 9],
+                    tipo: "personalizada",
+                    ativa: true,
+                },
+            ],
+            funcoesLocais: [
+                {
+                    chave:
+                        "custom-montador-painel-solar",
+                    rotulo:
+                        "MONTADOR DE PAINEL SOLAR",
+                    termos: ["solar"],
+                    treinamentos: [1],
+                },
+                {
+                    chave:
+                        "custom-legado-pintor-industrial",
+                    rotulo:
+                        "PINTOR INDUSTRIAL",
+                    termos: ["pintor industrial"],
+                    treinamentos: [1, 4],
+                },
+            ],
+        });
+
+const matrizAjudanteRemota =
+    matrizesMescladasFuncoesRemotas.find(
+        (item) =>
+            item.chave === "ajudante"
+    );
+
+assert.deepEqual(
+    matrizAjudanteRemota.treinamentos,
+    [1, 2, 7],
+    "Ajuste remoto deve substituir os treinamentos da matriz fixa."
+);
+
+assert.equal(
+    matrizAjudanteRemota.ajusteRemoto,
+    true,
+    "Matriz fixa ajustada deve ser identificada como remota."
+);
+
+assert.equal(
+    matrizesMescladasFuncoesRemotas.filter(
+        (item) =>
+            item.rotulo ===
+            "MONTADOR DE PAINEL SOLAR"
+    ).length,
+    1,
+    "Função remota deve substituir a cópia legada do localStorage."
+);
+
+assert.ok(
+    matrizesMescladasFuncoesRemotas.some(
+        (item) =>
+            item.rotulo ===
+            "PINTOR INDUSTRIAL"
+    ),
+    "Função local ainda não migrada deve continuar disponível."
+);
+
+assert.equal(
+    matrizesMescladasFuncoesRemotas[
+        matrizesMescladasFuncoesRemotas.length - 1
+    ].chave,
+    "geral",
+    "A matriz geral deve permanecer como último fallback."
+);
+
+const codigoDocumentosFuncoesRemotas =
+    readFileSync(
+        new URL(
+            "../src/services/colaboradorDocumentosService.js",
+            import.meta.url
+        ),
+        "utf8"
+    );
+
+assert.match(
+    codigoDocumentosFuncoesRemotas,
+    /definirFuncoesTreinamentosRemotas/,
+    "Serviço documental deve expor o cache remoto."
+);
+
+assert.match(
+    codigoDocumentosFuncoesRemotas,
+    /mesclarMatrizesFuncaoRemotas/,
+    "Matrizes devem ser mescladas pelo serviço remoto."
+);
+
+const codigoHandlersFuncoesRemotas =
+    readFileSync(
+        new URL(
+            "../src/services/appColaboradoresHandlersService.js",
+            import.meta.url
+        ),
+        "utf8"
+    );
+
+assert.match(
+    codigoHandlersFuncoesRemotas,
+    /carregarFuncoesTreinamentosRemotas/,
+    "Carregamento de colaboradores deve buscar funções remotas."
+);
+
+const codigoMigracaoFuncoesRemotas =
+    readFileSync(
+        new URL(
+            "../supabase/migrations/20260721101500_funcoes_treinamentos_persistencia_remota.sql",
+            import.meta.url
+        ),
+        "utf8"
+    );
+
+assert.match(
+    codigoMigracaoFuncoesRemotas,
+    /enable row level security/i,
+    "Tabela de funções deve possuir RLS."
+);
+
+assert.match(
+    codigoMigracaoFuncoesRemotas,
+    /usuario_tem_permissao_sistema[\s\S]*colaboradores[\s\S]*editar/i,
+    "Alterações de funções devem exigir permissão de edição."
+);
+
+assert.match(
+    codigoMigracaoFuncoesRemotas,
+    /usuario_tem_permissao_sistema[\s\S]*colaboradores[\s\S]*excluir/i,
+    "Exclusões de funções devem exigir permissão de exclusão."
+);
+
+assert.doesNotMatch(
+    codigoMigracaoFuncoesRemotas,
+    /grant[\s\S]*on table public\.funcoes_treinamentos[\s\S]*to anon/i,
+    "Usuários anônimos não podem acessar a tabela de funções."
+);
+/*
+ * AJUSTAR_FUNCOES_INTERFACE_SEGURA
+ */
+const codigoPaginaAjustarFuncoes =
+    readFileSync(
+        new URL(
+            "../src/components/colaboradores/ColaboradoresPage.jsx",
+            import.meta.url
+        ),
+        "utf8"
+    );
+
+assert.match(
+    codigoPaginaAjustarFuncoes,
+    /Ajustar funções/,
+    "A tela de colaboradores deve exibir o botão Ajustar funções."
+);
+
+assert.match(
+    codigoPaginaAjustarFuncoes,
+    /ModalAjustarFuncoesColaborador/,
+    "A tela deve renderizar o modal de gerenciamento das funções."
+);
+
+assert.match(
+    codigoPaginaAjustarFuncoes,
+    /salvarFuncaoTreinamentosRemota/,
+    "Novas funções devem tentar persistência remota."
+);
+
+const codigoModalAjustarFuncoes =
+    readFileSync(
+        new URL(
+            "../src/components/colaboradores/ModalAjustarFuncoesColaborador.jsx",
+            import.meta.url
+        ),
+        "utf8"
+    );
+
+assert.match(
+    codigoModalAjustarFuncoes,
+    /Salvar ajustes/,
+    "O modal deve permitir salvar palavras-chave e treinamentos."
+);
+
+assert.match(
+    codigoModalAjustarFuncoes,
+    /Excluir função/,
+    "O modal deve permitir excluir funções personalizadas."
+);
+
+assert.match(
+    codigoModalAjustarFuncoes,
+    /Restaurar padrão/,
+    "Funções fixas devem permitir restauração da matriz padrão."
+);
+
+assert.match(
+    codigoModalAjustarFuncoes,
+    /colaboradoresVinculados\s*>\s*0/,
+    "A exclusão deve ser bloqueada quando houver colaboradores vinculados."
+);
+
+const codigoServicoCrudFuncoes =
+    readFileSync(
+        new URL(
+            "../src/services/funcoesTreinamentosService.js",
+            import.meta.url
+        ),
+        "utf8"
+    );
+
+assert.match(
+    codigoServicoCrudFuncoes,
+    /export async function salvarFuncaoTreinamentosRemota/,
+    "O serviço deve salvar funções no Supabase."
+);
+
+assert.match(
+    codigoServicoCrudFuncoes,
+    /export async function excluirFuncaoTreinamentosRemota/,
+    "O serviço deve excluir ou restaurar funções."
+);
+
+assert.match(
+    codigoServicoCrudFuncoes,
+    /await import\(\s*["']\.\.\/lib\/supabaseClient\.js["']\s*\)/,
+    "O cliente Supabase deve ser carregado dinamicamente."
+);
+
+assert.doesNotMatch(
+    codigoServicoCrudFuncoes,
+    /^import[\s\S]*supabaseClient\.js/m,
+    "O serviço não pode importar estaticamente o cliente Supabase."
+);
+/*
+ * MODAIS_FUNCOES_HERO_RODAPE_FIXO
+ *
+ * Garante o hero padrão SafeScan, o rodapé fixo
+ * e a permanência das ações críticas dos modais.
+ */
+const codigoModalAjustarFuncoesVisual =
+    readFileSync(
+        new URL(
+            "../src/components/colaboradores/ModalAjustarFuncoesColaborador.jsx",
+            import.meta.url
+        ),
+        "utf8"
+    );
+
+assert.match(
+    codigoModalAjustarFuncoesVisual,
+    /dashboard-hero-sst\.webp/,
+    "O modal Ajustar funções deve utilizar o hero padrão SafeScan."
+);
+
+assert.match(
+    codigoModalAjustarFuncoesVisual,
+    /linear-gradient\(90deg/,
+    "O hero do modal Ajustar funções deve possuir sobreposição escura."
+);
+
+assert.match(
+    codigoModalAjustarFuncoesVisual,
+    /<footer className="shrink-0 border-t/,
+    "As ações do modal Ajustar funções devem permanecer em rodapé fixo."
+);
+
+assert.match(
+    codigoModalAjustarFuncoesVisual,
+    /Excluir função/,
+    "O botão de exclusão das funções personalizadas deve permanecer disponível."
+);
+
+/*
+ * EXCLUIR_FUNCAO_ACAO_SEPARADA
+ *
+ * A exclusão deve permanecer visível, mas bloqueada
+ * para funções fixas e funções com colaboradores.
+ */
+assert.match(
+    codigoModalAjustarFuncoesVisual,
+    /data-acao="excluir-funcao"/,
+    "O rodapé deve possuir uma ação exclusiva para excluir função."
+);
+
+assert.match(
+    codigoModalAjustarFuncoesVisual,
+    /!funcaoSelecionada\.personalizada/,
+    "Funções fixas padrão não podem ser excluídas."
+);
+
+assert.match(
+    codigoModalAjustarFuncoesVisual,
+    /!podeExcluir/,
+    "Funções com colaboradores vinculados não podem ser excluídas."
+);
+
+assert.match(
+    codigoModalAjustarFuncoesVisual,
+    /data-acao="restaurar-funcao"/,
+    "A restauração das funções fixas deve permanecer como ação separada."
+);
+
+assert.match(
+    codigoModalAjustarFuncoesVisual,
+    /Restaurar padrão/,
+    "A restauração das funções fixas deve permanecer disponível."
+);
+
+assert.match(
+    codigoModalAjustarFuncoesVisual,
+    /Salvar ajustes/,
+    "O botão Salvar ajustes deve permanecer no rodapé."
+);
+
+const codigoModalNovaFuncaoVisual =
+    readFileSync(
+        new URL(
+            "../src/components/colaboradores/ModalNovaFuncaoColaborador.jsx",
+            import.meta.url
+        ),
+        "utf8"
+    );
+
+assert.match(
+    codigoModalNovaFuncaoVisual,
+    /dashboard-hero-sst\.webp/,
+    "O modal Nova função deve utilizar o hero padrão SafeScan."
+);
+
+assert.match(
+    codigoModalNovaFuncaoVisual,
+    /Gerenciamento de matrizes/,
+    "O modal Nova função deve seguir o padrão textual do gerenciamento de matrizes."
+);
+
+assert.match(
+    codigoModalNovaFuncaoVisual,
+    /<footer className="shrink-0 border-t/,
+    "O modal Nova função deve possuir rodapé fixo."
+);
+
+assert.match(
+    codigoModalNovaFuncaoVisual,
+    /treinamentosDisponiveisMatriz = treinamentosBase\.filter/,
+    "O filtro da matriz deve permanecer compatível com a regressão histórica."
+);
+
+assert.match(
+    codigoModalNovaFuncaoVisual,
+    /if \(treinamentoExclusivamenteManual\(treinamentoId\)\) return;/,
+    "O manipulador deve preservar o bloqueio histórico dos treinamentos manuais."
+);
+
+assert.match(
+    codigoModalNovaFuncaoVisual,
+    /Salvar função/,
+    "O botão Salvar função deve permanecer disponível."
+);
 console.log("Smoke test aprovado: persistencia, extintores, telas e permissoes criticas.");
+const codigoModalDivergenciaFuncaoAso = readFileSync(
+    new URL("../src/components/treinamentos/ModalDivergenciaFuncaoAso.jsx", import.meta.url),
+    "utf8"
+);
+
+const codigoAppTreinamentosHandlers = readFileSync(
+    new URL("../src/services/appTreinamentosHandlersService.js", import.meta.url),
+    "utf8"
+);
+
+assert.match(
+    codigoModalDivergenciaFuncaoAso,
+    /Atualizar função e salvar ASO/,
+    "Popup de divergencia ASO deve permanecer conectado ao fluxo de upload."
+);
+
+assert.match(
+    codigoModalDivergenciaFuncaoAso,
+    /Cancelar envio/,
+    "O popup deve permitir cancelar sem alterar a função."
+);
+
+assert.match(
+    codigoTreinamentosPage,
+    /salvarCertificadoComConferenciaAso/,
+    "Envios individual e em lote devem utilizar a conferência do ASO."
+);
+
+assert.match(
+    codigoTreinamentosPage,
+    /decisaoFuncaoAso:\s*"atualizar"/,
+    "A confirmação do popup deve enviar a decisão explícita de atualização."
+);
+
+assert.match(
+    codigoAppTreinamentosHandlers,
+    /tipo:\s*"divergencia_funcao_aso"/,
+    "O serviço deve devolver uma divergência estruturada antes do salvamento."
+);
+
+assert.match(
+    codigoAppTreinamentosHandlers,
+    /UPDATE_FUNCAO_ASO/,
+    "A atualização confirmada deve registrar auditoria."
+);
+
+assert.match(
+    codigoAppTreinamentosHandlers,
+    /\.update\(\{\s*funcao:\s*novaFuncao,/s,
+    "A função só deve ser atualizada pelo fluxo confirmado do ASO."
+);
+
+assert.match(
+    codigoApp,
+    /registrarAuditoria,\s*\n\s*\}\);/,
+    "App deve encaminhar o registrador de auditoria ao salvamento."
+);
+const codigoOcrArquivoAsoEscaneado = readFileSync(
+    new URL(
+        "../src/services/documentosOcrArquivoService.js",
+        import.meta.url
+    ),
+    "utf8"
+);
+
+assert.match(
+    codigoOcrArquivoAsoEscaneado,
+    /numeroPagina === 1 \? 2\.35 : 2\.0/,
+    "OCR de ASO escaneado deve manter resolucao ampliada."
+);
+
+assert.match(
+    codigoOcrArquivoAsoEscaneado,
+    /1900\s*\/\s*viewportBase\.width/,
+    "OCR de PDF escaneado deve preservar largura adequada."
+);
+
+assert.match(
+    codigoOcrArquivoAsoEscaneado,
+    /2700\s*\/\s*viewportBase\.height/,
+    "OCR de PDF escaneado deve preservar altura adequada."
+);
+
+assert.match(
+    codigoOcrArquivoAsoEscaneado,
+    /Math\.max\(\s*1\.65,/s,
+    "OCR de PDF escaneado deve preservar escala minima."
+);
+const codigoOcrAnalisePrioridadeAso = readFileSync(
+    new URL(
+        "../src/services/documentosOcrAnaliseService.js",
+        import.meta.url
+    ),
+    "utf8"
+);
+
+const codigoVerificacaoPrioridadeAso = readFileSync(
+    new URL(
+        "../src/services/documentosVerificacaoService.js",
+        import.meta.url
+    ),
+    "utf8"
+);
+
+const indicePrioridadeTituloAso =
+    codigoOcrAnalisePrioridadeAso.indexOf(
+        "const possuiTituloAsoExplicito"
+    );
+
+const indiceClassificacaoPcmso =
+    codigoOcrAnalisePrioridadeAso.indexOf(
+        'if (base.includes("programa de controle medico de saude ocupacional")'
+    );
+
+assert.ok(
+    indicePrioridadeTituloAso >= 0 &&
+    indiceClassificacaoPcmso >= 0 &&
+    indicePrioridadeTituloAso <
+        indiceClassificacaoPcmso,
+    "Titulo explicito de ASO deve vencer referencias internas a PCMSO."
+);
+
+assert.match(
+    codigoOcrAnalisePrioridadeAso,
+    /possuiTituloAsoExplicito\s*\|\|\s*arquivoNomeIndicaAso/s,
+    "Classificador deve considerar titulo e nome do arquivo antes de PCMSO."
+);
+
+assert.match(
+    codigoVerificacaoPrioridadeAso,
+    /const selecaoIndicaAso = Boolean\(/,
+    "Comparacao deve reconhecer a selecao explicita de NR-07 ASO."
+);
+
+assert.match(
+    codigoVerificacaoPrioridadeAso,
+    /selecaoIndicaAso\s*&&\s*funcaoDocumentoNormalizadaFuncaoAso\s*\?\s*tipoDocumentoSelecionadoFuncaoAso/s,
+    "Tipo selecionado ASO deve prevalecer quando a funcao foi extraida."
+);
+
+assert.match(
+    codigoVerificacaoPrioridadeAso,
+    /tipoDocumentoDetectado:\s*tipoDocumentoDetectadoFuncaoAso/,
+    "Resultado deve registrar o tipo detectado pelo OCR."
+);
+
+assert.match(
+    codigoVerificacaoPrioridadeAso,
+    /tipoDocumentoSelecionado:\s*tipoDocumentoSelecionadoFuncaoAso/,
+    "Resultado deve registrar o tipo selecionado pelo usuario."
+);
+
+assert.match(
+    codigoVerificacaoPrioridadeAso,
+    /tipoDocumentoUsado:\s*tipoDocumentoComparacaoFuncaoAso/,
+    "Resultado deve registrar o tipo efetivamente usado na comparacao."
+);
+
+const comparacaoRegressaoAlanAso = compararFuncaoAsoComCadastro({
+    tipoDocumento:
+        "NR-07 ASO - Atestado de Saude Ocupacional",
+    funcaoDocumento:
+        "AJUDANTE GERAL",
+    funcaoDocumentoNormalizada:
+        "ajudante geral",
+    funcaoDocumentoConfianca:
+        "alta",
+    funcaoDocumentoOrigem:
+        "texto_campo_rotulado",
+    funcaoCadastro:
+        "PEDREIRO",
+});
+
+assert.equal(
+    comparacaoRegressaoAlanAso.aplicavel,
+    true,
+    "NR-07 ASO selecionado deve tornar a comparacao aplicavel."
+);
+
+assert.equal(
+    comparacaoRegressaoAlanAso.status,
+    "divergente",
+    "AJUDANTE GERAL e PEDREIRO devem gerar divergencia."
+);
+
+assert.equal(
+    comparacaoRegressaoAlanAso.requerConfirmacao,
+    true,
+    "Divergencia do ASO deve exigir confirmacao antes de salvar."
+);

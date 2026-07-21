@@ -8,7 +8,7 @@ import {
     diaAniversarioColaborador,
     proximoAniversariante,
     deveMostrarAniversarioColaborador,
-    obterFuncaoCargoColaborador,
+    obterFuncaoBaseColaborador,
     colaboradorContaComoMobilizado,
     colaboradorForaControleDocumentalOperacional,
     itemDocumentoCriticoColaborador,
@@ -266,7 +266,7 @@ export function calcularResumoDashboardSst({
 
     const colaboradoresPorFuncao = Object.values(
         colaboradoresMobilizados.reduce((acc, colaborador) => {
-            const funcao = obterFuncaoCargoColaborador(colaborador);
+            const funcao = obterFuncaoBaseColaborador(colaborador);
             if (!acc[funcao]) acc[funcao] = { funcao, quantidade: 0 };
             acc[funcao].quantidade += 1;
             return acc;

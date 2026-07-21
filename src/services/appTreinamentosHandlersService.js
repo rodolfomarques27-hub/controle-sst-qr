@@ -886,6 +886,149 @@ export async function excluirArquivoCertificadoStorageAppService({
     }
 }
 
+function obterComparacaoFuncaoAsoDaVerificacao(verificacao = {}) {
+    const retorno =
+        verificacao?.retorno_ia ||
+        verificacao?.retornoIa ||
+        {};
+
+    return (
+        retorno?.comparacao_funcao_aso ||
+        retorno?.comparacaoFuncaoAso ||
+        null
+    );
+}
+
+function montarRetornoDivergenciaFuncaoAso({
+    comparacao,
+    colaborador,
+    certificado,
+} = {}) {
+    return {
+        ok: false,
+        tipo: "divergencia_funcao_aso",
+        requerConfirmacao: true,
+        comparacaoFuncaoAso: comparacao,
+        colaborador: {
+            id: colaborador?.id || "",
+            nome: colaborador?.nome || "",
+            funcao:
+                colaborador?.funcao ||
+                colaborador?.cargo ||
+                colaborador?.cargo_funcao ||
+                "",
+            codigoFuncionario:
+                colaborador?.codigoFuncionario ||
+                colaborador?.codigo_funcionario ||
+                "",
+        },
+        arquivoNome:
+            certificado?.arquivoNome ||
+            certificado?.arquivo_nome ||
+            obterNomeArquivoEntrada(certificado?.arquivo) ||
+            "",
+    };
+}
+
+async function atualizarFuncaoColaboradorPeloAso({
+    supabase,
+    colaborador,
+    comparacao,
+    certificado,
+    registrarAuditoria,
+} = {}) {
+    const colaboradorId = String(
+        colaborador?.id ||
+        ""
+    ).trim();
+
+    const funcaoAnterior = String(
+        colaborador?.funcao ||
+        colaborador?.cargo ||
+        colaborador?.cargo_funcao ||
+        ""
+    ).trim();
+
+    const novaFuncao = String(
+        comparacao?.funcaoDocumento ||
+        ""
+    ).trim();
+
+    if (!colaboradorId) {
+        throw new Error(
+            "Não foi possível identificar o colaborador para atualizar a função do ASO."
+        );
+    }
+
+    if (!novaFuncao) {
+        throw new Error(
+            "A função indicada no ASO não está disponível para atualização."
+        );
+    }
+
+    const { data, error } = await supabase
+        .from("colaboradores")
+        .update({
+            funcao: novaFuncao,
+        })
+        .eq("id", colaboradorId)
+        .select("id, nome, funcao, codigo_funcionario")
+        .single();
+
+    if (error) {
+        throw new Error(
+            `Erro ao atualizar a função do colaborador conforme o ASO: ${error.message}`
+        );
+    }
+
+    const colaboradorAtualizado = {
+        ...colaborador,
+        ...(data || {}),
+        funcao: data?.funcao || novaFuncao,
+        codigoFuncionario:
+            data?.codigo_funcionario ||
+            colaborador?.codigoFuncionario ||
+            colaborador?.codigo_funcionario ||
+            "",
+    };
+
+    if (typeof registrarAuditoria === "function") {
+        try {
+            await registrarAuditoria(
+                "UPDATE_FUNCAO_ASO",
+                "colaboradores",
+                `Atualizou a função de ${colaboradorAtualizado.nome || colaborador?.nome || "colaborador"} conforme divergência identificada no ASO.`,
+                colaboradorId,
+                {
+                    origem: "ASO",
+                    funcaoAnterior,
+                    funcaoNova: novaFuncao,
+                    funcaoDocumentoNormalizada:
+                        comparacao?.funcaoDocumentoNormalizada ||
+                        "",
+                    confiancaLeitura:
+                        comparacao?.confianca ||
+                        "",
+                    arquivo:
+                        certificado?.arquivoNome ||
+                        certificado?.arquivo_nome ||
+                        obterNomeArquivoEntrada(certificado?.arquivo) ||
+                        "",
+                    formaAlteracao:
+                        "Confirmação no popup de divergência documental",
+                }
+            );
+        } catch (erroAuditoria) {
+            console.warn(
+                "A função foi atualizada, mas não foi possível registrar a auditoria da divergência do ASO:",
+                erroAuditoria?.message || erroAuditoria
+            );
+        }
+    }
+
+    return colaboradorAtualizado;
+}
+
 export async function salvarCertificadoTreinamentoAppService({
     supabase,
     certificado,
@@ -895,58 +1038,196 @@ export async function salvarCertificadoTreinamentoAppService({
     setErroBanco,
     setColaboradores,
     setColaboradorSelecionado,
+    registrarAuditoria,
 }) {
     setErroBanco("");
 
     try {
-        await validarCertificadoAntesDoSalvamento({
+        const verificacaoPrevia = await validarCertificadoAntesDoSalvamento({
             supabase,
             certificado,
             colaboradores,
             colaboradorSelecionado,
         });
 
-        const certificadoNormalizado = await salvarCertificadoTreinamentoCrud({
-            supabase,
-            certificado,
-            colaboradores,
-            colaboradorSelecionado,
-        });
+        const comparacaoFuncaoAso =
+            obterComparacaoFuncaoAsoDaVerificacao(
+                verificacaoPrevia
+            );
+
+        const colaboradorBase =
+            localizarColaboradorParaVerificacao({
+                certificado,
+                certificadoNormalizado: {},
+                colaboradores,
+                colaboradorSelecionado,
+            });
+
+        const decisaoFuncaoAso = String(
+            certificado?.decisaoFuncaoAso ||
+            certificado?.decisao_funcao_aso ||
+            ""
+        ).trim().toLowerCase();
+
+        const exigeConfirmacaoFuncaoAso = Boolean(
+            comparacaoFuncaoAso?.requerConfirmacao
+        );
+
+        if (
+            exigeConfirmacaoFuncaoAso &&
+            decisaoFuncaoAso !== "atualizar"
+        ) {
+            return montarRetornoDivergenciaFuncaoAso({
+                comparacao: comparacaoFuncaoAso,
+                colaborador: colaboradorBase,
+                certificado,
+            });
+        }
+
+        let colaboradorFluxo = colaboradorBase;
+        let colaboradoresFluxo = colaboradores;
+        let colaboradorSelecionadoFluxo = colaboradorSelecionado;
+        let certificadoFluxo = certificado;
+
+        if (
+            exigeConfirmacaoFuncaoAso &&
+            decisaoFuncaoAso === "atualizar"
+        ) {
+            colaboradorFluxo =
+                await atualizarFuncaoColaboradorPeloAso({
+                    supabase,
+                    colaborador: colaboradorBase,
+                    comparacao: comparacaoFuncaoAso,
+                    certificado,
+                    registrarAuditoria,
+                });
+
+            colaboradoresFluxo = Array.isArray(colaboradores)
+                ? colaboradores.map((item) =>
+                    String(item.id) === String(colaboradorFluxo.id)
+                        ? {
+                            ...item,
+                            ...colaboradorFluxo,
+                        }
+                        : item
+                )
+                : colaboradores;
+
+            colaboradorSelecionadoFluxo =
+                colaboradorSelecionado &&
+                String(colaboradorSelecionado.id) ===
+                    String(colaboradorFluxo.id)
+                    ? {
+                        ...colaboradorSelecionado,
+                        ...colaboradorFluxo,
+                    }
+                    : colaboradorSelecionado;
+
+            certificadoFluxo = {
+                ...certificado,
+                colaborador: {
+                    ...(certificado?.colaborador || {}),
+                    ...colaboradorFluxo,
+                },
+            };
+
+            setColaboradores((atual) =>
+                atual.map((item) =>
+                    String(item.id) === String(colaboradorFluxo.id)
+                        ? {
+                            ...item,
+                            ...colaboradorFluxo,
+                        }
+                        : item
+                )
+            );
+
+            setColaboradorSelecionado((atual) => {
+                if (
+                    !atual ||
+                    String(atual.id) !== String(colaboradorFluxo.id)
+                ) {
+                    return atual;
+                }
+
+                return {
+                    ...atual,
+                    ...colaboradorFluxo,
+                };
+            });
+        }
+
+        const certificadoNormalizado =
+            await salvarCertificadoTreinamentoCrud({
+                supabase,
+                certificado: certificadoFluxo,
+                colaboradores: colaboradoresFluxo,
+                colaboradorSelecionado:
+                    colaboradorSelecionadoFluxo,
+            });
 
         setColaboradores((atual) =>
             atual.map((colaborador) => {
-                if (String(colaborador.id) !== String(certificadoNormalizado.colaboradorId)) return colaborador;
+                if (
+                    String(colaborador.id) !==
+                    String(certificadoNormalizado.colaboradorId)
+                ) {
+                    return colaborador;
+                }
 
-                const demais = (colaborador.treinamentos || []).filter(
-                    (item) => Number(item.treinamentoId) !== Number(certificadoNormalizado.treinamentoId)
+                const demais = (
+                    colaborador.treinamentos ||
+                    []
+                ).filter(
+                    (item) =>
+                        Number(item.treinamentoId) !==
+                        Number(certificadoNormalizado.treinamentoId)
                 );
 
                 return {
                     ...colaborador,
-                    treinamentos: [certificadoNormalizado, ...demais],
+                    treinamentos: [
+                        certificadoNormalizado,
+                        ...demais,
+                    ],
                 };
             })
         );
 
         setColaboradorSelecionado((atual) => {
-            if (!atual || String(atual.id) !== String(certificadoNormalizado.colaboradorId)) return atual;
+            if (
+                !atual ||
+                String(atual.id) !==
+                    String(certificadoNormalizado.colaboradorId)
+            ) {
+                return atual;
+            }
 
-            const demais = (atual.treinamentos || []).filter(
-                (item) => Number(item.treinamentoId) !== Number(certificadoNormalizado.treinamentoId)
+            const demais = (
+                atual.treinamentos ||
+                []
+            ).filter(
+                (item) =>
+                    Number(item.treinamentoId) !==
+                    Number(certificadoNormalizado.treinamentoId)
             );
 
             return {
                 ...atual,
-                treinamentos: [certificadoNormalizado, ...demais],
+                treinamentos: [
+                    certificadoNormalizado,
+                    ...demais,
+                ],
             };
         });
 
         executarVerificacaoCertificadoSemBloquearFluxo({
             supabase,
-            certificado,
+            certificado: certificadoFluxo,
             certificadoNormalizado,
-            colaboradores,
-            colaboradorSelecionado,
+            colaboradores: colaboradoresFluxo,
+            colaboradorSelecionado:
+                colaboradorSelecionadoFluxo,
             setColaboradores,
             setColaboradorSelecionado,
         });
@@ -955,8 +1236,16 @@ export async function salvarCertificadoTreinamentoAppService({
 
         return true;
     } catch (error) {
-        setErroBanco(error.message || "Erro ao salvar certificado.");
-        alert(error.message || "Erro ao salvar certificado.");
+        setErroBanco(
+            error.message ||
+            "Erro ao salvar certificado."
+        );
+
+        alert(
+            error.message ||
+            "Erro ao salvar certificado."
+        );
+
         return false;
     }
 }

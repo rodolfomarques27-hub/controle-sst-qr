@@ -1,5 +1,5 @@
 /* eslint-disable no-unused-vars */
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { Eye, EyeOff, GripVertical, RotateCcw, Search, SlidersHorizontal, Upload } from "lucide-react";
 import { supabase } from "../../lib/supabaseClient";
 import {
@@ -13,6 +13,7 @@ import { validarArquivoAntesUpload, validarListaArquivosAntesUpload } from "../F
 import { AlertasTstTreinamentos } from "./AlertasTstTreinamentos";
 import { BaseCertificadosTreinamentos } from "./BaseCertificadosTreinamentos";
 import { FormularioLancamentoCertificado } from "./FormularioLancamentoCertificado";
+import { ModalDivergenciaFuncaoAso } from "./ModalDivergenciaFuncaoAso";
 import VerificadorListaPresenca from "../VerificadorListaPresenca";
 import {
     avaliarTreinamentosColaborador,
@@ -176,6 +177,9 @@ export function Treinamentos({
     const [observacao, setObservacao] = useState("");
     const [salvandoCertificado, setSalvandoCertificado] = useState(false);
     const [analisandoArquivoCertificado, setAnalisandoArquivoCertificado] = useState(false);
+    const [divergenciaFuncaoAso, setDivergenciaFuncaoAso] = useState(null);
+    const [resolvendoDivergenciaFuncaoAso, setResolvendoDivergenciaFuncaoAso] = useState(false);
+    const resolverDivergenciaFuncaoAsoRef = useRef(null);
     const [arquivosLote, setArquivosLote] = useState([]);
     const [salvandoLote, setSalvandoLote] = useState(false);
     const [preparandoLoteCertificados, setPreparandoLoteCertificados] = useState(false);
@@ -379,6 +383,130 @@ export function Treinamentos({
         setDataRealizacao(obterDataHojeIso());
     };
 
+    const concluirDecisaoFuncaoAso = (resultado) => {
+        const resolver =
+            resolverDivergenciaFuncaoAsoRef.current;
+
+        resolverDivergenciaFuncaoAsoRef.current = null;
+        setDivergenciaFuncaoAso(null);
+        setResolvendoDivergenciaFuncaoAso(false);
+
+        if (typeof resolver === "function") {
+            resolver(Boolean(resultado));
+        }
+    };
+
+    const cancelarDivergenciaFuncaoAso = () => {
+        if (resolvendoDivergenciaFuncaoAso) return;
+        concluirDecisaoFuncaoAso(false);
+    };
+
+    const salvarCertificadoComConferenciaAso =
+        async (dadosCertificado) => {
+            const resultado =
+                await onSalvarCertificado(
+                    dadosCertificado
+                );
+
+            if (
+                resultado?.tipo !==
+                "divergencia_funcao_aso"
+            ) {
+                if (
+                    resultado &&
+                    typeof resultado === "object"
+                ) {
+                    return Boolean(resultado.ok);
+                }
+
+                return Boolean(resultado);
+            }
+
+            return new Promise((resolve) => {
+                if (
+                    resolverDivergenciaFuncaoAsoRef.current
+                ) {
+                    resolverDivergenciaFuncaoAsoRef.current(
+                        false
+                    );
+                }
+
+                resolverDivergenciaFuncaoAsoRef.current =
+                    resolve;
+
+                setDivergenciaFuncaoAso({
+                    ...resultado,
+                    certificado: dadosCertificado,
+                });
+            });
+        };
+
+    const confirmarAtualizacaoFuncaoAso = async () => {
+        const pendencia = divergenciaFuncaoAso;
+
+        if (
+            !pendencia?.certificado ||
+            resolvendoDivergenciaFuncaoAso
+        ) {
+            return;
+        }
+
+        setResolvendoDivergenciaFuncaoAso(true);
+
+        try {
+            const resultado =
+                await onSalvarCertificado({
+                    ...pendencia.certificado,
+                    decisaoFuncaoAso: "atualizar",
+                });
+
+            if (
+                resultado?.tipo ===
+                "divergencia_funcao_aso"
+            ) {
+                throw new Error(
+                    "A divergência permaneceu pendente após a confirmação."
+                );
+            }
+
+            const salvo =
+                resultado === true ||
+                resultado?.ok === true;
+
+            if (!salvo) {
+                setResolvendoDivergenciaFuncaoAso(
+                    false
+                );
+                return;
+            }
+
+            concluirDecisaoFuncaoAso(true);
+        } catch (erro) {
+            setResolvendoDivergenciaFuncaoAso(false);
+
+            if (typeof window !== "undefined") {
+                window.alert(
+                    erro?.message ||
+                    "Não foi possível atualizar a função e salvar o ASO."
+                );
+            }
+        }
+    };
+
+    useEffect(() => {
+        return () => {
+            const resolver =
+                resolverDivergenciaFuncaoAsoRef.current;
+
+            resolverDivergenciaFuncaoAsoRef.current =
+                null;
+
+            if (typeof resolver === "function") {
+                resolver(false);
+            }
+        };
+    }, []);
+
     const adicionarTreinamento = async () => {
         if (!podeCadastrarTreinamentosSistema || !podeUploadTreinamentosSistema) {
             if (typeof window !== "undefined") window.alert(!podeUploadTreinamentosSistema ? mensagemBloqueioUploadTreinamentos : mensagemBloqueioCadastroTreinamentos);
@@ -397,7 +525,7 @@ export function Treinamentos({
 
         setSalvandoCertificado(true);
 
-        const ok = await onSalvarCertificado({
+        const ok = await salvarCertificadoComConferenciaAso({
             colaboradorCodigo: String(colabSelecionado?.codigoFuncionario || ""),
             colaborador: colabSelecionado,
             treinamentoId: Number(treinamentoSelecionadoId),
@@ -640,7 +768,7 @@ export function Treinamentos({
                 });
 
                 try {
-                    const ok = await onSalvarCertificado({
+                    const ok = await salvarCertificadoComConferenciaAso({
                         colaboradorCodigo: String(item.colaboradorCodigo || ""),
                         colaborador: colaboradorDoArquivo,
                         treinamentoId: Number(item.treinamentoId),
@@ -1559,6 +1687,14 @@ export function Treinamentos({
                     return null;
                 })}
             </div>
+
+            <ModalDivergenciaFuncaoAso
+                aberto={Boolean(divergenciaFuncaoAso)}
+                dados={divergenciaFuncaoAso}
+                processando={resolvendoDivergenciaFuncaoAso}
+                onConfirmar={confirmarAtualizacaoFuncaoAso}
+                onCancelar={cancelarDivergenciaFuncaoAso}
+            />
         </div>
     );
 }

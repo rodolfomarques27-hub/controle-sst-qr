@@ -10,9 +10,13 @@ import {
 } from "./colaboradoresCrudService";
 import {
     analisarArquivosTreinamentoMassa,
+    definirFuncoesTreinamentosRemotas,
     normalizarColaborador,
     normalizarCertificado,
 } from "./colaboradorDocumentosService";
+import {
+    carregarFuncoesTreinamentosRemotas,
+} from "./funcoesTreinamentosService.js";
 
 const TAMANHO_LOTE_IDS_CERTIFICADOS = 50;
 
@@ -121,6 +125,24 @@ export async function carregarColaboradoresAppService({
     setErroBanco("");
 
     try {
+        try {
+            const resultadoFuncoes =
+                await carregarFuncoesTreinamentosRemotas({
+                    supabase,
+                });
+
+            definirFuncoesTreinamentosRemotas(
+                resultadoFuncoes.funcoes
+            );
+        } catch (errorFuncoes) {
+            definirFuncoesTreinamentosRemotas([]);
+
+            console.warn(
+                "Não foi possível carregar as funções e matrizes remotas. O SafeScan continuará usando as matrizes fixas e o cache local.",
+                errorFuncoes
+            );
+        }
+
         const empresas = await carregarEmpresas();
         await carregarDocumentosEmpresas();
 

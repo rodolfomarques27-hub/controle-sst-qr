@@ -13,6 +13,8 @@ import {
     converterDataIsoDireta,
     limparTextoPdfBruto,
 } from "../utils/sstUtils";
+import { resolverFuncaoBasePorMatrizes } from "./funcaoBaseService.js";
+import { mesclarMatrizesFuncaoRemotas } from "./funcoesTreinamentosService.js";
 
 const hoje = new Date();
 
@@ -40,6 +42,35 @@ export function colaboradorForaControleDocumentalOperacional(colaborador = {}) {
     return Boolean(obterSituacaoHistoricaTreinamentosColaborador(colaborador));
 }
 
+let funcoesTreinamentosRemotasCache = [];
+
+export function definirFuncoesTreinamentosRemotas(
+    funcoes = []
+) {
+    funcoesTreinamentosRemotasCache =
+        Array.isArray(funcoes)
+            ? funcoes.filter(Boolean)
+            : [];
+
+    return obterFuncoesTreinamentosRemotasCache();
+}
+
+export function obterFuncoesTreinamentosRemotasCache() {
+    return funcoesTreinamentosRemotasCache.map(
+        (item) => ({
+            ...item,
+            termos:
+                Array.isArray(item?.termos)
+                    ? [...item.termos]
+                    : [],
+            treinamentos:
+                Array.isArray(item?.treinamentos)
+                    ? [...item.treinamentos]
+                    : [],
+        })
+    );
+}
+
 export function obterFuncoesPersonalizadasSalvas() {
     if (typeof window === "undefined") return [];
 
@@ -57,22 +88,34 @@ export function salvarFuncoesPersonalizadas(lista) {
 }
 
 export function obterTodasMatrizesFuncao() {
-    const personalizadas = obterFuncoesPersonalizadasSalvas();
-    const matrizGeral = matrizTreinamentosPorFuncao.find((item) => item.chave === "geral");
-    const fixasSemGeral = matrizTreinamentosPorFuncao.filter((item) => item.chave !== "geral");
+    return mesclarMatrizesFuncaoRemotas({
+        matrizesBase:
+            matrizTreinamentosPorFuncao,
+        funcoesRemotas:
+            funcoesTreinamentosRemotasCache,
+        funcoesLocais:
+            obterFuncoesPersonalizadasSalvas(),
+    });
+}
 
-    return [...fixasSemGeral, ...personalizadas, matrizGeral];
+export function resolverFuncaoBase(funcao) {
+    return resolverFuncaoBasePorMatrizes({
+        funcao,
+        matrizes:
+            obterTodasMatrizesFuncao(),
+    });
+}
+
+export function obterFuncaoBase(funcao) {
+    return resolverFuncaoBase(
+        funcao
+    ).funcaoBase;
 }
 
 export function obterMatrizFuncao(funcao) {
-    const texto = normalizarTextoBusca(funcao);
-    const matrizes = obterTodasMatrizesFuncao();
-
-    return (
-        matrizes.find((item) =>
-            item.chave !== "geral" && item.termos.some((termo) => texto.includes(normalizarTextoBusca(termo)))
-        ) || matrizes.find((item) => item.chave === "geral")
-    );
+    return resolverFuncaoBase(
+        funcao
+    ).matriz;
 }
 
 export function treinamentosObrigatoriosFuncao(funcao) {
@@ -412,7 +455,23 @@ export function deveMostrarAniversarioColaborador(colaborador) {
 
 
 export function obterFuncaoCargoColaborador(colaborador) {
-    return String(colaborador?.funcao || colaborador?.cargo || "").trim() || "Função não informada";
+    return (
+        String(
+            colaborador?.funcao ||
+            colaborador?.cargo ||
+            colaborador?.cargo_funcao ||
+            ""
+        ).trim() ||
+        "Função não informada"
+    );
+}
+
+export function obterFuncaoBaseColaborador(colaborador) {
+    return obterFuncaoBase(
+        obterFuncaoCargoColaborador(
+            colaborador
+        )
+    );
 }
 
 export function colaboradorContaComoMobilizado(colaborador) {
