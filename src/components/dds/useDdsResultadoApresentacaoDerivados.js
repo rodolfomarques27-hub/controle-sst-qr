@@ -1963,6 +1963,87 @@ export default function useDdsResultadoApresentacaoDerivados({
                         true
                 );
 
+            /*
+             * dds_relatorio_analitico_correcoes_aplicadas_v1
+             *
+             * Mantém cada ocorrência diária do tema, sua procedência
+             * documental e o alerta aplicável sem consolidar ocorrências
+             * repetidas em uma única linha.
+             */
+            const ocorrenciasTemasDocumentadas =
+                diasAplicados.map(
+                    (dia) => {
+                        const tema =
+                            String(
+                                dia
+                                    ?.temaConfirmado ||
+                                ""
+                            ).trim();
+
+                        const origemDocumental =
+                            String(
+                                dia
+                                    ?.origemDocumentalTemaConfirmado ||
+                                ""
+                            )
+                                .trim()
+                                .toLowerCase();
+
+                        const rotuloOrigem =
+                            origemDocumental ===
+                            "pdf_assinado"
+                                ? "extraído do PDF assinado"
+                                : origemDocumental ===
+                                    "sistema_manual"
+                                    ? "preenchido/editado manualmente no sistema"
+                                    : "origem documental não classificada";
+
+                        const aviso =
+                            origemDocumental ===
+                            "sistema_manual"
+                                ? "tema confirmado no sistema, mas não localizado na folha assinada"
+                                : "";
+
+                        const identificacaoDia =
+                            obterNomeDiaIndicadorDds(
+                                dia
+                            );
+
+                        return {
+                            dia:
+                                identificacaoDia,
+                            tema,
+                            origemDocumental,
+                            rotuloOrigem,
+                            aviso,
+                            detalhe:
+                                `${identificacaoDia}: ${tema} (${rotuloOrigem})${
+                                    aviso
+                                        ? ` — ${aviso}`
+                                        : ""
+                                }`,
+                        };
+                    }
+                );
+
+            const ocorrenciasTemasComOrigemClassificada =
+                ocorrenciasTemasDocumentadas.filter(
+                    (ocorrencia) =>
+                        [
+                            "pdf_assinado",
+                            "sistema_manual",
+                        ].includes(
+                            ocorrencia
+                                .origemDocumental
+                        )
+                ).length;
+
+            const todasOcorrenciasTemasClassificadas =
+                ocorrenciasTemasDocumentadas.length >
+                    0 &&
+                ocorrenciasTemasComOrigemClassificada ===
+                    ocorrenciasTemasDocumentadas.length;
+
             const taxaCobertura =
                 percentualIndicadorDds(
                     diasAplicados.length,
@@ -2711,8 +2792,9 @@ export default function useDdsResultadoApresentacaoDerivados({
                         nivel:
                             nivelDiversidade,
                         detalhes:
-                            Array.from(
-                                temasDistintos
+                            ocorrenciasTemasDocumentadas.map(
+                                (ocorrencia) =>
+                                    ocorrencia.detalhe
                             ),
                     }),
                 ],
@@ -3164,11 +3246,20 @@ export default function useDdsResultadoApresentacaoDerivados({
                         "nao_calculavel"
                 ).length;
 
+            const correcoesAplicadasNestaVersao = [
+                `Contador analítico atualizado: ${indicadoresCalculados}/${todosIndicadores.length} indicadores calculados.`,
+                todasOcorrenciasTemasClassificadas
+                    ? `Todos os ${temasDistintos.size} tema(s) distinto(s) tiveram suas ${ocorrenciasTemasDocumentadas.length} ocorrência(s) apresentadas individualmente com procedência documental.`
+                    : `Procedência documental classificada em ${ocorrenciasTemasComOrigemClassificada}/${ocorrenciasTemasDocumentadas.length} ocorrência(s), abrangendo ${temasDistintos.size} tema(s) distinto(s).`,
+            ];
+
             return {
                 progressoImplantacao: 100,
                 blocos,
                 top3,
                 tituloPontosAtencao,
+                ocorrenciasTemasDocumentadas,
+                correcoesAplicadasNestaVersao,
                 composicaoBaseParticipantes: {
                     totalAnalisado:
                         participantes.length,

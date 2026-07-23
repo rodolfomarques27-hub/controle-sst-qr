@@ -514,6 +514,31 @@ function RelatorioAnaliticoSstDdsCard({
             ? relatorio.top3
             : [];
 
+    const ocorrenciasTemasDocumentadas =
+        Array.isArray(
+            relatorio.ocorrenciasTemasDocumentadas
+        )
+            ? relatorio.ocorrenciasTemasDocumentadas
+            : [];
+
+    const correcoesAplicadasNestaVersao =
+        Array.isArray(
+            relatorio.correcoesAplicadasNestaVersao
+        ) &&
+        relatorio.correcoesAplicadasNestaVersao.length >
+            0
+            ? relatorio.correcoesAplicadasNestaVersao
+            : [
+                `Contador analítico atualizado: ${resumo.indicadoresCalculados || 0}/${resumo.indicadoresTotal || 0} indicadores calculados.`,
+                `Procedência documental dos temas apresentada individualmente no bloco de diversidade temática (${ocorrenciasTemasDocumentadas.length} ocorrência(s)).`,
+            ];
+
+    const tituloCorrecoesAplicadasNestaVersao =
+        "CORREÇÕES APLICADAS NESTA VERSÃO";
+
+    const avisoTemaNaoLocalizadoFolhaAssinada =
+        "tema confirmado no sistema, mas não localizado na folha assinada";
+
     function imprimirRelatorioAnaliticoDds() {
         const janela =
             window.open(
@@ -570,6 +595,14 @@ function RelatorioAnaliticoSstDdsCard({
                     </p>
                 `;
 
+        const correcoesHtml =
+            correcoesAplicadasNestaVersao
+                .map(
+                    (correcao) =>
+                        `<li>${escaparHtmlRelatorioAnaliticoDds(correcao)}</li>`
+                )
+                .join("");
+
         const blocosHtml =
             blocos
                 .map(
@@ -590,8 +623,22 @@ function RelatorioAnaliticoSstDdsCard({
                                                     <ul>
                                                         ${indicador.detalhes
                                                             .map(
-                                                                (detalhe) =>
-                                                                    `<li>${escaparHtmlRelatorioAnaliticoDds(detalhe)}</li>`
+                                                                (detalhe) => {
+                                                                    const detalheTexto =
+                                                                        String(
+                                                                            detalhe ||
+                                                                            ""
+                                                                        );
+
+                                                                    const classeAviso =
+                                                                        detalheTexto.includes(
+                                                                            avisoTemaNaoLocalizadoFolhaAssinada
+                                                                        )
+                                                                            ? ' class="aviso-documental"'
+                                                                            : "";
+
+                                                                    return `<li${classeAviso}>${escaparHtmlRelatorioAnaliticoDds(detalheTexto)}</li>`;
+                                                                }
                                                             )
                                                             .join("")}
                                                     </ul>
@@ -806,6 +853,35 @@ function RelatorioAnaliticoSstDdsCard({
                             line-height: 1.4;
                         }
 
+                        .correcoes {
+                            margin-top: 8px;
+                            border: 1px solid #86efac;
+                            border-radius: 10px;
+                            background: #f0fdf4;
+                            padding: 8px;
+                            break-inside: avoid-page;
+                        }
+
+                        .correcoes h2 {
+                            margin: 0;
+                            color: #166534;
+                            font-size: 10px;
+                            text-transform: uppercase;
+                        }
+
+                        .correcoes ul {
+                            margin: 6px 0 0;
+                            padding-left: 16px;
+                        }
+
+                        .aviso-documental {
+                            border: 1px solid #fcd34d;
+                            border-radius: 5px;
+                            background: #fffbeb;
+                            color: #92400e;
+                            padding: 3px 5px;
+                        }
+
                         .bloco {
                             margin-top: 8px;
                             break-inside: avoid-page;
@@ -978,6 +1054,18 @@ function RelatorioAnaliticoSstDdsCard({
                         <div class="prioridades">
                             ${top3Html}
                         </div>
+                    </section>
+
+                    <section class="correcoes">
+                        <h2>
+                            ${escaparHtmlRelatorioAnaliticoDds(
+                                tituloCorrecoesAplicadasNestaVersao
+                            )}
+                        </h2>
+
+                        <ul>
+                            ${correcoesHtml}
+                        </ul>
                     </section>
 
                     ${blocosHtml}
@@ -1253,6 +1341,47 @@ function RelatorioAnaliticoSstDdsCard({
                 }
             );
 
+            planilha.addRow([]);
+
+            const linhaTituloCorrecoes =
+                planilha.addRow([
+                    tituloCorrecoesAplicadasNestaVersao,
+                ]);
+
+            planilha.mergeCells(
+                linhaTituloCorrecoes.number,
+                1,
+                linhaTituloCorrecoes.number,
+                4
+            );
+
+            linhaTituloCorrecoes.font = {
+                bold: true,
+                color: {
+                    argb: "FF166534",
+                },
+            };
+
+            linhaTituloCorrecoes.fill = {
+                type: "pattern",
+                pattern: "solid",
+                fgColor: {
+                    argb: "FFDCFCE7",
+                },
+            };
+
+            correcoesAplicadasNestaVersao.forEach(
+                (
+                    correcao,
+                    indice
+                ) => {
+                    planilha.addRow([
+                        indice + 1,
+                        correcao,
+                    ]);
+                }
+            );
+
             planilha.eachRow(
                 {
                     includeEmpty: false,
@@ -1423,6 +1552,23 @@ function RelatorioAnaliticoSstDdsCard({
                     indicador.nome,
                     indicador.valor,
                     indicador.interpretacao,
+                ]
+            ),
+            [],
+            [
+                tituloCorrecoesAplicadasNestaVersao,
+            ],
+            [
+                "Item",
+                "Confirmação",
+            ],
+            ...correcoesAplicadasNestaVersao.map(
+                (
+                    correcao,
+                    indice
+                ) => [
+                    indice + 1,
+                    correcao,
                 ]
             ),
             [],
@@ -1785,6 +1931,33 @@ function RelatorioAnaliticoSstDdsCard({
                                 )}
                             </section>
 
+                            <section className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4">
+                                <p className="text-[10px] font-black uppercase tracking-wide text-emerald-800">
+                                    {
+                                        tituloCorrecoesAplicadasNestaVersao
+                                    }
+                                </p>
+
+                                <ul className="mt-3 space-y-2 text-xs font-bold leading-5 text-emerald-950">
+                                    {correcoesAplicadasNestaVersao.map(
+                                        (
+                                            correcao,
+                                            indice
+                                        ) => (
+                                            <li
+                                                key={
+                                                    "correcao-relatorio-dds-" +
+                                                    indice
+                                                }
+                                                className="rounded-xl border border-emerald-100 bg-white px-3 py-2"
+                                            >
+                                                {correcao}
+                                            </li>
+                                        )
+                                    )}
+                                </ul>
+                            </section>
+
                             <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-6">
                                 <div className="rounded-xl border border-slate-200 bg-white p-3 text-center">
                                     <p className="text-[9px] font-black uppercase text-slate-500">
@@ -1943,6 +2116,16 @@ function RelatorioAnaliticoSstDdsCard({
                                                                                         indicador.nome +
                                                                                         "-" +
                                                                                         indice
+                                                                                    }
+                                                                                    className={
+                                                                                        String(
+                                                                                            detalhe ||
+                                                                                            ""
+                                                                                        ).includes(
+                                                                                            avisoTemaNaoLocalizadoFolhaAssinada
+                                                                                        )
+                                                                                            ? "rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-amber-900"
+                                                                                            : ""
                                                                                     }
                                                                                 >
                                                                                     {
